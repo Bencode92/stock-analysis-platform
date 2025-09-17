@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <title>NOVIS — Business Plan (THE PROJECT × Revolut) | 2025–2028</title>
+    
+    <!-- Police Google avec link (plus fiable pour PDF) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #000;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        @media screen {
+            body {
+                background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+                padding: 20px;
+            }
+            
+            .document {
+                max-width: 1200px;
+                margin: 0 auto;
+                background: #0f0f0f;
+                box-shadow: 0 0 60px rgba(6, 255, 165, 0.15);
+                border: 1px solid rgba(6, 255, 165, 0.2);
+                border-radius: 16px;
+                overflow: hidden;
+            }
+        }
+
+        /* Badge THE PROJECT × Revolut */
+        .program-badge {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1000;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            background: #1c0b3a;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,.15);
+            box-shadow: 0 6px 24px rgba(0,0,0,.35);
+            letter-spacing: .2px;
+        }
+
+        /* Désactivation complète de l'impression */
+        @media print {
+            body {
+                display: none !important;
+            }
+        }
+
+        .cover-page {
+            padding: 80px 60px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover-page::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(6, 255, 165, 0.05) 0%, transparent 70%);
+            animation: pulse 20s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(180deg); }
+        }
+
+        .company-logo {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #06ffa5, #00d084);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 900;
+            color: #000;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(6, 255, 165, 0.3);
+            position: relative;
+            z-index: 1;
+            letter-spacing: -2px;
+        }
+
+        .cover-title {
+            font-size: 56px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #06ffa5, #00d084);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-subtitle {
+            font-size: 24px;
+            color: #a0a0a0;
+            margin-bottom: 60px;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-info {
+            border-top: 1px solid rgba(6, 255, 165, 0.2);
+            padding-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-info-item {
+            color: #808080;
+        }
+
+        .cover-info-item strong {
+            color: #06ffa5;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .executive-summary {
+            padding: 60px;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+        }
+
+        .section-header {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #06ffa5, #00d084);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(6, 255, 165, 0.2);
+        }
+
+        .key-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+            align-items: stretch;
+        }
+
+        .metric-box {
+            padding: 28px;
+            background: linear-gradient(135deg, rgba(6, 255, 165, 0.05), rgba(6, 255, 165, 0.02));
+            border-radius: 16px;
+            border: 1px solid rgba(6, 255, 165, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            min-height: 180px;
+        }
+
+        .metric-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #06ffa5, #00d084);
+        }
+
+        .metric-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(6, 255, 165, 0.2);
+            border-color: rgba(6, 255, 165, 0.4);
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: #808080;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #06ffa5, #00d084);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .metric-value.negative {
+            background: linear-gradient(135deg, #ff3366, #ff1744);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metric-value.neutral {
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metric-detail {
+            font-size: 14px;
+            color: #a0a0a0;
+            line-height: 1.6;
+        }
+
+        .content-page {
+            padding: 60px;
+            background: #0f0f0f;
+        }
+
+        .subsection {
+            margin-bottom: 50px;
+        }
+
+        .subsection-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #06ffa5;
+            margin-bottom: 24px;
+        }
+
+        .professional-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            font-size: 14px;
+            background: rgba(6, 255, 165, 0.02);
+            border: 1px solid rgba(6, 255, 165, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .professional-table thead {
+            background: rgba(6, 255, 165, 0.1);
+        }
+
+        .professional-table th {
+            padding: 16px;
+            text-align: left;
+            font-weight: 700;
+            color: #06ffa5;
+            border-bottom: 2px solid rgba(6, 255, 165, 0.2);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            vertical-align: middle;
+        }
+
+        .professional-table th.number,
+        .professional-table td.number {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .professional-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(6, 255, 165, 0.05);
+            color: #c0c0c0;
+            vertical-align: top;
+        }
+
+        .professional-table tbody tr:hover {
+            background: rgba(6, 255, 165, 0.05);
+        }
+
+        .professional-table .highlight-row {
+            background: rgba(6, 255, 165, 0.1);
+            font-weight: 700;
+        }
+
+        .professional-table .highlight-row td {
+            color: #06ffa5;
+        }
+
+        .professional-table .total-row {
+            background: linear-gradient(135deg, rgba(6, 255, 165, 0.2), rgba(0, 208, 132, 0.2));
+            font-weight: 800;
+        }
+
+        .professional-table .total-row td {
+            border-bottom: none;
+            padding: 18px 16px;
+            color: #06ffa5;
+            vertical-align: middle;
+        }
+
+        .professional-table .negative-row {
+            background: rgba(255, 51, 102, 0.1);
+        }
+
+        .professional-table .negative-row td {
+            color: #ff3366;
+        }
+
+        .professional-table .optional-row {
+            background: rgba(255, 193, 7, 0.05);
+        }
+
+        .professional-table .optional-row td {
+            color: #ffc107;
+        }
+
+        .number.positive {
+            color: #06ffa5;
+            font-weight: 600;
+        }
+
+        .number.negative {
+            color: #ff3366;
+            font-weight: 600;
+        }
+
+        .alert-box {
+            padding: 24px;
+            border-radius: 12px;
+            margin: 24px 0;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: currentColor;
+        }
+
+        .alert-box.info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid rgba(23, 162, 184, 0.3);
+            color: #17a2b8;
+        }
+
+        .alert-box.success {
+            background: rgba(6, 255, 165, 0.1);
+            border: 1px solid rgba(6, 255, 165, 0.3);
+            color: #06ffa5;
+        }
+
+        .alert-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+        }
+
+        .alert-box.danger {
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            color: #ff3366;
+        }
+
+        .conformity-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .conformity-card {
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .conformity-card.do {
+            background: linear-gradient(135deg, rgba(6, 255, 165, 0.05), rgba(6, 255, 165, 0.02));
+            border: 1px solid rgba(6, 255, 165, 0.2);
+        }
+
+        .conformity-card.dont {
+            background: linear-gradient(135deg, rgba(255, 51, 102, 0.05), rgba(255, 51, 102, 0.02));
+            border: 1px solid rgba(255, 51, 102, 0.2);
+        }
+
+        .conformity-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .conformity-card.do .conformity-title {
+            color: #06ffa5;
+        }
+
+        .conformity-card.dont .conformity-title {
+            color: #ff3366;
+        }
+
+        .conformity-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .conformity-list li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            color: #c0c0c0;
+        }
+
+        .conformity-list li::before {
+            position: absolute;
+            left: 0;
+            top: 8px;
+        }
+
+        .conformity-card.do .conformity-list li::before {
+            content: '✓';
+            color: #06ffa5;
+        }
+
+        .conformity-card.dont .conformity-list li::before {
+            content: '✗';
+            color: #ff3366;
+        }
+
+        .triggers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .trigger-card {
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.05), rgba(255, 193, 7, 0.02));
+            border: 1px solid rgba(255, 193, 7, 0.2);
+            border-radius: 12px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .trigger-metric {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffc107;
+            margin-bottom: 8px;
+        }
+
+        .trigger-action {
+            font-size: 14px;
+            color: #c0c0c0;
+            line-height: 1.6;
+        }
+
+        .option-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .option-card {
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(6, 255, 165, 0.08), rgba(6, 255, 165, 0.02));
+            border-radius: 12px;
+            border: 2px solid rgba(6, 255, 165, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .option-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(6, 255, 165, 0.3);
+            border-color: #06ffa5;
+        }
+
+        .option-number {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #06ffa5, #00d084);
+            color: #000;
+            text-align: center;
+            line-height: 32px;
+            border-radius: 50%;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .option-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #06ffa5;
+            margin-bottom: 12px;
+        }
+
+        .option-description {
+            color: #c0c0c0;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .option-metrics {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .option-metrics div {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+        }
+
+        .option-metrics strong {
+            color: #06ffa5;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: #606060;
+            font-size: 12px;
+            border-top: 1px solid rgba(6, 255, 165, 0.1);
+            background: #0a0a0a;
+        }
+
+        .highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+            align-items: stretch;
+        }
+
+        .highlight-card {
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(6, 255, 165, 0.08), rgba(6, 255, 165, 0.02));
+            border-radius: 12px;
+            border: 1px solid rgba(6, 255, 165, 0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: 150px;
+        }
+
+        .highlight-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(6, 255, 165, 0.2);
+        }
+
+        .highlight-icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+
+        .highlight-title {
+            font-weight: 700;
+            color: #06ffa5;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .highlight-text {
+            font-size: 14px;
+            color: #a0a0a0;
+            line-height: 1.6;
+            flex-grow: 1;
+        }
+
+        .scenario-table {
+            margin: 30px 0;
+        }
+
+        .scenario-1 {
+            background: rgba(6, 255, 165, 0.1) !important;
+        }
+
+        .scenario-2 {
+            background: rgba(255, 193, 7, 0.1) !important;
+        }
+
+        .scenario-3 {
+            background: rgba(23, 162, 184, 0.1) !important;
+        }
+        
+        /* Mini notes grisées (écran) */
+        .small-note {
+            font-size: 12px;
+            color: #a0a0a0;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        /* Style spécifique pour les listes de contenu */
+        .content-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .content-list li {
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            color: #c0c0c0;
+        }
+
+        .content-list li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            color: #06ffa5;
+            font-weight: bold;
+        }
+
+        .methodology-box {
+            background: rgba(23, 162, 184, 0.05);
+            border: 1px solid rgba(23, 162, 184, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #a0a0a0;
+        }
+
+        .methodology-box strong {
+            color: #17a2b8;
+        }
+
+        .no-print {
+            display: block;
+        }
+
+        @media screen and (max-width: 768px) {
+            .key-metrics {
+                grid-template-columns: 1fr;
+            }
+            
+            .highlights {
+                grid-template-columns: 1fr;
+            }
+            
+            .professional-table {
+                font-size: 12px;
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .professional-table th,
+            .professional-table td {
+                padding: 10px 12px;
+            }
+            
+            .cover-info {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .page-break {
+            page-break-before: auto;
+            break-before: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="program-badge no-print">THE PROJECT × Revolut — Dossier Business Plan</div>
+    <div class="small-note no-print" style="margin:72px 16px 0;color:#cfcfe6;opacity:.8">
+        Document confidentiel — lien privé partagé pour évaluation du dossier.
+    </div>
+
+    <div class="document">
+        <!-- Cover Page -->
+        <div class="cover-page">
+            <div class="company-logo">NV</div>
+            
+            <h1 class="cover-title">Business Plan 2025-2028</h1>
+            <p class="cover-subtitle">
+                NOVIS - Plateforme d'éducation financière et d'investissement<br>
+                <small>Document confidentiel - Version 2.1 (audit final)</small><br>
+                <small>Candidature — THE PROJECT × Revolut</small>
+            </p>
+            
+            <div class="cover-info">
+                <div class="cover-info-item">
+                    <strong>BP</strong>
+                    Plan d'affaires - Lancement Q4 2025
+                </div>
+                <div class="cover-info-item">
+                    <strong>Date</strong>
+                    <span class="date-display">Septembre 2025</span>
+                </div>
+                <div class="cover-info-item">
+                    <strong>Lancement</strong>
+                    Beta août 2025 · Lancement octobre 2025
+                </div>
+                <div class="cover-info-item">
+                    <strong>Financement non dilutif recherché</strong>
+                    25 000€ - 32 000€ (subventions, prêts d'honneur, préventes)
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="executive-summary page-break">
+            <h2 class="section-header">Executive Summary</h2>
+            
+            <div class="alert-box success">
+                <strong>NOVIS</strong> : Plateforme d'éducation financière nouvelle génération
+                <br>• <strong>Prix</strong> : 5€/mois TTC (4.17€ HT) - Sans freemium - ZERO DILUTION
+                <br>• <strong>Coûts mensuels</strong> : 3 460€/mois = 1 320€ base (infra+services+opé) + 2 140€ marketing (dont 1 320€ collabs)
+                <br>• <strong>Break-even clients</strong> : 943 clients (atteint février 2026)
+                <br>• <strong>Break-even trésorerie</strong> : Juin 2026 (cumul positif)
+                <br>• <strong>Acquisition visée</strong> : 424 nouveaux/mois → 3 709 clients fin 2026
+                <br>• <strong>Objectif ambitieux</strong> : 576 nouveaux/mois pour atteindre 5 000 fin 2026
+            </div>
+
+            <div class="methodology-box">
+                <strong>Note méthodologique :</strong> CA calculé selon méthode "fin de mois" (EOM) : chaque nouveau client compte pour un mois complet dans le mois d'arrivée. Les coûts variables suivent la même base de calcul pour cohérence.
+            </div>
+
+            <div class="key-metrics">
+                <div class="metric-box">
+                    <div class="metric-label">Lancement Q4 2025</div>
+                    <div class="metric-value">1.6K€ HT</div>
+                    <div class="metric-detail">Oct: 40 clients<br>Nov: 130 clients<br>Déc: 220 clients</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">CA 2026 - Base (Brut HT)</div>
+                    <div class="metric-value">117.1K€</div>
+                    <div class="metric-detail">3 709 clients fin 2026<br>424 nouveaux/mois<br>EBITDA: 61.5K€</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">CA 2026 - Ambitieux (Brut HT)</div>
+                    <div class="metric-value">156.5K€</div>
+                    <div class="metric-detail">5 004 clients fin 2026<br>576 nouveaux/mois<br>EBITDA: 96.2K€</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">LTV/CAC</div>
+                    <div class="metric-value">11.1x</div>
+                    <div class="metric-detail">LTV: 56€<br>CAC: 5.05€<br>Payback: 1.38 mois</div>
+                </div>
+            </div>
+
+            <div class="highlights">
+                <div class="highlight-card">
+                    <div class="highlight-icon">💰</div>
+                    <div class="highlight-title">Structure de coûts</div>
+                    <div class="highlight-text">3 460€/mois total<br>3 260€ en oct (40 clients)<br>Break-even: 943 clients</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">📈</div>
+                    <div class="highlight-title">Croissance</div>
+                    <div class="highlight-text">Churn: 6.5%/mois<br>~260 pertes/mois à 4K clients<br>Besoin +576 pour 5K</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">🎯</div>
+                    <div class="highlight-title">Acquisition</div>
+                    <div class="highlight-text">CAC: 5.05€<br>TikTok: 800€/mois<br>Collabs: 1 320€/mois</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-icon">📊</div>
+                    <div class="highlight-title">Rentabilité 2026</div>
+                    <div class="highlight-text">Base: 61.5K€<br>Ambitieux: 96.2K€<br>Marge: 53-61%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Planning et Roadmap -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Roadmap 2025 & Structure de Coûts</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Planning de développement et lancement</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Période</th>
+                            <th>Phase</th>
+                            <th>Livrables</th>
+                            <th class="number">Budget mensuel</th>
+                            <th class="number">Budget total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Jan-Août 2025</strong></td>
+                            <td>Développement complet</td>
+                            <td>• MVP complet<br>• Beta entourage<br>• Conformité AMF</td>
+                            <td class="number">400 €/mois</td>
+                            <td class="number">3 200 €</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>Octobre 2025</strong></td>
+                            <td><strong>🚀 LANCEMENT</strong></td>
+                            <td>• Launch public<br>• 40 premiers clients<br>• Support non activé</td>
+                            <td class="number">3 260 €*</td>
+                            <td class="number">3 260 €</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Nov-Déc 2025</strong></td>
+                            <td>Scale initial</td>
+                            <td>• Acquisition clients<br>• Support activé (50+)<br>• 220 clients fin déc</td>
+                            <td class="number">3 460 €/mois</td>
+                            <td class="number">6 920 €</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="3"><strong>TOTAL 2025</strong></td>
+                            <td class="number"><strong>-</strong></td>
+                            <td class="number positive"><strong>13 380 €</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="small-note">* Octobre : 3 260€ car support client (200€) non activé (< 50 clients)</p>
+
+                <h3 class="subsection-title">Structure des coûts mensuels (3 460€/mois à partir de novembre 2025)</h3>
+                
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Catégorie</th>
+                            <th>Détail</th>
+                            <th class="number">Coût mensuel</th>
+                            <th class="number">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td rowspan="4"><strong>Infrastructure & APIs</strong></td>
+                            <td>Hosting/serveurs cloud</td>
+                            <td class="number">50 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr>
+                            <td>Base de données & backups</td>
+                            <td class="number">50 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr>
+                            <td>APIs financières (data marchés)</td>
+                            <td class="number">240 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr>
+                            <td>CDN/Storage + SSL</td>
+                            <td class="number">30 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td colspan="2"><strong>Sous-total Infrastructure</strong></td>
+                            <td class="number"><strong>370 €</strong></td>
+                            <td>-</td>
+                        </tr>
+                        
+                        <tr>
+                            <td rowspan="3"><strong>Services & Outils</strong></td>
+                            <td>Email/SMS transactionnels</td>
+                            <td class="number">30 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr>
+                            <td>GitHub/CI-CD + Monitoring</td>
+                            <td class="number">50 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr>
+                            <td>Domaine + certificats</td>
+                            <td class="number">20 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td colspan="2"><strong>Sous-total Services</strong></td>
+                            <td class="number"><strong>100 €</strong></td>
+                            <td>-</td>
+                        </tr>
+                        
+                        <tr class="optional-row">
+                            <td rowspan="5"><strong>Opérationnel & Support</strong></td>
+                            <td>Maintenance & développement continu</td>
+                            <td class="number">300 €</td>
+                            <td>Critique post-launch</td>
+                        </tr>
+                        <tr class="optional-row">
+                            <td>Support client (temps partiel)</td>
+                            <td class="number">200 €</td>
+                            <td>Dès 50+ clients</td>
+                        </tr>
+                        <tr class="optional-row">
+                            <td>Juridique AMF (veille & conseil)</td>
+                            <td class="number">200 €</td>
+                            <td>Conformité obligatoire</td>
+                        </tr>
+                        <tr class="optional-row">
+                            <td>Comptabilité & déclarations</td>
+                            <td class="number">100 €</td>
+                            <td>Obligatoire</td>
+                        </tr>
+                        <tr class="optional-row">
+                            <td>SEO tools + Analytics</td>
+                            <td class="number">50 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td colspan="2"><strong>Sous-total Opérationnel</strong></td>
+                            <td class="number"><strong>850 €</strong></td>
+                            <td>-</td>
+                        </tr>
+                        
+                        <tr class="scenario-2">
+                            <td rowspan="3"><strong>Marketing & Acquisition</strong></td>
+                            <td>Monteur TikTok (30 vidéos/mois)</td>
+                            <td class="number">800 €</td>
+                            <td>Acquisition organique</td>
+                        </tr>
+                        <tr class="scenario-2">
+                            <td>Content tools + design</td>
+                            <td class="number">20 €</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr class="scenario-2">
+                            <td>Collaborations créateurs (cap mensuel)</td>
+                            <td class="number">1 320 €</td>
+                            <td>1 macro + 4 mid</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td colspan="2"><strong>Sous-total Marketing</strong></td>
+                            <td class="number"><strong>2 140 €</strong></td>
+                            <td>-</td>
+                        </tr>
+                        
+                        <tr class="total-row">
+                            <td colspan="2"><strong>TOTAL MENSUEL</strong></td>
+                            <td class="number positive"><strong>3 460 €</strong></td>
+                            <td><strong>Post nov. 2025</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box info">
+                    <strong>Variables par abonné (0.50€/mois)</strong> : Frais Stripe (~0.35€) + Support marginal (~0.15€)
+                    <br><strong>ARPU net HT</strong> : 4.17€ - 0.50€ = 3.67€ par client
+                    <br><strong>Break-even clients</strong> : 3 460€ ÷ 3.67€ = 943 clients (atteint février 2026)
+                    <br><strong>Break-even trésorerie cumulée</strong> : Juin 2026 (rentabilité effective)
+                </div>
+            </div>
+        </div>
+
+        <!-- Plan d'Acquisition -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Plan d'Acquisition avec CAC Optimisé</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Cadence de production mensuelle</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Plateforme</th>
+                            <th>Format</th>
+                            <th class="number">Volume/mois</th>
+                            <th>Fréquence</th>
+                            <th>Résultat attendu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>TikTok</strong></td>
+                            <td>Vidéos courtes (30-60s)</td>
+                            <td class="number">30</td>
+                            <td>1/jour</td>
+                            <td>60-90 payés/mois</td>
+                        </tr>
+                        <tr>
+                            <td><strong>YouTube Shorts</strong></td>
+                            <td>Shorts éducatifs (60s max)</td>
+                            <td class="number">24</td>
+                            <td>6/semaine</td>
+                            <td>100 payés/mois</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Instagram</strong></td>
+                            <td>Reels + Carrousels</td>
+                            <td class="number">20</td>
+                            <td>5/semaine</td>
+                            <td>32 payés/mois</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SEO / Blog</strong></td>
+                            <td>Articles piliers</td>
+                            <td class="number">10</td>
+                            <td>2-3/semaine</td>
+                            <td>40 payés/mois</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="2"><strong>TOTAL ORGANIQUE</strong></td>
+                            <td class="number positive"><strong>84</strong></td>
+                            <td><strong>Quotidien</strong></td>
+                            <td><strong>232-262 payés</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="subsection-title">Projections d'acquisition avec CAC optimisé</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Canal</th>
+                            <th class="number">Vues/mois</th>
+                            <th class="number">CTR</th>
+                            <th class="number">Conv. payé</th>
+                            <th class="number">Payés</th>
+                            <th class="number">Coût canal</th>
+                            <th class="number">CAC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>TikTok (12.5k/vidéo)</strong></td>
+                            <td class="number">375 000</td>
+                            <td class="number">0.5%</td>
+                            <td class="number">4%</td>
+                            <td class="number positive">75</td>
+                            <td class="number">266€</td>
+                            <td class="number">3.55€</td>
+                        </tr>
+                        <tr>
+                            <td><strong>YouTube Shorts</strong></td>
+                            <td class="number">360 000</td>
+                            <td class="number">0.8%</td>
+                            <td class="number">4%</td>
+                            <td class="number positive">115</td>
+                            <td class="number">266€</td>
+                            <td class="number">2.31€</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Instagram</strong></td>
+                            <td class="number">160 000</td>
+                            <td class="number">0.5%</td>
+                            <td class="number">4%</td>
+                            <td class="number positive">32</td>
+                            <td class="number">268€</td>
+                            <td class="number">8.38€</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SEO organique</strong></td>
+                            <td class="number">-</td>
+                            <td class="number">-</td>
+                            <td class="number">3.2%</td>
+                            <td class="number positive">40</td>
+                            <td class="number">0€</td>
+                            <td class="number">0€</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Collabs macro (1/mois)</strong></td>
+                            <td class="number">300 000</td>
+                            <td class="number">1%</td>
+                            <td class="number">4%</td>
+                            <td class="number positive">120</td>
+                            <td class="number">1 000€</td>
+                            <td class="number">8.33€</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Collabs mid (4/mois)</strong></td>
+                            <td class="number">200 000</td>
+                            <td class="number">0.52%</td>
+                            <td class="number">4%</td>
+                            <td class="number positive">42</td>
+                            <td class="number">320€</td>
+                            <td class="number">7.62€</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>TOTAL</strong></td>
+                            <td class="number"><strong>1.4M</strong></td>
+                            <td class="number">0.76%</td>
+                            <td class="number">4%</td>
+                            <td class="number positive"><strong>424</strong></td>
+                            <td class="number"><strong>2 120€</strong></td>
+                            <td class="number positive"><strong>5.00€</strong></td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td colspan="5"><strong>+ Content tools (20€) réparti sur tous les canaux</strong></td>
+                            <td class="number">20€</td>
+                            <td class="number">+0.05€</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="5"><strong>CAC TOTAL PONDÉRÉ</strong></td>
+                            <td class="number"><strong>2 140€</strong></td>
+                            <td class="number positive"><strong>5.05€</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box success">
+                    <strong>CAC : 5.05€ vs LTV : 56€</strong> = Ratio LTV/CAC de 11.1x (excellent)
+                    <br><strong>Payback period</strong> : 5.05€ ÷ 3.67€ = 1.38 mois (très bon)
+                    <br><small><em>Note : Le 424/mois correspond au haut de fourchette organique (262) + collaborations (162)</em></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projections financières -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Projections Financières Corrigées</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Trois scénarios avec churn 6.5%/mois (CA brut HT)</h3>
+                
+                <div class="alert-box warning">
+                    <strong>Impact du churn 6.5%/mois</strong> : 
+                    <br>• Avec 424 nouveaux/mois → 3 709 clients fin 2026
+                    <br>• Pour atteindre 5 000 → besoin de 576 nouveaux/mois
+                    <br>• Alternative : réduire le churn à ~1-3%/mois pour améliorer les métriques
+                </div>
+
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Scénario</th>
+                            <th class="number">Nouveaux/mois</th>
+                            <th class="number">Clients fin 2026</th>
+                            <th class="number">CA 2026 HT brut</th>
+                            <th class="number">Coûts fixes</th>
+                            <th class="number">Coûts variables</th>
+                            <th class="number">EBITDA</th>
+                            <th class="number">Marge</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="scenario-2">
+                            <td><strong>Réaliste (base 424)</strong></td>
+                            <td class="number">424</td>
+                            <td class="number">3 709</td>
+                            <td class="number">117 100 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">14 042 €</td>
+                            <td class="number positive">61 538 €</td>
+                            <td class="number">53%</td>
+                        </tr>
+                        <tr class="scenario-1">
+                            <td><strong>Objectif 5000 (576/mois)</strong></td>
+                            <td class="number">576</td>
+                            <td class="number">5 004</td>
+                            <td class="number">156 500 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">18 762 €</td>
+                            <td class="number positive">96 218 €</td>
+                            <td class="number">61%</td>
+                        </tr>
+                        <tr class="scenario-3">
+                            <td><strong>Pessimiste (300/mois)</strong></td>
+                            <td class="number">300</td>
+                            <td class="number">2 653</td>
+                            <td class="number">85 000 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">10 200 €</td>
+                            <td class="number positive">33 280 €</td>
+                            <td class="number">39%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="subsection-title">P&L Prévisionnel Corrigé - Scénario réaliste (424/mois)</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Période</th>
+                            <th class="number">2025<br>(Q4 uniquement)</th>
+                            <th class="number">2026<br>(Année 1)</th>
+                            <th class="number">2027<br>(Année 2)</th>
+                            <th class="number">2028<br>(Année 3)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="highlight-row">
+                            <td><strong>Clients fin période</strong></td>
+                            <td class="number">220</td>
+                            <td class="number">3 709</td>
+                            <td class="number">5 500</td>
+                            <td class="number">5 990</td>
+                        </tr>
+                        <tr>
+                            <td>Nouveaux clients/mois</td>
+                            <td class="number">~73</td>
+                            <td class="number">424</td>
+                            <td class="number">450</td>
+                            <td class="number">329</td>
+                        </tr>
+                        <tr>
+                            <td>Churn mensuel</td>
+                            <td class="number">6.5%</td>
+                            <td class="number">6.5%</td>
+                            <td class="number">6.5%</td>
+                            <td class="number">5%</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>Chiffre d'affaires HT brut</strong></td>
+                            <td class="number">1 625 €</td>
+                            <td class="number">117 100 €</td>
+                            <td class="number">239 700 €</td>
+                            <td class="number">289 500 €</td>
+                        </tr>
+                        
+                        <tr>
+                            <td colspan="5" style="padding-top: 15px;"><strong>Charges d'exploitation</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Développement pré-launch (Jan-Août)</td>
+                            <td class="number">3 200 €</td>
+                            <td class="number">-</td>
+                            <td class="number">-</td>
+                            <td class="number">-</td>
+                        </tr>
+                        <tr>
+                            <td>Coûts fixes (3 260€ oct, puis 3 460€)</td>
+                            <td class="number">10 180 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">41 520 €</td>
+                            <td class="number">41 520 €</td>
+                        </tr>
+                        <tr>
+                            <td>Coûts variables (0.50€/abonné)</td>
+                            <td class="number">195 €</td>
+                            <td class="number">14 042 €</td>
+                            <td class="number">28 700 €</td>
+                            <td class="number">34 700 €</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td><strong>Total OPEX</strong></td>
+                            <td class="number">13 575 €</td>
+                            <td class="number">55 562 €</td>
+                            <td class="number">70 220 €</td>
+                            <td class="number">76 220 €</td>
+                        </tr>
+                        
+                        <tr class="total-row">
+                            <td><strong>EBITDA</strong></td>
+                            <td class="number negative">-11 950 €</td>
+                            <td class="number positive">61 538 €</td>
+                            <td class="number positive">169 480 €</td>
+                            <td class="number positive">213 280 €</td>
+                        </tr>
+                        
+                        <tr>
+                            <td>Marge EBITDA</td>
+                            <td class="number">-</td>
+                            <td class="number">53%</td>
+                            <td class="number positive">71%</td>
+                            <td class="number positive">74%</td>
+                        </tr>
+                        
+                        <tr class="highlight-row">
+                            <td><strong>Trésorerie cumulée</strong></td>
+                            <td class="number negative">-11 950 €</td>
+                            <td class="number positive">49 588 €</td>
+                            <td class="number positive">219 068 €</td>
+                            <td class="number positive">432 348 €</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box info">
+                    <strong>Points clés du modèle corrigé</strong> :
+                    <br>• CA présenté en <strong>brut HT</strong> (4.17€/client), méthode EOM (fin de mois)
+                    <br>• Break-even clients (943) atteint <strong>février 2026</strong>
+                    <br>• Break-even trésorerie cumulée atteint <strong>juin 2026</strong>
+                    <br>• Support client activé à partir de novembre 2025 (50+ clients)
+                    <br>• Marge EBITDA 2026 : 53% (excellent pour un SaaS en croissance)
+                </div>
+            </div>
+        </div>
+
+        <!-- Analyse de sensibilité -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Analyse de Sensibilité & KPIs</h2>
+            
+            <div class="subsection">
+                <h3 class="subsection-title">Impact du churn sur les métriques 2026 (424 nouveaux/mois constants)</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Churn mensuel</th>
+                            <th class="number">Clients fin 2026</th>
+                            <th class="number">CA HT brut</th>
+                            <th class="number">EBITDA</th>
+                            <th class="number">Marge EBITDA</th>
+                            <th>Impact vs base</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>3% (optimisé)</strong></td>
+                            <td class="number positive">4 480</td>
+                            <td class="number">132 900 €</td>
+                            <td class="number positive">75 440 €</td>
+                            <td class="number">57%</td>
+                            <td>+23% EBITDA</td>
+                        </tr>
+                        <tr>
+                            <td><strong>5% (amélioré)</strong></td>
+                            <td class="number">4 017</td>
+                            <td class="number">125 350 €</td>
+                            <td class="number positive">67 245 €</td>
+                            <td class="number">54%</td>
+                            <td>+9% EBITDA</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>6.5% (base)</strong></td>
+                            <td class="number">3 709</td>
+                            <td class="number">117 100 €</td>
+                            <td class="number positive">61 538 €</td>
+                            <td class="number">53%</td>
+                            <td>Référence</td>
+                        </tr>
+                        <tr>
+                            <td><strong>8% (élevé)</strong></td>
+                            <td class="number">3 432</td>
+                            <td class="number">109 340 €</td>
+                            <td class="number positive">52 104 €</td>
+                            <td class="number">48%</td>
+                            <td>-15% EBITDA</td>
+                        </tr>
+                        <tr>
+                            <td><strong>10% (critique)</strong></td>
+                            <td class="number negative">3 055</td>
+                            <td class="number">98 610 €</td>
+                            <td class="number positive">39 822 €</td>
+                            <td class="number">40%</td>
+                            <td>-35% EBITDA</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="small-note">Note : Cette sensibilité maintient l'acquisition à 424/mois constants. Pour 5 124 clients avec 3% de churn, il faudrait ~490 nouveaux/mois.</p>
+
+                <h3 class="subsection-title">Métriques clés du modèle</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Métrique</th>
+                            <th class="number">Valeur</th>
+                            <th>Commentaire</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Prix mensuel TTC</td>
+                            <td class="number positive">5.00 €</td>
+                            <td>Positionnement premium accessible</td>
+                        </tr>
+                        <tr>
+                            <td>Prix mensuel HT</td>
+                            <td class="number positive">4.17 €</td>
+                            <td>TVA 20% incluse</td>
+                        </tr>
+                        <tr>
+                            <td>ARPU net HT (après variables)</td>
+                            <td class="number positive">3.67 €</td>
+                            <td>Marge directe par client</td>
+                        </tr>
+                        <tr>
+                            <td>Coûts fixes mensuels</td>
+                            <td class="number">3 460 €</td>
+                            <td>3 260€ oct, puis 3 460€</td>
+                        </tr>
+                        <tr>
+                            <td>Break-even clients</td>
+                            <td class="number">943</td>
+                            <td>Atteint février 2026</td>
+                        </tr>
+                        <tr>
+                            <td>Break-even trésorerie</td>
+                            <td class="number">Juin 2026</td>
+                            <td>Cumul positif après 8-9 mois</td>
+                        </tr>
+                        <tr>
+                            <td>Churn mensuel actuel</td>
+                            <td class="number negative">6.5%</td>
+                            <td>À optimiser vers 3%</td>
+                        </tr>
+                        <tr>
+                            <td>LTV (Lifetime Value)</td>
+                            <td class="number positive">56 €</td>
+                            <td>15.4 mois de durée de vie moyenne</td>
+                        </tr>
+                        <tr>
+                            <td>LTV à 3% de churn</td>
+                            <td class="number positive">122 €</td>
+                            <td>33 mois de durée de vie moyenne</td>
+                        </tr>
+                        <tr>
+                            <td>CAC Organique</td>
+                            <td class="number">5.05 €</td>
+                            <td>Tout inclus (montage + collabs)</td>
+                        </tr>
+                        <tr>
+                            <td>Ratio LTV/CAC</td>
+                            <td class="number positive">11.1x</td>
+                            <td>24.2x si churn à 3%</td>
+                        </tr>
+                        <tr>
+                            <td>Payback period</td>
+                            <td class="number positive">1.38 mois</td>
+                            <td>Récupération rapide du CAC</td>
+                        </tr>
+                        <tr>
+                            <td>Clients fin 2026 (base)</td>
+                            <td class="number">3 709</td>
+                            <td>Avec 424 nouveaux/mois</td>
+                        </tr>
+                        <tr>
+                            <td>CA 2026 HT brut</td>
+                            <td class="number positive">117 100 €</td>
+                            <td>Scénario réaliste</td>
+                        </tr>
+                        <tr>
+                            <td>EBITDA 2026</td>
+                            <td class="number positive">61 538 €</td>
+                            <td>Marge 53%</td>
+                        </tr>
+                        <tr>
+                            <td>ROI année 1</td>
+                            <td class="number positive">193%</td>
+                            <td>61.5K€ / 32K€ investis</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 class="subsection-title">Actions prioritaires</h3>
+                <div class="triggers-grid">
+                    <div class="trigger-card">
+                        <div class="trigger-metric">🎯 Réduire le churn</div>
+                        <div class="trigger-action">• Onboarding gamifié<br>• Engagement hebdo obligatoire<br>• Objectif : 3%/mois<br>• Impact : +23% EBITDA</div>
+                    </div>
+                    <div class="trigger-card">
+                        <div class="trigger-metric">📈 Augmenter l'acquisition</div>
+                        <div class="trigger-action">• Passer à 576/mois<br>• Plus de collabs<br>• Tests ads payants<br>• Pour atteindre 5K clients</div>
+                    </div>
+                    <div class="trigger-card">
+                        <div class="trigger-metric">💰 Optimiser les coûts</div>
+                        <div class="trigger-action">• Négocier APIs<br>• Automatiser support<br>• Cap collabs strict<br>• Réduire Stripe fees</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scénarios stratégiques -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Scénarios Stratégiques</h2>
+            
+            <div class="option-cards">
+                <div class="option-card">
+                    <span class="option-number">A</span>
+                    <div class="option-title">Bootstrap Réaliste</div>
+                    <div class="option-description">
+                        Croissance organique maîtrisée avec ressources personnelles
+                    </div>
+                    <div class="option-metrics">
+                        <div><span>Investissement</span><strong>14K€ perso</strong></div>
+                        <div><span>Coûts mensuels</span><strong>3 460€</strong></div>
+                        <div><span>Nouveaux/mois</span><strong>424</strong></div>
+                        <div><span>Clients fin 2026</span><strong>3 709</strong></div>
+                        <div><span>EBITDA 2026</span><strong>61.5K€</strong></div>
+                        <div><span>Break-even tréso</span><strong>Juin 2026</strong></div>
+                    </div>
+                </div>
+
+                <div class="option-card">
+                    <span class="option-number">B</span>
+                    <div class="option-title">Growth Agressif</div>
+                    <div class="option-description">
+                        Acquisition forcée pour atteindre les 5000 clients
+                    </div>
+                    <div class="option-metrics">
+                        <div><span>Financement</span><strong>25K€ non dilutif</strong></div>
+                        <div><span>Nouveaux/mois</span><strong>576</strong></div>
+                        <div><span>Budget ads</span><strong>+1000€/mois</strong></div>
+                        <div><span>Clients fin 2026</span><strong>5 004</strong></div>
+                        <div><span>EBITDA 2026</span><strong>96.2K€</strong></div>
+                        <div><span>Risque</span><strong>Élevé</strong></div>
+                    </div>
+                </div>
+
+                <div class="option-card">
+                    <span class="option-number">C</span>
+                    <div class="option-title">Focus Rétention</div>
+                    <div class="option-description">
+                        Priorité absolue : réduire le churn à 3%/mois
+                    </div>
+                    <div class="option-metrics">
+                        <div><span>Financement</span><strong>20K€</strong></div>
+                        <div><span>Invest produit</span><strong>+500€/mois</strong></div>
+                        <div><span>Churn cible</span><strong>3%/mois</strong></div>
+                        <div><span>Clients fin 2026</span><strong>4 480</strong></div>
+                        <div><span>EBITDA 2026</span><strong>75.4K€</strong></div>
+                        <div><span>Plus durable</span><strong>✓</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box success">
+                <strong>Recommandation</strong> : Scénario C (Focus Rétention) est le plus viable long terme.
+                <br>Réduire le churn de 6.5% à 3% augmente l'EBITDA de 23% avec la même acquisition.
+                <br>LTV passe de 56€ à 122€, ratio LTV/CAC passe de 11x à 24x.
+            </div>
+        </div>
+
+        <!-- Conclusion -->
+        <div class="content-page page-break">
+            <h2 class="section-header">Synthèse & Recommandations</h2>
+            
+            <div class="subsection">
+                <div class="alert-box success">
+                    <h3 style="margin-bottom: 20px; color: #06ffa5;">Vision & Opportunité</h3>
+                    
+                    <strong>Forces du modèle (chiffres finaux) :</strong>
+                    <br>• LTV/CAC ratio : 11.1x (excellent)
+                    <br>• Payback : 1.38 mois (très rapide)
+                    <br>• Rentabilité : EBITDA 61.5K€ dès 2026 (53% marge)
+                    <br>• ROI année 1 : 193% (61.5K€ / 32K€ investis)
+                    <br>• TAM : ~28 M d'épargnants en France
+                    <br>• Modèle scalable sans dilution
+                    <br><br>
+                    
+                    <strong>Objectifs validés et cohérents :</strong>
+                    <br>• 3 709 clients fin 2026 (base)
+                    <br>• 5 004 clients fin 2026 (ambitieux)
+                    <br>• CA 2026 : 117-156.5K€ HT brut
+                    <br>• EBITDA 2026 : 61.5-96.2K€
+                    <br>• Marge EBITDA : 53-61%
+                </div>
+
+                <h3 class="subsection-title">Plan d'action prioritaire</h3>
+                <div class="highlights">
+                    <div class="highlight-card">
+                        <div class="highlight-icon">1️⃣</div>
+                        <div class="highlight-title">Court terme (Q1-Q3 2025)</div>
+                        <div class="highlight-text">• Sécuriser 20-25K€<br>• MVP sans fioritures<br>• Beta 50 personnes<br>• Mesurer le churn réel</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">2️⃣</div>
+                        <div class="highlight-title">Lancement (Q4 2025)</div>
+                        <div class="highlight-text">• Viser 200 clients<br>• Tester tous canaux<br>• Mesurer CAC réel<br>• Support à 50+</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">3️⃣</div>
+                        <div class="highlight-title">Scale (2026)</div>
+                        <div class="highlight-text">• Focus rétention<br>• Churn < 4%<br>• 400+ nouveaux/mois<br>• Break-even juin</div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">4️⃣</div>
+                        <div class="highlight-title">Long terme</div>
+                        <div class="highlight-text">• 6K clients (2028)<br>• EBITDA 213K€<br>• Prix premium tier<br>• International</div>
+                    </div>
+                </div>
+
+                <h3 class="subsection-title">Financement recommandé</h3>
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Poste</th>
+                            <th class="number">Montant</th>
+                            <th>Usage</th>
+                            <th>Criticité</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Développement MVP</td>
+                            <td class="number">3 200 €</td>
+                            <td>8 mois à 400€/mois</td>
+                            <td>Indispensable</td>
+                        </tr>
+                        <tr>
+                            <td>Buffer coûts fixes (6 mois)</td>
+                            <td class="number">20 760 €</td>
+                            <td>3 460€ × 6 mois</td>
+                            <td>Critique</td>
+                        </tr>
+                        <tr>
+                            <td>Tests marketing</td>
+                            <td class="number">3 000 €</td>
+                            <td>Ads, collabs, A/B tests</td>
+                            <td>Important</td>
+                        </tr>
+                        <tr>
+                            <td>Juridique/Compta setup</td>
+                            <td class="number">2 000 €</td>
+                            <td>Création société, CGV, RGPD</td>
+                            <td>Obligatoire</td>
+                        </tr>
+                        <tr>
+                            <td>Imprévus (10%)</td>
+                            <td class="number">2 896 €</td>
+                            <td>Marge de sécurité</td>
+                            <td>Prudent</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>TOTAL RECOMMANDÉ</strong></td>
+                            <td class="number positive"><strong>31 856 €</strong></td>
+                            <td><strong>100% non dilutif</strong></td>
+                            <td><strong>-</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert-box info">
+                    <strong>Check-list des hypothèses clés</strong> : 
+                    <br>• Churn constant sur l'année (6.5% puis 5%)
+                    <br>• Flux de nouveaux réguliers chaque mois
+                    <br>• Pas d'upsell prévu dans le modèle de base
+                    <br>• Frais Stripe moyens à 0.35€ par transaction
+                    <br>• Méthode CA : fin de mois (EOM), nouveaux = 1 mois complet
+                    <br>• Support client activé à 50+ clients (200€/mois)
+                </div>
+
+                <h3 class="subsection-title">Contact</h3>
+                <div style="text-align: center; margin-top: 40px;">
+                    <p style="font-size: 18px; color: #06ffa5;">
+                        NOVIS - L'éducation financière nouvelle génération
+                    </p>
+                    <p style="margin-top: 20px;">
+                        <strong>Email</strong> : mynovis@novisfr.com<br>
+                        <strong>Téléphone</strong> : 06 77 13 89 30<br>
+                        <strong>Statut</strong> : En recherche de financement non dilutif<br>
+                        <strong>Version BP</strong> : 2.1 (audit final) - THE PROJECT × Revolut
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <strong>NOVIS Business Plan 2025-2028 - V2.1 (Audit final) - THE PROJECT × Revolut</strong><br>
+            Break-even clients : 943 (fév 2026) · Break-even tréso : Juin 2026<br>
+            CA 2026 : 117K€ brut (méthode EOM) · EBITDA : 61.5K€ · Marge : 53%<br>
+            CAC : 5.05€ · LTV/CAC : 11.1x (24x si churn 3%) · Besoin : 32K€ non dilutif<br>
+            Contact : mynovis@novisfr.com · 06 77 13 89 30
+        </div>
+    </div>
+
+    <script>
+        // Animation au scroll (uniquement pour l'écran)
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // N'appliquer les animations qu'en mode écran
+        if (!window.matchMedia('print').matches) {
+            document.querySelectorAll('.metric-box, .highlight-card, .trigger-card, .option-card').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'all 0.6s ease';
+                observer.observe(el);
+            });
+        }
+    </script>
+</body>
+</html>
