@@ -791,6 +791,20 @@
             font-weight: bold;
         }
 
+        .methodology-box {
+            background: rgba(23, 162, 184, 0.05);
+            border: 1px solid rgba(23, 162, 184, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #a0a0a0;
+        }
+
+        .methodology-box strong {
+            color: #17a2b8;
+        }
+
         @media screen and (max-width: 768px) {
             .key-metrics {
                 grid-template-columns: 1fr;
@@ -828,7 +842,7 @@
             <h1 class="cover-title">Business Plan 2025-2028</h1>
             <p class="cover-subtitle">
                 NOVIS - Plateforme d'éducation financière et d'investissement<br>
-                <small>Document confidentiel - Version corrigée</small>
+                <small>Document confidentiel - Version 2.1 (audit final)</small>
             </p>
             
             <div class="cover-info">
@@ -865,6 +879,10 @@
                 <br>• <strong>Objectif ambitieux</strong> : 576 nouveaux/mois pour atteindre 5 000 fin 2026
             </div>
 
+            <div class="methodology-box">
+                <strong>Note méthodologique :</strong> CA calculé selon méthode "fin de mois" (EOM) : chaque nouveau client compte pour un mois complet dans le mois d'arrivée. Les coûts variables suivent la même base de calcul pour cohérence.
+            </div>
+
             <div class="key-metrics">
                 <div class="metric-box">
                     <div class="metric-label">Lancement Q4 2025</div>
@@ -874,12 +892,12 @@
                 <div class="metric-box">
                     <div class="metric-label">CA 2026 - Base (Brut HT)</div>
                     <div class="metric-value">117.1K€</div>
-                    <div class="metric-detail">3 709 clients fin 2026<br>424 nouveaux/mois<br>EBITDA: 61.6K€</div>
+                    <div class="metric-detail">3 709 clients fin 2026<br>424 nouveaux/mois<br>EBITDA: 61.5K€</div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">CA 2026 - Ambitieux (Brut HT)</div>
-                    <div class="metric-value">155.2K€</div>
-                    <div class="metric-detail">5 004 clients fin 2026<br>576 nouveaux/mois<br>EBITDA: 97.3K€</div>
+                    <div class="metric-value">156.5K€</div>
+                    <div class="metric-detail">5 004 clients fin 2026<br>576 nouveaux/mois<br>EBITDA: 96.2K€</div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">LTV/CAC</div>
@@ -892,7 +910,7 @@
                 <div class="highlight-card">
                     <div class="highlight-icon">💰</div>
                     <div class="highlight-title">Structure de coûts</div>
-                    <div class="highlight-text">3 460€/mois total<br>Break-even: 943 clients<br>Atteint février 2026</div>
+                    <div class="highlight-text">3 460€/mois total<br>3 260€ en oct (40 clients)<br>Break-even: 943 clients</div>
                 </div>
                 <div class="highlight-card">
                     <div class="highlight-icon">📈</div>
@@ -907,7 +925,7 @@
                 <div class="highlight-card">
                     <div class="highlight-icon">📊</div>
                     <div class="highlight-title">Rentabilité 2026</div>
-                    <div class="highlight-text">Base: 61.6K€<br>Ambitieux: 97.3K€<br>Marge: 53-63%</div>
+                    <div class="highlight-text">Base: 61.5K€<br>Ambitieux: 96.2K€<br>Marge: 53-61%</div>
                 </div>
             </div>
         </div>
@@ -939,26 +957,27 @@
                         <tr class="highlight-row">
                             <td><strong>Octobre 2025</strong></td>
                             <td><strong>🚀 LANCEMENT</strong></td>
-                            <td>• Launch public<br>• 40 premiers clients<br>• Support activé</td>
-                            <td class="number">3 460 €</td>
-                            <td class="number">3 460 €</td>
+                            <td>• Launch public<br>• 40 premiers clients<br>• Support non activé</td>
+                            <td class="number">3 260 €*</td>
+                            <td class="number">3 260 €</td>
                         </tr>
                         <tr>
                             <td><strong>Nov-Déc 2025</strong></td>
                             <td>Scale initial</td>
-                            <td>• Acquisition clients<br>• Optimisations<br>• 220 clients fin déc</td>
+                            <td>• Acquisition clients<br>• Support activé (50+)<br>• 220 clients fin déc</td>
                             <td class="number">3 460 €/mois</td>
                             <td class="number">6 920 €</td>
                         </tr>
                         <tr class="total-row">
                             <td colspan="3"><strong>TOTAL 2025</strong></td>
                             <td class="number"><strong>-</strong></td>
-                            <td class="number positive"><strong>13 580 €</strong></td>
+                            <td class="number positive"><strong>13 380 €</strong></td>
                         </tr>
                     </tbody>
                 </table>
+                <p class="small-note">* Octobre : 3 260€ car support client (200€) non activé (< 50 clients)</p>
 
-                <h3 class="subsection-title">Structure des coûts mensuels (3 460€/mois post-lancement)</h3>
+                <h3 class="subsection-title">Structure des coûts mensuels (3 460€/mois à partir de novembre 2025)</h3>
                 
                 <table class="professional-table">
                     <thead>
@@ -1080,7 +1099,7 @@
                         <tr class="total-row">
                             <td colspan="2"><strong>TOTAL MENSUEL</strong></td>
                             <td class="number positive"><strong>3 460 €</strong></td>
-                            <td><strong>Post-lancement</strong></td>
+                            <td><strong>Post nov. 2025</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -1288,20 +1307,20 @@
                             <td><strong>Objectif 5000 (576/mois)</strong></td>
                             <td class="number">576</td>
                             <td class="number">5 004</td>
-                            <td class="number">155 200 €</td>
+                            <td class="number">156 500 €</td>
                             <td class="number">41 520 €</td>
-                            <td class="number">16 400 €</td>
-                            <td class="number positive">97 280 €</td>
-                            <td class="number">63%</td>
+                            <td class="number">18 762 €</td>
+                            <td class="number positive">96 218 €</td>
+                            <td class="number">61%</td>
                         </tr>
                         <tr class="scenario-3">
                             <td><strong>Pessimiste (300/mois)</strong></td>
                             <td class="number">300</td>
-                            <td class="number">2 627</td>
-                            <td class="number">83 850 €</td>
+                            <td class="number">2 653</td>
+                            <td class="number">85 000 €</td>
                             <td class="number">41 520 €</td>
-                            <td class="number">10 031 €</td>
-                            <td class="number positive">32 299 €</td>
+                            <td class="number">10 200 €</td>
+                            <td class="number positive">33 280 €</td>
                             <td class="number">39%</td>
                         </tr>
                     </tbody>
@@ -1359,8 +1378,8 @@
                             <td class="number">-</td>
                         </tr>
                         <tr>
-                            <td>Coûts fixes (3 460€/mois dès Oct)</td>
-                            <td class="number">10 380 €</td>
+                            <td>Coûts fixes (3 260€ oct, puis 3 460€)</td>
+                            <td class="number">10 180 €</td>
                             <td class="number">41 520 €</td>
                             <td class="number">41 520 €</td>
                             <td class="number">41 520 €</td>
@@ -1375,7 +1394,7 @@
                         
                         <tr class="highlight-row">
                             <td><strong>Total OPEX</strong></td>
-                            <td class="number">13 775 €</td>
+                            <td class="number">13 575 €</td>
                             <td class="number">55 562 €</td>
                             <td class="number">70 220 €</td>
                             <td class="number">76 220 €</td>
@@ -1383,7 +1402,7 @@
                         
                         <tr class="total-row">
                             <td><strong>EBITDA</strong></td>
-                            <td class="number negative">-12 150 €</td>
+                            <td class="number negative">-11 950 €</td>
                             <td class="number positive">61 538 €</td>
                             <td class="number positive">169 480 €</td>
                             <td class="number positive">213 280 €</td>
@@ -1399,20 +1418,20 @@
                         
                         <tr class="highlight-row">
                             <td><strong>Trésorerie cumulée</strong></td>
-                            <td class="number negative">-12 150 €</td>
-                            <td class="number positive">49 388 €</td>
-                            <td class="number positive">218 868 €</td>
-                            <td class="number positive">432 148 €</td>
+                            <td class="number negative">-11 950 €</td>
+                            <td class="number positive">49 588 €</td>
+                            <td class="number positive">219 068 €</td>
+                            <td class="number positive">432 348 €</td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div class="alert-box info">
                     <strong>Points clés du modèle corrigé</strong> :
-                    <br>• CA présenté en <strong>brut HT</strong> (4.17€/client), variables comptés en charges
+                    <br>• CA présenté en <strong>brut HT</strong> (4.17€/client), méthode EOM (fin de mois)
                     <br>• Break-even clients (943) atteint <strong>février 2026</strong>
                     <br>• Break-even trésorerie cumulée atteint <strong>juin 2026</strong>
-                    <br>• EBITDA réel ~30% supérieur aux projections initiales
+                    <br>• Support client activé à partir de novembre 2025 (50+ clients)
                     <br>• Marge EBITDA 2026 : 53% (excellent pour un SaaS en croissance)
                 </div>
             </div>
@@ -1423,7 +1442,7 @@
             <h2 class="section-header">Analyse de Sensibilité & KPIs</h2>
             
             <div class="subsection">
-                <h3 class="subsection-title">Impact du churn sur les métriques 2026</h3>
+                <h3 class="subsection-title">Impact du churn sur les métriques 2026 (424 nouveaux/mois constants)</h3>
                 <table class="professional-table">
                     <thead>
                         <tr>
@@ -1438,11 +1457,11 @@
                     <tbody>
                         <tr>
                             <td><strong>3% (optimisé)</strong></td>
-                            <td class="number positive">5 124</td>
-                            <td class="number">158 470 €</td>
-                            <td class="number positive">101 305 €</td>
-                            <td class="number">64%</td>
-                            <td>+65% EBITDA</td>
+                            <td class="number positive">4 480</td>
+                            <td class="number">132 900 €</td>
+                            <td class="number positive">75 440 €</td>
+                            <td class="number">57%</td>
+                            <td>+23% EBITDA</td>
                         </tr>
                         <tr>
                             <td><strong>5% (amélioré)</strong></td>
@@ -1478,6 +1497,7 @@
                         </tr>
                     </tbody>
                 </table>
+                <p class="small-note">Note : Cette sensibilité maintient l'acquisition à 424/mois constants. Pour 5 124 clients avec 3% de churn, il faudrait ~490 nouveaux/mois.</p>
 
                 <h3 class="subsection-title">Métriques clés du modèle</h3>
                 <table class="professional-table">
@@ -1507,7 +1527,7 @@
                         <tr>
                             <td>Coûts fixes mensuels</td>
                             <td class="number">3 460 €</td>
-                            <td>Inclut collaborations marketing</td>
+                            <td>3 260€ oct, puis 3 460€</td>
                         </tr>
                         <tr>
                             <td>Break-even clients</td>
@@ -1530,6 +1550,11 @@
                             <td>15.4 mois de durée de vie moyenne</td>
                         </tr>
                         <tr>
+                            <td>LTV à 3% de churn</td>
+                            <td class="number positive">122 €</td>
+                            <td>33 mois de durée de vie moyenne</td>
+                        </tr>
+                        <tr>
                             <td>CAC Organique</td>
                             <td class="number">5.05 €</td>
                             <td>Tout inclus (montage + collabs)</td>
@@ -1537,7 +1562,7 @@
                         <tr>
                             <td>Ratio LTV/CAC</td>
                             <td class="number positive">11.1x</td>
-                            <td>Excellent (>3x minimum requis)</td>
+                            <td>24.2x si churn à 3%</td>
                         </tr>
                         <tr>
                             <td>Payback period</td>
@@ -1571,7 +1596,7 @@
                 <div class="triggers-grid">
                     <div class="trigger-card">
                         <div class="trigger-metric">🎯 Réduire le churn</div>
-                        <div class="trigger-action">• Onboarding gamifié<br>• Engagement hebdo obligatoire<br>• Objectif : 3%/mois<br>• Impact : +65% EBITDA</div>
+                        <div class="trigger-action">• Onboarding gamifié<br>• Engagement hebdo obligatoire<br>• Objectif : 3%/mois<br>• Impact : +23% EBITDA</div>
                     </div>
                     <div class="trigger-card">
                         <div class="trigger-metric">📈 Augmenter l'acquisition</div>
@@ -1617,7 +1642,7 @@
                         <div><span>Nouveaux/mois</span><strong>576</strong></div>
                         <div><span>Budget ads</span><strong>+1000€/mois</strong></div>
                         <div><span>Clients fin 2026</span><strong>5 004</strong></div>
-                        <div><span>EBITDA 2026</span><strong>97.3K€</strong></div>
+                        <div><span>EBITDA 2026</span><strong>96.2K€</strong></div>
                         <div><span>Risque</span><strong>Élevé</strong></div>
                     </div>
                 </div>
@@ -1632,8 +1657,8 @@
                         <div><span>Financement</span><strong>20K€</strong></div>
                         <div><span>Invest produit</span><strong>+500€/mois</strong></div>
                         <div><span>Churn cible</span><strong>3%/mois</strong></div>
-                        <div><span>Clients fin 2026</span><strong>5 124</strong></div>
-                        <div><span>EBITDA 2026</span><strong>101K€</strong></div>
+                        <div><span>Clients fin 2026</span><strong>4 480</strong></div>
+                        <div><span>EBITDA 2026</span><strong>75.4K€</strong></div>
                         <div><span>Plus durable</span><strong>✓</strong></div>
                     </div>
                 </div>
@@ -1641,8 +1666,8 @@
 
             <div class="alert-box success">
                 <strong>Recommandation</strong> : Scénario C (Focus Rétention) est le plus viable long terme.
-                <br>Réduire le churn de 6.5% à 3% augmente l'EBITDA de 65% et améliore significativement la valeur de l'entreprise.
-                <br>LTV passe de 56€ à 117€, ratio LTV/CAC passe de 11x à 23x.
+                <br>Réduire le churn de 6.5% à 3% augmente l'EBITDA de 23% avec la même acquisition.
+                <br>LTV passe de 56€ à 122€, ratio LTV/CAC passe de 11x à 24x.
             </div>
         </div>
 
@@ -1654,7 +1679,7 @@
                 <div class="alert-box success">
                     <h3 style="margin-bottom: 20px; color: #06ffa5;">Vision & Opportunité</h3>
                     
-                    <strong>Forces du modèle (chiffres corrigés) :</strong>
+                    <strong>Forces du modèle (chiffres finaux) :</strong>
                     <br>• LTV/CAC ratio : 11.1x (excellent)
                     <br>• Payback : 1.38 mois (très rapide)
                     <br>• Rentabilité : EBITDA 61.5K€ dès 2026 (53% marge)
@@ -1663,25 +1688,25 @@
                     <br>• Modèle scalable sans dilution
                     <br><br>
                     
-                    <strong>Objectifs corrigés et réalisables :</strong>
+                    <strong>Objectifs validés et cohérents :</strong>
                     <br>• 3 709 clients fin 2026 (base)
                     <br>• 5 004 clients fin 2026 (ambitieux)
-                    <br>• CA 2026 : 117-155K€ HT brut
-                    <br>• EBITDA 2026 : 61.5-97.3K€
-                    <br>• Marge EBITDA : 53-63%
+                    <br>• CA 2026 : 117-156.5K€ HT brut
+                    <br>• EBITDA 2026 : 61.5-96.2K€
+                    <br>• Marge EBITDA : 53-61%
                 </div>
 
                 <h3 class="subsection-title">Plan d'action prioritaire</h3>
                 <div class="highlights">
                     <div class="highlight-card">
                         <div class="highlight-icon">1️⃣</div>
-                        <div class="highlight-title">Court terme (Q4 2025)</div>
+                        <div class="highlight-title">Court terme (Q1-Q3 2025)</div>
                         <div class="highlight-text">• Sécuriser 20-25K€<br>• MVP sans fioritures<br>• Beta 50 personnes<br>• Mesurer le churn réel</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-icon">2️⃣</div>
                         <div class="highlight-title">Lancement (Q4 2025)</div>
-                        <div class="highlight-text">• Viser 200 clients<br>• Tester tous canaux<br>• Mesurer CAC réel<br>• Itérer rapidement</div>
+                        <div class="highlight-text">• Viser 200 clients<br>• Tester tous canaux<br>• Mesurer CAC réel<br>• Support à 50+</div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-icon">3️⃣</div>
@@ -1691,7 +1716,7 @@
                     <div class="highlight-card">
                         <div class="highlight-icon">4️⃣</div>
                         <div class="highlight-title">Long terme</div>
-                        <div class="highlight-text">• 10K clients (2028)<br>• EBITDA 213K€<br>• Prix premium tier<br>• International</div>
+                        <div class="highlight-text">• 6K clients (2028)<br>• EBITDA 213K€<br>• Prix premium tier<br>• International</div>
                     </div>
                 </div>
 
@@ -1713,9 +1738,9 @@
                             <td>Indispensable</td>
                         </tr>
                         <tr>
-                            <td>Buffer trésorerie (6 mois)</td>
+                            <td>Buffer coûts fixes (6 mois)</td>
                             <td class="number">20 760 €</td>
-                            <td>Couvrir les pertes initiales</td>
+                            <td>3 460€ × 6 mois</td>
                             <td>Critique</td>
                         </tr>
                         <tr>
@@ -1746,12 +1771,13 @@
                 </table>
 
                 <div class="alert-box info">
-                    <strong>Message aux investisseurs</strong> : 
-                    <br>Business plan solide avec métriques attractives et EBITDA réel 30% supérieur aux projections conservatrices.
-                    <br>Le modèle génère du cash rapidement (rentable dès juin 2026).
-                    <br>Le risque principal (churn) est adressable et son optimisation améliore drastiquement les métriques.
-                    <br>P&L 2027 : 240K€ HT brut, EBITDA 169K€ (71% marge).
-                    <br>P&L 2028 : 290K€ HT brut, EBITDA 213K€ (74% marge).
+                    <strong>Check-list des hypothèses clés</strong> : 
+                    <br>• Churn constant sur l'année (6.5% puis 5%)
+                    <br>• Flux de nouveaux réguliers chaque mois
+                    <br>• Pas d'upsell prévu dans le modèle de base
+                    <br>• Frais Stripe moyens à 0.35€ par transaction
+                    <br>• Méthode CA : fin de mois (EOM), nouveaux = 1 mois complet
+                    <br>• Support client activé à 50+ clients (200€/mois)
                 </div>
 
                 <h3 class="subsection-title">Contact</h3>
@@ -1763,7 +1789,7 @@
                         <strong>Email</strong> : mynovis@novisfr.com<br>
                         <strong>Téléphone</strong> : 06 77 13 89 30<br>
                         <strong>Statut</strong> : En recherche de financement non dilutif<br>
-                        <strong>Version BP</strong> : 2.0 (corrigée)
+                        <strong>Version BP</strong> : 2.1 (audit final)
                     </p>
                 </div>
             </div>
@@ -1771,10 +1797,10 @@
 
         <!-- Footer -->
         <div class="footer">
-            <strong>NOVIS Business Plan 2025-2028 - V2.0 Corrigée</strong><br>
+            <strong>NOVIS Business Plan 2025-2028 - V2.1 (Audit final)</strong><br>
             Break-even clients : 943 (fév 2026) · Break-even tréso : Juin 2026<br>
-            CA 2026 : 117K€ brut · EBITDA : 61.5K€ · Marge : 53%<br>
-            CAC : 5.05€ · LTV/CAC : 11.1x · Besoin financement : 25-32K€ non dilutif<br>
+            CA 2026 : 117K€ brut (méthode EOM) · EBITDA : 61.5K€ · Marge : 53%<br>
+            CAC : 5.05€ · LTV/CAC : 11.1x (24x si churn 3%) · Besoin : 32K€ non dilutif<br>
             Contact : mynovis@novisfr.com · 06 77 13 89 30
         </div>
     </div>
