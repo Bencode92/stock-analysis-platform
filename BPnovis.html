@@ -829,6 +829,170 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* === PRINT FIX OPTIMISÉ — Corrections pour supprimer les espaces vides === */
+        @media print {
+            /* 1) Dimensionner précisément pour A4 */
+            @page { 
+                size: A4; 
+                margin: 15mm; 
+            }
+            
+            html, body { 
+                width: 210mm; 
+                height: 100%;
+            }
+            
+            body { 
+                margin: 0 !important; 
+                padding: 0 !important;
+                background: #000 !important; 
+            }
+
+            /* 2) Doc pleine largeur de la zone imprimable */
+            .document {
+                width: calc(210mm - 30mm); /* 2 * 15mm de marges @page */
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                background: #0f0f0f !important;
+            }
+
+            /* 3) Supprimer TOUS les effets d'écran */
+            * {
+                animation: none !important;
+                transition: none !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* 4) Ne PAS utiliser 100vh en print (sinon page trop haute) */
+            .cover-page {
+                min-height: auto !important;
+                height: auto !important;
+                padding: 18mm 12mm !important;  /* remplace 80/60px par des mm */
+                background: #101010 !important;
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+            
+            .cover-page::before { 
+                display: none !important; 
+            }
+
+            /* 5) Convertir les paddings en mm pour les autres pages */
+            .executive-summary,
+            .content-page {
+                padding: 12mm !important; /* équiv. à ~45-50px */
+                background: #0f0f0f !important;
+                color: #e0e0e0 !important;
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+            
+            /* Dernière page sans saut supplémentaire */
+            .content-page:last-of-type,
+            .footer {
+                page-break-after: auto !important;
+                break-after: auto !important;
+            }
+
+            /* 6) Neutraliser l'ancienne classe page-break qui créait du vide */
+            .page-break {
+                page-break-before: auto !important;
+                break-before: auto !important;
+                /* Au lieu de forcer un saut AVANT, on laisse le flux naturel */
+            }
+
+            /* 7) Éviter que certains blocs se coupent mal */
+            .professional-table,
+            .key-metrics,
+            .highlights,
+            .alert-box,
+            .triggers-grid,
+            .option-cards,
+            .subsection {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            /* 8) Optimiser la taille des fonts pour l'impression */
+            body { 
+                font-size: 10pt; 
+            }
+            
+            h1 { 
+                font-size: 24pt !important; 
+            }
+            
+            h2, .section-header { 
+                font-size: 18pt !important; 
+            }
+            
+            h3, .subsection-title { 
+                font-size: 14pt !important; 
+            }
+            
+            .small-note { 
+                font-size: 8pt !important; 
+            }
+            
+            .professional-table {
+                font-size: 9pt !important;
+                width: 100%;
+                table-layout: fixed;
+            }
+
+            /* 9) S'assurer que les métriques restent visibles et bien formatées */
+            .metric-box {
+                min-height: auto !important;
+                padding: 8mm !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            /* 10) Optimiser les alertes pour l'impression */
+            .alert-box {
+                border-width: 2px !important;
+                padding: 6mm !important;
+                break-inside: avoid !important;
+            }
+
+            /* 11) Gérer les orphelins et veuves pour éviter les lignes isolées */
+            p, li, td {
+                orphans: 3;
+                widows: 3;
+            }
+
+            /* 12) Numérotation des pages (optionnel - si supporté par le navigateur) */
+            @page {
+                @bottom-right {
+                    content: "Page " counter(page) " sur " counter(pages);
+                    font-size: 9pt;
+                    color: #606060;
+                }
+            }
+            
+            /* 13) Header récurrent sur chaque page (optionnel - si supporté) */
+            @page :left {
+                @top-left {
+                    content: "NOVIS Business Plan 2025-2028";
+                    font-size: 8pt;
+                    color: #606060;
+                }
+            }
+            
+            @page :right {
+                @top-right {
+                    content: "NOVIS Business Plan 2025-2028";
+                    font-size: 8pt;
+                    color: #606060;
+                }
+            }
+        }
     </style>
 </head>
 <body>
