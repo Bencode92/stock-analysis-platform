@@ -866,6 +866,7 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
   - Éviter deux ETF offrant la même exposition (même thème/indice/métal).
   - **Au plus 1 ETF par thème fortement corrélé** (gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).
   - Interdit si overlap thématique ≥ 0.6 ou overlap de holdings ≥ 0.5.
+  - **Profil Modéré : somme des lignes `Crypto` ≤ 5.00%** (si aucun actif crypto éligible, mettre 0%).
 - Spécifique au profil Stable :
   - **Aucune ligne Crypto (0%)**.
 
@@ -876,6 +877,14 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 - Interdit: ETF à effet de levier (déjà exclus en amont).
 - **Anti-fin-de-cycle**: Interdiction d'ajouter un actif avec `YTD>100%` si `Perf 1M ≤ 0`.
 - Privilégier équilibrage `risk_class` : mix low/mid selon profil (Stable=80% low, Modéré=60% low, Agressif=40% low).
+
+## Style de justification (obligatoire, par ligne)
+- Commencer par: **"Pondération {allocation_pct:.2f}% —"**
+- Expliquer la logique: **marché** (MARKETS), **secteur** (SECTORS), **thème** (THEMES) et/ou **brief macro** (BRIEF), en reliant explicitement l’exposition visée (ex: "large cap US", "or physique", "obligations souveraines euro 3–5 ans").
+- Mentionner **le score** et **la classe de risque**: "Score {score:+.2f}, risque {risk_class}".
+- Terminer par **Réfs** avec des IDs (ex: `Réfs: [BR2,"MC1","SEC3"]`).
+- Ton neutre et descriptif (pas d’incitation). Exemple court:
+  "Pondération 7.50% — exposition théorique au S&P 500, portée par momentum US large cap et thématique IA diffuse; Score +0.82, risque mid. Réfs: [BR1, MC2, TH1]."
 
 ## COMPLIANCE (obligatoire)
 - Ce contenu est une **information financière générale**. Il **ne constitue pas** un conseil en investissement personnalisé ni une recommandation individuelle.
@@ -953,139 +962,150 @@ Contexte temporel: Portefeuilles optimisés pour {current_month} 2025.
 
 def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool, List[str]]:
     """
-    Validation stricte des portefeuilles générés version 3 avec contrôle des scores + COMPLIANCE
+    Validation stricte des portefeuilles v3 :
+      - 12–15 lignes, ≥2 catégories, somme = 100.00%
+      - Bloc Compliance complet
+      - Contraintes de scores & risque
+      - Anti-fin-de-cycle
+      - Doublons ETF (thématique/holdings)
+      - Règles spécifiques profils :
+          • Stable : Crypto interdite
+          • Modéré : Crypto ≤ 5.00%
     """
     errors = []
-    
-    # Créer un mapping id -> actif pour accès rapide aux scores
+
+    # Map id -> actif (métadonnées: score, flags, risk_class, ytd, perf_1m)
     id_to_asset = {}
     for asset_type in ["allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"]:
         for asset in allowed_assets.get(asset_type, []):
             id_to_asset[asset["id"]] = asset
-    
+
     for portfolio_name, portfolio in portfolios.items():
         if not isinstance(portfolio.get('Lignes'), list):
             errors.append(f"{portfolio_name}: 'Lignes' manquant ou invalide")
             continue
-            
+
         lignes = portfolio['Lignes']
 
-        # 🔒 Règle spécifique profil Stable : crypto interdite
+        # 🔒 Règles de profil
         if portfolio_name == "Stable":
             if any(l.get('category') == 'Crypto' for l in lignes):
                 errors.append("Stable: Crypto interdite (0 ligne attendue)")
-        
-        # Vérifier le nombre d'actifs
+
+        if portfolio_name == "Modéré":
+            crypto_sum = sum(float(l.get('allocation_pct', 0) or 0)
+                             for l in lignes if l.get('category') == 'Crypto')
+            if crypto_sum > 5.00 + 1e-6:
+                errors.append(f"Modéré: crypto={crypto_sum:.2f}% (> 5.00% autorisés)")
+
+        # Taille du portefeuille
         if not (12 <= len(lignes) <= 15):
             errors.append(f"{portfolio_name}: {len(lignes)} actifs (requis: 12-15)")
-        
-        # Vérifier la somme des allocations
-        total_allocation = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
+
+        # Somme des allocations
+        total_allocation = sum(float(l.get('allocation_pct', 0) or 0) for l in lignes)
         if abs(total_allocation - 100.0) > 0.01:
             errors.append(f"{portfolio_name}: allocation totale = {total_allocation:.2f}% (requis: 100.00%)")
-        
-        # Vérifier les IDs uniques
-        ids = [ligne.get('id') for ligne in lignes]
+
+        # IDs uniques
+        ids = [l.get('id') for l in lignes]
         if len(ids) != len(set(ids)):
             errors.append(f"{portfolio_name}: IDs dupliqués détectés")
-        
-        # Vérifier les catégories
-        categories = set(ligne.get('category') for ligne in lignes)
+
+        # ≥ 2 catégories
+        categories = set(l.get('category') for l in lignes)
         if len(categories) < 2:
             errors.append(f"{portfolio_name}: moins de 2 catégories ({categories})")
-        
-        # NOUVEAU: Vérifier la présence du bloc Compliance
+
+        # Bloc Compliance complet
         compliance = portfolio.get('Compliance', {})
         if not compliance:
             errors.append(f"{portfolio_name}: bloc 'Compliance' manquant")
         else:
-            required_compliance_fields = ['Disclaimer', 'Risques', 'Methodologie']
-            for field in required_compliance_fields:
+            for field in ['Disclaimer', 'Risques', 'Methodologie']:
                 if not compliance.get(field):
                     errors.append(f"{portfolio_name}: champ Compliance.{field} manquant")
-        
-        # NOUVEAU: Vérifier les scores et classes de risque
+
+        # Contrôles quantitatifs & cohérences
         scores = []
         overextended_count = 0
         risk_distribution = defaultdict(int)
-        
-        for ligne in lignes:
-            asset_id = ligne.get('id', '')
+
+        for l in lignes:
+            asset_id = l.get('id', '')
             asset = id_to_asset.get(asset_id)
-            
-            # Règle anti-fin-de-cycle: si info dispo sur l'actif
-            if asset:
-                ytd_val = fnum(asset.get("ytd"))
-                m1_val  = fnum(asset.get("perf_1m"))
-                if ytd_val > 100 and m1_val <= 0:
-                    errors.append(f"{portfolio_name}: {asset_id} viole 'YTD>100% & 1M≤0' (anti-fin-de-cycle)")
-            
-            if asset:
-                score = asset.get('score', 0)
-                scores.append(score)
-                
-                # Vérifier les flags
-                if asset.get('flags', {}).get('overextended', False):
-                    overextended_count += 1
-                
-                # Compter la distribution des classes de risque
-                risk_class = asset.get('risk_class', 'unknown')
-                risk_distribution[risk_class] += 1
-                
-                # Vérifier la cohérence des catégories
-                category = ligne.get('category')
-                if category == 'Obligations' and not asset_id.startswith('ETF_b'):
-                    errors.append(f"{portfolio_name}: {asset_id} dans Obligations mais n'est pas un bond ETF")
-                elif category == 'ETF' and asset_id.startswith('ETF_b'):
-                    errors.append(f"{portfolio_name}: {asset_id} est un bond ETF mais placé dans ETF standard")
-                elif category == 'Crypto' and not asset_id.startswith('CR_'):
-                    errors.append(f"{portfolio_name}: {asset_id} dans Crypto mais n'est pas une crypto autorisée")
-                elif category == 'Actions' and not asset_id.startswith('EQ_'):
-                    errors.append(f"{portfolio_name}: {asset_id} dans Actions mais n'est pas une action autorisée")
-        
-        # Vérifications quantitatives v3
+
+            # Cohérence catégorie ↔ id
+            category = l.get('category')
+            if category == 'Obligations' and not str(asset_id).startswith('ETF_b'):
+                errors.append(f"{portfolio_name}: {asset_id} dans Obligations mais n'est pas un bond ETF")
+            elif category == 'ETF' and str(asset_id).startswith('ETF_b'):
+                errors.append(f"{portfolio_name}: {asset_id} est un bond ETF mais placé dans ETF standard")
+            elif category == 'Crypto' and not str(asset_id).startswith('CR_'):
+                errors.append(f"{portfolio_name}: {asset_id} dans Crypto mais n'est pas une crypto autorisée")
+            elif category == 'Actions' and not str(asset_id).startswith('EQ_'):
+                errors.append(f"{portfolio_name}: {asset_id} dans Actions mais n'est pas une action autorisée")
+
+            if not asset:
+                continue
+
+            # Anti-fin-de-cycle
+            ytd_val = fnum(asset.get("ytd"))
+            m1_val  = fnum(asset.get("perf_1m"))
+            if ytd_val > 100 and m1_val <= 0:
+                errors.append(f"{portfolio_name}: {asset_id} viole 'YTD>100% & 1M≤0' (anti-fin-de-cycle)")
+
+            # Scores
+            score = float(asset.get('score', 0))
+            scores.append(score)
+
+            # Flags & distribution du risque
+            if asset.get('flags', {}).get('overextended', False):
+                overextended_count += 1
+
+            risk_class = asset.get('risk_class', 'unknown')
+            risk_distribution[risk_class] += 1
+
+        # Ratios de score
         if scores:
             positive_score_ratio = sum(1 for s in scores if s >= 0) / len(scores)
-            median_score = np.median(scores)
-            
+            median_score = float(np.median(scores))
             if positive_score_ratio < 0.70:
                 errors.append(f"{portfolio_name}: seulement {positive_score_ratio:.1%} d'actifs avec score ≥ 0 (requis: ≥70%)")
-            
             if median_score < 0:
                 errors.append(f"{portfolio_name}: médiane des scores = {median_score:.2f} (requis: ≥ 0)")
-        
+
         if overextended_count > 0:
-            errors.append(f"{portfolio_name}: {overextended_count} actifs sur-étendus (interdit)")
-        
-        # Vérifier l'équilibrage des classes de risque selon le profil
-        total_non_bond = sum(count for risk, count in risk_distribution.items() if risk != 'bond')
+            errors.append(f"{portfolio_name}: {overextended_count} actif(s) sur-étendu(s) (interdit)")
+
+        # Équilibrage des classes de risque (hors 'bond')
+        total_non_bond = sum(c for r, c in risk_distribution.items() if r != 'bond')
         if total_non_bond > 0:
             low_ratio = risk_distribution['low'] / total_non_bond
             expected_low = {"Stable": 0.80, "Modéré": 0.60, "Agressif": 0.40}.get(portfolio_name, 0.50)
-            
-            if abs(low_ratio - expected_low) > 0.20:  # Tolérance de 20%
+            if abs(low_ratio - expected_low) > 0.20:
                 errors.append(f"{portfolio_name}: {low_ratio:.1%} d'actifs low-risk (attendu: ~{expected_low:.0%})")
-        
-        # ===== Anti-doublon ETF (thématique/holdings) =====
+
+        # Doublons ETF (thèmes/holdings)
         try:
             overlaps = detect_portfolio_overlaps_v3(
-                portfolio, allowed_assets, etf_df=None,  # thématique si pas de holdings
-                theme_thresh=0.6, hold_thresh=0.5
+                portfolio, allowed_assets, etf_df=None, theme_thresh=0.6, hold_thresh=0.5
             )
             for o in overlaps:
                 n1, n2, typ, sc = o["names"][0], o["names"][1], o["type"], o["score"]
                 errors.append(f"{portfolio_name}: doublon ETF {n1} ↔ {n2} ({typ} {sc})")
         except Exception as e:
             print(f"⚠️ Validation overlap: {portfolio_name}: {e}")
-    
+
     return len(errors) == 0, errors
 
 
 def score_guard(portfolios: Dict, allowed_assets: Dict):
-    """Garde-fou post-LLM pour la santé des scores"""
-    import numpy as np
-    
-    # Map id -> score
+    """
+    Garde-fou post-LLM sur la qualité des scores:
+      - médiane des scores >= 0
+      - ≤ 30% d'actifs score négatif
+    """
     id2score = {}
     for k in ("allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"):
         for a in allowed_assets.get(k, []):
@@ -1093,52 +1113,29 @@ def score_guard(portfolios: Dict, allowed_assets: Dict):
 
     for name, p in portfolios.items():
         sc = [id2score.get(l["id"], 0.0) for l in p.get("Lignes", [])]
-        if not sc: 
+        if not sc:
             continue
-        
         med = float(np.median(sc))
         neg_ratio = sum(1 for s in sc if s < 0) / len(sc)
-        
         if med < 0 or neg_ratio > 0.30:
             raise ValueError(f"{name}: score santé KO (médiane={med:.2f}<0) ou {neg_ratio:.0%} négatifs (>30%)")
-    
+
     print("✅ Score guard: tous les portefeuilles passent les contrôles quantitatifs")
+
 
 def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict) -> Dict:
     """
     Corrections post-LLM :
-      - Crypto interdite en Stable
-      - Somme = 100%
-      - Ajout du bloc Compliance si manquant
-      - Remplacement des doublons d'ETF par détection d'overlap
-      - Dernier filet : max 1 ETF par ancre forte (gold/sp500/nasdaq/world/treasury/eurozone/emerging)
+      - Stable : supprime Crypto (réaffecte vers Obligations sinon dernière ligne)
+      - Modéré : cap Crypto ≤ 5% (réduit la/les lignes crypto, réaffecte)
+      - Somme = 100.00% (ajuste la dernière ligne)
+      - Ajout Compliance si manquant
+      - Remplacement des doublons d'ETF (overlaps) + 1 ETF / ancre forte
+      - Purge des lignes à 0 puis re-somme à 100.00%
     """
-    # --- Corrections de base (stable: pas de crypto, somme 100, compliance) ---
-    for portfolio_name, portfolio in portfolios.items():
-        if 'Lignes' in portfolio and isinstance(portfolio['Lignes'], list):
-            lignes = portfolio['Lignes']
-
-            if portfolio_name == "Stable":
-                crypto_lines = [l for l in lignes if l.get("category") == "Crypto"]
-                if crypto_lines:
-                    freed = sum(float(l.get("allocation_pct", 0) or 0) for l in crypto_lines)
-                    lignes[:] = [l for l in lignes if l.get("category") != "Crypto"]
-                    bond_target = next((x for x in lignes if x.get("category") == "Obligations"), None)
-                    target = bond_target or (lignes[-1] if lignes else None)
-                    if target:
-                        target["allocation_pct"] = round(float(target.get("allocation_pct", 0)) + freed, 2)
-
-            total = sum(float(ligne.get('allocation_pct', 0) or 0) for ligne in lignes)
-            if abs(total - 100.0) > 0.01 and len(lignes) > 0:
-                diff = 100.0 - total
-                lignes[-1]['allocation_pct'] = round(float(lignes[-1].get('allocation_pct', 0) or 0) + diff, 2)
-
-        if isinstance(portfolio, dict) and 'Compliance' not in portfolio:
-            portfolio['Compliance'] = get_compliance_block()
-
-    # --- Helpers internes ---
+    # Helpers
     def _id2asset(aid: str) -> Dict:
-        for k in ("allowed_equities","allowed_etfs_standard","allowed_bond_etfs","allowed_crypto"):
+        for k in ("allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"):
             for a in allowed_assets.get(k, []):
                 if a["id"] == aid:
                     return a
@@ -1147,15 +1144,64 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict)
     def _tokens(name: str) -> set:
         return _tokenize_theme(name or "")
 
-    # --- Traitement par portefeuille ---
-    for pf_name in ["Agressif","Modéré","Stable"]:
+    # --- Corrections de base (profil + compliance + somme) ---
+    for portfolio_name, portfolio in portfolios.items():
+        if not isinstance(portfolio, dict):
+            continue
+        if 'Lignes' not in portfolio or not isinstance(portfolio['Lignes'], list):
+            portfolio['Lignes'] = []
+        lignes = portfolio['Lignes']
+
+        # Stable : pas de crypto
+        if portfolio_name == "Stable":
+            crypto_lines = [l for l in lignes if l.get("category") == "Crypto"]
+            if crypto_lines:
+                freed = sum(float(l.get("allocation_pct", 0) or 0) for l in crypto_lines)
+                lignes[:] = [l for l in lignes if l.get("category") != "Crypto"]
+                bond_target = next((x for x in lignes if x.get("category") == "Obligations"), None)
+                target = bond_target or (lignes[-1] if lignes else None)
+                if target:
+                    target["allocation_pct"] = round(float(target.get("allocation_pct", 0)) + freed, 2)
+
+        # Modéré : cap crypto ≤ 5.00%
+        if portfolio_name == "Modéré":
+            crypto_lines = [l for l in lignes if l.get("category") == "Crypto"]
+            crypto_sum = sum(float(l.get("allocation_pct", 0) or 0) for l in crypto_lines)
+            if crypto_sum > 5.00:
+                to_cut = crypto_sum - 5.00
+                # réduire d'abord la plus grosse ligne
+                for l in sorted(crypto_lines, key=lambda x: float(x.get("allocation_pct", 0) or 0), reverse=True):
+                    cur = float(l.get("allocation_pct", 0) or 0)
+                    take = min(cur, to_cut)
+                    l["allocation_pct"] = round(cur - take, 2)
+                    to_cut -= take
+                    if to_cut <= 0:
+                        break
+                freed = round(crypto_sum - 5.00, 2)
+                if freed > 0:
+                    bond_target = next((x for x in lignes if x.get("category") == "Obligations"), None)
+                    target = bond_target or (lignes[-1] if lignes else None)
+                    if target:
+                        target["allocation_pct"] = round(float(target.get("allocation_pct", 0) or 0) + freed, 2)
+
+        # Ajout Compliance si manquant
+        if 'Compliance' not in portfolio:
+            portfolio['Compliance'] = get_compliance_block()
+
+        # Ajuste somme à 100.00 (provisoirement, on reprendra à la fin aussi)
+        total = sum(float(l.get('allocation_pct', 0) or 0) for l in lignes)
+        if abs(total - 100.0) > 0.01 and lignes:
+            diff = 100.0 - total
+            lignes[-1]['allocation_pct'] = round(float(lignes[-1].get('allocation_pct', 0) or 0) + diff, 2)
+
+    # --- Détection & correction des overlaps d'ETF + 1 ETF / ancre forte ---
+    for pf_name in ["Agressif", "Modéré", "Stable"]:
         pf = portfolios.get(pf_name, {})
         if not isinstance(pf, dict) or not isinstance(pf.get("Lignes"), list):
             continue
-
         lignes = pf["Lignes"]
 
-        # 1) Détection & correction des overlaps d'ETF (plus souple)
+        # 1) Overlaps (thématique/holdings) → tenter remplacement
         try:
             overlaps = detect_portfolio_overlaps_v3(
                 pf, allowed_assets, etf_df=None, theme_thresh=0.45, hold_thresh=0.5
@@ -1166,54 +1212,50 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict)
         used_ids = {l.get("id") for l in lignes}
         present_tokens = set()
         for l in lignes:
-            present_tokens |= _tokens(l.get("name",""))
+            present_tokens |= _tokens(l.get("name", ""))
 
         for o in overlaps:
-            l1 = next((x for x in lignes if x.get("name")==o["names"][0]), None)
-            l2 = next((x for x in lignes if x.get("name")==o["names"][1]), None)
+            l1 = next((x for x in lignes if x.get("name") == o["names"][0]), None)
+            l2 = next((x for x in lignes if x.get("name") == o["names"][1]), None)
             if not l1 or not l2:
                 continue
-
             s1 = float(_id2asset(l1.get("id")).get("score", 0))
             s2 = float(_id2asset(l2.get("id")).get("score", 0))
             a_keep, a_drop = (l1, l2) if s1 >= s2 else (l2, l1)
             freed = float(a_drop.get("allocation_pct", 0) or 0)
 
             replacement = None
-            for cand in sorted(allowed_assets.get("allowed_etfs_standard", []), key=lambda x: x.get("score",0), reverse=True):
+            for cand in sorted(allowed_assets.get("allowed_etfs_standard", []), key=lambda x: x.get("score", 0), reverse=True):
                 if cand["id"] in used_ids:
                     continue
-                t = _tokens(cand.get("name",""))
+                t = _tokens(cand.get("name", ""))
                 if t and t.isdisjoint(present_tokens):
                     replacement = cand
                     break
 
             if replacement:
-                a_drop["id"] = replacement["id"]
-                a_drop["name"] = replacement["name"]
-                a_drop["category"] = "ETF"
+                a_drop.update({"id": replacement["id"], "name": replacement["name"], "category": "ETF"})
                 present_tokens |= _tokens(replacement["name"])
                 used_ids.add(replacement["id"])
             else:
                 a_drop["allocation_pct"] = 0.0
-                bond_target = next((x for x in lignes if x.get("category")=="Obligations"), None)
+                bond_target = next((x for x in lignes if x.get("category") == "Obligations"), None)
                 target = bond_target or a_keep
-                target["allocation_pct"] = round(float(target.get("allocation_pct",0))+freed, 2)
+                target["allocation_pct"] = round(float(target.get("allocation_pct", 0)) + freed, 2)
 
-        # 2) Dernier filet : max 1 ETF par ancre forte
-        anchors = {"gold","sp500","nasdaq","world","treasury","eurozone","emerging"}
+        # 2) Dernier filet : au plus 1 ETF par ancre forte
+        anchors = {"gold", "sp500", "nasdaq", "world", "treasury", "eurozone", "emerging"}
         groups = {a: [] for a in anchors}
 
-        # Recalcule les sets après éventuels remplacements
         used_ids = {l.get("id") for l in lignes}
         present_tokens = set()
         for l in lignes:
-            present_tokens |= _tokens(l.get("name",""))
+            present_tokens |= _tokens(l.get("name", ""))
 
         for l in lignes:
-            if l.get("category") not in ("ETF","Obligations"):
+            if l.get("category") not in ("ETF", "Obligations"):
                 continue
-            toks = _tokens(l.get("name",""))
+            toks = _tokens(l.get("name", ""))
             for a in anchors:
                 if a in toks:
                     groups[a].append(l)
@@ -1221,33 +1263,27 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict)
         for a, lines in groups.items():
             if len(lines) <= 1:
                 continue
-
-            # garder le meilleur score
             best = max(lines, key=lambda x: float(_id2asset(x.get("id")).get("score", 0)))
             for loser in (x for x in lines if x is not best):
                 freed = float(loser.get("allocation_pct", 0) or 0)
-
-                # chercher un remplaçant non-chevauchant ni ancre identique
                 repl = None
-                for cand in sorted(allowed_assets.get("allowed_etfs_standard", []), key=lambda x: x.get("score",0), reverse=True):
+                for cand in sorted(allowed_assets.get("allowed_etfs_standard", []), key=lambda x: x.get("score", 0), reverse=True):
                     if cand["id"] in used_ids:
                         continue
-                    t = _tokens(cand.get("name",""))
+                    t = _tokens(cand.get("name", ""))
                     if a not in t and t.isdisjoint(present_tokens):
                         repl = cand
                         break
-
                 if repl:
-                    loser.update({"id": repl["id"], "name": repl["name"], "category":"ETF"})
+                    loser.update({"id": repl["id"], "name": repl["name"], "category": "ETF"})
                     used_ids.add(repl["id"])
                     present_tokens |= _tokens(repl["name"])
                 else:
-                    # à défaut, on redistribue l'allocation vers la meilleure ligne du groupe
                     loser["allocation_pct"] = 0.0
-                    best["allocation_pct"] = round(float(best.get("allocation_pct",0)) + freed, 2)
+                    best["allocation_pct"] = round(float(best.get("allocation_pct", 0)) + freed, 2)
 
-        # Purge des lignes tombées à 0 et ultime équilibrage à 100%
-        pf["Lignes"] = [l for l in lignes if float(l.get("allocation_pct",0) or 0) > 0]
+        # Purge 0 et re-somme à 100.00
+        pf["Lignes"] = [l for l in lignes if float(l.get("allocation_pct", 0) or 0) > 0]
         total_pf = sum(float(l.get('allocation_pct', 0) or 0) for l in pf["Lignes"])
         if abs(total_pf - 100.0) > 0.01 and pf["Lignes"]:
             diff = 100.0 - total_pf
@@ -1255,103 +1291,30 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict)
 
     return portfolios
 
-    def _tokens(name: str):
-        return _tokenize_theme(name or "")
-
-    for pf_name in ["Agressif","Modéré","Stable"]:
-        pf = portfolios.get(pf_name, {})
-        if not isinstance(pf, dict) or not isinstance(pf.get("Lignes"), list):
-            continue
-
-        # 1) repérer les overlaps
-        try:
-            overlaps = detect_portfolio_overlaps_v3(pf, allowed_assets, etf_df=None, theme_thresh=0.6, hold_thresh=0.5)
-        except Exception:
-            overlaps = []
-
-        if not overlaps:
-            continue
-
-        lignes = pf["Lignes"]
-        used_ids = {l.get("id") for l in lignes}
-        # cache tokens déjà présents (évite nouveau doublon)
-        present_tokens = set()
-        for l in lignes:
-            present_tokens |= _tokens(l.get("name",""))
-
-        for o in overlaps:
-            # choisir lequel garder (meilleur score autorisé)
-            a_keep = None; a_drop = None
-            # retrouver lignes
-            l1 = next((x for x in lignes if x.get("name")==o["names"][0]), None)
-            l2 = next((x for x in lignes if x.get("name")==o["names"][1]), None)
-            if not l1 or not l2: 
-                continue
-            s1 = float(_id2asset(l1.get("id")).get("score", 0))
-            s2 = float(_id2asset(l2.get("id")).get("score", 0))
-            if s1 >= s2:
-                a_keep, a_drop = l1, l2
-            else:
-                a_keep, a_drop = l2, l1
-
-            freed = float(a_drop.get("allocation_pct", 0) or 0)
-            # 2) tenter un remplaçant ETF standard non-chevauchant
-            replacement = None
-            for cand in sorted(allowed_assets.get("allowed_etfs_standard", []), key=lambda x: x.get("score",0), reverse=True):
-                if cand["id"] in used_ids: 
-                    continue
-                t = _tokens(cand.get("name",""))
-                if t and t.isdisjoint(present_tokens):
-                    replacement = cand
-                    break
-
-            # 3) appliquer la correction
-            if replacement:
-                a_drop["id"] = replacement["id"]
-                a_drop["name"] = replacement["name"]
-                a_drop["category"] = "ETF"
-                # garder l’allocation; mettre à jour contexte tokens
-                present_tokens |= _tokens(replacement["name"])
-                used_ids.add(replacement["id"])
-            else:
-                # à défaut : rebasculer l’allocation vers Obligations (ou la ligne gardée)
-                a_drop["allocation_pct"] = 0.0
-                bond_target = next((x for x in lignes if x.get("category")=="Obligations"), None)
-                target = bond_target or a_keep
-                target["allocation_pct"] = round(float(target.get("allocation_pct",0))+freed, 2)
-
-        # purge lignes mises à 0
-        pf["Lignes"] = [l for l in lignes if float(l.get("allocation_pct",0) or 0) > 0]
-
-    
-    return portfolios
 
 def apply_compliance_sanitization(portfolios: Dict) -> Dict:
-    """Applique la sanitisation des termes marketing interdits"""
-    for portfolio_name, portfolio in portfolios.items():
+    """Sanitise les termes marketing interdits (AMF) dans commentaires/justifications/exclusions."""
+    for _, portfolio in portfolios.items():
         if not isinstance(portfolio, dict):
             continue
-            
-        # Sanitiser le commentaire
+
         if 'Commentaire' in portfolio:
             portfolio['Commentaire'] = sanitize_marketing_language(portfolio['Commentaire'])
-        
-        # Sanitiser les justifications
+
         if 'Lignes' in portfolio and isinstance(portfolio['Lignes'], list):
             for ligne in portfolio['Lignes']:
                 if isinstance(ligne, dict) and 'justification' in ligne:
                     ligne['justification'] = sanitize_marketing_language(ligne['justification'])
-        
-        # Sanitiser les raisons d'exclusion
+
         if 'ActifsExclus' in portfolio and isinstance(portfolio['ActifsExclus'], list):
             for actif in portfolio['ActifsExclus']:
                 if isinstance(actif, dict) and 'reason' in actif:
                     actif['reason'] = sanitize_marketing_language(actif['reason'])
-    
+
     return portfolios
 
-# ============= CACHE D'UNIVERS AVEC HASH DE FICHIERS =============
 
+# ============= CACHE D'UNIVERS AVEC HASH DE FICHIERS =============
 _UNIVERSE_CACHE = {}
 
 def _sha1_bytes(b: bytes) -> str:
@@ -1376,6 +1339,7 @@ def set_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str, unive
 
 def get_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str):
     return _UNIVERSE_CACHE.get((etf_hash, stocks_hash, crypto_hash))
+
 
 # ============= FIX 3: RETRY API ROBUSTE AVEC TIMEOUTS ÉTENDUS =============
 
