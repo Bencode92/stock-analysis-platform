@@ -1311,20 +1311,43 @@ def apply_compliance_sanitization(portfolios: Dict) -> Dict:
                 if isinstance(actif, dict) and 'reason' in actif:
                     actif['reason'] = sanitize_marketing_language(actif['reason'])
 
-    return portfolios# ---------- Générateur d'explications par actif (macro/secteur/thème + score) ----------
-def build_explanations(portfolios_v3: dict, allowed_assets: dict, structured_data: dict) -> dict:
-    lut = _build_asset_lookup(allowed_assets)
-
-    # petit helper: récupérer score / classe de risque à partir de l'id autorisé
-    def _score_and_risk(aid: str):
-        for k in ("allowed_equities","allowed_etfs_standard","allowed_bond_etfs","allowed_crypto"):
+    return portfolios
+    # ---------- Générateur d'explications par actif (macro/secteur/thème + score) ----------
+def build_explanations(portfolios_obj: dict, allowed_assets: dict, structured_data: dict) -> dict:
+    """
+    Construit un dictionnaire d'explications par portefeuille.
+    - Compatible v3 : parcourt pf["Lignes"] (id, name, category, allocation_pct, justificationRefs, justification)
+    - Compatible v1 : parcourt pf["Actions"/"ETF"/"Obligations"/"Crypto"] (nom -> "12%")
+      et tente de reconstituer (id, score, risk_class) depuis allowed_assets.
+    """
+    # --- Helpers LUT ---
+    def _score_and_risk_by_id(aid: str):
+        for k in ("allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"):
             for a in allowed_assets.get(k, []) or []:
                 if a.get("id") == aid:
                     return float(a.get("score", 0.0)), a.get("risk_class", "mid")
         return 0.0, "mid"
 
-    # index (id -> texte) pour pouvoir citer BR/MC/SEC/TH
-    pools = {
+    def _find_meta_by_name(nm: str, category_hint: str):
+        """Retourne (id, score, risk_class, category_norm) en cherchant par nom exact dans allowed_assets."""
+        nm_low = (nm or "").strip().lower()
+        pools = [
+            ("Actions", "allowed_equities"),
+            ("ETF", "allowed_etfs_standard"),
+            ("Obligations", "allowed_bond_etfs"),
+            ("Crypto", "allowed_crypto"),
+        ]
+        # Priorité à la catégorie suggérée
+        pools.sort(key=lambda t: 0 if t[0] == category_hint else 1)
+        for cat, key in pools:
+            for a in allowed_assets.get(key, []) or []:
+                if str(a.get("name", "")).strip().lower() == nm_low:
+                    return a.get("id"), float(a.get("score", 0.0)), a.get("risk_class", "mid"), cat
+        # Défaut si introuvable
+        return nm, 0.0, "mid", category_hint
+
+    # Index des points (pour générer des refs BR/MC/SEC/TH)
+    pools_idx = {
         "BR": structured_data.get("brief_points", []) or [],
         "MC": structured_data.get("market_points", []) or [],
         "SEC": structured_data.get("sector_points", []) or [],
@@ -1334,7 +1357,6 @@ def build_explanations(portfolios_v3: dict, allowed_assets: dict, structured_dat
     def _pick_refs(name: str, category: str) -> list:
         nm = (name or "").lower()
         refs = []
-
         anchors = [
             ("uranium", "TH"), ("metals", "SEC"), ("gold", "TH"),
             ("s&p", "MC"), ("nasdaq", "MC"), ("world", "MC"),
@@ -1342,57 +1364,95 @@ def build_explanations(portfolios_v3: dict, allowed_assets: dict, structured_dat
             ("health", "SEC"), ("pharma", "SEC"), ("retail", "SEC"),
             ("housing", "SEC"), ("semiconductor", "SEC"),
             ("software", "SEC"), ("energy", "SEC"), ("oil", "SEC"),
-            ("bank", "SEC"), ("telecom", "SEC"), ("bitcoin", "TH")
+            ("bank", "SEC"), ("telecom", "SEC"), ("bitcoin", "TH"),
         ]
-        for kw, pool_key in anchors:
+        for kw, key in anchors:
             if kw in nm:
-                cand = [p["id"] for p in pools.get(pool_key, []) if re.search(kw, p["text"], re.I)]
-                if cand: refs.append(cand[0])
-
-        # garde au moins 2–3 réf. (BR/MC/SEC/TH) si rien n’a matché
+                cand = [p["id"] for p in pools_idx.get(key, []) if re.search(kw, p.get("text", ""), re.I)]
+                if cand:
+                    refs.append(cand[0])
+        # Compléter pour atteindre 2–4 réf.
         for key in ("BR", "MC", "SEC", "TH"):
-            if len(refs) >= 4: break
-            arr = pools.get(key, [])
+            if len(refs) >= 4:
+                break
+            arr = pools_idx.get(key, [])
             if arr:
                 refs.append(arr[0]["id"])
-        # dédoublonne et limite
+        # Dédoublonner et limiter
         seen, out = set(), []
         for r in refs:
             if r not in seen:
-                out.append(r); seen.add(r)
+                out.append(r)
+                seen.add(r)
         return out[:4]
 
-    explanations = {}
-    for pf_name, pf in portfolios_v3.items():
-        if not isinstance(pf, dict): 
+    explanations: dict = {}
+    if not isinstance(portfolios_obj, dict):
+        return explanations  # garde-fou
+
+    # Détecter v3 (présence de 'Lignes' dans au moins un portefeuille)
+    is_v3 = any(isinstance(p, dict) and "Lignes" in p for p in portfolios_obj.values())
+
+    for pf_name, pf in portfolios_obj.items():
+        if not isinstance(pf, dict):
             continue
         lines = []
-        for l in pf.get("Lignes", []) or []:
-            aid = l.get("id"); nm = l.get("name"); cat = l.get("category")
-            alloc = float(l.get("allocation_pct", 0) or 0)
-            score, risk = _score_and_risk(aid)
 
-            refs = l.get("justificationRefs") or _pick_refs(nm, cat)
+        if is_v3 and isinstance(pf.get("Lignes"), list):
+            # ---- Chemin v3 ----
+            for l in pf["Lignes"]:
+                aid   = l.get("id") or ""
+                nm    = l.get("name") or ""
+                cat   = l.get("category") or ""
+                alloc = float(l.get("allocation_pct", 0) or 0)
+                score, risk = _score_and_risk_by_id(aid)
+                refs  = l.get("justificationRefs") or _pick_refs(nm, cat)
 
-            # si le modèle a déjà fourni une justification, on la garde; sinon on synthétise proprement
-            if l.get("justification"):
-                base = l["justification"]
-            else:
-                expos = {
-                    "Actions": f"exposition entreprise ({nm}) liée à son secteur",
-                    "ETF": f"exposition indicielle/sectorielle via {nm}",
-                    "Obligations": "exposition obligataire diversifiée",
-                    "Crypto": f"exposition crypto ({nm}) avec filtre tendance 7j/24h positif"
-                }.get(cat, "exposition diversifiée")
-                base = f"Pondération {alloc:.2f}% — {expos}; Score {score:+.2f}, risque {risk}. Réfs: {refs}."
-            lines.append({
-                "id": aid, "name": nm, "category": cat,
-                "allocation_pct": round(alloc, 2),
-                "score": round(score, 3), "risk_class": risk,
-                "refs": refs, "justification": sanitize_marketing_language(base)
-            })
+                base_just = l.get("justification")
+                if not base_just:
+                    base_just = f"Pondération {alloc:.2f}% — exposition {cat.lower()} via {nm}; Score {score:+.2f}, risque {risk}. Réfs: {refs}."
+
+                lines.append({
+                    "id": aid,
+                    "name": nm,
+                    "category": cat,
+                    "allocation_pct": round(alloc, 2),
+                    "score": round(score, 3),
+                    "risk_class": risk,
+                    "refs": refs,
+                    "justification": sanitize_marketing_language(base_just),
+                })
+
+        else:
+            # ---- Chemin v1 (dicos par catégories) ----
+            for cat in ("Actions", "ETF", "Obligations", "Crypto"):
+                d = pf.get(cat) or {}
+                if not isinstance(d, dict):
+                    continue
+                for nm, alloc in d.items():
+                    # "12%" -> 12.0
+                    try:
+                        alloc_f = float(re.sub(r"[^0-9.\-]", "", str(alloc)) or 0.0)
+                    except Exception:
+                        alloc_f = 0.0
+                    aid, score, risk, cat_norm = _find_meta_by_name(nm, cat)
+                    refs = _pick_refs(nm, cat_norm)
+                    base_just = f"Pondération {alloc_f:.2f}% — exposition {cat_norm.lower()} via {nm}; Score {score:+.2f}, risque {risk}. Réfs: {refs}."
+                    lines.append({
+                        "id": aid,
+                        "name": nm,
+                        "category": cat_norm,
+                        "allocation_pct": round(alloc_f, 2),
+                        "score": round(score, 3),
+                        "risk_class": risk,
+                        "refs": refs,
+                        "justification": sanitize_marketing_language(base_just),
+                    })
+
         explanations[pf_name] = lines
+
     return explanations
+
 
 def write_explanations_files(explanations: dict,
                              path_json: str = "data/portfolio_explanations.json",
@@ -1530,27 +1590,36 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     result = response.json()
     content = result["choices"][0]["message"]["content"]
     
-    # Sauvegarder la réponse brute pour debug
-    response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
-    os.makedirs("debug/prompts", exist_ok=True)
-    with open(response_debug_file, 'w', encoding='utf-8') as f:
-        f.write(content)
-    print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
-    
-    # ✅ Parsing robuste (réparateur JSON)
-    try:
-        portfolios = parse_json_strict_or_repair(content)
-    except Exception as e:
-        print(f"❌ Erreur de parsing JSON après réparation: {e}")
-        raise
-    
-    # Attacher compliance de manière sûre
-    portfolios = attach_compliance(portfolios)
-    
-    # Sanitisation compliance (langage neutre)
-    print("🛡️ Application de la sanitisation compliance AMF...")
-    portfolios = apply_compliance_sanitization(portfolios)
-    
+# Sauvegarder la réponse brute pour debug
+response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
+os.makedirs("debug/prompts", exist_ok=True)
+with open(response_debug_file, "w", encoding="utf-8") as f:
+    f.write(content)
+print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
+
+# ✅ Parsing robuste (réparateur JSON)
+try:
+    portfolios = parse_json_strict_or_repair(content)
+except Exception as e:
+    print(f"❌ Erreur de parsing JSON après réparation: {e}")
+    raise
+
+# 🔎 Sanity check : la réponse doit contenir les 3 portefeuilles et des 'Lignes'
+expected = {"Agressif", "Modéré", "Stable"}
+if not isinstance(portfolios, dict) or not expected.issubset(portfolios.keys()):
+    raise ValueError("Réponse v3 invalide/partielle — pas de portefeuilles utilisables")
+if any(not isinstance(portfolios[k], dict) for k in expected):
+    raise ValueError("Réponse v3 invalide — mauvais format (clé non-dict)")
+if all(len(portfolios[k].get("Lignes", [])) == 0 for k in expected):
+    raise ValueError("Réponse v3 vide — aucune 'Lignes' fournie")
+
+# Attacher compliance de manière sûre
+portfolios = attach_compliance(portfolios)
+
+# Sanitisation compliance (langage neutre)
+print("🛡️ Application de la sanitisation compliance AMF...")
+portfolios = apply_compliance_sanitization(portfolios)
+
     # Validation post-génération v3
     validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
     if not validation_ok:
