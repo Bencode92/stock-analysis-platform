@@ -1547,16 +1547,16 @@ def _pct(v) -> str:
 def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
     lut = _build_asset_lookup(allowed_assets)
     out = {}
-
-    def _put(pf_key, category, name, alloc):
-        out.setdefault(pf_key, {
-            "Commentaire": "",
-            "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
-        })
-          # si jamais une catégorie inattendue arrive, on la mappe sur ETF
- if category not in ("Actions", "ETF", "Obligations", "Crypto"):
-     category = "ETF"
-  out[pf_key].setdefault(category, {})  # sécurité clé absente
+    
+def _put(pf_key, category, name, alloc):
+    out.setdefault(pf_key, {
+        "Commentaire": "",
+        "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
+    })
+    # si jamais une catégorie inattendue arrive, on la mappe sur ETF
+    if category not in ("Actions", "ETF", "Obligations", "Crypto"):
+        category = "ETF"
+    out[pf_key].setdefault(category, {})  # sécurité clé absente
     out[pf_key][category][name] = _pct(alloc)
 
     def _sum_pct_dict(d):
