@@ -39,12 +39,30 @@ jobs:
       - name: 🚀 Exécuter le script
         run: python generate_portfolios.py
 
+      # (Optionnel) Vérifier que les fichiers sont bien générés
+      - name: Check outputs
+        run: |
+          ls -lah data | sed -n '1,200p'
+          echo "----"
+          head -n 30 data/portfolio_explanations.json || true
+
       - name: 💾 Commit & push
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A data/
-          git commit -m "📊 Mise à jour automatique des portefeuilles" || echo "rien à committer"
-          git pull --rebase
+          git add data/portfolios.json \
+                  data/portfolio_explanations.json \
+                  data/portfolio_explanations.md \
+                  data/portfolio_history/* \
+                  data/portfolio_history/index.json \
+                  debug/prompts/* || true
+
+          # Si .gitignore les filtre, force l’ajout :
+          if git check-ignore -q data/portfolio_explanations.json; then
+            git add -f data/portfolio_explanations.json data/portfolio_explanations.md
+          fi
+
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "📄 Explications + portefeuilles" || echo "rien à committer"
+
           git push
 
