@@ -881,7 +881,7 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 ## Style de justification (obligatoire, par ligne)
 - Commencer par: **"Pondération {{allocation_pct:.2f}}% —"**
 - Expliquer la logique: **marché** (MARKETS), **secteur** (SECTORS), **thème** (THEMES) et/ou **brief macro** (BRIEF), en reliant explicitement l’exposition visée (ex: "large cap US", "or physique", "obligations souveraines euro 3–5 ans").
-- Mentionner **le score** et **la classe de risque**: "Score {score:+.2f}, risque {risk_class}".
+- Mentionner **le score** et **la classe de risque**: "Score {{score:+.2f}}, risque {{risk_class}}"
 - Terminer par **Réfs** avec des IDs (ex: `Réfs: [BR2,"MC1","SEC3"]`).
 - Ton neutre et descriptif (pas d’incitation). Exemple court:
   "Pondération 7.50% — exposition théorique au S&P 500, portée par momentum US large cap et thématique IA diffuse; Score +0.82, risque mid. Réfs: [BR1, MC2, TH1]."
@@ -1545,21 +1545,22 @@ def _pct(v) -> str:
     except: return f"{v}%"
 
 def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
+    """Convertit le format v3 (avec 'Lignes') vers le format v1 attendu par le front."""
     lut = _build_asset_lookup(allowed_assets)
-    out = {}
-    
-def _put(pf_key, category, name, alloc):
-    out.setdefault(pf_key, {
-        "Commentaire": "",
-        "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
-    })
-    # si jamais une catégorie inattendue arrive, on la mappe sur ETF
-    if category not in ("Actions", "ETF", "Obligations", "Crypto"):
-        category = "ETF"
-    out[pf_key].setdefault(category, {})  # sécurité clé absente
-    out[pf_key][category][name] = _pct(alloc)
+    out: dict = {}
 
-    def _sum_pct_dict(d):
+    def _put(pf_key: str, category: str, name: str, alloc):
+        # structure du portefeuille
+        out.setdefault(pf_key, {
+            "Commentaire": "",
+            "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
+        })
+        # cat inconnue -> ETF
+        if category not in ("Actions", "ETF", "Obligations", "Crypto"):
+            category = "ETF"
+        out[pf_key][category][name] = _pct(alloc)
+
+    def _sum_pct_dict(d: dict) -> float:
         tot = 0.0
         if isinstance(d, dict):
             for v in d.values():
@@ -1590,7 +1591,6 @@ def _put(pf_key, category, name, alloc):
         if not isinstance(pf, dict):
             continue
 
-        # Prend Commentaire puis Description en fallback
         base_comment = pf.get("Commentaire") or pf.get("Description") or ""
 
         out.setdefault(portfolio_name, {
@@ -1598,7 +1598,7 @@ def _put(pf_key, category, name, alloc):
             "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
         })
 
-        # --- Cas v2: catégories déjà présentes ---
+        # Cas v2 : catégories déjà présentes
         if any(k in pf for k in ("Actions", "ETF", "Obligations", "Crypto")):
             out[portfolio_name]["Actions"] = pf.get("Actions", {}) or {}
             out[portfolio_name]["ETF"] = pf.get("ETF", {}) or {}
@@ -1607,12 +1607,13 @@ def _put(pf_key, category, name, alloc):
             _ensure_comment(portfolio_name, base_comment)
             continue
 
-        # --- Cas v3: format 'Lignes' ---
-        for ligne in pf.get("Lignes", []):
+        # Cas v3 : format 'Lignes'
+        for ligne in pf.get("Lignes", []) or []:
             asset_id = ligne.get("id") or ligne.get("ID") or ""
             alloc = ligne.get("allocation_pct") or ligne.get("allocation") or 0
             if asset_id in lut:
-                name = lut[asset_id]["name"]; category = lut[asset_id]["category"]
+                name = lut[asset_id]["name"]
+                category = lut[asset_id]["category"]
             else:
                 name = ligne.get("name", asset_id)
                 category = _infer_category_from_id(asset_id)
@@ -1620,7 +1621,7 @@ def _put(pf_key, category, name, alloc):
 
         _ensure_comment(portfolio_name, base_comment)
 
-    # --- 2) Format "Portefeuilles" (archive v2/v3 non standard) ---
+    # --- 2) Format "Portefeuilles" (archives non standard) ---
     if not out and isinstance(raw_obj, dict):
         pfs = raw_obj.get("Portefeuilles") or raw_obj.get("portefeuilles") or []
 
@@ -1639,11 +1640,12 @@ def _put(pf_key, category, name, alloc):
                 "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
             })
 
-            for it in pf.get("Actifs", []):
+            for it in pf.get("Actifs", []) or []:
                 asset_id = it.get("id") or it.get("ID") or ""
                 alloc = it.get("allocation") or it.get("allocation_pct") or 0
                 if asset_id in lut:
-                    name = lut[asset_id]["name"]; category = lut[asset_id]["category"]
+                    name = lut[asset_id]["name"]
+                    category = lut[asset_id]["category"]
                 else:
                     name = it.get("name") or it.get("Nom") or asset_id
                     category = _infer_category_from_id(asset_id)
@@ -1652,6 +1654,7 @@ def _put(pf_key, category, name, alloc):
             _ensure_comment(pf_key, base_comment)
 
     return out
+
 
 # === V1: validation & auto-fix de la somme 100% ===
 def _to_float_pct(v):
