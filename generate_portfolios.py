@@ -3104,37 +3104,37 @@ def main():
     # Générer les portefeuilles avec la nouvelle version quantitative v3
     portfolios = generate_portfolios(filtered_data)
     
-  # ========== SAUVEGARDE ==========
-print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
-allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
-structured_data_for_expl = prepare_structured_data(filtered_data)
-explanations = build_explanations(portfolios, allowed_assets, structured_data_for_expl)
-write_explanations_files(explanations)  # -> data/portfolio_explanations.{json,md}
-save_portfolios_normalized(portfolios, allowed_assets)
+# ========== SAUVEGARDE ==========
+    print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
+    allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
+    structured_data_for_expl = prepare_structured_data(filtered_data)
+    explanations = build_explanations(portfolios, allowed_assets, structured_data_for_expl)
+    write_explanations_files(explanations)  # -> data/portfolio_explanations.{json,md}
+    save_portfolios_normalized(portfolios, allowed_assets)
 
-print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
-print("🎯 Fonctionnalités activées:")
-print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
-print("   • Filtrage automatique des ETF à effet de levier")
-print("   • Détection des actifs sur-étendus")
-print("   • Équilibrage par classes de risque")
-print("   • Diversification sectorielle round-robin (cap 30%)")
-print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
-print("   • Fallback crypto progressif")
-print("   • Cache intelligent d'univers (hash fichiers)")
-print("   • Retry API robuste (5 tentatives, timeouts étendus)")
-print("   🛡️ COMPLIANCE AMF:")
-print("     ∘ Langage neutre (pas d'incitation)")
-print("     ∘ Disclaimer automatique")
-print("     ∘ Liste des risques")
-print("     ∘ Méthodologie transparente")
-print("     ∘ Sanitisation anti-marketing")
-print("   🔧 FIXES DE STABILITÉ:")
-print("     ∘ Regex pandas warning corrigé")
-print("     ∘ Détection ETF levier corrigée")
-print("     ∘ Timeouts API étendus (20s/180s)")
-print("     ∘ Protection de type améliorée")
-print("     ∘ Système de fallback cache")
+    print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
+    print("🎯 Fonctionnalités activées:")
+    print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
+    print("   • Filtrage automatique des ETF à effet de levier")
+    print("   • Détection des actifs sur-étendus")
+    print("   • Équilibrage par classes de risque")
+    print("   • Diversification sectorielle round-robin (cap 30%)")
+    print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
+    print("   • Fallback crypto progressif")
+    print("   • Cache intelligent d'univers (hash fichiers)")
+    print("   • Retry API robuste (5 tentatives, timeouts étendus)")
+    print("   🛡️ COMPLIANCE AMF:")
+    print("     ∘ Langage neutre (pas d'incitation)")
+    print("     ∘ Disclaimer automatique")
+    print("     ∘ Liste des risques")
+    print("     ∘ Méthodologie transparente")
+    print("     ∘ Sanitisation anti-marketing")
+    print("   🔧 FIXES DE STABILITÉ:")
+    print("     ∘ Regex pandas warning corrigé")
+    print("     ∘ Détection ETF levier corrigée")
+    print("     ∘ Timeouts API étendus (20s/180s)")
+    print("     ∘ Protection de type améliorée")
+    print("     ∘ Système de fallback cache")
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
