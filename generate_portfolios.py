@@ -1311,7 +1311,107 @@ def apply_compliance_sanitization(portfolios: Dict) -> Dict:
                 if isinstance(actif, dict) and 'reason' in actif:
                     actif['reason'] = sanitize_marketing_language(actif['reason'])
 
-    return portfolios
+    return portfolios# ---------- Générateur d'explications par actif (macro/secteur/thème + score) ----------
+def build_explanations(portfolios_v3: dict, allowed_assets: dict, structured_data: dict) -> dict:
+    lut = _build_asset_lookup(allowed_assets)
+
+    # petit helper: récupérer score / classe de risque à partir de l'id autorisé
+    def _score_and_risk(aid: str):
+        for k in ("allowed_equities","allowed_etfs_standard","allowed_bond_etfs","allowed_crypto"):
+            for a in allowed_assets.get(k, []) or []:
+                if a.get("id") == aid:
+                    return float(a.get("score", 0.0)), a.get("risk_class", "mid")
+        return 0.0, "mid"
+
+    # index (id -> texte) pour pouvoir citer BR/MC/SEC/TH
+    pools = {
+        "BR": structured_data.get("brief_points", []) or [],
+        "MC": structured_data.get("market_points", []) or [],
+        "SEC": structured_data.get("sector_points", []) or [],
+        "TH": structured_data.get("theme_points", []) or [],
+    }
+
+    def _pick_refs(name: str, category: str) -> list:
+        nm = (name or "").lower()
+        refs = []
+
+        anchors = [
+            ("uranium", "TH"), ("metals", "SEC"), ("gold", "TH"),
+            ("s&p", "MC"), ("nasdaq", "MC"), ("world", "MC"),
+            ("treasury", "MC"), ("euro", "MC"), ("emerging", "MC"),
+            ("health", "SEC"), ("pharma", "SEC"), ("retail", "SEC"),
+            ("housing", "SEC"), ("semiconductor", "SEC"),
+            ("software", "SEC"), ("energy", "SEC"), ("oil", "SEC"),
+            ("bank", "SEC"), ("telecom", "SEC"), ("bitcoin", "TH")
+        ]
+        for kw, pool_key in anchors:
+            if kw in nm:
+                cand = [p["id"] for p in pools.get(pool_key, []) if re.search(kw, p["text"], re.I)]
+                if cand: refs.append(cand[0])
+
+        # garde au moins 2–3 réf. (BR/MC/SEC/TH) si rien n’a matché
+        for key in ("BR", "MC", "SEC", "TH"):
+            if len(refs) >= 4: break
+            arr = pools.get(key, [])
+            if arr:
+                refs.append(arr[0]["id"])
+        # dédoublonne et limite
+        seen, out = set(), []
+        for r in refs:
+            if r not in seen:
+                out.append(r); seen.add(r)
+        return out[:4]
+
+    explanations = {}
+    for pf_name, pf in portfolios_v3.items():
+        if not isinstance(pf, dict): 
+            continue
+        lines = []
+        for l in pf.get("Lignes", []) or []:
+            aid = l.get("id"); nm = l.get("name"); cat = l.get("category")
+            alloc = float(l.get("allocation_pct", 0) or 0)
+            score, risk = _score_and_risk(aid)
+
+            refs = l.get("justificationRefs") or _pick_refs(nm, cat)
+
+            # si le modèle a déjà fourni une justification, on la garde; sinon on synthétise proprement
+            if l.get("justification"):
+                base = l["justification"]
+            else:
+                expos = {
+                    "Actions": f"exposition entreprise ({nm}) liée à son secteur",
+                    "ETF": f"exposition indicielle/sectorielle via {nm}",
+                    "Obligations": "exposition obligataire diversifiée",
+                    "Crypto": f"exposition crypto ({nm}) avec filtre tendance 7j/24h positif"
+                }.get(cat, "exposition diversifiée")
+                base = f"Pondération {alloc:.2f}% — {expos}; Score {score:+.2f}, risque {risk}. Réfs: {refs}."
+            lines.append({
+                "id": aid, "name": nm, "category": cat,
+                "allocation_pct": round(alloc, 2),
+                "score": round(score, 3), "risk_class": risk,
+                "refs": refs, "justification": sanitize_marketing_language(base)
+            })
+        explanations[pf_name] = lines
+    return explanations
+
+def write_explanations_files(explanations: dict,
+                             path_json: str = "data/portfolio_explanations.json",
+                             path_md: str   = "data/portfolio_explanations.md") -> None:
+    os.makedirs(os.path.dirname(path_json), exist_ok=True)
+    with open(path_json, "w", encoding="utf-8") as f:
+        json.dump(explanations, f, ensure_ascii=False, indent=2)
+
+    md = []
+    for pf, rows in explanations.items():
+        md.append(f"# {pf}")
+        for r in rows:
+            refs_txt = ", ".join(r.get("refs", []))
+            md.append(f"- **{r['name']}** ({r['category']}, {r['allocation_pct']:.2f}%): "
+                      f"{r['justification']} "
+                      f"(Score {r['score']:+.2f}, risque {r['risk_class']}; Réfs: {refs_txt})")
+        md.append("")
+    with open(path_md, "w", encoding="utf-8") as f:
+        f.write("\n".join(md))
 
 
 # ============= CACHE D'UNIVERS AVEC HASH DE FICHIERS =============
@@ -3005,33 +3105,36 @@ def main():
     portfolios = generate_portfolios(filtered_data)
     
   # ========== SAUVEGARDE ==========
-    print("\n💾 Sauvegarde des portefeuilles...")
-    allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
-    save_portfolios_normalized(portfolios, allowed_assets)
-    
-    print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
-    print("🎯 Fonctionnalités activées:")
-    print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
-    print("   • Filtrage automatique des ETF à effet de levier")
-    print("   • Détection des actifs sur-étendus")
-    print("   • Équilibrage par classes de risque")
-    print("   • Diversification sectorielle round-robin (cap 30%)")
-    print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
-    print("   • Fallback crypto progressif")
-    print("   • Cache intelligent d'univers (hash fichiers)")
-    print("   • Retry API robuste (5 tentatives, timeouts étendus)")
-    print("   🛡️ COMPLIANCE AMF:")
-    print("     ∘ Langage neutre (pas d'incitation)")
-    print("     ∘ Disclaimer automatique")
-    print("     ∘ Liste des risques")
-    print("     ∘ Méthodologie transparente")
-    print("     ∘ Sanitisation anti-marketing")
-    print("   🔧 FIXES DE STABILITÉ:")
-    print("     ∘ Regex pandas warning corrigé")
-    print("     ∘ Détection ETF levier corrigée")
-    print("     ∘ Timeouts API étendus (20s/180s)")
-    print("     ∘ Protection de type améliorée")
-    print("     ∘ Système de fallback cache")
+print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
+allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
+structured_data_for_expl = prepare_structured_data(filtered_data)
+explanations = build_explanations(portfolios, allowed_assets, structured_data_for_expl)
+write_explanations_files(explanations)  # -> data/portfolio_explanations.{json,md}
+save_portfolios_normalized(portfolios, allowed_assets)
+
+print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
+print("🎯 Fonctionnalités activées:")
+print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
+print("   • Filtrage automatique des ETF à effet de levier")
+print("   • Détection des actifs sur-étendus")
+print("   • Équilibrage par classes de risque")
+print("   • Diversification sectorielle round-robin (cap 30%)")
+print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
+print("   • Fallback crypto progressif")
+print("   • Cache intelligent d'univers (hash fichiers)")
+print("   • Retry API robuste (5 tentatives, timeouts étendus)")
+print("   🛡️ COMPLIANCE AMF:")
+print("     ∘ Langage neutre (pas d'incitation)")
+print("     ∘ Disclaimer automatique")
+print("     ∘ Liste des risques")
+print("     ∘ Méthodologie transparente")
+print("     ∘ Sanitisation anti-marketing")
+print("   🔧 FIXES DE STABILITÉ:")
+print("     ∘ Regex pandas warning corrigé")
+print("     ∘ Détection ETF levier corrigée")
+print("     ∘ Timeouts API étendus (20s/180s)")
+print("     ∘ Protection de type améliorée")
+print("     ∘ Système de fallback cache")
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
