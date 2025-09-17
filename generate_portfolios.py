@@ -879,7 +879,7 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 - Privilégier équilibrage `risk_class` : mix low/mid selon profil (Stable=80% low, Modéré=60% low, Agressif=40% low).
 
 ## Style de justification (obligatoire, par ligne)
-- Commencer par: **"Pondération {allocation_pct:.2f}% —"**
+- Commencer par: **"Pondération {{allocation_pct:.2f}}% —"**
 - Expliquer la logique: **marché** (MARKETS), **secteur** (SECTORS), **thème** (THEMES) et/ou **brief macro** (BRIEF), en reliant explicitement l’exposition visée (ex: "large cap US", "or physique", "obligations souveraines euro 3–5 ans").
 - Mentionner **le score** et **la classe de risque**: "Score {score:+.2f}, risque {risk_class}".
 - Terminer par **Réfs** avec des IDs (ex: `Réfs: [BR2,"MC1","SEC3"]`).
@@ -1553,7 +1553,11 @@ def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
             "Commentaire": "",
             "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
         })
-        out[pf_key][category][name] = _pct(alloc)
+          # si jamais une catégorie inattendue arrive, on la mappe sur ETF
+ if category not in ("Actions", "ETF", "Obligations", "Crypto"):
+     category = "ETF"
+  out[pf_key].setdefault(category, {})  # sécurité clé absente
+    out[pf_key][category][name] = _pct(alloc)
 
     def _sum_pct_dict(d):
         tot = 0.0
@@ -1752,7 +1756,7 @@ except NameError:  # pragma: no cover
         if s.startswith("ETF_b"): return "Obligations"
         if s.startswith("ETF_s"): return "ETF"
         if s.startswith("CR_"): return "Crypto"
-        return "Autres"
+        return "ETF"
 
 # ---------- Tokenisation thématique ----------
 def _tokenize_theme(name: str) -> set:
