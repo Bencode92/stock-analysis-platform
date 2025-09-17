@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOVIS — Business Plan (THE PROJECT × Revolut) | 2025–2028</title>
+  <meta name="description" content="NOVIS — Dossier Business Plan 2025–2028. Candidature THE PROJECT × Revolut." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* Variables */
+    :root{
+      --bg: #ffffff;
+      --panel: #111117;
+      --purple: #2b0d57;
+      --purple-2: #3c1380;
+      --ink: #e7e7ef;
+      --muted: #a9a9c0;
+      --accent: #06ffa5;
+      --accent-2: #00d084;
+      --glow: rgba(6,255,165,.18);
+      --radius: 12px;
+    }
+
+    /* Reset */
+    *{box-sizing:border-box; margin:0; padding:0}
+    
+    /* Base styles - optimized for A4 */
+    body{
+      font-family:'Inter',system-ui,-apple-system,sans-serif;
+      background: #0b0b10;
+      color:var(--ink);
+      line-height:1.5;
+      margin:0;
+      padding:0;
+    }
+
+    /* Container for print */
+    .page-wrapper {
+      max-width: 210mm;
+      margin: 0 auto;
+      background: #0b0b10;
+      min-height: 297mm;
+    }
+
+    /* Header badge - smaller for print */
+    .badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 50;
+      padding: 6px 10px;
+      border: 1px solid rgba(255,255,255,.15);
+      background: linear-gradient(135deg,#1a0736, #2c0b5e);
+      color: #fff;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: .2px;
+    }
+
+    /* Hero section - compressed */
+    .hero {
+      position: relative;
+      padding: 50px 20px 30px;
+      background: linear-gradient(180deg, var(--purple), var(--purple-2));
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      font-size: 12px;
+      color: #fff;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+    }
+
+    .logo .mark {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg,var(--accent),var(--accent-2));
+      color: #000;
+      font-size: 14px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-weight: 900;
+      font-size: 28px;
+      line-height: 1.1;
+      color: #fff;
+    }
+
+    h1 .thin {
+      font-weight: 300;
+      font-size: 20px;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .sub {
+      margin: 0 0 15px;
+      color: #e9e9ff;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    /* CTA buttons - smaller */
+    .cta {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+      transition: all .2s;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg,var(--accent),var(--accent-2));
+      color: #000;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: rgba(255,255,255,.2);
+      color: #fff;
+    }
+
+    /* Stats section - compressed */
+    .stats {
+      padding: 15px 20px;
+      background: rgba(6,255,165,.05);
+      border-top: 1px solid rgba(255,255,255,.08);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 12px;
+      position: relative;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg,var(--accent),var(--accent-2));
+    }
+
+    .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--muted);
+    }
+
+    .k {
+      font-size: 20px;
+      font-weight: 900;
+      background: linear-gradient(135deg,var(--accent),var(--accent-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #cfd0e8;
+      opacity: .85;
+      margin-top: 2px;
+    }
+
+    /* Main content - compressed */
+    .content {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 20px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .panel h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      color: var(--accent);
+    }
+
+    .list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .list li {
+      display: flex;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(255,255,255,.06);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .list li:last-child {
+      border-bottom: 0;
+    }
+
+    .tick {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,var(--accent),var(--accent-2));
+      display: grid;
+      place-items: center;
+      color: #000;
+      font-weight: 900;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .quote {
+      background: linear-gradient(135deg, rgba(43,13,87,.7), rgba(17,17,23,.8));
+      border-color: rgba(255,255,255,.12);
+    }
+
+    .quote p {
+      font-size: 14px;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .projections {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      font-size: 11px;
+    }
+
+    /* Footer - compressed */
+    .footer {
+      padding: 20px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,.08);
+      color: var(--muted);
+      background: #0a0a0f;
+    }
+
+    .footer .btn {
+      margin: 0 5px;
+    }
+
+    .contact {
+      margin-top: 12px;
+      font-size: 12px;
+    }
+
+    .contact a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Print optimization */
+    @media print {
+      @page {
+        size: A4;
+        margin: 10mm;
+      }
+
+      body {
+        background: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .page-wrapper {
+        max-width: 100%;
+        min-height: auto;
+      }
+
+      .badge {
+        display: none !important;
+      }
+
+      /* Force colors in print */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      /* Ensure links work in PDF */
+      a {
+        color: #06ffa5 !important;
+        text-decoration: underline !important;
+      }
+
+      /* Adjust spacing for print */
+      .hero {
+        padding: 30px 15px 20px;
+      }
+
+      .stats {
+        padding: 12px 15px;
+      }
+
+      .content {
+        padding: 15px;
+        gap: 15px;
+      }
+
+      .footer {
+        padding: 15px;
+      }
+
+      /* Ensure single page */
+      .page-wrapper {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+    }
+
+    /* Screen optimizations */
+    @media screen {
+      body {
+        padding: 20px;
+        background: radial-gradient(1200px 800px at 20% -10%, rgba(6,255,165,.06), transparent 60%), #0b0b10;
+      }
+
+      .page-wrapper {
+        box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-primary:hover {
+        box-shadow: 0 10px 30px var(--glow);
+      }
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .content {
+        grid-template-columns: 1fr;
+      }
+
+      .cta {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <div class="badge">THE PROJECT × Revolut — Dossier de candidature</div>
+
+    <!-- HERO Section -->
+    <header class="hero">
+      <div class="logo">
+        <span class="mark">NV</span>
+        <span>NOVIS</span>
+      </div>
+      
+      <h1>
+        <span class="thin">Business Plan 2025–2028</span>
+        Plateforme d'éducation financière nouvelle génération
+      </h1>
+      
+      <p class="sub">
+        <strong>Candidature THE PROJECT × Revolut</strong> • Modèle premium accessible (5€/mois TTC)<br>
+        Zéro dilution, croissance organique forte, rentabilité rapide.
+      </p>
+      
+      <div class="cta">
+        <a class="btn btn-primary" href="https://bencode92.github.io/stock-analysis-platform/BPnovis-revolut.html" target="_blank">
+          📊 Business Plan
+        </a>
+        <a class="btn btn-ghost" href="https://bencode92.github.io/stock-analysis-platform/pitchdeck.html" target="_blank">
+          🎯 Pitch Deck
+        </a>
+      </div>
+    </header>
+
+    <!-- STATS Band -->
+    <section class="stats">
+      <div class="card">
+        <div class="label">Prix mensuel</div>
+        <div class="k">5€ TTC</div>
+        <div class="hint">4,17€ HT • ARPU net 3,67€</div>
+      </div>
+      <div class="card">
+        <div class="label">LTV / CAC</div>
+        <div class="k">11,1×</div>
+        <div class="hint">LTV 56€ • CAC 5,05€ • Payback 1,38 mois</div>
+      </div>
+      <div class="card">
+        <div class="label">Break-even</div>
+        <div class="k">943 clients</div>
+        <div class="hint">Février 2026 • Tréso positive juin 2026</div>
+      </div>
+      <div class="card">
+        <div class="label">EBITDA 2026</div>
+        <div class="k">61,5k€</div>
+        <div class="hint">CA 117k€ HT • Marge 53%</div>
+      </div>
+    </section>
+
+    <!-- CONTENT Grid -->
+    <section class="content">
+      <div class="panel">
+        <h3>Pourquoi NOVIS se démarque</h3>
+        <ul class="list">
+          <li>
+            <span class="tick">✓</span>
+            <div><strong>Prix psychologique parfait</strong><br>
+            5€/mois = seuil d'achat impulsif, pas de freemium.</div>
+          </li>
+          <li>
+            <span class="tick">✓</span>
+            <div><strong>Plateforme 360° unique</strong><br>
+            Budget, dette, bourse, crypto, immobilier, fiscal — tout en un.</div>
+          </li>
+          <li>
+            <span class="tick">✓</span>
+            <div><strong>Acquisition organique maîtrisée</strong><br>
+            424 nouveaux/mois via TikTok, YouTube Shorts, collaborations.</div>
+          </li>
+          <li>
+            <span class="tick">✓</span>
+            <div><strong>Métriques exceptionnelles</strong><br>
+            Coûts fixes 3 460€/mois, ROI année 1 : 193%, 100% autofinancé.</div>
+          </li>
+          <li>
+            <span class="tick">✓</span>
+            <div><strong>Vision long terme</strong><br>
+            3 709 clients fin 2026, 5 990 clients fin 2028, EBITDA 213k€.</div>
+          </li>
+        </ul>
+      </div>
+      
+      <aside class="panel quote">
+        <p>
+          « Notre mission : démocratiser l'éducation financière pour 21 millions de jeunes français.
+          Pas de prix abusifs, pas de dilution, pas de compromis sur la qualité. »
+        </p>
+        <p style="margin-top:10px;color:var(--muted);font-size:12px">
+          — Benoît Comas, Fondateur NOVIS
+        </p>
+        <div class="projections">
+          <p style="color:var(--accent);font-weight:700">Projections validées</p>
+          • 2026 : 117-156k€ CA<br>
+          • 2027 : 240k€ CA<br>
+          • 2028 : 290k€ CA
+        </div>
+      </aside>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <p style="font-size:16px;color:var(--ink);margin-bottom:12px">
+        <strong>📄 Consultez nos documents complets</strong>
+      </p>
+      <div style="margin-bottom:12px">
+        <a class="btn btn-primary" href="https://bencode92.github.io/stock-analysis-platform/BPnovis-revolut.html" target="_blank">
+          Business Plan détaillé
+        </a>
+        <a class="btn btn-ghost" href="https://bencode92.github.io/stock-analysis-platform/pitchdeck.html" target="_blank">
+          Pitch Deck interactif
+        </a>
+      </div>
+      <div class="contact">
+        <a href="mailto:mynovis@novisfr.com">✉️ mynovis@novisfr.com</a> • 
+        <a href="tel:+33677138930">📱 06 77 13 89 30</a>
+      </div>
+      <p style="margin-top:10px;font-size:11px">
+        © 2025 NOVIS — Tous droits réservés • Candidature THE PROJECT × Revolut • Document confidentiel
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
