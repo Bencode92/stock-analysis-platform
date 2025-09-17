@@ -39,15 +39,24 @@ jobs:
       - name: 🚀 Exécuter le script
         run: python generate_portfolios.py
 
-      # (Optionnel) Vérifier que les fichiers sont bien générés
-      - name: Check outputs
+      # (Optionnel) Inspecter rapidement les sorties
+      - name: 🧾 Check outputs (optionnel)
+        if: always()
         run: |
-          ls -lah data | sed -n '1,200p'
+          echo "== data =="
+          ls -lah data || true
           echo "----"
-          head -n 30 data/portfolio_explanations.json || true
+          [ -f data/portfolio_explanations.json ] && head -n 30 data/portfolio_explanations.json || true
+          echo "----"
+          [ -f data/portfolios.json ] && cat data/portfolios.json || true
+          echo "----"
+          ls -lah data/portfolio_history || true
+          echo "== debug/prompts =="
+          ls -lah debug/prompts || true
 
       - name: 💾 Commit & push
         run: |
+          # Ajouter précisément les artefacts générés
           git add data/portfolios.json \
                   data/portfolio_explanations.json \
                   data/portfolio_explanations.md \
@@ -55,14 +64,23 @@ jobs:
                   data/portfolio_history/index.json \
                   debug/prompts/* || true
 
-          # Si .gitignore les filtre, force l’ajout :
+          # Si .gitignore les filtre, forcer l’ajout
+          if git check-ignore -q data/portfolios.json; then
+            git add -f data/portfolios.json
+          fi
           if git check-ignore -q data/portfolio_explanations.json; then
             git add -f data/portfolio_explanations.json data/portfolio_explanations.md
+          fi
+          if git check-ignore -q data/portfolio_history; then
+            git add -f data/portfolio_history/*.json data/portfolio_history/index.json || true
+          fi
+          if git check-ignore -q debug/prompts; then
+            git add -f debug/prompts/* || true
           fi
 
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -m "📄 Explications + portefeuilles" || echo "rien à committer"
 
-          git push
-
+          # Push simple; si ça échoue pour divergence, tenter un rebase rapide
+          git push || (git pull --rebase && git push)
