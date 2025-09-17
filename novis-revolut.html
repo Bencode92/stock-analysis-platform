@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOVIS — Business Plan (THE PROJECT × Revolut) | 2025–2028</title>
+  <meta name="description" content="NOVIS — Dossier Business Plan 2025–2028. Candidature THE PROJECT × Revolut. Modèle premium accessible (5€/mois), LTV/CAC 11,1x, payback 1,38 mois." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <meta property="og:title" content="NOVIS — Business Plan (THE PROJECT × Revolut)" />
+  <meta property="og:description" content="Modèle premium accessible (5€/mois). LTV/CAC 11,1x. Payback 1,38 mois. Break-even Fév. 2026." />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="fr_FR" />
+  <style>
+    :root{
+      --bg: #0b0b10;
+      --panel: #111117;
+      --purple: #2b0d57;
+      --purple-2: #3c1380;
+      --ink: #e7e7ef;
+      --muted: #a9a9c0;
+      --accent: #06ffa5;
+      --accent-2: #00d084;
+      --glow: rgba(6,255,165,.18);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; 
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;
+      background: radial-gradient(1200px 800px at 20% -10%, rgba(6,255,165,.06), transparent 60%), var(--bg);
+      color:var(--ink);
+      line-height:1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* Header badge */
+    .badge {
+      position:fixed; 
+      top:16px; 
+      left:16px; 
+      z-index:50; 
+      padding:10px 14px; 
+      border:1px solid rgba(255,255,255,.15); 
+      background:linear-gradient(135deg,#1a0736, #2c0b5e); 
+      color:#fff; 
+      border-radius:12px; 
+      font-weight:700; 
+      letter-spacing:.2px; 
+      box-shadow:0 12px 28px rgba(0,0,0,.35);
+      font-size: 13px;
+    }
+
+    /* HERO */
+    .hero{
+      position:relative; 
+      overflow:hidden; 
+      padding:110px 24px 72px;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .hero::before{
+      content:""; 
+      position:absolute; 
+      inset:-20% -10% auto -10%; 
+      height:120%; 
+      background:radial-gradient(50% 50% at 70% 40%, rgba(255,255,255,.08), transparent 60%), 
+                linear-gradient(180deg, var(--purple), var(--purple-2)); 
+      filter:saturate(120%); 
+      z-index:-1;
+    }
+    .wrap{
+      max-width:1100px; 
+      margin:0 auto;
+      width: 100%;
+    }
+    .logo{
+      display:inline-flex; 
+      align-items:center; 
+      gap:10px; 
+      font-weight:900; 
+      letter-spacing:.5px; 
+      font-size:14px; 
+      color:#fff; 
+      text-transform:uppercase; 
+      opacity:.9
+    }
+    .logo .mark{
+      display:grid; 
+      place-items:center; 
+      width:44px; 
+      height:44px; 
+      border-radius:12px; 
+      background:linear-gradient(135deg,var(--accent),var(--accent-2)); 
+      color:#000; 
+      box-shadow:0 12px 40px var(--glow);
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .hero h1{
+      margin:22px 0 10px; 
+      font-weight:900; 
+      font-size:clamp(32px,6vw,56px); 
+      line-height:1.1; 
+      letter-spacing:-.5px;
+      color: #fff;
+    }
+    .hero h1 .thin{
+      font-weight:300; 
+      color:#fff
+    }
+    .hero p.sub{
+      margin:0 0 28px; 
+      color:#e9e9ff; 
+      opacity:.9;
+      font-size: clamp(15px, 2vw, 18px);
+    }
+
+    .cta{
+      display:flex; 
+      flex-wrap:wrap; 
+      gap:14px;
+      margin-bottom: 20px;
+    }
+    .btn{
+      display:inline-flex; 
+      align-items:center; 
+      gap:10px; 
+      padding:14px 24px; 
+      border-radius:14px; 
+      font-weight:700; 
+      border:1px solid transparent; 
+      transition:transform .12s ease, box-shadow .2s ease, border .2s;
+      font-size: 15px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-primary{
+      background:linear-gradient(135deg,var(--accent),var(--accent-2)); 
+      color:#000; 
+      box-shadow:0 16px 38px var(--glow)
+    }
+    .btn-primary:hover{
+      transform:translateY(-2px);
+      box-shadow:0 20px 45px var(--glow);
+      text-decoration: none;
+    }
+    .btn-ghost{
+      background:transparent; 
+      border-color:rgba(255,255,255,.18); 
+      color:#fff
+    }
+    .btn-ghost:hover{
+      border-color:rgba(255,255,255,.35); 
+      transform:translateY(-2px);
+      background: rgba(255,255,255,0.05);
+      text-decoration: none;
+    }
+
+    /* STAT CARDS */
+    .band{
+      padding:24px; 
+      background:linear-gradient(180deg, rgba(6,255,165,.06), rgba(6,255,165,.02)); 
+      border-top:1px solid rgba(255,255,255,.06); 
+      border-bottom:1px solid rgba(255,255,255,.06)
+    }
+    .stats{
+      display:grid; 
+      grid-template-columns:repeat(4,1fr); 
+      gap:16px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .card{
+      background:var(--panel); 
+      border:1px solid rgba(255,255,255,.08); 
+      border-radius:16px; 
+      padding:18px; 
+      position:relative; 
+      overflow:hidden
+    }
+    .card::after{
+      content:""; 
+      position:absolute; 
+      left:0; 
+      top:0; 
+      bottom:0; 
+      width:4px; 
+      background:linear-gradient(180deg,var(--accent),var(--accent-2))
+    }
+    .k{
+      font-size:28px; 
+      font-weight:900; 
+      letter-spacing:-.3px; 
+      background:linear-gradient(135deg,var(--accent),var(--accent-2)); 
+      -webkit-background-clip:text; 
+      -webkit-text-fill-color:transparent
+    }
+    .label{
+      font-size:12px; 
+      text-transform:uppercase; 
+      letter-spacing:.4px; 
+      color:var(--muted)
+    }
+    .hint{
+      font-size:13px; 
+      color:#cfd0e8; 
+      opacity:.85;
+      margin-top: 4px;
+    }
+
+    /* VALUE */
+    .section{
+      padding:64px 24px
+    }
+    .grid{
+      display:grid; 
+      grid-template-columns:1.2fr .8fr; 
+      gap:28px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .panel{
+      background:var(--panel); 
+      border:1px solid rgba(255,255,255,.08); 
+      border-radius:var(--radius); 
+      padding:24px
+    }
+    .panel h3{
+      margin:0 0 16px; 
+      font-size:20px;
+      color: var(--accent);
+    }
+    .list{
+      list-style:none; 
+      padding:0; 
+      margin:0
+    }
+    .list li{
+      display:flex; 
+      gap:10px; 
+      padding:12px 0; 
+      border-bottom:1px dashed rgba(255,255,255,.08)
+    }
+    .list li:last-child{
+      border-bottom:0
+    }
+    .tick{
+      width:24px; 
+      height:24px; 
+      border-radius:50%; 
+      background:linear-gradient(135deg,var(--accent),var(--accent-2)); 
+      display:grid; 
+      place-items:center; 
+      color:#000; 
+      font-weight:900;
+      flex-shrink: 0;
+    }
+
+    .quote{
+      background:linear-gradient(135deg, rgba(43,13,87,.7), rgba(17,17,23,.8)); 
+      border:1px solid rgba(255,255,255,.12); 
+      box-shadow:0 18px 50px rgba(0,0,0,.35);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .quote p{
+      margin:0; 
+      font-size:18px
+    }
+
+    /* Documents preview */
+    .docs-preview {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-top: 30px;
+    }
+    .docs-preview h4 {
+      margin: 0 0 12px;
+      color: var(--accent);
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .docs-list {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .doc-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .doc-item .icon {
+      color: var(--accent);
+    }
+
+    /* FOOTER */
+    .footer{
+      padding:36px 24px; 
+      color:var(--muted); 
+      text-align:center; 
+      border-top:1px solid rgba(255,255,255,.08)
+    }
+    .footer-cta {
+      margin-bottom: 24px;
+    }
+    .footer-cta .btn {
+      margin: 0 8px;
+    }
+
+    /* Responsive */
+    @media (max-width: 980px){ 
+      .grid{grid-template-columns:1fr} 
+      .stats{grid-template-columns:repeat(2,1fr);} 
+    }
+    @media (max-width: 560px){ 
+      .stats{grid-template-columns:1fr} 
+      .hero{padding-top:96px}
+      .badge {
+        font-size: 11px;
+        padding: 8px 10px;
+      }
+      .cta {
+        flex-direction: column;
+      }
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* Print styles */
+    @media print {
+      .badge { display: none !important; }
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .hero::before { display: none !important; }
+      .btn { display: none !important; }
+      .footer-cta { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="badge">THE PROJECT × Revolut — Dossier de candidature</div>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="wrap">
+      <div class="logo">
+        <span class="mark">NV</span> 
+        <span>NOVIS</span>
+      </div>
+      
+      <h1>
+        <span class="thin">Business Plan 2025–2028</span><br/>
+        NOVIS — Plateforme d'éducation financière nouvelle génération
+      </h1>
+      
+      <p class="sub">
+        <strong>Modèle premium accessible (5€/mois TTC)</strong><br/>
+        Candidature <strong>THE PROJECT × Revolut</strong><br/>
+        Zéro dilution, croissance organique forte, rentabilité rapide.
+      </p>
+      
+      <div class="cta">
+        <a class="btn btn-primary" href="https://bencode92.github.io/stock-analysis-platform/BPnovis-revolut.html" target="_blank" aria-label="Ouvrir le Business Plan complet">
+          📊 Business Plan Complet
+        </a>
+        <a class="btn btn-ghost" href="https://bencode92.github.io/stock-analysis-platform/pitchdeck.html" target="_blank" aria-label="Voir le Pitch Deck">
+          🎯 Pitch Deck Interactif
+        </a>
+      </div>
+
+      <div class="docs-preview">
+        <h4>Documents disponibles</h4>
+        <div class="docs-list">
+          <div class="doc-item">
+            <span class="icon">✓</span>
+            <span>Business Plan détaillé (80 pages)</span>
+          </div>
+          <div class="doc-item">
+            <span class="icon">✓</span>
+            <span>Projections financières 2025-2028</span>
+          </div>
+          <div class="doc-item">
+            <span class="icon">✓</span>
+            <span>Pitch Deck (12 slides)</span>
+          </div>
+          <div class="doc-item">
+            <span class="icon">✓</span>
+            <span>Analyse de sensibilité</span>
+          </div>
+        </div>
+      </div>
+      
+      <p class="hint" style="margin-top:20px; opacity:.8">
+        Document confidentiel — lien privé partagé pour évaluation du dossier.
+      </p>
+    </div>
+  </header>
+
+  <!-- STATS BAND -->
+  <section class="band">
+    <div class="stats" aria-label="Indicateurs clés">
+      <div class="card">
+        <div class="label">Prix mensuel</div>
+        <div class="k">5€ TTC</div>
+        <div class="hint">4,17€ HT • ARPU net 3,67€</div>
+      </div>
+      <div class="card">
+        <div class="label">LTV / CAC</div>
+        <div class="k">11,1×</div>
+        <div class="hint">LTV 56€ • CAC 5,05€ • Payback 1,38 mois</div>
+      </div>
+      <div class="card">
+        <div class="label">Break-even</div>
+        <div class="k">943 clients</div>
+        <div class="hint">Février 2026 • Tréso positive juin 2026</div>
+      </div>
+      <div class="card">
+        <div class="label">EBITDA 2026</div>
+        <div class="k">61,5k€</div>
+        <div class="hint">CA 117,1k€ HT • Marge 53%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUE & HIGHLIGHTS -->
+  <section class="section">
+    <div class="grid">
+      <div class="panel">
+        <h3>Pourquoi NOVIS se démarque</h3>
+        <ul class="list">
+          <li>
+            <span class="tick">✓</span>
+            <div>
+              <strong>Prix psychologique parfait</strong><br/>
+              5€/mois = seuil d'achat impulsif, pas de freemium, contenu illimité.
+            </div>
+          </li>
+          <li>
+            <span class="tick">✓</span>
+            <div>
+              <strong>Plateforme 360° unique</strong><br/>
+              Budget, dette, bourse, crypto, immobilier, fiscal — tout en un.
+            </div>
+          </li>
+          <li>
+            <span class="tick">✓</span>
+            <div>
+              <strong>Acquisition organique maîtrisée</strong><br/>
+              424 nouveaux/mois via TikTok, YouTube Shorts, collaborations.
+            </div>
+          </li>
+          <li>
+            <span class="tick">✓</span>
+            <div>
+              <strong>Métriques exceptionnelles</strong><br/>
+              Coûts fixes 3 460€/mois, ROI année 1 : 193%, 100% autofinancé.
+            </div>
+          </li>
+          <li>
+            <span class="tick">✓</span>
+            <div>
+              <strong>Vision long terme</strong><br/>
+              3 709 clients fin 2026 (base), 5 990 clients fin 2028, EBITDA 213k€.
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <aside class="panel quote">
+        <p>
+          « Notre mission : démocratiser l'éducation financière pour 21 millions de jeunes français.
+          Pas de prix abusifs, pas de dilution, pas de compromis sur la qualité. »
+        </p>
+        <p style="margin-top:16px;color:var(--muted);font-size:14px">
+          — Benoît Comas, Fondateur NOVIS
+        </p>
+        <div style="margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1)">
+          <p style="font-size:14px; color:var(--accent)">
+            <strong>Projections validées</strong>
+          </p>
+          <p style="font-size:13px; margin-top:8px">
+            • 2026 : 117-156k€ CA<br/>
+            • 2027 : 240k€ CA<br/>
+            • 2028 : 290k€ CA
+          </p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- CTA FOOTER -->
+  <footer class="footer">
+    <div class="footer-cta">
+      <p>
+        <strong style="font-size:18px; color:var(--ink)">Prêt·e à découvrir NOVIS en détail ?</strong>
+      </p>
+      <p style="margin:20px 0">
+        <a class="btn btn-primary" href="https://bencode92.github.io/stock-analysis-platform/BPnovis-revolut.html" target="_blank">
+          📊 Consulter le Business Plan
+        </a>
+        <a class="btn btn-ghost" href="https://bencode92.github.io/stock-analysis-platform/pitchdeck.html" target="_blank">
+          🎯 Voir le Pitch Deck
+        </a>
+      </p>
+      <p style="margin-top:20px">
+        <a href="mailto:mynovis@novisfr.com" style="color:var(--accent)">✉️ mynovis@novisfr.com</a> • 
+        <a href="tel:+33677138930" style="color:var(--accent)">📱 06 77 13 89 30</a>
+      </p>
+    </div>
+    <p style="margin-top:18px; font-size:13px">
+      © <span id="y">2025</span> NOVIS — Tous droits réservés • Candidature THE PROJECT × Revolut
+    </p>
+  </footer>
+
+  <script>
+    // Année dynamique
+    document.getElementById('y').textContent = new Date().getFullYear();
+    
+    // Analytics simple (optionnel)
+    console.log('NOVIS BP - THE PROJECT × Revolut - Loaded at', new Date().toISOString());
+  </script>
+</body>
+</html>
