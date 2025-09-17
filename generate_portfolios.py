@@ -1536,19 +1536,19 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     api_key = os.environ.get('API_CHAT')
     if not api_key:
         raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
-    
+
     current_month = get_current_month_fr()
-    
+
     # Vérifier si on a un univers quantitatif
     if not filtered_data.get('universe'):
         print("⚠️ Pas d'univers quantitatif détecté, génération en mode legacy")
         return generate_portfolios_legacy(filtered_data)
-    
+
     # Préparer les données structurées
     print("🔄 Préparation des données structurées v3...")
     structured_data = prepare_structured_data(filtered_data)
     allowed_assets = extract_allowed_assets(filtered_data)
-    
+
     universe = filtered_data['universe']
     print(f"  📊 Brief: {len(structured_data['brief_points'])} points")
     print(f"  📈 Marchés: {len(structured_data['market_points'])} points")
@@ -1558,67 +1558,73 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     print(f"  📊 ETF standards: {len(allowed_assets['allowed_etfs_standard'])}")
     print(f"  📉 ETF obligataires: {len(allowed_assets['allowed_bond_etfs'])}")
     print(f"  🪙 Cryptos autorisées: {len(allowed_assets['allowed_crypto'])}")
-    
+
     # Construire le prompt robuste v3 avec compliance AMF
     prompt = build_robust_prompt_v3(structured_data, allowed_assets, current_month)
-    
+
     # Horodatage pour les fichiers de debug
     debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    
+
     # Sauvegarder le prompt pour debug
     print("🔍 Sauvegarde du prompt v3 pour debug...")
     debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
     print(f"✅ Prompt v3 sauvegardé dans {debug_file}")
-    
+
     # Appel API (forçage JSON, température 0, limites de tokens)
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     data = {
         "model": "gpt-4-turbo",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
         "response_format": {"type": "json_object"},
-        "max_tokens": 1800
+        "max_tokens": 1800,
     }
-    
+
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v3 quantitatif + compliance)...")
-    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
+    response = post_with_retry(
+        "https://api.openai.com/v1/chat/completions",
+        headers,
+        data,
+        tries=5,
+        timeout=(20, 180),
+    )
     response.raise_for_status()
-    
+
     result = response.json()
     content = result["choices"][0]["message"]["content"]
-    
-# Sauvegarder la réponse brute pour debug
-response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
-os.makedirs("debug/prompts", exist_ok=True)
-with open(response_debug_file, "w", encoding="utf-8") as f:
-    f.write(content)
-print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
 
-# ✅ Parsing robuste (réparateur JSON)
-try:
-    portfolios = parse_json_strict_or_repair(content)
-except Exception as e:
-    print(f"❌ Erreur de parsing JSON après réparation: {e}")
-    raise
+    # Sauvegarder la réponse brute pour debug
+    response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
+    os.makedirs("debug/prompts", exist_ok=True)
+    with open(response_debug_file, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
 
-# 🔎 Sanity check : la réponse doit contenir les 3 portefeuilles et des 'Lignes'
-expected = {"Agressif", "Modéré", "Stable"}
-if not isinstance(portfolios, dict) or not expected.issubset(portfolios.keys()):
-    raise ValueError("Réponse v3 invalide/partielle — pas de portefeuilles utilisables")
-if any(not isinstance(portfolios[k], dict) for k in expected):
-    raise ValueError("Réponse v3 invalide — mauvais format (clé non-dict)")
-if all(len(portfolios[k].get("Lignes", [])) == 0 for k in expected):
-    raise ValueError("Réponse v3 vide — aucune 'Lignes' fournie")
+    # ✅ Parsing robuste (réparateur JSON)
+    try:
+        portfolios = parse_json_strict_or_repair(content)
+    except Exception as e:
+        print(f"❌ Erreur de parsing JSON après réparation: {e}")
+        raise
 
-# Attacher compliance de manière sûre
-portfolios = attach_compliance(portfolios)
+    # 🔎 Sanity check : la réponse doit contenir les 3 portefeuilles et des 'Lignes'
+    expected = {"Agressif", "Modéré", "Stable"}
+    if not isinstance(portfolios, dict) or not expected.issubset(set(portfolios.keys())):
+        raise ValueError("Réponse v3 invalide/partielle — pas de portefeuilles utilisables")
+    if any(not isinstance(portfolios[k], dict) for k in expected):
+        raise ValueError("Réponse v3 invalide — mauvais format (clé non-dict)")
+    if all(len(portfolios[k].get("Lignes", [])) == 0 for k in expected):
+        raise ValueError("Réponse v3 vide — aucune 'Lignes' fournie")
 
-# Sanitisation compliance (langage neutre)
-print("🛡️ Application de la sanitisation compliance AMF...")
-portfolios = apply_compliance_sanitization(portfolios)
+    # Attacher compliance de manière sûre
+    portfolios = attach_compliance(portfolios)
+
+    # Sanitisation compliance (langage neutre)
+    print("🛡️ Application de la sanitisation compliance AMF...")
+    portfolios = apply_compliance_sanitization(portfolios)
 
     # Validation post-génération v3
     validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
@@ -1634,7 +1640,7 @@ portfolios = apply_compliance_sanitization(portfolios)
         overlap_report = build_overlap_report(
             portfolios,
             allowed_assets,
-            etf_csv_path="data/combined_etfs.csv"
+            etf_csv_path="data/combined_etfs.csv",
         )
         for k, v in overlap_report.items():
             if v:
@@ -1687,7 +1693,6 @@ portfolios = apply_compliance_sanitization(portfolios)
             print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
 
     return portfolios
-
 
 
     # === NORMALISATION V3 -> SCHÉMA FRONT HISTORIQUE (Agressif/Modéré/Stable) ===
@@ -3173,7 +3178,7 @@ def main():
     # Générer les portefeuilles avec la nouvelle version quantitative v3
     portfolios = generate_portfolios(filtered_data)
     
-# ========== SAUVEGARDE ==========
+    # ========== SAUVEGARDE ==========
     print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
     allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
     structured_data_for_expl = prepare_structured_data(filtered_data)
@@ -3204,7 +3209,6 @@ def main():
     print("     ∘ Timeouts API étendus (20s/180s)")
     print("     ∘ Protection de type améliorée")
     print("     ∘ Système de fallback cache")
-
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
     try:
