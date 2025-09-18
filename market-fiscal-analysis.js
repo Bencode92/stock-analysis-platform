@@ -2,7 +2,7 @@
  * market-fiscal-analysis.js
  * Module d'intégration pour l'analyse de marché et la comparaison fiscale
  * Complète la page comparaison-fiscale.html
- * Version 3.0 - Corrections complètes
+ * Version 3.1 - Robustesse améliorée
  */
 
 // Constantes fiscales
@@ -55,6 +55,7 @@ const UNITS_CONTRACT = {
     gestionLocativeTaux: '%',
     tmi: '%'
 };
+
 /**
  * Helper pour parser les valeurs numériques en acceptant 0
  * ⚠️ IMPORTANT : Cette fonction doit être AVANT la classe MarketFiscalAnalyzer
@@ -67,14 +68,27 @@ function parseFloatOrDefault(elemId, def) {
     return Number.isNaN(v) ? def : v;   // 0 est conservé, '' ou 'abc' donnent def
 }
 
+/**
+ * Convertit en nombre ou renvoie null si invalide
+ * @param {any} v - Valeur à convertir
+ * @returns {number|null} - Nombre ou null
+ */
+function toNumberOrNull(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 class MarketFiscalAnalyzer {
     constructor() {
         this.simulateur = new SimulateurImmo();
         this.comparateur = new FiscalComparator(this.simulateur);
         this.propertyData = null;
         this.marketAnalysis = null;
-           // Constante pour le vrai signe minus
+        // Constante pour le vrai signe minus
         this.SIGN_MINUS = '−'; // U+2212 (pas un tiret simple !)
+        
+        // NEW : référence globale pratique pour la page
+        if (typeof window !== 'undefined') window.analyzer = this;
     }
     
     /**
@@ -237,48 +251,65 @@ comparatorData.chargeMensuelleCredit = baseResults.mensualite;
     }
 
     /**
-     * Analyse la position sur le marché
+     * Analyse la position sur le marché - VERSION ROBUSTE V3.1
      */
     analyzeMarketPosition(data) {
         const result = {
-            hasMarketData: !!data.ville,
+            hasMarketData: false,
             priceAnalysis: {},
             rentAnalysis: {},
             globalScore: 0
         };
 
-        if (data.ville) {
-            const marketPriceM2 = data.ville.prix_m2;
-            const marketRentM2 = data.ville.loyer_m2;
-            
-            // Analyse du prix
-            const priceDiff = ((data.prixM2Paye - marketPriceM2) / marketPriceM2) * 100;
-            result.priceAnalysis = {
-                userPrice: data.prixM2Paye,
-                marketPrice: marketPriceM2,
-                difference: priceDiff,
-                position: this.getPricePosition(priceDiff),
-                savings: (marketPriceM2 - data.prixM2Paye) * data.surface
-            };
-            
-            // Analyse du loyer - Comparer en CC
-            const loyerCCM2 = (data.loyerActuel + data.charges) / data.surface;
-            const rentDiff = ((loyerCCM2 - marketRentM2) / marketRentM2) * 100;
-            result.rentAnalysis = {
-                userRent: data.loyerM2Actuel,
-                userRentCC: loyerCCM2,
-                marketRent: marketRentM2,
-                difference: rentDiff,
-                position: this.getRentPosition(rentDiff),
-                potential: (marketRentM2 - loyerCCM2) * data.surface
-            };
-            
-            // Score global (0-100)
-            const priceScore = Math.max(0, 50 - Math.abs(priceDiff));
-            const rentScore = Math.max(0, 50 + (rentDiff / 2));
-            result.globalScore = (priceScore + rentScore) / 2;
-        }
+        if (!data) return result;
+
+        // Sécuriser surface/loyers
+        const surface = Number(data.surface) > 0 ? Number(data.surface) : 0;
+        const loyerHC = Number(data.loyerActuel ?? data.loyerHC ?? 0);
+        const chargesR = Number(data.charges ?? data.monthlyCharges ?? 0);
+
+        // Données marché (peuvent manquer)
+        const marketPriceM2 = data.ville ? toNumberOrNull(data.ville.prix_m2) : null;
+        const marketRentM2 = data.ville ? toNumberOrNull(data.ville.loyer_m2) : null;
+
+        const hasMarket = marketPriceM2 !== null && marketRentM2 !== null && surface > 0;
+        result.hasMarketData = hasMarket;
         
+        if (!hasMarket) {
+            // Pas de données suffisantes → on renvoie un squelette propre
+            return result;
+        }
+
+        // --- Analyse prix ---
+        const userPriceM2 = Number(data.prixM2Paye) || (Number(data.prixPaye || data.price || 0) / surface);
+        const priceDiff = ((userPriceM2 - marketPriceM2) / marketPriceM2) * 100;
+
+        result.priceAnalysis = {
+            userPrice: userPriceM2,
+            marketPrice: marketPriceM2,
+            difference: priceDiff,
+            position: this.getPricePosition(priceDiff),
+            savings: (marketPriceM2 - userPriceM2) * surface
+        };
+
+        // --- Analyse loyer (en CC) ---
+        const loyerCCM2 = surface > 0 ? ((loyerHC + chargesR) / surface) : 0;
+        const rentDiff = marketRentM2 > 0 ? ((loyerCCM2 - marketRentM2) / marketRentM2) * 100 : 0;
+
+        result.rentAnalysis = {
+            userRent: surface > 0 ? (loyerHC / surface) : 0,
+            userRentCC: loyerCCM2,
+            marketRent: marketRentM2,
+            difference: rentDiff,
+            position: this.getRentPosition(rentDiff),
+            potential: (marketRentM2 - loyerCCM2) * surface
+        };
+
+        // --- Score global (0-100) ---
+        const priceScore = Math.max(0, 50 - Math.abs(priceDiff));
+        const rentScore = Math.max(0, 50 + (rentDiff / 2));
+        result.globalScore = (priceScore + rentScore) / 2;
+
         return result;
     }
 
