@@ -5,71 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>NOVIS — Business Plan (THE PROJECT × Revolut)</title>
 <style>
-  /* --------- Thème (couleurs proches du site) --------- */
   :root{
-    --brand: #06ffa5;
-    --hero-from: #6b2cff;
-    --hero-to: #1a0736;
-    --bg: #0b0d14;
-    --surface: #101522;
+    --brand:#06ffa5;
+    --hero-from:#6b2cff;
+    --hero-to:#1a0736;
+    --bg:#0b0d14;
+    --surface:#101522;
     --surface-2:#151b2b;
-    --border: #263246;
-    --text: #e8edf5;
+    --border:#263246;
+    --text:#e8edf5;
     --muted:#a9b4c4;
   }
 
-  /* Reset + couleurs fidèles en PDF */
-  *{ margin:0; padding:0; box-sizing:border-box;
-     -webkit-print-color-adjust: exact !important;
-     print-color-adjust: exact !important;
-     color-adjust: exact !important;
-     forced-color-adjust: none !important;
+  *{
+    margin:0;padding:0;box-sizing:border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    forced-color-adjust: none !important;
   }
 
   body{
     font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background:#e0e0e0; /* écran */
-    color:var(--text);
-    line-height:1.45;
-    font-size:11pt;
+    background:#e0e0e0; color:var(--text); line-height:1.45; font-size:11pt;
     padding:20px;
   }
 
-  /* --------- Page A4 paysage --------- */
   .page{
-    width:297mm;           /* paysage */
-    min-height:210mm;
-    margin:0 auto;
-    background:var(--bg);
-    border-radius:8px;
-    box-shadow:0 0 20px rgba(0,0,0,.15);
-    overflow:hidden;
+    width:297mm; min-height:210mm; margin:0 auto; background:var(--bg);
+    border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,.15); overflow:hidden;
   }
-  .inner{
-    padding:15mm;
-  }
+  .inner{ padding:15mm; }
 
-  /* --------- Header hero dégradé --------- */
+  /* Header */
   .header{
-    background:linear-gradient(135deg, var(--hero-from), var(--hero-to));
-    color:white;
-    padding:14mm 15mm 10mm 15mm;
-    border-bottom:2px solid var(--brand);
+    background:linear-gradient(135deg,var(--hero-from),var(--hero-to));
+    color:#fff; padding:14mm 15mm 10mm 15mm; border-bottom:2px solid var(--brand);
   }
   .badge{
-    display:inline-block;
-    padding:6px 12px;
-    background:rgba(0,0,0,.35);
-    color:#fff;
-    border:1px solid rgba(255,255,255,.25);
-    border-radius:8px;
-    font-weight:700;
-    font-size:9pt;
-    margin-bottom:10px;
+    display:inline-block; padding:6px 12px; background:rgba(0,0,0,.35);
+    color:#fff; border:1px solid rgba(255,255,255,.25); border-radius:8px;
+    font-weight:700; font-size:9pt; margin-bottom:10px;
   }
-  .logo{
-    display:flex; align-items:center; gap:10px; margin-bottom:8px;
-  }
+  .logo{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
   .logo-mark{
     width:32px;height:32px;border-radius:9px;
     background:linear-gradient(135deg,var(--brand),#00d084);
@@ -79,83 +57,72 @@
   .subtitle{ color:#e9e3ff; opacity:.95; margin-top:6px; }
   .subtitle strong{ color:#fff; }
 
-  /* CTA */
   .cta-group{ margin:12px 0 0 0; display:flex; gap:10px; flex-wrap:wrap; }
-  .btn{
-    padding:8px 14px; border-radius:10px; text-decoration:none; font-weight:700; font-size:10pt;
-    border:1px solid transparent; display:inline-block; white-space:nowrap;
-  }
+  .btn{ padding:8px 14px; border-radius:10px; text-decoration:none; font-weight:700; font-size:10pt; border:1px solid transparent; display:inline-block; white-space:nowrap; }
   .btn-primary{ background:var(--brand); color:#000; }
   .btn-secondary{ background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); }
 
-  /* --------- Stats --------- */
+  /* Stats */
   .stats{
     display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
-    margin:14px 0; padding:10px;
-    background:var(--surface-2); border-radius:10px; border:1px solid var(--border);
+    margin:14px 0; padding:10px; background:var(--surface-2);
+    border-radius:10px; border:1px solid var(--border);
   }
-  .stat-card{
-    text-align:center; padding:10px; background:var(--surface);
-    border-radius:10px; border-left:3px solid var(--brand);
-  }
+  .stat-card{ text-align:center; padding:10px; background:var(--surface); border-radius:10px; border-left:3px solid var(--brand); }
   .stat-value{ font-size:16pt; font-weight:800; color:var(--brand); }
   .stat-label{ font-size:8pt; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .stat-detail{ font-size:7.5pt; color:#c3ccda; margin-top:3px; }
 
-  /* --------- Content --------- */
-  .content{
-    display:grid; grid-template-columns:1.2fr 1fr; gap:12px; margin-top:8px;
-  }
-  .panel{
-    padding:12px; background:var(--surface-2);
-    border-radius:12px; border:1px solid var(--border);
-  }
+  /* Content */
+  .content{ display:grid; grid-template-columns:1.2fr 1fr; gap:12px; margin-top:8px; }
+  .panel{ padding:12px; background:var(--surface-2); border-radius:12px; border:1px solid var(--border); }
   h2{ font-size:12pt; color:var(--brand); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--brand); }
   .feature-list{ list-style:none; }
-  .feature-list li{
-    padding:7px 0; font-size:9pt; display:flex; gap:8px;
-    border-bottom:1px dashed #2d3b53;
-  }
+  .feature-list li{ padding:7px 0; font-size:9pt; display:flex; gap:8px; border-bottom:1px dashed #2d3b53; }
   .feature-list li:last-child{ border-bottom:none; }
   .check{ color:var(--brand); font-weight:900; flex-shrink:0; }
 
   .quote-box{
     background:linear-gradient(135deg, rgba(26,7,54,.35), rgba(6,255,165,.08));
     border:1px solid var(--brand);
+    /* +++ plus d'espace */
+    padding:16px;
   }
-  .quote{ font-style:italic; font-size:9.5pt; color:#f2f4f8; margin-bottom:8px; }
-  .author{ font-size:8.5pt; color:#c9d2df; text-align:right; }
-  .projections{ margin-top:8px; padding-top:8px; border-top:1px solid #334155; font-size:8.5pt; }
-  .projections strong{ color:var(--brand); }
+  .quote{ font-style:italic; font-size:10.5pt; line-height:1.6; color:#f2f4f8; margin-bottom:10px; }
+  .author{ font-size:8.8pt; color:#c9d2df; text-align:right; }
 
-  /* --------- Footer --------- */
-  .footer{
-    margin-top:12px; padding-top:12px; border-top:2px solid var(--brand);
-    text-align:center; font-size:9.5pt; color:#dbe2ee;
+  .projections{
+    margin-top:10px; padding-top:10px; border-top:1px solid #334155; font-size:9.5pt; line-height:1.5;
   }
+  .projections strong{ color:var(--brand); }
+  /* liste en grille pour aérer */
+  .projections .years{
+    margin-top:6px; list-style:none; padding-left:0;
+    display:grid; grid-template-columns:repeat(3, 1fr); column-gap:14px; row-gap:4px;
+  }
+  .projections .years li{ white-space:nowrap; }
+
+  /* Footer */
+  .footer{ margin-top:12px; padding-top:12px; border-top:2px solid var(--brand); text-align:center; font-size:9.5pt; color:#dbe2ee; }
   .contact{ margin:8px 0; }
   .contact a{ color:var(--brand); text-decoration:none; margin:0 8px; }
 
-  /* --------- Impression (A4 paysage, 1 page, couleurs fidèles) --------- */
-  @page{ size: A4 landscape; margin: 0; }
-
+  /* Impression (A4 paysage, 1 page, couleurs fidèles) */
+  @page{ size: A4 landscape; margin:0; }
   @media print{
     html, body{ width:297mm; height:210mm; background:white; padding:0; }
-    /* ne pas afficher l'URL après les liens */
     a[href]::after{ content:"" !important; }
 
     .page{
-      /* Pré-élargir puis réduire pour garantir 1 page nette */
-      width: calc(297mm / 0.96);
-      height: calc(210mm / 0.96);
-      transform: scale(0.96);
-      transform-origin: top left;
-      box-shadow:none !important;
-      border-radius:0;
+      width:calc(297mm / 0.95);   /* un poil plus de place */
+      height:calc(210mm / 0.95);
+      transform:scale(0.95);
+      transform-origin:top left;
+      box-shadow:none !important; border-radius:0;
     }
     .inner{ padding:10mm; }
 
-    /* Compactage léger */
+    /* compact léger */
     body{ font-size:10pt; }
     h1{ font-size:20pt; }
     h2{ font-size:11pt; }
@@ -163,19 +130,20 @@
     .feature-list li{ padding:5px 0; font-size:8.6pt; }
     .btn{ padding:6px 10px; font-size:9pt; }
 
-    /* Pas de coupures moches */
+    /* Supprimer les CTA du footer pour éviter le doublon en PDF */
+    .footer .cta-group{ display:none !important; }
+    /* On garde tout le reste du footer (contact, mentions) */
+
     .header, .stats, .content, .panel, .quote-box, .footer{
-      break-inside: avoid; page-break-inside: avoid;
+      break-inside:avoid; page-break-inside:avoid;
     }
 
-    /* Couleurs forcées clés */
     .btn-primary{ background:var(--brand) !important; color:#000 !important; }
     .btn-secondary{ background:rgba(255,255,255,.12) !important; color:#fff !important; border-color:rgba(255,255,255,.22) !important; }
     .badge{ background:rgba(0,0,0,.35) !important; color:#fff !important; border-color:rgba(255,255,255,.25) !important; }
   }
 </style>
 </head>
-
 <body>
   <div class="page">
     <div class="header">
@@ -219,7 +187,7 @@
         </div>
       </div>
 
-      <!-- Main content -->
+      <!-- Content -->
       <div class="content">
         <div class="panel">
           <h2>Pourquoi NOVIS se démarque</h2>
@@ -239,10 +207,12 @@
           </div>
           <div class="author">— Benoît Comas, Fondateur NOVIS</div>
           <div class="projections">
-            <strong>Projections validées</strong><br>
-            • 2026 : 117-156k€ CA<br>
-            • 2027 : 240k€ CA<br>
-            • 2028 : 290k€ CA
+            <strong>Projections validées</strong>
+            <ul class="years">
+              <li>• 2026 : 117–156k€ CA</li>
+              <li>• 2027 : 240k€ CA</li>
+              <li>• 2028 : 290k€ CA</li>
+            </ul>
           </div>
         </div>
       </div>
