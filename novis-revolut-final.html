@@ -27,17 +27,25 @@
 
   body{
     font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background:#e0e0e0; color:var(--text); line-height:1.45; font-size:11pt;
+    background:#0b0d14; /* écran aussi en noir */
+    color:var(--text);
+    line-height:1.45;
+    font-size:11pt;
     padding:20px;
   }
 
   .page{
-    width:297mm; min-height:210mm; margin:0 auto; background:var(--bg);
-    border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,.15); overflow:hidden;
+    width:297mm;                /* A4 paysage */
+    min-height:210mm;
+    margin:0 auto;
+    background:var(--bg);
+    border-radius:8px;
+    box-shadow:0 0 20px rgba(0,0,0,.15);
+    overflow:hidden;
   }
   .inner{ padding:15mm; }
 
-  /* Header */
+  /* --- Header --- */
   .header{
     background:linear-gradient(135deg,var(--hero-from),var(--hero-to));
     color:#fff; padding:14mm 15mm 10mm 15mm; border-bottom:2px solid var(--brand);
@@ -58,11 +66,15 @@
   .subtitle strong{ color:#fff; }
 
   .cta-group{ margin:12px 0 0 0; display:flex; gap:10px; flex-wrap:wrap; }
-  .btn{ padding:8px 14px; border-radius:10px; text-decoration:none; font-weight:700; font-size:10pt; border:1px solid transparent; display:inline-block; white-space:nowrap; }
+  .btn{
+    padding:8px 14px; border-radius:10px; text-decoration:none;
+    font-weight:700; font-size:10pt; border:1px solid transparent;
+    display:inline-block; white-space:nowrap;
+  }
   .btn-primary{ background:var(--brand); color:#000; }
   .btn-secondary{ background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); }
 
-  /* Stats */
+  /* --- Stats --- */
   .stats{
     display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
     margin:14px 0; padding:10px; background:var(--surface-2);
@@ -73,7 +85,7 @@
   .stat-label{ font-size:8pt; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .stat-detail{ font-size:7.5pt; color:#c3ccda; margin-top:3px; }
 
-  /* Content */
+  /* --- Content --- */
   .content{ display:grid; grid-template-columns:1.2fr 1fr; gap:12px; margin-top:8px; }
   .panel{ padding:12px; background:var(--surface-2); border-radius:12px; border:1px solid var(--border); }
   h2{ font-size:12pt; color:var(--brand); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--brand); }
@@ -85,44 +97,40 @@
   .quote-box{
     background:linear-gradient(135deg, rgba(26,7,54,.35), rgba(6,255,165,.08));
     border:1px solid var(--brand);
-    /* +++ plus d'espace */
     padding:16px;
   }
   .quote{ font-style:italic; font-size:10.5pt; line-height:1.6; color:#f2f4f8; margin-bottom:10px; }
   .author{ font-size:8.8pt; color:#c9d2df; text-align:right; }
 
-  .projections{
-    margin-top:10px; padding-top:10px; border-top:1px solid #334155; font-size:9.5pt; line-height:1.5;
-  }
+  .projections{ margin-top:10px; padding-top:10px; border-top:1px solid #334155; font-size:9.5pt; line-height:1.5; }
   .projections strong{ color:var(--brand); }
-  /* liste en grille pour aérer */
   .projections .years{
     margin-top:6px; list-style:none; padding-left:0;
-    display:grid; grid-template-columns:repeat(3, 1fr); column-gap:14px; row-gap:4px;
+    display:grid; grid-template-columns:repeat(3,1fr); column-gap:14px; row-gap:4px;
   }
   .projections .years li{ white-space:nowrap; }
 
-  /* Footer */
+  /* --- Footer --- */
   .footer{ margin-top:12px; padding-top:12px; border-top:2px solid var(--brand); text-align:center; font-size:9.5pt; color:#dbe2ee; }
   .contact{ margin:8px 0; }
   .contact a{ color:var(--brand); text-decoration:none; margin:0 8px; }
 
-  /* Impression (A4 paysage, 1 page, couleurs fidèles) */
+  /* --- Impression : A4 paysage, fond noir plein, liens OK --- */
   @page{ size: A4 landscape; margin:0; }
   @media print{
-    html, body{ width:297mm; height:210mm; background:white; padding:0; }
-    a[href]::after{ content:"" !important; }
+    /* Fond de la page noir (pas de bordures blanches) */
+    html, body{ width:297mm; height:210mm; background:var(--bg) !important; padding:0; }
 
+    /* conservez les couleurs + liens cliquables (zoom au lieu de transform) */
     .page{
-      width:calc(297mm / 0.95);   /* un poil plus de place */
-      height:calc(210mm / 0.95);
-      transform:scale(0.95);
-      transform-origin:top left;
+      width:297mm; height:210mm;
+      zoom: 0.95;                 /* ajuste pour tout tenir sur 1 page */
+      transform: none !important; /* important : pas de scale -> liens restent cliquables */
       box-shadow:none !important; border-radius:0;
     }
     .inner{ padding:10mm; }
 
-    /* compact léger */
+    /* Compactage léger */
     body{ font-size:10pt; }
     h1{ font-size:20pt; }
     h2{ font-size:11pt; }
@@ -130,17 +138,15 @@
     .feature-list li{ padding:5px 0; font-size:8.6pt; }
     .btn{ padding:6px 10px; font-size:9pt; }
 
-    /* Supprimer les CTA du footer pour éviter le doublon en PDF */
+    /* Pas de lien texte ajouté */
+    a[href]::after{ content:"" !important; }
+    /* Footer : pas de doublon de CTA en PDF */
     .footer .cta-group{ display:none !important; }
-    /* On garde tout le reste du footer (contact, mentions) */
 
+    /* Évite les coupures bizarres */
     .header, .stats, .content, .panel, .quote-box, .footer{
       break-inside:avoid; page-break-inside:avoid;
     }
-
-    .btn-primary{ background:var(--brand) !important; color:#000 !important; }
-    .btn-secondary{ background:rgba(255,255,255,.12) !important; color:#fff !important; border-color:rgba(255,255,255,.22) !important; }
-    .badge{ background:rgba(0,0,0,.35) !important; color:#fff !important; border-color:rgba(255,255,255,.25) !important; }
   }
 </style>
 </head>
@@ -163,31 +169,13 @@
     </div>
 
     <div class="inner">
-      <!-- Stats -->
       <div class="stats">
-        <div class="stat-card">
-          <div class="stat-label">PRIX MENSUEL</div>
-          <div class="stat-value">5€ TTC</div>
-          <div class="stat-detail">4,17€ HT • ARPU 3,67€</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">LTV / CAC</div>
-          <div class="stat-value">11,1×</div>
-          <div class="stat-detail">LTV 56€ • CAC 5,05€</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">BREAK-EVEN</div>
-          <div class="stat-value">943</div>
-          <div class="stat-detail">Février 2026</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">EBITDA 2026</div>
-          <div class="stat-value">61,5k€</div>
-          <div class="stat-detail">CA 117k€ • Marge 53%</div>
-        </div>
+        <div class="stat-card"><div class="stat-label">PRIX MENSUEL</div><div class="stat-value">5€ TTC</div><div class="stat-detail">4,17€ HT • ARPU 3,67€</div></div>
+        <div class="stat-card"><div class="stat-label">LTV / CAC</div><div class="stat-value">11,1×</div><div class="stat-detail">LTV 56€ • CAC 5,05€</div></div>
+        <div class="stat-card"><div class="stat-label">BREAK-EVEN</div><div class="stat-value">943</div><div class="stat-detail">Février 2026</div></div>
+        <div class="stat-card"><div class="stat-label">EBITDA 2026</div><div class="stat-value">61,5k€</div><div class="stat-detail">CA 117k€ • Marge 53%</div></div>
       </div>
 
-      <!-- Content -->
       <div class="content">
         <div class="panel">
           <h2>Pourquoi NOVIS se démarque</h2>
@@ -217,7 +205,6 @@
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="footer">
         <strong>📄 Consultez nos documents complets</strong>
         <div class="cta-group" style="margin-top:8px">
