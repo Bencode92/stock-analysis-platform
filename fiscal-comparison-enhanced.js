@@ -11,6 +11,7 @@
  * - Calculs de cash-flow réels basés sur les charges effectivement payées
  * - Badge "Régime actuel" dynamique avec le select
  * - Protection contre tableauAmortissement undefined
+ * - Fix apostrophe et référence window.analyzer
  */
 /* ================== HELPERS REGIMES & LABELS ================== */
 window.REGIME_LABELS = {
@@ -19,7 +20,7 @@ window.REGIME_LABELS = {
   lmnp_micro : 'LMNP – Micro-BIC',
   lmnp_reel  : 'LMNP – Réel',
   lmp_reel   : 'LMP – Réel',
-  sci_is     : 'SCI à l'IS'
+  sci_is     : "SCI à l'IS"
 };
 
 // mapping entre tes IDs internes et une clé "canonique" pour l'UI
@@ -37,7 +38,7 @@ const REGIME_ID_FROM_KEY = Object.fromEntries(
 
 function _fmtNumber(n){
   try {
-    return window.analyzer?.formatNumber ? analyzer.formatNumber(n)
+    return window.analyzer?.formatNumber ? window.analyzer.formatNumber(n)
       : new Intl.NumberFormat('fr-FR', {maximumFractionDigits:0}).format(Math.round(n));
   } catch(e){ return String(n); }
 }
@@ -298,20 +299,22 @@ return results;
         // Protection contre tableauAmortissement undefined
         const ta = Array.isArray(baseResults.tableauAmortissement) ? baseResults.tableauAmortissement : [];
         
-        // Préparer les données communes pour tous les calculs
+        // Préparer les données communes pour tous les calculs avec protection des zéros
         const commonData = {
             loyerMensuel: baseResults.loyerBrut,
-            vacanceLocative: baseResults.vacanceLocative || 5,
-            taxeFonciere: baseResults.taxeFonciere || 800,
-            chargesCopro: baseResults.chargesNonRecuperables / 12 || 50,
-            assurancePNO: baseResults.assurancePNO / 12 || 15,
-            entretien: baseResults.entretienAnnuel || 500,
+            vacanceLocative: (baseResults.vacanceLocative ?? 5),
+            taxeFonciere: (baseResults.taxeFonciere ?? 800),
+            chargesCopro: (typeof baseResults.chargesNonRecuperables === 'number' 
+                ? baseResults.chargesNonRecuperables / 12 : 50),
+            assurancePNO: (typeof baseResults.assurancePNO === 'number' 
+                ? baseResults.assurancePNO / 12 : 15),
+            entretien: (baseResults.entretienAnnuel ?? 500),
             gestionLocative: data.gestionLocativeTaux > 0 ? loyerAnnuel * (data.gestionLocativeTaux / 100) : 0,
             interetsAnnuels: (baseResults.interetsAnnee1 != null) 
                 ? baseResults.interetsAnnee1 
                 : ta.slice(0, 12).reduce((sum, m) => sum + (m.interets || 0), 0),
-            fraisAchat: baseResults.fraisAchat || 0,
-            travaux: baseResults.travaux || 0
+            fraisAchat: (baseResults.fraisAchat ?? 0),
+            travaux: (baseResults.travaux ?? 0)
         };
         
         switch (calcul.type) {
@@ -953,6 +956,7 @@ if (typeof window !== 'undefined') {
         const old = MarketFiscalAnalyzer.prototype.generateFiscalResultsHTML;
         MarketFiscalAnalyzer.prototype.generateFiscalResultsHTML = function(fiscal, analysisData){
           window.lastFiscalResults = fiscal; // pour MAJ live
+          window.lastAnalysisData  = analysisData; // Mémoriser aussi analysisData
           return window.renderFiscalResults(fiscal, analysisData, window.propertyData || {});
         };
         console.log('🔁 generateFiscalResultsHTML overridé par renderFiscalResults');
