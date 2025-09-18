@@ -1932,7 +1932,8 @@ function buildChargesBreakdown(p) {
         
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
-            analyzer = new MarketFiscalAnalyzer();
+        window.analyzer = new MarketFiscalAnalyzer();
+analyzer = window.analyzer; // garde la variable existante utilisée plus bas
             
             // Gérer les données de ville sélectionnée
             if (window.villeSearchManager) {
@@ -2053,7 +2054,8 @@ propertyData = {
     fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
     taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
     vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value ?? 0),
-    gestionLocative: document.getElementById('gestionLocative').checked || false,
+    gestionLocativeTaux: parseFloat(document.getElementById('gestionLocative').value) || 0,
+gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) || 0) > 0,
     travaux: parseFloat(document.getElementById('travaux-renovation').value) || 0,
     entretienAnnuel: parseFloat(document.getElementById('entretien-annuel').value) || 500,
     chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
@@ -2571,7 +2573,7 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                 monthlyCharges: 50,
                 taxeFonciere: 800,
                 vacanceLocative: 5,
-                gestionLocative: false
+                gestionLocative: 0
             };
             
             Object.keys(defaults).forEach(param => {
