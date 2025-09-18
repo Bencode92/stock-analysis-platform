@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOVIS — Business Plan (THE PROJECT × Revolut)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: white;
+      color: #222;
+      line-height: 1.3;
+      font-size: 10pt;
+    }
+    
+    .page {
+      width: 297mm;
+      height: 210mm;
+      padding: 10mm 15mm;
+      margin: 0 auto;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    
+    /* Header compact */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #06ffa5;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+    
+    .left-header {
+      flex: 1;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #1a0736;
+      color: white;
+      border-radius: 4px;
+      font-size: 8pt;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    
+    h1 {
+      font-size: 20pt;
+      color: #1a0736;
+      margin: 4px 0;
+    }
+    
+    .subtitle {
+      font-size: 9pt;
+      color: #555;
+    }
+    
+    .links {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .btn {
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 9pt;
+      border: 2px solid;
+      display: inline-block;
+    }
+    
+    .btn-primary {
+      background: #06ffa5;
+      color: black;
+      border-color: #06ffa5;
+    }
+    
+    .btn-secondary {
+      background: white;
+      color: #06ffa5;
+      border-color: #06ffa5;
+    }
+    
+    /* Main content in 3 columns */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 15px;
+      flex: 1;
+      margin: 10px 0;
+    }
+    
+    /* Stats column */
+    .stats-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .stat-card {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 6px;
+      border-left: 4px solid #06ffa5;
+    }
+    
+    .stat-label {
+      font-size: 8pt;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .stat-value {
+      font-size: 18pt;
+      font-weight: bold;
+      color: #06ffa5;
+      margin: 2px 0;
+    }
+    
+    .stat-detail {
+      font-size: 7pt;
+      color: #888;
+    }
+    
+    /* Features column */
+    .features {
+      background: #f9f9f9;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    h2 {
+      font-size: 11pt;
+      color: #06ffa5;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #06ffa5;
+    }
+    
+    .feature-list {
+      list-style: none;
+    }
+    
+    .feature-list li {
+      padding: 5px 0;
+      font-size: 8pt;
+      display: flex;
+      gap: 6px;
+    }
+    
+    .check {
+      color: #06ffa5;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    
+    /* Quote column */
+    .quote-section {
+      background: linear-gradient(135deg, #f0fff8, #f5fffc);
+      border: 1px solid #06ffa5;
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    
+    .quote {
+      font-style: italic;
+      font-size: 9pt;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    .author {
+      font-size: 8pt;
+      color: #666;
+      text-align: right;
+      margin-bottom: 8px;
+    }
+    
+    .projections {
+      padding-top: 8px;
+      border-top: 1px solid #ddd;
+      font-size: 8pt;
+    }
+    
+    .projections strong {
+      color: #06ffa5;
+    }
+    
+    /* Footer */
+    .footer {
+      border-top: 3px solid #06ffa5;
+      padding-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+    }
+    
+    .footer-left {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .contact a {
+      color: #06ffa5;
+      text-decoration: none;
+      margin: 0 5px;
+    }
+    
+    .footer-right {
+      color: #888;
+      text-align: right;
+    }
+    
+    /* Print specific */
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      
+      .page {
+        margin: 0;
+        padding: 8mm 10mm;
+        width: 297mm;
+        height: 210mm;
+        page-break-after: avoid;
+      }
+      
+      a {
+        color: #06ffa5 !important;
+      }
+    }
+    
+    @media screen {
+      body {
+        background: #e0e0e0;
+        padding: 20px;
+      }
+      
+      .page {
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        margin: 20px auto;
+      }
+    }
+    
+    /* Compact version for smaller content */
+    .compact {
+      font-size: 8pt !important;
+    }
+    
+    .compact .stat-value {
+      font-size: 14pt !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Header with links -->
+    <div class="header">
+      <div class="left-header">
+        <div class="badge">THE PROJECT × Revolut</div>
+        <h1>NOVIS — Business Plan 2025-2028</h1>
+        <div class="subtitle">
+          Plateforme d'éducation financière • <strong>5€/mois</strong> • Zéro dilution • Rentabilité rapide
+        </div>
+      </div>
+      <div class="links">
+        <a href="https://novisfr.github.io/NovisFR/BPNOVIS.html" class="btn btn-primary" target="_blank">
+          📊 Business Plan
+        </a>
+        <a href="https://novisfr.github.io/NovisFR/Pitch.html" class="btn btn-secondary" target="_blank">
+          🎯 Pitch Deck
+        </a>
+      </div>
+    </div>
+    
+    <!-- Main content in 3 columns -->
+    <div class="main">
+      <!-- Column 1: Stats -->
+      <div class="stats-column">
+        <div class="stat-card">
+          <div class="stat-label">Prix Mensuel</div>
+          <div class="stat-value">5€ TTC</div>
+          <div class="stat-detail">4,17€ HT • ARPU net 3,67€</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">LTV / CAC</div>
+          <div class="stat-value">11,1×</div>
+          <div class="stat-detail">LTV 56€ • CAC 5,05€ • Payback 1,38 mois</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Break-even</div>
+          <div class="stat-value">943 clients</div>
+          <div class="stat-detail">Février 2026 • Tréso positive juin 2026</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">EBITDA 2026</div>
+          <div class="stat-value">61,5k€</div>
+          <div class="stat-detail">CA 117k€ HT • Marge 53%</div>
+        </div>
+      </div>
+      
+      <!-- Column 2: Features -->
+      <div class="features">
+        <h2>Pourquoi NOVIS se démarque</h2>
+        <ul class="feature-list">
+          <li>
+            <span class="check">✓</span>
+            <div><strong>Prix psychologique parfait</strong><br>
+            5€/mois = seuil d'achat impulsif</div>
+          </li>
+          <li>
+            <span class="check">✓</span>
+            <div><strong>Plateforme 360° unique</strong><br>
+            Budget, dette, bourse, crypto, fiscal</div>
+          </li>
+          <li>
+            <span class="check">✓</span>
+            <div><strong>Acquisition maîtrisée</strong><br>
+            424 nouveaux/mois (TikTok, YouTube)</div>
+          </li>
+          <li>
+            <span class="check">✓</span>
+            <div><strong>Métriques solides</strong><br>
+            Coûts fixes 3 460€/mois • ROI 193%</div>
+          </li>
+          <li>
+            <span class="check">✓</span>
+            <div><strong>Vision validée</strong><br>
+            3 709 clients fin 2026 • EBITDA 213k€ (2028)</div>
+          </li>
+        </ul>
+      </div>
+      
+      <!-- Column 3: Quote & Projections -->
+      <div class="quote-section">
+        <div>
+          <div class="quote">
+            « Notre mission : démocratiser l'éducation financière pour 21 millions de jeunes français. »
+          </div>
+          <div class="author">— Benoît Comas, Fondateur</div>
+        </div>
+        
+        <div class="projections">
+          <strong>Projections validées</strong><br>
+          • 2026 : 117-156k€ CA<br>
+          • 2027 : 240k€ CA<br>
+          • 2028 : 290k€ CA<br>
+          • ROI année 1 : 193%<br>
+          • 100% autofinancé
+        </div>
+        
+        <div style="margin-top: 10px; padding: 8px; background: rgba(6,255,165,0.1); border-radius: 4px;">
+          <strong style="color: #06ffa5;">Contact Direct</strong><br>
+          📧 mynovis@novisfr.com<br>
+          📱 06 77 13 89 30
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer with full links -->
+    <div class="footer">
+      <div class="footer-left">
+        <strong>Documents complets disponibles :</strong>
+        <span>Business Plan détaillé (80 pages)</span>
+        <span>•</span>
+        <span>Pitch Deck interactif (12 slides)</span>
+      </div>
+      <div class="footer-right">
+        © 2025 NOVIS — Document confidentiel THE PROJECT × Revolut
+      </div>
+    </div>
+  </div>
+</body>
+</html>
