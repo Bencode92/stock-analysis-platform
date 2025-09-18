@@ -9,6 +9,8 @@
  * - Pas de PS pour LMNP/LMP
  * - Seuil IS mis à jour pour 2024 (42 500€)
  * - Calculs de cash-flow réels basés sur les charges effectivement payées
+ * - Badge "Régime actuel" dynamique avec le select
+ * - Protection contre tableauAmortissement undefined
  */
 /* ================== HELPERS REGIMES & LABELS ================== */
 window.REGIME_LABELS = {
@@ -17,10 +19,10 @@ window.REGIME_LABELS = {
   lmnp_micro : 'LMNP – Micro-BIC',
   lmnp_reel  : 'LMNP – Réel',
   lmp_reel   : 'LMP – Réel',
-  sci_is     : 'SCI à l’IS'
+  sci_is     : 'SCI à l'IS'
 };
 
-// mapping entre tes IDs internes et une clé "canonique" pour l’UI
+// mapping entre tes IDs internes et une clé "canonique" pour l'UI
 const REGIME_KEY_FROM_ID = {
   'micro-foncier': 'nu_micro',
   'reel-foncier' : 'nu_reel',
@@ -214,7 +216,7 @@ class FiscalComparator {
 const currentKey = data?.regimeActuel || null;              // ex: "lmnp_reel"
 const currentId  = currentKey ? (REGIME_ID_FROM_KEY[currentKey] || currentKey) : null;
 
-// Ajoute des métadonnées utiles pour l’UI
+// Ajoute des métadonnées utiles pour l'UI
 results.forEach(r => {
   r.key       = REGIME_KEY_FROM_ID[r.id] || r.id;           // ex: "lmnp_reel"
   r.isCurrent = currentId ? (r.id === currentId) : false;   // badge "Régime actuel"
@@ -226,13 +228,13 @@ results.sort((a, b) => b.cashflowNetAnnuel - a.cashflowNetAnnuel);
 // Marque le meilleur calculé (sauf si on force le régime actuel)
 if (results.length > 0) results[0].isOptimal = true;
 
-// Si l’utilisateur force son régime : le mettre en premier
+// Si l'utilisateur force son régime : le mettre en premier
 if (data?.forceRegime) {
   const idx = results.findIndex(r => r.isCurrent);
   if (idx > 0) {
     const cur = results.splice(idx, 1)[0];
     results.unshift(cur);
-    results.forEach((r, i) => r.isOptimal = (i === 0)); // le 1er devient la “référence”
+    results.forEach((r, i) => r.isOptimal = (i === 0)); // le 1er devient la "référence"
   }
 }
 
@@ -293,6 +295,9 @@ return results;
             description: regime.description
         };
         
+        // Protection contre tableauAmortissement undefined
+        const ta = Array.isArray(baseResults.tableauAmortissement) ? baseResults.tableauAmortissement : [];
+        
         // Préparer les données communes pour tous les calculs
         const commonData = {
             loyerMensuel: baseResults.loyerBrut,
@@ -302,7 +307,9 @@ return results;
             assurancePNO: baseResults.assurancePNO / 12 || 15,
             entretien: baseResults.entretienAnnuel || 500,
             gestionLocative: data.gestionLocativeTaux > 0 ? loyerAnnuel * (data.gestionLocativeTaux / 100) : 0,
-            interetsAnnuels: baseResults.interetsAnnee1 || baseResults.tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0),
+            interetsAnnuels: (baseResults.interetsAnnee1 != null) 
+                ? baseResults.interetsAnnee1 
+                : ta.slice(0, 12).reduce((sum, m) => sum + (m.interets || 0), 0),
             fraisAchat: baseResults.fraisAchat || 0,
             travaux: baseResults.travaux || 0
         };
@@ -849,8 +856,16 @@ if (typeof window !== 'undefined') {
     }
 
     const curKey = props.regimeActuel || null;
+    
+    // Recalibrer dynamiquement le "current" d'après le select
+    fiscalArray = fiscalArray.map(r => {
+      const key = r.key || (REGIME_KEY_FROM_ID[r.id] || r.id);
+      return { ...r, key, isCurrent: curKey ? (key === curKey) : !!r.isCurrent };
+    });
+
+    // recalculer best/current après le mapping
     const best   = fiscalArray.find(r => r.isOptimal) || fiscalArray[0];
-    const current= fiscalArray.find(r => r.isCurrent) || null;
+    const current = fiscalArray.find(r => r.isCurrent) || null;
 
     const bestAnnual = (typeof best.cashflowNetAnnuel==='number') ? best.cashflowNetAnnuel : NaN;
     const curAnnual  = current && typeof current.cashflowNetAnnuel==='number' ? current.cashflowNetAnnuel : NaN;
@@ -947,4 +962,3 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-
