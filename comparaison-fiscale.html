@@ -1416,7 +1416,7 @@ td.neutral {
         <div class="loyer-type-toggle" style="margin-top:12px;">
           <span class="toggle-option">
             <input type="checkbox" id="force-regime">
-            <label for="force-regime">Forcer l’optimisation à rester sur ce régime</label>
+            <label for="force-regime">Forcer l'optimisation à rester sur ce régime</label>
           </span>
           <span class="form-help">Sinon, on affiche aussi le meilleur régime calculé.</span>
         </div>
@@ -1751,7 +1751,7 @@ td.neutral {
 
     <!-- Résultats de l'analyse de marché -->
     <div id="market-analysis-results" aria-live="polite">
-      <!-- Rempli dynamiquement par analyzeMarket(...) -->
+      <!-- Rempli dynamiquement par renderMarketAnalysis(...) -->
     </div>
 
     <div class="continue-section">
@@ -1878,7 +1878,7 @@ function drawBuyRent () {
                  oninput="br.loyerMarché=+this.value;
                           document.getElementById('brOutput').textContent=this.value+' €';
                           drawBuyRent()">
-          <output id="brOutput">${br.loyerMarché} €</output>
+          <output id="brOutput">${br.loyerMarché} €</o>
         </label>
       </div>
     </section>`;
@@ -2016,7 +2016,6 @@ analyzer = window.analyzer; // garde la variable existante utilisée plus bas
                 lineEl.classList.toggle('completed', i < step);
             }
         }
-window.renderMarketAnalysis = renderMarketAnalysis; //
         
 // Soumission du formulaire
 document.getElementById('property-form').addEventListener('submit', async function(e) {
@@ -2030,9 +2029,8 @@ document.getElementById('property-form').addEventListener('submit', async functi
     const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
     
     // Récupérer les données du formulaire
-    // Récupérer les données du formulaire
 propertyData = {
-    ville: window.villeSearchManager?.getSelectedVilleData(),
+    ville: window.villeSearchManager?.getSelectedVilleData() || {},  // Patch Bonus: valeur par défaut
     prixPaye: parseFloat(document.getElementById('propertyPrice').value),
     surface: parseFloat(document.getElementById('propertySurface').value),
     loyerActuel: loyerHC,
@@ -2080,22 +2078,54 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
     propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
     propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface; // Loyer CC au m²
     
-    // Analyser par rapport au marché
-    renderMarketAnalysis(propertyData);
-    
-    // Passer à l'étape 2
+    // Patch C: Passe d'abord à l'étape 2 puis analyse avec requestAnimationFrame
     goToStep(2);
+    
+    // Rendu robuste avec requestAnimationFrame et try/catch
+    const renderer = window.renderMarketAnalysis || window.analyzeMarket;
+    requestAnimationFrame(() => {
+        const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
+        
+        if (!resultsDiv) {
+            console.error('❌ Conteneur de résultats introuvable');
+            return;
+        }
+        
+        try {
+            if (typeof renderer === 'function') {
+                renderer(propertyData);
+            } else {
+                throw new Error('Aucune fonction d\'analyse de marché trouvée');
+            }
+        } catch (err) {
+            resultsDiv.innerHTML = `
+                <div class="market-comparison-card average">
+                    <div class="market-badge high">Erreur</div>
+                    <h3 style="color:#ef4444;">Impossible d'analyser le marché</h3>
+                    <p style="color:#94a3b8;">${err.message}</p>
+                    <div class="recommendations-box" style="margin-top:20px;">
+                        <button class="btn btn-outline" onclick="goToStep(1)">
+                            <i class="fas fa-arrow-left"></i> Corriger les données
+                        </button>
+                    </div>
+                </div>
+            `;
+            console.error(err);
+        }
+    });
 });
 
 // ──────────────────────────────────────────────────────────────────────────
-// analyzeMarket (version optimisée & sûre)
-//   - tolère data/villes incomplètes
-//   - évite NaN/Infinity (diviseurs à 0)
-//   - affiche toujours quelque chose (panneau fallback)
-//   - laisse applyMarkerColors() gérer l'apparence des marqueurs
+// renderMarketAnalysis (version optimisée & sûre)
+//   - Patch B: Ciblage robuste du conteneur
+//   - Patch D: generateRecommendations blindé
 // ──────────────────────────────────────────────────────────────────────────
 function renderMarketAnalysis(data) {
-  const resultsDiv = document.getElementById('market-analysis-results');
+  // Patch B: Ciblage robuste avec fallback
+  const resultsDiv = 
+    document.querySelector('#section-2.market-analysis-section #market-analysis-results') ||
+    document.getElementById('market-analysis-results');
+    
   if (!resultsDiv) {
     console.error('❌ #market-analysis-results introuvable');
     return;
@@ -2314,6 +2344,10 @@ function renderMarketAnalysis(data) {
     </div>`;
   setTimeout(applyMarkerColors, 0);
 }
+
+// Patch A: Export après la déclaration
+window.renderMarketAnalysis = renderMarketAnalysis;
+
 // Fonction pour formater les nombres
 function formatNumber(num) {
     if (window.analyzer && window.analyzer.formatNumber) {
@@ -2375,10 +2409,30 @@ window.addEventListener('resize', () => {
         }
     }, 250); // Debounce de 250ms
 });
-// Générer les recommandations
-function generateRecommendations(pricePosition, rentPosition, data) {
+
+// Patch D: Blindage de generateRecommendations
+function generateRecommendations(pricePosition, rentPosition, data = {}) {
+    const ville = data.ville || {};
+    const pM2 = Number(ville.prix_m2) || 0;
+    const rM2 = Number(ville.loyer_m2) || 0;
+    const surface = Number(data.surface) || 0;
+    const hasMarket = pM2 > 0 && rM2 > 0 && surface > 0;
+    
     let recommendations = '';
     
+    if (!hasMarket) {
+        // Pas de données de marché → retourne juste la reco fiscale générique
+        return `
+            <div class="recommendation-item">
+                <div class="recommendation-icon"><i class="fas fa-balance-scale"></i></div>
+                <div class="recommendation-content">
+                    <h4>Optimisation fiscale recommandée</h4>
+                    <p>Passez à l'étape suivante pour découvrir le meilleur régime fiscal pour votre situation.</p>
+                </div>
+            </div>`;
+    }
+    
+    // Recommandations avec données de marché
     if (pricePosition === 'low' && rentPosition === 'high') {
         recommendations += `
             <div class="recommendation-item">
@@ -2393,7 +2447,8 @@ function generateRecommendations(pricePosition, rentPosition, data) {
         `;
     }
     
-    if (pricePosition === 'high') {
+    if (pricePosition === 'high' && pM2 > 0 && data.prixM2Paye) {
+        const diff = Math.round(Math.abs((data.prixM2Paye - pM2) / pM2 * 100));
         recommendations += `
             <div class="recommendation-item">
                 <div class="recommendation-icon">
@@ -2401,14 +2456,15 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                 </div>
                 <div class="recommendation-content">
                     <h4>Prix d'achat élevé</h4>
-                    <p>Vous avez payé ${Math.round(Math.abs((data.prixM2Paye - data.ville.prix_m2) / data.ville.prix_m2 * 100))}% au-dessus du marché. 
+                    <p>Vous avez payé ${diff}% au-dessus du marché. 
                     L'optimisation fiscale sera d'autant plus importante.</p>
                 </div>
             </div>
         `;
     }
     
-    if (rentPosition === 'low') {
+    if (rentPosition === 'low' && rM2 > 0 && data.loyerM2Actuel) {
+        const diff = Math.round(Math.abs((data.loyerM2Actuel - rM2) / rM2 * 100));
         recommendations += `
             <div class="recommendation-item">
                 <div class="recommendation-icon">
@@ -2416,8 +2472,8 @@ function generateRecommendations(pricePosition, rentPosition, data) {
                 </div>
                 <div class="recommendation-content">
                     <h4>Potentiel d'augmentation du loyer</h4>
-                    <p>Votre loyer est ${Math.round(Math.abs((data.loyerM2Actuel - data.ville.loyer_m2) / data.ville.loyer_m2 * 100))}% en dessous du marché. 
-                    Vous pourriez potentiellement augmenter à ${formatNumber(data.ville.loyer_m2 * data.surface)} €/mois.</p>
+                    <p>Votre loyer est ${diff}% en dessous du marché. 
+                    Vous pourriez potentiellement augmenter à ${formatNumber(rM2 * surface)} €/mois.</p>
                 </div>
             </div>
         `;
