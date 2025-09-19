@@ -2,8 +2,8 @@
  * market-fiscal-analysis.js
  * Module d'intégration pour l'analyse de marché et la comparaison fiscale
  * Complète la page comparaison-fiscale.html
- * Version 3.1 - Robustesse améliorée
- * MODIFICATION: Ajout logique pour afficher le régime sélectionné si checkbox cochée
+ * Version 3.2 - Format d'affichage corrigé
+ * MODIFICATION: Retour au format original avec 2 cartes côte à côte
  */
 
 // Constantes fiscales
@@ -1318,8 +1318,8 @@ return {
     }
 
 /**
- * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION AVEC LOGIQUE CONDITIONNELLE
- * MODIFICATION: Si forceRegime est coché, affiche le régime sélectionné, sinon le meilleur
+ * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION AVEC FORMAT 2 CARTES
+ * MODIFICATION: Format identique à l'image 2 avec 2 cartes côte à côte
  */
 generateFiscalResultsHTML(fiscalResults, inputData) {
     // Déterminer si on force le régime ou non
@@ -1346,10 +1346,6 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
         regimeToShow = bestRegime;
     }
     
-    // Utilisation du helper pour formater les montants avec conversion robuste
-    const cashflowMensuel = this.formatAmountWithClass(regimeToShow.cashflowMensuel);
-    const cashflowAnnuel = this.formatAmountWithClass(regimeToShow.cashflowNetAnnuel);
-    
     // Calcul des charges déductibles approximatives
     const chargesDeductibles = inputData.yearlyCharges + inputData.taxeFonciere + 
         (inputData.loanAmount * inputData.loanRate / 100) + inputData.gestionFees + 
@@ -1362,6 +1358,10 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
     const titlePrefix = forceRegime ? 
         (regimeToShow === bestRegime ? '🏆 Régime sélectionné (optimal)' : '📊 Régime sélectionné') : 
         '🏆 Meilleur régime fiscal';
+    
+    // Calcul du rendement brut sur coût total
+    const rendementBrut = ((inputData.yearlyRent || inputData.loyerHC * 12) / 
+                          (inputData.coutTotalAcquisition || inputData.price)) * 100;
     
     return `
         <!-- Résumé du bien -->
@@ -1427,12 +1427,13 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     ${inputData.travauxRenovation > 0 ? ` Travaux initiaux (${this.formatCurrency(inputData.travauxRenovation)})` : ''}
                     ${inputData.typeAchat === 'encheres' ? ' Frais enchères personnalisés' : ''}
                 </div>
-            ` : ''}
+            ` : ''}\
         </div>
 
-        <!-- Régime à afficher (sélectionné ou meilleur) -->
+        <!-- Régime à afficher avec les 2 cartes comme dans l'image 2 -->
         <div class="best-regime-card">
             <h3>${titlePrefix} : ${regimeToShow.nom}</h3>
+            
             ${forceRegime && regimeToShow !== bestRegime ? `
                 <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); 
                             border-radius: 8px; padding: 10px; margin: 10px 0;">
@@ -1442,22 +1443,23 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     (différence : ${this.formatCurrency(bestRegime.cashflowNetAnnuel - regimeToShow.cashflowNetAnnuel)}/an)
                 </div>
             ` : ''}
-<div class="regime-benefits">
-    <div class="benefit-item">
-        <h4>💸 Cash-flow mensuel</h4>
-        <p class="amount ${regimeToShow.cashflowMensuel >= 0 ? 'positive' : 'negative'}">
-            ${regimeToShow.cashflowMensuel >= 0 ? '+' : ''}${this.formatCurrency(regimeToShow.cashflowMensuel)}
-        </p>
-    </div>
-    
-           <div class="benefit-item">
-                <h4>📊 Rendement brut / coût total</h4>
-                <p class="amount ${this.getRendementClass(((inputData.yearlyRent || inputData.loyerHC * 12) / (inputData.coutTotalAcquisition || inputData.price)) * 100)}">
-                    ${(((inputData.yearlyRent || inputData.loyerHC * 12) / 
-                        (inputData.coutTotalAcquisition || inputData.price)) * 100).toFixed(2)} %
-                </p>
+            
+            <!-- Les 2 cartes côte à côte comme dans l'image 2 -->
+            <div class="regime-benefits" style="display: flex; gap: 20px; margin: 20px 0;">
+                <div class="benefit-item" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 191, 255, 0.2); border-radius: 15px; padding: 20px; text-align: center;">
+                    <h4 style="color: #94a3b8; font-size: 0.9em; margin-bottom: 10px;">💸 Cash-flow mensuel</h4>
+                    <p class="amount ${regimeToShow.cashflowMensuel >= 0 ? 'positive' : 'negative'}" style="font-size: 2em; font-weight: 700; margin: 10px 0;">
+                        ${regimeToShow.cashflowMensuel >= 0 ? '+' : ''}${this.formatCurrency(regimeToShow.cashflowMensuel)}
+                    </p>
+                </div>
+                
+                <div class="benefit-item" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 191, 255, 0.2); border-radius: 15px; padding: 20px; text-align: center;">
+                    <h4 style="color: #94a3b8; font-size: 0.9em; margin-bottom: 10px;">📊 Rendement brut / coût total</h4>
+                    <p class="amount ${this.getRendementClass(rendementBrut)}" style="font-size: 2em; font-weight: 700; margin: 10px 0;">
+                        ${rendementBrut.toFixed(2)} %
+                    </p>
+                </div>
             </div>
-</div>
             
             <!-- Détail du calcul -->
             <div class="fiscal-calculation-details">
@@ -1491,7 +1493,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     </tr>
                 </table>
                 
-                <!-- NOUVEAU : Bouton pour afficher le détail -->
+                <!-- Bouton pour afficher le détail -->
                 <button class="btn-expand-table" 
                         id="btn-fiscal-detail"
                         type="button"
@@ -1505,7 +1507,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             </div>
         </div>
         
-<!-- NOUVEAU : Tableau détaillé (caché par défaut) -->
+<!-- Tableau détaillé (caché par défaut) -->
 <div id="detailed-fiscal-table" class="detailed-table-container" style="display: none; margin-top: 20px; animation: slideDown 0.3s ease;">
     ${this.buildDetailedTable(regimeToShow, inputData)}
 </div>
@@ -1566,7 +1568,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             </div>
         </div>
 
-  <!-- Script pour le debug uniquement (le toggle est géré ailleurs) -->
+  <!-- Script pour le debug uniquement -->
         <script>
             // Debug data
             window.lastAnalysisData = {
