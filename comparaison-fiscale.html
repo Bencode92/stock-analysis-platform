@@ -1741,33 +1741,30 @@ td.neutral {
     </div>
 </div>
 
+<!-- Section 2 : Analyse de marché -->
+<div class="market-analysis-section" id="section-2">
+  <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
+    <div class="card-header">
+      <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+      <h2 class="card-title">Analyse de votre investissement par rapport au marché</h2>
+    </div>
 
-        <!-- Section 2 : Analyse de marché -->
-        <div class="market-analysis-section" id="section-2">
-            <div class="card backdrop-blur-md bg-opacity-20 border border-blue-400/10 shadow-lg">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h2 class="card-title">Analyse de votre investissement par rapport au marché</h2>
-                </div>
-                
-                <!-- Résultats de l'analyse de marché -->
-                <div id="market-analysis-results">
-                    <!-- Sera rempli dynamiquement -->
-                </div>
-                
-                <div class="continue-section">
-                    <button class="btn btn-outline" onclick="goToStep(1)">
-                        <i class="fas fa-arrow-left"></i> Retour
-                    </button>
-                    <button class="btn-continue" onclick="proceedToFiscalAnalysis()">
-                        Optimiser ma fiscalité
-                        <i class="fas fa-arrow-right" style="margin-left: 10px;"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
+    <!-- Résultats de l'analyse de marché -->
+    <div id="market-analysis-results" aria-live="polite">
+      <!-- Rempli dynamiquement par analyzeMarket(...) -->
+    </div>
+
+    <div class="continue-section">
+      <button class="btn btn-outline" onclick="goToStep(1)">
+        <i class="fas fa-arrow-left"></i> Retour
+      </button>
+      <button class="btn-continue" onclick="proceedToFiscalAnalysis()">
+        Optimiser ma fiscalité
+        <i class="fas fa-arrow-right" style="margin-left: 10px;"></i>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Section 3 : Optimisation fiscale -->
 <div class="market-analysis-section" id="section-3">
@@ -2088,229 +2085,234 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
     // Passer à l'étape 2
     goToStep(2);
 });
-// Fonction d'analyse de marché
+
+// ──────────────────────────────────────────────────────────────────────────
+// analyzeMarket (version optimisée & sûre)
+//   - tolère data/villes incomplètes
+//   - évite NaN/Infinity (diviseurs à 0)
+//   - affiche toujours quelque chose (panneau fallback)
+//   - laisse applyMarkerColors() gérer l'apparence des marqueurs
+// ──────────────────────────────────────────────────────────────────────────
 function analyzeMarket(data) {
   const resultsDiv = document.getElementById('market-analysis-results');
+  if (!resultsDiv) {
+    console.error('❌ #market-analysis-results introuvable');
+    return;
+  }
 
-  // ✅ sécurise : on ne fait l'analyse "avec marché" que si les 2 chiffres existent
-  const _ville = data?.ville || {};
-  const marketPriceM2 = Number(_ville.prix_m2);
-  const marketRentM2  = Number(_ville.loyer_m2);
-  const hasMarket = Number.isFinite(marketPriceM2) && Number.isFinite(marketRentM2);
+  // Helpers locaux
+  const num = v => Number(v);
+  const finite = v => Number.isFinite(v);
+  const safeDiv = (a, b) => (finite(a) && finite(b) && b !== 0) ? a / b : NaN;
 
-  if (hasMarket) {
-    // Analyse avec données de marché
-    const priceDiff = ((data.prixM2Paye - marketPriceM2) / marketPriceM2) * 100;
-    const rentDiff  = ((data.loyerCCM2 - marketRentM2)  / marketRentM2)  * 100;
-    // Déterminer la position sur le marché
-let pricePosition = 'average';
-let rentPosition = 'average';
-let rentCardClass = 'average';  // Pour la couleur de la carte
-let rentBadgeClass = 'average'; // Pour la couleur du badge
+  // Données utilisateur normalisées
+  const d = data || {};
+  const ville = d.ville || {};
+  const surface   = num(d.surface);
+  const prixPaye  = num(d.prixPaye);
+  const loyerHC   = num(d.loyerActuel);
+  const chgRecup  = finite(num(d.monthlyCharges)) ? num(d.monthlyCharges) : num(d.charges) || 0;
+  const loyerCC   = finite(num(d.loyerCC)) ? num(d.loyerCC) : (finite(loyerHC) ? loyerHC : 0) + chgRecup;
 
-if (priceDiff < -10) pricePosition = 'low';
-else if (priceDiff > 10) pricePosition = 'high';
+  // Ratios utilisateur (avec garde-fous)
+  const prixM2Paye = finite(num(d.prixM2Paye)) ? num(d.prixM2Paye) : safeDiv(prixPaye, surface);
+  const loyerCCM2  = finite(num(d.loyerCCM2))  ? num(d.loyerCCM2)  : safeDiv(loyerCC, surface);
+  const loyerM2HC  = safeDiv(loyerHC, surface); // utile pour recommandations
 
-// Logique inversée pour le loyer
-if (rentDiff > 10) {           // Loyer AU-DESSUS du marché = BON
-    rentPosition = 'high';      // → Texte "Bon rendement"
-    rentCardClass = 'low';      // → Carte VERTE
-    rentBadgeClass = 'low';     // → Badge VERT
-} else if (rentDiff < -10) {   // Loyer SOUS le marché = MAUVAIS
-    rentPosition = 'low';       // → Texte "Loyer faible"
-    rentCardClass = 'high';     // → Carte ROUGE
-    rentBadgeClass = 'high';    // → Badge ROUGE
-} else {
-    rentBadgeClass = 'average'; // → Badge ORANGE si dans la moyenne
+  // Marché
+  const marketPriceM2 = num(ville.prix_m2);
+  const marketRentM2  = num(ville.loyer_m2);
+  const hasMarket = finite(marketPriceM2) && marketPriceM2 > 0 &&
+                    finite(marketRentM2) && marketRentM2  > 0;
+
+  // Préconditions minimales
+  if (!finite(prixM2Paye)) {
+    resultsDiv.innerHTML = `
+      <div class="market-comparison-card average">
+        <h3 style="color:#ef4444;">Données insuffisantes</h3>
+        <p style="color:#94a3b8">Vérifiez le <strong>prix</strong> et la <strong>surface</strong> (surface &ne; 0).</p>
+      </div>`;
+    return;
+  }
+
+  // Avec données de marché
+  if (hasMarket && finite(loyerCCM2)) {
+    const priceDiff = ((prixM2Paye - marketPriceM2) / marketPriceM2) * 100;
+    const rentDiff  = ((loyerCCM2  - marketRentM2)  / marketRentM2)  * 100;
+
+    // Classes & libellés
+    let pricePosition = 'average';
+    if (priceDiff < -10) pricePosition = 'low';
+    else if (priceDiff > 10) pricePosition = 'high';
+
+    let rentPosition = 'average', rentCardClass = 'average', rentBadgeClass = 'average';
+    if (rentDiff > 10) { rentPosition = 'high'; rentCardClass = 'low';  rentBadgeClass = 'low';  } // vert
+    else if (rentDiff < -10) { rentPosition = 'low';  rentCardClass = 'high'; rentBadgeClass = 'high'; } // rouge
+
+    // HTML
+    resultsDiv.innerHTML = `
+      <!-- Prix -->
+      <div class="market-comparison-card ${pricePosition}">
+        <div class="market-badge ${pricePosition}">
+          ${pricePosition === 'low' ? 'Bonne affaire' : pricePosition === 'high' ? 'Prix élevé' : 'Prix du marché'}
+        </div>
+
+        <h3 style="color:#e2e8f0;font-size:1.5em;margin-bottom:20px;">
+          <i class="fas fa-tag"></i> Analyse du prix d'achat
+        </h3>
+
+        <div class="comparison-input-group">
+          <div class="input-with-label">
+            <label>Votre prix au m²</label>
+            <div style="font-size:2em;font-weight:700;color:#e2e8f0;">${Math.round(prixM2Paye)} €/m²</div>
+          </div>
+          <div class="vs-separator">VS</div>
+          <div class="input-with-label">
+            <label>Prix du marché</label>
+            <div style="font-size:2em;font-weight:700;color:#00bfff;">${Math.round(marketPriceM2)} €/m²</div>
+          </div>
+        </div>
+
+        <div class="position-indicator">
+          <div class="position-marker" data-category="price" data-percent="${priceDiff}">
+            ${priceDiff > 0 ? '+' : ''}${Math.round(priceDiff)}%
+            <div class="position-tooltip">
+              ${priceDiff > 0 ? 'Au-dessus' : 'En dessous'} du marché de ${Math.abs(Math.round(priceDiff))}%
+            </div>
+          </div>
+        </div>
+        <div class="position-labels">
+          <span>-50% (Excellente affaire)</span>
+          <span>0% (Prix du marché)</span>
+          <span>+50% (Trop cher)</span>
+        </div>
+
+        <div class="market-details">
+          <div class="market-metric">
+            <div class="market-metric-label">Prix total payé</div>
+            <div class="market-metric-value">${formatNumber(prixPaye)} €</div>
+            <div class="market-metric-comparison">Pour ${surface} m² à ${ville.ville ?? '—'}</div>
+          </div>
+          <div class="market-metric">
+            <div class="market-metric-label">Économie/Surcoût</div>
+            <div class="market-metric-value" style="color:${priceDiff < 0 ? '#22c55e' : '#ef4444'};">
+              ${priceDiff < 0 ? '-' : '+'}${formatNumber(Math.abs(prixPaye - (marketPriceM2 * surface)))} €
+            </div>
+            <div class="market-metric-comparison">Par rapport au marché</div>
+          </div>
+          <div class="market-metric">
+            <div class="market-metric-label">Type de bien</div>
+            <div class="market-metric-value">${ville.piece ?? '—'}</div>
+            <div class="market-metric-comparison">${ville.departement ?? '—'} - ${ville.ville ?? '—'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loyer -->
+      <div class="market-comparison-card ${rentCardClass}">
+        <div class="market-badge ${rentBadgeClass}">
+          ${rentPosition === 'high' ? 'Bon rendement' : rentPosition === 'low' ? 'Loyer faible' : 'Loyer du marché'}
+        </div>
+
+        <h3 style="color:#e2e8f0;font-size:1.5em;margin-bottom:20px;">
+          <i class="fas fa-coins"></i> Analyse du loyer
+        </h3>
+
+        <div class="comparison-input-group">
+          <div class="input-with-label">
+            <label>Votre loyer au m² (CC)</label>
+            <div style="font-size:2em;font-weight:700;color:#e2e8f0;">
+              ${finite(loyerCCM2) ? loyerCCM2.toFixed(2) : '—'} €/m²
+            </div>
+          </div>
+          <div class="vs-separator">VS</div>
+          <div class="input-with-label">
+            <label>Loyer du marché</label>
+            <div style="font-size:2em;font-weight:700;color:#00bfff;">
+              ${marketRentM2.toFixed(2)} €/m²
+            </div>
+          </div>
+        </div>
+
+        <div class="position-indicator">
+          <div class="position-marker" data-category="rent" data-percent="${rentDiff}">
+            ${rentDiff > 0 ? '+' : ''}${Math.round(rentDiff)}%
+            <div class="position-tooltip">
+              ${rentDiff > 0 ? 'Au-dessus' : 'En dessous'} du marché de ${Math.abs(Math.round(rentDiff))}%
+            </div>
+          </div>
+        </div>
+        <div class="position-labels">
+          <span>-50% (Trop bas)</span>
+          <span>0% (Loyer du marché)</span>
+          <span>+50% (Excellent)</span>
+        </div>
+
+        <div class="market-details">
+          <div class="market-metric">
+            <div class="market-metric-label">Loyer mensuel</div>
+            <div class="market-metric-value">${formatNumber(loyerCC)} €</div>
+            <div class="market-metric-comparison">Charges comprises</div>
+          </div>
+          <div class="market-metric">
+            <div class="market-metric-label">Potentiel de loyer</div>
+            <div class="market-metric-value">${formatNumber(marketRentM2 * surface)} €</div>
+            <div class="market-metric-comparison">Au prix du marché</div>
+          </div>
+          <div class="market-metric">
+            <div class="market-metric-label">Rendement brut (HC)</div>
+            <div class="market-metric-value">
+              ${finite(prixPaye) && finite(loyerHC) && prixPaye > 0 ? ((loyerHC * 12) / prixPaye * 100).toFixed(2) + '%' : '—'}
+            </div>
+            <div class="market-metric-comparison">Sur votre investissement</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommandations -->
+      <div class="recommendations-box">
+        <div class="recommendations-title"><i class="fas fa-lightbulb"></i> Nos recommandations</div>
+        ${generateRecommendations(pricePosition, rentPosition, {
+          ...d,
+          ville,
+          loyerM2Actuel: finite(loyerM2HC) ? loyerM2HC : d.loyerM2Actuel
+        })}
+      </div>
+    `;
+
+    setTimeout(applyMarkerColors, 0);
+    return;
+  }
+
+  // Fallback sans marché
+  resultsDiv.innerHTML = `
+    <div class="market-comparison-card average">
+      <h3 style="color:#e2e8f0;font-size:1.5em;margin-bottom:20px;">
+        <i class="fas fa-info-circle"></i> Analyse sans données de marché
+      </h3>
+      <p style="color:#94a3b8;line-height:1.6;">
+        Nous n'avons pas de données de marché pour votre ville.
+        L'analyse se base sur vos ratios.
+      </p>
+      <div class="market-details" style="margin-top:30px;">
+        <div class="market-metric">
+          <div class="market-metric-label">Prix au m²</div>
+          <div class="market-metric-value">${finite(prixM2Paye) ? Math.round(prixM2Paye) + ' €/m²' : '—'}</div>
+        </div>
+        <div class="market-metric">
+          <div class="market-metric-label">Loyer au m² (HC)</div>
+          <div class="market-metric-value">${finite(loyerM2HC) ? loyerM2HC.toFixed(2) + ' €/m²' : '—'}</div>
+        </div>
+        <div class="market-metric">
+          <div class="market-metric-label">Rendement brut (HC)</div>
+          <div class="market-metric-value">
+            ${finite(prixPaye) && finite(loyerHC) && prixPaye > 0 ? ((loyerHC * 12) / prixPaye * 100).toFixed(2) + '%' : '—'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(applyMarkerColors, 0);
 }
-        
-        resultsDiv.innerHTML = `
-            <!-- Analyse du prix d'achat -->
-            <div class="market-comparison-card ${pricePosition}">
-                <div class="market-badge ${pricePosition}">
-                    ${pricePosition === 'low' ? 'Bonne affaire' : pricePosition === 'high' ? 'Prix élevé' : 'Prix du marché'}
-                </div>
-                
-                <h3 style="color: #e2e8f0; font-size: 1.5em; margin-bottom: 20px;">
-                    <i class="fas fa-tag"></i> Analyse du prix d'achat
-                </h3>
-                
-                <div class="comparison-input-group">
-                    <div class="input-with-label">
-                        <label>Votre prix au m²</label>
-                        <div style="font-size: 2em; font-weight: 700; color: #e2e8f0;">
-                            ${Math.round(data.prixM2Paye)} €/m²
-                        </div>
-                    </div>
-                    <div class="vs-separator">VS</div>
-                    <div class="input-with-label">
-                        <label>Prix du marché</label>
-                        <div style="font-size: 2em; font-weight: 700; color: #00bfff;">
-                            ${Math.round(marketPriceM2)} €/m²
-                        </div>
-                    </div>
-                </div>
-                
-<div class="position-indicator">
-    <div class="position-marker" 
-         data-category="price"
-         data-percent="${priceDiff}"
-         style="left: ${Math.min(Math.max((priceDiff + 50) * 2, 0), 100)}%;">
-        ${priceDiff > 0 ? '+' : ''}${Math.round(priceDiff)}%
-        <div class="position-tooltip">
-            ${priceDiff > 0 ? 'Au-dessus' : 'En dessous'} du marché de ${Math.abs(Math.round(priceDiff))}%
-        </div>
-    </div>
-</div>
-<div class="position-labels">
-    <span>-50% (Excellente affaire)</span>
-    <span>0% (Prix du marché)</span>
-    <span>+50% (Trop cher)</span>
-</div>
-                
-                <div class="market-details">
-                    <div class="market-metric">
-                        <div class="market-metric-label">Prix total payé</div>
-                        <div class="market-metric-value">${formatNumber(data.prixPaye)} €</div>
-                        <div class="market-metric-comparison">
-                            Pour ${data.surface} m² à ${data.ville.ville}
-                        </div>
-                    </div>
-                    <div class="market-metric">
-                        <div class="market-metric-label">Économie/Surcoût</div>
-                        <div class="market-metric-value" style="color: ${priceDiff < 0 ? '#22c55e' : '#ef4444'};">
-                            ${priceDiff < 0 ? '-' : '+'}${formatNumber(Math.abs(data.prixPaye - (marketPriceM2 * data.surface)))} €
-                        </div>
-                        <div class="market-metric-comparison">
-                            Par rapport au marché
-                        </div>
-                    </div>
-                    <div class="market-metric">
-                        <div class="market-metric-label">Type de bien</div>
-                        <div class="market-metric-value">${data.ville.piece}</div>
-                        <div class="market-metric-comparison">
-                            ${data.ville.departement} - ${data.ville.ville}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Analyse du loyer -->
-            <div class="market-comparison-card ${rentCardClass}">
-                <div class="market-badge ${rentBadgeClass}">
-                    ${rentPosition === 'high' ? 'Bon rendement' : rentPosition === 'low' ? 'Loyer faible' : 'Loyer du marché'}
-                </div>
-                
-                <h3 style="color: #e2e8f0; font-size: 1.5em; margin-bottom: 20px;">
-                    <i class="fas fa-coins"></i> Analyse du loyer
-                </h3>
-                
-<div class="comparison-input-group">
-    <div class="input-with-label">
-        <label>Votre loyer au m² (CC)</label>
-        <div style="font-size: 2em; font-weight: 700; color: #e2e8f0;">
-            ${data.loyerCCM2.toFixed(2)} €/m²
-        </div>
-    </div>
-    <div class="vs-separator">VS</div>
-    <div class="input-with-label">
-        <label>Loyer du marché</label>
-        <div style="font-size: 2em; font-weight: 700; color: #00bfff;">
-            ${marketRentM2.toFixed(2)} €/m²
-        </div>
-    </div>
-</div>
-                
-<div class="position-indicator">
-    <div class="position-marker" 
-         data-category="rent"
-         data-percent="${rentDiff}"
-         style="left: ${Math.min(Math.max((rentDiff + 50) * 2, 0), 100)}%;">
-        ${rentDiff > 0 ? '+' : ''}${Math.round(rentDiff)}%
-        <div class="position-tooltip">
-            ${rentDiff > 0 ? 'Au-dessus' : 'En dessous'} du marché de ${Math.abs(Math.round(rentDiff))}%
-        </div>
-    </div>
-</div>
-<div class="position-labels">
-    <span>-50% (Trop bas)</span>
-    <span>0% (Loyer du marché)</span>
-    <span>+50% (Excellent)</span>
-</div>
-                
-<div class="market-details">
-    <div class="market-metric">
-        <div class="market-metric-label">Loyer mensuel</div>
-        <div class="market-metric-value">${formatNumber(data.loyerCC)} €</div>
-        <div class="market-metric-comparison">
-            Charges comprises
-        </div>
-    </div>
-    <div class="market-metric">
-        <div class="market-metric-label">Potentiel de loyer</div>
-        <div class="market-metric-value">${formatNumber(marketRentM2 * data.surface)} €</div>
-        <div class="market-metric-comparison">
-            Au prix du marché
-        </div>
-    </div>
-    <div class="market-metric">
-        <div class="market-metric-label">Rendement brut</div>
-        <div class="market-metric-value">${((data.loyerActuel * 12) / data.prixPaye * 100).toFixed(2)}%</div>
-        <div class="market-metric-comparison">
-            Sur votre investissement
-        </div>
-    </div>
-</div>
-            </div>
-            
-            <!-- Recommandations -->
-            <div class="recommendations-box">
-                <div class="recommendations-title">
-                    <i class="fas fa-lightbulb"></i>
-                    Nos recommandations
-                </div>
-                
-                ${generateRecommendations(pricePosition, rentPosition, data)}
-            </div>
-        `;
-        
-        // ✅ AJOUT : Appliquer les couleurs aux marqueurs
-        setTimeout(applyMarkerColors, 0);
-        
-    } else {
-        // Analyse sans données de marché
-        resultsDiv.innerHTML = `
-            <div class="market-comparison-card average">
-                <h3 style="color: #e2e8f0; font-size: 1.5em; margin-bottom: 20px;">
-                    <i class="fas fa-info-circle"></i> Analyse sans données de marché
-                </h3>
-                <p style="color: #94a3b8; line-height: 1.6;">
-                    Nous n'avons pas de données de marché pour votre ville. 
-                    L'analyse se basera uniquement sur les ratios financiers standards.
-                </p>
-                
-                <div class="market-details" style="margin-top: 30px;">
-                    <div class="market-metric">
-                        <div class="market-metric-label">Prix au m²</div>
-                        <div class="market-metric-value">${Math.round(data.prixM2Paye)} €/m²</div>
-                    </div>
-                    <div class="market-metric">
-                        <div class="market-metric-label">Loyer au m²</div>
-                        <div class="market-metric-value">${data.loyerM2Actuel.toFixed(2)} €/m²</div>
-                    </div>
-                    <div class="market-metric">
-                        <div class="market-metric-label">Rendement brut</div>
-                        <div class="market-metric-value">${((data.loyerActuel * 12) / data.prixPaye * 100).toFixed(2)}%</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // ✅ AJOUT : Appliquer les couleurs même sans données de marché (au cas où)
-        setTimeout(applyMarkerColors, 0);
-    }
-}
-
 // Fonction pour formater les nombres
 function formatNumber(num) {
     if (window.analyzer && window.analyzer.formatNumber) {
