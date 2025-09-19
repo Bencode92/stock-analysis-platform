@@ -1879,7 +1879,7 @@ function drawBuyRent () {
                  oninput="br.loyerMarché=+this.value;
                           document.getElementById('brOutput').textContent=this.value+' €';
                           drawBuyRent()">
-          <output id="brOutput">${br.loyerMarché} €</output>  <!-- CORRECTION 2: Balise fermante correcte -->
+          <output id="brOutput">${br.loyerMarché} €</output>
         </label>
       </div>
     </section>`;
@@ -2003,10 +2003,11 @@ analyzer = window.analyzer; // garde la variable existante utilisée plus bas
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         
+        // FIX: Suppression du backslash parasite qui causait l'erreur de syntaxe
         function updateStepIndicator(step) {
             // Mettre à jour les étapes
             for (let i = 1; i <= 3; i++) {
-                const stepEl = document.getElementById(`step-${i}`);\
+                const stepEl = document.getElementById(`step-${i}`); // FIX: Supprimé le \ après cette ligne
                 stepEl.classList.remove('active', 'completed');
                 
                 if (i < step) {
