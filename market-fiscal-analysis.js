@@ -2,8 +2,7 @@
  * market-fiscal-analysis.js
  * Module d'intégration pour l'analyse de marché et la comparaison fiscale
  * Complète la page comparaison-fiscale.html
- * Version 3.2 - Format d'affichage corrigé
- * MODIFICATION: Retour au format original avec 2 cartes côte à côte
+ * Version 3.0 - Corrections complètes
  */
 
 // Constantes fiscales
@@ -56,7 +55,6 @@ const UNITS_CONTRACT = {
     gestionLocativeTaux: '%',
     tmi: '%'
 };
-
 /**
  * Helper pour parser les valeurs numériques en acceptant 0
  * ⚠️ IMPORTANT : Cette fonction doit être AVANT la classe MarketFiscalAnalyzer
@@ -69,27 +67,14 @@ function parseFloatOrDefault(elemId, def) {
     return Number.isNaN(v) ? def : v;   // 0 est conservé, '' ou 'abc' donnent def
 }
 
-/**
- * Convertit en nombre ou renvoie null si invalide
- * @param {any} v - Valeur à convertir
- * @returns {number|null} - Nombre ou null
- */
-function toNumberOrNull(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
 class MarketFiscalAnalyzer {
     constructor() {
         this.simulateur = new SimulateurImmo();
         this.comparateur = new FiscalComparator(this.simulateur);
         this.propertyData = null;
         this.marketAnalysis = null;
-        // Constante pour le vrai signe minus
+           // Constante pour le vrai signe minus
         this.SIGN_MINUS = '−'; // U+2212 (pas un tiret simple !)
-        
-        // NEW : référence globale pratique pour la page
-        if (typeof window !== 'undefined') window.analyzer = this;
     }
     
     /**
@@ -244,10 +229,6 @@ comparatorData.chargeMensuelleCredit = baseResults.mensualite;
             // Travaux
             travauxRenovation: rawData.travauxRenovation || 0,
             
-            // Régime fiscal
-            regimeActuel: rawData.regimeActuel,
-            forceRegime: rawData.forceRegime,
-            
             // Pour compatibilité avec le simulateur
             montantEmprunt: rawData.loanAmount,
             fraisBancaires: rawData.fraisBancairesDossier + rawData.fraisBancairesCompte,
@@ -256,65 +237,48 @@ comparatorData.chargeMensuelleCredit = baseResults.mensualite;
     }
 
     /**
-     * Analyse la position sur le marché - VERSION ROBUSTE V3.1
+     * Analyse la position sur le marché
      */
     analyzeMarketPosition(data) {
         const result = {
-            hasMarketData: false,
+            hasMarketData: !!data.ville,
             priceAnalysis: {},
             rentAnalysis: {},
             globalScore: 0
         };
 
-        if (!data) return result;
-
-        // Sécuriser surface/loyers
-        const surface = Number(data.surface) > 0 ? Number(data.surface) : 0;
-        const loyerHC = Number(data.loyerActuel ?? data.loyerHC ?? 0);
-        const chargesR = Number(data.charges ?? data.monthlyCharges ?? 0);
-
-        // Données marché (peuvent manquer)
-        const marketPriceM2 = data.ville ? toNumberOrNull(data.ville.prix_m2) : null;
-        const marketRentM2 = data.ville ? toNumberOrNull(data.ville.loyer_m2) : null;
-
-        const hasMarket = marketPriceM2 !== null && marketRentM2 !== null && surface > 0;
-        result.hasMarketData = hasMarket;
-        
-        if (!hasMarket) {
-            // Pas de données suffisantes → on renvoie un squelette propre
-            return result;
+        if (data.ville) {
+            const marketPriceM2 = data.ville.prix_m2;
+            const marketRentM2 = data.ville.loyer_m2;
+            
+            // Analyse du prix
+            const priceDiff = ((data.prixM2Paye - marketPriceM2) / marketPriceM2) * 100;
+            result.priceAnalysis = {
+                userPrice: data.prixM2Paye,
+                marketPrice: marketPriceM2,
+                difference: priceDiff,
+                position: this.getPricePosition(priceDiff),
+                savings: (marketPriceM2 - data.prixM2Paye) * data.surface
+            };
+            
+            // Analyse du loyer - Comparer en CC
+            const loyerCCM2 = (data.loyerActuel + data.charges) / data.surface;
+            const rentDiff = ((loyerCCM2 - marketRentM2) / marketRentM2) * 100;
+            result.rentAnalysis = {
+                userRent: data.loyerM2Actuel,
+                userRentCC: loyerCCM2,
+                marketRent: marketRentM2,
+                difference: rentDiff,
+                position: this.getRentPosition(rentDiff),
+                potential: (marketRentM2 - loyerCCM2) * data.surface
+            };
+            
+            // Score global (0-100)
+            const priceScore = Math.max(0, 50 - Math.abs(priceDiff));
+            const rentScore = Math.max(0, 50 + (rentDiff / 2));
+            result.globalScore = (priceScore + rentScore) / 2;
         }
-
-        // --- Analyse prix ---
-        const userPriceM2 = Number(data.prixM2Paye) || (Number(data.prixPaye || data.price || 0) / surface);
-        const priceDiff = ((userPriceM2 - marketPriceM2) / marketPriceM2) * 100;
-
-        result.priceAnalysis = {
-            userPrice: userPriceM2,
-            marketPrice: marketPriceM2,
-            difference: priceDiff,
-            position: this.getPricePosition(priceDiff),
-            savings: (marketPriceM2 - userPriceM2) * surface
-        };
-
-        // --- Analyse loyer (en CC) ---
-        const loyerCCM2 = surface > 0 ? ((loyerHC + chargesR) / surface) : 0;
-        const rentDiff = marketRentM2 > 0 ? ((loyerCCM2 - marketRentM2) / marketRentM2) * 100 : 0;
-
-        result.rentAnalysis = {
-            userRent: surface > 0 ? (loyerHC / surface) : 0,
-            userRentCC: loyerCCM2,
-            marketRent: marketRentM2,
-            difference: rentDiff,
-            position: this.getRentPosition(rentDiff),
-            potential: (marketRentM2 - loyerCCM2) * surface
-        };
-
-        // --- Score global (0-100) ---
-        const priceScore = Math.max(0, 50 - Math.abs(priceDiff));
-        const rentScore = Math.max(0, 50 + (rentDiff / 2));
-        result.globalScore = (priceScore + rentScore) / 2;
-
+        
         return result;
     }
 
@@ -1047,19 +1011,10 @@ prepareFiscalData() {
     // Récupérer tous les paramètres avancés
     const allParams = this.getAllAdvancedParams();
     
-    // Récupérer le régime fiscal sélectionné
-    const regimeActuel = document.querySelector('input[name="regime-actuel"]:checked')?.value || 
-                        window.propertyData?.regimeActuel;
-    
-    // Vérifier si on force le régime
-    const forceRegime = document.getElementById('force-regime')?.checked || false;
-    
     console.log('💰 Calcul des loyers:', {
         loyerHC,
         charges,
-        loyerCC,
-        regimeActuel,
-        forceRegime
+        loyerCC
     });
     
     // Récupérer TOUS les paramètres du formulaire
@@ -1081,8 +1036,6 @@ prepareFiscalData() {
         
         // Fiscal
         tmi: parseFloat(document.getElementById('tmi')?.value) || 30,
-        regimeActuel: regimeActuel,
-        forceRegime: forceRegime,
         
         // Charges
         monthlyCharges: charges,
@@ -1168,10 +1121,6 @@ return {
     loyerMensuel: loyerHC,
     tmi: formData.tmi,
     chargesCopro: charges,
-    
-    // Régime fiscal
-    regimeActuel: formData.regimeActuel,
-    forceRegime: formData.forceRegime,
     
     // Données étendues pour l'affichage
     ...formData,
@@ -1318,50 +1267,23 @@ return {
     }
 
 /**
- * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION AVEC FORMAT 2 CARTES
- * MODIFICATION: Format identique à l'image 2 avec 2 cartes côte à côte
+ * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION COMPLÈTE
  */
 generateFiscalResultsHTML(fiscalResults, inputData) {
-    // Déterminer si on force le régime ou non
-    const forceRegime = inputData.forceRegime || document.getElementById('force-regime')?.checked || false;
-    
-    // Trouver le meilleur régime (calcul objectif)
     const bestRegime = fiscalResults.reduce((a, b) => 
         a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
     );
-    
-    // Déterminer le régime à afficher
-    let regimeToShow;
-    if (forceRegime) {
-        // Si on force le régime, prendre celui sélectionné
-        const selectedKey = inputData.regimeActuel || 
-                          document.querySelector('input[name="regime-actuel"]:checked')?.value;
-        
-        regimeToShow = fiscalResults.find(r => {
-            const key = r.key || (r.isCurrent ? Object.keys(window.REGIME_LABELS || {}).find(k => window.REGIME_LABELS[k] === r.nom) : null);
-            return key === selectedKey || r.isCurrent;
-        }) || bestRegime;
-    } else {
-        // Sinon, afficher le meilleur régime calculé
-        regimeToShow = bestRegime;
-    }
+     // Utilisation du helper pour formater les montants avec conversion robuste
+    const cashflowMensuel = this.formatAmountWithClass(bestRegime.cashflowMensuel);
+    const cashflowAnnuel = this.formatAmountWithClass(bestRegime.cashflowNetAnnuel);
     
     // Calcul des charges déductibles approximatives
     const chargesDeductibles = inputData.yearlyCharges + inputData.taxeFonciere + 
         (inputData.loanAmount * inputData.loanRate / 100) + inputData.gestionFees + 
-        inputData.entretienAnnuel + (inputData.chargesCoproNonRecup * 12);
+        inputData.entretienAnnuel + (inputData.chargesCoproNonRecup * 12); // NOUVEAU : Ajouter charges non récup
     
     const baseImposable = Math.max(0, inputData.yearlyRent - chargesDeductibles);
     const impotEstime = baseImposable * inputData.tmi / 100;
-    
-    // Titre adaptatif
-    const titlePrefix = forceRegime ? 
-        (regimeToShow === bestRegime ? '🏆 Régime sélectionné (optimal)' : '📊 Régime sélectionné') : 
-        '🏆 Meilleur régime fiscal';
-    
-    // Calcul du rendement brut sur coût total
-    const rendementBrut = ((inputData.yearlyRent || inputData.loyerHC * 12) / 
-                          (inputData.coutTotalAcquisition || inputData.price)) * 100;
     
     return `
         <!-- Résumé du bien -->
@@ -1427,39 +1349,28 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     ${inputData.travauxRenovation > 0 ? ` Travaux initiaux (${this.formatCurrency(inputData.travauxRenovation)})` : ''}
                     ${inputData.typeAchat === 'encheres' ? ' Frais enchères personnalisés' : ''}
                 </div>
-            ` : ''}\
+            ` : ''}
         </div>
 
-        <!-- Régime à afficher avec les 2 cartes comme dans l'image 2 -->
+        <!-- Meilleur régime -->
         <div class="best-regime-card">
-            <h3>${titlePrefix} : ${regimeToShow.nom}</h3>
-            
-            ${forceRegime && regimeToShow !== bestRegime ? `
-                <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); 
-                            border-radius: 8px; padding: 10px; margin: 10px 0;">
-                    <i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i>
-                    <strong>Note :</strong> Le régime optimal serait <strong>${bestRegime.nom}</strong> 
-                    avec un cash-flow de ${this.formatCurrency(bestRegime.cashflowNetAnnuel)}/an
-                    (différence : ${this.formatCurrency(bestRegime.cashflowNetAnnuel - regimeToShow.cashflowNetAnnuel)}/an)
-                </div>
-            ` : ''}
-            
-            <!-- Les 2 cartes côte à côte comme dans l'image 2 -->
-            <div class="regime-benefits" style="display: flex; gap: 20px; margin: 20px 0;">
-                <div class="benefit-item" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 191, 255, 0.2); border-radius: 15px; padding: 20px; text-align: center;">
-                    <h4 style="color: #94a3b8; font-size: 0.9em; margin-bottom: 10px;">💸 Cash-flow mensuel</h4>
-                    <p class="amount ${regimeToShow.cashflowMensuel >= 0 ? 'positive' : 'negative'}" style="font-size: 2em; font-weight: 700; margin: 10px 0;">
-                        ${regimeToShow.cashflowMensuel >= 0 ? '+' : ''}${this.formatCurrency(regimeToShow.cashflowMensuel)}
-                    </p>
-                </div>
-                
-                <div class="benefit-item" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 191, 255, 0.2); border-radius: 15px; padding: 20px; text-align: center;">
-                    <h4 style="color: #94a3b8; font-size: 0.9em; margin-bottom: 10px;">📊 Rendement brut / coût total</h4>
-                    <p class="amount ${this.getRendementClass(rendementBrut)}" style="font-size: 2em; font-weight: 700; margin: 10px 0;">
-                        ${rendementBrut.toFixed(2)} %
-                    </p>
-                </div>
+            <h3>🏆 Meilleur régime fiscal : ${bestRegime.nom}</h3>
+<div class="regime-benefits">
+    <div class="benefit-item">
+        <h4>💸 Cash-flow mensuel</h4>
+        <p class="amount ${bestRegime.cashflowMensuel >= 0 ? 'positive' : 'negative'}">
+            ${bestRegime.cashflowMensuel >= 0 ? '+' : ''}${this.formatCurrency(bestRegime.cashflowMensuel)}
+        </p>
+    </div>
+    
+           <div class="benefit-item">
+                <h4>📊 Rendement brut / coût total</h4>
+                <p class="amount ${this.getRendementClass(((inputData.yearlyRent || inputData.loyerHC * 12) / (inputData.coutTotalAcquisition || inputData.price)) * 100)}">
+                    ${(((inputData.yearlyRent || inputData.loyerHC * 12) / 
+                        (inputData.coutTotalAcquisition || inputData.price)) * 100).toFixed(2)} %
+                </p>
             </div>
+</div>
             
             <!-- Détail du calcul -->
             <div class="fiscal-calculation-details">
@@ -1479,7 +1390,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     </tr>
                     <tr>
                         <td>Impôt (TMI ${inputData.tmi}%):</td>
-                        <td class="negative">-${this.formatCurrency(Math.abs(regimeToShow.impotAnnuel))}</td>
+                        <td class="negative">-${this.formatCurrency(Math.abs(bestRegime.impotAnnuel))}</td>
                     </tr>
                     <tr>
                         <td>Mensualité crédit:</td>
@@ -1487,13 +1398,13 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                     </tr>
                     <tr class="total-row">
                         <td><strong>Résultat net annuel:</strong></td>
-                        <td class="${regimeToShow.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
-                            <strong>${this.formatCurrency(regimeToShow.cashflowNetAnnuel)}</strong>
+                        <td class="${bestRegime.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+                            <strong>${this.formatCurrency(bestRegime.cashflowNetAnnuel)}</strong>
                         </td>
                     </tr>
                 </table>
                 
-                <!-- Bouton pour afficher le détail -->
+                <!-- NOUVEAU : Bouton pour afficher le détail -->
                 <button class="btn-expand-table" 
                         id="btn-fiscal-detail"
                         type="button"
@@ -1507,9 +1418,9 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             </div>
         </div>
         
-<!-- Tableau détaillé (caché par défaut) -->
+<!-- NOUVEAU : Tableau détaillé (caché par défaut) -->
 <div id="detailed-fiscal-table" class="detailed-table-container" style="display: none; margin-top: 20px; animation: slideDown 0.3s ease;">
-    ${this.buildDetailedTable(regimeToShow, inputData)}
+    ${this.buildDetailedTable(bestRegime, inputData)}
 </div>
 
 <!-- Tableau comparatif -->
@@ -1532,12 +1443,10 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                                      (inputData.coutTotalAcquisition || inputData.price)) * 100;
                 
                 return `
-                <tr class="${regime.nom === bestRegime.nom ? 'best-regime' : ''} ${regime.nom === regimeToShow.nom ? 'current-regime' : ''}">
+                <tr class="${regime.nom === bestRegime.nom ? 'best-regime' : ''}">
                     <td>
                         <i class="fas ${regime.icone || 'fa-home'}"></i>
                         ${regime.nom}
-                        ${regime.nom === bestRegime.nom && !forceRegime ? ' ⭐' : ''}
-                        ${regime.nom === regimeToShow.nom && forceRegime ? ' ✓' : ''}
                     </td>
                     <td class="${regime.cashflowMensuel > 0 ? 'positive' : 'negative'}">
                         ${this.formatCurrency(regime.cashflowMensuel)}
@@ -1568,7 +1477,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
             </div>
         </div>
 
-  <!-- Script pour le debug uniquement -->
+  <!-- Script pour le debug uniquement (le toggle est géré ailleurs) -->
         <script>
             // Debug data
             window.lastAnalysisData = {
@@ -1576,7 +1485,7 @@ generateFiscalResultsHTML(fiscalResults, inputData) {
                 results: ${JSON.stringify(fiscalResults)},
                 timestamp: new Date()
             };
-            console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.')
+            console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
             
             // Fonction de debug globale
             window.debugFiscalAnalysis = function() {
@@ -2127,38 +2036,6 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     window.MarketFiscalAnalyzer = MarketFiscalAnalyzer;
     window.lazyLoadCharts = lazyLoadCharts; // Export la fonction de lazy loading
 }
-// ─────────────────────────────────────────────
-// Anti-collision & compatibilité (Option C)
-// Redirige d'anciens appels vers renderMarketAnalysis()
-// et expose analyzeMarketLegacy pour un usage "moteur".
-// ─────────────────────────────────────────────
-(function () {
-  if (typeof window === 'undefined') return;
-
-  // Exécution "moteur" (renvoie les résultats sans s'occuper du DOM)
-  async function analyzeMarketLegacy(data) {
-    const analyzer = window.analyzer || new MarketFiscalAnalyzer();
-    return analyzer.performCompleteAnalysis(data);
-  }
-
-  // Export legacy (si d'autres pages en ont besoin)
-  window.analyzeMarketLegacy = analyzeMarketLegacy;
-
-  // Ancien nom global : on le garde fonctionnel, mais on le déprécie.
-  // S'il existe déjà côté page, on ne le touche pas.
-  if (!window.analyzeMarket) {
-    window.analyzeMarket = function (data) {
-      console.warn('[DEPRECATED] window.analyzeMarket → utilisez renderMarketAnalysis(). Redirection…');
-      // Si la page a défini un rendu UI explicite, on s'y branche
-      if (typeof window.renderMarketAnalysis === 'function') {
-        return window.renderMarketAnalysis(data);
-      }
-      // Sinon on exécute juste le calcul et on renvoie les résultats
-      return analyzeMarketLegacy(data);
-    };
-  }
-})();
-
 
 // Helpers de debug V3 avec tests unitaires
 window.debugFiscalPipeline = function() {
@@ -2248,9 +2125,48 @@ window.debugFiscalPipeline = function() {
     console.log('4️⃣ Test par régime:');
     ['Micro-foncier', 'Location nue au réel', 'LMNP Micro-BIC', 'LMNP au réel', 'SCI à l\'IS'].forEach(regimeName => {
         const regime = { nom: regimeName };
-        const calc = analyzer.getDetailedCalculations(regime, fiscalData, analyzer.getAllAdvancedParams(), { tableauAmortissement: [] });
-        console.log(`  - ${regimeName}: Base imposable = ${calc.baseImposable}, Cash-flow = ${calc.cashflowNetAnnuel}`);
+        const calc = analyzer.getDetailedCalculations(regime, fiscalData, analyzer.getAllAdvancedParams(), {});
+        console.log(`${regimeName}:`, {
+            baseImposable: calc.baseImposable,
+            totalImpots: calc.totalImpots,
+            cashflow: calc.cashflowNetAnnuel,
+            chargesDeductibles: calc.totalCharges
+        });
     });
     
+    console.groupEnd();
+};
+
+// Nouvelle fonction de test pour vérifier les calculs
+window.testFiscalCalculations = function() {
+    console.group('🧪 Tests de calculs fiscaux');
+    
+    const analyzer = new MarketFiscalAnalyzer();
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: Mensualité de prêt
+    const mensualite = analyzer.calculateMonthlyPayment(160000, 3.5, 20);
+    const expectedMensualite = 928.37; // Valeur attendue
+    if (Math.abs(mensualite - expectedMensualite) < 1) {
+        console.log('✅ Test mensualité: PASS');
+        passed++;
+    } else {
+        console.log('❌ Test mensualité: FAIL', mensualite, 'vs', expectedMensualite);
+        failed++;
+    }
+    
+    // Test 2: Charges non récupérables annuelles
+    const testData = { chargesCoproNonRecup: 50 };
+    const adapted = analyzer.prepareFiscalDataForComparator(testData);
+    if (adapted.chargesNonRecuperables === 600) { // 50 * 12
+        console.log('✅ Test charges annuelles: PASS');
+        passed++;
+    } else {
+        console.log('❌ Test charges annuelles: FAIL', adapted.chargesNonRecuperables);
+        failed++;
+    }
+    
+    console.log(`\n📊 Résultats: ${passed} PASS, ${failed} FAIL`);
     console.groupEnd();
 };
