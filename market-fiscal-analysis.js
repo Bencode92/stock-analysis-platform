@@ -2067,6 +2067,38 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     window.MarketFiscalAnalyzer = MarketFiscalAnalyzer;
     window.lazyLoadCharts = lazyLoadCharts; // Export la fonction de lazy loading
 }
+// ─────────────────────────────────────────────
+// Anti-collision & compatibilité (Option C)
+// Redirige d'anciens appels vers renderMarketAnalysis()
+// et expose analyzeMarketLegacy pour un usage “moteur”.
+// ─────────────────────────────────────────────
+(function () {
+  if (typeof window === 'undefined') return;
+
+  // Exécution “moteur” (renvoie les résultats sans s'occuper du DOM)
+  async function analyzeMarketLegacy(data) {
+    const analyzer = window.analyzer || new MarketFiscalAnalyzer();
+    return analyzer.performCompleteAnalysis(data);
+  }
+
+  // Export legacy (si d'autres pages en ont besoin)
+  window.analyzeMarketLegacy = analyzeMarketLegacy;
+
+  // Ancien nom global : on le garde fonctionnel, mais on le déprécie.
+  // S'il existe déjà côté page, on ne le touche pas.
+  if (!window.analyzeMarket) {
+    window.analyzeMarket = function (data) {
+      console.warn('[DEPRECATED] window.analyzeMarket → utilisez renderMarketAnalysis(). Redirection…');
+      // Si la page a défini un rendu UI explicite, on s’y branche
+      if (typeof window.renderMarketAnalysis === 'function') {
+        return window.renderMarketAnalysis(data);
+      }
+      // Sinon on exécute juste le calcul et on renvoie les résultats
+      return analyzeMarketLegacy(data);
+    };
+  }
+})();
+
 
 // Helpers de debug V3 avec tests unitaires
 window.debugFiscalPipeline = function() {
