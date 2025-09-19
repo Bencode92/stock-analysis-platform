@@ -2016,6 +2016,7 @@ analyzer = window.analyzer; // garde la variable existante utilisée plus bas
                 lineEl.classList.toggle('completed', i < step);
             }
         }
+window.renderMarketAnalysis = renderMarketAnalysis; //
         
 // Soumission du formulaire
 document.getElementById('property-form').addEventListener('submit', async function(e) {
@@ -2080,7 +2081,7 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
     propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface; // Loyer CC au m²
     
     // Analyser par rapport au marché
-    analyzeMarket(propertyData);
+    renderMarketAnalysis(propertyData);
     
     // Passer à l'étape 2
     goToStep(2);
@@ -2093,7 +2094,7 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
 //   - affiche toujours quelque chose (panneau fallback)
 //   - laisse applyMarkerColors() gérer l'apparence des marqueurs
 // ──────────────────────────────────────────────────────────────────────────
-function analyzeMarket(data) {
+function renderMarketAnalysis(data) {
   const resultsDiv = document.getElementById('market-analysis-results');
   if (!resultsDiv) {
     console.error('❌ #market-analysis-results introuvable');
