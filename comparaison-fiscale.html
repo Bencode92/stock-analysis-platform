@@ -91,10 +91,11 @@
     display: none;
 }
 
-/* CORRECTION 3: Force l'affichage avec !important */
+/* CORRECTION: Force l'affichage avec !important et animation fill mode */
 .market-analysis-section.active {
     display: block !important;
     animation: fadeIn 0.5s ease;
+    animation-fill-mode: both;
 }
 
 @keyframes fadeIn {
@@ -1740,7 +1741,8 @@ td.neutral {
         </div>
       </div>
     </div>
-</div>
+  </div>
+</div><!-- ✅ CORRECTION: Fermeture de la section 1 ici -->
 
 <!-- Section 2 : Analyse de marché -->
 <div class="market-analysis-section" id="section-2">
@@ -1879,7 +1881,7 @@ function drawBuyRent () {
                  oninput="br.loyerMarché=+this.value;
                           document.getElementById('brOutput').textContent=this.value+' €';
                           drawBuyRent()">
-          <output id="brOutput">${br.loyerMarché} €</output>
+          <output id="brOutput">${br.loyerMarché} €</o>
         </label>
       </div>
     </section>`;
@@ -1890,7 +1892,7 @@ function drawBuyRent () {
                 <!-- Les résultats fiscaux seront insérés ici -->
             </div>
         </div>
-    </div>
+    </div><!-- ✅ Fermeture du container principal -->
 
     <!-- Scripts -->
     <script src="./ville-search.js"></script>
@@ -1930,8 +1932,17 @@ function buildChargesBreakdown(p) {
         
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
-        window.analyzer = new MarketFiscalAnalyzer();
-analyzer = window.analyzer; // garde la variable existante utilisée plus bas
+            // Vérification initiale de la structure des sections
+            (() => {
+                const s = [1,2,3].map(i => document.getElementById(`section-${i}`));
+                const sameParent = s.every((x, _, arr) => x && x.parentElement === arr[0].parentElement);
+                if (!sameParent) {
+                    console.warn('⚠️ Sections non sœurs : vérifiez la fermeture des <div>.');
+                }
+            })();
+            
+            window.analyzer = new MarketFiscalAnalyzer();
+            analyzer = window.analyzer; // garde la variable existante utilisée plus bas
             
             // Gérer les données de ville sélectionnée
             if (window.villeSearchManager) {
@@ -2136,6 +2147,13 @@ function renderMarketAnalysis(data) {
     
   if (!resultsDiv) {
     console.error('❌ #market-analysis-results introuvable');
+    return;
+  }
+
+  // Vérification que le renderer existe
+  const renderer = window.renderMarketAnalysis || window.analyzeMarket;
+  if (typeof renderer !== 'function') {
+    resultsDiv.innerHTML = '<div class="market-comparison-card high"><h3>Analyse indisponible</h3></div>';
     return;
   }
 
