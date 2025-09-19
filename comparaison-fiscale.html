@@ -91,8 +91,9 @@
     display: none;
 }
 
+/* CORRECTION 3: Force l'affichage avec !important */
 .market-analysis-section.active {
-    display: block;
+    display: block !important;
     animation: fadeIn 0.5s ease;
 }
 
@@ -1878,7 +1879,7 @@ function drawBuyRent () {
                  oninput="br.loyerMarché=+this.value;
                           document.getElementById('brOutput').textContent=this.value+' €';
                           drawBuyRent()">
-          <output id="brOutput">${br.loyerMarché} €</o>
+          <output id="brOutput">${br.loyerMarché} €</output>  <!-- CORRECTION 2: Balise fermante correcte -->
         </label>
       </div>
     </section>`;
@@ -1978,15 +1979,20 @@ analyzer = window.analyzer; // garde la variable existante utilisée plus bas
         }
         toggleFieldsForRP();
         
-        // Gestion des étapes
+        // CORRECTION 1: Force l'affichage avec style.display
         function goToStep(step) {
-            // Masquer toutes les sections
+            // Cache tout, quoi qu'en disent les CSS
             document.querySelectorAll('.market-analysis-section').forEach(section => {
                 section.classList.remove('active');
+                section.style.display = 'none';  // Force le masquage
             });
             
-            // Afficher la section courante
-            document.getElementById(`section-${step}`).classList.add('active');
+            // Affiche la cible
+            const target = document.getElementById(`section-${step}`);
+            if (target) {
+                target.classList.add('active');
+                target.style.display = 'block';  // Force l'affichage
+            }
             
             // Mettre à jour l'indicateur d'étapes
             updateStepIndicator(step);
@@ -2000,7 +2006,7 @@ analyzer = window.analyzer; // garde la variable existante utilisée plus bas
         function updateStepIndicator(step) {
             // Mettre à jour les étapes
             for (let i = 1; i <= 3; i++) {
-                const stepEl = document.getElementById(`step-${i}`);
+                const stepEl = document.getElementById(`step-${i}`);\
                 stepEl.classList.remove('active', 'completed');
                 
                 if (i < step) {
@@ -2084,6 +2090,7 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
     // Rendu robuste avec requestAnimationFrame et try/catch
     const renderer = window.renderMarketAnalysis || window.analyzeMarket;
     requestAnimationFrame(() => {
+        goToStep(2); // Double appel au cas où un autre code l'aurait masquée
         const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
         
         if (!resultsDiv) {
@@ -2095,7 +2102,7 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
             if (typeof renderer === 'function') {
                 renderer(propertyData);
             } else {
-                throw new Error('Aucune fonction d\'analyse de marché trouvée');
+                resultsDiv.innerHTML = '<div class="market-comparison-card average"><h3 style="color:#ef4444">Aucune fonction d\'analyse trouvée</h3></div>';
             }
         } catch (err) {
             resultsDiv.innerHTML = `
