@@ -7,6 +7,7 @@ class VilleSearchManager {
         this.selectedVille = null;
         this.selectedPiece = 'T2'; // Par défaut T2
         this.manualMode = false;
+        this.onVilleSelected = null; // Callback pour notifier la sélection
         
         this.init();
     }
@@ -417,6 +418,11 @@ class VilleSearchManager {
         
         // Mettre à jour les champs prix/loyer
         this.updatePriceFields();
+        
+        // ✅ MODIFICATION 2 : Appeler le callback si défini
+        if (typeof this.onVilleSelected === 'function') {
+            this.onVilleSelected(this.getSelectedVilleData());
+        }
     }
     
     displayVilleInfo(ville) {
@@ -441,7 +447,13 @@ class VilleSearchManager {
         
         selector.innerHTML = '';
         
-        Object.keys(pieces).forEach(pieceType => {
+        // ✅ MODIFICATION 3 : Sécuriser le choix de pièce
+        const keys = Object.keys(pieces);
+        if (!keys.includes(this.selectedPiece)) {
+            this.selectedPiece = keys[0]; // fallback sur la première pièce disponible
+        }
+        
+        keys.forEach(pieceType => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = `piece-btn ${pieceType === this.selectedPiece ? 'active' : ''}`;
@@ -472,6 +484,11 @@ class VilleSearchManager {
         
         // Mettre à jour les champs
         this.updatePriceFields();
+        
+        // ✅ MODIFICATION 2 : Appeler le callback après changement de pièce
+        if (typeof this.onVilleSelected === 'function') {
+            this.onVilleSelected(this.getSelectedVilleData());
+        }
     }
     
     updatePriceFields() {
@@ -554,6 +571,20 @@ class VilleSearchManager {
                 if (villeInfo) villeInfo.style.display = 'block';
             }
         }
+        
+        // ✅ MODIFICATION 2 : Appeler le callback en mode manuel avec objet neutre
+        if (typeof this.onVilleSelected === 'function') {
+            this.onVilleSelected(
+                this.getSelectedVilleData() || {
+                    ville: '',
+                    departement: '',
+                    piece: null,
+                    prix_m2: null,
+                    loyer_m2: null,
+                    manual_mode: true
+                }
+            );
+        }
     }
     
     // Méthode pour obtenir les données de la ville sélectionnée
@@ -599,8 +630,10 @@ function integrateWithExistingSimulator() {
     
     // Vérifier si le bouton de simulation existe
     const btnSimulate = document.getElementById('btn-simulate');
+    
+    // ✅ MODIFICATION 1 : Supprimer le warning si le bouton n'existe pas
     if (!btnSimulate) {
-        console.warn('⚠️ Bouton de simulation non trouvé');
+        // Page sans bouton "simulate" : on ne fait rien, pas de warning
         return;
     }
     
