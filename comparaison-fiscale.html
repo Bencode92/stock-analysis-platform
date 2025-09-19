@@ -2090,16 +2090,18 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
 });
 // Fonction d'analyse de marché
 function analyzeMarket(data) {
-    const resultsDiv = document.getElementById('market-analysis-results');
-    
-    if (data.ville) {
-        // Analyse avec données de marché
-        const marketPriceM2 = data.ville.prix_m2;
-        const marketRentM2 = data.ville.loyer_m2;
-        
-        const priceDiff = ((data.prixM2Paye - marketPriceM2) / marketPriceM2) * 100;
-        const rentDiff = ((data.loyerCCM2 - marketRentM2) / marketRentM2) * 100;
-        
+  const resultsDiv = document.getElementById('market-analysis-results');
+
+  // ✅ sécurise : on ne fait l'analyse "avec marché" que si les 2 chiffres existent
+  const _ville = data?.ville || {};
+  const marketPriceM2 = Number(_ville.prix_m2);
+  const marketRentM2  = Number(_ville.loyer_m2);
+  const hasMarket = Number.isFinite(marketPriceM2) && Number.isFinite(marketRentM2);
+
+  if (hasMarket) {
+    // Analyse avec données de marché
+    const priceDiff = ((data.prixM2Paye - marketPriceM2) / marketPriceM2) * 100;
+    const rentDiff  = ((data.loyerCCM2 - marketRentM2)  / marketRentM2)  * 100;
     // Déterminer la position sur le marché
 let pricePosition = 'average';
 let rentPosition = 'average';
