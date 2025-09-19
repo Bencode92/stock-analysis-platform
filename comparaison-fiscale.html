@@ -1899,6 +1899,7 @@ function drawBuyRent () {
     <script src="./immo-simulation.js"></script>
     <script src="./fiscal-comparison-enhanced.js"></script>
     <script src="./market-fiscal-analysis.js"></script>
+    <script src="./fix-fiscal-display.js"></script><!-- FIX AJOUTÉ ICI -->
     
     <script>
         // Variables globales
@@ -2080,7 +2081,10 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
     droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
     coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
     honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
-    fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0
+    fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0,
+    // AJOUT: Récupérer le régime actuel sélectionné
+    regimeActuel: document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro',
+    forceRegime: document.getElementById('force-regime')?.checked || false
 };
 
     // Calculer le montant emprunté et la mensualité
