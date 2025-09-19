@@ -12,6 +12,7 @@
  * - Badge "Régime actuel" dynamique avec le select
  * - Protection contre tableauAmortissement undefined
  * - Fix apostrophe et référence window.analyzer
+ * - NOUVEAU : Affichage détaillé du régime sélectionné avec comparaison complète
  */
 /* ================== HELPERS REGIMES & LABELS ================== */
 window.REGIME_LABELS = {
@@ -213,36 +214,28 @@ class FiscalComparator {
             }
         }
         
-// ➜ Annoter et trier
-const currentKey = data?.regimeActuel || null;              // ex: "lmnp_reel"
-const currentId  = currentKey ? (REGIME_ID_FROM_KEY[currentKey] || currentKey) : null;
+        // ➜ Annoter et trier
+        const currentKey = data?.regimeActuel || null;
+        const currentId = currentKey ? (REGIME_ID_FROM_KEY[currentKey] || currentKey) : null;
 
-// Ajoute des métadonnées utiles pour l'UI
-results.forEach(r => {
-  r.key       = REGIME_KEY_FROM_ID[r.id] || r.id;           // ex: "lmnp_reel"
-  r.isCurrent = currentId ? (r.id === currentId) : false;   // badge "Régime actuel"
-});
+        // Ajoute des métadonnées utiles pour l'UI
+        results.forEach(r => {
+            r.key = REGIME_KEY_FROM_ID[r.id] || r.id;
+            r.isCurrent = currentId ? (r.id === currentId) : false;
+        });
 
-// Tri naturel (meilleur cash-flow en premier)
-results.sort((a, b) => b.cashflowNetAnnuel - a.cashflowNetAnnuel);
+        // Tri naturel (meilleur cash-flow en premier)
+        results.sort((a, b) => b.cashflowNetAnnuel - a.cashflowNetAnnuel);
 
-// Marque le meilleur calculé (sauf si on force le régime actuel)
-if (results.length > 0) results[0].isOptimal = true;
+        // Marque le meilleur calculé
+        if (results.length > 0) results[0].isOptimal = true;
 
-// Si l'utilisateur force son régime : le mettre en premier
-if (data?.forceRegime) {
-  const idx = results.findIndex(r => r.isCurrent);
-  if (idx > 0) {
-    const cur = results.splice(idx, 1)[0];
-    results.unshift(cur);
-    results.forEach((r, i) => r.isOptimal = (i === 0)); // le 1er devient la "référence"
-  }
-}
+        // NE PAS forcer le régime actuel en premier, juste l'annoter
+        // L'affichage se chargera de montrer le détail du régime sélectionné
 
-// Cache & retour
-this.cache.set(cacheKey, results);
-return results;
-
+        // Cache & retour
+        this.cache.set(cacheKey, results);
+        return results;
     }
 
     /**
@@ -851,115 +844,209 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = FiscalComparator;
 } else {
     window.FiscalComparator = FiscalComparator;
-}/* ================== RENDERER HTML & OVERRIDE ================== */
+}
+
+/* ================== RENDERER HTML AMÉLIORÉ ================== */
 if (typeof window !== 'undefined') {
-  window.renderFiscalResults = function(fiscalArray, analysisData, props={}){
-    if (!Array.isArray(fiscalArray) || fiscalArray.length === 0){
-      return `<div class="regime-result"><p style="color:#94a3b8">Aucun résultat fiscal disponible.</p></div>`;
+  window.renderFiscalResults = function(fiscalArray, analysisData, props={}) {
+    if (!Array.isArray(fiscalArray) || fiscalArray.length === 0) {
+        return `<div class="regime-result"><p style="color:#94a3b8">Aucun résultat fiscal disponible.</p></div>`;
     }
 
-    const curKey = props.regimeActuel || null;
+    // Récupérer le régime actuellement sélectionné
+    const selectedKey = props.regimeActuel || 
+                       document.querySelector('input[name="regime-actuel"]:checked')?.value || 
+                       'nu_micro';
     
-    // Recalibrer dynamiquement le "current" d'après le select
+    // Trouver le régime sélectionné ET le meilleur régime
     fiscalArray = fiscalArray.map(r => {
-      const key = r.key || (REGIME_KEY_FROM_ID[r.id] || r.id);
-      return { ...r, key, isCurrent: curKey ? (key === curKey) : !!r.isCurrent };
+        const key = r.key || (REGIME_KEY_FROM_ID[r.id] || r.id);
+        return { ...r, key, isCurrent: (key === selectedKey) };
     });
-
-    // recalculer best/current après le mapping
-    const best   = fiscalArray.find(r => r.isOptimal) || fiscalArray[0];
-    const current = fiscalArray.find(r => r.isCurrent) || null;
-
-    const bestAnnual = (typeof best.cashflowNetAnnuel==='number') ? best.cashflowNetAnnuel : NaN;
-    const curAnnual  = current && typeof current.cashflowNetAnnuel==='number' ? current.cashflowNetAnnuel : NaN;
-    const gapAnnual  = (isFinite(bestAnnual) && isFinite(curAnnual)) ? (bestAnnual - curAnnual) : NaN;
-
-    const selectHtml = `
-      <select onchange="(function(v){
-        if(window.propertyData){window.propertyData.regimeActuel=v;}
-        const box=document.getElementById('fiscal-comparison-results');
-        if(box && window.lastFiscalResults){
-          box.innerHTML = window.renderFiscalResults(window.lastFiscalResults, window.lastAnalysisData?.input, window.propertyData||{});
-        }
-      })(this.value)"
-        style="margin-left:8px;background:#0e1b2d;border:1px solid rgba(0,191,255,.3);color:#e2e8f0;border-radius:8px;padding:6px 10px;">
-        ${Object.entries(window.REGIME_LABELS).map(([k,v]) => `<option value="${k}" ${k===curKey?'selected':''}>${v}</option>`).join('')}
-      </select>`;
-
-    const summary = `
-      <div class="best-regime-summary">
-        <div class="summary-title"><i class="fas fa-balance-scale"></i> Synthèse des régimes</div>
-        <div class="summary-content">
-          <div style="margin-bottom:8px;">
-            Régime actuel : <span class="summary-highlight">${window.REGIME_LABELS[curKey] || '—'}</span> ${selectHtml}
-          </div>
-          <div style="margin-bottom:8px;">
-            ${props?.forceRegime ? `Optimisation <strong>verrouillée</strong> sur votre régime actuel.` :
-              `Recommandé : <span class="summary-highlight">${window.REGIME_LABELS[best.key] || best.nom}</span>`}
-          </div>
-          ${(!props?.forceRegime && current && isFinite(gapAnnual)) ? `
-            <div style="opacity:.9;">
-              Écart vs votre régime :
-              <span class="summary-highlight" style="color:${gapAnnual>=0?'#22c55e':'#ef4444'};">
-                ${(gapAnnual>=0?'+':'-')}${_fmtNumber(Math.abs(gapAnnual))} €/an
-              </span>
-            </div>` : ``}
+    
+    // Trier par cash-flow (meilleur en premier)
+    const sorted = [...fiscalArray].sort((a, b) => b.cashflowNetAnnuel - a.cashflowNetAnnuel);
+    const best = sorted[0];
+    const selected = fiscalArray.find(r => r.isCurrent) || best;
+    
+    // Calcul des écarts
+    const selectedAnnual = selected.cashflowNetAnnuel || 0;
+    const bestAnnual = best.cashflowNetAnnuel || 0;
+    const gap = bestAnnual - selectedAnnual;
+    
+    // 1. DÉTAIL DU RÉGIME SÉLECTIONNÉ
+    const detailHTML = `
+        <div class="best-regime-summary" style="background: rgba(0, 191, 255, 0.05); border: 2px solid rgba(0, 191, 255, 0.3); border-radius: 20px; padding: 30px; margin: 30px 0;">
+            <div class="summary-title" style="font-size: 1.8em; color: #00bfff; margin-bottom: 20px;">
+                <i class="fas fa-balance-scale"></i> 
+                Détail du régime sélectionné : ${window.REGIME_LABELS[selectedKey] || selected.nom}
+                ${selected !== best ? `
+                    <div style="font-size: 0.6em; color: #ffc107; margin-top: 10px;">
+                        ⚠️ Un meilleur régime existe : ${window.REGIME_LABELS[best.key] || best.nom} 
+                        (<span style="color: #22c55e;">+${_fmtNumber(gap)} €/an</span>)
+                    </div>
+                ` : `
+                    <div style="font-size: 0.6em; color: #22c55e; margin-top: 10px;">
+                        ✅ C'est le meilleur régime pour votre situation !
+                    </div>
+                `}
+            </div>
+            
+            <!-- Métriques principales en gros -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0;">
+                <div style="text-align: center;">
+                    <h3 style="color: #94a3b8; font-size: 1.1em; margin-bottom: 10px;">Cash-flow mensuel</h3>
+                    <div class="${selectedAnnual >= 0 ? 'positive' : 'negative'}" style="font-size: 2.5em; font-weight: 700; color: ${selectedAnnual >= 0 ? '#22c55e' : '#ef4444'};">
+                        ${selectedAnnual >= 0 ? '+' : ''}${_fmtNumber(selectedAnnual / 12)} €
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <h3 style="color: #94a3b8; font-size: 1.1em; margin-bottom: 10px;">Cash-flow annuel</h3>
+                    <div class="${selectedAnnual >= 0 ? 'positive' : 'negative'}" style="font-size: 2.5em; font-weight: 700; color: ${selectedAnnual >= 0 ? '#22c55e' : '#ef4444'};">
+                        ${selectedAnnual >= 0 ? '+' : ''}${_fmtNumber(selectedAnnual)} €
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Détails fiscaux -->
+            <div style="background: rgba(255, 255, 255, 0.03); border-radius: 15px; padding: 20px; margin: 20px 0;">
+                <h4 style="color: #00bfff; margin-bottom: 15px;">Détails fiscaux</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                    <div>
+                        <span style="color: #94a3b8;">Base imposable:</span>
+                        <strong style="color: #e2e8f0; margin-left: 10px;">${_numOrDash(selected.baseImposable)} €</strong>
+                    </div>
+                    <div>
+                        <span style="color: #94a3b8;">Impôts annuels:</span>
+                        <strong style="color: #ef4444; margin-left: 10px;">−${_numOrDash(Math.abs(selected.impotAnnuel || 0))} €</strong>
+                    </div>
+                    <div>
+                        <span style="color: #94a3b8;">Rendement net:</span>
+                        <strong style="color: ${selected.rendementNet > 4 ? '#22c55e' : selected.rendementNet < 2 ? '#ef4444' : '#e2e8f0'}; margin-left: 10px;">
+                            ${_pctOrDash(selected.rendementNet)}
+                        </strong>
+                    </div>
+                    ${selected.deficit > 0 ? `
+                    <div>
+                        <span style="color: #94a3b8;">Déficit reportable:</span>
+                        <strong style="color: #ffc107; margin-left: 10px;">${_fmtNumber(selected.deficit)} €</strong>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <!-- Avantages du régime -->
+            ${selected.avantages && selected.avantages.length > 0 ? `
+                <div style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 15px; padding: 20px; margin-top: 20px;">
+                    <h4 style="color: #22c55e; margin-bottom: 15px;">
+                        <i class="fas fa-check-circle"></i> Points clés de ce régime
+                    </h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #e2e8f0;">
+                        ${selected.avantages.map(a => `<li style="margin: 8px 0;">${a}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
         </div>
-      </div>`;
-
-    const cards = fiscalArray.map(r=>{
-      const taxesRaw =
-        (typeof r.impotAnnuel === 'number' ? Math.abs(r.impotAnnuel) :
-         typeof r.impotTotal  === 'number' ? r.impotTotal :
-         typeof r.totalImpot  === 'number' ? r.totalImpot :
-         typeof r.impots      === 'number' ? r.impots : null);
-
-      return `
-        <div class="regime-result ${r.isOptimal && !props.forceRegime ? 'best' : ''}" data-regime-key="${r.key||''}">
-          <div class="regime-header">
-            <div class="regime-name">
-              <i class="fas ${String(r.id).includes('lmnp')||String(r.id).includes('lmp') ? 'fa-bed':'fa-building'}"></i>
-              ${window.REGIME_LABELS[r.key] || r.nom || 'Régime'}
+    `;
+    
+    // 2. TABLEAU COMPARATIF DE TOUS LES RÉGIMES
+    const comparisonHTML = `
+        <div style="margin-top: 50px;">
+            <h3 style="color: #00bfff; font-size: 1.5em; margin-bottom: 25px; text-align: center;">
+                <i class="fas fa-chart-bar"></i> Comparaison de tous les régimes fiscaux
+            </h3>
+            
+            <div class="regime-comparison-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+                ${sorted.map(r => {
+                    const isSelected = r.key === selectedKey;
+                    const isBest = r === best;
+                    const diff = r.cashflowNetAnnuel - selectedAnnual;
+                    
+                    return `
+                        <div class="regime-result ${isBest ? 'best' : ''}" 
+                             style="background: ${isSelected ? 'rgba(0, 191, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)'}; 
+                                    border: 2px solid ${isBest ? '#22c55e' : isSelected ? '#00bfff' : 'rgba(0, 191, 255, 0.2)'}; 
+                                    border-radius: 15px; padding: 20px; transition: all 0.3s ease;
+                                    ${isSelected ? 'box-shadow: 0 0 20px rgba(0,191,255,0.3);' : ''}">
+                            
+                            <div class="regime-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                                <div class="regime-name" style="font-weight: 600; color: ${isBest ? '#22c55e' : '#00bfff'};">
+                                    <i class="fas ${r.icone || (String(r.id).includes('lmnp')||String(r.id).includes('lmp') ? 'fa-bed':'fa-building')}"></i>
+                                    ${window.REGIME_LABELS[r.key] || r.nom}
+                                </div>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    ${isBest ? '<span class="regime-badge" style="background: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em;">Meilleur</span>' : ''}
+                                    ${isSelected ? '<span class="regime-badge current" style="background: #3b82f6; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em;">Sélectionné</span>' : ''}
+                                </div>
+                            </div>
+                            
+                            <div class="regime-metrics" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div class="metric-box" style="text-align: center; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                    <div class="metric-label" style="color: #94a3b8; font-size: 0.85em; margin-bottom: 5px;">Cash-flow annuel</div>
+                                    <div class="metric-value ${r.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}" 
+                                         style="font-size: 1.2em; font-weight: 600; color: ${r.cashflowNetAnnuel >= 0 ? '#22c55e' : '#ef4444'};">
+                                        ${_numOrDash(r.cashflowNetAnnuel)} €
+                                    </div>
+                                </div>
+                                <div class="metric-box" style="text-align: center; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                    <div class="metric-label" style="color: #94a3b8; font-size: 0.85em; margin-bottom: 5px;">Impôts</div>
+                                    <div class="metric-value negative" style="font-size: 1.2em; font-weight: 600; color: #ef4444;">
+                                        ${_numOrDash(Math.abs(r.impotAnnuel || 0))} €
+                                    </div>
+                                </div>
+                                <div class="metric-box" style="text-align: center; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                    <div class="metric-label" style="color: #94a3b8; font-size: 0.85em; margin-bottom: 5px;">Rendement</div>
+                                    <div class="metric-value neutral" style="font-size: 1.2em; font-weight: 600; color: #e2e8f0;">
+                                        ${_pctOrDash(r.rendementNet)}
+                                    </div>
+                                </div>
+                                <div class="metric-box" style="text-align: center; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                    <div class="metric-label" style="color: #94a3b8; font-size: 0.85em; margin-bottom: 5px;">Base imposable</div>
+                                    <div class="metric-value neutral" style="font-size: 1.2em; font-weight: 600; color: #e2e8f0;">
+                                        ${_numOrDash(r.baseImposable)} €
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${!isSelected ? `
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                                    <span style="color: ${diff >= 0 ? '#22c55e' : '#ef4444'}; font-weight: 500;">
+                                        ${diff >= 0 ? 'Gain' : 'Perte'} vs sélection: 
+                                        ${diff >= 0 ? '+' : ''}${_fmtNumber(diff)} €/an
+                                    </span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('')}
             </div>
-            ${r.isOptimal && !props.forceRegime ? `<div class="regime-badge">Meilleur</div>` : ``}
-            ${r.isCurrent ? `<div class="regime-badge current">Régime actuel</div>` : ``}
-          </div>
-
-          <div class="regime-metrics">
-            <div class="metric-box">
-              <div class="metric-label">Cash-flow net annuel</div>
-              <div class="metric-value ${(r.cashflowNetAnnuel||0)>=0?'positive':'negative'}">${_numOrDash(r.cashflowNetAnnuel)} €</div>
+            
+            <!-- Légende -->
+            <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px; text-align: center;">
+                <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; color: #94a3b8; font-size: 0.9em;">
+                    <div><span style="display: inline-block; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; margin-right: 8px;"></span>Meilleur régime</div>
+                    <div><span style="display: inline-block; width: 12px; height: 12px; background: #3b82f6; border-radius: 50%; margin-right: 8px;"></span>Régime sélectionné</div>
+                    <div><span style="display: inline-block; width: 12px; height: 12px; background: rgba(0,191,255,0.3); border-radius: 50%; margin-right: 8px;"></span>Autres régimes</div>
+                </div>
             </div>
-            <div class="metric-box">
-              <div class="metric-label">Impôts & prélèvements</div>
-              <div class="metric-value ${typeof taxesRaw==='number'?(taxesRaw<=0?'positive':'negative'):'neutral'}">${_numOrDash(taxesRaw)} €</div>
-            </div>
-            <div class="metric-box">
-              <div class="metric-label">Rendement net</div>
-              <div class="metric-value neutral">${_pctOrDash(r.rendementNet)}</div>
-            </div>
-            <div class="metric-box">
-              <div class="metric-label">Base imposable</div>
-              <div class="metric-value neutral">${_numOrDash(r.baseImposable)} €</div>
-            </div>
-          </div>
-        </div>`;
-    }).join('');
-
-    return `${summary}<div class="regime-comparison-grid">${cards}</div>`;
+        </div>
+    `;
+    
+    // Retourner le HTML complet
+    return detailHTML + comparisonHTML;
   };
 
-  // 🔄 Override doux si MarketFiscalAnalyzer existe (sinon, rien)
+  // Override doux si MarketFiscalAnalyzer existe
   window.addEventListener('load', () => {
     try {
       if (window.MarketFiscalAnalyzer && MarketFiscalAnalyzer.prototype) {
         const old = MarketFiscalAnalyzer.prototype.generateFiscalResultsHTML;
         MarketFiscalAnalyzer.prototype.generateFiscalResultsHTML = function(fiscal, analysisData){
-          window.lastFiscalResults = fiscal; // pour MAJ live
-          window.lastAnalysisData  = analysisData; // Mémoriser aussi analysisData
+          window.lastFiscalResults = fiscal;
+          window.lastAnalysisData = { input: analysisData };
           return window.renderFiscalResults(fiscal, analysisData, window.propertyData || {});
         };
-        console.log('🔁 generateFiscalResultsHTML overridé par renderFiscalResults');
+        console.log('✅ generateFiscalResultsHTML overridé avec nouvelle logique');
       }
     } catch (e) {
       console.warn('Override generateFiscalResultsHTML impossible :', e);
