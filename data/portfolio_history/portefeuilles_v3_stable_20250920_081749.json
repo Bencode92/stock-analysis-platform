@@ -1,0 +1,218 @@
+{
+    "version": "v3_quantitatif_compliance_amf_stable",
+    "timestamp": "20250920_081749",
+    "date": "2025-09-20T08:17:49.677763",
+    "portfolios": {
+        "Portefeuilles": [
+            {
+                "Nom": "Agressif",
+                "Actifs": [
+                    {
+                        "id": "CR_3",
+                        "allocation": "15.00%"
+                    },
+                    {
+                        "id": "CR_1",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "ETF_s6",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "ETF_s2",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "EQ_9",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "EQ_23",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "EQ_1",
+                        "allocation": "7.00%"
+                    },
+                    {
+                        "id": "EQ_5",
+                        "allocation": "7.00%"
+                    },
+                    {
+                        "id": "EQ_12",
+                        "allocation": "7.00%"
+                    },
+                    {
+                        "id": "EQ_13",
+                        "allocation": "6.00%"
+                    },
+                    {
+                        "id": "EQ_17",
+                        "allocation": "5.00%"
+                    },
+                    {
+                        "id": "EQ_18",
+                        "allocation": "4.00%"
+                    },
+                    {
+                        "id": "EQ_20",
+                        "allocation": "3.00%"
+                    }
+                ],
+                "Compliance": {
+                    "Total_Lignes": 13,
+                    "Categories_Incluses": [
+                        "Actions",
+                        "ETF",
+                        "Crypto"
+                    ],
+                    "Allocation_Totale": "100.00%"
+                }
+            },
+            {
+                "Nom": "Modéré",
+                "Actifs": [
+                    {
+                        "id": "ETF_s4",
+                        "allocation": "15.00%"
+                    },
+                    {
+                        "id": "ETF_s9",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "ETF_b1",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "EQ_2",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "EQ_8",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "EQ_11",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "EQ_16",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "EQ_19",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "CR_5",
+                        "allocation": "7.00%"
+                    },
+                    {
+                        "id": "CR_2",
+                        "allocation": "5.00%"
+                    },
+                    {
+                        "id": "EQ_14",
+                        "allocation": "5.00%"
+                    },
+                    {
+                        "id": "EQ_25",
+                        "allocation": "5.00%"
+                    },
+                    {
+                        "id": "EQ_3",
+                        "allocation": "3.00%"
+                    }
+                ],
+                "Compliance": {
+                    "Total_Lignes": 13,
+                    "Categories_Incluses": [
+                        "Actions",
+                        "ETF",
+                        "Obligations",
+                        "Crypto"
+                    ],
+                    "Allocation_Totale": "100.00%"
+                }
+            },
+            {
+                "Nom": "Stable",
+                "Actifs": [
+                    {
+                        "id": "ETF_b3",
+                        "allocation": "15.00%"
+                    },
+                    {
+                        "id": "ETF_b2",
+                        "allocation": "15.00%"
+                    },
+                    {
+                        "id": "ETF_s7",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "EQ_6",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "EQ_3",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "EQ_22",
+                        "allocation": "10.00%"
+                    },
+                    {
+                        "id": "EQ_17",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "EQ_8",
+                        "allocation": "8.00%"
+                    },
+                    {
+                        "id": "EQ_14",
+                        "allocation": "7.00%"
+                    },
+                    {
+                        "id": "EQ_25",
+                        "allocation": "7.00%"
+                    }
+                ],
+                "Compliance": {
+                    "Total_Lignes": 10,
+                    "Categories_Incluses": [
+                        "Actions",
+                        "ETF",
+                        "Obligations"
+                    ],
+                    "Allocation_Totale": "100.00%",
+                    "Crypto": "0%"
+                }
+            }
+        ]
+    },
+    "overlap_report": {
+        "Agressif": [],
+        "Modéré": [],
+        "Stable": []
+    },
+    "features": [
+        "drawdown_normalisé",
+        "diversification_round_robin",
+        "validation_anti_fin_cycle",
+        "fallback_crypto_progressif",
+        "cache_univers_hash",
+        "retry_api_robuste",
+        "compliance_amf",
+        "sanitisation_marketing",
+        "disclaimer_automatique",
+        "regex_pandas_fixed",
+        "etf_detection_fixed",
+        "timeout_extended",
+        "type_safety_improved",
+        "cache_fallback_system"
+    ]
+}
