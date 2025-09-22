@@ -1361,75 +1361,108 @@ td.neutral {
         </div>
       </div>
 
-      <!-- ⬇️ NOUVEAU : Choix du régime fiscal actuel (AVANT le bloc Continue) -->
-      <div class="form-section">
-        <div class="form-section-title">
-          <i class="fas fa-balance-scale"></i>
-          Régime fiscal actuel
-        </div>
+<!-- ⬇️ NOUVEAU : Choix du régime fiscal actuel (AVANT le bloc Continue) -->
+<div class="form-section">
+  <div class="form-section-title">
+    <i class="fas fa-balance-scale"></i>
+    Régime fiscal actuel
+  </div>
 
-        <div class="grid grid-2">
-          <div class="input-with-label">
-            <label>Location nue</label>
-            <div class="piece-selector">
-              <label class="mode-option">
-                <input type="radio" name="regime-actuel" value="nu_micro" checked>
-                <div class="mode-card">
-                  <div class="mode-icon"><i class="fas fa-leaf"></i></div>
-                  <div class="mode-content">
-                    <h4>Micro-foncier</h4><p>Abattement 30%</p>
-                  </div>
-                </div>
-              </label>
-
-              <label class="mode-option">
-                <input type="radio" name="regime-actuel" value="nu_reel">
-                <div class="mode-card">
-                  <div class="mode-icon"><i class="fas fa-calculator"></i></div>
-                  <div class="mode-content">
-                    <h4>Réel foncier</h4><p>Charges au réel</p>
-                  </div>
-                </div>
-              </label>
+  <div class="grid grid-2">
+    <!-- Location nue -->
+    <div class="input-with-label">
+      <label>Location nue</label>
+      <div class="piece-selector">
+        <label class="mode-option">
+          <input type="radio" name="regime-actuel" value="nu_micro" checked>
+          <div class="mode-card">
+            <div class="mode-icon"><i class="fas fa-leaf"></i></div>
+            <div class="mode-content">
+              <h4>Micro-foncier</h4>
+              <p>Abattement 30%</p>
             </div>
           </div>
+        </label>
 
-          <div class="input-with-label">
-            <label>Location meublée</label>
-            <div class="piece-selector">
-              <label class="mode-option">
-                <input type="radio" name="regime-actuel" value="lmnp_micro">
-                <div class="mode-card">
-                  <div class="mode-icon"><i class="fas fa-bed"></i></div>
-                  <div class="mode-content">
-                    <h4>LMNP Micro-BIC</h4><p>Abattement 50%</p>
-                  </div>
-                </div>
-              </label>
-
-              <label class="mode-option">
-                <input type="radio" name="regime-actuel" value="lmnp_reel">
-                <div class="mode-card">
-                  <div class="mode-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                  <div class="mode-content">
-                    <h4>LMNP Réel</h4><p>Amortissements</p>
-                  </div>
-                </div>
-              </label>
-
-              <label class="mode-option">
-                <input type="radio" name="regime-actuel" value="lmp_reel">
-                <div class="mode-card">
-                  <div class="mode-icon"><i class="fas fa-briefcase"></i></div>
-                  <div class="mode-content">
-                    <h4>LMP Réel</h4><p>Recettes pro</p>
-                  </div>
-                </div>
-              </label>
+        <label class="mode-option">
+          <input type="radio" name="regime-actuel" value="nu_reel">
+          <div class="mode-card">
+            <div class="mode-icon"><i class="fas fa-calculator"></i></div>
+            <div class="mode-content">
+              <h4>Réel foncier</h4>
+              <p>Charges au réel</p>
             </div>
           </div>
-        </div>
+        </label>
+      </div>
+    </div>
 
+    <!-- Location meublée -->
+    <div class="input-with-label">
+      <label>Location meublée</label>
+      <div class="piece-selector">
+        <label class="mode-option">
+          <input type="radio" name="regime-actuel" value="lmnp_micro">
+          <div class="mode-card">
+            <div class="mode-icon"><i class="fas fa-bed"></i></div>
+            <div class="mode-content">
+              <h4>LMNP Micro-BIC</h4>
+              <p>Abattement 50%</p>
+            </div>
+          </div>
+        </label>
+
+        <label class="mode-option">
+          <input type="radio" name="regime-actuel" value="lmnp_reel">
+          <div class="mode-card">
+            <div class="mode-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="mode-content">
+              <h4>LMNP Réel</h4>
+              <p>Amortissements</p>
+            </div>
+          </div>
+        </label>
+
+        <label class="mode-option">
+          <input type="radio" name="regime-actuel" value="lmp_reel">
+          <div class="mode-card">
+            <div class="mode-icon"><i class="fas fa-briefcase"></i></div>
+            <div class="mode-content">
+              <h4>LMP Réel</h4>
+              <p>Recettes pro</p>
+            </div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Structure sociétaire -->
+    <div class="input-with-label">
+      <label>Structure sociétaire</label>
+      <div class="piece-selector">
+        <label class="mode-option">
+          <input type="radio" name="regime-actuel" value="sci_is">
+          <div class="mode-card">
+            <div class="mode-icon"><i class="fas fa-building"></i></div>
+            <div class="mode-content">
+              <h4>SCI à l’IS</h4>
+              <p>IS 15% / 25%</p>
+            </div>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="loyer-type-toggle" style="margin-top:12px;">
+    <span class="toggle-option">
+      <input type="checkbox" id="force-regime">
+      <label for="force-regime">Afficher le détail de ce régime (même s'il n'est pas le meilleur)</label>
+    </span>
+    <span class="form-help">Si décoché, affiche automatiquement le meilleur régime calculé.</span>
+  </div>
+</div>
+        
 <div class="loyer-type-toggle" style="margin-top:12px;">
     <span class="toggle-option">
         <input type="checkbox" id="force-regime">
