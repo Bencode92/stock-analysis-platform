@@ -521,6 +521,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
         // LMP au réel — cotisations sociales (pas de PS)
         // Synonymes gérés pour robustesse d'affichage/rendu
         // ─────────────────────────────────────────────────────────
+        case 'LMP Réel':
         case 'LMP au réel':
         case 'LMP (Loueur Meublé Professionnel)':
         case 'LMP réel':
