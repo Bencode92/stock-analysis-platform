@@ -32,8 +32,8 @@ const FISCAL_CONSTANTS = {
     DUREE_AMORTISSEMENT_MOBILIER: 10,
 
     // LMP (cotisations sociales pro)
-    LMP_COTIS_TAUX: 0.40,   // 40% du bénéfice — paramétrable
-    LMP_COTIS_MIN: 0        // minimum annuel — paramétrable
+  LMP_COTISATIONS_TAUX: 0.35,   // 35% par défaut
+  LMP_COTISATIONS_MIN: 0
 };
 
 /**
@@ -357,8 +357,15 @@ getAllAdvancedParams() {
         // LMP (cotisations sociales) + Toggles
         // ─────────────────────────────────────────
         // LMP (cotisations sociales) — en % et en €/an
-        lmpCotisationsTaux: parseFloatOrDefault('lmp-cotisations-taux', FISCAL_CONSTANTS.LMP_COTIS_TAUX * 100), // en %
-        lmpCotisationsMin:  parseFloatOrDefault('lmp-cotisations-min',  FISCAL_CONSTANTS.LMP_COTIS_MIN),        // €/an
+  // % et plancher €/an (si les inputs n’existent pas, on prend les valeurs défaut constantes)
+    lmpCotisationsTaux: parseFloatOrDefault(
+      'lmp-cotisations-taux',
+      FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100 // en %
+    ),
+    lmpCotisationsMin:  parseFloatOrDefault(
+      'lmp-cotisations-min',
+      FISCAL_CONSTANTS.LMP_COTISATIONS_MIN       // €/an
+    ),
 
         // Toggles utiles (fonctionnent même sans input dans le DOM)
         assujettiCotisSociales: document.getElementById('assujetti-cotis')?.checked ?? false, // LMNP soumis cotisations → pas de PS
@@ -421,6 +428,9 @@ calculateAnnualInterests(inputData, baseResults, year = 1) {
     /**
      * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE
      */
+/**
+ * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE
+ */
 getDetailedCalculations(regime, inputData, params, baseResults) {
     const loyerHC = inputData.loyerHC;
     const loyerAnnuelBrut = loyerHC * 12;
@@ -443,7 +453,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
     let amortissementBien = 0;
     let amortissementMobilier = 0;
     let amortissementTravaux = 0;
-    let cotisationsSociales = 0; // ← 3.a) pour LMP
+    let cotisationsSociales = 0; // ← pour LMP
 
     switch (regime.nom) {
         case 'Micro-foncier': {
@@ -455,17 +465,15 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
             break;
         }
 
-        // 3.b) Location nue au réel — valorise le déficit foncier (IR négatif possible, pas de PS sur déficit)
+        // Location nue au réel — déficit foncier possible (IR négatif), pas de PS sur déficit
         case 'Location nue au réel': {
             const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
             const baseAvantPlafond = revenusNets - chargesReelles;
 
-            // Base IR/PS (jamais < 0)
             baseImposable = Math.max(0, baseAvantPlafond);
             impotRevenu = baseImposable * (inputData.tmi / 100);
             prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
 
-            // Économie d'IR due au déficit foncier (plafond 10 700 €, pas de PS)
             if (baseAvantPlafond < 0) {
                 const imputable = Math.min(FISCAL_CONSTANTS.DEFICIT_FONCIER_MAX, -baseAvantPlafond);
                 const economieIR = imputable * (inputData.tmi / 100);
@@ -476,7 +484,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
             break;
         }
 
-        // 3.b) LMNP Micro-BIC — PS 17,2 % sauf si assujetti URSSAF
+        // LMNP Micro-BIC — PS 17,2 % sauf si assujetti cotisations
         case 'LMNP Micro-BIC': {
             const base = revenusNets * (1 - FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT);
             chargesDeductibles = revenusNets * FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT;
@@ -488,12 +496,10 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
             break;
         }
 
-        // 3.b) LMNP au réel — PS 17,2 % sauf si assujetti URSSAF
+        // LMNP au réel — PS 17,2 % sauf si assujetti cotisations
         case 'LMNP au réel': {
-            // 1) Charges réelles
             const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
-            // 2) Amortissements
             const baseAmortissable = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
             amortissementBien = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
             amortissementMobilier = inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
@@ -501,24 +507,29 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
 
             const totalDeductions = chargesReelles + amortissementBien + amortissementMobilier + amortissementTravaux;
 
-            // 3) Fiscalité
             baseImposable = Math.max(0, revenusNets - totalDeductions);
             impotRevenu = baseImposable * (inputData.tmi / 100);
 
             const assujetti = !!inputData.assujettiCotisSociales;
             prelevementsSociaux = assujetti ? 0 : baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
 
-            // Pour l'affichage, on garde charges réelles dans chargesDeductibles (les amort. sont listés à part)
             chargesDeductibles = chargesReelles;
             break;
         }
 
-        // 3.b) NOUVEAU — LMP au réel (cotisations sociales, pas de PS)
-        case 'LMP au réel': {
+        // ─────────────────────────────────────────────────────────
+        // LMP au réel — cotisations sociales (pas de PS)
+        // Synonymes gérés pour robustesse d'affichage/rendu
+        // ─────────────────────────────────────────────────────────
+        case 'LMP au réel':
+        case 'LMP (Loueur Meublé Professionnel)':
+        case 'LMP réel':
+        case 'LMP':
+        case 'lmp': {
             // 1) Charges réelles
             const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
-            // 2) Amortissements (mêmes barèmes par défaut que LMNP)
+            // 2) Amortissements (mêmes barèmes que LMNP par défaut)
             const baseAmortissable = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
             amortissementBien = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
             amortissementMobilier = inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
@@ -537,8 +548,8 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
             impotRevenu = baseImposable * (inputData.tmi / 100) - economieIR;
             prelevementsSociaux = 0;
 
-            const tauxCotis = (Number(inputData.lmpCotisationsTaux) || 0) / 100;
-            const minCotis = Number(inputData.lmpCotisationsMin) || 0;
+            const tauxCotis = (Number(inputData.lmpCotisationsTaux) || (FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100)) / 100;
+            const minCotis  = Number(inputData.lmpCotisationsMin)  || FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
             cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
 
             // 6) Charges affichées (on agrège charges + amortissements)
@@ -546,11 +557,10 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
             break;
         }
 
-        // 3.b) SCI à l’IS — ajout amortissements + toggle taux réduit
+        // SCI à l’IS — amortissements + toggle taux réduit
         case "SCI à l'IS": {
             const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
-            // Amortissements (approche simple)
             const baseAmortissable = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
             const amortBien = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
             const amortMob  = (inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
@@ -568,7 +578,6 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
             }
             prelevementsSociaux = 0;
 
-            // Pour cohérence d'affichage des lignes d'amortissement
             amortissementBien = amortBien;
             amortissementMobilier = amortMob;
             amortissementTravaux = 0;
@@ -585,7 +594,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
         }
     }
 
-    // 3.c) Total impôts & contributions (inclut les cotisations sociales)
+    // Total impôts & contributions (inclut les cotisations sociales le cas échéant)
     const totalImpots = impotRevenu + prelevementsSociaux + cotisationsSociales;
 
     // Charges cash (pour le CF)
@@ -603,7 +612,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
 
     // Total charges déductibles pour l'affichage (évite double comptage en LMP)
     const totalCharges =
-        regime.nom === 'LMP au réel'
+        ['LMP au réel','LMP (Loueur Meublé Professionnel)','LMP réel','LMP','lmp'].includes(regime.nom)
             ? chargesDeductibles // déjà charges + amort en LMP
             : chargesDeductibles + amortissementBien + amortissementMobilier + amortissementTravaux;
 
@@ -630,11 +639,11 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
         assurancePNO: params.assurancePNO * 12,
         totalCharges,
 
-        // 3.d) Fiscalité
+        // Fiscalité
         baseImposable,
         impotRevenu,
         prelevementsSociaux,
-        cotisationsSociales, // ← ajouté
+        cotisationsSociales, // ← affichage LMP
         totalImpots,
 
         // Cash-flow
@@ -648,6 +657,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
         chargesReelles: this.calculateRealCharges(inputData, params, interetsAnnuels)
     };
 }
+
     /**
      * Construit le tableau détaillé complet
      */
@@ -920,50 +930,90 @@ buildChargesSection(calc, params) {
      * Construit la section fiscalité
      */
 buildFiscaliteSection(calc, inputData) {
+    const isSCI = calc.regime === "SCI à l'IS";
+    const isIRNegatif = typeof calc.impotRevenu === 'number' && calc.impotRevenu < 0;
+
+    // Helpers d’affichage
+    const fmt = v => this.formatCurrency(Math.abs(Number(v) || 0));
+    const has = v => typeof v === 'number' && isFinite(v) && Math.abs(v) > 0;
+
+    // Libellé IR
+    const libIR = isSCI ? '(IS)' : `(TMI ${Number(inputData.tmi) || 0}%)`;
+    const formIR = isSCI ? 'Barème IS' : `= Base × ${Number(inputData.tmi) || 0}%`;
+
+    // Ligne IR (montant négatif = économie → affichée en positif, classe “positive”)
+    const irValueCell = isIRNegatif
+        ? `<td class="text-right positive">+${fmt(calc.impotRevenu)}</td>`
+        : `<td class="text-right negative">-${fmt(calc.impotRevenu)}</td>`;
+
+    const irFormulaCell = isIRNegatif
+        ? `<td class="formula">Économie d'impôt (déficit/imputation)</td>`
+        : `<td class="formula">${formIR}</td>`;
+
+    // Total impôts : si négatif → économie nette
+    const totalImpotsNeg = has(calc.totalImpots) && calc.totalImpots < 0;
+    const totalImpotsCell = totalImpotsNeg
+        ? `<td class="text-right positive"><strong>+${fmt(calc.totalImpots)}</strong></td>`
+        : `<td class="text-right negative"><strong>-${fmt(calc.totalImpots)}</strong></td>`;
+
+    const totalImpotsLabel = totalImpotsNeg
+        ? `<strong>Économie nette</strong>`
+        : `<strong>Total impôts</strong>`;
+
     return `
         <tr class="section-header">
             <td colspan="3"><strong>📊 CALCUL FISCAL</strong></td>
         </tr>
+
         <tr>
             <td>Revenus nets</td>
             <td class="text-right">${this.formatCurrency(calc.revenusNets)}</td>
             <td class="formula">Après vacance et gestion</td>
         </tr>
+
         <tr>
             <td>- Charges déductibles</td>
             <td class="text-right negative">-${this.formatCurrency(calc.totalCharges)}</td>
             <td class="formula">Total ci-dessus</td>
         </tr>
+
         <tr>
             <td><strong>Base imposable</strong></td>
             <td class="text-right"><strong>${this.formatCurrency(calc.baseImposable)}</strong></td>
             <td class="formula">= Max(0, revenus - charges)</td>
         </tr>
+
         <tr>
-            <td>Impôt sur le revenu ${calc.regime === 'SCI à l\'IS' ? '(IS)' : `(TMI ${inputData.tmi}%)`}</td>
-            <td class="text-right negative">-${this.formatCurrency(calc.impotRevenu)}</td>
-            <td class="formula">${calc.regime === 'SCI à l\'IS' ? 'Barème IS' : `= Base × ${inputData.tmi}%`}</td>
+            <td>Impôt sur le revenu ${libIR}</td>
+            ${irValueCell}
+            ${irFormulaCell}
         </tr>
 
-        ${typeof calc.cotisationsSociales === 'number' && calc.cotisationsSociales > 0 ? `
+        ${
+            has(calc.cotisationsSociales)
+                ? `
         <tr>
             <td>Cotisations sociales (LMP)</td>
-            <td class="text-right negative">-${this.formatCurrency(calc.cotisationsSociales)}</td>
+            <td class="text-right negative">-${fmt(calc.cotisationsSociales)}</td>
             <td class="formula">Assises sur bénéfice BIC pro</td>
-        </tr>
-        ` : ''}
+        </tr>`
+                : ''
+        }
 
-        ${calc.prelevementsSociaux > 0 ? `
+        ${
+            has(calc.prelevementsSociaux)
+                ? `
         <tr>
             <td>Prélèvements sociaux (17.2%)</td>
-            <td class="text-right negative">-${this.formatCurrency(calc.prelevementsSociaux)}</td>
+            <td class="text-right negative">-${fmt(calc.prelevementsSociaux)}</td>
             <td class="formula">Selon régime</td>
-        </tr>
-        ` : ''}
+        </tr>`
+                : ''
+        }
 
         <tr class="total-row">
-            <td><strong>Total impôts</strong></td>
-            <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalImpots)}</strong></td>
+            <td>${totalImpotsLabel}</td>
+            ${totalImpotsCell}
             <td></td>
         </tr>
     `;
