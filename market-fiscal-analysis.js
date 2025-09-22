@@ -128,66 +128,84 @@ class MarketFiscalAnalyzer {
     /**
      * Effectue l'analyse complète (marché + fiscal) - V3 CORRIGÉE
      */
-    async performCompleteAnalysis(data) {
-        try {
-            // 1. Analyse de marché
-            this.marketAnalysis = this.analyzeMarketPosition(data);
-            
-            // 2. Préparation des données
-            const fiscalData = this.prepareFiscalData(data);
-            const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
-            
-// 3. Créer un pseudo-résultat sans tableau d'amortissement
-const baseResults = {
-    // Mensualité déjà calculée dans prepareFiscalData
-    mensualite: comparatorData.chargeMensuelleCredit || 
-                this.calculateMonthlyPayment(
-                    comparatorData.loanAmount,
-                    comparatorData.loanRate,
-                    comparatorData.loanDuration
-                ),
-    
-    // Pas de tableau → force la formule analytique
-    tableauAmortissement: null
-};
+async performCompleteAnalysis(data) {
+    try {
+        // 1. Analyse de marché
+        this.marketAnalysis = this.analyzeMarketPosition(data);
+        
+        // 2. Préparation des données
+        const fiscalData = this.prepareFiscalData(data);
+        const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
+        
+        // 3. Créer un pseudo-résultat sans tableau d'amortissement
+        const baseResults = {
+            // Mensualité déjà calculée dans prepareFiscalData
+            mensualite: comparatorData.chargeMensuelleCredit || 
+                        this.calculateMonthlyPayment(
+                            comparatorData.loanAmount,
+                            comparatorData.loanRate,
+                            comparatorData.loanDuration
+                        ),
+            // Pas de tableau → force la formule analytique
+            tableauAmortissement: null
+        };
 
-// 4. Propager la mensualité pour le comparateur
-comparatorData.chargeMensuelleCredit = baseResults.mensualite;
+        // 4. Propager la mensualité pour le comparateur
+        comparatorData.chargeMensuelleCredit = baseResults.mensualite;
+        
+        // 5. Enrichir comparatorData avec les résultats du simulateur
+        comparatorData.chargeMensuelleCredit = baseResults.mensualite;
+        comparatorData.tableauAmortissement = baseResults.tableauAmortissement;
+        
+        // 6. Comparaison des régimes avec l'adaptateur
+        const fiscalResults = await this.comparateur.compareAllRegimes(comparatorData);
+        
+        // 7. Enrichir les résultats avec les calculs détaillés différenciés
+        const params = this.getAllAdvancedParams();
+        fiscalResults.forEach(regime => {
+            const detailedCalc = this.getDetailedCalculations(regime, fiscalData, params, baseResults);
             
-            // 5. Enrichir comparatorData avec les résultats du simulateur
-            comparatorData.chargeMensuelleCredit = baseResults.mensualite;
-            comparatorData.tableauAmortissement = baseResults.tableauAmortissement;
+            // Remplacer par les valeurs détaillées plus précises
+            regime.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
+            regime.cashflowMensuel = detailedCalc.cashflowNetAnnuel / 12;
+            regime.impotAnnuel = -(detailedCalc.totalImpots);
+            regime.rendementNet = (detailedCalc.cashflowNetAnnuel / fiscalData.price) * 100;
             
-            // 6. Comparaison des régimes avec l'adaptateur
-            const fiscalResults = await this.comparateur.compareAllRegimes(comparatorData);
-            
-            // 7. Enrichir les résultats avec les calculs détaillés différenciés
-            const params = this.getAllAdvancedParams();
-            fiscalResults.forEach(regime => {
-                const detailedCalc = this.getDetailedCalculations(regime, fiscalData, params, baseResults);
-                
-                // Remplacer par les valeurs détaillées plus précises
-                regime.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
-                regime.cashflowMensuel = detailedCalc.cashflowNetAnnuel / 12;
-                regime.impotAnnuel = -(detailedCalc.totalImpots);
-                regime.rendementNet = (detailedCalc.cashflowNetAnnuel / fiscalData.price) * 100;
-                
-                // Ajouter les détails pour le debug
-                regime._detailedCalc = detailedCalc;
-            });
-            
-            return {
-                market: this.marketAnalysis,
-                fiscal: fiscalResults,
-                recommendations: this.generateGlobalRecommendations(this.marketAnalysis, fiscalResults)
-            };
-            
-        } catch (error) {
-            console.error('Erreur dans performCompleteAnalysis:', error);
-            throw error;
+            // Ajouter les détails pour le debug
+            regime._detailedCalc = detailedCalc;
+        });
+
+        // 🔒 S'assurer que LMP apparaît si l'utilisateur l'a choisi ou a coché "forcer le régime"
+        const wantLMP = (data?.regimeActuel === 'lmp_reel') || (data?.forceRegime === true);
+        const hasLMP  = fiscalResults.some(r => /(^|\s)LMP\b/i.test(r.nom));
+
+        if (wantLMP && !hasLMP) {
+            const lmpRegime = { id: 'lmp', nom: 'LMP Réel', icone: 'fa-briefcase' };
+            const detailedCalc = this.getDetailedCalculations(lmpRegime, fiscalData, params, baseResults);
+
+            lmpRegime.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
+            lmpRegime.cashflowMensuel   = detailedCalc.cashflowNetAnnuel / 12;
+            lmpRegime.impotAnnuel       = -(detailedCalc.totalImpots);
+            lmpRegime.rendementNet      = (detailedCalc.cashflowNetAnnuel / (fiscalData.price || fiscalData.prixBien || 1)) * 100;
+            lmpRegime._detailedCalc     = detailedCalc;
+
+            fiscalResults.push(lmpRegime);
         }
-    }
 
+        // (optionnel mais recommandé) — re-classer pour garder le meilleur en tête de liste
+        fiscalResults.sort((a, b) => (b.cashflowNetAnnuel ?? -Infinity) - (a.cashflowNetAnnuel ?? -Infinity));
+        
+        return {
+            market: this.marketAnalysis,
+            fiscal: fiscalResults,
+            recommendations: this.generateGlobalRecommendations(this.marketAnalysis, fiscalResults)
+        };
+        
+    } catch (error) {
+        console.error('Erreur dans performCompleteAnalysis:', error);
+        throw error;
+    }
+}
     /**
      * Prépare les données pour le comparateur fiscal - V3 COMPLÈTE
      */
