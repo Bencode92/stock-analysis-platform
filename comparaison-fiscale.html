@@ -2624,51 +2624,31 @@ function generateRecommendations(pricePosition, rentPosition, data = {}) {
            5) Sélection du régime à détailler (actuel forcé OU meilleur)
               → correspondance par ID (robuste) avec fallback par label
         ----------------------------------------------------------------- */
-        // Meilleur régime (par cash-flow net annuel)
-        const bestRegime = analysis.fiscal.reduce(
-            (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
-            analysis.fiscal[0]
-        );
-
-        // Régime sélectionné dans l'UI
-        const selectedCode = propertyData.regimeActuel;
-        const mapEntry = REGIME_LABELS?.[selectedCode]; // attendu: { id, label } si tu as appliqué la map améliorée
-        // Fallback si REGIME_LABELS ne contient que des labels (ancienne version)
-        const selectedRes =
-            (mapEntry?.id && analysis.fiscal.find(r => r.id === mapEntry.id)) ||
-            (mapEntry?.label && analysis.fiscal.find(r => r.nom === mapEntry.label)) ||
-            (typeof mapEntry === 'string' && analysis.fiscal.find(r => r.nom === mapEntry)) ||
-            null;
-
-        // Si case "forcer le régime" cochée et trouvé → détailler le sélectionné, sinon le meilleur
-        const regimeDetail = (propertyData.forceRegime && selectedRes) ? selectedRes : bestRegime;
-
-        /* -----------------------------------------------------------------
-           6) Génération HTML (en passant le régime à détailler + badges)
-              ⚠️ On passe bien propertyData et non analysisData
-        ----------------------------------------------------------------- */
-const selectedCode = propertyData?.regimeActuel;           // ex: 'nu_micro'
-const selectedMap  = REGIME_LABELS?.[selectedCode];        // { id, label } ou undefined
-
 // Meilleur régime (par cash-flow net annuel)
 const bestRegime = analysis.fiscal.reduce(
   (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
   analysis.fiscal[0]
 );
 
-// Régime correspondant au choix utilisateur (si présent dans les résultats)
+// Code sélectionné dans l'UI → map vers {id,label}
+const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
+const selectedMap  = REGIME_LABELS?.[selectedCode];  // { id, label } ou undefined
+
+// Résultat correspondant au choix (si présent dans la liste)
 const selectedRes =
-  (selectedMap?.id    && analysis.fiscal.find(r => r.id  === selectedMap.id))   ||
+  (selectedMap?.id    && analysis.fiscal.find(r => r.id  === selectedMap.id)) ||
   (selectedMap?.label && analysis.fiscal.find(r => r.nom === selectedMap.label)) ||
   null;
 
-// Si "forcer le régime" est coché et trouvé → détail du sélectionné, sinon du meilleur
+// Si "forcer le régime" est coché et trouvé → détailler le sélectionné, sinon le meilleur
 const detailRegime = (propertyData?.forceRegime && selectedRes) ? selectedRes : bestRegime;
 
-// Rendu fiscal avec options (IDs robustes)
+/* -----------------------------------------------------------------
+   6) Génération HTML (passage des opts + IDs robustes)
+----------------------------------------------------------------- */
 const html = analyzer.generateFiscalResultsHTML(
   analysis.fiscal,
-  analysisData, // ⚠️ on passe bien les données d'analyse préparées
+  analysisData, // on passe bien les données d'analyse préparées
   {
     detailId    : detailRegime.id,
     selectedId  : selectedRes?.id || null,
