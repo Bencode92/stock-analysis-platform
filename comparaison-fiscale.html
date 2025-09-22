@@ -2620,10 +2620,11 @@ function generateRecommendations(pricePosition, rentPosition, data = {}) {
             drawBuyRent();
         }
 
-        /* -----------------------------------------------------------------
-           5) Sélection du régime à détailler (actuel forcé OU meilleur)
-              → correspondance par ID (robuste) avec fallback par label
-        ----------------------------------------------------------------- */
+/* -----------------------------------------------------------------
+   5) Régime à mettre en avant = le régime ACTUEL (si trouvé),
+      sinon on retombe sur le meilleur comme filet de sécurité.
+      → correspondance robuste par ID avec fallback par label
+----------------------------------------------------------------- */
 // Meilleur régime (par cash-flow net annuel)
 const bestRegime = analysis.fiscal.reduce(
   (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
@@ -2632,28 +2633,31 @@ const bestRegime = analysis.fiscal.reduce(
 
 // Code sélectionné dans l'UI → map vers {id,label}
 const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
-const selectedMap  = REGIME_LABELS?.[selectedCode];  // { id, label } ou undefined
+const mapEntry    = REGIME_LABELS?.[selectedCode];   // { id, label } ou undefined
 
 // Résultat correspondant au choix (si présent dans la liste)
 const selectedRes =
-  (selectedMap?.id    && analysis.fiscal.find(r => r.id  === selectedMap.id)) ||
-  (selectedMap?.label && analysis.fiscal.find(r => r.nom === selectedMap.label)) ||
+  (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
+  (mapEntry?.label && analysis.fiscal.find(r => r.nom === mapEntry.label)) ||
+  (typeof mapEntry === 'string' && analysis.fiscal.find(r => r.nom === mapEntry)) ||
   null;
 
-// Si "forcer le régime" est coché et trouvé → détailler le sélectionné, sinon le meilleur
-const detailRegime = (propertyData?.forceRegime && selectedRes) ? selectedRes : bestRegime;
+// 👉 On privilégie TOUJOURS le régime actuel si on l'a trouvé
+const detailRegime = selectedRes || bestRegime;
 
 /* -----------------------------------------------------------------
-   6) Génération HTML (passage des opts + IDs robustes)
+   6) Génération HTML (on passe le détail = régime ACTUEL)
+      - bestId sert aux badges "Meilleur" dans le tableau
+      - forceRegime à true pour que le header prenne le régime détaillé
 ----------------------------------------------------------------- */
 const html = analyzer.generateFiscalResultsHTML(
   analysis.fiscal,
-  analysisData, // on passe bien les données d'analyse préparées
+  analysisData,
   {
-    detailId    : detailRegime.id,
+    detailId    : detailRegime.id,      // carte du haut = régime actuel
     selectedId  : selectedRes?.id || null,
-    bestId      : bestRegime.id,
-    forceRegime : !!propertyData?.forceRegime
+    bestId      : bestRegime.id,        // conserve l'étoile "Meilleur" dans le tableau
+    forceRegime : !!selectedRes         // titre/visuel aligné sur le régime détaillé
   }
 );
 resultsDiv.innerHTML = html;
