@@ -694,44 +694,44 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
       break;
     }
 
-    // ───────────────────────────────────────────────────────────
-    // G) SCI À L’IS — option PFU investisseur
-    // ───────────────────────────────────────────────────────────
-    case 'sci_is': {
-      const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
-      const baseAmortissable  = Number(inputData.price ?? 0) * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
-      const amortBien         = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-      const amortMob          = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+ // ───────────────────────────────────────────────────────────
+// G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
+// ───────────────────────────────────────────────────────────
+case 'sci_is': {
+  const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
+  const baseAmortissable  = Number(inputData.price ?? 0) * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
+  const amortBien         = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+  const amortMob          = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
 
-      // Charges "réelles" uniquement ici ; amortissements séparés
-      chargesDeductibles      = chargesReelles;
-      amortissementBien       = amortBien;
-      amortissementMobilier   = amortMob;
-      amortissementTravaux    = 0;
+  // Charges "réelles" uniquement ici ; amortissements séparés
+  chargesDeductibles      = chargesReelles;
+  amortissementBien       = amortBien;
+  amortissementMobilier   = amortMob;
+  amortissementTravaux    = 0;
 
-      const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
-      const eligible15        = !!inputData.sciEligibleTauxReduit;
+  const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
+  const eligible15        = !!inputData.sciEligibleTauxReduit;
 
-      if (eligible15) {
-        const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
-        const surplus = Math.max(0, resultatAvantIS - tranche);
-        impotRevenu   = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
-      } else {
-        impotRevenu   = resultatAvantIS * 0.25;
-      }
+  if (eligible15) {
+    const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
+    const surplus = Math.max(0, resultatAvantIS - tranche);
+    impotRevenu   = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
+  } else {
+    impotRevenu   = resultatAvantIS * 0.25;
+  }
 
-      // ✅ Correctif #3 : option PFU 30% pour simulation “investisseur”
-      const applyPFU = (params && params.applyPFU === true) || (inputData && inputData.applyPFU === true);
-      if (applyPFU) {
-        const dividendes = Math.max(0, resultatAvantIS - impotRevenu);
-        const pfu        = dividendes * 0.30; // approximation PFU (IR + PS)
-        impotRevenu     += pfu;
-      }
+  // ✅ PFU 30% sur la part distribuée (opt-in via applyPFU)
+  const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
+  if (applyPFU) {
+    const ratioDistrib = Math.max(0, Math.min(1, Number(inputData?.sciDistribution ?? params?.sciDistribution ?? 1)));
+    const dividendes   = Math.max(0, resultatAvantIS - impotRevenu); // résultat après IS
+    impotRevenu       += (dividendes * ratioDistrib) * 0.30;         // PFU sur la part distribuée
+  }
 
-      prelevementsSociaux     = 0;   // en société IS, PS non applicables au niveau société
-      baseImposable           = resultatAvantIS;
-      break;
-    }
+  prelevementsSociaux     = 0;   // en société IS, PS non applicables au niveau société
+  baseImposable           = resultatAvantIS;
+  break;
+}
 
     // ───────────────────────────────────────────────────────────
     // Par défaut : calque "nu réel"
@@ -1008,43 +1008,43 @@ calculateFraisAcquisition(prix, typeAchat, params) {
   }
 }
 
-    /**
-     * Construit la section revenus
-     */
-    buildRevenusSection(calc, params) {
-        return `
-            <tr class="section-header">
-                <td colspan="3"><strong>💰 REVENUS LOCATIFS</strong></td>
-            </tr>
-            <tr>
-                <td>Loyer mensuel HC</td>
-                <td class="text-right">${this.formatCurrency(calc.loyerHC)}</td>
-                <td class="formula">Loyer hors charges</td>
-            </tr>
-            <tr>
-                <td>Loyer annuel brut</td>
-                <td class="text-right">${this.formatCurrency(calc.loyerAnnuelBrut)}</td>
-                <td class="formula">= ${calc.loyerHC} × 12 mois</td>
-            </tr>
-            <tr>
-                <td>Vacance locative (${calc.vacanceLocative}%)</td>
-                <td class="text-right negative">-${this.formatCurrency(calc.vacanceAmount)}</td>
-                <td class="formula">= ${this.formatNumber(calc.loyerAnnuelBrut)} × ${calc.vacanceLocative}%</td>
-            </tr>
-${calc.fraisGestion > 0 ? `
-<tr>
-    <td>Frais de gestion (${params.gestionLocativeTaux}%)</td>
-    <td class="text-right negative">-${this.formatCurrency(calc.fraisGestion)}</td>
-    <td class="formula">= Loyer net × ${params.gestionLocativeTaux}%</td>
-</tr>
-` : ''}
-            <tr class="total-row">
-                <td><strong>Revenus locatifs nets</strong></td>
-                <td class="text-right"><strong>${this.formatCurrency(calc.revenusNets)}</strong></td>
-                <td></td>
-            </tr>
-        `;
-    }
+  /**
+ * Construit la section revenus (affichage corrigé de la formule de vacance)
+ */
+buildRevenusSection(calc, params) {
+  return `
+    <tr class="section-header">
+      <td colspan="3"><strong>💰 REVENUS LOCATIFS</strong></td>
+    </tr>
+    <tr>
+      <td>Loyer mensuel HC</td>
+      <td class="text-right">${this.formatCurrency(calc.loyerHC)}</td>
+      <td class="formula">Loyer hors charges</td>
+    </tr>
+    <tr>
+      <td>Loyer annuel brut</td>
+      <td class="text-right">${this.formatCurrency(calc.loyerAnnuelBrut)}</td>
+      <td class="formula">= ${calc.loyerHC} × 12 mois</td>
+    </tr>
+    <tr>
+      <td>Vacance locative (${calc.vacanceLocative}%)</td>
+      <td class="text-right negative">-${this.formatCurrency(calc.vacanceAmount)}</td>
+      <td class="formula">= (Loyer HC + charges récup.) × 12 × ${calc.vacanceLocative}%</td>
+    </tr>
+    ${calc.fraisGestion > 0 ? `
+    <tr>
+      <td>Frais de gestion (${params.gestionLocativeTaux}%)</td>
+      <td class="text-right negative">-${this.formatCurrency(calc.fraisGestion)}</td>
+      <td class="formula">= Loyer net × ${params.gestionLocativeTaux}%</td>
+    </tr>
+    ` : ''}
+    <tr class="total-row">
+      <td><strong>Revenus locatifs nets</strong></td>
+      <td class="text-right"><strong>${this.formatCurrency(calc.revenusNets)}</strong></td>
+      <td></td>
+    </tr>
+  `;
+}
 
 /**
  * Construit la section charges (triées par impact)
