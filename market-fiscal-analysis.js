@@ -386,123 +386,112 @@ prepareFiscalDataForComparator(rawData) {
         return 'underpriced';
     }
 
- /**
-     * Récupère tous les paramètres avancés du formulaire - VERSION CORRIGÉE
-     * ✅ ACCEPTE MAINTENANT LA VALEUR 0 grâce au helper parseFloatOrDefault
-     */
+/**
+ * Récupère tous les paramètres avancés du formulaire - VERSION CORRIGÉE
+ * ✅ ACCEPTE MAINTENANT LA VALEUR 0 grâce au helper parseFloatOrDefault
+ */
 getAllAdvancedParams() {
-    return {
-        // Communs
-        fraisBancairesDossier: parseFloatOrDefault('frais-bancaires-dossier', 900),
-        fraisBancairesCompte: parseFloatOrDefault('frais-bancaires-compte', 150),
-        fraisGarantie: parseFloatOrDefault('frais-garantie', 1.3709),
-        taxeFonciere: parseFloatOrDefault('taxeFonciere', 800),
-        vacanceLocative: parseFloatOrDefault('vacanceLocative', 0),
-        gestionLocativeTaux: parseFloatOrDefault('gestionLocative', 0),
+  return {
+    // Communs
+    fraisBancairesDossier: parseFloatOrDefault('frais-bancaires-dossier', 900),
+    fraisBancairesCompte:  parseFloatOrDefault('frais-bancaires-compte', 150),
+    fraisGarantie:         parseFloatOrDefault('frais-garantie', 1.3709),
+    taxeFonciere:          parseFloatOrDefault('taxeFonciere', 800),
+    vacanceLocative:       parseFloatOrDefault('vacanceLocative', 0),
+    gestionLocativeTaux:   parseFloatOrDefault('gestionLocative', 0),
 
-        // Séparer travaux et entretien
-        travauxRenovation: parseFloatOrDefault('travaux-renovation', 0),
-        entretienAnnuel: parseFloatOrDefault('entretien-annuel', 500),
-        assurancePNO: parseFloatOrDefault('assurance-pno', 15),
+    // Séparer travaux et entretien
+    travauxRenovation: parseFloatOrDefault('travaux-renovation', 0),
+    entretienAnnuel:   parseFloatOrDefault('entretien-annuel', 500),
+    assurancePNO:      parseFloatOrDefault('assurance-pno', 15),
 
-        // Charges de copropriété non récupérables
-        chargesCoproNonRecup: parseFloatOrDefault('charges-copro-non-recup', 50),
+    // Charges de copropriété non récupérables
+    chargesCoproNonRecup: parseFloatOrDefault('charges-copro-non-recup', 50),
 
-        // Spécifiques classique
-        fraisNotaireTaux: parseFloatOrDefault('frais-notaire-taux', 8),
-        commissionImmo: parseFloatOrDefault('commission-immo', 4),
+    // Spécifiques classique
+    fraisNotaireTaux: parseFloatOrDefault('frais-notaire-taux', 8),
+    commissionImmo:   parseFloatOrDefault('commission-immo', 4),
 
-        // Spécifiques enchères - BASE
-        droitsEnregistrement: parseFloatOrDefault('droits-enregistrement', 5.70),
-        coefMutation: parseFloatOrDefault('coef-mutation', 2.37),
-        honorairesAvocat: parseFloatOrDefault('honoraires-avocat', 1500),
-        fraisFixes: parseFloatOrDefault('frais-fixes', 50),
+    // Spécifiques enchères - BASE
+    droitsEnregistrement: parseFloatOrDefault('droits-enregistrement', 5.70),
+    coefMutation:         parseFloatOrDefault('coef-mutation', 2.37),
+    honorairesAvocat:     parseFloatOrDefault('honoraires-avocat', 1500),
+    fraisFixes:           parseFloatOrDefault('frais-fixes', 50),
 
-        // Enchères - Émoluments par tranches
-        emolumentsTranche1: parseFloatOrDefault('emoluments-tranche1', 7),
-        emolumentsTranche2: parseFloatOrDefault('emoluments-tranche2', 3),
-        emolumentsTranche3: parseFloatOrDefault('emoluments-tranche3', 2),
-        emolumentsTranche4: parseFloatOrDefault('emoluments-tranche4', 1),
+    // Enchères - Émoluments par tranches
+    emolumentsTranche1: parseFloatOrDefault('emoluments-tranche1', 7),
+    emolumentsTranche2: parseFloatOrDefault('emoluments-tranche2', 3),
+    emolumentsTranche3: parseFloatOrDefault('emoluments-tranche3', 2),
+    emolumentsTranche4: parseFloatOrDefault('emoluments-tranche4', 1),
 
-        // Enchères - Autres frais détaillés
-        honorairesAvocatCoef: parseFloatOrDefault('honoraires-avocat-coef', 0.25),
-        tvaHonoraires: parseFloatOrDefault('tva-honoraires', 20),
-        publiciteFonciere: parseFloatOrDefault('publicite-fonciere', 0.10),
-        avocatPorterEnchere: parseFloatOrDefault('avocat-porter-enchere', 300),
-        suiviDossier: parseFloatOrDefault('suivi-dossier', 1200),
-        cautionMisePrix: parseFloatOrDefault('caution-mise-prix', 5),
-        cautionRestituee: document.getElementById('caution-restituee')?.checked ?? true,
+    // Enchères - Autres frais détaillés
+    honorairesAvocatCoef: parseFloatOrDefault('honoraires-avocat-coef', 0.25),
+    tvaHonoraires:        parseFloatOrDefault('tva-honoraires', 20),
+    publiciteFonciere:    parseFloatOrDefault('publicite-fonciere', 0.10),
+    avocatPorterEnchere:  parseFloatOrDefault('avocat-porter-enchere', 300),
+    suiviDossier:         parseFloatOrDefault('suivi-dossier', 1200),
+    cautionMisePrix:      parseFloatOrDefault('caution-mise-prix', 5),
+    cautionRestituee:     document.getElementById('caution-restituee')?.checked ?? true,
 
-        // ─────────────────────────────────────────
-        // LMP (cotisations sociales) + Toggles
-        // ─────────────────────────────────────────
-        // LMP (cotisations sociales) — en % et en €/an
-  // % et plancher €/an (si les inputs n’existent pas, on prend les valeurs défaut constantes)
+    // ─────────────────────────────────────────
+    // LMP (cotisations sociales) + Toggles
+    // ─────────────────────────────────────────
+    // % et plancher €/an (si les inputs n’existent pas, on prend les valeurs défaut constantes)
     lmpCotisationsTaux: parseFloatOrDefault(
       'lmp-cotisations-taux',
       FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100 // en %
     ),
-    lmpCotisationsMin:  parseFloatOrDefault(
+    lmpCotisationsMin: parseFloatOrDefault(
       'lmp-cotisations-min',
-      FISCAL_CONSTANTS.LMP_COTISATIONS_MIN       // €/an
+      FISCAL_CONSTANTS.LMP_COTISATIONS_MIN // €/an
     ),
 
-        // Toggles utiles (fonctionnent même sans input dans le DOM)
-        assujettiCotisSociales: document.getElementById('assujetti-cotis')?.checked ?? false, // LMNP soumis cotisations → pas de PS
-        sciEligibleTauxReduit:  document.getElementById('sci-taux-reduit')?.checked ?? true   // 15% jusqu’à 42 500 €
-    };
+    // Toggles utiles (fonctionnent même sans input dans le DOM)
+    assujettiCotisSociales: document.getElementById('assujetti-cotis')?.checked ?? false, // LMNP soumis cotisations → pas de PS
+    sciEligibleTauxReduit:  document.getElementById('sci-taux-reduit')?.checked ?? true,  // 15% jusqu’à 42 500 €
+
+    // PFU pour SCI à l'IS (dividendes simulés au PFU 30%)
+    applyPFU: document.getElementById('apply-pfu')?.checked ?? false
+  };
 }
 
 /**
- * Calcule les intérêts annuels avec précision - V3 (sécurisé 0% d’intérêt)
+ * Calcule les intérêts annuels avec précision – somme fermée (gère 0% et échéancier)
+ * year = 1 → mois 0..11, year = 2 → mois 12..23, etc.
  */
 calculateAnnualInterests(inputData, baseResults, year = 1) {
-  // 1️⃣ Cas idéal : on dispose du tableau d'amortissement précis
+  // 1) Si on a un échéancier détaillé, on additionne simplement les intérêts de l'année
   if (baseResults?.tableauAmortissement?.length >= 12) {
     const start = (year - 1) * 12;
-    const end = Math.min(year * 12, baseResults.tableauAmortissement.length);
+    const end   = Math.min(year * 12, baseResults.tableauAmortissement.length);
+    if (end <= start) return 0;
     return baseResults.tableauAmortissement
       .slice(start, end)
-      .reduce((sum, m) => sum + (m.interets || 0), 0);
+      .reduce((sum, m) => sum + (Number(m?.interets) || 0), 0);
   }
 
-  // 2️⃣ Approximation analytique avec formule actuarielle (sans tableau)
-  const annualRate = Number(inputData.loanRate ?? 0);   // en %
-  const r = (annualRate / 100) / 12;                    // taux mensuel
+  // 2) Sinon : somme fermée exacte sur [n0, n1)
+  const P   = Number(inputData?.loanAmount ?? 0);
+  const yrs = Number(inputData?.loanDuration ?? 0);
+  const yr  = Number(inputData?.loanRate ?? 0);      // en %
+  const N   = yrs * 12;
+  if (!(P > 0) || !(N > 0)) return 0;
 
-  // ✅ Cas 0% (ou quasi 0) : intérêts nuls, évite la division par r
-  if (!Number.isFinite(r) || Math.abs(r) < 1e-12) return 0;
+  const r = (yr / 100) / 12;                         // taux mensuel
+  if (!Number.isFinite(r) || Math.abs(r) < 1e-12) return 0; // 0% → pas d’intérêts
 
-  const M = this.calculateMonthlyPayment(
-    Number(inputData.loanAmount ?? 0),
-    annualRate,
-    Number(inputData.loanDuration ?? 0)
-  );
+  const M  = this.calculateMonthlyPayment(P, yr, yrs);
+  const n0 = Math.max(0, (year - 1) * 12);
+  const n1 = Math.min(year * 12, N);
+  if (n1 <= n0) return 0;
 
-  const totalMonths = Number(inputData.loanDuration ?? 0) * 12;
-  const n0 = Math.max(0, (year - 1) * 12);                    // début d'année (mois)
-  const n1 = Math.min(year * 12, totalMonths);                // fin d'année (mois)
-  if (n1 <= n0 || totalMonths <= 0) return 0;
+  const a0 = Math.pow(1 + r, n0);
+  const a1 = Math.pow(1 + r, n1);
 
-  // Formule actuarielle exacte du capital restant dû après n mensualités
-  const CRD = (n) => {
-    const P = Number(inputData.loanAmount ?? 0);
-    if (n === 0) return P;
-    if (n >= totalMonths) return 0;
-
-    const pow = Math.pow(1 + r, n);
-    return P * pow - M * (pow - 1) / r;
-  };
-
-  // Capital restant dû au début et à la fin de l'année
-  const crdStart = CRD(n0);
-  const crdEnd = CRD(n1);
-
-  // Méthode des trapèzes : moyenne du CRD × taux annuel
-  const capitalMoyen = (crdStart + crdEnd) / 2;
-  return capitalMoyen * (annualRate / 100);
+  // S = Σ_{k=n0}^{n1-1} r · CRD(k)
+  //   = P·(a1 − a0) − M · [ (a1 − a0)/r − (n1 − n0) ]
+  return P * (a1 - a0) - M * ((a1 - a0) / r - (n1 - n0));
 }
-
 /**
  * Calcule les charges réelles déductibles
  */
@@ -969,22 +958,46 @@ buildCoutInitialSection(inputData, params, coutTotalProjet = null) {
     // 🆕 AJOUTEZ LA NOUVELLE FONCTION ICI (juste après l'accolade fermante)
 /**
  * Calcule tous les frais d'acquisition (classique ou enchères)
+ * Intègre les paramètres auparavant “fantômes” :
+ *  - coefMutation : multiplicateur sur les droits d’enregistrement
+ *  - honorairesAvocatCoef : coefficient multiplicatif sur les honoraires
+ *  - cautionMisePrix / cautionRestituee : coût si non restituée
  */
 calculateFraisAcquisition(prix, typeAchat, params) {
-if (typeAchat === 'encheres') {
-    const droits = prix * (params.droitsEnregistrement / 100);
-    const emoluments = this.calculateEmoluments(prix, params);
-    const honoraires = params.honorairesAvocat;
-    const publiciteFonciere = prix * (params.publiciteFonciere / 100);  // 🆕
-    const tvaHonoraires = honoraires * (params.tvaHonoraires / 100);    // 🆕
-    const fraisDivers = params.fraisFixes + params.avocatPorterEnchere + params.suiviDossier;
-    
-    return droits + emoluments + honoraires + tvaHonoraires + publiciteFonciere + fraisDivers;
-    } else {
-        const fraisNotaire = prix * (params.fraisNotaireTaux / 100);
-        const commission = prix * (params.commissionImmo / 100);
-        return fraisNotaire + commission;
+  const P = Number(prix) || 0;
+
+  if (typeAchat === 'encheres') {
+    // Droits d'enregistrement × coefMutation (si fourni)
+    const droits = P * (Number(params?.droitsEnregistrement ?? 0) / 100) *
+                   (Number(params?.coefMutation ?? 1) || 1); // 🆕
+
+    const emoluments = this.calculateEmoluments(P, params);
+
+    // Honoraires × (1 + coef)
+    const honorairesBase = Number(params?.honorairesAvocat ?? 0);
+    const honorairesCoef = Number(params?.honorairesAvocatCoef ?? 0);
+    const honoraires     = honorairesBase * (1 + honorairesCoef);         // 🆕
+
+    const publiciteFonciere = P * (Number(params?.publiciteFonciere ?? 0) / 100);
+    const tvaHonoraires     = honoraires * (Number(params?.tvaHonoraires ?? 0) / 100);
+
+    // Frais divers + caution si NON restituée
+    let fraisDivers = Number(params?.fraisFixes ?? 0)
+                    + Number(params?.avocatPorterEnchere ?? 0)
+                    + Number(params?.suiviDossier ?? 0);
+
+    const cautionTaux = Number(params?.cautionMisePrix ?? 0) / 100;
+    const caution     = P * (isFinite(cautionTaux) ? cautionTaux : 0);    // 🆕
+    if (params?.cautionRestituee === false) {
+      fraisDivers += caution;                                             // 🆕
     }
+
+    return droits + emoluments + honoraires + tvaHonoraires + publiciteFonciere + fraisDivers;
+  } else {
+    const fraisNotaire = P * (Number(params?.fraisNotaireTaux ?? 0) / 100);
+    const commission   = P * (Number(params?.commissionImmo ?? 0) / 100);
+    return fraisNotaire + commission;
+  }
 }
 
     /**
