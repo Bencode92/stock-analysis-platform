@@ -33,7 +33,7 @@ const FISCAL_CONSTANTS = {
 
     // LMP (cotisations sociales pro)
   LMP_COTISATIONS_TAUX: 0.35,   // 35% par défaut
-  LMP_COTISATIONS_MIN: 0
+  LMP_COTISATIONS_MIN: 1200
 };
 
 /**
@@ -267,55 +267,57 @@ return {
         throw error;
     }
 }
-    /**
-     * Prépare les données pour le comparateur fiscal - V3 COMPLÈTE
-     */
-    prepareFiscalDataForComparator(rawData) {
-        // Calcul du loyer brut annuel AVANT l'appel au simulateur
-        const loyerMensuelTotal = rawData.loyerHC + (rawData.monthlyCharges || 50);
-        const loyerBrutAnnuel = loyerMensuelTotal * 12;
-        
-        return {
-            // Prix et financement
-            prixBien: rawData.price,
-            apport: rawData.apport,
-            duree: rawData.loanDuration,
-            taux: rawData.loanRate,
-            
-            // Revenus - V3: Distinction HC/CC pour plafonds
-            loyerMensuel: rawData.loyerHC,
-            loyerBrutHC: rawData.loyerHC * 12,                 // Pour les plafonds fiscaux
-            loyerBrutCC: loyerBrutAnnuel,                      // Pour l'analyse cash-flow
-            loyerBrut: loyerBrutAnnuel,                        // Compatibilité
-            chargesCopro: rawData.monthlyCharges || 50,
-            
-            // Charges - V3: chargesNonRecuperables en ANNUEL
-            taxeFonciere: rawData.taxeFonciere || 800, // Annuel
-            vacanceLocative: rawData.vacanceLocative || 0,
-            gestionLocativeTaux: rawData.gestionLocativeTaux || 0, // TAUX numérique
-            chargesNonRecuperables: (rawData.chargesCoproNonRecup || 50) * 12, // V3: ANNUEL
-            
-            // Divers
-            surface: rawData.surface,
-            typeAchat: rawData.typeAchat,
-            tmi: rawData.tmi,
-            
-            // Charges annuelles
-            entretienAnnuel: rawData.entretienAnnuel || 500,
-            assurancePNO: (rawData.assurancePNO || 15) * 12,
-            
-            // Calculé après le simulateur
-            chargeMensuelleCredit: rawData.monthlyPayment || 0,
-            
-            // Travaux
-            travauxRenovation: rawData.travauxRenovation || 0,
-            
-            // Pour compatibilité avec le simulateur
-            montantEmprunt: rawData.loanAmount,
-            fraisBancaires: rawData.fraisBancairesDossier + rawData.fraisBancairesCompte,
-            fraisGarantie: rawData.fraisGarantie
-        };
-    }
+   /**
+ * Prépare les données pour le comparateur fiscal - V3 COMPLÈTE
+ * (respecte les zéros saisis grâce à ??)
+ */
+prepareFiscalDataForComparator(rawData) {
+  // Calcul du loyer brut annuel AVANT l'appel au simulateur
+  const chargesM = (rawData.monthlyCharges ?? 50);    // respecte 0
+  const loyerMensuelTotal = (rawData.loyerHC ?? 0) + chargesM;
+  const loyerBrutAnnuel = loyerMensuelTotal * 12;
+
+  return {
+    // Prix et financement
+    prixBien: rawData.price,
+    apport: rawData.apport,
+    duree: rawData.loanDuration,
+    taux: rawData.loanRate,
+
+    // Revenus - V3: Distinction HC/CC pour plafonds
+    loyerMensuel: (rawData.loyerHC ?? 0),
+    loyerBrutHC: (rawData.loyerHC ?? 0) * 12,   // Pour les plafonds fiscaux
+    loyerBrutCC: loyerBrutAnnuel,               // Pour l'analyse cash-flow
+    loyerBrut: loyerBrutAnnuel,                 // Compatibilité
+    chargesCopro: chargesM,
+
+    // Charges - V3: chargesNonRecuperables en ANNUEL
+    taxeFonciere: (rawData.taxeFonciere ?? 800),                         // €/an
+    vacanceLocative: (rawData.vacanceLocative ?? 0),                     // %
+    gestionLocativeTaux: (rawData.gestionLocativeTaux ?? 0),             // %
+    chargesNonRecuperables: ((rawData.chargesCoproNonRecup ?? 50) * 12), // €/an
+
+    // Divers
+    surface: rawData.surface,
+    typeAchat: rawData.typeAchat,
+    tmi: rawData.tmi,
+
+    // Charges annuelles
+    entretienAnnuel: (rawData.entretienAnnuel ?? 500),
+    assurancePNO: ((rawData.assurancePNO ?? 15) * 12),
+
+    // Calculé après le simulateur
+    chargeMensuelleCredit: (rawData.monthlyPayment ?? 0),
+
+    // Travaux
+    travauxRenovation: (rawData.travauxRenovation ?? 0),
+
+    // Pour compatibilité avec le simulateur
+    montantEmprunt: rawData.loanAmount,
+    fraisBancaires: (rawData.fraisBancairesDossier ?? 0) + (rawData.fraisBancairesCompte ?? 0),
+    fraisGarantie: rawData.fraisGarantie
+  };
+}
 
     /**
      * Analyse la position sur le marché
@@ -651,7 +653,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
         const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX;
 
         const minRaw    = Number(inputData.lmpCotisationsMin);
-        const minCotis  = Number.isFinite(minRaw) ? minRaw : 1200;
+        const minCotis  = Number.isFinite(minRaw) ? minRaw : FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
 
         cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
         prelevementsSociaux = 0;
@@ -690,7 +692,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
       const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX;
 
       const minRaw    = Number(inputData.lmpCotisationsMin);
-      const minCotis  = Number.isFinite(minRaw) ? minRaw : 1200;
+      const minCotis  = Number.isFinite(minRaw) ? minRaw : FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
 
       cotisationsSociales     = Math.max(baseImposable * tauxCotis, minCotis);
 
@@ -1306,8 +1308,8 @@ prepareFiscalData() {
     const villeData = window.villeSearchManager?.getSelectedVilleData();
     
     // SIMPLIFICATION : Toujours HC + charges
-    const loyerHC = parseFloat(document.getElementById('monthlyRent')?.value) || 0;
-    const charges = parseFloat(document.getElementById('monthlyCharges')?.value) || 50;
+    const loyerHC = parseFloatOrDefault('monthlyRent', 0);
+    const charges = parseFloatOrDefault('monthlyCharges', 50);
     const loyerCC = loyerHC + charges;
     
     // Récupérer tous les paramètres avancés
@@ -1352,7 +1354,7 @@ prepareFiscalData() {
         
         // Paramètres avancés
        gestionLocativeTaux: allParams.gestionLocativeTaux,
-      vacanceLocative: parseFloat(document.getElementById('vacanceLocative')?.value ?? 0),
+       vacanceLocative: parseFloatOrDefault('vacanceLocative', 0),
         
         // Mode d'achat
         typeAchat: document.querySelector('input[name="type-achat"]:checked')?.value || 'classique',
@@ -1822,220 +1824,234 @@ generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
     `;
 }
 
-    /**
-     * Génère le tableau de comparaison détaillé
-     */
-    generateDetailedComparisonTable(classique, encheres, modeActuel) {
-        const data = modeActuel === 'classique' ? classique : encheres;
-        const compareData = modeActuel === 'classique' ? encheres : classique;
-        
-        return `
-            <table class="detailed-comparison-table">
-                <thead>
-                    <tr>
-                        <th>Critère</th>
-                        <th>${modeActuel === 'classique' ? 'Achat Classique' : 'Vente aux Enchères'}</th>
-                        <th>${modeActuel === 'classique' ? 'Vente aux Enchères' : 'Achat Classique'}</th>
-                        <th>Différence</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- COÛTS D'ACQUISITION -->
-                    <tr class="section-header">
-                        <td colspan="4"><strong>COÛTS D'ACQUISITION</strong></td>
-                    </tr>
-                    <tr>
-                        <td>Prix d'achat</td>
-                        <td>${this.formatNumber(data.prixAchat)} €</td>
-                        <td>${this.formatNumber(compareData.prixAchat)} €</td>
-                        <td class="${data.prixAchat < compareData.prixAchat ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.prixAchat - compareData.prixAchat)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Frais de notaire / Droits</td>
-                        <td>${this.formatNumber(data.fraisNotaire || data.droitsEnregistrement)} €</td>
-                        <td>${this.formatNumber(compareData.fraisNotaire || compareData.droitsEnregistrement)} €</td>
-                        <td class="${(data.fraisNotaire || data.droitsEnregistrement) < (compareData.fraisNotaire || compareData.droitsEnregistrement) ? 'positive' : 'negative'}">
-                            ${this.formatNumber((data.fraisNotaire || data.droitsEnregistrement) - (compareData.fraisNotaire || compareData.droitsEnregistrement))} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Commission / Honoraires avocat</td>
-                        <td>${this.formatNumber(data.commission || data.honorairesAvocat)} €</td>
-                        <td>${this.formatNumber(compareData.commission || compareData.honorairesAvocat)} €</td>
-                        <td class="${(data.commission || data.honorairesAvocat) < (compareData.commission || compareData.honorairesAvocat) ? 'positive' : 'negative'}">
-                            ${this.formatNumber((data.commission || data.honorairesAvocat) - (compareData.commission || compareData.honorairesAvocat))} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Travaux de rénovation</td>
-                        <td>${this.formatNumber(data.travaux)} €</td>
-                        <td>${this.formatNumber(compareData.travaux)} €</td>
-                        <td class="${data.travaux < compareData.travaux ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.travaux - compareData.travaux)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Frais bancaires</td>
-                        <td>${this.formatNumber(data.fraisBancaires)} €</td>
-                        <td>${this.formatNumber(compareData.fraisBancaires)} €</td>
-                        <td class="${data.fraisBancaires < compareData.fraisBancaires ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.fraisBancaires - compareData.fraisBancaires)} €
-                        </td>
-                    </tr>
-                    <tr class="total-row">
-                        <td><strong>Budget total nécessaire</strong></td>
-                        <td><strong>${this.formatNumber(data.coutTotal)} €</strong></td>
-                        <td><strong>${this.formatNumber(compareData.coutTotal)} €</strong></td>
-                        <td class="${data.coutTotal < compareData.coutTotal ? 'positive' : 'negative'}">
-                            <strong>${this.formatNumber(data.coutTotal - compareData.coutTotal)} €</strong>
-                        </td>
-                    </tr>
-                    
-                    <!-- FINANCEMENT -->
-                    <tr class="section-header">
-                        <td colspan="4"><strong>FINANCEMENT</strong></td>
-                    </tr>
-                    <tr>
-                        <td>Votre apport personnel</td>
-                        <td>${this.formatNumber(data.coutTotal - data.emprunt)} €</td>
-                        <td>${this.formatNumber(compareData.coutTotal - compareData.emprunt)} €</td>
-                        <td>0 €</td>
-                    </tr>
-                    <tr>
-                        <td>Montant emprunté</td>
-                        <td>${this.formatNumber(data.emprunt)} €</td>
-                        <td>${this.formatNumber(compareData.emprunt)} €</td>
-                        <td class="${data.emprunt < compareData.emprunt ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.emprunt - compareData.emprunt)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Remboursement mensuel</td>
-                        <td>${this.formatNumber(data.mensualite)} €/mois</td>
-                        <td>${this.formatNumber(compareData.mensualite)} €/mois</td>
-                        <td class="${data.mensualite < compareData.mensualite ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.mensualite - compareData.mensualite)} €
-                        </td>
-                    </tr>
-                    
-                    <!-- REVENUS LOCATIFS -->
-                    <tr class="section-header">
-                        <td colspan="4"><strong>REVENUS LOCATIFS</strong></td>
-                    </tr>
-                    <tr>
-                        <td>Surface que vous pouvez acheter</td>
-                        <td>${data.surface.toFixed(1)} m²</td>
-                        <td>${compareData.surface.toFixed(1)} m²</td>
-                        <td class="${data.surface > compareData.surface ? 'positive' : 'negative'}">
-                            ${(data.surface - compareData.surface).toFixed(1)} m²
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Loyer mensuel (avant charges)</td>
-                        <td>${this.formatNumber(data.loyerBrut)} €</td>
-                        <td>${this.formatNumber(compareData.loyerBrut)} €</td>
-                        <td class="${data.loyerBrut > compareData.loyerBrut ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.loyerBrut - compareData.loyerBrut)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Provision logement vide</td>
-                        <td>-${this.formatNumber(data.loyerBrut - data.loyerNet)} €</td>
-                        <td>-${this.formatNumber(compareData.loyerBrut - compareData.loyerNet)} €</td>
-                        <td>${this.formatNumber((data.loyerBrut - data.loyerNet) - (compareData.loyerBrut - compareData.loyerNet))} €</td>
-                    </tr>
-                    <tr>
-                        <td>Loyer net mensuel</td>
-                        <td>${this.formatNumber(data.loyerNet)} €</td>
-                        <td>${this.formatNumber(compareData.loyerNet)} €</td>
-                        <td class="${data.loyerNet > compareData.loyerNet ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.loyerNet - compareData.loyerNet)} €
-                        </td>
-                    </tr>
-                    
-                    <!-- VOS DÉPENSES MENSUELLES -->
-                    <tr class="section-header">
-                        <td colspan="4"><strong>VOS DÉPENSES MENSUELLES</strong></td>
-                    </tr>
-                    <tr>
-                        <td>Remboursement du prêt</td>
-                        <td>-${this.formatNumber(data.mensualite)} €</td>
-                        <td>-${this.formatNumber(compareData.mensualite)} €</td>
-                        <td class="${data.mensualite < compareData.mensualite ? 'positive' : 'negative'}">
-                            ${this.formatNumber(compareData.mensualite - data.mensualite)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Taxe foncière (par mois)</td>
-                        <td>-${this.formatNumber(data.taxeFonciere / 12)} €</td>
-                        <td>-${this.formatNumber(compareData.taxeFonciere / 12)} €</td>
-                        <td class="${data.taxeFonciere < compareData.taxeFonciere ? 'positive' : 'negative'}">
-                            ${this.formatNumber((compareData.taxeFonciere - data.taxeFonciere) / 12)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Charges de copropriété</td>
-                        <td>-${this.formatNumber(data.chargesNonRecuperables / 12)} €</td>
-                        <td>-${this.formatNumber(compareData.chargesNonRecuperables / 12)} €</td>
-                        <td class="${data.chargesNonRecuperables < compareData.chargesNonRecuperables ? 'positive' : 'negative'}">
-                            ${this.formatNumber((compareData.chargesNonRecuperables - data.chargesNonRecuperables) / 12)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Budget entretien</td>
-                        <td>-${this.formatNumber(data.entretienAnnuel / 12)} €</td>
-                        <td>-${this.formatNumber(compareData.entretienAnnuel / 12)} €</td>
-                        <td class="${data.entretienAnnuel < compareData.entretienAnnuel ? 'positive' : 'negative'}">
-                            ${this.formatNumber((compareData.entretienAnnuel - data.entretienAnnuel) / 12)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Assurance propriétaire</td>
-                        <td>-${this.formatNumber(data.assurancePNO / 12)} €</td>
-                        <td>-${this.formatNumber(compareData.assurancePNO / 12)} €</td>
-                        <td>${this.formatNumber((compareData.assurancePNO - data.assurancePNO) / 12)} €</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td><strong>Total de vos dépenses</strong></td>
-                        <td><strong>-${this.formatNumber(data.mensualite + data.taxeFonciere/12 + data.chargesNonRecuperables/12 + data.entretienAnnuel/12 + data.assurancePNO/12)} €</strong></td>
-                        <td><strong>-${this.formatNumber(compareData.mensualite + compareData.taxeFonciere/12 + compareData.chargesNonRecuperables/12 + compareData.entretienAnnuel/12 + compareData.assurancePNO/12)} €</strong></td>
-                        <td><strong>${this.formatNumber((compareData.mensualite + compareData.taxeFonciere/12 + compareData.chargesNonRecuperables/12 + compareData.entretienAnnuel/12 + compareData.assurancePNO/12) - (data.mensualite + data.taxeFonciere/12 + data.chargesNonRecuperables/12 + data.entretienAnnuel/12 + data.assurancePNO/12))} €</strong></td>
-                    </tr>
-                    
-                    <!-- RÉSULTAT -->
-                    <tr class="section-header">
-                        <td colspan="4"><strong>RÉSULTAT</strong></td>
-                    </tr>
-                    <tr>
-                        <td>Cash-flow avant impôts</td>
-                        <td class="${data.cashFlow >= 0 ? 'positive' : 'negative'}">${this.formatNumber(data.cashFlow)} €</td>
-                        <td class="${compareData.cashFlow >= 0 ? 'positive' : 'negative'}">${this.formatNumber(compareData.cashFlow)} €</td>
-                        <td class="${data.cashFlow > compareData.cashFlow ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.cashFlow - compareData.cashFlow)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Gain annuel après impôts théorique</td>
-                        <td class="${data.cashFlowAnnuel >= 0 ? 'positive' : 'negative'}">${this.formatNumber(data.cashFlowAnnuel)} €</td>
-                        <td class="${compareData.cashFlowAnnuel >= 0 ? 'positive' : 'negative'}">${this.formatNumber(compareData.cashFlowAnnuel)} €</td>
-                        <td class="${data.cashFlowAnnuel > compareData.cashFlowAnnuel ? 'positive' : 'negative'}">
-                            ${this.formatNumber(data.cashFlowAnnuel - compareData.cashFlowAnnuel)} €
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Rendement de votre investissement</td>
-                        <td class="${data.rendementNet >= 0 ? 'positive' : 'negative'}">${data.rendementNet.toFixed(2)} %</td>
-                        <td class="${compareData.rendementNet >= 0 ? 'positive' : 'negative'}">${compareData.rendementNet.toFixed(2)} %</td>
-                        <td class="${data.rendementNet > compareData.rendementNet ? 'positive' : 'negative'}">
-                            ${(data.rendementNet - compareData.rendementNet).toFixed(2)} %
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        `;
-    }
+  /**
+ * Génère le tableau de comparaison détaillé
+ * (corrige l’unité du loyer : affichage mensuel HC, dérivé de sources annuelles si besoin)
+ */
+generateDetailedComparisonTable(classique, encheres, modeActuel) {
+  const data = modeActuel === 'classique' ? classique : encheres;
+  const compareData = modeActuel === 'classique' ? encheres : classique;
+
+  // Helpers pour sécuriser l’unité mensuelle
+  const monthlyHC = (o) =>
+    (o?.loyerMensuel ?? o?.loyerHC ??
+      (typeof o?.loyerBrutHC === 'number' ? o.loyerBrutHC / 12 :
+       (typeof o?.loyerBrut === 'number'   ? o.loyerBrut   / 12 : 0)));
+  const monthlyNet = (o) =>
+    (o?.loyerNetMensuel ?? (typeof o?.loyerNet === 'number' ? o.loyerNet / 12 : undefined));
+
+  const mDataHC  = monthlyHC(data);
+  const mCompHC  = monthlyHC(compareData);
+  const mDataNet = monthlyNet(data) ?? mDataHC;          // fallback raisonnable
+  const mCompNet = monthlyNet(compareData) ?? mCompHC;   // fallback raisonnable
+
+  return `
+      <table class="detailed-comparison-table">
+          <thead>
+              <tr>
+                  <th>Critère</th>
+                  <th>${modeActuel === 'classique' ? 'Achat Classique' : 'Vente aux Enchères'}</th>
+                  <th>${modeActuel === 'classique' ? 'Vente aux Enchères' : 'Achat Classique'}</th>
+                  <th>Différence</th>
+              </tr>
+          </thead>
+          <tbody>
+              <!-- COÛTS D'ACQUISITION -->
+              <tr class="section-header">
+                  <td colspan="4"><strong>COÛTS D'ACQUISITION</strong></td>
+              </tr>
+              <tr>
+                  <td>Prix d'achat</td>
+                  <td>${this.formatNumber(data.prixAchat)} €</td>
+                  <td>${this.formatNumber(compareData.prixAchat)} €</td>
+                  <td class="${data.prixAchat < compareData.prixAchat ? 'positive' : 'negative'}">
+                      ${this.formatNumber(data.prixAchat - compareData.prixAchat)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Frais de notaire / Droits</td>
+                  <td>${this.formatNumber(data.fraisNotaire || data.droitsEnregistrement)} €</td>
+                  <td>${this.formatNumber(compareData.fraisNotaire || compareData.droitsEnregistrement)} €</td>
+                  <td class="${(data.fraisNotaire || data.droitsEnregistrement) < (compareData.fraisNotaire || compareData.droitsEnregistrement) ? 'positive' : 'negative'}">
+                      ${this.formatNumber((data.fraisNotaire || data.droitsEnregistrement) - (compareData.fraisNotaire || compareData.droitsEnregistrement))} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Commission / Honoraires avocat</td>
+                  <td>${this.formatNumber(data.commission || data.honorairesAvocat)} €</td>
+                  <td>${this.formatNumber(compareData.commission || compareData.honorairesAvocat)} €</td>
+                  <td class="${(data.commission || data.honorairesAvocat) < (compareData.commission || compareData.honorairesAvocat) ? 'positive' : 'negative'}">
+                      ${this.formatNumber((data.commission || data.honorairesAvocat) - (compareData.commission || compareData.honorairesAvocat))} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Travaux de rénovation</td>
+                  <td>${this.formatNumber(data.travaux)} €</td>
+                  <td>${this.formatNumber(compareData.travaux)} €</td>
+                  <td class="${data.travaux < compareData.travaux ? 'positive' : 'negative'}">
+                      ${this.formatNumber(data.travaux - compareData.travaux)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Frais bancaires</td>
+                  <td>${this.formatNumber(data.fraisBancaires)} €</td>
+                  <td>${this.formatNumber(compareData.fraisBancaires)} €</td>
+                  <td class="${data.fraisBancaires < compareData.fraisBancaires ? 'positive' : 'negative'}">
+                      ${this.formatNumber(data.fraisBancaires - compareData.fraisBancaires)} €
+                  </td>
+              </tr>
+              <tr class="total-row">
+                  <td><strong>Budget total nécessaire</strong></td>
+                  <td><strong>${this.formatNumber(data.coutTotal)} €</strong></td>
+                  <td><strong>${this.formatNumber(compareData.coutTotal)} €</strong></td>
+                  <td class="${data.coutTotal < compareData.coutTotal ? 'positive' : 'negative'}">
+                      <strong>${this.formatNumber(data.coutTotal - compareData.coutTotal)} €</strong>
+                  </td>
+              </tr>
+              
+              <!-- FINANCEMENT -->
+              <tr class="section-header">
+                  <td colspan="4"><strong>FINANCEMENT</strong></td>
+              </tr>
+              <tr>
+                  <td>Votre apport personnel</td>
+                  <td>${this.formatNumber(data.coutTotal - data.emprunt)} €</td>
+                  <td>${this.formatNumber(compareData.coutTotal - compareData.emprunt)} €</td>
+                  <td>0 €</td>
+              </tr>
+              <tr>
+                  <td>Montant emprunté</td>
+                  <td>${this.formatNumber(data.emprunt)} €</td>
+                  <td>${this.formatNumber(compareData.emprunt)} €</td>
+                  <td class="${data.emprunt < compareData.emprunt ? 'positive' : 'negative'}">
+                      ${this.formatNumber(data.emprunt - compareData.emprunt)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Remboursement mensuel</td>
+                  <td>${this.formatNumber(data.mensualite)} €/mois</td>
+                  <td>${this.formatNumber(compareData.mensualite)} €/mois</td>
+                  <td class="${data.mensualite < compareData.mensualite ? 'positive' : 'negative'}">
+                      ${this.formatNumber(data.mensualite - compareData.mensualite)} €
+                  </td>
+              </tr>
+              
+              <!-- REVENUS LOCATIFS -->
+              <tr class="section-header">
+                  <td colspan="4"><strong>REVENUS LOCATIFS</strong></td>
+              </tr>
+              <tr>
+                  <td>Surface que vous pouvez acheter</td>
+                  <td>${data.surface.toFixed(1)} m²</td>
+                  <td>${compareData.surface.toFixed(1)} m²</td>
+                  <td class="${data.surface > compareData.surface ? 'positive' : 'negative'}">
+                      ${(data.surface - compareData.surface).toFixed(1)} m²
+                  </td>
+              </tr>
+              <tr>
+                  <td>Loyer mensuel (avant charges)</td>
+                  <td>${this.formatNumber(mDataHC)} €</td>
+                  <td>${this.formatNumber(mCompHC)} €</td>
+                  <td class="${mDataHC > mCompHC ? 'positive' : 'negative'}">
+                      ${this.formatNumber(mDataHC - mCompHC)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Provision logement vide</td>
+                  <td>-${this.formatNumber(Math.max(0, mDataHC - mDataNet))} €</td>
+                  <td>-${this.formatNumber(Math.max(0, mCompHC - mCompNet))} €</td>
+                  <td>${this.formatNumber(Math.max(0, (mDataHC - mDataNet)) - Math.max(0, (mCompHC - mCompNet)))} €</td>
+              </tr>
+              <tr>
+                  <td>Loyer net mensuel</td>
+                  <td>${this.formatNumber(mDataNet)} €</td>
+                  <td>${this.formatNumber(mCompNet)} €</td>
+                  <td class="${mDataNet > mCompNet ? 'positive' : 'negative'}">
+                      ${this.formatNumber(mDataNet - mCompNet)} €
+                  </td>
+              </tr>
+              
+              <!-- VOS DÉPENSES MENSUELLES -->
+              <tr class="section-header">
+                  <td colspan="4"><strong>VOS DÉPENSES MENSUELLES</strong></td>
+              </tr>
+              <tr>
+                  <td>Remboursement du prêt</td>
+                  <td>-${this.formatNumber(data.mensualite)} €</td>
+                  <td>-${this.formatNumber(compareData.mensualite)} €</td>
+                  <td class="${data.mensualite < compareData.mensualite ? 'positive' : 'negative'}">
+                      ${this.formatNumber(compareData.mensualite - data.mensualite)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Taxe foncière (par mois)</td>
+                  <td>-${this.formatNumber(data.taxeFonciere / 12)} €</td>
+                  <td>-${this.formatNumber(compareData.taxeFonciere / 12)} €</td>
+                  <td class="${data.taxeFonciere < compareData.taxeFonciere ? 'positive' : 'negative'}">
+                      ${this.formatNumber((compareData.taxeFonciere - data.taxeFonciere) / 12)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Charges de copropriété</td>
+                  <td>-${this.formatNumber(data.chargesNonRecuperables / 12)} €</td>
+                  <td>-${this.formatNumber(compareData.chargesNonRecuperables / 12)} €</td>
+                  <td class="${data.chargesNonRecuperables < compareData.chargesNonRecuperables ? 'positive' : 'negative'}">
+                      ${this.formatNumber((compareData.chargesNonRecuperables - data.chargesNonRecuperables) / 12)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Budget entretien</td>
+                  <td>-${this.formatNumber(data.entretienAnnuel / 12)} €</td>
+                  <td>-${this.formatNumber(compareData.entretienAnnuel / 12)} €</td>
+                  <td class="${data.entretienAnnuel < compareData.entretienAnnuel ? 'positive' : 'negative'}">
+                      ${this.formatNumber((compareData.entretienAnnuel - data.entretienAnnuel) / 12)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Assurance propriétaire</td>
+                  <td>-${this.formatNumber(data.assurancePNO / 12)} €</td>
+                  <td>-${this.formatNumber(compareData.assurancePNO / 12)} €</td>
+                  <td>${this.formatNumber((compareData.assurancePNO - data.assurancePNO) / 12)} €</td>
+              </tr>
+              <tr class="total-row">
+                  <td><strong>Total de vos dépenses</strong></td>
+                  <td><strong>-${this.formatNumber(data.mensualite + data.taxeFonciere/12 + data.chargesNonRecuperables/12 + data.entretienAnnuel/12 + data.assurancePNO/12)} €</strong></td>
+                  <td><strong>-${this.formatNumber(compareData.mensualite + compareData.taxeFonciere/12 + compareData.chargesNonRecuperables/12 + compareData.entretienAnnuel/12 + compareData.assurancePNO/12)} €</strong></td>
+                  <td><strong>${this.formatNumber((compareData.mensualite + compareData.taxeFonciere/12 + compareData.chargesNonRecuperables/12 + compareData.entretienAnnuel/12 + compareData.assurancePNO/12) - (data.mensualite + data.taxeFonciere/12 + data.chargesNonRecuperables/12 + data.entretienAnnuel/12 + data.assurancePNO/12))} €</strong></td>
+              </tr>
+              
+              <!-- RÉSULTAT -->
+              <tr class="section-header">
+                  <td colspan="4"><strong>RÉSULTAT</strong></td>
+              </tr>
+              <tr>
+                  <td>Cash-flow avant impôts</td>
+                  <td class="${data.cashFlow >= 0 ? 'positive' : 'negative'}">${this.formatNumber(data.cashFlow)} €</td>
+                  <td class="${compareData.cashFlow >= 0 ? 'positive' : 'negative'}">${this.formatNumber(compareData.cashFlow)} €</td>
+                  <td class="${data.cashFlow > compareData.cashFlow ? 'positive' : 'negative'}">
+                      ${this.formatNumber(data.cashFlow - compareData.cashFlow)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Gain annuel après impôts théorique</td>
+                  <td class="${data.cashFlowAnnuel >= 0 ? 'positive' : 'negative'}">${this.formatNumber(data.cashFlowAnnuel)} €</td>
+                  <td class="${compareData.cashFlowAnnuel >= 0 ? 'positive' : 'negative'}">${this.formatNumber(compareData.cashFlowAnnuel)} €</td>
+                  <td class="${data.cashFlowAnnuel > compareData.cashFlowAnnuel ? 'positive' : 'negative'}">
+                      ${this.formatNumber(data.cashFlowAnnuel - compareData.cashFlowAnnuel)} €
+                  </td>
+              </tr>
+              <tr>
+                  <td>Rendement de votre investissement</td>
+                  <td class="${data.rendementNet >= 0 ? 'positive' : 'negative'}">${data.rendementNet.toFixed(2)} %</td>
+                  <td class="${compareData.rendementNet >= 0 ? 'positive' : 'negative'}">${compareData.rendementNet.toFixed(2)} %</td>
+                  <td class="${data.rendementNet > compareData.rendementNet ? 'positive' : 'negative'}">
+                      ${(data.rendementNet - compareData.rendementNet).toFixed(2)} %
+                  </td>
+              </tr>
+          </tbody>
+      </table>
+  `;
+}
 
     /**
      * Génère les cartes de définition
