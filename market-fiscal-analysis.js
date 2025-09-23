@@ -180,91 +180,169 @@ formatAmountWithClass(value, showSign = true) {
     rawValue: numValue
   };
 }
-    /**
-     * Effectue l'analyse complète (marché + fiscal) - V3 CORRIGÉE
-     */
+/**
+ * Effectue l'analyse complète (marché + fiscal) - V3 CORRIGÉE
+ */
 async performCompleteAnalysis(data) {
-    try {
-        // 1. Analyse de marché
-        this.marketAnalysis = this.analyzeMarketPosition(data);
-        
-        // 2. Préparation des données
-        const fiscalData = this.prepareFiscalData(data);
-        const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
-        
-        // 3. Créer un pseudo-résultat sans tableau d'amortissement
-        const baseResults = {
-            // Mensualité déjà calculée dans prepareFiscalData
-            mensualite: comparatorData.chargeMensuelleCredit || 
-                        this.calculateMonthlyPayment(
-                            comparatorData.loanAmount,
-                            comparatorData.loanRate,
-                            comparatorData.loanDuration
-                        ),
-            // Pas de tableau → force la formule analytique
-            tableauAmortissement: null
-        };
+  try {
+    // 1) Analyse de marché
+    this.marketAnalysis = this.analyzeMarketPosition(data);
 
-        // 4. Propager la mensualité pour le comparateur
-        comparatorData.chargeMensuelleCredit = baseResults.mensualite;
-        
-        // 5. Enrichir comparatorData avec les résultats du simulateur
-        comparatorData.tableauAmortissement = baseResults.tableauAmortissement;
-        
-        // 6. Comparaison des régimes avec l'adaptateur
-        const fiscalResults = await this.comparateur.compareAllRegimes(comparatorData);
-        
-// 7. Enrichir les résultats avec les calculs détaillés différenciés
-const params = this.getAllAdvancedParams();
-fiscalResults.forEach(regime => {
-  const detailedCalc = this.getDetailedCalculations(regime, fiscalData, params, baseResults);
+    // 2) Préparer les données (form → comparateur)
+    const fiscalData     = this.prepareFiscalData(data);
+    const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
 
-  // Remplacer par les valeurs détaillées plus précises
-  regime.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
-  regime.cashflowMensuel   = detailedCalc.cashflowNetAnnuel / 12;
-  regime.impotAnnuel       = -(detailedCalc.totalImpots);
-  regime.rendementNet      = (detailedCalc.cashflowNetAnnuel / (fiscalData.price || fiscalData.prixBien || 1)) * 100;
+    // 3) Pseudo-résultat sans tableau d'amortissement (fallback analytique)
+    const loanAmt  = Number(comparatorData.montantEmprunt ?? comparatorData.loanAmount ?? 0);
+    const loanRate = Number(comparatorData.taux ?? comparatorData.loanRate ?? 0);
+    const loanDur  = Number(comparatorData.duree ?? comparatorData.loanDuration ?? 0);
 
-  // Ajouter les détails pour le debug
-  regime._detailedCalc = detailedCalc;
-});
+    const baseResults = {
+      // Si le comparateur a déjà une mensualité → on la reprend
+      mensualite: Number(comparatorData.chargeMensuelleCredit ?? 0) ||
+                  (loanAmt > 0 && loanDur > 0
+                    ? this.calculateMonthlyPayment(loanAmt, loanRate, loanDur)
+                    : 0),
+      // Pas de tableau → force la formule analytique dans les calculs d'intérêts
+      tableauAmortissement: null
+    };
 
-// ✅ 7.b Normaliser systématiquement les ids/labels renvoyés
-fiscalResults.forEach(r => {
-  const key = this.normalizeRegimeKey(r);
-  r.id = key || r.id;
-  const reg = this.getRegimeRegistry()[r.id];
-  if (reg && !r.nom) r.nom = reg.nom;
-});
+    // 4) Propager la mensualité et l'absence d'échéancier vers le comparateur
+    comparatorData.chargeMensuelleCredit = baseResults.mensualite;
+    comparatorData.tableauAmortissement  = baseResults.tableauAmortissement;
 
-// ✅ 7.c Injection GÉNÉRIQUE du régime choisi si absent (plus de cas spécial LMP)
-const chosenKey = this.normalizeRegimeKey({ id: data?.regimeActuel });
-if (chosenKey && !fiscalResults.some(r => this.normalizeRegimeKey(r) === chosenKey)) {
-  const reg = { ...this.getRegimeRegistry()[chosenKey] };
-  if (reg) {
-    const detailedCalc = this.getDetailedCalculations(reg, fiscalData, params, baseResults);
-    reg.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
-    reg.cashflowMensuel   = detailedCalc.cashflowNetAnnuel / 12;
-    reg.impotAnnuel       = -(detailedCalc.totalImpots);
-    reg.rendementNet      = (detailedCalc.cashflowNetAnnuel / (fiscalData.price || fiscalData.prixBien || 1)) * 100;
-    reg._detailedCalc     = detailedCalc;
-    fiscalResults.push(reg);
+    // 5) Comparaison des régimes (adaptateur externe)
+    const rawResults = await this.comparateur.compareAllRegimes(comparatorData);
+    const fiscalResults = Array.isArray(rawResults) ? rawResults : (rawResults?.results || []);
+
+    // 6) Enrichir chaque régime avec le calcul détaillé maison
+    const params = this.getAllAdvancedParams();
+
+    fiscalResults.forEach((regime) => {
+      const detailedCalc = this.getDetailedCalculations(regime, fiscalData, params, baseResults);
+
+      // Valeurs finales cohérentes
+      regime.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
+      regime.cashflowMensuel   = detailedCalc.cashflowNetAnnuel / 12;
+      regime.impotAnnuel       = -(detailedCalc.totalImpots);
+
+      const baseRend = Number(
+        fiscalData.coutTotalAcquisition ??
+        fiscalData.price ??
+        fiscalData.prixBien ??
+        0
+      );
+      const denom = baseRend > 0 ? baseRend : 1; // éviter NaN/∞
+      regime.rendementNet = (detailedCalc.cashflowNetAnnuel / denom) * 100;
+
+      // Garde le détail pour l'affichage/diagnostic
+      regime._detailedCalc = detailedCalc;
+    });
+
+    // 7) Normaliser systématiquement les identifiants/labels
+    fiscalResults.forEach((r) => {
+      const key = this.normalizeRegimeKey(r);
+      r.id = key || r.id;
+      const regMeta = this.getRegimeRegistry()[r.id];
+      if (regMeta && !r.nom) r.nom = regMeta.nom;
+    });
+
+    // 8) Injecter le régime "choisi" s'il est absent (clé normalisée)
+    if (data?.regimeActuel) {
+      const chosenKey = this.normalizeRegimeKey({ id: data.regimeActuel });
+      const alreadyThere = fiscalResults.some((r) => this.normalizeRegimeKey(r) === chosenKey);
+      if (chosenKey && !alreadyThere) {
+        const regMeta = { ...this.getRegimeRegistry()[chosenKey] };
+        if (regMeta) {
+          const detailedCalc = this.getDetailedCalculations(regMeta, fiscalData, params, baseResults);
+          regMeta.cashflowNetAnnuel = detailedCalc.cashflowNetAnnuel;
+          regMeta.cashflowMensuel   = detailedCalc.cashflowNetAnnuel / 12;
+          regMeta.impotAnnuel       = -(detailedCalc.totalImpots);
+
+          const baseRend2 = Number(
+            fiscalData.coutTotalAcquisition ??
+            fiscalData.price ??
+            fiscalData.prixBien ??
+            0
+          );
+          const denom2 = baseRend2 > 0 ? baseRend2 : 1;
+          regMeta.rendementNet = (detailedCalc.cashflowNetAnnuel / denom2) * 100;
+
+          regMeta._detailedCalc = detailedCalc;
+          fiscalResults.push(regMeta);
+        }
+      }
+    }
+
+    // 9) Trier: meilleur cash-flow annuel en premier
+    fiscalResults.sort(
+      (a, b) => (Number(b.cashflowNetAnnuel) || -Infinity) - (Number(a.cashflowNetAnnuel) || -Infinity)
+    );
+
+    // 10) Retour consolidé
+    return {
+      market: this.marketAnalysis,
+      fiscal: fiscalResults,
+      recommendations: this.generateGlobalRecommendations(this.marketAnalysis, fiscalResults)
+    };
+
+  } catch (error) {
+    console.error('Erreur dans performCompleteAnalysis:', error);
+    throw error;
   }
 }
 
-// (optionnel) garder le meilleur en tête de liste
-fiscalResults.sort((a, b) => (b.cashflowNetAnnuel ?? -Infinity) - (a.cashflowNetAnnuel ?? -Infinity));
+/**
+ * IR progressif (barème 2024 par défaut), parts & décote optionnelle.
+ * NB: mets à jour les seuils si besoin, ou passe-les via params.*
+ * Utilisée par getDetailedCalculations quand irPrecise=true.
+ */
+computeIRProgressif(baseImposable, parts = 1, params = {}) {
+  const b = Math.max(0, Number(baseImposable) || 0);
+  const p = Math.max(1, Number(parts) || 1);
+  if (b <= 0) return 0;
 
-return {
-  market: this.marketAnalysis,
-  fiscal: fiscalResults,
-  recommendations: this.generateGlobalRecommendations(this.marketAnalysis, fiscalResults)
-};
-        
-    } catch (error) {
-        console.error('Erreur dans performCompleteAnalysis:', error);
-        throw error;
+  // Barème par part (revenus 2024 - adapter si besoin)
+  const bareme = [
+    { plafond: 11497,  taux: 0.00 },
+    { plafond: 29315,  taux: 0.11 },
+    { plafond: 83823,  taux: 0.30 },
+    { plafond: 180294, taux: 0.41 },
+    { plafond: Infinity, taux: 0.45 }
+  ];
+
+  // Quotient familial
+  const qf = b / p;
+
+  // Impôt par part
+  let irPart = 0;
+  let prev   = 0;
+  for (const tr of bareme) {
+    const borne = Math.min(qf, tr.plafond);
+    if (borne > prev) {
+      irPart += (borne - prev) * tr.taux;
+      prev = borne;
+      if (!isFinite(tr.plafond)) break;
     }
+  }
+
+  // Remise au niveau du foyer
+  let ir = irPart * p;
+
+  // Décote (optionnelle, paramétrable)
+  const applyDecote = !!(params.irApplyDecote);
+  if (applyDecote) {
+    const seuil1P = Number(params.irDecoteSeuil1P ?? 1928);
+    const seuil2P = Number(params.irDecoteSeuil2P ?? 3191);
+    const coeff   = Number(params.irDecoteCoeff ?? 0.4525);
+    const seuil   = (p > 1) ? seuil2P : seuil1P;
+    if (ir < seuil) {
+      const decote = Math.max(0, seuil - ir) * coeff;
+      ir = Math.max(0, ir - decote);
+    }
+  }
+
+  return ir;
 }
    /**
  * Prépare les données pour le comparateur fiscal - V3 COMPLÈTE
@@ -434,9 +512,19 @@ getAllAdvancedParams() {
     cautionRestituee:     document.getElementById('caution-restituee')?.checked ?? true,
 
     // ─────────────────────────────────────────
+    // IR “précis” (barème progressif + parts + décote) – optionnel
+    // (si les inputs n'existent pas, valeurs par défaut ; la décote reste désactivée si la case n'existe pas)
+    // ─────────────────────────────────────────
+    irPrecise:       document.getElementById('ir-mode-precis')?.checked ?? false,
+    foyerParts:      parseFloatOrDefault('foyer-parts', 1),
+    irApplyDecote:   document.getElementById('ir-decote')?.checked ?? false,
+    irDecoteSeuil1P: parseFloatOrDefault('ir-decote-seuil-1p', 1928),
+    irDecoteSeuil2P: parseFloatOrDefault('ir-decote-seuil-2p', 3191),
+    irDecoteCoeff:   parseFloatOrDefault('ir-decote-coeff', 0.4525),
+
+    // ─────────────────────────────────────────
     // LMP (cotisations sociales) + Toggles
     // ─────────────────────────────────────────
-    // % et plancher €/an (si les inputs n’existent pas, on prend les valeurs défaut constantes)
     lmpCotisationsTaux: parseFloatOrDefault(
       'lmp-cotisations-taux',
       FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100 // en %
@@ -446,12 +534,10 @@ getAllAdvancedParams() {
       FISCAL_CONSTANTS.LMP_COTISATIONS_MIN // €/an
     ),
 
-    // Toggles utiles (fonctionnent même sans input dans le DOM)
+    // Toggles utiles
     assujettiCotisSociales: document.getElementById('assujetti-cotis')?.checked ?? false, // LMNP soumis cotisations → pas de PS
     sciEligibleTauxReduit:  document.getElementById('sci-taux-reduit')?.checked ?? true,  // 15% jusqu’à 42 500 €
-
-    // PFU pour SCI à l'IS (dividendes simulés au PFU 30%)
-    applyPFU: document.getElementById('apply-pfu')?.checked ?? false
+    applyPFU:               document.getElementById('apply-pfu')?.checked ?? false        // PFU 30% sur dividendes simulés
   };
 }
 
@@ -504,51 +590,55 @@ calculateRealCharges(inputData, params, interetsAnnuels) {
 }
 /**
  * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE (patchée)
- * Correctifs inclus :
- * 1) Micro = recettes CC (plafond & base), éligibilité sur recettes CC annuelles
- * 2) Zéros respectés : usage de ?? pour les champs susceptibles de valoir 0
- * 3) SCI à l’IS : option PFU 30% (params.applyPFU === true || inputData.applyPFU === true)
- * 4) Cotisations sociales LMP/LMNP assujetti : plancher paramétrable (défaut 1200 €)
- * 5) ✅ CF corrigé : on garde CC pour le fiscal, mais on calcule le cash-flow en HC (option A)
+ * - Micro = recettes CC
+ * - IR “précis” (barème progressif + parts + décote) remplace le TMI là où on faisait base * TMI
+ * - Spécificités (déficit foncier hors intérêts, PFU, cotisations) inchangées
  */
 getDetailedCalculations(regime, inputData, params, baseResults) {
   // ─────────────────────────────────────────────────────────────
-  // A) SOCLES DE REVENUS (corrigés pour MICROS : base = recettes CC)
+  // A) SOCLES DE REVENUS (MICRO = base CC)
   // ─────────────────────────────────────────────────────────────
   const loyerHC       = Number(inputData.loyerHC ?? 0);
   const chargesRecupM = Number(inputData.chargesRecuperables ?? inputData.monthlyCharges ?? 0);
   const loyerCCm      = Number(inputData.loyerCC ?? (loyerHC + chargesRecupM));
   const loyerAnnuelHC = loyerHC * 12;
 
-  const vacPct        = Number(inputData.vacanceLocative ?? 0) / 100;
+  const vacPct = Number(inputData.vacanceLocative ?? 0) / 100;
 
-  // ⚠️ Base fiscale (MICRO) = CC
-  const recettesCCAnn = loyerCCm * 12;
-  const vacanceAmount = recettesCCAnn * vacPct;
-  const recettesBrutes = recettesCCAnn - vacanceAmount; // ← garde pour le FISCAL
+  // Recettes CC (fiscal)
+  const recettesCCAnn  = loyerCCm * 12;
+  const vacanceAmount  = recettesCCAnn * vacPct;
+  const recettesBrutes = recettesCCAnn - vacanceAmount;
 
-  // Frais de gestion : impactent cash-flow & régimes réels (pas la base micro)
+  // 🆕 Base cash-flow en HC (calculée AVANT l’usage ci-dessous)
+  const recettesHCAnn    = loyerHC * 12;
+  const vacanceAmountHC  = recettesHCAnn * vacPct;
+
+  // Frais de gestion (impact CF & réel)
   const gestTaux     = Number(params.gestionLocativeTaux ?? 0) / 100;
-  const fraisGestion = gestTaux > 0 ? recettesBrutes * gestTaux : 0;
+  const baseGestion  = Math.max(0, (recettesHCAnn - vacanceAmountHC));
+  const fraisGestion = gestTaux > 0 ? baseGestion * gestTaux : 0;
 
-  // Revenus nets utilisés pour les régimes RÉELS (fiscal)
-  const revenusNets = recettesBrutes - fraisGestion;
+  // Revenus nets utilisés pour les RÉELS (fiscal)
+  const revenusNets  = recettesBrutes - fraisGestion;
 
-  // 🆕 Base cash-flow en HC (évite d'ajouter une charge "passe-plat")
-  const recettesHCAnn   = loyerHC * 12;
-  const vacanceAmountHC = recettesHCAnn * vacPct;
-  const revenusNetsCF   = (recettesHCAnn - vacanceAmountHC) - fraisGestion;
+  // 🆕 Revenus nets pour le cash-flow (HC)
+  const revenusNetsCF = (recettesHCAnn - vacanceAmountHC) - fraisGestion;
 
   // ─────────────────────────────────────────────────────────────
   // Crédit
   // ─────────────────────────────────────────────────────────────
-  const interetsAnnuels     = this.calculateAnnualInterests(inputData, baseResults);
-  const mensualite          = Number(inputData.monthlyPayment ?? 0);
-  const mensualiteAnnuelle  = mensualite * 12;
-  const capitalAnnuel       = mensualiteAnnuelle - interetsAnnuels;
+  const interetsAnnuels    = this.calculateAnnualInterests(inputData, baseResults);
+  const mensualite         = Number(inputData.monthlyPayment ?? 0);
+  const mensualiteAnnuelle = mensualite * 12;
+  const capitalAnnuel      = mensualiteAnnuelle - interetsAnnuels;
 
   // Variables communes
   const TMI = Number(inputData.tmi ?? 0) / 100;
+
+  // 🆕 Paramètres IR précis (communs à tous les cas)
+  const usePreciseIR = !!(inputData.irPrecise ?? params.irPrecise);
+  const parts        = Number(inputData.foyerParts ?? params.foyerParts ?? 1);
 
   let chargesDeductibles    = 0;
   let baseImposable         = 0;
@@ -564,7 +654,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
 
   switch (key) {
     // ───────────────────────────────────────────────────────────
-    // B) MICRO-FONCIER (base = RECETTES CC, éligibilité sur CC annuel)
+    // B) MICRO-FONCIER
     // ───────────────────────────────────────────────────────────
     case 'nu_micro': {
       if (recettesCCAnn > FISCAL_CONSTANTS.MICRO_FONCIER_PLAFOND) {
@@ -572,10 +662,12 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
       }
       const base = recettesBrutes * (1 - FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT);
 
-      chargesDeductibles  = recettesBrutes * FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT; // affichage
+      chargesDeductibles  = recettesBrutes * FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT; // pour affichage
       baseImposable       = base;
-      impotRevenu         = base * TMI;
-      prelevementsSociaux = base * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+      impotRevenu         = usePreciseIR
+        ? this.computeIRProgressif(baseImposable, parts, params)
+        : baseImposable * TMI;
+      prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
       break;
     }
 
@@ -589,24 +681,28 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
         Number(params.assurancePNO ?? 0) * 12 +
         Number(params.entretienAnnuel ?? 0);
 
-      // Déficit HORS intérêts imputable au revenu global (plafonné)
       const baseAvantInterets   = revenusNets - chargesHorsInterets;
       const deficitHorsInterets = Math.min(0, baseAvantInterets);
       const imputableGlobal     = Math.min(FISCAL_CONSTANTS.DEFICIT_FONCIER_MAX, Math.abs(deficitHorsInterets));
 
-      // Résultat foncier après intérêts (≥ 0) = base pour IR/PS
       const baseApresInterets   = Math.max(0, baseAvantInterets - interetsAnnuels);
 
-      baseImposable             = baseApresInterets;
-      impotRevenu               = baseApresInterets * TMI - (imputableGlobal * TMI);
-      prelevementsSociaux       = baseApresInterets * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+      baseImposable = baseApresInterets;
 
-      chargesDeductibles        = interetsAnnuels + chargesHorsInterets;
+      // IR sur la base (précis ou TMI) − économie liée au déficit hors intérêts (restée au TMI)
+      const irSurBase = usePreciseIR
+        ? this.computeIRProgressif(baseImposable, parts, params)
+        : baseImposable * TMI;
+
+      impotRevenu         = irSurBase - (imputableGlobal * TMI);
+      prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+
+      chargesDeductibles  = interetsAnnuels + chargesHorsInterets;
       break;
     }
 
     // ───────────────────────────────────────────────────────────
-    // D) LMNP MICRO-BIC (base = RECETTES CC, éligibilité sur CC annuel)
+    // D) LMNP MICRO-BIC
     // ───────────────────────────────────────────────────────────
     case 'lmnp_micro': {
       if (recettesCCAnn > FISCAL_CONSTANTS.MICRO_BIC_PLAFOND) {
@@ -614,12 +710,15 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
       }
       const base = recettesBrutes * (1 - FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT);
 
-      chargesDeductibles  = recettesBrutes * FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT; // affichage
+      chargesDeductibles  = recettesBrutes * FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT; // pour affichage
       baseImposable       = base;
-      impotRevenu         = base * TMI;
+
+      impotRevenu = usePreciseIR
+        ? this.computeIRProgressif(baseImposable, parts, params)
+        : baseImposable * TMI;
 
       const assujetti     = !!inputData.assujettiCotisSociales;
-      prelevementsSociaux = assujetti ? 0 : base * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+      prelevementsSociaux = assujetti ? 0 : baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
       break;
     }
 
@@ -628,6 +727,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
     // ───────────────────────────────────────────────────────────
     case 'lmnp_reel': {
       const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
+
       const baseAmortissable  = Number(inputData.price ?? 0) *
                                 (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
 
@@ -635,27 +735,38 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
       amortissementMobilier   = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
       amortissementTravaux    = Number(inputData.travauxRenovation ?? 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
 
-      const totalDeductions   = chargesReelles + amortissementBien + amortissementMobilier + amortissementTravaux;
+      // 🧮 Utilisé vs Reporté
+      const resultatAvantAmort = revenusNets - chargesReelles;
+      const amortTotal         = amortissementBien + amortissementMobilier + amortissementTravaux;
+      const amortDispo         = Math.max(0, resultatAvantAmort);
+      const amortUtilise       = Math.min(amortTotal, amortDispo);
+      const amortReporte       = Math.max(0, amortTotal - amortUtilise);
 
-      baseImposable           = Math.max(0, revenusNets - totalDeductions);
-      impotRevenu             = baseImposable * TMI;
+      baseImposable = Math.max(0, resultatAvantAmort - amortUtilise);
 
-      const assujetti         = !!inputData.assujettiCotisSociales;
+      // IR (précis ou TMI)
+      impotRevenu = usePreciseIR
+        ? this.computeIRProgressif(baseImposable, parts, params)
+        : baseImposable * TMI;
+
+      // Cotisations sociales LMNP assujetti → pas de PS
+      const assujetti = !!inputData.assujettiCotisSociales;
       if (assujetti) {
-        // ✅ Correctif #4 : plancher paramétrable, zéros respectés
         const tauxRaw   = Number(inputData.lmpCotisationsTaux);
         const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX;
-
         const minRaw    = Number(inputData.lmpCotisationsMin);
         const minCotis  = Number.isFinite(minRaw) ? minRaw : FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
-
         cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
         prelevementsSociaux = 0;
       } else {
         prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
       }
 
-      chargesDeductibles      = chargesReelles;
+      chargesDeductibles = chargesReelles;
+
+      // ↩️ expose pour l’affichage
+      regime._amortUtilise = amortUtilise;
+      regime._amortReporte = amortReporte;
       break;
     }
 
@@ -673,74 +784,79 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
 
       const baseAvantAmort    = revenusNets - chargesReelles;
       const deficitHorsAmort  = Math.min(0, baseAvantAmort);
-      const economieIR        = Math.abs(deficitHorsAmort) * TMI;
+      const economieIR        = Math.abs(deficitHorsAmort) * TMI; // règle spécifique conservée (TMI)
 
       const amortTotal        = amortissementBien + amortissementMobilier + amortissementTravaux;
       baseImposable           = Math.max(0, baseAvantAmort - amortTotal);
 
-      impotRevenu             = baseImposable * TMI - economieIR;
-      prelevementsSociaux     = 0;
+      // IR sur base (précis ou TMI), puis on retranche l’économie IR au TMI (spécificité conservée)
+      const irSurBase = usePreciseIR
+        ? this.computeIRProgressif(baseImposable, parts, params)
+        : baseImposable * TMI;
 
-      // ✅ Correctif #4 : plancher paramétrable, zéros respectés
+      impotRevenu         = irSurBase - economieIR;
+      prelevementsSociaux = 0;
+
       const tauxRaw   = Number(inputData.lmpCotisationsTaux);
       const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX;
-
       const minRaw    = Number(inputData.lmpCotisationsMin);
       const minCotis  = Number.isFinite(minRaw) ? minRaw : FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
 
-      cotisationsSociales     = Math.max(baseImposable * tauxCotis, minCotis);
+      cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
 
-      chargesDeductibles      = chargesReelles + amortTotal;
+      chargesDeductibles = chargesReelles + amortTotal;
       break;
     }
 
- // ───────────────────────────────────────────────────────────
-// G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
-// ───────────────────────────────────────────────────────────
-case 'sci_is': {
-  const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
-  const baseAmortissable  = Number(inputData.price ?? 0) * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
-  const amortBien         = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-  const amortMob          = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+    // ───────────────────────────────────────────────────────────
+    // G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
+    // ───────────────────────────────────────────────────────────
+    case 'sci_is': {
+      const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
+      const baseAmortissable  = Number(inputData.price ?? 0) * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
+      const amortBien         = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+      const amortMob          = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
 
-  // Charges "réelles" uniquement ici ; amortissements séparés
-  chargesDeductibles      = chargesReelles;
-  amortissementBien       = amortBien;
-  amortissementMobilier   = amortMob;
-  amortissementTravaux    = 0;
+      chargesDeductibles      = chargesReelles;
+      amortissementBien       = amortBien;
+      amortissementMobilier   = amortMob;
+      amortissementTravaux    = 0;
 
-  const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
-  const eligible15        = !!inputData.sciEligibleTauxReduit;
+      const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
+      const eligible15        = !!inputData.sciEligibleTauxReduit;
 
-  if (eligible15) {
-    const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
-    const surplus = Math.max(0, resultatAvantIS - tranche);
-    impotRevenu   = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
-  } else {
-    impotRevenu   = resultatAvantIS * 0.25;
-  }
+      if (eligible15) {
+        const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
+        const surplus = Math.max(0, resultatAvantIS - tranche);
+        impotRevenu   = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
+      } else {
+        impotRevenu   = resultatAvantIS * 0.25;
+      }
 
-  // ✅ PFU 30% sur la part distribuée (opt-in via applyPFU)
-  const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
-  if (applyPFU) {
-    const ratioDistrib = Math.max(0, Math.min(1, Number(inputData?.sciDistribution ?? params?.sciDistribution ?? 1)));
-    const dividendes   = Math.max(0, resultatAvantIS - impotRevenu); // résultat après IS
-    impotRevenu       += (dividendes * ratioDistrib) * 0.30;         // PFU sur la part distribuée
-  }
+      const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
+      if (applyPFU) {
+        const ratioDistrib = Math.max(0, Math.min(1, Number(inputData?.sciDistribution ?? params?.sciDistribution ?? 1)));
+        const dividendes   = Math.max(0, resultatAvantIS - impotRevenu); // après IS
+        impotRevenu       += (dividendes * ratioDistrib) * 0.30;         // PFU 30%
+      }
 
-  prelevementsSociaux     = 0;   // en société IS, PS non applicables au niveau société
-  baseImposable           = resultatAvantIS;
-  break;
-}
+      prelevementsSociaux = 0;   // PS non applicables au niveau société
+      baseImposable       = resultatAvantIS;
+      break;
+    }
 
     // ───────────────────────────────────────────────────────────
-    // Par défaut : calque "nu réel"
+    // Par défaut : calque "nu réel" simplifié
     // ───────────────────────────────────────────────────────────
     default: {
       const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
       chargesDeductibles   = chargesReelles;
       baseImposable        = Math.max(0, revenusNets - chargesReelles);
-      impotRevenu          = baseImposable * TMI;
+
+      impotRevenu = usePreciseIR
+        ? this.computeIRProgressif(baseImposable, parts, params)
+        : baseImposable * TMI;
+
       prelevementsSociaux  = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
     }
   }
@@ -810,7 +926,11 @@ case 'sci_is': {
     // Infos
     regime: this.getRegimeRegistry()[key]?.nom || regime.nom,
     abattementApplique: isMicro ? chargesDeductibles : 0,
-    chargesReelles: this.calculateRealCharges(inputData, params, interetsAnnuels)
+    chargesReelles: this.calculateRealCharges(inputData, params, interetsAnnuels),
+
+    // 🆕 Amortissements LMNP (pour affichage)
+    amortUtilise: regime._amortUtilise ?? 0,
+    amortReporte: regime._amortReporte ?? 0
   };
 }
 
@@ -1050,158 +1170,176 @@ buildRevenusSection(calc, params) {
  * Construit la section charges (triées par impact)
  */
 buildChargesSection(calc, params) {
-    const charges = [];
-    
-    // Pour les régimes micro, afficher l'abattement forfaitaire
-    if (calc.regime.includes('Micro')) {
-        charges.push({
-            label: `Abattement forfaitaire (${calc.regime === 'Micro-foncier' ? '30%' : '50%'})`,
-            value: calc.abattementApplique,
-            formula: 'Sur revenus nets'
-        });
-    } else {
-        // Pour les régimes réels, détailler toutes les charges
-        charges.push(
-            { label: "Intérêts d'emprunt", value: calc.interetsAnnuels, formula: "Selon échéancier" },
-            calc.amortissementBien > 0 ? { label: "Amortissement bien", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × valeur` } : null,
-            calc.amortissementMobilier > 0 ? { label: "Amortissement mobilier", value: calc.amortissementMobilier, formula: "10% × 10% du prix" } : null,
-            
-            // 🆕 LIGNE AJOUTÉE : Amortissement des travaux
-            calc.amortissementTravaux > 0 ? { 
-                label: "Amortissement travaux", 
-                value: calc.amortissementTravaux, 
-                formula: "2.5% × coût travaux" 
-            } : null,
-            
-            { label: "Taxe foncière", value: calc.taxeFonciere, formula: "Paramètre avancé" },
-            // { label: "Charges copro récupérables", value: calc.chargesCopro, formula: "12 × charges mensuelles" }, // Commenté car non déductible
-            calc.chargesCoproNonRecup > 0 ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12` } : null,
-            { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12` },
-            { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" }
-        );
-    }
-    
-    const validCharges = charges.filter(Boolean).sort((a, b) => b.value - a.value);
-    
-    return `
-        <tr class="section-header">
-            <td colspan="3"><strong>📉 CHARGES DÉDUCTIBLES</strong></td>
-        </tr>
-        ${validCharges.map(charge => `
-        <tr>
-            <td>${charge.label}</td>
-            <td class="text-right negative">-${this.formatCurrency(charge.value)}</td>
-            <td class="formula">${charge.formula}</td>
-        </tr>
-        `).join('')}
-        ${calc.regime.includes('Micro') && calc.chargesReelles > calc.abattementApplique ? `
-        <tr class="warning-row">
-            <td colspan="3" style="color: #f59e0b; font-style: italic;">
-                ⚠️ Charges réelles (${this.formatCurrency(calc.chargesReelles)}) > Abattement (${this.formatCurrency(calc.abattementApplique)})
-                → Le régime réel serait plus avantageux
-            </td>
-        </tr>
-        ` : ''}
-        <tr class="total-row">
-            <td><strong>Total charges déductibles</strong></td>
-            <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalCharges)}</strong></td>
-            <td></td>
-        </tr>
-    `;
+  const charges = [];
+  
+  // Pour les régimes micro, afficher l'abattement forfaitaire
+  if (calc.regime.includes('Micro')) {
+    charges.push({
+      label: `Abattement forfaitaire (${calc.regime === 'Micro-foncier' ? '30%' : '50%'})`,
+      value: calc.abattementApplique,
+      formula: 'Sur revenus nets'
+    });
+  } else {
+    // Pour les régimes réels, détailler toutes les charges
+    charges.push(
+      { label: "Intérêts d'emprunt", value: calc.interetsAnnuels, formula: "Selon échéancier" },
+      calc.amortissementBien > 0 ? { label: "Amortissement bien", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × valeur` } : null,
+      calc.amortissementMobilier > 0 ? { label: "Amortissement mobilier", value: calc.amortissementMobilier, formula: "10% × 10% du prix" } : null,
+
+      // Amortissement des travaux
+      calc.amortissementTravaux > 0 ? { 
+        label: "Amortissement travaux", 
+        value: calc.amortissementTravaux, 
+        formula: "2.5% × coût travaux" 
+      } : null,
+
+      // 🆕 Ajouts pédagogiques (après les lignes d'amortissement)
+      calc.amortUtilise > 0 ? { 
+        label: "Amortissement utilisé", 
+        value: calc.amortUtilise, 
+        formula: "Plafonné par le résultat" 
+      } : null,
+      calc.amortReporte > 0 ? { 
+        label: "Amortissement reporté", 
+        value: calc.amortReporte, 
+        formula: "Report sur exercices futurs" 
+      } : null,
+
+      { label: "Taxe foncière", value: calc.taxeFonciere, formula: "Paramètre avancé" },
+      // { label: "Charges copro récupérables", value: calc.chargesCopro, formula: "12 × charges mensuelles" }, // non déductible
+      calc.chargesCoproNonRecup > 0 ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12` } : null,
+      { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12` },
+      { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" }
+    );
+  }
+
+  const validCharges = charges.filter(Boolean).sort((a, b) => b.value - a.value);
+
+  return `
+    <tr class="section-header">
+      <td colspan="3"><strong>📉 CHARGES DÉDUCTIBLES</strong></td>
+    </tr>
+    ${validCharges.map(charge => `
+      <tr>
+        <td>${charge.label}</td>
+        <td class="text-right negative">-${this.formatCurrency(charge.value)}</td>
+        <td class="formula">${charge.formula}</td>
+      </tr>
+    `).join('')}
+    ${calc.regime.includes('Micro') && calc.chargesReelles > calc.abattementApplique ? `
+    <tr class="warning-row">
+      <td colspan="3" style="color: #f59e0b; font-style: italic;">
+        ⚠️ Charges réelles (${this.formatCurrency(calc.chargesReelles)}) > Abattement (${this.formatCurrency(calc.abattementApplique)})
+        → Le régime réel serait plus avantageux
+      </td>
+    </tr>
+    ` : ''}
+    <tr class="total-row">
+      <td><strong>Total charges déductibles</strong></td>
+      <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalCharges)}</strong></td>
+      <td></td>
+    </tr>
+  `;
 }
 
-    /**
-     * Construit la section fiscalité
-     */
+/**
+ * Construit la section fiscalité
+ */
 buildFiscaliteSection(calc, inputData) {
-    const isSCI = calc.regime === "SCI à l'IS";
-    const isIRNegatif = typeof calc.impotRevenu === 'number' && calc.impotRevenu < 0;
+  const isSCI = calc.regime === "SCI à l'IS";
+  const isIRNegatif = typeof calc.impotRevenu === 'number' && calc.impotRevenu < 0;
 
-    // Helpers d’affichage
-    const fmt = v => this.formatCurrency(Math.abs(Number(v) || 0));
-    const has = v => typeof v === 'number' && isFinite(v) && Math.abs(v) > 0;
+  // Helpers d’affichage
+  const fmt = v => this.formatCurrency(Math.abs(Number(v) || 0));
+  const has = v => typeof v === 'number' && isFinite(v) && Math.abs(v) > 0;
 
-    // Libellé IR
-    const libIR = isSCI ? '(IS)' : `(TMI ${Number(inputData.tmi) || 0}%)`;
-    const formIR = isSCI ? 'Barème IS' : `= Base × ${Number(inputData.tmi) || 0}%`;
+  // Libellé IR (barème progressif vs TMI)
+  const isPreciseIR = !!(inputData.irPrecise);
+  const libIR  = isSCI
+    ? '(IS)'
+    : (isPreciseIR ? '(barème progressif)' : `(TMI ${Number(inputData.tmi) || 0}%)`);
+  const formIR = isSCI
+    ? 'Barème IS'
+    : (isPreciseIR ? 'Barème progressif' : `= Base × ${Number(inputData.tmi) || 0}%`);
 
-    // Ligne IR (montant négatif = économie → affichée en positif, classe “positive”)
-    const irValueCell = isIRNegatif
-        ? `<td class="text-right positive">+${fmt(calc.impotRevenu)}</td>`
-        : `<td class="text-right negative">-${fmt(calc.impotRevenu)}</td>`;
+  // Ligne IR (montant négatif = économie → affichée en positif, classe “positive”)
+  const irValueCell = isIRNegatif
+    ? `<td class="text-right positive">+${fmt(calc.impotRevenu)}</td>`
+    : `<td class="text-right negative">-${fmt(calc.impotRevenu)}</td>`;
 
-    const irFormulaCell = isIRNegatif
-        ? `<td class="formula">Économie d'impôt (déficit/imputation)</td>`
-        : `<td class="formula">${formIR}</td>`;
+  const irFormulaCell = isIRNegatif
+    ? `<td class="formula">Économie d'impôt (déficit/imputation)</td>`
+    : `<td class="formula">${formIR}</td>`;
 
-    // Total impôts : si négatif → économie nette
-    const totalImpotsNeg = has(calc.totalImpots) && calc.totalImpots < 0;
-    const totalImpotsCell = totalImpotsNeg
-        ? `<td class="text-right positive"><strong>+${fmt(calc.totalImpots)}</strong></td>`
-        : `<td class="text-right negative"><strong>-${fmt(calc.totalImpots)}</strong></td>`;
+  // Total impôts : si négatif → économie nette
+  const totalImpotsNeg = has(calc.totalImpots) && calc.totalImpots < 0;
+  const totalImpotsCell = totalImpotsNeg
+    ? `<td class="text-right positive"><strong>+${fmt(calc.totalImpots)}</strong></td>`
+    : `<td class="text-right negative"><strong>-${fmt(calc.totalImpots)}</strong></td>`;
 
-    const totalImpotsLabel = totalImpotsNeg
-        ? `<strong>Économie nette</strong>`
-        : `<strong>Total impôts</strong>`;
+  const totalImpotsLabel = totalImpotsNeg
+    ? `<strong>Économie nette</strong>`
+    : `<strong>Total impôts</strong>`;
 
-    return `
-        <tr class="section-header">
-            <td colspan="3"><strong>📊 CALCUL FISCAL</strong></td>
-        </tr>
+  return `
+    <tr class="section-header">
+      <td colspan="3"><strong>📊 CALCUL FISCAL</strong></td>
+    </tr>
 
-        <tr>
-            <td>Revenus nets</td>
-            <td class="text-right">${this.formatCurrency(calc.revenusNets)}</td>
-            <td class="formula">Après vacance et gestion</td>
-        </tr>
+    <tr>
+      <td>Revenus nets</td>
+      <td class="text-right">${this.formatCurrency(calc.revenusNets)}</td>
+      <td class="formula">Après vacance et gestion</td>
+    </tr>
 
-        <tr>
-            <td>- Charges déductibles</td>
-            <td class="text-right negative">-${this.formatCurrency(calc.totalCharges)}</td>
-            <td class="formula">Total ci-dessus</td>
-        </tr>
+    <tr>
+      <td>- Charges déductibles</td>
+      <td class="text-right negative">-${this.formatCurrency(calc.totalCharges)}</td>
+      <td class="formula">Total ci-dessus</td>
+    </tr>
 
-        <tr>
-            <td><strong>Base imposable</strong></td>
-            <td class="text-right"><strong>${this.formatCurrency(calc.baseImposable)}</strong></td>
-            <td class="formula">= Max(0, revenus - charges)</td>
-        </tr>
+    <tr>
+      <td><strong>Base imposable</strong></td>
+      <td class="text-right"><strong>${this.formatCurrency(calc.baseImposable)}</strong></td>
+      <td class="formula">= Max(0, revenus - charges)</td>
+    </tr>
 
-        <tr>
-            <td>Impôt sur le revenu ${libIR}</td>
-            ${irValueCell}
-            ${irFormulaCell}
-        </tr>
+    <tr>
+      <td>Impôt sur le revenu ${libIR}</td>
+      ${irValueCell}
+      ${irFormulaCell}
+    </tr>
 
-        ${
-            has(calc.cotisationsSociales)
-                ? `
-        <tr>
-            <td>Cotisations sociales (LMP)</td>
-            <td class="text-right negative">-${fmt(calc.cotisationsSociales)}</td>
-            <td class="formula">Assises sur bénéfice BIC pro</td>
-        </tr>`
-                : ''
-        }
+    ${
+      has(calc.cotisationsSociales)
+        ? `
+    <tr>
+      <td>Cotisations sociales (LMP)</td>
+      <td class="text-right negative">-${fmt(calc.cotisationsSociales)}</td>
+      <td class="formula">Assises sur bénéfice BIC pro</td>
+    </tr>`
+        : ''
+    }
 
-        ${
-            has(calc.prelevementsSociaux)
-                ? `
-        <tr>
-            <td>Prélèvements sociaux (17.2%)</td>
-            <td class="text-right negative">-${fmt(calc.prelevementsSociaux)}</td>
-            <td class="formula">Selon régime</td>
-        </tr>`
-                : ''
-        }
+    ${
+      has(calc.prelevementsSociaux)
+        ? `
+    <tr>
+      <td>Prélèvements sociaux (17.2%)</td>
+      <td class="text-right negative">-${fmt(calc.prelevementsSociaux)}</td>
+      <td class="formula">Selon régime</td>
+    </tr>`
+        : ''
+    }
 
-        <tr class="total-row">
-            <td>${totalImpotsLabel}</td>
-            ${totalImpotsCell}
-            <td></td>
-        </tr>
-    `;
+    <tr class="total-row">
+      <td>${totalImpotsLabel}</td>
+      ${totalImpotsCell}
+      <td></td>
+    </tr>
+  `;
 }
+ 
 
     /**
      * Construit la section cash-flow
