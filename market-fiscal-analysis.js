@@ -209,7 +209,6 @@ async performCompleteAnalysis(data) {
         comparatorData.chargeMensuelleCredit = baseResults.mensualite;
         
         // 5. Enrichir comparatorData avec les résultats du simulateur
-        comparatorData.chargeMensuelleCredit = baseResults.mensualite;
         comparatorData.tableauAmortissement = baseResults.tableauAmortissement;
         
         // 6. Comparaison des régimes avec l'adaptateur
@@ -1208,7 +1207,7 @@ const chargesCashAnnuel =
         <tr>
             <td>Charges cash annuelles</td>
             <td class="text-right negative">-${this.formatCurrency(chargesCashAnnuel)}</td>
-            <td class="formula">TF + copro + entretien + PNO${calc.fraisGestion ? ' + gestion' : ''}</td>
+            <td class="formula">  TF + copro + entretien + PNO${calc.fraisGestion ? ' (gestion déjà déduite des revenus)' : ''}</td>
         </tr>
         <tr>
             <td>Mensualité crédit (capital + intérêts)</td>
@@ -1824,13 +1823,17 @@ generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
     `;
 }
 
-  /**
+/**
  * Génère le tableau de comparaison détaillé
  * (corrige l’unité du loyer : affichage mensuel HC, dérivé de sources annuelles si besoin)
  */
 generateDetailedComparisonTable(classique, encheres, modeActuel) {
   const data = modeActuel === 'classique' ? classique : encheres;
   const compareData = modeActuel === 'classique' ? encheres : classique;
+
+  // ✅ Sécurise le nom du coût total (compat: coutTotal / coutTotalAcquisition)
+  const coutA = Number(data.coutTotal ?? data.coutTotalAcquisition ?? 0);
+  const coutB = Number(compareData.coutTotal ?? compareData.coutTotalAcquisition ?? 0);
 
   // Helpers pour sécuriser l’unité mensuelle
   const monthlyHC = (o) =>
@@ -1902,10 +1905,10 @@ generateDetailedComparisonTable(classique, encheres, modeActuel) {
               </tr>
               <tr class="total-row">
                   <td><strong>Budget total nécessaire</strong></td>
-                  <td><strong>${this.formatNumber(data.coutTotal)} €</strong></td>
-                  <td><strong>${this.formatNumber(compareData.coutTotal)} €</strong></td>
-                  <td class="${data.coutTotal < compareData.coutTotal ? 'positive' : 'negative'}">
-                      <strong>${this.formatNumber(data.coutTotal - compareData.coutTotal)} €</strong>
+                  <td><strong>${this.formatNumber(coutA)} €</strong></td>
+                  <td><strong>${this.formatNumber(coutB)} €</strong></td>
+                  <td class="${coutA < coutB ? 'positive' : 'negative'}">
+                      <strong>${this.formatNumber(coutA - coutB)} €</strong>
                   </td>
               </tr>
               
@@ -1915,8 +1918,8 @@ generateDetailedComparisonTable(classique, encheres, modeActuel) {
               </tr>
               <tr>
                   <td>Votre apport personnel</td>
-                  <td>${this.formatNumber(data.coutTotal - data.emprunt)} €</td>
-                  <td>${this.formatNumber(compareData.coutTotal - compareData.emprunt)} €</td>
+                  <td>${this.formatNumber(coutA - (data.emprunt ?? 0))} €</td>
+                  <td>${this.formatNumber(coutB - (compareData.emprunt ?? 0))} €</td>
                   <td>0 €</td>
               </tr>
               <tr>
