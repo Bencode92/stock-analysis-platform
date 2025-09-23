@@ -509,6 +509,7 @@ calculateRealCharges(inputData, params, interetsAnnuels) {
  * 2) Zéros respectés : usage de ?? pour les champs susceptibles de valoir 0
  * 3) SCI à l’IS : option PFU 30% (params.applyPFU === true || inputData.applyPFU === true)
  * 4) Cotisations sociales LMP/LMNP assujetti : plancher paramétrable (défaut 1200 €)
+ * 5) ✅ CF corrigé : on garde CC pour le fiscal, mais on calcule le cash-flow en HC (option A)
  */
 getDetailedCalculations(regime, inputData, params, baseResults) {
   // ─────────────────────────────────────────────────────────────
@@ -520,18 +521,23 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
   const loyerAnnuelHC = loyerHC * 12;
 
   const vacPct        = Number(inputData.vacanceLocative ?? 0) / 100;
-  const recettesCCAnn = loyerCCm * 12;                             // ⚠️ base micro = CC
-  const vacanceAmount = recettesCCAnn * vacPct;
 
-  // Base “micro” = recettes encaissées nettes de vacance (sans frais de gestion)
-  const recettesBrutes = recettesCCAnn - vacanceAmount;
+  // ⚠️ Base fiscale (MICRO) = CC
+  const recettesCCAnn = loyerCCm * 12;
+  const vacanceAmount = recettesCCAnn * vacPct;
+  const recettesBrutes = recettesCCAnn - vacanceAmount; // ← garde pour le FISCAL
 
   // Frais de gestion : impactent cash-flow & régimes réels (pas la base micro)
   const gestTaux     = Number(params.gestionLocativeTaux ?? 0) / 100;
   const fraisGestion = gestTaux > 0 ? recettesBrutes * gestTaux : 0;
 
-  // Revenus nets utilisés pour les régimes RÉELS & le cash-flow
+  // Revenus nets utilisés pour les régimes RÉELS (fiscal)
   const revenusNets = recettesBrutes - fraisGestion;
+
+  // 🆕 Base cash-flow en HC (évite d'ajouter une charge "passe-plat")
+  const recettesHCAnn   = loyerHC * 12;
+  const vacanceAmountHC = recettesHCAnn * vacPct;
+  const revenusNetsCF   = (recettesHCAnn - vacanceAmountHC) - fraisGestion;
 
   // ─────────────────────────────────────────────────────────────
   // Crédit
@@ -751,8 +757,9 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
     Number(params.assurancePNO ?? 0) * 12 +
     Number(params.chargesCoproNonRecup ?? 0) * 12;
 
+  // 🆕 CF calculé en HC
   const cashflowNetAnnuel =
-    revenusNets -
+    revenusNetsCF -
     chargesCashAnnuel -
     totalImpots -
     mensualiteAnnuelle;
@@ -769,10 +776,11 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
     loyerHC,
     loyerAnnuelBrut: loyerAnnuelHC,
     vacanceLocative: Number(inputData.vacanceLocative ?? 0),
-    vacanceAmount,
+    vacanceAmount,                // CC (fiscal)
     gestionLocative: Number(params.gestionLocativeTaux ?? 0),
     fraisGestion,
-    revenusNets,
+    revenusNets,                  // fiscal (CC)
+    revenusNetsCF,                // 🆕 cash-flow (HC)
 
     // Charges (lignes)
     interetsAnnuels,
