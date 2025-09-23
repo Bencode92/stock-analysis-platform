@@ -117,53 +117,69 @@ class MarketFiscalAnalyzer {
         };
     }
 
-    /**
-     * Convertit une valeur en nombre, gère TOUS les formats français
-     * @param {any} val - Valeur à convertir ("−1 234,56 €", "1.234,56", etc.)
-     * @returns {number} - Nombre parsé ou 0
-     */
-    toFloat(val) {
-        if (typeof val === 'number') return val || 0;
-        if (!val) return 0;
+/** Convertit une valeur en nombre, gère les formats FR/UE courants */
+toFloat(val) {
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  if (val == null || val === '') return 0;
 
-        // 🔒 Conversion bulletproof pour format français
-        const cleaned = String(val)
-            .replace(/\u00A0/g, '')    // NBSP (espace insécable)
-            .replace(/\u2212/g, '-')   // U+2212 (vrai minus) → tiret ASCII
-            .replace(/\s/g, '')        // tous les espaces
-            .replace(/[€$]/g, '')      // symboles monétaires
-            .replace(/\./g, '')        // points (séparateurs de milliers)
-            .replace(',', '.');        // virgule → point décimal
+  // Nettoyage robuste : espaces insécables, séparateurs de milliers, symboles €
+  let s = String(val)
+    .trim()
+    .replace(/\u2212/g, '-')        // vrai signe moins → '-'
+    .replace(/[\u00A0\u202F]/g, '') // NBSP et espace fine insécable
+    .replace(/[€$]/g, '')           // symboles monétaires
+    .replace(/\s/g, '')             // tout espace résiduel
+    .replace(/'/g, '');             // séparateur de milliers style suisse
 
-        return parseFloat(cleaned) || 0; // parseFloat plus tolérant que Number
-    }
+  // Cas français classique : "1.234,56" → enlever les points (milliers), puis virgule → point
+  if (s.includes(',') && s.includes('.')) {
+    s = s.replace(/\./g, '').replace(/,/g, '.');
+  } else {
+    // Si on n'a que des points, on suppose déjà un décimal correct
+    // Si on n'a que des virgules, on les convertit en points
+    s = s.replace(/,/g, '.');
+    // Les points restants utilisés comme milliers (ex: "1.234") ne posent pas de souci à parseFloat
+  }
+
+  // Ne garder que chiffres, un éventuel signe -, et un seul point décimal
+  s = s.replace(/[^0-9\.\-]/g, '');
+  const firstDot = s.indexOf('.');
+  if (firstDot !== -1) {
+    s =
+      s.slice(0, firstDot + 1) +
+      s.slice(firstDot + 1).replace(/\./g, ''); // retire les autres points
+  }
+
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
 }
-    
-    /**
-     * Formate un montant avec le bon signe et la bonne classe CSS
-     * @param {any} value - Valeur à formater
-     * @param {boolean} showSign - Afficher le signe +/−
-     * @returns {object} { className, formattedValue, isPositive, numValue }
-     */
-    formatAmountWithClass(value, showSign = true) {
-        const numValue = this.toFloat(value); // Utilise notre helper bulletproof
-        const isPositive = numValue >= 0;
-        const absValue = Math.abs(numValue);
-        
-        let formattedValue = this.formatCurrency(absValue);
-        if (showSign) {
-            formattedValue = (isPositive ? '+' : this.SIGN_MINUS) + formattedValue;
-        }
-        
-        return {
-            className: isPositive ? 'positive' : 'negative',
-            formattedValue,
-            isPositive,
-            numValue,
-            rawValue: numValue
-        };
-    }
 
+/**
+ * Formate un montant avec signe et classe CSS
+ * @param {any} value
+ * @param {boolean} showSign
+ * @returns {{ className:string, formattedValue:string, isPositive:boolean, numValue:number, rawValue:number }}
+ */
+formatAmountWithClass(value, showSign = true) {
+  const numValue = this.toFloat(value);
+  const isPositive = numValue >= 0;
+  const absValue = Math.abs(numValue);
+
+  const minus = this.SIGN_MINUS || '−';
+  let formattedValue = this.formatCurrency(absValue);
+
+  if (showSign) {
+    formattedValue = (isPositive ? '+' : minus) + formattedValue;
+  }
+
+  return {
+    className: isPositive ? 'positive' : 'negative',
+    formattedValue,
+    isPositive,
+    numValue,
+    rawValue: numValue
+  };
+}
     /**
      * Effectue l'analyse complète (marché + fiscal) - V3 CORRIGÉE
      */
