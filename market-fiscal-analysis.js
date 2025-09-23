@@ -1222,7 +1222,7 @@ const chargesCashAnnuel =
         </tr>
         <tr>
             <td>Revenus nets après impôts</td>
-            <td class="text-right positive">+${this.formatCurrency(calc.revenusNets - calc.totalImpots)}</td>
+            <td class="text-right positive">+${this.formatCurrency(calc.revenusNetsCF - calc.totalImpots)}</td>
             <td class="formula">= Revenus - impôts</td>
         </tr>
         <tr>
@@ -1591,257 +1591,276 @@ return {
     }
 
 /**
- * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION COMPLÈTE
+ * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION COMPLÈTE (ancrage sur calcul réel)
  */
 generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
-    // ✅ Sécurité
-    if (!Array.isArray(fiscalResults) || fiscalResults.length === 0) {
-        return '<div class="market-comparison-card"><p>Aucun résultat fiscal à afficher.</p></div>';
-    }
+  // ✅ Sécurité
+  if (!Array.isArray(fiscalResults) || fiscalResults.length === 0) {
+    return '<div class="market-comparison-card"><p>Aucun résultat fiscal à afficher.</p></div>';
+  }
 
-    // Helpers (tolérants aux champs manquants)
-    const fmt = (v) => this.formatCurrency ? this.formatCurrency(v || 0) : (new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v || 0));
-    const rendementClass = (x) => this.getRendementClass ? this.getRendementClass(x) : (x >= 6 ? 'positive' : x >= 3 ? 'neutral' : 'negative');
-    const buildDetail = (regime, data) => this.buildDetailedTable ? this.buildDetailedTable(regime, data) : '<div class="market-comparison-card"><p>Détails indisponibles.</p></div>';
+  // Helpers (tolérants aux champs manquants)
+  const fmt = (v) =>
+    this.formatCurrency
+      ? this.formatCurrency(v || 0)
+      : new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
-    // Normalisation des champs d'entrée communs
-    const yearlyRent = Number(inputData.yearlyRent ?? (inputData.loyerHC ?? inputData.loyerMensuel ?? 0) * 12) || 0;
-    const monthlyPayment = Number(inputData.monthlyPayment ?? inputData.mensualite ?? 0) || 0;
-    const yearlyPayment = monthlyPayment * 12;
-    const totalCost = Number(inputData.coutTotalAcquisition ?? inputData.price ?? inputData.prixBien ?? inputData.prixPaye ?? 0) || 0;
+  const rendementClass = (x) =>
+    this.getRendementClass ? this.getRendementClass(x) : (x >= 6 ? 'positive' : x >= 3 ? 'neutral' : 'negative');
 
-    // Déterminer le meilleur régime
-    const bestRegime = fiscalResults.reduce((a, b) =>
-        (a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b
-    , fiscalResults[0]);
+  const buildDetail = (regime, data) =>
+    this.buildDetailedTable ? this.buildDetailedTable(regime, data) : '<div class="market-comparison-card"><p>Détails indisponibles.</p></div>';
 
-    // ✅ Utiliser les IDs pour la robustesse (détail, sélection, meilleur)
-    const selectedId = opts.selectedId || null;
-    const bestIdFromOpts = opts.bestId || null;
-    const forceRegime = !!opts.forceRegime;
+  // Normalisation des champs d'entrée communs
+  const yearlyRent      = Number(inputData.yearlyRent ?? (inputData.loyerHC ?? inputData.loyerMensuel ?? 0) * 12) || 0;
+  const monthlyPayment  = Number(inputData.monthlyPayment ?? inputData.mensualite ?? 0) || 0;
+  const yearlyPayment   = monthlyPayment * 12;
+  const totalCost       = Number(inputData.coutTotalAcquisition ?? inputData.price ?? inputData.prixBien ?? inputData.prixPaye ?? 0) || 0;
 
-    const detailRegime =
-        fiscalResults.find(r => r.id === opts.detailId) ||
-        bestRegime;
+  // Déterminer le meilleur régime
+  const bestRegime = fiscalResults.reduce(
+    (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
+    fiscalResults[0]
+  );
 
-    // Estimations “détail du calcul” à partir des inputs (affichage uniquement)
-    const yearlyCharges = Number(inputData.yearlyCharges ?? 0) || 0;
-    const taxeFonciere = Number(inputData.taxeFonciere ?? 0) || 0;
-    const loanAmount = Number(inputData.loanAmount ?? inputData.montantEmprunte ?? 0) || 0;
-    const loanRate = Number(inputData.loanRate ?? inputData.taux ?? 0) || 0; // en %
-    const loanDuration = Number(inputData.loanDuration ?? inputData.duree ?? 0) || 0;
-    const gestionFees = Number(inputData.gestionFees ?? inputData.gestionLocativeMontant ?? 0) || 0;
-    const entretienAnnuel = Number(inputData.entretienAnnuel ?? 0) || 0;
-    const chargesCoproNRmois = Number(inputData.chargesCoproNonRecup ?? 0) || 0;
+  // ✅ Utiliser les IDs pour la robustesse (détail, sélection, meilleur)
+  const selectedId     = opts.selectedId || null;
+  const bestIdFromOpts = opts.bestId || null;
+  const forceRegime    = !!opts.forceRegime;
 
-    // ✅ Remplacement : intérêts annuels réalistes via calculateAnnualInterests
-    const interetsAnnuelsEstimes = this.calculateAnnualInterests(
-        { loanAmount, loanRate, loanDuration },
-        { tableauAmortissement: inputData.tableauAmortissement || [] },
-        1
-    );
+  const detailRegime =
+    fiscalResults.find((r) => r.id === opts.detailId) ||
+    bestRegime;
 
-    const chargesDeductibles = yearlyCharges
-        + taxeFonciere
-        + interetsAnnuelsEstimes   // ← remplace loanAmount * (loanRate / 100)
-        + gestionFees
-        + entretienAnnuel
-        + (chargesCoproNRmois * 12);
+  // ————————————————————————————————————————————————
+  // Bloc “estimation” ancré sur le calcul réel si dispo
+  // ————————————————————————————————————————————————
+  const yearlyCharges      = Number(inputData.yearlyCharges ?? 0) || 0;
+  const taxeFonciere       = Number(inputData.taxeFonciere ?? 0) || 0;
+  const loanAmount         = Number(inputData.loanAmount ?? inputData.montantEmprunte ?? 0) || 0;
+  const loanRate           = Number(inputData.loanRate ?? inputData.taux ?? 0) || 0; // %
+  const loanDuration       = Number(inputData.loanDuration ?? inputData.duree ?? 0) || 0;
+  const gestionFees        = Number(inputData.gestionFees ?? inputData.gestionLocativeMontant ?? 0) || 0;
+  const entretienAnnuel    = Number(inputData.entretienAnnuel ?? 0) || 0;
+  const chargesCoproNRmois = Number(inputData.chargesCoproNonRecup ?? 0) || 0;
 
-    const baseImposableEstimee = Math.max(0, yearlyRent - chargesDeductibles);
+  // Intérêts annuels réalistes via calculateAnnualInterests
+  const interetsAnnuelsEstimes = this.calculateAnnualInterests(
+    { loanAmount, loanRate, loanDuration },
+    { tableauAmortissement: inputData.tableauAmortissement || [] },
+    1
+  );
 
-    // Rendu principal
-    return `
-        <!-- Résumé du bien -->
-        <div class="property-summary">
-            <h3>📊 Résumé de votre investissement</h3>
-            <div class="summary-grid">
-                <div class="summary-item">
-                    <span class="label">🏛️ Type d'acquisition:</span>
-                    <span class="value">${inputData.typeAchat === 'encheres' ? 'Vente aux enchères' : 'Achat classique'}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">📍 Localisation:</span>
-                    <span class="value">${inputData.city || inputData.ville?.nom || 'Non renseignée'}${inputData.department ? ` (${inputData.department})` : ''}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">🏠 Bien:</span>
-                    <span class="value">${(inputData.propertyType || 'Logement')} - ${(inputData.surface || 0)} m²</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">💰 Prix d'achat:</span>
-                    <span class="value">${fmt(inputData.price ?? inputData.prixBien ?? inputData.prixPaye ?? 0)}</span>
-                </div>
-                ${Number(inputData.travauxRenovation ?? 0) > 0 ? `
-                <div class="summary-item">
-                    <span class="label">🔨 Travaux initiaux:</span>
-                    <span class="value">${fmt(inputData.travauxRenovation)}</span>
-                </div>` : ''}
-                <div class="summary-item">
-                    <span class="label">💸 Coût total:</span>
-                    <span class="value" style="font-weight: 600; color: #00bfff;">${fmt(totalCost)}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">🏦 Financement:</span>
-                    <span class="value">${(loanRate || inputData.taux || 0)}% sur ${(inputData.loanDuration ?? inputData.duree ?? 0)} ans</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">💵 Loyer mensuel (HC estimé):</span>
-                    <span class="value">${fmt((yearlyRent/12) || (inputData.loyerHC ?? inputData.loyerMensuel ?? 0))}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">📊 TMI:</span>
-                    <span class="value">${inputData.tmi ?? 0}%</span>
-                </div>
-                ${chargesCoproNRmois ? `
-                <div class="summary-item">
-                    <span class="label">🏢 Charges copro non récup.:</span>
-                    <span class="value">${fmt(chargesCoproNRmois)}/mois</span>
-                </div>` : ''}
-            </div>
+  // 🔗 Ancrage estimation sur le calcul réel du régime (si dispo)
+  const r            = detailRegime?._detailedCalc;
+  const affRevenus   = r ? r.revenusNetsCF
+                         : (yearlyRent - gestionFees); // fallback simple (HC - gestion)
+  const affCharges   = r ? r.totalCharges
+                         : (yearlyCharges
+                            + taxeFonciere
+                            + interetsAnnuelsEstimes
+                            + gestionFees
+                            + entretienAnnuel
+                            + (chargesCoproNRmois * 12));
+  const affBaseImp   = r ? r.baseImposable
+                         : Math.max(0, affRevenus - affCharges);
+  const affImpots    = r ? r.totalImpots
+                         : Math.abs(detailRegime.impotAnnuel || 0);
 
-            ${(inputData.gestionLocative || (inputData.vacanceLocative ?? 0) > 5 || (inputData.travauxRenovation ?? 0) > 0 || inputData.typeAchat === 'encheres') ? `
-            <div class="parameter-modified" style="margin-top:10px;padding:10px;background:rgba(255,193,7,0.1);border-radius:6px;">
-                <i class="fas fa-info-circle" style="color:#ffc107;"></i>
-                Paramètres avancés pris en compte :
-                ${inputData.gestionLocative ? ' Gestion locative' : ''}
-                ${(inputData.vacanceLocative ?? 0) > 5 ? ` Vacance locative (${inputData.vacanceLocative}%)` : ''}
-                ${(inputData.travauxRenovation ?? 0) > 0 ? ` Travaux initiaux (${fmt(inputData.travauxRenovation)})` : ''}
-                ${inputData.typeAchat === 'encheres' ? ' Frais enchères personnalisés' : ''}
-            </div>` : ''}
+  // Rendu principal
+  return `
+    <!-- Résumé du bien -->
+    <div class="property-summary">
+      <h3>📊 Résumé de votre investissement</h3>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="label">🏛️ Type d'acquisition:</span>
+          <span class="value">${inputData.typeAchat === 'encheres' ? 'Vente aux enchères' : 'Achat classique'}</span>
         </div>
-
-        <!-- Carte du régime détaillé -->
-        <div class="best-regime-card">
-            <h3>
-                ${forceRegime && selectedId ? '⚖️ Régime fiscal choisi' : '🏆 Meilleur régime fiscal'} :
-                ${detailRegime.nom}
-            </h3>
-
-            <div class="regime-benefits">
-                <div class="benefit-item">
-                    <h4>💸 Cash-flow mensuel</h4>
-                    <p class="amount ${detailRegime.cashflowMensuel >= 0 ? 'positive' : 'negative'}">
-                        ${detailRegime.cashflowMensuel >= 0 ? '+' : ''}${fmt(detailRegime.cashflowMensuel)}
-                    </p>
-                </div>
-                <div class="benefit-item">
-                    <h4>📊 Rendement brut / coût total</h4>
-                    <p class="amount ${rendementClass((yearlyRent / (totalCost || 1)) * 100)}">
-                        ${((yearlyRent / (totalCost || 1)) * 100).toFixed(2)} %
-                    </p>
-                </div>
-            </div>
-
-            <!-- Détail du calcul (affichage) -->
-            <div class="fiscal-calculation-details">
-                <h4>📋 Détail du calcul avec vos données</h4>
-                <table class="calculation-table">
-                    <tr>
-                        <td>Revenus locatifs annuels (HC) :</td>
-                        <td class="positive">+${fmt(yearlyRent)}</td>
-                    </tr>
-                    <tr>
-                        <td>Charges déductibles (estimation) :</td>
-                        <td class="negative">-${fmt(chargesDeductibles)}</td>
-                    </tr>
-                    <tr>
-                        <td>Base imposable (estimation) :</td>
-                        <td>${fmt(baseImposableEstimee)}</td>
-                    </tr>
-                    <tr>
-                        <td>Impôt (selon régime) :</td>
-                        <td class="negative">-${fmt(Math.abs(detailRegime.impotAnnuel || 0))}</td>
-                    </tr>
-                    <tr>
-                        <td>Mensualités de crédit (annuelles) :</td>
-                        <td class="negative">-${fmt(yearlyPayment)}</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td><strong>Résultat net annuel :</strong></td>
-                        <td class="${(detailRegime.cashflowNetAnnuel ?? 0) >= 0 ? 'positive' : 'negative'}">
-                            <strong>${fmt(detailRegime.cashflowNetAnnuel || 0)}</strong>
-                        </td>
-                    </tr>
-                </table>
-
-                <button class="btn-expand-table" id="btn-fiscal-detail" type="button">
-                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                    <span>Voir le détail complet</span>
-                </button>
-            </div>
+        <div class="summary-item">
+          <span class="label">📍 Localisation:</span>
+          <span class="value">${inputData.city || inputData.ville?.nom || 'Non renseignée'}${inputData.department ? ` (${inputData.department})` : ''}</span>
         </div>
-
-        <!-- Tableau détaillé (caché par défaut) -->
-        <div id="detailed-fiscal-table" style="display:none;">
-            ${buildDetail(detailRegime, inputData)}
+        <div class="summary-item">
+          <span class="label">🏠 Bien:</span>
+          <span class="value">${(inputData.propertyType || 'Logement')} - ${(inputData.surface || 0)} m²</span>
         </div>
-
-        <!-- Tableau comparatif avec badges -->
-        <div class="comparison-table">
-            <h3>📊 Comparaison des régimes fiscaux</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Régime</th>
-                        <th>Cash-flow mensuel</th>
-                        <th>Cash-flow annuel</th>
-                        <th>Impôt annuel</th>
-                        <th>cash-flow / coût total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${fiscalResults.map(regime => {
-                        const rendementNet = (Number(regime.cashflowNetAnnuel || 0) / (totalCost || 1)) * 100;
-                        const isSelected = selectedId ? regime.id === selectedId : false;
-                        const isBest = bestIdFromOpts ? regime.id === bestIdFromOpts : regime.id === bestRegime.id;
-
-                        return `
-                        <tr class="${isBest ? 'best-regime' : ''}">
-                            <td>
-                                <i class="fas ${regime.icone || 'fa-home'}"></i>
-                                ${regime.nom}
-                                ${isSelected ? '<span class="regime-badge current">Régime actuel</span>' : ''}
-                                ${isBest ? '<span class="regime-badge">Meilleur</span>' : ''}
-                            </td>
-                            <td class="${(regime.cashflowMensuel ?? 0) >= 0 ? 'positive' : 'negative'}">
-                                ${fmt(regime.cashflowMensuel || 0)}
-                            </td>
-                            <td class="${(regime.cashflowNetAnnuel ?? 0) >= 0 ? 'positive' : 'negative'}">
-                                ${fmt(regime.cashflowNetAnnuel || 0)}
-                            </td>
-                            <td>${fmt(Math.abs(regime.impotAnnuel || 0))}</td>
-                            <td class="${rendementClass(rendementNet)}">
-                                ${isFinite(rendementNet) ? rendementNet.toFixed(2) : '—'}%
-                            </td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
+        <div class="summary-item">
+          <span class="label">💰 Prix d'achat:</span>
+          <span class="value">${fmt(inputData.price ?? inputData.prixBien ?? inputData.prixPaye ?? 0)}</span>
         </div>
-
-        <!-- Conteneurs de graphiques (scripts existants inchangés) -->
-        <div class="charts-container" style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin:30px 0;">
-            <div class="chart-wrapper">
-                <h4 style="text-align:center;color:#e2e8f0;">Cash-flow net annuel par régime</h4>
-                <canvas id="fiscal-cashflow-chart" style="height:300px;"></canvas>
-            </div>
-            <div class="chart-wrapper">
-                <h4 style="text-align:center;color:#e2e8f0;">Rendement net par régime</h4>
-                <canvas id="fiscal-rendement-chart" style="height:300px;"></canvas>
-            </div>
+        ${Number(inputData.travauxRenovation ?? 0) > 0 ? `
+        <div class="summary-item">
+          <span class="label">🔨 Travaux initiaux:</span>
+          <span class="value">${fmt(inputData.travauxRenovation)}</span>
+        </div>` : ''}
+        <div class="summary-item">
+          <span class="label">💸 Coût total:</span>
+          <span class="value" style="font-weight: 600; color: #00bfff;">${fmt(totalCost)}</span>
         </div>
+        <div class="summary-item">
+          <span class="label">🏦 Financement:</span>
+          <span class="value">${(loanRate || inputData.taux || 0)}% sur ${(inputData.loanDuration ?? inputData.duree ?? 0)} ans</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">💵 Loyer mensuel (HC estimé):</span>
+          <span class="value">${fmt((yearlyRent / 12) || (inputData.loyerHC ?? inputData.loyerMensuel ?? 0))}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">📊 TMI:</span>
+          <span class="value">${inputData.tmi ?? 0}%</span>
+        </div>
+        ${chargesCoproNRmois ? `
+        <div class="summary-item">
+          <span class="label">🏢 Charges copro non récup.:</span>
+          <span class="value">${fmt(chargesCoproNRmois)}/mois</span>
+        </div>` : ''}
+      </div>
 
-        <!-- Debug helper -->
-        <script>
-            window.lastAnalysisData = {
-                input: ${JSON.stringify(inputData || {})},
-                results: ${JSON.stringify(fiscalResults || [])},
-                timestamp: new Date()
-            };
-            console.log('✅ Analyse fiscale: rendu HTML généré.');
-        </script>
-    `;
+      ${(inputData.gestionLocative || (inputData.vacanceLocative ?? 0) > 5 || (inputData.travauxRenovation ?? 0) > 0 || inputData.typeAchat === 'encheres') ? `
+      <div class="parameter-modified" style="margin-top:10px;padding:10px;background:rgba(255,193,7,0.1);border-radius:6px;">
+        <i class="fas fa-info-circle" style="color:#ffc107;"></i>
+        Paramètres avancés pris en compte :
+        ${inputData.gestionLocative ? ' Gestion locative' : ''}
+        ${(inputData.vacanceLocative ?? 0) > 5 ? ` Vacance locative (${inputData.vacanceLocative}%)` : ''}
+        ${(inputData.travauxRenovation ?? 0) > 0 ? ` Travaux initiaux (${fmt(inputData.travauxRenovation)})` : ''}
+        ${inputData.typeAchat === 'encheres' ? ' Frais enchères personnalisés' : ''}
+      </div>` : ''}
+    </div>
+
+    <!-- Carte du régime détaillé -->
+    <div class="best-regime-card">
+      <h3>
+        ${forceRegime && selectedId ? '⚖️ Régime fiscal choisi' : '🏆 Meilleur régime fiscal'} :
+        ${detailRegime.nom}
+      </h3>
+
+      <div class="regime-benefits">
+        <div class="benefit-item">
+          <h4>💸 Cash-flow mensuel</h4>
+          <p class="amount ${detailRegime.cashflowMensuel >= 0 ? 'positive' : 'negative'}">
+            ${detailRegime.cashflowMensuel >= 0 ? '+' : ''}${fmt(detailRegime.cashflowMensuel)}
+          </p>
+        </div>
+        <div class="benefit-item">
+          <h4>📊 Rendement brut / coût total</h4>
+          <p class="amount ${rendementClass((yearlyRent / (totalCost || 1)) * 100)}">
+            ${((yearlyRent / (totalCost || 1)) * 100).toFixed(2)} %
+          </p>
+        </div>
+      </div>
+
+      <!-- Détail du calcul (affichage) -->
+      <div class="fiscal-calculation-details">
+        <h4>📋 Détail du calcul avec vos données</h4>
+        <table class="calculation-table">
+          <tr>
+            <td>Revenus nets (base CF) :</td>
+            <td class="positive">+${fmt(affRevenus)}</td>
+          </tr>
+          <tr>
+            <td>Charges déductibles (selon régime) :</td>
+            <td class="negative">-${fmt(affCharges)}</td>
+          </tr>
+          <tr>
+            <td>Base imposable (estimation) :</td>
+            <td>${fmt(affBaseImp)}</td>
+          </tr>
+          <tr>
+            <td>Impôts & prélèvements (estimation) :</td>
+            <td class="negative">-${fmt(Math.abs(affImpots))}</td>
+          </tr>
+          <tr>
+            <td>Mensualités de crédit (annuelles) :</td>
+            <td class="negative">-${fmt(yearlyPayment)}</td>
+          </tr>
+          <tr class="total-row">
+            <td><strong>Résultat net annuel :</strong></td>
+            <td class="${(detailRegime.cashflowNetAnnuel ?? 0) >= 0 ? 'positive' : 'negative'}">
+              <strong>${fmt(detailRegime.cashflowNetAnnuel || 0)}</strong>
+            </td>
+          </tr>
+        </table>
+
+        <button class="btn-expand-table" id="btn-fiscal-detail" type="button">
+          <i class="fas fa-chevron-down" aria-hidden="true"></i>
+          <span>Voir le détail complet</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tableau détaillé (caché par défaut) -->
+    <div id="detailed-fiscal-table" style="display:none;">
+      ${buildDetail(detailRegime, inputData)}
+    </div>
+
+    <!-- Tableau comparatif avec badges -->
+    <div class="comparison-table">
+      <h3>📊 Comparaison des régimes fiscaux</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Régime</th>
+            <th>Cash-flow mensuel</th>
+            <th>Cash-flow annuel</th>
+            <th>Impôt annuel</th>
+            <th>cash-flow / coût total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            fiscalResults.map(regime => {
+              const rendementNet = (Number(regime.cashflowNetAnnuel || 0) / (totalCost || 1)) * 100;
+              const isSelected   = selectedId ? regime.id === selectedId : false;
+              const isBest       = bestIdFromOpts ? regime.id === bestIdFromOpts : regime.id === bestRegime.id;
+
+              return `
+                <tr class="${isBest ? 'best-regime' : ''}">
+                  <td>
+                    <i class="fas ${regime.icone || 'fa-home'}"></i>
+                    ${regime.nom}
+                    ${isSelected ? '<span class="regime-badge current">Régime actuel</span>' : ''}
+                    ${isBest ? '<span class="regime-badge">Meilleur</span>' : ''}
+                  </td>
+                  <td class="${(regime.cashflowMensuel ?? 0) >= 0 ? 'positive' : 'negative'}">
+                    ${fmt(regime.cashflowMensuel || 0)}
+                  </td>
+                  <td class="${(regime.cashflowNetAnnuel ?? 0) >= 0 ? 'positive' : 'negative'}">
+                    ${fmt(regime.cashflowNetAnnuel || 0)}
+                  </td>
+                  <td>${fmt(Math.abs(regime.impotAnnuel || 0))}</td>
+                  <td class="${rendementClass(rendementNet)}">
+                    ${isFinite(rendementNet) ? rendementNet.toFixed(2) : '—'}%
+                  </td>
+                </tr>`;
+            }).join('')
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Conteneurs de graphiques (scripts existants inchangés) -->
+    <div class="charts-container" style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin:30px 0;">
+      <div class="chart-wrapper">
+        <h4 style="text-align:center;color:#e2e8f0;">Cash-flow net annuel par régime</h4>
+        <canvas id="fiscal-cashflow-chart" style="height:300px;"></canvas>
+      </div>
+      <div class="chart-wrapper">
+        <h4 style="text-align:center;color:#e2e8f0;">Rendement net par régime</h4>
+        <canvas id="fiscal-rendement-chart" style="height:300px;"></canvas>
+      </div>
+    </div>
+
+    <!-- Debug helper -->
+    <script>
+      window.lastAnalysisData = {
+        input: ${JSON.stringify(inputData || {})},
+        results: ${JSON.stringify(fiscalResults || [])},
+        timestamp: new Date()
+      };
+      console.log('✅ Analyse fiscale: rendu HTML généré.');
+    </script>
+  `;
 }
 
 /**
