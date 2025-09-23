@@ -1128,13 +1128,18 @@ calculateFraisAcquisition(prix, typeAchat, params) {
   }
 }
 
-  /**
+ /**
  * Construit la section revenus (affichage corrigé de la formule de vacance)
+ * + Badges pédagogiques HC/CC
  */
 buildRevenusSection(calc, params) {
   return `
     <tr class="section-header">
-      <td colspan="3"><strong>💰 REVENUS LOCATIFS</strong></td>
+      <td colspan="3">
+        <strong>💰 REVENUS LOCATIFS</strong>
+        <span class="badge badge-hc">CF sur HC</span>
+        <span class="badge badge-cc">Fiscal sur CC</span>
+      </td>
     </tr>
     <tr>
       <td>Loyer mensuel HC</td>
@@ -1149,7 +1154,7 @@ buildRevenusSection(calc, params) {
     <tr>
       <td>Vacance locative (${calc.vacanceLocative}%)</td>
       <td class="text-right negative">-${this.formatCurrency(calc.vacanceAmount)}</td>
-      <td class="formula">= (Loyer HC + charges récup.) × 12 × ${calc.vacanceLocative}%</td>
+      <td class="formula">= (HC + charges récup.) × 12 × ${calc.vacanceLocative}%  <!-- CC pour fiscal --></td>
     </tr>
     ${calc.fraisGestion > 0 ? `
     <tr>
@@ -1168,6 +1173,7 @@ buildRevenusSection(calc, params) {
 
 /**
  * Construit la section charges (triées par impact)
+ * (inchangée)
  */
 buildChargesSection(calc, params) {
   const charges = [];
@@ -1244,6 +1250,7 @@ buildChargesSection(calc, params) {
 
 /**
  * Construit la section fiscalité
+ * (libellé revenus précisé : base CC)
  */
 buildFiscaliteSection(calc, inputData) {
   const isSCI = calc.regime === "SCI à l'IS";
@@ -1287,7 +1294,7 @@ buildFiscaliteSection(calc, inputData) {
     </tr>
 
     <tr>
-      <td>Revenus nets</td>
+      <td>Revenus nets (base CC)</td>
       <td class="text-right">${this.formatCurrency(calc.revenusNets)}</td>
       <td class="formula">Après vacance et gestion</td>
     </tr>
@@ -1339,58 +1346,58 @@ buildFiscaliteSection(calc, inputData) {
     </tr>
   `;
 }
- 
 
-    /**
-     * Construit la section cash-flow
-     */
+/**
+ * Construit la section cash-flow
+ * (libellé revenus précisé : base HC)
+ */
 buildCashflowSection(calc, inputData) {
-    const mensualiteAnnuelle = inputData.monthlyPayment * 12;
-    
-    // Recalculer les charges cash pour l'affichage
-const chargesCashAnnuel = 
+  const mensualiteAnnuelle = inputData.monthlyPayment * 12;
+
+  // Recalculer les charges cash pour l'affichage
+  const chargesCashAnnuel = 
     calc.taxeFonciere +
     calc.chargesCoproNonRecup +
     calc.entretienAnnuel +
     calc.assurancePNO;
-    
-    return `
-        <tr class="section-header">
-            <td colspan="3"><strong>💰 CASH-FLOW</strong></td>
-        </tr>
-        <tr>
-            <td>Revenus nets après impôts</td>
-            <td class="text-right positive">+${this.formatCurrency(calc.revenusNetsCF - calc.totalImpots)}</td>
-            <td class="formula">= Revenus - impôts</td>
-        </tr>
-        <tr>
-            <td>Charges cash annuelles</td>
-            <td class="text-right negative">-${this.formatCurrency(chargesCashAnnuel)}</td>
-            <td class="formula">  TF + copro + entretien + PNO${calc.fraisGestion ? ' (gestion déjà déduite des revenus)' : ''}</td>
-        </tr>
-        <tr>
-            <td>Mensualité crédit (capital + intérêts)</td>
-            <td class="text-right negative">-${this.formatCurrency(mensualiteAnnuelle)}</td>
-            <td class="formula">= ${this.formatNumber(inputData.monthlyPayment)} × 12</td>
-        </tr>
-        <tr>
-            <td>Dont remboursement capital</td>
-            <td class="text-right">-${this.formatCurrency(calc.capitalAnnuel)}</td>
-            <td class="formula">Enrichissement</td>
-        </tr>
-        <tr class="total-row ${calc.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
-            <td><strong>Cash-flow net annuel</strong></td>
-            <td class="text-right"><strong>${this.formatCurrency(calc.cashflowNetAnnuel)}</strong></td>
-            <td><strong>${calc.cashflowNetAnnuel >= 0 ? 'Bénéfice' : 'Déficit'}</strong></td>
-        </tr>
-        <tr>
-            <td>Cash-flow mensuel moyen</td>
-            <td class="text-right ${calc.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
-                ${this.formatCurrency(calc.cashflowNetAnnuel / 12)}
-            </td>
-            <td class="formula">= Annuel ÷ 12</td>
-        </tr>
-    `;
+
+  return `
+    <tr class="section-header">
+      <td colspan="3"><strong>💰 CASH-FLOW</strong></td>
+    </tr>
+    <tr>
+      <td>Revenus nets après impôts (base HC)</td>
+      <td class="text-right positive">+${this.formatCurrency(calc.revenusNetsCF - calc.totalImpots)}</td>
+      <td class="formula">= Revenus - impôts</td>
+    </tr>
+    <tr>
+      <td>Charges cash annuelles</td>
+      <td class="text-right negative">-${this.formatCurrency(chargesCashAnnuel)}</td>
+      <td class="formula">TF + copro + entretien + PNO${calc.fraisGestion ? ' (gestion déjà déduite des revenus)' : ''}</td>
+    </tr>
+    <tr>
+      <td>Mensualité crédit (capital + intérêts)</td>
+      <td class="text-right negative">-${this.formatCurrency(mensualiteAnnuelle)}</td>
+      <td class="formula">= ${this.formatNumber(inputData.monthlyPayment)} × 12</td>
+    </tr>
+    <tr>
+      <td>Dont remboursement capital</td>
+      <td class="text-right">-${this.formatCurrency(calc.capitalAnnuel)}</td>
+      <td class="formula">Enrichissement</td>
+    </tr>
+    <tr class="total-row ${calc.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+      <td><strong>Cash-flow net annuel</strong></td>
+      <td class="text-right"><strong>${this.formatCurrency(calc.cashflowNetAnnuel)}</strong></td>
+      <td><strong>${calc.cashflowNetAnnuel >= 0 ? 'Bénéfice' : 'Déficit'}</strong></td>
+    </tr>
+    <tr>
+      <td>Cash-flow mensuel moyen</td>
+      <td class="text-right ${calc.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+        ${this.formatCurrency(calc.cashflowNetAnnuel / 12)}
+      </td>
+      <td class="formula">= Annuel ÷ 12</td>
+    </tr>
+  `;
 }
 
     /**
