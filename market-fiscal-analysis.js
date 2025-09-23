@@ -505,155 +505,222 @@ calculateAnnualInterests(inputData, baseResults, year = 1) {
     }
 
 /**
- * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE
+ * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE (patchée)
  */
 getDetailedCalculations(regime, inputData, params, baseResults) {
-  const loyerHC = inputData.loyerHC;
+  // ─────────────────────────────────────────────────────────────
+  // A) SOCLES DE REVENUS
+  // ─────────────────────────────────────────────────────────────
+  const loyerHC         = inputData.loyerHC;
   const loyerAnnuelBrut = loyerHC * 12;
-  const vacanceAmount = loyerAnnuelBrut * (inputData.vacanceLocative / 100);
-  const loyerNetVacance = loyerAnnuelBrut - vacanceAmount;
-  const fraisGestion = params.gestionLocativeTaux > 0 ? loyerNetVacance * (params.gestionLocativeTaux / 100) : 0;
-  const revenusNets = loyerNetVacance - fraisGestion;
+  const vacanceAmount   = loyerAnnuelBrut * (inputData.vacanceLocative / 100);
 
-  // Intérêts / crédit
-  const interetsAnnuels = this.calculateAnnualInterests(inputData, baseResults);
-  const mensualite = inputData.monthlyPayment;
-  const mensualiteAnnuelle = mensualite * 12;
-  const capitalAnnuel = mensualiteAnnuelle - interetsAnnuels;
+  // ⚠️ Base MICRO = recettes encaissées (HC après vacance), sans gestion
+  const recettesBrutes  = loyerAnnuelBrut - vacanceAmount;
+
+  // La gestion impacte le cash-flow et les régimes RÉELS (pas la base micro)
+  const fraisGestion    = params.gestionLocativeTaux > 0
+    ? recettesBrutes * (params.gestionLocativeTaux / 100)
+    : 0;
+
+  // Revenus nets pour cash-flow et régimes réels
+  const revenusNets = recettesBrutes - fraisGestion;
+
+  // ─────────────────────────────────────────────────────────────
+  // Crédit
+  // ─────────────────────────────────────────────────────────────
+  const interetsAnnuels     = this.calculateAnnualInterests(inputData, baseResults);
+  const mensualite          = inputData.monthlyPayment;
+  const mensualiteAnnuelle  = mensualite * 12;
+  const capitalAnnuel       = mensualiteAnnuelle - interetsAnnuels;
 
   // Variables communes
-  let chargesDeductibles = 0;
-  let baseImposable = 0;
-  let impotRevenu = 0;
-  let prelevementsSociaux = 0;
-  let amortissementBien = 0;
+  let chargesDeductibles    = 0;
+  let baseImposable         = 0;
+  let impotRevenu           = 0;
+  let prelevementsSociaux   = 0;
+  let amortissementBien     = 0;
   let amortissementMobilier = 0;
-  let amortissementTravaux = 0;
-  let cotisationsSociales = 0; // ← pour LMP
+  let amortissementTravaux  = 0;
+  let cotisationsSociales   = 0; // LMP/LMNP assujetti
 
-  // --- NOUVEAU : on switche sur la clé normalisée ---
+  // --- Switch sur clé normalisée ---
   const key = this.normalizeRegimeKey(regime);
 
   switch (key) {
+    // ───────────────────────────────────────────────────────────
+    // B) MICRO-FONCIER
+    // ───────────────────────────────────────────────────────────
     case 'nu_micro': {
-      // Micro-foncier
-      chargesDeductibles = revenusNets * FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT;
-      baseImposable = revenusNets * (1 - FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT);
-      impotRevenu = baseImposable * (inputData.tmi / 100);
-      prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
-      break;
-    }
-
-    case 'nu_reel': {
-      const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
-      const baseAvantPlafond = revenusNets - chargesReelles;
-      baseImposable = Math.max(0, baseAvantPlafond);
-      impotRevenu = baseImposable * (inputData.tmi / 100);
-      prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
-      if (baseAvantPlafond < 0) {
-        const imputable = Math.min(FISCAL_CONSTANTS.DEFICIT_FONCIER_MAX, -baseAvantPlafond);
-        const economieIR = imputable * (inputData.tmi / 100);
-        impotRevenu -= economieIR;
+      if (recettesBrutes > FISCAL_CONSTANTS.MICRO_FONCIER_PLAFOND) {
+        regime._warning = 'Inéligible micro-foncier (> 15 000 €)';
       }
-      chargesDeductibles = chargesReelles;
+      const base = recettesBrutes * (1 - FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT);
+
+      chargesDeductibles  = recettesBrutes * FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT; // affichage
+      baseImposable       = base;
+      impotRevenu         = base * (inputData.tmi / 100);
+      prelevementsSociaux = base * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
       break;
     }
 
+    // ───────────────────────────────────────────────────────────
+    // C) NU AU RÉEL — déficit foncier hors intérêts imputable (10 700 €)
+    // ───────────────────────────────────────────────────────────
+    case 'nu_reel': {
+      const chargesHorsInterets =
+        params.taxeFonciere +
+        (params.chargesCoproNonRecup * 12) +
+        (params.assurancePNO * 12) +
+        params.entretienAnnuel;
+
+      // Déficit HORS intérêts imputable au revenu global (plafonné)
+      const baseAvantInterets   = revenusNets - chargesHorsInterets;
+      const deficitHorsInterets = Math.min(0, baseAvantInterets);
+      const imputableGlobal     = Math.min(FISCAL_CONSTANTS.DEFICIT_FONCIER_MAX, Math.abs(deficitHorsInterets));
+
+      // Résultat foncier après intérêts (≥ 0) = base pour IR/PS
+      const baseApresInterets   = Math.max(0, baseAvantInterets - interetsAnnuels);
+
+      baseImposable             = baseApresInterets;
+      impotRevenu               = baseApresInterets * (inputData.tmi / 100) - (imputableGlobal * (inputData.tmi / 100));
+      prelevementsSociaux       = baseApresInterets * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+
+      chargesDeductibles        = interetsAnnuels + chargesHorsInterets;
+      break;
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // B) LMNP MICRO-BIC (même logique micro : abattement sur recettes brutes)
+    // ───────────────────────────────────────────────────────────
     case 'lmnp_micro': {
-      const base = revenusNets * (1 - FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT);
-      chargesDeductibles = revenusNets * FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT;
-      baseImposable = base;
-      impotRevenu = base * (inputData.tmi / 100);
-      const assujetti = !!inputData.assujettiCotisSociales;
+      if (recettesBrutes > FISCAL_CONSTANTS.MICRO_BIC_PLAFOND) {
+        regime._warning = 'Inéligible micro-BIC (> 77 700 €)';
+      }
+      const base = recettesBrutes * (1 - FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT);
+
+      chargesDeductibles  = recettesBrutes * FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT; // affichage
+      baseImposable       = base;
+      impotRevenu         = base * (inputData.tmi / 100);
+
+      const assujetti     = !!inputData.assujettiCotisSociales;
       prelevementsSociaux = assujetti ? 0 : base * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
       break;
     }
 
+    // ───────────────────────────────────────────────────────────
+    // D) LMNP AU RÉEL — assujetti ⇒ cotisations sociales, PS = 0
+    // ───────────────────────────────────────────────────────────
     case 'lmnp_reel': {
-      const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
-      const baseAmortissable = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
-      amortissementBien = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-      amortissementMobilier = inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
-      amortissementTravaux = (inputData.travauxRenovation || 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-      const totalDeductions = chargesReelles + amortissementBien + amortissementMobilier + amortissementTravaux;
-      baseImposable = Math.max(0, revenusNets - totalDeductions);
-      impotRevenu = baseImposable * (inputData.tmi / 100);
-      const assujetti = !!inputData.assujettiCotisSociales;
-      prelevementsSociaux = assujetti ? 0 : baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
-      chargesDeductibles = chargesReelles;
+      const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
+      const baseAmortissable  = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
+
+      amortissementBien       = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+      amortissementMobilier   = (inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+      amortissementTravaux    = (inputData.travauxRenovation || 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+
+      const totalDeductions   = chargesReelles + amortissementBien + amortissementMobilier + amortissementTravaux;
+
+      baseImposable           = Math.max(0, revenusNets - totalDeductions);
+      impotRevenu             = baseImposable * (inputData.tmi / 100);
+
+      const assujetti         = !!inputData.assujettiCotisSociales;
+      if (assujetti) {
+        const tauxCotis = (Number(inputData.lmpCotisationsTaux) || (FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100)) / 100;
+        const minCotis  = Number(inputData.lmpCotisationsMin)  || FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
+        cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
+        prelevementsSociaux = 0;
+      } else {
+        prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+      }
+
+      chargesDeductibles      = chargesReelles;
       break;
     }
 
+    // ───────────────────────────────────────────────────────────
+    // LMP (réel) — inchangé (logique déjà correcte)
+    // ───────────────────────────────────────────────────────────
     case 'lmp': {
-      // LMP réel (cotisations sociales, pas de PS)
-      const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
-      const baseAmortissable = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
-      amortissementBien = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-      amortissementMobilier = inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
-      amortissementTravaux = (inputData.travauxRenovation || 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+      const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
+      const baseAmortissable  = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
 
-      const baseAvantAmort = revenusNets - chargesReelles;
-      const deficitHorsAmort = Math.min(0, baseAvantAmort);
-      const economieIR = Math.abs(deficitHorsAmort) * (inputData.tmi / 100);
+      amortissementBien       = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+      amortissementMobilier   = inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+      amortissementTravaux    = (inputData.travauxRenovation || 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
 
-      const amortTotal = amortissementBien + amortissementMobilier + amortissementTravaux;
-      baseImposable = Math.max(0, baseAvantAmort - amortTotal);
+      const baseAvantAmort    = revenusNets - chargesReelles;
+      const deficitHorsAmort  = Math.min(0, baseAvantAmort);
+      const economieIR        = Math.abs(deficitHorsAmort) * (inputData.tmi / 100);
 
-      impotRevenu = baseImposable * (inputData.tmi / 100) - economieIR;
-      prelevementsSociaux = 0;
+      const amortTotal        = amortissementBien + amortissementMobilier + amortissementTravaux;
+      baseImposable           = Math.max(0, baseAvantAmort - amortTotal);
+
+      impotRevenu             = baseImposable * (inputData.tmi / 100) - economieIR;
+      prelevementsSociaux     = 0;
 
       const tauxCotis = (Number(inputData.lmpCotisationsTaux) || (FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100)) / 100;
       const minCotis  = Number(inputData.lmpCotisationsMin)  || FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
-      cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
+      cotisationsSociales     = Math.max(baseImposable * tauxCotis, minCotis);
 
-      chargesDeductibles = chargesReelles + amortTotal;
+      chargesDeductibles      = chargesReelles + amortTotal;
       break;
     }
 
+    // ───────────────────────────────────────────────────────────
+    // E) SCI À L’IS — pas de double comptage des amortissements
+    // ───────────────────────────────────────────────────────────
     case 'sci_is': {
-      const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
-      const baseAmortissable = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
-      const amortBien = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-      const amortMob  = (inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+      const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
+      const baseAmortissable  = inputData.price * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
+      const amortBien         = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+      const amortMob          = (inputData.price * FISCAL_CONSTANTS.LMNP_PART_MOBILIER) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
 
-      chargesDeductibles = chargesReelles + amortBien + amortMob;
-      baseImposable = Math.max(0, revenusNets - chargesDeductibles);
+      // Charges "réelles" uniquement ici ; amortissements séparés
+      chargesDeductibles      = chargesReelles;
+      amortissementBien       = amortBien;
+      amortissementMobilier   = amortMob;
+      amortissementTravaux    = 0;
 
-      const eligible15 = !!inputData.sciEligibleTauxReduit;
+      const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
+      const eligible15        = !!inputData.sciEligibleTauxReduit;
+
       if (eligible15) {
-        const tranche = Math.min(baseImposable, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
-        const surplus = Math.max(0, baseImposable - tranche);
-        impotRevenu = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
+        const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
+        const surplus = Math.max(0, resultatAvantIS - tranche);
+        impotRevenu   = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
       } else {
-        impotRevenu = baseImposable * 0.25;
+        impotRevenu   = resultatAvantIS * 0.25;
       }
-      prelevementsSociaux = 0;
 
-      amortissementBien = amortBien;
-      amortissementMobilier = amortMob;
-      amortissementTravaux = 0;
+      prelevementsSociaux     = 0;
+      baseImposable           = resultatAvantIS;
       break;
     }
 
+    // ───────────────────────────────────────────────────────────
+    // Par défaut : calque "nu réel"
+    // ───────────────────────────────────────────────────────────
     default: {
-      // Sécurité : calque location nue au réel
       const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
-      chargesDeductibles = chargesReelles;
-      baseImposable = Math.max(0, revenusNets - chargesReelles);
-      impotRevenu = baseImposable * (inputData.tmi / 100);
-      prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+      chargesDeductibles   = chargesReelles;
+      baseImposable        = Math.max(0, revenusNets - chargesReelles);
+      impotRevenu          = baseImposable * (inputData.tmi / 100);
+      prelevementsSociaux  = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
     }
   }
 
-  // Total impôts & contributions (inclut les cotisations sociales le cas échéant)
+  // ─────────────────────────────────────────────────────────────
+  // Totaux & retours
+  // ─────────────────────────────────────────────────────────────
   const totalImpots = impotRevenu + prelevementsSociaux + cotisationsSociales;
 
-  // Charges cash (pour le CF)
+  // Charges cash pour le CF (la gestion est déjà retranchée des revenus)
   const chargesCashAnnuel =
-    params.taxeFonciere +
-    params.entretienAnnuel +
-    (params.assurancePNO * 12) +
-    (params.chargesCoproNonRecup * 12);
+      params.taxeFonciere +
+      params.entretienAnnuel +
+      (params.assurancePNO * 12) +
+      (params.chargesCoproNonRecup * 12);
 
   const cashflowNetAnnuel =
     revenusNets -
@@ -661,9 +728,8 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
     totalImpots -
     mensualiteAnnuelle;
 
-  // --- NOUVEAU : isMicro + totalCharges basés sur la clé ---
+  // totalCharges pour l’affichage (amortissements ajoutés 1 seule fois)
   const isMicro = (key === 'nu_micro' || key === 'lmnp_micro');
-
   const totalCharges =
     (key === 'lmp')
       ? chargesDeductibles
@@ -696,7 +762,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
     baseImposable,
     impotRevenu,
     prelevementsSociaux,
-    cotisationsSociales, // ← affichage LMP
+    cotisationsSociales,
     totalImpots,
 
     // Cash-flow
