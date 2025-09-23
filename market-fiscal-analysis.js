@@ -452,58 +452,66 @@ getAllAdvancedParams() {
     };
 }
 
-    /**
-     * Calcule les intérêts annuels avec précision - V3
-     */
+/**
+ * Calcule les intérêts annuels avec précision - V3 (sécurisé 0% d’intérêt)
+ */
 calculateAnnualInterests(inputData, baseResults, year = 1) {
-    // 1️⃣ Cas idéal : on dispose du tableau d'amortissement précis
-    if (baseResults?.tableauAmortissement?.length >= 12) {
-        const start = (year - 1) * 12;
-        const end = Math.min(year * 12, baseResults.tableauAmortissement.length);
-        return baseResults.tableauAmortissement
-            .slice(start, end)
-            .reduce((sum, m) => sum + (m.interets || 0), 0);
-    }
+  // 1️⃣ Cas idéal : on dispose du tableau d'amortissement précis
+  if (baseResults?.tableauAmortissement?.length >= 12) {
+    const start = (year - 1) * 12;
+    const end = Math.min(year * 12, baseResults.tableauAmortissement.length);
+    return baseResults.tableauAmortissement
+      .slice(start, end)
+      .reduce((sum, m) => sum + (m.interets || 0), 0);
+  }
 
-    // 2️⃣ Approximation analytique avec formule actuarielle (sans tableau)
-    const r = (inputData.loanRate / 100) / 12;  // taux mensuel
-    const M = this.calculateMonthlyPayment(
-        inputData.loanAmount,
-        inputData.loanRate,
-        inputData.loanDuration
-    );
-    
-    const n0 = (year - 1) * 12;  // nombre de mois déjà écoulés
-    const n1 = Math.min(year * 12, inputData.loanDuration * 12);  // fin d'année
-    
-    // Formule actuarielle exacte du capital restant dû après n mensualités
-    const CRD = (n) => {
-        if (n === 0) return inputData.loanAmount;
-        if (n >= inputData.loanDuration * 12) return 0;
-        
-        return inputData.loanAmount * Math.pow(1 + r, n) - 
-               M * (Math.pow(1 + r, n) - 1) / r;
-    };
-    
-    // Capital restant dû au début et à la fin de l'année
-    const crdStart = CRD(n0);
-    const crdEnd = CRD(n1);
-    
-    // Méthode des trapèzes : moyenne du CRD × taux annuel
-    const capitalMoyen = (crdStart + crdEnd) / 2;
-    return capitalMoyen * (inputData.loanRate / 100);
+  // 2️⃣ Approximation analytique avec formule actuarielle (sans tableau)
+  const annualRate = Number(inputData.loanRate ?? 0);   // en %
+  const r = (annualRate / 100) / 12;                    // taux mensuel
+
+  // ✅ Cas 0% (ou quasi 0) : intérêts nuls, évite la division par r
+  if (!Number.isFinite(r) || Math.abs(r) < 1e-12) return 0;
+
+  const M = this.calculateMonthlyPayment(
+    Number(inputData.loanAmount ?? 0),
+    annualRate,
+    Number(inputData.loanDuration ?? 0)
+  );
+
+  const totalMonths = Number(inputData.loanDuration ?? 0) * 12;
+  const n0 = Math.max(0, (year - 1) * 12);                    // début d'année (mois)
+  const n1 = Math.min(year * 12, totalMonths);                // fin d'année (mois)
+  if (n1 <= n0 || totalMonths <= 0) return 0;
+
+  // Formule actuarielle exacte du capital restant dû après n mensualités
+  const CRD = (n) => {
+    const P = Number(inputData.loanAmount ?? 0);
+    if (n === 0) return P;
+    if (n >= totalMonths) return 0;
+
+    const pow = Math.pow(1 + r, n);
+    return P * pow - M * (pow - 1) / r;
+  };
+
+  // Capital restant dû au début et à la fin de l'année
+  const crdStart = CRD(n0);
+  const crdEnd = CRD(n1);
+
+  // Méthode des trapèzes : moyenne du CRD × taux annuel
+  const capitalMoyen = (crdStart + crdEnd) / 2;
+  return capitalMoyen * (annualRate / 100);
 }
-    /**
-     * Calcule les charges réelles déductibles
-     */
-    calculateRealCharges(inputData, params, interetsAnnuels) {
-        return interetsAnnuels + 
-               params.taxeFonciere + 
-               (params.chargesCoproNonRecup * 12) + 
-               (params.assurancePNO * 12) + 
-               params.entretienAnnuel;
-    }
 
+/**
+ * Calcule les charges réelles déductibles
+ */
+calculateRealCharges(inputData, params, interetsAnnuels) {
+  return interetsAnnuels +
+         Number(params.taxeFonciere ?? 0) +
+         Number(params.chargesCoproNonRecup ?? 0) * 12 +
+         Number(params.assurancePNO ?? 0) * 12 +
+         Number(params.entretienAnnuel ?? 0);
+}
 /**
  * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE (patchée)
  * Correctifs inclus :
@@ -835,96 +843,100 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
         `;
     }
 
-    /**
-     * Construit la section coût initial de l'opération
-     */
-   buildCoutInitialSection(inputData, params, coutTotalProjet = null) {
-        // Calcul des frais selon le type d'achat
-        let fraisAcquisition = 0;
-        let detailFrais = [];
-        
-        if (inputData.typeAchat === 'encheres') {
-            // Frais pour vente aux enchères
-            const droitsEnregistrement = inputData.price * (params.droitsEnregistrement / 100);
-            const emoluments = this.calculateEmoluments(inputData.price, params);
-            const honorairesAvocat = params.honorairesAvocat;
-            const fraisDivers = params.fraisFixes + params.avocatPorterEnchere + params.suiviDossier;
-            
-            fraisAcquisition = droitsEnregistrement + emoluments + honorairesAvocat + fraisDivers;
-            
-            detailFrais = [
-                { label: "Droits d'enregistrement", value: droitsEnregistrement, formula: `${params.droitsEnregistrement}% du prix` },
-                { label: "Émoluments du poursuivant", value: emoluments, formula: "Selon barème" },
-                { label: "Honoraires avocat", value: honorairesAvocat, formula: "Forfait" },
-                { label: "Frais divers (admin, suivi...)", value: fraisDivers, formula: "Frais fixes" }
-            ];
-        } else {
-            // Frais pour achat classique
-            const fraisNotaire = inputData.price * (params.fraisNotaireTaux / 100);
-            const commission = inputData.price * (params.commissionImmo / 100);
-            
-            fraisAcquisition = fraisNotaire + commission;
-            
-            detailFrais = [
-                { label: "Frais de notaire", value: fraisNotaire, formula: `${params.fraisNotaireTaux}% du prix` },
-                { label: "Commission immobilière", value: commission, formula: `${params.commissionImmo}% du prix` }
-            ];
-        }
-        
-        // Ajouter les frais bancaires
-        const fraisBancaires = params.fraisBancairesDossier + params.fraisBancairesCompte + 
-                              (inputData.loanAmount * params.fraisGarantie / 100);
-        
-        detailFrais.push({ 
-            label: "Frais bancaires totaux", 
-            value: fraisBancaires, 
-            formula: "Dossier + compte + garantie" 
-        });
-        
-        const coutTotalOperation = coutTotalProjet || inputData.coutTotalAcquisition || 
+/**
+ * Construit la section coût initial de l'opération
+ */
+buildCoutInitialSection(inputData, params, coutTotalProjet = null) {
+  // Calcul des frais selon le type d'achat
+  let fraisAcquisition = 0;
+  let detailFrais = [];
+  
+  if (inputData.typeAchat === 'encheres') {
+      // Frais pour vente aux enchères
+      const droitsEnregistrement = inputData.price * (params.droitsEnregistrement / 100);
+      const emoluments          = this.calculateEmoluments(inputData.price, params);
+      const honorairesAvocat    = params.honorairesAvocat;
+      const publiciteFonciere   = inputData.price * (params.publiciteFonciere / 100); // 🆕
+      const tvaHonoraires       = honorairesAvocat * (params.tvaHonoraires / 100);    // 🆕
+      const fraisDivers         = params.fraisFixes + params.avocatPorterEnchere + params.suiviDossier;
+      
+      // Inclure tous les postes dans le total d'acquisition (aligné avec calculateFraisAcquisition)
+      fraisAcquisition = droitsEnregistrement + emoluments + honorairesAvocat + tvaHonoraires + publiciteFonciere + fraisDivers;
+      
+      detailFrais = [
+          { label: "Droits d'enregistrement", value: droitsEnregistrement, formula: `${params.droitsEnregistrement}% du prix` },
+          { label: "Émoluments du poursuivant", value: emoluments, formula: "Selon barème" },
+          { label: "Honoraires avocat", value: honorairesAvocat, formula: "Forfait" },
+          { label: "TVA sur honoraires", value: tvaHonoraires, formula: `${params.tvaHonoraires}% des honoraires` },              // 🆕
+          { label: "Publicité foncière", value: publiciteFonciere, formula: `${params.publiciteFonciere}% du prix` },            // 🆕
+          { label: "Frais divers (admin, suivi...)", value: fraisDivers, formula: "Frais fixes" }
+      ];
+  } else {
+      // Frais pour achat classique
+      const fraisNotaire = inputData.price * (params.fraisNotaireTaux / 100);
+      const commission   = inputData.price * (params.commissionImmo / 100);
+      
+      fraisAcquisition = fraisNotaire + commission;
+      
+      detailFrais = [
+          { label: "Frais de notaire", value: fraisNotaire, formula: `${params.fraisNotaireTaux}% du prix` },
+          { label: "Commission immobilière", value: commission, formula: `${params.commissionImmo}% du prix` }
+      ];
+  }
+  
+  // Ajouter les frais bancaires
+  const fraisBancaires = params.fraisBancairesDossier + params.fraisBancairesCompte + 
+                         (inputData.loanAmount * params.fraisGarantie / 100);
+  
+  detailFrais.push({ 
+      label: "Frais bancaires totaux", 
+      value: fraisBancaires, 
+      formula: "Dossier + compte + garantie" 
+  });
+  
+  const coutTotalOperation = coutTotalProjet || inputData.coutTotalAcquisition || 
     (inputData.price + inputData.travauxRenovation + fraisAcquisition + fraisBancaires);
-        
-        return `
-            <tr class="section-header">
-                <td colspan="3"><strong>💰 COÛT INITIAL DE L'OPÉRATION</strong></td>
-            </tr>
-            <tr>
-                <td>Prix d'achat du bien</td>
-                <td class="text-right">${this.formatCurrency(inputData.price)}</td>
-                <td class="formula">Prix négocié</td>
-            </tr>
-            ${inputData.travauxRenovation > 0 ? `
-            <tr>
-                <td>Travaux de rénovation</td>
-                <td class="text-right">${this.formatCurrency(inputData.travauxRenovation)}</td>
-                <td class="formula">Travaux initiaux</td>
-            </tr>
-            ` : ''}
-            ${detailFrais.map(frais => `
-            <tr>
-                <td>${frais.label}</td>
-                <td class="text-right">${this.formatCurrency(frais.value)}</td>
-                <td class="formula">${frais.formula}</td>
-            </tr>
-            `).join('')}
-            <tr class="total-row">
-                <td><strong>Coût total de l'opération</strong></td>
-                <td class="text-right"><strong>${this.formatCurrency(coutTotalOperation)}</strong></td>
-                <td class="formula"><strong>Investissement total</strong></td>
-            </tr>
-            <tr>
-                <td>Apport personnel</td>
-                <td class="text-right">${this.formatCurrency(inputData.apport)}</td>
-                <td class="formula">${((inputData.apport / coutTotalOperation) * 100).toFixed(1)}% du total</td>
-            </tr>
-            <tr>
-                <td>Montant emprunté</td>
-                <td class="text-right">${this.formatCurrency(inputData.loanAmount)}</td>
-                <td class="formula">${((inputData.loanAmount / coutTotalOperation) * 100).toFixed(1)}% du total</td>
-            </tr>
-        `;
-    }
-
+  
+  return `
+      <tr class="section-header">
+          <td colspan="3"><strong>💰 COÛT INITIAL DE L'OPÉRATION</strong></td>
+      </tr>
+      <tr>
+          <td>Prix d'achat du bien</td>
+          <td class="text-right">${this.formatCurrency(inputData.price)}</td>
+          <td class="formula">Prix négocié</td>
+      </tr>
+      ${inputData.travauxRenovation > 0 ? `
+      <tr>
+          <td>Travaux de rénovation</td>
+          <td class="text-right">${this.formatCurrency(inputData.travauxRenovation)}</td>
+          <td class="formula">Travaux initiaux</td>
+      </tr>
+      ` : ''}
+      ${detailFrais.map(frais => `
+      <tr>
+          <td>${frais.label}</td>
+          <td class="text-right">${this.formatCurrency(frais.value)}</td>
+          <td class="formula">${frais.formula}</td>
+      </tr>
+      `).join('')}
+      <tr class="total-row">
+          <td><strong>Coût total de l'opération</strong></td>
+          <td class="text-right"><strong>${this.formatCurrency(coutTotalOperation)}</strong></td>
+          <td class="formula"><strong>Investissement total</strong></td>
+      </tr>
+      <tr>
+          <td>Apport personnel</td>
+          <td class="text-right">${this.formatCurrency(inputData.apport)}</td>
+          <td class="formula">${((inputData.apport / coutTotalOperation) * 100).toFixed(1)}% du total</td>
+      </tr>
+      <tr>
+          <td>Montant emprunté</td>
+          <td class="text-right">${this.formatCurrency(inputData.loanAmount)}</td>
+          <td class="formula">${((inputData.loanAmount / coutTotalOperation) * 100).toFixed(1)}% du total</td>
+      </tr>
+  `;
+}
     /**
      * Calcule les émoluments pour les enchères
      */
@@ -1595,12 +1607,21 @@ generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
     const taxeFonciere = Number(inputData.taxeFonciere ?? 0) || 0;
     const loanAmount = Number(inputData.loanAmount ?? inputData.montantEmprunte ?? 0) || 0;
     const loanRate = Number(inputData.loanRate ?? inputData.taux ?? 0) || 0; // en %
+    const loanDuration = Number(inputData.loanDuration ?? inputData.duree ?? 0) || 0;
     const gestionFees = Number(inputData.gestionFees ?? inputData.gestionLocativeMontant ?? 0) || 0;
     const entretienAnnuel = Number(inputData.entretienAnnuel ?? 0) || 0;
     const chargesCoproNRmois = Number(inputData.chargesCoproNonRecup ?? 0) || 0;
+
+    // ✅ Remplacement : intérêts annuels réalistes via calculateAnnualInterests
+    const interetsAnnuelsEstimes = this.calculateAnnualInterests(
+        { loanAmount, loanRate, loanDuration },
+        { tableauAmortissement: inputData.tableauAmortissement || [] },
+        1
+    );
+
     const chargesDeductibles = yearlyCharges
         + taxeFonciere
-        + (loanAmount * (loanRate / 100))
+        + interetsAnnuelsEstimes   // ← remplace loanAmount * (loanRate / 100)
         + gestionFees
         + entretienAnnuel
         + (chargesCoproNRmois * 12);
