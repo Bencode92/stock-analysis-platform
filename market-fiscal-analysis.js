@@ -1279,11 +1279,11 @@ buildIndicateursSection(calc, inputData) {
         : null;
         
     /* 2️⃣ Rendement net sur coût total (loyers - charges non récupérables) */
-const revenuNetReel = calc.revenusNets
-    - calc.taxeFonciere
-    - calc.chargesCoproNonRecup
-    - calc.entretienAnnuel
-    - calc.assurancePNO;
+const revenuNetReel = (calc.revenusNetsCF
+  - calc.taxeFonciere
+  - calc.chargesCoproNonRecup
+  - calc.entretienAnnuel
+  - calc.assurancePNO);
 const rendementNetReel = (revenuNetReel / coutTotalProjet) * 100;
     
 /* 3️⃣ Taux de couverture du crédit (DSCR) */
