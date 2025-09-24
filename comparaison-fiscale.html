@@ -1590,6 +1590,23 @@ td.neutral {
           </div>
           <span class="form-help">Si activé, la simulation ajoute un PFU de 30% sur les dividendes versés (SCI à l’IS).</span>
         </div>
+
+        <!-- NOUVEAU : distribution des bénéfices (s'affiche si PFU activé) -->
+        <div class="form-group" id="sci-distrib-group" style="display:none;">
+          <label class="form-label" for="sci-distribution">Distribution des bénéfices (SCI)</label>
+          <div class="form-input-wrapper">
+            <input
+              type="range"
+              id="sci-distribution"
+              class="form-input"
+              min="0" max="100" step="5"
+              value=""
+              oninput="document.getElementById('sci-distribution-out').textContent = (this.value === '' ? '—' : this.value + ' %')"
+            >
+            <span id="sci-distribution-out" class="form-help" style="margin-left:8px">—</span>
+          </div>
+          <span class="form-help">Part des bénéfices distribués (0–100%). Si laissé vide, on suppose 0%.</span>
+        </div>
       </div>
     </div>
 
