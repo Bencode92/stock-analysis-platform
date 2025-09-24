@@ -545,7 +545,31 @@ getAllAdvancedParams() {
     applyPFU:               document.getElementById('apply-pfu')?.checked ?? false
   };
 }
+/** AJOUT — normalise la distribution SCI (retourne un ratio 0..1 + messages) */
+normalizeSciDistribution(raw, def = 0) {
+  const msgs = [];
 
+  // valeur par défaut si vide/indéfinie
+  if (raw === '' || raw == null || (typeof raw === 'number' && !isFinite(raw))) {
+    const v0 = Math.max(0, Math.min(1, Number(def) || 0));
+    if (v0 === 0) msgs.push('Distribution non renseignée → 0% par défaut (pas de PFU).');
+    return { val: v0, msgs };
+  }
+
+  // parse tolérant (gère virgule décimale)
+  let v = (typeof raw === 'number') ? raw : parseFloat(String(raw).replace(',', '.'));
+  if (!isFinite(v)) v = Number(def) || 0;
+
+  // si > 1 on suppose un pourcentage (ex: 30 → 0.30)
+  if (v > 1) {
+    v = v / 100;
+    msgs.push('Distribution interprétée comme un pourcentage → convertie en ratio.');
+  }
+
+  // clamp 0..1
+  v = Math.max(0, Math.min(1, v));
+  return { val: v, msgs };
+}
 /**
  * Calcule les intérêts annuels avec précision – somme fermée (gère 0% et échéancier)
  * year = 1 → mois 0..11, year = 2 → mois 12..23, etc.
