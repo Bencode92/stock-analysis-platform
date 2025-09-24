@@ -963,6 +963,7 @@ const sciDivNet  = isSCI ? Number(regime._sciDividendesNets ?? 0) : 0;
 const sciReste   = isSCI ? Number(regime._sciResteSociete ?? 0) : 0;
 
   return {
+  return {
     // Revenus
     loyerHC,
     loyerAnnuelBrut: loyerAnnuelHC,
@@ -1005,9 +1006,19 @@ const sciReste   = isSCI ? Number(regime._sciResteSociete ?? 0) : 0;
 
     // 🆕 Amortissements LMNP (pour affichage)
     amortUtilise: regime._amortUtilise ?? 0,
-    amortReporte: regime._amortReporte ?? 0
+    amortReporte: regime._amortReporte ?? 0,
+
+    // 🆕 Exposition SCI/IS pour le rendu (zéro si pas SCI)
+    _pfu: pfuOut,
+    _sciDistribRatio: ratioOut,
+    _messages: msgsOut,
+    _sciResultatAvantIS: sciAvantIS,
+    _sciImpotsIS: sciImpIS,
+    _sciBeneficeApresIS: sciApresIS,
+    _sciDividendesBruts: sciDivBrut,
+    _sciDividendesNets: sciDivNet,
+    _sciResteSociete: sciReste
   };
-}
 
     /**
      * Construit le tableau détaillé complet
