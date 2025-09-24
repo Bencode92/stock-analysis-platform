@@ -961,6 +961,7 @@ const sciApresIS = isSCI ? Number(regime._sciBeneficeApresIS ?? 0) : 0;
 const sciDivBrut = isSCI ? Number(regime._sciDividendesBruts ?? 0) : 0;
 const sciDivNet  = isSCI ? Number(regime._sciDividendesNets ?? 0) : 0;
 const sciReste   = isSCI ? Number(regime._sciResteSociete ?? 0) : 0;
+    
 
   return {
     // Revenus
@@ -1018,6 +1019,7 @@ const sciReste   = isSCI ? Number(regime._sciResteSociete ?? 0) : 0;
     _sciDividendesNets: sciDivNet,
     _sciResteSociete: sciReste
   };
+    }
 
     /**
      * Construit le tableau détaillé complet
