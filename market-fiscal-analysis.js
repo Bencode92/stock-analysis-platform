@@ -837,7 +837,7 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
       break;
     }
 
-  // ───────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────
 // G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
 // ───────────────────────────────────────────────────────────
 case 'sci_is': {
@@ -854,19 +854,22 @@ case 'sci_is': {
   const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
   const eligible15        = !!inputData.sciEligibleTauxReduit;
 
-  // IS 15% jusqu'au plafond, puis 25% sinon
+  // 1) IS (séparé du PFU)
+  let impotIS = 0;
   if (eligible15) {
     const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
     const surplus = Math.max(0, resultatAvantIS - tranche);
-    impotRevenu   = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
+    impotIS = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
   } else {
-    impotRevenu   = resultatAvantIS * 0.25;
+    impotIS = resultatAvantIS * 0.25;
   }
 
-  // --- PFU sur dividendes (par défaut: 0% si non renseigné) ---
+  let impotRevenuLocal = impotIS; // total impôts côté fonction (IS seul pour l’instant)
+  const beneficeApresIS = Math.max(0, resultatAvantIS - impotIS);
+
+  // 2) PFU (optionnel) + décomposition dividendes
   const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
-  let pfu = 0;
-  let distribRatio = 0;
+  let distribRatio = 0, pfu = 0, dividendesBruts = 0, dividendesNets = 0, resteSociete = beneficeApresIS;
   let _messages = [];
 
   if (applyPFU) {
@@ -877,22 +880,32 @@ case 'sci_is': {
     distribRatio = val;
     if (msgs?.length) _messages = _messages.concat(msgs);
 
-    const dividendes = Math.max(0, resultatAvantIS - impotRevenu); // après IS
-    pfu = dividendes * distribRatio * 0.30;                        // PFU 30%
-    impotRevenu += pfu;
+    dividendesBruts = beneficeApresIS * distribRatio;
+    pfu             = dividendesBruts * 0.30;   // PFU 30%
+    dividendesNets  = dividendesBruts - pfu;    // net perçu par l’associé
+    resteSociete    = beneficeApresIS - dividendesBruts;
+
+    impotRevenuLocal += pfu;                    // total impôts = IS + PFU
   }
 
-  prelevementsSociaux = 0;   // PS non applicables au niveau société
-  baseImposable       = resultatAvantIS;
+  // sorties de la branche (variables communes de la fonction)
+  prelevementsSociaux = 0;                      // pas de PS au niveau société
+  baseImposable       = resultatAvantIS;        // “résultat fiscal” de la SCI
+  impotRevenu         = impotRevenuLocal;       // total IS (+ PFU si activé)
 
   // Expose pour l’affichage
-  regime._pfu = pfu;
-  regime._sciDistribRatio = distribRatio;
-  regime._messages = (regime._messages || []).concat(_messages);
+  regime._pfu                 = pfu;
+  regime._sciDistribRatio     = distribRatio;
+  regime._messages            = (regime._messages || []).concat(_messages);
+  regime._sciResultatAvantIS  = resultatAvantIS;
+  regime._sciImpotsIS         = impotIS;
+  regime._sciBeneficeApresIS  = beneficeApresIS;
+  regime._sciDividendesBruts  = dividendesBruts;
+  regime._sciDividendesNets   = dividendesNets;
+  regime._sciResteSociete     = resteSociete;
 
   break;
 }
-    // ───────────────────────────────────────────────────────────
     // Par défaut : calque "nu réel" simplifié
     // ───────────────────────────────────────────────────────────
     default: {
@@ -933,6 +946,21 @@ case 'sci_is': {
     (key === 'lmp')
       ? chargesDeductibles
       : chargesDeductibles + amortissementBien + amortissementMobilier + amortissementTravaux;
+    // ─────────────────────────────────────────────────────────────
+// Exposition SCI/IS pour le rendu (à placer juste avant return)
+// ─────────────────────────────────────────────────────────────
+const isSCI = (key === 'sci_is');
+
+const pfuOut   = isSCI ? Number(regime._pfu ?? 0) : 0;
+const ratioOut = isSCI ? Number(regime._sciDistribRatio ?? 0) : 0;
+const msgsOut  = Array.isArray(regime._messages) ? regime._messages : [];
+
+const sciAvantIS = isSCI ? Number(regime._sciResultatAvantIS ?? baseImposable ?? 0) : 0;
+const sciImpIS   = isSCI ? Number(regime._sciImpotsIS ?? 0) : 0;
+const sciApresIS = isSCI ? Number(regime._sciBeneficeApresIS ?? 0) : 0;
+const sciDivBrut = isSCI ? Number(regime._sciDividendesBruts ?? 0) : 0;
+const sciDivNet  = isSCI ? Number(regime._sciDividendesNets ?? 0) : 0;
+const sciReste   = isSCI ? Number(regime._sciResteSociete ?? 0) : 0;
 
   return {
     // Revenus
