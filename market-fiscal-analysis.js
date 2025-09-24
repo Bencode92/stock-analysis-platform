@@ -512,9 +512,15 @@ getAllAdvancedParams() {
     cautionRestituee:     document.getElementById('caution-restituee')?.checked ?? true,
 
     // ─────────────────────────────────────────
-    // IR “précis” (barème progressif + parts + décote) – optionnel
-    // (si les inputs n'existent pas, valeurs par défaut ; la décote reste désactivée si la case n'existe pas)
+    // SCI/IS – taux de distribution (UI en %, ici ratio 0..1)
+    // Laisse undefined si non saisi pour que le helper affiche le message d’usage.
+    sciDistribution: (() => {
+      const p = parseFloatOrDefault('sci-distribution', NaN); // % saisi côté UI
+      return Number.isFinite(p) ? Math.max(0, Math.min(1, p / 100)) : undefined;
+    })(),
+
     // ─────────────────────────────────────────
+    // IR “précis” (barème progressif + parts + décote) – optionnel
     irPrecise:       document.getElementById('ir-mode-precis')?.checked ?? false,
     foyerParts:      parseFloatOrDefault('foyer-parts', 1),
     irApplyDecote:   document.getElementById('ir-decote')?.checked ?? false,
@@ -524,7 +530,6 @@ getAllAdvancedParams() {
 
     // ─────────────────────────────────────────
     // LMP (cotisations sociales) + Toggles
-    // ─────────────────────────────────────────
     lmpCotisationsTaux: parseFloatOrDefault(
       'lmp-cotisations-taux',
       FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100 // en %
@@ -535,9 +540,9 @@ getAllAdvancedParams() {
     ),
 
     // Toggles utiles
-    assujettiCotisSociales: document.getElementById('assujetti-cotis')?.checked ?? false, // LMNP soumis cotisations → pas de PS
-    sciEligibleTauxReduit:  document.getElementById('sci-taux-reduit')?.checked ?? true,  // 15% jusqu’à 42 500 €
-    applyPFU:               document.getElementById('apply-pfu')?.checked ?? false        // PFU 30% sur dividendes simulés
+    assujettiCotisSociales: document.getElementById('assujetti-cotis')?.checked ?? false,
+    sciEligibleTauxReduit:  document.getElementById('sci-taux-reduit')?.checked ?? true,
+    applyPFU:               document.getElementById('apply-pfu')?.checked ?? false
   };
 }
 
@@ -808,43 +813,61 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
       break;
     }
 
-    // ───────────────────────────────────────────────────────────
-    // G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
-    // ───────────────────────────────────────────────────────────
-    case 'sci_is': {
-      const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
-      const baseAmortissable  = Number(inputData.price ?? 0) * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
-      const amortBien         = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-      const amortMob          = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+  // ───────────────────────────────────────────────────────────
+// G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
+// ───────────────────────────────────────────────────────────
+case 'sci_is': {
+  const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
+  const baseAmortissable  = Number(inputData.price ?? 0) * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
+  const amortBien         = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+  const amortMob          = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
 
-      chargesDeductibles      = chargesReelles;
-      amortissementBien       = amortBien;
-      amortissementMobilier   = amortMob;
-      amortissementTravaux    = 0;
+  chargesDeductibles      = chargesReelles;
+  amortissementBien       = amortBien;
+  amortissementMobilier   = amortMob;
+  amortissementTravaux    = 0;
 
-      const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
-      const eligible15        = !!inputData.sciEligibleTauxReduit;
+  const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
+  const eligible15        = !!inputData.sciEligibleTauxReduit;
 
-      if (eligible15) {
-        const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
-        const surplus = Math.max(0, resultatAvantIS - tranche);
-        impotRevenu   = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
-      } else {
-        impotRevenu   = resultatAvantIS * 0.25;
-      }
+  // IS 15% jusqu'au plafond, puis 25% sinon
+  if (eligible15) {
+    const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
+    const surplus = Math.max(0, resultatAvantIS - tranche);
+    impotRevenu   = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
+  } else {
+    impotRevenu   = resultatAvantIS * 0.25;
+  }
 
-      const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
-      if (applyPFU) {
-        const ratioDistrib = Math.max(0, Math.min(1, Number(inputData?.sciDistribution ?? params?.sciDistribution ?? 1)));
-        const dividendes   = Math.max(0, resultatAvantIS - impotRevenu); // après IS
-        impotRevenu       += (dividendes * ratioDistrib) * 0.30;         // PFU 30%
-      }
+  // --- PFU sur dividendes (par défaut: 0% si non renseigné) ---
+  const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
+  let pfu = 0;
+  let distribRatio = 0;
+  let _messages = [];
 
-      prelevementsSociaux = 0;   // PS non applicables au niveau société
-      baseImposable       = resultatAvantIS;
-      break;
-    }
+  if (applyPFU) {
+    const { val, msgs } = this.normalizeSciDistribution(
+      inputData?.sciDistribution ?? params?.sciDistribution,
+      0 // défaut conservateur: 0% distribué
+    );
+    distribRatio = val;
+    if (msgs?.length) _messages = _messages.concat(msgs);
 
+    const dividendes = Math.max(0, resultatAvantIS - impotRevenu); // après IS
+    pfu = dividendes * distribRatio * 0.30;                        // PFU 30%
+    impotRevenu += pfu;
+  }
+
+  prelevementsSociaux = 0;   // PS non applicables au niveau société
+  baseImposable       = resultatAvantIS;
+
+  // Expose pour l’affichage
+  regime._pfu = pfu;
+  regime._sciDistribRatio = distribRatio;
+  regime._messages = (regime._messages || []).concat(_messages);
+
+  break;
+}
     // ───────────────────────────────────────────────────────────
     // Par défaut : calque "nu réel" simplifié
     // ───────────────────────────────────────────────────────────
@@ -1289,6 +1312,16 @@ buildFiscaliteSection(calc, inputData) {
     : `<strong>Total impôts</strong>`;
 
   return `
+    ${
+      (Array.isArray(calc._messages) && calc._messages.length)
+        ? `<tr><td colspan="3">
+             <div class="info-banner" style="margin:8px 0;padding:8px 12px;border-radius:8px;background:rgba(0,191,255,.08);border:1px solid rgba(0,191,255,.25);color:#e2e8f0;">
+               <i class="fas fa-info-circle"></i> ${calc._messages.join(' ')}
+             </div>
+           </td></tr>`
+        : ''
+    }
+
     <tr class="section-header">
       <td colspan="3"><strong>📊 CALCUL FISCAL</strong></td>
     </tr>
@@ -1316,6 +1349,17 @@ buildFiscaliteSection(calc, inputData) {
       ${irValueCell}
       ${irFormulaCell}
     </tr>
+
+    ${
+      (calc.regime === "SCI à l'IS" && Number(calc._pfu) > 0)
+        ? `
+    <tr>
+      <td>PFU sur dividendes (${Math.round((calc._sciDistribRatio || 0) * 100)}%)</td>
+      <td class="text-right negative">-${fmt(calc._pfu)}</td>
+      <td class="formula">= (Résultat après IS × ratio) × 30%</td>
+    </tr>`
+        : ''
+    }
 
     ${
       has(calc.cotisationsSociales)
@@ -1346,6 +1390,7 @@ buildFiscaliteSection(calc, inputData) {
     </tr>
   `;
 }
+
 
 /**
  * Construit la section cash-flow
