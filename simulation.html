@@ -314,8 +314,7 @@
                 </div>
                 
                 <div id="investment-simulator" class="simulation-content">
-                <div id="inv-grid" class="grid grid-cols-1 sm:!grid-cols-2 gap-6 mt-8">
-
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                         <!-- Paramètres de simulation -->
                         <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
                             <h4 class="text-xl font-semibold mb-4 flex items-center">
@@ -1649,6 +1648,108 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Scénarios & Formations -->
+            <div class="mt-12">
+                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
+                    <i class="fas fa-lightbulb mr-3"></i>
+                    Scénarios et formations
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Analyses de scénarios -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-flask mr-2"></i>
+                            Analyse de scénarios
+                        </h3>
+                        
+                        <div class="scenario-block">
+                            <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
+                            <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
+                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-krach">
+                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="scenario-block">
+                            <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
+                            <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
+                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-progressif">
+                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Formations recommandées -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-graduation-cap mr-2"></i>
+                            Formations recommandées
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-chart-line text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">L'effet des intérêts composés</h4>
+                                    <p class="text-xs text-gray-400">12 min de lecture</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-file-invoice-dollar text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Choisir le bon véhicule fiscal</h4>
+                                    <p class="text-xs text-gray-400">15 min de lecture</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-balance-scale text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Répartition d'actifs: principes</h4>
+                                    <p class="text-xs text-gray-400">18 min de lecture</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Questions fréquentes -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-question-circle mr-2"></i>
+                            Questions fréquentes
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Comment estimer le rendement ?</h4>
+                                <p class="text-sm text-gray-300">Le rendement dépend de l'actif. Pour les indices boursiers, 7-10% est une estimation historique raisonnable sur le long terme.</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Quelle durée d'investissement privilégier ?</h4>
+                                <p class="text-sm text-gray-300">Plus la durée est longue, plus l'effet des intérêts composés est puissant. Pour les actions, un horizon de 8-10 ans minimum est recommandé.</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Quelle enveloppe choisir pour quel objectif ?</h4>
+                                <p class="text-sm text-gray-300">PEA pour les investissements en actions sur le long terme, Assurance-vie pour la flexibilité, PER pour la retraite.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Theme toggle -->
     <div class="theme-toggle">
         <button class="theme-toggle-btn">
@@ -1691,6 +1792,107 @@
     </script>
 </body>
 </html>
+
+            <!-- Scénarios & Formations -->
+            <div class="mt-12">
+                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
+                    <i class="fas fa-lightbulb mr-3"></i>
+                    Scénarios et formations
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Analyses de scénarios -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-flask mr-2"></i>
+                            Analyse de scénarios
+                        </h3>
+                        
+                        <div class="scenario-block">
+                            <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
+                            <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
+                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-krach">
+                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="scenario-block">
+                            <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
+                            <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
+                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-progressif">
+                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Formations recommandées -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-graduation-cap mr-2"></i>
+                            Formations recommandées
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-chart-line text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">L'effet des intérêts composés</h4>
+                                    <p class="text-xs text-gray-400">12 min de lecture</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-file-invoice-dollar text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Choisir le bon véhicule fiscal</h4>
+                                    <p class="text-xs text-gray-400">15 min de lecture</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-balance-scale text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Répartition d'actifs: principes</h4>
+                                    <p class="text-xs text-gray-400">18 min de lecture</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Questions fréquentes -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-question-circle mr-2"></i>
+                            Questions fréquentes
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Comment estimer le rendement ?</h4>
+                                <p class="text-sm text-gray-300">Le rendement dépend de l'actif. Pour les indices boursiers, 7-10% est une estimation historique raisonnable sur le long terme.</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Quelle durée d'investissement privilégier ?</h4>
+                                <p class="text-sm text-gray-300">Plus la durée est longue, plus l'effet des intérêts composés est puissant. Pour les actions, un horizon de 8-10 ans minimum est recommandé.</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Quelle enveloppe choisir pour quel objectif ?</h4>
+                                <p class="text-sm text-gray-300">PEA pour les investissements en actions sur le long terme, Assurance-vie pour la flexibilité, PER pour la retraite.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Theme toggle -->
     <div class="theme-toggle">
