@@ -1972,130 +1972,163 @@ function buildChargesBreakdown(p) {
           return Object.values(obj).reduce((a,b)=>a+Number(b),0);
         }
         
-        // Initialisation
-        document.addEventListener('DOMContentLoaded', function() {
-            // Vérification initiale de la structure des sections
-            (() => {
-                const s = [1,2,3].map(i => document.getElementById(`section-${i}`));
-                const sameParent = s.every((x, _, arr) => x && x.parentElement === arr[0].parentElement);
-                if (!sameParent) {
-                    console.warn('⚠️ Sections non sœurs : vérifiez la fermeture des <div>.');
-                }
-            })();
-            
-            window.analyzer = new MarketFiscalAnalyzer();
-            analyzer = window.analyzer; // garde la variable existante utilisée plus bas
-            
-            // Gérer les données de ville sélectionnée
-            if (window.villeSearchManager) {
-                window.villeSearchManager.onVilleSelected = function(villeData) {
-                    document.getElementById('propertyCity').value = villeData.ville || '';
-                    document.getElementById('propertyDepartment').value = villeData.departement || '';
-                };
-            }
-            
-            // Gestion des paramètres avancés
-            document.getElementById('btn-advanced-toggle').addEventListener('click', function() {
-                const advancedParams = document.getElementById('advanced-params');
-                advancedParams.classList.toggle('hidden');
-                
-                if (!advancedParams.classList.contains('hidden')) {
-                    this.innerHTML = '<i class="fas fa-sliders-h"></i> Masquer les paramètres';
-                } else {
-                    this.innerHTML = '<i class="fas fa-sliders-h"></i> Paramètres avancés';
-                }
-            });
-            
-            // Gestion des tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-tab');
-                    
-                    // Retirer active de tous les tabs et contenus
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                    
-                    // Ajouter active au tab cliqué et son contenu
-                    this.classList.add('active');
-                    document.getElementById(targetId).classList.add('active');
-                });
-            });
-        });
-        
-        // Gestion résidence principale
-        const occupationSelect = document.getElementById('occupationMode');
-        occupationSelect.addEventListener('change', toggleFieldsForRP);
-        
-        function toggleFieldsForRP() {
-            const isRP = occupationSelect.value === 'residence';
-            document.getElementById('partnerContribution-group').style.display = isRP ? '' : 'none';
-        }
-        toggleFieldsForRP();
-        
-        // CORRECTION 1: Force l'affichage avec style.display
-        function goToStep(step) {
-            // Cache tout, quoi qu'en disent les CSS
-            document.querySelectorAll('.market-analysis-section').forEach(section => {
-                section.classList.remove('active');
-                section.style.display = 'none';  // Force le masquage
-            });
-            
-            // Affiche la cible
-            const target = document.getElementById(`section-${step}`);
-            if (target) {
-                target.classList.add('active');
-                target.style.display = 'block';  // Force l'affichage
-            }
-            
-            // Mettre à jour l'indicateur d'étapes
-            updateStepIndicator(step);
-            
-            currentStep = step;
-            
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        
-        // FIX: Suppression du backslash parasite qui causait l'erreur de syntaxe
-        function updateStepIndicator(step) {
-            // Mettre à jour les étapes
-            for (let i = 1; i <= 3; i++) {
-                const stepEl = document.getElementById(`step-${i}`); // FIX: Supprimé le \ après cette ligne
-                stepEl.classList.remove('active', 'completed');
-                
-                if (i < step) {
-                    stepEl.classList.add('completed');
-                } else if (i === step) {
-                    stepEl.classList.add('active');
-                }
-            }
-            
-            // Mettre à jour les lignes
-            for (let i = 1; i <= 2; i++) {
-                const lineEl = document.getElementById(`line-${i}`);
-                lineEl.classList.toggle('completed', i < step);
-            }
-        }
-        
+// Initialisation
+document.addEventListener('DOMContentLoaded', function () {
+  // Vérification initiale de la structure des sections
+  (() => {
+    const s = [1, 2, 3].map(i => document.getElementById(`section-${i}`));
+    const sameParent = s.every((x, _, arr) => x && x.parentElement === arr[0].parentElement);
+    if (!sameParent) {
+      console.warn('⚠️ Sections non sœurs : vérifiez la fermeture des <div>.');
+    }
+  })();
+
+  window.analyzer = new MarketFiscalAnalyzer();
+  analyzer = window.analyzer; // garde la variable existante utilisée plus bas
+
+  // Gérer les données de ville sélectionnée
+  if (window.villeSearchManager) {
+    window.villeSearchManager.onVilleSelected = function (villeData) {
+      document.getElementById('propertyCity').value = villeData.ville || '';
+      document.getElementById('propertyDepartment').value = villeData.departement || '';
+    };
+  }
+
+  // Gestion des paramètres avancés
+  document.getElementById('btn-advanced-toggle').addEventListener('click', function () {
+    const advancedParams = document.getElementById('advanced-params');
+    advancedParams.classList.toggle('hidden');
+
+    if (!advancedParams.classList.contains('hidden')) {
+      this.innerHTML = '<i class="fas fa-sliders-h"></i> Masquer les paramètres';
+    } else {
+      this.innerHTML = '<i class="fas fa-sliders-h"></i> Paramètres avancés';
+    }
+  });
+
+  // Gestion des tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function () {
+      const targetId = this.getAttribute('data-tab');
+
+      // Retirer active de tous les tabs et contenus
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      // Ajouter active au tab cliqué et son contenu
+      this.classList.add('active');
+      document.getElementById(targetId).classList.add('active');
+    });
+  });
+
+  // --- PFU / Distribution : montrer/masquer en fonction de la case "apply-pfu"
+  const pfuCb = document.getElementById('apply-pfu');
+  const sciDistribGroup = document.getElementById('sci-distrib-group');
+  const sciDistribInput = document.getElementById('sci-distribution');
+  const sciDistribOut = document.getElementById('sci-distribution-out');
+
+  if (pfuCb && sciDistribGroup) {
+    const toggleDistrib = () => {
+      const show = !!pfuCb.checked;
+      sciDistribGroup.style.display = show ? '' : 'none';
+
+      // Si masqué → vider la valeur pour laisser le helper renvoyer "undefined"
+      if (!show) {
+        if (sciDistribInput) sciDistribInput.value = '';
+        if (sciDistribOut) sciDistribOut.textContent = '—';
+      } else {
+        // Si affiché et vide → initialiser à 0%
+        if (sciDistribInput && sciDistribInput.value === '') sciDistribInput.value = 0;
+        if (sciDistribOut) sciDistribOut.textContent = (sciDistribInput?.value ?? '0') + ' %';
+      }
+    };
+
+    pfuCb.addEventListener('change', toggleDistrib);
+    if (sciDistribInput) {
+      sciDistribInput.addEventListener('input', () => {
+        sciDistribOut.textContent = (sciDistribInput.value === '' ? '—' : sciDistribInput.value + ' %');
+      });
+    }
+
+    // État initial
+    toggleDistrib();
+  }
+});
+
+// Gestion résidence principale
+const occupationSelect = document.getElementById('occupationMode');
+occupationSelect.addEventListener('change', toggleFieldsForRP);
+
+function toggleFieldsForRP() {
+  const isRP = occupationSelect.value === 'residence';
+  document.getElementById('partnerContribution-group').style.display = isRP ? '' : 'none';
+}
+toggleFieldsForRP();
+
+// CORRECTION 1: Force l'affichage avec style.display
+function goToStep(step) {
+  // Cache tout, quoi qu'en disent les CSS
+  document.querySelectorAll('.market-analysis-section').forEach(section => {
+    section.classList.remove('active');
+    section.style.display = 'none'; // Force le masquage
+  });
+
+  // Affiche la cible
+  const target = document.getElementById(`section-${step}`);
+  if (target) {
+    target.classList.add('active');
+    target.style.display = 'block'; // Force l'affichage
+  }
+
+  // Mettre à jour l'indicateur d'étapes
+  updateStepIndicator(step);
+
+  currentStep = step;
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// FIX: Suppression du backslash parasite qui causait l'erreur de syntaxe
+function updateStepIndicator(step) {
+  // Mettre à jour les étapes
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById(`step-${i}`); // FIX: Supprimé le \ après cette ligne
+    stepEl.classList.remove('active', 'completed');
+
+    if (i < step) {
+      stepEl.classList.add('completed');
+    } else if (i === step) {
+      stepEl.classList.add('active');
+    }
+  }
+
+  // Mettre à jour les lignes
+  for (let i = 1; i <= 2; i++) {
+    const lineEl = document.getElementById(`line-${i}`);
+    lineEl.classList.toggle('completed', i < step);
+  }
+}
+
 // Soumission du formulaire
-document.getElementById('property-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    // SIMPLIFICATION : Toujours HC + charges récupérables
-    const loyerHC = parseFloat(document.getElementById('monthlyRent').value);
-    const charges = parseFloat(document.getElementById('monthlyCharges').value) || 50;
-    
-    // Récupérer les paramètres avancés
-    const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
-    
-    // Récupérer les données du formulaire
-propertyData = {
-    ville: window.villeSearchManager?.getSelectedVilleData() || {},  // Patch Bonus: valeur par défaut
+document.getElementById('property-form').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  // SIMPLIFICATION : Toujours HC + charges récupérables
+  const loyerHC = parseFloat(document.getElementById('monthlyRent').value);
+  const charges = parseFloat(document.getElementById('monthlyCharges').value) || 50;
+
+  // Récupérer les paramètres avancés
+  const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
+
+  // Récupérer les données du formulaire
+  propertyData = {
+    ville: window.villeSearchManager?.getSelectedVilleData() || {}, // Patch Bonus: valeur par défaut
     prixPaye: parseFloat(document.getElementById('propertyPrice').value),
     surface: parseFloat(document.getElementById('propertySurface').value),
     loyerActuel: loyerHC,
     charges: charges,
-    monthlyCharges: charges,      // ← AJOUT
+    monthlyCharges: charges, // ← AJOUT
     loyerCC: loyerHC + charges, // Ajouter le loyer CC pour l'analyse
     apport: parseFloat(document.getElementById('apport').value),
     duree: parseFloat(document.getElementById('loanDuration').value),
@@ -2111,7 +2144,7 @@ propertyData = {
     taxeFonciere: parseFloat(document.getElementById('taxeFonciere').value) || 800,
     vacanceLocative: parseFloat(document.getElementById('vacanceLocative').value ?? 0),
     gestionLocativeTaux: parseFloat(document.getElementById('gestionLocative').value) || 0,
-gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) || 0) > 0,
+    gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) || 0) > 0,
     travaux: parseFloat(document.getElementById('travaux-renovation').value) || 0,
     entretienAnnuel: parseFloat(document.getElementById('entretien-annuel').value) || 500,
     chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
@@ -2126,59 +2159,58 @@ gestionLocative: (parseFloat(document.getElementById('gestionLocative').value) |
     // AJOUT: Récupérer le régime actuel sélectionné
     regimeActuel: document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro',
     forceRegime: document.getElementById('force-regime')?.checked || false
-};
+  };
 
-    // Calculer le montant emprunté et la mensualité
-    const montantEmprunte = propertyData.prixPaye - propertyData.apport;
-    propertyData.mensualite = calcMensualite(
-        montantEmprunte,
-        propertyData.taux,
-        propertyData.duree
-    );
- 
-    // Calculer le prix au m² payé
-    propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
-    propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
-    propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface; // Loyer CC au m²
-    
-    // Patch C: Passe d'abord à l'étape 2 puis analyse avec requestAnimationFrame
-    goToStep(2);
-    
-    // Rendu robuste avec requestAnimationFrame et try/catch
-    const renderer = window.renderMarketAnalysis || window.analyzeMarket;
-    requestAnimationFrame(() => {
-        goToStep(2); // Double appel au cas où un autre code l'aurait masquée
-        const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
-        
-        if (!resultsDiv) {
-            console.error('❌ Conteneur de résultats introuvable');
-            return;
-        }
-        
-        try {
-            if (typeof renderer === 'function') {
-                renderer(propertyData);
-            } else {
-                resultsDiv.innerHTML = '<div class="market-comparison-card average"><h3 style="color:#ef4444">Aucune fonction d\'analyse trouvée</h3></div>';
-            }
-        } catch (err) {
-            resultsDiv.innerHTML = `
-                <div class="market-comparison-card average">
-                    <div class="market-badge high">Erreur</div>
-                    <h3 style="color:#ef4444;">Impossible d'analyser le marché</h3>
-                    <p style="color:#94a3b8;">${err.message}</p>
-                    <div class="recommendations-box" style="margin-top:20px;">
-                        <button class="btn btn-outline" onclick="goToStep(1)">
-                            <i class="fas fa-arrow-left"></i> Corriger les données
-                        </button>
-                    </div>
-                </div>
-            `;
-            console.error(err);
-        }
-    });
+  // Calculer le montant emprunté et la mensualité
+  const montantEmprunte = propertyData.prixPaye - propertyData.apport;
+  propertyData.mensualite = calcMensualite(
+    montantEmprunte,
+    propertyData.taux,
+    propertyData.duree
+  );
+
+  // Calculer le prix au m² payé
+  propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
+  propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
+  propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface; // Loyer CC au m²
+
+  // Patch C: Passe d'abord à l'étape 2 puis analyse avec requestAnimationFrame
+  goToStep(2);
+
+  // Rendu robuste avec requestAnimationFrame et try/catch
+  const renderer = window.renderMarketAnalysis || window.analyzeMarket;
+  requestAnimationFrame(() => {
+    goToStep(2); // Double appel au cas où un autre code l'aurait masquée
+    const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
+
+    if (!resultsDiv) {
+      console.error('❌ Conteneur de résultats introuvable');
+      return;
+    }
+
+    try {
+      if (typeof renderer === 'function') {
+        renderer(propertyData);
+      } else {
+        resultsDiv.innerHTML = '<div class="market-comparison-card average"><h3 style="color:#ef4444">Aucune fonction d\'analyse trouvée</h3></div>';
+      }
+    } catch (err) {
+      resultsDiv.innerHTML = `
+        <div class="market-comparison-card average">
+          <div class="market-badge high">Erreur</div>
+          <h3 style="color:#ef4444;">Impossible d'analyser le marché</h3>
+          <p style="color:#94a3b8;">${err.message}</p>
+          <div class="recommendations-box" style="margin-top:20px;">
+            <button class="btn btn-outline" onclick="goToStep(1)">
+              <i class="fas fa-arrow-left"></i> Corriger les données
+            </button>
+          </div>
+        </div>
+      `;
+      console.error(err);
+    }
+  });
 });
-
 // ──────────────────────────────────────────────────────────────────────────
 // renderMarketAnalysis (version optimisée & sûre)
 //   - Patch B: Ciblage robuste du conteneur
