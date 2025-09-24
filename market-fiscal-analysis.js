@@ -1333,9 +1333,75 @@ buildFiscaliteSection(calc, inputData) {
 
   // Helpers d’affichage
   const fmt = v => this.formatCurrency(Math.abs(Number(v) || 0));
+  const pct = x => `${Math.round((Number(x) || 0) * 100)}%`;
   const has = v => typeof v === 'number' && isFinite(v) && Math.abs(v) > 0;
 
-  // Libellé IR (barème progressif vs TMI)
+  // 🎯 Rendu dédié SCI à l’IS
+  if (isSCI) {
+    const hasPFU = Number(calc._pfu) > 0;
+    return `
+      ${(Array.isArray(calc._messages) && calc._messages.length)
+        ? `<tr><td colspan="3" class="info-banner">
+             <i class="fas fa-info-circle"></i> ${calc._messages.join(' ')}
+           </td></tr>` : ''}
+
+      <tr class="section-header">
+        <td colspan="3"><strong>📊 CALCUL FISCAL — SCI à l’IS</strong></td>
+      </tr>
+
+      <tr><td>Revenus nets (base CC)</td>
+          <td class="text-right">${this.formatCurrency(calc.revenusNets)}</td>
+          <td class="formula">Après vacance et gestion</td></tr>
+
+      <tr><td>- Charges déductibles</td>
+          <td class="text-right negative">-${this.formatCurrency(calc.totalCharges)}</td>
+          <td class="formula">Total ci-dessus</td></tr>
+
+      <tr><td><strong>Base imposable (résultat avant IS)</strong></td>
+          <td class="text-right"><strong>${this.formatCurrency(calc.baseImposable)}</strong></td>
+          <td class="formula">= Max(0, revenus − charges)</td></tr>
+
+      <tr><td>Impôt société (IS)</td>
+          <td class="text-right negative">-${fmt(calc._sciImpotsIS)}</td>
+          <td class="formula">15% jusqu’à ${this.formatCurrency(FISCAL_CONSTANTS.IS_PLAFOND_REDUIT)} puis 25%</td></tr>
+
+      <tr><td>Résultat après IS</td>
+          <td class="text-right positive">+${fmt(calc._sciBeneficeApresIS)}</td>
+          <td class="formula">= Base − IS</td></tr>
+
+      ${hasPFU ? `
+        <tr><td>Dividendes bruts distribués (${pct(calc._sciDistribRatio)})</td>
+            <td class="text-right">-${fmt(calc._sciDividendesBruts)}</td>
+            <td class="formula">= Résultat après IS × ratio</td></tr>
+
+        <tr><td>PFU 30% sur dividendes</td>
+            <td class="text-right negative">-${fmt(calc._pfu)}</td>
+            <td class="formula">= Dividendes × 30%</td></tr>
+
+        <tr><td>Dividendes nets perçus</td>
+            <td class="text-right positive">+${fmt(calc._sciDividendesNets)}</td>
+            <td class="formula">= Dividendes − PFU</td></tr>
+
+        <tr><td>Bénéfice conservé en SCI</td>
+            <td class="text-right">${fmt(calc._sciResteSociete)}</td>
+            <td class="formula">= Résultat après IS − Dividendes</td></tr>
+      ` : `
+        <tr><td>Distribution</td>
+            <td class="text-right">—</td>
+            <td class="formula">Distribution désactivée</td></tr>
+      `}
+
+      <tr class="total-row">
+        <td><strong>Total impôts (IS${hasPFU ? ' + PFU' : ''})</strong></td>
+        <td class="text-right negative"><strong>-${fmt(calc.totalImpots)}</strong></td>
+        <td></td>
+      </tr>
+    `;
+  }
+
+  // ————————————————————————————————————————————————
+  // Rendu générique (IR/TMI/PS/LMP) pour les autres régimes
+  // ————————————————————————————————————————————————
   const isPreciseIR = !!(inputData.irPrecise);
   const libIR  = isSCI
     ? '(IS)'
@@ -1344,7 +1410,6 @@ buildFiscaliteSection(calc, inputData) {
     ? 'Barème IS'
     : (isPreciseIR ? 'Barème progressif' : `= Base × ${Number(inputData.tmi) || 0}%`);
 
-  // Ligne IR (montant négatif = économie → affichée en positif, classe “positive”)
   const irValueCell = isIRNegatif
     ? `<td class="text-right positive">+${fmt(calc.impotRevenu)}</td>`
     : `<td class="text-right negative">-${fmt(calc.impotRevenu)}</td>`;
@@ -1353,7 +1418,6 @@ buildFiscaliteSection(calc, inputData) {
     ? `<td class="formula">Économie d'impôt (déficit/imputation)</td>`
     : `<td class="formula">${formIR}</td>`;
 
-  // Total impôts : si négatif → économie nette
   const totalImpotsNeg = has(calc.totalImpots) && calc.totalImpots < 0;
   const totalImpotsCell = totalImpotsNeg
     ? `<td class="text-right positive"><strong>+${fmt(calc.totalImpots)}</strong></td>`
