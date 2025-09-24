@@ -963,7 +963,6 @@ const sciDivNet  = isSCI ? Number(regime._sciDividendesNets ?? 0) : 0;
 const sciReste   = isSCI ? Number(regime._sciResteSociete ?? 0) : 0;
 
   return {
-  return {
     // Revenus
     loyerHC,
     loyerAnnuelBrut: loyerAnnuelHC,
