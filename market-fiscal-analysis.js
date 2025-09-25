@@ -639,9 +639,21 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
   const vacanceAmount  = recettesCCAnn * vacPct;
   const recettesBrutes = recettesCCAnn - vacanceAmount;
 
+  // --- Infos micro-foncier / base CC (plafond 15 000 €)
+  const plafondMicro = Number(FISCAL_CONSTANTS.MICRO_FONCIER_PLAFOND || 15000);
+  const ratioPlafond = plafondMicro > 0 ? (recettesCCAnn / plafondMicro) : 0;
+  const microFlag = {
+    plafond: plafondMicro,
+    recettesCCAnn,
+    ratio: ratioPlafond,
+    status: (recettesCCAnn > plafondMicro) ? 'over'
+           : (ratioPlafond >= 0.90)       ? 'near'
+           : 'ok'
+  };
+
   // 🆕 Base cash-flow en HC (calculée AVANT l’usage ci-dessous)
-  const recettesHCAnn    = loyerHC * 12;
-  const vacanceAmountHC  = recettesHCAnn * vacPct;
+  const recettesHCAnn   = loyerHC * 12;
+  const vacanceAmountHC = recettesHCAnn * vacPct;
 
   // Frais de gestion (impact CF & réel)
   const gestTaux     = Number(params.gestionLocativeTaux ?? 0) / 100;
@@ -682,23 +694,29 @@ getDetailedCalculations(regime, inputData, params, baseResults) {
   const key = this.normalizeRegimeKey(regime);
 
   switch (key) {
-    // ───────────────────────────────────────────────────────────
-    // B) MICRO-FONCIER
-    // ───────────────────────────────────────────────────────────
-    case 'nu_micro': {
-      if (recettesCCAnn > FISCAL_CONSTANTS.MICRO_FONCIER_PLAFOND) {
-        regime._warning = 'Inéligible micro-foncier (> 15 000 € de recettes CC).';
-      }
-      const base = recettesBrutes * (1 - FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT);
+// ───────────────────────────────────────────────────────────
+// B) MICRO-FONCIER
+// ───────────────────────────────────────────────────────────
+case 'nu_micro': {
+  // Alerte existante
+  if (recettesCCAnn > FISCAL_CONSTANTS.MICRO_FONCIER_PLAFOND) {
+    regime._warning = 'Inéligible micro-foncier (> 15 000 € de recettes CC).';
+  }
+  // ✅ Renforce/garantit l’avertissement sans écraser une valeur existante utile
+  regime._warning = recettesCCAnn > FISCAL_CONSTANTS.MICRO_FONCIER_PLAFOND
+    ? 'Inéligible micro-foncier (> 15 000 € de recettes CC).'
+    : regime._warning;
 
-      chargesDeductibles  = recettesBrutes * FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT; // pour affichage
-      baseImposable       = base;
-      impotRevenu         = usePreciseIR
-        ? this.computeIRProgressif(baseImposable, parts, params)
-        : baseImposable * TMI;
-      prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
-      break;
-    }
+  const base = recettesBrutes * (1 - FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT);
+
+  chargesDeductibles  = recettesBrutes * FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT; // pour affichage
+  baseImposable       = base;
+  impotRevenu         = usePreciseIR
+    ? this.computeIRProgressif(baseImposable, parts, params)
+    : baseImposable * TMI;
+  prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+  break;
+}
 
     // ───────────────────────────────────────────────────────────
     // C) NU AU RÉEL — déficit foncier hors intérêts imputable (10 700 €)
@@ -962,64 +980,67 @@ const sciDivBrut = isSCI ? Number(regime._sciDividendesBruts ?? 0) : 0;
 const sciDivNet  = isSCI ? Number(regime._sciDividendesNets ?? 0) : 0;
 const sciReste   = isSCI ? Number(regime._sciResteSociete ?? 0) : 0;
     
+return {
+  // Revenus
+  loyerHC,
+  loyerAnnuelBrut: loyerAnnuelHC,
+  vacanceLocative: Number(inputData.vacanceLocative ?? 0),
+  vacanceAmount,                // CC (fiscal)
+  gestionLocative: Number(params.gestionLocativeTaux ?? 0),
+  fraisGestion,
+  revenusNets,                  // fiscal (CC)
+  revenusNetsCF,                // 🆕 cash-flow (HC)
 
-  return {
-    // Revenus
-    loyerHC,
-    loyerAnnuelBrut: loyerAnnuelHC,
-    vacanceLocative: Number(inputData.vacanceLocative ?? 0),
-    vacanceAmount,                // CC (fiscal)
-    gestionLocative: Number(params.gestionLocativeTaux ?? 0),
-    fraisGestion,
-    revenusNets,                  // fiscal (CC)
-    revenusNetsCF,                // 🆕 cash-flow (HC)
+  // 🆕 Exposition micro-foncier / base CC (pour affichage & alertes)
+  recettesCCAnn,                        // CC annuel (HC + charges récup.)
+  chargesRecuperablesAnn: chargesRecupM * 12,
+  _microFlag: microFlag,                // {plafond, recettesCCAnn, ratio, status}
 
-    // Charges (lignes)
-    interetsAnnuels,
-    tauxAmortissement: amortissementBien > 0 ? FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN * 100 : 0,
-    amortissementBien,
-    amortissementMobilier,
-    amortissementTravaux,
-    chargesCopro: Number(inputData.chargesRecuperables ?? 0) * 12,
-    chargesCoproNonRecup: Number(params.chargesCoproNonRecup ?? 0) * 12,
-    entretienAnnuel: Number(params.entretienAnnuel ?? 0),
-    taxeFonciere: Number(params.taxeFonciere ?? 0),
-    assurancePNO: Number(params.assurancePNO ?? 0) * 12,
-    totalCharges,
+  // Charges (lignes)
+  interetsAnnuels,
+  tauxAmortissement: amortissementBien > 0 ? FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN * 100 : 0,
+  amortissementBien,
+  amortissementMobilier,
+  amortissementTravaux,
+  chargesCopro: Number(inputData.chargesRecuperables ?? 0) * 12,
+  chargesCoproNonRecup: Number(params.chargesCoproNonRecup ?? 0) * 12,
+  entretienAnnuel: Number(params.entretienAnnuel ?? 0),
+  taxeFonciere: Number(params.taxeFonciere ?? 0),
+  assurancePNO: Number(params.assurancePNO ?? 0) * 12,
+  totalCharges,
 
-    // Fiscalité
-    baseImposable,
-    impotRevenu,
-    prelevementsSociaux,
-    cotisationsSociales,
-    totalImpots,
+  // Fiscalité
+  baseImposable,
+  impotRevenu,
+  prelevementsSociaux,
+  cotisationsSociales,
+  totalImpots,
 
-    // Cash-flow
-    capitalAnnuel,
-    mensualiteAnnuelle,
-    cashflowNetAnnuel,
+  // Cash-flow
+  capitalAnnuel,
+  mensualiteAnnuelle,
+  cashflowNetAnnuel,
 
-    // Infos
-    regime: this.getRegimeRegistry()[key]?.nom || regime.nom,
-    abattementApplique: isMicro ? chargesDeductibles : 0,
-    chargesReelles: this.calculateRealCharges(inputData, params, interetsAnnuels),
+  // Infos
+  regime: this.getRegimeRegistry()[key]?.nom || regime.nom,
+  abattementApplique: isMicro ? chargesDeductibles : 0,
+  chargesReelles: this.calculateRealCharges(inputData, params, interetsAnnuels),
 
-    // 🆕 Amortissements LMNP (pour affichage)
-    amortUtilise: regime._amortUtilise ?? 0,
-    amortReporte: regime._amortReporte ?? 0,
+  // 🆕 Amortissements LMNP (pour affichage)
+  amortUtilise: regime._amortUtilise ?? 0,
+  amortReporte: regime._amortReporte ?? 0,
 
-    // 🆕 Exposition SCI/IS pour le rendu (zéro si pas SCI)
-    _pfu: pfuOut,
-    _sciDistribRatio: ratioOut,
-    _messages: msgsOut,
-    _sciResultatAvantIS: sciAvantIS,
-    _sciImpotsIS: sciImpIS,
-    _sciBeneficeApresIS: sciApresIS,
-    _sciDividendesBruts: sciDivBrut,
-    _sciDividendesNets: sciDivNet,
-    _sciResteSociete: sciReste
-  };
-    }
+  // 🆕 Exposition SCI/IS pour le rendu (zéro si pas SCI)
+  _pfu: pfuOut,
+  _sciDistribRatio: ratioOut,
+  _messages: msgsOut,
+  _sciResultatAvantIS: sciAvantIS,
+  _sciImpotsIS: sciImpIS,
+  _sciBeneficeApresIS: sciApresIS,
+  _sciDividendesBruts: sciDivBrut,
+  _sciDividendesNets: sciDivNet,
+  _sciResteSociete: sciReste
+};
 
     /**
      * Construit le tableau détaillé complet
@@ -1215,11 +1236,33 @@ calculateFraisAcquisition(prix, typeAchat, params) {
   }
 }
 
- /**
- * Construit la section revenus (affichage corrigé de la formule de vacance)
- * + Badges pédagogiques HC/CC
- */
+ // 2) Section Revenus locatifs — HC ➜ CC, avec bannière micro-foncier
 buildRevenusSection(calc, params) {
+  const ccAnn = Number(calc.recettesCCAnn ?? 0);
+  const hcAnn = Number(calc.loyerAnnuelBrut ?? 0);
+  const chRec = Number(calc.chargesRecuperablesAnn ?? 0);
+
+  // Bannière d’éligibilité micro (si concerné)
+  const microBanner =
+    (calc.regime === 'Micro-foncier' && calc._microFlag)
+      ? (() => {
+          const f = calc._microFlag;
+          if (f.status === 'over') {
+            return `<tr><td colspan="3" class="warning-row" style="color:#ef4444;">
+                      ❌ Recettes (CC) ${this.formatCurrency(f.recettesCCAnn)} &gt; ${this.formatCurrency(f.plafond)} :
+                      <strong>micro-foncier inéligible</strong>
+                    </td></tr>`;
+          }
+          if (f.status === 'near') {
+            return `<tr><td colspan="3" class="warning-row" style="color:#f59e0b;">
+                      ⚠️ Recettes (CC) ${this.formatCurrency(f.recettesCCAnn)} ≈ ${Math.round(f.ratio*100)}% du plafond :
+                      <strong>proche de la limite micro-foncier</strong>
+                    </td></tr>`;
+          }
+          return '';
+        })()
+      : '';
+
   return `
     <tr class="section-header">
       <td colspan="3">
@@ -1228,32 +1271,40 @@ buildRevenusSection(calc, params) {
         <span class="badge badge-cc">Fiscal sur CC</span>
       </td>
     </tr>
+
+    ${microBanner}
+
     <tr>
       <td>Loyer mensuel HC</td>
       <td class="text-right">${this.formatCurrency(calc.loyerHC)}</td>
-      <td class="formula">Loyer hors charges</td>
+      <td class="formula">Hors charges locatives</td>
     </tr>
     <tr>
-      <td>Loyer annuel brut</td>
-      <td class="text-right">${this.formatCurrency(calc.loyerAnnuelBrut)}</td>
-      <td class="formula">= ${calc.loyerHC} × 12 mois</td>
+      <td>Charges récupérables refacturées</td>
+      <td class="text-right">${this.formatCurrency(chRec)}</td>
+      <td class="formula">= charges récup. × 12</td>
+    </tr>
+    <tr>
+      <td><em>Recettes brutes (base CC)</em></td>
+      <td class="text-right"><em>${this.formatCurrency(ccAnn)}</em></td>
+      <td class="formula"><em>= HC × 12 + charges récup.</em></td>
     </tr>
     <tr>
       <td>Vacance locative (${calc.vacanceLocative}%)</td>
       <td class="text-right negative">-${this.formatCurrency(calc.vacanceAmount)}</td>
-      <td class="formula">= (HC + charges récup.) × 12 × ${calc.vacanceLocative}%  <!-- CC pour fiscal --></td>
+      <td class="formula">= Recettes CC × ${calc.vacanceLocative}%</td>
     </tr>
     ${calc.fraisGestion > 0 ? `
     <tr>
       <td>Frais de gestion (${params.gestionLocativeTaux}%)</td>
       <td class="text-right negative">-${this.formatCurrency(calc.fraisGestion)}</td>
-      <td class="formula">= Loyer net × ${params.gestionLocativeTaux}%</td>
-    </tr>
-    ` : ''}
+      <td class="formula">= (HC × 12 − vacance HC) × ${params.gestionLocativeTaux}%</td>
+    </tr>` : ''}
+
     <tr class="total-row">
       <td><strong>Revenus locatifs nets</strong></td>
       <td class="text-right"><strong>${this.formatCurrency(calc.revenusNets)}</strong></td>
-      <td></td>
+      <td class="formula">Fiscalité basée sur CC</td>
     </tr>
   `;
 }
@@ -1414,13 +1465,28 @@ buildFiscaliteSection(calc, inputData) {
   // ————————————————————————————————————————————————
   // Rendu générique (IR/TMI/PS/LMP) pour les autres régimes
   // ————————————————————————————————————————————————
+
+  // Alerte micro > 15k (si micro-foncier)
+  const microAlertOver =
+    (calc.regime === 'Micro-foncier' && calc._microFlag && calc._microFlag.status === 'over')
+      ? `<tr><td colspan="3" class="warning-row" style="color:#ef4444;">
+           ❌ Vos recettes (CC) dépassent 15 000 € :
+           le micro-foncier est inapplicable. Passez au <strong>réel</strong>.
+         </td></tr>`
+      : '';
+
+  // Pré-warning si ≥ 90% du plafond
+  const microAlertNear =
+    (calc.regime === 'Micro-foncier' && calc._microFlag && calc._microFlag.status === 'near')
+      ? `<tr><td colspan="3" class="warning-row" style="color:#f59e0b;">
+           ⚠️ Vos recettes (CC) atteignent ~${Math.round((calc._microFlag.ratio || 0) * 100)}% du plafond micro-foncier.
+           Surveillez la limite de <strong>15 000 €</strong>.
+         </td></tr>`
+      : '';
+
   const isPreciseIR = !!(inputData.irPrecise);
-  const libIR  = isSCI
-    ? '(IS)'
-    : (isPreciseIR ? '(barème progressif)' : `(TMI ${Number(inputData.tmi) || 0}%)`);
-  const formIR = isSCI
-    ? 'Barème IS'
-    : (isPreciseIR ? 'Barème progressif' : `= Base × ${Number(inputData.tmi) || 0}%`);
+  const libIR  = isPreciseIR ? '(barème progressif)' : `(TMI ${Number(inputData.tmi) || 0}%)`;
+  const formIR = isPreciseIR ? 'Barème progressif' : `= Base × ${Number(inputData.tmi) || 0}%`;
 
   const irValueCell = isIRNegatif
     ? `<td class="text-right positive">+${fmt(calc.impotRevenu)}</td>`
@@ -1440,6 +1506,8 @@ buildFiscaliteSection(calc, inputData) {
     : `<strong>Total impôts</strong>`;
 
   return `
+    ${microAlertOver}
+    ${microAlertNear}
     ${
       (Array.isArray(calc._messages) && calc._messages.length)
         ? `<tr><td colspan="3">
@@ -1477,17 +1545,6 @@ buildFiscaliteSection(calc, inputData) {
       ${irValueCell}
       ${irFormulaCell}
     </tr>
-
-    ${
-      (calc.regime === "SCI à l'IS" && Number(calc._pfu) > 0)
-        ? `
-    <tr>
-      <td>PFU sur dividendes (${Math.round((calc._sciDistribRatio || 0) * 100)}%)</td>
-      <td class="text-right negative">-${fmt(calc._pfu)}</td>
-      <td class="formula">= (Résultat après IS × ratio) × 30%</td>
-    </tr>`
-        : ''
-    }
 
     ${
       has(calc.cotisationsSociales)
