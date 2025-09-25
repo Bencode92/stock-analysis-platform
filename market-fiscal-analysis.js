@@ -770,52 +770,55 @@ case 'nu_micro': {
     }
 
     // ───────────────────────────────────────────────────────────
-    // E) LMNP AU RÉEL — assujetti ⇒ cotisations sociales, PS = 0
-    // ───────────────────────────────────────────────────────────
-    case 'lmnp_reel': {
-      const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
+// E) LMNP AU RÉEL — assujetti ⇒ cotisations sociales, PS = 0
+// ───────────────────────────────────────────────────────────
+case 'lmnp_reel': {
+  const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
-      const baseAmortissable  = Number(inputData.price ?? 0) *
-                                (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
+  const baseAmortissable = Number(inputData.price ?? 0) *
+                            (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
 
-      amortissementBien       = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-      amortissementMobilier   = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
-      amortissementTravaux    = Number(inputData.travauxRenovation ?? 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+  amortissementBien     = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+  amortissementMobilier = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+  amortissementTravaux  = Number(inputData.travauxRenovation ?? 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
 
-      // 🧮 Utilisé vs Reporté
-      const resultatAvantAmort = revenusNets - chargesReelles;
-      const amortTotal         = amortissementBien + amortissementMobilier + amortissementTravaux;
-      const amortDispo         = Math.max(0, resultatAvantAmort);
-      const amortUtilise       = Math.min(amortTotal, amortDispo);
-      const amortReporte       = Math.max(0, amortTotal - amortUtilise);
+  // 🧮 Utilisé vs Reporté (ne déduire que l'amortissement utilisé)
+  const resultatAvantAmort = revenusNets - chargesReelles;
+  const amortCalcules      = amortissementBien + amortissementMobilier + amortissementTravaux;
+  const amortDispo         = Math.max(0, resultatAvantAmort);
+  const amortUtilise       = Math.min(amortCalcules, amortDispo);
+  const amortReporte       = Math.max(0, amortCalcules - amortUtilise);
 
-      baseImposable = Math.max(0, resultatAvantAmort - amortUtilise);
+  baseImposable = Math.max(0, resultatAvantAmort - amortUtilise);
 
-      // IR (précis ou TMI)
-      impotRevenu = usePreciseIR
-        ? this.computeIRProgressif(baseImposable, parts, params)
-        : baseImposable * TMI;
+  // IR (précis ou TMI)
+  impotRevenu = usePreciseIR
+    ? this.computeIRProgressif(baseImposable, parts, params)
+    : baseImposable * TMI;
 
-      // Cotisations sociales LMNP assujetti → pas de PS
-      const assujetti = !!inputData.assujettiCotisSociales;
-      if (assujetti) {
-        const tauxRaw   = Number(inputData.lmpCotisationsTaux);
-        const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX;
-        const minRaw    = Number(inputData.lmpCotisationsMin);
-        const minCotis  = Number.isFinite(minRaw) ? minRaw : FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
-        cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
-        prelevementsSociaux = 0;
-      } else {
-        prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
-      }
+  // Cotisations sociales LMNP assujetti → pas de PS
+  const assujetti = !!inputData.assujettiCotisSociales;
+  if (assujetti) {
+    const tauxRaw   = Number(inputData.lmpCotisationsTaux);
+    const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX;
+    const minRaw    = Number(inputData.lmpCotisationsMin);
+    const minCotis  = Number.isFinite(minRaw) ? minRaw : FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
+    cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
+    prelevementsSociaux = 0;
+  } else {
+    prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+  }
 
-      chargesDeductibles = chargesReelles;
+  // Charges déductibles "cash"
+  chargesDeductibles = chargesReelles;
 
-      // ↩️ expose pour l’affichage
-      regime._amortUtilise = amortUtilise;
-      regime._amortReporte = amortReporte;
-      break;
-    }
+  // ↩️ Expose pour l’affichage + pour totalCharges (après le switch)
+  regime._amortCalcules = amortCalcules; // info (non inclus)
+  regime._amortUtilise  = amortUtilise;  // inclus dans le total
+  regime._amortReporte  = amortReporte;  // non inclus cette année
+
+  break;
+}
 
     // ───────────────────────────────────────────────────────────
     // F) LMP (réel) — avec plancher cotisations
@@ -959,11 +962,25 @@ case 'sci_is': {
     mensualiteAnnuelle;
 
   // totalCharges pour l’affichage (amortissements ajoutés 1 seule fois)
-  const isMicro = (key === 'nu_micro' || key === 'lmnp_micro');
-  const totalCharges =
-    (key === 'lmp')
-      ? chargesDeductibles
-      : chargesDeductibles + amortissementBien + amortissementMobilier + amortissementTravaux;
+const isMicro = (key === 'nu_micro' || key === 'lmnp_micro');
+
+let totalCharges;
+if (key === 'lmnp_reel') {
+  // ✅ LMNP réel : charges cash + amortissement utilisé uniquement
+  totalCharges = Number(chargesDeductibles || 0) + Number(regime._amortUtilise || 0);
+} else if (key === 'lmp') {
+  // LMP (inchangé pour l’instant)
+  totalCharges = Number(chargesDeductibles || 0)
+    + Number(amortissementBien || 0)
+    + Number(amortissementMobilier || 0)
+    + Number(amortissementTravaux || 0);
+} else {
+  // Autres régimes (micro / nu réel / SCI IS) : comportement existant
+  totalCharges = Number(chargesDeductibles || 0)
+    + Number(amortissementBien || 0)
+    + Number(amortissementMobilier || 0)
+    + Number(amortissementTravaux || 0);
+}
     // ─────────────────────────────────────────────────────────────
 // Exposition SCI/IS pour le rendu (à placer juste avant return)
 // ─────────────────────────────────────────────────────────────
@@ -1310,78 +1327,104 @@ buildRevenusSection(calc, params) {
 }
 
 /**
- * Construit la section charges (triées par impact)
- * (inchangée)
+ * Construit la section charges (lisible, avec badges et bloc amortissements)
  */
 buildChargesSection(calc, params) {
   const charges = [];
-  
-  // Pour les régimes micro, afficher l'abattement forfaitaire
+
+  // ───────────────
+  // A) Régimes MICRO
+  // ───────────────
   if (calc.regime.includes('Micro')) {
     charges.push({
       label: `Abattement forfaitaire (${calc.regime === 'Micro-foncier' ? '30%' : '50%'})`,
       value: calc.abattementApplique,
-      formula: 'Sur revenus nets'
+      formula: 'Sur revenus nets',
+      included: true
     });
   } else {
-    // Pour les régimes réels, détailler toutes les charges
+    // ───────────────
+    // B) RÉELS
+    // 1) Charges "cash" (toutes incluses dans le total)
+    // ───────────────
     charges.push(
-      { label: "Intérêts d'emprunt", value: calc.interetsAnnuels, formula: "Selon échéancier" },
-      calc.amortissementBien > 0 ? { label: "Amortissement bien", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × valeur` } : null,
-      calc.amortissementMobilier > 0 ? { label: "Amortissement mobilier", value: calc.amortissementMobilier, formula: "10% × 10% du prix" } : null,
-
-      // Amortissement des travaux
-      calc.amortissementTravaux > 0 ? { 
-        label: "Amortissement travaux", 
-        value: calc.amortissementTravaux, 
-        formula: "2.5% × coût travaux" 
-      } : null,
-
-      // 🆕 Ajouts pédagogiques (après les lignes d'amortissement)
-      calc.amortUtilise > 0 ? { 
-        label: "Amortissement utilisé", 
-        value: calc.amortUtilise, 
-        formula: "Plafonné par le résultat" 
-      } : null,
-      calc.amortReporte > 0 ? { 
-        label: "Amortissement reporté", 
-        value: calc.amortReporte, 
-        formula: "Report sur exercices futurs" 
-      } : null,
-
-      { label: "Taxe foncière", value: calc.taxeFonciere, formula: "Paramètre avancé" },
-      // { label: "Charges copro récupérables", value: calc.chargesCopro, formula: "12 × charges mensuelles" }, // non déductible
-      calc.chargesCoproNonRecup > 0 ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12` } : null,
-      { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12` },
-      { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel" }
+      { label: "Intérêts d'emprunt", value: calc.interetsAnnuels, formula: "Selon échéancier", included: true },
+      { label: "Taxe foncière", value: calc.taxeFonciere, formula: "Paramètre avancé", included: true },
+      calc.chargesCoproNonRecup > 0
+        ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12`, included: true }
+        : null,
+      { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12`, included: true },
+      { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel", included: true }
     );
+
+    // 2) Bloc "Amortissements (non cash)"
+    const amortBloc = [
+      // Récap info (non déduite)
+      {
+        label: "Amortissements calculés (bien + mobilier + travaux)",
+        value: (calc.amortissementBien + calc.amortissementMobilier + calc.amortissementTravaux),
+        formula: "Info — non inclus dans le total",
+        included: false,
+        info: true
+      },
+      // Sous-détails (gris / info)
+      calc.amortissementBien > 0
+        ? { label: "• Bien (info)", value: calc.amortissementBien, formula: `${calc.tauxAmortissement}% × base amortissable`, included: false, info: true }
+        : null,
+      calc.amortissementMobilier > 0
+        ? { label: "• Mobilier (info)", value: calc.amortissementMobilier, formula: "10% × 10% du prix", included: false, info: true }
+        : null,
+      calc.amortissementTravaux > 0
+        ? { label: "• Travaux (info)", value: calc.amortissementTravaux, formula: "2.5% × coût travaux", included: false, info: true }
+        : null,
+      // Ligne réellement déductible (comptable)
+      calc.amortUtilise > 0
+        ? { label: "Amortissement utilisé (non cash)", value: calc.amortUtilise, formula: "Plafonné par le résultat — inclus dans le total", included: true, nonCash: true }
+        : null,
+      // Ligne reportée (non incluse cette année)
+      calc.amortReporte > 0
+        ? { label: "Amortissement reporté", value: calc.amortReporte, formula: "Reporté — non inclus cette année", included: false, muted: true }
+        : null
+    ].filter(Boolean);
+
+    charges.push(...amortBloc);
   }
 
-  const validCharges = charges.filter(Boolean).sort((a, b) => b.value - a.value);
+  // ⚠️ Ne pas trier pour préserver la hiérarchie visuelle (cash puis amortissements)
+  const validCharges = charges.filter(Boolean);
 
   return `
     <tr class="section-header">
       <td colspan="3"><strong>📉 CHARGES DÉDUCTIBLES</strong></td>
     </tr>
+
     ${validCharges.map(charge => `
-      <tr>
-        <td>${charge.label}</td>
-        <td class="text-right negative">-${this.formatCurrency(charge.value)}</td>
-        <td class="formula">${charge.formula}</td>
+      <tr class="${charge.info ? 'muted' : ''}">
+        <td>
+          ${charge.label}
+          ${charge.nonCash ? ' <span class="badge badge-gray">non cash</span>' : ''}
+          ${charge.included ? ' <span class="badge badge-blue">inclus</span>' : ' <span class="badge badge-gray">non inclus</span>'}
+        </td>
+        <td class="text-right ${charge.included ? 'negative' : 'neutral'}">
+          ${charge.included ? '-' : ''}${this.formatCurrency(charge.value)}
+        </td>
+        <td class="formula ${charge.muted ? 'text-muted' : ''}">${charge.formula}</td>
       </tr>
     `).join('')}
+
     ${calc.regime.includes('Micro') && calc.chargesReelles > calc.abattementApplique ? `
-    <tr class="warning-row">
-      <td colspan="3" style="color: #f59e0b; font-style: italic;">
-        ⚠️ Charges réelles (${this.formatCurrency(calc.chargesReelles)}) > Abattement (${this.formatCurrency(calc.abattementApplique)})
-        → Le régime réel serait plus avantageux
-      </td>
-    </tr>
+      <tr class="warning-row">
+        <td colspan="3" style="color: #f59e0b; font-style: italic;">
+          ⚠️ Charges réelles (${this.formatCurrency(calc.chargesReelles)}) > Abattement (${this.formatCurrency(calc.abattementApplique)})
+          → Le régime réel serait plus avantageux
+        </td>
+      </tr>
     ` : ''}
+
     <tr class="total-row">
       <td><strong>Total charges déductibles</strong></td>
       <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalCharges)}</strong></td>
-      <td></td>
+      <td class="formula"><strong>Charges cash + amortissement utilisé</strong></td>
     </tr>
   `;
 }
