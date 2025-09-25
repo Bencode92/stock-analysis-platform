@@ -1673,64 +1673,72 @@ buildCashflowSection(calc, inputData) {
   `;
 }
 
-    /**
-     * Construit la section indicateurs
-     * ───────────────────────────────────────────────────────────
-     * 1. Cash-on-Cash        = Cash-flow net annuel / Apport
-     * 2. Rendement net réel  = Revenus nets / Coût total du projet
-     * 3. Taux de couverture  = Revenus nets / Mensualités de crédit
-     */
+  /**
+ * Construit la section indicateurs
+ * 1. Cash-on-Cash        = Cash-flow net annuel / Apport
+ * 2. Cash-flow / coût    = Cash-flow net annuel / Coût total
+ * 3. DSCR (couverture)   = NOI / Mensualités annuelles
+ *    où NOI = revenusNetsCF − (TF + copro NR + entretien + PNO)
+ */
 buildIndicateursSection(calc, inputData) {
-    // Récupération des constantes fiscales
-    const PS = FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX || 0.172;
-    
-    // Calcul du coût total du projet
-    const coutTotalProjet = inputData.coutTotalAcquisition || 
-                           (inputData.price + (inputData.travauxRenovation || 0) + (inputData.price * 0.10));
-    
-    // Mensualité annuelle
-    const mensualiteAnnuelle = inputData.monthlyPayment * 12;
-    
-    /* 1️⃣ Cash-on-Cash return (gérer apport = 0) */
-    const cashOnCash = inputData.apport > 0 
-        ? (calc.cashflowNetAnnuel / inputData.apport) * 100 
-        : null;
-        
- /* 2️⃣ Cash-flow / coût total (après impôts & crédit) */
-const cashflowYield = (calc.cashflowNetAnnuel / coutTotalProjet) * 100;
-    
-/* 3️⃣ Taux de couverture du crédit (DSCR) */
-const dscr = mensualiteAnnuelle > 0
-    ? (revenuNetReel / mensualiteAnnuelle)
-    : 1;
-const tauxCouverture = dscr * 100;
-    
-    return `
-        <tr class="section-header">
-            <td colspan="3"><strong>📈 INDICATEURS DE PERFORMANCE</strong></td>
-        </tr>
-        <tr>
-            <td>Cash-on-Cash return</td>
-            <td class="text-right ${cashOnCash !== null && cashOnCash >= 0 ? 'positive' : 'negative'}">
-                ${cashOnCash !== null ? cashOnCash.toFixed(2) + '%' : '—'}
-            </td>
-            <td class="formula">${cashOnCash !== null ? '= Cash-flow / Apport' : 'Pas d\'apport'}</td>
-        </tr>
-<tr>
-  <td>Cash-flow / coût total</td>
-  <td class="text-right ${cashflowYield >= 0 ? 'positive' : 'negative'}">
-    ${isFinite(cashflowYield) ? cashflowYield.toFixed(2) + '%' : '—'}
-  </td>
-  <td class="formula">= Cash-flow net annuel / Coût total</td>
-</tr>
-        <tr>
-            <td>Taux de couverture du crédit</td>
-            <td class="text-right ${tauxCouverture >= 100 ? 'positive' : 'negative'}">
-                ${tauxCouverture.toFixed(0)}%
-            </td>
-            <td class="formula">= Revenus nets / Mensualités</td>
-        </tr>
-    `;
+  // Coût total (sécurisé)
+  const coutTotalProjet =
+    Number(inputData.coutTotalAcquisition ?? 0) ||
+    (Number(inputData.price || 0) + Number(inputData.travauxRenovation || 0) + Number(inputData.price || 0) * 0.10);
+
+  // Mensualités annuelles
+  const mensualiteAnnuelle = Number(inputData.monthlyPayment || 0) * 12;
+
+  /* 1️⃣ Cash-on-Cash (gérer apport = 0) */
+  const cashOnCash =
+    Number(inputData.apport) > 0
+      ? (Number(calc.cashflowNetAnnuel || 0) / Number(inputData.apport)) * 100
+      : null;
+
+  /* 2️⃣ Cash-flow / coût total (après impôts & crédit) */
+  const cashflowYield = (Number(calc.cashflowNetAnnuel || 0) / (coutTotalProjet || 1)) * 100;
+
+  /* 3️⃣ DSCR = NOI / Mensualités annuelles
+       NOI = revenusNetsCF − charges cash (hors impôt & hors crédit) */
+  const chargesCashAnnuel =
+    Number(calc.taxeFonciere || 0) +
+    Number(calc.chargesCoproNonRecup || 0) +
+    Number(calc.entretienAnnuel || 0) +
+    Number(calc.assurancePNO || 0);
+
+  const revenuNetReel = Math.max(0, Number(calc.revenusNetsCF || 0) - chargesCashAnnuel); // NOI
+  const dscr = mensualiteAnnuelle > 0 ? (revenuNetReel / mensualiteAnnuelle) : 1;
+  const tauxCouverture = dscr * 100;
+
+  return `
+    <tr class="section-header">
+      <td colspan="3"><strong>📈 INDICATEURS DE PERFORMANCE</strong></td>
+    </tr>
+
+    <tr>
+      <td>Cash-on-Cash return</td>
+      <td class="text-right ${cashOnCash !== null && cashOnCash >= 0 ? 'positive' : 'negative'}">
+        ${cashOnCash !== null && isFinite(cashOnCash) ? cashOnCash.toFixed(2) + '%' : '—'}
+      </td>
+      <td class="formula">${cashOnCash !== null ? '= Cash-flow / Apport' : 'Pas d\'apport'}</td>
+    </tr>
+
+    <tr>
+      <td>Cash-flow / coût total</td>
+      <td class="text-right ${cashflowYield >= 0 ? 'positive' : 'negative'}">
+        ${isFinite(cashflowYield) ? cashflowYield.toFixed(2) + '%' : '—'}
+      </td>
+      <td class="formula">= Cash-flow net annuel / Coût total</td>
+    </tr>
+
+    <tr>
+      <td>Taux de couverture du crédit (DSCR)</td>
+      <td class="text-right ${tauxCouverture >= 100 ? 'positive' : 'negative'}">
+        ${isFinite(tauxCouverture) ? tauxCouverture.toFixed(0) + '%' : '—'}
+      </td>
+      <td class="formula">= (Revenus nets CF − charges cash) / Mensualités</td>
+    </tr>
+  `;
 }
 
 /**
