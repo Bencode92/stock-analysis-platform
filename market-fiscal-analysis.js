@@ -1041,7 +1041,7 @@ return {
   _sciDividendesNets: sciDivNet,
   _sciResteSociete: sciReste
 };
-
+ }
     /**
      * Construit le tableau détaillé complet
      */
