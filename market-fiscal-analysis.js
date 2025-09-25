@@ -1653,13 +1653,8 @@ buildIndicateursSection(calc, inputData) {
         ? (calc.cashflowNetAnnuel / inputData.apport) * 100 
         : null;
         
-    /* 2️⃣ Rendement net sur coût total (loyers - charges non récupérables) */
-const revenuNetReel = (calc.revenusNetsCF
-  - calc.taxeFonciere
-  - calc.chargesCoproNonRecup
-  - calc.entretienAnnuel
-  - calc.assurancePNO);
-const rendementNetReel = (revenuNetReel / coutTotalProjet) * 100;
+ /* 2️⃣ Cash-flow / coût total (après impôts & crédit) */
+const cashflowYield = (calc.cashflowNetAnnuel / coutTotalProjet) * 100;
     
 /* 3️⃣ Taux de couverture du crédit (DSCR) */
 const dscr = mensualiteAnnuelle > 0
@@ -1678,13 +1673,13 @@ const tauxCouverture = dscr * 100;
             </td>
             <td class="formula">${cashOnCash !== null ? '= Cash-flow / Apport' : 'Pas d\'apport'}</td>
         </tr>
-        <tr>
-            <td>Rendement net sur coût total</td>
-            <td class="text-right ${rendementNetReel >= 0 ? 'positive' : 'negative'}">
-                ${rendementNetReel.toFixed(2)}%
-            </td>
-            <td class="formula">= Revenus nets / Coût total</td>
-        </tr>
+<tr>
+  <td>Cash-flow / coût total</td>
+  <td class="text-right ${cashflowYield >= 0 ? 'positive' : 'negative'}">
+    ${isFinite(cashflowYield) ? cashflowYield.toFixed(2) + '%' : '—'}
+  </td>
+  <td class="formula">= Cash-flow net annuel / Coût total</td>
+</tr>
         <tr>
             <td>Taux de couverture du crédit</td>
             <td class="text-right ${tauxCouverture >= 100 ? 'positive' : 'negative'}">
