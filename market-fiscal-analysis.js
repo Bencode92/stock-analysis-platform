@@ -25,11 +25,12 @@ const FISCAL_CONSTANTS = {
     LMNP_TAUX_AMORTISSEMENT_BIEN: 0.025,
     LMNP_TAUX_AMORTISSEMENT_MOBILIER: 0.10,
     LMNP_PART_MOBILIER: 0.10,
-    LMNP_PART_TERRAIN: 0.10,  
+    LMNP_PART_TERRAIN: 0.15,  
     
     // Durées
     DUREE_AMORTISSEMENT_BIEN: 40,
     DUREE_AMORTISSEMENT_MOBILIER: 10,
+    DUREE_AMORTISSEMENT_TRAVAUX: 10,
 
     // LMP (cotisations sociales pro)
   LMP_COTISATIONS_TAUX: 0.35,   // 35% par défaut
@@ -608,14 +609,35 @@ calculateAnnualInterests(inputData, baseResults, year = 1) {
   return P * (a1 - a0) - M * ((a1 - a0) / r - (n1 - n0));
 }
 /**
- * Calcule les charges réelles déductibles
+ * Calcule les charges réelles déductibles (régimes au réel).
+ * Inclut : intérêts, taxe foncière, charges copro NR, PNO, entretien,
+ * + frais bancaires (dossier, tenue) et garantie (caution/PPD) amortie
+ * linéairement sur la durée du prêt.
+ *
+ * @param {object} inputData - contient loanAmount (montant emprunté) et loanDuration (années)
+ * @param {object} params - paramètres avancés (TF, copro NR, PNO, entretien, frais bancaires, taux de garantie)
+ * @param {number} interetsAnnuels - intérêts d’emprunt de l’année (calculés ailleurs)
+ * @returns {number} total des charges déductibles (hors amortissements)
  */
 calculateRealCharges(inputData, params, interetsAnnuels) {
-  return interetsAnnuels +
-         Number(params.taxeFonciere ?? 0) +
-         Number(params.chargesCoproNonRecup ?? 0) * 12 +
-         Number(params.assurancePNO ?? 0) * 12 +
-         Number(params.entretienAnnuel ?? 0);
+  const tf     = Number(params.taxeFonciere ?? 0);
+  const copro  = Number(params.chargesCoproNonRecup ?? 0) * 12;
+  const pno    = Number(params.assurancePNO ?? 0) * 12;
+  const entret = Number(params.entretienAnnuel ?? 0);
+
+  // Frais bancaires
+  const fraisDossier = Number(params.fraisBancairesDossier ?? 0);
+  const fraisCompte  = Number(params.fraisBancairesCompte ?? 0);
+  const tauxGarant   = Number(params.fraisGarantie ?? 0) / 100; // ex: 1.3709% → 0.013709
+  const loanAmount   = Number(inputData.loanAmount ?? 0);
+  const duree        = Math.max(1, Number(inputData.loanDuration ?? 1)); // années
+
+  // Garantie (caution/PPD/hypo) amortie sur la durée du prêt
+  const garantieAmortieAn = (loanAmount * tauxGarant) / duree;
+
+  return interetsAnnuels
+       + tf + copro + pno + entret
+       + fraisDossier + fraisCompte + garantieAmortieAn;
 }
 /**
  * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE (patchée)
@@ -769,53 +791,72 @@ case 'nu_micro': {
       break;
     }
 
-    // ───────────────────────────────────────────────────────────
-// E) LMNP AU RÉEL — assujetti ⇒ cotisations sociales, PS = 0
+// ───────────────────────────────────────────────────────────
+// E) LMNP AU RÉEL — assujetti ⇒ cotisations sociales, sinon PS = 17,2%
 // ───────────────────────────────────────────────────────────
 case 'lmnp_reel': {
+  // 1) Charges réelles (intérêts + TF + copro NR + PNO + entretien + frais bancaires + garantie amortie)
   const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
-  const baseAmortissable = Number(inputData.price ?? 0) *
-                            (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
+  // 2) Bases d'amortissement
+  const prix       = Number(inputData.price ?? 0);
+  const tauxNot    = Number(params.fraisNotaireTaux ?? 0) / 100;   // ex: 8% → 0.08
+  const tauxCom    = Number(params.commissionImmo   ?? 0) / 100;   // ex: 4% → 0.04
+  const partTer    = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN ?? 0);   // ex: 0.15
+  const partMob    = Number(FISCAL_CONSTANTS.LMNP_PART_MOBILIER ?? 0);  // ex: 0.10 (mettre 0 si pas de mobilier réel)
 
-  amortissementBien     = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-  amortissementMobilier = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
-  amortissementTravaux  = Number(inputData.travauxRenovation ?? 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+  // Frais d'acquisition intégrés au bâti (notaire + agence)
+  const fraisNot   = prix * tauxNot;
+  const commission = prix * tauxCom;
 
-  // 🧮 Utilisé vs Reporté (ne déduire que l'amortissement utilisé)
+  // Base amortissable du bâti : (prix + frais) – terrain – mobilier
+  const baseBien = Math.max(
+    0,
+    (prix + fraisNot + commission) * (1 - partTer - partMob)
+  );
+
+  // Amortissements (bâti au taux, mobilier & travaux à la durée)
+  const amortissementBien     = baseBien * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
+  const baseMob               = prix * partMob;
+  const amortissementMobilier = baseMob / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_MOBILIER ?? 10));
+  const travaux               = Number(inputData.travauxRenovation ?? 0);
+  const amortissementTravaux  = travaux / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_TRAVAUX ?? 10));
+
+  // 3) Plafond d'utilisation des amortissements (jamais créer de déficit)
   const resultatAvantAmort = revenusNets - chargesReelles;
-  const amortCalcules      = amortissementBien + amortissementMobilier + amortissementTravaux;
+  const amortCalcules      = Math.max(0, amortissementBien + amortissementMobilier + amortissementTravaux);
   const amortDispo         = Math.max(0, resultatAvantAmort);
   const amortUtilise       = Math.min(amortCalcules, amortDispo);
   const amortReporte       = Math.max(0, amortCalcules - amortUtilise);
 
+  // 4) Base imposable et impôts
   baseImposable = Math.max(0, resultatAvantAmort - amortUtilise);
 
-  // IR (précis ou TMI)
+  // IR (barème précis ou TMI)
   impotRevenu = usePreciseIR
     ? this.computeIRProgressif(baseImposable, parts, params)
     : baseImposable * TMI;
 
-  // Cotisations sociales LMNP assujetti → pas de PS
+  // Cotisations sociales si assujetti (LMNP affilié/SSI) → pas de PS
   const assujetti = !!inputData.assujettiCotisSociales;
   if (assujetti) {
     const tauxRaw   = Number(inputData.lmpCotisationsTaux);
-    const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX;
+    const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX ?? 0.35);
     const minRaw    = Number(inputData.lmpCotisationsMin);
-    const minCotis  = Number.isFinite(minRaw) ? minRaw : FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
+    const minCotis  = Number.isFinite(minRaw) ? minRaw : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_MIN ?? 1200);
     cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
     prelevementsSociaux = 0;
   } else {
-    prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+    cotisationsSociales  = 0;
+    prelevementsSociaux  = baseImposable * Number(FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX ?? 0.172);
   }
 
-  // Charges déductibles "cash"
-  chargesDeductibles = chargesReelles;
-
-  // ↩️ Expose pour l’affichage + pour totalCharges (après le switch)
-  regime._amortCalcules = amortCalcules; // info (non inclus)
-  regime._amortUtilise  = amortUtilise;  // inclus dans le total
-  regime._amortReporte  = amortReporte;  // non inclus cette année
+  // 5) Expositions & sorties
+  chargesDeductibles      = chargesReelles;           // charges "cash" uniquement
+  regime._amortCalcules   = amortCalcules;            // info (non inclus)
+  regime._amortUtilise    = amortUtilise;             // inclus dans totalCharges
+  regime._amortReporte    = amortReporte;             // reporté (non inclus cette année)
+  // (Le totalCharges est recalculé après le switch, en ajoutant _amortUtilise)
 
   break;
 }
