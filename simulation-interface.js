@@ -1192,20 +1192,21 @@ document.addEventListener('DOMContentLoaded', function() {
         return formData;
     }
 
-    /**
-     * Formate un montant en euros
-     * @param {number} montant - Montant à formater
-     * @param {number} decimales - Nombre de décimales (par défaut 0)
-     * @returns {string} - Montant formaté
-     */
-    function formaterMontant(montant, decimales = 0) {
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: decimales,
-            maximumFractionDigits: decimales
-        }).format(montant);
-    }
+  /**
+ * Formate un montant en euros
+ * @param {number} montant - Montant à formater
+ * @param {number} decimales - Nombre de décimales (par défaut 0)
+ * @returns {string} - Montant formaté
+ */
+function formaterMontant(montant, decimales = 0) {
+  if (Math.abs(montant) < 0.5) montant = 0; // empêche l'affichage de -0 €
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales
+  }).format(montant);
+}
 
     /**
      * Formate un pourcentage
@@ -1614,7 +1615,6 @@ function afficherResultats(resultats) {
     document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
     document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
     document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
-   document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualiteTotale);
     document.getElementById('encheres-mensualite').textContent  = formaterMontantMensuel(encheres.mensualiteTotale);
     document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
     
@@ -1958,29 +1958,26 @@ if (document.getElementById('comp-classique-cashflow-annuel')) {
         }
     }
 
-// CALCUL DU RENDEMENT BASÉ SUR L'APPORT INITIAL PARAMÉTRÉ
-// Récupérer l'apport depuis le formulaire ou le simulateur
-const apportInitial = parseFloat(document.getElementById('apport')?.value) || 
-                     window.simulateur?.params.base.apport || 
-                     20000;
+// === RENTABILITÉ — utiliser le rendement net calculé par le moteur ===
+document.getElementById('comp-classique-rentabilite').textContent =
+  formaterPourcentage(classique.rendementNet);
+document.getElementById('comp-encheres-rentabilite').textContent =
+  formaterPourcentage(encheres.rendementNet);
 
-const rendementClassique = apportInitial > 0 ? (cashflowClassiqueFinal * 12 / apportInitial) * 100 : 0;
-const rendementEncheres = apportInitial > 0 ? (cashflowEncheresFinal * 12 / apportInitial) * 100 : 0;
+majDifference(
+  'comp-rentabilite-diff',
+  encheres.rendementNet - classique.rendementNet,
+  true // affiche avec %
+);
 
-document.getElementById('comp-classique-rentabilite').textContent = formaterPourcentage(rendementClassique);
-document.getElementById('comp-encheres-rentabilite').textContent = formaterPourcentage(rendementEncheres);
-majDifference('comp-rentabilite-diff', rendementEncheres - rendementClassique, true);
-
-// Mettre à jour aussi les badges de rendement en haut des cartes
+// Badges en haut des cartes
 const classiqueRendEl = document.getElementById('classique-rentabilite');
 const encheresRendEl = document.getElementById('encheres-rentabilite');
-if (classiqueRendEl) classiqueRendEl.textContent = rendementClassique.toFixed(2) + '%';
-if (encheresRendEl) encheresRendEl.textContent = rendementEncheres.toFixed(2) + '%';
+if (classiqueRendEl) classiqueRendEl.textContent = formaterPourcentage(classique.rendementNet);
+if (encheresRendEl) encheresRendEl.textContent = formaterPourcentage(encheres.rendementNet);
 
-// Générer le résumé lisible
+// (on garde ces deux appels juste après)
 genererResumeLisible(classique, encheres);
-
-// Ajouter les barres visuelles
 ajouterBarresVisuelles(classique, encheres);
     
     /**
