@@ -469,79 +469,95 @@ prepareFiscalDataForComparator(rawData) {
     }
 
 /**
- * Récupère tous les paramètres avancés du formulaire - VERSION CORRIGÉE + AJOUTS
- * ✅ ACCEPTE 0 grâce à parseFloatOrDefault
+ * Récupère tous les paramètres avancés du formulaire — version robuste
+ * ✅ Conserve les zéros saisis (parseFloatOrDefault)
+ * ✅ Tolérante aux champs manquants
+ * ✅ Ajoute la distribution SCI (brute) pour PFU
  */
 getAllAdvancedParams() {
+  const el = (id) => document.getElementById(id);
+  const isChecked = (id, def = false) => el(id)?.checked ?? def;
+
+  // Laisse volontairement la valeur BRUTE (ex: "70" ou "0,7")
+  // La normalisation (ratio 0..1) est gérée par normalizeSciDistribution(...)
+  const sciDistribRaw =
+    el('sci-distribution')?.value ??
+    el('distribution-benefices')?.value ??
+    el('sci_distrib')?.value ??
+    '';
+
   return {
-    // Communs
+    // ───────── Communs
     fraisBancairesDossier: parseFloatOrDefault('frais-bancaires-dossier', 900),
-    fraisBancairesCompte:  parseFloatOrDefault('frais-bancaires-compte', 150), // initial (one-off)
-    tenueCompteAn:         parseFloatOrDefault('tenue-compte-annuel', 0),      // ✅ récurrent
+    fraisBancairesCompte:  parseFloatOrDefault('frais-bancaires-compte', 150), // one-off initial
+    tenueCompteAn:         parseFloatOrDefault('tenue-compte-annuel', 0),      // récurrent €/an
     fraisGarantie:         parseFloatOrDefault('frais-garantie', 1.3709),
     taxeFonciere:          parseFloatOrDefault('taxeFonciere', 800),
     vacanceLocative:       parseFloatOrDefault('vacanceLocative', 0),
     gestionLocativeTaux:   parseFloatOrDefault('gestionLocative', 0),
 
-    // Séparer travaux et entretien
-    travauxRenovation: parseFloatOrDefault('travaux-renovation', 0),
-    entretienAnnuel:   parseFloatOrDefault('entretien-annuel', 500),
-    assurancePNO:      parseFloatOrDefault('assurance-pno', 15),
+    // ───────── Entretien / travaux / assurances
+    travauxRenovation:     parseFloatOrDefault('travaux-renovation', 0),
+    entretienAnnuel:       parseFloatOrDefault('entretien-annuel', 500),
+    assurancePNO:          parseFloatOrDefault('assurance-pno', 15),
 
-    // Charges copro non récupérables (€/mois)
-    chargesCoproNonRecup: parseFloatOrDefault('charges-copro-non-recup', 50),
+    // ───────── Copro (€/mois)
+    chargesCoproNonRecup:  parseFloatOrDefault('charges-copro-non-recup', 50),
 
-    // ➕ Frais structurels (souvent oubliés)
-    comptaAn:              parseFloatOrDefault('compta-an', 0),               // honoraires comptable €/an
-    assuranceEmprunteurAn: parseFloatOrDefault('assurance-emprunteur-an', 0), // ADI €/an
-    cfeAn:                 parseFloatOrDefault('cfe-an', 0),                  // CFE €/an
+    // ───────── Frais structurels (souvent oubliés)
+    comptaAn:              parseFloatOrDefault('compta-an', 0),
+    assuranceEmprunteurAn: parseFloatOrDefault('assurance-emprunteur-an', 0),
+    cfeAn:                 parseFloatOrDefault('cfe-an', 0),
 
-    // Spécifiques classique
-    fraisNotaireTaux: parseFloatOrDefault('frais-notaire-taux', 8),
-    commissionImmo:   parseFloatOrDefault('commission-immo', 4),
+    // ───────── Achat classique
+    fraisNotaireTaux:      parseFloatOrDefault('frais-notaire-taux', 8),
+    commissionImmo:        parseFloatOrDefault('commission-immo', 4),
 
-    // Spécifiques enchères - BASE
-    droitsEnregistrement: parseFloatOrDefault('droits-enregistrement', 5.70),
-    coefMutation:         parseFloatOrDefault('coef-mutation', 2.37),
-    honorairesAvocat:     parseFloatOrDefault('honoraires-avocat', 1500),
-    fraisFixes:           parseFloatOrDefault('frais-fixes', 50),
+    // ───────── Enchères — base
+    droitsEnregistrement:  parseFloatOrDefault('droits-enregistrement', 5.70),
+    coefMutation:          parseFloatOrDefault('coef-mutation', 2.37),
+    honorairesAvocat:      parseFloatOrDefault('honoraires-avocat', 1500),
+    fraisFixes:            parseFloatOrDefault('frais-fixes', 50),
 
-    // Enchères - Émoluments par tranches
-    emolumentsTranche1: parseFloatOrDefault('emoluments-tranche1', 7),
-    emolumentsTranche2: parseFloatOrDefault('emoluments-tranche2', 3),
-    emolumentsTranche3: parseFloatOrDefault('emoluments-tranche3', 2),
-    emolumentsTranche4: parseFloatOrDefault('emoluments-tranche4', 1),
+    // ───────── Enchères — émoluments/barème
+    emolumentsTranche1:    parseFloatOrDefault('emoluments-tranche1', 7),
+    emolumentsTranche2:    parseFloatOrDefault('emoluments-tranche2', 3),
+    emolumentsTranche3:    parseFloatOrDefault('emoluments-tranche3', 2),
+    emolumentsTranche4:    parseFloatOrDefault('emoluments-tranche4', 1),
 
-    // Enchères - Autres frais détaillés
-    honorairesAvocatCoef: parseFloatOrDefault('honoraires-avocat-coef', 0.25),
-    tvaHonoraires:        parseFloatOrDefault('tva-honoraires', 20),
-    publiciteFonciere:    parseFloatOrDefault('publicite-fonciere', 0.10),
-    avocatPorterEnchere:  parseFloatOrDefault('avocat-porter-enchere', 300),
-    suiviDossier:         parseFloatOrDefault('suivi-dossier', 1200),
-    cautionMisePrix:      parseFloatOrDefault('caution-mise-prix', 5),
-    cautionRestituee:     document.getElementById('caution-restituee')?.checked ?? true,
+    // ───────── Enchères — autres frais détaillés
+    honorairesAvocatCoef:  parseFloatOrDefault('honoraires-avocat-coef', 0.25),
+    tvaHonoraires:         parseFloatOrDefault('tva-honoraires', 20),
+    publiciteFonciere:     parseFloatOrDefault('publicite-fonciere', 0.10),
+    avocatPorterEnchere:   parseFloatOrDefault('avocat-porter-enchere', 300),
+    suiviDossier:          parseFloatOrDefault('suivi-dossier', 1200),
+    cautionMisePrix:       parseFloatOrDefault('caution-mise-prix', 5),
+    cautionRestituee:      isChecked('caution-restituee', true),
 
-    // ➕ SCI meublé / composant mobilier (affinage)
-    partMobilier:      parseFloatOrDefault('part-mobilier', 10), // % du prix affecté au mobilier
-    sciMeuble:         document.getElementById('sci-meuble')?.checked ?? false,
-    sciDureeAmortTrav: parseFloatOrDefault('sci-duree-amort-trav', FISCAL_CONSTANTS.SCI_TRAVAUX_AMORT_YEARS),
+    // ───────── SCI meublé / composant mobilier
+    partMobilier:          parseFloatOrDefault('part-mobilier', 10), // % du prix
+    sciMeuble:             isChecked('sci-meuble', false),
+    sciDureeAmortTrav:     parseFloatOrDefault('sci-duree-amort-trav', FISCAL_CONSTANTS.SCI_TRAVAUX_AMORT_YEARS),
 
-    // ─ IR précis (barème progressif + parts + décote) – optionnel
-    irPrecise:       document.getElementById('ir-mode-precis')?.checked ?? false,
-    foyerParts:      parseFloatOrDefault('foyer-parts', 1),
-    irApplyDecote:   document.getElementById('ir-decote')?.checked ?? false,
-    irDecoteSeuil1P: parseFloatOrDefault('ir-decote-seuil-1p', 1928),
-    irDecoteSeuil2P: parseFloatOrDefault('ir-decote-seuil-2p', 3191),
-    irDecoteCoeff:   parseFloatOrDefault('ir-decote-coeff', 0.4525),
+    // ───────── IR précis (barème progressif + parts + décote)
+    irPrecise:             isChecked('ir-mode-precis', false),
+    foyerParts:            parseFloatOrDefault('foyer-parts', 1),
+    irApplyDecote:         isChecked('ir-decote', false),
+    irDecoteSeuil1P:       parseFloatOrDefault('ir-decote-seuil-1p', 1928),
+    irDecoteSeuil2P:       parseFloatOrDefault('ir-decote-seuil-2p', 3191),
+    irDecoteCoeff:         parseFloatOrDefault('ir-decote-coeff', 0.4525),
 
-    // LMP (cotisations sociales) + Toggles
-    lmpCotisationsTaux: parseFloatOrDefault('lmp-cotisations-taux', FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100),
-    lmpCotisationsMin:  parseFloatOrDefault('lmp-cotisations-min', FISCAL_CONSTANTS.LMP_COTISATIONS_MIN),
+    // ───────── LMP / LMNP (cotisations)
+    lmpCotisationsTaux:    parseFloatOrDefault('lmp-cotisations-taux', FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100),
+    lmpCotisationsMin:     parseFloatOrDefault('lmp-cotisations-min', FISCAL_CONSTANTS.LMP_COTISATIONS_MIN),
 
-    // Toggles utiles
-    assujettiCotisSociales: document.getElementById('assujetti-cotis')?.checked ?? false,
-    sciEligibleTauxReduit:  document.getElementById('sci-taux-reduit')?.checked ?? true,
-    applyPFU:               document.getElementById('apply-pfu')?.checked ?? false
+    // ───────── Toggles & PFU
+    assujettiCotisSociales:isChecked('assujetti-cotis', false),
+    sciEligibleTauxReduit: isChecked('sci-taux-reduit', true),
+    applyPFU:              isChecked('apply-pfu', false),
+
+    // 🆕 Distribution SCI (brute) — normalisée plus tard
+    sciDistribution:       sciDistribRaw
   };
 }
 /** AJOUT — normalise la distribution SCI (retourne un ratio 0..1 + messages) */
