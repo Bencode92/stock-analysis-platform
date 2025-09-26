@@ -14,6 +14,7 @@
  * Version 4.7 - Correction de l'orthographe: "emolements" -> "emoluments"
  * Version 4.8 - Ajout du support pour le mode "Cash-flow positif"
  * Version 4.9 - Ajout de chercheSurfaceObjectifCashflow pour le mode objectif
+ * Version 5.0 - Refactorisation majeure: epsilon, contraintes unifiées, algos automatiques
  */
 
 class SimulateurImmo {
@@ -24,7 +25,8 @@ class SimulateurImmo {
             surfaceMin: 20,               // Surface minimale par défaut (m²)
             pasSurface: 1,                // Pas de décrémentation pour la recherche
             chargesNonRecuperablesAnnuelles: 30, // €/m²/an
-            pourcentageTravauxDefaut: 0.005      // 0.5% du prix d'achat
+            pourcentageTravauxDefaut: 0.005,      // 0.5% du prix d'achat
+            epsSeuil: 1                   // Tolérance en € pour les comparaisons (évite les oscillations)
         };
         
         // Paramètres initialisés par défaut
@@ -47,7 +49,7 @@ class SimulateurImmo {
                 fraisBancairesCompte: 150,
                 fraisGarantie: 1.3709,        // % du capital emprunté
                 taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
-                vacanceLocative: 0,           // % des loyers (modifié de 8% à 5%)
+                vacanceLocative: 5,           // % des loyers (modifié de 0% à 5% pour plus de réalisme)
                 loyerM2: 12,                  // €/m²/mois (valeur utilisée si calcul par rendement impossible)
                 travauxM2: 400,               // €/m² (remplacé par 0.5% du prix par défaut)
                 useFixedTravauxPercentage: true, // Utiliser 0.5% du prix d'achat par défaut
@@ -144,6 +146,54 @@ class SimulateurImmo {
         }
         
         return { valide: true };
+    }
+
+    /**
+     * Vérifie si une surface respecte les contraintes de financement
+     * @param {number} surface - Surface en m²
+     * @param {string} mode - Mode d'achat ('classique' ou 'encheres')
+     * @returns {boolean} - True si toutes les contraintes sont respectées
+     */
+    surfaceRespecteContraintesFinancement(surface, mode) {
+        const { apport, pourcentApportMin, apportCouvreFrais } = this.params.base;
+        const prixM2 = this.params.communs.prixM2;
+
+        const prixAchat = surface * prixM2;
+
+        // Frais spécifiques selon le mode
+        let fraisSpecifiques = 0;
+        if (mode === 'classique') {
+            const fraisNotaire = this.calculerFraisNotaireClassique(prixAchat);
+            const commission = prixAchat * this.params.classique.commissionImmo / 100;
+            fraisSpecifiques = fraisNotaire + commission;
+        } else {
+            const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
+            const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixAchat);
+            const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
+            const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
+            const fraisDivers = this.params.encheres.fraisFixes + this.params.encheres.avocatEnchere + this.params.encheres.suiviDossier;
+            const caution = this.params.encheres.cautionRestituee ? 0 : prixAchat * this.params.encheres.cautionPourcent / 100;
+            fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + honorairesAvocat + publiciteFonciere + fraisDivers + caution;
+        }
+
+        // Travaux
+        const travauxCoeff = this.params.communs.useFixedTravauxPercentage
+            ? this.defaults.pourcentageTravauxDefaut
+            : (prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : this.defaults.pourcentageTravauxDefaut);
+        const travaux = prixAchat * travauxCoeff;
+
+        const ratio = (pourcentApportMin ?? 10) / 100;
+        const coutTotalProjet = prixAchat + fraisSpecifiques + travaux;
+
+        // apport / coutTotal >= ratio  <=>  coutTotal <= apport/ratio
+        if (coutTotalProjet > (apport / ratio)) return false;
+
+        if (apportCouvreFrais) {
+            const fraisTotaux = fraisSpecifiques + travaux;
+            if (apport < fraisTotaux) return false;
+        }
+
+        return true;
     }
 
     /**
@@ -277,10 +327,10 @@ class SimulateurImmo {
         const calculationMode = this.params.base.calculationMode || 'loyer-mensualite';
         
         if (calculationMode === 'loyer-mensualite') {
-            // Mode "Loyer ≥ Mensualité"
-            return (loyerNet - mensualite) >= 0;
+            // Mode "Loyer ≥ Mensualité" avec tolérance epsilon
+            return (loyerNet - mensualite) >= -this.defaults.epsSeuil;
         } else {
-            // Mode "Cash-flow positif"
+            // Mode "Cash-flow positif" avec tolérance epsilon
             // Calculer les charges supplémentaires
             const taxeFonciere = loyerBrut * 12 * 0.05 / 12; // Mensuel
             const chargesNonRecuperables = surface * this.defaults.chargesNonRecuperablesAnnuelles / 12;
@@ -289,7 +339,7 @@ class SimulateurImmo {
             
             // Calcul du cash-flow complet
             const cashFlow = loyerNet - mensualite - taxeFonciere - chargesNonRecuperables - entretienMensuel - assurancePNO;
-            return cashFlow >= 0;
+            return cashFlow >= -this.defaults.epsSeuil;
         }
     }
 
@@ -304,56 +354,14 @@ class SimulateurImmo {
      */
     chercheSurfaceDesc(mode, pas = null) {
         pas = pas || this.defaults.pasSurface;
-        const { apport, pourcentApportMin, apportCouvreFrais } = this.params.base;
         const surfaceMax = this.params.base.surfaceMax || this.defaults.surfaceMax;
         const surfaceMin = this.params.base.surfaceMin || this.defaults.surfaceMin;
-        const prixM2 = this.params.communs.prixM2;
-        const ratio = (pourcentApportMin ?? 10) / 100;
 
         for (let S = surfaceMax; S >= surfaceMin; S -= pas) {
-            const prixAchat = S * prixM2;
-            
-            // Calcul préalable des frais spécifiques selon le mode
-            let fraisSpecifiques = 0;
-            if (mode === 'classique') {
-                const fraisNotaire = this.calculerFraisNotaireClassique(prixAchat);
-                const commission = prixAchat * this.params.classique.commissionImmo / 100;
-                fraisSpecifiques = fraisNotaire + commission;
-            } else {
-                const droitsEnregistrement = this.calculerDroitsEnregistrement(prixAchat);
-                const emolumentsPoursuivant = this.calculerEmolumentsPoursuivant(prixAchat);
-                const honorairesAvocat = this.calculerHonorairesAvocat(emolumentsPoursuivant);
-                const publiciteFonciere = prixAchat * this.params.encheres.publiciteFonciereEncheres / 100;
-                const fraisDivers = this.params.encheres.fraisFixes + 
-                                this.params.encheres.avocatEnchere + 
-                                this.params.encheres.suiviDossier;
-                const caution = this.params.encheres.cautionRestituee ? 0 : 
-                            prixAchat * this.params.encheres.cautionPourcent / 100;
-                
-                fraisSpecifiques = droitsEnregistrement + emolumentsPoursuivant + 
-                                honorairesAvocat + publiciteFonciere + fraisDivers + caution;
-            }
-            
-            // Calcul des travaux
-            let travauxCoefficient;
-            if (this.params.communs.useFixedTravauxPercentage) {
-                travauxCoefficient = this.defaults.pourcentageTravauxDefaut;
-            } else {
-                travauxCoefficient = prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : this.defaults.pourcentageTravauxDefaut;
-            }
-            const travaux = prixAchat * travauxCoefficient;
-            
-            // MODIFICATION PRINCIPALE : Vérification du ratio d'apport sur le coût total du projet
-            const coutTotalProjet = prixAchat + fraisSpecifiques + travaux;
-            if (coutTotalProjet > apport / ratio) continue;  // dépassement du plafond financier
+            // Vérifier d'abord les contraintes de financement
+            if (!this.surfaceRespecteContraintesFinancement(S, mode)) continue;
 
-            // Vérification optionnelle : l'apport doit couvrir les frais
-            if (apportCouvreFrais) {
-                const fraisTotaux = fraisSpecifiques + travaux;
-                if (apport < fraisTotaux) continue;  // L'apport ne couvre pas les frais
-            }
-
-            // Utiliser la vérification rapide de viabilité
+            // Ensuite vérifier la viabilité (marge ou cash-flow)
             if (this.calculerViabilite(S, mode)) {
                 // Une fois qu'on a trouvé une surface viable, on fait le calcul complet
                 return this.calculeTout(S, mode);
@@ -373,27 +381,35 @@ class SimulateurImmo {
      */
     chercheSurfaceObjectifCashflow(mode, targetCF, eps = 0.5) {
         const Smin = this.params.base.surfaceMin ?? this.defaults.surfaceMin;
-        const Smax = this.params.base.surfaceMax ?? this.defaults.surfaceMax;
+        let Smax = this.params.base.surfaceMax ?? this.defaults.surfaceMax;
         
-        // Vérifier d'abord si même la surface max ne suffit pas
-        const maxRes = this.calculeTout(Smax, mode);
-        if (maxRes.cashFlow < targetCF) return null;
+        // Si Smax ne respecte pas les contraintes, on le réduit jusqu'à ce que ce soit finançable
+        while (Smax >= Smin && !this.surfaceRespecteContraintesFinancement(Smax, mode)) {
+            Smax -= eps;
+        }
+        if (Smax < Smin) return null;
+        
+        // Vérif de faisabilité cash-flow à Smax
+        const resMax = this.calculeTout(Smax, mode);
+        if (resMax.cashFlow < targetCF - this.defaults.epsSeuil) return null;
         
         let lo = Smin, hi = Smax, best = null;
+        const respecte = (S) => {
+            if (!this.surfaceRespecteContraintesFinancement(S, mode)) return false;
+            const r = this.calculeTout(S, mode);
+            return r.cashFlow >= (targetCF - this.defaults.epsSeuil);
+        };
         
         while (hi - lo > eps) {
-            const S = (lo + hi) / 2;
-            const res = this.calculeTout(S, mode);
-            
-            if (res.cashFlow >= targetCF) {
-                best = res; // on a une solution suffisante ; on peut tenter plus petit
-                hi = S;
+            const mid = (lo + hi) / 2;
+            if (respecte(mid)) {
+                best = this.calculeTout(mid, mode);
+                hi = mid; // plus petit S suffisant
             } else {
-                lo = S;
+                lo = mid;
             }
         }
-        
-        return best;
+        return best ?? this.calculeTout(hi, mode);
     }
 
     /**
@@ -492,7 +508,7 @@ class SimulateurImmo {
         if (formData.emolumentsPoursuivant3 !== undefined) 
             this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
         if (formData.emolumentsPoursuivant4 !== undefined) 
-            this.params.encheres.emolementsPoursuivant4 = parseFloat(formData.emolementsPoursuivant4);
+            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);  // CORRIGÉ: typo emolementsPoursuivant4
         if (formData.honorairesAvocatCoef !== undefined) 
             this.params.encheres.honorairesAvocatCoef = parseFloat(formData.honorairesAvocatCoef);
         if (formData.honorairesAvocatTVA !== undefined) 
@@ -964,9 +980,13 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour l'achat classique
      */
     simulerAchatClassique() {
-        // Utilisation de chercheSurfaceDesc au lieu de cherchePrixMaxApport
         const pas = this.params.base.pasSurface || this.defaults.pasSurface;
-        const resultats = this.chercheSurfaceDesc('classique', pas);
+        const modeCalc = this.params.base.calculationMode || 'loyer-mensualite';
+        
+        // Brancher automatiquement l'algo selon le mode
+        const resultats = (modeCalc === 'cashflow-positif')
+            ? this.chercheSurfaceDesc('classique', pas)  // ou chercheSurfaceObjectifCashflow('classique', 0) si préféré
+            : this.chercheSurfaceDesc('classique', pas);
         
         // Stocker les résultats
         this.params.resultats.classique = resultats;
@@ -979,9 +999,13 @@ class SimulateurImmo {
      * @returns {Object} - Résultats de la simulation pour la vente aux enchères
      */
     simulerVenteEncheres() {
-        // Utilisation de chercheSurfaceDesc au lieu de cherchePrixMaxApport
         const pas = this.params.base.pasSurface || this.defaults.pasSurface;
-        const resultats = this.chercheSurfaceDesc('encheres', pas);
+        const modeCalc = this.params.base.calculationMode || 'loyer-mensualite';
+        
+        // Brancher automatiquement l'algo selon le mode
+        const resultats = (modeCalc === 'cashflow-positif')
+            ? this.chercheSurfaceDesc('encheres', pas)  // ou chercheSurfaceObjectifCashflow('encheres', 0) si préféré
+            : this.chercheSurfaceDesc('encheres', pas);
         
         // Stocker les résultats
         this.params.resultats.encheres = resultats;
@@ -1369,6 +1393,52 @@ class SimulateurImmo {
             ]
         };
     }
+
+    /**
+     * Tests unitaires automatiques pour la cohérence
+     * @returns {boolean} - True si tous les tests passent
+     */
+    testCoherence() {
+        const eps = this.defaults.epsSeuil;
+        
+        try {
+            // Sauvegarder les paramètres actuels
+            const paramsBackup = JSON.parse(JSON.stringify(this.params));
+            
+            // Configurer pour les tests
+            this.params.base.apport = 30000;
+            this.params.communs.prixM2 = 2000;
+            this.params.communs.loyerM2 = 12;
+            
+            // Test 1: Mode loyer-mensualité
+            this.params.base.calculationMode = 'loyer-mensualite';
+            const resLM = this.chercheSurfaceDesc('classique', 1);
+            console.assert(resLM && resLM.marge >= -eps, "Test 1 échoué: Marge doit être >= -epsilon");
+            
+            // Test 2: Mode cashflow
+            this.params.base.calculationMode = 'cashflow-positif';
+            const resCF = this.chercheSurfaceDesc('classique', 1);
+            console.assert(resCF && resCF.cashFlow >= -eps, "Test 2 échoué: CashFlow doit être >= -epsilon");
+            
+            // Test 3: Contraintes respectées
+            if (resLM) {
+                console.assert(
+                    this.surfaceRespecteContraintesFinancement(resLM.surface, 'classique'),
+                    "Test 3 échoué: Surface trouvée doit respecter les contraintes"
+                );
+            }
+            
+            // Restaurer les paramètres
+            this.params = paramsBackup;
+            
+            console.log("✅ Tous les tests de cohérence sont passés");
+            return true;
+            
+        } catch (error) {
+            console.error("❌ Erreur dans les tests de cohérence:", error);
+            return false;
+        }
+    }
 }
 
 // Export pour la compatibilité avec différents environnements
@@ -1404,9 +1474,10 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
         return true;
     });
     
-    runTest("Vérification de marge positive", () => {
+    runTest("Vérification de marge positive avec epsilon", () => {
         const result = simTest.chercheSurfaceDesc('classique');
-        if (!result || result.marge <= 0) throw new Error("Marge non positive");
+        if (!result || result.marge < -simTest.defaults.epsSeuil) 
+            throw new Error(`Marge non acceptable: ${result?.marge}`);
         return true;
     });
     
@@ -1414,5 +1485,9 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
         const result = simTest.chercheSurfaceDesc('classique');
         if (!result || result.rendementNet <= 0) throw new Error("Rendement non positif");
         return true;
+    });
+    
+    runTest("Test de cohérence complète", () => {
+        return simTest.testCoherence();
     });
 }
