@@ -1414,7 +1414,7 @@ buildChargesSection(calc, params) {
         ? { label: "• Mobilier (info)", value: calc.amortissementMobilier, formula: "10% × 10% du prix", included: false, info: true }
         : null,
       calc.amortissementTravaux > 0
-        ? { label: "• Travaux (info)", value: calc.amortissementTravaux, formula: "2.5% × coût travaux", included: false, info: true }
+        ? { label: "• Travaux (info)", value: calc.amortissementTravaux, formula: "≈ (1/10) × coût travaux (10 ans)", included: false, info: true }
         : null,
       // Ligne réellement déductible (comptable)
       calc.amortUtilise > 0
