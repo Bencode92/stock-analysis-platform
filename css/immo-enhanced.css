@@ -1274,60 +1274,68 @@ input:checked + .slider:before {
 }
 
 /* === RÉSULTATS – KPIs en pied de carte === */
+.results-footer { padding: 0.75rem 0.75rem; }
+
 .results-footer .flex {
-    /* remplace le flex “à plat” par une grille propre */
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--spacing-lg);
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-md);
 }
 
 .results-footer .flex > div {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(0, 217, 255, 0.15);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    text-align: center;
-    box-shadow: var(--shadow-card);
+  padding: 0.75rem 1rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(0,217,255,0.15);
+  border-left-width: 3px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
 }
 
-/* libellés compacts */
+/* libellés plus petits */
 .results-footer .flex > div .results-label {
-    margin-bottom: 0.25rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    color: var(--text-label);
-    text-transform: uppercase;
+  margin-bottom: 0.2rem;
+  font-size: 0.66rem;              /* ↓ était ~0.85rem */
+  letter-spacing: 0.06em;
+  color: var(--text-label);
+  text-transform: uppercase;
 }
 
-/* valeur bien visible, chiffres tabulaires pour un alignement net */
+/* valeur compacte et fluide */
 .results-footer .flex > div > div:last-child {
-    font-size: 1.35rem;
-    font-weight: 800;
-    line-height: 1;
-    color: #fff;
-    font-variant-numeric: tabular-nums;
-    -webkit-font-feature-settings: "tnum" 1;
-            font-feature-settings: "tnum" 1;
+  font-size: clamp(0.95rem, 1vw + 0.2rem, 1.12rem);  /* ↓ était 1.35rem */
+  font-weight: 700;                                  /* ↓ était 800 */
+  line-height: 1.15;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum" 1;
+          font-feature-settings: "tnum" 1;
+  white-space: nowrap;
 }
 
-/* petits marqueurs de couleur par KPI (optionnel) */
-.results-footer .flex > div:nth-child(1) { border-left: 4px solid #3B82F6; } /* Mensualité */
-.results-footer .flex > div:nth-child(2) { border-left: 4px solid #22D3EE; } /* Loyer net */
-.results-footer .flex > div:nth-child(3) { border-left: 4px solid #A78BFA; } /* Marge */
-.results-footer .flex > div:nth-child(4) { border-left: 4px solid #10B981; } /* Cash-flow */
+/* repères couleur en bord */
+.results-footer .flex > div:nth-child(1){ border-left-color:#3B82F6; } /* Mensualité */
+.results-footer .flex > div:nth-child(2){ border-left-color:#22D3EE; } /* Loyer net */
+.results-footer .flex > div:nth-child(3){ border-left-color:#A78BFA; } /* Marge */
+.results-footer .flex > div:nth-child(4){ border-left-color:#10B981; } /* Cash-flow */
 
-/* couleurs auto si tu ajoutes déjà .positive / .negative en JS */
-.results-footer .flex > div > .positive { color: #10B981; }
-.results-footer .flex > div > .negative { color: #F59E0B; }
+/* teintes auto si tes valeurs ont .positive / .negative */
+.results-footer .flex > div > .positive { color:#10B981; }
+.results-footer .flex > div > .negative { color:#F59E0B; }
 
-/* Responsive */
-@media (max-width: 1024px) {
-    .results-footer .flex { grid-template-columns: repeat(2, 1fr); }
+/* breakpoints : on réduit encore si l’écran rétrécit */
+@media (max-width: 1400px){
+  .results-footer .flex > div > div:last-child { font-size: 1rem; }
+  .results-footer .flex > div .results-label { font-size: 0.62rem; }
 }
-@media (max-width: 560px) {
-    .results-footer .flex { grid-template-columns: 1fr; }
+@media (max-width: 1024px){
+  .results-footer .flex { grid-template-columns: repeat(2, 1fr); }
+  .results-footer .flex > div > div:last-child { font-size: 0.95rem; }
 }
-
+@media (max-width: 560px){
+  .results-footer .flex { grid-template-columns: 1fr; }
+  .results-footer .flex > div > div:last-child { font-size: 0.9rem; }
+}
 
 /* === ÉTATS === */
 .hidden {
