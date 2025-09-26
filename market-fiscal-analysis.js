@@ -799,28 +799,27 @@ case 'lmnp_reel': {
   const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
   // 2) Bases d'amortissement
-  const prix       = Number(inputData.price ?? 0);
-  const tauxNot    = Number(params.fraisNotaireTaux ?? 0) / 100;   // ex: 8% → 0.08
-  const tauxCom    = Number(params.commissionImmo   ?? 0) / 100;   // ex: 4% → 0.04
-  const partTer    = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN ?? 0);   // ex: 0.15
-  const partMob    = Number(FISCAL_CONSTANTS.LMNP_PART_MOBILIER ?? 0);  // ex: 0.10 (mettre 0 si pas de mobilier réel)
+  const prix    = Number(inputData.price ?? 0);
+  const tauxNot = Number(params.fraisNotaireTaux ?? 0) / 100;  // ex: 8% → 0.08
+  const tauxCom = Number(params.commissionImmo   ?? 0) / 100;  // ex: 4% → 0.04
+  const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);  // ex: 0.15
+  const partMob = Number(FISCAL_CONSTANTS.LMNP_PART_MOBILIER ?? 0);  // ex: 0.10 (mettre 0 si pas de mobilier réel)
 
   // Frais d'acquisition intégrés au bâti (notaire + agence)
   const fraisNot   = prix * tauxNot;
   const commission = prix * tauxCom;
 
   // Base amortissable du bâti : (prix + frais) – terrain – mobilier
-  const baseBien = Math.max(
-    0,
-    (prix + fraisNot + commission) * (1 - partTer - partMob)
-  );
+  const baseBien = Math.max(0, (prix + fraisNot + commission) * (1 - partTer - partMob));
 
-  // Amortissements (bâti au taux, mobilier & travaux à la durée)
-  const amortissementBien     = baseBien * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
-  const baseMob               = prix * partMob;
-  const amortissementMobilier = baseMob / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_MOBILIER ?? 10));
-  const travaux               = Number(inputData.travauxRenovation ?? 0);
-  const amortissementTravaux  = travaux / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_TRAVAUX ?? 10));
+  // Amortissements (⚠️ on AFFECTE les let définis plus haut, pas de const ici)
+  amortissementBien = baseBien * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
+
+  const baseMob = prix * partMob;
+  amortissementMobilier = baseMob / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_MOBILIER ?? 10));
+
+  const travaux = Number(inputData.travauxRenovation ?? 0);
+  amortissementTravaux = travaux / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_TRAVAUX ?? 10));
 
   // 3) Plafond d'utilisation des amortissements (jamais créer de déficit)
   const resultatAvantAmort = revenusNets - chargesReelles;
@@ -852,11 +851,10 @@ case 'lmnp_reel': {
   }
 
   // 5) Expositions & sorties
-  chargesDeductibles      = chargesReelles;           // charges "cash" uniquement
-  regime._amortCalcules   = amortCalcules;            // info (non inclus)
-  regime._amortUtilise    = amortUtilise;             // inclus dans totalCharges
-  regime._amortReporte    = amortReporte;             // reporté (non inclus cette année)
-  // (Le totalCharges est recalculé après le switch, en ajoutant _amortUtilise)
+  chargesDeductibles    = chargesReelles;     // charges "cash" uniquement
+  regime._amortCalcules = amortCalcules;      // info (non inclus)
+  regime._amortUtilise  = amortUtilise;       // inclus dans total
+  regime._amortReporte  = amortReporte;       // reporté (non inclus cette année)
 
   break;
 }
