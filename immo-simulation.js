@@ -17,6 +17,7 @@
  * Version 5.0 - Refactorisation majeure: epsilon, contraintes unifiées, algos automatiques
  * Version 5.1 - Corrections fiscales, assurance emprunteur, TF paramétrable, robustesse
  * Version 5.2 - Clarification des marges: ajout margeHorsAssurance et margeAvecAssurance
+ * Version 5.3 - Taxe foncière: ajout du mode pourcentage pour cohérence avec l'UI
  */
 
 class SimulateurImmo {
@@ -30,7 +31,7 @@ class SimulateurImmo {
             pourcentageTravauxDefaut: 0.005,      // 0.5% du prix d'achat
             epsSeuil: 1,                  // Tolérance en € pour les comparaisons (évite les oscillations)
             tauxAssuranceEmprunteur: 0.20, // Taux d'assurance emprunteur par défaut (0.20% du capital)
-            taxeFonciereDefaut: 0.05      // 5% du loyer annuel brut par défaut
+            taxeFonciereDefaut: 5         // 5% du loyer annuel brut par défaut (modifié de 0.05 à 5 pour cohérence)
         };
         
         // Paramètres initialisés par défaut
@@ -52,7 +53,8 @@ class SimulateurImmo {
                 fraisBancairesCompte: 150,
                 fraisGarantie: 1.3709,        // % du capital emprunté
                 tauxAssuranceEmprunteur: 0.20, // % du capital emprunté (nouveau)
-                taxeFonciere: 0,              // Montant annuel en € (0 = utiliser 5% du loyer)
+                taxeFonciere: 5,              // Valeur de la taxe foncière (% ou € selon le mode)
+                taxeFonciereMode: 'pourcentage', // Mode: 'pourcentage' (du loyer) ou 'montant' (€/an)
                 vacanceLocative: 5,           // % des loyers (modifié de 0% à 5% pour plus de réalisme)
                 loyerM2: 12,                  // €/m²/mois (valeur utilisée si calcul par rendement impossible)
                 travauxM2: 400,               // €/m² (remplacé par 0.5% du prix par défaut)
@@ -507,6 +509,8 @@ class SimulateurImmo {
             this.params.communs.tauxAssuranceEmprunteur = parseFloat(formData.tauxAssuranceEmprunteur);
         if (formData.taxeFonciere !== undefined) 
             this.params.communs.taxeFonciere = parseFloat(formData.taxeFonciere);
+        if (formData.taxeFonciereMode !== undefined) 
+            this.params.communs.taxeFonciereMode = formData.taxeFonciereMode || 'pourcentage';
         if (formData.vacanceLocative !== undefined) 
             this.params.communs.vacanceLocative = parseFloat(formData.vacanceLocative);
         if (formData.loyerM2 !== undefined) 
@@ -755,17 +759,25 @@ class SimulateurImmo {
     }
 
     /**
-     * Calcule la taxe foncière annuelle
+     * Calcule la taxe foncière annuelle (gère mode pourcentage et montant fixe)
      * @param {number} loyerAnnuelBrut - Loyer annuel brut
      * @returns {number} - Taxe foncière annuelle
      */
     calculerTaxeFonciereAnnuelle(loyerAnnuelBrut) {
-        // Si un montant est paramétré, l'utiliser
-        if (this.params.communs.taxeFonciere > 0) {
-            return this.params.communs.taxeFonciere;
+        const mode = this.params.communs.taxeFonciereMode || 'pourcentage';
+        const valeur = this.params.communs.taxeFonciere || 0;
+        
+        if (mode === 'pourcentage') {
+            // Si mode pourcentage, appliquer le % au loyer annuel brut
+            const pourcentage = valeur / 100;
+            return loyerAnnuelBrut * pourcentage;
+        } else if (mode === 'montant') {
+            // Si mode montant, utiliser directement la valeur en €/an
+            return valeur;
+        } else {
+            // Fallback: utiliser le défaut (5% du loyer)
+            return loyerAnnuelBrut * (this.defaults.taxeFonciereDefaut / 100);
         }
-        // Sinon, utiliser 5% du loyer annuel brut par défaut
-        return loyerAnnuelBrut * this.defaults.taxeFonciereDefaut;
     }
 
     /**
@@ -990,7 +1002,7 @@ class SimulateurImmo {
         const rendementBrut = (loyerBrut * 12) / prixAchat * 100;
         const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
         
-        // Taxe foncière (paramétrable ou 5% du loyer)
+        // Taxe foncière (gère maintenant mode pourcentage et montant fixe)
         const taxeFonciere = this.calculerTaxeFonciereAnnuelle(loyerBrut * 12);
         
         // Charges non récupérables (utiliser le paramètre)
@@ -1540,12 +1552,24 @@ class SimulateurImmo {
                 );
             }
             
-            // Test 5: Taxe foncière paramétrable
+            // Test 5: Taxe foncière en mode montant
+            this.params.communs.taxeFonciereMode = 'montant';
             this.params.communs.taxeFonciere = 1500;
-            const resAvecTF = this.calculeTout(50, 'classique');
+            const resAvecTFMontant = this.calculeTout(50, 'classique');
             console.assert(
-                Math.abs(resAvecTF.taxeFonciere - 1500) < 0.01,
-                "Test 5 échoué: Taxe foncière doit être paramétrable"
+                Math.abs(resAvecTFMontant.taxeFonciere - 1500) < 0.01,
+                "Test 5a échoué: Taxe foncière en mode montant doit être respectée"
+            );
+            
+            // Test 5b: Taxe foncière en mode pourcentage
+            this.params.communs.taxeFonciereMode = 'pourcentage';
+            this.params.communs.taxeFonciere = 5;
+            const resAvecTFPourcent = this.calculeTout(50, 'classique');
+            const loyerAnnuelTest = 50 * 12 * 12; // surface * loyerM2 * 12 mois
+            const tfAttendue = loyerAnnuelTest * 0.05;
+            console.assert(
+                Math.abs(resAvecTFPourcent.taxeFonciere - tfAttendue) < 0.01,
+                "Test 5b échoué: Taxe foncière en mode pourcentage doit être 5% du loyer"
             );
             
             // Test 6: Deux marges distinctes
@@ -1626,6 +1650,18 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
         const diff = Math.abs((result.margeHorsAssurance - result.margeAvecAssurance) - result.mensualiteAssurance);
         if (diff > 0.01) {
             throw new Error(`Incohérence entre les marges: diff=${diff}`);
+        }
+        return true;
+    });
+    
+    runTest("Test taxe foncière pourcentage", () => {
+        simTest.params.communs.taxeFonciereMode = 'pourcentage';
+        simTest.params.communs.taxeFonciere = 5;
+        const result = simTest.calculeTout(50, 'classique');
+        const tfAttendue = result.loyerBrut * 12 * 0.05;
+        const diff = Math.abs(result.taxeFonciere - tfAttendue);
+        if (diff > 0.01) {
+            throw new Error(`TF incorrecte: obtenue=${result.taxeFonciere}, attendue=${tfAttendue}`);
         }
         return true;
     });
