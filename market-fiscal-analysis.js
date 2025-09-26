@@ -277,6 +277,36 @@ async performCompleteAnalysis(data) {
         }
       }
     }
+        // 8bis) S'assurer que tous les régimes de base existent (dont LMP)
+    {
+      const required = ['nu_micro','nu_reel','lmnp_micro','lmnp_reel','lmp','sci_is']; // ou ['lmp'] si tu veux minimal
+      const registry = this.getRegimeRegistry();
+
+      const addIfMissing = (key) => {
+        const present = fiscalResults.some(r => this.normalizeRegimeKey(r) === key);
+        if (present || !registry[key]) return;
+
+        const meta = { ...registry[key] };
+        meta.id = key; // par sûreté
+
+        const detailed = this.getDetailedCalculations(meta, fiscalData, params, baseResults);
+
+        meta.cashflowNetAnnuel = detailed.cashflowNetAnnuel;
+        meta.cashflowMensuel   = detailed.cashflowNetAnnuel / 12;
+        meta.impotAnnuel       = -(detailed.totalImpots);
+
+        const baseRend = Number(
+          fiscalData.coutTotalAcquisition ?? fiscalData.price ?? fiscalData.prixBien ?? 0
+        );
+        const denom = baseRend > 0 ? baseRend : 1;
+        meta.rendementNet = (detailed.cashflowNetAnnuel / denom) * 100;
+
+        meta._detailedCalc = detailed;
+        fiscalResults.push(meta);
+      };
+
+      required.forEach(addIfMissing);
+    }
 
     // 9) Trier: meilleur cash-flow annuel en premier
     fiscalResults.sort(
