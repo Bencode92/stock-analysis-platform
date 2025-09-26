@@ -798,12 +798,23 @@ case 'lmnp_reel': {
   // 1) Charges réelles (intérêts + TF + copro NR + PNO + entretien + frais bancaires + garantie amortie)
   const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
+  // 🆕 Expose postes frais bancaires & garantie amortie (pour l’affichage)
+  const _fraisDossier = Number(params.fraisBancairesDossier || 0);
+  const _fraisCompte  = Number(params.fraisBancairesCompte  || 0);
+  const _garantieAmortieAn =
+    (Number(inputData.loanAmount || 0) * (Number(params.fraisGarantie || 0) / 100)) /
+    Math.max(1, Number(inputData.loanDuration || 1));
+
+  regime._fraisDossier      = _fraisDossier;
+  regime._fraisCompte       = _fraisCompte;
+  regime._garantieAmortieAn = _garantieAmortieAn;
+
   // 2) Bases d'amortissement
   const prix    = Number(inputData.price ?? 0);
   const tauxNot = Number(params.fraisNotaireTaux ?? 0) / 100;  // ex: 8% → 0.08
   const tauxCom = Number(params.commissionImmo   ?? 0) / 100;  // ex: 4% → 0.04
   const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);  // ex: 0.15
-  const partMob = Number(FISCAL_CONSTANTS.LMNP_PART_MOBILIER ?? 0);  // ex: 0.10 (mettre 0 si pas de mobilier réel)
+  const partMob = Number(FISCAL_CONSTANTS.LMNP_PART_MOBILIER ?? 0);  // ex: 0.10
 
   // Frais d'acquisition intégrés au bâti (notaire + agence)
   const fraisNot   = prix * tauxNot;
@@ -859,12 +870,23 @@ case 'lmnp_reel': {
   break;
 }
 
-    // ───────────────────────────────────────────────────────────
-    // F) LMP (réel) — avec plancher cotisations
-    // ───────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────
+// F) LMP (réel) — avec plancher cotisations
+// ───────────────────────────────────────────────────────────
 case 'lmp': {
   // 1) Charges réelles (intérêts + TF + copro NR + PNO + entretien + frais bancaires + garantie amortie)
   const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
+
+  // 🆕 Expose postes frais bancaires & garantie amortie (pour l’affichage)
+  const _fraisDossier = Number(params.fraisBancairesDossier || 0);
+  const _fraisCompte  = Number(params.fraisBancairesCompte  || 0);
+  const _garantieAmortieAn =
+    (Number(inputData.loanAmount || 0) * (Number(params.fraisGarantie || 0) / 100)) /
+    Math.max(1, Number(inputData.loanDuration || 1));
+
+  regime._fraisDossier      = _fraisDossier;
+  regime._fraisCompte       = _fraisCompte;
+  regime._garantieAmortieAn = _garantieAmortieAn;
 
   // 2) Bases et amortissements — mêmes hypothèses que LMNP
   const prix    = Number(inputData.price ?? 0);
@@ -1077,6 +1099,12 @@ return {
   entretienAnnuel: Number(params.entretienAnnuel ?? 0),
   taxeFonciere: Number(params.taxeFonciere ?? 0),
   assurancePNO: Number(params.assurancePNO ?? 0) * 12,
+
+  // 🆕 Exposition frais bancaires & garantie (pour affichage)
+  fraisDossier: Number(regime._fraisDossier ?? 0),
+  fraisCompte: Number(regime._fraisCompte ?? 0),
+  garantieAmortieAn: Number(regime._garantieAmortieAn ?? 0),
+
   totalCharges,
 
   // Fiscalité
@@ -2096,6 +2124,8 @@ generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
   const loyerMensuelHCBrut = Number(inputData.loyerHC ?? inputData.loyerMensuel ?? 0) || 0;
   const vacPctSummary      = Number(inputData.vacanceLocative ?? 0) / 100;
   const loyerMensuelHCNet  = loyerMensuelHCBrut * (1 - vacPctSummary);
+    // Rendement brut (HC brut) sur coût total
+const rendementBrut = ((loyerMensuelHCBrut * 12) / (totalCost || 1)) * 100;
 
   // Déterminer le meilleur régime
   const bestRegime = fiscalResults.reduce(
@@ -2224,9 +2254,9 @@ generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
         </div>
         <div class="benefit-item">
           <h4>📊 Rendement brut / coût total</h4>
-          <p class="amount ${rendementClass((yearlyRent / (totalCost || 1)) * 100)}">
-            ${((yearlyRent / (totalCost || 1)) * 100).toFixed(2)} %
-          </p>
+<p class="amount ${rendementClass(rendementBrut)}">
+  ${rendementBrut.toFixed(2)} %
+</p>
         </div>
       </div>
 
