@@ -1454,13 +1454,11 @@ td.neutral {
     </div>
   </div>
 
-  <div class="loyer-type-toggle" style="margin-top:12px;">
-    <span class="toggle-option">
-      <input type="checkbox" id="force-regime">
-      <label for="force-regime">Afficher le détail de ce régime (même s'il n'est pas le meilleur)</label>
-    </span>
-    <span class="form-help">Si décoché, affiche automatiquement le meilleur régime calculé.</span>
-  </div>
+<div class="loyer-type-toggle" style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+  <button id="btn-best-cashflow" type="button" class="btn btn-secondary">
+    Afficher le régime au meilleur cash-flow
+  </button>
+</div>
       </div>
 <!-- ⬆️ FIN NOUVEAU BLOC -->
 
@@ -2815,5 +2813,83 @@ resultsDiv.innerHTML = html;
         setInterval(updateTime, 1000);
         updateTime();
     </script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+  (function(){
+    const byId = (id) => document.getElementById(id);
+
+    // Surbrillance quand on change manuellement de radio
+    function wireManualHighlight() {
+      document.querySelectorAll('input[name="regime-actuel"]').forEach(input => {
+        input.addEventListener('change', () => {
+          document.querySelectorAll('.mode-option').forEach(l => l.classList.remove('selected'));
+          const wrap = input.closest('.mode-option');
+          if (wrap) wrap.classList.add('selected');
+        });
+      });
+    }
+
+    async function pickAndShowBest() {
+      const analyzer = window.analyzer || (window.analyzer = new MarketFiscalAnalyzer());
+
+      // 1) Récup des données (on laisse l’algo choisir)
+      const fiscalData = analyzer.prepareFiscalData?.() || {};
+      fiscalData.regimeActuel = null;
+
+      // 2) Calcul
+      const out = await analyzer.performCompleteAnalysis(fiscalData);
+      const fiscal = out?.fiscal || [];
+      if (!fiscal.length) {
+        alert("Impossible de calculer le meilleur régime pour l’instant.");
+        return;
+      }
+
+      // 3) Le meilleur en tête
+      const best = fiscal[0];
+      const bestId = analyzer.normalizeRegimeKey?.(best) || best.id;
+
+      // 4) Cocher + surbrillance
+      const bestInput =
+        document.querySelector(`input[name="regime-actuel"][value="${bestId}"]`) ||
+        document.querySelector(`input[name="regime-actuel"][value="${best.id}"]`);
+      if (bestInput) {
+        bestInput.checked = true;
+        document.querySelectorAll('.mode-option').forEach(l => l.classList.remove('selected'));
+        const wrap = bestInput.closest('.mode-option');
+        if (wrap) wrap.classList.add('selected');
+      }
+
+      // 5) Rendu (prend #fiscal-results sinon #fiscal-comparison-results)
+      const html = analyzer.generateFiscalResultsHTML(
+        fiscal,
+        fiscalData,
+        { selectedId: bestId, bestId: bestId, forceRegime: false }
+      );
+
+      let container = byId('fiscal-results') || byId('fiscal-comparison-results');
+      if (!container) {
+        const host = document.querySelector('#section-1') || document.body;
+        container = document.createElement('div');
+        container.id = 'fiscal-results';
+        host.insertAdjacentElement('afterend', container);
+      }
+      container.innerHTML = html;
+
+      // 6) Graphiques
+      analyzer.createFiscalCharts?.(fiscal);
+    }
+
+    // Bouton “meilleur cash-flow”
+    const btn = document.getElementById('btn-best-cashflow');
+    if (btn && !btn.__wired) {
+      btn.addEventListener('click', pickAndShowBest);
+      btn.__wired = true;
+    }
+
+    // Surbrillance manuelle
+    wireManualHighlight();
+  })();
+});
+</script>
 </body>
 </html>
