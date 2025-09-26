@@ -15,6 +15,7 @@
  * Version 4.8 - Ajout du support pour le mode "Cash-flow positif"
  * Version 4.9 - Ajout de chercheSurfaceObjectifCashflow pour le mode objectif
  * Version 5.0 - Refactorisation majeure: epsilon, contraintes unifiées, algos automatiques
+ * Version 5.1 - Corrections fiscales, assurance emprunteur, TF paramétrable, robustesse
  */
 
 class SimulateurImmo {
@@ -26,7 +27,9 @@ class SimulateurImmo {
             pasSurface: 1,                // Pas de décrémentation pour la recherche
             chargesNonRecuperablesAnnuelles: 30, // €/m²/an
             pourcentageTravauxDefaut: 0.005,      // 0.5% du prix d'achat
-            epsSeuil: 1                   // Tolérance en € pour les comparaisons (évite les oscillations)
+            epsSeuil: 1,                  // Tolérance en € pour les comparaisons (évite les oscillations)
+            tauxAssuranceEmprunteur: 0.20, // Taux d'assurance emprunteur par défaut (0.20% du capital)
+            taxeFonciereDefaut: 0.05      // 5% du loyer annuel brut par défaut
         };
         
         // Paramètres initialisés par défaut
@@ -36,26 +39,26 @@ class SimulateurImmo {
                 surface: 50,                  // Surface en m²
                 taux: 3.5,                    // Taux d'emprunt
                 duree: 20,                    // Durée du prêt
-                // objectif: 'cashflow',      // Objectif: cashflow ou rendement (supprimé)
-                // rendementMin: 5,           // Rendement minimum souhaité (supprimé)
                 surfaceMax: 120,              // Surface maximale autorisée
                 surfaceMin: 20,               // Surface minimale autorisée (ajouté)
                 pourcentApportMin: 10,        // Pourcentage d'apport minimum exigé (ajouté)
                 apportCouvreFrais: false,     // Nouveau: l'apport doit-il couvrir au moins les frais
-                calculationMode: 'loyer-mensualite' // Mode de calcul: 'loyer-mensualite' ou 'cashflow-positif'
+                calculationMode: 'loyer-mensualite', // Mode de calcul: 'loyer-mensualite' ou 'cashflow-positif'
+                incluFraisBancairesDansRatio: false  // Nouveau: inclure frais bancaires dans le ratio d'apport
             },
             communs: {
                 fraisBancairesDossier: 900,
                 fraisBancairesCompte: 150,
                 fraisGarantie: 1.3709,        // % du capital emprunté
-                taxeFonciere: 0,              // % du prix (remplacé par 5% du loyer)
+                tauxAssuranceEmprunteur: 0.20, // % du capital emprunté (nouveau)
+                taxeFonciere: 0,              // Montant annuel en € (0 = utiliser 5% du loyer)
                 vacanceLocative: 5,           // % des loyers (modifié de 0% à 5% pour plus de réalisme)
                 loyerM2: 12,                  // €/m²/mois (valeur utilisée si calcul par rendement impossible)
                 travauxM2: 400,               // €/m² (remplacé par 0.5% du prix par défaut)
                 useFixedTravauxPercentage: true, // Utiliser 0.5% du prix d'achat par défaut
                 entretienAnnuel: 0.5,         // % du prix d'achat
                 assurancePNO: 250,            // € par an
-                chargesNonRecuperables: 0,    // Remplacé par un montant fixe
+                chargesNonRecuperables: 30,   // €/m²/an (maintenant utilisé correctement)
                 prixM2: 2000                  // Prix du marché immobilier en €/m²
             },
             classique: {
@@ -86,7 +89,8 @@ class SimulateurImmo {
             fiscalite: {
                 tauxPrelevementsSociaux: 17.2, // %
                 tauxMarginalImpot: 30,        // %
-                deficitFoncier: true
+                deficitFoncier: true,
+                plafondDeficitFoncier: 10700  // € par an (hors intérêts)
             },
             // Pour stocker les résultats
             resultats: {
@@ -108,7 +112,7 @@ class SimulateurImmo {
      */
     validerParametres() {
         const { apport, taux, duree } = this.params.base;
-        const { prixM2, loyerM2 } = this.params.communs;
+        const { prixM2, loyerM2, vacanceLocative } = this.params.communs;
         
         if (!apport || apport <= 0) {
             return { 
@@ -117,10 +121,10 @@ class SimulateurImmo {
             };
         }
         
-        if (!taux || taux <= 0) {
+        if (!taux || taux < 0) {
             return { 
                 valide: false, 
-                message: "Le taux d'emprunt doit être supérieur à 0" 
+                message: "Le taux d'emprunt doit être positif ou nul" 
             };
         }
         
@@ -145,6 +149,14 @@ class SimulateurImmo {
             };
         }
         
+        // Borner la vacance locative entre 0 et 100%
+        if (vacanceLocative < 0 || vacanceLocative > 100) {
+            return { 
+                valide: false, 
+                message: "La vacance locative doit être entre 0% et 100%" 
+            };
+        }
+        
         return { valide: true };
     }
 
@@ -155,7 +167,7 @@ class SimulateurImmo {
      * @returns {boolean} - True si toutes les contraintes sont respectées
      */
     surfaceRespecteContraintesFinancement(surface, mode) {
-        const { apport, pourcentApportMin, apportCouvreFrais } = this.params.base;
+        const { apport, pourcentApportMin, apportCouvreFrais, incluFraisBancairesDansRatio } = this.params.base;
         const prixM2 = this.params.communs.prixM2;
 
         const prixAchat = surface * prixM2;
@@ -182,11 +194,23 @@ class SimulateurImmo {
             : (prixM2 > 0 ? (this.params.communs.travauxM2 / prixM2) : this.defaults.pourcentageTravauxDefaut);
         const travaux = prixAchat * travauxCoeff;
 
-        const ratio = (pourcentApportMin ?? 10) / 100;
-        const coutTotalProjet = prixAchat + fraisSpecifiques + travaux;
+        let coutReference = prixAchat + fraisSpecifiques + travaux;
+        
+        // Optionnellement inclure les frais bancaires dans le ratio
+        if (incluFraisBancairesDansRatio) {
+            const fraisDossier = this.params.communs.fraisBancairesDossier;
+            const fraisCompte = this.params.communs.fraisBancairesCompte;
+            const tauxGarantie = this.params.communs.fraisGarantie / 100;
+            // Estimation des frais bancaires
+            const empruntEstime = Math.max(0, coutReference - apport);
+            const fraisBancairesEstimes = fraisDossier + fraisCompte + empruntEstime * tauxGarantie;
+            coutReference += fraisBancairesEstimes;
+        }
 
-        // apport / coutTotal >= ratio  <=>  coutTotal <= apport/ratio
-        if (coutTotalProjet > (apport / ratio)) return false;
+        const ratio = (pourcentApportMin ?? 10) / 100;
+
+        // apport / coutReference >= ratio  <=>  coutReference <= apport/ratio
+        if (coutReference > (apport / ratio)) return false;
 
         if (apportCouvreFrais) {
             const fraisTotaux = fraisSpecifiques + travaux;
@@ -269,7 +293,7 @@ class SimulateurImmo {
         const apport = this.params.base.apport;
         const taux = this.params.base.taux;
         const duree = this.params.base.duree;
-        const vacanceLocative = this.params.communs.vacanceLocative;
+        const vacanceLocative = Math.max(0, Math.min(100, this.params.communs.vacanceLocative));
         
         const prixM2 = parseFloat(this.params.communs.prixM2);
         const prixAchat = surface * prixM2;
@@ -313,11 +337,19 @@ class SimulateurImmo {
         const fraisCompte = this.params.communs.fraisBancairesCompte;
         const tauxGarantie = this.params.communs.fraisGarantie / 100;
         
-        const emprunt = (coutHorsFraisB - apport + fraisDossier + fraisCompte) 
-                    / (1 - tauxGarantie);
+        // Protection contre division par zéro et emprunt négatif
+        let emprunt = 0;
+        if (Math.abs(1 - tauxGarantie) > 0.0001) {
+            emprunt = Math.max(0, (coutHorsFraisB - apport + fraisDossier + fraisCompte) / (1 - tauxGarantie));
+        }
         
-        // Mensualité
+        // Mensualité du prêt
         const mensualite = this.calculerMensualite(emprunt, taux, duree);
+        
+        // Assurance emprunteur
+        const tauxAssurance = (this.params.communs.tauxAssuranceEmprunteur ?? this.defaults.tauxAssuranceEmprunteur) / 100;
+        const mensualiteAssurance = emprunt * tauxAssurance / 12;
+        const mensualiteTotale = mensualite + mensualiteAssurance;
         
         // Loyer
         const loyerBrut = surface * this.params.communs.loyerM2;
@@ -328,17 +360,21 @@ class SimulateurImmo {
         
         if (calculationMode === 'loyer-mensualite') {
             // Mode "Loyer ≥ Mensualité" avec tolérance epsilon
-            return (loyerNet - mensualite) >= -this.defaults.epsSeuil;
+            return (loyerNet - mensualiteTotale) >= -this.defaults.epsSeuil;
         } else {
             // Mode "Cash-flow positif" avec tolérance epsilon
-            // Calculer les charges supplémentaires
-            const taxeFonciere = loyerBrut * 12 * 0.05 / 12; // Mensuel
-            const chargesNonRecuperables = surface * this.defaults.chargesNonRecuperablesAnnuelles / 12;
+            // Taxe foncière paramétrable
+            const taxeFonciere = this.calculerTaxeFonciereAnnuelle(loyerBrut * 12) / 12; // Mensuel
+            
+            // Charges non récupérables (utiliser le paramètre)
+            const chargesNonRecuperables = surface * 
+                (this.params.communs.chargesNonRecuperables ?? this.defaults.chargesNonRecuperablesAnnuelles) / 12;
+            
             const entretienMensuel = prixAchat * (this.params.communs.entretienAnnuel / 100) / 12;
             const assurancePNO = this.params.communs.assurancePNO / 12;
             
             // Calcul du cash-flow complet
-            const cashFlow = loyerNet - mensualite - taxeFonciere - chargesNonRecuperables - entretienMensuel - assurancePNO;
+            const cashFlow = loyerNet - mensualiteTotale - taxeFonciere - chargesNonRecuperables - entretienMensuel - assurancePNO;
             return cashFlow >= -this.defaults.epsSeuil;
         }
     }
@@ -446,6 +482,10 @@ class SimulateurImmo {
         if (formData.apportCouvreFrais !== undefined)
             this.params.base.apportCouvreFrais = formData.apportCouvreFrais;
         
+        // Nouveau: inclure frais bancaires dans ratio
+        if (formData.incluFraisBancairesDansRatio !== undefined)
+            this.params.base.incluFraisBancairesDansRatio = formData.incluFraisBancairesDansRatio;
+        
         // Paramètres de surface min/max et pas
         if (formData.surfaceMax !== undefined)
             this.params.base.surfaceMax = parseFloat(formData.surfaceMax) || this.defaults.surfaceMax;
@@ -461,6 +501,8 @@ class SimulateurImmo {
             this.params.communs.fraisBancairesCompte = parseFloat(formData.fraisBancairesCompte);
         if (formData.fraisGarantie !== undefined) 
             this.params.communs.fraisGarantie = parseFloat(formData.fraisGarantie);
+        if (formData.tauxAssuranceEmprunteur !== undefined) 
+            this.params.communs.tauxAssuranceEmprunteur = parseFloat(formData.tauxAssuranceEmprunteur);
         if (formData.taxeFonciere !== undefined) 
             this.params.communs.taxeFonciere = parseFloat(formData.taxeFonciere);
         if (formData.vacanceLocative !== undefined) 
@@ -533,6 +575,8 @@ class SimulateurImmo {
             this.params.fiscalite.tauxMarginalImpot = parseFloat(formData.tauxMarginalImpot);
         if (formData.deficitFoncier !== undefined)
             this.params.fiscalite.deficitFoncier = formData.deficitFoncier;
+        if (formData.plafondDeficitFoncier !== undefined)
+            this.params.fiscalite.plafondDeficitFoncier = parseFloat(formData.plafondDeficitFoncier);
     }
 
     /**
@@ -674,6 +718,8 @@ class SimulateurImmo {
      * @returns {number} - Mensualité
      */
     calculerMensualite(montantPret, taux, dureeAnnees) {
+        if (montantPret <= 0) return 0;
+        
         const tauxMensuel = taux / 100 / 12;
         const nombreMensualites = dureeAnnees * 12;
         
@@ -701,7 +747,23 @@ class SimulateurImmo {
      * @returns {number} - Loyer mensuel net
      */
     calculerLoyerNet(loyerBrut, vacance) {
-        return loyerBrut * (1 - vacance / 100);
+        // Borner la vacance entre 0 et 100%
+        const vacanceBornee = Math.max(0, Math.min(100, vacance));
+        return loyerBrut * (1 - vacanceBornee / 100);
+    }
+
+    /**
+     * Calcule la taxe foncière annuelle
+     * @param {number} loyerAnnuelBrut - Loyer annuel brut
+     * @returns {number} - Taxe foncière annuelle
+     */
+    calculerTaxeFonciereAnnuelle(loyerAnnuelBrut) {
+        // Si un montant est paramétré, l'utiliser
+        if (this.params.communs.taxeFonciere > 0) {
+            return this.params.communs.taxeFonciere;
+        }
+        // Sinon, utiliser 5% du loyer annuel brut par défaut
+        return loyerAnnuelBrut * this.defaults.taxeFonciereDefaut;
     }
 
     /**
@@ -710,8 +772,9 @@ class SimulateurImmo {
      * @returns {number} - Montant mensuel des charges non récupérables
      */
     calculerChargesNonRecuperables(surface) {
-        // Utilisé la valeur externalisée dans defaults
-        return (surface * this.defaults.chargesNonRecuperablesAnnuelles) / 12;
+        // Utiliser le paramètre s'il existe, sinon la valeur par défaut
+        const chargesAnnuelles = this.params.communs.chargesNonRecuperables ?? this.defaults.chargesNonRecuperablesAnnuelles;
+        return (surface * chargesAnnuelles) / 12;
     }
 
     /**
@@ -726,35 +789,45 @@ class SimulateurImmo {
     /**
      * Calcule le cash-flow mensuel
      * @param {number} loyerNet - Loyer mensuel net
-     * @param {number} mensualite - Mensualité du prêt
+     * @param {number} mensualiteTotale - Mensualité totale (prêt + assurance)
      * @param {number} taxeFonciere - Montant annuel de la taxe foncière
      * @param {number} chargesNonRecuperables - Charges non récupérables mensuelles
      * @param {number} entretienMensuel - Coût d'entretien mensuel
      * @param {number} assurancePNO - Coût annuel de l'assurance PNO
      * @returns {number} - Cash-flow mensuel
      */
-    calculerCashFlow(loyerNet, mensualite, taxeFonciere, chargesNonRecuperables, entretienMensuel, assurancePNO) {
-        return loyerNet - mensualite - (taxeFonciere / 12) - chargesNonRecuperables - entretienMensuel - (assurancePNO / 12);
+    calculerCashFlow(loyerNet, mensualiteTotale, taxeFonciere, chargesNonRecuperables, entretienMensuel, assurancePNO) {
+        return loyerNet - mensualiteTotale - (taxeFonciere / 12) - chargesNonRecuperables - entretienMensuel - (assurancePNO / 12);
     }
 
     /**
-     * Calcule l'impact fiscal
+     * Calcule l'impact fiscal (corrigé pour le déficit foncier)
      * @param {number} revenuFoncier - Revenu foncier annuel avant impôts
      * @param {number} interetsEmprunt - Intérêts d'emprunt annuels
      * @returns {number} - Impact fiscal annuel
      */
     calculerImpactFiscal(revenuFoncier, interetsEmprunt) {
+        const TMI = this.params.fiscalite.tauxMarginalImpot / 100;
+        const PS = this.params.fiscalite.tauxPrelevementsSociaux / 100;
+        
+        // Si le revenu foncier est positif : TMI + PS s'appliquent
+        if (revenuFoncier > 0) {
+            return -(revenuFoncier * (TMI + PS));
+        }
+        
         // Si le revenu foncier est négatif et le déficit foncier est déductible
         if (revenuFoncier < 0 && this.params.fiscalite.deficitFoncier) {
-            // Impact fiscal positif (économie d'impôt)
-            const tauxImposition = (this.params.fiscalite.tauxMarginalImpot + this.params.fiscalite.tauxPrelevementsSociaux) / 100;
-            return Math.abs(revenuFoncier) * tauxImposition;
-        } 
-        // Si le revenu foncier est positif
-        else if (revenuFoncier > 0) {
-            // Impact fiscal négatif (impôt à payer)
-            const tauxImposition = (this.params.fiscalite.tauxMarginalImpot + this.params.fiscalite.tauxPrelevementsSociaux) / 100;
-            return -revenuFoncier * tauxImposition;
+            // En déficit foncier : seul le TMI génère une économie d'impôt
+            // Les PS ne s'appliquent pas sur un déficit
+            // Note: en réalité, il faut distinguer la part intérêts (reportable) 
+            // de la part charges (imputable dans la limite de 10 700€)
+            // Version simplifiée : on applique le TMI sur tout le déficit
+            const deficit = Math.abs(revenuFoncier);
+            const plafond = this.params.fiscalite.plafondDeficitFoncier || 10700;
+            
+            // Appliquer le plafond sur la partie hors intérêts (simplifié ici)
+            const deficitImputable = Math.min(deficit, plafond);
+            return deficitImputable * TMI;
         }
         
         return 0;
@@ -774,6 +847,16 @@ class SimulateurImmo {
     }
 
     /**
+     * Calcule le rendement sur coût total (nouveau)
+     * @param {number} loyerAnnuelNet - Loyer annuel net
+     * @param {number} coutTotal - Coût total de l'investissement
+     * @returns {number} - Rendement sur coût total en %
+     */
+    calculerRendementSurCoutTotal(loyerAnnuelNet, coutTotal) {
+        return (loyerAnnuelNet / coutTotal) * 100;
+    }
+
+    /**
      * Calcule le tableau d'amortissement du prêt
      * @param {number} montantPret - Montant du prêt
      * @param {number} taux - Taux d'intérêt annuel en %
@@ -781,6 +864,8 @@ class SimulateurImmo {
      * @returns {Array} - Tableau d'amortissement
      */
     calculerTableauAmortissement(montantPret, taux, dureeAnnees) {
+        if (montantPret <= 0) return [];
+        
         const tauxMensuel = taux / 100 / 12;
         const nombreMensualites = dureeAnnees * 12;
         const mensualite = this.calculerMensualite(montantPret, taux, dureeAnnees);
@@ -816,7 +901,7 @@ class SimulateurImmo {
         const apport = this.params.base.apport;
         const taux = this.params.base.taux;
         const duree = this.params.base.duree;
-        const vacanceLocative = this.params.communs.vacanceLocative;
+        const vacanceLocative = Math.max(0, Math.min(100, this.params.communs.vacanceLocative));
         
         // Prix d'achat (en fonction de la surface)
         // Utiliser le prix au m² paramétré
@@ -878,8 +963,11 @@ class SimulateurImmo {
         const fraisCompte = this.params.communs.fraisBancairesCompte;
         const tauxGarantie = this.params.communs.fraisGarantie / 100;
         
-        const emprunt = (coutHorsFraisB - apport + fraisDossier + fraisCompte) 
-                     / (1 - tauxGarantie);
+        // Protection contre division par zéro et emprunt négatif
+        let emprunt = 0;
+        if (Math.abs(1 - tauxGarantie) > 0.0001) {
+            emprunt = Math.max(0, (coutHorsFraisB - apport + fraisDossier + fraisCompte) / (1 - tauxGarantie));
+        }
         
         // Frais bancaires
         const fraisBancaires = fraisDossier + fraisCompte + emprunt * tauxGarantie;
@@ -887,19 +975,24 @@ class SimulateurImmo {
         // Coût total
         const coutTotal = coutHorsFraisB + fraisBancaires;
         
-        // Mensualité
+        // Mensualité du prêt
         const mensualite = this.calculerMensualite(emprunt, taux, duree);
+        
+        // Assurance emprunteur
+        const tauxAssurance = (this.params.communs.tauxAssuranceEmprunteur ?? this.defaults.tauxAssuranceEmprunteur) / 100;
+        const mensualiteAssurance = emprunt * tauxAssurance / 12;
+        const mensualiteTotale = mensualite + mensualiteAssurance;
         
         // Loyer (basé sur la valeur au m² du marché, non plus sur le rendement souhaité)
         const loyerBrut = surface * this.params.communs.loyerM2;
         const rendementBrut = (loyerBrut * 12) / prixAchat * 100;
         const loyerNet = this.calculerLoyerNet(loyerBrut, vacanceLocative);
         
-        // Taxe foncière (5% du loyer annuel brut)
-        const taxeFonciere = loyerBrut * 12 * 0.05;
+        // Taxe foncière (paramétrable ou 5% du loyer)
+        const taxeFonciere = this.calculerTaxeFonciereAnnuelle(loyerBrut * 12);
         
-        // Charges non récupérables (30€/m²/an)
-        const chargesCopro = surface * this.defaults.chargesNonRecuperablesAnnuelles;
+        // Charges non récupérables (utiliser le paramètre)
+        const chargesCopro = surface * (this.params.communs.chargesNonRecuperables ?? this.defaults.chargesNonRecuperablesAnnuelles);
         const chargesNonRecuperables = chargesCopro / 12; // Mensuel
         
         // Entretien
@@ -908,9 +1001,9 @@ class SimulateurImmo {
         // Assurance PNO
         const assurancePNO = this.params.communs.assurancePNO;
         
-        // Cash-flow
+        // Cash-flow (avec mensualité totale incluant l'assurance)
         const cashFlow = this.calculerCashFlow(
-            loyerNet, mensualite, taxeFonciere, 
+            loyerNet, mensualiteTotale, taxeFonciere, 
             chargesNonRecuperables, entretienMensuel, assurancePNO
         );
         
@@ -922,13 +1015,16 @@ class SimulateurImmo {
         const chargesDeductibles = taxeFonciere + assurancePNO + chargesCopro + (entretienMensuel * 12);
         const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
         
-        // Impact fiscal
+        // Impact fiscal (corrigé)
         const impactFiscal = this.calculerImpactFiscal(revenuFoncier, interetsPremierAnnee);
         
         // Rendement net
         const rendementNet = this.calculerRendementNet(
             loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal
         );
+        
+        // Rendement sur coût total (nouveau)
+        const rendementSurCoutTotal = this.calculerRendementSurCoutTotal(loyerNet * 12, coutTotal);
         
         // Construire le résultat
         const resultat = {
@@ -940,6 +1036,8 @@ class SimulateurImmo {
             coutTotal,
             emprunt,
             mensualite,
+            mensualiteAssurance,  // NOUVEAU
+            mensualiteTotale,     // NOUVEAU
             loyerNet,
             loyerBrut,
             loyerM2: surface > 0 ? loyerBrut / surface : 0,
@@ -954,7 +1052,8 @@ class SimulateurImmo {
             cashFlowAnnuel: cashFlow * 12,
             rendementNet,
             rendementBrut,
-            marge: loyerNet - mensualite,
+            rendementSurCoutTotal,  // NOUVEAU
+            marge: loyerNet - mensualiteTotale,
             tableauAmortissement
         };
         
@@ -1427,6 +1526,22 @@ class SimulateurImmo {
                     "Test 3 échoué: Surface trouvée doit respecter les contraintes"
                 );
             }
+            
+            // Test 4: Assurance emprunteur prise en compte
+            if (resLM) {
+                console.assert(
+                    resLM.mensualiteTotale > resLM.mensualite,
+                    "Test 4 échoué: Mensualité totale doit inclure l'assurance"
+                );
+            }
+            
+            // Test 5: Taxe foncière paramétrable
+            this.params.communs.taxeFonciere = 1500;
+            const resAvecTF = this.calculeTout(50, 'classique');
+            console.assert(
+                Math.abs(resAvecTF.taxeFonciere - 1500) < 0.01,
+                "Test 5 échoué: Taxe foncière doit être paramétrable"
+            );
             
             // Restaurer les paramètres
             this.params = paramsBackup;
