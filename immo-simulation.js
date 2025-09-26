@@ -16,6 +16,7 @@
  * Version 4.9 - Ajout de chercheSurfaceObjectifCashflow pour le mode objectif
  * Version 5.0 - Refactorisation majeure: epsilon, contraintes unifiées, algos automatiques
  * Version 5.1 - Corrections fiscales, assurance emprunteur, TF paramétrable, robustesse
+ * Version 5.2 - Clarification des marges: ajout margeHorsAssurance et margeAvecAssurance
  */
 
 class SimulateurImmo {
@@ -360,6 +361,7 @@ class SimulateurImmo {
         
         if (calculationMode === 'loyer-mensualite') {
             // Mode "Loyer ≥ Mensualité" avec tolérance epsilon
+            // Utilise la mensualité totale (avec assurance) pour la cohérence
             return (loyerNet - mensualiteTotale) >= -this.defaults.epsSeuil;
         } else {
             // Mode "Cash-flow positif" avec tolérance epsilon
@@ -1053,7 +1055,10 @@ class SimulateurImmo {
             rendementNet,
             rendementBrut,
             rendementSurCoutTotal,  // NOUVEAU
-            marge: loyerNet - mensualiteTotale,
+            // Deux marges pour la transparence
+            margeHorsAssurance: loyerNet - mensualite,  // NOUVEAU: marge sans l'assurance
+            margeAvecAssurance: loyerNet - mensualiteTotale,  // NOUVEAU: marge avec l'assurance (comme avant)
+            marge: loyerNet - mensualiteTotale,  // Conservé pour compatibilité (= margeAvecAssurance)
             tableauAmortissement
         };
         
@@ -1512,7 +1517,7 @@ class SimulateurImmo {
             // Test 1: Mode loyer-mensualité
             this.params.base.calculationMode = 'loyer-mensualite';
             const resLM = this.chercheSurfaceDesc('classique', 1);
-            console.assert(resLM && resLM.marge >= -eps, "Test 1 échoué: Marge doit être >= -epsilon");
+            console.assert(resLM && resLM.margeAvecAssurance >= -eps, "Test 1 échoué: Marge avec assurance doit être >= -epsilon");
             
             // Test 2: Mode cashflow
             this.params.base.calculationMode = 'cashflow-positif';
@@ -1542,6 +1547,14 @@ class SimulateurImmo {
                 Math.abs(resAvecTF.taxeFonciere - 1500) < 0.01,
                 "Test 5 échoué: Taxe foncière doit être paramétrable"
             );
+            
+            // Test 6: Deux marges distinctes
+            if (resLM) {
+                console.assert(
+                    Math.abs(resLM.margeHorsAssurance - resLM.margeAvecAssurance - resLM.mensualiteAssurance) < 0.01,
+                    "Test 6 échoué: La différence entre les marges doit égaler l'assurance"
+                );
+            }
             
             // Restaurer les paramètres
             this.params = paramsBackup;
@@ -1591,8 +1604,8 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
     
     runTest("Vérification de marge positive avec epsilon", () => {
         const result = simTest.chercheSurfaceDesc('classique');
-        if (!result || result.marge < -simTest.defaults.epsSeuil) 
-            throw new Error(`Marge non acceptable: ${result?.marge}`);
+        if (!result || result.margeAvecAssurance < -simTest.defaults.epsSeuil) 
+            throw new Error(`Marge non acceptable: ${result?.margeAvecAssurance}`);
         return true;
     });
     
@@ -1604,5 +1617,16 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
     
     runTest("Test de cohérence complète", () => {
         return simTest.testCoherence();
+    });
+    
+    runTest("Vérification des deux marges", () => {
+        const result = simTest.chercheSurfaceDesc('classique');
+        if (!result) throw new Error("Aucun résultat");
+        
+        const diff = Math.abs((result.margeHorsAssurance - result.margeAvecAssurance) - result.mensualiteAssurance);
+        if (diff > 0.01) {
+            throw new Error(`Incohérence entre les marges: diff=${diff}`);
+        }
+        return true;
     });
 }
