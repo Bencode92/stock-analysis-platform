@@ -1273,6 +1273,62 @@ input:checked + .slider:before {
     color: var(--warning-color);
 }
 
+/* === RÉSULTATS – KPIs en pied de carte === */
+.results-footer .flex {
+    /* remplace le flex “à plat” par une grille propre */
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.results-footer .flex > div {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(0, 217, 255, 0.15);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    text-align: center;
+    box-shadow: var(--shadow-card);
+}
+
+/* libellés compacts */
+.results-footer .flex > div .results-label {
+    margin-bottom: 0.25rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--text-label);
+    text-transform: uppercase;
+}
+
+/* valeur bien visible, chiffres tabulaires pour un alignement net */
+.results-footer .flex > div > div:last-child {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-feature-settings: "tnum" 1;
+            font-feature-settings: "tnum" 1;
+}
+
+/* petits marqueurs de couleur par KPI (optionnel) */
+.results-footer .flex > div:nth-child(1) { border-left: 4px solid #3B82F6; } /* Mensualité */
+.results-footer .flex > div:nth-child(2) { border-left: 4px solid #22D3EE; } /* Loyer net */
+.results-footer .flex > div:nth-child(3) { border-left: 4px solid #A78BFA; } /* Marge */
+.results-footer .flex > div:nth-child(4) { border-left: 4px solid #10B981; } /* Cash-flow */
+
+/* couleurs auto si tu ajoutes déjà .positive / .negative en JS */
+.results-footer .flex > div > .positive { color: #10B981; }
+.results-footer .flex > div > .negative { color: #F59E0B; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .results-footer .flex { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+    .results-footer .flex { grid-template-columns: 1fr; }
+}
+
+
 /* === ÉTATS === */
 .hidden {
     display: none !important;
