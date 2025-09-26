@@ -472,14 +472,14 @@ prepareFiscalDataForComparator(rawData) {
  * Récupère tous les paramètres avancés du formulaire — version robuste
  * ✅ Conserve les zéros saisis (parseFloatOrDefault)
  * ✅ Tolérante aux champs manquants
- * ✅ Ajoute la distribution SCI (brute) pour PFU
+ * ✅ Ajoute la distribution SCI (valeur brute) pour PFU
  */
 getAllAdvancedParams() {
   const el = (id) => document.getElementById(id);
   const isChecked = (id, def = false) => el(id)?.checked ?? def;
 
-  // Laisse volontairement la valeur BRUTE (ex: "70" ou "0,7")
-  // La normalisation (ratio 0..1) est gérée par normalizeSciDistribution(...)
+  // Valeur BRUTE du slider/texte "Distribution des bénéfices" (ex: "80" ou "0,8")
+  // La normalisation en ratio 0..1 se fait via normalizeSciDistribution(...)
   const sciDistribRaw =
     el('sci-distribution')?.value ??
     el('distribution-benefices')?.value ??
@@ -504,10 +504,10 @@ getAllAdvancedParams() {
     // ───────── Copro (€/mois)
     chargesCoproNonRecup:  parseFloatOrDefault('charges-copro-non-recup', 50),
 
-    // ───────── Frais structurels (souvent oubliés)
-    comptaAn:              parseFloatOrDefault('compta-an', 0),
-    assuranceEmprunteurAn: parseFloatOrDefault('assurance-emprunteur-an', 0),
-    cfeAn:                 parseFloatOrDefault('cfe-an', 0),
+    // ───────── Frais structurels (réalistes)
+    comptaAn:              parseFloatOrDefault('compta-an', 0),               // expert-comptable €/an
+    assuranceEmprunteurAn: parseFloatOrDefault('assurance-emprunteur-an', 0), // ADI €/an
+    cfeAn:                 parseFloatOrDefault('cfe-an', 0),                  // CFE €/an
 
     // ───────── Achat classique
     fraisNotaireTaux:      parseFloatOrDefault('frais-notaire-taux', 8),
@@ -519,13 +519,13 @@ getAllAdvancedParams() {
     honorairesAvocat:      parseFloatOrDefault('honoraires-avocat', 1500),
     fraisFixes:            parseFloatOrDefault('frais-fixes', 50),
 
-    // ───────── Enchères — émoluments/barème
+    // ───────── Enchères — barème/émoluments
     emolumentsTranche1:    parseFloatOrDefault('emoluments-tranche1', 7),
     emolumentsTranche2:    parseFloatOrDefault('emoluments-tranche2', 3),
     emolumentsTranche3:    parseFloatOrDefault('emoluments-tranche3', 2),
     emolumentsTranche4:    parseFloatOrDefault('emoluments-tranche4', 1),
 
-    // ───────── Enchères — autres frais détaillés
+    // ───────── Enchères — autres frais
     honorairesAvocatCoef:  parseFloatOrDefault('honoraires-avocat-coef', 0.25),
     tvaHonoraires:         parseFloatOrDefault('tva-honoraires', 20),
     publiciteFonciere:     parseFloatOrDefault('publicite-fonciere', 0.10),
@@ -539,7 +539,7 @@ getAllAdvancedParams() {
     sciMeuble:             isChecked('sci-meuble', false),
     sciDureeAmortTrav:     parseFloatOrDefault('sci-duree-amort-trav', FISCAL_CONSTANTS.SCI_TRAVAUX_AMORT_YEARS),
 
-    // ───────── IR précis (barème progressif + parts + décote)
+    // ───────── IR précis (optionnel)
     irPrecise:             isChecked('ir-mode-precis', false),
     foyerParts:            parseFloatOrDefault('foyer-parts', 1),
     irApplyDecote:         isChecked('ir-decote', false),
@@ -556,7 +556,7 @@ getAllAdvancedParams() {
     sciEligibleTauxReduit: isChecked('sci-taux-reduit', true),
     applyPFU:              isChecked('apply-pfu', false),
 
-    // 🆕 Distribution SCI (brute) — normalisée plus tard
+    // 🆕 Distribution SCI (valeur brute) — normalisée plus tard
     sciDistribution:       sciDistribRaw
   };
 }
@@ -970,42 +970,49 @@ case 'lmp': {
 // G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
 // ───────────────────────────────────────────────────────────
 case 'sci_is': {
-  const chargesReellesBase = this.calculateRealCharges(inputData, params, interetsAnnuels); // inclut tenue, compta, ADI, CFE
+  // Charges réelles (inclut tenue, compta, ADI, CFE, etc.)
+  const chargesReellesBase = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
-  // Bases d'amortissement
-  const prix   = Number(inputData.price ?? 0);
-  const tauxNot= Number(params.fraisNotaireTaux ?? 0) / 100;
-  const tauxCom= Number(params.commissionImmo   ?? 0) / 100;
-
-  // Bâti amortissable = (prix + notaire + agence) - terrain
+  // --- Bases d'amortissement (SCI à l'IS)
+  // Bâti amortissable = (prix + notaire + agence) × (1 - part_terrain) − base_mobilier
+  const prix     = Number(inputData.price ?? 0);
+  const tauxNot  = Number(params.fraisNotaireTaux ?? 0) / 100;
+  const tauxCom  = Number(params.commissionImmo   ?? 0) / 100;
   const partTer  = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN ?? 0.15);
-  const baseBat  = Math.max(0, (prix + prix*tauxNot + prix*tauxCom) * (1 - partTer));
-  const amortBien= baseBat * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
 
-  // Mobilier (option SCI meublée) – par défaut 10% sur 10 ans
+  // Mobilier activable (case "SCI meublé" ou % > 0)
   const useMob   = !!params.sciMeuble || Number(params.partMobilier ?? 0) > 0;
-  const partMob  = Math.max(0, Math.min(1, (Number(params.partMobilier ?? 10) / 100)));
-  const amortMob = useMob
-    ? (prix * partMob * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER ?? 0.10))
+  const partMob  = useMob ? Math.max(0, Math.min(1, Number(params.partMobilier ?? 10) / 100)) : 0;
+
+  const fraisNot   = prix * tauxNot;
+  const commission = prix * tauxCom;
+
+  const baseMob = prix * partMob;
+  const baseBat = Math.max(0, (prix + fraisNot + commission) * (1 - partTer) - baseMob);
+
+  const amortBien = baseBat * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
+  const amortMob  = useMob
+    ? baseMob * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER ?? 0.10)
     : 0;
 
-  // Travaux amortis en SCI
+  // Travaux amortis (paramétrable, 15 ans par défaut)
   const dureeTrav = Math.max(1, Number(params.sciDureeAmortTrav ?? FISCAL_CONSTANTS.SCI_TRAVAUX_AMORT_YEARS ?? 15));
   const amortTrav = Number(inputData.travauxRenovation ?? 0) / dureeTrav;
 
-  // Résultat comptable avant IS (⚠️ sans écrêtage pour garder le déficit)
-  const resComptable = revenusNets - (chargesReellesBase + amortBien + amortMob + amortTrav);
-
-  // IS (avec écrêtage à 0 pour la base imposable)
+  // Résultat comptable (avant IS) — on conserve le déficit éventuel
+  const resComptable    = revenusNets - (chargesReellesBase + amortBien + amortMob + amortTrav);
   const resultatAvantIS = Math.max(0, resComptable);
-  const eligible15      = !!inputData.sciEligibleTauxReduit;
 
+  // Impôt sur les sociétés
+  const eligible15 = (params?.sciEligibleTauxReduit ?? true) === true;
   let impotIS = 0;
   if (resultatAvantIS > 0) {
     if (eligible15) {
-      const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
-      const surplus = Math.max(0, resultatAvantIS - tranche);
-      impotIS = tranche * Number(FISCAL_CONSTANTS.IS_TAUX_REDUIT ?? 0.15) + surplus * 0.25;
+      const plafond = Number(FISCAL_CONSTANTS.IS_PLAFOND_REDUIT ?? 42500);
+      const taux15  = Number(FISCAL_CONSTANTS.IS_TAUX_REDUIT ?? 0.15);
+      const tranche = Math.min(resultatAvantIS, plafond);
+      const surplus = Math.max(0, resultatAvantIS - plafond);
+      impotIS = tranche * taux15 + surplus * 0.25;
     } else {
       impotIS = resultatAvantIS * 0.25;
     }
@@ -1013,7 +1020,7 @@ case 'sci_is': {
 
   const beneficeApresIS = Math.max(0, resultatAvantIS - impotIS);
 
-  // PFU (optionnel)
+  // PFU (optionnel) sur dividendes distribués
   const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
   const { val: distribRatio, msgs } = this.normalizeSciDistribution(
     inputData?.sciDistribution ?? params?.sciDistribution, 0
@@ -1027,23 +1034,23 @@ case 'sci_is': {
     resteSociete    = beneficeApresIS - dividendesBruts;
   }
 
-  // Expositions / sorties
-  const chargesReelles    = chargesReellesBase;
-  chargesDeductibles      = chargesReelles;
-  amortissementBien       = amortBien;
-  amortissementMobilier   = amortMob;
-  amortissementTravaux    = amortTrav;
+  // Expositions / sorties pour l'affichage global
+  const chargesReelles = chargesReellesBase;
+  chargesDeductibles       = chargesReelles;
+  amortissementBien        = amortBien;
+  amortissementMobilier    = amortMob;
+  amortissementTravaux     = amortTrav;
 
-  const totalImp          = impotIS + pfu;
-  prelevementsSociaux     = 0;
-  baseImposable           = resultatAvantIS;
-  impotRevenu             = totalImp;
+  const totalImp           = impotIS + pfu;
+  prelevementsSociaux      = 0;
+  baseImposable            = resultatAvantIS;
+  impotRevenu              = totalImp;
 
-  // ⚠️ expose le déficit reportable si resComptable < 0
+  // Infos internes + messages (dédupliqués)
   regime._sciDeficit         = Math.max(0, -resComptable);
   regime._pfu                = pfu;
   regime._sciDistribRatio    = distribRatio;
-  regime._messages           = (regime._messages || []).concat(msgs || []);
+  regime._messages           = Array.from(new Set([...(regime._messages || []), ...(msgs || [])]));
   regime._sciResultatAvantIS = resultatAvantIS;
   regime._sciImpotsIS        = impotIS;
   regime._sciBeneficeApresIS = beneficeApresIS;
@@ -1460,6 +1467,12 @@ buildRevenusSection(calc, params) {
 buildChargesSection(calc, params) {
   const charges = [];
 
+  // Ajustements d'affichage
+  const isSCI = calc.regime === "SCI à l'IS";
+  const travFormula =
+    isSCI ? `${params.sciDureeAmortTrav} ans`
+          : "≈ (1/10) × coût travaux (10 ans)";
+
   // ───────────────
   // A) Régimes MICRO
   // ───────────────
@@ -1484,7 +1497,7 @@ buildChargesSection(calc, params) {
       { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12`, included: true },
       { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel", included: true },
 
-      // ── AJOUT : frais bancaires & garantie ─────────────────────
+      // ── Frais bancaires & garantie ────────────────────────────
       calc.fraisDossier > 0
         ? { label: "Frais bancaires — dossier", value: calc.fraisDossier, formula: "Déductible année 1", included: true }
         : null,
@@ -1498,7 +1511,7 @@ buildChargesSection(calc, params) {
         ? { label: "Garantie (amortie / an)", value: calc.garantieAmortieAn, formula: `${params.fraisGarantie}% ÷ durée du prêt`, included: true }
         : null,
 
-      // ➕ frais structurels (si saisis)
+      // ➕ Frais structurels (si saisis)
       Number(params.comptaAn ?? 0) > 0
         ? { label: "Comptabilité SCI (honoraires)", value: Number(params.comptaAn), formula: "€/an", included: true }
         : null,
@@ -1529,7 +1542,7 @@ buildChargesSection(calc, params) {
         ? { label: "• Mobilier (info)", value: calc.amortissementMobilier, formula: "10% × 10% du prix", included: false, info: true }
         : null,
       calc.amortissementTravaux > 0
-        ? { label: "• Travaux (info)", value: calc.amortissementTravaux, formula: "≈ (1/10) × coût travaux (10 ans)", included: false, info: true }
+        ? { label: "• Travaux (info)", value: calc.amortissementTravaux, formula: travFormula, included: false, info: true }
         : null,
       // Ligne réellement déductible (comptable)
       calc.amortUtilise > 0
@@ -1578,7 +1591,9 @@ buildChargesSection(calc, params) {
     <tr class="total-row">
       <td><strong>Total charges déductibles</strong></td>
       <td class="text-right negative"><strong>-${this.formatCurrency(calc.totalCharges)}</strong></td>
-      <td class="formula"><strong>Charges cash + amortissement utilisé</strong></td>
+      <td class="formula"><strong>${
+        isSCI ? 'Charges cash + amortissements (comptables)' : 'Charges cash + amortissement utilisé'
+      }</strong></td>
     </tr>
   `;
 }
@@ -2186,7 +2201,7 @@ return {
     }
 
 /**
- * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION COMPLÈTE (ancrage sur calcul réel)
+ * Génère le HTML pour afficher les résultats fiscaux améliorés - VERSION COMPLÈTE (avec badge Micro-foncier inéligible)
  */
 generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
   // ✅ Sécurité
@@ -2213,12 +2228,12 @@ generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
   const totalCost       = Number(inputData.coutTotalAcquisition ?? inputData.price ?? inputData.prixBien ?? inputData.prixPaye ?? 0) || 0;
 
   // — Affichages loyer (brut vs net de vacance) —
-  // brut = loyer saisi hors charges, net = après vacance (utile ailleurs)
   const loyerMensuelHCBrut = Number(inputData.loyerHC ?? inputData.loyerMensuel ?? 0) || 0;
   const vacPctSummary      = Number(inputData.vacanceLocative ?? 0) / 100;
   const loyerMensuelHCNet  = loyerMensuelHCBrut * (1 - vacPctSummary);
-    // Rendement brut (HC brut) sur coût total
-const rendementBrut = ((loyerMensuelHCBrut * 12) / (totalCost || 1)) * 100;
+
+  // Rendement brut (HC brut) sur coût total
+  const rendementBrut = ((loyerMensuelHCBrut * 12) / (totalCost || 1)) * 100;
 
   // Déterminer le meilleur régime
   const bestRegime = fiscalResults.reduce(
@@ -2347,9 +2362,9 @@ const rendementBrut = ((loyerMensuelHCBrut * 12) / (totalCost || 1)) * 100;
         </div>
         <div class="benefit-item">
           <h4>📊 Rendement brut / coût total</h4>
-<p class="amount ${rendementClass(rendementBrut)}">
-  ${rendementBrut.toFixed(2)} %
-</p>
+          <p class="amount ${rendementClass(rendementBrut)}">
+            ${rendementBrut.toFixed(2)} %
+          </p>
         </div>
       </div>
 
@@ -2417,6 +2432,14 @@ const rendementBrut = ((loyerMensuelHCBrut * 12) / (totalCost || 1)) * 100;
               const isSelected   = selectedId ? regime.id === selectedId : false;
               const isBest       = bestIdFromOpts ? regime.id === bestIdFromOpts : regime.id === bestRegime.id;
 
+              // 🔎 Badge “Micro-foncier inéligible” (si recettes CC > 15 000 €)
+              const regKey = this.normalizeRegimeKey ? this.normalizeRegimeKey(regime) : (regime.id || '');
+              const isMicroRow = (regime.id === 'nu_micro' || regKey === 'nu_micro');
+              const ineligibleMicro = isMicroRow && (
+                (regime?._detailedCalc?._microFlag?.status === 'over') ||
+                (detailRegime?._detailedCalc?._microFlag?.status === 'over')
+              );
+
               return `
                 <tr class="${isBest ? 'best-regime' : ''}">
                   <td>
@@ -2424,6 +2447,7 @@ const rendementBrut = ((loyerMensuelHCBrut * 12) / (totalCost || 1)) * 100;
                     ${regime.nom}
                     ${isSelected ? '<span class="regime-badge current">Régime actuel</span>' : ''}
                     ${isBest ? '<span class="regime-badge">Meilleur</span>' : ''}
+                    ${ineligibleMicro ? '<span class="regime-badge danger">Inéligible</span>' : ''}
                   </td>
                   <td class="${(regime.cashflowMensuel ?? 0) >= 0 ? 'positive' : 'negative'}">
                     ${fmt(regime.cashflowMensuel || 0)}
