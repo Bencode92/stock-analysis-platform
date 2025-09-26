@@ -465,7 +465,7 @@ prepareFiscalDataForComparator(rawData) {
         return 'underpriced';
     }
 
-**
+ /**
  * Récupère tous les paramètres avancés du formulaire - VERSION CORRIGÉE
  * ✅ ACCEPTE MAINTENANT LA VALEUR 0 grâce au helper parseFloatOrDefault
  */
