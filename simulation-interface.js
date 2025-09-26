@@ -1615,6 +1615,7 @@ function afficherResultats(resultats) {
     document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
     document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
    document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualiteTotale);
+    document.getElementById('encheres-mensualite').textContent  = formaterMontantMensuel(encheres.mensualiteTotale);
     document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
     
     // Cash-flow mensuel et annuel pour les enchères
