@@ -862,40 +862,60 @@ case 'lmnp_reel': {
     // ───────────────────────────────────────────────────────────
     // F) LMP (réel) — avec plancher cotisations
     // ───────────────────────────────────────────────────────────
-    case 'lmp': {
-      const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
-      const baseAmortissable  = Number(inputData.price ?? 0) *
-                                (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN - FISCAL_CONSTANTS.LMNP_PART_MOBILIER);
+case 'lmp': {
+  // 1) Charges réelles (intérêts + TF + copro NR + PNO + entretien + frais bancaires + garantie amortie)
+  const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
 
-      amortissementBien       = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-      amortissementMobilier   = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
-      amortissementTravaux    = Number(inputData.travauxRenovation ?? 0) * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
+  // 2) Bases et amortissements — mêmes hypothèses que LMNP
+  const prix    = Number(inputData.price ?? 0);
+  const tauxNot = Number(params.fraisNotaireTaux ?? 0) / 100;   // ex: 8% → 0.08
+  const tauxCom = Number(params.commissionImmo   ?? 0) / 100;   // ex: 4% → 0.04
+  const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);   // 0.15
+  const partMob = Number(FISCAL_CONSTANTS.LMNP_PART_MOBILIER ?? 0);   // 0.10
 
-      const baseAvantAmort    = revenusNets - chargesReelles;
-      const deficitHorsAmort  = Math.min(0, baseAvantAmort);
-      const economieIR        = Math.abs(deficitHorsAmort) * TMI; // règle spécifique conservée (TMI)
+  const fraisNot   = prix * tauxNot;
+  const commission = prix * tauxCom;
 
-      const amortTotal        = amortissementBien + amortissementMobilier + amortissementTravaux;
-      baseImposable           = Math.max(0, baseAvantAmort - amortTotal);
+  // Base amortissable du bâti: (prix + notaire + agence) – terrain – mobilier
+  const baseBien = Math.max(0, (prix + fraisNot + commission) * (1 - partTer - partMob));
+  amortissementBien = baseBien * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
 
-      // IR sur base (précis ou TMI), puis on retranche l’économie IR au TMI (spécificité conservée)
-      const irSurBase = usePreciseIR
-        ? this.computeIRProgressif(baseImposable, parts, params)
-        : baseImposable * TMI;
+  // Mobilier sur 10 ans
+  const baseMob = prix * partMob;
+  amortissementMobilier = baseMob / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_MOBILIER ?? 10));
 
-      impotRevenu         = irSurBase - economieIR;
-      prelevementsSociaux = 0;
+  // Travaux d’amélioration sur 10 ans
+  const travaux = Number(inputData.travauxRenovation ?? 0);
+  amortissementTravaux = travaux / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_TRAVAUX ?? 10));
 
-      const tauxRaw   = Number(inputData.lmpCotisationsTaux);
-      const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX;
-      const minRaw    = Number(inputData.lmpCotisationsMin);
-      const minCotis  = Number.isFinite(minRaw) ? minRaw : FISCAL_CONSTANTS.LMP_COTISATIONS_MIN;
+  // 3) Amortissement utilisé (ne doit pas créer de déficit)
+  const resultatAvantAmort = revenusNets - chargesReelles;
+  const amortCalcules      = Math.max(0, amortissementBien + amortissementMobilier + amortissementTravaux);
+  const amortUtilise       = Math.min(amortCalcules, Math.max(0, resultatAvantAmort));
+  const amortReporte       = Math.max(0, amortCalcules - amortUtilise);
 
-      cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
+  // 4) Base, IR, cotisations (pas de PS en LMP)
+  baseImposable = Math.max(0, resultatAvantAmort - amortUtilise);
 
-      chargesDeductibles = chargesReelles + amortTotal;
-      break;
-    }
+  impotRevenu = usePreciseIR
+    ? this.computeIRProgressif(baseImposable, parts, params)
+    : baseImposable * TMI;
+
+  prelevementsSociaux = 0; // LMP = cotisations pro, pas de PS
+
+  const tauxRaw   = Number(inputData.lmpCotisationsTaux);
+  const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX ?? 0.35);
+  const minRaw    = Number(inputData.lmpCotisationsMin);
+  const minCotis  = Number.isFinite(minRaw) ? minRaw : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_MIN ?? 1200);
+  cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
+
+  // 5) Exposition & total charges
+  chargesDeductibles    = chargesReelles;   // uniquement les charges "cash"
+  regime._amortCalcules = amortCalcules;    // info (non inclus)
+  regime._amortUtilise  = amortUtilise;     // inclus dans total
+  regime._amortReporte  = amortReporte;     // report (non inclus)
+  break;
+}
 
 // ───────────────────────────────────────────────────────────
 // G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
@@ -1000,19 +1020,13 @@ case 'sci_is': {
     totalImpots -
     mensualiteAnnuelle;
 
-  // totalCharges pour l’affichage (amortissements ajoutés 1 seule fois)
+// totalCharges pour l’affichage (amortissements ajoutés 1 seule fois)
 const isMicro = (key === 'nu_micro' || key === 'lmnp_micro');
 
 let totalCharges;
-if (key === 'lmnp_reel') {
-  // ✅ LMNP réel : charges cash + amortissement utilisé uniquement
+if (key === 'lmnp_reel' || key === 'lmp') {
+  // ✅ LMNP/LMP réel : charges cash + amortissement utilisé uniquement
   totalCharges = Number(chargesDeductibles || 0) + Number(regime._amortUtilise || 0);
-} else if (key === 'lmp') {
-  // LMP (inchangé pour l’instant)
-  totalCharges = Number(chargesDeductibles || 0)
-    + Number(amortissementBien || 0)
-    + Number(amortissementMobilier || 0)
-    + Number(amortissementTravaux || 0);
 } else {
   // Autres régimes (micro / nu réel / SCI IS) : comportement existant
   totalCharges = Number(chargesDeductibles || 0)
