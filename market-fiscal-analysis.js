@@ -2091,6 +2091,12 @@ generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
   const yearlyPayment   = monthlyPayment * 12;
   const totalCost       = Number(inputData.coutTotalAcquisition ?? inputData.price ?? inputData.prixBien ?? inputData.prixPaye ?? 0) || 0;
 
+  // — Affichages loyer (brut vs net de vacance) —
+  // brut = loyer saisi hors charges, net = après vacance (utile ailleurs)
+  const loyerMensuelHCBrut = Number(inputData.loyerHC ?? inputData.loyerMensuel ?? 0) || 0;
+  const vacPctSummary      = Number(inputData.vacanceLocative ?? 0) / 100;
+  const loyerMensuelHCNet  = loyerMensuelHCBrut * (1 - vacPctSummary);
+
   // Déterminer le meilleur régime
   const bestRegime = fiscalResults.reduce(
     (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
@@ -2177,8 +2183,8 @@ generateFiscalResultsHTML(fiscalResults, inputData, opts = {}) {
           <span class="value">${(loanRate || inputData.taux || 0)}% sur ${(inputData.loanDuration ?? inputData.duree ?? 0)} ans</span>
         </div>
         <div class="summary-item">
-          <span class="label">💵 Loyer mensuel (HC estimé):</span>
-          <span class="value">${fmt((yearlyRent / 12) || (inputData.loyerHC ?? inputData.loyerMensuel ?? 0))}</span>
+          <span class="label">💵 Loyer mensuel (HC brut):</span>
+          <span class="value">${fmt(loyerMensuelHCBrut)}</span>
         </div>
         <div class="summary-item">
           <span class="label">📊 TMI:</span>
