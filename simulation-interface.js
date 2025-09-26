@@ -1505,7 +1505,7 @@ function afficherResultats(resultats) {
     document.getElementById('classique-travaux').textContent = formaterMontant(classique.travaux);
     document.getElementById('classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
     document.getElementById('classique-total').textContent = formaterMontant(classique.coutTotal);
-    document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
+    document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualiteTotale);
     document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
     
     // Cash-flow mensuel et annuel
@@ -1614,7 +1614,7 @@ function afficherResultats(resultats) {
     document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
     document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
     document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
-    document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
+   document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualiteTotale);
     document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
     
     // Cash-flow mensuel et annuel pour les enchères
@@ -1851,9 +1851,10 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     majDifference('comp-emprunt-diff', encheres.emprunt - classique.emprunt);
     
     // Remboursement mensuel
-    document.getElementById('comp-classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
-    document.getElementById('comp-encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
-    majDifference('comp-mensualite-diff', encheres.mensualite - classique.mensualite);
+document.getElementById('comp-classique-mensualite').textContent = formaterMontantMensuel(classique.mensualiteTotale);
+document.getElementById('comp-encheres-mensualite').textContent  = formaterMontantMensuel(encheres.mensualiteTotale);
+majDifference('comp-mensualite-diff', encheres.mensualiteTotale - classique.mensualiteTotale);
+
     
     // ===================================================================
     // SECTION 3 : REVENUS LOCATIFS
@@ -1888,9 +1889,9 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     // ===================================================================
     
     // Remboursement du prêt
-    document.getElementById('comp-classique-mensualite2').textContent = formaterMontant(-classique.mensualite);
-    document.getElementById('comp-encheres-mensualite2').textContent = formaterMontant(-encheres.mensualite);
-    majDifference('comp-mensualite2-diff', -(encheres.mensualite - classique.mensualite));
+document.getElementById('comp-classique-mensualite2').textContent = formaterMontant(-classique.mensualiteTotale);
+document.getElementById('comp-encheres-mensualite2').textContent  = formaterMontant(-encheres.mensualiteTotale);
+majDifference('comp-mensualite2-diff', -(encheres.mensualiteTotale - classique.mensualiteTotale));
     
     // Taxe foncière (par mois)
     const taxeClassique = classique.taxeFonciere / 12;
@@ -1921,8 +1922,8 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     majDifference('comp-assurance-diff', -(assuranceEncheres - assuranceClassique));
     
     // Total de vos dépenses
-    const totalChargesClassique = classique.mensualite + taxeClassique + chargesClassique + entretienClassique + assuranceClassique;
-    const totalChargesEncheres = encheres.mensualite + taxeEncheres + chargesEncheres + entretienEncheres + assuranceEncheres;
+ const totalChargesClassique = classique.mensualiteTotale + taxeClassique + chargesClassique + entretienClassique + assuranceClassique;
+const totalChargesEncheres  = encheres.mensualiteTotale  + taxeEncheres  + chargesEncheres  + entretienEncheres  + assuranceEncheres;
     document.getElementById('comp-classique-total-charges').textContent = formaterMontant(-totalChargesClassique);
     document.getElementById('comp-encheres-total-charges').textContent = formaterMontant(-totalChargesEncheres);
     majDifference('comp-total-charges-diff', -(totalChargesEncheres - totalChargesClassique));
