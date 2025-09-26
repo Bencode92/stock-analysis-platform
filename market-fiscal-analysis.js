@@ -32,9 +32,12 @@ const FISCAL_CONSTANTS = {
     DUREE_AMORTISSEMENT_MOBILIER: 10,
     DUREE_AMORTISSEMENT_TRAVAUX: 10,
 
+    // Amortissement SCI
+    SCI_TRAVAUX_AMORT_YEARS: 15, // durée par défaut pour les travaux en SCI à l'IS
+
     // LMP (cotisations sociales pro)
-  LMP_COTISATIONS_TAUX: 0.35,   // 35% par défaut
-  LMP_COTISATIONS_MIN: 1200
+    LMP_COTISATIONS_TAUX: 0.35,   // 35% par défaut
+    LMP_COTISATIONS_MIN: 1200
 };
 
 /**
@@ -465,16 +468,16 @@ prepareFiscalDataForComparator(rawData) {
         return 'underpriced';
     }
 
- /**
- * Récupère tous les paramètres avancés du formulaire - VERSION CORRIGÉE
- * ✅ ACCEPTE MAINTENANT LA VALEUR 0 grâce au helper parseFloatOrDefault
+/**
+ * Récupère tous les paramètres avancés du formulaire - VERSION CORRIGÉE + AJOUTS
+ * ✅ ACCEPTE 0 grâce à parseFloatOrDefault
  */
 getAllAdvancedParams() {
   return {
     // Communs
     fraisBancairesDossier: parseFloatOrDefault('frais-bancaires-dossier', 900),
-    fraisBancairesCompte:  parseFloatOrDefault('frais-bancaires-compte', 150),
-    tenueCompteAn:         parseFloatOrDefault('tenue-compte-annuel', 0), // 👈 AJOUT
+    fraisBancairesCompte:  parseFloatOrDefault('frais-bancaires-compte', 150), // initial (one-off)
+    tenueCompteAn:         parseFloatOrDefault('tenue-compte-annuel', 0),      // ✅ récurrent
     fraisGarantie:         parseFloatOrDefault('frais-garantie', 1.3709),
     taxeFonciere:          parseFloatOrDefault('taxeFonciere', 800),
     vacanceLocative:       parseFloatOrDefault('vacanceLocative', 0),
@@ -485,8 +488,13 @@ getAllAdvancedParams() {
     entretienAnnuel:   parseFloatOrDefault('entretien-annuel', 500),
     assurancePNO:      parseFloatOrDefault('assurance-pno', 15),
 
-    // Charges de copropriété non récupérables
+    // Charges copro non récupérables (€/mois)
     chargesCoproNonRecup: parseFloatOrDefault('charges-copro-non-recup', 50),
+
+    // ➕ Frais structurels (souvent oubliés)
+    comptaAn:              parseFloatOrDefault('compta-an', 0),               // honoraires comptable €/an
+    assuranceEmprunteurAn: parseFloatOrDefault('assurance-emprunteur-an', 0), // ADI €/an
+    cfeAn:                 parseFloatOrDefault('cfe-an', 0),                  // CFE €/an
 
     // Spécifiques classique
     fraisNotaireTaux: parseFloatOrDefault('frais-notaire-taux', 8),
@@ -513,16 +521,12 @@ getAllAdvancedParams() {
     cautionMisePrix:      parseFloatOrDefault('caution-mise-prix', 5),
     cautionRestituee:     document.getElementById('caution-restituee')?.checked ?? true,
 
-    // ─────────────────────────────────────────
-    // SCI/IS – taux de distribution (UI en %, ici ratio 0..1)
-    // Laisse undefined si non saisi pour que le helper affiche le message d’usage.
-    sciDistribution: (() => {
-      const p = parseFloatOrDefault('sci-distribution', NaN); // % saisi côté UI
-      return Number.isFinite(p) ? Math.max(0, Math.min(1, p / 100)) : undefined;
-    })(),
+    // ➕ SCI meublé / composant mobilier (affinage)
+    partMobilier:      parseFloatOrDefault('part-mobilier', 10), // % du prix affecté au mobilier
+    sciMeuble:         document.getElementById('sci-meuble')?.checked ?? false,
+    sciDureeAmortTrav: parseFloatOrDefault('sci-duree-amort-trav', FISCAL_CONSTANTS.SCI_TRAVAUX_AMORT_YEARS),
 
-    // ─────────────────────────────────────────
-    // IR “précis” (barème progressif + parts + décote) – optionnel
+    // ─ IR précis (barème progressif + parts + décote) – optionnel
     irPrecise:       document.getElementById('ir-mode-precis')?.checked ?? false,
     foyerParts:      parseFloatOrDefault('foyer-parts', 1),
     irApplyDecote:   document.getElementById('ir-decote')?.checked ?? false,
@@ -530,16 +534,9 @@ getAllAdvancedParams() {
     irDecoteSeuil2P: parseFloatOrDefault('ir-decote-seuil-2p', 3191),
     irDecoteCoeff:   parseFloatOrDefault('ir-decote-coeff', 0.4525),
 
-    // ─────────────────────────────────────────
     // LMP (cotisations sociales) + Toggles
-    lmpCotisationsTaux: parseFloatOrDefault(
-      'lmp-cotisations-taux',
-      FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100 // en %
-    ),
-    lmpCotisationsMin: parseFloatOrDefault(
-      'lmp-cotisations-min',
-      FISCAL_CONSTANTS.LMP_COTISATIONS_MIN // €/an
-    ),
+    lmpCotisationsTaux: parseFloatOrDefault('lmp-cotisations-taux', FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX * 100),
+    lmpCotisationsMin:  parseFloatOrDefault('lmp-cotisations-min', FISCAL_CONSTANTS.LMP_COTISATIONS_MIN),
 
     // Toggles utiles
     assujettiCotisSociales: document.getElementById('assujetti-cotis')?.checked ?? false,
@@ -611,36 +608,47 @@ calculateAnnualInterests(inputData, baseResults, year = 1) {
 }
 /**
  * Calcule les charges réelles déductibles (régimes au réel).
- * Inclut : intérêts, taxe foncière, charges copro NR, PNO, entretien,
- * + frais bancaires (dossier, tenue) et garantie (caution/PPD) amortie
- * linéairement sur la durée du prêt.
+ * Inclut intérêts, TF, copro NR, PNO, entretien,
+ * + tenue de compte récurrente, frais bancaires one-off (année 1),
+ * + garantie amortie sur la durée, + compta/ADI/CFE.
  *
  * @param {object} inputData - contient loanAmount (montant emprunté) et loanDuration (années)
- * @param {object} params - paramètres avancés (TF, copro NR, PNO, entretien, frais bancaires, taux de garantie)
+ * @param {object} params    - paramètres avancés (TF, copro NR, PNO, entretien, frais, etc.)
  * @param {number} interetsAnnuels - intérêts d’emprunt de l’année (calculés ailleurs)
+ * @param {number} [year=1]  - année de simulation (1 = inclut les one-off)
  * @returns {number} total des charges déductibles (hors amortissements)
  */
-calculateRealCharges(inputData, params, interetsAnnuels) {
+calculateRealCharges(inputData, params, interetsAnnuels, year = 1) {
   const tf     = Number(params.taxeFonciere ?? 0);
   const copro  = Number(params.chargesCoproNonRecup ?? 0) * 12;
   const pno    = Number(params.assurancePNO ?? 0) * 12;
   const entret = Number(params.entretienAnnuel ?? 0);
 
   // Frais bancaires
-  const fraisDossier     = Number(params.fraisBancairesDossier ?? 0);   // one-off (année 1)
-  const fraisCompteInit  = Number(params.fraisBancairesCompte ?? 0);    // one-off (année 1)
-  const tenueCompteAn    = Number(params.tenueCompteAn ?? 0);           // récurrent
-  const tauxGarant       = Number(params.fraisGarantie ?? 0) / 100;     // ex: 1.3709% → 0.013709
-  const loanAmount       = Number(inputData.loanAmount ?? 0);
-  const duree            = Math.max(1, Number(inputData.loanDuration ?? 1)); // années
+  const fraisDossier    = Number(params.fraisBancairesDossier ?? 0); // one-off (année 1)
+  const fraisCompteInit = Number(params.fraisBancairesCompte  ?? 0); // one-off (année 1)
+  const tenueCompteAn   = Number(params.tenueCompteAn ?? 0);         // récurrent €/an
 
-  // Garantie (caution/PPD/hypo) amortie sur la durée du prêt
+  const tauxGarant = Number(params.fraisGarantie ?? 0) / 100;
+  const loanAmount = Number(inputData.loanAmount ?? 0);
+  const duree      = Math.max(1, Number(inputData.loanDuration ?? 1)); // années
+
+  // Garantie amortie sur la durée du prêt
   const garantieAmortieAn = (loanAmount * tauxGarant) / duree;
+
+  // Frais structurels
+  const comptaAn = Number(params.comptaAn ?? 0);                    // Comptable SCI
+  const adiAn    = Number(params.assuranceEmprunteurAn ?? 0);       // ADI
+  const cfeAn    = Number(params.cfeAn ?? 0);                       // CFE
+
+  // One-off uniquement en année 1
+  const oneOffThisYear = (year === 1) ? (fraisDossier + fraisCompteInit) : 0;
 
   return interetsAnnuels
        + tf + copro + pno + entret
        + tenueCompteAn
-       + fraisDossier + fraisCompteInit + garantieAmortieAn;
+       + oneOffThisYear + garantieAmortieAn
+       + comptaAn + adiAn + cfeAn;
 }
 /**
  * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE (patchée)
@@ -946,87 +954,90 @@ case 'lmp': {
 // G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
 // ───────────────────────────────────────────────────────────
 case 'sci_is': {
-  // Charges cash (intérêts, TF, copro NR, PNO, entretien, frais bancaires, garantie amortie)
-  const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
+  const chargesReellesBase = this.calculateRealCharges(inputData, params, interetsAnnuels); // inclut tenue, compta, ADI, CFE
 
-  // Bases d'amortissement alignées sur LMNP (prix + notaire + agence − terrain − mobilier)
-  const prix      = Number(inputData.price ?? 0);
-  const tauxNot   = Number(params.fraisNotaireTaux ?? 0) / 100;
-  const tauxCom   = Number(params.commissionImmo   ?? 0) / 100;
-  const partTer   = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN ?? 0.15);
+  // Bases d'amortissement
+  const prix   = Number(inputData.price ?? 0);
+  const tauxNot= Number(params.fraisNotaireTaux ?? 0) / 100;
+  const tauxCom= Number(params.commissionImmo   ?? 0) / 100;
 
-  // Location nue par défaut en SCI : pas de mobilier amortissable (mettre >0 si tu as du mobilier réel)
-  const partMobIS = 0;
+  // Bâti amortissable = (prix + notaire + agence) - terrain
+  const partTer  = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN ?? 0.15);
+  const baseBat  = Math.max(0, (prix + prix*tauxNot + prix*tauxCom) * (1 - partTer));
+  const amortBien= baseBat * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
 
-  const fraisNot   = prix * tauxNot;
-  const commission = prix * tauxCom;
+  // Mobilier (option SCI meublée) – par défaut 10% sur 10 ans
+  const useMob   = !!params.sciMeuble || Number(params.partMobilier ?? 0) > 0;
+  const partMob  = Math.max(0, Math.min(1, (Number(params.partMobilier ?? 10) / 100)));
+  const amortMob = useMob
+    ? (prix * partMob * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER ?? 0.10))
+    : 0;
 
-  const baseBien = Math.max(0, (prix + fraisNot + commission) * (1 - partTer - partMobIS));
-  const amortBien = baseBien * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
+  // Travaux amortis en SCI
+  const dureeTrav = Math.max(1, Number(params.sciDureeAmortTrav ?? FISCAL_CONSTANTS.SCI_TRAVAUX_AMORT_YEARS ?? 15));
+  const amortTrav = Number(inputData.travauxRenovation ?? 0) / dureeTrav;
 
-  const baseMob = prix * partMobIS;
-  const amortMob = baseMob / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_MOBILIER ?? 10));
+  // Résultat comptable avant IS (⚠️ sans écrêtage pour garder le déficit)
+  const resComptable = revenusNets - (chargesReellesBase + amortBien + amortMob + amortTrav);
 
-  chargesDeductibles      = chargesReelles;
-  amortissementBien       = amortBien;
-  amortissementMobilier   = amortMob;
-  amortissementTravaux    = 0;
+  // IS (avec écrêtage à 0 pour la base imposable)
+  const resultatAvantIS = Math.max(0, resComptable);
+  const eligible15      = !!inputData.sciEligibleTauxReduit;
 
-  // Autoriser le déficit comptable à l'IS (reportable) : l'assiette IS ne peut pas être négative
-  const resultatComptable = revenusNets - (chargesReelles + amortBien + amortMob);
-  const resultatAvantIS   = Math.max(0, resultatComptable);
-
-  const eligible15 = !!inputData.sciEligibleTauxReduit;
   let impotIS = 0;
-  if (eligible15) {
-    const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
-    const surplus = Math.max(0, resultatAvantIS - tranche);
-    impotIS = tranche * FISCAL_CONSTANTS.IS_TAUX_REDUIT + surplus * 0.25;
-  } else {
-    impotIS = resultatAvantIS * 0.25;
+  if (resultatAvantIS > 0) {
+    if (eligible15) {
+      const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
+      const surplus = Math.max(0, resultatAvantIS - tranche);
+      impotIS = tranche * Number(FISCAL_CONSTANTS.IS_TAUX_REDUIT ?? 0.15) + surplus * 0.25;
+    } else {
+      impotIS = resultatAvantIS * 0.25;
+    }
   }
 
-  let impotRevenuLocal  = impotIS;
   const beneficeApresIS = Math.max(0, resultatAvantIS - impotIS);
 
   // PFU (optionnel)
   const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
-  let distribRatio = 0, pfu = 0, dividendesBruts = 0, dividendesNets = 0, resteSociete = beneficeApresIS;
-  let _messages = [];
+  const { val: distribRatio, msgs } = this.normalizeSciDistribution(
+    inputData?.sciDistribution ?? params?.sciDistribution, 0
+  );
 
-  if (applyPFU) {
-    const { val, msgs } = this.normalizeSciDistribution(
-      inputData?.sciDistribution ?? params?.sciDistribution, 0
-    );
-    distribRatio = val;
-    if (msgs?.length) _messages = _messages.concat(msgs);
-
+  let pfu = 0, dividendesBruts = 0, dividendesNets = 0, resteSociete = beneficeApresIS;
+  if (applyPFU && beneficeApresIS > 0) {
     dividendesBruts = beneficeApresIS * distribRatio;
     pfu             = dividendesBruts * 0.30;
     dividendesNets  = dividendesBruts - pfu;
     resteSociete    = beneficeApresIS - dividendesBruts;
-
-    impotRevenuLocal += pfu; // IS + PFU
   }
 
-  prelevementsSociaux = 0;
-  baseImposable       = resultatAvantIS; // “résultat avant IS”
-  impotRevenu         = impotRevenuLocal;
+  // Expositions / sorties
+  const chargesReelles    = chargesReellesBase;
+  chargesDeductibles      = chargesReelles;
+  amortissementBien       = amortBien;
+  amortissementMobilier   = amortMob;
+  amortissementTravaux    = amortTrav;
 
-  // Expose (affichage)
-  regime._pfu                 = pfu;
-  regime._sciDistribRatio     = distribRatio;
-  regime._messages            = (regime._messages || []).concat(_messages);
-  regime._sciResultatAvantIS  = resultatAvantIS;
-  regime._sciImpotsIS         = impotIS;
-  regime._sciBeneficeApresIS  = beneficeApresIS;
-  regime._sciDividendesBruts  = dividendesBruts;
-  regime._sciDividendesNets   = dividendesNets;
-  regime._sciResteSociete     = resteSociete;
-  regime._sciDeficit          = resultatComptable < 0 ? Math.abs(resultatComptable) : 0;
+  const totalImp          = impotIS + pfu;
+  prelevementsSociaux     = 0;
+  baseImposable           = resultatAvantIS;
+  impotRevenu             = totalImp;
+
+  // ⚠️ expose le déficit reportable si resComptable < 0
+  regime._sciDeficit         = Math.max(0, -resComptable);
+  regime._pfu                = pfu;
+  regime._sciDistribRatio    = distribRatio;
+  regime._messages           = (regime._messages || []).concat(msgs || []);
+  regime._sciResultatAvantIS = resultatAvantIS;
+  regime._sciImpotsIS        = impotIS;
+  regime._sciBeneficeApresIS = beneficeApresIS;
+  regime._sciDividendesBruts = dividendesBruts;
+  regime._sciDividendesNets  = dividendesNets;
+  regime._sciResteSociete    = resteSociete;
 
   break;
 }
+
 
     // Par défaut : calque "nu réel" simplifié
     // ───────────────────────────────────────────────────────────
@@ -1469,6 +1480,17 @@ buildChargesSection(calc, params) {
         : null,
       calc.garantieAmortieAn > 0
         ? { label: "Garantie (amortie / an)", value: calc.garantieAmortieAn, formula: `${params.fraisGarantie}% ÷ durée du prêt`, included: true }
+        : null,
+
+      // ➕ frais structurels (si saisis)
+      Number(params.comptaAn ?? 0) > 0
+        ? { label: "Comptabilité SCI (honoraires)", value: Number(params.comptaAn), formula: "€/an", included: true }
+        : null,
+      Number(params.assuranceEmprunteurAn ?? 0) > 0
+        ? { label: "Assurance emprunteur (ADI)", value: Number(params.assuranceEmprunteurAn), formula: "€/an", included: true }
+        : null,
+      Number(params.cfeAn ?? 0) > 0
+        ? { label: "CFE", value: Number(params.cfeAn), formula: "€/an", included: true }
         : null
       // ───────────────────────────────────────────────────────────
     );
@@ -1562,6 +1584,7 @@ buildFiscaliteSection(calc, inputData) {
   if (isSCI) {
     const hasPFU = Number(calc._pfu) > 0;
     const hasDeficit = Number(calc._sciDeficit || 0) > 0; // 🆕 alerte déficit reportable
+
     return `
       ${(Array.isArray(calc._messages) && calc._messages.length)
         ? `<tr><td colspan="3" class="info-banner">
@@ -1626,7 +1649,6 @@ buildFiscaliteSection(calc, inputData) {
       </tr>
     `;
   }
-
   // ————————————————————————————————————————————————
   // Rendu générique (IR/TMI/PS/LMP) pour les autres régimes
   // ————————————————————————————————————————————————
