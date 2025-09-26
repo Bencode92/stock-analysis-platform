@@ -465,7 +465,7 @@ prepareFiscalDataForComparator(rawData) {
         return 'underpriced';
     }
 
-/**
+**
  * Récupère tous les paramètres avancés du formulaire - VERSION CORRIGÉE
  * ✅ ACCEPTE MAINTENANT LA VALEUR 0 grâce au helper parseFloatOrDefault
  */
@@ -474,6 +474,7 @@ getAllAdvancedParams() {
     // Communs
     fraisBancairesDossier: parseFloatOrDefault('frais-bancaires-dossier', 900),
     fraisBancairesCompte:  parseFloatOrDefault('frais-bancaires-compte', 150),
+    tenueCompteAn:         parseFloatOrDefault('tenue-compte-annuel', 0), // 👈 AJOUT
     fraisGarantie:         parseFloatOrDefault('frais-garantie', 1.3709),
     taxeFonciere:          parseFloatOrDefault('taxeFonciere', 800),
     vacanceLocative:       parseFloatOrDefault('vacanceLocative', 0),
@@ -626,18 +627,20 @@ calculateRealCharges(inputData, params, interetsAnnuels) {
   const entret = Number(params.entretienAnnuel ?? 0);
 
   // Frais bancaires
-  const fraisDossier = Number(params.fraisBancairesDossier ?? 0);
-  const fraisCompte  = Number(params.fraisBancairesCompte ?? 0);
-  const tauxGarant   = Number(params.fraisGarantie ?? 0) / 100; // ex: 1.3709% → 0.013709
-  const loanAmount   = Number(inputData.loanAmount ?? 0);
-  const duree        = Math.max(1, Number(inputData.loanDuration ?? 1)); // années
+  const fraisDossier     = Number(params.fraisBancairesDossier ?? 0);   // one-off (année 1)
+  const fraisCompteInit  = Number(params.fraisBancairesCompte ?? 0);    // one-off (année 1)
+  const tenueCompteAn    = Number(params.tenueCompteAn ?? 0);           // récurrent
+  const tauxGarant       = Number(params.fraisGarantie ?? 0) / 100;     // ex: 1.3709% → 0.013709
+  const loanAmount       = Number(inputData.loanAmount ?? 0);
+  const duree            = Math.max(1, Number(inputData.loanDuration ?? 1)); // années
 
   // Garantie (caution/PPD/hypo) amortie sur la durée du prêt
   const garantieAmortieAn = (loanAmount * tauxGarant) / duree;
 
   return interetsAnnuels
        + tf + copro + pno + entret
-       + fraisDossier + fraisCompte + garantieAmortieAn;
+       + tenueCompteAn
+       + fraisDossier + fraisCompteInit + garantieAmortieAn;
 }
 /**
  * Calcule tous les détails pour un régime donné - V3 DIFFÉRENCIÉE (patchée)
@@ -943,20 +946,37 @@ case 'lmp': {
 // G) SCI À L’IS — option PFU investisseur (+ taux de distribution)
 // ───────────────────────────────────────────────────────────
 case 'sci_is': {
-  const chargesReelles    = this.calculateRealCharges(inputData, params, interetsAnnuels);
-  const baseAmortissable  = Number(inputData.price ?? 0) * (1 - FISCAL_CONSTANTS.LMNP_PART_TERRAIN);
-  const amortBien         = baseAmortissable * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN;
-  const amortMob          = Number(inputData.price ?? 0) * FISCAL_CONSTANTS.LMNP_PART_MOBILIER * FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_MOBILIER;
+  // Charges cash (intérêts, TF, copro NR, PNO, entretien, frais bancaires, garantie amortie)
+  const chargesReelles = this.calculateRealCharges(inputData, params, interetsAnnuels);
+
+  // Bases d'amortissement alignées sur LMNP (prix + notaire + agence − terrain − mobilier)
+  const prix      = Number(inputData.price ?? 0);
+  const tauxNot   = Number(params.fraisNotaireTaux ?? 0) / 100;
+  const tauxCom   = Number(params.commissionImmo   ?? 0) / 100;
+  const partTer   = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN ?? 0.15);
+
+  // Location nue par défaut en SCI : pas de mobilier amortissable (mettre >0 si tu as du mobilier réel)
+  const partMobIS = 0;
+
+  const fraisNot   = prix * tauxNot;
+  const commission = prix * tauxCom;
+
+  const baseBien = Math.max(0, (prix + fraisNot + commission) * (1 - partTer - partMobIS));
+  const amortBien = baseBien * Number(FISCAL_CONSTANTS.LMNP_TAUX_AMORTISSEMENT_BIEN ?? 0.025);
+
+  const baseMob = prix * partMobIS;
+  const amortMob = baseMob / Math.max(1, Number(FISCAL_CONSTANTS.DUREE_AMORTISSEMENT_MOBILIER ?? 10));
 
   chargesDeductibles      = chargesReelles;
   amortissementBien       = amortBien;
   amortissementMobilier   = amortMob;
   amortissementTravaux    = 0;
 
-  const resultatAvantIS   = Math.max(0, revenusNets - (chargesReelles + amortBien + amortMob));
-  const eligible15        = !!inputData.sciEligibleTauxReduit;
+  // Autoriser le déficit comptable à l'IS (reportable) : l'assiette IS ne peut pas être négative
+  const resultatComptable = revenusNets - (chargesReelles + amortBien + amortMob);
+  const resultatAvantIS   = Math.max(0, resultatComptable);
 
-  // 1) IS (séparé du PFU)
+  const eligible15 = !!inputData.sciEligibleTauxReduit;
   let impotIS = 0;
   if (eligible15) {
     const tranche = Math.min(resultatAvantIS, FISCAL_CONSTANTS.IS_PLAFOND_REDUIT);
@@ -966,36 +986,34 @@ case 'sci_is': {
     impotIS = resultatAvantIS * 0.25;
   }
 
-  let impotRevenuLocal = impotIS; // total impôts côté fonction (IS seul pour l’instant)
+  let impotRevenuLocal  = impotIS;
   const beneficeApresIS = Math.max(0, resultatAvantIS - impotIS);
 
-  // 2) PFU (optionnel) + décomposition dividendes
+  // PFU (optionnel)
   const applyPFU = (params?.applyPFU === true) || (inputData?.applyPFU === true);
   let distribRatio = 0, pfu = 0, dividendesBruts = 0, dividendesNets = 0, resteSociete = beneficeApresIS;
   let _messages = [];
 
   if (applyPFU) {
     const { val, msgs } = this.normalizeSciDistribution(
-      inputData?.sciDistribution ?? params?.sciDistribution,
-      0 // défaut conservateur: 0% distribué
+      inputData?.sciDistribution ?? params?.sciDistribution, 0
     );
     distribRatio = val;
     if (msgs?.length) _messages = _messages.concat(msgs);
 
     dividendesBruts = beneficeApresIS * distribRatio;
-    pfu             = dividendesBruts * 0.30;   // PFU 30%
-    dividendesNets  = dividendesBruts - pfu;    // net perçu par l’associé
+    pfu             = dividendesBruts * 0.30;
+    dividendesNets  = dividendesBruts - pfu;
     resteSociete    = beneficeApresIS - dividendesBruts;
 
-    impotRevenuLocal += pfu;                    // total impôts = IS + PFU
+    impotRevenuLocal += pfu; // IS + PFU
   }
 
-  // sorties de la branche (variables communes de la fonction)
-  prelevementsSociaux = 0;                      // pas de PS au niveau société
-  baseImposable       = resultatAvantIS;        // “résultat fiscal” de la SCI
-  impotRevenu         = impotRevenuLocal;       // total IS (+ PFU si activé)
+  prelevementsSociaux = 0;
+  baseImposable       = resultatAvantIS; // “résultat avant IS”
+  impotRevenu         = impotRevenuLocal;
 
-  // Expose pour l’affichage
+  // Expose (affichage)
   regime._pfu                 = pfu;
   regime._sciDistribRatio     = distribRatio;
   regime._messages            = (regime._messages || []).concat(_messages);
@@ -1005,9 +1023,11 @@ case 'sci_is': {
   regime._sciDividendesBruts  = dividendesBruts;
   regime._sciDividendesNets   = dividendesNets;
   regime._sciResteSociete     = resteSociete;
+  regime._sciDeficit          = resultatComptable < 0 ? Math.abs(resultatComptable) : 0;
 
   break;
 }
+
     // Par défaut : calque "nu réel" simplifié
     // ───────────────────────────────────────────────────────────
     default: {
@@ -1435,7 +1455,22 @@ buildChargesSection(calc, params) {
         ? { label: "Charges copro non récupérables", value: calc.chargesCoproNonRecup, formula: `${params.chargesCoproNonRecup} × 12`, included: true }
         : null,
       { label: "Assurance PNO", value: calc.assurancePNO, formula: `${params.assurancePNO} × 12`, included: true },
-      { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel", included: true }
+      { label: "Entretien annuel", value: calc.entretienAnnuel, formula: "Budget annuel", included: true },
+
+      // ── AJOUT : frais bancaires & garantie ─────────────────────
+      calc.fraisDossier > 0
+        ? { label: "Frais bancaires — dossier", value: calc.fraisDossier, formula: "Déductible année 1", included: true }
+        : null,
+      calc.fraisCompte > 0
+        ? { label: "Frais bancaires — tenue (initiale)", value: calc.fraisCompte, formula: "Déductible année 1", included: true }
+        : null,
+      Number(params.tenueCompteAn ?? 0) > 0
+        ? { label: "Tenue de compte (récurrente)", value: Number(params.tenueCompteAn), formula: "€/an", included: true }
+        : null,
+      calc.garantieAmortieAn > 0
+        ? { label: "Garantie (amortie / an)", value: calc.garantieAmortieAn, formula: `${params.fraisGarantie}% ÷ durée du prêt`, included: true }
+        : null
+      // ───────────────────────────────────────────────────────────
     );
 
     // 2) Bloc "Amortissements (non cash)"
@@ -1526,6 +1561,7 @@ buildFiscaliteSection(calc, inputData) {
   // 🎯 Rendu dédié SCI à l’IS
   if (isSCI) {
     const hasPFU = Number(calc._pfu) > 0;
+    const hasDeficit = Number(calc._sciDeficit || 0) > 0; // 🆕 alerte déficit reportable
     return `
       ${(Array.isArray(calc._messages) && calc._messages.length)
         ? `<tr><td colspan="3" class="info-banner">
@@ -1535,6 +1571,11 @@ buildFiscaliteSection(calc, inputData) {
       <tr class="section-header">
         <td colspan="3"><strong>📊 CALCUL FISCAL — SCI à l’IS</strong></td>
       </tr>
+
+      ${hasDeficit ? `
+        <tr><td colspan="3" class="warning-row" style="color:#f59e0b;">
+          ⚠️ Résultat comptable déficitaire de ${fmt(calc._sciDeficit)} — pas d'IS cette année (déficit reportable).
+        </td></tr>` : ''}
 
       <tr><td>Revenus nets (base CC)</td>
           <td class="text-right">${this.formatCurrency(calc.revenusNets)}</td>
@@ -1589,8 +1630,6 @@ buildFiscaliteSection(calc, inputData) {
   // ————————————————————————————————————————————————
   // Rendu générique (IR/TMI/PS/LMP) pour les autres régimes
   // ————————————————————————————————————————————————
-
-  // Alerte micro > 15k (si micro-foncier)
   const microAlertOver =
     (calc.regime === 'Micro-foncier' && calc._microFlag && calc._microFlag.status === 'over')
       ? `<tr><td colspan="3" class="warning-row" style="color:#ef4444;">
@@ -1599,7 +1638,6 @@ buildFiscaliteSection(calc, inputData) {
          </td></tr>`
       : '';
 
-  // Pré-warning si ≥ 90% du plafond
   const microAlertNear =
     (calc.regime === 'Micro-foncier' && calc._microFlag && calc._microFlag.status === 'near')
       ? `<tr><td colspan="3" class="warning-row" style="color:#f59e0b;">
@@ -1706,14 +1744,21 @@ buildFiscaliteSection(calc, inputData) {
  * (libellé revenus précisé : base HC)
  */
 buildCashflowSection(calc, inputData) {
-  const mensualiteAnnuelle = inputData.monthlyPayment * 12;
+  const mensualiteAnnuelle = Number(inputData.monthlyPayment || 0) * 12;
 
   // Recalculer les charges cash pour l'affichage
   const chargesCashAnnuel = 
-    calc.taxeFonciere +
-    calc.chargesCoproNonRecup +
-    calc.entretienAnnuel +
-    calc.assurancePNO;
+    Number(calc.taxeFonciere || 0) +
+    Number(calc.chargesCoproNonRecup || 0) +
+    Number(calc.entretienAnnuel || 0) +
+    Number(calc.assurancePNO || 0);
+
+  // 🆕 Vue société (SCI) : après IS seulement (avant PFU)
+  const isSCI = calc.regime === "SCI à l'IS";
+  const impotsSociete = isSCI
+    ? Math.max(0, Number(calc.totalImpots || 0) - Number(calc._pfu || 0))
+    : Number(calc.totalImpots || 0);
+  const cfSociete = (Number(calc.revenusNetsCF || 0) - impotsSociete) - chargesCashAnnuel - mensualiteAnnuelle;
 
   return `
     <tr class="section-header">
@@ -1721,7 +1766,7 @@ buildCashflowSection(calc, inputData) {
     </tr>
     <tr>
       <td>Revenus nets après impôts (base HC)</td>
-      <td class="text-right positive">+${this.formatCurrency(calc.revenusNetsCF - calc.totalImpots)}</td>
+      <td class="text-right positive">+${this.formatCurrency(Number(calc.revenusNetsCF || 0) - Number(calc.totalImpots || 0))}</td>
       <td class="formula">= Revenus - impôts</td>
     </tr>
     <tr>
@@ -1732,22 +1777,32 @@ buildCashflowSection(calc, inputData) {
     <tr>
       <td>Mensualité crédit (capital + intérêts)</td>
       <td class="text-right negative">-${this.formatCurrency(mensualiteAnnuelle)}</td>
-      <td class="formula">= ${this.formatNumber(inputData.monthlyPayment)} × 12</td>
+      <td class="formula">= ${this.formatNumber(Number(inputData.monthlyPayment || 0))} × 12</td>
     </tr>
     <tr>
       <td>Dont remboursement capital</td>
-      <td class="text-right">-${this.formatCurrency(calc.capitalAnnuel)}</td>
+      <td class="text-right">-${this.formatCurrency(Number(calc.capitalAnnuel || 0))}</td>
       <td class="formula">Enrichissement</td>
     </tr>
-    <tr class="total-row ${calc.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
+
+    ${isSCI ? `
+    <tr>
+      <td>Cash-flow société (après IS, avant PFU)</td>
+      <td class="text-right ${cfSociete >= 0 ? 'positive' : 'negative'}">
+        ${this.formatCurrency(cfSociete)}
+      </td>
+      <td class="formula">Vision “société” (hors distribution)</td>
+    </tr>` : ''}
+
+    <tr class="total-row ${Number(calc.cashflowNetAnnuel || 0) >= 0 ? 'positive' : 'negative'}">
       <td><strong>Cash-flow net annuel</strong></td>
-      <td class="text-right"><strong>${this.formatCurrency(calc.cashflowNetAnnuel)}</strong></td>
-      <td><strong>${calc.cashflowNetAnnuel >= 0 ? 'Bénéfice' : 'Déficit'}</strong></td>
+      <td class="text-right"><strong>${this.formatCurrency(Number(calc.cashflowNetAnnuel || 0))}</strong></td>
+      <td><strong>${Number(calc.cashflowNetAnnuel || 0) >= 0 ? 'Bénéfice' : 'Déficit'}</strong></td>
     </tr>
     <tr>
       <td>Cash-flow mensuel moyen</td>
-      <td class="text-right ${calc.cashflowNetAnnuel >= 0 ? 'positive' : 'negative'}">
-        ${this.formatCurrency(calc.cashflowNetAnnuel / 12)}
+      <td class="text-right ${Number(calc.cashflowNetAnnuel || 0) >= 0 ? 'positive' : 'negative'}">
+        ${this.formatCurrency(Number(calc.cashflowNetAnnuel || 0) / 12)}
       </td>
       <td class="formula">= Annuel ÷ 12</td>
     </tr>
