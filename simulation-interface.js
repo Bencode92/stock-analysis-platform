@@ -476,8 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Adapter l'interface selon l'appareil
     window.addEventListener('resize', adapterInterfaceSelonAppareil);
-    window.addEventListener('DOMContentLoaded', adapterInterfaceSelonAppareil);
-
+   adapterInterfaceSelonAppareil();
     // Fonctions
     // --------------------
 
@@ -1799,46 +1798,46 @@ document.getElementById('encheres-impact-fiscal').textContent =
  */
 function remplirTableauComparatifDetaille(classique, encheres) {
     // ===================================================================
-    // SECTION 1 : COÛTS D'ACQUISITION
-    // ===================================================================
+  // SECTION 1 : COÛTS D'ACQUISITION
+  // ===================================================================
 
-    // Prix d'achat
-    document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
-    document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
-    majDifference('comp-prix-diff', encheres.prixAchat - classique.prixAchat);
+  // Prix d'achat
+  document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
+  document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
+  majDifference('comp-prix-diff', encheres.prixAchat - classique.prixAchat, false, true);
 
-    // Frais de notaire / Droits d'enregistrement
-    document.getElementById('comp-classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
-    document.getElementById('comp-encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
-    majDifference('comp-frais-diff', encheres.droitsEnregistrement - classique.fraisNotaire);
+  // Frais de notaire / Droits d'enregistrement
+  document.getElementById('comp-classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
+  document.getElementById('comp-encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
+  majDifference('comp-frais-diff', encheres.droitsEnregistrement - classique.fraisNotaire, false, true);
 
-    // Commission / Honoraires avocat
-    document.getElementById('comp-classique-commission').textContent = formaterMontant(classique.commission);
-    const honorairesEncheres = (encheres.honorairesAvocat || 0) + (encheres.fraisDivers || 0);
-    document.getElementById('comp-encheres-honoraires').textContent = formaterMontant(honorairesEncheres);
-    majDifference('comp-commission-diff', honorairesEncheres - classique.commission);
+  // Commission / Honoraires avocat
+  document.getElementById('comp-classique-commission').textContent = formaterMontant(classique.commission);
+  const honorairesEncheres = (encheres.honorairesAvocat || 0) + (encheres.fraisDivers || 0);
+  document.getElementById('comp-encheres-honoraires').textContent = formaterMontant(honorairesEncheres);
+  majDifference('comp-commission-diff', honorairesEncheres - classique.commission, false, true);
 
-    // Travaux de rénovation
-    document.getElementById('comp-classique-travaux').textContent = formaterMontant(classique.travaux);
-    document.getElementById('comp-encheres-travaux').textContent = formaterMontant(encheres.travaux);
-    majDifference('comp-travaux-diff', encheres.travaux - classique.travaux);
+  // Travaux de rénovation
+  document.getElementById('comp-classique-travaux').textContent = formaterMontant(classique.travaux);
+  document.getElementById('comp-encheres-travaux').textContent = formaterMontant(encheres.travaux);
+  majDifference('comp-travaux-diff', encheres.travaux - classique.travaux, false, true);
 
-    // Frais bancaires
-    document.getElementById('comp-classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
-    document.getElementById('comp-encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
-    majDifference('comp-frais-bancaires-diff', encheres.fraisBancaires - classique.fraisBancaires);
+  // Frais bancaires
+  document.getElementById('comp-classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
+  document.getElementById('comp-encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
+  majDifference('comp-frais-bancaires-diff', encheres.fraisBancaires - classique.fraisBancaires, false, true);
 
-    // Autres frais (auto-calculés pour équilibrer le tableau)
-    const autresFraisClassique = calculerAutresFrais(classique);
-    const autresFraisEncheres = calculerAutresFrais(encheres);
-    document.getElementById('comp-classique-autres-frais').textContent = formaterMontant(autresFraisClassique);
-    document.getElementById('comp-encheres-autres-frais').textContent = formaterMontant(autresFraisEncheres);
-    majDifference('comp-autres-frais-diff', autresFraisEncheres - autresFraisClassique);
+  // Autres frais (auto-calculés)
+  const autresFraisClassique = calculerAutresFrais(classique);
+  const autresFraisEncheres = calculerAutresFrais(encheres);
+  document.getElementById('comp-classique-autres-frais').textContent = formaterMontant(autresFraisClassique);
+  document.getElementById('comp-encheres-autres-frais').textContent = formaterMontant(autresFraisEncheres);
+  majDifference('comp-autres-frais-diff', autresFraisEncheres - autresFraisClassique, false, true);
 
-    // Budget total nécessaire
-    document.getElementById('comp-classique-total').textContent = formaterMontant(classique.coutTotal);
-    document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
-    majDifference('comp-total-diff', encheres.coutTotal - classique.coutTotal);
+  // Budget total nécessaire
+  document.getElementById('comp-classique-total').textContent = formaterMontant(classique.coutTotal);
+  document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
+  majDifference('comp-total-diff', encheres.coutTotal - classique.coutTotal, false, true);
 
     // ===================================================================
     // SECTION 2 : FINANCEMENT
@@ -1987,16 +1986,17 @@ function remplirTableauComparatifDetaille(classique, encheres) {
 /**
  * Met à jour un élément de différence avec la bonne classe CSS
  */
-function majDifference(elementId, difference, isPourcentage = false) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-    
-    if (isPourcentage) {
-        element.textContent = (difference > 0 ? '+' : '') + difference.toFixed(2) + ' %';
-    } else {
-        element.textContent = formaterMontantAvecSigne(difference);
-    }
-    element.className = difference > 0 ? 'positive' : difference < 0 ? 'negative' : '';
+function majDifference(elementId, difference, isPourcentage = false, invert = false) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  if (isPourcentage) {
+    element.textContent = (difference > 0 ? '+' : '') + difference.toFixed(2) + ' %';
+  } else {
+    element.textContent = formaterMontantAvecSigne(difference);
+  }
+  const val = invert ? -difference : difference;
+  element.className = val > 0 ? 'positive' : val < 0 ? 'negative' : '';
 }
 
 /**
