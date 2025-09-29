@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const simulateur = new SimulateurImmo();
     // Rendre le simulateur accessible globalement pour les extensions
     window.simulateur = simulateur;
+    window.dispatchEvent(new CustomEvent('simulateurPret', { detail: { simulateur } }));
 
     // Éléments DOM
     const btnAdvancedToggle = document.getElementById('btn-advanced-toggle');
@@ -1214,9 +1215,12 @@ function formaterMontant(montant, decimales = 0) {
      * @param {number} decimales - Nombre de décimales (par défaut 2)
      * @returns {string} - Pourcentage formaté
      */
-    function formaterPourcentage(valeur, decimales = 2) {
-        return valeur.toFixed(decimales) + ' %';
-    }
+function formaterPourcentage(valeur, decimales = 2) {
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales
+  }).format(valeur) + ' %';
+}
 
     /**
      * Formate un montant mensuel
@@ -1478,7 +1482,7 @@ function calculerAutresFrais(data) {
  * Affiche les résultats de la simulation
  * @param {Object} resultats - Résultats de la simulation
  */
-function afficherResultats(resultats) {
+window.afficherResultats = function afficherResultats(resultats) {
     const { classique, encheres } = resultats;
     
     // Vérifier si des résultats ont été trouvés
@@ -1561,8 +1565,10 @@ function afficherResultats(resultats) {
     
     // Affichage des données fiscales pour l'achat classique si les éléments existent
     if (document.getElementById('classique-revenu-foncier')) {
-        document.getElementById('classique-revenu-foncier').textContent = formaterMontant(classique.revenuFoncier);
-        document.getElementById('classique-impact-fiscal').textContent = formaterMontant(classique.impactFiscal);
+document.getElementById('classique-revenu-foncier').textContent =
+  formaterMontant(classique.fiscalDetail?.revenuFoncier || 0);
+document.getElementById('classique-impact-fiscal').textContent =
+  formaterMontant(classique.impactFiscal || 0);
         
         // Cash-flow après impôt mensuel et annuel
         const cashflowApresImpotMensuel = classique.cashFlow + (classique.impactFiscal / 12);
@@ -1653,8 +1659,10 @@ function afficherResultats(resultats) {
     
     // Affichage des données fiscales pour les enchères si les éléments existent
     if (document.getElementById('encheres-revenu-foncier')) {
-        document.getElementById('encheres-revenu-foncier').textContent = formaterMontant(encheres.revenuFoncier);
-        document.getElementById('encheres-impact-fiscal').textContent = formaterMontant(encheres.impactFiscal);
+  document.getElementById('encheres-revenu-foncier').textContent =
+  formaterMontant(encheres.fiscalDetail?.revenuFoncier || 0);
+document.getElementById('encheres-impact-fiscal').textContent =
+  formaterMontant(encheres.impactFiscal || 0);
         
         // Cash-flow après impôt mensuel et annuel
         const cashflowApresImpotMensuel = encheres.cashFlow + (encheres.impactFiscal / 12);
@@ -1944,8 +1952,8 @@ function remplirTableauComparatifDetaille(classique, encheres) {
 
     if (document.getElementById('comp-classique-cashflow-annuel')) {
         // ✅ Gain annuel cohérent avec l'affichage (cash-flow mensuel ARRONDI × 12)
-        const gainAnnuelClassique = Math.round(classique.cashFlow) * 12;
-        const gainAnnuelEncheres  = Math.round(encheres.cashFlow) * 12;
+const gainAnnuelClassique = Math.round(classique.cashFlow * 12);
+const gainAnnuelEncheres  = Math.round(encheres.cashFlow * 12);
 
         document.getElementById('comp-classique-cashflow-annuel')
             .textContent = formaterMontantAvecSigne(gainAnnuelClassique);
@@ -1956,37 +1964,14 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     }
 
     // Impôt mensuel (si dispo)
-    if (classique.impotFiscal !== undefined && encheres.impotFiscal !== undefined) {
-        const impotMensuelClassique = Math.abs(classique.impotFiscal) / 12;
-        const impotMensuelEncheres  = Math.abs(encheres.impotFiscal) / 12;
+if (classique.impots !== undefined && encheres.impots !== undefined) {
+  const impotMensuelClassique = Math.abs(classique.impots) / 12;
+  const impotMensuelEncheres  = Math.abs(encheres.impots) / 12;
         document.getElementById('comp-classique-impot-mensuel').textContent = formaterMontant(-impotMensuelClassique);
         document.getElementById('comp-encheres-impot-mensuel').textContent  = formaterMontant(-impotMensuelEncheres);
         majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
     }
 }
-
-// === RENTABILITÉ — utiliser le rendement net calculé par le moteur ===
-document.getElementById('comp-classique-rentabilite').textContent =
-  formaterPourcentage(classique.rendementNet);
-document.getElementById('comp-encheres-rentabilite').textContent =
-  formaterPourcentage(encheres.rendementNet);
-
-majDifference(
-  'comp-rentabilite-diff',
-  encheres.rendementNet - classique.rendementNet,
-  true // affiche avec %
-);
-
-// Badges en haut des cartes
-const classiqueRendEl = document.getElementById('classique-rentabilite');
-const encheresRendEl = document.getElementById('encheres-rentabilite');
-if (classiqueRendEl) classiqueRendEl.textContent = formaterPourcentage(classique.rendementNet);
-if (encheresRendEl) encheresRendEl.textContent = formaterPourcentage(encheres.rendementNet);
-
-// On conserve ces appels pour mettre à jour le résumé et la visu
-genererResumeLisible(classique, encheres);
-ajouterBarresVisuelles(classique, encheres);
-
     
     /**
      * Met à jour un élément de différence avec la bonne classe CSS
