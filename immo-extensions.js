@@ -12,6 +12,7 @@
  * - IRA conforme (3% du CRD)
  * - Paramètres exposés (frais revente, part terrain)
  * - Sensibilité sur les projections
+ * - Frais d'acquisition éligibles pour calcul PV
  */
 
 // Module principal d'extensions pour le simulateur immobilier
@@ -376,9 +377,32 @@ const ImmoExtensions = (function() {
         SimulateurImmo.prototype.calculerScenarioRevente = function(investissement, nbAnnees, tauxAppreciationAnnuel) {
             const prixAchat = investissement.prixAchat || 0;
             const coutTotal = investissement.coutTotal || 0;
-            const fraisAcquisition = coutTotal - prixAchat;
             const apportInitial = this.params.base.apport || 0;
             const montantEmprunte = coutTotal - apportInitial;
+            
+            // AMÉLIORATION : Calculer les frais d'acquisition éligibles pour le calcul de PV
+            // On exclut les frais bancaires, garantie et petits travaux (déjà couverts par forfait 15%)
+            let fraisAcqEligibles = 0;
+            
+            // Pour l'achat classique
+            if (investissement.fraisNotaire) {
+                fraisAcqEligibles = (investissement.fraisNotaire || 0) + 
+                                   (investissement.commission || 0);
+            } 
+            // Pour les enchères  
+            else if (investissement.droits) {
+                fraisAcqEligibles = (investissement.droits || 0) + 
+                                   (investissement.emoluments || 0) +
+                                   (investissement.honoraires || 0) +
+                                   (investissement.publicite || 0);
+            }
+            // Si pas de détail, on prend la différence totale (ancienne méthode)
+            else {
+                fraisAcqEligibles = coutTotal - prixAchat;
+            }
+            
+            // Application du forfait minimum de 7.5%
+            fraisAcqEligibles = Math.max(fraisAcqEligibles, prixAchat * 0.075);
             
             // OPTIMISATION 1 : Utiliser les cash-flows APRÈS impôt
             const cashFlowAvantImpotsMensuel = Number(investissement.cashFlow) || 0;
@@ -412,7 +436,7 @@ const ImmoExtensions = (function() {
                 regime,
                 prixAchat,
                 valeurRevente,
-                fraisAcq: fraisAcquisition,
+                fraisAcq: fraisAcqEligibles, // Utilisation des frais éligibles uniquement
                 nbAnnees,
                 amortissementAnnuel,
                 tauxIS,
@@ -424,8 +448,8 @@ const ImmoExtensions = (function() {
             const impotPlusValueTotal = resPV.impot;
             
             // Extraction des détails
-            const plusValueBrute = resPV.detail.pvBrute || Math.max(0, valeurRevente - prixAchat - fraisAcquisition);
-            const prixAcquisitionMajore = resPV.detail.prixMajore || prixAchat + fraisAcquisition;
+            const plusValueBrute = resPV.detail.pvBrute || Math.max(0, valeurRevente - prixAchat - fraisAcqEligibles);
+            const prixAcquisitionMajore = resPV.detail.prixMajore || prixAchat + fraisAcqEligibles;
             const abattementIR = resPV.detail.abattIR || 0;
             const abattementPS = resPV.detail.abattPS || 0;
             const surtaxe = resPV.detail.surtaxe || 0;
@@ -498,6 +522,7 @@ const ImmoExtensions = (function() {
                 plusValueBruteSansMajoration: Math.max(0, valeurRevente - prixAchat), // Protection contre négatif
                 fraisRevente,
                 fraisReventePct, // Exposer le pourcentage utilisé
+                fraisAcqEligibles, // NOUVEAU : exposer les frais éligibles utilisés
                 impotPlusValue: {
                     ir: impotPlusValueIR,
                     ps: impotPlusValuePS,
@@ -1968,11 +1993,12 @@ function ajouterSelectionRegimeFiscal() {
                         ✅ Cash-flows après impôt dans le TRI<br>
                         ✅ IRA conforme (3% du CRD max)<br>
                         ✅ Frais de revente paramétrables (${resultatsClassique.fraisReventePct}%)<br>
+                        ✅ Frais d'acquisition éligibles uniquement (hors frais bancaires/garantie)<br>
                         ${resultatsClassique.regime === 'lmnp-reel' && simulateur.params.projections.reintegrationAmortLMNP2025 ?
                             '✅ LMNP réel : réintégration des amortissements<br>' : ''}
                         ${resultatsClassique.regime.endsWith('-is') ? 
                             `✅ Régime IS : taux ${simulateur.params.projections.eligibleTauxReduitIS ? 'réduit 15% puis' : ''} ${simulateur.params.fiscalite.tauxIS}%<br>` : ''}
-                        Prix d'acquisition majoré = Prix + frais (7.5%) + travaux (15% après 5 ans)<br>
+                        Prix d'acquisition majoré = Prix + frais éligibles (min 7.5%) + travaux (15% après 5 ans)<br>
                         Abattements selon durée (exonération IR à 22 ans, PS à 30 ans)
                     </p>
                 </div>
