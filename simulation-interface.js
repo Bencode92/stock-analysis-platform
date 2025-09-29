@@ -1512,37 +1512,39 @@ window.afficherResultats = function afficherResultats(resultats) {
     document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualiteTotale);
     document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
     
-    // Cash-flow mensuel et annuel
+    // --- CASH-FLOW (CLASSIQUE) : mensuel arrondi + annuel basé sur le mensuel affiché ---
     const cashflowClassique = document.getElementById('classique-cashflow');
     if (cashflowClassique) {
-        // Créer un conteneur pour le cash-flow mensuel et annuel
-        const cashflowContainer = document.createElement('div');
-        cashflowContainer.className = 'cashflow-container';
-        cashflowContainer.id = cashflowClassique.id || 'classique-cashflow';  // ← AJOUT IMPORTANT
-        
-        // Cash-flow mensuel
-        const cashflowMensuel = document.createElement('div');
-        cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(classique.cashFlow);
-        cashflowMensuel.textContent = formaterMontantMensuel(classique.cashFlow);
-        
-        // Cash-flow annuel
-        const cashflowAnnuel = document.createElement('div');
-        cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(classique.cashFlow);
-        cashflowAnnuel.textContent = formaterMontantAnnuel(classique.cashFlow * 12);
-        
-        // Ajouter au conteneur
-        cashflowContainer.appendChild(cashflowMensuel);
-        cashflowContainer.appendChild(cashflowAnnuel);
-        
-        // Remplacer le contenu actuel
-        cashflowClassique.parentNode.replaceChild(cashflowContainer, cashflowClassique);
+      const cashflowContainer = document.createElement('div');
+      cashflowContainer.className = 'cashflow-container';
+      cashflowContainer.id = cashflowClassique.id || 'classique-cashflow';
+
+      // Mensuel affiché (arrondi)
+      const cfMensuelAffiche = Math.round(classique.cashFlow);
+
+      const cashflowMensuel = document.createElement('div');
+      cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cfMensuelAffiche);
+      cashflowMensuel.textContent = formaterMontantMensuel(cfMensuelAffiche);
+
+      // Annuel = mensuel affiché × 12 (puis arrondi)
+      const cfAnnuelAffiche = Math.round(cfMensuelAffiche * 12);
+
+      const cashflowAnnuel = document.createElement('div');
+      cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cfMensuelAffiche);
+      cashflowAnnuel.textContent = formaterMontantAnnuel(cfAnnuelAffiche);
+
+      cashflowContainer.appendChild(cashflowMensuel);
+      cashflowContainer.appendChild(cashflowAnnuel);
+
+      cashflowClassique.parentNode.replaceChild(cashflowContainer, cashflowClassique);
     }
     
-    // Affichage de la marge loyer-dette
+    // --- MARGE LOYER-DETTE (CLASSIQUE) : clamp à 0 € si |marge| < 0,5 ---
     const margeClassique = document.getElementById('classique-marge');
     if (margeClassique) {
-        margeClassique.textContent = formaterMontantMensuel(classique.marge);
-        margeClassique.className = getClasseValeur(classique.marge);
+      const margeAffichee = Math.abs(classique.marge) < 0.5 ? 0 : Math.round(classique.marge);
+      margeClassique.textContent = formaterMontantMensuel(margeAffichee);
+      margeClassique.className = getClasseValeur(margeAffichee);
     }
     
     // Animation des rentabilités
@@ -1623,38 +1625,40 @@ document.getElementById('classique-impact-fiscal').textContent =
     document.getElementById('encheres-mensualite').textContent  = formaterMontantMensuel(encheres.mensualiteTotale);
     document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
     
-    // Cash-flow mensuel et annuel pour les enchères
-    const cashflowEncheres = document.getElementById('encheres-cashflow');
-    if (cashflowEncheres) {
-        // Créer un conteneur pour le cash-flow mensuel et annuel
-        const cashflowContainer = document.createElement('div');
-        cashflowContainer.className = 'cashflow-container';
-        cashflowContainer.id = cashflowEncheres.id || 'encheres-cashflow';    // ← AJOUT IMPORTANT
-        
-        // Cash-flow mensuel
-        const cashflowMensuel = document.createElement('div');
-        cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(encheres.cashFlow);
-        cashflowMensuel.textContent = formaterMontantMensuel(encheres.cashFlow);
-        
-        // Cash-flow annuel
-        const cashflowAnnuel = document.createElement('div');
-        cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(encheres.cashFlow);
-        cashflowAnnuel.textContent = formaterMontantAnnuel(encheres.cashFlow * 12);
-        
-        // Ajouter au conteneur
-        cashflowContainer.appendChild(cashflowMensuel);
-        cashflowContainer.appendChild(cashflowAnnuel);
-        
-        // Remplacer le contenu actuel
-        cashflowEncheres.parentNode.replaceChild(cashflowContainer, cashflowEncheres);
-    }
-    
-    // Affichage de la marge loyer-dette
-    const margeEncheres = document.getElementById('encheres-marge');
-    if (margeEncheres) {
-        margeEncheres.textContent = formaterMontantMensuel(encheres.marge);
-        margeEncheres.className = getClasseValeur(encheres.marge);
-    }
+ // --- CASH-FLOW (ENCHÈRES) : mensuel arrondi + annuel basé sur le mensuel affiché ---
+const cashflowEncheres = document.getElementById('encheres-cashflow');
+if (cashflowEncheres) {
+  const cashflowContainer = document.createElement('div');
+  cashflowContainer.className = 'cashflow-container';
+  cashflowContainer.id = cashflowEncheres.id || 'encheres-cashflow';
+
+  // Mensuel affiché (arrondi)
+  const cfMensuelAffiche = Math.round(encheres.cashFlow);
+
+  const cashflowMensuel = document.createElement('div');
+  cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cfMensuelAffiche);
+  cashflowMensuel.textContent = formaterMontantMensuel(cfMensuelAffiche);
+
+  // Annuel = mensuel affiché × 12 (puis arrondi)
+  const cfAnnuelAffiche = Math.round(cfMensuelAffiche * 12);
+
+  const cashflowAnnuel = document.createElement('div');
+  cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cfMensuelAffiche);
+  cashflowAnnuel.textContent = formaterMontantAnnuel(cfAnnuelAffiche);
+
+  cashflowContainer.appendChild(cashflowMensuel);
+  cashflowContainer.appendChild(cashflowAnnuel);
+
+  cashflowEncheres.parentNode.replaceChild(cashflowContainer, cashflowEncheres);
+}
+
+// --- MARGE LOYER-DETTE (ENCHÈRES) : clamp à 0 € si |marge| < 0,5 ---
+const margeEncheres = document.getElementById('encheres-marge');
+if (margeEncheres) {
+  const margeAffichee = Math.abs(encheres.marge) < 0.5 ? 0 : Math.round(encheres.marge);
+  margeEncheres.textContent = formaterMontantMensuel(margeAffichee);
+  margeEncheres.className = getClasseValeur(margeAffichee);
+}
     
     // Affichage des données fiscales pour les enchères si les éléments existent
     if (document.getElementById('encheres-revenu-foncier')) {
@@ -1797,192 +1801,154 @@ document.getElementById('encheres-impact-fiscal').textContent =
  * @param {Object} encheres - Résultats vente aux enchères
  */
 function remplirTableauComparatifDetaille(classique, encheres) {
-    // ===================================================================
-  // SECTION 1 : COÛTS D'ACQUISITION
-  // ===================================================================
-
-  // Prix d'achat
+  // ===================== SECTION 1 : COÛTS D'ACQUISITION =====================
   document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
   document.getElementById('comp-encheres-prix').textContent = formaterMontant(encheres.prixAchat);
   majDifference('comp-prix-diff', encheres.prixAchat - classique.prixAchat, false, true);
 
-  // Frais de notaire / Droits d'enregistrement
   document.getElementById('comp-classique-frais-notaire').textContent = formaterMontant(classique.fraisNotaire);
   document.getElementById('comp-encheres-droits').textContent = formaterMontant(encheres.droitsEnregistrement);
   majDifference('comp-frais-diff', encheres.droitsEnregistrement - classique.fraisNotaire, false, true);
 
-  // Commission / Honoraires avocat
   document.getElementById('comp-classique-commission').textContent = formaterMontant(classique.commission);
   const honorairesEncheres = (encheres.honorairesAvocat || 0) + (encheres.fraisDivers || 0);
   document.getElementById('comp-encheres-honoraires').textContent = formaterMontant(honorairesEncheres);
   majDifference('comp-commission-diff', honorairesEncheres - classique.commission, false, true);
 
-  // Travaux de rénovation
   document.getElementById('comp-classique-travaux').textContent = formaterMontant(classique.travaux);
   document.getElementById('comp-encheres-travaux').textContent = formaterMontant(encheres.travaux);
   majDifference('comp-travaux-diff', encheres.travaux - classique.travaux, false, true);
 
-  // Frais bancaires
   document.getElementById('comp-classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
   document.getElementById('comp-encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
   majDifference('comp-frais-bancaires-diff', encheres.fraisBancaires - classique.fraisBancaires, false, true);
 
-  // Autres frais (auto-calculés)
   const autresFraisClassique = calculerAutresFrais(classique);
   const autresFraisEncheres = calculerAutresFrais(encheres);
   document.getElementById('comp-classique-autres-frais').textContent = formaterMontant(autresFraisClassique);
   document.getElementById('comp-encheres-autres-frais').textContent = formaterMontant(autresFraisEncheres);
   majDifference('comp-autres-frais-diff', autresFraisEncheres - autresFraisClassique, false, true);
 
-  // Budget total nécessaire
   document.getElementById('comp-classique-total').textContent = formaterMontant(classique.coutTotal);
   document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
   majDifference('comp-total-diff', encheres.coutTotal - classique.coutTotal, false, true);
 
-    // ===================================================================
-    // SECTION 2 : FINANCEMENT
-    // ===================================================================
+ // ============================ SECTION 2 : FINANCEMENT ============================
+  const apport = simulateur.params.base.apport;
+  document.getElementById('comp-classique-apport').textContent = formaterMontant(apport);
+  document.getElementById('comp-encheres-apport').textContent = formaterMontant(apport);
+  document.getElementById('comp-apport-diff').textContent = '0 €';
 
-    // Apport personnel
-    const apport = simulateur.params.base.apport;
-    document.getElementById('comp-classique-apport').textContent = formaterMontant(apport);
-    document.getElementById('comp-encheres-apport').textContent = formaterMontant(apport);
-    document.getElementById('comp-apport-diff').textContent = '0 €';
+  document.getElementById('comp-classique-emprunt').textContent = formaterMontant(classique.emprunt);
+  document.getElementById('comp-encheres-emprunt').textContent = formaterMontant(encheres.emprunt);
+  majDifference('comp-emprunt-diff', encheres.emprunt - classique.emprunt);
 
-    // Montant emprunté
-    document.getElementById('comp-classique-emprunt').textContent = formaterMontant(classique.emprunt);
-    document.getElementById('comp-encheres-emprunt').textContent = formaterMontant(encheres.emprunt);
-    majDifference('comp-emprunt-diff', encheres.emprunt - classique.emprunt);
+  document.getElementById('comp-classique-mensualite').textContent = formaterMontantMensuel(classique.mensualiteTotale);
+  document.getElementById('comp-encheres-mensualite').textContent  = formaterMontantMensuel(encheres.mensualiteTotale);
+  majDifference('comp-mensualite-diff', encheres.mensualiteTotale - classique.mensualiteTotale);
 
-    // Remboursement mensuel
-    document.getElementById('comp-classique-mensualite').textContent = formaterMontantMensuel(classique.mensualiteTotale);
-    document.getElementById('comp-encheres-mensualite').textContent  = formaterMontantMensuel(encheres.mensualiteTotale);
-    // ✅ Différence calculée sur valeurs brutes (non arrondies)
-    majDifference('comp-mensualite-diff', encheres.mensualiteTotale - classique.mensualiteTotale);
+  // ========================= SECTION 3 : REVENUS LOCATIFS =========================
+  document.getElementById('comp-classique-surface').textContent = classique.surface.toFixed(1) + ' m²';
+  document.getElementById('comp-encheres-surface').textContent = encheres.surface.toFixed(1) + ' m²';
+  const surfaceDiff = encheres.surface - classique.surface;
+  document.getElementById('comp-surface-diff').textContent = (surfaceDiff > 0 ? '+' : '') + surfaceDiff.toFixed(1) + ' m²';
+  document.getElementById('comp-surface-diff').className = surfaceDiff >= 0 ? 'positive' : 'negative';
 
-    // ===================================================================
-    // SECTION 3 : REVENUS LOCATIFS
-    // ===================================================================
+  document.getElementById('comp-classique-loyer').textContent = formaterMontant(classique.loyerBrut);
+  document.getElementById('comp-encheres-loyer').textContent = formaterMontant(encheres.loyerBrut);
+  majDifference('comp-loyer-diff', encheres.loyerBrut - classique.loyerBrut);
 
-    // Surface que vous pouvez acheter
-    document.getElementById('comp-classique-surface').textContent = classique.surface.toFixed(1) + ' m²';
-    document.getElementById('comp-encheres-surface').textContent = encheres.surface.toFixed(1) + ' m²';
-    const surfaceDiff = encheres.surface - classique.surface;
-    document.getElementById('comp-surface-diff').textContent = (surfaceDiff > 0 ? '+' : '') + surfaceDiff.toFixed(1) + ' m²';
-    document.getElementById('comp-surface-diff').className = surfaceDiff >= 0 ? 'positive' : 'negative';
+  const vacanceClassique = classique.loyerBrut - classique.loyerNet;
+  const vacanceEncheres = encheres.loyerBrut - encheres.loyerNet;
+  document.getElementById('comp-classique-vacance').textContent = formaterMontant(-vacanceClassique);
+  document.getElementById('comp-encheres-vacance').textContent = formaterMontant(-vacanceEncheres);
+  majDifference('comp-vacance-diff', -(vacanceEncheres - vacanceClassique), false, true);
 
-    // Loyer mensuel (avant charges)
-    document.getElementById('comp-classique-loyer').textContent = formaterMontant(classique.loyerBrut);
-    document.getElementById('comp-encheres-loyer').textContent = formaterMontant(encheres.loyerBrut);
-    majDifference('comp-loyer-diff', encheres.loyerBrut - classique.loyerBrut);
+  document.getElementById('comp-classique-loyer-net').textContent = formaterMontant(classique.loyerNet);
+  document.getElementById('comp-encheres-loyer-net').textContent = formaterMontant(encheres.loyerNet);
+  majDifference('comp-loyer-net-diff', encheres.loyerNet - classique.loyerNet);
 
-    // Provision logement vide
-    const vacanceClassique = classique.loyerBrut - classique.loyerNet;
-    const vacanceEncheres = encheres.loyerBrut - encheres.loyerNet;
-    document.getElementById('comp-classique-vacance').textContent = formaterMontant(-vacanceClassique);
-    document.getElementById('comp-encheres-vacance').textContent = formaterMontant(-vacanceEncheres);
-    majDifference('comp-vacance-diff', -(vacanceEncheres - vacanceClassique));
+   // ======================= SECTION 4 : VOS DÉPENSES MENSUELLES =====================
+  document.getElementById('comp-classique-mensualite2').textContent = formaterMontant(-classique.mensualiteTotale);
+  document.getElementById('comp-encheres-mensualite2').textContent  = formaterMontant(-encheres.mensualiteTotale);
+  majDifference('comp-mensualite2-diff', -(encheres.mensualiteTotale - classique.mensualiteTotale), false, true);
 
-    // Loyer net mensuel
-    document.getElementById('comp-classique-loyer-net').textContent = formaterMontant(classique.loyerNet);
-    document.getElementById('comp-encheres-loyer-net').textContent = formaterMontant(encheres.loyerNet);
-    majDifference('comp-loyer-net-diff', encheres.loyerNet - classique.loyerNet);
+  const taxeClassique = classique.taxeFonciere / 12;
+  const taxeEncheres  = encheres.taxeFonciere / 12;
+  document.getElementById('comp-classique-taxe').textContent = formaterMontant(-taxeClassique);
+  document.getElementById('comp-encheres-taxe').textContent  = formaterMontant(-taxeEncheres);
+  majDifference('comp-taxe-diff', -(taxeEncheres - taxeClassique), false, true);
 
-    // ===================================================================
-    // SECTION 4 : VOS DÉPENSES MENSUELLES
-    // ===================================================================
+  const chargesClassique = classique.chargesNonRecuperables / 12;
+  const chargesEncheres  = encheres.chargesNonRecuperables / 12;
+  document.getElementById('comp-classique-charges').textContent = formaterMontant(-chargesClassique);
+  document.getElementById('comp-encheres-charges').textContent  = formaterMontant(-chargesEncheres);
+  majDifference('comp-charges-diff', -(chargesEncheres - chargesClassique), false, true);
 
-    // Remboursement du prêt (affichage dépenses)
-    document.getElementById('comp-classique-mensualite2').textContent = formaterMontant(-classique.mensualiteTotale);
-    document.getElementById('comp-encheres-mensualite2').textContent  = formaterMontant(-encheres.mensualiteTotale);
-    majDifference('comp-mensualite2-diff', -(encheres.mensualiteTotale - classique.mensualiteTotale));
+  const entretienClassique = classique.entretienAnnuel / 12;
+  const entretienEncheres  = encheres.entretienAnnuel / 12;
+  document.getElementById('comp-classique-entretien').textContent = formaterMontant(-entretienClassique);
+  document.getElementById('comp-encheres-entretien').textContent  = formaterMontant(-entretienEncheres);
+  majDifference('comp-entretien-diff', -(entretienEncheres - entretienClassique), false, true);
 
-    // Taxe foncière (par mois)
-    const taxeClassique = classique.taxeFonciere / 12;
-    const taxeEncheres  = encheres.taxeFonciere / 12;
-    document.getElementById('comp-classique-taxe').textContent = formaterMontant(-taxeClassique);
-    document.getElementById('comp-encheres-taxe').textContent  = formaterMontant(-taxeEncheres);
-    majDifference('comp-taxe-diff', -(taxeEncheres - taxeClassique));
+  const assuranceClassique = classique.assurancePNO / 12;
+  const assuranceEncheres  = encheres.assurancePNO / 12;
+  document.getElementById('comp-classique-assurance').textContent = formaterMontant(-assuranceClassique);
+  document.getElementById('comp-encheres-assurance').textContent  = formaterMontant(-assuranceEncheres);
+  majDifference('comp-assurance-diff', -(assuranceEncheres - assuranceClassique), false, true);
 
-    // Charges de copropriété
-    const chargesClassique = classique.chargesNonRecuperables / 12;
-    const chargesEncheres  = encheres.chargesNonRecuperables / 12;
-    document.getElementById('comp-classique-charges').textContent = formaterMontant(-chargesClassique);
-    document.getElementById('comp-encheres-charges').textContent  = formaterMontant(-chargesEncheres);
-    majDifference('comp-charges-diff', -(chargesEncheres - chargesClassique));
+  // Total de vos dépenses (somme des lignes affichées, arrondies)
+  const r = (n) => Math.round(n);
+  const totalChargesClassique =
+    r(-classique.mensualiteTotale) +
+    r(-(classique.taxeFonciere / 12)) +
+    r(-(classique.chargesNonRecuperables / 12)) +
+    r(-(classique.entretienAnnuel / 12)) +
+    r(-(classique.assurancePNO / 12));
 
-    // Budget entretien
-    const entretienClassique = classique.entretienAnnuel / 12;
-    const entretienEncheres  = encheres.entretienAnnuel / 12;
-    document.getElementById('comp-classique-entretien').textContent = formaterMontant(-entretienClassique);
-    document.getElementById('comp-encheres-entretien').textContent  = formaterMontant(-entretienEncheres);
-    majDifference('comp-entretien-diff', -(entretienEncheres - entretienClassique));
+  const totalChargesEncheres =
+    r(-encheres.mensualiteTotale) +
+    r(-(encheres.taxeFonciere / 12)) +
+    r(-(encheres.chargesNonRecuperables / 12)) +
+    r(-(encheres.entretienAnnuel / 12)) +
+    r(-(encheres.assurancePNO / 12));
 
-    // Assurance propriétaire
-    const assuranceClassique = classique.assurancePNO / 12;
-    const assuranceEncheres  = encheres.assurancePNO / 12;
-    document.getElementById('comp-classique-assurance').textContent = formaterMontant(-assuranceClassique);
-    document.getElementById('comp-encheres-assurance').textContent  = formaterMontant(-assuranceEncheres);
-    majDifference('comp-assurance-diff', -(assuranceEncheres - assuranceClassique));
+  document.getElementById('comp-classique-total-charges').textContent = formaterMontant(totalChargesClassique);
+  document.getElementById('comp-encheres-total-charges').textContent  = formaterMontant(totalChargesEncheres);
+  majDifference('comp-total-charges-diff', totalChargesEncheres - totalChargesClassique, false, true);
 
-    // ✅ Total de vos dépenses = somme EXACTE des lignes AFFICHÉES (arrondies)
-    const r = (n) => Math.round(n); // arrondi à l’euro
-    const totalChargesClassique =
-        r(-classique.mensualiteTotale) +
-        r(-(classique.taxeFonciere / 12)) +
-        r(-(classique.chargesNonRecuperables / 12)) +
-        r(-(classique.entretienAnnuel / 12)) +
-        r(-(classique.assurancePNO / 12));
+// =================== SECTION 5 : FISCALITÉ (si éléments présents) =================
+  if (document.getElementById('comp-classique-cashflow-annuel')) {
+    // Annuel = mensuel affiché (arrondi) × 12
+    const gainAnnuelClassique = Math.round(Math.round(classique.cashFlow) * 12);
+    const gainAnnuelEncheres  = Math.round(Math.round(encheres.cashFlow) * 12);
 
-    const totalChargesEncheres =
-        r(-encheres.mensualiteTotale) +
-        r(-(encheres.taxeFonciere / 12)) +
-        r(-(encheres.chargesNonRecuperables / 12)) +
-        r(-(encheres.entretienAnnuel / 12)) +
-        r(-(encheres.assurancePNO / 12));
+    document.getElementById('comp-classique-cashflow-annuel')
+      .textContent = formaterMontantAvecSigne(gainAnnuelClassique);
+    document.getElementById('comp-encheres-cashflow-annuel')
+      .textContent = formaterMontantAvecSigne(gainAnnuelEncheres);
 
-    document.getElementById('comp-classique-total-charges').textContent = formaterMontant(totalChargesClassique);
-    document.getElementById('comp-encheres-total-charges').textContent  = formaterMontant(totalChargesEncheres);
-    majDifference('comp-total-charges-diff', totalChargesEncheres - totalChargesClassique);
+    majDifference('comp-cashflow-annuel-diff', gainAnnuelEncheres - gainAnnuelClassique);
+  }
 
-    // ===================================================================
-    // SECTION 5 : FISCALITÉ (optionnelle selon le template)
-    // ===================================================================
+  // Impôt mensuel : coût → inversion activée
+  const impClassEl = document.getElementById('comp-classique-impot-mensuel');
+  const impEnchEl  = document.getElementById('comp-encheres-impot-mensuel');
+  const impDiffEl  = document.getElementById('comp-impot-mensuel-diff');
 
-    if (document.getElementById('comp-classique-cashflow-annuel')) {
-        // ✅ Gain annuel cohérent avec l'affichage (cash-flow mensuel ARRONDI × 12)
-        const gainAnnuelClassique = Math.round(classique.cashFlow * 12);
-        const gainAnnuelEncheres  = Math.round(encheres.cashFlow * 12);
+  if (impClassEl && impEnchEl && impDiffEl &&
+      classique.impots !== undefined && encheres.impots !== undefined) {
 
-        document.getElementById('comp-classique-cashflow-annuel')
-            .textContent = formaterMontantAvecSigne(gainAnnuelClassique);
-        document.getElementById('comp-encheres-cashflow-annuel')
-            .textContent = formaterMontantAvecSigne(gainAnnuelEncheres);
+    const impotMensuelClassique = Math.abs(classique.impots) / 12;
+    const impotMensuelEncheres  = Math.abs(encheres.impots) / 12;
 
-        majDifference('comp-cashflow-annuel-diff', gainAnnuelEncheres - gainAnnuelClassique);
-    }
-
-    // Impôt mensuel (si dispo) — PROTÉGÉ
-    const impClassEl = document.getElementById('comp-classique-impot-mensuel');
-    const impEnchEl  = document.getElementById('comp-encheres-impot-mensuel');
-    const impDiffEl  = document.getElementById('comp-impot-mensuel-diff');
-
-    if (
-      impClassEl && impEnchEl && impDiffEl &&
-      classique.impots !== undefined && encheres.impots !== undefined
-    ) {
-      const impotMensuelClassique = Math.abs(classique.impots) / 12;
-      const impotMensuelEncheres  = Math.abs(encheres.impots) / 12;
-
-      impClassEl.textContent = formaterMontant(-impotMensuelClassique);
-      impEnchEl.textContent  = formaterMontant(-impotMensuelEncheres);
-      majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
-    } else {
-      // Optionnel : log pour repérer rapidement les IDs manquants dans le DOM
-      console.warn('[Comparatif] Section "Impôt mensuel" non rendue (éléments HTML absents ou valeurs non définies).');
-    }
-} // ←←← 🔧 ACCOLADE AJOUTÉE : on ferme bien la fonction remplirTableauComparatifDetaille
-
+    impClassEl.textContent = formaterMontant(-impotMensuelClassique);
+    impEnchEl.textContent  = formaterMontant(-impotMensuelEncheres);
+    majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique), false, true);
+  } else {
+    console.warn('[Comparatif] Section "Impôt mensuel" non rendue (éléments HTML absents ou valeurs non définies).');
+  }
+}
 /**
  * Met à jour un élément de différence avec la bonne classe CSS
  */
