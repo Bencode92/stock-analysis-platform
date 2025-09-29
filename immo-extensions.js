@@ -14,6 +14,7 @@
  * - Sensibilité sur les projections
  * - Frais d'acquisition éligibles pour calcul PV
  * - Harmonisation des libellés cash-flow
+ * - Correction récap hypothèses et sélecteurs :has()
  */
 
 // Module principal d'extensions pour le simulateur immobilier
@@ -1464,7 +1465,8 @@ function ajouterSelectionRegimeFiscal() {
 
     // Ajoute le récapitulatif des hypothèses
     function ajouterRecapHypotheses(resultats) {
-        if (!resultats || !resultats.params) return;
+        // CORRECTION G: Vérifier simulateur.params au lieu de resultats.params
+        if (!resultats || !simulateur?.params) return;
         
         // Créer ou récupérer le conteneur
         let recapContainer = document.getElementById('recap-hypotheses');
@@ -1501,8 +1503,8 @@ function ajouterSelectionRegimeFiscal() {
             tauxISInfo = ` - Taux IS: ${simulateur.params.fiscalite.tauxIS || 25}%`;
         }
         
-        // Remplir avec les paramètres actuels
-        const params = resultats.params;
+        // CORRECTION G: Utiliser simulateur.params au lieu de resultats.params
+        const params = simulateur.params;
         recapContainer.innerHTML = `
             <h3><i class="fas fa-info-circle"></i> Hypothèses de la simulation</h3>
             <div class="recap-hypotheses-grid">
@@ -1595,8 +1597,10 @@ function ajouterSelectionRegimeFiscal() {
         container.id = `${prefix}-indicateurs`;
         container.className = 'flex gap-2 mt-3';
         
-        // Trouver le bon emplacement pour insérer le conteneur
-        const parentElement = document.querySelector(`.results-card:has(#${prefix}-budget-max) .results-body`);
+        // CORRECTION H: Remplacer le sélecteur :has() par une approche compatible
+        const budgetEl = document.getElementById(`${prefix}-budget-max`);
+        const parentElement = budgetEl ? budgetEl.closest('.results-card')?.querySelector('.results-body') : null;
+        
         if (parentElement) {
             parentElement.appendChild(container);
         }
@@ -1888,8 +1892,10 @@ function ajouterSelectionRegimeFiscal() {
         
         container.style.display = 'block';
         
-        // Helper pour formater les pourcentages
-        const formatPct = (val) => val ? `${val.toFixed(1)}%` : '0%';
+        // CORRECTION J: Format FR pour les pourcentages
+        const formatPct = (val) => 
+            new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                .format(val || 0) + ' %';
         
         container.innerHTML = `
             <div class="scenario-header">
@@ -2132,8 +2138,9 @@ function ajouterSelectionRegimeFiscal() {
         
         // Si l'élément n'existe pas, le créer
         if (!fiscalInfo) {
-            // Trouver le conteneur de résultats
-            const resultsCard = document.querySelector(`.results-card:has(#${mode}-budget-max) .results-body`);
+            // CORRECTION H: Remplacer le sélecteur :has() par une approche compatible
+            const budgetEl = document.getElementById(`${mode}-budget-max`);
+            const resultsCard = budgetEl ? budgetEl.closest('.results-card')?.querySelector('.results-body') : null;
             if (!resultsCard) return;
             
             // Créer un nouveau div pour les informations fiscales
