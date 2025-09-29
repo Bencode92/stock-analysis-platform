@@ -1963,14 +1963,24 @@ const gainAnnuelEncheres  = Math.round(encheres.cashFlow * 12);
         majDifference('comp-cashflow-annuel-diff', gainAnnuelEncheres - gainAnnuelClassique);
     }
 
-    // Impôt mensuel (si dispo)
-if (classique.impots !== undefined && encheres.impots !== undefined) {
+// Impôt mensuel (si dispo) — PROTÉGÉ
+const impClassEl = document.getElementById('comp-classique-impot-mensuel');
+const impEnchEl  = document.getElementById('comp-encheres-impot-mensuel');
+const impDiffEl  = document.getElementById('comp-impot-mensuel-diff');
+
+if (
+  impClassEl && impEnchEl && impDiffEl &&
+  classique.impots !== undefined && encheres.impots !== undefined
+) {
   const impotMensuelClassique = Math.abs(classique.impots) / 12;
   const impotMensuelEncheres  = Math.abs(encheres.impots) / 12;
-        document.getElementById('comp-classique-impot-mensuel').textContent = formaterMontant(-impotMensuelClassique);
-        document.getElementById('comp-encheres-impot-mensuel').textContent  = formaterMontant(-impotMensuelEncheres);
-        majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
-    }
+
+  impClassEl.textContent = formaterMontant(-impotMensuelClassique);
+  impEnchEl.textContent  = formaterMontant(-impotMensuelEncheres);
+  majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique));
+} else {
+  // Optionnel : log pour repérer rapidement les IDs manquants dans le DOM
+  console.warn('[Comparatif] Section "Impôt mensuel" non rendue (éléments HTML absents ou valeurs non définies).');
 }
     
     /**
