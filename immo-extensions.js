@@ -31,12 +31,15 @@ const ImmoExtensions = (function() {
         }
     };
     
+    // --- Config rapide ---
+    const ENABLE_FISCAL_UI = false; // <-- pas d'UI fiscale
+    
     // NOUVEAU : Paramètres par défaut pour les projections
     const DEFAULTS_PROJECTIONS = {
         fraisReventePct: 7,        // Frais de revente par défaut (7%)
         partTerrain: 20,           // Part du terrain non-amortissable (20%)
-        eligibleTauxReduitIS: true, // Éligibilité au taux réduit IS
-        reintegrationAmortLMNP2025: true // Réintégration des amortissements LMNP (réforme 2025)
+        eligibleTauxReduitIS: false, // Éligibilité au taux réduit IS
+        reintegrationAmortLMNP2025: false // <-- pas de réintégration LMNP par défaut
     };
     
     // ===============================================================
@@ -1060,13 +1063,17 @@ const ImmoExtensions = (function() {
 
     // Ajoute les éléments d'interface nécessaires
     function ajouterElementsInterface() {
-        // 1. Ajouter la sélection du régime fiscal
-        ajouterSelectionRegimeFiscal();
+        // 1) (optionnel) Sélection du régime fiscal
+        if (ENABLE_FISCAL_UI && !window.disableFiscalImpact) {
+            ajouterSelectionRegimeFiscal();
+        } else {
+            window.disableFiscalImpact = true; // désactive toute l'UI fiscale
+        }
         
-        // 2. Ajouter la section pour les scénarios de sortie
+        // 2) Scénarios de sortie
         ajouterSectionScenarios();
         
-        // 3. NOUVEAU : Ajouter les paramètres de projection
+        // 3) Paramètres de projection (on garde, mais sans options fiscales)
         ajouterParametresProjection();
     }
 
@@ -1197,7 +1204,7 @@ function ajouterSelectionRegimeFiscal() {
             <h4 class="text-sm font-semibold mb-3 text-blue-400">
                 <i class="fas fa-cog mr-2"></i>Paramètres avancés de projection
             </h4>
-            <div class="grid grid-3 gap-4">
+            <div class="grid grid-2 gap-4">
                 <div class="form-group">
                     <label class="form-label text-sm">Frais de revente</label>
                     <div class="form-addon">
@@ -1219,34 +1226,13 @@ function ajouterSelectionRegimeFiscal() {
                     </div>
                     <span class="form-help text-xs">Non amortissable (15-30% selon zone)</span>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label text-sm">Options fiscales</label>
-                    <div class="flex flex-col gap-2">
-                        <label class="flex items-center text-xs">
-                            <input type="checkbox" id="eligible-taux-reduit" 
-                                   ${DEFAULTS_PROJECTIONS.eligibleTauxReduitIS ? 'checked' : ''} 
-                                   class="mr-2">
-                            <span>Éligible taux réduit IS (15%)</span>
-                        </label>
-                        <label class="flex items-center text-xs">
-                            <input type="checkbox" id="reintegration-amort-lmnp" 
-                                   ${DEFAULTS_PROJECTIONS.reintegrationAmortLMNP2025 ? 'checked' : ''} 
-                                   class="mr-2">
-                            <span>Réintégration amort. LMNP (2025)</span>
-                        </label>
-                    </div>
-                </div>
             </div>
             
-            <!-- Bouton pour calculer la sensibilité -->
             <div class="mt-4">
                 <button id="btn-sensibilite" class="btn btn-outline btn-sm">
                     <i class="fas fa-chart-area"></i> Analyser la sensibilité
                 </button>
             </div>
-            
-            <!-- Conteneur pour la grille de sensibilité -->
             <div id="sensibilite-results" class="mt-4" style="display: none;"></div>
         `;
         
@@ -1979,7 +1965,7 @@ function ajouterSelectionRegimeFiscal() {
                         ✅ Cash-flows après impôt dans le TRI<br>
                         ✅ IRA conforme (3% du CRD max)<br>
                         ✅ Frais de revente paramétrables (${resultatsClassique.fraisReventePct}%)<br>
-                        ${resultatsClassique.regime === 'lmnp-reel' ? 
+                        ${resultatsClassique.regime === 'lmnp-reel' && simulateur.params.projections.reintegrationAmortLMNP2025 ?
                             '✅ LMNP réel : réintégration des amortissements<br>' : ''}
                         ${resultatsClassique.regime.endsWith('-is') ? 
                             `✅ Régime IS : taux ${simulateur.params.projections.eligibleTauxReduitIS ? 'réduit 15% puis' : ''} ${simulateur.params.fiscalite.tauxIS}%<br>` : ''}
@@ -2174,110 +2160,50 @@ function ajouterSelectionRegimeFiscal() {
                 const newExplanation = document.createElement('div');
                 newExplanation.className = 'fiscal-explanation';
                 newExplanation.innerHTML = explanation;
-                fiscalInfo.insertBefore(newExplanation, fiscalInfo.querySelector('table'));
+                fiscalInfo.querySelector('h4').insertAdjacentElement('afterend', newExplanation);
             }
             
-            const table = fiscalInfo.querySelector('table');
-            table.innerHTML = `
-                <tr>
-                    <td>Revenu foncier annuel</td>
-                    <td>${formaterMontant(fiscal.revenuFoncier)}</td>
-                </tr>
-                ${fiscal.abattement > 0 ? `
-                <tr>
-                    <td>Abattement forfaitaire</td>
-                    <td>- ${formaterMontant(fiscal.abattement)}</td>
-                </tr>
-                ` : ''}
-                ${fiscal.chargesDeduites > 0 ? `
-                <tr>
-                    <td>Charges déductibles</td>
-                    <td>- ${formaterMontant(fiscal.chargesDeduites)}</td>
-                </tr>
-                ` : ''}
-                ${fiscal.amortissement > 0 ? `
-                <tr>
-                    <td>Amortissement</td>
-                    <td>- ${formaterMontant(fiscal.amortissement)}</td>
-                </tr>
-                ` : ''}
-                <tr>
-                    <td>${fiscal.type === 'IS' ? 'Résultat fiscal société' : 'Revenu imposable'}</td>
-                    <td id="${mode}-revenu-imposable">${formaterMontant(fiscal.revenusImposables)}</td>
-                </tr>
-                <tr>
-                    <td>${fiscal.type === 'IS' ? `Impôt société (${fiscal.tauxIS}%)` : 'Impact fiscal annuel'}</td>
-                    <td id="${mode}-impact-fiscal" class="${impactFiscal >= 0 ? 'positive' : 'negative'}">
-                        ${formaterMontant(impactFiscal)}
-                    </td>
-                </tr>
-                <tr>
-                    <td>Cash-flow après impôt</td>
-                    <td id="${mode}-cashflow-apres-impot" class="${cashFlowApresImpot >= 0 ? 'positive' : 'negative'}">
-                        ${formaterMontantMensuel(cashFlowApresImpot)}
-                    </td>
-                </tr>
-            `;
-        }
-        
-        // NOUVEAU : Mettre à jour les valeurs en bas de la carte
-        // Calculer le cash-flow après impôt
-        const cashFlowApresImpotMensuel = (Number(resultats.cashFlow) || 0) + ((Number(resultats.impactFiscal) || 0) / 12);
-        const cashFlowApresImpotAnnuel = cashFlowApresImpotMensuel * 12;
-
-        // Méthode simple et directe : utiliser l'ID existant pour le cash-flow
-        const cashflowElement = document.getElementById(`${mode}-cashflow`);
-        if (cashflowElement) {
-            // Mettre à jour la valeur mensuelle
-            cashflowElement.textContent = `${cashFlowApresImpotMensuel >= 0 ? '' : ''}${Math.round(cashFlowApresImpotMensuel)} €/mois`;
-            cashflowElement.className = cashFlowApresImpotMensuel >= 0 ? 'positive' : 'negative';
-        }
-
-        // Mettre à jour le cash-flow annuel dans le tableau comparatif si présent
-        const cashflowAnnuelElement = document.getElementById(`comp-${mode}-cashflow-annuel`);
-        if (cashflowAnnuelElement) {
-            const strongElement = cashflowAnnuelElement.querySelector('strong') || cashflowAnnuelElement;
-            strongElement.textContent = formaterMontant(cashFlowApresImpotAnnuel);
-        }
-
-        // Alternative : chercher dans la structure connue des résultats
-        const resultsFooter = document.querySelector(`.results-card:has(#${mode}-budget-max) .results-footer`);
-        if (resultsFooter && !cashflowElement) {
-            const cashflowContainer = Array.from(resultsFooter.querySelectorAll('div')).find(div => {
-                const label = div.querySelector('.results-label');
-                return label && label.textContent === 'Cash-flow';
-            });
-            
-            if (cashflowContainer) {
-                const valueDiv = cashflowContainer.querySelector('div:not(.results-label)');
-                if (valueDiv) {
-                    valueDiv.textContent = `${cashFlowApresImpotMensuel >= 0 ? '' : ''}${Math.round(cashFlowApresImpotMensuel)} €/mois`;
-                    valueDiv.className = cashFlowApresImpotMensuel >= 0 ? 'positive' : 'negative';
+            // Mettre à jour les valeurs dans le tableau
+            const updateElement = (id, value, isPositive = null) => {
+                const elem = document.getElementById(id);
+                if (elem) {
+                    elem.textContent = value;
+                    if (isPositive !== null) {
+                        elem.className = isPositive ? 'positive' : 'negative';
+                    }
                 }
-            }
+            };
+            
+            updateElement(`${mode}-revenu-imposable`, formaterMontant(fiscal.revenusImposables));
+            updateElement(`${mode}-impact-fiscal`, formaterMontant(impactFiscal), impactFiscal >= 0);
+            updateElement(`${mode}-cashflow-apres-impot`, formaterMontantMensuel(cashFlowApresImpot), cashFlowApresImpot >= 0);
         }
     }
-
-    // Exposer les fonctions publiques
+    
+    // Export des méthodes publiques
     return {
         initialiser: initialiser
     };
 })();
 
-// Initialisation automatique au chargement de la page
-document.addEventListener('DOMContentLoaded', function() {
-    // Attendre que le simulateur principal soit initialisé
-    const checkSimulateur = setInterval(function() {
-        if (window.simulateur && window.simulateur instanceof SimulateurImmo) {
-            clearInterval(checkSimulateur);
+// Attendre que le DOM soit chargé
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialiser si le simulateur existe
+        if (window.simulateur && typeof window.simulateur === 'object') {
             ImmoExtensions.initialiser(window.simulateur);
-            console.log("Extensions du simulateur immobilier v2.0 initialisées");
         }
-    }, 100);
-    
-    // Délai maximum de 5 secondes
-    setTimeout(function() {
-        clearInterval(checkSimulateur);
-        console.warn("Délai d'attente dépassé pour l'initialisation des extensions");
-    }, 5000);
+    });
+} else {
+    // DOM déjà chargé
+    if (window.simulateur && typeof window.simulateur === 'object') {
+        ImmoExtensions.initialiser(window.simulateur);
+    }
+}
+
+// Écouter l'événement personnalisé de création du simulateur
+window.addEventListener('simulateurPret', function(e) {
+    if (e.detail && e.detail.simulateur) {
+        ImmoExtensions.initialiser(e.detail.simulateur);
+    }
 });
