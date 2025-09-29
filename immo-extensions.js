@@ -13,6 +13,7 @@
  * - Paramètres exposés (frais revente, part terrain)
  * - Sensibilité sur les projections
  * - Frais d'acquisition éligibles pour calcul PV
+ * - Harmonisation des libellés cash-flow
  */
 
 // Module principal d'extensions pour le simulateur immobilier
@@ -1679,8 +1680,22 @@ function ajouterSelectionRegimeFiscal() {
                 
                 // Ajouter l'affichage fiscal
                 mettreAJourAffichageFiscal();
+                
+                // HARMONISATION : Corriger les libellés cash-flow après le rendu
+                corrigerLibellesComparatif();
             };
         }
+    }
+    
+    // HARMONISATION : Fonction pour corriger les libellés dans le comparatif
+    function corrigerLibellesComparatif() {
+        document.querySelectorAll('.comparison-table td:first-child').forEach(td => {
+            const txt = td.textContent.trim().toLowerCase();
+            if (txt === 'cashflow-avant-impôts' || txt === 'cashflow avant impôts' || 
+                txt === 'cash-flows avant impôts' || txt === 'cashflows avant impôt') {
+                td.textContent = 'Cash-flow avant impôt';
+            }
+        });
     }
 
     // Ajoute les écouteurs d'événements
@@ -1951,7 +1966,7 @@ function ajouterSelectionRegimeFiscal() {
                                     <td>${formaterMontant(res.fraRemboursementAnticipe)}</td>
                                 </tr>
                                 <tr class="border-t border-gray-600">
-                                    <td>Cash-flows cumulés AVANT impôt</td>
+                                    <td>Cash-flow avant impôt (cumulé)</td>
                                     <td>${formaterMontant(res.cashFlowAvantImpot * horizon)}</td>
                                 </tr>
                                 <tr>
@@ -1959,7 +1974,7 @@ function ajouterSelectionRegimeFiscal() {
                                     <td class="${res.impactFiscalAnnuel >= 0 ? 'positive' : 'negative'}">${formaterMontant(res.impactFiscalAnnuel * horizon)}</td>
                                 </tr>
                                 <tr>
-                                    <td>Cash-flows cumulés APRÈS impôt (${horizon} ans)</td>
+                                    <td>Cash-flow après impôt (cumulé ${horizon} ans)</td>
                                     <td class="positive">${formaterMontant(res.cashFlowsCumules)}</td>
                                 </tr>
                                 <tr>
