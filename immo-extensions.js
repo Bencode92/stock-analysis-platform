@@ -7,7 +7,11 @@
  * 3. Scénarios de sortie/revente
  * 4. Améliorations d'interface utilisateur
  * 
- * Version 1.0 - Mai 2025
+ * Version 2.0 - Décembre 2024
+ * - Cash-flows après impôt dans TRI
+ * - IRA conforme (3% du CRD)
+ * - Paramètres exposés (frais revente, part terrain)
+ * - Sensibilité sur les projections
  */
 
 // Module principal d'extensions pour le simulateur immobilier
@@ -27,12 +31,21 @@ const ImmoExtensions = (function() {
         }
     };
     
+    // NOUVEAU : Paramètres par défaut pour les projections
+    const DEFAULTS_PROJECTIONS = {
+        fraisReventePct: 7,        // Frais de revente par défaut (7%)
+        partTerrain: 20,           // Part du terrain non-amortissable (20%)
+        eligibleTauxReduitIS: true, // Éligibilité au taux réduit IS
+        reintegrationAmortLMNP2025: true // Réintégration des amortissements LMNP (réforme 2025)
+    };
+    
     // ===============================================================
-    // HELPER CALCUL PLUS-VALUE 2025
+    // HELPER CALCUL PLUS-VALUE 2025 (VERSION OPTIMISÉE)
     // ===============================================================
     
     /**
      * Helper générique – Calcul de la plus-value (règles 2025)
+     * Version optimisée avec paramètres exposés
      */
     function calculerImpotPlusValueSelonRegime({
         regime,
@@ -42,7 +55,10 @@ const ImmoExtensions = (function() {
         nbAnnees,
         amortissementAnnuel,
         tauxIS = 25,
-        exonerationType = null
+        exonerationType = null,
+        partTerrain = DEFAULTS_PROJECTIONS.partTerrain,
+        eligibleTauxReduitIS = DEFAULTS_PROJECTIONS.eligibleTauxReduitIS,
+        reintegrationAmortLMNP2025 = DEFAULTS_PROJECTIONS.reintegrationAmortLMNP2025
     }) {
         // Exonérations totales
         if (exonerationType === 'main_residence') {
@@ -56,8 +72,8 @@ const ImmoExtensions = (function() {
 
             let prixMajore = prixAchat + fraisMajores + travauxMajores;
 
-            // Réforme 2025 : ré-intégration amortissements LMNP réel
-            if (regime === 'lmnp-reel') {
+            // Réforme 2025 : ré-intégration amortissements LMNP réel (avec flag)
+            if (regime === 'lmnp-reel' && reintegrationAmortLMNP2025) {
                 prixMajore -= amortissementAnnuel * nbAnnees;
             }
 
@@ -77,13 +93,20 @@ const ImmoExtensions = (function() {
             const baseIR = pvBrute * (1 - abattIR / 100);
             const basePS = pvBrute * (1 - abattPS / 100);
 
-            // Surtaxe 2025 avec décote officielle
+            // Surtaxe 2025 avec décote officielle (VERSION AMÉLIORÉE)
             let surtaxe = 0;
             if (baseIR > 50_000) {
-                surtaxe = Math.min(
-                    baseIR * 0.06 - Math.max(0, baseIR - 150_000) * 0.04,
-                    baseIR * 0.06
-                );
+                // Calcul plus précis par tranches
+                if (baseIR <= 100_000) {
+                    surtaxe = (baseIR - 50_000) * 0.02; // 2% de 50k à 100k
+                } else if (baseIR <= 150_000) {
+                    surtaxe = 50_000 * 0.02 + (baseIR - 100_000) * 0.04; // +4% de 100k à 150k
+                } else {
+                    surtaxe = 50_000 * 0.02 + 50_000 * 0.04 + (baseIR - 150_000) * 0.06; // +6% au-delà
+                }
+                
+                // Plafonner à 6% max avec décote
+                surtaxe = Math.min(surtaxe, baseIR * 0.06);
             }
 
             return {
@@ -93,24 +116,31 @@ const ImmoExtensions = (function() {
             };
         }
 
-        // RÉGIMES IS
+        // RÉGIMES IS (VERSION OPTIMISÉE)
         if (regime.endsWith('-is')) {
-            // Valeur comptable : terrain ≈ 20% non amortissable
-            const valeurTerrain = prixAchat * 0.20;
+            // Valeur comptable avec part terrain paramétrable
+            const valeurTerrain = prixAchat * (partTerrain / 100);
             const amortCumule = amortissementAnnuel * nbAnnees;
             const valeurComptable = Math.max(valeurTerrain, prixAchat - amortCumule);
 
             const baseIS = Math.max(0, valeurRevente - valeurComptable);
 
-            // Barème 15% jusqu'à 42 500€, puis 25%
-            const impotIS = baseIS <= 42_500
-                ? baseIS * 0.15
-                : 42_500 * 0.15 + (baseIS - 42_500) * 0.25;
+            // Barème IS avec taux réduit conditionnel
+            let impotIS;
+            if (eligibleTauxReduitIS) {
+                // Taux réduit 15% jusqu'à 42 500€, puis taux normal
+                impotIS = baseIS <= 42_500
+                    ? baseIS * 0.15
+                    : 42_500 * 0.15 + (baseIS - 42_500) * (tauxIS / 100);
+            } else {
+                // Taux plein directement
+                impotIS = baseIS * (tauxIS / 100);
+            }
 
             return {
                 impot: impotIS,
                 baseImposable: { IS: baseIS },
-                detail: { valeurComptable, amortCumule }
+                detail: { valeurComptable, amortCumule, partTerrain }
             };
         }
 
@@ -120,7 +150,7 @@ const ImmoExtensions = (function() {
     
     // Initialisation du module
     function initialiser(simulateurInstance) {
-        console.log("Initialisation des extensions du simulateur immobilier");
+        console.log("Initialisation des extensions du simulateur immobilier v2.0");
         simulateur = simulateurInstance;
         
         // Initialiser le régime fiscal par défaut s'il n'existe pas
@@ -131,6 +161,11 @@ const ImmoExtensions = (function() {
         // Initialiser le taux d'IS par défaut s'il n'existe pas
         if (!simulateur.params.fiscalite.tauxIS) {
             simulateur.params.fiscalite.tauxIS = 25; // 25% par défaut
+        }
+        
+        // NOUVEAU : Initialiser les paramètres de projection
+        if (!simulateur.params.projections) {
+            simulateur.params.projections = { ...DEFAULTS_PROJECTIONS };
         }
         
         // Étendre le simulateur avec les nouvelles méthodes
@@ -333,7 +368,7 @@ const ImmoExtensions = (function() {
         };
 
         // ===============================================================
-        // MÉTHODE CALCULER SCÉNARIO REVENTE 2025
+        // MÉTHODE CALCULER SCÉNARIO REVENTE 2025 (VERSION OPTIMISÉE)
         // ===============================================================
         SimulateurImmo.prototype.calculerScenarioRevente = function(investissement, nbAnnees, tauxAppreciationAnnuel) {
             const prixAchat = investissement.prixAchat || 0;
@@ -341,8 +376,12 @@ const ImmoExtensions = (function() {
             const fraisAcquisition = coutTotal - prixAchat;
             const apportInitial = this.params.base.apport || 0;
             const montantEmprunte = coutTotal - apportInitial;
-            const cashFlowMensuel = (investissement.cashFlow || 0);
-            const cashFlowAnnuel = cashFlowMensuel * 12;
+            
+            // OPTIMISATION 1 : Utiliser les cash-flows APRÈS impôt
+            const cashFlowAvantImpotsMensuel = Number(investissement.cashFlow) || 0;
+            const impactFiscalAnnuel = Number(investissement.impactFiscal) || 0; // positif = gain fiscal
+            const cashFlowApresImpotsMensuel = cashFlowAvantImpotsMensuel + impactFiscalAnnuel / 12;
+            const cashFlowAnnuel = cashFlowApresImpotsMensuel * 12; // CASH-FLOW APRÈS IMPÔT
             
             // Récupérer le régime fiscal actuel
             const regime = this.params.fiscalite?.regimeFiscal || 
@@ -350,15 +389,20 @@ const ImmoExtensions = (function() {
                            'reel-foncier';
             const tauxIS = this.params.fiscalite?.tauxIS || 25;
             
+            // Récupérer les paramètres de projection
+            const fraisReventePct = this.params.projections?.fraisReventePct || DEFAULTS_PROJECTIONS.fraisReventePct;
+            const partTerrain = this.params.projections?.partTerrain || DEFAULTS_PROJECTIONS.partTerrain;
+            const eligibleTauxReduitIS = this.params.projections?.eligibleTauxReduitIS ?? DEFAULTS_PROJECTIONS.eligibleTauxReduitIS;
+            const reintegrationAmortLMNP2025 = this.params.projections?.reintegrationAmortLMNP2025 ?? DEFAULTS_PROJECTIONS.reintegrationAmortLMNP2025;
+            
             // Calcul de la valeur future
             const facteurAppreciation = Math.pow(1 + tauxAppreciationAnnuel/100, nbAnnees);
             const valeurRevente = prixAchat * facteurAppreciation;
             
-            // Frais de revente (10%)
-            const tauxFraisRevente = 10;
-            const fraisRevente = valeurRevente * (tauxFraisRevente/100);
+            // OPTIMISATION 2 : Frais de revente paramétrables
+            const fraisRevente = valeurRevente * (fraisReventePct/100);
             
-            // Calcul plus-value via helper 2025
+            // Calcul plus-value via helper 2025 avec paramètres exposés
             const amortissementAnnuel = this.calculerAmortissementAnnuel(regime);
             
             const resPV = calculerImpotPlusValueSelonRegime({
@@ -368,7 +412,10 @@ const ImmoExtensions = (function() {
                 fraisAcq: fraisAcquisition,
                 nbAnnees,
                 amortissementAnnuel,
-                tauxIS
+                tauxIS,
+                partTerrain,
+                eligibleTauxReduitIS,
+                reintegrationAmortLMNP2025
             });
 
             const impotPlusValueTotal = resPV.impot;
@@ -402,32 +449,32 @@ const ImmoExtensions = (function() {
                 nbAnnees * 12
             );
             
-            // Frais de remboursement anticipé
+            // OPTIMISATION 3 : IRA conforme (3% du CRD, pas 2%)
             const tauxMensuel = (this.params.base.taux / 100) / 12;
             const fraRemboursementAnticipe = Math.min(
-                capitalRestantDu * 0.02,
-                capitalRestantDu * tauxMensuel * 6
+                capitalRestantDu * 0.03,        // 3% du CRD (règle légale)
+                capitalRestantDu * tauxMensuel * 6  // 6 mois d'intérêts
             );
             
-            // Cash-flows cumulés
+            // Cash-flows cumulés (APRÈS IMPÔT)
             const cashFlowsCumules = cashFlowAnnuel * nbAnnees;
             
             // Valeur nette après revente
             const valeurNetteRevente = valeurRevente - fraisRevente - impotPlusValueTotal - capitalRestantDu - fraRemboursementAnticipe;
             
-            // Gain total
+            // Gain total (avec CF après impôt)
             const gainTotal = valeurNetteRevente + cashFlowsCumules - apportInitial;
             
             // Multiple sur apport
             const multipleInvestissement = apportInitial > 0 ? 
                 (apportInitial + gainTotal) / apportInitial : 0;
             
-            // Calcul du TRI
+            // Calcul du TRI avec flux après impôt
             const fluxTresorerie = [];
             fluxTresorerie.push(-apportInitial);
             
             for (let i = 1; i < nbAnnees; i++) {
-                fluxTresorerie.push(cashFlowAnnuel);
+                fluxTresorerie.push(cashFlowAnnuel); // CF après impôt
             }
             
             fluxTresorerie.push(cashFlowAnnuel + valeurNetteRevente);
@@ -445,8 +492,9 @@ const ImmoExtensions = (function() {
                 valeurRevente,
                 prixAcquisitionMajore,
                 plusValueBrute,
-                plusValueBruteSansMajoration: valeurRevente - prixAchat,
+                plusValueBruteSansMajoration: Math.max(0, valeurRevente - prixAchat), // Protection contre négatif
                 fraisRevente,
+                fraisReventePct, // Exposer le pourcentage utilisé
                 impotPlusValue: {
                     ir: impotPlusValueIR,
                     ps: impotPlusValuePS,
@@ -460,6 +508,7 @@ const ImmoExtensions = (function() {
                 capitalRestantDu,
                 fraRemboursementAnticipe,
                 valeurNetteRevente,
+                cashFlowAnnuel, // CF après impôt annuel
                 cashFlowsCumules,
                 gainTotal,
                 resultatNet: gainTotal,
@@ -467,15 +516,52 @@ const ImmoExtensions = (function() {
                 multipleInvestissement,
                 fluxTresorerie,
                 regime,
-                detailPlusValue: resPV
+                detailPlusValue: resPV,
+                // Nouveaux champs pour transparence
+                cashFlowAvantImpot: cashFlowAvantImpotsMensuel * 12,
+                impactFiscalAnnuel: impactFiscalAnnuel
             };
         };
         
         // ===============================================================
-        // MÉTHODE CALCULER AMORTISSEMENT ANNUEL
+        // NOUVELLE MÉTHODE : GRILLE DE SENSIBILITÉ
+        // ===============================================================
+        SimulateurImmo.prototype.grilleSensibilite = function(investissement, nbAnnees, 
+            appVals = [0, 1, 2, 3, 4], 
+            fraisVals = [5, 7, 10]) {
+            
+            const resultats = [];
+            const originalFrais = this.params.projections.fraisReventePct;
+            
+            for (let app of appVals) {
+                for (let frais of fraisVals) {
+                    // Temporairement changer les frais
+                    this.params.projections.fraisReventePct = frais;
+                    
+                    // Calculer le scénario
+                    const scenario = this.calculerScenarioRevente(investissement, nbAnnees, app);
+                    
+                    resultats.push({
+                        appreciation: app,
+                        fraisRevente: frais,
+                        tri: scenario.tri,
+                        gainTotal: scenario.gainTotal,
+                        multipleInvestissement: scenario.multipleInvestissement
+                    });
+                }
+            }
+            
+            // Restaurer les frais originaux
+            this.params.projections.fraisReventePct = originalFrais;
+            
+            return resultats;
+        };
+        
+        // ===============================================================
+        // MÉTHODE CALCULER AMORTISSEMENT ANNUEL (avec part terrain)
         // ===============================================================
         SimulateurImmo.prototype.calculerAmortissementAnnuel = function(regime) {
-            if (!['lmnp-reel', 'sci-is'].includes(regime)) return 0;
+            if (!['lmnp-reel', 'sci-is', 'sas-is', 'sarl-is'].includes(regime)) return 0;
             
             const modeActuel = this.modeActuel || 'classique';
             
@@ -485,7 +571,7 @@ const ImmoExtensions = (function() {
             }
             
             const prixAchat = this.params.resultats[modeActuel].prixAchat || 0;
-            const partTerrain = 0.15; // 15% pour le terrain (non amortissable)
+            const partTerrain = (this.params.projections?.partTerrain || DEFAULTS_PROJECTIONS.partTerrain) / 100;
             const partConstruction = 1 - partTerrain;
             const tauxAmortissement = 0.025; // 2.5% par an (40 ans)
             
@@ -925,6 +1011,41 @@ const ImmoExtensions = (function() {
                 border: 1px solid rgba(139, 92, 246, 0.2);
             }
             
+            /* Styles pour la grille de sensibilité */
+            .sensibilite-table {
+                margin-top: 1rem;
+                border-collapse: collapse;
+                width: 100%;
+            }
+            
+            .sensibilite-table th,
+            .sensibilite-table td {
+                padding: 0.5rem;
+                text-align: center;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .sensibilite-table th {
+                background-color: rgba(0, 255, 135, 0.1);
+                color: var(--primary-color);
+                font-weight: 600;
+            }
+            
+            .sensibilite-table td.good {
+                background-color: rgba(16, 185, 129, 0.2);
+                color: #10B981;
+            }
+            
+            .sensibilite-table td.average {
+                background-color: rgba(245, 158, 11, 0.2);
+                color: #F59E0B;
+            }
+            
+            .sensibilite-table td.poor {
+                background-color: rgba(239, 68, 68, 0.2);
+                color: #EF4444;
+            }
+            
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(10px); }
                 to { opacity: 1; transform: translateY(0); }
@@ -944,6 +1065,9 @@ const ImmoExtensions = (function() {
         
         // 2. Ajouter la section pour les scénarios de sortie
         ajouterSectionScenarios();
+        
+        // 3. NOUVEAU : Ajouter les paramètres de projection
+        ajouterParametresProjection();
     }
 
 // Ajoute le sélecteur de régime fiscal
@@ -1054,6 +1178,81 @@ function ajouterSelectionRegimeFiscal() {
         
         // Initialiser les écouteurs d'événements
         initialiserEvenementsRegimeCards();
+    }
+
+    // NOUVEAU : Ajouter les paramètres de projection
+    function ajouterParametresProjection() {
+        // Vérifier si l'élément existe déjà
+        if (document.getElementById('params-projections')) return;
+        
+        // Trouver le conteneur des scénarios
+        const scenariosCard = document.getElementById('scenarios-card');
+        if (!scenariosCard) return;
+        
+        // Créer le conteneur des paramètres avancés de projection
+        const paramsDiv = document.createElement('div');
+        paramsDiv.id = 'params-projections';
+        paramsDiv.className = 'mt-4 p-4 bg-opacity-20 border border-blue-400/10 rounded';
+        paramsDiv.innerHTML = `
+            <h4 class="text-sm font-semibold mb-3 text-blue-400">
+                <i class="fas fa-cog mr-2"></i>Paramètres avancés de projection
+            </h4>
+            <div class="grid grid-3 gap-4">
+                <div class="form-group">
+                    <label class="form-label text-sm">Frais de revente</label>
+                    <div class="form-addon">
+                        <input type="number" id="frais-revente-pct" class="form-input" 
+                               value="${DEFAULTS_PROJECTIONS.fraisReventePct}" 
+                               min="3" max="15" step="0.5">
+                        <span class="form-addon-text">%</span>
+                    </div>
+                    <span class="form-help text-xs">Agence, diagnostics, rafraîchissement</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label text-sm">Part du terrain</label>
+                    <div class="form-addon">
+                        <input type="number" id="part-terrain" class="form-input" 
+                               value="${DEFAULTS_PROJECTIONS.partTerrain}" 
+                               min="10" max="40" step="5">
+                        <span class="form-addon-text">%</span>
+                    </div>
+                    <span class="form-help text-xs">Non amortissable (15-30% selon zone)</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label text-sm">Options fiscales</label>
+                    <div class="flex flex-col gap-2">
+                        <label class="flex items-center text-xs">
+                            <input type="checkbox" id="eligible-taux-reduit" 
+                                   ${DEFAULTS_PROJECTIONS.eligibleTauxReduitIS ? 'checked' : ''} 
+                                   class="mr-2">
+                            <span>Éligible taux réduit IS (15%)</span>
+                        </label>
+                        <label class="flex items-center text-xs">
+                            <input type="checkbox" id="reintegration-amort-lmnp" 
+                                   ${DEFAULTS_PROJECTIONS.reintegrationAmortLMNP2025 ? 'checked' : ''} 
+                                   class="mr-2">
+                            <span>Réintégration amort. LMNP (2025)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bouton pour calculer la sensibilité -->
+            <div class="mt-4">
+                <button id="btn-sensibilite" class="btn btn-outline btn-sm">
+                    <i class="fas fa-chart-area"></i> Analyser la sensibilité
+                </button>
+            </div>
+            
+            <!-- Conteneur pour la grille de sensibilité -->
+            <div id="sensibilite-results" class="mt-4" style="display: none;"></div>
+        `;
+        
+        // Insérer après les champs horizon/appréciation
+        const btnCalculer = scenariosCard.querySelector('#btn-calculer-scenarios');
+        btnCalculer.parentNode.insertBefore(paramsDiv, btnCalculer);
     }
 
     // Initialise les écouteurs d'événements pour les cartes de régime fiscal
@@ -1481,6 +1680,9 @@ function ajouterSelectionRegimeFiscal() {
             btnCalculerScenarios.addEventListener('click', function() {
                 if (!simulateur) return;
                 
+                // Mettre à jour les paramètres de projection depuis l'interface
+                mettreAJourParametresProjection();
+                
                 const horizon = parseInt(document.getElementById('horizon-revente').value);
                 const appreciation = parseFloat(document.getElementById('appreciation-annuelle').value);
                 
@@ -1495,6 +1697,23 @@ function ajouterSelectionRegimeFiscal() {
                 afficherResultatsScenarios(resultatsClassique, resultatsEncheres, horizon);
             });
         }
+        
+        // NOUVEAU : Écouteur pour le calcul de sensibilité
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'btn-sensibilite') {
+                calculerEtAfficherSensibilite();
+            }
+        });
+        
+        // NOUVEAU : Écouteurs pour les paramètres de projection
+        document.addEventListener('change', function(e) {
+            if (e.target && (e.target.id === 'frais-revente-pct' || 
+                            e.target.id === 'part-terrain' ||
+                            e.target.id === 'eligible-taux-reduit' ||
+                            e.target.id === 'reintegration-amort-lmnp')) {
+                mettreAJourParametresProjection();
+            }
+        });
         
         // Écouteur pour le régime fiscal
         const regimeFiscalSelect = document.getElementById('regime-fiscal');
@@ -1544,7 +1763,99 @@ function ajouterSelectionRegimeFiscal() {
         }
     }
 
-    // Affiche les résultats des scénarios de revente MISE À JOUR
+    // NOUVEAU : Mettre à jour les paramètres de projection
+    function mettreAJourParametresProjection() {
+        if (!simulateur) return;
+        
+        const fraisRevente = document.getElementById('frais-revente-pct');
+        const partTerrain = document.getElementById('part-terrain');
+        const eligibleTauxReduit = document.getElementById('eligible-taux-reduit');
+        const reintegrationAmort = document.getElementById('reintegration-amort-lmnp');
+        
+        if (fraisRevente) {
+            simulateur.params.projections.fraisReventePct = parseFloat(fraisRevente.value);
+        }
+        if (partTerrain) {
+            simulateur.params.projections.partTerrain = parseFloat(partTerrain.value);
+        }
+        if (eligibleTauxReduit) {
+            simulateur.params.projections.eligibleTauxReduitIS = eligibleTauxReduit.checked;
+        }
+        if (reintegrationAmort) {
+            simulateur.params.projections.reintegrationAmortLMNP2025 = reintegrationAmort.checked;
+        }
+    }
+
+    // NOUVEAU : Calculer et afficher la sensibilité
+    function calculerEtAfficherSensibilite() {
+        if (!simulateur || !simulateur.params.resultats.classique) {
+            alert("Veuillez d'abord effectuer une simulation");
+            return;
+        }
+        
+        const horizon = parseInt(document.getElementById('horizon-revente').value);
+        const container = document.getElementById('sensibilite-results');
+        
+        // Calculer la grille pour l'achat classique
+        const grille = simulateur.grilleSensibilite(
+            simulateur.params.resultats.classique,
+            horizon,
+            [0, 1, 2, 3, 4],
+            [5, 7, 10]
+        );
+        
+        // Créer le tableau HTML
+        let html = `
+            <h4 class="text-sm font-semibold mb-3 text-yellow-400">
+                <i class="fas fa-chart-area mr-2"></i>Analyse de sensibilité - TRI selon appréciation et frais
+            </h4>
+            <table class="sensibilite-table">
+                <thead>
+                    <tr>
+                        <th>Appréciation →<br>Frais ↓</th>
+                        <th>0%</th>
+                        <th>1%</th>
+                        <th>2%</th>
+                        <th>3%</th>
+                        <th>4%</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        [5, 7, 10].forEach(frais => {
+            html += '<tr>';
+            html += `<th>${frais}%</th>`;
+            
+            [0, 1, 2, 3, 4].forEach(app => {
+                const result = grille.find(r => r.appreciation === app && r.fraisRevente === frais);
+                const tri = result ? result.tri : 0;
+                
+                let className = 'poor';
+                if (tri >= 8) className = 'good';
+                else if (tri >= 5) className = 'average';
+                
+                html += `<td class="${className}">${tri.toFixed(1)}%</td>`;
+            });
+            
+            html += '</tr>';
+        });
+        
+        html += `
+                </tbody>
+            </table>
+            <p class="text-xs mt-2 text-gray-400">
+                <i class="fas fa-info-circle mr-1"></i>
+                TRI calculé avec cash-flows après impôt. 
+                Vert: >8% | Orange: 5-8% | Rouge: <5%
+            </p>
+        `;
+        
+        container.innerHTML = html;
+        container.style.display = 'block';
+    }
+
+    // Affiche les résultats des scénarios de revente (VERSION OPTIMISÉE)
     function afficherResultatsScenarios(resultatsClassique, resultatsEncheres, horizon) {
         const container = document.getElementById('resultats-scenarios');
         if (!container) return;
@@ -1557,7 +1868,10 @@ function ajouterSelectionRegimeFiscal() {
         container.innerHTML = `
             <div class="scenario-header">
                 <div class="scenario-title">Résultats à ${horizon} ans</div>
-                <div class="scenario-badge">Appréciation: ${document.getElementById('appreciation-annuelle').value}%/an</div>
+                <div class="scenario-badge">
+                    Appréciation: ${document.getElementById('appreciation-annuelle').value}%/an | 
+                    Frais revente: ${resultatsClassique.fraisReventePct}%
+                </div>
             </div>
             
             <div class="grid grid-2">
@@ -1611,7 +1925,7 @@ function ajouterSelectionRegimeFiscal() {
                                 </tr>
                                 ` : ''}
                                 <tr class="border-t border-gray-600">
-                                    <td>Frais de revente (10%)</td>
+                                    <td>Frais de revente (${res.fraisReventePct}%)</td>
                                     <td>${formaterMontant(res.fraisRevente)}</td>
                                 </tr>
                                 <tr>
@@ -1619,11 +1933,19 @@ function ajouterSelectionRegimeFiscal() {
                                     <td>${formaterMontant(res.capitalRestantDu)}</td>
                                 </tr>
                                 <tr>
-                                    <td>Indemnités remb. anticipé</td>
+                                    <td>IRA (3% CRD max)</td>
                                     <td>${formaterMontant(res.fraRemboursementAnticipe)}</td>
                                 </tr>
                                 <tr class="border-t border-gray-600">
-                                    <td>Cash-flows cumulés (${horizon} ans)</td>
+                                    <td>Cash-flows cumulés AVANT impôt</td>
+                                    <td>${formaterMontant(res.cashFlowAvantImpot * horizon / 12)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Impact fiscal cumulé</td>
+                                    <td class="${res.impactFiscalAnnuel >= 0 ? 'positive' : 'negative'}">${formaterMontant(res.impactFiscalAnnuel * horizon)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Cash-flows cumulés APRÈS impôt (${horizon} ans)</td>
                                     <td class="positive">${formaterMontant(res.cashFlowsCumules)}</td>
                                 </tr>
                                 <tr>
@@ -1633,7 +1955,7 @@ function ajouterSelectionRegimeFiscal() {
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td>TRI (Taux de Rendement Interne)</td>
+                                    <td>TRI avec CF après impôt</td>
                                     <td class="highlight">${res.tri.toFixed(2)}%</td>
                                 </tr>
                                 <tr>
@@ -1652,15 +1974,17 @@ function ajouterSelectionRegimeFiscal() {
                     <i class="fas fa-info-circle"></i>
                 </div>
                 <div>
-                    <h4 class="font-medium mb-1">Calcul fiscal 2025 conforme</h4>
+                    <h4 class="font-medium mb-1">Calcul fiscal 2025 optimisé</h4>
                     <p class="text-sm opacity-90">
+                        ✅ Cash-flows après impôt dans le TRI<br>
+                        ✅ IRA conforme (3% du CRD max)<br>
+                        ✅ Frais de revente paramétrables (${resultatsClassique.fraisReventePct}%)<br>
                         ${resultatsClassique.regime === 'lmnp-reel' ? 
-                            'LMNP réel : réintégration des amortissements<br>' : ''}
+                            '✅ LMNP réel : réintégration des amortissements<br>' : ''}
                         ${resultatsClassique.regime.endsWith('-is') ? 
-                            'Régime IS : barème progressif (15%/25%)<br>' : ''}
-                        Prix d'acquisition majoré = Prix + frais notaire (7.5%) + travaux (15% après 5 ans)<br>
-                        Abattements selon durée de détention (exonération IR à 22 ans, PS à 30 ans)<br>
-                        Surtaxe 2025 avec décote progressive au-delà de 50k€
+                            `✅ Régime IS : taux ${simulateur.params.projections.eligibleTauxReduitIS ? 'réduit 15% puis' : ''} ${simulateur.params.fiscalite.tauxIS}%<br>` : ''}
+                        Prix d'acquisition majoré = Prix + frais (7.5%) + travaux (15% après 5 ans)<br>
+                        Abattements selon durée (exonération IR à 22 ans, PS à 30 ans)
                     </p>
                 </div>
             </div>
@@ -1688,7 +2012,7 @@ function ajouterSelectionRegimeFiscal() {
             case 'reel-foncier': regimeLabel = 'Régime réel foncier'; break;
             case 'lmnp-micro': regimeLabel = 'LMNP micro-BIC (abattement 50%)'; break;
             case 'lmnp-reel': regimeLabel = 'LMNP réel avec amortissements'; break;
-            case 'sci-is': regimeLabel = `SCI à l'IS (${simulateur.params.fiscalite.tauxIS || 25}%)`; break;
+            case 'sci-is': regimeLabel = `SCI à l'IS (${simulateur.params.fiscalite.tauxIS || 25}%)`;  break;
             case 'sas-is': regimeLabel = `SAS (IS ${simulateur.params.fiscalite.tauxIS || 25}%)`; break;
             case 'sarl-is': regimeLabel = `SARL (IS ${simulateur.params.fiscalite.tauxIS || 25}%)`; break;
             default: regimeLabel = 'Micro-foncier';
@@ -1947,7 +2271,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.simulateur && window.simulateur instanceof SimulateurImmo) {
             clearInterval(checkSimulateur);
             ImmoExtensions.initialiser(window.simulateur);
-            console.log("Extensions du simulateur immobilier initialisées");
+            console.log("Extensions du simulateur immobilier v2.0 initialisées");
         }
     }, 100);
     
