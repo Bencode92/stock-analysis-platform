@@ -38,8 +38,8 @@ const ImmoExtensions = (function() {
     const DEFAULTS_PROJECTIONS = {
         fraisReventePct: 7,        // Frais de revente par défaut (7%)
         partTerrain: 20,           // Part du terrain non-amortissable (20%)
-        eligibleTauxReduitIS: false, // Éligibilité au taux réduit IS
-        reintegrationAmortLMNP2025: false // <-- pas de réintégration LMNP par défaut
+        eligibleTauxReduitIS: true, // Éligibilité au taux réduit IS
+        reintegrationAmortLMNP2025: false // <- PAS de réintégration LMNP par défaut
     };
     
     // ===============================================================
@@ -1866,6 +1866,9 @@ function ajouterSelectionRegimeFiscal() {
                     const icon = idx === 0 ? 'home' : 'gavel';
                     const title = idx === 0 ? 'Achat Classique' : 'Vente aux Enchères';
                     
+                    // CORRECTION 2: Recalculer la plus-value brute pour garantir la cohérence
+                    const pvBruteCalculee = Math.max(0, res.valeurRevente - res.prixAcquisitionMajore);
+                    
                     return `
                     <div class="results-card">
                         <div class="results-header">
@@ -1893,8 +1896,8 @@ function ajouterSelectionRegimeFiscal() {
                                     <td>${formaterMontant(res.prixAcquisitionMajore)}</td>
                                 </tr>
                                 <tr>
-                                    <td class="pl-4">Plus-value imposable</td>
-                                    <td>${formaterMontant(res.plusValueBrute)}</td>
+                                    <td class="pl-4">Plus-value brute (après majorations)</td>
+                                    <td>${formaterMontant(pvBruteCalculee)}</td>
                                 </tr>
                                 <tr>
                                     <td class="pl-4">Abattements (IR: ${formatPct(res.abattements.ir)}, PS: ${formatPct(res.abattements.ps)})</td>
@@ -1924,7 +1927,7 @@ function ajouterSelectionRegimeFiscal() {
                                 </tr>
                                 <tr class="border-t border-gray-600">
                                     <td>Cash-flows cumulés AVANT impôt</td>
-                                    <td>${formaterMontant(res.cashFlowAvantImpot * horizon / 12)}</td>
+                                    <td>${formaterMontant(res.cashFlowAvantImpot * horizon)}</td>
                                 </tr>
                                 <tr>
                                     <td>Impact fiscal cumulé</td>
