@@ -1960,6 +1960,8 @@ function remplirTableauComparatifDetaille(classique, encheres) {
       console.warn('[Comparatif] Section "Impôt mensuel" non rendue (éléments HTML absents).');
     }
   };
+    }  
+}  
 /**
  * Met à jour un élément de différence avec la bonne classe CSS
  */
