@@ -1796,6 +1796,7 @@ document.getElementById('encheres-impact-fiscal').textContent =
 
    
 /**
+/**
  * Remplit le tableau comparatif détaillé
  * @param {Object} classique - Résultats achat classique
  * @param {Object} encheres - Résultats vente aux enchères
@@ -1833,7 +1834,7 @@ function remplirTableauComparatifDetaille(classique, encheres) {
   document.getElementById('comp-encheres-total').textContent = formaterMontant(encheres.coutTotal);
   majDifference('comp-total-diff', encheres.coutTotal - classique.coutTotal, false, true);
 
- // ============================ SECTION 2 : FINANCEMENT ============================
+  // ============================ SECTION 2 : FINANCEMENT ============================
   const apport = simulateur.params.base.apport;
   document.getElementById('comp-classique-apport').textContent = formaterMontant(apport);
   document.getElementById('comp-encheres-apport').textContent = formaterMontant(apport);
@@ -1868,7 +1869,7 @@ function remplirTableauComparatifDetaille(classique, encheres) {
   document.getElementById('comp-encheres-loyer-net').textContent = formaterMontant(encheres.loyerNet);
   majDifference('comp-loyer-net-diff', encheres.loyerNet - classique.loyerNet);
 
-   // ======================= SECTION 4 : VOS DÉPENSES MENSUELLES =====================
+  // ======================= SECTION 4 : VOS DÉPENSES MENSUELLES =====================
   document.getElementById('comp-classique-mensualite2').textContent = formaterMontant(-classique.mensualiteTotale);
   document.getElementById('comp-encheres-mensualite2').textContent  = formaterMontant(-encheres.mensualiteTotale);
   majDifference('comp-mensualite2-diff', -(encheres.mensualiteTotale - classique.mensualiteTotale), false, true);
@@ -1917,7 +1918,7 @@ function remplirTableauComparatifDetaille(classique, encheres) {
   document.getElementById('comp-encheres-total-charges').textContent  = formaterMontant(totalChargesEncheres);
   majDifference('comp-total-charges-diff', totalChargesEncheres - totalChargesClassique, false, true);
 
-// =================== SECTION 5 : FISCALITÉ (si éléments présents) =================
+  // =================== SECTION 5 : FISCALITÉ (si éléments présents) =================
   if (document.getElementById('comp-classique-cashflow-annuel')) {
     // Annuel = mensuel affiché (arrondi) × 12
     const gainAnnuelClassique = Math.round(Math.round(classique.cashFlow) * 12);
@@ -1931,24 +1932,35 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     majDifference('comp-cashflow-annuel-diff', gainAnnuelEncheres - gainAnnuelClassique);
   }
 
-  // Impôt mensuel : coût → inversion activée
-  const impClassEl = document.getElementById('comp-classique-impot-mensuel');
-  const impEnchEl  = document.getElementById('comp-encheres-impot-mensuel');
-  const impDiffEl  = document.getElementById('comp-impot-mensuel-diff');
+  // --- Impôt mensuel : calculé sur loyers encaissés (coût → invert = true)
+  {
+    const impClassEl = document.getElementById('comp-classique-impot-mensuel');
+    const impEnchEl  = document.getElementById('comp-encheres-impot-mensuel');
+    const impDiffEl  = document.getElementById('comp-impot-mensuel-diff');
 
-  if (impClassEl && impEnchEl && impDiffEl &&
-      classique.impots !== undefined && encheres.impots !== undefined) {
+    if (impClassEl && impEnchEl && impDiffEl) {
+      // Micro-foncier calculé sur loyers encaissés (loyer net × 12)
+      const mfC = computeMicroFoncierFromEncaisse(classique.loyerNet);
+      const mfE = computeMicroFoncierFromEncaisse(encheres.loyerNet);
 
-    const impotMensuelClassique = Math.abs(classique.impots) / 12;
-    const impotMensuelEncheres  = Math.abs(encheres.impots) / 12;
+      const impotMensuelClassique = Math.abs(mfC.impactAnnuel) / 12;
+      const impotMensuelEncheres  = Math.abs(mfE.impactAnnuel) / 12;
 
-    impClassEl.textContent = formaterMontant(-impotMensuelClassique);
-    impEnchEl.textContent  = formaterMontant(-impotMensuelEncheres);
-    majDifference('comp-impot-mensuel-diff', -(impotMensuelEncheres - impotMensuelClassique), false, true);
-  } else {
-    console.warn('[Comparatif] Section "Impôt mensuel" non rendue (éléments HTML absents ou valeurs non définies).');
+      // Affichage en « coût » (valeurs négatives)
+      impClassEl.textContent = formaterMontant(-impotMensuelClassique);
+      impEnchEl.textContent  = formaterMontant(-impotMensuelEncheres);
+
+      // Différence : coût → inversion activée
+      majDifference(
+        'comp-impot-mensuel-diff',
+        -(impotMensuelEncheres - impotMensuelClassique),
+        false,
+        true
+      );
+    } else {
+      console.warn('[Comparatif] Section "Impôt mensuel" non rendue (éléments HTML absents).');
+    }
   }
-}
 /**
  * Met à jour un élément de différence avec la bonne classe CSS
  */
