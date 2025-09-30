@@ -18,6 +18,19 @@
 // Désactiver complètement l'impact fiscal
 window.disableFiscalImpact = true;
 
+// Shim de sécurité: si la fiscalité est désactivée (ou la fonction n'est pas chargée),
+// on fournit une implémentation neutre qui renvoie zéro impact et évite la ReferenceError.
+if (window.disableFiscalImpact && typeof window.computeMicroFoncierFromEncaisse !== 'function') {
+  window.computeMicroFoncierFromEncaisse = function () {
+    return {
+      revenuEncaisseAnnuel: 0,
+      abattement: 0,
+      revenuImposable: 0,
+      impactAnnuel: 0
+    };
+  };
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Constantes globales
     const TOAST_DURATION = 5000; // Durée d'affichage des toasts en millisecondes
@@ -1564,24 +1577,30 @@ window.afficherResultats = function afficherResultats(resultats) {
         majClasseRentabilite(encheresRentabilite.parentElement, rentEncheres);
     }
     
-    // Affichage des données fiscales pour l'achat classique si les éléments existent
+ // Affichage des données fiscales pour l'achat classique si les éléments existent
 {
   const elRev = document.getElementById('classique-revenu-foncier');
   const elAb  = document.getElementById('classique-abattement');
   const elRI  = document.getElementById('classique-revenu-imposable');
   const elImp = document.getElementById('classique-impact-fiscal');
 
-  if (elRev || elAb || elRI || elImp) {
-    const mf = computeMicroFoncierFromEncaisse(classique.loyerNet); // base = loyer net × 12
+  const hasFiscalEls = elRev || elAb || elRI || elImp;
+
+  if (!window.disableFiscalImpact &&
+      typeof window.computeMicroFoncierFromEncaisse === 'function' &&
+      hasFiscalEls) {
+
+    // base = loyer net × 12 (la fonction attend le net mensuel)
+    const mf = window.computeMicroFoncierFromEncaisse(classique.loyerNet);
 
     if (elRev) elRev.textContent = formaterMontant(mf.revenuEncaisseAnnuel);
     if (elAb)  elAb.textContent  = formaterMontant(-mf.abattement);
     if (elRI)  elRI.textContent  = formaterMontant(mf.revenuImposable);
     if (elImp) elImp.textContent = formaterMontant(-Math.abs(mf.impactAnnuel));
 
-    // Cash-flow après impôt cohérent avec l'impact calculé ci-dessus
-    const cfMensuelAI = classique.cashFlow + (mf.impactAnnuel / 12);
-    const cfAnnuelAI  = cfMensuelAI * 12;
+    // Cash-flow après impôt cohérent avec l'impact calculé
+    const cfMensuelAI = Math.round(classique.cashFlow + (mf.impactAnnuel / 12));
+    const cfAnnuelAI  = Math.round(cfMensuelAI * 12);
 
     const cfNode = document.getElementById('classique-cashflow-apres-impot');
     if (cfNode) {
@@ -1595,6 +1614,34 @@ window.afficherResultats = function afficherResultats(resultats) {
       const a = document.createElement('div');
       a.className = 'cashflow-annual ' + getClasseValeur(cfAnnuelAI);
       a.textContent = formaterMontantAnnuel(cfAnnuelAI);
+
+      box.appendChild(m); box.appendChild(a);
+      cfNode.parentNode.replaceChild(box, cfNode);
+    }
+
+  } else if (hasFiscalEls) {
+    // Affichage neutre quand fiscalité désactivée / fonction absente
+    if (elRev) elRev.textContent = '—';
+    if (elAb)  elAb.textContent  = '—';
+    if (elRI)  elRI.textContent  = '—';
+    if (elImp) elImp.textContent = '—';
+
+    // Cash-flow après impôt = cash-flow affiché (pas d'impact)
+    const cfNode = document.getElementById('classique-cashflow-apres-impot');
+    if (cfNode) {
+      const cfMensuel = Math.round(classique.cashFlow);
+      const cfAnnuel  = Math.round(cfMensuel * 12);
+
+      const box = document.createElement('div');
+      box.className = 'cashflow-container';
+
+      const m = document.createElement('div');
+      m.className = 'cashflow-monthly ' + getClasseValeur(cfMensuel);
+      m.textContent = formaterMontantMensuel(cfMensuel);
+
+      const a = document.createElement('div');
+      a.className = 'cashflow-annual ' + getClasseValeur(cfAnnuel);
+      a.textContent = formaterMontantAnnuel(cfAnnuel);
 
       box.appendChild(m); box.appendChild(a);
       cfNode.parentNode.replaceChild(box, cfNode);
@@ -1662,23 +1709,30 @@ if (margeEncheres) {
   margeEncheres.className = getClasseValeur(margeAffichee);
 }
     
-    // Affichage des données fiscales pour les enchères si les éléments existent
- {
+// Affichage des données fiscales pour les enchères si les éléments existent
+{
   const elRev = document.getElementById('encheres-revenu-foncier');
   const elAb  = document.getElementById('encheres-abattement');
   const elRI  = document.getElementById('encheres-revenu-imposable');
   const elImp = document.getElementById('encheres-impact-fiscal');
 
-  if (elRev || elAb || elRI || elImp) {
-    const mf = computeMicroFoncierFromEncaisse(encheres.loyerNet);
+  const hasFiscalEls = elRev || elAb || elRI || elImp;
+
+  if (!window.disableFiscalImpact &&
+      typeof window.computeMicroFoncierFromEncaisse === 'function' &&
+      hasFiscalEls) {
+
+    // base = loyer net × 12 (la fonction prend le net mensuel)
+    const mf = window.computeMicroFoncierFromEncaisse(encheres.loyerNet);
 
     if (elRev) elRev.textContent = formaterMontant(mf.revenuEncaisseAnnuel);
     if (elAb)  elAb.textContent  = formaterMontant(-mf.abattement);
     if (elRI)  elRI.textContent  = formaterMontant(mf.revenuImposable);
     if (elImp) elImp.textContent = formaterMontant(-Math.abs(mf.impactAnnuel));
 
-    const cfMensuelAI = encheres.cashFlow + (mf.impactAnnuel / 12);
-    const cfAnnuelAI  = cfMensuelAI * 12;
+    // Cash-flow après impôt cohérent
+    const cfMensuelAI = Math.round(encheres.cashFlow + (mf.impactAnnuel / 12));
+    const cfAnnuelAI  = Math.round(cfMensuelAI * 12);
 
     const cfNode = document.getElementById('encheres-cashflow-apres-impot');
     if (cfNode) {
@@ -1692,6 +1746,34 @@ if (margeEncheres) {
       const a = document.createElement('div');
       a.className = 'cashflow-annual ' + getClasseValeur(cfAnnuelAI);
       a.textContent = formaterMontantAnnuel(cfAnnuelAI);
+
+      box.appendChild(m); box.appendChild(a);
+      cfNode.parentNode.replaceChild(box, cfNode);
+    }
+
+  } else if (hasFiscalEls) {
+    // Fiscalité OFF / fonction absente → affichage neutre
+    if (elRev) elRev.textContent = '—';
+    if (elAb)  elAb.textContent  = '—';
+    if (elRI)  elRI.textContent  = '—';
+    if (elImp) elImp.textContent = '—';
+
+    // Cash-flow après impôt = cash-flow affiché (pas d'impact)
+    const cfNode = document.getElementById('encheres-cashflow-apres-impot');
+    if (cfNode) {
+      const cfMensuel = Math.round(encheres.cashFlow);
+      const cfAnnuel  = Math.round(cfMensuel * 12);
+
+      const box = document.createElement('div');
+      box.className = 'cashflow-container';
+
+      const m = document.createElement('div');
+      m.className = 'cashflow-monthly ' + getClasseValeur(cfMensuel);
+      m.textContent = formaterMontantMensuel(cfMensuel);
+
+      const a = document.createElement('div');
+      a.className = 'cashflow-annual ' + getClasseValeur(cfAnnuel);
+      a.textContent = formaterMontantAnnuel(cfAnnuel);
 
       box.appendChild(m); box.appendChild(a);
       cfNode.parentNode.replaceChild(box, cfNode);
