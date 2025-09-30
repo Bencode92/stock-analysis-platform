@@ -2,7 +2,7 @@
  * city-comparison.js - Comparateur multi-villes pour l'investissement immobilier
  * Permet de comparer jusqu'à 10 villes simultanément
  * 
- * v2.5 - Version simplifiée sans mode objectif
+ * v2.6 - Version avec classement par RENDEMENT NET
  */
 
 class CityComparator {
@@ -387,11 +387,15 @@ class CityComparator {
                 }
             }
             
-            // Tri par loyer net mensuel (critère principal)
-            results.sort((a, b) => b.loyerNetMensuel - a.loyerNetMensuel);
+            // MODIFICATION 2: Tri par **rendement net** (critère principal), puis cash-flow, puis loyer net
+            results.sort((a, b) =>
+                (b.rendement - a.rendement) ||
+                (b.cashFlow - a.cashFlow) ||
+                (b.loyerNetMensuel - a.loyerNetMensuel)
+            );
             
             console.log('✅ Résultats obtenus:', results.length);
-            console.log('📊 Critère de tri: Loyer net');
+            console.log('📊 Critère de tri: Rendement net');
             
             // Afficher les résultats
             this.displayResults(results);
@@ -472,7 +476,7 @@ class CityComparator {
             console.log(`  Classique: ${classique ? `surface=${classique.surface.toFixed(1)}m², loyer=${classique.loyerNet.toFixed(0)}€, cashFlow=${classique.cashFlow.toFixed(0)}€` : 'Aucune solution'}`);
             console.log(`  Enchères: ${encheres ? `surface=${encheres.surface.toFixed(1)}m², loyer=${encheres.loyerNet.toFixed(0)}€, cashFlow=${encheres.cashFlow.toFixed(0)}€` : 'Aucune solution'}`);
             
-            // Sélection du meilleur selon le loyer net
+            // Sélection du meilleur selon le rendement net
             let best = null;
             let mode = '';
             
@@ -488,15 +492,15 @@ class CityComparator {
                 best = classique;
                 mode = 'classique';
             } else {
-                // On garde le meilleur loyer net
-                if (encheres.loyerNet > classique.loyerNet) {
+                // MODIFICATION 1: On garde le meilleur **rendement net**
+                if (encheres.rendementNet > classique.rendementNet) {
                     best = encheres;
                     mode = 'encheres';
                 } else {
                     best = classique;
                     mode = 'classique';
                 }
-                console.log(`  ✅ Sélectionné: ${mode} avec ${best.loyerNet.toFixed(0)}€/mois de loyer net`);
+                console.log(`  ✅ Sélectionné: ${mode} avec ${best.rendementNet.toFixed(2)}% de rendement`);
             }
             
             if (!best) return null;
@@ -517,8 +521,8 @@ class CityComparator {
             };
             
         } finally {
-            // 4. Restaurer l'état original complet
-            this.simulateur.params = JSON.parse(JSON.stringify(originalParams));
+            // 4. Restaurer l'état original complet (option bonus conseillée)
+            this.simulateur.chargerParametres(originalParams);
         }
     }
     
@@ -566,7 +570,7 @@ class CityComparator {
                     </h3>
                     <p style="text-align: center; margin-bottom: 2rem; color: var(--text-muted);">
                         <i class="fas fa-info-circle mr-1"></i>
-                        Classement par loyer net mensuel le plus élevé
+                        Classement par rendement net le plus élevé
                     </p>
                     
                     <div class="city-results-grid">
@@ -586,8 +590,8 @@ class CityComparator {
                                 
                                 <div class="stats-grid">
                                     <div class="stat-item highlight">
-                                        <p class="stat-value">${Math.round(r.loyerNetMensuel)}€</p>
-                                        <p class="stat-label">Loyer net/mois</p>
+                                        <p class="stat-value">${r.rendement.toFixed(2)}%</p>
+                                        <p class="stat-label">Rendement net</p>
                                     </div>
                                     <div class="stat-item ${r.cashFlow >= 0 ? 'positive' : 'negative'}">
                                         <p class="stat-value">
@@ -596,12 +600,12 @@ class CityComparator {
                                         <p class="stat-label">Cash-flow</p>
                                     </div>
                                     <div class="stat-item">
-                                        <p class="stat-value">${r.surface.toFixed(0)}m²</p>
-                                        <p class="stat-label">Surface</p>
+                                        <p class="stat-value">${Math.round(r.loyerNetMensuel)}€</p>
+                                        <p class="stat-label">Loyer net/mois</p>
                                     </div>
                                     <div class="stat-item">
-                                        <p class="stat-value">${r.rendement.toFixed(2)}%</p>
-                                        <p class="stat-label">Rendement</p>
+                                        <p class="stat-value">${r.surface.toFixed(0)}m²</p>
+                                        <p class="stat-label">Surface</p>
                                     </div>
                                 </div>
                                 
@@ -628,9 +632,9 @@ class CityComparator {
                                             <th>Ville</th>
                                             <th>Type</th>
                                             <th>Mode</th>
-                                            <th class="highlight">Loyer net/mois</th>
+                                            <th class="highlight">Rendement</th>
                                             <th>Cash-flow</th>
-                                            <th>Rendement</th>
+                                            <th>Loyer net/mois</th>
                                             <th>Prix</th>
                                         </tr>
                                     </thead>
@@ -644,11 +648,11 @@ class CityComparator {
                                                         ${r.mode === 'encheres' ? 'Enchères' : 'Classique'}
                                                     </span>
                                                 </td>
-                                                <td style="text-align: right; font-weight: 600;" class="highlight">${Math.round(r.loyerNetMensuel)}€</td>
+                                                <td style="text-align: right;" class="highlight">${r.rendement.toFixed(2)}%</td>
                                                 <td style="text-align: right; font-weight: 600;" class="${r.cashFlow >= 0 ? 'positive' : 'negative'}">
                                                     ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
                                                 </td>
-                                                <td style="text-align: right;">${r.rendement.toFixed(2)}%</td>
+                                                <td style="text-align: right; font-weight: 600;">${Math.round(r.loyerNetMensuel)}€</td>
                                                 <td style="text-align: right;">${(r.prixAchat/1000).toFixed(0)}k€</td>
                                             </tr>
                                         `).join('')}
