@@ -1796,7 +1796,6 @@ document.getElementById('encheres-impact-fiscal').textContent =
 
    
 /**
-/**
  * Remplit le tableau comparatif détaillé
  * @param {Object} classique - Résultats achat classique
  * @param {Object} encheres - Résultats vente aux enchères
@@ -1960,7 +1959,7 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     } else {
       console.warn('[Comparatif] Section "Impôt mensuel" non rendue (éléments HTML absents).');
     }
-  }
+  };
 /**
  * Met à jour un élément de différence avec la bonne classe CSS
  */
