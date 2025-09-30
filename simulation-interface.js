@@ -1565,40 +1565,42 @@ window.afficherResultats = function afficherResultats(resultats) {
     }
     
     // Affichage des données fiscales pour l'achat classique si les éléments existent
-    if (document.getElementById('classique-revenu-foncier')) {
-document.getElementById('classique-revenu-foncier').textContent =
-  formaterMontant(classique.fiscalDetail?.revenuFoncier || 0);
-document.getElementById('classique-impact-fiscal').textContent =
-  formaterMontant(classique.impactFiscal || 0);
-        
-        // Cash-flow après impôt mensuel et annuel
-        const cashflowApresImpotMensuel = classique.cashFlow + (classique.impactFiscal / 12);
-        const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
-        
-        const cashflowApresImpot = document.getElementById('classique-cashflow-apres-impot');
-        if (cashflowApresImpot) {
-            // Créer un conteneur pour le cash-flow après impôt
-            const cashflowContainer = document.createElement('div');
-            cashflowContainer.className = 'cashflow-container';
-            
-            // Cash-flow mensuel après impôt
-            const cashflowMensuel = document.createElement('div');
-            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
-            cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
-            
-            // Cash-flow annuel après impôt
-            const cashflowAnnuel = document.createElement('div');
-            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
-            cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
-            
-            // Ajouter au conteneur
-            cashflowContainer.appendChild(cashflowMensuel);
-            cashflowContainer.appendChild(cashflowAnnuel);
-            
-            // Remplacer le contenu actuel
-            cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
-        }
+{
+  const elRev = document.getElementById('classique-revenu-foncier');
+  const elAb  = document.getElementById('classique-abattement');
+  const elRI  = document.getElementById('classique-revenu-imposable');
+  const elImp = document.getElementById('classique-impact-fiscal');
+
+  if (elRev || elAb || elRI || elImp) {
+    const mf = computeMicroFoncierFromEncaisse(classique.loyerNet); // base = loyer net × 12
+
+    if (elRev) elRev.textContent = formaterMontant(mf.revenuEncaisseAnnuel);
+    if (elAb)  elAb.textContent  = formaterMontant(-mf.abattement);
+    if (elRI)  elRI.textContent  = formaterMontant(mf.revenuImposable);
+    if (elImp) elImp.textContent = formaterMontant(-Math.abs(mf.impactAnnuel));
+
+    // Cash-flow après impôt cohérent avec l'impact calculé ci-dessus
+    const cfMensuelAI = classique.cashFlow + (mf.impactAnnuel / 12);
+    const cfAnnuelAI  = cfMensuelAI * 12;
+
+    const cfNode = document.getElementById('classique-cashflow-apres-impot');
+    if (cfNode) {
+      const box = document.createElement('div');
+      box.className = 'cashflow-container';
+
+      const m = document.createElement('div');
+      m.className = 'cashflow-monthly ' + getClasseValeur(cfMensuelAI);
+      m.textContent = formaterMontantMensuel(cfMensuelAI);
+
+      const a = document.createElement('div');
+      a.className = 'cashflow-annual ' + getClasseValeur(cfAnnuelAI);
+      a.textContent = formaterMontantAnnuel(cfAnnuelAI);
+
+      box.appendChild(m); box.appendChild(a);
+      cfNode.parentNode.replaceChild(box, cfNode);
     }
+  }
+}
     
     // Affichage des résultats pour la vente aux enchères
     // Nouveaux éléments pour budget et surface
@@ -1661,40 +1663,41 @@ if (margeEncheres) {
 }
     
     // Affichage des données fiscales pour les enchères si les éléments existent
-    if (document.getElementById('encheres-revenu-foncier')) {
-  document.getElementById('encheres-revenu-foncier').textContent =
-  formaterMontant(encheres.fiscalDetail?.revenuFoncier || 0);
-document.getElementById('encheres-impact-fiscal').textContent =
-  formaterMontant(encheres.impactFiscal || 0);
-        
-        // Cash-flow après impôt mensuel et annuel
-        const cashflowApresImpotMensuel = encheres.cashFlow + (encheres.impactFiscal / 12);
-        const cashflowApresImpotAnnuel = cashflowApresImpotMensuel * 12;
-        
-        const cashflowApresImpot = document.getElementById('encheres-cashflow-apres-impot');
-        if (cashflowApresImpot) {
-            // Créer un conteneur pour le cash-flow après impôt
-            const cashflowContainer = document.createElement('div');
-            cashflowContainer.className = 'cashflow-container';
-            
-            // Cash-flow mensuel après impôt
-            const cashflowMensuel = document.createElement('div');
-            cashflowMensuel.className = 'cashflow-monthly ' + getClasseValeur(cashflowApresImpotMensuel);
-            cashflowMensuel.textContent = formaterMontantMensuel(cashflowApresImpotMensuel);
-            
-            // Cash-flow annuel après impôt
-            const cashflowAnnuel = document.createElement('div');
-            cashflowAnnuel.className = 'cashflow-annual ' + getClasseValeur(cashflowApresImpotAnnuel);
-            cashflowAnnuel.textContent = formaterMontantAnnuel(cashflowApresImpotAnnuel);
-            
-            // Ajouter au conteneur
-            cashflowContainer.appendChild(cashflowMensuel);
-            cashflowContainer.appendChild(cashflowAnnuel);
-            
-            // Remplacer le contenu actuel
-            cashflowApresImpot.parentNode.replaceChild(cashflowContainer, cashflowApresImpot);
-        }
+ {
+  const elRev = document.getElementById('encheres-revenu-foncier');
+  const elAb  = document.getElementById('encheres-abattement');
+  const elRI  = document.getElementById('encheres-revenu-imposable');
+  const elImp = document.getElementById('encheres-impact-fiscal');
+
+  if (elRev || elAb || elRI || elImp) {
+    const mf = computeMicroFoncierFromEncaisse(encheres.loyerNet);
+
+    if (elRev) elRev.textContent = formaterMontant(mf.revenuEncaisseAnnuel);
+    if (elAb)  elAb.textContent  = formaterMontant(-mf.abattement);
+    if (elRI)  elRI.textContent  = formaterMontant(mf.revenuImposable);
+    if (elImp) elImp.textContent = formaterMontant(-Math.abs(mf.impactAnnuel));
+
+    const cfMensuelAI = encheres.cashFlow + (mf.impactAnnuel / 12);
+    const cfAnnuelAI  = cfMensuelAI * 12;
+
+    const cfNode = document.getElementById('encheres-cashflow-apres-impot');
+    if (cfNode) {
+      const box = document.createElement('div');
+      box.className = 'cashflow-container';
+
+      const m = document.createElement('div');
+      m.className = 'cashflow-monthly ' + getClasseValeur(cfMensuelAI);
+      m.textContent = formaterMontantMensuel(cfMensuelAI);
+
+      const a = document.createElement('div');
+      a.className = 'cashflow-annual ' + getClasseValeur(cfAnnuelAI);
+      a.textContent = formaterMontantAnnuel(cfAnnuelAI);
+
+      box.appendChild(m); box.appendChild(a);
+      cfNode.parentNode.replaceChild(box, cfNode);
     }
+  }
+}
         
         // Comparatif
         document.getElementById('comp-classique-prix').textContent = formaterMontant(classique.prixAchat);
