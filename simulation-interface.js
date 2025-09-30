@@ -1959,7 +1959,6 @@ function remplirTableauComparatifDetaille(classique, encheres) {
     } else {
       console.warn('[Comparatif] Section "Impôt mensuel" non rendue (éléments HTML absents).');
     }
-  };
     }  
 }  
 /**
