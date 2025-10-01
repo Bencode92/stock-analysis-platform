@@ -1,0 +1,116 @@
+Tu es un expert en allocation quantitative. Construis TROIS portefeuilles (Agressif, Modéré, Stable).
+
+## Données structurées (univers fermés v3)
+BRIEF_POINTS = [{"id": "BR1", "text": "📋 RÉSUMÉ COMPLET DE L'ACTUALITÉ FINANCIÈRE:"}, {"id": "BR2", "text": "📊 Vue d'ensemble: Les marchés financiers font face à une volatilité accrue suite aux tensions commerciales entre les États-Unis et la Chine, tandis qu..."}, {"id": "BR3", "text": "• Les négociations commerciales entre les États-Unis et la Chine restent tendues, avec de nouvelles mesures potentielles annoncées"}, {"id": "BR4", "text": "• La Fed pourrait maintenir ses taux directeurs élevés jusqu'à fin 2025 selon les dernières minutes"}, {"id": "BR5", "text": "• Les marchés européens montrent une résilience face aux incertitudes mondiales"}, {"id": "BR6", "text": "• Le secteur de la défense connaît une croissance soutenue dans un contexte géopolitique instable"}, {"id": "BR7", "text": "• Les marchés émergents restent sous pression face au dollar fort"}, {"id": "BR8", "text": "📅 Événements importants:"}, {"id": "BR9", "text": "• 2025-04-02: Annonce de la Fed sur le maintien des taux directeurs (Impact: Élevé)"}, {"id": "BR10", "text": "• 2025-04-05: Tensions commerciales USA-Chine : nouvelles menaces de tarifs douaniers (Impact: Modéré)"}]
+MARKETS = [{"id": "MC1", "text": "iShares MSCI Israel ETF (Israel):"}, {"id": "MC2", "text": "iShares MSCI Switzerland ETF (Suisse):"}, {"id": "MC3", "text": "iShares MSCI Spain ETF (Espagne):"}, {"id": "MC4", "text": "Global X MSCI Argentina ETF (Argentine):"}, {"id": "MC5", "text": "iShares MSCI Turkey ETF (Turquie):"}, {"id": "MC6", "text": "Invesco STOXX Europe 600 UCITS ETF (Zone Euro):"}]
+SECTORS = []
+THEMES = []
+
+ALLOWED_EQUITIES = [{"id": "EQ_1", "name": "AMERICAN FINANCIAL GROUP INC", "symbol": "AMERIC", "score": 1.579, "risk_class": "low", "flags": {"overextended": false}, "sector": "Finance", "country": "Etats-Unis", "ytd": 6.74, "perf_1m": 8.2}, {"id": "EQ_2", "name": "ABBVIE INC", "symbol": "ABBVIE", "score": 1.528, "risk_class": "low", "flags": {"overextended": false}, "sector": "Santé", "country": "Etats-Unis", "ytd": 22.89, "perf_1m": 6.24}, {"id": "EQ_3", "name": "TJX INC", "symbol": "TJX", "score": 1.501, "risk_class": "low", "flags": {"overextended": false}, "sector": "Biens de consommation cycliques", "country": "Etats-Unis", "ytd": 15.91, "perf_1m": 3.64}, {"id": "EQ_4", "name": "ADVANCED INFO SERVICE NON-VOTING D", "symbol": "ADVANC", "score": 1.4, "risk_class": "low", "flags": {"overextended": false}, "sector": "La communication", "country": "Thaïlande", "ytd": 5.42, "perf_1m": 13.08}, {"id": "EQ_5", "name": "RIO TINTO PLC", "symbol": "RIO", "score": 1.327, "risk_class": "low", "flags": {"overextended": false}, "sector": "Matériaux", "country": "Royaume-Uni", "ytd": -0.34, "perf_1m": 3.74}, {"id": "EQ_6", "name": "JM SMUCKER", "symbol": "JM", "score": 1.215, "risk_class": "low", "flags": {"overextended": false}, "sector": "Biens de consommation de base", "country": "Etats-Unis", "ytd": -0.56, "perf_1m": -0.72}, {"id": "EQ_7", "name": "FIRSTENERGY CORP", "symbol": "FIRSTE", "score": 1.196, "risk_class": "low", "flags": {"overextended": false}, "sector": "Services publics", "country": "Etats-Unis", "ytd": 10.45, "perf_1m": 1.01}, {"id": "EQ_8", "name": "HALLIBURTON", "symbol": "HALLIB", "score": 1.126, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Energie", "country": "Etats-Unis", "ytd": -11.65, "perf_1m": 9.67}, {"id": "EQ_9", "name": "LOCKHEED MARTIN CORP", "symbol": "LOCKHE", "score": 1.099, "risk_class": "low", "flags": {"overextended": false}, "sector": "Industries", "country": "Etats-Unis", "ytd": 1.65, "perf_1m": 9.49}, {"id": "EQ_10", "name": "ALEXANDRIA REAL ESTATE EQUITIES RE", "symbol": "ALEXAN", "score": 1.094, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Immobilier", "country": "Etats-Unis", "ytd": -11.32, "perf_1m": 7.51}, {"id": "EQ_11", "name": "MOTOROLA SOLUTIONS INC", "symbol": "MOTORO", "score": 0.989, "risk_class": "low", "flags": {"overextended": false}, "sector": "Technologie de l'information", "country": "Etats-Unis", "ytd": 0.46, "perf_1m": 0.14}, {"id": "EQ_12", "name": "LOEWS CORP", "symbol": "LOEWS", "score": 1.246, "risk_class": "low", "flags": {"overextended": false}, "sector": "Finance", "country": "Etats-Unis", "ytd": 17.69, "perf_1m": 3.55}, {"id": "EQ_13", "name": "JOHNSON & JOHNSON", "symbol": "JOHNSO", "score": 1.493, "risk_class": "low", "flags": {"overextended": false}, "sector": "Santé", "country": "Etats-Unis", "ytd": 22.52, "perf_1m": -1.1}, {"id": "EQ_14", "name": "ROSS STORES INC", "symbol": "ROSS", "score": 1.29, "risk_class": "low", "flags": {"overextended": false}, "sector": "Biens de consommation cycliques", "country": "Etats-Unis", "ytd": -2.35, "perf_1m": 1.06}, {"id": "EQ_15", "name": "OMNICOM GROUP INC", "symbol": "OMNICO", "score": 0.736, "risk_class": "mid", "flags": {"overextended": false}, "sector": "La communication", "country": "Etats-Unis", "ytd": -11.18, "perf_1m": -2.99}, {"id": "EQ_16", "name": "JSW STEEL LTD", "symbol": "JSW", "score": 1.174, "risk_class": "low", "flags": {"overextended": false}, "sector": "Matériaux", "country": "Inde", "ytd": 26.91, "perf_1m": 9.74}, {"id": "EQ_17", "name": "IMPERIAL BRANDS PLC", "symbol": "IMPERI", "score": 1.181, "risk_class": "low", "flags": {"overextended": false}, "sector": "Biens de consommation de base", "country": "Royaume-Uni", "ytd": 20.88, "perf_1m": 0.1}, {"id": "EQ_18", "name": "ENTERGY CORP", "symbol": "ENTERG", "score": 1.172, "risk_class": "low", "flags": {"overextended": false}, "sector": "Services publics", "country": "Etats-Unis", "ytd": 21.59, "perf_1m": 2.81}, {"id": "EQ_19", "name": "CHEVRON CORP", "symbol": "CHEVRO", "score": 1.088, "risk_class": "low", "flags": {"overextended": false}, "sector": "Energie", "country": "Etats-Unis", "ytd": 9.05, "perf_1m": 1.13}, {"id": "EQ_20", "name": "FERROVIAL", "symbol": "FERROV", "score": 0.823, "risk_class": "low", "flags": {"overextended": false}, "sector": "Industries", "country": "Espagne", "ytd": 18.7, "perf_1m": 3.68}, {"id": "EQ_21", "name": "HEALTHPEAK PROPERTIES INC", "symbol": "HEALTH", "score": 0.961, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Immobilier", "country": "Etats-Unis", "ytd": -7.27, "perf_1m": 5.92}, {"id": "EQ_22", "name": "ZOOM COMMUNICATIONS INC CLASS A", "symbol": "ZOOM", "score": 0.126, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Technologie de l'information", "country": "Etats-Unis", "ytd": 1.55, "perf_1m": 1.84}, {"id": "EQ_23", "name": "STATE BANK OF INDIA", "symbol": "STATE", "score": 1.036, "risk_class": "low", "flags": {"overextended": false}, "sector": "Finance", "country": "Inde", "ytd": 9.2, "perf_1m": 7.22}, {"id": "EQ_24", "name": "ALKEM LABORATORIES LTD", "symbol": "ALKEM", "score": 1.374, "risk_class": "low", "flags": {"overextended": false}, "sector": "Santé", "country": "Inde", "ytd": 0.09, "perf_1m": 2.84}, {"id": "EQ_25", "name": "THE SWATCH GROUP AG", "symbol": "THE", "score": 1.228, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Biens de consommation cycliques", "country": "Suisse", "ytd": -3.59, "perf_1m": 7.43}]
+ALLOWED_ETFS_STANDARD = [{"id": "ETF_s1", "name": "iShares MSCI Spain ETF", "symbol": "ISHARE", "score": 2.869, "risk_class": "low", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 59.66, "perf_1m": 0.0}, {"id": "ETF_s2", "name": "SPDR Gold Shares", "symbol": "SPDR", "score": 2.675, "risk_class": "low", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 44.36, "perf_1m": 0.0}, {"id": "ETF_s3", "name": "Global X MSCI Greece ETF", "symbol": "GLOBAL", "score": 2.459, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 65.9, "perf_1m": 0.0}, {"id": "ETF_s4", "name": "iShares U.S. Aerospace & Defense ETF", "symbol": "ISHARE", "score": 2.441, "risk_class": "low", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 43.54, "perf_1m": 0.0}, {"id": "ETF_s5", "name": "iShares MSCI South Korea ETF", "symbol": "ISHARE", "score": 1.996, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 56.47, "perf_1m": 0.0}, {"id": "ETF_s6", "name": "VanEck Uranium & Nuclear ETF", "symbol": "VANECK", "score": 1.933, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 61.39, "perf_1m": 0.0}, {"id": "ETF_s7", "name": "SPDR S&P Aerospace & Defense ETF", "symbol": "SPDR", "score": 1.927, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 41.05, "perf_1m": 0.0}, {"id": "ETF_s8", "name": "iShares Silver Trust", "symbol": "ISHARE", "score": 1.914, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 56.93, "perf_1m": 0.0}, {"id": "ETF_s9", "name": "iShares MSCI Mexico ETF", "symbol": "ISHARE", "score": 1.832, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 43.0, "perf_1m": 0.0}, {"id": "ETF_s10", "name": "iShares MSCI China Small-Cap ETF", "symbol": "ISHARE", "score": 1.806, "risk_class": "mid", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 57.09, "perf_1m": 0.0}]
+ALLOWED_BOND_ETFS = [{"id": "ETF_b1", "name": "PIMCO Multisector Bond Active ETF", "symbol": "PIMCO", "score": 2.266, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 3.41, "perf_1m": 0.0}, {"id": "ETF_b2", "name": "Alpha Architect 1-3 Month Boxx Fund", "symbol": "ALPHA", "score": 1.72, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 3.19, "perf_1m": 0.0}, {"id": "ETF_b3", "name": "iShares Flexible Income Active ETF", "symbol": "ISHARE", "score": 1.356, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 2.28, "perf_1m": 0.0}, {"id": "ETF_b4", "name": "Aptus Defined Risk ETF", "symbol": "APTUS", "score": 0.845, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 4.93, "perf_1m": 0.0}, {"id": "ETF_b5", "name": "SPDR DoubleLine Total Return Tactical ETF", "symbol": "SPDR", "score": 0.294, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 2.99, "perf_1m": 0.0}, {"id": "ETF_b6", "name": "Hartford Strategic Income ETF", "symbol": "HARTFO", "score": -0.064, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 3.98, "perf_1m": 0.0}, {"id": "ETF_b7", "name": "First Trust Limited Duration Investment Grade Corporate ETF", "symbol": "FIRST", "score": -0.096, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 1.78, "perf_1m": 0.0}, {"id": "ETF_b8", "name": "JPMorgan Income ETF", "symbol": "JPMORG", "score": -0.108, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 1.68, "perf_1m": 0.0}, {"id": "ETF_b9", "name": "Capital Group Core Plus Income ETF", "symbol": "CAPITA", "score": -0.2, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 2.32, "perf_1m": 0.0}, {"id": "ETF_b10", "name": "SGI Enhanced Core ETF", "symbol": "SGI", "score": -0.304, "risk_class": "bond", "flags": {"overextended": false}, "sector": "Unknown", "country": "Global", "ytd": 0.9, "perf_1m": 0.0}]
+ALLOWED_CRYPTO = [{"id": "CR_1", "name": "ZEC/EUR", "symbol": "ZEC/EU", "sevenDaysPositif": true, "score": 3.659, "risk_class": "mid", "ytd": 13.94, "perf_1m": 0.0}, {"id": "CR_2", "name": "ZEC/USD", "symbol": "ZEC/US", "sevenDaysPositif": true, "score": 3.627, "risk_class": "mid", "ytd": 30.97, "perf_1m": 0.0}, {"id": "CR_3", "name": "BTCST/USD", "symbol": "BTCST/", "sevenDaysPositif": true, "score": 2.665, "risk_class": "mid", "ytd": -54.05, "perf_1m": 0.0}, {"id": "CR_4", "name": "PORTO/USD", "symbol": "PORTO/", "sevenDaysPositif": true, "score": 2.564, "risk_class": "low", "ytd": -27.81, "perf_1m": 0.0}, {"id": "CR_5", "name": "GNO/USD", "symbol": "GNO/US", "sevenDaysPositif": true, "score": 2.438, "risk_class": "low", "ytd": -46.31, "perf_1m": 0.0}]
+
+## Règles ABSOLUES v3 (scoring quantitatif)
+- Choisir uniquement des actifs dont l'`id` figure dans les listes ALLOWED_*.
+- 3 portefeuilles : chacun **12 à 15** lignes (somme Actions+ETF+Obligations+Crypto).
+- **≥2 catégories** par portefeuille (parmi: Actions, ETF, Obligations, Crypto).
+- **Somme des allocations = 100.00** avec **2 décimales**. La **dernière ligne** ajuste pour atteindre 100.00.
+- Catégorie **Obligations** = ALLOWED_BOND_ETFS exclusivement. Interdit ailleurs.
+- Catégorie **ETF** = uniquement ALLOWED_ETFS_STANDARD (aucun bond ETF ici).
+- Catégorie **Crypto** = actifs de ALLOWED_CRYPTO avec `sevenDaysPositif=true`.
+- Un même `id` ne peut apparaître qu'**une fois** par portefeuille.
+- Diversification anti-doublon (ETF) :
+  - Éviter deux ETF offrant la même exposition (même thème/indice/métal).
+  - **Au plus 1 ETF par thème fortement corrélé** (gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).
+  - Interdit si overlap thématique ≥ 0.6 ou overlap de holdings ≥ 0.5.
+  - **Profil Modéré : somme des lignes `Crypto` ≤ 5.00%** (si aucun actif crypto éligible, mettre 0%).
+- Spécifique au profil Stable :
+  - **Aucune ligne Crypto (0%)**.
+
+## Règles de scoring quantitatif (NOUVELLES)
+- N'utiliser que les actifs avec `flags.overextended=false`.
+- **≥70% des lignes** d'un portefeuille doivent avoir `score ≥ 0`.
+- La **médiane des scores par portefeuille ≥ 0**.
+- Interdit: ETF à effet de levier (déjà exclus en amont).
+- **Anti-fin-de-cycle**: Interdiction d'ajouter un actif avec `YTD>100%` si `Perf 1M ≤ 0`.
+- Privilégier équilibrage `risk_class` : mix low/mid selon profil (Stable=80% low, Modéré=60% low, Agressif=40% low).
+
+## Style de justification (obligatoire, par ligne)
+- Commencer par: **"Pondération {allocation_pct:.2f}% —"**
+- Expliquer la logique: **marché** (MARKETS), **secteur** (SECTORS), **thème** (THEMES) et/ou **brief macro** (BRIEF), en reliant explicitement l’exposition visée (ex: "large cap US", "or physique", "obligations souveraines euro 3–5 ans").
+- Mentionner **le score** et **la classe de risque**: "Score {score:+.2f}, risque {risk_class}"
+- Terminer par **Réfs** avec des IDs (ex: `Réfs: [BR2,"MC1","SEC3"]`).
+- Ton neutre et descriptif (pas d’incitation). Exemple court:
+  "Pondération 7.50% — exposition théorique au S&P 500, portée par momentum US large cap et thématique IA diffuse; Score +0.82, risque mid. Réfs: [BR1, MC2, TH1]."
+
+## COMPLIANCE (obligatoire)
+- Ce contenu est une **information financière générale**. Il **ne constitue pas** un conseil en investissement personnalisé ni une recommandation individuelle.
+- N'utilise **aucune** donnée personnelle, ne déduis **aucun** profil de l'utilisateur et **n'adapte** pas les portefeuilles au lecteur. Reste **strictement générique**.
+- **Langage neutre uniquement** : interdit d'employer « acheter », « vendre », « conserver », « à privilégier », « fortement recommandé », « garanti », « sans risque », « objectif de prix », « rendement attendu ». Utiliser des formulations comme « pondération modèle », « exposition théorique », « scénarios possibles ».
+- **Aucune incitation** à passer un ordre, **aucun lien affilié**, **aucune promesse** de performance.
+- **Toujours** ajouter dans la sortie un bloc `Compliance` avec :
+  - `Disclaimer` : texte court (2–3 phrases) rappelant que c'est de l'information générale, que les performances passées ne préjugent pas des performances futures, et qu'il existe un risque de perte en capital.
+  - `Risques` : 3–6 puces, incluant au minimum : « Perte en capital possible », « Performances passées ≠ performances futures », « Volatilité des marchés », et pour la catégorie Crypto : « Forte volatilité, possibilité de perte totale ».
+  - `Methodologie` : 1–2 phrases sur l'approche quantitative (scoring momentum/risque/liquidité) et ses limites (incertitudes, données susceptibles d'évoluer).
+- Les commentaires/justifications doivent rester **descriptifs** (pas d'impératifs, pas d'injonctions).
+
+## Logique d'investissement (synthèse)
+- Chaque actif doit être justifié par **≥2 références** parmi BRIEF(Macro), MARKETS(Géo), SECTORS(Secteur), THEMES(Thèmes).
+  Utilise les **IDs** (ex: ["BR2","MC1"]).
+- Ne **jamais** choisir sur la seule base de la perf YTD ou du score.
+- Mentionne brièvement le score et la classe de risque dans la justification.
+- Préférer les actifs avec score > 0 et diversification sectorielle/géographique.
+
+## Commentaires attendus (par portefeuille)
+- `Commentaire` (≤1200 caractères), structure:
+  1) Actualités (BRIEF) — 2–3 phrases neutres
+  2) Marchés (MARKETS) — 2–3 phrases
+  3) Secteurs (SECTORS/THEMES) — 2–3 phrases
+  4) Approche quantitative — 2–3 phrases sur l'équilibrage score/risque
+
+## Actifs exclus
+- Fournis 2–3 `ActifsExclus` avec `reason` courte et `refs` (IDs) expliquant l'exclusion.
+- Priorité aux actifs sur-étendus ou à score très négatif.
+
+## Format de SORTIE (STRICT, JSON UNIQUEMENT, pas de markdown, aucun texte hors JSON)
+{
+  "Agressif": {
+    "Commentaire": "...",
+    "Lignes": [
+      {"id":"EQ_1",   "name":"Microsoft Corporation", "category":"Actions",     "allocation_pct":12.50, "justificationRefs":["BR1","SEC2"], "justification":"Score 1.23 (momentum tech) + résilience IA face ralentissement", "score":1.23, "risk_class":"low"},
+      {"id":"ETF_s1", "name":"Vanguard S&P 500 ETF",  "category":"ETF",         "allocation_pct":25.00, "justificationRefs":["MC1","TH1"],  "justification":"Score 0.87 + exposition théorique large marché US", "score":0.87, "risk_class":"mid"},
+      {"id":"ETF_b1", "name":"iShares Euro Govt Bond", "category":"Obligations", "allocation_pct":15.00, "justificationRefs":["BR3","SEC4"], "justification":"Pondération refuge géopolitique", "score":0.12, "risk_class":"bond"},
+      {"id":"CR_1",   "name":"Bitcoin",               "category":"Crypto",      "allocation_pct":5.00,  "justificationRefs":["TH3","MC2"],  "justification":"Score 2.15 + exposition institutionnelle", "score":2.15, "risk_class":"mid"}
+    ],
+    "ActifsExclus": [
+      {"name":"Tesla Inc", "reason":"Score -0.85 + sur-extension YTD >150%", "refs":["BR1","SEC1"]},
+      {"name":"ARKK ETF", "reason":"Score -1.23 + exposition correction sévère", "refs":["BR2"]}
+    ],
+    "Compliance": {
+      "Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
+      "Risques": [
+        "Perte en capital possible",
+        "Performances passées ne préjugent pas des performances futures",
+        "Volatilité accrue selon les classes d'actifs",
+        "Crypto-actifs : volatilité élevée, perte totale possible",
+        "Risques de change pour les actifs internationaux",
+        "Risque de liquidité sur certains marchés"
+      ],
+      "Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
+    }
+  },
+  "Modéré": { "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...], "Compliance": {...} },
+  "Stable": { "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...], "Compliance": {...} }
+}
+
+### CONTRÔLE QUALITÉ v3 (obligatoire avant d'émettre la réponse)
+- Vérifie que chaque portefeuille a 12–15 lignes, ≥2 catégories, somme = 100.00 exactement (2 décimales).
+- Vérifie qu'aucun `id` n'est dupliqué et que chaque catégorie respecte ses univers autorisés.
+- Vérifie que ≥70% des actifs ont score ≥ 0 et médiane des scores ≥ 0.
+- Vérifie l'équilibrage risk_class selon profil.
+- Vérifie que chaque portefeuille contient le bloc `Compliance` complet.
+- Si une règle échoue, corrige puis ne sors que le JSON final conforme.
+- Ta réponse doit commencer par `{` et finir par `}` — **aucun autre caractère**.
+
+Contexte temporel: Portefeuilles optimisés pour octobre 2025.
