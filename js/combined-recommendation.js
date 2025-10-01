@@ -4833,8 +4833,7 @@ getStatusExplanations(statusId, answers) {
     bracket_45: '45%'
   };
   const tmiLabel = tmiMap[A.tax_bracket] || null;
-
-  const fmt€ = (n) => Number.isFinite(+n) ? `${Number(n).toLocaleString('fr-FR')} €` : '';
+  const fmtEUR = (n) => Number.isFinite(+n) ? `${Number(n).toLocaleString('fr-FR')} €` : '';
 
   // Micro helper (utilise ton helper si dispo, sinon fallback local)
   const microThreshold = (() => {
