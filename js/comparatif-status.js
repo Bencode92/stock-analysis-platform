@@ -1,16 +1,66 @@
 /**
  * comparatif-statuts.js - Tableau comparatif des formes juridiques
- * Version 2025 avec seuils à jour et comparaison intelligente
+ * Version 2025 ULTRA - Métas, scoring, diff-only, badges, simulateur
  */
 
 // Fonction d'initialisation disponible globalement pour être appelée depuis app.js
 window.initComparatifStatuts = function() {
-    console.log("Initialisation du tableau comparatif des statuts");
+    console.log("Initialisation du tableau comparatif des statuts (version ultra 2025)");
     window.createComparatifTable('comparatif-container');
 };
 
 // Encapsulation du reste du code dans une IIFE
 (function() {
+    // ========== MÉTAS FALLBACK (en attendant combined-recommendation.js) ==========
+    const META_FALLBACK = {
+        'MICRO': {
+            meta_payout: { peut_salaire: false, peut_dividendes: false, dividendes_cot_sociales: 'n/a', base_cotisations: 'bénéfice' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Bénéfice pris en compte par Pôle Emploi, attention dépassement plafonds' },
+            meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false, migration_simple: 'EI→société (apport/cession)' },
+            meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'faible' }
+        },
+        'EI': {
+            meta_payout: { peut_salaire: false, peut_dividendes: false, dividendes_cot_sociales: 'n/a', base_cotisations: 'bénéfice' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Bénéfice pris en compte, pas de dividendes' },
+            meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false, migration_simple: 'EI→société (apport/cession)' },
+            meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'faible' }
+        },
+        'EURL': {
+            meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: '>10%', base_cotisations: 'rémunération + dividendes>10%' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non pris en compte ARE, salaire=baisse ARE' },
+            meta_evolution: { accueil_investisseurs: 'moyen', entree_associes_facile: true, migration_simple: 'EURL→SARL facile' },
+            meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'moyenne' }
+        },
+        'SASU': {
+            meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: 'non', base_cotisations: 'rémunération' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non pris en compte ; salaire=baisse ARE ; attention requalification abus' },
+            meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'SASU→SAS très simple' },
+            meta_dirigeant: { statut_dirigeant: 'assimilé salarié', couverture_dirigeant: 'élevée' }
+        },
+        'SARL': {
+            meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: '>10%', base_cotisations: 'rémunération + dividendes>10%' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE ; salaire=baisse ARE' },
+            meta_evolution: { accueil_investisseurs: 'moyen', entree_associes_facile: true, migration_simple: 'Transformation SAS possible' },
+            meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'moyenne' }
+        },
+        'SAS': {
+            meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: 'non', base_cotisations: 'rémunération' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE ; salaire=baisse ARE ; attention requalification' },
+            meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'Actions de préférence, BSPCE' },
+            meta_dirigeant: { statut_dirigeant: 'assimilé salarié', couverture_dirigeant: 'élevée' }
+        }
+    };
+
+    // Rates 2025 pour simulateur
+    const RATES_2025 = {
+        pfu: 0.30,
+        cot_sasu_employeur: 0.42,
+        cot_sasu_salarie: 0.22,
+        cot_tns: 0.45,
+        seuil_div_tns: 0.10,
+        is_rate: 0.15 // jusqu'à 42.5k, puis 25%
+    };
+
     // Injecter le CSS nécessaire pour le tableau
     function injectCSS() {
         const style = document.createElement('style');
@@ -39,6 +89,167 @@ window.initComparatifStatuts = function() {
                 color: rgba(230, 230, 230, 0.8);
                 margin-bottom: 1.5rem;
                 line-height: 1.5;
+            }
+
+            /* NOUVEAUX STYLES - Filtres d'intention */
+            .intent-filters {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+                margin-bottom: 1.5rem;
+                padding: 1rem;
+                background: rgba(1, 35, 65, 0.5);
+                border-radius: 8px;
+                border: 1px solid rgba(0, 255, 135, 0.2);
+            }
+
+            .intent-filter-item {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.5rem 0.75rem;
+                background: rgba(1, 42, 74, 0.5);
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .intent-filter-item:hover {
+                background: rgba(1, 42, 74, 0.8);
+            }
+
+            .intent-filter-item.active {
+                background: rgba(0, 255, 135, 0.15);
+                border: 1px solid rgba(0, 255, 135, 0.4);
+            }
+
+            .intent-filter-item input[type="checkbox"] {
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+                accent-color: #00FF87;
+            }
+
+            .intent-filter-item label {
+                cursor: pointer;
+                font-size: 0.875rem;
+                user-select: none;
+            }
+
+            /* Badges sur les lignes */
+            .status-badges {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.25rem;
+                margin-top: 0.25rem;
+            }
+
+            .status-badge {
+                display: inline-flex;
+                align-items: center;
+                padding: 0.125rem 0.375rem;
+                border-radius: 3px;
+                font-size: 0.65rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+            }
+
+            .badge-salary { background: rgba(59, 130, 246, 0.2); color: #60A5FA; }
+            .badge-dividends { background: rgba(236, 72, 153, 0.2); color: #EC4899; }
+            .badge-are { background: rgba(16, 185, 129, 0.2); color: #10B981; }
+            .badge-investors { background: rgba(245, 158, 11, 0.2); color: #F59E0B; }
+            .badge-tns { background: rgba(139, 92, 246, 0.2); color: #A78BFA; }
+            .badge-assimile { background: rgba(34, 211, 238, 0.2); color: #22D3EE; }
+
+            /* Mode Diff-only */
+            .diff-mode-toggle {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.5rem 0.75rem;
+                background: rgba(1, 42, 74, 0.5);
+                border-radius: 6px;
+                margin-bottom: 1rem;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .diff-mode-toggle:hover {
+                background: rgba(1, 42, 74, 0.8);
+            }
+
+            .diff-mode-toggle.active {
+                background: rgba(0, 255, 135, 0.15);
+                border: 1px solid rgba(0, 255, 135, 0.4);
+            }
+
+            /* Score et pourquoi */
+            .status-score {
+                display: inline-flex;
+                align-items: center;
+                padding: 0.25rem 0.5rem;
+                background: rgba(0, 255, 135, 0.1);
+                border-radius: 4px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                margin-left: 0.5rem;
+            }
+
+            .status-why {
+                font-size: 0.7rem;
+                color: rgba(255, 255, 255, 0.6);
+                margin-top: 0.25rem;
+                font-style: italic;
+            }
+
+            /* Simulateur Net Perso */
+            #simulator-panel {
+                position: fixed;
+                right: -400px;
+                top: 100px;
+                width: 380px;
+                max-height: calc(100vh - 120px);
+                background: rgba(1, 22, 39, 0.95);
+                border: 1px solid rgba(0, 255, 135, 0.3);
+                border-radius: 12px;
+                padding: 1.5rem;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+                z-index: 100;
+                transition: right 0.3s;
+                overflow-y: auto;
+            }
+
+            #simulator-panel.open {
+                right: 20px;
+            }
+
+            .simulator-toggle-btn {
+                position: fixed;
+                right: 20px;
+                top: 120px;
+                background: rgba(0, 255, 135, 0.2);
+                border: 1px solid rgba(0, 255, 135, 0.3);
+                color: #00FF87;
+                padding: 0.75rem 1rem;
+                border-radius: 8px;
+                cursor: pointer;
+                z-index: 99;
+                transition: all 0.2s;
+                font-weight: 600;
+            }
+
+            .simulator-toggle-btn:hover {
+                background: rgba(0, 255, 135, 0.3);
+                transform: translateY(-2px);
+            }
+
+            .scenario-result {
+                background: rgba(1, 42, 74, 0.5);
+                padding: 1rem;
+                border-radius: 8px;
+                margin-top: 1rem;
+                border-left: 3px solid #00FF87;
             }
 
             /* Filtres */
@@ -140,7 +351,7 @@ window.initComparatifStatuts = function() {
                 padding: 0.875rem 1rem;
                 border-bottom: 1px solid rgba(1, 42, 74, 0.5);
                 font-size: 0.875rem;
-                vertical-align: middle;
+                vertical-align: top;
             }
 
             .comparatif-table tr:last-child td {
@@ -158,7 +369,7 @@ window.initComparatifStatuts = function() {
             /* Cellules spécifiques */
             .statut-cell {
                 display: flex;
-                align-items: center;
+                align-items: flex-start;
                 gap: 0.75rem;
             }
 
@@ -172,6 +383,7 @@ window.initComparatifStatuts = function() {
                 background-color: rgba(1, 42, 74, 0.5);
                 color: #00FF87;
                 font-size: 1rem;
+                flex-shrink: 0;
             }
 
             .statut-info {
@@ -187,7 +399,6 @@ window.initComparatifStatuts = function() {
             .statut-fullname {
                 font-size: 0.75rem;
                 color: rgba(230, 230, 230, 0.6);
-                max-width: 180px;
             }
 
             /* État du chargement */
@@ -282,6 +493,19 @@ window.initComparatifStatuts = function() {
 
                 #smart-comparison .grid {
                     grid-template-columns: 1fr !important;
+                }
+
+                #simulator-panel {
+                    width: 100%;
+                    right: -100%;
+                    left: 0;
+                    top: 0;
+                    max-height: 100vh;
+                    border-radius: 0;
+                }
+
+                #simulator-panel.open {
+                    right: 0;
                 }
             }
 
@@ -571,19 +795,142 @@ window.initComparatifStatuts = function() {
         return { obligationsCle: '' };
     }
 
+    // ========== MOTEUR DE SCORING ==========
+    function scoreStatut(statut, answers) {
+        let s = 0;
+        const why = [];
+        const meta = statut.meta_payout || {};
+        const areM = statut.meta_are || {};
+        const evoM = statut.meta_evolution || {};
+        const dirM = statut.meta_dirigeant || {};
+
+        // Salaire / dividendes
+        if (answers.veut_salaire) {
+            if (meta.peut_salaire) { s += 3; } 
+            else { why.push('Pas de salaire possible'); }
+        }
+        if (answers.veut_dividendes) {
+            if (meta.peut_dividendes) { 
+                s += 3;
+                if (meta.dividendes_cot_sociales === 'non') {
+                    s += 2;
+                    why.push('Dividendes sans cotisations');
+                }
+            }
+        }
+
+        // ARE
+        if (answers.en_chomage) {
+            if (areM.are_compatible_sans_salaire) { s += 2; why.push('ARE ok sans salaire'); }
+            if (areM.are_baisse_si_salaire && answers.veut_salaire) { 
+                s -= 1; 
+                why.push('Salaire ↓ ARE'); 
+            }
+        }
+
+        // Associés / Levée
+        if (answers.prevoit_associes !== 'non') {
+            if (evoM.entree_associes_facile) { s += 2; } 
+            else { s -= 1; why.push('Entrée associés encadrée'); }
+        }
+        if (answers.levee_fonds !== 'non') {
+            const level = evoM.accueil_investisseurs;
+            if (level === 'élevé') { s += 3; why.push('Investisseurs friendly'); }
+            else if (level === 'moyen') { s += 1; }
+            else { s -= 1; }
+        }
+
+        // Couverture sociale
+        if (answers.veut_salaire && dirM.statut_dirigeant === 'assimilé salarié') { 
+            s += 1; 
+            why.push('Assimilé salarié');
+        }
+
+        return { score: s, why: why.slice(0, 3) }; // Max 3 raisons
+    }
+
+    // ========== MODE DIFF-ONLY ==========
+    function onlyDifferences(rows, columns) {
+        const keys = columns.map(c => c.key).filter(k => k !== 'name');
+        return keys.filter(k => {
+            const vals = rows.map(r => String(r[k] ?? '—').toLowerCase());
+            return new Set(vals).size > 1;
+        });
+    }
+
     // Normalise une fiche statut pour l'affichage
-    function enrichForDisplay(statut) {
+    function enrichForDisplay(statut, answers = {}) {
         const derived = deriveObligations(statut.shortName || statut.name);
         const km = statut.key_metrics || {};
-        return {
+        
+        // Merge avec métas fallback si manquant
+        const shortName = (statut.shortName || '').toUpperCase();
+        const fallback = META_FALLBACK[shortName] || {};
+        
+        const enriched = {
             ...statut,
             regimeTVA: statut.regimeTVA || derived.regimeTVA,
             plafondCA: statut.plafondCA || derived.plafondCA || '—',
             obligationsCle: statut.obligationsCle || derived.obligationsCle || '—',
-            // Pour la colonne "Protection patrimoine": on affiche étoiles + texte si dispo
             _pp_stars: Number.isFinite(km.patrimony_protection) ? km.patrimony_protection : null,
-            _pp_text: toText(statut.protectionPatrimoine)
+            _pp_text: toText(statut.protectionPatrimoine),
+            meta_payout: statut.meta_payout || fallback.meta_payout || {},
+            meta_are: statut.meta_are || fallback.meta_are || {},
+            meta_evolution: statut.meta_evolution || fallback.meta_evolution || {},
+            meta_dirigeant: statut.meta_dirigeant || fallback.meta_dirigeant || {}
         };
+
+        // Scoring si answers fourni
+        if (Object.keys(answers).length > 0) {
+            const scoring = scoreStatut(enriched, answers);
+            enriched._score = scoring.score;
+            enriched._why = scoring.why;
+        }
+
+        return enriched;
+    }
+
+    // ========== SIMULATEUR NET PERSO ==========
+    function simulateNet(statut, benef, scenario) {
+        const meta = statut.meta_payout || {};
+        let net = 0, cout = 0;
+
+        if (scenario === 'salaire' && meta.peut_salaire) {
+            // Salaire 100% (SASU/SAS style)
+            const brut = benef / (1 + RATES_2025.cot_sasu_employeur);
+            const charges = brut * (RATES_2025.cot_sasu_employeur + RATES_2025.cot_sasu_salarie);
+            net = brut * (1 - RATES_2025.cot_sasu_salarie);
+            cout = benef;
+        } else if (scenario === 'dividendes' && meta.peut_dividendes) {
+            // Dividendes 100% (après IS)
+            const is = benef * RATES_2025.is_rate;
+            const dividBrut = benef - is;
+            
+            if (meta.dividendes_cot_sociales === '>10%') {
+                // EURL/SARL : cotis sur part >10%
+                const seuil = benef * RATES_2025.seuil_div_tns;
+                const partCotis = Math.max(0, dividBrut - seuil);
+                const cotisSociales = partCotis * RATES_2025.cot_tns;
+                net = dividBrut * (1 - RATES_2025.pfu) - cotisSociales;
+            } else {
+                // SASU/SAS : PFU seulement
+                net = dividBrut * (1 - RATES_2025.pfu);
+            }
+            cout = benef;
+        } else if (scenario === 'mix' && meta.peut_salaire && meta.peut_dividendes) {
+            // 50/50
+            const half = benef / 2;
+            const resultSal = simulateNet(statut, half, 'salaire');
+            const resultDiv = simulateNet(statut, half, 'dividendes');
+            net = resultSal.net + resultDiv.net;
+            cout = benef;
+        } else {
+            // TNS ou impossible
+            net = benef * (1 - RATES_2025.cot_tns);
+            cout = benef;
+        }
+
+        return { net: Math.round(net), cout: Math.round(cout) };
     }
 
     // ========== FIN NOUVEAUX UTILITAIRES ==========
@@ -606,30 +953,54 @@ window.initComparatifStatuts = function() {
                 <div class="comparatif-header">
                     <h2 class="comparatif-title">Comparatif des formes juridiques 2025</h2>
                     <p class="comparatif-description">
-                        Tableau comparatif des principales caractéristiques des différentes formes juridiques en France.
-                        Utilisez les filtres ci-dessous pour personnaliser l'affichage selon vos besoins.
+                        Tableau comparatif intelligent : filtrez par intention, comparez les différences clés, simulez votre rémunération.
                     </p>
+
+                    <!-- NOUVEAUX FILTRES D'INTENTION -->
+                    <div class="intent-filters" id="intent-filters">
+                        <div class="intent-filter-item" data-intent="veut_salaire">
+                            <input type="checkbox" id="filter-salaire">
+                            <label for="filter-salaire">💼 Je veux du salaire</label>
+                        </div>
+                        <div class="intent-filter-item" data-intent="veut_dividendes">
+                            <input type="checkbox" id="filter-dividendes">
+                            <label for="filter-dividendes">💰 Je vise des dividendes</label>
+                        </div>
+                        <div class="intent-filter-item" data-intent="en_chomage">
+                            <input type="checkbox" id="filter-chomage">
+                            <label for="filter-chomage">🛡️ Je suis au chômage (ARE)</label>
+                        </div>
+                        <div class="intent-filter-item" data-intent="prevoit_associes">
+                            <input type="checkbox" id="filter-associes">
+                            <label for="filter-associes">👥 J'aurai des associés</label>
+                        </div>
+                        <div class="intent-filter-item" data-intent="levee_fonds">
+                            <input type="checkbox" id="filter-levee">
+                            <label for="filter-levee">🚀 Je veux lever des fonds</label>
+                        </div>
+                    </div>
                     
                     <div class="comparison-bar">
                         <div class="comparison-title">Comparer directement:</div>
                         <select id="status-dropdown" class="status-dropdown">
                             <option value="">Sélectionner un statut...</option>
-                            <!-- Les options seront générées ici -->
                         </select>
-                        <div class="comparison-items" id="comparison-items">
-                            <!-- Les éléments de comparaison seront ici -->
-                        </div>
+                        <div class="comparison-items" id="comparison-items"></div>
                         <button class="add-comparison-btn" id="add-comparison-btn">
                             <i class="fas fa-plus mr-1"></i> Ajouter
                         </button>
+                    </div>
+
+                    <!-- TOGGLE DIFF-ONLY -->
+                    <div class="diff-mode-toggle" id="diff-mode-toggle">
+                        <input type="checkbox" id="diff-mode-checkbox">
+                        <label for="diff-mode-checkbox">📊 Afficher uniquement les différences</label>
                     </div>
                     
                     <div class="comparatif-filters">
                         <div class="filter-group">
                             <label class="filter-label">Filtrer par critères:</label>
-                            <div class="criteria-buttons" id="criteria-buttons">
-                                <!-- Les boutons seront générés ici -->
-                            </div>
+                            <div class="criteria-buttons" id="criteria-buttons"></div>
                         </div>
                         
                         <div class="filter-group" style="max-width: 300px;">
@@ -642,12 +1013,17 @@ window.initComparatifStatuts = function() {
                 <div class="comparatif-table-container">
                     <table class="comparatif-table" id="comparatif-table">
                         <thead>
-                            <tr id="table-headers">
-                                <!-- Les en-têtes seront générés ici -->
-                            </tr>
+                            <tr id="table-headers"></tr>
                         </thead>
                         <tbody id="table-body">
-                            <!-- Les données seront générées ici -->
+                            <tr>
+                                <td colspan="10">
+                                    <div class="loading-state">
+                                        <div class="spinner"></div>
+                                        <p>Chargement des données...</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -655,23 +1031,43 @@ window.initComparatifStatuts = function() {
                 <div class="comparatif-notes">
                     <h3 class="notes-title">Notes explicatives</h3>
                     <div class="notes-list">
-                        <div class="notes-item">
-                            <span class="notes-term">IR</span> - Impôt sur le Revenu
-                        </div>
-                        <div class="notes-item">
-                            <span class="notes-term">IS</span> - Impôt sur les Sociétés
-                        </div>
-                        <div class="notes-item">
-                            <span class="notes-term">TNS</span> - Travailleur Non Salarié
-                        </div>
-                        <div class="notes-item">
-                            <span class="notes-term">CA</span> - Chiffre d'Affaires
-                        </div>
+                        <div class="notes-item"><span class="notes-term">IR</span> - Impôt sur le Revenu</div>
+                        <div class="notes-item"><span class="notes-term">IS</span> - Impôt sur les Sociétés</div>
+                        <div class="notes-item"><span class="notes-term">TNS</span> - Travailleur Non Salarié</div>
+                        <div class="notes-item"><span class="notes-term">CA</span> - Chiffre d'Affaires</div>
+                        <div class="notes-item"><span class="notes-term">PFU</span> - Prélèvement Forfaitaire Unique (30%)</div>
+                        <div class="notes-item"><span class="notes-term">ARE</span> - Allocation Retour à l'Emploi</div>
                     </div>
                     <p class="notes-disclaimer">
-                        Les informations présentées sont à jour pour l'année 2025. Pour plus de détails ou pour une 
-                        recommandation personnalisée, utilisez notre simulateur.
+                        Informations 2025. Le simulateur donne des estimations ; consultez un expert-comptable pour votre cas précis.
                     </p>
+                </div>
+                
+                <!-- SIMULATEUR NET PERSO -->
+                <button class="simulator-toggle-btn" id="simulator-toggle-btn">
+                    📊 Simulateur Net Perso
+                </button>
+                <div id="simulator-panel">
+                    <h3 style="color: #00FF87; margin-bottom: 1rem;">Simulateur Net Perso</h3>
+                    <label style="display: block; margin-bottom: 0.5rem;">Bénéfice annuel (€):</label>
+                    <input type="number" id="sim-benef" value="60000" style="width: 100%; padding: 0.5rem; border-radius: 4px; background: rgba(1, 42, 74, 0.7); border: 1px solid rgba(0, 255, 135, 0.3); color: #E6E6E6; margin-bottom: 1rem;">
+                    
+                    <label style="display: block; margin-bottom: 0.5rem;">Scénario:</label>
+                    <select id="sim-scenario" style="width: 100%; padding: 0.5rem; border-radius: 4px; background: rgba(1, 42, 74, 0.7); border: 1px solid rgba(0, 255, 135, 0.3); color: #E6E6E6; margin-bottom: 1rem;">
+                        <option value="salaire">100% Salaire</option>
+                        <option value="dividendes">100% Dividendes</option>
+                        <option value="mix">Mix 50/50</option>
+                    </select>
+
+                    <button id="sim-calculate" style="width: 100%; padding: 0.75rem; background: rgba(0, 255, 135, 0.2); border: 1px solid rgba(0, 255, 135, 0.5); border-radius: 8px; color: #00FF87; font-weight: 600; cursor: pointer; margin-bottom: 1rem;">
+                        Calculer
+                    </button>
+
+                    <div id="sim-results"></div>
+
+                    <button id="simulator-close" style="width: 100%; padding: 0.5rem; margin-top: 1rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: #E6E6E6; cursor: pointer;">
+                        Fermer
+                    </button>
                 </div>
                 
                 <!-- Boutons d'action flottants -->
@@ -681,19 +1077,6 @@ window.initComparatifStatuts = function() {
                     </button>
                 </div>
             </div>
-        `;
-
-        // Afficher l'état de chargement initial
-        const tableBody = document.getElementById('table-body');
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="10">
-                    <div class="loading-state">
-                        <div class="spinner"></div>
-                        <p>Chargement des données...</p>
-                    </div>
-                </td>
-            </tr>
         `;
 
         // Définir les critères de comparaison
@@ -719,9 +1102,19 @@ window.initComparatifStatuts = function() {
         let selectedCriterion = 'all';
         let searchTerm = '';
         let compareStatuts = [];
+        let diffMode = false;
+        let intentAnswers = {
+            veut_salaire: false,
+            veut_dividendes: false,
+            en_chomage: false,
+            prevoit_associes: 'non',
+            levee_fonds: 'non'
+        };
         
         // Initialiser les événements de comparaison
         initComparisonEvents();
+        initIntentFilters();
+        initSimulator();
 
         // Charger et afficher les données
         loadStatutData();
@@ -738,29 +1131,111 @@ window.initComparatifStatuts = function() {
             });
         });
 
-        // ========== DEBOUNCE SUR LA RECHERCHE ==========
+        // Debounce sur la recherche
         const debouncedUpdate = debounce(()=>{ updateTable(); }, 200);
         $('#search-input').addEventListener('input', (e)=>{
             searchTerm = e.target.value.toLowerCase();
             debouncedUpdate();
         });
+
+        // Diff mode toggle
+        $('#diff-mode-checkbox').addEventListener('change', (e) => {
+            diffMode = e.target.checked;
+            $('#diff-mode-toggle').classList.toggle('active', diffMode);
+            updateTable();
+        });
         
-        // Ajouter les écouteurs d'événements pour les boutons d'action        
+        // Bouton imprimer
         document.getElementById('print-btn').addEventListener('click', () => {
             window.print();
         });
+
+        // ========== INIT FILTRES D'INTENTION ==========
+        function initIntentFilters() {
+            $$('.intent-filter-item').forEach(item => {
+                const intent = item.dataset.intent;
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                
+                item.addEventListener('click', (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+                });
+
+                checkbox.addEventListener('change', () => {
+                    item.classList.toggle('active', checkbox.checked);
+                    
+                    if (intent === 'prevoit_associes' || intent === 'levee_fonds') {
+                        intentAnswers[intent] = checkbox.checked ? 'oui' : 'non';
+                    } else {
+                        intentAnswers[intent] = checkbox.checked;
+                    }
+                    
+                    updateTable();
+                });
+            });
+        }
+
+        // ========== INIT SIMULATEUR ==========
+        function initSimulator() {
+            const panel = $('#simulator-panel');
+            const toggleBtn = $('#simulator-toggle-btn');
+            const closeBtn = $('#simulator-close');
+            const calculateBtn = $('#sim-calculate');
+
+            toggleBtn.addEventListener('click', () => {
+                panel.classList.add('open');
+            });
+
+            closeBtn.addEventListener('click', () => {
+                panel.classList.remove('open');
+            });
+
+            calculateBtn.addEventListener('click', () => {
+                const benef = parseFloat($('#sim-benef').value) || 60000;
+                const scenario = $('#sim-scenario').value;
+                const resultsDiv = $('#sim-results');
+                
+                resultsDiv.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.6);">Calcul en cours...</p>';
+
+                setTimeout(() => {
+                    const comparingStatuts = compareStatuts.length > 0 
+                        ? compareStatuts.map(sn => Object.values(window.legalStatuses || {}).find(s => s.shortName === sn)).filter(Boolean)
+                        : Object.values(window.legalStatuses || {}).slice(0, 3);
+
+                    let html = '';
+                    comparingStatuts.forEach(statut => {
+                        const enriched = enrichForDisplay(statut, intentAnswers);
+                        const result = simulateNet(enriched, benef, scenario);
+                        
+                        html += `
+                            <div class="scenario-result">
+                                <h4 style="color: #00FF87; margin-bottom: 0.5rem;">${statut.shortName}</h4>
+                                <div style="display: grid; gap: 0.5rem;">
+                                    <div>Net perso: <b>${fmtEuro(result.net)}</b></div>
+                                    <div>Coût total: <b>${fmtEuro(result.cout)}</b></div>
+                                    <div style="font-size: 0.75rem; opacity: 0.7;">
+                                        Scénario: ${scenario === 'salaire' ? '100% Salaire' : scenario === 'dividendes' ? '100% Dividendes' : 'Mix 50/50'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    resultsDiv.innerHTML = html || '<p>Sélectionnez des statuts à comparer</p>';
+                }, 300);
+            });
+        }
 
         // Fonction pour initialiser les événements de comparaison
         function initComparisonEvents() {
             const addComparisonBtn = document.getElementById('add-comparison-btn');
             const statusDropdown = document.getElementById('status-dropdown');
             
-            // Remplir la liste déroulante avec les statuts disponibles
             function populateStatusDropdown() {
                 if (window.legalStatuses) {
                     statusDropdown.innerHTML = '<option value="">Sélectionner un statut...</option>';
-                    
-                    // Trier les statuts par nom avec locale fr
                     const statuts = Object.values(window.legalStatuses)
                         .sort((a,b)=> a.shortName.localeCompare(b.shortName,'fr',{sensitivity:'base'}));
                     
@@ -773,26 +1248,21 @@ window.initComparatifStatuts = function() {
                 }
             }
             
-            // Gérer le changement de sélection dans la liste déroulante
             statusDropdown.addEventListener('change', () => {
                 if (statusDropdown.value) {
                     addToComparison(statusDropdown.value);
-                    statusDropdown.value = ''; // Réinitialiser après la sélection
+                    statusDropdown.value = '';
                 }
             });
             
-            // Gérer le clic sur le bouton Ajouter
             addComparisonBtn.addEventListener('click', () => {
                 if (window.legalStatuses) {
-                    // Créer une liste des statuts disponibles pour sélection
                     const statuts = Object.values(window.legalStatuses);
                     if (statuts.length > 0) {
-                        // Trouver un statut qui n'est pas déjà dans la comparaison
                         const availableStatuts = statuts.filter(statut => 
                             !compareStatuts.includes(statut.shortName));
                         
                         if (availableStatuts.length > 0) {
-                            // Ajouter le premier statut disponible à la comparaison
                             addToComparison(availableStatuts[0].shortName);
                         } else {
                             alert('Tous les statuts sont déjà inclus dans la comparaison');
@@ -801,11 +1271,9 @@ window.initComparatifStatuts = function() {
                 }
             });
             
-            // Initialiser la liste déroulante quand les données sont disponibles
             if (window.legalStatuses) {
                 populateStatusDropdown();
             } else {
-                // Vérifier périodiquement si les données sont disponibles
                 const checkInterval = setInterval(() => {
                     if (window.legalStatuses) {
                         populateStatusDropdown();
@@ -814,17 +1282,14 @@ window.initComparatifStatuts = function() {
                 }, 500);
             }
 
-            // Écouter l'événement custom si disponible
             window.addEventListener('legalStatuses:ready', ()=>populateStatusDropdown(), { once:true });
         }
         
-        // Fonction pour ajouter un statut à la comparaison
         function addToComparison(statutShortName) {
             if (compareStatuts.includes(statutShortName)) return;
             
             if (compareStatuts.length >= 3) {
-                // Limiter à 3 statuts maximum
-                compareStatuts.shift(); // Retirer le premier
+                compareStatuts.shift();
             }
             
             compareStatuts.push(statutShortName);
@@ -832,7 +1297,6 @@ window.initComparatifStatuts = function() {
             updateTable();
         }
         
-        // Fonction pour retirer un statut de la comparaison
         function removeFromComparison(statutShortName) {
             const index = compareStatuts.indexOf(statutShortName);
             if (index !== -1) {
@@ -842,7 +1306,6 @@ window.initComparatifStatuts = function() {
             }
         }
         
-        // Fonction pour mettre à jour la barre de comparaison
         function updateComparisonBar() {
             const comparisonItems = document.getElementById('comparison-items');
             comparisonItems.innerHTML = '';
@@ -859,7 +1322,6 @@ window.initComparatifStatuts = function() {
                     <button class="remove-btn"><i class="fas fa-times"></i></button>
                 `;
                 
-                // Ajouter l'événement pour supprimer
                 itemDiv.querySelector('.remove-btn').addEventListener('click', () => {
                     removeFromComparison(shortName);
                 });
@@ -867,11 +1329,10 @@ window.initComparatifStatuts = function() {
                 comparisonItems.appendChild(itemDiv);
             });
 
-            // ========== COMPARAISON INTELLIGENTE ==========
             renderSmartComparison();
         }
 
-        // ========== FONCTION COMPARAISON INTELLIGENTE ==========
+        // ========== COMPARAISON INTELLIGENTE ==========
         function renderSmartComparison(){
             let host = $('#smart-comparison');
             if (!host){
@@ -884,7 +1345,7 @@ window.initComparatifStatuts = function() {
             host.innerHTML = '';
 
             const has = x => compareStatuts.includes(x);
-            const get = sn => enrichForDisplay(Object.values(window.legalStatuses||{}).find(s=>s.shortName===sn) || { shortName: sn, name: sn });
+            const get = sn => enrichForDisplay(Object.values(window.legalStatuses||{}).find(s=>s.shortName===sn) || { shortName: sn, name: sn }, intentAnswers);
 
             if (has('EURL') && has('SASU')) {
                 const eurl = get('EURL'), sasu = get('SASU');
@@ -921,10 +1382,8 @@ window.initComparatifStatuts = function() {
             }
         }
 
-        // Fonction pour générer une notation par étoiles
         function generateStarRating(rating) {
             if (typeof rating !== 'number') return 'Non évalué';
-            
             let stars = '';
             for (let i = 1; i <= 5; i++) {
                 stars += `<span class="star ${i <= rating ? 'filled' : ''}">★</span>`;
@@ -932,7 +1391,6 @@ window.initComparatifStatuts = function() {
             return stars;
         }
         
-        // ========== TOOLTIPS ENRICHIS ==========
         function getTooltipForProperty(propertyKey) {
             const tooltips = {
                 'responsabilite': 'Niveau de responsabilité financière personnelle du dirigeant',
@@ -949,23 +1407,19 @@ window.initComparatifStatuts = function() {
                 'obligationsCle': 'Obligations déclaratives/comptables clés 2025',
                 'plafondCA': 'Plafonds micro 2025 selon l\'activité'
             };
-            
             return tooltips[propertyKey] || 'Information complémentaire';
         }
 
-        // Fonction pour charger les données des statuts
         function loadStatutData() {
-            // Essayer d'obtenir les données depuis window.legalStatuses
             if (window.legalStatuses) {
                 renderTable(window.legalStatuses);
             } else {
-                // Si pas disponible, attendre un peu et réessayer
                 console.log("Les données legalStatuses ne sont pas encore disponibles, tentative dans 500ms...");
                 setTimeout(() => {
                     if (window.legalStatuses) {
                         renderTable(window.legalStatuses);
                     } else {
-                        // Si toujours pas disponible, afficher un message d'erreur
+                        const tableBody = document.getElementById('table-body');
                         tableBody.innerHTML = `
                             <tr>
                                 <td colspan="10">
@@ -974,15 +1428,7 @@ window.initComparatifStatuts = function() {
                                             <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>
                                             Impossible de charger les données des statuts juridiques.
                                         </p>
-                                        <button id="retry-load" style="
-                                            padding: 0.5rem 1rem;
-                                            background-color: rgba(0, 255, 135, 0.2);
-                                            border: 1px solid rgba(0, 255, 135, 0.5);
-                                            color: #00FF87;
-                                            border-radius: 0.375rem;
-                                            cursor: pointer;
-                                            margin-top: 0.5rem;
-                                        ">Réessayer</button>
+                                        <button id="retry-load" style="padding: 0.5rem 1rem; background-color: rgba(0, 255, 135, 0.2); border: 1px solid rgba(0, 255, 135, 0.5); color: #00FF87; border-radius: 0.375rem; cursor: pointer; margin-top: 0.5rem;">Réessayer</button>
                                     </div>
                                 </td>
                             </tr>
@@ -992,11 +1438,9 @@ window.initComparatifStatuts = function() {
                 }, 500);
             }
 
-            // Écouter l'événement custom si disponible
             window.addEventListener('legalStatuses:ready', ()=>renderTable(window.legalStatuses), { once:true });
         }
 
-        // ========== COLONNES ENRICHIES ==========
         function getColumnsForCriterion(criterion) {
             switch (criterion) {
                 case 'basic':
@@ -1041,17 +1485,14 @@ window.initComparatifStatuts = function() {
             }
         }
 
-        // Fonction pour filtrer les statuts en fonction du terme de recherche et de la comparaison
         function filterStatuts(statuts, term) {
             let filteredList = Object.values(statuts);
             
-            // Si nous sommes en mode comparaison, filtrer uniquement les statuts sélectionnés
             if (compareStatuts.length > 0) {
                 filteredList = filteredList.filter(statut => 
                     compareStatuts.includes(statut.shortName));
             }
             
-            // Puis filtrer par terme de recherche
             if (term) {
                 filteredList = filteredList.filter(statut =>
                     statut.name.toLowerCase().includes(term) || 
@@ -1063,26 +1504,25 @@ window.initComparatifStatuts = function() {
             return filteredList;
         }
 
-        // Fonction principale pour mettre à jour le tableau
         function updateTable() {
             if (!window.legalStatuses) return;
             
-            // Obtenir les colonnes à afficher selon le critère
-            const columns = getColumnsForCriterion(selectedCriterion);
-            
-            // Mettre à jour les en-têtes du tableau
-            const tableHeaders = document.getElementById('table-headers');
-            tableHeaders.innerHTML = columns.map(col => 
-                `<th>${col.label}</th>`
-            ).join('');
-            
-            // Filtrer les statuts
+            let columns = getColumnsForCriterion(selectedCriterion);
             const filteredStatuts = filterStatuts(window.legalStatuses, searchTerm);
+            const rowsData = filteredStatuts.map(s => enrichForDisplay(s, intentAnswers));
+
+            // ========== MODE DIFF-ONLY ==========
+            if (diffMode && compareStatuts.length >= 2) {
+                const diffKeys = onlyDifferences(rowsData, columns);
+                columns = [
+                    { key: 'name', label: 'Statut' },
+                    ...columns.filter(c => diffKeys.includes(c.key))
+                ];
+            }
             
-            // ========== ENRICHISSEMENT DES DONNÉES ==========
-            const rowsData = filteredStatuts.map(enrichForDisplay);
+            const tableHeaders = document.getElementById('table-headers');
+            tableHeaders.innerHTML = columns.map(col => `<th>${col.label}</th>`).join('');
             
-            // Générer les lignes du tableau
             const tableBody = document.getElementById('table-body');
             
             if (rowsData.length === 0) {
@@ -1096,13 +1536,48 @@ window.initComparatifStatuts = function() {
                 return;
             }
             
+            // ========== GÉNÉRATION DES BADGES ==========
+            function generateBadges(statut) {
+                const badges = [];
+                const meta = statut.meta_payout || {};
+                const dirM = statut.meta_dirigeant || {};
+                
+                if (meta.peut_salaire) badges.push('<span class="status-badge badge-salary">💼 Salaire</span>');
+                if (meta.peut_dividendes) {
+                    if (meta.dividendes_cot_sociales === 'non') {
+                        badges.push('<span class="status-badge badge-dividends">💰 Div. sans cotis</span>');
+                    } else {
+                        badges.push('<span class="status-badge badge-dividends">💰 Dividendes</span>');
+                    }
+                }
+                if (statut.meta_are && statut.meta_are.are_compatible_sans_salaire) {
+                    badges.push('<span class="status-badge badge-are">🛡️ ARE ok</span>');
+                }
+                if (statut.meta_evolution && statut.meta_evolution.accueil_investisseurs === 'élevé') {
+                    badges.push('<span class="status-badge badge-investors">🚀 Investisseurs</span>');
+                }
+                if (dirM.statut_dirigeant === 'TNS') {
+                    badges.push('<span class="status-badge badge-tns">TNS</span>');
+                } else if (dirM.statut_dirigeant === 'assimilé salarié') {
+                    badges.push('<span class="status-badge badge-assimile">Assimilé salarié</span>');
+                }
+                
+                return badges.join('');
+            }
+
             tableBody.innerHTML = rowsData.map((statut, index) => {
-                // Ajouter animation avec délai progressif
                 let row = `<tr style="animation-delay: ${index * 0.05}s;">`;
                 
                 columns.forEach(column => {
                     if (column.key === 'name') {
-                        // Style spécial pour la cellule du nom
+                        const scoreHtml = statut._score !== undefined 
+                            ? `<span class="status-score">Score: ${statut._score}</span>` 
+                            : '';
+                        const whyHtml = statut._why && statut._why.length > 0
+                            ? `<div class="status-why">${statut._why.join(', ')}</div>`
+                            : '';
+                        const badges = generateBadges(statut);
+                        
                         row += `
                             <td>
                                 <div class="statut-cell">
@@ -1110,14 +1585,18 @@ window.initComparatifStatuts = function() {
                                         <i class="fas ${statut.logo || 'fa-building'}"></i>
                                     </div>
                                     <div class="statut-info">
-                                        <span class="statut-name">${statut.shortName}</span>
+                                        <div>
+                                            <span class="statut-name">${statut.shortName}</span>
+                                            ${scoreHtml}
+                                        </div>
                                         <span class="statut-fullname">${statut.name}</span>
+                                        ${whyHtml}
+                                        <div class="status-badges">${badges}</div>
                                     </div>
                                 </div>
                             </td>
                         `;
                     } else if (column.key === 'responsabilite') {
-                        // Mise en évidence pour la responsabilité
                         const isLimited = statut[column.key] && statut[column.key].toLowerCase().includes('limitée');
                         row += `
                             <td class="${isLimited ? 'highlighted-value' : ''}">
@@ -1128,7 +1607,6 @@ window.initComparatifStatuts = function() {
                             </td>
                         `;
                     } else if (column.key === 'protectionPatrimoine') {
-                        // ========== ÉTOILES + TEXTE ==========
                         const stars = Number.isFinite(statut._pp_stars) ? `
                             <div class="rating-stars" title="${statut._pp_stars}/5">
                                 ${generateStarRating(statut._pp_stars)}
@@ -1142,7 +1620,6 @@ window.initComparatifStatuts = function() {
                             </td>
                         `;
                     } else if (column.key === 'capital') {
-                        // Mise en valeur du capital minimal
                         row += `
                             <td class="key-cell">
                                 <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
@@ -1151,7 +1628,6 @@ window.initComparatifStatuts = function() {
                             </td>
                         `;
                     } else {
-                        // Style normal pour les autres cellules avec tooltip
                         row += `
                             <td>
                                 <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
@@ -1166,9 +1642,7 @@ window.initComparatifStatuts = function() {
                 return row;
             }).join('');
             
-            // Ajouter écouteurs d'événements pour les lignes du tableau
             document.querySelectorAll('#table-body tr').forEach((row, index) => {
-                // Ajouter un effet de survol plus prononcé
                 row.addEventListener('mouseover', () => {
                     row.style.backgroundColor = 'rgba(0, 255, 135, 0.05)';
                 });
@@ -1176,7 +1650,6 @@ window.initComparatifStatuts = function() {
                     row.style.backgroundColor = '';
                 });
                 
-                // Ajouter clic pour sélectionner pour comparaison
                 row.addEventListener('click', () => {
                     const statut = rowsData[index];
                     if (statut) {
@@ -1186,7 +1659,6 @@ window.initComparatifStatuts = function() {
             });
         }
 
-        // Fonction de rendu initial du tableau
         function renderTable(data) {
             updateTable();
         }
