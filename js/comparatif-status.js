@@ -1,179 +1,57 @@
 /**
  * comparatif-statuts.js - Tableau comparatif des formes juridiques
- * Version 2025 ULTRA++ - Métas, scoring, diff-only, badges, simulateur + FILTRES INTENTIONS
+ * Version 2025 CLEAN - Sans simulateur, avec debugging amélioré
  */
 
-// Fonction d'initialisation disponible globalement pour être appelée depuis app.js
+// Fonction d'initialisation disponible globalement
 window.initComparatifStatuts = function() {
-    console.log("Initialisation du tableau comparatif des statuts (version ultra++ 2025)");
+    console.log("✅ Initialisation du tableau comparatif des statuts");
     window.createComparatifTable('comparatif-container');
 };
 
 // Encapsulation du reste du code dans une IIFE
 (function() {
-    // ========== MÉTAS FALLBACK (en attendant combined-recommendation.js) ==========
+    // ========== MÉTAS FALLBACK ==========
     const META_FALLBACK = {
         'MICRO': {
             meta_payout: { peut_salaire: false, peut_dividendes: false, dividendes_cot_sociales: 'n/a', base_cotisations: 'bénéfice' },
-            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Bénéfice pris en compte par Pôle Emploi, attention dépassement plafonds' },
-            meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false, migration_simple: 'EI→société (apport/cession)' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Bénéfice pris en compte par Pôle Emploi' },
+            meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false, migration_simple: 'EI→société' },
             meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'faible' }
         },
         'EI': {
             meta_payout: { peut_salaire: false, peut_dividendes: false, dividendes_cot_sociales: 'n/a', base_cotisations: 'bénéfice' },
-            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Bénéfice pris en compte, pas de dividendes' },
-            meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false, migration_simple: 'EI→société (apport/cession)' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Bénéfice pris en compte' },
+            meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false, migration_simple: 'EI→société' },
             meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'faible' }
         },
         'EURL': {
-            meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: '>10%', base_cotisations: 'rémunération + dividendes>10%' },
-            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non pris en compte ARE, salaire=baisse ARE' },
+            meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: '>10%', base_cotisations: 'rémunération + div>10%' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE' },
             meta_evolution: { accueil_investisseurs: 'moyen', entree_associes_facile: true, migration_simple: 'EURL→SARL facile' },
             meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'moyenne' }
         },
         'SASU': {
             meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: 'non', base_cotisations: 'rémunération' },
-            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non pris en compte ; salaire=baisse ARE ; attention requalification abus' },
-            meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'SASU→SAS très simple' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE' },
+            meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'SASU→SAS simple' },
             meta_dirigeant: { statut_dirigeant: 'assimilé salarié', couverture_dirigeant: 'élevée' }
         },
         'SARL': {
-            meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: '>10%', base_cotisations: 'rémunération + dividendes>10%' },
-            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE ; salaire=baisse ARE' },
-            meta_evolution: { accueil_investisseurs: 'moyen', entree_associes_facile: true, migration_simple: 'Transformation SAS possible' },
+            meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: '>10%', base_cotisations: 'rémunération + div>10%' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE' },
+            meta_evolution: { accueil_investisseurs: 'moyen', entree_associes_facile: true, migration_simple: 'SARL→SAS possible' },
             meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'moyenne' }
         },
         'SAS': {
             meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: 'non', base_cotisations: 'rémunération' },
-            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE ; salaire=baisse ARE ; attention requalification' },
-            meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'Actions de préférence, BSPCE' },
+            meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE' },
+            meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'Actions préférence, BSPCE' },
             meta_dirigeant: { statut_dirigeant: 'assimilé salarié', couverture_dirigeant: 'élevée' }
         }
     };
 
-    // Rates 2025 pour simulateur
-    const RATES_2025 = {
-        pfu: 0.30,
-        cot_sasu_employeur: 0.42,
-        cot_sasu_salarie: 0.22,
-        cot_tns: 0.45,
-        seuil_div_tns: 0.10,
-        is_rate: 0.15
-    };
-
-    // Injecter le CSS (idem que précédemment - je garde le même pour ne pas alourdir)
-    function injectCSS() {
-        const style = document.createElement('style');
-        style.textContent = `
-            /* Le CSS complet reste identique - je ne le répète pas pour gagner de la place */
-            .comparatif-container { max-width: 100%; overflow-x: auto; font-family: 'Inter', sans-serif; color: #E6E6E6; }
-            .comparatif-header { margin-bottom: 1.5rem; }
-            .comparatif-title { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.75rem; color: #00FF87; }
-            .comparatif-description { color: rgba(230, 230, 230, 0.8); margin-bottom: 1.5rem; line-height: 1.5; }
-            .intent-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; padding: 1rem; background: rgba(1, 35, 65, 0.5); border-radius: 8px; border: 1px solid rgba(0, 255, 135, 0.2); }
-            .intent-filter-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(1, 42, 74, 0.5); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-            .intent-filter-item:hover { background: rgba(1, 42, 74, 0.8); }
-            .intent-filter-item.active { background: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.4); }
-            .intent-filter-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #00FF87; }
-            .intent-filter-item label { cursor: pointer; font-size: 0.875rem; user-select: none; }
-            .status-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.25rem; }
-            .status-badge { display: inline-flex; align-items: center; padding: 0.125rem 0.375rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
-            .badge-salary { background: rgba(59, 130, 246, 0.2); color: #60A5FA; }
-            .badge-dividends { background: rgba(236, 72, 153, 0.2); color: #EC4899; }
-            .badge-are { background: rgba(16, 185, 129, 0.2); color: #10B981; }
-            .badge-investors { background: rgba(245, 158, 11, 0.2); color: #F59E0B; }
-            .badge-tns { background: rgba(139, 92, 246, 0.2); color: #A78BFA; }
-            .badge-assimile { background: rgba(34, 211, 238, 0.2); color: #22D3EE; }
-            .diff-mode-toggle { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(1, 42, 74, 0.5); border-radius: 6px; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; }
-            .diff-mode-toggle:hover { background: rgba(1, 42, 74, 0.8); }
-            .diff-mode-toggle.active { background: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.4); }
-            .status-why { font-size: 0.7rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem; font-style: italic; }
-            #simulator-panel { position: fixed; right: -400px; top: 100px; width: 380px; max-height: calc(100vh - 120px); background: rgba(1, 22, 39, 0.95); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); z-index: 100; transition: right 0.3s; overflow-y: auto; }
-            #simulator-panel.open { right: 20px; }
-            .simulator-toggle-btn { position: fixed; right: 20px; top: 120px; background: rgba(0, 255, 135, 0.2); border: 1px solid rgba(0, 255, 135, 0.3); color: #00FF87; padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; z-index: 99; transition: all 0.2s; font-weight: 600; }
-            .simulator-toggle-btn:hover { background: rgba(0, 255, 135, 0.3); transform: translateY(-2px); }
-            .scenario-result { background: rgba(1, 42, 74, 0.5); padding: 1rem; border-radius: 8px; margin-top: 1rem; border-left: 3px solid #00FF87; }
-            .comparatif-filters { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end; }
-            .filter-group { flex: 1; min-width: 200px; }
-            .filter-label { display: block; margin-bottom: 0.5rem; color: rgba(230, 230, 230, 0.7); font-size: 0.875rem; }
-            .criteria-buttons { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
-            .criteria-button { padding: 0.5rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; cursor: pointer; background-color: rgba(1, 42, 74, 0.5); border: 1px solid rgba(0, 255, 135, 0.2); color: rgba(230, 230, 230, 0.8); transition: all 0.2s ease; }
-            .criteria-button:hover { border-color: rgba(0, 255, 135, 0.4); background-color: rgba(1, 42, 74, 0.7); }
-            .criteria-button.active { background-color: rgba(0, 255, 135, 0.15); border-color: rgba(0, 255, 135, 0.7); color: #00FF87; }
-            .search-input { width: 100%; padding: 0.625rem 1rem; border-radius: 0.375rem; border: 1px solid rgba(1, 42, 74, 0.8); background-color: rgba(1, 42, 74, 0.5); color: #E6E6E6; transition: all 0.2s ease; }
-            .search-input:focus { outline: none; border-color: rgba(0, 255, 135, 0.5); box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2); }
-            .comparatif-table-container { border-radius: 0.75rem; border: 1px solid rgba(1, 42, 74, 0.8); overflow: hidden; background-color: rgba(1, 42, 74, 0.3); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); position: relative; }
-            .comparatif-table { width: 100%; border-collapse: collapse; text-align: left; }
-            .comparatif-table th { padding: 1rem; background-color: rgba(1, 22, 39, 0.8); font-weight: 600; color: #00FF87; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(1, 42, 74, 0.8); position: sticky; top: 0; z-index: 10; }
-            .comparatif-table td { padding: 0.875rem 1rem; border-bottom: 1px solid rgba(1, 42, 74, 0.5); font-size: 0.875rem; vertical-align: top; }
-            .comparatif-table tr:last-child td { border-bottom: none; }
-            .comparatif-table tr:nth-child(odd) { background-color: rgba(1, 42, 74, 0.2); }
-            .comparatif-table tr:hover { background-color: rgba(0, 255, 135, 0.05); }
-            .statut-cell { display: flex; align-items: flex-start; gap: 0.75rem; }
-            .statut-icon { width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: rgba(1, 42, 74, 0.5); color: #00FF87; font-size: 1rem; flex-shrink: 0; }
-            .statut-info { display: flex; flex-direction: column; }
-            .statut-name { font-weight: 600; color: #E6E6E6; }
-            .statut-fullname { font-size: 0.75rem; color: rgba(230, 230, 230, 0.6); }
-            .loading-state { display: flex; justify-content: center; align-items: center; height: 200px; flex-direction: column; gap: 1rem; }
-            .spinner { width: 40px; height: 40px; border: 3px solid rgba(0, 255, 135, 0.3); border-radius: 50%; border-top-color: #00FF87; animation: spin 1s ease-in-out infinite; }
-            @keyframes spin { to { transform: rotate(360deg); } }
-            .comparatif-notes { margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; background-color: rgba(1, 42, 74, 0.3); font-size: 0.875rem; }
-            .notes-title { font-weight: 600; color: #00FF87; margin-bottom: 0.5rem; }
-            .notes-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; margin-bottom: 0.75rem; }
-            .notes-item { display: flex; align-items: center; gap: 0.5rem; }
-            .notes-term { color: #00FF87; font-weight: 500; }
-            .notes-disclaimer { font-style: italic; color: rgba(230, 230, 230, 0.6); font-size: 0.8125rem; text-align: center; margin-top: 0.75rem; }
-            @media (max-width: 768px) {
-                .comparatif-filters { flex-direction: column; }
-                .criteria-buttons { grid-template-columns: repeat(2, 1fr); }
-                .statut-icon { width: 2rem; height: 2rem; font-size: 0.875rem; }
-                .comparatif-table th, .comparatif-table td { padding: 0.75rem 0.5rem; font-size: 0.75rem; }
-                .notes-list { grid-template-columns: 1fr; }
-                #smart-comparison .grid { grid-template-columns: 1fr !important; }
-                #simulator-panel { width: 100%; right: -100%; left: 0; top: 0; max-height: 100vh; border-radius: 0; }
-                #simulator-panel.open { right: 0; }
-            }
-            .comparatif-table .key-cell { background-color: rgba(0, 255, 135, 0.05); font-weight: 500; }
-            .comparatif-table .highlighted-value { color: #00FF87; font-weight: 600; }
-            .rating-stars { display: inline-flex; align-items: center; }
-            .rating-stars .star { color: rgba(255, 255, 255, 0.2); margin-right: 2px; }
-            .rating-stars .star.filled { color: #00FF87; }
-            @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-            .comparatif-table tr { animation: fadeInUp 0.3s ease forwards; opacity: 0; }
-            .comparatif-table tr:nth-child(1) { animation-delay: 0.05s; }
-            .comparatif-table tr:nth-child(2) { animation-delay: 0.1s; }
-            .comparatif-table tr:nth-child(3) { animation-delay: 0.15s; }
-            .comparatif-table tr:nth-child(4) { animation-delay: 0.2s; }
-            .comparatif-table tr:nth-child(5) { animation-delay: 0.25s; }
-            .comparatif-table tr:nth-child(6) { animation-delay: 0.3s; }
-            .comparatif-table tr:nth-child(7) { animation-delay: 0.35s; }
-            .comparatif-table tr:nth-child(8) { animation-delay: 0.4s; }
-            .comparatif-table tr:nth-child(9) { animation-delay: 0.45s; }
-            .comparatif-table tr:nth-child(10) { animation-delay: 0.5s; }
-            .comparison-bar { display: flex; align-items: center; padding: 0.75rem 1rem; background-color: rgba(1, 35, 65, 0.7); border-radius: 8px; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
-            .comparison-title { font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.8); margin-right: 1rem; }
-            .comparison-items { display: flex; flex-wrap: wrap; gap: 0.5rem; flex-grow: 1; }
-            .comparison-item { display: flex; align-items: center; padding: 0.375rem 0.75rem; background-color: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 4px; font-size: 0.8125rem; color: #00FF87; }
-            .comparison-item .remove-btn { background: none; border: none; color: rgba(255, 255, 255, 0.6); font-size: 0.75rem; margin-left: 0.5rem; cursor: pointer; padding: 2px; }
-            .comparison-item .remove-btn:hover { color: #FF6B6B; }
-            .add-comparison-btn, .add-comparison-select { padding: 0.375rem 0.75rem; background-color: rgba(1, 42, 74, 0.5); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 4px; font-size: 0.8125rem; color: rgba(255, 255, 255, 0.7); cursor: pointer; transition: all 0.2s; }
-            .add-comparison-btn:hover { background-color: rgba(1, 42, 74, 0.7); border-color: rgba(255, 255, 255, 0.5); color: #fff; }
-            .status-dropdown { margin-right: 0.5rem; width: 200px; padding: 0.5rem; background-color: rgba(1, 42, 74, 0.7); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 4px; color: #E6E6E6; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300FF87' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: calc(100% - 0.75rem) center; padding-right: 2rem; }
-            .status-dropdown:focus { outline: none; border-color: rgba(0, 255, 135, 0.5); box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2); }
-            .info-tooltip { position: relative; cursor: help; }
-            .info-tooltip:hover::after { content: attr(data-tooltip); position: absolute; left: 50%; transform: translateX(-50%); bottom: 100%; background-color: rgba(1, 22, 39, 0.95); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.875rem; white-space: nowrap; z-index: 10; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2); border: 1px solid rgba(0, 255, 135, 0.3); margin-bottom: 5px; }
-            .actions-floating-bar { position: fixed; bottom: 1.5rem; right: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 20; }
-            .action-btn { width: 3rem; height: 3rem; border-radius: 50%; background-color: rgba(0, 255, 135, 0.2); border: 1px solid rgba(0, 255, 135, 0.3); color: #00FF87; display: flex; align-items: center; justify-content: center; font-size: 1.125rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
-            .action-btn:hover { background-color: rgba(0, 255, 135, 0.3); transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
-            #smart-comparison { margin-top: 0.75rem; }
-            #smart-comparison .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-            #smart-comparison b { color: #00FF87; }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // ========== NOUVEAUX UTILITAIRES 2025 ==========
-    
+    // ========== UTILITAIRES ==========
     const $ = (s, r=document)=>r.querySelector(s);
     const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
     const toText = v => (v==null || v==='') ? '—' : String(v);
@@ -194,18 +72,18 @@ window.initComparatifStatuts = function() {
 
     function deriveObligations(shortName) {
         const T = getThresholds2025();
-        const tvaFr = `Franchise TVA 2025 : ventes ${fmtEuro(T.tva_franchise_base.ventes)} (${fmtEuro(T.tva_franchise_base.tolerance_ventes)} tol.) • services ${fmtEuro(T.tva_franchise_base.services)} (${fmtEuro(T.tva_franchise_base.tolerance_services)} tol.)`;
-        const microPlaf = `Ventes/Hébergement ${fmtEuro(T.micro.bic_sales)} • Services/BIC ${fmtEuro(T.micro.bic_service)} • BNC ${fmtEuro(T.micro.bnc)} • Meublés tourisme ${fmtEuro(T.micro.meuble_classe_ca)} (classé) / ${fmtEuro(T.micro.meuble_non_classe_ca)} (non classé)`;
+        const tvaFr = `Franchise TVA 2025 : ventes ${fmtEuro(T.tva_franchise_base.ventes)} • services ${fmtEuro(T.tva_franchise_base.services)}`;
+        const microPlaf = `Ventes ${fmtEuro(T.micro.bic_sales)} • Services ${fmtEuro(T.micro.bic_service)} • BNC ${fmtEuro(T.micro.bnc)}`;
 
         const SN = (shortName||'').toUpperCase();
         if (SN.includes('MICRO')) {
             return {
                 obligationsCle: [
-                    'Déclaration du CA (URSSAF) mensuelle/trimestrielle',
-                    'Livre des recettes (+ registre achats si ventes)',
-                    'Franchise TVA par défaut (option possible)',
-                    'CFE (souvent exonérée la 1ʳᵉ année)',
-                    'Compte pro dédié si CA > 10 000 € deux années de suite'
+                    'Déclaration CA (URSSAF) mensuelle/trimestrielle',
+                    'Livre des recettes',
+                    'Franchise TVA par défaut',
+                    'CFE (exonérée 1ʳᵉ année)',
+                    'Compte pro si CA > 10k€ 2 ans'
                 ].join(' · '),
                 plafondCA: microPlaf,
                 regimeTVA: tvaFr
@@ -213,22 +91,12 @@ window.initComparatifStatuts = function() {
         }
         if (SN==='EURL') {
             return {
-                obligationsCle: [
-                    'Comptabilité d\'engagement, dépôt des comptes',
-                    'AG d\'approbation < 6 mois après clôture',
-                    'TVA : réel simplifié/normal ou franchise si éligible',
-                    'Cotisations TNS (et sur dividendes > 10 % si IS)'
-                ].join(' · ')
+                obligationsCle: 'Compta engagement · AG < 6 mois · TVA réel ou franchise · Cotis TNS + div>10%'
             };
         }
         if (SN==='SASU') {
             return {
-                obligationsCle: [
-                    'Comptabilité d\'engagement, dépôt des comptes',
-                    'Paie & DSN si rémunération du président',
-                    'TVA : réel simplifié/normal ou franchise si éligible',
-                    'Dividendes non soumis à cotisations sociales (PFU/barème)'
-                ].join(' · ')
+                obligationsCle: 'Compta engagement · Paie & DSN si rémunération · TVA réel ou franchise · Div non soumis cotis'
             };
         }
         return { obligationsCle: '' };
@@ -240,8 +108,7 @@ window.initComparatifStatuts = function() {
         const t = String(text).toLowerCase();
         const nums = (t.match(/\d+/g) || []).map(n => parseInt(n, 10)).sort((a,b)=>a-b);
         if (nums.length) return nums[0];
-        if (/\b2\+|\bplusieurs|\bdeux\b/.test(t)) return 2;
-        return /1/.test(t) ? 1 : 1;
+        return /\b2\+|plusieurs|deux\b/.test(t) ? 2 : 1;
     }
 
     function allowsMultipleAssociates(statut) {
@@ -267,17 +134,12 @@ window.initComparatifStatuts = function() {
     }
 
     function matchIntent(statut, ans) {
-        // 1) Associés : supprimer les statuts purement solo
         if (ans.prevoit_associes === 'oui' && !allowsMultipleAssociates(statut)) return false;
-
-        // 2) Dividendes : garder uniquement ceux qui permettent effectivement des dividendes
         if (ans.veut_dividendes && !canPayDividends(statut)) return false;
-
-        // 3) Chômage (ARE) : on n'exclut rien (on ajoute un encart explicatif)
         return true;
     }
 
-    // ========== MOTEUR DE SCORING (SIMPLIFIÉ - SANS SALAIRE) ==========
+    // ========== SCORING ==========
     function scoreStatut(statut, answers) {
         let s = 0;
         const why = [];
@@ -285,31 +147,26 @@ window.initComparatifStatuts = function() {
         const areM = statut.meta_are || {};
         const evoM = statut.meta_evolution || {};
 
-        // Dividendes
         if (answers.veut_dividendes && meta.peut_dividendes) {
             s += 3;
             if (meta.dividendes_cot_sociales === 'non') {
                 s += 2;
                 why.push('Dividendes sans cotis');
-            }
-            if (meta.dividendes_cot_sociales === '>10%') {
+            } else if (meta.dividendes_cot_sociales === '>10%') {
                 why.push('Dividendes >10% cotisés');
             }
         }
 
-        // ARE
         if (answers.en_chomage && areM.are_compatible_sans_salaire) {
             s += 2;
-            why.push('ARE possible sans salaire');
+            why.push('ARE compatible');
         }
 
-        // Associés
         if (answers.prevoit_associes !== 'non') {
             if (evoM.entree_associes_facile) { s += 2; }
             else { s -= 1; why.push('Entrée associés encadrée'); }
         }
 
-        // Levée de fonds
         if (answers.levee_fonds !== 'non') {
             const level = evoM.accueil_investisseurs;
             if (level === 'élevé') { s += 3; why.push('Investisseurs friendly'); }
@@ -356,41 +213,6 @@ window.initComparatifStatuts = function() {
         return enriched;
     }
 
-    function simulateNet(statut, benef, scenario) {
-        const meta = statut.meta_payout || {};
-        let net = 0, cout = 0;
-
-        if (scenario === 'salaire' && meta.peut_salaire) {
-            const brut = benef / (1 + RATES_2025.cot_sasu_employeur);
-            net = brut * (1 - RATES_2025.cot_sasu_salarie);
-            cout = benef;
-        } else if (scenario === 'dividendes' && meta.peut_dividendes) {
-            const is = benef * RATES_2025.is_rate;
-            const dividBrut = benef - is;
-            
-            if (meta.dividendes_cot_sociales === '>10%') {
-                const seuil = benef * RATES_2025.seuil_div_tns;
-                const partCotis = Math.max(0, dividBrut - seuil);
-                const cotisSociales = partCotis * RATES_2025.cot_tns;
-                net = dividBrut * (1 - RATES_2025.pfu) - cotisSociales;
-            } else {
-                net = dividBrut * (1 - RATES_2025.pfu);
-            }
-            cout = benef;
-        } else if (scenario === 'mix' && meta.peut_salaire && meta.peut_dividendes) {
-            const half = benef / 2;
-            const resultSal = simulateNet(statut, half, 'salaire');
-            const resultDiv = simulateNet(statut, half, 'dividendes');
-            net = resultSal.net + resultDiv.net;
-            cout = benef;
-        } else {
-            net = benef * (1 - RATES_2025.cot_tns);
-            cout = benef;
-        }
-
-        return { net: Math.round(net), cout: Math.round(cout) };
-    }
-
     // ========== ENCART ARE/ARCE ==========
     function renderAREHelper(intentAnswers) {
         let host = document.getElementById('are-helper');
@@ -413,32 +235,135 @@ window.initComparatifStatuts = function() {
             <div style="border:1px solid rgba(0,255,135,.35);border-radius:8px;padding:12px;background:rgba(1,35,65,.6)">
                 <div style="font-weight:600;color:#00FF87;margin-bottom:6px">🛡️ Chômage (ARE) — points clés</div>
                 <ul style="margin:0; padding-left:18px; line-height:1.4">
-                    <li><b>Salaire</b> versé par la société ⇒ <b>réduction/ajustement</b> de l'ARE.</li>
-                    <li><b>Dividendes SAS/SASU/SA/SELAS</b> ⇒ en principe <b>non pris en compte</b> par l'ARE 
-                        (<span style="opacity:.8">attention au risque de <i>requalification</i> si abus</span>).</li>
-                    <li><b>EURL/SARL à l'IS</b> ⇒ dividendes au-delà de <b>10&nbsp;%</b> (capital+primes+CCA) soumis à cotisations TNS.</li>
-                    <li><b>ARCE</b> possible (versement en capital) vs <b>maintien ARE</b> : à arbitrer selon trésorerie & plan de rémunération.</li>
+                    <li><b>Salaire</b> versé ⇒ <b>réduction ARE</b></li>
+                    <li><b>Dividendes SAS/SASU</b> ⇒ <b>non pris en compte</b> par ARE</li>
+                    <li><b>EURL/SARL à l'IS</b> ⇒ dividendes >10% soumis cotis TNS</li>
+                    <li><b>ARCE</b> possible vs <b>maintien ARE</b> : à arbitrer</li>
                 </ul>
             </div>`;
+    }
+
+    // ========== INJECTION CSS ==========
+    function injectCSS() {
+        if (document.getElementById('comparatif-status-styles')) return; // Éviter double injection
+        
+        const style = document.createElement('style');
+        style.id = 'comparatif-status-styles';
+        style.textContent = `
+            .comparatif-container { max-width: 100%; overflow-x: auto; font-family: 'Inter', sans-serif; color: #E6E6E6; }
+            .comparatif-header { margin-bottom: 1.5rem; }
+            .comparatif-title { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.75rem; color: #00FF87; }
+            .comparatif-description { color: rgba(230, 230, 230, 0.8); margin-bottom: 1.5rem; line-height: 1.5; }
+            
+            .intent-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; padding: 1rem; background: rgba(1, 35, 65, 0.5); border-radius: 8px; border: 1px solid rgba(0, 255, 135, 0.2); }
+            .intent-filter-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(1, 42, 74, 0.5); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+            .intent-filter-item:hover { background: rgba(1, 42, 74, 0.8); }
+            .intent-filter-item.active { background: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.4); }
+            .intent-filter-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #00FF87; }
+            .intent-filter-item label { cursor: pointer; font-size: 0.875rem; user-select: none; }
+            
+            .status-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.25rem; }
+            .status-badge { display: inline-flex; align-items: center; padding: 0.125rem 0.375rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; }
+            .badge-salary { background: rgba(59, 130, 246, 0.2); color: #60A5FA; }
+            .badge-dividends { background: rgba(236, 72, 153, 0.2); color: #EC4899; }
+            .badge-are { background: rgba(16, 185, 129, 0.2); color: #10B981; }
+            .badge-investors { background: rgba(245, 158, 11, 0.2); color: #F59E0B; }
+            .badge-tns { background: rgba(139, 92, 246, 0.2); color: #A78BFA; }
+            .badge-assimile { background: rgba(34, 211, 238, 0.2); color: #22D3EE; }
+            
+            .diff-mode-toggle { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(1, 42, 74, 0.5); border-radius: 6px; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; }
+            .diff-mode-toggle:hover { background: rgba(1, 42, 74, 0.8); }
+            .diff-mode-toggle.active { background: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.4); }
+            
+            .status-why { font-size: 0.7rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem; font-style: italic; }
+            
+            .comparison-bar { display: flex; align-items: center; padding: 0.75rem 1rem; background-color: rgba(1, 35, 65, 0.7); border-radius: 8px; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+            .comparison-title { font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.8); margin-right: 1rem; }
+            .comparison-items { display: flex; flex-wrap: wrap; gap: 0.5rem; flex-grow: 1; }
+            .comparison-item { display: flex; align-items: center; padding: 0.375rem 0.75rem; background-color: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 4px; font-size: 0.8125rem; color: #00FF87; }
+            .comparison-item .remove-btn { background: none; border: none; color: rgba(255, 255, 255, 0.6); font-size: 0.75rem; margin-left: 0.5rem; cursor: pointer; padding: 2px; }
+            .comparison-item .remove-btn:hover { color: #FF6B6B; }
+            
+            .status-dropdown { margin-right: 0.5rem; width: 200px; padding: 0.5rem; background-color: rgba(1, 42, 74, 0.7); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 4px; color: #E6E6E6; }
+            
+            .comparatif-filters { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end; }
+            .filter-group { flex: 1; min-width: 200px; }
+            .filter-label { display: block; margin-bottom: 0.5rem; color: rgba(230, 230, 230, 0.7); font-size: 0.875rem; }
+            .criteria-buttons { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
+            .criteria-button { padding: 0.5rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; cursor: pointer; background-color: rgba(1, 42, 74, 0.5); border: 1px solid rgba(0, 255, 135, 0.2); color: rgba(230, 230, 230, 0.8); transition: all 0.2s ease; }
+            .criteria-button:hover { border-color: rgba(0, 255, 135, 0.4); background-color: rgba(1, 42, 74, 0.7); }
+            .criteria-button.active { background-color: rgba(0, 255, 135, 0.15); border-color: rgba(0, 255, 135, 0.7); color: #00FF87; }
+            
+            .search-input { width: 100%; padding: 0.625rem 1rem; border-radius: 0.375rem; border: 1px solid rgba(1, 42, 74, 0.8); background-color: rgba(1, 42, 74, 0.5); color: #E6E6E6; transition: all 0.2s ease; }
+            .search-input:focus { outline: none; border-color: rgba(0, 255, 135, 0.5); box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2); }
+            
+            .comparatif-table-container { border-radius: 0.75rem; border: 1px solid rgba(1, 42, 74, 0.8); overflow: hidden; background-color: rgba(1, 42, 74, 0.3); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+            .comparatif-table { width: 100%; border-collapse: collapse; text-align: left; }
+            .comparatif-table th { padding: 1rem; background-color: rgba(1, 22, 39, 0.8); font-weight: 600; color: #00FF87; font-size: 0.875rem; text-transform: uppercase; border-bottom: 1px solid rgba(1, 42, 74, 0.8); position: sticky; top: 0; z-index: 10; }
+            .comparatif-table td { padding: 0.875rem 1rem; border-bottom: 1px solid rgba(1, 42, 74, 0.5); font-size: 0.875rem; vertical-align: top; }
+            .comparatif-table tr:last-child td { border-bottom: none; }
+            .comparatif-table tr:nth-child(odd) { background-color: rgba(1, 42, 74, 0.2); }
+            .comparatif-table tr:hover { background-color: rgba(0, 255, 135, 0.05); cursor: pointer; }
+            
+            .statut-cell { display: flex; align-items: flex-start; gap: 0.75rem; }
+            .statut-icon { width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: rgba(1, 42, 74, 0.5); color: #00FF87; font-size: 1rem; flex-shrink: 0; }
+            .statut-info { display: flex; flex-direction: column; }
+            .statut-name { font-weight: 600; color: #E6E6E6; }
+            .statut-fullname { font-size: 0.75rem; color: rgba(230, 230, 230, 0.6); }
+            
+            .loading-state { display: flex; justify-content: center; align-items: center; height: 200px; flex-direction: column; gap: 1rem; }
+            .spinner { width: 40px; height: 40px; border: 3px solid rgba(0, 255, 135, 0.3); border-radius: 50%; border-top-color: #00FF87; animation: spin 1s ease-in-out infinite; }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            
+            .comparatif-notes { margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; background-color: rgba(1, 42, 74, 0.3); font-size: 0.875rem; }
+            .notes-title { font-weight: 600; color: #00FF87; margin-bottom: 0.5rem; }
+            .notes-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; margin-bottom: 0.75rem; }
+            .notes-item { display: flex; align-items: center; gap: 0.5rem; }
+            .notes-term { color: #00FF87; font-weight: 500; }
+            .notes-disclaimer { font-style: italic; color: rgba(230, 230, 230, 0.6); font-size: 0.8125rem; text-align: center; margin-top: 0.75rem; }
+            
+            .comparatif-table .key-cell { background-color: rgba(0, 255, 135, 0.05); font-weight: 500; }
+            .comparatif-table .highlighted-value { color: #00FF87; font-weight: 600; }
+            .rating-stars { display: inline-flex; align-items: center; }
+            .rating-stars .star { color: rgba(255, 255, 255, 0.2); margin-right: 2px; }
+            .rating-stars .star.filled { color: #00FF87; }
+            
+            @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            .comparatif-table tbody tr { animation: fadeInUp 0.3s ease forwards; opacity: 0; }
+            
+            #smart-comparison { margin-top: 0.75rem; }
+            #smart-comparison .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+            #smart-comparison b { color: #00FF87; }
+            
+            @media (max-width: 768px) {
+                .comparatif-filters { flex-direction: column; }
+                .criteria-buttons { grid-template-columns: repeat(2, 1fr); }
+                .statut-icon { width: 2rem; height: 2rem; font-size: 0.875rem; }
+                .comparatif-table th, .comparatif-table td { padding: 0.75rem 0.5rem; font-size: 0.75rem; }
+                .notes-list { grid-template-columns: 1fr; }
+                #smart-comparison .grid { grid-template-columns: 1fr !important; }
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     // ========== CRÉATION TABLEAU ==========
     window.createComparatifTable = function(containerId) {
         const container = document.getElementById(containerId);
         if (!container) {
-            console.error(`Conteneur #${containerId} non trouvé`);
+            console.error(`❌ Conteneur #${containerId} non trouvé`);
             return;
         }
 
+        console.log("📦 Création du comparatif dans", containerId);
         injectCSS();
 
-        // ========== HTML AVEC SEULEMENT 4 FILTRES ==========
         container.innerHTML = `
             <div class="comparatif-container">
                 <div class="comparatif-header">
                     <h2 class="comparatif-title">Comparatif des formes juridiques 2025</h2>
                     <p class="comparatif-description">
-                        Tableau comparatif intelligent : filtrez par intention, comparez les différences clés, simulez votre rémunération.
+                        Tableau comparatif intelligent : filtrez par intention, comparez les différences clés.
                     </p>
 
                     <div class="intent-filters" id="intent-filters">
@@ -466,9 +391,6 @@ window.initComparatifStatuts = function() {
                             <option value="">Sélectionner un statut...</option>
                         </select>
                         <div class="comparison-items" id="comparison-items"></div>
-                        <button class="add-comparison-btn" id="add-comparison-btn">
-                            <i class="fas fa-plus mr-1"></i> Ajouter
-                        </button>
                     </div>
 
                     <div class="diff-mode-toggle" id="diff-mode-toggle">
@@ -518,40 +440,8 @@ window.initComparatifStatuts = function() {
                         <div class="notes-item"><span class="notes-term">ARE</span> - Allocation Retour à l'Emploi</div>
                     </div>
                     <p class="notes-disclaimer">
-                        Informations 2025. Le simulateur donne des estimations ; consultez un expert-comptable pour votre cas précis.
+                        Informations 2025. Consultez un expert-comptable pour votre cas précis.
                     </p>
-                </div>
-                
-                <button class="simulator-toggle-btn" id="simulator-toggle-btn">
-                    📊 Simulateur Net Perso
-                </button>
-                <div id="simulator-panel">
-                    <h3 style="color: #00FF87; margin-bottom: 1rem;">Simulateur Net Perso</h3>
-                    <label style="display: block; margin-bottom: 0.5rem;">Bénéfice annuel (€):</label>
-                    <input type="number" id="sim-benef" value="60000" style="width: 100%; padding: 0.5rem; border-radius: 4px; background: rgba(1, 42, 74, 0.7); border: 1px solid rgba(0, 255, 135, 0.3); color: #E6E6E6; margin-bottom: 1rem;">
-                    
-                    <label style="display: block; margin-bottom: 0.5rem;">Scénario:</label>
-                    <select id="sim-scenario" style="width: 100%; padding: 0.5rem; border-radius: 4px; background: rgba(1, 42, 74, 0.7); border: 1px solid rgba(0, 255, 135, 0.3); color: #E6E6E6; margin-bottom: 1rem;">
-                        <option value="salaire">100% Salaire</option>
-                        <option value="dividendes">100% Dividendes</option>
-                        <option value="mix">Mix 50/50</option>
-                    </select>
-
-                    <button id="sim-calculate" style="width: 100%; padding: 0.75rem; background: rgba(0, 255, 135, 0.2); border: 1px solid rgba(0, 255, 135, 0.5); border-radius: 8px; color: #00FF87; font-weight: 600; cursor: pointer; margin-bottom: 1rem;">
-                        Calculer
-                    </button>
-
-                    <div id="sim-results"></div>
-
-                    <button id="simulator-close" style="width: 100%; padding: 0.5rem; margin-top: 1rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: #E6E6E6; cursor: pointer;">
-                        Fermer
-                    </button>
-                </div>
-                
-                <div class="actions-floating-bar">
-                    <button class="action-btn" title="Imprimer" id="print-btn">
-                        <i class="fas fa-print"></i>
-                    </button>
                 </div>
             </div>
         `;
@@ -578,7 +468,6 @@ window.initComparatifStatuts = function() {
         let compareStatuts = [];
         let diffMode = false;
         
-        // ========== INTENTANSWERS SANS SALAIRE ==========
         let intentAnswers = {
             veut_dividendes: false,
             en_chomage: false,
@@ -586,9 +475,39 @@ window.initComparatifStatuts = function() {
             levee_fonds: 'non'
         };
         
+        // ========== HOOK POUR PRESETS ==========
+        window.__comparatifHooks = window.__comparatifHooks || {};
+        window.__comparatifHooks.setComparison = function(statuts) {
+            console.log("🎯 Preset: setComparison appelé avec", statuts);
+            compareStatuts = statuts || [];
+            updateComparisonBar();
+            updateTable();
+        };
+        window.__comparatifHooks.setIntents = function(intents) {
+            console.log("🎯 Preset: setIntents appelé avec", intents);
+            Object.assign(intentAnswers, intents);
+            
+            // Cocher les checkboxes correspondantes
+            $$('.intent-filter-item').forEach(item => {
+                const intent = item.dataset.intent;
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    if (intent === 'prevoit_associes' || intent === 'levee_fonds') {
+                        checkbox.checked = intentAnswers[intent] === 'oui';
+                    } else {
+                        checkbox.checked = !!intentAnswers[intent];
+                    }
+                    item.classList.toggle('active', checkbox.checked);
+                }
+            });
+            
+            renderAREHelper(intentAnswers);
+            updateTable();
+        };
+        console.log("✅ Hooks comparatif exposés:", Object.keys(window.__comparatifHooks));
+        
         initComparisonEvents();
         initIntentFilters();
-        initSimulator();
         loadStatutData();
 
         renderAREHelper(intentAnswers);
@@ -615,10 +534,6 @@ window.initComparatifStatuts = function() {
             $('#diff-mode-toggle').classList.toggle('active', diffMode);
             updateTable();
         });
-        
-        document.getElementById('print-btn').addEventListener('click', () => {
-            window.print();
-        });
 
         function initIntentFilters() {
             $$('.intent-filter-item').forEach(item => {
@@ -641,64 +556,14 @@ window.initComparatifStatuts = function() {
                         intentAnswers[intent] = checkbox.checked;
                     }
                     
+                    console.log("🎯 Intent changed:", intent, intentAnswers[intent]);
                     renderAREHelper(intentAnswers);
                     updateTable();
                 });
             });
         }
 
-        function initSimulator() {
-            const panel = $('#simulator-panel');
-            const toggleBtn = $('#simulator-toggle-btn');
-            const closeBtn = $('#simulator-close');
-            const calculateBtn = $('#sim-calculate');
-
-            toggleBtn.addEventListener('click', () => {
-                panel.classList.add('open');
-            });
-
-            closeBtn.addEventListener('click', () => {
-                panel.classList.remove('open');
-            });
-
-            calculateBtn.addEventListener('click', () => {
-                const benef = parseFloat($('#sim-benef').value) || 60000;
-                const scenario = $('#sim-scenario').value;
-                const resultsDiv = $('#sim-results');
-                
-                resultsDiv.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.6);">Calcul en cours...</p>';
-
-                setTimeout(() => {
-                    const comparingStatuts = compareStatuts.length > 0 
-                        ? compareStatuts.map(sn => Object.values(window.legalStatuses || {}).find(s => s.shortName === sn)).filter(Boolean)
-                        : Object.values(window.legalStatuses || {}).slice(0, 3);
-
-                    let html = '';
-                    comparingStatuts.forEach(statut => {
-                        const enriched = enrichForDisplay(statut, intentAnswers);
-                        const result = simulateNet(enriched, benef, scenario);
-                        
-                        html += `
-                            <div class="scenario-result">
-                                <h4 style="color: #00FF87; margin-bottom: 0.5rem;">${statut.shortName}</h4>
-                                <div style="display: grid; gap: 0.5rem;">
-                                    <div>Net perso: <b>${fmtEuro(result.net)}</b></div>
-                                    <div>Coût total: <b>${fmtEuro(result.cout)}</b></div>
-                                    <div style="font-size: 0.75rem; opacity: 0.7;">
-                                        Scénario: ${scenario === 'salaire' ? '100% Salaire' : scenario === 'dividendes' ? '100% Dividendes' : 'Mix 50/50'}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    resultsDiv.innerHTML = html || '<p>Sélectionnez des statuts à comparer</p>';
-                }, 300);
-            });
-        }
-
         function initComparisonEvents() {
-            const addComparisonBtn = document.getElementById('add-comparison-btn');
             const statusDropdown = document.getElementById('status-dropdown');
             
             function populateStatusDropdown() {
@@ -713,29 +578,15 @@ window.initComparatifStatuts = function() {
                         option.textContent = statut.shortName;
                         statusDropdown.appendChild(option);
                     });
+                    console.log("✅ Dropdown peuplé avec", statuts.length, "statuts");
                 }
             }
             
             statusDropdown.addEventListener('change', () => {
                 if (statusDropdown.value) {
+                    console.log("📌 Ajout manuel:", statusDropdown.value);
                     addToComparison(statusDropdown.value);
                     statusDropdown.value = '';
-                }
-            });
-            
-            addComparisonBtn.addEventListener('click', () => {
-                if (window.legalStatuses) {
-                    const statuts = Object.values(window.legalStatuses);
-                    if (statuts.length > 0) {
-                        const availableStatuts = statuts.filter(statut => 
-                            !compareStatuts.includes(statut.shortName));
-                        
-                        if (availableStatuts.length > 0) {
-                            addToComparison(availableStatuts[0].shortName);
-                        } else {
-                            alert('Tous les statuts sont déjà inclus dans la comparaison');
-                        }
-                    }
                 }
             });
             
@@ -754,13 +605,17 @@ window.initComparatifStatuts = function() {
         }
         
         function addToComparison(statutShortName) {
-            if (compareStatuts.includes(statutShortName)) return;
+            if (compareStatuts.includes(statutShortName)) {
+                console.log("⚠️ Statut déjà présent:", statutShortName);
+                return;
+            }
             
             if (compareStatuts.length >= 3) {
                 compareStatuts.shift();
             }
             
             compareStatuts.push(statutShortName);
+            console.log("✅ Comparaison mise à jour:", compareStatuts);
             updateComparisonBar();
             updateTable();
         }
@@ -769,6 +624,7 @@ window.initComparatifStatuts = function() {
             const index = compareStatuts.indexOf(statutShortName);
             if (index !== -1) {
                 compareStatuts.splice(index, 1);
+                console.log("🗑️ Statut retiré:", statutShortName);
                 updateComparisonBar();
                 updateTable();
             }
@@ -778,8 +634,10 @@ window.initComparatifStatuts = function() {
             const comparisonItems = document.getElementById('comparison-items');
             comparisonItems.innerHTML = '';
             
+            console.log("🔄 Mise à jour barre de comparaison avec", compareStatuts);
+            
             compareStatuts.forEach(shortName => {
-                const statut = Object.values(window.legalStatuses).find(s => s.shortName === shortName);
+                const statut = Object.values(window.legalStatuses || {}).find(s => s.shortName === shortName);
                 if (!statut) return;
                 
                 const itemDiv = document.createElement('div');
@@ -821,30 +679,24 @@ window.initComparatifStatuts = function() {
                         <div style="font-weight:600;color:#00FF87;margin-bottom:6px">💡 EURL vs SASU — points décisifs</div>
                         <div class="grid">
                             <div>
-                                <div><b>Social dirigeant</b> : ${toText(eurl.regimeSocial)}</div>
-                                <div><b>Fiscalité par défaut</b> : ${toText(eurl.fiscalite)}</div>
-                                <div><b>Dividendes</b> : assujettis TNS au-delà de 10 % (si IS)</div>
-                                <div><b>Capital</b> : ${toText(eurl.capital)}</div>
+                                <div><b>Social</b>: ${toText(eurl.regimeSocial)}</div>
+                                <div><b>Fiscalité</b>: ${toText(eurl.fiscalite)}</div>
+                                <div><b>Dividendes</b>: cotisés >10%</div>
                             </div>
                             <div>
-                                <div><b>Social dirigeant</b> : ${toText(sasu.regimeSocial)}</div>
-                                <div><b>Fiscalité par défaut</b> : ${toText(sasu.fiscalite)}</div>
-                                <div><b>Dividendes</b> : pas de cotisations sociales (PFU/barème)</div>
-                                <div><b>Capital</b> : ${toText(sasu.capital)}</div>
+                                <div><b>Social</b>: ${toText(sasu.regimeSocial)}</div>
+                                <div><b>Fiscalité</b>: ${toText(sasu.fiscalite)}</div>
+                                <div><b>Dividendes</b>: non cotisés</div>
                             </div>
-                        </div>
-                        <div style="margin-top:8px;font-size:.9rem;opacity:.9">
-                            <b>Raccourci</b> : EURL = cotisations souvent plus basses (TNS) si salaire, SASU = meilleure couverture (assimilé salarié) et plus simple si investisseurs/associés arrivent.
                         </div>
                     </div>`;
             } else if (compareStatuts.length===1 && has('MICRO')) {
                 const m = get('MICRO');
                 host.innerHTML = `
                     <div style="border:1px solid rgba(0,255,135,.3);border-radius:8px;padding:12px;background:rgba(1,35,65,.6)">
-                        <div style="font-weight:600;color:#00FF87;margin-bottom:6px">📋 Freelance en micro — ce qu'il faut faire en 2025</div>
-                        <div style="line-height:1.5">${m.obligationsCle.split(' · ').map(x=>`• ${x}`).join('<br>')}</div>
-                        <div style="margin-top:6px;font-size:.9rem;opacity:.9"><b>Plafonds</b> : ${m.plafondCA}</div>
-                        <div style="font-size:.9rem;opacity:.9"><b>TVA</b> : ${m.regimeTVA || '—'}</div>
+                        <div style="font-weight:600;color:#00FF87;margin-bottom:6px">📋 Micro-entreprise 2025</div>
+                        <div>${m.obligationsCle}</div>
+                        <div style="margin-top:6px;font-size:.9rem;opacity:.9"><b>Plafonds</b>: ${m.plafondCA}</div>
                     </div>`;
             }
         }
@@ -853,35 +705,17 @@ window.initComparatifStatuts = function() {
             if (typeof rating !== 'number') return 'Non évalué';
             let stars = '';
             for (let i = 1; i <= 5; i++) {
-                stars += `<span class="star ${i <= rating ? 'filled' : ''}\">★</span>`;
+                stars += `<span class="star ${i <= rating ? 'filled' : ''}">★</span>`;
             }
             return stars;
         }
         
-        function getTooltipForProperty(propertyKey) {
-            const tooltips = {
-                'responsabilite': 'Niveau de responsabilité financière personnelle du dirigeant',
-                'capital': 'Montant minimum légal pour constituer la société',
-                'fiscalite': 'Régime fiscal par défaut (IR: Impôt sur le Revenu, IS: Impôt sur les Sociétés)',
-                'fiscaliteOption': 'Options IR/IS/versement libératoire et fenêtres d\'option',
-                'regimeSocial': 'Statut social du dirigeant (TNS: indépendant, Assimilé salarié: régime général)',
-                'chargesSociales': 'Où se calculent les cotisations (rémunération, bénéfice, dividendes…)',
-                'associes': 'Nombre minimum et maximum d\'associés autorisés',
-                'protectionPatrimoine': 'Niveau de séparation entre patrimoines personnel et professionnel',
-                'regimeTVA': 'Régime de TVA applicable',
-                'formalites': 'Complexité des démarches administratives',
-                'publicationComptes': 'Obligation de publier les comptes annuels',
-                'obligationsCle': 'Obligations déclaratives/comptables clés 2025',
-                'plafondCA': 'Plafonds micro 2025 selon l\'activité'
-            };
-            return tooltips[propertyKey] || 'Information complémentaire';
-        }
-
         function loadStatutData() {
             if (window.legalStatuses) {
+                console.log("✅ legalStatuses disponible:", Object.keys(window.legalStatuses).length);
                 renderTable(window.legalStatuses);
             } else {
-                console.log("Les données legalStatuses ne sont pas encore disponibles, tentative dans 500ms...");
+                console.log("⏳ Attente de legalStatuses...");
                 setTimeout(() => {
                     if (window.legalStatuses) {
                         renderTable(window.legalStatuses);
@@ -892,8 +726,8 @@ window.initComparatifStatuts = function() {
                                 <td colspan="10">
                                     <div class="loading-state">
                                         <p style="color: #FF6B6B;">
-                                            <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>
-                                            Impossible de charger les données des statuts juridiques.
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Impossible de charger les données.
                                         </p>
                                         <button id="retry-load" style="padding: 0.5rem 1rem; background-color: rgba(0, 255, 135, 0.2); border: 1px solid rgba(0, 255, 135, 0.5); color: #00FF87; border-radius: 0.375rem; cursor: pointer; margin-top: 0.5rem;">Réessayer</button>
                                     </div>
@@ -905,7 +739,10 @@ window.initComparatifStatuts = function() {
                 }, 500);
             }
 
-            window.addEventListener('legalStatuses:ready', ()=>renderTable(window.legalStatuses), { once:true });
+            window.addEventListener('legalStatuses:ready', ()=>{
+                console.log("✅ Événement legalStatuses:ready reçu");
+                renderTable(window.legalStatuses);
+            }, { once:true });
         }
 
         function getColumnsForCriterion(criterion) {
@@ -956,6 +793,7 @@ window.initComparatifStatuts = function() {
             let list = Object.values(statuts);
 
             if (compareStatuts.length > 0) {
+                console.log("🔍 Filtrage par comparaison:", compareStatuts);
                 list = list.filter(statut => compareStatuts.includes(statut.shortName));
             }
 
@@ -977,11 +815,15 @@ window.initComparatifStatuts = function() {
                 list.sort((a,b) => (b._score||0) - (a._score||0));
             }
 
+            console.log("📊 Statuts filtrés:", list.length, "sur", Object.keys(statuts).length);
             return list;
         }
 
         function updateTable() {
-            if (!window.legalStatuses) return;
+            if (!window.legalStatuses) {
+                console.log("⚠️ updateTable: legalStatuses non disponible");
+                return;
+            }
             
             let columns = getColumnsForCriterion(selectedCriterion);
             const filteredStatuts = filterStatuts(window.legalStatuses, searchTerm);
@@ -993,6 +835,7 @@ window.initComparatifStatuts = function() {
                     { key: 'name', label: 'Statut' },
                     ...columns.filter(c => diffKeys.includes(c.key))
                 ];
+                console.log("📊 Mode diff: colonnes affichées:", diffKeys);
             }
             
             const tableHeaders = document.getElementById('table-headers');
@@ -1042,11 +885,10 @@ window.initComparatifStatuts = function() {
             }
 
             tableBody.innerHTML = rowsData.map((statut, index) => {
-                let row = `<tr style="animation-delay: ${index * 0.05}s;">`;
+                let row = `<tr style="animation-delay: ${index * 0.05}s;" data-statut="${statut.shortName}">`;
                 
                 columns.forEach(column => {
                     if (column.key === 'name') {
-                        // ========== PAS DE SCORE AFFICHÉ ==========
                         const whyHtml = statut._why && statut._why.length > 0
                             ? `<div class="status-why">${statut._why.join(', ')}</div>`
                             : '';
@@ -1073,10 +915,8 @@ window.initComparatifStatuts = function() {
                         const isLimited = statut[column.key] && statut[column.key].toLowerCase().includes('limitée');
                         row += `
                             <td class="${isLimited ? 'highlighted-value' : ''}">
-                                <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
-                                    ${toText(statut[column.key])}
-                                    ${isLimited ? ' <i class="fas fa-shield-alt text-green-400 ml-1"></i>' : ''}
-                                </span>
+                                ${toText(statut[column.key])}
+                                ${isLimited ? ' <i class="fas fa-shield-alt" style="color:#00FF87"></i>' : ''}
                             </td>
                         `;
                     } else if (column.key === 'protectionPatrimoine') {
@@ -1086,26 +926,20 @@ window.initComparatifStatuts = function() {
                             </div>` : '';
                         row += `
                             <td>
-                                <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
-                                    ${stars}
-                                    <span>${toText(statut._pp_text)}</span>
-                                </span>
+                                ${stars}
+                                <span>${toText(statut._pp_text)}</span>
                             </td>
                         `;
                     } else if (column.key === 'capital') {
                         row += `
                             <td class="key-cell">
-                                <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
-                                    ${toText(statut[column.key])}
-                                </span>
+                                ${toText(statut[column.key])}
                             </td>
                         `;
                     } else {
                         row += `
                             <td>
-                                <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
-                                    ${toText(statut[column.key])}
-                                </span>
+                                ${toText(statut[column.key])}
                             </td>
                         `;
                     }
@@ -1115,18 +949,13 @@ window.initComparatifStatuts = function() {
                 return row;
             }).join('');
             
-            document.querySelectorAll('#table-body tr').forEach((row, index) => {
-                row.addEventListener('mouseover', () => {
-                    row.style.backgroundColor = 'rgba(0, 255, 135, 0.05)';
-                });
-                row.addEventListener('mouseout', () => {
-                    row.style.backgroundColor = '';
-                });
-                
+            // Ajouter événement de clic sur les lignes
+            document.querySelectorAll('#table-body tr').forEach((row) => {
                 row.addEventListener('click', () => {
-                    const statut = rowsData[index];
-                    if (statut) {
-                        addToComparison(statut.shortName);
+                    const statutShortName = row.getAttribute('data-statut');
+                    if (statutShortName) {
+                        console.log("🖱️ Clic sur ligne:", statutShortName);
+                        addToComparison(statutShortName);
                     }
                 });
             });
