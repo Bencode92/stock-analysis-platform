@@ -730,187 +730,216 @@ const legalStatuses = {
 window.legalStatuses = legalStatuses;
 
 // Barèmes et filtres (PLACEHOLDERS, À REMPLACER)
-   const exclusionFilters = [
-    {
-        id: "professional_order",
-        condition: "yes",
-        excluded_statuses: ["MICRO", "SNC"],
-        tolerance_message: "Si votre activité est accessoire et non soumise à l'ordre, souhaitez-vous tout de même voir la micro-entreprise ?"
-    },
-    {
-        id: "team_structure",
-        condition: "solo",
-        excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SELARL", "SELAS", "SCA"], 
-        tolerance_message: null
-    },
-    {
-        id: "available_capital",
-        condition: value => value < 1,
-        excluded_statuses: ["SA"],
-        tolerance_message: "La SA exige ≥ 37 000 € libérés à 50 % minimum."
-    },
-    {
-        id: "social_regime",
-        condition: "assimilated_employee",
-        excluded_statuses: ["EI", "MICRO", "SNC"],
-        tolerance_message: null
-    },
-    {
-        id: "age",
-        condition: "minor",
-        excluded_statuses: ["SAS", "SARL", "SA", "EURL", "SASU", "SNC", "SCI", "SELARL", "SELAS", "SCA"],
-        tolerance_condition: "emancipated_minor",
-        tolerance_message: "Si vous êtes mineur émancipé, certaines sociétés commerciales restent accessibles."
-    },
-    {
-        id: "sharing_instruments",
-        condition: value => value && value.length > 0,
-        excluded_statuses: ["EI", "MICRO", "SNC"],
-        tolerance_message: null
-    }
+const exclusionFilters = [
+  // Professions avec ordre (avocats, médecins, EC, etc.)
+  // -> On N'EXCLUT PLUS la MICRO globalement (micro-BNC possible selon ordre) ;
+  //    on écarte surtout la SNC.
+  {
+    id: "professional_order",
+    condition: "yes",
+    excluded_statuses: ["SNC"],
+    tolerance_message:
+      "Si vous exercez à titre individuel, EI/Micro peuvent rester possibles selon l’ordre. En exercice en société, privilégiez les SEL (SELARL/SELAS)."
+  },
+
+  // Solo : on masque les formes nécessitant ≥ 2 associés
+  {
+    id: "team_structure",
+    condition: "solo",
+    excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SELARL", "SELAS", "SCA"],
+    tolerance_message: null
+  },
+
+  // Capital disponible : seuil utile pour SA/SCA (≥ 37 000 € dont 50 % à la constitution)
+  {
+    id: "available_capital",
+    condition: (value) => Number(value || 0) < 18500, // 50 % de 37 000 €
+    excluded_statuses: ["SA", "SCA"],
+    tolerance_message:
+      "La SA/SCA exigent au moins 37 000 € de capital (≥ 50 % libérés à la constitution)."
+  },
+
+  // Souhait du régime social "assimilé salarié"
+  // (On exclut les statuts TNS par défaut ; exceptions possibles selon la gérance)
+  {
+    id: "social_regime",
+    condition: "assimilated_employee",
+    excluded_statuses: ["EI", "MICRO", "SNC", "EURL", "SARL", "SELARL"],
+    tolerance_message:
+      "EURL/SARL/SELARL peuvent parfois convenir si le dirigeant est non associé ou minoritaire/égalitaire (assimilé salarié)."
+  },
+
+  // Mineur non émancipé : on masque les sociétés commerciales
+  {
+    id: "age",
+    condition: "minor",
+    excluded_statuses: ["SAS", "SARL", "SA", "EURL", "SASU", "SNC", "SCI", "SELARL", "SELAS", "SCA"],
+    tolerance_condition: "emancipated_minor",
+    tolerance_message:
+      "Si vous êtes mineur émancipé, certaines sociétés commerciales restent accessibles."
+  },
+
+  // Instruments d’actionnariat (BSPCE, AGA, BSA, actions de préférence…)
+  // -> Réservés SAS/SASU/SA/SELAS (sous conditions). On exclut aussi SARL/EURL/SELARL/SCI.
+  {
+    id: "sharing_instruments",
+    condition: (value) => Array.isArray(value) && value.length > 0,
+    excluded_statuses: ["EI", "MICRO", "SNC", "SARL", "EURL", "SELARL", "SCI"],
+    tolerance_message:
+      "BSPCE/AGA/BSA sont possibles en SAS/SASU/SA/SELAS (sous conditions légales)."
+  },
+
+  // Appel public à l’épargne / cotation : SA ou SCA uniquement
+  {
+    id: "public_listing_or_aps",
+    condition: (value) => value === true,
+    excluded_statuses: ["EI", "MICRO", "EURL", "SASU", "SAS", "SARL", "SNC", "SCI", "SELARL", "SELAS"],
+    tolerance_message:
+      "Pour une cotation ou un appel public à l’épargne, orientez-vous vers une SA (ou SCA)."
+  }
 ];
 window.exclusionFilters = exclusionFilters;
- const ratingScales = {
-    taxation: {
-        EI: 3,
-        MICRO: 4,
-        EURL: 4,
-        SASU: 4,
-        SARL: 3,
-        SAS: 4,
-        SA: 3,
-        SNC: 3,
-        SCI: 4,
-        SELARL: 3,
-        SELAS: 3,
-        SCA: 3
-    },
-    social_cost: {
-        EI: 3,
-        MICRO: 5,
-        EURL: 3,
-        SASU: 2,
-        SARL: 3,
-        SAS: 2,
-        SA: 2,
-        SNC: 3,
-        SCI: 3,
-        SELARL: 3,
-        SELAS: 2,
-        SCA: 2
-    },
-    patrimony_protection: {
-        EI: 4,
-        MICRO: 4,
-        EURL: 4,
-        SASU: 5,
-        SARL: 4,
-        SAS: 5,
-        SA: 5,
-        SNC: 1,
-        SCI: 2,
-        SELARL: 4,
-        SELAS: 5,
-        SCA: 3
-    },
-    governance: {
-        EI: 5,
-        MICRO: 5,
-        EURL: 4,
-        SASU: 4,
-        SARL: 3,
-        SAS: 4,
-        SA: 2,
-        SNC: 3,
-        SCI: 4,
-        SELARL: 3,
-        SELAS: 4,
-        SCA: 2
-    },
-    fundraising: {
-        EI: 1,
-        MICRO: 1,
-        EURL: 2,
-        SASU: 4,
-        SARL: 2,
-        SAS: 5,
-        SA: 4,
-        SNC: 1,
-        SCI: 1,
-        SELARL: 3,
-        SELAS: 5,
-        SCA: 3
-    },
-    flexibility: {
-        EI: 5,
-        MICRO: 5,
-        EURL: 3,
-        SASU: 5,
-        SARL: 2,
-        SAS: 5,
-        SA: 1,
-        SNC: 2,
-        SCI: 3,
-        SELARL: 2,
-        SELAS: 4,
-        SCA: 2
-    },
-    retirement_insurance: {
-        EI: 2,
-        MICRO: 2,
-        EURL: 3,
-        SASU: 4,
-        SARL: 3,
-        SAS: 4,
-        SA: 5,
-        SNC: 2,
-        SCI: 1,
-        SELARL: 3,
-        SELAS: 4,
-        SCA: 4
-    },
-    administrative_simplicity: {
-        EI: 5,
-        MICRO: 5,
-        EURL: 3,
-        SASU: 2,
-        SARL: 3,
-        SAS: 2,
-        SA: 1,
-        SNC: 3,
-        SCI: 3,
-        SELARL: 3,
-        SELAS: 2,
-        SCA: 1
-    },
-    accounting_cost: {
-        EI: 4,
-        MICRO: 5,
-        EURL: 4,
-        SASU: 3,
-        SARL: 3,
-        SAS: 3,
-        SA: 1,
-        SNC: 2,
-        SCI: 4,
-        SELARL: 3,
-        SELAS: 3,
-        SCA: 1
-    },
-    transmission: {
-        EI: 1,
-        MICRO: 1,
-        EURL: 3,
-        SASU: 4,
-        SARL: 3,
-        SAS: 5,
-        SA: 5,
-        SNC: 2,
-        SCI: 5,
-        SELARL: 3,
-        SELAS: 4,
-        SCA: 3
-    }
+const ratingScales = {
+  taxation: {
+    EI: 3,
+    MICRO: 4,
+    EURL: 4,
+    SASU: 4,
+    SARL: 3,
+    SAS: 4,
+    SA: 3,
+    SNC: 3,
+    SCI: 4,
+    SELARL: 3,
+    SELAS: 3,
+    SCA: 3
+  },
+  social_cost: {
+    EI: 3,
+    MICRO: 4, // ajusté (était 5) pour coller à tes key_metrics
+    EURL: 3,
+    SASU: 2,
+    SARL: 3,
+    SAS: 2,
+    SA: 2,
+    SNC: 3,
+    SCI: 3,
+    SELARL: 3,
+    SELAS: 2,
+    SCA: 2
+  },
+  patrimony_protection: {
+    EI: 4,
+    MICRO: 4,
+    EURL: 4,
+    SASU: 5,
+    SARL: 4,
+    SAS: 5,
+    SA: 5,
+    SNC: 1,
+    SCI: 2,
+    SELARL: 4,
+    SELAS: 5,
+    SCA: 2 // ajusté (était 3) : commandités illimité
+  },
+  governance: {
+    EI: 4,     // ajusté (était 5)
+    MICRO: 5,
+    EURL: 3,   // ajusté (était 4)
+    SASU: 5,   // ajusté (était 4)
+    SARL: 2,   // ajusté (était 3)
+    SAS: 5,    // ajusté (était 4)
+    SA: 2,
+    SNC: 3,
+    SCI: 4,
+    SELARL: 3,
+    SELAS: 5,  // ajusté (était 4)
+    SCA: 3     // ajusté (était 2)
+  },
+  fundraising: {
+    EI: 1,
+    MICRO: 1,
+    EURL: 1,   // ajusté (était 2)
+    SASU: 5,   // ajusté (était 4)
+    SARL: 3,   // ajusté (était 2)
+    SAS: 5,
+    SA: 5,     // ajusté (était 4)
+    SNC: 1,
+    SCI: 1,
+    SELARL: 2, // ajusté (était 3)
+    SELAS: 4,  // ajusté (était 5)
+    SCA: 5     // ajusté (était 3)
+  },
+  flexibility: {
+    EI: 5,
+    MICRO: 5,
+    EURL: 3,
+    SASU: 5,
+    SARL: 2,
+    SAS: 5,
+    SA: 1,
+    SNC: 2,
+    SCI: 3,
+    SELARL: 2,
+    SELAS: 5,  // ajusté (était 4)
+    SCA: 2
+  },
+  retirement_insurance: {
+    EI: 2,
+    MICRO: 2,
+    EURL: 3,
+    SASU: 4,
+    SARL: 3,
+    SAS: 4,
+    SA: 5,
+    SNC: 2,
+    SCI: 1,
+    SELARL: 3,
+    SELAS: 4,
+    SCA: 4
+  },
+  administrative_simplicity: {
+    EI: 4,   // ajusté (était 5)
+    MICRO: 5,
+    EURL: 3,
+    SASU: 2,
+    SARL: 2, // ajusté (était 3)
+    SAS: 1,  // ajusté (était 2)
+    SA: 1,
+    SNC: 3,
+    SCI: 2,  // ajusté (était 3)
+    SELARL: 2, // ajusté (était 3)
+    SELAS: 2,
+    SCA: 1
+  },
+  accounting_cost: {
+    EI: 4,
+    MICRO: 5,
+    EURL: 4,
+    SASU: 3,
+    SARL: 3,
+    SAS: 3,
+    SA: 1,
+    SNC: 3, // ajusté (était 2)
+    SCI: 4,
+    SELARL: 3,
+    SELAS: 3,
+    SCA: 1
+  },
+  transmission: {
+    EI: 2,      // ajusté (était 1)
+    MICRO: 1,
+    EURL: 3,
+    SASU: 4,
+    SARL: 4,    // ajusté (était 3)
+    SAS: 5,
+    SA: 5,
+    SNC: 2,
+    SCI: 5,
+    SELARL: 4,  // ajusté (était 3)
+    SELAS: 4,
+    SCA: 4      // ajusté (était 3)
+  }
 };
 window.ratingScales = ratingScales;
 
@@ -932,1011 +961,1537 @@ window.engineLoadingStarted = true;
 // Règles de scoring configurables
 const scoringRules = [
     // Règles pour la protection du patrimoine
-    {
-        id: 'essential_patrimony_protection',
-        description: 'Protection du patrimoine essentielle',
-        condition: answers => answers.patrimony_protection === 'essential',
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
-    {
-        id: 'high_risk_activity_ei_micro',
-        description: 'Activité à risque élevé pour EI/MICRO',
-        condition: answers => answers.high_professional_risk === 'yes',
-        apply: (statusId, score) => {
-            if (['EI', 'MICRO'].includes(statusId)) {
-                return score - 1;
-            } else if (statusId === 'EIRL') {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
-    {
-        id: 'sca_anti_takeover_protection',
-        description: 'SCA : protection anti-OPA',
-        condition: answers =>
-            answers.takeover_protection === 'yes' ||
-            answers.hostile_takeover_concern === 'yes',
-        apply: (statusId, score) => {
-            if (statusId === 'SCA') {
-                return score + 1.5;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
-    {
-        id: 'sci_patrimony_separation_bonus',
-        description: 'SCI : séparation du patrimoine immobilier',
-        condition: answers => answers.patrimony_protection === 'essential',
-        apply: (statusId, score) => {
-            if (statusId === 'SCI') {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
-    {
-    id: 'risk_aversion_liability_shift',
-    description: 'Appétence au risque faible : privilégier la responsabilité limitée',
-    condition: answers =>
-        answers.risk_appetite !== undefined &&
-        answers.risk_appetite <= 2,
-    apply: (statusId, score) => {
-        if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
-            return score - 0.5;            // responsabilité illimitée
-        }
-        if (['SASU', 'SAS', 'SARL', 'EURL', 'SA', 'SCI'].includes(statusId)) {
-            return score + 0.5;            // responsabilité limitée
-        }
-        return score;
-    },
-    criteria: 'patrimony_protection'
-},
 {
-    id: 'bank_guarantee_liability_penalty',
-    description: 'Caution bancaire personnelle : pénalise EI / MICRO',
-    condition: answers => answers.bank_guarantee === 'yes',
-    apply: (statusId, score) => {
-        if (['EI', 'MICRO'].includes(statusId)) {
-            return score - 0.5;            // plus exposé
-        }
-        if (['SASU', 'SAS', 'SARL', 'EURL', 'SA'].includes(statusId)) {
-            return score + 0.25;           // structure protectrice
-        }
-        return score;
-    },
-    criteria: 'patrimony_protection'
+  id: 'essential_patrimony_protection',
+  description: 'Protection du patrimoine essentielle',
+  condition: answers => answers.patrimony_protection === 'essential',
+  apply: (statusId, score) => {
+    // +1 pour toutes les formes à responsabilité limitée (hors SCI et SCA)
+    if ([
+      'SASU', 'SAS', 'SARL', 'EURL', 'SA',
+      'SELAS', 'SELARL', 'EI', 'MICRO'
+    ].includes(statusId)) {
+      return score + 1;
+    }
+    return score;
+  },
+  criteria: 'patrimony_protection'
 },
+
 {
-    id: 'holding_asset_separation_bonus',
-    description: 'Holding de tête : bonus pour dissocier patrimoine et opérationnel',
-    condition: answers => answers.holding_company === 'yes',
-    apply: (statusId, score) => {
-        if (['SAS', 'SARL', 'SA'].includes(statusId)) {
-            return score + 0.5;
-        }
-        return score;
-    },
-    criteria: 'patrimony_protection'
+  id: 'high_risk_activity_ei_micro', // on garde l'id pour compatibilité, mais on corrige la logique
+  description: 'Activité à risque élevé : pénalise surtout les formes à responsabilité illimitée',
+  condition: answers => answers.high_professional_risk === 'yes',
+  apply: (statusId, score) => {
+    if (statusId === 'SNC') return score - 1.5;            // illimitée & solidaire
+    if (statusId === 'SCA') return score - 1;               // commandités illimités
+    if (statusId === 'SCI') return score - 0.5;             // illimitée mais proportionnelle
+    // EI/MICRO ne sont plus illimitées depuis 2022 → pas de malus spécifique ici
+    return score;
+  },
+  criteria: 'patrimony_protection'
 },
-        {
-        id: 'unlimited_liability_penalty',
-        description: 'Responsabilité illimitée pénalisée si protection essentielle ou activité à risque',
-        condition: answers =>
-            answers.patrimony_protection === 'essential' ||
-            answers.high_professional_risk === 'yes',
-        apply: (statusId, score) => {
-            if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
-                return score - 2;        // forte pénalité
-            }
-            if (statusId === 'SCA') {
-                return score - 1;        // commandité SCA : pénalité modérée
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
-    {
-        id: 'ei_2022_partial_shield',
-        description: "Entreprise individuelle (réforme 2022) : séparation patrimoine pro/perso",
-        condition: () => true, // toujours évaluée
-        apply: (statusId, score) => {
-            if (statusId === 'EI') {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
-    {
-        id: 'collaborating_spouse_shared_risk',
-        description: 'Conjoint collaborateur : accroît le risque sur les formes illimitées',
-        condition: answers => answers.collaborating_spouse === 'yes',
-        apply: (statusId, score) => {
-            if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
-                return score - 0.5;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
-    {
-        id: 'sci_real_estate_shield',
-        description: "Immobilier sans caution bancaire : la SCI isole le bien",
-        condition: answers =>
-            answers.activity_type === 'immobilier' &&
-            answers.bank_guarantee !== 'yes',
-        apply: (statusId, score) => {
-            if (statusId === 'SCI') {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
-    {
-       id: 'eurl_majority_penalty',
-    description: 'Associé ≥ 75 % + caution perso : pénalité EURL / SARL',
-    condition: answers =>
-        parseFloat(answers.capital_percentage || 0) >= 75 &&
-        answers.bank_guarantee === 'yes',
-    apply: (statusId, score) =>
-        ['EURL', 'SARL'].includes(statusId) ? score - 0.5 : score,
-    criteria: 'patrimony_protection'
-    },
-    {
-        id: 'multiple_housing_units_bonus',
-        description: 'Portefeuille immo (> 120 k€ CA) : bonus SCI pour cantonnement',
-        condition: answers =>
-            answers.activity_type === 'immobilier' &&
-            parseFloat(answers.projected_revenue || 0) > 120_000,
-        apply: (statusId, score) => {
-            if (statusId === 'SCI') {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'patrimony_protection'
-    },
+
+{
+  id: 'sca_anti_takeover_protection',
+  description: 'SCA : protection anti-OPA',
+  condition: answers =>
+    answers.takeover_protection === 'yes' ||
+    answers.hostile_takeover_concern === 'yes',
+  apply: (statusId, score) => statusId === 'SCA' ? score + 1.5 : score,
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'sci_patrimony_separation_bonus',
+  description: 'SCI : séparation du patrimoine immobilier (pertinent si activité immobilière)',
+  condition: answers =>
+    answers.patrimony_protection === 'essential' &&
+    answers.activity_type === 'immobilier' &&
+    answers.bank_guarantee !== 'yes',
+  apply: (statusId, score) => statusId === 'SCI' ? score + 1 : score,
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'risk_aversion_liability_shift',
+  description: 'Appétence au risque faible : privilégier la responsabilité limitée',
+  condition: answers =>
+    answers.risk_appetite !== undefined &&
+    answers.risk_appetite <= 2,
+  apply: (statusId, score) => {
+    if (statusId === 'SNC') return score - 0.75;            // illimitée & solidaire
+    if (statusId === 'SCA') return score - 0.5;             // commandités illimités
+    // Bonus aux formes limitées (y compris EI/MICRO depuis 2022). On exclut la SCI.
+    if ([
+      'SASU', 'SAS', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL', 'EI', 'MICRO'
+    ].includes(statusId)) return score + 0.5;
+    return score;
+  },
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'bank_guarantee_liability_penalty',
+  description: 'Caution bancaire personnelle : neutralise la protection, quel que soit le statut',
+  condition: answers => answers.bank_guarantee === 'yes',
+  apply: (statusId, score) => {
+    // La caution perso expose le patrimoine perso dans tous les cas → malus uniforme
+    return score - 0.5;
+  },
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'holding_asset_separation_bonus',
+  description: 'Holding de tête : bonus pour dissocier patrimoine et opérationnel',
+  condition: answers => answers.holding_company === 'yes',
+  apply: (statusId, score) => {
+    // Holding pertinent surtout en sociétés (pas en EI/MICRO)
+    if (['SAS', 'SASU', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL'].includes(statusId)) {
+      return score + 0.5;
+    }
+    return score;
+  },
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'unlimited_liability_penalty',
+  description: 'Responsabilité illimitée pénalisée si protection essentielle ou activité à risque',
+  condition: answers =>
+    answers.patrimony_protection === 'essential' ||
+    answers.high_professional_risk === 'yes',
+  apply: (statusId, score) => {
+    if (statusId === 'SNC') return score - 2;
+    if (statusId === 'SCA') return score - 1;               // vise la position de commandité
+    // SCI : pénalité seulement hors cas immobilier (sinon règles dédiées ci-dessus)
+    if (statusId === 'SCI' && answers.activity_type !== 'immobilier') return score - 0.5;
+    // EI / MICRO NE SONT PLUS illimitées → supprimer l’ancien malus
+    return score;
+  },
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'ei_2022_partial_shield',
+  description: 'Entreprise individuelle (réforme 2022) : séparation patrimoine pro/perso',
+  condition: () => true, // toujours évaluée
+  apply: (statusId, score) => {
+    if (statusId === 'EI' || statusId === 'MICRO') {
+      return score + 0.5;
+    }
+    return score;
+  },
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'collaborating_spouse_shared_risk',
+  description: 'Conjoint collaborateur : accroît le risque sur les formes illimitées',
+  condition: answers => answers.collaborating_spouse === 'yes',
+  apply: (statusId, score) => {
+    if (statusId === 'SNC') return score - 0.5;             // illimitée & solidaire
+    // EI/MICRO : depuis 2022, protection améliorée → malus allégé ou nul
+    if (statusId === 'EI' || statusId === 'MICRO') return score - 0.25;
+    return score;
+  },
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'sci_real_estate_shield',
+  description: 'Immobilier sans caution bancaire : la SCI isole le bien',
+  condition: answers =>
+    answers.activity_type === 'immobilier' &&
+    answers.bank_guarantee !== 'yes',
+  apply: (statusId, score) => statusId === 'SCI' ? score + 1 : score,
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'eurl_majority_penalty',
+  description: 'Associé ≥ 75 % + caution perso : pénalité EURL / SARL',
+  condition: answers =>
+    parseFloat(answers.capital_percentage || 0) >= 75 &&
+    answers.bank_guarantee === 'yes',
+  apply: (statusId, score) =>
+    ['EURL', 'SARL'].includes(statusId) ? score - 0.5 : score,
+  criteria: 'patrimony_protection'
+},
+
+{
+  id: 'multiple_housing_units_bonus',
+  description: 'Portefeuille immo (> 120 k€ CA) : bonus SCI pour cantonnement',
+  condition: answers =>
+    answers.activity_type === 'immobilier' &&
+    parseFloat(answers.projected_revenue || 0) > 120_000,
+  apply: (statusId, score) => statusId === 'SCI' ? score + 1 : score,
+  criteria: 'patrimony_protection'
+},
+
     
     // Règles pour la simplicité administrative
         {
-        id: 'high_revenue_small_structures',
-        description: 'CA élevé pour petites structures',
-        condition: answers => parseFloat(answers.projected_revenue) > 100_000,
-        apply: (statusId, score) => {
-            if (['EI', 'MICRO'].includes(statusId)) {
-                return score - 1;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'low_revenue_structure_penalty',
-        description: 'Faible CA : structures complexes inadaptées',
-        condition: answers => parseFloat(answers.projected_revenue) < 50_000,
-        apply: (statusId, score) => {
-            if (['SAS', 'SA', 'SARL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) {
-                return score - 1;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'high_revenue_complex_structures',
-        description: 'CA élevé pour structures complexes',
-        condition: answers => parseFloat(answers.projected_revenue) > 300_000,
-        apply: (statusId, score) => {
-            if (['SAS', 'SA', 'SARL'].includes(statusId)) {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'accounting_complexity_simple',
-        description: 'Préférence pour comptabilité simple',
-        condition: answers => answers.accounting_complexity === 'simple',
-        apply: (statusId, score) => {
-            if (['SAS', 'SA'].includes(statusId)) {
-                return score - 1;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'accounting_outsourced_micro',
-        description: 'Comptabilité externalisée pour micro',
-        condition: answers => answers.accounting_complexity === 'outsourced',
-        apply: (statusId, score) => {
-            if (statusId === 'MICRO') {
-                return score - 0.5;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'sca_large_capital_requirement',
-        description: 'SCA : capital disponible < 37 000 €',
-        condition: answers => parseFloat(answers.available_capital) < 37_000,
-        apply: (statusId, score) => {
-            if (statusId === 'SCA') {
-                return score - 2;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'sca_complexity_penalty',
-        description: 'SCA : complexité pénalisante si CA < 500 k€',
-        condition: answers => parseFloat(answers.projected_revenue) < 500_000,
-        apply: (statusId, score) => {
-            if (statusId === 'SCA') {
-                return score - 1.5;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'non_liberal_sel_exclusion',
-        description: 'SEL : exclusion si activité non libérale',
-        condition: answers =>
-            answers.professional_order !== 'yes' &&
-            answers.regulated_profession !== 'yes' &&
-            answers.activity_sector !== 'liberal',
-        apply: (statusId, score) => {
-            if (['SELARL', 'SELAS'].includes(statusId)) {
-                return score - 10; // exclusion forte
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'sci_simplicity_penalty',
-        description: 'SCI : pénalité si recherche de simplicité comptable',
-        condition: answers => answers.accounting_complexity === 'simple',
-        apply: (statusId, score) => {
-            if (statusId === 'SCI') {
-                return score - 0.5;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-  {
-    id: 'vat_regime_micro_bonus',
-    description: 'Franchise en base de TVA : bonus pour MICRO',
-    condition: answers => answers.vat_regime === 'franchise',
-    apply: (statusId, score) =>
-      statusId === 'MICRO' ? score + 1 : score,
-    criteria: 'administrative_simplicity',
-  },
-  {
-    id: 'vat_regime_real_penalty_micro',
-    description: 'Régime réel de TVA sur MICRO ou EI : lourdeur déclarative',
-    condition: answers => answers.vat_regime !== 'franchise',
-    apply: (statusId, score) =>
-      ['MICRO', 'EI'].includes(statusId) ? score - 1 : score,
-    criteria: 'administrative_simplicity',
-  },
-  {
-    id: 'solo_project_bonus_solo_status',
-    description: 'Projet solo : bonus EI/MICRO/EURL/SASU, malus statuts collectifs',
-    condition: answers => answers.team_structure === 'solo',
-    apply: (statusId, score) => {
-      if (['EI', 'MICRO', 'EURL', 'SASU'].includes(statusId)) return score + 0.5;
-      if (
-        ['SNC', 'SCI', 'SARL', 'SAS', 'SA', 'SELARL', 'SELAS', 'SCA'].includes(
-          statusId,
-        )
-      )
-        return score - 0.5;
-      return score;
-    },
-    criteria: 'administrative_simplicity',
-  },
-  {
-    id: 'associate_number_complexity',
-    description: 'Plus de 10 associés : pénalité croissante',
-    condition: answers =>
-      parseInt(answers.associates_number ?? 0, 10) > 10,
-    apply: (statusId, score) => {
-      if (['SARL', 'SAS', 'SCI'].includes(statusId)) return score - 1;
-      if (['SA', 'SCA'].includes(statusId)) return score - 2;
-      return score;
-    },
-    criteria: 'administrative_simplicity',
-  },
 
-  {
-    id: 'integration_fiscale_penalty',
-    description: 'Intégration fiscale de groupe : complexité supplémentaire',
-    condition: answers => answers.tax_integration === 'yes',
-    apply: (statusId, score) =>
-      ['SAS', 'SARL', 'SA', 'SELAS', 'SELARL'].includes(statusId)
-        ? score - 1
-        : score,
-    criteria: 'administrative_simplicity',
+  id: 'high_revenue_small_structures',
+  description: 'CA élevé pour petites structures',
+  condition: answers => parseFloat(answers.projected_revenue ?? 0) > 100_000,
+  apply: (statusId, score) => {
+    // À partir d'un certain volume, EI/MICRO deviennent moins “simples” (TVA, obligations…)
+    if (['EI', 'MICRO'].includes(statusId)) return score - 1;
+    return score;
   },
-  {
-    id: 'holding_structure_penalty',
-    description: 'Holding de tête : pénalité de simplicité (sauf SCI)',
-    condition: answers => answers.holding_company === 'yes',
-    apply: (statusId, score) =>
-      statusId !== 'SCI' ? score - 0.5 : score,
-    criteria: 'administrative_simplicity',
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'low_revenue_structure_penalty',
+  description: 'Faible CA : structures complexes inadaptées',
+  condition: answers => parseFloat(answers.projected_revenue ?? 0) < 50_000,
+  apply: (statusId, score) => {
+    if (['SAS', 'SA', 'SARL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score - 1;
+    return score;
   },
-  {
-    id: 'sca_sa_capital_penalty',
-    description: 'Capital disponible < 37 000 € : pénalité SA et SCA',
-    condition: answers =>
-      parseFloat(answers.available_capital ?? 0) < 37_000,
-    apply: (statusId, score) =>
-      ['SA', 'SCA'].includes(statusId) ? score - 2 : score,
-    criteria: 'administrative_simplicity',
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'high_revenue_complex_structures',
+  description: 'CA élevé pour structures sociétaires complètes',
+  condition: answers => parseFloat(answers.projected_revenue ?? 0) > 300_000,
+  apply: (statusId, score) => {
+    if (['SAS', 'SA', 'SARL', 'SELAS', 'SELARL'].includes(statusId)) return score + 0.5;
+    return score;
   },
-  {
-    id: 'low_revenue_complex_structure_penalty_v2',
-    description: 'CA < 50 k€ : pénalite SAS / SA / SARL / SEL* / SCA',
-    condition: answers =>
-      parseFloat(answers.projected_revenue ?? 0) < 50_000,
-    apply: (statusId, score) =>
-      ['SAS', 'SA', 'SARL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)
-        ? score - 1
-        : score,
-    criteria: 'administrative_simplicity',
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'accounting_complexity_simple',
+  description: 'Préférence pour comptabilité simple',
+  condition: answers => answers.accounting_complexity === 'simple',
+  apply: (statusId, score) => {
+    // Pénalise les formes avec formalisme/comptabilité plus lourds
+    if (['SAS', 'SA', 'SARL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score - 1;
+    return score;
   },
-    {
-    id: 'vat_franchise_micro_bonus',
-    description: 'Franchise de TVA : formalités ultra-légères pour EI / MICRO',
-    condition: answers => answers.vat_regime === 'franchise',
-    apply: (statusId, score) => {
-        if (['EI', 'MICRO'].includes(statusId)) {
-            return score + 0.5;   // ✔ tenue de TVA évitée
-        }
-        return score;
-    },
-    criteria: 'administrative_simplicity'
+  criteria: 'administrative_simplicity'
 },
+
+// (supprimé : "accounting_outsourced_micro" — redondant/incohérent avec la règle d’externalisation plus bas)
+
 {
-    id: 'vat_real_micro_penalty',
-    description: 'Régime réel / simplifié TVA : surcharge pour EI / MICRO',
-    condition: answers =>
-        answers.vat_regime === 'real' || answers.vat_regime === 'simplified',
-    apply: (statusId, score) => {
-        if (['EI', 'MICRO'].includes(statusId)) {
-            return score - 0.5;   // ✘ déclarations TVA mensuelles / CA12
-        }
-        return score;
-    },
-    criteria: 'administrative_simplicity'
+  id: 'sca_large_capital_requirement',
+  description: 'SCA : capital disponible < 37 000 €',
+  condition: answers => parseFloat(answers.available_capital ?? 0) < 37_000,
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 2 : score),
+  criteria: 'administrative_simplicity'
 },
+
 {
-    id: 'outsourced_complex_accounting_bonus',
-    description: 'Comptabilité externalisée : neutralise la complexité des SAS / SA / SARL',
-    condition: answers => answers.accounting_complexity === 'outsourced',
-    apply: (statusId, score) => {
-        if (['SAS', 'SA', 'SARL', 'SELARL', 'SELAS'].includes(statusId)) {
-            return score + 0.5;   // ✔ cabinet comptable prend tout en charge
-        }
-        return score;
-    },
-    criteria: 'administrative_simplicity'
+  id: 'sca_complexity_penalty',
+  description: 'SCA : complexité pénalisante si CA < 500 k€',
+  condition: answers => parseFloat(answers.projected_revenue ?? 0) < 500_000,
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 1.5 : score),
+  criteria: 'administrative_simplicity'
 },
+
 {
-    id: 'progressive_contribution_bonus',
-    description: 'Apports progressifs : statuts souples sur la libération de capital',
-    condition: answers => answers.progressive_contribution === 'yes',
-    apply: (statusId, score) => {
-        if (['SAS', 'SARL', 'SA', 'SELARL', 'SELAS'].includes(statusId)) {
-            return score + 0.25;  // ✔ libération fractionnée autorisée
-        }
-        return score;
-    },
-    criteria: 'administrative_simplicity'
+  id: 'non_liberal_sel_exclusion',
+  description: 'SEL : exclusion si activité non libérale',
+  condition: answers =>
+    answers.professional_order !== 'yes' &&
+    answers.regulated_profession !== 'yes' &&
+    answers.activity_sector !== 'liberal',
+  apply: (statusId, score) => (['SELARL', 'SELAS'].includes(statusId) ? score - 10 : score),
+  criteria: 'administrative_simplicity'
 },
+
 {
-    id: 'vat_exempt_activity_penalty_complex_structures',
-    description: 'Activité exonérée de TVA : inutilement lourd pour SAS / SA',
-    condition: answers => answers.vat_regime === 'exempt',
-    apply: (statusId, score) => {
-        if (['SAS', 'SA'].includes(statusId)) {
-            return score - 0.25;  // ✘ formalisme société + factures sans TVA
-        }
-        return score;
-    },
-    criteria: 'administrative_simplicity'
+  id: 'sci_simplicity_penalty',
+  description: 'SCI : pénalité si recherche de simplicité comptable',
+  condition: answers => answers.accounting_complexity === 'simple',
+  apply: (statusId, score) => (statusId === 'SCI' ? score - 0.5 : score),
+  criteria: 'administrative_simplicity'
 },
-    
+
+// TVA (évite les doublons : on garde seulement ces deux règles)
+{
+  id: 'vat_franchise_micro_bonus',
+  description: 'Franchise en base de TVA : formalités ultra-légères pour EI / MICRO',
+  condition: answers => answers.vat_regime === 'franchise',
+  apply: (statusId, score) => (['EI', 'MICRO'].includes(statusId) ? score + 0.5 : score),
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'vat_real_micro_penalty',
+  description: 'Régime réel (ou simplifié) de TVA : surcharge pour EI / MICRO',
+  condition: answers => answers.vat_regime === 'real' || answers.vat_regime === 'simplified',
+  apply: (statusId, score) => (['EI', 'MICRO'].includes(statusId) ? score - 0.5 : score),
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'solo_project_bonus_solo_status',
+  description: 'Projet solo : bonus EI/MICRO/EURL/SASU, malus statuts collectifs',
+  condition: answers => answers.team_structure === 'solo',
+  apply: (statusId, score) => {
+    if (['EI', 'MICRO', 'EURL', 'SASU'].includes(statusId)) return score + 0.5;
+    if (['SNC', 'SCI', 'SARL', 'SAS', 'SA', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score - 0.5;
+    return score;
+  },
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'associate_number_complexity',
+  description: 'Plus de 10 associés : pénalité croissante',
+  condition: answers => parseInt(answers.associates_number ?? 0, 10) > 10,
+  apply: (statusId, score) => {
+    if (['SA', 'SCA'].includes(statusId)) return score - 2;
+    if (['SAS', 'SARL', 'SCI', 'SELARL', 'SELAS'].includes(statusId)) return score - 1;
+    return score;
+  },
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'integration_fiscale_penalty',
+  description: 'Intégration fiscale de groupe : complexité supplémentaire',
+  condition: answers => answers.tax_integration === 'yes',
+  apply: (statusId, score) =>
+    ['SAS', 'SARL', 'SA', 'SELAS', 'SELARL'].includes(statusId) ? score - 1 : score,
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'holding_structure_penalty',
+  description: 'Holding de tête : pénalité de simplicité (sauf SCI)',
+  condition: answers => answers.holding_company === 'yes',
+  apply: (statusId, score) => (statusId !== 'SCI' ? score - 0.5 : score),
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'sca_sa_capital_penalty',
+  description: 'Capital disponible < 37 000 € : pénalité SA et SCA',
+  condition: answers => parseFloat(answers.available_capital ?? 0) < 37_000,
+  apply: (statusId, score) => (['SA', 'SCA'].includes(statusId) ? score - 2 : score),
+  criteria: 'administrative_simplicity'
+},
     // Règles pour l'optimisation fiscale
-    {
-        id: 'high_tmi_ir_malus',
-        description: 'TMI élevée défavorable pour IR',
-        condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
-        apply: (statusId, score) => {
-            if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
-                return score - 1.5;
-            }
-            return score;
-        },
-        criteria: 'taxation_optimization'
-    },
-    {
-        id: 'high_tmi_is_bonus',
-        description: 'TMI élevée favorable pour IS',
-        condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'taxation_optimization'
-    },
-    {
-        id: 'low_tmi_micro_bonus',
-        description: 'TMI faible favorable pour micro',
-        condition: answers => ['non_taxable', 'bracket_11'].includes(answers.tax_bracket),
-        apply: (statusId, score) => {
-            if (statusId === 'MICRO') {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'taxation_optimization'
-    },
-    {
-        id: 'dividend_preference_is',
-        description: 'Préférence dividendes favorable pour IS',
-        condition: answers => answers.remuneration_preference === 'dividends',
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'taxation_optimization'
-    },
-    {
-        id: 'salary_preference_ir',
-        description: 'Préférence salaire favorable pour IR',
-        condition: answers => answers.remuneration_preference === 'salary',
-        apply: (statusId, score) => {
-            if (['EI', 'MICRO'].includes(statusId)) {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'taxation_optimization'
-    },
-    {
-        id: 'innovation_devices_bonus',
-        description: 'Dispositifs innovation (JEI/CIR/CII)',
-        condition: answers => answers.jei_cir_cii && answers.jei_cir_cii.length > 0,
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'taxation_optimization'
-    },
-    
-    // Règles pour les charges sociales
+   {
+  id: 'high_tmi_ir_malus',
+  description: 'TMI élevée défavorable pour IR',
+  condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
+  apply: (statusId, score) => {
+    // Formes à l’IR (ou transparentes) pénalisées si TMI élevée
+    if (['EI', 'MICRO', 'SNC'].includes(statusId)) return score - 1.5;
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
 
-        {
-        id: 'tns_preference_bonus',
-        description: 'Préférence TNS favorable',
-        condition: answers => answers.social_regime === 'tns',
-        apply: (statusId, score) => {
-            if (['EI', 'EIRL', 'MICRO', 'EURL', 'SARL'].includes(statusId)) {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'social_charges'
-    },
-    {
-        id: 'employee_preference_bonus',
-        description: 'Préférence assimilé salarié favorable',
-        condition: answers => answers.social_regime === 'assimilated_employee',
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'social_charges'
-    },
-    {
-        id: 'low_income_micro_bonus',
-        description: 'Faibles revenus favorables pour micro',
-        condition: answers => parseFloat(answers.income_objective_year1) < 1_500,
-        apply: (statusId, score) => {
-            if (statusId === 'MICRO') {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'social_charges'
-    },
-    {
-        id: 'high_income_assimile_malus',
-        description: 'Revenus élevés défavorables pour assimilé salarié',
-        condition: answers => parseFloat(answers.income_objective_year1) > 5_000,
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS'].includes(statusId)) {
-                return score - 0.5;
-            }
-            return score;
-        },
-        criteria: 'social_charges'
-    },
-    {
-        id: 'acre_bonus',
-        description: 'Exonération ACRE – bonus transitoire',
-        condition: answers => answers.acre === 'yes',
-        apply: (_statusId, score) => score + 0.5,
-        criteria: 'social_charges'
-    },
-    {
-        id: 'selas_assimile_preference',
-        description: 'Libéral : SELAS pour régime assimilé salarié',
-        condition: answers =>
-            answers.professional_order === 'yes' &&
-            answers.social_regime === 'assimilated_employee',
-        apply: (statusId, score) => {
-            if (statusId === 'SELAS') {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'social_charges'
-    },
-    // Règles pour la capacité de financement
-    {
-        id: 'fundraising_sas_sa_bonus',
-        description: 'Levée de fonds favorable pour SAS/SASU/SA',
-        condition: answers => answers.fundraising === 'yes',
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
-                return score + 1.5;
-            }
-            if (['SARL', 'EURL'].includes(statusId)) {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'fundraising_capacity'
-    },
-    {
-        id: 'sharing_instruments_bonus',
-        description: 'Instruments de partage (BSPCE, …)',
-        condition: answers =>
-            answers.sharing_instruments && answers.sharing_instruments.length > 0,
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'fundraising_capacity'
-    },
-    {
-        id: 'investors_ei_micro_malus',
-        description: 'Investisseurs : défavorable pour EI/MICRO',
-        condition: answers => answers.team_structure === 'investors',
-        apply: (statusId, score) => {
-            if (['EI', 'EIRL', 'MICRO', 'SNC'].includes(statusId)) {
-                return score - 2;
-            }
-            return score;
-        },
-        criteria: 'fundraising_capacity'
-    },
-    {
-        id: 'liberal_fundraising_selas',
-        description: 'Libéral : levée de fonds favorise SELAS',
-        condition: answers =>
-            answers.professional_order === 'yes' && answers.fundraising === 'yes',
-        apply: (statusId, score) => {
-            if (statusId === 'SELAS') {
-                return score + 1.5;
-            }
-            if (statusId === 'SELARL') {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'fundraising_capacity'
-    },
-    {
-        id: 'sca_family_control_with_investors',
-        description: 'SCA : contrôle familial + investisseurs externes',
-        condition: answers =>
-            answers.family_project === 'yes' &&
-            answers.fundraising === 'yes' &&
-            answers.control_preservation === 'essential',
-        apply: (statusId, score) => {
-            if (statusId === 'SCA') {
-                return score + 2;
-            }
-            return score;
-        },
-        criteria: 'governance_flexibility'
-    },
+{
+  id: 'high_tmi_is_bonus',
+  description: 'TMI élevée favorable pour IS',
+  condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
+  apply: (statusId, score) => {
+    // Toutes formes IS structurellement avantagées quand TMI perso est élevé
+    if (['SASU', 'SAS', 'SA', 'SARL', 'EURL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score + 1;
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
+
+{
+  id: 'low_tmi_micro_bonus',
+  description: 'TMI faible favorable pour micro',
+  condition: answers => ['non_taxable', 'bracket_11'].includes(answers.tax_bracket),
+  apply: (statusId, score) => (statusId === 'MICRO' ? score + 1 : score),
+  criteria: 'taxation_optimization'
+},
+
+{
+  id: 'expense_ratio_micro_rules_bonus',
+  description: 'Faibles charges réelles : micro avantageux',
+  // expense_ratio = charges réelles / CA (0 → 1). Valeur facultative.
+  condition: answers => parseFloat(answers.expense_ratio ?? -1) >= 0 && parseFloat(answers.expense_ratio) <= 0.30,
+  apply: (statusId, score) => (statusId === 'MICRO' ? score + 0.75 : score),
+  criteria: 'taxation_optimization'
+},
+
+{
+  id: 'expense_ratio_micro_rules_malus',
+  description: 'Charges élevées : micro défavorable, réel/IS favorables',
+  condition: answers => parseFloat(answers.expense_ratio ?? -1) >= 0.50,
+  apply: (statusId, score) => {
+    if (statusId === 'MICRO') return score - 1;
+    if (['EI', 'EURL', 'SARL', 'SASU', 'SAS', 'SA', 'SELARL', 'SELAS'].includes(statusId)) return score + 0.5;
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
+
+{
+  id: 'dividend_preference_is',
+  description: 'Préférence dividendes : favorable aux formes IS',
+  condition: answers => answers.remuneration_preference === 'dividends',
+  apply: (statusId, score) => {
+    // Dividendes + : SASU/SAS/SA/SELAS (pas de cotisations sociales en principe)
+    if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) return score + 0.75;
+    // EURL / SARL : bonus bridé (risque cotisations TNS >10 %)
+    if (statusId === 'EURL') return score + 0.1;
+    if (statusId === 'SARL') {
+      const pct = parseFloat(answers.capital_percentage ?? 0);
+      // Si gérant a ≥ 50 % (majoritaire), risque TNS sur >10 %
+      return score + (pct >= 50 ? 0.1 : 0.5);
+    }
+    // Autres formes IS : bonus standard
+    if (['SELARL', 'SCA'].includes(statusId)) return score + 0.5;
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
+
+{
+  id: 'dividends_tns_penalty_sarl_eurl',
+  description: 'Dividendes TNS : pénalité EURL / SARL (gérant majoritaire)',
+  condition: answers => answers.remuneration_preference === 'dividends',
+  apply: (statusId, score) => {
+    if (statusId === 'EURL') return score - 0.5; // TNS par nature
+    if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
+
+{
+  id: 'salary_preference_is',
+  description: 'Préférence salaire : favorable aux formes IS (déductible)',
+  condition: answers => answers.remuneration_preference === 'salary',
+  apply: (statusId, score) => {
+    // Le “salaire” du dirigeant est une charge déductible en société à l’IS
+    if (['SASU', 'SAS', 'SA', 'SARL', 'EURL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score + 0.75;
+    // En EI/MICRO, les “prélèvements” ne sont pas déductibles → pas de bonus
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
+
+{
+  id: 'profit_reinvestment_is_bonus',
+  description: 'Réinvestissement des bénéfices : avantage IS',
+  condition: answers => answers.profit_reinvestment === 'yes',
+  apply: (statusId, score) => {
+    if (['SASU','SAS','SA','SARL','EURL','SELARL','SELAS','SCA'].includes(statusId)) return score + 0.5;
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
+
+{
+  id: 'innovation_devices_bonus',
+  description: 'Dispositifs innovation (JEI/CIR/CII)',
+  condition: answers => Array.isArray(answers.jei_cir_cii) && answers.jei_cir_cii.length > 0,
+  apply: (statusId, score) => {
+    // Structures IS les plus usuelles pour ces dispositifs
+    if (['SASU', 'SAS', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL'].includes(statusId)) return score + 0.5;
+    // MICRO/EI : souvent inadapté (procédures, base imposable, etc.)
+    if (['MICRO', 'EI'].includes(statusId)) return score - 0.25;
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
     
-    // Règles pour la transmission
-       {
-        id: 'sale_exit_bonus',
-        description: 'Sortie par vente – sociétés commerciales',
-        condition: answers => answers.exit_intention === 'sale',
-        apply: (statusId, score) => {
-            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'transmission'
+ // RÈGLES — CHARGES SOCIALES (MAJ 30/09/2025)
+
+{
+  id: 'tns_preference_bonus',
+  description: 'Préférence TNS favorable',
+  condition: answers => answers.social_regime === 'tns',
+  apply: (statusId, score) => {
+    if (['EI', 'MICRO', 'EURL'].includes(statusId)) return score + 1;
+    // SARL/SELARL : bonus TNS pertinent seulement si gérant majoritaire (règles dédiées ci-dessous)
+    return score;
+  },
+  criteria: 'social_charges'
+},
+
+{
+  id: 'sarl_majoritaire_tns_bonus',
+  description: 'SARL gérant majoritaire = TNS : bonus si préférence TNS',
+  condition: answers =>
+    answers.social_regime === 'tns' &&
+    parseFloat(answers.capital_percentage ?? 0) >= 50,
+  apply: (statusId, score) => (statusId === 'SARL' ? score + 1 : score),
+  criteria: 'social_charges'
+},
+
+{
+  id: 'sarl_minoritaire_tns_malus',
+  description: 'SARL gérant minoritaire/égalitaire = assimilé : malus si préférence TNS',
+  condition: answers =>
+    answers.social_regime === 'tns' &&
+    parseFloat(answers.capital_percentage ?? 0) < 50,
+  apply: (statusId, score) => (statusId === 'SARL' ? score - 0.5 : score),
+  criteria: 'social_charges'
+},
+
+{
+  id: 'selarl_majoritaire_tns_bonus',
+  description: 'SELARL gérant majoritaire = TNS : bonus si préférence TNS',
+  condition: answers =>
+    answers.social_regime === 'tns' &&
+    parseFloat(answers.capital_percentage ?? 0) >= 50,
+  apply: (statusId, score) => (statusId === 'SELARL' ? score + 1 : score),
+  criteria: 'social_charges'
+},
+
+{
+  id: 'employee_preference_bonus',
+  description: 'Préférence assimilé salarié favorable',
+  condition: answers => answers.social_regime === 'assimilated_employee',
+  apply: (statusId, score) => {
+    if (['SASU', 'SAS', 'SA', 'SELAS', 'SCA'].includes(statusId)) return score + 1;
+    // SARL/SELARL gérant minoritaire/égalitaire : bonus fin réglé ci-dessous
+    return score;
+  },
+  criteria: 'social_charges'
+},
+
+{
+  id: 'sarl_minoritaire_assimile_bonus',
+  description: 'SARL gérant minoritaire/égalitaire = assimilé : bonus si préférence assimilé',
+  condition: answers =>
+    answers.social_regime === 'assimilated_employee' &&
+    parseFloat(answers.capital_percentage ?? 0) < 50,
+  apply: (statusId, score) => (statusId === 'SARL' ? score + 0.5 : score),
+  criteria: 'social_charges'
+},
+
+{
+  id: 'selas_assimile_preference',
+  description: 'Libéral : SELAS pour régime assimilé salarié',
+  condition: answers =>
+    answers.professional_order === 'yes' &&
+    answers.social_regime === 'assimilated_employee',
+  apply: (statusId, score) => (statusId === 'SELAS' ? score + 1 : score),
+  criteria: 'social_charges'
+},
+
+{
+  id: 'low_income_micro_bonus',
+  description: 'Faibles revenus favorables pour micro',
+  condition: answers => parseFloat(answers.income_objective_year1 ?? 0) < 1500,
+  apply: (statusId, score) => (statusId === 'MICRO' ? score + 1 : score),
+  criteria: 'social_charges'
+},
+
+{
+  id: 'low_income_tns_minima_malus',
+  description: 'Très faibles revenus : malus TNS (cotisations minimales)',
+  condition: answers => parseFloat(answers.income_objective_year1 ?? 0) < 1000,
+  apply: (statusId, score) => {
+    if (['EI', 'EURL'].includes(statusId)) return score - 0.5;
+    if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
+    if (statusId === 'SELARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
+    return score;
+  },
+  criteria: 'social_charges'
+},
+
+{
+  id: 'high_income_assimile_malus',
+  description: 'Revenus élevés défavorables pour assimilé salarié',
+  condition: answers => parseFloat(answers.income_objective_year1 ?? 0) > 5000,
+  apply: (statusId, score) => (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId) ? score - 0.5 : score),
+  criteria: 'social_charges'
+},
+
+{
+  id: 'high_income_tns_bonus',
+  description: 'Revenus élevés : TNS souvent plus économique (taux globaux inférieurs)',
+  condition: answers => parseFloat(answers.income_objective_year1 ?? 0) > 5000,
+  apply: (statusId, score) => {
+    if (['EI', 'EURL'].includes(statusId)) return score + 0.25;
+    if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score + 0.25;
+    if (statusId === 'SELARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score + 0.25;
+    return score;
+  },
+  criteria: 'social_charges'
+},
+
+{
+  id: 'dividends_social_bonus_sas',
+  description: 'Préférence dividendes : bonus social pour SAS/SASU/SELAS/SA (pas de cotisations)',
+  condition: answers => answers.remuneration_preference === 'dividends',
+  apply: (statusId, score) =>
+    ['SASU', 'SAS', 'SELAS', 'SA'].includes(statusId) ? score + 0.5 : score,
+  criteria: 'social_charges'
+},
+
+{
+  id: 'dividends_tns_social_malus',
+  description: 'Dividendes > 10% (EURL / SARL gérant majoritaire) : cotisations TNS',
+  condition: answers => answers.remuneration_preference === 'dividends',
+  apply: (statusId, score) => {
+    if (statusId === 'EURL') return score - 0.5;
+    if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
+    return score;
+  },
+  criteria: 'social_charges'
+},
+
+{
+  id: 'zero_salary_strategy_assimile_bonus',
+  description: 'Stratégie 0 salaire : charges nulles en assimilé (couverture dépendante)',
+  condition: answers =>
+    (answers.other_employee_job === 'yes' || answers.remuneration_preference === 'dividends') &&
+    parseFloat(answers.income_objective_year1 ?? 0) <= 500,
+  apply: (statusId, score) =>
+    ['SASU', 'SAS', 'SELAS', 'SA'].includes(statusId) ? score + 0.75 : score,
+  criteria: 'social_charges'
+},
+
+{
+  id: 'zero_salary_strategy_tns_malus',
+  description: 'Stratégie 0 salaire : minima TNS à supporter',
+  condition: answers =>
+    (answers.other_employee_job === 'yes' || answers.remuneration_preference === 'dividends') &&
+    parseFloat(answers.income_objective_year1 ?? 0) <= 500,
+  apply: (statusId, score) => {
+    if (['EI', 'EURL'].includes(statusId)) return score - 0.5;
+    if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
+    if (statusId === 'SELARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
+    return score;
+  },
+  criteria: 'social_charges'
+},
+
+{
+  id: 'acre_bonus',
+  description: 'ACRE : exonération partielle temporaire',
+  condition: answers => answers.acre === 'yes',
+  apply: (_statusId, score) => score + 0.5,
+  criteria: 'social_charges'
+},
+
+{
+  id: 'acre_micro_extra_bonus',
+  description: 'ACRE en micro : allègement de taux sur 12 mois',
+  condition: answers => answers.acre === 'yes',
+  apply: (statusId, score) => (statusId === 'MICRO' ? score + 0.25 : score),
+  criteria: 'social_charges'
+},
+
+// RÈGLES — CAPACITÉ DE FINANCEMENT (MAJ 30/09/2025)
+
+{
+  id: 'fundraising_sas_sa_bonus',
+  description: 'Levée de fonds favorable pour SAS/SASU/SA',
+  condition: answers => answers.fundraising === 'yes',
+  apply: (statusId, score) => {
+    if (['SASU', 'SAS', 'SA'].includes(statusId)) return score + 1.5;
+    if (['SARL', 'EURL'].includes(statusId)) return score + 0.5;
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'sharing_instruments_bonus',
+  description: 'Instruments de partage (BSPCE, BSA AIR, AGA…)',
+  condition: answers => Array.isArray(answers.sharing_instruments) && answers.sharing_instruments.length > 0,
+  apply: (statusId, score) => {
+    // BSPCE uniquement sociétés par actions (SAS/SASU/SA/SELAS)
+    const hasBSPCE = (answers.sharing_instruments || []).includes('BSPCE');
+    const hasBSAair = (answers.sharing_instruments || []).includes('BSA_AIR');
+    const hasAGA = (answers.sharing_instruments || []).includes('AGA');
+    let delta = 0;
+    if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) {
+      if (hasBSPCE) delta += 1;
+      if (hasBSAair) delta += 0.75;
+      if (hasAGA) delta += 0.5;
     },
-    {
-        id: 'transmission_exit_bonus',
-        description: 'Sortie par transmission – sociétés commerciales',
-        condition: answers => answers.exit_intention === 'transmission',
-        apply: (statusId, score) => {
-            if (['SAS', 'SA', 'SARL'].includes(statusId)) {
-                return score + 1;
-            }
-            return score;
-        },
-        criteria: 'transmission'
-    },
-    {
-        id: 'family_transmission_sarl_bonus',
-        description: 'Transmission familiale : bonus SARL',
-        condition: answers => answers.family_transmission === 'yes',
-        apply: (statusId, score) => {
-            if (statusId === 'SARL') {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'transmission'
-    },
-    {
-        id: 'sci_family_transmission_bonus',
-        description: 'SCI : transmission familiale facilitée',
-        condition: answers => answers.family_transmission === 'yes',
-        apply: (statusId, score) => {
-            if (statusId === 'SCI') {
-                return score + 0.5;
-            }
-            return score;
-        },
-        criteria: 'transmission'
-    },
-         // Règles pour les professions libérales réglementées
-    {
-        id: 'regulated_profession_selarl_bonus',
-        description: 'Libéral : SELARL pour profession réglementée',
-        condition: answers =>
-            answers.professional_order === 'yes' ||
-            answers.regulated_profession === 'yes',
-        apply: (statusId, score) => {
-            if (statusId === 'SELARL') {
-                return score + 2;          // fort bonus SELARL
-            }
-            if (['MICRO', 'EI', 'SNC'].includes(statusId)) {
-                return score - 1;          // pénalité pour statuts non adaptés
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-        id: 'regulated_profession_selas_bonus',
-        description: 'Libéral : SELAS (flexibilité de gouvernance)',
-        condition: answers =>
-            answers.professional_order === 'yes' &&
-            answers.governance_flexibility === 'essential',
-        apply: (statusId, score) => {
-            if (statusId === 'SELAS') {
-                return score + 2;          // bonus principal SELAS
-            }
-            if (statusId === 'SELARL') {
-                return score + 1;          // bonus secondaire SELARL
-            }
-            return score;
-        },
-        criteria: 'governance_flexibility'
-    },
-     // Règle pour l'activité immobilière
-        {
-        id: 'immobilier_activity_sci_mega_bonus',
-        description: 'Activité immobilière : SCI fortement recommandée',
-        condition: answers => answers.activity_type === 'immobilier',
-        apply: (statusId, score) => {
-            if (statusId === 'SCI') {
-                return score + 3; // Bonus fort
-            }
-            // Pénaliser légèrement les autres formes pour l'immobilier
-            if (['MICRO', 'EI'].includes(statusId)) {
-                return score - 1;
-            }
-            return score;
-        },
-        criteria: 'administrative_simplicity'
-    },
-    {
-    id: 'multiple_partners_bonus_collective',
-    description: 'Plusieurs associés : bonus pour statuts pensés pour la gestion collective',
-    condition: answers =>
-        ['family', 'associates', 'investors'].includes(answers.team_structure) &&
-        parseInt(answers.associates_number || 2, 10) >= 2,
-    apply: (statusId, score) => {
-        if (['SARL', 'SNC', 'SCI'].includes(statusId)) {
-            return score + 0.75;      // ✔ collectif facilité
-        }
-        if (['SASU', 'EURL', 'EI'].includes(statusId)) {
-            return score - 0.75;      // ✘ statuts solo par défaut
-        }
-        return score;
-    },
-    criteria: 'governance_flexibility',
+    // Les autres formes ne tirent pas (ou peu) parti de ces instruments
+    return score + delta;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'investors_ei_micro_malus',
+  description: 'Investisseurs en capital : défavorable pour EI/MICRO/SNC',
+  condition: answers => answers.team_structure === 'investors',
+  apply: (statusId, score) => {
+    if (['EI', 'MICRO', 'SNC'].includes(statusId)) return score - 2;
+    if (statusId === 'SCI') return score - 1; // peu adaptée à l’equity généraliste
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'liberal_fundraising_selas',
+  description: 'Libéral réglementé : levée de fonds favorise SELAS',
+  condition: answers => answers.professional_order === 'yes' && answers.fundraising === 'yes',
+  apply: (statusId, score) => {
+    if (statusId === 'SELAS') return score + 1.5;
+    if (statusId === 'SELARL') return score + 0.5;
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'crowdfunding_equity_bonus',
+  description: 'Crowdfunding equity (plateformes) favorable aux sociétés par actions',
+  condition: answers => answers.crowdfunding_equity === 'yes',
+  apply: (statusId, score) => {
+    if (['SASU', 'SAS'].includes(statusId)) return score + 0.75;
+    if (statusId === 'SA') return score + 0.5;
+    if (['SARL', 'EURL'].includes(statusId)) return score + 0.25;
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'bank_debt_bonus',
+  description: 'Dette bancaire : crédibilité des formes sociétaires',
+  condition: answers => answers.bank_debt === 'yes',
+  apply: (statusId, score) => {
+    if (['SA', 'SAS', 'SARL', 'EURL'].includes(statusId)) return score + 0.5;
+    if (statusId === 'SASU') return score + 0.4;
+    if (statusId === 'EI') return score + 0.25;
+    if (statusId === 'MICRO') return score + 0.1;
+    if (statusId === 'SCI' && answers.activity_sector === 'real_estate') return score + 0.5; // hypothèque/adossement immo
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'many_investors_bonus_sas',
+  description: 'Nombre élevé d’investisseurs (angel/seed) → SAS/SA',
+  condition: answers => parseInt(answers.investors_count ?? answers.associates_number ?? 0, 10) > 20,
+  apply: (statusId, score) => {
+    if (['SAS', 'SA'].includes(statusId)) return score + 0.75;
+    if (['SARL', 'EURL'].includes(statusId)) return score - 0.25; // agrément et formalisme
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'foreign_investors_bonus',
+  description: 'Investisseurs étrangers : préférence SAS/SA (souplesse/pactes)',
+  condition: answers => answers.investor_origin === 'international',
+  apply: (statusId, score) => (['SAS', 'SASU', 'SA'].includes(statusId) ? score + 0.75 : score),
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'ipo_path_sa_bonus',
+  description: 'Projet de cotation (IPO) : avantage SA',
+  condition: answers => answers.ipo_path === 'yes',
+  apply: (statusId, score) => {
+    if (statusId === 'SA') return score + 2;
+    if (statusId === 'SAS') return score + 0.5; // transformation en SA anticipable
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'control_preservation_sas_bonus',
+  description: 'Préservation du contrôle via actions de préférence / pactes',
+  condition: answers => answers.fundraising === 'yes' && ['important','essential'].includes(answers.control_preservation),
+  apply: (statusId, score) => {
+    if (['SAS', 'SASU'].includes(statusId)) return score + 0.5; // grande liberté statutaire
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'sca_family_control_with_investors',
+  description: 'SCA : contrôle familial + investisseurs externes',
+  condition: answers =>
+    answers.family_project === 'yes' &&
+    answers.fundraising === 'yes' &&
+    answers.control_preservation === 'essential',
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 2 : score),
+  criteria: 'governance_flexibility'
+},
+
+{
+  id: 'holding_topco_bonus',
+  description: 'Holding de tête pour levées successives (topco) : SAS/SA',
+  condition: answers => answers.holding_company === 'yes' && answers.fundraising === 'yes',
+  apply: (statusId, score) => (['SAS', 'SA'].includes(statusId) ? score + 0.5 : score),
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'vc_preference_bonus',
+  description: 'VC/business angels : préférence SAS/SA, SARL/EURL moins adaptée',
+  condition: answers => ['vc', 'business_angels', 'mixed'].includes(answers.investor_type),
+  apply: (statusId, score) => {
+    if (['SAS', 'SA'].includes(statusId)) return score + 1;
+    if (['SARL', 'EURL'].includes(statusId)) return score - 0.25;
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'real_estate_equity_malus_sci',
+  description: 'Equity hors immobilier : SCI inadaptée',
+  condition: answers => answers.activity_sector !== 'real_estate' && answers.fundraising === 'yes',
+  apply: (statusId, score) => (statusId === 'SCI' ? score - 1 : score),
+  criteria: 'fundraising_capacity'
+},
+
+{
+  id: 'employee_share_plan_bonus',
+  description: 'Plan d’actionnariat salarié : sociétés par actions avantagées',
+  condition: answers => answers.employee_share_plan === 'yes',
+  apply: (statusId, score) => (['SAS', 'SASU', 'SA', 'SELAS'].includes(statusId) ? score + 0.5 : score),
+  criteria: 'fundraising_capacity'
+},
+ // RÈGLES — TRANSMISSION (MAJ 30/09/2025)
+
+{
+  id: 'sale_exit_bonus',
+  description: 'Sortie par vente – sociétés commerciales',
+  condition: answers => answers.exit_intention === 'sale',
+  apply: (statusId, score) => {
+    if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) return score + 1;
+    return score;
+  },
+  criteria: 'transmission'
+},
+
+{
+  id: 'sale_exit_ei_bonus',
+  description: 'Vente de fonds (cession EI) – bonus modéré',
+  condition: answers => answers.exit_intention === 'sale',
+  apply: (statusId, score) => (statusId === 'EI' ? score + 0.5 : score),
+  criteria: 'transmission'
+},
+
+{
+  id: 'transmission_exit_bonus',
+  description: 'Sortie par transmission – sociétés commerciales',
+  condition: answers => answers.exit_intention === 'transmission',
+  apply: (statusId, score) => (['SAS', 'SA', 'SARL'].includes(statusId) ? score + 1 : score),
+  criteria: 'transmission'
+},
+
+{
+  id: 'family_transmission_sarl_bonus',
+  description: 'Transmission familiale : bonus SARL',
+  condition: answers => answers.family_transmission === 'yes',
+  apply: (statusId, score) => (statusId === 'SARL' ? score + 0.5 : score),
+  criteria: 'transmission'
+},
+
+{
+  id: 'sci_family_transmission_bonus',
+  description: 'SCI : transmission familiale facilitée (immobilier)',
+  condition: answers => answers.family_transmission === 'yes',
+  apply: (statusId, score) => {
+    if (statusId !== 'SCI') return score;
+    // +1 si projet immo, sinon +0.5 (gestion patrimoniale)
+    return score + (answers.activity_sector === 'real_estate' ? 1 : 0.5);
+  },
+  criteria: 'transmission'
+},
+
+{
+  id: 'micro_transmission_malus',
+  description: 'Transmission/vente moins favorable en micro',
+  condition: answers => ['sale', 'transmission'].includes(answers.exit_intention),
+  apply: (statusId, score) => (statusId === 'MICRO' ? score - 0.75 : score),
+  criteria: 'transmission'
+},
+
+{
+  id: 'dutreil_eligible_bonus',
+  description: 'Pacte Dutreil (donation/succession) – bonus formes éligibles',
+  condition: answers =>
+    (answers.exit_intention === 'transmission' || answers.exit_intention === 'gift') &&
+    answers.family_transmission === 'yes',
+  apply: (statusId, score) => {
+    // Dutreil : EI (fonds exploité) et titres de sociétés opérationnelles (SARL/EURL/SAS/SASU/SA/SELARL/SELAS)
+    const eligible = ['EI','SARL','EURL','SAS','SASU','SA','SELARL','SELAS'];
+    return eligible.includes(statusId) ? score + 1.25 : score;
+  },
+  criteria: 'transmission'
+},
+
+{
+  id: 'liberal_transmission_sel_bonus',
+  description: 'Libéral réglementé : transmission facilitée via SEL',
+  condition: answers => answers.professional_order === 'yes' && answers.exit_intention === 'transmission',
+  apply: (statusId, score) => {
+    if (statusId === 'SELAS') return score + 0.75;
+    if (statusId === 'SELARL') return score + 0.5;
+    return score;
+  },
+  criteria: 'transmission'
+},
+
+{
+  id: 'mbo_lbo_bonus',
+  description: 'Reprise par management (MBO/LBO) – sociétés par actions/SARL',
+  condition: answers => answers.mbo_lbo === 'yes',
+  apply: (statusId, score) => {
+    if (['SAS','SASU','SA'].includes(statusId)) return score + 1;
+    if (['SARL','EURL'].includes(statusId)) return score + 0.5;
+    return score;
+  },
+  criteria: 'transmission'
+},
+
+{
+  id: 'share_deal_bonus_sas_sa',
+  description: 'Préférence pour cession de titres (share deal)',
+  condition: answers => answers.sale_mode === 'shares', // 'shares' | 'assets'
+  apply: (statusId, score) => (['SAS','SASU','SA'].includes(statusId) ? score + 0.5 : score),
+  criteria: 'transmission'
+},
+
+{
+  id: 'asset_deal_bonus_ei_sarl',
+  description: 'Préférence pour cession de fonds/actifs (asset deal)',
+  condition: answers => answers.sale_mode === 'assets', // 'shares' | 'assets'
+  apply: (statusId, score) => {
+    if (['EI','SARL','EURL'].includes(statusId)) return score + 0.5;
+    if (statusId === 'SCI' && answers.activity_sector === 'real_estate') return score + 0.5;
+    return score;
+  },
+  criteria: 'transmission'
+},
+
+{
+  id: 'third_party_sale_sarl_malus',
+  description: 'Vente à un tiers : agrément des parts (SARL/EURL) défavorable',
+  condition: answers => answers.exit_intention === 'sale' && answers.buyer_type === 'third_party',
+  apply: (statusId, score) => (['SARL','EURL'].includes(statusId) ? score - 0.25 : score),
+  criteria: 'transmission'
+},
+
+{
+  id: 'many_heirs_shares_bonus',
+  description: 'Plusieurs héritiers : souplesse de répartition via titres',
+  condition: answers => parseInt(answers.heirs_count ?? 0, 10) >= 2 && answers.exit_intention === 'transmission',
+  apply: (statusId, score) => {
+    if (['SAS','SA'].includes(statusId)) return score + 0.5;
+    if (statusId === 'SCI' && answers.activity_sector === 'real_estate') return score + 0.5;
+    return score;
+  },
+  criteria: 'transmission'
+},
+
+{
+  id: 'family_control_sca_bonus',
+  description: 'Contrôle familial pérenne dans la transmission',
+  condition: answers => answers.exit_intention === 'transmission' && answers.control_preservation === 'essential',
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 1.5 : score),
+  criteria: 'transmission'
+},
+
+{
+  id: 'holding_family_planning_bonus',
+  description: 'Holding de famille (topco) pour transmissions échelonnées',
+  condition: answers => answers.holding_company === 'yes' && answers.exit_intention === 'transmission',
+  apply: (statusId, score) => (['SAS','SA','SARL'].includes(statusId) ? score + 0.5 : score),
+  criteria: 'transmission'
+},
+
+{
+  id: 'seller_retirement_bonus',
+  description: 'Départ en retraite du cédant : focus sur la cession',
+  condition: answers => answers.seller_retirement === 'yes' && answers.exit_intention === 'sale',
+  apply: (statusId, score) => (['SASU','SAS','SA','SARL','EURL','EI'].includes(statusId) ? score + 0.5 : score),
+  criteria: 'transmission'
+},
+// RÈGLES — PROFESSIONS LIBÉRALES RÉGLEMENTÉES (MAJ 30/09/2025)
+
+// 1) Tes règles conservées
+{
+  id: 'regulated_profession_selarl_bonus',
+  description: 'Libéral : SELARL pour profession réglementée',
+  condition: answers =>
+    answers.professional_order === 'yes' ||
+    answers.regulated_profession === 'yes',
+  apply: (statusId, score) => {
+    if (statusId === 'SELARL') return score + 2; // fort bonus SELARL
+    if (['MICRO', 'EI', 'SNC'].includes(statusId)) return score - 1; // pénalité
+    return score;
+  },
+  criteria: 'administrative_simplicity'
+},
+
+{
+  id: 'regulated_profession_selas_bonus',
+  description: 'Libéral : SELAS (flexibilité de gouvernance)',
+  condition: answers =>
+    answers.professional_order === 'yes' &&
+    answers.governance_flexibility === 'essential',
+  apply: (statusId, score) => {
+    if (statusId === 'SELAS') return score + 2;   // bonus principal
+    if (statusId === 'SELARL') return score + 1;  // bonus secondaire
+    return score;
+  },
+  criteria: 'governance_flexibility'
+},
+
+// 2) Formes commerciales "non-SEL" désavantageuses pour professions réglementées
+{
+  id: 'regulated_non_sel_malus',
+  description: 'Prof. réglementée : malus si SAS/SASU/SARL/EURL non-SEL',
+  condition: answers => answers.professional_order === 'yes' || answers.regulated_profession === 'yes',
+  apply: (statusId, score) => {
+    if (['SAS','SASU','SARL','EURL'].includes(statusId)) return score - 1; // préférer SELAS/SELARL
+    return score;
+  },
+  criteria: 'credibility'
+},
+
+// 3) Multi-associés : la SELAS prime pour la souplesse, SELARL en alternative
+{
+  id: 'regulated_multi_partners_bonus',
+  description: 'Prof. réglementée à plusieurs : SELAS/SELARL favorisées',
+  condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && parseInt(answers.associates_count ?? 1, 10) >= 2,
+  apply: (statusId, score) => {
+    if (statusId === 'SELAS') return score + 1;
+    if (statusId === 'SELARL') return score + 0.75;
+    return score;
+  },
+  criteria: 'governance_flexibility'
+},
+
+// 4) Choix du régime social souhaité
+{
+  id: 'regulated_tns_preference_selarl',
+  description: 'Libéral réglementé + préférence TNS → SELARL',
+  condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && answers.social_regime === 'tns',
+  apply: (statusId, score) => (statusId === 'SELARL' ? score + 1 : score),
+  criteria: 'social_charges'
+},
+
+{
+  id: 'regulated_assimile_preference_selas',
+  description: 'Libéral réglementé + préférence assimilé salarié → SELAS',
+  condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && answers.social_regime === 'assimilated_employee',
+  apply: (statusId, score) => (statusId === 'SELAS' ? score + 1 : score),
+  criteria: 'social_charges'
+},
+
+// 5) Démarrage prudent (micro-BNC) : petite tolérance si faible CA & année pilote
+{
+  id: 'regulated_micro_pilot_year_soft_bonus',
+  description: 'Année pilote + faible CA : micro-BNC tolérée (bonus léger)',
+  condition: answers =>
+    answers.professional_order === 'yes' &&
+    answers.pilot_year === 'yes' &&
+    parseFloat(answers.income_objective_year1 ?? '0') < 30000,
+  apply: (statusId, score) => (statusId === 'MICRO' ? score + 0.5 : score),
+  criteria: 'administrative_simplicity'
+},
+
+// 6) Investisseurs externes (limités par l’ordre) : SELAS mieux adaptée
+{
+  id: 'regulated_investors_pref_selas',
+  description: 'Investisseurs externes (quotas ordre) : avantage SELAS',
+  condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && answers.team_structure === 'investors',
+  apply: (statusId, score) => {
+    if (statusId === 'SELAS') return score + 0.75;
+    if (statusId === 'SELARL') return score + 0.25;
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+// 7) SCI/SNC : formes inadaptées à l’exercice libéral
+{
+  id: 'regulated_sci_strong_malus',
+  description: 'SCI inadaptée à l’exercice libéral : malus',
+  condition: answers => answers.professional_order === 'yes' || answers.regulated_profession === 'yes',
+  apply: (statusId, score) => (statusId === 'SCI' ? score - 2 : score),
+  criteria: 'credibility'
 },
 {
-    id: 'solo_project_penalty_multi_partner_statutes',
-    description: 'Projet solo : pénalise statuts qui exigent ≥ 2 associés',
-    condition: answers => answers.team_structure === 'solo',
-    apply: (statusId, score) => {
-        if (['SNC', 'SCI', 'SARL'].includes(statusId)) {
-            return score - 1;
-        }
-        return score;
-    },
-    criteria: 'governance_flexibility',
+  id: 'regulated_snc_extra_malus',
+  description: 'SNC (responsabilité illimitée) : malus pour prof. réglementées',
+  condition: answers => answers.professional_order === 'yes' || answers.regulated_profession === 'yes',
+  apply: (statusId, score) => (statusId === 'SNC' ? score - 0.5 : score),
+  criteria: 'patrimony_protection'
 },
+
+// 8) Protection du patrimoine essentielle : privilégier SEL (vs EI/MICRO)
 {
-    id: 'flexible_statutes_bonus',
-    description: 'Gouvernance sur-mesure : bonus SAS / SASU / SELAS / SCA',
-    condition: answers =>
-        answers.governance_complexity === 'complex' ||
-        answers.governance_complexity === 'moderate',
-    apply: (statusId, score) => {
-        if (['SAS', 'SASU', 'SELAS', 'SCA'].includes(statusId)) {
-            return score + 1;          // ✔ statuts ultra-flexibles
-        }
-        if (['SARL', 'SNC', 'SCI', 'EI', 'MICRO'].includes(statusId)) {
-            return score - 0.5;        // ✘ rigidité statutaire
-        }
-        return score;
-    },
-    criteria: 'governance_flexibility',
+  id: 'regulated_patrimony_protection_sel_bonus',
+  description: 'Protection patrimoniale essentielle : SEL privilégiées',
+  condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && answers.patrimony_protection === 'essential',
+  apply: (statusId, score) => {
+    if (['SELAS','SELARL'].includes(statusId)) return score + 0.75;
+    if (['EI','MICRO'].includes(statusId)) return score - 0.5;
+    return score;
+  },
+  criteria: 'patrimony_protection'
 },
+
+// 9) Croissance multi-site / groupe : SELAS recommandée
 {
-    id: 'simple_governance_penalty_flexible_statutes',
-    description: 'Gouvernance très simple souhaitée : SAS / SCA moins pertinentes',
-    condition: answers => answers.governance_complexity === 'simple',
-    apply: (statusId, score) => {
-        if (['SAS', 'SCA'].includes(statusId)) {
-            return score - 0.5;
-        }
-        return score;
-    },
-    criteria: 'governance_flexibility',
+  id: 'regulated_multi_site_selas_bonus',
+  description: 'Cabinet multi-site / structuration de groupe : SELAS +',
+  condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && answers.multi_site === 'yes',
+  apply: (statusId, score) => (statusId === 'SELAS' ? score + 0.5 : score),
+  criteria: 'governance_flexibility'
+},
+
+// 10) Dispositifs de partage (BSPCE/AGA…) quand éligible : avantage SELAS
+{
+  id: 'regulated_sharing_instruments_selas',
+  description: 'Instruments d’intéressement/attraction talents : SELAS +',
+  condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && answers.sharing_instruments && answers.sharing_instruments.length > 0,
+  apply: (statusId, score) => (statusId === 'SELAS' ? score + 0.5 : score),
+  criteria: 'fundraising_capacity'
+},
+
+// 11) Activité principalement médicale (TVA souvent exonérée) : focus sécurité sociale
+{
+  id: 'regulated_healthcare_assimile_hint',
+  description: 'Actes médicaux (souvent hors TVA) : préférence protection sociale',
+  condition: answers => answers.professional_order === 'yes' && answers.activity_sector === 'healthcare',
+  apply: (statusId, score) => {
+    if (statusId === 'SELAS' && answers.social_regime === 'assimilated_employee') return score + 0.5;
+    if (statusId === 'SELARL' && answers.social_regime === 'tns') return score + 0.25;
+    return score;
+  },
+  criteria: 'social_charges'
+},
+
+  // RÈGLES — ACTIVITÉ IMMOBILIÈRE (MAJ 30/09/2025)
+
+// 0) Aides de lecture côté données (toutes facultatives : si absentes, la règle ne s'applique pas)
+// answers.real_estate_model ∈ ['patrimonial_nue','meuble','para_hotel','marchand','promotion','lotissement','bureaux_nus']
+// answers.family_project ∈ ['yes','no']
+// answers.bank_financing ∈ ['yes','no']
+// answers.income_objective_year1 : number (€, pour jauger "petite activité meublée")
+
+// 1) Immobilier patrimonial (NU) : SCI très favorisée (ajustée)
+{
+  id: 'immobilier_activity_sci_mega_bonus',
+  description: 'Immobilier patrimonial (nu) : SCI fortement recommandée',
+  condition: answers =>
+    answers.activity_type === 'immobilier' &&
+    ['patrimonial_nue','bureaux_nus', null, undefined].includes(answers.real_estate_model ?? null),
+  apply: (statusId, score) => {
+    if (statusId === 'SCI') return score + 3;        // Bonus fort pour la détention/gestion nue
+    if (['MICRO','EI'].includes(statusId)) return score - 1; // EI/Micro moins lisibles en détention collective
+    return score;
+  },
+  criteria: 'administrative_simplicity'
+},
+
+// 2) Meublé (LMNP/LMP) : éviter SCI (IR), favoriser SARL de famille / EI-MICRO/EURL
+{
+  id: 'immobilier_meuble_pref_sarlfam_ei',
+  description: 'Location meublée : + SARL (famille, IR) / EI / EURL, - SCI',
+  condition: answers =>
+    answers.activity_type === 'immobilier' &&
+    answers.real_estate_model === 'meuble',
+  apply: (statusId, score) => {
+    if (statusId === 'SCI') return score - 2;              // SCI inadaptée au meublé habituel (requalification IS)
+    if (statusId === 'SARL') return score + 1.25;          // SARL de famille à l’IR très pertinente
+    if (statusId === 'EURL') return score + 0.75;          // EURL à l’IR possible (micro-BIC éligible)
+    if (statusId === 'EI') return score + 0.75;            // EI (LMNP/LMP) lisible
+    if (statusId === 'MICRO') {
+      // Prime légère pour un petit démarrage en micro-BIC
+      const small = parseFloat(answers.income_objective_year1 ?? '0') <= 90000; // seuil confort
+      return score + (small ? 0.5 : 0.25);
+    }
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
+
+// 3) Para-hôtelier (services type hôtel) : SAS/SARL oui, SCI non
+{
+  id: 'immobilier_parahotelier_pref_societes_commerciales',
+  description: 'Para-hôtelier : SAS/SARL préférées, SCI dissuadée',
+  condition: answers =>
+    answers.activity_type === 'immobilier' &&
+    answers.real_estate_model === 'para_hotel',
+  apply: (statusId, score) => {
+    if (statusId === 'SCI') return score - 2;
+    if (statusId === 'SAS') return score + 1.5;
+    if (statusId === 'SARL') return score + 1;
+    if (statusId === 'SASU') return score + 1;
+    return score;
+  },
+  criteria: 'credibility'
+},
+
+// 4) Marchand de biens / Promotion / Lotissement : SAS/SARL fortement favorisées
+{
+  id: 'immobilier_marchand_promo_pref_sas_sarl',
+  description: 'Marchand de biens / promo : SAS/SARL ++ ; SCI fortement déconseillée',
+  condition: answers =>
+    answers.activity_type === 'immobilier' &&
+    ['marchand','promotion','lotissement'].includes(answers.real_estate_model),
+  apply: (statusId, score) => {
+    if (statusId === 'SCI') return score - 3;
+    if (statusId === 'SNC') return score - 1;       // responsabilité illimitée
+    if (statusId === 'SAS') return score + 2;
+    if (statusId === 'SARL') return score + 1.5;
+    if (statusId === 'SASU') return score + 1.25;   // solo marchand ok
+    if (statusId === 'SA') return score + 1;        // gros projets
+    return score;
+  },
+  criteria: 'governance_flexibility'
+},
+
+// 5) Plusieurs associés (collectif) — ta règle conservée et complétée
+{
+  id: 'multiple_partners_bonus_collective',
+  description: 'Plusieurs associés : bonus pour gestion collective',
+  condition: answers =>
+    ['family','associates','investors'].includes(answers.team_structure) &&
+    parseInt(answers.associates_number || 2, 10) >= 2,
+  apply: (statusId, score) => {
+    if (['SARL','SNC','SCI'].includes(statusId)) return score + 0.75;
+    if (['SASU','EURL','EI'].includes(statusId)) return score - 0.75;
+    return score;
+  },
+  criteria: 'governance_flexibility'
+},
+
+// 6) Solo : pénaliser les statuts nécessitant ≥ 2 associés — ta règle conservée
+{
+  id: 'solo_project_penalty_multi_partner_statutes',
+  description: 'Projet solo : pénalise statuts qui exigent ≥ 2 associés',
+  condition: answers => answers.team_structure === 'solo',
+  apply: (statusId, score) => (['SNC','SCI','SARL'].includes(statusId) ? score - 1 : score),
+  criteria: 'governance_flexibility'
+},
+
+// 7) Gouvernance sur-mesure (SAS/SASU/SELAS/SCA) — ta règle conservée
+{
+  id: 'flexible_statutes_bonus',
+  description: 'Gouvernance sur-mesure : bonus SAS / SASU / SELAS / SCA',
+  condition: answers =>
+    answers.governance_complexity === 'complex' ||
+    answers.governance_complexity === 'moderate',
+  apply: (statusId, score) => {
+    if (['SAS','SASU','SELAS','SCA'].includes(statusId)) return score + 1;
+    if (['SARL','SNC','SCI','EI','MICRO'].includes(statusId)) return score - 0.5;
+    return score;
+  },
+  criteria: 'governance_flexibility'
+},
+
+// 8) Gouvernance très simple : SAS / SCA un peu moins pertinentes — ta règle conservée
+{
+  id: 'simple_governance_penalty_flexible_statutes',
+  description: 'Gouvernance très simple souhaitée : SAS / SCA moins pertinentes',
+  condition: answers => answers.governance_complexity === 'simple',
+  apply: (statusId, score) => (['SAS','SCA'].includes(statusId) ? score - 0.5 : score),
+  criteria: 'governance_flexibility'
+},
+
+// 9) Immobilier + projet familial : SCI encore avantagée (transmission)
+{
+  id: 'immobilier_family_project_sci_bonus',
+  description: 'Immobilier familial : SCI ++ (agréments, démembrement, transmission)',
+  condition: answers =>
+    answers.activity_type === 'immobilier' && answers.family_project === 'yes' &&
+    ['patrimonial_nue','bureaux_nus'].includes(answers.real_estate_model ?? 'patrimonial_nue'),
+  apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
+  criteria: 'transmission'
+},
+
+// 10) Immobilier + investisseurs externes : SAS / SCA privilégiées
+{
+  id: 'immobilier_investors_pref_sas_sca',
+  description: 'Investisseurs externes : SAS (souplesse) ou SCA (contrôle familial)',
+  condition: answers =>
+    answers.activity_type === 'immobilier' && answers.team_structure === 'investors',
+  apply: (statusId, score) => {
+    if (statusId === 'SAS') return score + 1.25;
+    if (statusId === 'SCA') return score + 1; // contrôle par les commandités
+    if (statusId === 'SCI') return score + 0.25; // toléré en patrimonial simple
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
+
+// 11) Immobilier + financement bancaire essentiel : statuts crédibles favorisés
+{
+  id: 'immobilier_bank_financing_bonus',
+  description: 'Financement bancaire : + SCI/SARL/SAS, - MICRO/EI',
+  condition: answers =>
+    answers.activity_type === 'immobilier' && answers.bank_financing === 'yes',
+  apply: (statusId, score) => {
+    if (['SCI','SARL','SAS'].includes(statusId)) return score + 0.75;
+    if (['MICRO','EI'].includes(statusId)) return score - 0.5;
+    return score;
+  },
+  criteria: 'credibility'
 }
     
 ];
 window.scoringRules = scoringRules;
 
 class RecommendationEngine {
-    constructor() {
-        console.log("Initialisation du RecommendationEngine");
-        // Blindage du constructeur - vérification que legalStatuses est disponible
-        if (!window.legalStatuses) {
-            throw new Error(
-                "`window.legalStatuses` est introuvable – vérifie le chargement de legal-status-data.js"
-            );
-        }
-        this.answers = {};
-        this.filteredStatuses = {...window.legalStatuses};
-        this.scores = {};
-        this.weightedScores = {};
-        this.priorityWeights = {};
-        this.incompatibles = [];
-        this.auditTrail = {
-            exclusions: [],
-            weightingRules: [],
-            scores: {}
-        };
-        
-        // Paramètres des seuils pour 2025
-        this.thresholds2025 = {
-            micro: {
-                bic_sales: 188700,
-                bic_service: 77700,
-                bnc: 77700
-            },
-            is_reduced_rate_limit: 42500
-        };
-        
-        // Cache pour la mémoïsation
-        this.memoizedResults = {};
-        
-        // Dictionnaire des alternatives pour chaque cas d'incompatibilité
-        this.alternativeSuggestions = {
-    MICRO: {
+  constructor() {
+    console.log("Initialisation du RecommendationEngine (MAJ 30/09/2025)");
+
+    // Blindage du constructeur
+    if (!window.legalStatuses) {
+      throw new Error("`window.legalStatuses` est introuvable – charge d’abord legal-status-data.js");
+    }
+
+    this.answers = {};
+    this.filteredStatuses = { ...window.legalStatuses };
+    this.scores = {};
+    this.weightedScores = {};
+    this.priorityWeights = {};
+    this.incompatibles = []; // [{ statusId, code, explanation, alternatives }]
+    this.auditTrail = { exclusions: [], weightingRules: [], scores: {} };
+
+ // === SEUILS & RÉFÉRENTIELS — 2025 ===
+this.thresholds2025 = {
+  micro: {
+    // Micro-BIC/BNC (LF 2025)
+    bic_sales: 188_700,        // ventes / hébergement
+    bic_service: 77_700,       // prestations de services BIC
+    bnc: 77_700,               // BNC
+
+    // Exception meublés de tourisme 2025 (abattements & plafonds spécifiques)
+    meuble_classe_ca: 77_700,  // classé
+    meuble_non_classe_ca: 15_000 // non classé
+  },
+
+  // IS réduit 15 % sous conditions (CA < 10 M€, plafond de bénéfice)
+  is_reduced_rate: {
+    profit_cap: 42_500,
+    turnover_cap: 10_000_000
+  },
+
+  // Franchise en base de TVA (2025)
+  tva_franchise_base: {
+    ventes: 85_000,
+    services: 37_500,
+    tolerance_ventes: 93_500,
+    tolerance_services: 41_250
+  },
+
+  // Contraintes de structure (min. d’associés)
+  min_associates: {
+    MICRO: 1, EI: 1, EURL: 1, SASU: 1,
+    SARL: 2, SAS: 2, SNC: 2, SCI: 2,
+    SA: 2, // 7 si cotée
+    SELARL: 2, SELAS: 1, // SELASU possible
+    SCA: 4 // 1 commandité + 3 commanditaires (≥7 si appel public)
+  }
+};
+
+    // Alias rétrocompatibilité si ton code lit encore la clé initiale
+    this.thresholds2025.is_reduced_rate_limit = this.thresholds2025.is_reduced_rate.profit_cap;
+
+    // Cache mémo
+    this.memoizedResults = {};
+
+    // === ALTERNATIVES (2025) — étendues/clarifiées ===
+    this.alternativeSuggestions = {
+      MICRO: {
         'ca-depasse-seuil': {
-            alternatives: ['EURL', 'SASU'],
-            explanation: 'Optez pour une EURL ou une SASU pour gérer un chiffre d’affaires plus élevé.'
+          alternatives: ['EURL', 'SASU'],
+          explanation: "Optez pour EURL ou SASU si votre CA dépasse les plafonds micro."
         },
         'ordre-professionnel': {
-            alternatives: ['SELARL', 'SELAS'],
-            explanation: 'Pour une profession réglementée, passez en SELARL ou SELAS.'
+          alternatives: ['SELARL', 'SELAS'],
+          explanation: "Pour une profession réglementée, privilégiez SELARL ou SELAS."
         },
-        fundraising: {
-            alternatives: ['SAS', 'SASU'],
-            explanation: 'Pour lever des fonds, une SAS ou SASU est plus adaptée.'
+        'fundraising': {
+          alternatives: ['SAS', 'SASU'],
+          explanation: "Pour lever des fonds, SAS / SASU sont bien adaptées."
+        },
+        'financement-bancaire-credibilite': {
+          alternatives: ['SARL', 'SAS', 'SCI'],
+          explanation: "Pour rassurer les banques, une société (SARL/SAS/SCI en immo) est plus crédible."
         }
-    },
+      },
 
-    EI: {
+      EI: {
         'protection-patrimoine': {
-            alternatives: ['EURL', 'SASU'],
-            explanation: 'Choisissez EURL ou SASU pour isoler votre patrimoine personnel.'
+          alternatives: ['EURL', 'SASU'],
+          explanation: "Séparez mieux vos risques avec EURL ou SASU."
         },
         'levee-fonds': {
-            alternatives: ['SASU', 'SAS'],
-            explanation: 'Pour accueillir des investisseurs, préférez SASU ou SAS.'
+          alternatives: ['SASU', 'SAS'],
+          explanation: "Pour accueillir des investisseurs, préférez SASU/SAS."
+        },
+        'financement-bancaire-credibilite': {
+          alternatives: ['SARL', 'SAS'],
+          explanation: "Structure sociétale souvent mieux perçue par les banques."
         }
-    },
+      },
 
-    /* ---------- ENTREPRISE UNIPERSONNELLE & DÉRIVÉS ---------- */
-    EURL: {
+      /* ---------- ENTREPRISE UNIPERSONNELLE & DÉRIVÉS ---------- */
+      EURL: {
         'ouverture-capital': {
-            alternatives: ['SARL', 'SAS'],
-            explanation: 'Si vous souhaitez faire entrer de nouveaux associés, transformez l’EURL en SARL ou SAS.'
+          alternatives: ['SARL', 'SAS'],
+          explanation: "Transformation en SARL/SAS pour faire entrer des associés."
         },
         'regime-social-tns-indesirable': {
-            alternatives: ['SASU', 'SAS'],
-            explanation: 'Pour bénéficier du régime assimilé salarié, passez en SASU ou SAS.'
+          alternatives: ['SASU', 'SAS'],
+          explanation: "Régime assimilé salarié via SASU/SAS."
         },
-        fundraising: {
-            alternatives: ['SAS', 'SA'],
-            explanation: 'Pour de vraies levées de fonds, une SAS ou SA est plus appropriée.'
+        'fundraising': {
+          alternatives: ['SAS', 'SA'],
+          explanation: "Pour des levées significatives, SAS ou SA."
         }
-    },
+      },
 
-    SASU: {
+      SASU: {
         'associe-unique-veut-sassocier': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: 'À l’arrivée d’un deuxième associé, transformez en SAS ou SARL.'
+          alternatives: ['SAS', 'SARL'],
+          explanation: "À l’arrivée d’un deuxième associé : SAS ou SARL."
         },
         'charges-sociales-elevees': {
-            alternatives: ['EURL', 'MICRO'],
-            explanation: 'Pour alléger les cotisations, envisagez EURL ou régime micro.'
+          alternatives: ['EURL', 'MICRO'],
+          explanation: "EURL (TNS) ou micro peuvent alléger le coût social."
         },
         'imposition-is-non-voulu': {
-            alternatives: ['EURL', 'EI'],
-            explanation: 'Pour être imposé à l’IR de plein droit, optez plutôt pour EURL ou EI.'
+          alternatives: ['EURL', 'EI'],
+          explanation:
+            "SASU est à l’IS par défaut (option IR possible 5 exercices si éligible) ; sinon EURL/EI pour l’IR de plein droit."
         }
-    },
+      },
 
-    /* ---------- FORMES CLASSIQUES MULTI-ASSOCIÉS ---------- */
-    SARL: {
+      /* ---------- FORMES CLASSIQUES MULTI-ASSOCIÉS ---------- */
+      SARL: {
         'gouvernance-rigide': {
-            alternatives: ['SAS', 'SA'],
-            explanation: 'Pour plus de souplesse statutaire, migrez vers SAS ou SA.'
+          alternatives: ['SAS', 'SA'],
+          explanation: "Plus de souplesse statutaire en SAS/SA."
         },
         'levee-fonds': {
-            alternatives: ['SAS', 'SA'],
-            explanation: 'Les investisseurs préfèrent généralement la SAS ou la SA.'
+          alternatives: ['SAS', 'SA'],
+          explanation: "Les investisseurs préfèrent généralement SAS/SA."
         },
         'regime-social-tns-indesirable': {
-            alternatives: ['SAS', 'SA'],
-            explanation: 'Pour le président assimilé salarié, basculez en SAS ou SA.'
+          alternatives: ['SAS', 'SA'],
+          explanation: "Pour éviter TNS (gérance majoritaire), passez en SAS/SA."
         }
-    },
+      },
 
-    SAS: {
+      SAS: {
         'associe-unique': {
-            alternatives: ['SASU', 'EURL'],
-            explanation: 'S’il ne reste qu’un associé, passez en SASU (ou EURL si vous voulez l’IR).'
+          alternatives: ['SASU', 'EURL'],
+          explanation: "S’il ne reste qu’un associé : SASU, ou EURL pour viser l’IR."
         },
         'petit-projet': {
-            alternatives: ['EI', 'MICRO', 'EURL'],
-            explanation: 'Pour une très petite activité, les régimes simplifiés sont moins coûteux.'
+          alternatives: ['EI', 'MICRO', 'EURL'],
+          explanation: "Pour une très petite activité, privilégier les régimes simplifiés."
         },
         'activite-reglementee': {
-            alternatives: ['SELARL', 'SELAS'],
-            explanation: 'Pour les professions réglementées, préférez SELARL ou SELAS.'
+          alternatives: ['SELARL', 'SELAS'],
+          explanation: "Pour professions réglementées : SELARL/SELAS."
         }
-    },
+      },
 
-    SA: {
+      SA: {
         'capital-insuffisant': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: 'Si vous n’atteignez pas 37 000 € de capital, choisissez SAS ou SARL.'
+          alternatives: ['SAS', 'SARL'],
+          explanation: "Si < 37 000 € de capital : SAS/SARL."
         },
         'nombre-associes-insuffisant': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: 'Avec moins de 2 (ou 7 si cotée) actionnaires, tournez-vous vers SAS ou SARL.'
+          alternatives: ['SAS', 'SARL'],
+          explanation: "Moins de 2 (ou 7 si cotée) : basculez en SAS/SARL."
         },
         'souplesse-gouvernance-voulue': {
-            alternatives: ['SAS'],
-            explanation: 'La SAS offre une grande liberté statutaire par rapport à la SA.'
+          alternatives: ['SAS'],
+          explanation: "SAS = liberté statutaire."
         }
-    },
+      },
 
-    /* ---------- FORMES SPÉCIFIQUES ---------- */
-    SNC: {
+      /* ---------- FORMES SPÉCIFIQUES ---------- */
+      SNC: {
         'risque-eleve': {
-            alternatives: ['SARL', 'SAS'],
-            explanation: 'Limitez la responsabilité des associés avec une SARL ou une SAS.'
+          alternatives: ['SARL', 'SAS'],
+          explanation: "Responsabilité illimitée : préférez SARL/SAS."
         }
-    },
+      },
 
-    SCI: {
+      SCI: {
         'hors-immobilier': {
-            alternatives: ['SARL', 'SAS', 'EURL', 'SASU'],
-            explanation: 'Pour toute activité commerciale, remplacez la SCI par une SARL, SAS, EURL ou SASU selon le nombre d’associés.'
+          alternatives: ['SARL', 'SAS', 'EURL', 'SASU'],
+          explanation: "Pour une activité commerciale : SARL/SAS (ou EURL/SASU en solo)."
+        },
+        'meuble-habituel': {
+          alternatives: ['SARL', 'EURL', 'EI'],
+          explanation:
+            "Meublé habituel inadapté en SCI à l’IR (risque d’IS). Préférez SARL de famille (IR), EURL ou EI (LMNP/LMP)."
+        },
+        'marchand-promotion': {
+          alternatives: ['SAS', 'SARL', 'SASU'],
+          explanation:
+            "Marchand/promo = activité commerciale : SAS/SARL (SASU si solo) plutôt que SCI."
+        },
+        'financement-bancaire-credibilite': {
+          alternatives: ['SCI', 'SARL', 'SAS'],
+          explanation:
+            "En immobilier, SCI/SARL/SAS rassurent mieux les banques que MICRO/EI."
         },
         'simplicite-comptable': {
-            alternatives: ['EURL', 'SARL'],
-            explanation: 'Pour alléger les obligations comptables, optez pour EURL ou SARL.'
+          alternatives: ['EURL', 'SARL'],
+          explanation: "Pour alléger le formalisme, EURL/SARL peuvent être plus simples à gérer."
         }
-    },
+      },
 
-    SELARL: {
-        fundraising: {
-            alternatives: ['SELAS', 'SAS'],
-            explanation: 'Pour ouvrir le capital, basculez en SELAS ou en SAS.'
+      SELARL: {
+        'fundraising': {
+          alternatives: ['SELAS', 'SAS'],
+          explanation: "Ouverture de capital facilitée en SELAS/SAS (sous règles ordinales)."
         },
         'besoin-flexibilite-gouvernance': {
-            alternatives: ['SELAS', 'SAS'],
-            explanation: 'Pour plus de souplesse de gouvernance, privilégiez SELAS ou SAS.'
+          alternatives: ['SELAS', 'SAS'],
+          explanation: "Gouvernance plus souple en SELAS/SAS."
         }
-    },
+      },
 
-    SELAS: {
+      SELAS: {
         'non-reglemente': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: 'Sans contrainte d’ordre, une SAS ou SARL est plus simple.'
+          alternatives: ['SAS', 'SARL'],
+          explanation: "Sans ordre pro : SAS/SARL suffisent, moins de contraintes."
         },
         'regime-social-non-souhaite': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: 'Si vous refusez le régime assimilé salarié, envisagez SAS ou SARL.'
+          alternatives: ['SARL', 'EURL'],
+          explanation: "Pour éviter l’assimilé salarié : SARL (TNS gérant maj.) / EURL."
         }
-    },
+      },
 
-    SCA: {
+      SCA: {
         'capital-insuffisant': {
-            alternatives: ['SAS', 'SA'],
-            explanation: 'Avec moins de 37 000 € de capital, optez pour SAS ou SA.'
+          alternatives: ['SAS', 'SA'],
+          explanation: "Si < 37 000 € (ou 225 000 € en appel public) : SAS/SA."
         },
         'petit-projet': {
-            alternatives: ['SAS', 'SARL'],
-            explanation: 'Pour un petit projet, SAS ou SARL sont plus légères.'
+          alternatives: ['SAS', 'SARL'],
+          explanation: "SCA est lourde : préférer SAS/SARL."
         }
-    }
-};
+      }
+    };
         console.log("RecommendationEngine initialisé avec succès");
     }
 
@@ -1995,1625 +2550,3127 @@ class RecommendationEngine {
         };
     }
 
-    /**
-     * Appliquer les filtres d'exclusion pour éliminer certains statuts
-     */
-    applyExclusionFilters() {
-        // Appliquer les filtres déclaratifs
-        this.applyDeclarativeFilters();
-        
-        // Appliquer les filtres spécifiques
-        this.applySpecificFilters();
-        
-        console.log('Statuts après filtres:', Object.keys(this.filteredStatuses));
+  /**
+ * Appliquer les filtres d'exclusion pour éliminer certains statuts
+ */
+applyExclusionFilters() {
+  // Appliquer les filtres déclaratifs
+  this.applyDeclarativeFilters();
+
+  // Appliquer les filtres spécifiques
+  this.applySpecificFilters();
+
+  console.log('Statuts après filtres:', Object.keys(this.filteredStatuses));
+}
+
+/**
+ * Appliquer les filtres d'exclusion déclaratifs définis dans legal-status-data.js
+ * - condition: string | function(answers) | RegExp | string[]
+ * - tolerance_condition: string (clé dans answers) | function(answers)
+ */
+applyDeclarativeFilters() {
+  const filters = Array.isArray(window.exclusionFilters) ? window.exclusionFilters : [];
+
+  filters.forEach(filter => {
+    let shouldExclude = false;
+
+    try {
+      const cond = filter?.condition;
+      const id = filter?.id;
+
+      if (typeof cond === 'string') {
+        // Match exact sur la valeur de answers[id]
+        shouldExclude = (this.answers?.[id] === cond);
+      } else if (typeof cond === 'function') {
+        // On passe l'objet answers **entier**
+        shouldExclude = !!cond(this.answers);
+      } else if (cond instanceof RegExp) {
+        // Test regex sur answers[id] (stringifié)
+        const val = this.answers?.[id];
+        shouldExclude = cond.test(String(val ?? ''));
+      } else if (Array.isArray(cond)) {
+        // Inclusion dans une liste de valeurs
+        shouldExclude = cond.includes(this.answers?.[id]);
+      }
+    } catch (e) {
+      console.error(`Erreur dans le filtre ${filter?.id}:`, e);
     }
-    
-    /**
-     * Appliquer les filtres d'exclusion déclaratifs définis dans legal-status-data.js
-     */
-    applyDeclarativeFilters() {
-        window.exclusionFilters.forEach(filter => {
-            // Vérifier si le filtre s'applique à la réponse
-            let shouldExclude = false;
-            
-            if (typeof filter.condition === 'string') {
-                // Condition simple (valeur exacte)
-                shouldExclude = this.answers[filter.id] === filter.condition;
-            } else if (typeof filter.condition === 'function') {
-                // Condition fonction (comparaison complexe)
-                try {
-                    shouldExclude = filter.condition(this.answers[filter.id]);
-                } catch (e) {
-                    console.error(`Erreur dans le filtre ${filter.id}:`, e);
-                }
-            }
-            
-            // Vérifier si une tolérance est applicable
-            if (shouldExclude && filter.tolerance_condition && this.answers[filter.tolerance_condition]) {
-                shouldExclude = false;
-            }
-            
-            // Si la condition est remplie, exclure les statuts spécifiés
-            if (shouldExclude) {
-                this.excludeStatuses(
-                    filter.excluded_statuses,
-                    filter.tolerance_message || `Exclusion par règle: ${filter.id}`
-                );
-            }
-        });
+
+    // Tolérance éventuelle (clé booléenne ou fonction)
+    if (shouldExclude && filter?.tolerance_condition) {
+      try {
+        const tol = filter.tolerance_condition;
+        if (typeof tol === 'function') {
+          if (tol(this.answers)) shouldExclude = false;
+        } else if (typeof tol === 'string') {
+          if (this.answers?.[tol]) shouldExclude = false;
+        }
+      } catch (e) {
+        console.error(`Erreur dans la tolérance du filtre ${filter?.id}:`, e);
+      }
     }
+
+    // Si la condition est remplie, exclure les statuts spécifiés
+    if (shouldExclude) {
+      const list = Array.isArray(filter?.excluded_statuses) ? filter.excluded_statuses.filter(Boolean) : [];
+      if (list.length) {
+        this.excludeStatuses(
+          list,
+          // message priorité: tolerance_message > reason > message > fallback
+          filter?.tolerance_message || filter?.reason || filter?.message || `Exclusion par règle: ${filter?.id}`
+        );
+      }
+    }
+  });
+}
     
-    /**
-     * Appliquer les filtres d'exclusion spécifiques (cas particuliers)
-     */
+/**
+ * Appliquer les filtres d'exclusion spécifiques (cas particuliers) — MAJ 30/09/2025
+ */
 applySpecificFilters() {
-    // ─── Données dérivées ──────────────────────────────────────────────
-const teamSolo = this.answers.team_structure === 'solo';
-const nbAssoc = parseInt(this.answers.associates_number || 1, 10); // défaut : 1
-const capital = parseFloat(this.answers.available_capital || 0);   // défaut : 0
-    const revenue = parseFloat(this.answers.projected_revenue || 0);
-/* ------------------------------------------------------------------
-     * 1. Activité relevant d’un ordre professionnel
-     * ------------------------------------------------------------------ */
-    if (this.answers.professional_order === 'yes') {
-        this.excludeStatuses(['MICRO', 'SNC'],
-            "Activité relevant d'un ordre professionnel – MICRO & SNC exclues");
+  // ─── Données dérivées ──────────────────────────────────────────────
+  const A = this.answers || {};
+  const teamSolo = A.team_structure === 'solo';
+  const nbAssoc  = parseInt(A.associates_number || 1, 10);
+  const capital  = parseFloat(A.available_capital || 0);
+  const revenue  = parseFloat(A.projected_revenue || 0);
+  const orderType = String(A.order_type || '').toLowerCase(); // ex: 'cnb', 'cno'
+
+  // Sécuriser thresholds (fallbacks au cas où)
+  const TH = this.thresholds2025 || {};
+  const MICRO = (TH.micro || {
+    bic_sales: 188_700, bic_service: 77_700, bnc: 77_700,
+    meuble_classe_ca: 77_700, meuble_non_classe_ca: 15_000
+  });
+
+  // Helper micro (utilise le helper externe s’il existe, sinon fallback local)
+  const microThreshold = (() => {
+    if (typeof this._getMicroCeilingForAnswers === 'function') {
+      const val = this._getMicroCeilingForAnswers(A);
+      if (Number.isFinite(val)) return val;
     }
-
-    /* ------------------------------------------------------------------
-     * 2. CA prévisionnel > seuil micro → MICRO exclue
-     * ------------------------------------------------------------------ */
-if (this.answers.projected_revenue) {
-    let microThreshold = this.thresholds2025.micro.bic_service;       // par défaut
-    if (this.answers.activity_type === 'bic_sales') microThreshold = this.thresholds2025.micro.bic_sales;
-    if (this.answers.activity_type === 'bnc')        microThreshold = this.thresholds2025.micro.bnc;
-
-    if (revenue > microThreshold) {
-        this.excludeStatus('MICRO',
-            `CA prévisionnel (${revenue.toLocaleString()} €) > seuil micro (${microThreshold.toLocaleString()} €)`);
+    // Fallback : calcule selon l’activité
+    if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
+      return A.furnished_tourism_classed === 'yes'
+        ? MICRO.meuble_classe_ca       // 77 700 €
+        : MICRO.meuble_non_classe_ca;  // 15 000 €
     }
-}
+    const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
+    if (['ventes', 'hébergement', 'hebergement', 'bic_sales'].includes(nature)) return MICRO.bic_sales;   // 188 700 €
+    if (nature === 'bnc') return MICRO.bnc;                                                               // 77 700 €
+    return MICRO.bic_service;                                                                              // 77 700 €
+  })();
 
-    /* ------------------------------------------------------------------
-     * 3. Besoin de lever des fonds (tout montant) → EI / MICRO / SNC exclues
-     * ------------------------------------------------------------------ */
-    if (this.answers.fundraising === 'yes') {
-        this.excludeStatuses(['EI', 'MICRO', 'SNC'],
-            'Levée de fonds envisagée – statuts peu attractifs exclus');
+  /* ------------------------------------------------------------------
+   * 1) Activité relevant d’un ordre professionnel
+   *    → MICRO & SNC exclues (EI tolérée selon professions)
+   * ------------------------------------------------------------------ */
+  if (A.professional_order === 'yes' || A.regulated_profession === 'yes') {
+    this.excludeStatuses(['MICRO', 'SNC'],
+      "Activité relevant d'un ordre professionnel – MICRO & SNC exclues");
+  }
+
+  /* ------------------------------------------------------------------
+   * 2) CA prévisionnel > seuil micro → MICRO exclue (incl. cas meublés 2025)
+   * ------------------------------------------------------------------ */
+  if (Number.isFinite(revenue) && Number.isFinite(microThreshold) && revenue > microThreshold) {
+    this.excludeStatus('MICRO',
+      `CA prévisionnel (${revenue.toLocaleString()} €) > seuil micro (${microThreshold.toLocaleString()} €)`);
+  }
+
+  /* ------------------------------------------------------------------
+   * 3) Besoin de lever des fonds → EI / MICRO / SNC exclus
+   * ------------------------------------------------------------------ */
+  if (A.fundraising === 'yes' || A.investors === 'yes') {
+    this.excludeStatuses(['EI', 'MICRO', 'SNC'],
+      'Levée de fonds envisagée – statuts peu attractifs exclus (préférez SAS/SASU/SA)');
+  }
+
+  /* ------------------------------------------------------------------
+   * 4) SEL réservées aux professions libérales réglementées (ordres)
+   *    → si pas d’ordre/réglementation, SELARL/SELAS exclues
+   * ------------------------------------------------------------------ */
+  const hasOrder = (A.professional_order === 'yes') || (A.regulated_activity === 'yes') || (A.regulated_profession === 'yes');
+  if (!hasOrder) {
+    this.excludeStatuses(['SELARL', 'SELAS'],
+      'SEL réservées aux professions libérales réglementées (ordre/agréments requis)');
+  }
+
+  /* ------------------------------------------------------------------
+   * 5) SCI réservée aux activités civiles immobilières
+   *    - Exclue si activité ≠ immobilier
+   *    - Exclue même en immobilier pour meublé habituel / para-hôtelier
+   *      et pour marchand de biens / promotion / lotissement
+   * ------------------------------------------------------------------ */
+  if (A.activity_type !== 'immobilier') {
+    this.excludeStatus('SCI', 'SCI réservée aux activités civiles immobilières');
+  } else {
+    const model = String(A.real_estate_model || '').toLowerCase();
+    if (['meuble','meublé','para_hotellerie','para-hotelier','para-hôtellerie'].includes(model)) {
+      this.excludeStatus('SCI', 'Location meublée/para-hôtelière = activité commerciale → SCI inadaptée (risque IS)');
     }
-
-    /* ------------------------------------------------------------------
-     * 4. SEL réservées aux professions libérales réglementées
-     * ------------------------------------------------------------------ */
- const isLiberal = this.answers.activity_type === 'bnc';
-const hasOrder = this.answers.professional_order === 'yes' ||
-                 this.answers.regulated_activity === 'yes';
-    if (!hasOrder && !isLiberal) {
-        this.excludeStatuses(['SELARL', 'SELAS'],
-            'SEL réservées aux professions libérales réglementées');
+    if (['marchand','marchand_de_biens','marchand-de-biens','promotion','lotissement'].includes(model)) {
+      this.excludeStatus('SCI', 'Marchand/promotion/lotissement = activité commerciale → préférer SAS/SARL');
     }
+  }
 
-    /* ------------------------------------------------------------------
-     * 5. SCI réservée aux activités civiles immobilières
-     * ------------------------------------------------------------------ */
-    if (this.answers.activity_type && this.answers.activity_type !== 'immobilier') {
-        this.excludeStatus('SCI',
-            'SCI réservée aux activités civiles immobilières');
-    }
+  /* ------------------------------------------------------------------
+   * 6) Risque pro élevé → éviter responsabilité illimitée
+   *    (EI & MICRO : séparation pro/perso depuis 2022 mais prudence)
+   * ------------------------------------------------------------------ */
+  if (A.high_professional_risk === 'yes') {
+    this.excludeStatuses(['EI', 'MICRO', 'SNC'],
+      'Risque professionnel élevé – privilégier une responsabilité limitée (EURL/SARL/SAS/SASU/SA)');
+  }
 
-    /* ------------------------------------------------------------------
-     * 6. Risque professionnel élevé → éviter responsabilité illimitée
-     * ------------------------------------------------------------------ */
-    if (this.answers.high_professional_risk === 'yes') {
-        this.excludeStatuses(['EI', 'MICRO', 'SNC'],
-            'Responsabilité illimitée incompatible avec risque professionnel élevé');
-    }
+  /* ------------------------------------------------------------------
+   * 7) Régime social souhaité
+   * ------------------------------------------------------------------ */
+  if (A.social_regime === 'assimilated_employee') {
+    // Statuts TNS (par défaut) exclus
+    this.excludeStatuses(['EI', 'MICRO', 'EURL', 'SARL', 'SNC'],
+      'Régime assimilé salarié souhaité – statuts TNS exclus (préférez SAS/SASU/SA/SELAS)');
+  } else if (A.social_regime === 'tns') {
+    // Statuts assimilé salarié exclus
+    this.excludeStatuses(['SAS', 'SASU', 'SA', 'SELAS', 'SCA'],
+      'Régime TNS souhaité – statuts assimilé salarié exclus');
+  }
 
-    /* ------------------------------------------------------------------
-     * 7. Régime social souhaité
-     * ------------------------------------------------------------------ */
-    if (this.answers.social_regime === 'assimilated_employee') {
-        this.excludeStatuses(['EI', 'MICRO', 'EURL', 'SARL', 'SNC'],
-            'Régime assimilé salarié souhaité – statuts TNS exclus');
-    } else if (this.answers.social_regime === 'tns') {
-        this.excludeStatuses(['SAS', 'SASU', 'SA', 'SELAS'],
-            'Régime TNS souhaité – statuts assimilé salarié exclus');
-    }
+  /* ------------------------------------------------------------------
+   * 8) Protection du patrimoine essentielle
+   * ------------------------------------------------------------------ */
+  if (A.patrimony_protection === 'essential') {
+    this.excludeStatuses(['SNC'],
+      'Protection patrimoniale essentielle – responsabilité solidaire/illimitée exclue');
+  }
 
-    /* ------------------------------------------------------------------
-     * 8. Protection du patrimoine essentielle
-     * ------------------------------------------------------------------ */
-    if (this.answers.patrimony_protection === 'essential') {
-        this.excludeStatuses(['SNC'],
-            'Protection patrimoniale essentielle – responsabilité solidaire exclue');
-    }
-
-/* ------------------------------------------------------------------
- * 9. Nombre d'associés & statuts unipersonnels / pluripersonnels
- * ------------------------------------------------------------------ */
-if (teamSolo) {
+  /* ------------------------------------------------------------------
+   * 9) Nombre d’associés & statuts uni/pluripersonnels
+   *    - Solo : exclure les formes ≥ 2 associés (on conserve SELARL/SELAS : SELARLU/SELASU possibles)
+   *    - À plusieurs : exclure les formes unipersonnelles
+   * ------------------------------------------------------------------ */
+  if (teamSolo) {
     this.excludeStatuses(
-        ['SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'],
-        'Un seul associé – statuts pluripersonnels exclus'
+      ['SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SCA'],
+      'Un seul associé – statuts pluripersonnels exclus'
     );
-} else {
-    // ≥ 2 associés
+    // NB: SELARL/SELAS conservées (SELARLU/SELASU possibles selon ordre)
+  } else {
     this.excludeStatuses(
-        ['EI', 'MICRO', 'EURL', 'SASU'],
-        'Plusieurs associés – statuts unipersonnels exclus'
+      ['EI', 'MICRO', 'EURL', 'SASU'],
+      'Plusieurs associés – statuts unipersonnels exclus'
     );
-    
     if (nbAssoc > 100) this.excludeStatus('SARL', 'SARL limitée à 100 associés');
-    if (nbAssoc < 2)   this.excludeStatus('SA', 'SA requiert au moins 2 actionnaires');
-    if (nbAssoc < 4)   this.excludeStatus('SCA', 'SCA requiert au moins 4 associés');
-}  // <-- L'accolade fermante du else doit être ici
+    if (nbAssoc < 2)   this.excludeStatus('SA',   'SA requiert au moins 2 actionnaires (7 si cotée)');
+    if (nbAssoc < 4)   this.excludeStatus('SCA',  'SCA requiert au moins 4 associés (1 commandité + 3 commanditaires)');
+  }
 
-/* ------------------------------------------------------------------
- * 10. Capital social minimum (SA & SCA)
- * ------------------------------------------------------------------ */
-if (capital < 37_000) {
-    this.excludeStatuses(['SA', 'SCA'],
-        'Capital insuffisant (minimum légal : 37 000 €)');
-}
+  /* ------------------------------------------------------------------
+   * 10) Capital social minimum (SA & SCA) + cas cotée/IPO
+   *     - SA : 37 000 € (≥ 50 % libéré à la constitution)
+   *     - SCA : 37 000 € (ou 225 000 € si appel public à l’épargne)
+   * ------------------------------------------------------------------ */
+  const wantsIPO = (A.public_listing === 'yes') || (A.public_offering === 'yes') || (A.ape === 'ipo');
+  if (capital < 37_000) {
+    this.excludeStatuses(['SA', 'SCA'], 'Capital insuffisant (minimum légal SA/SCA : 37 000 €)');
+  }
+  if (wantsIPO && capital < 225_000) {
+    this.excludeStatus('SCA', 'SCA avec appel public : capital minimum 225 000 € requis');
+  }
+  if (wantsIPO && nbAssoc < 7) {
+    this.excludeStatus('SA', 'SA cotée : au moins 7 actionnaires requis');
+  }
 
-/* ------------------------------------------------------------------
- * 11. Levée de fonds ≥ 1 M€ → éviter SARL / SNC
- * ------------------------------------------------------------------ */
-if (this.answers.fundraising === 'yes' &&
-    parseFloat(this.answers.fundraising_amount || '0') >= 1_000_000) {
+  /* ------------------------------------------------------------------
+   * 11) Levée de fonds ≥ 1 M€ → éviter SARL / SNC (préférer SAS/SA)
+   * ------------------------------------------------------------------ */
+  const fundraisingAmount = parseFloat(A.fundraising_amount || '0');
+  if ((A.fundraising === 'yes' || A.investors === 'yes') && fundraisingAmount >= 1_000_000) {
     this.excludeStatuses(['SARL', 'SNC'],
-        'Levée de fonds importante – privilégier SAS ou SA');
-}
+      'Levée de fonds importante (≥ 1 M€) – privilégier SAS/SA');
+  }
 
-/* ------------------------------------------------------------------
- * 12. Activité agricole → proposer statuts agricoles dédiés
- * ------------------------------------------------------------------ */
-if (this.answers.activity_type === 'agricultural') {
+  /* ------------------------------------------------------------------
+   * 12) Activité agricole → proposer statuts agricoles dédiés
+   * ------------------------------------------------------------------ */
+  if (A.activity_type === 'agricultural' || A.activity_sector === 'agricole') {
     this.excludeStatuses(
-        ['EI', 'MICRO', 'EURL', 'SASU', 'SARL', 'SAS', 'SA',
-         'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'],
-        'Activité agricole – choisir EARL, GAEC ou SCEA');
-}
+      ['EI','MICRO','EURL','SASU','SARL','SAS','SA','SNC','SCI','SELARL','SELAS','SCA'],
+      'Activité agricole – privilégier EARL, GAEC ou SCEA'
+    );
+  }
 
-/* ------------------------------------------------------------------
- * 13. Ordres pros interdisant SAS / SASU (CNB, CNO, etc.)
- * ------------------------------------------------------------------ */
-if (['cnb', 'cno'].includes(this.answers.order_type)) {
+  /* ------------------------------------------------------------------
+   * 13) Ordres pros interdisant SAS / SASU (ex. CNB, CNO)
+   * ------------------------------------------------------------------ */
+  if (['cnb','cno'].includes(orderType)) {
     this.excludeStatuses(['SAS', 'SASU'],
-        'Ordre professionnel incompatible avec SAS / SASU');
+      'Ordre professionnel incompatible avec SAS / SASU (règles ordinales)');
+  }
+}
+    
+ /**
+ * Alternatives + exclusions — harmonisation des clés (status_id & statusId)
+ */
+findAlternativeSuggestion(statusId, reason) {
+  const reasonCode = this.getReasonCode(reason);
+  const block = this.alternativeSuggestions?.[statusId]?.[reasonCode];
+  if (block) return block;
+
+  return {
+    alternatives: this.getGenericAlternatives(statusId),
+    explanation: "Consultez les autres formes juridiques recommandées qui évitent cette contrainte"
+  };
 }
 
+getReasonCode(reason) {
+  const r = String(reason || '');
+  const rl = r.toLowerCase();
+
+  if (/ca/i.test(r) && rl.includes('seuil')) return 'ca-depasse-seuil';
+  if (rl.includes('ordre professionnel')) return 'ordre-professionnel';
+  if (rl.includes('fonds') || rl.includes('levée') || rl.includes('levee')) return 'fundraising';
+  if (rl.includes('patrimoine')) return 'protection-patrimoine';
+  if (rl.includes('risque')) return 'risque-eleve';
+
+  return rl
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 30);
 }
-    
-    /**
-     * Trouve des alternatives pour un statut exclu et une raison donnée
-     * @param {string} statusId - Identifiant du statut exclu
-     * @param {string} reason - Raison de l'exclusion
-     * @returns {Object|null} - Suggestion d'alternative ou null
-     */
-    findAlternativeSuggestion(statusId, reason) {
-        // Convertir la raison en code pour correspondance
-        const reasonCode = this.getReasonCode(reason);
-        
-        if (this.alternativeSuggestions[statusId] && 
-            this.alternativeSuggestions[statusId][reasonCode]) {
-            return this.alternativeSuggestions[statusId][reasonCode];
-        }
-        
-        // Alternative générique si pas de correspondance spécifique
-        return {
-            alternatives: this.getGenericAlternatives(statusId),
-            explanation: "Consultez les autres formes juridiques recommandées qui évitent cette contrainte"
-        };
-    }
 
-    /**
-     * Convertit une raison textuelle en code pour correspondance
-     * @param {string} reason - Raison d'exclusion en texte
-     * @returns {string} - Code de raison standardisé
-     */
-    getReasonCode(reason) {
-        // Extraire un code à partir de la description
-        if (reason.includes("CA") && reason.includes("seuil")) return "ca-depasse-seuil";
-        if (reason.includes("ordre professionnel")) return "ordre-professionnel";
-        if (reason.includes("fonds")) return "fundraising";
-        if (reason.includes("patrimoine")) return "protection-patrimoine";
-        if (reason.includes("risque")) return "risque-eleve";
-        
-        // Créer un slug à partir du texte
-        return reason.toLowerCase()
-            .replace(/[^a-z0-9]/g, '-')
-            .replace(/-+/g, '-')
-            .substring(0, 30);
-    }
+getGenericAlternatives(statusId) {
+  const alternatives = {
+    MICRO: ['EI', 'EURL', 'SASU'],
+    EI: ['MICRO', 'EURL', 'SASU'],
+    EURL: ['SASU', 'SARL', 'EI'],
+    SASU: ['SAS', 'EURL', 'EI', 'MICRO'],
+    SARL: ['SAS', 'EURL', 'SELARL'],
+    SAS: ['SASU', 'SARL', 'SELAS', 'SA'],
+    SA: ['SAS', 'SCA'],
+    SNC: ['SARL', 'SAS', 'EURL'],
+    SCI: ['SARL', 'SAS', 'EURL', 'SASU'],
+    SELARL: ['SELAS', 'SARL'],
+    SELAS: ['SELARL', 'SAS'],
+    SCA: ['SA', 'SAS']
+  };
+  return alternatives[statusId] || ['EURL', 'SASU'];
+}
 
-    /**
-     * Retourne des alternatives génériques selon le type de statut
-     * @param {string} statusId - Identifiant du statut
-     * @returns {Array} - Liste d'alternatives possibles
-     */
-    getGenericAlternatives(statusId) {
-        const alternatives = {
-            'MICRO': ['EI', 'EURL'],
-            'EI': ['MICRO', 'EURL'],
-            'EURL': ['SASU', 'SARL'],
-            'SASU': ['EURL', 'SAS'],
-            'SARL': ['EURL', 'SAS'],
-            'SAS': ['SASU', 'SARL'],
-            'SNC': ['SARL', 'SAS'],
-            'SCI': ['SARL', 'SAS'],
-            'SELARL': ['SELAS'],
-            'SELAS': ['SELARL']
-        };
-        
-        return alternatives[statusId] || ['EURL', 'SASU'];
-    }
-    
-    /**
-     * Exclure un statut juridique
-     */
-    excludeStatus(statusId, reason) {
-        if (this.filteredStatuses[statusId]) {
-            const status = this.filteredStatuses[statusId];
-            
-            // Trouver une suggestion d'alternative
-            const suggestion = this.findAlternativeSuggestion(statusId, reason);
-            
-            // Stocker dans les incompatibilités
-            this.incompatibles.push({
-                id: statusId,
-                name: status.name,
-                shortName: status.shortName,
-                status: status,
-                reason: reason,
-                suggestion: suggestion,
-                compatibilite: 'INCOMPATIBLE'
-            });
-            
-            delete this.filteredStatuses[statusId];
-            
-            // Journaliser l'exclusion avec l'alternative
-            this.auditTrail.exclusions.push({
-                status_id: statusId,
-                reason: reason,
-                alternative: suggestion ? suggestion.explanation : null
-            });
-        }
-    }
-    
-    /**
-     * Exclure plusieurs statuts juridiques
-     */
-    excludeStatuses(statusIds, reason) {
-        statusIds.forEach(statusId => {
-            this.excludeStatus(statusId, reason);
-        });
-    }
+excludeStatus(statusId, reason) {
+  if (!this.filteredStatuses?.[statusId]) return;
 
-    /**
-     * Calculer les poids à appliquer pour chaque critère basé sur les priorités
-     */
-    calculatePriorityWeights() {
-        // Par défaut, tous les critères ont un poids de 1
-        const defaultWeights = {
-            patrimony_protection: 1,
-            administrative_simplicity: 1,
-            taxation_optimization: 1,
-            social_charges: 1,
-            fundraising_capacity: 1,
-            credibility: 1,
-            governance_flexibility: 1,
-            transmission: 1
-        };
-        
-        this.priorityWeights = {...defaultWeights};
-        
-        // Si les priorités ont été définies
-        if (this.answers.priorities && this.answers.priorities.length > 0) {
-            // Mapping des IDs de priorité vers les critères
-            const priorityMapping = {
-                taxation: 'taxation_optimization',
-                social_cost: 'social_charges',
-                patrimony_protection: 'patrimony_protection',
-                governance_flexibility: 'governance_flexibility',
-                fundraising: 'fundraising_capacity',
-                transmission: 'transmission',
-                admin_simplicity: 'administrative_simplicity',
-                accounting_cost: 'administrative_simplicity',
-                retirement_insurance: 'social_charges'
-            };
-            
-            // Poids selon le rang (1er = 5, 2e = 4, 3e = 3)
-            const rankWeights = [5, 4, 3];
-            
-            // Appliquer les poids selon les priorités
-            this.answers.priorities.forEach((priorityId, index) => {
-                if (index < 3) { // Limiter à 3 priorités
-                    const criteriaKey = priorityMapping[priorityId];
-                    if (criteriaKey) {
-                        this.priorityWeights[criteriaKey] = rankWeights[index];
-                        
-                        // Journaliser la règle de pondération
-                        this.auditTrail.weightingRules.push({
-                            priority: priorityId,
-                            rank: index + 1,
-                            criteria: criteriaKey,
-                            weight: rankWeights[index]
-                        });
-                    }
-                }
-            });
-        }
-        
-        console.log('Poids des priorités:', this.priorityWeights);
-    }
+  const status = this.filteredStatuses[statusId];
+  const suggestion = this.findAlternativeSuggestion(statusId, reason);
 
-    /**
-     * Calculer les scores pour chaque statut juridique
-     */
-    calculateScores() {
-        const statuses = Object.keys(this.filteredStatuses);
-        
-        // Pour chaque statut
-        statuses.forEach(statusId => {
-            // Initialiser le score
-            this.scores[statusId] = 0;
-            this.weightedScores[statusId] = 0;
-            this.auditTrail.scores[statusId] = {};
-            
-            const status = this.filteredStatuses[statusId];
-            const metrics = status.key_metrics;
-            
-            // Critères et leurs scores
-            const criteriaScores = {
-                patrimony_protection: this.calculateCriteriaScore('patrimony_protection', statusId, metrics),
-                administrative_simplicity: this.calculateCriteriaScore('administrative_simplicity', statusId, metrics),
-                taxation_optimization: this.calculateCriteriaScore('taxation_optimization', statusId, metrics),
-                social_charges: this.calculateCriteriaScore('social_charges', statusId, metrics),
-                fundraising_capacity: this.calculateCriteriaScore('fundraising_capacity', statusId, metrics),
-                credibility: metrics.credibility || 3,
-                governance_flexibility: metrics.governance_flexibility || 3,
-                transmission: this.calculateCriteriaScore('transmission', statusId, metrics)
-            };
-            
-            // Calculer le score total (non pondéré)
-            let totalScore = 0;
-            let totalWeightedScore = 0;
-            let totalWeight = 0;
-            
-            for (const [criterion, score] of Object.entries(criteriaScores)) {
-                const weight = this.priorityWeights[criterion] || 1;
-                totalScore += score;
-                totalWeightedScore += score * weight;
-                totalWeight += weight;
-                
-                // Journaliser les scores
-                this.auditTrail.scores[statusId][criterion] = {
-                    raw_score: score,
-                    weight: weight,
-                    weighted_score: score * weight
-                };
-            }
-            
-            this.scores[statusId] = totalScore;
-            
-            // Normaliser le score pondéré (sur 100)
-            this.weightedScores[statusId] = totalWeightedScore / totalWeight * 20;
-        });
-        
-        console.log('Scores pondérés:', this.weightedScores);
-    }
-    
-    /**
-     * Calculer le score pour un critère donné en utilisant les règles applicables
-     */
-    calculateCriteriaScore(criteria, statusId, metrics) {
-        // Score de base à partir des métriques du statut
-        let score = metrics[criteria] || 3;
-        
-        // Appliquer toutes les règles correspondant au critère
-        const appliedRules = [];
-        
-        scoringRules
-            .filter(rule => rule.criteria === criteria)
-            .forEach(rule => {
-                // Vérifier si la règle s'applique selon les réponses
-                if (rule.condition(this.answers)) {
-                    // Calculer le nouveau score
-                    const newScore = rule.apply(statusId, score);
-                    
-                    // Si la règle a modifié le score, l'enregistrer
-                    if (newScore !== score) {
-                        appliedRules.push({
-                            id: rule.id,
-                            description: rule.description,
-                            impact: newScore - score
-                        });
-                        
-                        // Mettre à jour le score
-                        score = newScore;
-                    }
-                }
-            });
-        
-        // Stocker les règles appliquées dans l'audit trail
-        if (appliedRules.length > 0) {
-            if (!this.auditTrail.scores[statusId]) {
-                this.auditTrail.scores[statusId] = {};
-            }
-            if (!this.auditTrail.scores[statusId][criteria]) {
-                this.auditTrail.scores[statusId][criteria] = {};
-            }
-            
-            this.auditTrail.scores[statusId][criteria].applied_rules = appliedRules;
-        }
-        
-        // Limiter le score entre 0 et 5
-        return Math.max(0, Math.min(5, score));
-    }
-    
-    /**
-     * Méthode pour expliquer les décisions du moteur de recommandation
-     */
-    explainRecommendation(statusId) {
-        if (!this.auditTrail.scores[statusId]) {
-            return "Aucune explication disponible";
-        }
-        
-        let explanation = `Explication pour ${this.filteredStatuses[statusId].name} (${statusId}):\n\n`;
-        
-        // Expliquer les scores par critère
-        for (const [criterion, data] of Object.entries(this.auditTrail.scores[statusId])) {
-            explanation += `${criterion}: ${data.raw_score}/5 (poids: ${data.weight})\n`;
-            
-            if (data.applied_rules && data.applied_rules.length) {
-                explanation += "  Règles appliquées:\n";
-                data.applied_rules.forEach(rule => {
-                    const impact = rule.impact > 0 ? `+${rule.impact}` : rule.impact;
-                    explanation += `  - ${rule.description} (${impact})\n`;
-                });
-            }
-        }
-        
-        // Score final
-        explanation += `\nScore final: ${Math.round(this.weightedScores[statusId])}/100\n`;
-        
-        return explanation;
-    }
+  this.incompatibles = this.incompatibles || [];
+  this.auditTrail = this.auditTrail || { exclusions: [], weightingRules: [], scores: [] };
 
-    /**
-     * Génère des stratégies personnalisées pour un statut juridique selon le profil
-     * @param {string} statusId - Identifiant du statut juridique
-     * @returns {Array} - Liste des stratégies personnalisées
-     */
-    generateContextualStrategies(statusId) {
-        const status = this.filteredStatuses[statusId];
-        if (!status) return [];
-        
-        const strategies = [];
-        
-        // Stratégies spécifiques par forme juridique
-// ─────────────────────────────────────────────────────────────────────────────
-// MICRO-ENTREPRENEUR
-// ─────────────────────────────────────────────────────────────────────────────
-if (statusId === 'MICRO') {
-  strategies.push({
-    title: "Optimisation de la trésorerie",
-    description: "Profitez de l'absence de TVA sous le seuil de franchise pour améliorer votre trésorerie.",
-    icon: "fa-coins",
+  this.incompatibles.push({
+    id: statusId,
+    name: status.name,
+    shortName: status.shortName,
+    status,
+    reason,
+    suggestion,
+    compatibilite: 'INCOMPATIBLE'
   });
 
-  if (this.answers.tax_bracket === 'non_taxable' || this.answers.tax_bracket === 'bracket_11') {
-    strategies.push({
-      title: "Option versement libératoire",
-      description: "Avec votre TMI faible, le versement libératoire de l'impôt est très avantageux.",
-      icon: "fa-percent",
+  delete this.filteredStatuses[statusId];
+
+  // Harmonisation : on stocke les deux clés
+  this.auditTrail.exclusions.push({
+    status_id: statusId,
+    statusId: statusId,
+    reason,
+    alternative: suggestion?.explanation || null
+  });
+}
+
+excludeStatuses(statusIds, reason) {
+  (statusIds || []).forEach(id => this.excludeStatus(id, reason));
+}
+
+
+/**
+ * Calculer les poids à appliquer pour chaque critère basé sur les priorités (MAJ 30/09/2025)
+ * - Dédup des priorités
+ * - Alias tolérés
+ * - Poids relatifs (max)
+ * - Normalisation (moyenne = 1) pour comparabilité inter-dossiers
+ */
+calculatePriorityWeights() {
+  const CRITERIA_KEYS = [
+    'patrimony_protection',
+    'administrative_simplicity',
+    'taxation_optimization',
+    'social_charges',
+    'fundraising_capacity',
+    'credibility',
+    'governance_flexibility',
+    'transmission'
+  ];
+
+  // 1) base neutre
+  const defaultWeights = Object.fromEntries(CRITERIA_KEYS.map(k => [k, 1]));
+  this.priorityWeights = { ...defaultWeights };
+
+  // sécurité trail
+  this.auditTrail = this.auditTrail || { exclusions: [], weightingRules: [], scores: {} };
+
+  const raw = Array.isArray(this.answers?.priorities) ? this.answers.priorities : [];
+  if (!raw.length) {
+    console.log('Poids des priorités:', this.priorityWeights);
+    return;
+  }
+
+  // 2) mapping + alias tolérés
+  const priorityMapping = {
+    // fisc / charges
+    taxation: 'taxation_optimization',
+    net_income: 'taxation_optimization',
+    social_cost: 'social_charges',
+    urssaf: 'social_charges',
+    payroll_charges: 'social_charges',
+
+    // protection / gouvernance / transmission
+    patrimony_protection: 'patrimony_protection',
+    asset_protection: 'patrimony_protection',
+    governance_flexibility: 'governance_flexibility',
+    bylaws_flexibility: 'governance_flexibility',
+    voting_flexibility: 'governance_flexibility',
+    transmission: 'transmission',
+    estate: 'transmission',
+    succession: 'transmission',
+
+    // simplicité / compta
+    admin_simplicity: 'administrative_simplicity',
+    accounting_cost: 'administrative_simplicity',
+    paperwork: 'administrative_simplicity',
+
+    // crédibilité / levée
+    credibility: 'credibility',
+    image: 'credibility',
+    bank_trust: 'credibility',
+    fundraising: 'fundraising_capacity',
+    investors: 'fundraising_capacity',
+    vc_ready: 'fundraising_capacity',
+
+    // couverture sociale
+    retirement_insurance: 'social_charges'
+  };
+
+  // 3) dédup (on garde le 1er ordre de préférence)
+  const seen = new Set();
+  const deduped = [];
+  for (const p of raw) {
+    const key = String(p || '').toLowerCase().trim();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      deduped.push(key);
+    }
+  }
+
+  // 4) poids par rang (top3 only). Ajuste si moins de 3 priorités.
+  const baseRankWeights = [5, 4, 3];
+  const rankWeights = baseRankWeights.slice(0, Math.min(3, deduped.length));
+
+  // 5) applique (mode "max" pour éviter l’écrasement en cas d’alias doublons)
+  deduped.slice(0, 3).forEach((priorityId, index) => {
+    const criteriaKey = priorityMapping[priorityId];
+    if (!criteriaKey || !CRITERIA_KEYS.includes(criteriaKey)) return;
+
+    const w = rankWeights[index];
+    const current = this.priorityWeights[criteriaKey] ?? 1;
+    const next = Math.max(current, w);
+
+    this.priorityWeights[criteriaKey] = next;
+
+    this.auditTrail.weightingRules.push({
+      priority: priorityId,
+      alias_to: criteriaKey,
+      rank: index + 1,
+      weight_assigned: w,
+      merge_mode: 'max'
+    });
+  });
+
+  // 6) normalisation pour que la moyenne des critères reste = 1
+  const values = CRITERIA_KEYS.map(k => this.priorityWeights[k] ?? 1);
+  const mean = values.reduce((a, b) => a + b, 0) / values.length || 1;
+  const factor = mean === 0 ? 1 : (1 / mean);
+
+  CRITERIA_KEYS.forEach(k => {
+    this.priorityWeights[k] = +(this.priorityWeights[k] * factor).toFixed(6);
+  });
+
+  this.auditTrail.weightingRules.push({
+    normalization: 'mean_to_1',
+    before_mean: mean,
+    factor_applied: factor
+  });
+
+  console.log('Poids des priorités (normalisés):', this.priorityWeights);
+}
+
+/**
+ * Calcul des scores (v2, MAJ 30/09/2025)
+ * - Tous les critères passent par calculateCriteriaScore
+ * - Clamp 1..5
+ * - Sortie 0..100 via ((avg-1)/4)*100
+ * - Anti-compensation soft (min < 2 => -5%)
+ * - Audit du poids (weight, weight_share, weighted_score, top_contributors)
+ */
+calculateScores() {
+  const CRITERIA = [
+    'patrimony_protection',
+    'administrative_simplicity',
+    'taxation_optimization',
+    'social_charges',
+    'fundraising_capacity',
+    'credibility',
+    'governance_flexibility',
+    'transmission'
+  ];
+
+  const clamp = (x, min = 1, max = 5) =>
+    Math.min(max, Math.max(min, Number.isFinite(x) ? x : 3));
+
+  const to100 = (avg1to5) =>
+    Math.max(0, Math.min(100, ((avg1to5 - 1) / 4) * 100)); // 1→0 ; 5→100
+
+  this.scores = this.scores || {};
+  this.weightedScores = this.weightedScores || {};
+  this.auditTrail = this.auditTrail || { exclusions: [], weightingRules: [], scores: {} };
+  this.auditTrail.scores = this.auditTrail.scores || {};
+
+  const statuses = Object.keys(this.filteredStatuses || {});
+
+  statuses.forEach(statusId => {
+    const status  = this.filteredStatuses[statusId];
+    const metrics = status?.key_metrics || {};
+
+    // S'assure de ne pas écraser les logs posés par calculateCriteriaScore
+    this.auditTrail.scores[statusId] = this.auditTrail.scores[statusId] || {};
+
+    let totalWeighted = 0;
+    let totalWeight   = 0;
+    let minCrit       = Infinity;
+
+    // 1) Boucle critères : calcule score & poids, alimente l'audit
+    CRITERIA.forEach(criterion => {
+      const base = Number.isFinite(metrics[criterion]) ? metrics[criterion] : 3;
+
+      // Toujours passer par calculateCriteriaScore pour capter les règles
+      const scored = clamp(
+        this.calculateCriteriaScore
+          ? this.calculateCriteriaScore(criterion, statusId, metrics)
+          : base
+      );
+
+      const weight = Number.isFinite(this.priorityWeights?.[criterion])
+        ? this.priorityWeights[criterion]
+        : 1;
+
+      totalWeighted += scored * weight;
+      totalWeight   += weight;
+      minCrit        = Math.min(minCrit, scored);
+
+      // Fusion dans l'audit existant (préserve applied_rules, etc.)
+      const node = this.auditTrail.scores[statusId][criterion] || {};
+      if (node.base_score === undefined) node.base_score = base;
+      node.final_score    = scored;
+      node.weight         = weight;
+      node.weighted_score = +(scored * weight).toFixed(4);
+      this.auditTrail.scores[statusId][criterion] = node;
+    });
+
+    // 2) Moyenne pondérée 1..5 + conversion 0..100 + anti-compensation
+    const avg1to5 = totalWeight > 0 ? (totalWeighted / totalWeight) : 0;
+    let score100  = to100(avg1to5);
+
+    let penaltyNote = null;
+    if (minCrit < 2) {
+      score100    = +(score100 * 0.95).toFixed(2); // -5%
+      penaltyNote = 'soft-penalty:min-criterion<2';
+    } else {
+      score100    = +score100.toFixed(2);
+    }
+
+    this.scores[statusId]        = +avg1to5.toFixed(4); // moyenne 1..5
+    this.weightedScores[statusId]= score100;            // score 0..100
+
+    // 3) Audit des poids : part relative et top contributeurs
+    const contributions = [];
+    if (totalWeight > 0) {
+      CRITERIA.forEach(c => {
+        const node = this.auditTrail.scores[statusId][c];
+        const share = (node?.weight || 0) / totalWeight;
+        node.weight_share = +share.toFixed(6);
+        this.auditTrail.scores[statusId][c] = node;
+
+        if (Number.isFinite(node?.weighted_score)) {
+          contributions.push({ criterion: c, weighted: node.weighted_score });
+        }
+      });
+    }
+
+    contributions.sort((a, b) => (b.weighted - a.weighted));
+    const topContributors = contributions.slice(0, 3).map(x => x.criterion);
+
+    // 4) Résumé statut
+    this.auditTrail.scores[statusId].__summary = {
+      avg_1to5: this.scores[statusId],
+      score_0to100: this.weightedScores[statusId],
+      min_criterion: minCrit,
+      penalty: penaltyNote,
+      total_weight: +totalWeight.toFixed(6),
+      top_contributors: topContributors
+    };
+  });
+
+  console.log('Scores pondérés (0..100):', this.weightedScores);
+}
+
+
+    
+/**
+ * Calculer le score pour un critère donné en utilisant les règles applicables (v2)
+ * - Base via nullish coalescing (??)
+ * - Clamp 1..5
+ * - Règles triées par priorité (rule.priority || 100)
+ * - Audit détaillé before/after
+ * - Cap optionnel de l'impact net par critère (désactivé par défaut)
+ */
+calculateCriteriaScore(criteria, statusId, metrics) {
+  // 1) Base 1..5 et nullish coalescing
+  const clamp = (x, min = 1, max = 5) => Math.min(max, Math.max(min, Number.isFinite(x) ? x : 3));
+  const baseRaw = metrics?.[criteria];
+  const base = clamp(baseRaw ?? 3, 1, 5);
+
+  let score = base;
+
+  // 2) Récupération des règles du critère + tri déterministe
+  const rulesForCriterion = (this.rulesByCriteria?.[criteria]
+    ?? (Array.isArray(scoringRules) ? scoringRules.filter(r => r.criteria === criteria) : []))
+    .slice()
+    .sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+
+  const appliedRules = [];
+
+  // 3) Cap optionnel de l'impact net par critère (désactivé)
+  const ENABLE_NET_CAP = false;    // mets true pour activer
+  const NET_CAP_VALUE = 2;         // impact net max (+/-) autorisé sur 1..5
+  let netDelta = 0;
+
+  for (const rule of rulesForCriterion) {
+    if (!rule?.condition || !rule?.apply) continue;
+    if (!rule.condition(this.answers)) continue;
+
+    const before = score;
+
+    // Compat : rule.apply peut renvoyer un nombre ou { score, note }
+    let out = rule.apply(statusId, score, this.answers, metrics);
+    if (out && typeof out === 'object') {
+      if (Number.isFinite(out.score)) score = out.score;
+      // tu peux aussi logger out.note si tu en fournis
+    } else {
+      score = out;
+    }
+
+    // Clamp step-by-step en 1..5
+    score = clamp(score, 1, 5);
+    const impact = +(score - before).toFixed(3);
+    netDelta += impact;
+
+    appliedRules.push({
+      id: rule.id,
+      description: rule.description,
+      priority: rule.priority ?? 100,
+      before,
+      after: score,
+      impact
+    });
+
+    if (ENABLE_NET_CAP && Math.abs(netDelta) >= NET_CAP_VALUE) {
+      appliedRules.push({
+        id: '__cap__',
+        description: `Cap d'impact net atteint (+/-${NET_CAP_VALUE})`,
+        priority: Infinity,
+        before: score,
+        after: score,
+        impact: 0
+      });
+      break;
+    }
+  }
+
+  // 4) Audit trail riche
+  this.auditTrail.scores[statusId] ??= {};
+  this.auditTrail.scores[statusId][criteria] ??= {};
+  this.auditTrail.scores[statusId][criteria].base_score = base;
+  this.auditTrail.scores[statusId][criteria].applied_rules = appliedRules;
+  this.auditTrail.scores[statusId][criteria].final_score = score;
+
+  return score; // 1..5
+}    
+/**
+ * Explication détaillée et robuste d'une recommandation
+ * - Compatible avec les logs d'audit issus de calculateScores ET/OU calculateCriteriaScore
+ * - Affiche base -> final, poids, contribution pondérée par critère
+ * - Trie les règles par impact décroissant
+ * - Récap "boosters" / "freins" global
+ * - Indique si le statut a été exclu en amont
+ * @param {string} statusId
+ * @param {{format?: 'text'|'markdown'}} opts
+ * @returns {string}
+ */
+explainRecommendation(statusId, opts = {}) {
+  const format = opts.format || 'text';
+  const status = this.filteredStatuses?.[statusId];
+  if (!status) return `Aucune explication disponible (statut inconnu: ${statusId}).`;
+
+  const niceName = status.name || statusId;
+  const scoresNode = this.auditTrail?.scores?.[statusId] || {};
+  const criteriaOrder = [
+    'patrimony_protection',
+    'administrative_simplicity',
+    'taxation_optimization',
+    'social_charges',
+    'fundraising_capacity',
+    'credibility',
+    'governance_flexibility',
+    'transmission'
+  ];
+  const labels = {
+    patrimony_protection: 'Protection du patrimoine',
+    administrative_simplicity: 'Simplicité administrative',
+    taxation_optimization: 'Optimisation fiscale',
+    social_charges: 'Charges sociales',
+    fundraising_capacity: 'Capacité à lever des fonds',
+    credibility: 'Crédibilité',
+    governance_flexibility: 'Souplesse de gouvernance',
+    transmission: 'Transmission'
+  };
+  const clamp = (x, min = 1, max = 5) => Math.min(max, Math.max(min, Number.isFinite(+x) ? +x : 3));
+  const f2 = n => (Number.isFinite(n) ? n.toFixed(2) : String(n));
+
+  // Drapeau exclusion éventuelle (détecte statusId OU status_id)
+  const exclusionHit = Array.isArray(this.auditTrail?.exclusions)
+    ? this.auditTrail.exclusions.find(e => (e?.statusId || e?.status_id) === statusId)
+    : null;
+
+  let totalWeight = 0;
+  let sumWeighted = 0;
+  const lines = [];
+  const allRuleImpacts = [];
+
+  for (const c of criteriaOrder) {
+    const node = scoresNode[c] || {};
+    // base_score si dispo, sinon métrique brute, sinon raw_score (qui peut déjà être "final"), sinon 3
+    const metricBase = status.key_metrics?.[c];
+    const base = clamp(node.base_score ?? metricBase ?? node.raw_score ?? 3, 1, 5);
+    const finalScore = clamp(node.final_score ?? node.raw_score ?? base, 1, 5);
+    const weight = Number.isFinite(node.weight) ? node.weight : (this.priorityWeights?.[c] ?? 1);
+    const weighted = Number.isFinite(node.weighted_score) ? node.weighted_score : (finalScore * weight);
+
+    totalWeight += weight;
+    sumWeighted += weighted;
+
+    // Règles appliquées
+    const rules = Array.isArray(node.applied_rules) ? node.applied_rules.slice() : [];
+    // Tri par impact décroissant (impact nul en bas)
+    rules.sort((a, b) => Math.abs(b.impact || 0) - Math.abs(a.impact || 0));
+
+    // Collecte globale pour "Top boosters/freins"
+    rules.forEach(r => {
+      const impact = Number(r.impact || 0);
+      if (impact !== 0) {
+        allRuleImpacts.push({
+          criterion: c,
+          label: labels[c] || c,
+          id: r.id,
+          description: r.description,
+          impact
+        });
+      }
+    });
+
+    lines.push({
+      c,
+      label: labels[c] || c,
+      base,
+      finalScore,
+      delta: +(finalScore - base).toFixed(3),
+      weight,
+      weighted,
+      rules
     });
   }
 
-  strategies.push({
-    title: "Surveillance des seuils",
-    description: `Suivez votre CA pour ne pas dépasser les seuils (${this.thresholds2025.micro.bic_sales} € ventes, ${this.thresholds2025.micro.bic_service} € services).`,
-    icon: "fa-chart-line",
-  });
-}
+  // Normalisation cohérente avec calculateScores: (Σ score*poids / Σ poids) * 20
+  const normalized100 = totalWeight > 0 ? (sumWeighted / totalWeight) * 20 : 0;
+  const normalizedStored = this.weightedScores?.[statusId];
+  const final100 = Number.isFinite(normalizedStored)
+    ? Math.round(normalizedStored)
+    : Math.round(normalized100);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EURL
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'EURL') {
-  if (this.answers.tax_bracket === 'bracket_41' || this.answers.tax_bracket === 'bracket_45') {
-    strategies.push({
-      title: "Option IS recommandée",
-      description: "Avec votre TMI élevée, l'IS avec taux réduit à 15 % est fiscal-optimisant.",
-      icon: "fa-balance-scale",
-    });
+  // Helpers d'affichage
+  const h = (s) => (format === 'markdown' ? `**${s}**` : s);
+  let out = '';
+
+  out += `${h('Explication')} – ${niceName} (${statusId})\n`;
+  if (exclusionHit) {
+    out += `⚠️ ${h('Statut exclu')} : ${exclusionHit?.reason || 'Raison non renseignée'}\n`;
+  }
+  out += `\n${h('Score final')} : ${final100}/100\n`;
+  out += `${h('Méthode')} : moyenne pondérée des critères (1..5) normalisée sur 100.\n`;
+
+  // Top boosters / freins
+  if (allRuleImpacts.length) {
+    const topBoosts = allRuleImpacts
+      .filter(r => r.impact > 0)
+      .sort((a, b) => b.impact - a.impact)
+      .slice(0, 3);
+    const topDrags = allRuleImpacts
+      .filter(r => r.impact < 0)
+      .sort((a, b) => a.impact - b.impact)
+      .slice(0, 3);
+
+    if (topBoosts.length) {
+      out += `\n${h('Top boosters')} :\n`;
+      topBoosts.forEach(r => {
+        out += `• ${r.label} – ${r.description} (+${f2(r.impact)})\n`;
+      });
+    }
+    if (topDrags.length) {
+      out += `\n${h('Top freins')} :\n`;
+      topDrags.forEach(r => {
+        out += `• ${r.label} – ${r.description} (${f2(r.impact)})\n`;
+      });
+    }
   }
 
-  strategies.push({
-    title: "Charges déductibles",
-    description: "Optimisez vos charges réelles déductibles, contrairement au forfait micro-entreprise.",
-    icon: "fa-receipt",
+  // Détail par critère
+  out += `\n${h('Détail par critère')} :\n`;
+  lines.forEach(L => {
+    out += `\n${h(L.label)} : base ${f2(L.base)}/5 → final ${f2(L.finalScore)}/5`
+      + ` | poids ${f2(L.weight)} | contribution ${f2(L.weighted)}\n`;
+    if (L.rules.length) {
+      out += `  Règles appliquées :\n`;
+      L.rules.forEach(r => {
+        const imp = r.impact > 0 ? `+${f2(r.impact)}` : f2(r.impact);
+        out += `  - ${r.description} (${imp})\n`;
+      });
+    } else {
+      out += `  (Aucune règle appliquée)\n`;
+    }
   });
+
+  return out;
 }
+/**
+ * Génère des stratégies contextualisées par statut (MAJ 30/09/2025)
+ * - Cohérente avec les IDs de statuts fournis (MICRO, EI, EURL, SASU, SARL, SAS, SA, SNC, SCI, SELARL, SELAS, SCA)
+ * - Utilise this.thresholds2025 (micro, TVA, IS réduit)
+ */
+generateContextualStrategies(statusId) {
+  const status = this.filteredStatuses?.[statusId] || window.legalStatuses?.[statusId];
+  if (!status) return [];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SASU / SAS
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'SASU' || statusId === 'SAS') {
-  strategies.push({
-    title: "Optimisation salaire/dividendes",
-    description: "Répartissez judicieusement entre salaire et dividendes selon votre TMI et vos besoins de trésorerie.",
-    icon: "fa-percentage",
-  });
+  const A = this.answers || {};
+  const T = this.thresholds2025 || {};
+  const priorities = Array.isArray(A.priorities) ? A.priorities : [];
+  const isLowTMI  = ['non_taxable','bracket_11'].includes(A.tax_bracket);
+  const isHighTMI = ['bracket_41','bracket_45'].includes(A.tax_bracket);
 
-  if (this.answers.fundraising === 'yes') {
-    strategies.push({
-      title: "Préparation à la levée de fonds",
-      description: "Préparez une documentation adaptée et des statuts optimisés pour les investisseurs.",
-      icon: "fa-hand-holding-usd",
-    });
+  const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('fr-FR') : String(n ?? ''));
+  const IS_PROFIT_CAP = T?.is_reduced_rate?.profit_cap ?? 42_500;
+  const IS_TURNOVER_CAP = T?.is_reduced_rate?.turnover_cap ?? 10_000_000;
+
+  const strategies = [];
+  const add = (title, description, icon = 'fa-lightbulb') => {
+    // évite les doublons par titre
+    if (!strategies.some(s => s.title === title)) strategies.push({ title, description, icon });
+  };
+
+  // ───────────────────────────────────────────────────────────────────
+  // Stratégies spécifiques par forme juridique
+  // ───────────────────────────────────────────────────────────────────
+
+  // MICRO-ENTREPRISE
+  if (statusId === 'MICRO') {
+    add(
+      "Optimisation de la trésorerie",
+      "Sous la franchise en base de TVA, vous encaissez la TVA de vos achats sans la reverser : gain de trésorerie si vos clients sont des particuliers.",
+      "fa-coins"
+    );
+
+    if (isLowTMI) {
+      add(
+        "Option pour le versement libératoire",
+        "Avec une TMI faible, l’option au versement libératoire peut réduire votre impôt (sous conditions de RFR et d’éligibilité).",
+        "fa-percent"
+      );
+    }
+
+    add(
+      "Surveillance des seuils micro",
+      `Suivez votre CA pour ne pas dépasser les plafonds : ventes/hébergement ${fmt(T?.micro?.bic_sales)} € • services/BIC ${fmt(T?.micro?.bic_service)} € • BNC ${fmt(T?.micro?.bnc)} €. Meublés de tourisme 2025 : ${fmt(T?.micro?.meuble_classe_ca)} € (classé) / ${fmt(T?.micro?.meuble_non_classe_ca)} € (non classé).`,
+      "fa-chart-line"
+    );
+
+    add(
+      "TVA : rester en franchise ou opter",
+      `Franchise en base 2025 : ventes ${fmt(T?.tva_franchise_base?.ventes)} € / services ${fmt(T?.tva_franchise_base?.services)} € (tolérances ${fmt(T?.tva_franchise_base?.tolerance_ventes)} € / ${fmt(T?.tva_franchise_base?.tolerance_services)} €). L’option TVA peut améliorer la récup. sur vos achats si vous avez beaucoup d’investissements.`,
+      "fa-file-invoice-dollar"
+    );
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EI (entreprise individuelle)
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'EI') {
-  strategies.push({
-    title: "Choix entre micro et réel",
-    description: "Comparez vos charges réelles au forfait micro ; basculez vers le régime réel si vos charges dépassent ~34 % du CA.",
-    icon: "fa-exchange-alt",
-  });
-  strategies.push({
-    title: "Prévoyance & retraite",
-    description: "Souscrivez un contrat Madelin pour déduire vos cotisations et sécuriser votre protection sociale.",
-    icon: "fa-shield-alt",
-  });
-}
+  // EI
+  else if (statusId === 'EI') {
+    add(
+      "Choix micro vs réel",
+      "Comparez l’abattement forfaitaire (71 %/50 %/34 %) à vos charges réelles. Si vos charges > abattement, opter pour le réel peut être plus avantageux.",
+      "fa-exchange-alt"
+    );
+    add(
+      "Option IS (assimilation EURL) à étudier",
+      "Pour lisser l’impôt quand les bénéfices montent, l’option IS (par assimilation EURL) peut être pertinente. Fenêtre d’option : jusqu’à la fin du 3e mois de l’exercice.",
+      "fa-balance-scale"
+    );
+    add(
+      "Protection sociale",
+      "Renforcez votre couverture avec un PER individuel (ex-Madelin) et une prévoyance (IJ, invalidité, décès).",
+      "fa-shield-alt"
+    );
+  }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SARL
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'SARL') {
-  strategies.push({
-    title: "Statut du gérant",
-    description: "Gérant majoritaire : cotisations TNS moins élevées ; minoritaire : assimilation salariée avec meilleure couverture.",
-    icon: "fa-user-tie",
-  });
-  strategies.push({
-    title: "Dividendes vs rémunération",
-    description: "Calibrez la quote-part de dividendes pour limiter les cotisations tout en profitant de l’abattement de 40 %.",
-    icon: "fa-hand-holding-usd",
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SA
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'SA') {
-  strategies.push({
-    title: "Renforcer la crédibilité",
-    description: "La SA rassure grands comptes et investisseurs, idéale pour viser les marchés internationaux.",
-    icon: "fa-building",
-  });
-  strategies.push({
-    title: "Rémunération en actions",
-    description: "Mettez en place stock-options ou BSPCE pour attirer les talents et différer la charge fiscale.",
-    icon: "fa-gift",
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SNC
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'SNC') {
-  strategies.push({
-    title: "Pacte d’associés solide",
-    description: "Responsabilité illimitée : verrouillez clauses de solidarité et procédures de sortie.",
-    icon: "fa-file-contract",
-  });
-  strategies.push({
-    title: "Option pour l’IS",
-    description: "En cas de bénéfices importants, l’IS peut limiter votre imposition personnelle.",
-    icon: "fa-balance-scale",
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SCI
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'SCI') {
-  strategies.push({
-    title: "Amortissement ou déficit foncier",
-    description: "À l’IS : amortissez l’immeuble ; à l’IR : profitez du déficit foncier pour réduire l’impôt.",
-    icon: "fa-warehouse",
-  });
-  strategies.push({
-    title: "Transmission patrimoniale",
-    description: "Démembrez les parts (nue-propriété/usufruit) pour alléger les droits de succession.",
-    icon: "fa-seedling",
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SELARL
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'SELARL') {
-  strategies.push({
-    title: "Statut TNS",
-    description: "Le gérant reste Travailleur Non Salarié : charges sociales plus légères qu’en SELAS.",
-    icon: "fa-user-md",
-  });
-  strategies.push({
-    title: "Intéressement des associés",
-    description: "Mettez en place PEE ou PERCO pour défiscaliser une partie des rémunérations.",
-    icon: "fa-chart-pie",
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SELAS
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'SELAS') {
-  strategies.push({
-    title: "Protection sociale premium",
-    description: "Le président assimilé salarié bénéficie du régime général et d’une prévoyance haut de gamme.",
-    icon: "fa-heartbeat",
-  });
-  strategies.push({
-    title: "Pack d’associés & gouvernance",
-    description: "Rédigez un pacte d’actionnaires définissant droits préférentiels et clauses de sortie.",
-    icon: "fa-users-cog",
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SCA
-// ─────────────────────────────────────────────────────────────────────────────
-else if (statusId === 'SCA') {
-  strategies.push({
-    title: "Séparation pouvoirs & capitaux",
-    description: "Commandités dirigent, commanditaires financent : idéal pour lever des fonds tout en gardant le contrôle.",
-    icon: "fa-sitemap",
-  });
-  strategies.push({
-    title: "Transmission progressive",
-    description: "Les actions de commanditaires se transmettent facilement sans perte de contrôle des commandités.",
-    icon: "fa-handshake",
-  });
-        }
-        
-        // Stratégies basées sur les priorités utilisateur
-        const priorities = this.answers.priorities || [];
-        if (priorities.includes('patrimony_protection')) {
-            if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) {
-                strategies.push({
-                    title: "Renforcement de la protection patrimoniale",
-                    description: "Envisagez une assurance RC Pro complémentaire pour une protection maximale.",
-                    icon: "fa-shield-alt"
-                });
-            }
-        }
-        
-        // Stratégies liées aux aides et dispositifs
-        if (this.answers.acre === 'yes') {
-            strategies.push({
-                title: "Exonérations ACRE",
-                description: "Profitez de l'exonération partielle de charges sociales pendant la première année.",
-                icon: "fa-star"
-            });
-        }
-        
-        if (priorities.includes('taxation_optimization') && ['SASU', 'SAS'].includes(statusId)) {
-            strategies.push({
-                title: "Taux réduit IS",
-                description: "Optimisez votre rémunération pour bénéficier du taux IS réduit à 15% jusqu'à 42 500€.",
-                icon: "fa-piggy-bank"
-            });
-        }
-        
-        return strategies;
+  // EURL
+  else if (statusId === 'EURL') {
+    if (isHighTMI) {
+      add(
+        "Option IS recommandée (souvent)",
+        `Avec une TMI élevée, l’IS peut réduire votre imposition globale. Taux réduit 15 % jusqu’à ${fmt(IS_PROFIT_CAP)} € de bénéfice si CA < ${fmt(IS_TURNOVER_CAP)} €.`,
+        "fa-balance-scale"
+      );
+    } else {
+      add(
+        "Arbitrage IR vs IS",
+        `À l’IR : cotisations sur le bénéfice ; à l’IS : cotisations sur rémunération + dividendes > 10 % (capital libéré + primes + CCA). Simulez selon votre niveau de bénéfice.`,
+        "fa-calculator"
+      );
     }
+    add(
+      "Déductibilité des charges",
+      "Suivi des charges réelles (véhicule, loyer, matériel, sous-traitance, télécoms…) : effet direct sur le résultat et l’impôt.",
+      "fa-receipt"
+    );
+    add(
+      "Éligibilité micro (cas particuliers)",
+      "Une EURL à l’IR avec gérant = associé unique peut être éligible au régime micro si l’activité et les seuils s’y prêtent.",
+      "fa-info-circle"
+    );
+  }
 
-    /**
-     * Génère le HTML pour afficher les stratégies contextuelles
-     * @param {string} statusId - Identifiant du statut
-     * @returns {string} - HTML pour les stratégies
-     */
-    renderContextualStrategies(statusId) {
-        const strategies = this.generateContextualStrategies(statusId);
-        if (strategies.length === 0) return '';
-        
-        const status = this.filteredStatuses[statusId];
-        
-        let html = `
-        <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-6">
-            <h4 class="font-semibold text-green-400 mb-4">
-                <i class="fas fa-lightbulb mr-2"></i>
-                Stratégies optimales pour votre ${status.name}
-            </h4>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        `;
-        
-        strategies.forEach(strategy => {
-            html += `
-            <div class="bg-blue-800 bg-opacity-20 p-4 rounded-lg hover:bg-opacity-30 transition">
-                <div class="flex items-start">
-                    <div class="bg-green-900 bg-opacity-30 rounded-full p-3 mr-3">
-                        <i class="fas ${strategy.icon} text-green-400"></i>
-                    </div>
-                    <div>
-                        <h5 class="font-semibold mb-1">${strategy.title}</h5>
-                        <p class="text-sm text-gray-300">${strategy.description}</p>
-                    </div>
-                </div>
-            </div>
-            `;
-        });
-        
-        html += `
-            </div>
-        </div>
-        `;
-        
-        return html;
+  // SASU / SAS
+  else if (statusId === 'SASU' || statusId === 'SAS') {
+    add(
+      "Optimisation salaire / dividendes",
+      "Combinez rémunération (protection sociale) et dividendes (PFU par défaut) selon vos besoins de trésorerie et votre TMI.",
+      "fa-percent"
+    );
+    add(
+      "Instruments d’intéressement",
+      "Prévoyez BSPCE/AGA/BSA et actions de préférence (SAS) pour attirer et fidéliser les talents tout en préparant les tours d’investissement.",
+      "fa-gift"
+    );
+    add(
+      "Gouvernance souple",
+      "Rédigez des statuts et un pacte d’actionnaires robustes (agrément, préemption, inaliénabilité, bad leaver/good leaver).",
+      "fa-users-cog"
+    );
+    if (A.fundraising === 'yes' || A.investors === 'yes') {
+      add(
+        "Préparation à la levée",
+        "Data room, KPIs, cap table propre, clauses d’investissement (liquidation préférentielle, anti-dilution) : facilitez la négociation.",
+        "fa-hand-holding-usd"
+      );
     }
+    add(
+      "Seuils commissaire aux comptes",
+      "Anticipez la nomination d’un CAC si 2 des 3 seuils sont dépassés (bilan 5 M€, CA 10 M€, 50 salariés) ou en cas de contrôle/contrôlée.",
+      "fa-clipboard-check"
+    );
+  }
 
-    /**
-     * Obtenir les meilleures recommandations (top N)
-     */
-    getTopRecommendations(count = 3) {
-        // Vérifier qu'il y a au moins un statut disponible
-        if (Object.keys(this.filteredStatuses).length === 0) {
-            console.error("Aucun statut disponible après application des filtres");
-            return [];
-        }
-        
-        // Trier les statuts par score pondéré décroissant
-        const sortedStatuses = Object.keys(this.weightedScores)
-            .sort((a, b) => this.weightedScores[b] - this.weightedScores[a]);
-        
-        // Prendre les N premiers
-        const topN = Math.min(count, sortedStatuses.length);
-        const topStatuses = sortedStatuses.slice(0, topN);
-        
-        // Construire les objets de recommandation avec catégorisation
-        return topStatuses.map((statusId, index) => {
-            const score = Math.round(this.weightedScores[statusId]);
-            
-            // Catégoriser selon le score
-            let compatibilite = 'PEU ADAPTÉ';
-            if (score >= 80) {
-                compatibilite = 'RECOMMANDÉ';
-            } else if (score >= 65) {
-                compatibilite = 'COMPATIBLE';
-            } else if (score < 45) {
-                compatibilite = 'DÉCONSEILLÉ';
-            }
-            
-            return {
-                rank: index + 1,
-                id: statusId,
-                name: this.filteredStatuses[statusId].name,
-                shortName: this.filteredStatuses[statusId].shortName,
-                score: score,
-                status: this.filteredStatuses[statusId],
-                strengths: this.getStrengths(statusId),
-                weaknesses: this.getWeaknesses(statusId),
-                compatibilite: compatibilite,
-                scoreCriteresStructurels: Math.round(score * 0.6), // Approximation pour compatibilité
-                scoreObjectifs: Math.round(score * 0.4), // Approximation pour compatibilité
-                scoreDetails: {
-                    pourcentage: score
-                },
-                explanation: this.explainRecommendation(statusId)
-            };
-        });
+  // SARL
+  else if (statusId === 'SARL') {
+    add(
+      "Statut du gérant",
+      "Majoritaire = TNS (cotisations plus faibles, couverture moindre). Minoritaire/égalitaire = assimilé salarié (meilleure couverture, coût supérieur).",
+      "fa-user-tie"
+    );
+    add(
+      "Dividendes vs rémunération",
+      "À l’IS et gérant majoritaire : dividendes au-delà de 10 % (capital libéré + primes + CCA) soumis à cotisations TNS. Calibrez la politique de distribution.",
+      "fa-hand-holding-usd"
+    );
+    add(
+      "SARL de famille (IR)",
+      "Si éligible (membres d’une même famille), l’option IR sans limite de durée peut être intéressante.",
+      "fa-home"
+    );
+  }
+
+  // SA
+  else if (statusId === 'SA') {
+    add(
+      "Crédibilité et gouvernance",
+      "Forme adaptée aux projets d’envergure (CA/financements importants), conseil d’administration ou directoire/CS, très appréciée des grands comptes.",
+      "fa-building"
+    );
+    add(
+      "Rémunération en titres",
+      "Mettez en place stock-options, AGA et plans d’actions de performance pour attirer/retenir les dirigeants.",
+      "fa-gift"
+    );
+    add(
+      "Pré-cotation",
+      "Si une cotation est envisagée, structurez la gouvernance, les procédures et la communication financière dès maintenant.",
+      "fa-chart-line"
+    );
+  }
+
+  // SNC
+  else if (statusId === 'SNC') {
+    add(
+      "Pacte d’associés robuste",
+      "Responsabilité illimitée et solidaire : verrouillez les clauses d’agrément, sorties, non-concurrence et répartition des pertes.",
+      "fa-file-contract"
+    );
+    add(
+      "Option IS à envisager",
+      "En cas de bénéfices élevés, l’option IS peut limiter l’imposition personnelle (IR par défaut en transparence).",
+      "fa-balance-scale"
+    );
+  }
+
+  // SCI
+  else if (statusId === 'SCI') {
+    add(
+      "IR vs IS",
+      "À l’IR : revenus fonciers et déficit foncier chez les associés. À l’IS : amortissement de l’immeuble mais plus-values taxées à l’IS à la sortie.",
+      "fa-warehouse"
+    );
+    add(
+      "Transmission patrimoniale",
+      "Démembrement des parts (nue-propriété/usufruit), donations successives : préparez la transmission familiale.",
+      "fa-seedling"
+    );
+    add(
+      "Attention à l’objet civil",
+      "Location meublée habituelle/para-hôtellerie et marchand de biens = activité commerciale (risque d’assujettissement IS) : préférez une société commerciale (SARL/SAS).",
+      "fa-exclamation-triangle"
+    );
+  }
+
+  // SELARL
+  else if (statusId === 'SELARL') {
+    add(
+      "Arbitrage TNS",
+      "Gérant associé majoritaire = TNS (coût maîtrisé), mais prévoyance à renforcer. Dividendes > 10 % (capital libéré + primes + CCA) assujettis aux cotisations TNS.",
+      "fa-user-md"
+    );
+    add(
+      "Épargne salariale",
+      "Mettez en place intéressement/PEE/PER collectif pour optimiser la rémunération nette des associés et collaborateurs.",
+      "fa-chart-pie"
+    );
+    add(
+      "Conformité ordinale",
+      "Statuts et pactes conformes à l’ordre (agrément, quotas de détention par des professionnels).",
+      "fa-gavel"
+    );
+  }
+
+  // SELAS
+  else if (statusId === 'SELAS') {
+    add(
+      "Protection sociale du président",
+      "Assimilé salarié (régime général) : meilleure prévoyance, à coût plus élevé qu’en TNS.",
+      "fa-heartbeat"
+    );
+    add(
+      "Gouvernance souple avec contraintes ordinales",
+      "Profitez de la flexibilité de la SAS (actions de préférence, pacte) tout en respectant les quotas de détention par des professionnels.",
+      "fa-users-cog"
+    );
+    add(
+      "Ouverture à des investisseurs (bornée)",
+      "Entrée d’investisseurs possible mais minoritaire (règles ordinales) : structurez les droits préférentiels.",
+      "fa-handshake"
+    );
+  }
+
+  // SCA
+  else if (statusId === 'SCA') {
+    add(
+      "Séparation gestion/capitaux",
+      "Commandités dirigent (responsabilité illimitée), commanditaires apportent les capitaux : utile pour garder le contrôle tout en levant des fonds.",
+      "fa-sitemap"
+    );
+    add(
+      "Transmission en douceur",
+      "Cession d’actions de commanditaires facilitée sans perte de contrôle des commandités.",
+      "fa-random"
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────
+  // Stratégies transverses en fonction des priorités/utilisateur
+  // ───────────────────────────────────────────────────────────────────
+
+  if (priorities.includes('patrimony_protection')) {
+    if (['SASU','SAS','SARL','EURL','SA','SELAS','SELARL','SCA'].includes(statusId)) {
+      add(
+        "Protection patrimoniale renforcée",
+        "Cumulez la responsabilité limitée avec une RC Pro solide et, pour les dirigeants, une assurance RCMS/D&O.",
+        "fa-shield-alt"
+      );
     }
+  }
 
-    /**
-     * Obtenir les forces d'un statut juridique pour le profil
-     */
-    getStrengths(statusId) {
-        const strengths = [];
-        const status = this.filteredStatuses[statusId];
-        
-        // Ajouter les forces spécifiques au profil
-        if (statusId === 'MICRO' && this.answers.administrative_simplicity) {
-            strengths.push("Simplicité administrative maximale (pas de comptabilité complexe)");
-        }
-        
-        if (['SASU', 'SAS'].includes(statusId) && this.answers.governance_flexibility) {
-            strengths.push("Grande liberté statutaire et souplesse de gouvernance");
-        }
-        
-        if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId) && this.answers.patrimony_protection === 'essential') {
-            strengths.push("Protection complète du patrimoine personnel");
-        }
-        
-        if (['SASU', 'SAS'].includes(statusId) && this.answers.social_regime === 'assimilated_employee') {
-            strengths.push("Statut d'assimilé salarié avec protection sociale complète");
-        }
-        
-        // Avantages fiscaux spécifiques
-        if ((['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) && 
-            ['bracket_41', 'bracket_45'].includes(this.answers.tax_bracket)) {
-            strengths.push("Optimisation fiscale avec l'IS à 15% jusqu'à 42 500€ de bénéfices");
-        }
-        
-        if (statusId === 'MICRO' && this.answers.projected_revenue < 50000) {
-            strengths.push("Régime fiscal avantageux avec abattement forfaitaire sur le chiffre d'affaires");
-        }
-        
-        // Si pas assez de forces spécifiques, compléter avec des forces génériques
-        if (strengths.length < 3 && status.advantages) {
-            for (const advantage of status.advantages) {
-                if (strengths.length < 3 && !strengths.some(s => s.toLowerCase().includes(advantage.toLowerCase()))) {
-                    strengths.push(advantage);
-                }
-            }
-        }
-        
-        return strengths.slice(0, 3); // Limiter à 3 forces
+  if (A.acre === 'yes') {
+    add(
+      "Exonération ACRE",
+      "Profitez de l’allègement de charges sociales la 1ère année (selon barèmes en vigueur) et anticipez la fin du dispositif.",
+      "fa-star"
+    );
+  }
+
+  if (priorities.includes('taxation_optimization')) {
+    if (['SASU','SAS','SARL','EURL','SA','SELAS','SELARL','SCA'].includes(statusId)) {
+      add(
+        "Taux réduit d’IS (15 %)",
+        `Si éligible (CA < ${fmt(IS_TURNOVER_CAP)} €), privilégiez la part de bénéfice jusqu’à ${fmt(IS_PROFIT_CAP)} € au taux réduit.`,
+        "fa-piggy-bank"
+      );
     }
+  }
 
-    /**
-     * Obtenir les faiblesses d'un statut juridique pour le profil
-     */
-    getWeaknesses(statusId) {
-        const weaknesses = [];
-        const status = this.filteredStatuses[statusId];
-        
-        // Ajouter les faiblesses spécifiques au profil
-        if (['EI', 'MICRO'].includes(statusId) && this.answers.high_professional_risk === 'yes') {
-            weaknesses.push("Responsabilité illimitée risquée pour votre activité à risque élevé");
-        }
-        
-        if (['EI', 'MICRO', 'EIRL'].includes(statusId) && this.answers.fundraising === 'yes') {
-            weaknesses.push("Difficultés pour lever des fonds ou attirer des investisseurs");
-        }
-        
-        if (['SAS', 'SASU', 'SA'].includes(statusId) && this.answers.projected_revenue < 30000) {
-            weaknesses.push("Coûts de gestion potentiellement élevés par rapport au chiffre d'affaires");
-        }
-        
-        if (statusId === 'MICRO' && this.answers.projected_revenue > 0.7 * this.thresholds2025.micro.bic_service) {
-            weaknesses.push("Risque de dépassement des seuils du régime micro-entrepreneur");
-        }
-        
-        // Faiblesses fiscales spécifiques
-        if (['EI', 'MICRO'].includes(statusId) && ['bracket_41', 'bracket_45'].includes(this.answers.tax_bracket)) {
-            weaknesses.push("Imposition à l'IR potentiellement défavorable avec votre TMI élevée");
-        }
-        
-        if ((['SASU', 'SAS'].includes(statusId)) && this.answers.social_regime === 'tns') {
-            weaknesses.push("Ne correspond pas à votre préférence pour le régime TNS");
-        }
-        
-        // Si pas assez de faiblesses spécifiques, compléter avec des faiblesses génériques
-        if (weaknesses.length < 3 && status.disadvantages) {
-            for (const disadvantage of status.disadvantages) {
-                if (weaknesses.length < 3 && !weaknesses.some(w => w.toLowerCase().includes(disadvantage.toLowerCase()))) {
-                    weaknesses.push(disadvantage);
-                }
-            }
-        }
-        
-        return weaknesses.slice(0, 3); // Limiter à 3 faiblesses
-    }
-
-    /**
-     * Affiche les détails d'un statut juridique
-     * @param {Object} recommendation - L'objet de recommandation
-     */
-    showStatusDetails(recommendation) {
-        if (!recommendation) return;
-        
-        const status = recommendation.status;
-        
-        // Extraire les raisons personnalisées de la recommandation
-        const explanations = this.getStatusExplanations(recommendation.id, this.answers);
-        
-        // Créer l'élément de la modale
-        const modalOverlay = document.createElement('div');
-        modalOverlay.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
-        
-        // Contenu de la modale
-        modalOverlay.innerHTML = `
-            <div class="bg-blue-900 bg-opacity-70 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <!-- En-tête -->
-                <div class="flex items-center mb-6 pb-4 border-b border-gray-700">
-                    <div class="h-16 w-16 rounded-full bg-blue-800 bg-opacity-50 flex items-center justify-center text-3xl mr-5">
-                        <i class="fas ${status.logo || 'fa-building'} text-green-400"></i>
-                    </div>
-                    <div class="flex-grow">
-                        <h2 class="text-2xl font-bold">${status.name} (${status.shortName})</h2>
-                        <p class="text-gray-300">${status.description}</p>
-                    </div>
-                    <div>
-                        <span class="px-3 py-1 bg-green-500 text-gray-900 rounded-full font-medium">
-                            Score: ${recommendation.score}/100
-                        </span>
-                    </div>
-                </div>
-                
-                <!-- SECTION PERSONNALISÉE: Pourquoi ce statut est adapté à votre projet -->
-                <div class="bg-green-900 bg-opacity-20 p-5 rounded-xl border border-green-800 mb-6">
-                    <h3 class="text-xl font-bold mb-3 text-green-400">
-                        <i class="fas fa-chart-line mr-2"></i> Pourquoi la ${status.name} est adaptée à votre projet
-                    </h3>
-                    
-                    <div class="mb-4">
-                        <p class="text-lg mb-3">Basé sur vos réponses, ce statut est particulièrement recommandé car:</p>
-                        <ul class="space-y-3">
-                            ${explanations.map(item => `
-                                <li class="flex items-start">
-                                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
-                                    <div>
-                                        <p class="font-medium">${item.title}</p>
-                                        <p class="text-gray-300 text-sm">${item.explanation}</p>
-                                    </div>
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                </div>
-                
-                <!-- Caractéristiques principales -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2 flex items-center">
-                            <i class="fas fa-users mr-2 text-green-400"></i> Structure
-                        </h3>
-                        <ul class="space-y-2 text-sm">
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">Associés:</span>
-                                <span>${status.associes || 'Non spécifié'}</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">Capital:</span>
-                                <span>${status.capital || 'Non spécifié'}</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">Responsabilité:</span>
-                                <span>${status.responsabilite || 'Non spécifié'}</span>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2 flex items-center">
-                            <i class="fas fa-file-invoice-dollar mr-2 text-green-400"></i> Fiscalité
-                        </h3>
-                        <ul class="space-y-2 text-sm">
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">Régime:</span>
-                                <span>${status.fiscalite || 'Non spécifié'}</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">Option:</span>
-                                <span>${status.fiscaliteOption || 'Non spécifié'}</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">TVA:</span>
-                                <span>${status.regimeTVA || 'Non spécifié'}</span>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2 flex items-center">
-                            <i class="fas fa-user-shield mr-2 text-green-400"></i> Social
-                        </h3>
-                        <ul class="space-y-2 text-sm">
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">Régime:</span>
-                                <span>${status.regimeSocial || 'Non spécifié'}</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">Charges:</span>
-                                <span>${status.chargesSociales || 'Non spécifié'}</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span class="text-gray-400">Protection:</span>
-                                <span>${status.protectionPatrimoine || 'Non spécifié'}</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <!-- Forces et faiblesses -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <!-- Forces -->
-                    <div class="bg-green-900 bg-opacity-20 p-4 rounded-lg border border-green-800">
-                        <h3 class="font-semibold mb-3 flex items-center text-green-400">
-                            <i class="fas fa-plus-circle mr-2"></i> Points forts
-                        </h3>
-                        <ul class="space-y-2">
-                            ${recommendation.strengths.map(strength => `
-                                <li class="flex items-start">
-                                    <i class="fas fa-check text-green-400 mt-1 mr-2"></i>
-                                    <span>${strength}</span>
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                    
-                    <!-- Faiblesses -->
-                    <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800">
-                        <h3 class="font-semibold mb-3 flex items-center text-red-400">
-                            <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
-                        </h3>
-                        <ul class="space-y-2">
-                            ${recommendation.weaknesses.map(weakness => `
-                                <li class="flex items-start">
-                                    <i class="fas fa-times text-red-400 mt-1 mr-2"></i>
-                                    <span>${weakness}</span>
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                </div>
-                
-                <!-- Profils adaptés -->
-                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg mb-6">
-                    <h3 class="font-semibold mb-2 flex items-center text-green-400">
-                        <i class="fas fa-thumbs-up mr-2"></i> Profils adaptés
-                    </h3>
-                    <ul class="space-y-2">
-                        ${(status.suitable_for || []).map(item => `
-                            <li class="flex items-start">
-                                <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
-                                <span>${item}</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                </div>
-                
-                <!-- Boutons d'action -->
-                <div class="flex justify-end mt-6">
-                    <button id="close-details-modal" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                        <i class="fas fa-times mr-2"></i> Fermer
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Ajouter la modale au DOM
-        document.body.appendChild(modalOverlay);
-        
-        // Gérer la fermeture
-        document.getElementById('close-details-modal').addEventListener('click', () => {
-            modalOverlay.remove();
-        });
-        
-        // Fermer en cliquant en dehors du contenu
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) {
-                modalOverlay.remove();
-            }
-        });
-    }
-
-    /**
-     * Génère des explications personnalisées sur pourquoi un statut est recommandé
-     * @param {string} statusId - Identifiant du statut juridique
-     * @param {Object} answers - Réponses de l'utilisateur
-     * @returns {Array} - Liste d'explications
-     */
-    getStatusExplanations(statusId, answers) {
-        const explanations = [];
-        
-        // Mapping TMI pour affichage
-        const tmiMap = {
-            'non_taxable': 'non imposable',
-            'bracket_11': '11%',
-            'bracket_30': '30%',
-            'bracket_41': '41%',
-            'bracket_45': '45%'
-        };
-        
-        // 1. FISCALITÉ (TMI)
-        if (answers.tax_bracket) {
-            const tmiValue = tmiMap[answers.tax_bracket] || '';
-            
-
-    // SASU / SAS ------------------------------------------------
-    if ((statusId === 'SASU' || statusId === 'SAS') &&
-        (answers.tax_bracket === 'bracket_41' || answers.tax_bracket === 'bracket_45')) {
-        explanations.push({
-            title: "Optimisation fiscale avec votre TMI élevée",
-            explanation: `Avec votre tranche marginale d'imposition à ${tmiValue}, la société est soumise à l'IS : 15 % jusqu'à 42 500 € de bénéfices puis 25 %.`
-        });
-    } else if ((statusId === 'SASU' || statusId === 'SAS')) {
-        explanations.push({
-            title: "IS et dividendes modulables",
-            explanation: `L'IS à 15 % / 25 % dissocie fiscalité pro et perso ; avec votre TMI de ${tmiValue}, vous pourrez ajuster votre rémunération (salaire / dividendes).`
-        });
-    }
-
-    // SARL -------------------------------------------------------
-    else if (statusId === 'SARL' &&
-            (answers.tax_bracket === 'bracket_11' || answers.tax_bracket === 'bracket_30')) {
-        explanations.push({
-            title: "Option IR temporaire intéressante",
-            explanation: `La SARL peut opter pour l'IR 5 ans ; avec votre TMI de ${tmiValue}, cela peut réduire l'imposition avant passage automatique à l’IS.`
-        });
+  if (priorities.includes('fundraising_capacity')) {
+    if (['SASU','SAS','SA','SELAS','SCA'].includes(statusId)) {
+      add(
+        "Prêt-convertible & equity",
+        "Pensez BSA Air/OC/ABSA, clause de conversion, actions de préférence et liquidation préférentielle.",
+        "fa-seedling"
+      );
     } else if (statusId === 'SARL') {
-        explanations.push({
-            title: "IS plus doux que votre TMI",
-            explanation: `Avec une TMI de ${tmiValue}, l'IS (15 % puis 25 %) allège la pression fiscale par rapport à une transparence IR.`
-        });
+      add(
+        "Ouverture du capital encadrée",
+        "AGRÉMENT obligatoire pour cessions à des tiers : organisez pacte et calendrier d’augmentations de capital.",
+        "fa-user-friends"
+      );
     }
+  }
 
-    // SA ---------------------------------------------------------
-    else if (statusId === 'SA') {
-        explanations.push({
-            title: "IS obligatoire pour la SA",
-            explanation: `La SA paie l'IS (15 % puis 25 %). Avec votre TMI de ${tmiValue}, la fiscalité société limite l’impact sur vos revenus personnels.`
-        });
+  if (priorities.includes('administrative_simplicity')) {
+    add(
+      "Automatisation back-office",
+      "Outil de facturation + synchronisation bancaire + pré-compta = moins de temps administratif, meilleure conformité.",
+      "fa-robot"
+    );
+  }
+
+  if (priorities.includes('transmission')) {
+    if (['SCI','SARL','SA','SAS','SELARL','SELAS','SCA','EURL'].includes(statusId)) {
+      add(
+        "Anticiper la transmission",
+        "Pacte Dutreil (si éligible), démembrement, donations échelonnées et clauses de continuation : optimisez fiscalement la transmission.",
+        "fa-people-carry"
+      );
     }
+  }
 
-    // SELARL -----------------------------------------------------
-    else if (statusId === 'SELARL') {
-        explanations.push({
-            title: "IS & professions libérales",
-            explanation: `La SELARL est soumise à l'IS ; votre TMI de ${tmiValue} reste donc sans effet direct sur les bénéfices de la société.`
-        });
+  if (priorities.includes('social_charges')) {
+    if (['SASU','SAS','SA','SELAS'].includes(statusId)) {
+      add(
+        "Arbitrage net disponible",
+        "Simulez finement salaire vs dividendes (PFU/option barème) pour maximiser le net et la protection sociale.",
+        "fa-calculator"
+      );
+    } else if (['SARL','EURL','SELARL'].includes(statusId)) {
+      add(
+        "Optimisation TNS",
+        "Ajustez rémunération, dividendes (seuil 10 %) et versements au PER pour optimiser charges et protection.",
+        "fa-sliders-h"
+      );
     }
+  }
 
-    // SELAS ------------------------------------------------------
-    else if (statusId === 'SELAS') {
-        explanations.push({
-            title: "IS + dividendes pour SELAS",
-            explanation: `IS à 15 % / 25 %. Avec votre TMI de ${tmiValue}, vous pourrez arbitrer salaire/dividendes pour optimiser la fiscalité personnelle.`
-        });
+  if (priorities.includes('credibility')) {
+    add(
+      "Renforcer l’image",
+      "Compte pro dédié, assurance adaptée, dépôt des comptes à l’heure et gouvernance claire : signaux positifs pour banques/clients.",
+      "fa-handshake"
+    );
+  }
+
+  if (priorities.includes('governance_flexibility')) {
+    if (['SASU','SAS','SELAS'].includes(statusId)) {
+      add(
+        "Clauses statutaires avancées",
+        "Actions de préférence, droits financiers/vote modulés, clauses d’inaliénabilité et mécanismes de sortie (drag/tag).",
+        "fa-project-diagram"
+      );
+    } else {
+      add(
+        "Pacte d’associés",
+        "Même dans des formes plus rigides (SARL/SELARL), un pacte peut compléter utilement les statuts.",
+        "fa-file-signature"
+      );
     }
+  }
 
-    // SCA --------------------------------------------------------
-    else if (statusId === 'SCA') {
-        explanations.push({
-            title: "IS et montages financiers",
-            explanation: `La SCA relève aussi de l'IS (15 % / 25 %). Avec une TMI ${tmiValue}, cette structure commandite/commanditaire peut réduire la charge fiscale dans les LBO.`
-        });
+  return strategies;
+}
+
+/**
+ * Génère le HTML des stratégies contextuelles (accessibilité + contraste + responsive)
+ * - Palette neutre (slate) + accent (amber/green) pour meilleur contraste
+ * - <section> + <ul>/<li> sémantiques, aria-labelledby
+ * - Responsive: 1 → 2 → 3 colonnes
+ * - Focus visible / hover, ombres douces
+ * - join() au lieu de concat en boucle
+ */
+renderContextualStrategies(statusId) {
+  const strategies = this.generateContextualStrategies(statusId);
+  if (!Array.isArray(strategies) || strategies.length === 0) return '';
+
+  const status = this.filteredStatuses?.[statusId] || window.legalStatuses?.[statusId];
+  if (!status) return '';
+
+  // Petite sécurité XSS si jamais les strings viennent d'une source dynamique
+  const esc = (s) => String(s ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;');
+
+  const titleId = `strat-title-${statusId.toLowerCase()}`;
+
+  const items = strategies.map((st) => {
+    const icon = esc(st.icon || 'fa-lightbulb');
+    const title = esc(st.title || '');
+    const desc  = esc(st.description || '');
+
+    return `
+      <li class="group rounded-lg border border-slate-700/40 bg-slate-800/30 dark:bg-slate-900/30 p-4 shadow-sm
+                 hover:bg-slate-800/50 dark:hover:bg-slate-900/50 transition-colors focus-within:ring-2
+                 focus-within:ring-amber-400/40">
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 rounded-full p-2 ring-1 ring-amber-400/30 bg-amber-400/10">
+            <i class="fas ${icon} text-amber-400" aria-hidden="true"></i>
+          </div>
+          <div class="min-w-0">
+            <h5 class="font-semibold text-slate-100 mb-1">${title}</h5>
+            <p class="text-sm text-slate-300 leading-relaxed">${desc}</p>
+          </div>
+        </div>
+      </li>
+    `;
+  }).join('');
+
+  return `
+    <section class="rounded-xl border border-slate-700/40 bg-slate-800/40 dark:bg-slate-900/40
+                    shadow-sm backdrop-blur-sm p-4 md:p-6 mb-6" aria-labelledby="${titleId}">
+      <div class="flex items-center gap-2 mb-4">
+        <i class="fas fa-lightbulb text-amber-400" aria-hidden="true"></i>
+        <h4 id="${titleId}" class="font-semibold text-amber-300 dark:text-amber-400">
+          Stratégies optimales pour votre ${esc(status.name)}
+        </h4>
+      </div>
+
+      <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        ${items}
+      </ul>
+    </section>
+  `;
+}
+
+  /**
+ * Obtenir les meilleures recommandations (top N) — version robuste
+ * - Catégorisation basée sur le score 0..100 non arrondi
+ * - Tie-breakers déterministes
+ * - Breakdown structurel / objectifs calculé depuis l'audit trail
+ */
+getTopRecommendations(count = 3) {
+  const to100 = (avg1to5) => Math.max(0, Math.min(100, ((avg1to5 - 1) / 4) * 100)); // 1→0 ; 5→100
+
+  // Groupes de critères (tu peux ajuster ces groupes au besoin)
+  const GROUPS = {
+    structurel: ['patrimony_protection','credibility','governance_flexibility','transmission'],
+    objectifs : ['administrative_simplicity','taxation_optimization','social_charges','fundraising_capacity']
+  };
+
+  const hasStatuses = this.filteredStatuses && Object.keys(this.filteredStatuses).length > 0;
+  if (!hasStatuses) {
+    console.error("Aucun statut disponible après application des filtres");
+    return [];
+  }
+
+  // Construit une liste [statusId, score100, avg1to5, credibilityMetric,...] en sécurisant
+  const entries = Object.keys(this.filteredStatuses).map(statusId => {
+    const s100 = Number(this.weightedScores?.[statusId]);
+    const avg  = Number(this.scores?.[statusId]); // moyenne 1..5
+    const cred = Number(this.filteredStatuses[statusId]?.key_metrics?.credibility ?? 0);
+    return { statusId, s100, avg, cred };
+  }).filter(e => Number.isFinite(e.s100) && Number.isFinite(e.avg));
+
+  if (!entries.length) {
+    console.warn("Aucun score pondéré exploitable");
+    return [];
+  }
+
+  // Tri ↓ par score, puis avg, puis crédibilité, puis nom pour stabilité
+  entries.sort((a, b) => {
+    if (b.s100 !== a.s100) return b.s100 - a.s100;
+    if (b.avg  !== a.avg ) return b.avg  - a.avg;
+    if (b.cred !== a.cred) return b.cred - a.cred;
+    const na = (this.filteredStatuses[a.statusId]?.name || a.statusId).toString();
+    const nb = (this.filteredStatuses[b.statusId]?.name || b.statusId).toString();
+    return na.localeCompare(nb, 'fr', { sensitivity: 'base' });
+  });
+
+  // Catégorisation
+  const categorize = (score) => {
+    if (score >= 80) return 'RECOMMANDÉ';
+    if (score >= 65) return 'COMPATIBLE';
+    if (score < 45)  return 'DÉCONSEILLÉ';
+    return 'PEU ADAPTÉ';
+  };
+
+  // Calcul d’un sous-score 0..100 pour un groupe de critères, depuis l’audit trail si possible
+  const groupScore100 = (statusId, criteriaList) => {
+    const node = this.auditTrail?.scores?.[statusId] || {};
+    let sw = 0;     // somme (score * poids)
+    let w  = 0;     // somme poids
+
+    criteriaList.forEach(c => {
+      const cNode = node[c] || {};
+      const final = Number.isFinite(cNode.final_score) ? cNode.final_score
+                   : Number.isFinite(cNode.raw_score)   ? cNode.raw_score
+                   : Number(this.filteredStatuses[statusId]?.key_metrics?.[c] ?? 3);
+      const weight = Number.isFinite(cNode.weight) ? cNode.weight
+                   : Number(this.priorityWeights?.[c] ?? 1);
+      sw += final * weight;
+      w  += weight;
+    });
+
+    if (w === 0) return null; // pas de pondération exploitable
+    const avg = sw / w;       // 1..5
+    return Math.round(to100(avg)); // 0..100 arrondi pour lisibilité
+  };
+
+  const topN = Math.min(count, entries.length);
+  const sliced = entries.slice(0, topN);
+
+  return sliced.map((e, i) => {
+    const statusId = e.statusId;
+    const status   = this.filteredStatuses[statusId];
+    const rawScore = Number(this.weightedScores[statusId]); // non arrondi
+    const score    = Math.round(rawScore);
+
+    // Sous-scores calculés (remplace l’approx 60/40)
+    const scoreStruct  = groupScore100(statusId, GROUPS.structurel);
+    const scoreObject  = groupScore100(statusId, GROUPS.objectifs);
+
+    return {
+      rank: i + 1,
+      id: statusId,
+      name: status.name,
+      shortName: status.shortName,
+      score,                               // affichage
+      score_raw: +rawScore.toFixed(2),     // pour audit/tri précis
+      status,
+      compatibilite: categorize(rawScore), // catégorisation basée sur le brut
+      strengths: this.getStrengths?.(statusId) ?? [],
+      weaknesses: this.getWeaknesses?.(statusId) ?? [],
+      // remplace l’approximation 0.6/0.4 :
+      scoreCriteresStructurels: scoreStruct,
+      scoreObjectifs: scoreObject,
+      scoreDetails: { pourcentage: score },
+      explanation: this.explainRecommendation?.(statusId) ?? ''
+    };
+  });
+}
+
+  /**
+ * Obtenir les forces d'un statut juridique pour le profil (MAJ 30/09/2025)
+ * - Renvoie un tableau de 1..3 phrases (strings)
+ * - Utilise les priorités, le régime social, le CA prévisionnel, la TMI, etc.
+ * - Cohérent avec thresholds2025 et les formes disponibles
+ */
+getStrengths(statusId) {
+  const strengths = [];
+  const A = this.answers || {};
+  const status = (this.filteredStatuses && this.filteredStatuses[statusId]) 
+              || (window.legalStatuses && window.legalStatuses[statusId]);
+  if (!status) return strengths;
+
+  // ====== Données profil ======
+  const priorities = Array.isArray(A.priorities) ? A.priorities.map(p => String(p).toLowerCase()) : [];
+  const wantsSimplicity = !!A.administrative_simplicity || priorities.includes('administrative_simplicity') || priorities.includes('accounting_cost') || priorities.includes('paperwork');
+  const wantsGovFlex    = !!A.governance_flexibility || priorities.includes('governance_flexibility') || priorities.includes('bylaws_flexibility') || priorities.includes('voting_flexibility');
+  const patrimonyEssential = A.patrimony_protection === 'essential' || priorities.includes('patrimony_protection') || priorities.includes('asset_protection');
+  const wantsAssimilated   = A.social_regime === 'assimilated_employee';
+  const wantsTNS           = A.social_regime === 'tns';
+  const fundraising        = A.fundraising === 'yes' || A.investors === 'yes';
+  const revenue            = Number.parseFloat(A.projected_revenue || 0);
+  const taxBracket         = String(A.tax_bracket || '').toLowerCase(); // 'non_taxable','bracket_11','bracket_30','bracket_41','bracket_45', etc.
+
+  // ====== Seuils (micro + IS réduit) ======
+  const isReduced = (this.thresholds2025 && this.thresholds2025.is_reduced_rate) || { profit_cap: 42500, turnover_cap: 10_000_000 };
+  const microCeiling = (() => {
+    try {
+      if (typeof this._getMicroCeilingForAnswers === 'function') {
+        return this._getMicroCeilingForAnswers(A);
+      }
+      // fallback local cohérent avec applySpecificFilters()
+      if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
+        return A.furnished_tourism_classed === 'yes'
+          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 77700
+          : this.thresholds2025?.micro?.meuble_non_classe_ca ?? 15000;
+      }
+      const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 188700;
+      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 77700;
+      return this.thresholds2025?.micro?.bic_service ?? 77700;
+    } catch {
+      return 77700;
     }
+  })();
 
-    // SNC --------------------------------------------------------
-    else if (statusId === 'SNC') {
-        explanations.push({
-            title: "Transparence fiscale (IR) ou option IS",
-            explanation: `Par défaut, les bénéfices de la SNC sont taxés à votre TMI de ${tmiValue}. Si elle est élevée, une option IS limitera l’imposition à 15 % / 25 %.`
-        });
+  const fmt = (n) => Number.isFinite(n) ? n.toLocaleString('fr-FR') : String(n);
+
+  // ====== Règles par statut ======
+
+  // MICRO
+  if (statusId === 'MICRO') {
+    if (wantsSimplicity) {
+      strengths.push("Simplicité administrative maximale (comptabilité ultra-légère, déclaratif en ligne).");
     }
-
-    // SCI --------------------------------------------------------
-    else if (statusId === 'SCI') {
-        explanations.push({
-            title: "Choix IR foncier ou IS",
-            explanation: `La SCI est transparente (IR foncier à ${tmiValue}) ou peut opter pour l'IS (15 % / 25 %) avec amortissement de l’immeuble.`
-        });
+    if (Number.isFinite(revenue) && revenue <= microCeiling) {
+      strengths.push(`Adapté à votre CA prévisionnel : sous le plafond micro 2025 (${fmt(microCeiling)} €).`);
     }
-
-    /* =============== ENTREPRISES INDIVIDUELLES ================ */
-
-    // EI ---------------------------------------------------------
-    else if (statusId === 'EI') {
-        explanations.push({
-            title: "Imposition directe à l'IR",
-            explanation: `Les bénéfices d'une EI s’ajoutent à vos autres revenus et sont taxés à votre TMI de ${tmiValue}. Si celle-ci est élevée, une structure à l’IS (EURL / SASU) peut être plus avantageuse.`
-        });
+    if (['non_taxable','bracket_11'].includes(taxBracket)) {
+      strengths.push("Versement libératoire potentiellement avantageux avec TMI faible.");
     }
+  }
 
-    // MICRO ------------------------------------------------------
-    else if (statusId === 'MICRO' &&
-            (answers.tax_bracket === 'non_taxable' || answers.tax_bracket === 'bracket_11')) {
-        explanations.push({
-            title: "Régime micro + faible TMI",
-            explanation: `Avec une TMI de ${tmiValue}, l’abattement forfaitaire (71 % ventes / 50 % services / 34 % BNC) minimise la base imposable.`
-        });
-    } else if (statusId === 'MICRO') {
-        explanations.push({
-            title: "Micro : simplicité mais double prélèvement",
-            explanation: `À TMI ${tmiValue}, l’imposition calculée sur le chiffre d’affaires peut coûter plus cher qu’un régime réel (EURL / SASU) si vous avez beaucoup de charges.`
-        });
-    }
+  // EI
+  if (statusId === 'EI') {
+    if (wantsSimplicity) strengths.push("Création et gestion très simples (guichet unique, obligations allégées).");
+    if (patrimonyEssential) strengths.push("Séparation automatique des patrimoines (depuis 2022) pour sécuriser le personnel.");
+    strengths.push("Possibilité d’opter pour l’IS (assimilation EURL) si l’activité monte en puissance.");
+  }
 
-    // EURL -------------------------------------------------------
-    else if (statusId === 'EURL') {
-        explanations.push({
-            title: "Choix IR ou IS selon votre TMI",
-            explanation: `Par défaut à l'IR (TMI ${tmiValue}), l’EURL peut opter pour l'IS (15 % / 25 %) ; un arbitrage pertinent si votre TMI dépasse 30 %.`
-        });
+  // EURL
+  if (statusId === 'EURL') {
+    if (patrimonyEssential) strengths.push("Responsabilité limitée aux apports : bonne protection patrimoniale.");
+    if (['bracket_41','bracket_45'].includes(taxBracket)) {
+      strengths.push(`Option IS intéressante (taux réduit 15 % jusqu’à ${fmt(isReduced.profit_cap)} € si CA < ${fmt(isReduced.turnover_cap)} €).`);
     }
+    strengths.push("Évolutive vers SARL à plusieurs associés, crédibilité commerciale solide.");
+  }
+
+  // SASU
+  if (statusId === 'SASU') {
+    if (wantsAssimilated) strengths.push("Président assimilé salarié (régime général : maladie, retraite, prévoyance).");
+    if (wantsGovFlex) strengths.push("Grande liberté statutaire et de gouvernance.");
+    if (fundraising) strengths.push("Attractive pour investisseurs (BSPCE, actions de préférence, pactes…).");
+  }
+
+  // SAS
+  if (statusId === 'SAS') {
+    if (wantsGovFlex) strengths.push("Gouvernance très flexible (statuts sur-mesure).");
+    if (fundraising) strengths.push("Structure plébiscitée pour les levées de fonds et l’entrée d’investisseurs.");
+    if (wantsAssimilated) strengths.push("Dirigeants assimilés salariés (protection sociale du régime général).");
+  }
+
+  // SARL
+  if (statusId === 'SARL') {
+    strengths.push("Structure stable et connue, crédible auprès des partenaires.");
+    if (wantsTNS) strengths.push("Gérant majoritaire TNS : cotisations généralement plus faibles qu’en assimilé salarié.");
+    strengths.push("Régime fiscal adaptable (IS par défaut, IR possible sous conditions / SARL de famille).");
+  }
+
+  // SA
+  if (statusId === 'SA') {
+    strengths.push("Crédibilité institutionnelle élevée (grands comptes, investisseurs).");
+    strengths.push("Compatible avec une introduction en bourse et des financements importants.");
+    strengths.push("Gouvernance structurée (CA ou directoire/conseil de surveillance).");
+  }
+
+  // SNC
+  if (statusId === 'SNC') {
+    strengths.push("Souplesse statutaire et forte crédibilité bancaire via responsabilité des associés.");
+    if (['non_taxable','bracket_11','bracket_30'].includes(taxBracket)) {
+      strengths.push("Transparence fiscale à l’IR potentiellement avantageuse si TMI modérée.");
+    }
+    strengths.push("Répartition des bénéfices très flexible entre associés.");
+  }
+
+  // SCI
+  if (statusId === 'SCI') {
+    strengths.push("Outil patrimonial efficace pour détenir et transmettre de l’immobilier.");
+    strengths.push("Statuts souples (agrément, répartition des droits, démembrement des parts).");
+    strengths.push("Option IS possible (amortissements) ou IR (déduction des charges réelles chez les associés).");
+  }
+
+  // SELARL
+  if (statusId === 'SELARL') {
+    strengths.push("Adaptée aux professions libérales réglementées (cadre ordinal sécurisé).");
+    strengths.push("Responsabilité limitée aux apports ; rémunération technique possible.");
+    if (wantsTNS) strengths.push("Gérant majoritaire TNS : niveau de cotisations souvent plus modéré.");
+  }
+
+  // SELAS
+  if (statusId === 'SELAS') {
+    strengths.push("Souplesse de gouvernance (modèle SAS) dans un cadre ordinal.");
+    if (wantsAssimilated) strengths.push("Président assimilé salarié : protection sociale du régime général.");
+    strengths.push("Facilite l’entrée d’investisseurs sous contraintes de détention professionnelle.");
+  }
+
+  // SCA
+  if (statusId === 'SCA') {
+    strengths.push("Séparation nette pouvoirs/capitaux (commandités dirigent, commanditaires financent).");
+    strengths.push("Accès aux capitaux via actions tout en conservant le contrôle opérationnel.");
+    strengths.push("Structure pertinente pour groupes familiaux/holdings avec besoin de stabilité de direction.");
+  }
+
+  // ====== Ajustements transverses (priorités) ======
+  if (patrimonyEssential && ['SASU','SAS','SARL','EURL'].includes(statusId)) {
+    strengths.unshift("Responsabilité limitée : bon alignement avec votre priorité de protection patrimoniale.");
+  }
+  if (wantsGovFlex && ['SASU','SAS','SELAS'].includes(statusId)) {
+    strengths.unshift("Très forte souplesse de gouvernance : aligné avec votre priorité de flexibilité.");
+  }
+  if (fundraising && ['SASU','SAS','SA','SCA'].includes(statusId)) {
+    strengths.unshift("Compatible avec une stratégie de levée de fonds.");
+  }
+  if (statusId === 'MICRO' && wantsSimplicity) {
+    strengths.unshift("Ultra simple au quotidien (déclarations micro, pas de bilan).");
+  }
+
+  // ====== Complément par avantages génériques si besoin ======
+  if (strengths.length < 3 && Array.isArray(status.advantages)) {
+    for (const adv of status.advantages) {
+      if (strengths.length >= 3) break;
+      const already = strengths.some(s => s.toLowerCase().includes(String(adv).toLowerCase()));
+      if (!already) strengths.push(adv);
+    }
+  }
+
+  return strengths.slice(0, 3);
+}
+
+/**
+ * Obtenir les faiblesses d'un statut juridique pour le profil (MAJ 30/09/2025)
+ * - Renvoie un tableau de 1..3 phrases (strings)
+ * - Logique profilée (priorités, CA, TMI, régime social, levée de fonds…)
+ * - Fallback sur les désavantages génériques du statut si besoin
+ */
+getWeaknesses(statusId) {
+  const weaknesses = [];
+  const A = this.answers || {};
+  const status = (this.filteredStatuses && this.filteredStatuses[statusId])
+              || (window.legalStatuses && window.legalStatuses[statusId]);
+  if (!status) return weaknesses;
+
+  // ====== Données profil ======
+  const priorities = Array.isArray(A.priorities) ? A.priorities.map(p => String(p).toLowerCase()) : [];
+  const wantsSimplicity = !!A.administrative_simplicity || priorities.includes('administrative_simplicity') || priorities.includes('accounting_cost') || priorities.includes('paperwork');
+  const wantsGovFlex    = !!A.governance_flexibility || priorities.includes('governance_flexibility') || priorities.includes('bylaws_flexibility') || priorities.includes('voting_flexibility');
+  const patrimonyEssential = A.patrimony_protection === 'essential' || priorities.includes('patrimony_protection') || priorities.includes('asset_protection');
+  const wantsAssimilated   = A.social_regime === 'assimilated_employee';
+  const wantsTNS           = A.social_regime === 'tns';
+  const fundraising        = A.fundraising === 'yes' || A.investors === 'yes';
+  const revenue            = Number.parseFloat(A.projected_revenue || 0);
+  const taxBracket         = String(A.tax_bracket || '').toLowerCase(); // 'non_taxable','bracket_11','bracket_30','bracket_41','bracket_45', etc.
+
+  // ====== Seuils (micro) alignés avec applySpecificFilters() ======
+  const microCeiling = (() => {
+    try {
+      if (typeof this._getMicroCeilingForAnswers === 'function') {
+        return this._getMicroCeilingForAnswers(A);
+      }
+      if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
+        return A.furnished_tourism_classed === 'yes'
+          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 77700
+          : this.thresholds2025?.micro?.meuble_non_classe_ca ?? 15000;
+      }
+      const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 188700;
+      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 77700;
+      return this.thresholds2025?.micro?.bic_service ?? 77700;
+    } catch {
+      return 77700;
+    }
+  })();
+
+  const fmt = (n) => Number.isFinite(n) ? n.toLocaleString('fr-FR') : String(n);
+
+  // ====== Règles par statut ======
+
+  // MICRO
+  if (statusId === 'MICRO') {
+    if (fundraising) weaknesses.push("Structure peu adaptée aux levées de fonds et à l’entrée d’investisseurs.");
+    if (revenue > 0 && revenue >= 0.9 * microCeiling) {
+      weaknesses.push(`Risque de dépassement du plafond micro ${fmt(microCeiling)} € à court terme.`);
+    }
+    if (['bracket_41','bracket_45'].includes(taxBracket)) {
+      weaknesses.push("Imposition forfaitaire à l’IR souvent défavorable avec TMI élevée.");
+    }
+    if (wantsAssimilated) weaknesses.push("Ne permet pas le régime assimilé salarié (protection sociale limitée).");
+    if (patrimonyEssential) {
+      weaknesses.push("Protection non absolue (exceptions : fraude, dettes fiscales/sociales, caution).");
+    }
+  }
+
+  // EI
+  if (statusId === 'EI') {
+    if (fundraising) weaknesses.push("Non adaptée à la levée de fonds ni à l’entrée d’associés.");
+    if (wantsAssimilated) weaknesses.push("Régime social TNS (pas d’assimilé salarié par défaut).");
+    if (patrimonyEssential) weaknesses.push("Protection patrimoniale perfectible (exceptions légales possibles).");
+    if (!wantsSimplicity && (priorities.includes('credibility') || priorities.includes('fundraising'))) {
+      weaknesses.push("Crédibilité limitée pour des projets ambitieux.");
+    }
+  }
+
+  // EURL
+  if (statusId === 'EURL') {
+    if (wantsGovFlex) weaknesses.push("Moins flexible qu’une SASU pour la gouvernance et l’entrée d’investisseurs.");
+    if (fundraising) weaknesses.push("Peu attractive pour les levées de fonds significatives.");
+    if (wantsAssimilated) {
+      weaknesses.push("Par défaut gérant associé = TNS (assimilé salarié seulement si gérant non associé).");
+    }
+    weaknesses.push("À l’IS, dividendes > 10 % base (capital libéré + primes + CCA) assujettis aux cotisations TNS.");
+  }
+
+  // SASU
+  if (statusId === 'SASU') {
+    if (wantsTNS) weaknesses.push("Incompatible avec votre préférence TNS (président assimilé salarié).");
+    if (revenue > 0 && revenue < 30000) weaknesses.push("Coûts de gestion/compta élevés pour un faible CA.");
+    weaknesses.push("Charges sociales élevées sur la rémunération (URSSAF, retraite).");
+  }
+
+  // SAS
+  if (statusId === 'SAS') {
+    if (wantsTNS) weaknesses.push("Ne propose pas de régime TNS pour le dirigeant statutaire.");
+    if (wantsSimplicity) weaknesses.push("Obligations juridiques et comptables plus lourdes que les régimes individuels.");
+    if (revenue > 0 && revenue < 30000) weaknesses.push("Frais fixes (compta, juridiques) élevés rapportés à un petit CA.");
+  }
+
+  // SARL
+  if (statusId === 'SARL') {
+    if (wantsGovFlex) weaknesses.push("Gouvernance moins souple (règles légales de quorum/majorité, agrément cessions).");
+    if (fundraising) weaknesses.push("Moins adaptée aux levées de fonds (agrément, pas d’actions de préférence).");
+    weaknesses.push("Si gérant majoritaire : TNS (couverture moins protectrice).");
+  }
+
+  // SA
+  if (statusId === 'SA') {
+    weaknesses.push("Capital minimal 37 000 € et formalisme très lourd (gouvernance, CAC…).");
+    if (revenue > 0 && revenue < 300000) weaknesses.push("Sur-dimensionnée pour un projet à faible/moyen CA.");
+    if (wantsSimplicity) weaknesses.push("Complexité juridique et coûts de fonctionnement élevés.");
+  }
+
+  // SNC
+  if (statusId === 'SNC') {
+    weaknesses.push("Responsabilité illimitée et solidaire des associés.");
+    if (patrimonyEssential) weaknesses.push("Incompatible avec une exigence forte de protection patrimoniale.");
+    if (['bracket_41','bracket_45'].includes(taxBracket)) weaknesses.push("Transparence à l’IR potentiellement pénalisante avec TMI élevée.");
+    if (fundraising) weaknesses.push("Entrée d’investisseurs difficile (agrément unanime, peu attractive).");
+  }
+
+  // SCI
+  if (statusId === 'SCI') {
+    weaknesses.push("Responsabilité illimitée et proportionnelle des associés.");
+    weaknesses.push("Interdiction des activités commerciales (meublé habituel, para-hôtellerie, marchand de biens).");
+    if (fundraising) weaknesses.push("Peu adaptée aux levées de fonds externes.");
+  }
+
+  // SELARL
+  if (statusId === 'SELARL') {
+    if (wantsAssimilated) weaknesses.push("Gérant majoritaire = TNS (pas d’assimilé salarié).");
+    weaknesses.push("Contraintes ordinales (agréments, détention majoritaire par des professionnels).");
+    if (fundraising) weaknesses.push("Ouverture aux investisseurs extérieurs limitée par les règles ordinales.");
+  }
+
+  // SELAS
+  if (statusId === 'SELAS') {
+    if (wantsTNS) weaknesses.push("Président assimilé salarié (pas de TNS).");
+    weaknesses.push("Charges sociales élevées sur la rémunération du dirigeant.");
+    weaknesses.push("Règles ordinales limitant la part des investisseurs non professionnels.");
+  }
+
+  // SCA
+  if (statusId === 'SCA') {
+    weaknesses.push("Responsabilité illimitée des commandités et gouvernance complexe.");
+    weaknesses.push("Capital élevé en cas d’appel public (225 000 €) et coûts de fonctionnement importants.");
+    if (wantsSimplicity) weaknesses.push("Complexité juridique importante, forme rare.");
+  }
+
+  // ====== Mismatch transverses selon priorités ======
+  // Simplicité prioritaire → formes lourdes
+  if (wantsSimplicity && ['SA','SAS','SARL','SELARL','SELAS','SCA'].includes(statusId)) {
+    weaknesses.unshift("Obligations juridiques et comptables relativement lourdes, peu alignées avec votre priorité de simplicité.");
+  }
+  // Flexibilité de gouvernance prioritaire → formes rigides
+  if (wantsGovFlex && ['SARL','SA','SNC'].includes(statusId)) {
+    weaknesses.unshift("Gouvernance moins flexible que les formes par actions, peu alignée avec votre priorité de souplesse.");
+  }
+  // Levée de fonds prioritaire → formes peu adaptées
+  if (fundraising && ['EI','MICRO','SNC','SARL','SCI','SELARL'].includes(statusId)) {
+    weaknesses.unshift("Peu adaptée à une stratégie de levée de fonds.");
+  }
+  // Transmission prioritaire → formes faibles en transmission
+  if (priorities.includes('transmission') && ['MICRO','EI','SNC'].includes(statusId)) {
+    weaknesses.push("Moins performante pour la transmission du patrimoine ou de l’entreprise.");
+  }
+  // Mismatch de régime social
+  if (wantsAssimilated && ['EI','EURL','SARL'].includes(statusId)) {
+    weaknesses.push("Risque de ne pas correspondre à votre préférence pour le régime assimilé salarié.");
+  }
+  if (wantsTNS && ['SASU','SAS','SA','SELAS','SCA'].includes(statusId)) {
+    weaknesses.push("Ne propose pas de régime TNS pour le dirigeant.");
+  }
+
+  // ====== Complément par désavantages génériques si besoin ======
+  if (weaknesses.length < 3 && Array.isArray(status.disadvantages)) {
+    for (const disadv of status.disadvantages) {
+      if (weaknesses.length >= 3) break;
+      const already = weaknesses.some(w => w.toLowerCase().includes(String(disadv).toLowerCase()));
+      if (!already) weaknesses.push(disadv);
+    }
+  }
+
+  return weaknesses.slice(0, 3);
+}
+/**
+ * Affiche les détails d'un statut juridique (MAJ 30/09/2025)
+ * - Sécurisé (escape HTML)
+ * - Accessible (role="dialog", aria-*, focus trap, ESC, click dehors)
+ * - Robuste (IDs uniques, nettoyage des listeners, restore focus, lock scroll)
+ * - Compatible avec recommendation.status existant
+ */
+showStatusDetails(recommendation) {
+  if (!recommendation) return;
+
+  // ─── Helpers ──────────────────────────────────────────────────────
+  const escapeHTML = (v) =>
+    String(v ?? '').replace(/[&<>"']/g, (m) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]
+    ));
+
+  const fmt = (n) => Number.isFinite(+n) ? Number(n).toLocaleString('fr-FR') : escapeHTML(n);
+
+  const listHTML = (arr, icon, color) => (arr || [])
+    .map(txt => `
+      <li class="flex items-start">
+        <i class="fas ${icon} ${color} mt-1 mr-2"></i>
+        <span>${escapeHTML(txt)}</span>
+      </li>
+    `).join('');
+
+  const safe = (obj, key, fallback = 'Non spécifié') =>
+    escapeHTML(obj?.[key] ?? fallback);
+
+  // ─── Données ──────────────────────────────────────────────────────
+  const status = recommendation.status
+    || (this.filteredStatuses && this.filteredStatuses[recommendation.id]);
+  if (!status) return;
+
+  const explanations = (this.getStatusExplanations
+    ? (this.getStatusExplanations(recommendation.id, this.answers) || [])
+    : []).slice(0, 5);
+
+  const strengths  = Array.isArray(recommendation.strengths)  ? recommendation.strengths  : (this.getStrengths?.(recommendation.id)  || []);
+  const weaknesses = Array.isArray(recommendation.weaknesses) ? recommendation.weaknesses : (this.getWeaknesses?.(recommendation.id) || []);
+
+  // ─── IDs uniques + a11y ──────────────────────────────────────────
+  const modalId   = `status-modal-${recommendation.id}-${Date.now()}`;
+  const titleId   = `${modalId}-title`;
+  const descId    = `${modalId}-desc`;
+  const closeId   = `${modalId}-close`;
+
+  // Fermer un éventuel modal déjà ouvert pour éviter les doublons
+  document.querySelectorAll(`[data-status-modal="true"]`).forEach(n => n.remove());
+
+  // Lock scroll arrière-plan
+  const body = document.body;
+  const prevOverflow = body.style.overflow;
+  body.style.overflow = 'hidden';
+
+  // Mémoriser l’élément qui avait le focus
+  const prevFocus = document.activeElement;
+
+  // ─── Overlay ──────────────────────────────────────────────────────
+  const overlay = document.createElement('div');
+  overlay.setAttribute('data-status-modal', 'true');
+  overlay.className = 'fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4';
+
+  // ─── Contenu (ON échappe toutes les interpolations) ───────────────
+  overlay.innerHTML = `
+    <div class="bg-blue-900 bg-opacity-70 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto outline-none"
+         role="dialog" aria-modal="true" aria-labelledby="${titleId}" aria-describedby="${descId}"
+         tabindex="-1">
+      <!-- Header -->
+      <div class="flex items-center mb-6 pb-4 border-b border-gray-700">
+        <div class="h-16 w-16 rounded-full bg-blue-800 bg-opacity-50 flex items-center justify-center text-3xl mr-5 shrink-0">
+          <i class="fas ${escapeHTML(status.logo || 'fa-building')} text-green-400"></i>
+        </div>
+        <div class="flex-grow min-w-0">
+          <h2 id="${titleId}" class="text-2xl font-bold truncate">
+            ${escapeHTML(status.name)} (${escapeHTML(status.shortName)})
+          </h2>
+          <p id="${descId}" class="text-gray-300 mt-1">
+            ${escapeHTML(status.description || '')}
+          </p>
+        </div>
+        <div class="ml-4">
+          <span class="px-3 py-1 bg-green-500 text-gray-900 rounded-full font-medium whitespace-nowrap">
+            Score&nbsp;: ${fmt(recommendation.score)}/100
+          </span>
+        </div>
+      </div>
+
+      <!-- Pourquoi adapté -->
+      <div class="bg-green-900 bg-opacity-20 p-5 rounded-xl border border-green-800 mb-6">
+        <h3 class="text-xl font-bold mb-3 text-green-400">
+          <i class="fas fa-chart-line mr-2"></i> Pourquoi la ${escapeHTML(status.name)} est adaptée à votre projet
+        </h3>
+        <div class="mb-4">
+          <p class="text-lg mb-3">Basé sur vos réponses, ce statut est particulièrement recommandé car :</p>
+          <ul class="space-y-3">
+            ${
+              explanations.length
+                ? explanations.map(item => `
+                    <li class="flex items-start">
+                      <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                      <div>
+                        <p class="font-medium">${escapeHTML(item.title || '')}</p>
+                        <p class="text-gray-300 text-sm">${escapeHTML(item.explanation || '')}</p>
+                      </div>
+                    </li>
+                  `).join('')
+                : `<li class="text-gray-300">Analyse personnalisée indisponible pour ce statut.</li>`
+            }
+          </ul>
+        </div>
+      </div>
+
+      <!-- Caractéristiques -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+          <h3 class="font-semibold mb-2 flex items-center">
+            <i class="fas fa-users mr-2 text-green-400"></i> Structure
+          </h3>
+          <ul class="space-y-2 text-sm">
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">Associés :</span>
+              <span class="text-right">${safe(status, 'associes')}</span>
+            </li>
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">Capital :</span>
+              <span class="text-right">${safe(status, 'capital')}</span>
+            </li>
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">Responsabilité :</span>
+              <span class="text-right">${safe(status, 'responsabilite')}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+          <h3 class="font-semibold mb-2 flex items-center">
+            <i class="fas fa-file-invoice-dollar mr-2 text-green-400"></i> Fiscalité
+          </h3>
+          <ul class="space-y-2 text-sm">
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">Régime :</span>
+              <span class="text-right">${safe(status, 'fiscalite')}</span>
+            </li>
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">Option :</span>
+              <span class="text-right">${safe(status, 'fiscaliteOption')}</span>
+            </li>
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">TVA :</span>
+              <span class="text-right">${safe(status, 'regimeTVA')}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+          <h3 class="font-semibold mb-2 flex items-center">
+            <i class="fas fa-user-shield mr-2 text-green-400"></i> Social
+          </h3>
+          <ul class="space-y-2 text-sm">
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">Régime :</span>
+              <span class="text-right">${safe(status, 'regimeSocial')}</span>
+            </li>
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">Charges :</span>
+              <span class="text-right">${safe(status, 'chargesSociales')}</span>
+            </li>
+            <li class="flex justify-between gap-3">
+              <span class="text-gray-400">Protection :</span>
+              <span class="text-right">${safe(status, 'protectionPatrimoine')}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Forces / Faiblesses -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-green-900 bg-opacity-20 p-4 rounded-lg border border-green-800">
+          <h3 class="font-semibold mb-3 flex items-center text-green-400">
+            <i class="fas fa-plus-circle mr-2"></i> Points forts
+          </h3>
+          <ul class="space-y-2">
+            ${ strengths.length ? listHTML(strengths, 'fa-check', 'text-green-400') : '<li class="text-gray-300">Aucun point fort spécifique identifié.</li>' }
+          </ul>
+        </div>
+
+        <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800">
+          <h3 class="font-semibold mb-3 flex items-center text-red-400">
+            <i class="fas fa-exclamation-circle mr-2"></i> Points d’attention
+          </h3>
+          <ul class="space-y-2">
+            ${ weaknesses.length ? listHTML(weaknesses, 'fa-times', 'text-red-400') : '<li class="text-gray-300">Aucun point d’attention majeur identifié.</li>' }
+          </ul>
+        </div>
+      </div>
+
+      <!-- Profils adaptés -->
+      <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg mb-6">
+        <h3 class="font-semibold mb-2 flex items-center text-green-400">
+          <i class="fas fa-thumbs-up mr-2"></i> Profils adaptés
+        </h3>
+        <ul class="space-y-2">
+          ${
+            Array.isArray(status.suitable_for) && status.suitable_for.length
+              ? status.suitable_for.map(item => `
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                    <span>${escapeHTML(item)}</span>
+                  </li>
+                `).join('')
+              : '<li class="text-gray-300">Non renseigné.</li>'
+          }
+        </ul>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex justify-end mt-6">
+        <button id="${closeId}" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+          <i class="fas fa-times mr-2"></i> Fermer
+        </button>
+      </div>
+    </div>
+  `;
+
+  // ─── Montage DOM ──────────────────────────────────────────────────
+  document.body.appendChild(overlay);
+
+  const dialog = overlay.querySelector('[role="dialog"]');
+  const btnClose = overlay.querySelector(`#${CSS.escape(closeId)}`);
+
+  // Empêche la fermeture lors d’un clic dans le contenu
+  dialog.addEventListener('click', (e) => e.stopPropagation());
+
+  // Fermer sur clic overlay
+  const close = () => {
+    overlay.remove();
+    body.style.overflow = prevOverflow; // restore scroll
+    if (prevFocus && typeof prevFocus.focus === 'function') {
+      prevFocus.focus();
+    }
+    // Nettoyage listeners (gc friendly)
+    document.removeEventListener('keydown', onKeyDown, true);
+  };
+
+  overlay.addEventListener('click', close);
+  btnClose.addEventListener('click', close);
+
+  // ESC + focus trap
+  const focusables = () => Array.from(dialog.querySelectorAll(
+    'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+  ));
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+      return;
+    }
+    if (e.key === 'Tab') {
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0];
+      const last  = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  };
+  document.addEventListener('keydown', onKeyDown, true);
+
+  // Focus initial
+  (btnClose || dialog).focus();
+}
+
+/**
+ * Génère des explications personnalisées sur pourquoi un statut est recommandé
+ * MAJ 30/09/2025 — cohérente avec thresholds2025 & référentiel statuts
+ * @param {string} statusId - Identifiant du statut (ex: 'SAS', 'MICRO'…)
+ * @param {Object} answers  - Réponses utilisateur (facultatif : this.answers sera utilisé par défaut)
+ * @returns {Array<{title:string, explanation:string}>}
+ */
+getStatusExplanations(statusId, answers) {
+  const A = answers || this.answers || {};
+  const out = [];
+
+  // ── Helpers ----------------------------------------------------
+  const tmiMap = {
+    non_taxable: 'non imposable',
+    bracket_11: '11%',
+    bracket_30: '30%',
+    bracket_41: '41%',
+    bracket_45: '45%'
+  };
+  const tmiLabel = tmiMap[A.tax_bracket] || null;
+
+  const fmt€ = (n) => Number.isFinite(+n) ? `${Number(n).toLocaleString('fr-FR')} €` : '';
+
+  // Micro helper (utilise ton helper si dispo, sinon fallback local)
+  const microThreshold = (() => {
+    if (typeof this._getMicroCeilingForAnswers === 'function') {
+      return this._getMicroCeilingForAnswers(A);
+    }
+    if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
+      return A.furnished_tourism_classed === 'yes'
+        ? this.thresholds2025?.micro?.meuble_classe_ca
+        : this.thresholds2025?.micro?.meuble_non_classe_ca;
+    }
+    const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
+    if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales;
+    if (nature === 'bnc') return this.thresholds2025?.micro?.bnc;
+    return this.thresholds2025?.micro?.bic_service;
+  })();
+
+  const tvaBase = this.thresholds2025?.tva_franchise_base || {
+    ventes: 85000, services: 37500, tolerance_ventes: 93500, tolerance_services: 41250
+  };
+
+  const isCompany = (id) => ['SAS','SASU','SARL','EURL','SA','SELARL','SELAS','SCA'].includes(id);
+  const isSel     = (id) => ['SELARL','SELAS'].includes(id);
+  const isSasLike = (id) => ['SAS','SASU','SELAS'].includes(id);
+
+  const projectedRevenue = Number(A.projected_revenue || 0);
+
+  // Potentielle éligibilité IS réduit (15 % jusqu’au plafond de bénéfice)
+  // NB: on reste volontairement "sous conditions" car la détention du capital n'est pas connue ici.
+  const isReducedISNote = (() => {
+    if (!isCompany(statusId)) return null;
+    const cap = this.thresholds2025?.is_reduced_rate?.profit_cap ?? 42500;
+    const caCap = this.thresholds2025?.is_reduced_rate?.turnover_cap ?? 10_000_000;
+    if (Number.isFinite(projectedRevenue) && projectedRevenue < caCap) {
+      return `Éligibilité possible au taux réduit d’IS à 15 % jusqu’à ${fmt€(cap)} (CA < ${fmt€(caCap)} et autres conditions).`;
+    }
+    return null;
+  })();
+
+  // Franchise en base de TVA (utile pour MICRO/EI et, plus largement, petites structures à l’IS)
+  const tvaFranchiseNote = (() => {
+    const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
+    const seuil = ['ventes','hébergement','hebergement','bic_sales'].includes(nature)
+      ? tvaBase.ventes : tvaBase.services;
+    if (Number.isFinite(projectedRevenue) && projectedRevenue <= seuil) {
+      return `Franchise en base de TVA possible (seuils 2025 : ${fmt€(tvaBase.ventes)} ventes / ${fmt€(tvaBase.services)} services; tolérance ${fmt€(tvaBase.tolerance_ventes)} / ${fmt€(tvaBase.tolerance_services)}).`;
+    }
+    return null;
+  })();
+
+  // Priorités utilisateur (pour personnaliser le wording)
+  const wantsGovFlex  = A.priorities?.includes?.('governance_flexibility') || A.governance_flexibility === 'yes';
+  const wantsCred     = A.priorities?.includes?.('credibility') || A.credibility === 'yes';
+  const wantsFund     = (A.fundraising === 'yes') || (A.investors === 'yes') || A.priorities?.includes?.('fundraising_capacity');
+  const wantsProtect  = A.patrimony_protection === 'essential' || A.priorities?.includes?.('patrimony_protection');
+  const socialPrefAsm = A.social_regime === 'assimilated_employee';
+  const socialPrefTns = A.social_regime === 'tns';
+  const orderYes      = (A.professional_order === 'yes') || (A.regulated_profession === 'yes') || (A.regulated_activity === 'yes');
+
+  // ── Règles communes par statut -----------------------------------
+
+  // MICRO
+  if (statusId === 'MICRO') {
+    out.push({
+      title: "Simplicité et charges proportionnelles",
+      explanation: "Déclarations et comptabilité ultra-simplifiées ; vos cotisations sont calculées sur le chiffre d’affaires réellement encaissé."
+    });
+    if (tvaFranchiseNote) {
+      out.push({ title: "TVA — franchise en base", explanation: tvaFranchiseNote });
+    }
+    if (Number.isFinite(projectedRevenue) && Number.isFinite(microThreshold)) {
+      out.push({
+        title: "Cohérence avec votre niveau de CA",
+        explanation: `Votre CA prévisionnel (${fmt€(projectedRevenue)}) se situe sous le plafond micro applicable (${fmt€(microThreshold)} — 2025).`
+      });
+    }
+    if (tmiLabel && ['non imposable','11%'].includes(tmiLabel)) {
+      out.push({
+        title: "Micro + faible TMI",
+        explanation: `Avec une TMI ${tmiLabel}, l’abattement forfaitaire (71 % ventes/hébergement • 50 % services BIC • 34 % BNC) maintient une base imposable réduite.`
+      });
+    }
+  }
+
+  // EI
+  else if (statusId === 'EI') {
+    out.push({
+      title: "Souplesse de démarrage",
+      explanation: "Création simple, pas de capital, possibilité de rester au micro ou de passer au réel selon l’évolution des charges."
+    });
+    out.push({
+      title: "Séparation pro/perso (2022)",
+      explanation: "Patrimoine professionnel séparé par défaut (hors exceptions légales : fraude, dettes fiscales/sociales, renonciation, caution)."
+    });
+    if (tvaFranchiseNote) out.push({ title: "TVA — franchise en base", explanation: tvaFranchiseNote });
+    if (tmiLabel) {
+      out.push({
+        title: "Lisibilité fiscale",
+        explanation: `Bénéfices imposés à l’IR (TMI ${tmiLabel}). En cas de montée en charge, l’option IS (assimilation EURL) reste envisageable.`
+      });
+    }
+  }
+
+  // EURL
+  else if (statusId === 'EURL') {
+    if (wantsProtect) {
+      out.push({ title: "Responsabilité limitée", explanation: "Votre patrimoine personnel est protégé à hauteur des apports." });
+    }
+    if (socialPrefTns) {
+      out.push({ title: "Coût social contenu (TNS)", explanation: "Un gérant associé unique relève du régime TNS, souvent moins coûteux qu’un régime assimilé salarié." });
+    }
+    if (tmiLabel) {
+      out.push({
+        title: "Arbitrage IR / IS",
+        explanation: `Par défaut à l’IR (TMI ${tmiLabel}) ; option possible pour l’IS (15 % puis 25 %) si votre TMI est élevée ou pour lisser la fiscalité.`
+      });
+    }
+    if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
+  }
+
+  // SASU / SAS
+  else if (statusId === 'SASU' || statusId === 'SAS') {
+    if (socialPrefAsm) {
+      out.push({ title: "Régime social ‘assimilé salarié’", explanation: "Protection du régime général pour le président (hors assurance chômage)." });
+    }
+    if (wantsGovFlex) {
+      out.push({ title: "Gouvernance flexible", explanation: "Statuts personnalisables : organes, droits de vote, clauses d’agrément/inaliénabilité, actions de préférence…" });
+    }
+    if (wantsFund) {
+      out.push({ title: "Prête pour les investisseurs", explanation: "Ouvre facilement le capital (BSPCE, BSA, actions de préférence, pactes), adaptée aux levées de fonds." });
+    }
+    if (tmiLabel) {
+      out.push({
+        title: "Arbitrage salaire/dividendes",
+        explanation: `IS à 15 % / 25 % dissociant fiscalité pro/perso ; avec une TMI ${tmiLabel}, vous pouvez moduler salaire et dividendes.`
+      });
+    }
+    if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
+  }
+
+  // SARL
+  else if (statusId === 'SARL') {
+    if (wantsProtect) out.push({ title: "Responsabilité limitée", explanation: "Protection du patrimoine personnel à hauteur des apports." });
+    out.push({ title: "Cadre stable & connu", explanation: "Structure robuste et familière des partenaires (banques, assureurs), adaptée aux PME/familiales." });
+    if (socialPrefTns) {
+      out.push({ title: "Gérant majoritaire = TNS", explanation: "Si vous êtes gérant majoritaire, régime TNS (cotisations souvent plus faibles que le régime salarié)." });
+    }
+    if (tmiLabel) {
+      out.push({
+        title: "Option IR 5 ans (art. 239 bis AB) ou famille",
+        explanation: `Selon conditions, IR temporaire utile si TMI ${tmiLabel} modérée ; sinon, IS (15 % / 25 %) pour lisser la fiscalité.`
+      });
+    }
+    if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
+  }
+
+  // SA
+  else if (statusId === 'SA') {
+    if (wantsCred) out.push({ title: "Crédibilité institutionnelle", explanation: "Forme très rassurante pour grands comptes, marchés publics et partenaires internationaux." });
+    if (wantsFund) out.push({ title: "Ouverture des capitaux", explanation: "Compatible avec des tours de financement significatifs, voire une cotation ultérieure." });
+    if (tmiLabel) {
+      out.push({ title: "IS par défaut", explanation: `IS 15 % / 25 % ; avec TMI ${tmiLabel}, la fiscalité société limite l’impact sur vos revenus personnels.` });
+    }
+    if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
+  }
+
+  // SNC
+  else if (statusId === 'SNC') {
+    out.push({ title: "Transparence fiscale par défaut", explanation: "À l’IR par transparence (option IS possible). Pertinent si TMI faible et forte confiance entre associés." });
+    out.push({ title: "Souplesse de répartition", explanation: "Répartition des bénéfices et règles de fonctionnement aménageables statutairement." });
+    if (tmiLabel) {
+      out.push({ title: "Option IS en cas de TMI élevée", explanation: `Si votre TMI ${tmiLabel} est élevée, l’option IS (15 % / 25 %) peut réduire la charge globale.` });
+    }
+  }
+
+  // SCI
+  else if (statusId === 'SCI') {
+    out.push({ title: "Patrimoine immobilier collectif", explanation: "Idéale pour acheter, détenir et gérer un bien à plusieurs avec clauses d’agrément." });
+    if ((A.activity_type === 'immobilier') && (!['meuble','para_hotellerie','para-hotelier','para-hôtellerie'].includes(String(A.real_estate_model).toLowerCase()))) {
+      out.push({ title: "Location nue & transmission", explanation: "Transparence IR (revenus fonciers) et outils de transmission (démembrement, donations-partage)." });
+    } else {
+      out.push({ title: "Attention à l’objet civil", explanation: "Meublé habituel/para-hôtelier ou marchand de biens → activité commerciale : envisager SAS/SARL." });
+    }
+    out.push({ title: "Option IS possible", explanation: "Peut opter pour l’IS (15 % / 25 %) et amortir l’immeuble, utile pour lisser le résultat." });
+  }
+
+  // SELARL / SELAS
+  else if (statusId === 'SELARL' || statusId === 'SELAS') {
+    if (orderYes) {
+      out.push({ title: "Adaptée aux professions réglementées", explanation: "Cadre SEL conforme aux exigences ordinales (capital/contrôle par des professionnels, agréments, déontologie)." });
+    } else {
+      out.push({ title: "Cadre libéral sécurisé", explanation: "Structure dédiée aux professions libérales réglementées (vérifier l’éligibilité auprès de l’ordre)." });
+    }
+    if (statusId === 'SELAS' && socialPrefAsm) {
+      out.push({ title: "Protection sociale du président", explanation: "Régime assimilé salarié (maladie, retraite, prévoyance ; hors chômage)." });
+    }
+    if (statusId === 'SELARL' && socialPrefTns) {
+      out.push({ title: "Coût social contenu (gérant majoritaire TNS)", explanation: "Cotisations souvent plus faibles qu’en régime assimilé salarié (contrepartie : couverture moindre)." });
+    }
+    if (wantsFund) {
+      out.push({ title: "Ouverture encadrée du capital", explanation: "Entrée d’investisseurs possible mais limitée par les quotas/professions autorisées par l’ordre." });
+    }
+    if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
+  }
+
+  // SCA
+  else if (statusId === 'SCA') {
+    if (wantsFund) out.push({ title: "Levier de financement + contrôle", explanation: "Sépare direction (commandités) et capitaux (commanditaires) pour lever des fonds en gardant la main." });
+    if (wantsCred) out.push({ title: "Crédibilité et stabilité", explanation: "Gouvernance robuste, utile pour groupes familiaux/holdings et stratégies anti-OPA." });
+    if (tmiLabel) out.push({ title: "IS par défaut", explanation: `IS 15 % / 25 % ; avec TMI ${tmiLabel}, la fiscalité société reste décorrélée de vos revenus personnels.` });
+    if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
+  }
+
+  // ── Bonus contextuels transverses --------------------------------
+
+  // Franchise TVA : utile aussi pour petites SAS/SARL/SASU/EURL
+  if (!['MICRO','SCI','SNC','SA','SCA'].includes(statusId) && tvaFranchiseNote && projectedRevenue > 0) {
+    out.push({ title: "TVA — franchise en base (optionnelle)", explanation: tvaFranchiseNote });
+  }
+
+  // Protection patrimoniale demandée
+  if (wantsProtect && ['SAS','SASU','SARL','EURL','SA','SELARL','SELAS','SCA'].includes(statusId)) {
+    out.push({ title: "Protection patrimoniale recherchée", explanation: "Forme à responsabilité limitée : les risques sont cantonnés aux apports (hors fautes/garanties personnelles)." });
+  }
+
+  // Gouvernance flexible recherchée
+  if (wantsGovFlex && isSasLike(statusId)) {
+    out.push({ title: "Priorité ‘souplesse de gouvernance’", explanation: "SAS/SELAS permettent un pacte + statuts très modulaires (actions de préférence, vesting, clauses de sortie…)." });
+  }
+
+  // Levée de fonds
+  if (wantsFund && ['SAS','SASU','SA','SCA','SELAS'].includes(statusId)) {
+    out.push({ title: "Priorité ‘capacité de levée’", explanation: "Instruments financiers et pratiques de marché bien établis : plus attractif pour VC/BA." });
+  }
+
+  // Cohérence avec préférence de régime social
+  if (socialPrefAsm && ['SAS','SASU','SA','SELAS'].includes(statusId)) {
+    out.push({ title: "Aligné avec votre préférence sociale", explanation: "Statut du dirigeant ‘assimilé salarié’ (hors assurance chômage) conforme à votre choix." });
+  }
+  if (socialPrefTns && ['EURL','SARL','SELARL'].includes(statusId)) {
+    out.push({ title: "Aligné avec votre préférence TNS", explanation: "Régime TNS possible (ex. gérant majoritaire), souvent moins coûteux en charges." });
+  }
+
+  // Micro — vigilance seuil (si malgré tout recommandé)
+  if (statusId === 'MICRO' && Number.isFinite(projectedRevenue) && Number.isFinite(microThreshold)) {
+    const ratio = projectedRevenue / microThreshold;
+    if (ratio >= 0.7 && ratio < 1) {
+      out.push({
+        title: "Vigilance ‘proche du plafond’",
+        explanation: `Votre CA prévisionnel approche le plafond micro (${fmt€(projectedRevenue)} / ${fmt€(microThreshold)}). Anticipez un basculement au réel si dépassement.`
+      });
+    }
+  }
+
+  // SEL — cohérence ordre pro
+  if (isSel(statusId) && !orderYes) {
+    out.push({
+      title: "Vérifier l’éligibilité ordinale",
+      explanation: "Les SEL sont réservées aux professions libérales réglementées : confirmez l’agrément/inscription à l’ordre."
+    });
+  }
+
+  // Compactage (unique + max ~6 messages)
+  const seen = new Set();
+  const deduped = out.filter(item => {
+    const sig = `${item.title}::${item.explanation}`;
+    if (seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+
+  return deduped.slice(0, 6);
 }
         
-        // 2. PROTECTION DU PATRIMOINE
+// 2) PROTECTION DU PATRIMOINE — MAJ 30/09/2025
+// Catégories (pour la lecture des conditions) :
+// - Protection limitée : SASU, SAS, SARL, EURL, SA, SELARL, SELAS
+// - Protection partielle : EI, MICRO (séparation pro/perso 2022 avec exceptions), SCA (hybride)
+// - Responsabilité illimitée : SNC, SCI
 
 /* ------------------------------------------------------------------
  * PRIORITÉ : ESSENTIEL
  * -----------------------------------------------------------------*/
 if (answers.patrimony_protection === 'essential' &&
-    (statusId === 'SASU' || statusId === 'SAS'  || statusId === 'SARL' || statusId === 'EURL' ||
-     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS' || statusId === 'SCA')) {
-
-    explanations.push({
-        title: "Protection optimale de votre patrimoine personnel",
-        explanation: "Ce statut répond parfaitement à votre besoin essentiel de protéger vos biens privés ; la responsabilité est strictement limitée à vos apports."
-    });
+    (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SARL' || statusId === 'EURL' ||
+     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS')) {
+  explanations.push({
+    title: "Protection optimale de votre patrimoine personnel",
+    explanation: "Responsabilité limitée aux apports : vos biens privés sont isolés du risque professionnel (sauf fautes de gestion, cautions/garanties personnelles, dettes fiscales/sociales)."
+  });
 }
 
 if (answers.patrimony_protection === 'essential' &&
-    (statusId === 'EI' || statusId === 'MICRO' || statusId === 'SNC' || statusId === 'SCI')) {
-
+    (statusId === 'EI' || statusId === 'MICRO')) {
+  explanations.push({
+    title: "Protection partielle (EI/Micro)",
+    explanation: "Séparation pro/perso automatique depuis 2022, mais avec exceptions (fraude, dettes fiscales/sociales, renonciation, caution). Pour une exigence « Essentielle », préférez SASU, EURL ou SARL."
+  });
+  if (answers.high_professional_risk === 'yes') {
     explanations.push({
-        title: "Attention : responsabilité illimitée",
-        explanation: "Vous souhaitez une protection « Essentielle », mais ce statut n’isole pas votre patrimoine personnel. Envisagez plutôt une SASU, EURL ou SARL."
+      title: "Vigilance accrue en activité à risque",
+      explanation: "Au vu de votre niveau de risque, une structure à responsabilité limitée est recommandée."
     });
+  }
+}
+
+if (answers.patrimony_protection === 'essential' && statusId === 'SCA') {
+  explanations.push({
+    title: "Protection partielle (SCA)",
+    explanation: "Hybride : commanditaires protégés (limités aux apports), commandités responsables indéfiniment. Pour une exigence « Essentielle », privilégiez SAS/SARL."
+  });
+  if (answers.high_professional_risk === 'yes') {
+    explanations.push({
+      title: "Risque dirigeant (commandités)",
+      explanation: "Avec un risque élevé, la commandite n’offre pas un blindage suffisant pour les dirigeants."
+    });
+  }
+}
+
+if (answers.patrimony_protection === 'essential' &&
+    (statusId === 'SNC' || statusId === 'SCI')) {
+  explanations.push({
+    title: "Inadéquation : responsabilité illimitée",
+    explanation: "Ce statut n’isole pas votre patrimoine (SNC : solidaire ; SCI : indéfinie & proportionnelle). Orientez-vous vers SASU, EURL ou SARL."
+  });
+  if (answers.high_professional_risk === 'yes') {
+    explanations.push({
+      title: "Risque juridique majeur",
+      explanation: "Avec une activité à risque, la responsabilité illimitée est fortement déconseillée."
+    });
+  }
 }
 
 /* ------------------------------------------------------------------
  * PRIORITÉ : IMPORTANT
  * -----------------------------------------------------------------*/
 if (answers.patrimony_protection === 'important' &&
-    (statusId === 'SASU' || statusId === 'SAS'  || statusId === 'SARL' || statusId === 'EURL' ||
-     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS' || statusId === 'SCA')) {
-
-    explanations.push({
-        title: "Responsabilité limitée conforme à vos attentes",
-        explanation: "Vos biens personnels sont séparés du risque professionnel ; prudence néanmoins avec les cautions bancaires éventuelles."
-    });
+    (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SARL' || statusId === 'EURL' ||
+     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS')) {
+  explanations.push({
+    title: "Responsabilité limitée conforme à vos attentes",
+    explanation: "Vos biens personnels sont séparés du risque pro ; restez vigilant sur les cautions personnelles et la gestion."
+  });
 }
 
 if (answers.patrimony_protection === 'important' &&
-    (statusId === 'EI' || statusId === 'MICRO' || statusId === 'SNC' || statusId === 'SCI')) {
-
+    (statusId === 'EI' || statusId === 'MICRO')) {
+  explanations.push({
+    title: "Protection partielle acceptable si risque maîtrisé",
+    explanation: "La séparation pro/perso (réforme 2022) connaît des exceptions. Assurez une RC Pro solide et limitez les cautions. Si le risque augmente, passez en responsabilité limitée."
+  });
+  if (answers.high_professional_risk === 'yes') {
     explanations.push({
-        title: "Responsabilité potentiellement illimitée",
-        explanation: "Le statut choisi n’offre pas la protection souhaitée (« Importante »). Sécurisez-vous via assurances RC Pro ou envisagez une forme sociétaire à responsabilité limitée."
+      title: "Alerte risque",
+      explanation: "Compte tenu d’un risque élevé, EI/Micro peuvent être insuffisants : privilégiez une société à responsabilité limitée."
     });
+  }
+}
+
+if (answers.patrimony_protection === 'important' && statusId === 'SCA') {
+  explanations.push({
+    title: "Protection partielle (SCA)",
+    explanation: "Commanditaires protégés mais commandités exposés. Si la protection est « Importante », envisagez SAS/SARL."
+  });
+  if (answers.high_professional_risk === 'yes') {
+    explanations.push({
+      title: "Alerte pour les commandités",
+      explanation: "Le risque élevé rend l’exposition des commandités peu acceptable."
+    });
+  }
+}
+
+if (answers.patrimony_protection === 'important' &&
+    (statusId === 'SNC' || statusId === 'SCI')) {
+  explanations.push({
+    title: "Protection insuffisante",
+    explanation: "Responsabilité illimitée (SNC/SCI) : privilégiez une SASU/EURL/SARL pour mieux isoler votre patrimoine."
+  });
 }
 
 /* ------------------------------------------------------------------
  * PRIORITÉ : SECONDAIRE
  * -----------------------------------------------------------------*/
 if (answers.patrimony_protection === 'secondary' &&
-    (statusId === 'SASU' || statusId === 'SAS'  || statusId === 'SARL' || statusId === 'EURL' ||
-     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS' || statusId === 'SCA')) {
-
-    explanations.push({
-        title: "Protection automatique (bonus)",
-        explanation: "Même si la protection n’est pas votre priorité, la responsabilité est déjà limitée avec ce statut."
-    });
+    (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SARL' || statusId === 'EURL' ||
+     statusId === 'SA'   || statusId === 'SELARL' || statusId === 'SELAS')) {
+  explanations.push({
+    title: "Protection automatique (bonus)",
+    explanation: "Même si ce n’est pas votre priorité, la responsabilité limitée est un atout par défaut."
+  });
 }
 
 if (answers.patrimony_protection === 'secondary' &&
-    (statusId === 'EI' || statusId === 'MICRO' || statusId === 'SNC' || statusId === 'SCI')) {
-
-    explanations.push({
-        title: "Responsabilité illimitée assumée",
-        explanation: "Votre priorité de protection est faible ; le choix d’un statut à responsabilité illimitée reste cohérent si vous acceptez le risque."
-    });
+    (statusId === 'EI' || statusId === 'MICRO')) {
+  explanations.push({
+    title: "Protection jugée suffisante si activité peu risquée",
+    explanation: "La séparation pro/perso (2022) avec exceptions peut convenir si vous acceptez ce risque résiduel."
+  });
 }
 
-/* ----------------------------------------------------------------
- * 3-A. Vous avez choisi le régime « Assimilé salarié »
- * ----------------------------------------------------------------*/
-if (answers.social_regime === 'assimilated_employee' &&
-    (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SA' || statusId === 'SELAS')) {
-
-    explanations.push({
-        title: "Régime social d'assimilé salarié correspondant à vos préférences",
-        explanation: "Ce statut vous rattache au régime général de la Sécurité sociale ; vous bénéficiez d’une protection complète (maladie, retraite, prévoyance) comme souhaité."
-    });
+if (answers.patrimony_protection === 'secondary' && statusId === 'SCA')) {
+  explanations.push({
+    title: "Compromis acceptable (SCA)",
+    explanation: "Commanditaires protégés, commandités exposés : cohérent si vous acceptez ce compromis."
+  });
 }
 
-/* ----------------------------------------------------------------
- * 3-B. Vous avez choisi le régime « Travailleur non salarié » (TNS)
- * ----------------------------------------------------------------*/
-if (answers.social_regime === 'tns' &&
-    (statusId === 'MICRO' || statusId === 'EI'  || statusId === 'EURL' || statusId === 'SARL' ||
-     statusId === 'SELARL' || statusId === 'SNC' || statusId === 'SCI' || statusId === 'SCA')) {
-
-    explanations.push({
-        title: "Régime TNS correspondant à vos préférences",
-        explanation: "Le statut sélectionné relève du régime social des indépendants (TNS) ; vous profitez de cotisations plus faibles, avec une protection sociale adaptée à votre activité."
-    });
+if (answers.patrimony_protection === 'secondary' &&
+    (statusId === 'SNC' || statusId === 'SCI')) {
+  explanations.push({
+    title: "Responsabilité illimitée assumée",
+    explanation: "Choix cohérent uniquement si votre risque opérationnel est très limité."
+  });
 }
 
-/* ----------------------------------------------------------------
- * 3-C. Vous avez choisi l’option « Mixte / Flexible »
- *      (combiner TNS et assimilé salarié au fil du temps)
- * ----------------------------------------------------------------*/
-if (answers.social_regime === 'mixed' &&
-    (statusId === 'SASU' || statusId === 'SAS' || statusId === 'EURL' || statusId === 'SARL' ||
-     statusId === 'SELAS' || statusId === 'SELARL')) {
+// 3) RÉGIME SOCIAL — MAJ 30/09/2025
+// Rappels rapides :
+// - Assimilé salarié (régime général, hors assurance chômage de plein droit) : SASU, SAS, SA, SELAS (dirigeants statutaires).
+// - TNS (Sécurité sociale des indépendants) : EI, MICRO ; EURL (gérant associé unique) ; SARL/SELARL (gérant associé majoritaire) ; SNC (associés gérants) ; SCI (gérant associé exerçant une activité pro).
+// - Cas particuliers :
+//   • EURL (gérant non associé) = assimilé salarié.
+//   • SARL/SELARL (gérant minoritaire/égalitaire ou tiers) = assimilé salarié.
+//   • SNC (gérant non associé) = assimilé salarié.
+//   • SCI : pas de régime si gérance non rémunérée ; si rémunérée → gérant non associé = assimilé / gérant associé exerçant = TNS.
+//   • SCA : gérant rémunéré = assimilé salarié ; pas de TNS pour les commandités/commanditaires du seul fait de la SCA.
 
+// ----------------------------------------------------------------
+// 3-A. Préférence « Assimilé salarié »
+// ----------------------------------------------------------------
+if (answers.social_regime === 'assimilated_employee') {
+  if (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SA' || statusId === 'SELAS') {
     explanations.push({
-        title: "Régime social flexible compatible avec votre choix",
-        explanation: "Ces formes juridiques permettent de passer de TNS à assimilé salarié (ou inversement) en fonction de la gouvernance ou du niveau de participation, offrant la souplesse recherchée."
+      title: "Régime d'assimilé salarié aligné avec votre préférence",
+      explanation: "Dirigeant rattaché au régime général (maladie, retraite, prévoyance). Pas d’assurance chômage automatique."
     });
+  }
+
+  if (statusId === 'SARL' || statusId === 'SELARL') {
+    explanations.push({
+      title: "Assimilé salarié possible sous condition de gouvernance",
+      explanation: "En SARL/SELARL, le gérant est assimilé salarié s’il est minoritaire/égalitaire ou tiers. S’il est majoritaire, il relève du régime TNS."
+    });
+  }
+
+  if (statusId === 'EURL') {
+    explanations.push({
+      title: "Assimilé salarié possible en EURL (gérant non associé)",
+      explanation: "En EURL, le gérant non associé est assimilé salarié ; le gérant associé unique est TNS."
+    });
+  }
+
+  if (statusId === 'SNC') {
+    explanations.push({
+      title: "Assimilé salarié uniquement si gérant non associé",
+      explanation: "En SNC, les associés gérants sont TNS. L’assimilé salarié ne concerne qu’un gérant non associé."
+    });
+  }
+
+  if (statusId === 'SCI') {
+    explanations.push({
+      title: "Assimilé salarié possible si gérance non associée et rémunérée",
+      explanation: "SCI : pas de régime si gérance non rémunérée. Si rémunération : gérant non associé = assimilé ; gérant associé exerçant = TNS."
+    });
+  }
+
+  if (statusId === 'SCA') {
+    explanations.push({
+      title: "Assimilé salarié pour le(s) gérant(s) de SCA",
+      explanation: "En SCA, le gérant rémunéré relève du régime général ; les commanditaires sans mandat sont hors régime social."
+    });
+  }
+
+  if (statusId === 'MICRO' || statusId === 'EI') {
+    explanations.push({
+      title: "Inadéquation avec votre préférence",
+      explanation: "EI/Micro relèvent du régime TNS. Pour un régime assimilé salarié, orientez-vous vers SASU/SAS/SA/SELAS (ou aménagements de gouvernance en SARL/SELARL/EURL)."
+    });
+  }
 }
+
+// ----------------------------------------------------------------
+// 3-B. Préférence « Travailleur non salarié » (TNS)
+// ----------------------------------------------------------------
+if (answers.social_regime === 'tns') {
+  if (statusId === 'MICRO' || statusId === 'EI') {
+    explanations.push({
+      title: "Régime TNS parfaitement aligné",
+      explanation: "Vous relevez de la Sécurité sociale des indépendants avec des cotisations généralement plus faibles (couverture à compléter si besoin)."
+    });
+  }
+
+  if (statusId === 'EURL') {
+    explanations.push({
+      title: "TNS si gérant associé unique",
+      explanation: "En EURL, le gérant associé unique est TNS ; si le gérant est non associé, il devient assimilé salarié."
+    });
+  }
+
+  if (statusId === 'SARL' || statusId === 'SELARL') {
+    explanations.push({
+      title: "TNS sous condition de majorité",
+      explanation: "Gérant associé majoritaire = TNS. Gérant minoritaire/égalitaire ou tiers = assimilé salarié."
+    });
+  }
+
+  if (statusId === 'SNC') {
+    explanations.push({
+      title: "TNS pour les associés gérants",
+      explanation: "Les associés gérants sont TNS (cotisations même sur bénéfices non distribués). Un gérant non associé serait, lui, assimilé salarié."
+    });
+  }
+
+  if (statusId === 'SCI') {
+    explanations.push({
+      title: "TNS possible selon l’activité du gérant associé",
+      explanation: "SCI : pas de régime si gérance non rémunérée. Si activité pro exercée par un gérant associé, TNS ; gérant non associé rémunéré = assimilé."
+    });
+  }
+
+  if (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SA' || statusId === 'SELAS') {
+    explanations.push({
+      title: "Incompatibilité avec TNS",
+      explanation: "SASU/SAS/SA/SELAS placent le dirigeant au régime général (assimilé). Pour du TNS, privilégiez EURL/SARL (gérance majoritaire) ou EI/Micro."
+    });
+  }
+
+  if (statusId === 'SCA') {
+    explanations.push({
+      title: "SCA : pas de TNS pour la gérance",
+      explanation: "Le(s) gérant(s) de SCA rémunérés sont assimilés salariés. Le régime TNS n’est pas adapté ici."
+    });
+  }
+}
+
+// ----------------------------------------------------------------
+// 3-C. Préférence « Mixte / Flexible » (pouvoir basculer TNS ↔ assimilé)
+// ----------------------------------------------------------------
+if (answers.social_regime === 'mixed') {
+  if (statusId === 'SARL' || statusId === 'SELARL') {
+    explanations.push({
+      title: "Flexibilité par la répartition du capital",
+      explanation: "En SARL/SELARL, le régime dépend de la majorité de gérance : majoritaire = TNS, minoritaire/égalitaire/tiers = assimilé. Vous pouvez ajuster au fil du temps."
+    });
+  }
+
+  if (statusId === 'EURL') {
+    explanations.push({
+      title: "Flexibilité via la qualité du gérant",
+      explanation: "EURL : gérant associé unique = TNS ; gérant non associé = assimilé. Un changement de gérant permet de basculer."
+    });
+  }
+
+  if (statusId === 'SNC') {
+    explanations.push({
+      title: "Flexibilité par la qualité du gérant",
+      explanation: "SNC : associés gérants = TNS ; gérant non associé = assimilé. Une modification de gouvernance permet de changer de régime."
+    });
+  }
+
+  if (statusId === 'SCI') {
+    explanations.push({
+      title: "Flexibilité limitée et dépendante de la rémunération",
+      explanation: "SCI : sans rémunération, pas de régime. Si rémunération : gérant non associé = assimilé ; gérant associé exerçant = TNS. La bascule dépend de la configuration."
+    });
+  }
+
+  if (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SA' || statusId === 'SELAS') {
+    explanations.push({
+      title: "Bascule non possible dans la même forme",
+      explanation: "Ces formes placent les dirigeants en assimilé salarié. Pour passer en TNS, il faut changer de forme (ex. SASU → EURL/EI) ou réorganiser via une autre entité."
+    });
+  }
+
+  if (statusId === 'SCA') {
+    explanations.push({
+      title: "Souplesse limitée en SCA",
+      explanation: "La gérance rémunérée reste assimilée salariée. Le ‘mixte’ n’est pas réalisable sans refonte de la structure."
+    });
+  }
+
+  if (statusId === 'MICRO' || statusId === 'EI') {
+    explanations.push({
+      title: "Bascule possible en changeant de forme",
+      explanation: "EI/Micro sont TNS. Pour de l’assimilé salarié, une transformation vers SASU/SAS/SA/SELAS (ou un schéma sociétaire adapté) est nécessaire."
+    });
+  }
+
         
-        // 4. VOLUME D'ACTIVITÉ
-if (answers.projected_revenue) {
-    const revenue = parseFloat(answers.projected_revenue);   // valeur réutilisée partout
+// 4) VOLUME D’ACTIVITÉ — MAJ 30/09/2025
+if (answers.projected_revenue != null) {
+  const revenue = Number(answers.projected_revenue);
+  if (!Number.isFinite(revenue) || revenue < 0) {
+    // Rien à expliquer si la valeur n'est pas exploitable
+  } else {
+    // Seuils 2025 (micro & TVA)
+    const MICRO_SERVICES = 77_700;
+    const MICRO_VENTES   = 188_700;
+    const TVA_SERVICES   = 37_500;
+    const TVA_VENTES     = 85_000;
+    const TVA_SERVICES_TOL = 41_250; // tolérance
+    const TVA_VENTES_TOL   = 93_500; // tolérance
 
     /* ---------- MICRO-ENTREPRISE --------------------------------- */
-    if (statusId === 'MICRO' && revenue <= 77_700) {
+    if (statusId === 'MICRO' && revenue <= MICRO_SERVICES) {
+      explanations.push({
+        title: "Compatible avec votre volume d'activité",
+        explanation: `Avec un CA prévisionnel de ${revenue.toLocaleString()} €, vous restez sous le plafond de 77 700 € (services/BNC) et profitez de la simplicité du régime micro.`
+      });
+
+      // Note TVA (utile même si plafond micro OK)
+      if (revenue > TVA_SERVICES) {
         explanations.push({
-            title: "Compatible avec votre volume d'activité prévisionnel",
-            explanation: `Avec un CA prévisionnel de ${revenue.toLocaleString()} €, vous restez sous le seuil de 77 700 € (services/BNC) et profitez de la simplicité micro.`
+          title: "Vigilance TVA (franchise en base)",
+          explanation: `Franchise en base : 85 000 € (ventes) / 37 500 € (services) — tolérance 93 500 € / 41 250 €. Selon votre activité, vous pourriez devenir assujetti à la TVA avant d’atteindre le plafond micro.`
         });
-    } else if (statusId === 'MICRO' && revenue <= 188_700) {
+      }
+    } else if (statusId === 'MICRO' && revenue <= MICRO_VENTES) {
+      explanations.push({
+        title: "Sous le plafond micro-BIC (ventes)",
+        explanation: `Votre CA prévu (${revenue.toLocaleString()} €) est inférieur à 188 700 € (ventes/hébergement). Le régime micro reste possible ; surveillez toutefois vos marges et la TVA.`
+      });
+
+      if (revenue > TVA_VENTES) {
         explanations.push({
-            title: "Seuil micro-BIC vente non dépassé",
-            explanation: `Votre CA prévu (${revenue.toLocaleString()} €) reste inférieur au plafond de 188 700 € (ventes). Le régime micro reste possible, mais surveillez la marge pour éviter la sortie forcée.`
+          title: "TVA probable malgré le maintien au micro",
+          explanation: `Au-delà de 85 000 € (ventes) — tolérance 93 500 € — la franchise en base cesse : vous devrez facturer et déclarer la TVA.`
         });
+      }
     } else if (statusId === 'MICRO') {
-        explanations.push({
-            title: "Dépassement des seuils micro-entreprise",
-            explanation: `Avec ${revenue.toLocaleString()} € de CA prévu, vous dépassez les plafonds micro. Une forme sociétaire (EURL, SASU…) sera plus adaptée.`
-        });
+      explanations.push({
+        title: "Dépassement des plafonds du régime micro",
+        explanation: `Avec ${revenue.toLocaleString()} € de CA prévu, vous excédez 77 700 € (services/BNC) et 188 700 € (ventes). Une forme sociétaire (EURL, SASU…) sera plus adaptée.`
+      });
     }
 
-    /* ---------- EI ---------------------------------------------- */
+    /* ---------- EI ------------------------------------------------ */
     else if (statusId === 'EI' && revenue < 100_000) {
-        explanations.push({
-            title: "EI adaptée à un CA modéré",
-            explanation: `Un CA de ${revenue.toLocaleString()} € reste gérable en Entreprise Individuelle ; pensez au réel simplifié pour récupérer la TVA et déduire vos charges.`
-        });
+      explanations.push({
+        title: "EI adaptée à un CA modéré",
+        explanation: `Un CA de ${revenue.toLocaleString()} € reste confortable en EI. En régime réel, vous pourrez déduire vos charges et, si besoin, récupérer la TVA.`
+      });
     } else if (statusId === 'EI') {
-        explanations.push({
-            title: "Envisagez une forme sociétaire pour ce niveau de CA",
-            explanation: `Avec ${revenue.toLocaleString()} € prévus, passer en société (EURL, SASU…) facilitera la séparation patrimoine pro/perso et l’optimisation fiscale.`
-        });
+      explanations.push({
+        title: "Au-delà, pensez société",
+        explanation: `Avec ${revenue.toLocaleString()} € prévus, passer en société (EURL, SASU…) facilite la séparation pro/perso et l’optimisation fiscale/sociale.`
+      });
     }
 
-    /* ---------- EURL / SARL ------------------------------------- */
+    /* ---------- EURL / SARL -------------------------------------- */
     else if (statusId === 'EURL' || statusId === 'SARL') {
-        explanations.push({
-            title: "Structure robuste pour votre volume d'activité",
-            explanation: `La (E)SARL gère sans contrainte particulière un CA de ${revenue.toLocaleString()} € et vous permet d'ajuster salaire et dividendes au fil de la croissance.`
-        });
+      explanations.push({
+        title: "Structure robuste pour votre niveau d’activité",
+        explanation: `La (E)SARL absorbe sans difficulté un CA de ${revenue.toLocaleString()} € et permet d’arbitrer rémunération/dividendes selon la rentabilité.`
+      });
     }
 
-    /* ---------- SASU / SAS -------------------------------------- */
-    else if ((statusId === 'SASU' || statusId === 'SAS') && revenue > 80_000) {
-        explanations.push({
-            title: "Structure adaptée à un CA élevé",
-            explanation: `Avec un CA prévisionnel de ${revenue.toLocaleString()} €, la souplesse capitalistique de la SAS(U) facilite votre développement et d'éventuelles levées de fonds.`
-        });
+    /* ---------- SASU / SAS --------------------------------------- */
+    else if ((statusId === 'SASU' || statusId === 'SAS') && revenue <= 30_000) {
+      explanations.push({
+        title: "Frais fixes à surveiller",
+        explanation: `Pour ${revenue.toLocaleString()} € de CA, les coûts (compta, charges sociales du président) peuvent peser. Assurez la marge ou envisagez une option alternative.`
+      });
+    } else if ((statusId === 'SASU' || statusId === 'SAS') && revenue > 80_000) {
+      explanations.push({
+        title: "Adaptée à un CA élevé et évolutif",
+        explanation: `Avec ${revenue.toLocaleString()} € de CA, la souplesse capitalistique de la SAS(U) facilite la croissance et d’éventuelles levées de fonds.`
+      });
     } else if (statusId === 'SASU' || statusId === 'SAS') {
-        explanations.push({
-            title: "Cadre évolutif pour un CA intermédiaire",
-            explanation: `La SAS(U) demeure pertinente pour ${revenue.toLocaleString()} € de CA, tout en prévoyant déjà la montée en puissance (investisseurs, BSPCE…).`
-        });
+      explanations.push({
+        title: "Cadre évolutif pour un CA intermédiaire",
+        explanation: `La SAS(U) reste pertinente pour ${revenue.toLocaleString()} € de CA, tout en préparant la montée en puissance (investisseurs, BSPCE, actions de préférence).`
+      });
     }
 
-    /* ---------- SA ---------------------------------------------- */
-    else if (statusId === 'SA') {
-        explanations.push({
-            title: "SA : dimension « grande entreprise »",
-            explanation: `Un CA prévisionnel de ${revenue.toLocaleString()} € justifie la lourdeur administrative de la SA et ouvre l'accès aux marchés de capitaux.`
-        });
+    /* ---------- SA ------------------------------------------------ */
+    else if (statusId === 'SA' && revenue < 500_000) {
+      explanations.push({
+        title: "Lourdeur possiblement disproportionnée",
+        explanation: `Pour ${revenue.toLocaleString()} € de CA, les exigences de la SA (gouvernance, CAC…) peuvent être lourdes. À réserver aux projets d’envergure.`
+      });
+    } else if (statusId === 'SA') {
+      explanations.push({
+        title: "SA : dimension grande entreprise",
+        explanation: `Un CA de ${revenue.toLocaleString()} € justifie la gouvernance de la SA et ouvre l’accès aux marchés de capitaux.`
+      });
     }
 
-    /* ---------- SNC --------------------------------------------- */
+    /* ---------- SNC ---------------------------------------------- */
     else if (statusId === 'SNC') {
-        explanations.push({
-            title: "SNC et volume d'affaires",
-            explanation: `Avec ${revenue.toLocaleString()} € prévus, la SNC supporte techniquement ce chiffre mais expose chaque associé à une responsabilité illimitée.`
-        });
+      explanations.push({
+        title: "Volume d’affaires et responsabilité",
+        explanation: `Avec ${revenue.toLocaleString()} € prévus, la SNC tient la charge mais chaque associé reste responsable indéfiniment et solidairement des dettes.`
+      });
     }
 
-    /* ---------- SCI --------------------------------------------- */
+    /* ---------- SCI ---------------------------------------------- */
     else if (statusId === 'SCI') {
-        explanations.push({
-            title: "SCI : chiffre d'affaires immobilier",
-            explanation: `La SCI n’est pas plafonnée en CA, mais assurez-vous que les ${revenue.toLocaleString()} € correspondent bien à des loyers ou cessions immobilières.`
-        });
+      explanations.push({
+        title: "SCI : CA lié à l’immobilier",
+        explanation: `Pas de plafond en soi, mais vérifiez que les ${revenue.toLocaleString()} € correspondent bien à des loyers/cessions compatibles avec l’objet civil (sinon risque de requalification).`
+      });
     }
 
-    /* ---------- SELARL / SELAS ---------------------------------- */
-    else if (statusId === 'SELARL' || statusId === 'SELAS') {
-        explanations.push({
-            title: "Volume d'activité compatible avec votre SEL",
-            explanation: `Un CA de ${revenue.toLocaleString()} € est courant pour une société d'exercice libéral ; anticipez néanmoins le plafonnement retraite/prévoyance de votre profession.`
-        });
+    /* ---------- SELARL / SELAS ----------------------------------- */
+    else if ((statusId === 'SELARL' || statusId === 'SELAS') && revenue < 80_000) {
+      explanations.push({
+        title: "CA modeste : charges à suivre",
+        explanation: `Pour ${revenue.toLocaleString()} € de CA, suivez vos honoraires, charges et cotisations (plafonds retraite/prévoyance de la profession).`
+      });
+    } else if (statusId === 'SELARL' || statusId === 'SELAS') {
+      explanations.push({
+        title: "Volume d’activité courant pour une SEL",
+        explanation: `Un CA de ${revenue.toLocaleString()} € est classique pour une SEL ; anticipez l’impact des plafonds sociaux et des éventuels seuils de CAC.`
+      });
     }
 
-    /* ---------- SCA --------------------------------------------- */
+    /* ---------- SCA ---------------------------------------------- */
     else if (statusId === 'SCA') {
-        explanations.push({
-            title: "SCA : structure taillée pour un CA conséquent",
-            explanation: `Avec ${revenue.toLocaleString()} €, la Commandite par Actions facilite les montages financiers (LBO) et l'entrée d'investisseurs commanditaires.`
-        });
+      explanations.push({
+        title: "SCA adaptée aux CA conséquents",
+        explanation: `Avec ${revenue.toLocaleString()} € de CA, la commandite par actions facilite les montages financiers (ex. LBO) et l’arrivée d’investisseurs commanditaires.`
+      });
     }
+  }
 }
+
         
-        // 5. LEVÉE DE FONDS
+// 5) LEVÉE DE FONDS — MAJ 30/09/2025
 if (answers.fundraising === 'yes') {
 
-    // SASU ----------------------------------------------------------
-    if (statusId === 'SASU') {
-        explanations.push({
-            title: "Structure optimale pour vos besoins de financement",
-            explanation: "La SASU peut rapidement s’ouvrir à d’autres actionnaires ; sa souplesse statutaire et le capital variable facilitent les levées de fonds."
-        });
-    }
+  // SAS : la référence pour investisseurs (VC/BA)
+  if (statusId === 'SAS') {
+    explanations.push({
+      title: "Cadre idéal pour accueillir des investisseurs",
+      explanation: "Émissions d’actions/obligations, actions de préférence, BSA/OC, BSPCE, pacte d’actionnaires : la SAS est le format préféré des fonds et business angels."
+    });
+  }
 
-    // SAS -----------------------------------------------------------
-    if (statusId === 'SAS') {
-        explanations.push({
-            title: "Cadre idéal pour accueillir des investisseurs",
-            explanation: "La SAS émet facilement de nouvelles actions, BSPCE ou obligations convertibles : c’est la forme de société la plus prisée par les fonds et business angels."
-        });
-    }
+  // SASU : ouverture rapide du capital
+  if (statusId === 'SASU') {
+    explanations.push({
+      title: "Structure optimale pour démarrer puis ouvrir le capital",
+      explanation: "Passage fluide vers une SAS multi-actionnaires, capital variable possible et instruments (BSPCE/BSA/OC) facilitant une levée dès l’amorçage."
+    });
+  }
 
-    // SA ------------------------------------------------------------
-    if (statusId === 'SA') {
-        explanations.push({
-            title: "SA : accès élargi aux capitaux",
-            explanation: "Avec son directoire ou conseil d’administration, la SA peut lever des montants importants, voire s’introduire en bourse. Parfait pour un financement externe ambitieux."
-        });
-    }
+  // SA : grosses levées / IPO
+  if (statusId === 'SA') {
+    explanations.push({
+      title: "Accès élargi aux capitaux (voire bourse)",
+      explanation: "Gouvernance structurée (CA/directoire) et cadre adapté aux montants importants et à une éventuelle introduction en bourse."
+    });
+  }
 
-    // SCA -----------------------------------------------------------
-    if (statusId === 'SCA') {
-        explanations.push({
-            title: "SCA : structure dédiée aux investisseurs commanditaires",
-            explanation: "Les commanditaires participent au capital sans être impliqués dans la gestion, ce qui attire les fonds pour des opérations type LBO."
-        });
-    }
+  // SCA : garder la main tout en levant
+  if (statusId === 'SCA') {
+    explanations.push({
+      title: "Levier capitalistique en préservant le contrôle",
+      explanation: "Commanditaires apportent des fonds sans gérer ; utile pour opérations type contrôle familial/LBO, mais forme complexe et rare."
+    });
+  }
 
-    // SARL / EURL ---------------------------------------------------
-    if (statusId === 'SARL' || statusId === 'EURL') {
-        explanations.push({
-            title: "Levées de fonds possibles mais plus encadrées",
-            explanation: "La cession ou création de parts sociales est plus rigide qu’en SAS ; envisagez de transformer en SAS pour faciliter l’entrée de nouveaux investisseurs."
-        });
-    }
+  // SELAS / SELARL : contraintes ordinales
+  if (statusId === 'SELAS' || statusId === 'SELARL') {
+    explanations.push({
+      title: "Levées possibles mais encadrées par la profession",
+      explanation: "Entrée d’investisseurs soumise aux règles ordinales et à la détention majoritaire par des professionnels : périmètre d’investisseurs restreint."
+    });
+  }
 
-    // SELARL / SELAS -----------------------------------------------
-    if (statusId === 'SELARL' || statusId === 'SELAS') {
-        explanations.push({
-            title: "Financement limité au cercle de professionnels",
-            explanation: "Les investisseurs doivent appartenir à la même profession réglementée ; lever des fonds reste possible, mais le périmètre est restreint."
-        });
-    }
+  // SARL / EURL : faisable mais moins fluide
+  if (statusId === 'SARL' || statusId === 'EURL') {
+    explanations.push({
+      title: "Ouverture du capital plus rigide",
+      explanation: "Agrément des cessions et parts sociales moins attractives que des actions. Transformer en SAS facilite l’entrée de nouveaux investisseurs."
+    });
+  }
 
-    // SCI -----------------------------------------------------------
-    if (statusId === 'SCI') {
-        explanations.push({
-            title: "Ouverture de capital immobilière maîtrisée",
-            explanation: "La SCI peut accueillir de nouveaux associés, mais les investisseurs recherchent souvent la liquidité d’une SAS immobilière."
-        });
-    }
+  // SCI : immobilier patrimonial (peu liquide)
+  if (statusId === 'SCI') {
+    explanations.push({
+      title: "Ouverture de capital limitée et peu liquide",
+      explanation: "Possible d’accueillir des associés, mais les investisseurs préfèrent souvent une SAS immobilière pour la liquidité et les tours de table."
+    });
+  }
 
-    // EI / MICRO ----------------------------------------------------
-    if (statusId === 'EI' || statusId === 'MICRO') {
-        explanations.push({
-            title: "Structure peu adaptée à une levée de fonds",
-            explanation: "En entreprise individuelle (micro comprise), il n’y a pas de capital social ni d’actions ; les investisseurs préfèrent entrer au capital d’une société (SASU, SAS…)."
-        });
-    }
+  // SNC : responsabilité illimitée = frein
+  if (statusId === 'SNC') {
+    explanations.push({
+      title: "Peu adaptée aux investisseurs externes",
+      explanation: "Responsabilité illimitée et solidaire : structure généralement dissuasive pour lever des fonds. Une SAS sera plus adaptée."
+    });
+  }
 
-    // SNC -----------------------------------------------------------
-    if (statusId === 'SNC') {
-        explanations.push({
-            title: "Levée de fonds difficile en SNC",
-            explanation: "La responsabilité illimitée et solidaire décourage la plupart des investisseurs externes. Préférez une SAS pour faciliter l’entrée de capitaux."
-        });
-    }
-        }
-        // 6. GOUVERNANCE
+  // EI / MICRO : pas de capital social
+  if (statusId === 'EI' || statusId === 'MICRO') {
+    explanations.push({
+      title: "Inadapté aux levées de fonds",
+      explanation: "Pas d’actions ni de capital social : les investisseurs n’entrent pas au capital. Envisagez SASU/SAS pour structurer une levée."
+    });
+  }
+}
+       // 6) GOUVERNANCE — MAJ 30/09/2025
+
 /* ----------------------------------------------------------------
- * TEAM STRUCTURE : SOLO  (entrepreneur individuel)
+ * TEAM STRUCTURE : SOLO (entrepreneur individuel / associé unique)
  * ----------------------------------------------------------------*/
 if (answers.team_structure === 'solo' &&
-    (statusId === 'EI'   || statusId === 'MICRO' || statusId === 'EURL' || statusId === 'SASU')) {
+    (statusId === 'EI' || statusId === 'MICRO' || statusId === 'EURL' || statusId === 'SASU')) {
+  explanations.push({
+    title: "Gouvernance optimisée pour travailler seul",
+    explanation: "Décisions rapides et formalisme réduit : EI/Micro sans AG ; EURL/SASU avec décisions de l’associé unique consignées (procès-verbaux), obligations plus légères qu’en société à plusieurs."
+  });
+}
 
-    explanations.push({
-        title: "Gouvernance simplifiée pour entrepreneur solo",
-        explanation: "Ce statut est parfaitement adapté à une gestion unipersonnelle : formalités légères, prise de décision rapide et aucun formalisme d’assemblée générale."
-    });
+// Option solo pour professions libérales en SELASU (forme unipersonnelle)
+if (answers.team_structure === 'solo' && statusId === 'SELAS') {
+  explanations.push({
+    title: "Mode solo possible en SELAS (SELASU)",
+    explanation: "Pour une profession libérale réglementée, la SELAS peut être unipersonnelle (SELASU) : gouvernance simple du président, tout en conservant la crédibilité d’une société par actions."
+  });
+}
+
+// Mises en garde si SOLO mais forme plutôt “multi”
+if (answers.team_structure === 'solo' &&
+    (statusId === 'SARL' || statusId === 'SAS' || statusId === 'SA' || statusId === 'SNC' ||
+     statusId === 'SCI'  || statusId === 'SELARL' || statusId === 'SCA')) {
+  explanations.push({
+    title: "Forme moins adaptée au mode solo",
+    explanation: "Ces structures sont pensées pour plusieurs associés (ou exigent un formalisme plus lourd). Privilégiez EI/Micro ou une forme unipersonnelle (EURL, SASU, éventuellement SELASU)."
+  });
 }
 
 /* ----------------------------------------------------------------
  * TEAM STRUCTURE : FAMILLE
  * ----------------------------------------------------------------*/
 if (answers.team_structure === 'family' &&
-    (statusId === 'SARL' || statusId === 'SCI'   || statusId === 'SNC'  || statusId === 'SELARL')) {
+    (statusId === 'SARL' || statusId === 'SCI' || statusId === 'SNC' || statusId === 'SELARL')) {
+  explanations.push({
+    title: "Cadre propice aux projets familiaux",
+    explanation: "SARL (dont SARL de famille à l’IR), SCI (agrément/clauses d’organisation patrimoniale), SNC (forte solidarité mais grande cohésion) et SELARL (pour libéraux) offrent des règles claires de transmission et d’agrément."
+  });
+}
 
-    explanations.push({
-        title: "Cadre juridique propice à un projet familial",
-        explanation: "Ce statut permet de répartir les parts entre membres de la famille tout en préservant un mode de gouvernance simple et des règles de transmission adaptées."
-    });
+// Mises en garde famille (formes moins “patrimoniales” par défaut)
+if (answers.team_structure === 'family' &&
+    (statusId === 'SAS' || statusId === 'SA' || statusId === 'SASU' || statusId === 'EURL' ||
+     statusId === 'EI'  || statusId === 'MICRO' || statusId === 'SELAS' || statusId === 'SCA')) {
+  explanations.push({
+    title: "Peut convenir, mais d’autres formes sont souvent plus naturelles en famille",
+    explanation: "Ces statuts peuvent fonctionner en famille, mais SARL/SCI/SNC/SELARL facilitent en pratique l’agrément, la stabilité et la transmission (donations-partage, démembrement de parts, etc.)."
+  });
 }
 
 /* ----------------------------------------------------------------
- * TEAM STRUCTURE : ASSOCIÉS  (sans investisseurs extérieurs)
+ * TEAM STRUCTURE : ASSOCIÉS (sans investisseurs extérieurs)
  * ----------------------------------------------------------------*/
 if (answers.team_structure === 'associates' &&
-    (statusId === 'SARL' || statusId === 'SAS'  || statusId === 'SNC'  || statusId === 'SCI'  ||
+    (statusId === 'SARL' || statusId === 'SAS' || statusId === 'SNC' || statusId === 'SCI' ||
      statusId === 'SELARL' || statusId === 'SELAS' || statusId === 'SCA' || statusId === 'SA')) {
+  explanations.push({
+    title: "Gouvernance adaptée entre associés",
+    explanation: "Règles de décision collective (AG, statuts/pacte, clauses d’agrément) et répartition des pouvoirs selon les parts. Possibilité d’organiser droits de vote, information et sortie."
+  });
+}
 
-    explanations.push({
-        title: "Gouvernance adaptée à un groupe d'associés",
-        explanation: "Cette forme sociétaire prévoit des règles claires de décision collective (AG, pacte, clauses d’agrément) et répartit les pouvoirs selon les parts détenues."
-    });
+// Finesses par forme (associés)
+if (answers.team_structure === 'associates' && statusId === 'SAS') {
+  explanations.push({
+    title: "Souplesse statutaire maximale (SAS)",
+    explanation: "Organes et quorum librement définis, actions de préférence, clauses sur-mesure (veto, inaliénabilité, préemption). Idéal pour régler la vie entre associés."
+  });
+}
+if (answers.team_structure === 'associates' && statusId === 'SARL') {
+  explanations.push({
+    title: "Cadre légal protecteur (SARL)",
+    explanation: "Gérance encadrée, agrément pour cessions à des tiers, majorités légales : solide pour PME/familial, un peu moins flexible que la SAS."
+  });
+}
+if (answers.team_structure === 'associates' && statusId === 'SNC') {
+  explanations.push({
+    title: "Cohésion forte mais risque élevé (SNC)",
+    explanation: "Tous commerçants, responsabilité illimitée et solidaire ; entrées/sorties d’associés souvent à l’unanimité : à réserver aux associés de grande confiance."
+  });
+}
+if (answers.team_structure === 'associates' && statusId === 'SCI') {
+  explanations.push({
+    title: "Outil civil pour l’immobilier (SCI)",
+    explanation: "Objet civil (pas d’activité commerciale habituelle). Agrément/statuts utiles pour l’organisation et la conservation d’un patrimoine commun."
+  });
+}
+if (answers.team_structure === 'associates' && statusId === 'SA') {
+  explanations.push({
+    title: "Gouvernance institutionnelle (SA)",
+    explanation: "CA ou directoire/conseil de surveillance, commissaires aux comptes, formalisme renforcé : crédible pour projets d’envergure."
+  });
+}
+if (answers.team_structure === 'associates' && statusId === 'SELARL') {
+  explanations.push({
+    title: "Libéraux réglementés (SELARL)",
+    explanation: "Règles ordinales + agrément, capital majoritairement professionnel : bon cadre d’exercice commun, levée externe limitée."
+  });
+}
+if (answers.team_structure === 'associates' && statusId === 'SELAS') {
+  explanations.push({
+    title: "Libéraux avec souplesse (SELAS)",
+    explanation: "Souplesse type SAS, mais détention majoritaire par des professionnels et contraintes ordinales à respecter."
+  });
+}
+if (answers.team_structure === 'associates' && statusId === 'SCA') {
+  explanations.push({
+    title: "Séparation gestion/capital (SCA)",
+    explanation: "Commandités dirigent, commanditaires apportent le capital ; contrôle renforcé mais responsabilité illimitée des commandités et formalisme élevé."
+  });
+}
+
+// Avertissement si “associés” mais forme solo
+if (answers.team_structure === 'associates' &&
+    (statusId === 'SASU' || statusId === 'EURL' || statusId === 'EI' || statusId === 'MICRO')) {
+  explanations.push({
+    title: "Forme unipersonnelle ou individuelle",
+    explanation: "Ces statuts sont pensés pour un seul entrepreneur. Pour fonctionner à plusieurs, préférez SAS/SARL/SCI… ou transformez la structure."
+  });
 }
 
 /* ----------------------------------------------------------------
- * TEAM STRUCTURE : AVEC INVESTISSEURS
+ * TEAM STRUCTURE : AVEC INVESTISSEURS (levée de fonds / entrants externes)
  * ----------------------------------------------------------------*/
 if (answers.team_structure === 'investors' &&
-    (statusId === 'SAS'  || statusId === 'SASU' || statusId === 'SA'  || statusId === 'SCA')) {
-
-    explanations.push({
-        title: "Gouvernance idéale pour accueillir des investisseurs",
-        explanation: "Ce statut offre une grande souplesse pour émettre de nouvelles actions, organiser des droits différenciés (BSPCE, actions de préférence) et adapter la gouvernance aux exigences des fonds."
-    });
+    (statusId === 'SAS' || statusId === 'SASU' || statusId === 'SA' || statusId === 'SCA')) {
+  explanations.push({
+    title: "Prête à accueillir des investisseurs",
+    explanation: "Emission d’actions, actions de préférence, BSA/BSPCE (selon éligibilité), pactes et gouvernance adaptables ; crédibilité élevée auprès des fonds."
+  });
 }
+
+// Détails par forme (investisseurs)
+if (answers.team_structure === 'investors' && statusId === 'SAS') {
+  explanations.push({
+    title: "Standard marché pour la levée (SAS)",
+    explanation: "Très utilisée par les investisseurs : clauses sur-mesure, instruments d’incentive (BSPCE), gouvernance flexible."
+  });
+}
+if (answers.team_structure === 'investors' && statusId === 'SASU') {
+  explanations.push({
+    title: "SASU → SAS facilement",
+    explanation: "Démarrer seul puis ouvrir le capital : passage fluide vers une SAS pluripersonnelle pour accueillir des fonds."
+  });
+}
+if (answers.team_structure === 'investors' && statusId === 'SA') {
+  explanations.push({
+    title: "Crédibilité boursière et gouvernance lourde (SA)",
+    explanation: "Structure institutionnelle, CAC obligatoires, possibilité de cotation ; parfaite pour grosses levées, plus coûteuse à gérer."
+  });
+}
+if (answers.team_structure === 'investors' && statusId === 'SCA') {
+  explanations.push({
+    title: "Conserver le contrôle (SCA)",
+    explanation: "Permet d’ouvrir le capital tout en gardant la direction via les commandités ; attention à leur responsabilité illimitée et au formalisme."
+  });
+}
+
+// Mises en garde : formes peu adaptées à l’entrée d’investisseurs
+if (answers.team_structure === 'investors' &&
+    (statusId === 'EI' || statusId === 'MICRO' || statusId === 'EURL' || statusId === 'SARL' ||
+     statusId === 'SNC' || statusId === 'SCI' || statusId === 'SELARL' || statusId === 'SELAS')) {
+  explanations.push({
+    title: "Moins adapté à une levée externe",
+    explanation: "Ces formes sont limitées (agrément strict, objet civil, majorité professionnelle, ou absence d’actions). Pour des investisseurs, privilégiez SAS/SASU, SA ou SCA."
+  });
+}
+
         
-        // Ajouter des explications génériques si nécessaire
-        if (explanations.length < 3) {
-            // Explications génériques basées sur les points forts du statut
-            const genericExplanations = {
-                'SASU': [
-                    {
-                        title: "Structure flexible et évolutive",
-                        explanation: "La SASU offre une grande liberté statutaire et peut évoluer facilement vers une SAS multi-actionnaires si votre projet se développe."
-                    },
-                    {
-                        title: "Image professionnelle renforcée",
-                        explanation: "Ce statut confère une image professionnelle et crédible auprès de vos partenaires et clients potentiels."
-                    }
-                ],
-                'MICRO': [
-                    {
-                        title: "Simplicité administrative maximale",
-                        explanation: "La micro-entreprise vous permet de démarrer rapidement avec un minimum de formalités et une comptabilité ultra-simplifiée."
-                    },
-                    {
-                        title: "Charges calculées uniquement sur le CA réalisé",
-                        explanation: "Vous ne payez des cotisations que sur les revenus effectivement encaissés, idéal pour une activité en démarrage ou à temps partiel."
-                    }
-                ],
-                'EURL': [
-                    {
-                        title: "Équilibre entre simplicité et protection",
-                        explanation: "L'EURL offre un bon compromis entre simplicité administrative et protection du patrimoine personnel."
-                    },
-                    {
-                        title: "Crédibilité commerciale",
-                        explanation: "Ce statut est bien connu et reconnu, ce qui renforce votre crédibilité auprès des partenaires commerciaux et financiers."
-                    }
-                ]
-            };
-            
-            // Ajouter les explications génériques pour ce statut
-            if (genericExplanations[statusId]) {
-                genericExplanations[statusId].forEach(exp => {
-                    if (explanations.length < 3) {
-                        explanations.push(exp);
-                    }
-                });
-            }
-        }
-        
-        // Si toujours pas assez d'explications, ajouter une générique basée sur le score
-        if (explanations.length < 3) {
-            explanations.push({
-                title: "Structure globalement adaptée à votre profil",
-                explanation: "Après analyse complète de vos réponses, notre algorithme a déterminé que ce statut présente le meilleur équilibre entre tous les critères importants pour votre situation."
-            });
-        }
-        
-        return explanations;
-    }
+// 4) EXPLICATIONS GÉNÉRIQUES — MAJ 30/09/2025
+if (explanations.length < 3) {
+  const genericExplanations = {
+    'MICRO': [
+      {
+        title: "Simplicité administrative maximale",
+        explanation: "Démarrage rapide, obligations ultra-légères et déclaratif simplifié : idéal pour tester ou exercer en activité accessoire."
+      },
+      {
+        title: "Charges sociales sur le CA encaissé",
+        explanation: "Vous cotisez uniquement sur le chiffre d’affaires réellement perçu, pratique en phase de lancement irrégulier."
+      }
+    ],
+    'EI': [
+      {
+        title: "Mise en route simple et modulable",
+        explanation: "Création 100 % en ligne et possibilité d’évoluer vers réel/IS selon la croissance (assimilation EURL pour l’IS)."
+      },
+      {
+        title: "Séparation pro/perso actée depuis 2022",
+        explanation: "Le patrimoine professionnel est isolé par défaut (sous réserve des exceptions légales : fraude, dettes fiscales/sociales, caution…)."
+      }
+    ],
+    'EURL': [
+      {
+        title: "Responsabilité limitée + option fiscale",
+        explanation: "Protection des biens personnels et choix entre IR/IS pour optimiser selon vos revenus et charges."
+      },
+      {
+        title: "Évolutive vers SARL",
+        explanation: "Fait reconnaître votre crédibilité et permet l’arrivée ultérieure d’associés sans changer d’ADN juridique."
+      }
+    ],
+    'SASU': [
+      {
+        title: "Flexibilité statutaire et image ‘corporate’",
+        explanation: "Gouvernance sur mesure, communication professionnelle et passage fluide en SAS à plusieurs si le projet s’agrandit."
+      },
+      {
+        title: "Rémunération & dividendes modulables",
+        explanation: "Arbitrages possibles entre salaire et dividendes, utiles pour adapter la charge sociale et fiscale."
+      }
+    ],
+    'SARL': [
+      {
+        title: "Cadre stable et rassurant",
+        explanation: "Structure connue, adaptée aux PME/familiales, avec gérance et assemblée régulière pour une gouvernance lisible."
+      },
+      {
+        title: "Protection du patrimoine et fiscalité adaptable",
+        explanation: "Responsabilité limitée ; IS par défaut, avec fenêtres d’option IR (ou SARL de famille) selon votre situation."
+      }
+    ],
+    'SAS': [
+      {
+        title: "Gouvernance sur mesure + investisseurs",
+        explanation: "Statuts très flexibles (actions de préférence, BSPCE, pactes…) facilitant les levées de fonds et l’entrée d’associés."
+      },
+      {
+        title: "Image crédible et dividendes non cotisés",
+        explanation: "Positionnement professionnel fort ; les dividendes ne supportent pas de cotisations sociales (hors requalification)."
+      }
+    ],
+    'SA': [
+      {
+        title: "Structure institutionnelle",
+        explanation: "Gouvernance robuste (CA/directoire) et crédibilité élevée auprès des partenaires et marchés."
+      },
+      {
+        title: "Accès élargi aux capitaux",
+        explanation: "Cadre adapté aux projets d’envergure et, le cas échéant, à une future cotation."
+      }
+    ],
+    'SNC': [
+      {
+        title: "Souplesse interne et confiance",
+        explanation: "Répartition des bénéfices flexible et forte implication des associés pour les projets de proximité/familiaux."
+      },
+      {
+        title: "Ancrage bancaire",
+        explanation: "Le caractère solidaire peut rassurer certains partenaires financiers dans des schémas simples et locaux."
+      }
+    ],
+    'SCI': [
+      {
+        title: "Outil patrimonial & transmission",
+        explanation: "Très adaptée pour détenir/organiser un patrimoine immobilier et préparer la transmission (agréments, démembrements…)."
+      },
+      {
+        title: "Souplesse fiscale",
+        explanation: "IR foncier par défaut ou option IS possible pour lisser les résultats (amortissements) selon votre stratégie."
+      }
+    ],
+    'SELARL': [
+      {
+        title: "Cadre libéral sécurisé",
+        explanation: "Responsabilité limitée, conformité aux règles ordinales et image crédible pour un exercice en commun."
+      },
+      {
+        title: "Organisation durable",
+        explanation: "Structure pensée pour la pérennité du cabinet et la répartition équilibrée du travail et des revenus."
+      }
+    ],
+    'SELAS': [
+      {
+        title: "Souplesse de la SAS en libéral",
+        explanation: "Gouvernance personnalisable et image ‘corporate’ tout en respectant les contraintes ordinales."
+      },
+      {
+        title: "Ouverture mesurée du capital",
+        explanation: "Facilite l’association de professionnels et, à la marge, d’investisseurs dans le respect des quotas de détention."
+      }
+    ],
+    'SCA': [
+      {
+        title: "Contrôle de la direction",
+        explanation: "Sépare gestion (commandités) et capitaux (commanditaires), utile pour préserver le pilotage dans le temps."
+      },
+      {
+        title: "Accès au marché des capitaux",
+        explanation: "Forme d’actions permettant des levées substantielles, notamment pour des groupes familiaux/holdings."
+      }
+    ]
+  };
+
+  const list = genericExplanations[statusId] || [];
+  for (const exp of list) {
+    if (explanations.length >= 3) break;
+    explanations.push(exp);
+  }
+}
+
+// Fallback final si toujours < 3
+if (explanations.length < 3) {
+  explanations.push({
+    title: "Structure globalement adaptée à votre profil",
+    explanation: "D’après l’analyse multicritères (protection, fiscalité, charges sociales, simplicité, crédibilité, transmission), ce statut présente le meilleur équilibre pour votre situation actuelle."
+  });
+}
+
     
     /**
      * Afficher les détails d'un statut juridique avec analyse personnalisée
@@ -3665,74 +5722,75 @@ if (answers.team_structure === 'investors' &&
         
         // Carte pour chaque recommandation
         recommendations.forEach((recommendation, index) => {
-            const status = recommendation.status;
-            const isMainRecommendation = index === 0;
-            
-            resultsHTML += `
-                <div class="recommendation-card ${isMainRecommendation ? 'main-recommendation' : ''} bg-opacity-60 bg-blue-900 rounded-xl overflow-hidden mb-8 border ${isMainRecommendation ? 'border-green-400' : 'border-gray-700'}">
-                    <!-- En-tête -->
-                    <div class="p-6 flex items-center border-b border-gray-700 ${isMainRecommendation ? 'bg-green-900 bg-opacity-30' : ''}">
-                        <div class="h-16 w-16 rounded-full bg-opacity-30 ${isMainRecommendation ? 'bg-green-800' : 'bg-blue-800'} flex items-center justify-center text-3xl mr-5">
-                            <i class="fas ${status.logo || 'fa-building'} ${isMainRecommendation ? 'text-green-400' : 'text-gray-300'}"></i>
-                        </div>
-                        <div class="flex-grow">
-                            <div class="flex justify-between items-center">
-                                <h3 class="text-2xl font-bold">${status.name}</h3>
-                                <div class="score-badge ${isMainRecommendation ? 'bg-green-500 text-gray-900' : 'bg-blue-700'} px-3 py-1 rounded-full text-sm font-medium">
-                                    Score: ${recommendation.score}/100
-                                </div>
-                            </div>
-                            <p class="text-gray-400 mt-1">
-                                ${isMainRecommendation ? 'Recommandation principale' : `Alternative ${index}`}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <!-- Contenu -->
-                    <div class="p-6">
-                        <p class="mb-5">${status.description}</p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Forces -->
-                            <div>
-                                <h4 class="font-semibold mb-2 flex items-center text-green-400">
-                                    <i class="fas fa-check-circle mr-2"></i> Points forts
-                                </h4>
-                                <ul class="space-y-2">
-                                    ${recommendation.strengths.map(strength => `
-                                        <li class="flex items-start">
-                                            <i class="fas fa-plus-circle text-green-400 mt-1 mr-2"></i>
-                                            <span>${strength}</span>
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                            
-                            <!-- Faiblesses -->
-                            <div>
-                                <h4 class="font-semibold mb-2 flex items-center text-red-400">
-                                    <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
-                                </h4>
-                                <ul class="space-y-2">
-                                    ${recommendation.weaknesses.map(weakness => `
-                                        <li class="flex items-start">
-                                            <i class="fas fa-minus-circle text-red-400 mt-1 mr-2"></i>
-                                            <span>${weakness}</span>
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <!-- Boutons d'action -->
-                        <div class="mt-6 flex justify-end">
-                            <button class="details-btn bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-3" data-status-id="${status.shortName}">
-                                <i class="fas fa-info-circle mr-2"></i> Plus de détails
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
+         const strengths = (recommendation.strengths || []);
+const weaknesses = (recommendation.weaknesses || []);
+
+resultsHTML += `
+  <div class="recommendation-card ${isMainRecommendation ? 'main-recommendation' : ''} bg-opacity-60 bg-blue-900 rounded-xl overflow-hidden mb-8 border ${isMainRecommendation ? 'border-green-400' : 'border-gray-700'}">
+    <!-- En-tête -->
+    <div class="p-6 flex items-center border-b border-gray-700 ${isMainRecommendation ? 'bg-green-900 bg-opacity-30' : ''}">
+      <div class="h-16 w-16 rounded-full bg-opacity-30 ${isMainRecommendation ? 'bg-green-800' : 'bg-blue-800'} flex items-center justify-center text-3xl mr-5">
+        <i class="fas ${status.logo || 'fa-building'} ${isMainRecommendation ? 'text-green-400' : 'text-gray-300'}"></i>
+      </div>
+      <div class="flex-grow">
+        <div class="flex justify-between items-center">
+          <h3 class="text-2xl font-bold">${status.name}</h3>
+          <div class="score-badge ${isMainRecommendation ? 'bg-green-500 text-gray-900' : 'bg-blue-700'} px-3 py-1 rounded-full text-sm font-medium">
+            Score: ${recommendation.score}/100
+          </div>
+        </div>
+        <p class="text-gray-400 mt-1">
+          ${isMainRecommendation ? 'Recommandation principale' : `Alternative ${index + 1}`}
+        </p>
+      </div>
+    </div>
+
+    <!-- Contenu -->
+    <div class="p-6">
+      <p class="mb-5">${status.description}</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Forces -->
+        <div>
+          <h4 class="font-semibold mb-2 flex items-center text-green-400">
+            <i class="fas fa-check-circle mr-2"></i> Points forts
+          </h4>
+          <ul class="space-y-2">
+            ${strengths.map(s => `
+              <li class="flex items-start">
+                <i class="fas fa-plus-circle text-green-400 mt-1 mr-2"></i>
+                <span>${s}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+
+        <!-- Faiblesses -->
+        <div>
+          <h4 class="font-semibold mb-2 flex items-center text-red-400">
+            <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
+          </h4>
+          <ul class="space-y-2">
+            ${weaknesses.map(w => `
+              <li class="flex items-start">
+                <i class="fas fa-minus-circle text-red-400 mt-1 mr-2"></i>
+                <span>${w}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Boutons d'action -->
+      <div class="mt-6 flex justify-end">
+        <button class="details-btn bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-3"
+                data-status-id="${recommendation.id}" aria-label="Voir les détails de ${status.name}">
+          <i class="fas fa-info-circle mr-2"></i> Plus de détails
+        </button>
+      </div>
+    </div>
+  </div>
+`;
         });
         
         // Ajouter les stratégies contextuelles pour la recommandation principale
@@ -3761,32 +5819,35 @@ resultsHTML += `
 // Injecter le HTML dans le conteneur
 resultsContainer.innerHTML = resultsHTML;
 
-// Attacher les événements
-document.getElementById('restart-btn').addEventListener('click', () => {
+// Délégation d'événements
+resultsContainer.addEventListener('click', (e) => {
+  const restart = e.target.closest('#restart-btn');
+  if (restart) {
     location.reload();
-});
+    return;
+  }
 
-document.getElementById('compare-btn').addEventListener('click', () => {
-    // Trouver et cliquer sur l'onglet "Comparatif des statuts"
+  const compare = e.target.closest('#compare-btn');
+  if (compare) {
     const tabItems = document.querySelectorAll('.tab-item');
+    let opened = false;
     tabItems.forEach((tab) => {
-        if (tab.textContent.trim() === 'Comparatif des statuts') {
-            tab.click();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+      if (tab.textContent.trim() === 'Comparatif des statuts') {
+        tab.click();
+        opened = true;
+      }
     });
+    if (opened) window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  const details = e.target.closest('.details-btn');
+  if (details) {
+    const statusId = details.dataset.statusId; // ex: 'SASU', 'MICRO', ...
+    const rec = (recommendations || []).find(r => r.id === statusId);
+    if (rec) this.showStatusDetails(rec);
+  }
 });
-        
-        // Événements pour les boutons de détails
-        document.querySelectorAll('.details-btn').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const statusId = btn.dataset.statusId;
-                const recommendationObject = recommendations.find(r => r.status.shortName === statusId);
-                if (recommendationObject) {
-                    this.showStatusDetails(recommendationObject);
-                }
-            });
-        });
         
         // Événement pour le bouton de téléchargement PDF
         const downloadBtn = document.querySelector('.download-btn');
@@ -3797,93 +5858,166 @@ document.getElementById('compare-btn').addEventListener('click', () => {
         }
     }
     
-    /**
-     * Affiche les statuts juridiques incompatibles avec suggestions alternatives
-     * @param {Array} incompatibles - Liste des statuts incompatibles
-     * @returns {string} - HTML pour l'affichage des incompatibilités
-     */
-    displayIncompatibilities(incompatibles) {
-        if (!incompatibles || incompatibles.length === 0) return '';
-        
-        let html = `
-            <div class="mt-8 mb-6">
-                <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">
-                    <i class="fas fa-exclamation-triangle mr-2"></i> 
-                    Formes juridiques incompatibles avec votre profil
-                </h3>
-                <div class="bg-blue-900 bg-opacity-20 p-4 rounded-xl">
-                    <p class="mb-4">Les structures suivantes présentent des incompatibilités avec vos critères :</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        `;
-        
-        // Regrouper les incompatibilités par forme juridique
-        const incompatibilitiesByForm = {};
-        
-        incompatibles.forEach(inc => {
-            if (!incompatibilitiesByForm[inc.id]) {
-                incompatibilitiesByForm[inc.id] = {
-                    form: inc.status,
-                    reasons: [],
-                    suggestions: []
-                };
-            }
-            
-            // Ajouter la raison si nouvelle
-            if (!incompatibilitiesByForm[inc.id].reasons.some(r => r === inc.reason)) {
-                incompatibilitiesByForm[inc.id].reasons.push(inc.reason);
-            }
-            
-            // Ajouter la suggestion si nouvelle et non déjà présente
-            if (inc.suggestion && !incompatibilitiesByForm[inc.id].suggestions.some(
-                s => s.explanation === inc.suggestion.explanation
-            )) {
-                incompatibilitiesByForm[inc.id].suggestions.push(inc.suggestion);
-            }
-        });
-        
-        // Générer le HTML pour chaque forme incompatible
-        Object.values(incompatibilitiesByForm).forEach(item => {
-            html += `
-                <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800">
-                    <h4 class="font-semibold text-red-400 mb-2">${item.form.name}</h4>
-                    <ul class="text-sm">
-            `;
-            
-            item.reasons.forEach(reason => {
-                html += `<li class="mb-1 flex items-start">
-                    <i class="fas fa-times text-red-400 mr-2 mt-1"></i>
-                    <span>${reason}</span>
-                </li>`;
-            });
-            
-            // Ajouter les suggestions alternatives
-            if (item.suggestions.length > 0) {
-                html += `<li class="mt-3 pt-2 border-t border-red-800"></li>`;
-                
-                item.suggestions.forEach(suggestion => {
-                    html += `
-                        <li class="mt-2 flex items-start">
-                            <i class="fas fa-lightbulb text-yellow-400 mr-2 mt-1"></i>
-                            <span><strong>Alternative :</strong> ${suggestion.explanation}</span>
-                        </li>
-                    `;
-                });
-            }
-            
-            html += `
-                    </ul>
-                </div>
-            `;
-        });
-        
-        html += `
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        return html;
+  /**
+ * Affiche les statuts juridiques incompatibles avec suggestions alternatives
+ * @param {Array} incompatibles - [{ id|code|key?, status?, reason, suggestion? }]
+ * @returns {string} HTML
+ */
+displayIncompatibilities(incompatibles) {
+  if (!Array.isArray(incompatibles) || incompatibles.length === 0) return '';
+
+  // 1) Regrouper par forme (clé normalisée)
+  const byForm = new Map();
+  incompatibles.forEach((inc) => {
+    const rawKey =
+      inc.key || inc.code || inc.id ||
+      (inc.status?.code || inc.status?.shortName || inc.status?.id) || '';
+    const key = String(rawKey).toUpperCase();
+
+    if (!byForm.has(key)) {
+      // On récupère l’objet statut depuis la source sûre si possible
+      const statusObj =
+        inc.status ||
+        this.filteredStatuses?.[key] ||
+        null;
+
+      byForm.set(key, {
+        key,
+        form: statusObj,
+        reasons: new Set(),
+        suggestions: new Map(), // dé-dupe par (targetId|explanation)
+      });
     }
+
+    const bucket = byForm.get(key);
+
+    // Raison
+    if (inc.reason) bucket.reasons.add(inc.reason);
+
+    // Suggestion
+    if (inc.suggestion) {
+      const tgt = inc.suggestion.targetId || inc.suggestion.targetKey || '';
+      const exp = inc.suggestion.explanation || '';
+      const dedupeKey = `${tgt}::${exp}`;
+      if (!bucket.suggestions.has(dedupeKey)) {
+        bucket.suggestions.set(dedupeKey, {
+          targetId: tgt || null,
+          explanation: exp,
+        });
+      }
+    }
+  });
+
+  // 2) Tri facultatif : les cartes avec le plus de raisons d’abord
+  const items = Array.from(byForm.values()).sort(
+    (a, b) => b.reasons.size - a.reasons.size
+  );
+
+  // 3) Génération HTML
+  let html = `
+    <section class="mt-8 mb-6" aria-labelledby="incompat-title">
+      <h3 id="incompat-title" class="text-xl font-bold text-red-400 mb-4 flex items-center">
+        <i class="fas fa-exclamation-triangle mr-2" aria-hidden="true"></i>
+        Formes juridiques incompatibles avec votre profil
+      </h3>
+
+      <div class="bg-blue-900 bg-opacity-20 p-4 rounded-xl">
+        <p class="mb-4">Les structures suivantes présentent des incompatibilités avec vos critères :</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" role="list">
+  `;
+
+  items.forEach((item) => {
+    const name =
+      item.form?.name || item.form?.shortName || item.key || 'Statut';
+    const shortName = item.form?.shortName ? ` (${item.form.shortName})` : '';
+    const reasons = Array.from(item.reasons);
+    const suggestions = Array.from(item.suggestions.values());
+
+    html += `
+      <article role="listitem"
+               class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800"
+               data-status-key="${item.key}">
+        <h4 class="font-semibold text-red-400 mb-2">${name}${shortName}</h4>
+
+        <ul class="text-sm space-y-1" aria-label="Raisons d'incompatibilité">
+    `;
+
+    // si >4 raisons, on affiche 4 + le reste dans <details>
+    const maxInline = 4;
+    const head = reasons.slice(0, maxInline);
+    const tail = reasons.slice(maxInline);
+
+    head.forEach((reason) => {
+      html += `
+        <li class="flex items-start">
+          <i class="fas fa-times text-red-400 mr-2 mt-1" aria-hidden="true"></i>
+          <span>${reason}</span>
+        </li>`;
+    });
+
+    if (tail.length > 0) {
+      html += `
+        <li>
+          <details class="mt-1">
+            <summary class="cursor-pointer text-gray-300 hover:text-gray-100">
+              Voir ${tail.length} raison(s) supplémentaire(s)
+            </summary>
+            <ul class="mt-2 space-y-1">
+              ${tail
+                .map(
+                  (r) => `
+                <li class="flex items-start">
+                  <i class="fas fa-times text-red-400 mr-2 mt-1" aria-hidden="true"></i>
+                  <span>${r}</span>
+                </li>`
+                )
+                .join('')}
+            </ul>
+          </details>
+        </li>`;
+    }
+
+    // Suggestions
+    if (suggestions.length > 0) {
+      html += `<li class="mt-3 pt-2 border-t border-red-800"></li>`;
+      suggestions.forEach((s) => {
+        const hasTarget = !!s.targetId;
+        html += `
+          <li class="mt-2 flex items-start">
+            <i class="fas fa-lightbulb text-yellow-400 mr-2 mt-1" aria-hidden="true"></i>
+            <span>
+              <strong>Alternative :</strong> ${s.explanation}
+              ${
+                hasTarget
+                  ? `<button class="ml-2 inline-flex items-center px-2 py-0.5 rounded bg-blue-700 hover:bg-blue-600 text-xs"
+                              type="button"
+                              data-target-id="${String(s.targetId).toUpperCase()}"
+                              title="Voir les détails de l’alternative">
+                        Voir les détails
+                     </button>`
+                  : ''
+              }
+            </span>
+          </li>
+        `;
+      });
+    }
+
+    html += `
+        </ul>
+      </article>
+    `;
+  });
+
+  html += `
+        </div>
+      </div>
+    </section>
+  `;
+
+  return html;
+}
 }
 
 /**
