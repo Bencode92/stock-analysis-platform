@@ -2687,22 +2687,30 @@ applyDeclarativeFilters() {
  */
 applySpecificFilters() {
   // ─── Données dérivées ──────────────────────────────────────────────
-const A = this.answers || {};
-const teamSolo = A.team_structure === 'solo';
+  const A = this.answers || {};
+  const teamSolo = A.team_structure === 'solo';
 
-// Nombre d’associés (null si inconnu)
-const nbAssocParsed = parseInt(A.associates_number, 10);
-const nbAssoc = Number.isFinite(nbAssocParsed) ? nbAssocParsed : null;
+  // Nombre d’associés (null si inconnu)
+  const nbAssocParsed = parseInt(A.associates_number, 10);
+  const nbAssoc = Number.isFinite(nbAssocParsed) ? nbAssocParsed : null;
 
-// Capital disponible (null si inconnu)
-const capParsed = parseFloat(A.available_capital);
-const capital = Number.isFinite(capParsed) ? capParsed : null;
+  // Capital disponible (null si inconnu)
+  const capParsed = parseFloat(A.available_capital);
+  const capital = Number.isFinite(capParsed) ? capParsed : null;
 
-// ✅ SECURISATION immobilier (helper + fallback)
-const isImmo =
-  (typeof window.isRealEstateSector === 'function' && window.isRealEstateSector(A)) ||
-  String(A.activity_type || '').toLowerCase() === 'immobilier';
-  // Sécuriser thresholds (fallbacks au cas où)
+  // CA prévisionnel (null si inconnu)
+  const revenueParsed = parseFloat(A.projected_revenue);
+  const revenue = Number.isFinite(revenueParsed) ? revenueParsed : null;
+
+  // Type d'ordre pro (string minuscule, peut être vide)
+  const orderType = String(A.professional_order_type || A.order_type || '').toLowerCase();
+
+  // Immobilier ? (helper optionnel + fallback simple)
+  const isImmo =
+    (typeof window.isRealEstateSector === 'function' && window.isRealEstateSector(A)) ||
+    String(A.activity_type || '').toLowerCase() === 'immobilier';
+
+  // Référentiels + fallbacks
   const TH = this.thresholds2025 || {};
   const MICRO = (TH.micro || {
     bic_sales: 188_700, bic_service: 77_700, bnc: 77_700,
@@ -2716,7 +2724,7 @@ const isImmo =
       if (Number.isFinite(val)) return val;
     }
     // Fallback : calcule selon l’activité
-    if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
+    if (isImmo && (A.real_estate_model === 'meuble' || A.real_estate_model === 'meublé')) {
       return A.furnished_tourism_classed === 'yes'
         ? MICRO.meuble_classe_ca       // 77 700 €
         : MICRO.meuble_non_classe_ca;  // 15 000 €
@@ -2729,27 +2737,30 @@ const isImmo =
 
   /* ------------------------------------------------------------------
    * 1) Activité relevant d’un ordre professionnel
-   *    → MICRO & SNC exclues (EI tolérée selon professions)
+   *    → MICR0 tolérée selon cas ; SNC exclue
    * ------------------------------------------------------------------ */
- if (A.professional_order === 'yes' || A.regulated_profession === 'yes') {
-  this.excludeStatus('SNC', "Activité relevant d'un ordre professionnel – SNC exclue (responsabilité illimitée)");
-  // MICRO tolérée individuellement (micro-BNC) → pas d'exclusion ici
-}
+  if (A.professional_order === 'yes' || A.regulated_profession === 'yes') {
+    this.excludeStatus('SNC', "Activité relevant d'un ordre professionnel – SNC exclue (responsabilité illimitée)");
+  }
 
   /* ------------------------------------------------------------------
    * 2) CA prévisionnel > seuil micro → MICRO exclue (incl. cas meublés 2025)
    * ------------------------------------------------------------------ */
   if (Number.isFinite(revenue) && Number.isFinite(microThreshold) && revenue > microThreshold) {
-    this.excludeStatus('MICRO',
-      `CA prévisionnel (${revenue.toLocaleString()} €) > seuil micro (${microThreshold.toLocaleString()} €)`);
+    this.excludeStatus(
+      'MICRO',
+      `CA prévisionnel (${revenue.toLocaleString('fr-FR')} €) > seuil micro (${microThreshold.toLocaleString('fr-FR')} €)`
+    );
   }
 
   /* ------------------------------------------------------------------
    * 3) Besoin de lever des fonds → EI / MICRO / SNC exclus
    * ------------------------------------------------------------------ */
   if (A.fundraising === 'yes' || A.investors === 'yes') {
-    this.excludeStatuses(['EI', 'MICRO', 'SNC'],
-      'Levée de fonds envisagée – statuts peu attractifs exclus (préférez SAS/SASU/SA)');
+    this.excludeStatuses(
+      ['EI', 'MICRO', 'SNC'],
+      'Levée de fonds envisagée – statuts peu attractifs exclus (préférez SAS/SASU/SA)'
+    );
   }
 
   /* ------------------------------------------------------------------
@@ -2764,15 +2775,17 @@ const isImmo =
 
   /* ------------------------------------------------------------------
    * 5) SCI réservée aux activités civiles immobilières
-   *    - Exclue si activité ≠ immobilier
+   *    - Exclue si activité ≠ immobilier (via isImmo)
    *    - Exclue même en immobilier pour meublé habituel / para-hôtelier
    *      et pour marchand de biens / promotion / lotissement
    * ------------------------------------------------------------------ */
-  if (A.activity_type !== 'immobilier') {
+  if (!isImmo) {
     this.excludeStatus('SCI', 'SCI réservée aux activités civiles immobilières');
   } else {
     const model = String(A.real_estate_model || '').toLowerCase();
-    if (['meuble','meublé','para_hotellerie','para-hotelier','para-hôtellerie'].includes(model)) {
+    const isParaHotel = ['para_hotel','para_hotellerie','para-hotelier','para-hôtellerie'].includes(model);
+    const isMeuble = ['meuble','meublé'].includes(model);
+    if (isMeuble || isParaHotel) {
       this.excludeStatus('SCI', 'Location meublée/para-hôtelière = activité commerciale → SCI inadaptée (risque IS)');
     }
     if (['marchand','marchand_de_biens','marchand-de-biens','promotion','lotissement'].includes(model)) {
@@ -2782,23 +2795,26 @@ const isImmo =
 
   /* ------------------------------------------------------------------
    * 6) Risque pro élevé → éviter responsabilité illimitée
-   *    (EI & MICRO : séparation pro/perso depuis 2022 mais prudence)
    * ------------------------------------------------------------------ */
   if (A.high_professional_risk === 'yes') {
-  this.excludeStatus('SNC', 'Risque professionnel élevé – responsabilité solidaire/illimitée exclue');
-}
+    this.excludeStatus('SNC', 'Risque professionnel élevé – responsabilité solidaire/illimitée exclue');
+  }
 
   /* ------------------------------------------------------------------
    * 7) Régime social souhaité
    * ------------------------------------------------------------------ */
   if (A.social_regime === 'assimilated_employee') {
     // Statuts TNS (par défaut) exclus
-    this.excludeStatuses(['EI', 'MICRO', 'EURL', 'SARL', 'SNC'],
-      'Régime assimilé salarié souhaité – statuts TNS exclus (préférez SAS/SASU/SA/SELAS)');
+    this.excludeStatuses(
+      ['EI', 'MICRO', 'EURL', 'SARL', 'SNC'],
+      'Régime assimilé salarié souhaité – statuts TNS exclus (préférez SAS/SASU/SA/SELAS)'
+    );
   } else if (A.social_regime === 'tns') {
     // Statuts assimilé salarié exclus
-    this.excludeStatuses(['SAS', 'SASU', 'SA', 'SELAS', 'SCA'],
-      'Régime TNS souhaité – statuts assimilé salarié exclus');
+    this.excludeStatuses(
+      ['SAS', 'SASU', 'SA', 'SELAS', 'SCA'],
+      'Régime TNS souhaité – statuts assimilé salarié exclus'
+    );
   }
 
   /* ------------------------------------------------------------------
@@ -2811,50 +2827,46 @@ const isImmo =
 
   /* ------------------------------------------------------------------
    * 9) Nombre d’associés & statuts uni/pluripersonnels
-   *    - Solo : exclure les formes ≥ 2 associés (on conserve SELARL/SELAS : SELARLU/SELASU possibles)
+   *    - Solo : exclure les formes ≥ 2 associés
    *    - À plusieurs : exclure les formes unipersonnelles
+   *    (règles légales appliquées uniquement si nbAssoc connu)
    * ------------------------------------------------------------------ */
   if (teamSolo === true) {
-  this.excludeStatuses(['SARL','SAS','SA','SNC','SCI','SCA'], 'Un seul associé – statuts pluripersonnels exclus');
-} else if (nbAssoc != null && nbAssoc >= 2) {
-  this.excludeStatuses(['EI','MICRO','EURL','SASU'], 'Plusieurs associés – statuts unipersonnels exclus');
-}
-// Bornes légales uniquement si nbAssoc est connu
-if (nbAssoc != null) {
-  if (nbAssoc > 100) this.excludeStatus('SARL', 'SARL limitée à 100 associés');
-  if (nbAssoc < 2)   this.excludeStatus('SA',   'SA requiert au moins 2 actionnaires (7 si cotée)');
-  if (nbAssoc < 4)   this.excludeStatus('SCA',  'SCA requiert au moins 4 associés (1 commandité + 3 commanditaires)');
-}
+    this.excludeStatuses(['SARL','SAS','SA','SNC','SCI','SCA'], 'Un seul associé – statuts pluripersonnels exclus');
+  } else if (nbAssoc != null && nbAssoc >= 2) {
+    this.excludeStatuses(['EI','MICRO','EURL','SASU'], 'Plusieurs associés – statuts unipersonnels exclus');
+  }
+  if (nbAssoc != null) {
+    if (nbAssoc > 100) this.excludeStatus('SARL', 'SARL limitée à 100 associés');
+    if (nbAssoc < 2)   this.excludeStatus('SA',   'SA requiert au moins 2 actionnaires (7 si cotée)');
+    if (nbAssoc < 4)   this.excludeStatus('SCA',  'SCA requiert au moins 4 associés (1 commandité + 3 commanditaires)');
+  }
 
   /* ------------------------------------------------------------------
    * 10) Capital social minimum (SA & SCA) + cas cotée/IPO
    *     - SA : 37 000 € (≥ 50 % libéré à la constitution)
    *     - SCA : 37 000 € (ou 225 000 € si appel public à l’épargne)
    * ------------------------------------------------------------------ */
- const wantsIPO = this.answers.public_listing_or_aps === 'yes';
-
-// Seuil de base (hors IPO/APS) : 37 000 € pour SA & SCA
-if (capital != null && capital < 37_000) {
-  this.excludeStatuses(['SA','SCA'], 'Capital insuffisant (minimum légal SA/SCA : 37 000 €)');
-}
-
-const wantsIPO = this.answers.public_listing_or_aps === 'yes';
-if (wantsIPO) {
-  if (capital != null && capital < 225_000) {
-    this.excludeStatus('SCA', 'SCA avec appel public : capital minimum 225 000 € requis');
+  if (capital != null && capital < 37_000) {
+    this.excludeStatuses(['SA','SCA'], 'Capital insuffisant (minimum légal SA/SCA : 37 000 €)');
   }
-  if (nbAssoc != null && nbAssoc < 7) {
-    this.excludeStatus('SA', 'SA cotée : au moins 7 actionnaires requis');
+
+  const wantsIPO = this.answers.public_listing_or_aps === 'yes';
+  if (wantsIPO) {
+    if (capital != null && capital < 225_000) {
+      this.excludeStatus('SCA', 'SCA avec appel public : capital minimum 225 000 € requis');
+    }
+    if (nbAssoc != null && nbAssoc < 7) {
+      this.excludeStatus('SA', 'SA cotée : au moins 7 actionnaires requis');
+    }
   }
-}
 
   /* ------------------------------------------------------------------
    * 11) Levée de fonds ≥ 1 M€ → éviter SARL / SNC (préférer SAS/SA)
    * ------------------------------------------------------------------ */
   const fundraisingAmount = parseFloat(A.fundraising_amount || '0');
   if ((A.fundraising === 'yes' || A.investors === 'yes') && fundraisingAmount >= 1_000_000) {
-    this.excludeStatuses(['SARL', 'SNC'],
-      'Levée de fonds importante (≥ 1 M€) – privilégier SAS/SA');
+    this.excludeStatuses(['SARL', 'SNC'], 'Levée de fonds importante (≥ 1 M€) – privilégier SAS/SA');
   }
 
   /* ------------------------------------------------------------------
@@ -2875,6 +2887,7 @@ if (wantsIPO) {
       'Ordre professionnel incompatible avec SAS / SASU (règles ordinales)');
   }
 }
+
     
  /**
  * Alternatives + exclusions — harmonisation des clés (status_id & statusId)
