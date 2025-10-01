@@ -1,140 +1,114 @@
 /**
  * preset-bridge.js - Pont entre preset-ui et comparatif-status
- * Expose le hook __comparatifHooks pour contrôler le comparateur
+ * Utilise les hooks exposés par comparatif-status.js
  */
 
 (function() {
     'use strict';
 
-    let isReady = false;
+    console.log('🌉 Bridge: Initialisation du pont presets...');
 
-    // Attendre que le comparatif soit prêt
-    function waitForComparatif(callback) {
+    // Attendre que les hooks du comparatif soient prêts
+    function waitForComparatifHooks(callback, maxAttempts = 50) {
+        let attempts = 0;
+        
         const checkInterval = setInterval(() => {
-            // Vérifier que les éléments essentiels existent
-            const header = document.querySelector('.comparatif-header');
-            const intentFilters = document.querySelector('.intent-filters');
+            attempts++;
             
-            if (header && intentFilters) {
+            if (window.__comparatifHooks && 
+                window.__comparatifHooks.setComparison && 
+                window.__comparatifHooks.setIntents) {
                 clearInterval(checkInterval);
+                console.log('✅ Bridge: Hooks du comparatif détectés !');
                 callback();
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                console.error('❌ Bridge: Timeout - Hooks du comparatif non trouvés');
             }
         }, 100);
-
-        // Timeout après 5 secondes
-        setTimeout(() => clearInterval(checkInterval), 5000);
     }
 
-    // Fonction pour cocher/décocher un filtre d'intention
-    function setIntentFilter(intentKey, value) {
-        // Map des clés vers les IDs des checkboxes
-        const idMap = {
-            'veut_dividendes': 'filter-dividendes',
-            'en_chomage': 'filter-chomage',
-            'prevoit_associes': 'filter-associes',
-            'levee_fonds': 'filter-levee'
-        };
-
-        const checkboxId = idMap[intentKey];
-        if (!checkboxId) return;
-
-        const checkbox = document.getElementById(checkboxId);
-        if (!checkbox) return;
-
-        // Déterminer si on doit cocher
-        const shouldCheck = (value === true || value === 'oui');
-        
-        // Simuler un click si l'état doit changer
-        if (checkbox.checked !== shouldCheck) {
-            checkbox.click();
-        }
-    }
-
-    // Fonction pour ajouter des statuts à la comparaison
-    function addStatusToComparison(statutShortName) {
-        const dropdown = document.getElementById('status-dropdown');
-        if (!dropdown) return false;
-
-        // Trouver l'option correspondante
-        const option = Array.from(dropdown.options).find(opt => opt.value === statutShortName);
-        if (!option) {
-            console.warn(`Statut ${statutShortName} not found in dropdown`);
-            return false;
+    // Créer une interface unifiée pour les presets
+    function createPresetInterface() {
+        // Vérifier que les hooks existent
+        if (!window.__comparatifHooks) {
+            console.error('❌ Bridge: window.__comparatifHooks non disponible !');
+            return;
         }
 
-        // Sélectionner et déclencher le changement
-        dropdown.value = statutShortName;
-        dropdown.dispatchEvent(new Event('change'));
-        
-        return true;
-    }
+        const originalHooks = window.__comparatifHooks;
 
-    // Fonction pour vider la comparaison
-    function clearComparison() {
-        const removeButtons = document.querySelectorAll('.comparison-item .remove-btn');
-        removeButtons.forEach(btn => btn.click());
-    }
-
-    // Créer le hook
-    function createHook() {
+        // Ajouter la méthode applyPreset que preset-ui cherche
         window.__comparatifHooks = {
+            ...originalHooks,
+            
             applyPreset: function(preset) {
-                console.log('Bridge: Applying preset', preset.label);
-
-                // 1. Vider la comparaison actuelle
-                clearComparison();
-
-                // 2. Ajouter les statuts du preset
-                setTimeout(() => {
-                    (preset.statuts || []).forEach((sn, index) => {
-                        setTimeout(() => {
-                            addStatusToComparison(sn);
-                        }, index * 100);
-                    });
-                }, 200);
-
-                // 3. Appliquer les filtres d'intention
-                if (preset.intents) {
-                    setTimeout(() => {
-                        Object.keys(preset.intents).forEach(key => {
-                            setIntentFilter(key, preset.intents[key]);
-                        });
-                    }, 400);
+                console.log('🎯 Bridge: Application du preset', preset.label);
+                
+                if (!preset) {
+                    console.error('❌ Bridge: Preset invalide');
+                    return;
                 }
 
-                console.log('Bridge: Preset applied successfully');
+                try {
+                    // 1. Appliquer les statuts à la comparaison
+                    if (preset.statuts && preset.statuts.length > 0) {
+                        console.log('📊 Bridge: Application des statuts:', preset.statuts);
+                        originalHooks.setComparison(preset.statuts);
+                    }
+
+                    // 2. Appliquer les filtres d'intention
+                    if (preset.intents) {
+                        console.log('🎯 Bridge: Application des intentions:', preset.intents);
+                        // Petit délai pour que la comparaison soit appliquée d'abord
+                        setTimeout(() => {
+                            originalHooks.setIntents(preset.intents);
+                        }, 200);
+                    }
+
+                    console.log('✅ Bridge: Preset appliqué avec succès !');
+                } catch (error) {
+                    console.error('❌ Bridge: Erreur lors de l\'application du preset:', error);
+                }
             },
 
             reset: function() {
-                console.log('Bridge: Resetting comparator');
-
-                // Vider la comparaison
-                clearComparison();
-
-                // Décocher tous les filtres d'intention
-                ['veut_dividendes', 'en_chomage', 'prevoit_associes', 'levee_fonds'].forEach(key => {
-                    setIntentFilter(key, false);
-                });
-
-                console.log('Bridge: Comparator reset');
+                console.log('🔄 Bridge: Reset du comparatif');
+                
+                try {
+                    // Vider la comparaison
+                    originalHooks.setComparison([]);
+                    
+                    // Désactiver tous les filtres
+                    originalHooks.setIntents({
+                        veut_dividendes: false,
+                        en_chomage: false,
+                        prevoit_associes: 'non',
+                        levee_fonds: 'non'
+                    });
+                    
+                    console.log('✅ Bridge: Reset effectué');
+                } catch (error) {
+                    console.error('❌ Bridge: Erreur lors du reset:', error);
+                }
             },
 
-            isReady: () => isReady
+            isReady: () => true
         };
 
-        isReady = true;
-        console.log('Bridge: __comparatifHooks created and ready');
+        console.log('✅ Bridge: Interface presets créée avec succès !');
+        console.log('📋 Bridge: Méthodes disponibles:', Object.keys(window.__comparatifHooks));
 
-        // Signaler que le comparatif est prêt pour les presets
-        window.dispatchEvent(new Event('comparatif:ready'));
+        // Signaler que le bridge est prêt
+        window.dispatchEvent(new Event('preset-bridge:ready'));
     }
 
     // Initialiser le bridge
     function initBridge() {
-        console.log('Bridge: Initializing preset bridge...');
+        console.log('🚀 Bridge: Démarrage...');
         
-        waitForComparatif(() => {
-            createHook();
+        waitForComparatifHooks(() => {
+            createPresetInterface();
         });
     }
 
@@ -142,7 +116,8 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initBridge);
     } else {
-        initBridge();
+        // DOM déjà chargé, attendre un peu que les autres scripts se chargent
+        setTimeout(initBridge, 100);
     }
 
 })();
