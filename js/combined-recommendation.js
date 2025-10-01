@@ -732,28 +732,28 @@ window.legalStatuses = legalStatuses;
 // Barèmes et filtres (PLACEHOLDERS, À REMPLACER)
 const exclusionFilters = [
   // Professions avec ordre (avocats, médecins, EC, etc.)
-  // -> On N'EXCLUT PLUS la MICRO globalement (micro-BNC possible selon ordre) ;
-  //    on écarte surtout la SNC.
+  // -> On N'EXCLUT PLUS la MICRO globalement ; on écarte surtout la SNC.
   {
     id: "professional_order",
-    condition: "yes",
+    condition: (answers) => answers.professional_order === "yes",
     excluded_statuses: ["SNC"],
     tolerance_message:
       "Si vous exercez à titre individuel, EI/Micro peuvent rester possibles selon l’ordre. En exercice en société, privilégiez les SEL (SELARL/SELAS)."
   },
 
   // Solo : on masque les formes nécessitant ≥ 2 associés
+  // (on NE masque PAS SELARL/SELAS pour permettre SELARLU/SELASU)
   {
     id: "team_structure",
-    condition: "solo",
-    excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SELARL", "SELAS", "SCA"],
+    condition: (answers) => answers.team_structure === "solo",
+    excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SCA"],
     tolerance_message: null
   },
 
   // Capital disponible : seuil utile pour SA/SCA (≥ 37 000 € dont 50 % à la constitution)
   {
     id: "available_capital",
-    condition: (value) => Number(value || 0) < 18500, // 50 % de 37 000 €
+    condition: (answers) => Number(answers.available_capital || 0) < 18500, // 50 % de 37 000 €
     excluded_statuses: ["SA", "SCA"],
     tolerance_message:
       "La SA/SCA exigent au moins 37 000 € de capital (≥ 50 % libérés à la constitution)."
@@ -763,7 +763,7 @@ const exclusionFilters = [
   // (On exclut les statuts TNS par défaut ; exceptions possibles selon la gérance)
   {
     id: "social_regime",
-    condition: "assimilated_employee",
+    condition: (answers) => answers.social_regime === "assimilated_employee",
     excluded_statuses: ["EI", "MICRO", "SNC", "EURL", "SARL", "SELARL"],
     tolerance_message:
       "EURL/SARL/SELARL peuvent parfois convenir si le dirigeant est non associé ou minoritaire/égalitaire (assimilé salarié)."
@@ -772,9 +772,10 @@ const exclusionFilters = [
   // Mineur non émancipé : on masque les sociétés commerciales
   {
     id: "age",
-    condition: "minor",
+    condition: (answers) => answers.age === "minor",
+    tolerance_condition: (answers) =>
+      answers.emancipated_minor === true || answers.emancipated_minor === "yes",
     excluded_statuses: ["SAS", "SARL", "SA", "EURL", "SASU", "SNC", "SCI", "SELARL", "SELAS", "SCA"],
-    tolerance_condition: "emancipated_minor",
     tolerance_message:
       "Si vous êtes mineur émancipé, certaines sociétés commerciales restent accessibles."
   },
@@ -783,7 +784,9 @@ const exclusionFilters = [
   // -> Réservés SAS/SASU/SA/SELAS (sous conditions). On exclut aussi SARL/EURL/SELARL/SCI.
   {
     id: "sharing_instruments",
-    condition: (value) => Array.isArray(value) && value.length > 0,
+    condition: (answers) =>
+      Array.isArray(answers.sharing_instruments) &&
+      answers.sharing_instruments.length > 0,
     excluded_statuses: ["EI", "MICRO", "SNC", "SARL", "EURL", "SELARL", "SCI"],
     tolerance_message:
       "BSPCE/AGA/BSA sont possibles en SAS/SASU/SA/SELAS (sous conditions légales)."
@@ -792,12 +795,14 @@ const exclusionFilters = [
   // Appel public à l’épargne / cotation : SA ou SCA uniquement
   {
     id: "public_listing_or_aps",
-    condition: (value) => value === true,
+    condition: (answers) =>
+      answers.public_listing_or_aps === true || answers.public_listing_or_aps === "yes",
     excluded_statuses: ["EI", "MICRO", "EURL", "SASU", "SAS", "SARL", "SNC", "SCI", "SELARL", "SELAS"],
     tolerance_message:
       "Pour une cotation ou un appel public à l’épargne, orientez-vous vers une SA (ou SCA)."
   }
 ];
+
 window.exclusionFilters = exclusionFilters;
 const ratingScales = {
   taxation: {
@@ -942,6 +947,27 @@ const ratingScales = {
   }
 };
 window.ratingScales = ratingScales;
+// ─────────────────────────────
+// Helpers secteur d'activité
+// ─────────────────────────────
+function getSector(answers) {
+  return String(answers?.activity_sector || answers?.activity_type || '')
+    .toLowerCase()
+    .trim();
+}
+function isRealEstateSector(answers) {
+  const s = getSector(answers);
+  return ['immobilier','real_estate','realestate','real-estate','immo'].includes(s);
+}
+// Optionnel : exposer pour d'autres modules / debug
+window.getSector = getSector;
+window.isRealEstateSector = isRealEstateSector;
+
+// Helper unifié Immobilier (utilisable partout)
+const IS_IMMO = (ans) =>
+  (typeof window.isRealEstateSector === 'function' && window.isRealEstateSector(ans)) ||
+  String(ans?.activity_type || '').toLowerCase() === 'immobilier';
+window.IS_IMMO = IS_IMMO; // optionnel : exposer globalement
 
 // ------------------------------------------------
 // PARTIE 2: MOTEUR DE RECOMMANDATION (COMPLET)
@@ -949,11 +975,11 @@ window.ratingScales = ratingScales;
 
 // Gestionnaire d'erreurs spécifique pour ce fichier
 window.addEventListener('error', (e) => {
-    if (e.filename.includes('recommendation-engine.js') || e.filename.includes('combined-recommendation.js')) {
-        console.error('Erreur bloquante dans le moteur de recommandation', e);
-    }
+  const f = e?.filename || '';
+  if (f.includes('recommendation-engine.js') || f.includes('combined-recommendation.js')) {
+    console.error('Erreur bloquante dans le moteur de recommandation', e);
+  }
 }, true);
-
 // Logs de débogage pour traquer le chargement
 console.log("Chargement du recommendation-engine.js commencé");
 window.engineLoadingStarted = true;
@@ -1611,11 +1637,11 @@ const scoringRules = [
     const hasBSAair = (answers.sharing_instruments || []).includes('BSA_AIR');
     const hasAGA = (answers.sharing_instruments || []).includes('AGA');
     let delta = 0;
-    if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) {
-      if (hasBSPCE) delta += 1;
-      if (hasBSAair) delta += 0.75;
-      if (hasAGA) delta += 0.5;
-    },
+  if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) {
+  if (hasBSPCE) delta += 1;
+  if (hasBSAair) delta += 0.75;
+  if (hasAGA) delta += 0.5;
+}
     // Les autres formes ne tirent pas (ou peu) parti de ces instruments
     return score + delta;
   },
@@ -2495,45 +2521,75 @@ this.thresholds2025 = {
         console.log("RecommendationEngine initialisé avec succès");
     }
 
-    /**
-     * Calculer les recommandations basées sur les réponses
-     * @param {Object} answers - Les réponses au questionnaire
-     */
-    calculateRecommendations(answers) {
-        console.log("Début du calcul des recommandations", answers);
-        // Mémoïsation - vérifier si les résultats sont déjà en cache
-        const answersKey = JSON.stringify(answers);
-        if (this.memoizedResults[answersKey]) {
-            console.log('Résultats récupérés du cache');
-            return this.memoizedResults[answersKey];
-        }
-        
-        this.answers = answers;
-        
-        // Réinitialiser les résultats
-        this.resetResults();
-        
-        // Appliquer les filtres d'exclusion
-        this.applyExclusionFilters();
-        
-        // Calculer les poids des priorités
-        this.calculatePriorityWeights();
-        
-        // Calculer les scores pour chaque statut juridique
-        this.calculateScores();
-        
-        // Obtenir les recommandations finales (top 3)
-        const recommendations = this.getTopRecommendations(3);
-        
-        // Afficher les résultats
-        this.displayResults(recommendations);
-        
-        // Mémoïsation - stocker les résultats en cache
-        this.memoizedResults[answersKey] = recommendations;
-        
-        console.log("Fin du calcul des recommandations", recommendations);
-        return recommendations;
-    }
+   /**
+ * Calculer les recommandations basées sur les réponses
+ * @param {Object} answers - Les réponses au questionnaire
+ */
+calculateRecommendations(answers) {
+  console.log("Début du calcul des recommandations (avant normalisation)", answers);
+
+  // ── Normalisation des clés hétérogènes ─────────────────────────────
+  const norm = { ...answers };
+  const toYN = (v) => (v === true ? 'yes' : v === false ? 'no' : v);
+
+  // Unifie le nombre d'associés
+  norm.associates_number = parseInt(
+    norm.associates_number ?? norm.associates_count ?? norm.investors_count ?? 0,
+    10
+  );
+
+  // Unifie la présence d'investisseurs
+  norm.investors = toYN(
+    norm.investors ?? (norm.team_structure === 'investors' ? 'yes' : 'no')
+  );
+
+  // Unifie les flags liés à la cotation / appel public à l’épargne
+  norm.public_listing = toYN(norm.public_listing);
+  norm.public_offering = toYN(norm.public_offering);
+  norm.ipo_path = toYN(norm.ipo_path);
+  norm.public_listing_or_aps = toYN(
+    norm.public_listing_or_aps ?? (
+      (norm.public_listing === 'yes' || norm.public_offering === 'yes' || norm.ipo_path === 'yes')
+        ? 'yes'
+        : 'no'
+    )
+  );
+
+  console.log("Réponses normalisées", norm);
+
+  // ── Mémoïsation avec les réponses normalisées ──────────────────────
+  const answersKey = JSON.stringify(norm);
+  if (this.memoizedResults[answersKey]) {
+    console.log('Résultats récupérés du cache (après normalisation)');
+    return this.memoizedResults[answersKey];
+  }
+
+  this.answers = norm;
+
+  // Réinitialiser les résultats
+  this.resetResults();
+
+  // Appliquer les filtres d'exclusion
+  this.applyExclusionFilters();
+
+  // Calculer les poids des priorités
+  this.calculatePriorityWeights();
+
+  // Calculer les scores pour chaque statut juridique
+  this.calculateScores();
+
+  // Obtenir les recommandations finales (top 3)
+  const recommendations = this.getTopRecommendations(3);
+
+  // Afficher les résultats
+  this.displayResults(recommendations);
+
+  // Mémoïsation - stocker les résultats en cache (clé normalisée)
+  this.memoizedResults[answersKey] = recommendations;
+
+  console.log("Fin du calcul des recommandations", recommendations);
+  return recommendations;
+}
     
     /**
      * Réinitialiser les résultats pour un nouveau calcul
@@ -2629,13 +2685,17 @@ applyDeclarativeFilters() {
  */
 applySpecificFilters() {
   // ─── Données dérivées ──────────────────────────────────────────────
-  const A = this.answers || {};
-  const teamSolo = A.team_structure === 'solo';
-  const nbAssoc  = parseInt(A.associates_number || 1, 10);
-  const capital  = parseFloat(A.available_capital || 0);
-  const revenue  = parseFloat(A.projected_revenue || 0);
-  const orderType = String(A.order_type || '').toLowerCase(); // ex: 'cnb', 'cno'
+ const A = this.answers || {};
+const teamSolo = A.team_structure === 'solo';
+const nbAssoc  = parseInt(A.associates_number || 1, 10);
+const capital  = parseFloat(A.available_capital || 0);
+const revenue  = parseFloat(A.projected_revenue || 0);
+const orderType = String(A.order_type || '').toLowerCase();
 
+// ✅ SECURISATION immobilier (helper + fallback)
+const isImmo =
+  (typeof window.isRealEstateSector === 'function' && window.isRealEstateSector(A)) ||
+  String(A.activity_type || '').toLowerCase() === 'immobilier';
   // Sécuriser thresholds (fallbacks au cas où)
   const TH = this.thresholds2025 || {};
   const MICRO = (TH.micro || {
@@ -2665,10 +2725,10 @@ applySpecificFilters() {
    * 1) Activité relevant d’un ordre professionnel
    *    → MICRO & SNC exclues (EI tolérée selon professions)
    * ------------------------------------------------------------------ */
-  if (A.professional_order === 'yes' || A.regulated_profession === 'yes') {
-    this.excludeStatuses(['MICRO', 'SNC'],
-      "Activité relevant d'un ordre professionnel – MICRO & SNC exclues");
-  }
+ if (A.professional_order === 'yes' || A.regulated_profession === 'yes') {
+  this.excludeStatus('SNC', "Activité relevant d'un ordre professionnel – SNC exclue (responsabilité illimitée)");
+  // MICRO tolérée individuellement (micro-BNC) → pas d'exclusion ici
+}
 
   /* ------------------------------------------------------------------
    * 2) CA prévisionnel > seuil micro → MICRO exclue (incl. cas meublés 2025)
@@ -2719,9 +2779,8 @@ applySpecificFilters() {
    *    (EI & MICRO : séparation pro/perso depuis 2022 mais prudence)
    * ------------------------------------------------------------------ */
   if (A.high_professional_risk === 'yes') {
-    this.excludeStatuses(['EI', 'MICRO', 'SNC'],
-      'Risque professionnel élevé – privilégier une responsabilité limitée (EURL/SARL/SAS/SASU/SA)');
-  }
+  this.excludeStatus('SNC', 'Risque professionnel élevé – responsabilité solidaire/illimitée exclue');
+}
 
   /* ------------------------------------------------------------------
    * 7) Régime social souhaité
@@ -2770,16 +2829,22 @@ applySpecificFilters() {
    *     - SA : 37 000 € (≥ 50 % libéré à la constitution)
    *     - SCA : 37 000 € (ou 225 000 € si appel public à l’épargne)
    * ------------------------------------------------------------------ */
-  const wantsIPO = (A.public_listing === 'yes') || (A.public_offering === 'yes') || (A.ape === 'ipo');
-  if (capital < 37_000) {
-    this.excludeStatuses(['SA', 'SCA'], 'Capital insuffisant (minimum légal SA/SCA : 37 000 €)');
-  }
-  if (wantsIPO && capital < 225_000) {
+ const wantsIPO = this.answers.public_listing_or_aps === 'yes';
+
+// Seuil de base (hors IPO/APS) : 37 000 € pour SA & SCA
+if (capital < 37_000) {
+  this.excludeStatuses(['SA', 'SCA'], 'Capital insuffisant (minimum légal SA/SCA : 37 000 €)');
+}
+
+// Contraintes spécifiques SI projet de cotation / appel public (IPO/APS)
+if (wantsIPO) {
+  if (capital < 225_000) {
     this.excludeStatus('SCA', 'SCA avec appel public : capital minimum 225 000 € requis');
   }
-  if (wantsIPO && nbAssoc < 7) {
+  if (nbAssoc < 7) {
     this.excludeStatus('SA', 'SA cotée : au moins 7 actionnaires requis');
   }
+}
 
   /* ------------------------------------------------------------------
    * 11) Levée de fonds ≥ 1 M€ → éviter SARL / SNC (préférer SAS/SA)
@@ -4334,7 +4399,7 @@ showStatusDetails(recommendation) {
           <i class="fas ${escapeHTML(status.logo || 'fa-building')} text-green-400"></i>
         </div>
         <div class="flex-grow min-w-0">
-          <h2 id="${titleId}" class="text-2xl font-bold truncate">
+           <h2 id="${titleId}" class="text-2xl font-bold truncate">
             ${escapeHTML(status.name)} (${escapeHTML(status.shortName)})
           </h2>
           <p id="${descId}" class="text-gray-300 mt-1">
@@ -4535,6 +4600,218 @@ showStatusDetails(recommendation) {
   // Focus initial
   (btnClose || dialog).focus();
 }
+  /**
+ * Ajoute des explications thématiques (patrimoine, régime social, volume, levée, gouvernance, génériques)
+ * à la liste d’explications 'out' en fonction de statusId et des réponses A.
+ * (Adaptation du bloc que tu avais hors fonction.)
+ */
+_augmentExplanationsByThemes(statusId, A, out) {
+  // --- PROTECTION DU PATRIMOINE ---
+  if (A.patrimony_protection === 'essential' &&
+      ['SASU','SAS','SARL','EURL','SA','SELARL','SELAS'].includes(statusId)) {
+    out.push({
+      title: "Protection optimale de votre patrimoine personnel",
+      explanation: "Responsabilité limitée aux apports : vos biens privés sont isolés du risque professionnel (sauf fautes de gestion, cautions/garanties personnelles, dettes fiscales/sociales)."
+    });
+  }
+  if (A.patrimony_protection === 'essential' && ['EI','MICRO'].includes(statusId)) {
+    out.push({
+      title: "Protection partielle (EI/Micro)",
+      explanation: "Séparation pro/perso depuis 2022, avec exceptions. Pour une exigence « Essentielle », préférez SASU/EURL/SARL."
+    });
+    if (A.high_professional_risk === 'yes') {
+      out.push({
+        title: "Vigilance accrue en activité à risque",
+        explanation: "Une structure à responsabilité limitée est recommandée."
+      });
+    }
+  }
+  if (A.patrimony_protection === 'essential' && statusId === 'SCA') {
+    out.push({
+      title: "Protection partielle (SCA)",
+      explanation: "Commanditaires protégés, commandités responsables indéfiniment. Privilégiez SAS/SARL si la protection est essentielle."
+    });
+  }
+  if (A.patrimony_protection === 'essential' && ['SNC','SCI'].includes(statusId)) {
+    out.push({
+      title: "Inadéquation : responsabilité illimitée",
+      explanation: "Ce statut n’isole pas votre patrimoine. Orientez-vous vers SASU, EURL ou SARL."
+    });
+  }
+
+  if (A.patrimony_protection === 'important' &&
+      ['SASU','SAS','SARL','EURL','SA','SELARL','SELAS'].includes(statusId)) {
+    out.push({
+      title: "Responsabilité limitée conforme à vos attentes",
+      explanation: "Vos biens personnels sont séparés du risque pro ; vigilances usuelles (cautions, gestion)."
+    });
+  }
+  if (A.patrimony_protection === 'important' && ['EI','MICRO'].includes(statusId)) {
+    out.push({
+      title: "Protection partielle acceptable si risque maîtrisé",
+      explanation: "Séparation pro/perso avec exceptions. Si le risque augmente, passez en responsabilité limitée."
+    });
+  }
+  if (A.patrimony_protection === 'important' && statusId === 'SCA') {
+    out.push({
+      title: "Protection partielle (SCA)",
+      explanation: "Commanditaires OK, commandités exposés. Envisagez SAS/SARL si la protection est réellement importante."
+    });
+  }
+  if (A.patrimony_protection === 'important' && ['SNC','SCI'].includes(statusId)) {
+    out.push({
+      title: "Protection insuffisante",
+      explanation: "Responsabilité illimitée (SNC/SCI) : préférez une forme à responsabilité limitée."
+    });
+  }
+
+  if (A.patrimony_protection === 'secondary' &&
+      ['SASU','SAS','SARL','EURL','SA','SELARL','SELAS'].includes(statusId)) {
+    out.push({
+      title: "Protection automatique (bonus)",
+      explanation: "Même si ce n’est pas prioritaire, la responsabilité limitée reste un atout."
+    });
+  }
+  if (A.patrimony_protection === 'secondary' && ['EI','MICRO'].includes(statusId)) {
+    out.push({
+      title: "Protection jugée suffisante si activité peu risquée",
+      explanation: "La séparation pro/perso (2022) avec exceptions peut convenir si vous acceptez ce risque résiduel."
+    });
+  }
+  if (A.patrimony_protection === 'secondary' && statusId === 'SCA') {
+    out.push({
+      title: "Compromis acceptable (SCA)",
+      explanation: "Commanditaires protégés, commandités exposés : cohérent si le compromis est accepté."
+    });
+  }
+  if (A.patrimony_protection === 'secondary' && ['SNC','SCI'].includes(statusId)) {
+    out.push({
+      title: "Responsabilité illimitée assumée",
+      explanation: "À réserver aux activités à risque opérationnel très limité."
+    });
+  }
+
+  // --- RÉGIME SOCIAL (préférences) ---
+  if (A.social_regime === 'assimilated_employee') {
+    if (['SASU','SAS','SA','SELAS'].includes(statusId)) {
+      out.push({
+        title: "Régime d'assimilé salarié aligné avec votre préférence",
+        explanation: "Régime général (maladie, retraite, prévoyance). Pas d’assurance chômage automatique."
+      });
+    }
+    if (statusId === 'SARL' || statusId === 'SELARL') {
+      out.push({
+        title: "Assimilé salarié possible sous condition de gouvernance",
+        explanation: "Gérant minoritaire/égalitaire/tiers = assimilé ; majoritaire = TNS."
+      });
+    }
+    if (statusId === 'EURL') {
+      out.push({
+        title: "Assimilé salarié possible en EURL (gérant non associé)",
+        explanation: "Gérant non associé = assimilé ; associé unique gérant = TNS."
+      });
+    }
+    if (['MICRO','EI'].includes(statusId)) {
+      out.push({
+        title: "Inadéquation avec votre préférence",
+        explanation: "EI/Micro = TNS. Pour de l’assimilé salarié : SASU/SAS/SA/SELAS (ou aménagements en SARL/EURL)."
+      });
+    }
+  }
+
+  if (A.social_regime === 'tns') {
+    if (['MICRO','EI'].includes(statusId)) {
+      out.push({
+        title: "Régime TNS parfaitement aligné",
+        explanation: "Cotisations souvent plus faibles, couverture à compléter selon besoin."
+      });
+    }
+    if (statusId === 'EURL') {
+      out.push({
+        title: "TNS si gérant associé unique",
+        explanation: "Non associé = assimilé salarié ; associé unique gérant = TNS."
+      });
+    }
+    if (statusId === 'SARL' || statusId === 'SELARL') {
+      out.push({
+        title: "TNS sous condition de majorité",
+        explanation: "Gérant majoritaire = TNS ; minoritaire/égalitaire/tiers = assimilé."
+      });
+    }
+    if (['SASU','SAS','SA','SELAS'].includes(statusId)) {
+      out.push({
+        title: "Incompatibilité avec TNS",
+        explanation: "Ces formes placent le dirigeant en assimilé salarié."
+      });
+    }
+  }
+
+  if (A.social_regime === 'mixed') {
+    if (statusId === 'SARL' || statusId === 'SELARL') {
+      out.push({
+        title: "Flexibilité par la répartition du capital",
+        explanation: "Le régime dépend de la majorité de gérance, ajustable dans le temps."
+      });
+    }
+    if (statusId === 'EURL') {
+      out.push({
+        title: "Flexibilité via la qualité du gérant",
+        explanation: "Changer la qualité du gérant (associé/non associé) fait basculer le régime."
+      });
+    }
+    if (['SASU','SAS','SA','SELAS'].includes(statusId)) {
+      out.push({
+        title: "Bascule non possible dans la même forme",
+        explanation: "Pour du TNS, il faut changer de forme (ex. SASU → EURL/EI) ou réorganiser."
+      });
+    }
+  }
+
+// --- VOLUME D’ACTIVITÉ ---
+if (A.projected_revenue != null) {
+  const r = Number(A.projected_revenue);
+
+  // Utilise d'abord microThreshold (déjà déterminé plus haut selon l'activité),
+  // sinon retombe sur le plafond BIC ventes/hébergement depuis thresholds2025.
+  const microCeil = Number.isFinite(+microThreshold)
+    ? Number(microThreshold)
+    : Number(this.thresholds2025?.micro?.bic_sales);
+
+  if (Number.isFinite(r) && r >= 0) {
+    if (statusId === 'MICRO' && Number.isFinite(microCeil) && r > microCeil) {
+      out.push({
+        title: "Dépassement des plafonds du régime micro",
+        explanation: `Avec ${r.toLocaleString('fr-FR')} € de CA prévu, envisagez une forme sociétaire (EURL, SASU…).`
+      });
+    }
+    if ((statusId === 'SASU' || statusId === 'SAS') && r <= 30000) {
+      out.push({
+        title: "Frais fixes à surveiller",
+        explanation: "Pour un faible CA, charges sociales/compta peuvent peser."
+      });
+    }
+  }
+}
+
+  // --- LEVÉE DE FONDS ---
+  if (A.fundraising === 'yes') {
+    if (statusId === 'SAS') out.push({ title:"Cadre idéal pour accueillir des investisseurs", explanation:"Actions de préférence, BSA/OC, BSPCE, pacte : format préféré des VC/BA." });
+    if (statusId === 'SASU') out.push({ title:"SASU → SAS facilement", explanation:"Démarrer seul puis ouvrir le capital sans friction." });
+    if (statusId === 'SA') out.push({ title:"Accès élargi aux capitaux (voire bourse)", explanation:"Gouvernance structurée, adaptées aux grosses levées." });
+    if (['EI','MICRO','EURL','SARL','SNC','SCI','SELARL','SELAS'].includes(statusId)) {
+      out.push({ title:"Moins adapté à une levée externe", explanation:"Agrément strict, objet civil ou absence d’actions : privilégiez SAS/SA si levée." });
+    }
+  }
+
+  // --- GOUVERNANCE / TEAM STRUCTURE (exemples clés) ---
+  if (A.team_structure === 'solo' && ['EI','MICRO','EURL','SASU'].includes(statusId)) {
+    out.push({ title:"Gouvernance optimisée pour travailler seul", explanation:"Décisions rapides, formalisme réduit." });
+  }
+  if (A.team_structure === 'investors' && ['SAS','SASU','SA','SCA'].includes(statusId)) {
+    out.push({ title:"Prête à accueillir des investisseurs", explanation:"Émissions d’actions, actions de préférence, gouvernance adaptable." });
+  }
+}
+
 
 /**
  * Génère des explications personnalisées sur pourquoi un statut est recommandé
@@ -4586,10 +4863,9 @@ getStatusExplanations(statusId, answers) {
   const projectedRevenue = Number(A.projected_revenue || 0);
 
   // Potentielle éligibilité IS réduit (15 % jusqu’au plafond de bénéfice)
-  // NB: on reste volontairement "sous conditions" car la détention du capital n'est pas connue ici.
   const isReducedISNote = (() => {
     if (!isCompany(statusId)) return null;
-    const cap = this.thresholds2025?.is_reduced_rate?.profit_cap ?? 42500;
+    const cap   = this.thresholds2025?.is_reduced_rate?.profit_cap   ?? 42500;
     const caCap = this.thresholds2025?.is_reduced_rate?.turnover_cap ?? 10_000_000;
     if (Number.isFinite(projectedRevenue) && projectedRevenue < caCap) {
       return `Éligibilité possible au taux réduit d’IS à 15 % jusqu’à ${fmt€(cap)} (CA < ${fmt€(caCap)} et autres conditions).`;
@@ -4597,7 +4873,7 @@ getStatusExplanations(statusId, answers) {
     return null;
   })();
 
-  // Franchise en base de TVA (utile pour MICRO/EI et, plus largement, petites structures à l’IS)
+  // Franchise en base de TVA
   const tvaFranchiseNote = (() => {
     const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
     const seuil = ['ventes','hébergement','hebergement','bic_sales'].includes(nature)
@@ -4608,7 +4884,7 @@ getStatusExplanations(statusId, answers) {
     return null;
   })();
 
-  // Priorités utilisateur (pour personnaliser le wording)
+  // Priorités utilisateur
   const wantsGovFlex  = A.priorities?.includes?.('governance_flexibility') || A.governance_flexibility === 'yes';
   const wantsCred     = A.priorities?.includes?.('credibility') || A.credibility === 'yes';
   const wantsFund     = (A.fundraising === 'yes') || (A.investors === 'yes') || A.priorities?.includes?.('fundraising_capacity');
@@ -4625,9 +4901,7 @@ getStatusExplanations(statusId, answers) {
       title: "Simplicité et charges proportionnelles",
       explanation: "Déclarations et comptabilité ultra-simplifiées ; vos cotisations sont calculées sur le chiffre d’affaires réellement encaissé."
     });
-    if (tvaFranchiseNote) {
-      out.push({ title: "TVA — franchise en base", explanation: tvaFranchiseNote });
-    }
+    if (tvaFranchiseNote) out.push({ title: "TVA — franchise en base", explanation: tvaFranchiseNote });
     if (Number.isFinite(projectedRevenue) && Number.isFinite(microThreshold)) {
       out.push({
         title: "Cohérence avec votre niveau de CA",
@@ -4663,12 +4937,8 @@ getStatusExplanations(statusId, answers) {
 
   // EURL
   else if (statusId === 'EURL') {
-    if (wantsProtect) {
-      out.push({ title: "Responsabilité limitée", explanation: "Votre patrimoine personnel est protégé à hauteur des apports." });
-    }
-    if (socialPrefTns) {
-      out.push({ title: "Coût social contenu (TNS)", explanation: "Un gérant associé unique relève du régime TNS, souvent moins coûteux qu’un régime assimilé salarié." });
-    }
+    if (wantsProtect) out.push({ title: "Responsabilité limitée", explanation: "Votre patrimoine personnel est protégé à hauteur des apports." });
+    if (socialPrefTns) out.push({ title: "Coût social contenu (TNS)", explanation: "Un gérant associé unique relève du régime TNS, souvent moins coûteux qu’un régime assimilé salarié." });
     if (tmiLabel) {
       out.push({
         title: "Arbitrage IR / IS",
@@ -4680,15 +4950,9 @@ getStatusExplanations(statusId, answers) {
 
   // SASU / SAS
   else if (statusId === 'SASU' || statusId === 'SAS') {
-    if (socialPrefAsm) {
-      out.push({ title: "Régime social ‘assimilé salarié’", explanation: "Protection du régime général pour le président (hors assurance chômage)." });
-    }
-    if (wantsGovFlex) {
-      out.push({ title: "Gouvernance flexible", explanation: "Statuts personnalisables : organes, droits de vote, clauses d’agrément/inaliénabilité, actions de préférence…" });
-    }
-    if (wantsFund) {
-      out.push({ title: "Prête pour les investisseurs", explanation: "Ouvre facilement le capital (BSPCE, BSA, actions de préférence, pactes), adaptée aux levées de fonds." });
-    }
+    if (socialPrefAsm) out.push({ title: "Régime social ‘assimilé salarié’", explanation: "Protection du régime général pour le président (hors assurance chômage)." });
+    if (wantsGovFlex) out.push({ title: "Gouvernance flexible", explanation: "Statuts personnalisables : organes, droits de vote, clauses d’agrément/inaliénabilité, actions de préférence…" });
+    if (wantsFund)   out.push({ title: "Prête pour les investisseurs", explanation: "Ouvre facilement le capital (BSPCE, BSA, actions de préférence, pactes), adaptée aux levées de fonds." });
     if (tmiLabel) {
       out.push({
         title: "Arbitrage salaire/dividendes",
@@ -4702,9 +4966,7 @@ getStatusExplanations(statusId, answers) {
   else if (statusId === 'SARL') {
     if (wantsProtect) out.push({ title: "Responsabilité limitée", explanation: "Protection du patrimoine personnel à hauteur des apports." });
     out.push({ title: "Cadre stable & connu", explanation: "Structure robuste et familière des partenaires (banques, assureurs), adaptée aux PME/familiales." });
-    if (socialPrefTns) {
-      out.push({ title: "Gérant majoritaire = TNS", explanation: "Si vous êtes gérant majoritaire, régime TNS (cotisations souvent plus faibles que le régime salarié)." });
-    }
+    if (socialPrefTns) out.push({ title: "Gérant majoritaire = TNS", explanation: "Si vous êtes gérant majoritaire, régime TNS (cotisations souvent plus faibles que le régime salarié)." });
     if (tmiLabel) {
       out.push({
         title: "Option IR 5 ans (art. 239 bis AB) ou famille",
@@ -4718,9 +4980,7 @@ getStatusExplanations(statusId, answers) {
   else if (statusId === 'SA') {
     if (wantsCred) out.push({ title: "Crédibilité institutionnelle", explanation: "Forme très rassurante pour grands comptes, marchés publics et partenaires internationaux." });
     if (wantsFund) out.push({ title: "Ouverture des capitaux", explanation: "Compatible avec des tours de financement significatifs, voire une cotation ultérieure." });
-    if (tmiLabel) {
-      out.push({ title: "IS par défaut", explanation: `IS 15 % / 25 % ; avec TMI ${tmiLabel}, la fiscalité société limite l’impact sur vos revenus personnels.` });
-    }
+    if (tmiLabel) out.push({ title: "IS par défaut", explanation: `IS 15 % / 25 % ; avec TMI ${tmiLabel}, la fiscalité société limite l’impact sur vos revenus personnels.` });
     if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
   }
 
@@ -4728,9 +4988,7 @@ getStatusExplanations(statusId, answers) {
   else if (statusId === 'SNC') {
     out.push({ title: "Transparence fiscale par défaut", explanation: "À l’IR par transparence (option IS possible). Pertinent si TMI faible et forte confiance entre associés." });
     out.push({ title: "Souplesse de répartition", explanation: "Répartition des bénéfices et règles de fonctionnement aménageables statutairement." });
-    if (tmiLabel) {
-      out.push({ title: "Option IS en cas de TMI élevée", explanation: `Si votre TMI ${tmiLabel} est élevée, l’option IS (15 % / 25 %) peut réduire la charge globale.` });
-    }
+    if (tmiLabel) out.push({ title: "Option IS en cas de TMI élevée", explanation: `Si votre TMI ${tmiLabel} est élevée, l’option IS (15 % / 25 %) peut réduire la charge globale.` });
   }
 
   // SCI
@@ -4757,9 +5015,7 @@ getStatusExplanations(statusId, answers) {
     if (statusId === 'SELARL' && socialPrefTns) {
       out.push({ title: "Coût social contenu (gérant majoritaire TNS)", explanation: "Cotisations souvent plus faibles qu’en régime assimilé salarié (contrepartie : couverture moindre)." });
     }
-    if (wantsFund) {
-      out.push({ title: "Ouverture encadrée du capital", explanation: "Entrée d’investisseurs possible mais limitée par les quotas/professions autorisées par l’ordre." });
-    }
+    if (wantsFund) out.push({ title: "Ouverture encadrée du capital", explanation: "Entrée d’investisseurs possible mais limitée par les quotas/professions autorisées par l’ordre." });
     if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
   }
 
@@ -4772,36 +5028,24 @@ getStatusExplanations(statusId, answers) {
   }
 
   // ── Bonus contextuels transverses --------------------------------
-
-  // Franchise TVA : utile aussi pour petites SAS/SARL/SASU/EURL
   if (!['MICRO','SCI','SNC','SA','SCA'].includes(statusId) && tvaFranchiseNote && projectedRevenue > 0) {
     out.push({ title: "TVA — franchise en base (optionnelle)", explanation: tvaFranchiseNote });
   }
-
-  // Protection patrimoniale demandée
   if (wantsProtect && ['SAS','SASU','SARL','EURL','SA','SELARL','SELAS','SCA'].includes(statusId)) {
     out.push({ title: "Protection patrimoniale recherchée", explanation: "Forme à responsabilité limitée : les risques sont cantonnés aux apports (hors fautes/garanties personnelles)." });
   }
-
-  // Gouvernance flexible recherchée
   if (wantsGovFlex && isSasLike(statusId)) {
     out.push({ title: "Priorité ‘souplesse de gouvernance’", explanation: "SAS/SELAS permettent un pacte + statuts très modulaires (actions de préférence, vesting, clauses de sortie…)." });
   }
-
-  // Levée de fonds
   if (wantsFund && ['SAS','SASU','SA','SCA','SELAS'].includes(statusId)) {
     out.push({ title: "Priorité ‘capacité de levée’", explanation: "Instruments financiers et pratiques de marché bien établis : plus attractif pour VC/BA." });
   }
-
-  // Cohérence avec préférence de régime social
   if (socialPrefAsm && ['SAS','SASU','SA','SELAS'].includes(statusId)) {
     out.push({ title: "Aligné avec votre préférence sociale", explanation: "Statut du dirigeant ‘assimilé salarié’ (hors assurance chômage) conforme à votre choix." });
   }
   if (socialPrefTns && ['EURL','SARL','SELARL'].includes(statusId)) {
     out.push({ title: "Aligné avec votre préférence TNS", explanation: "Régime TNS possible (ex. gérant majoritaire), souvent moins coûteux en charges." });
   }
-
-  // Micro — vigilance seuil (si malgré tout recommandé)
   if (statusId === 'MICRO' && Number.isFinite(projectedRevenue) && Number.isFinite(microThreshold)) {
     const ratio = projectedRevenue / microThreshold;
     if (ratio >= 0.7 && ratio < 1) {
@@ -4811,14 +5055,15 @@ getStatusExplanations(statusId, answers) {
       });
     }
   }
-
-  // SEL — cohérence ordre pro
   if (isSel(statusId) && !orderYes) {
     out.push({
       title: "Vérifier l’éligibilité ordinale",
       explanation: "Les SEL sont réservées aux professions libérales réglementées : confirmez l’agrément/inscription à l’ordre."
     });
   }
+
+  // ➜ Compléments depuis le bloc thématique (helper)
+  this._augmentExplanationsByThemes(statusId, A, out);
 
   // Compactage (unique + max ~6 messages)
   const seen = new Set();
@@ -5672,191 +5917,193 @@ if (explanations.length < 3) {
 }
 
     
-    /**
-     * Afficher les détails d'un statut juridique avec analyse personnalisée
-     */
-    displayResults(recommendations) {
-        console.log("Affichage des résultats:", recommendations);
-        // Récupérer les conteneurs
-        const resultsContainer = document.getElementById('results-container');
-        const questionContainer = document.getElementById('question-container');
-        
-        if (!resultsContainer) {
-            console.error('Conteneur de résultats non trouvé');
-            return;
-        }
-        
-        // Masquer le conteneur de questions et afficher celui des résultats
-        if (questionContainer) questionContainer.style.display = 'none';
-        resultsContainer.style.display = 'block';
-        
-        if (recommendations.length === 0) {
-            resultsContainer.innerHTML = `
-                <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center mb-8">
-                    <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
-                    <h2 class="text-2xl font-bold mb-4">Aucun statut juridique correspondant</h2>
-                    <p class="mb-6">Vos critères semblent incompatibles. Essayez d'assouplir certaines exigences et refaites le test.</p>
-                    <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
-                        <i class="fas fa-redo mr-2"></i> Refaire le test
-                    </button>
-                </div>
-            `;
-            
-            document.getElementById('restart-btn').addEventListener('click', () => {
-                location.reload();
-            });
-            
-            return;
-        }
-        
-        // Créer le contenu des résultats
-        let resultsHTML = `
-            <div class="results-container">
-                <div class="text-center mb-10">
-                    <h2 class="text-3xl font-bold mb-3">Votre statut juridique recommandé</h2>
-                    <p class="text-lg text-gray-300">Basé sur vos réponses, voici les formes juridiques les plus adaptées à votre projet</p>
-                </div>
-                
-                <div class="recommendation-cards">
-        `;
-        
-        // Carte pour chaque recommandation
-        recommendations.forEach((recommendation, index) => {
-         const strengths = (recommendation.strengths || []);
-const weaknesses = (recommendation.weaknesses || []);
+  /**
+ * Afficher les détails synthétiques + actions pour chaque recommandation
+ */
+displayResults(recommendations) {
+  console.log("Affichage des résultats:", recommendations);
 
-resultsHTML += `
-  <div class="recommendation-card ${isMainRecommendation ? 'main-recommendation' : ''} bg-opacity-60 bg-blue-900 rounded-xl overflow-hidden mb-8 border ${isMainRecommendation ? 'border-green-400' : 'border-gray-700'}">
-    <!-- En-tête -->
-    <div class="p-6 flex items-center border-b border-gray-700 ${isMainRecommendation ? 'bg-green-900 bg-opacity-30' : ''}">
-      <div class="h-16 w-16 rounded-full bg-opacity-30 ${isMainRecommendation ? 'bg-green-800' : 'bg-blue-800'} flex items-center justify-center text-3xl mr-5">
-        <i class="fas ${status.logo || 'fa-building'} ${isMainRecommendation ? 'text-green-400' : 'text-gray-300'}"></i>
+  const resultsContainer = document.getElementById('results-container');
+  const questionContainer = document.getElementById('question-container');
+
+  if (!resultsContainer) {
+    console.error('Conteneur de résultats non trouvé');
+    return;
+  }
+
+  // utilitaire d’échappement (même que showStatusDetails)
+  const escapeHTML = (v) =>
+    String(v ?? '').replace(/[&<>"']/g, (m) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]
+    ));
+
+  if (questionContainer) questionContainer.style.display = 'none';
+  resultsContainer.style.display = 'block';
+
+  if (!Array.isArray(recommendations) || recommendations.length === 0) {
+    resultsContainer.innerHTML = `
+      <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center mb-8">
+        <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+        <h2 class="text-2xl font-bold mb-4">Aucun statut juridique correspondant</h2>
+        <p class="mb-6">Vos critères semblent incompatibles. Essayez d'assouplir certaines exigences et refaites le test.</p>
+        <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+          <i class="fas fa-redo mr-2"></i> Refaire le test
+        </button>
       </div>
-      <div class="flex-grow">
-        <div class="flex justify-between items-center">
-          <h3 class="text-2xl font-bold">${status.name}</h3>
-          <div class="score-badge ${isMainRecommendation ? 'bg-green-500 text-gray-900' : 'bg-blue-700'} px-3 py-1 rounded-full text-sm font-medium">
-            Score: ${recommendation.score}/100
+    `;
+    resultsContainer.querySelector('#restart-btn')?.addEventListener('click', () => location.reload());
+    return;
+  }
+
+  let resultsHTML = `
+    <div class="results-container">
+      <div class="text-center mb-10">
+        <h2 class="text-3xl font-bold mb-3">Votre statut juridique recommandé</h2>
+        <p class="text-lg text-gray-300">Basé sur vos réponses, voici les formes juridiques les plus adaptées à votre projet</p>
+      </div>
+      <div class="recommendation-cards">
+  `;
+
+  recommendations.forEach((recommendation, index) => {
+    const isMainRecommendation = index === 0;
+
+    // Fallback robuste pour le statut (même logique que showStatusDetails)
+    const status =
+      recommendation.status
+      || this.filteredStatuses?.[recommendation.id]
+      || window?.legalStatuses?.[recommendation.id]
+      || {};
+
+    // Affichage nom + shortName (facultatif)
+    const displayName = status.name || recommendation.name || recommendation.id;
+    const short = status.shortName ? ` (${status.shortName})` : '';
+
+    const strengths  = Array.isArray(recommendation.strengths)  ? recommendation.strengths  : (this.getStrengths?.(recommendation.id)  || []);
+    const weaknesses = Array.isArray(recommendation.weaknesses) ? recommendation.weaknesses : (this.getWeaknesses?.(recommendation.id) || []);
+
+    resultsHTML += `
+      <div class="recommendation-card ${isMainRecommendation ? 'main-recommendation' : ''} bg-opacity-60 bg-blue-900 rounded-xl overflow-hidden mb-8 border ${isMainRecommendation ? 'border-green-400' : 'border-gray-700'}">
+        <div class="p-6 flex items-center border-b border-gray-700 ${isMainRecommendation ? 'bg-green-900 bg-opacity-30' : ''}">
+          <div class="h-16 w-16 rounded-full ${isMainRecommendation ? 'bg-green-800' : 'bg-blue-800'} bg-opacity-30 flex items-center justify-center text-3xl mr-5">
+            <i class="fas ${escapeHTML(status.logo || 'fa-building')} ${isMainRecommendation ? 'text-green-400' : 'text-gray-300'}"></i>
+          </div>
+          <div class="flex-grow min-w-0">
+            <div class="flex justify-between items-center gap-3">
+              <h3 class="text-2xl font-bold truncate">${escapeHTML(displayName)}${escapeHTML(short)}</h3>
+              <div class="score-badge ${isMainRecommendation ? 'bg-green-500 text-gray-900' : 'bg-blue-700 text-white'} px-3 py-1 rounded-full text-sm font-medium shrink-0">
+                Score&nbsp;: ${Number(recommendation.score ?? 0)}/100
+              </div>
+            </div>
+            <p class="text-gray-400 mt-1">
+              ${isMainRecommendation ? 'Recommandation principale' : `Alternative ${index + 1}`}
+            </p>
           </div>
         </div>
-        <p class="text-gray-400 mt-1">
-          ${isMainRecommendation ? 'Recommandation principale' : `Alternative ${index + 1}`}
-        </p>
-      </div>
-    </div>
 
-    <!-- Contenu -->
-    <div class="p-6">
-      <p class="mb-5">${status.description}</p>
+        <div class="p-6">
+          <p class="mb-5">${escapeHTML(status.description || '')}</p>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Forces -->
-        <div>
-          <h4 class="font-semibold mb-2 flex items-center text-green-400">
-            <i class="fas fa-check-circle mr-2"></i> Points forts
-          </h4>
-          <ul class="space-y-2">
-            ${strengths.map(s => `
-              <li class="flex items-start">
-                <i class="fas fa-plus-circle text-green-400 mt-1 mr-2"></i>
-                <span>${s}</span>
-              </li>
-            `).join('')}
-          </ul>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-semibold mb-2 flex items-center text-green-400">
+                <i class="fas fa-check-circle mr-2"></i> Points forts
+              </h4>
+              <ul class="space-y-2">
+                ${strengths.map(s => `
+                  <li class="flex items-start">
+                    <i class="fas fa-plus-circle text-green-400 mt-1 mr-2"></i>
+                    <span>${escapeHTML(s)}</span>
+                  </li>
+                `).join('') || '<li class="text-gray-300">—</li>'}
+              </ul>
+            </div>
+
+            <div>
+              <h4 class="font-semibold mb-2 flex items-center text-red-400">
+                <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
+              </h4>
+              <ul class="space-y-2">
+                ${weaknesses.map(w => `
+                  <li class="flex items-start">
+                    <i class="fas fa-minus-circle text-red-400 mt-1 mr-2"></i>
+                    <span>${escapeHTML(w)}</span>
+                  </li>
+                `).join('') || '<li class="text-gray-300">—</li>'}
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end">
+            <button class="details-btn bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-3"
+                    data-status-id="${escapeHTML(recommendation.id)}" aria-label="Voir les détails de ${escapeHTML(status.name || recommendation.id)}">
+              <i class="fas fa-info-circle mr-2"></i> Plus de détails
+            </button>
+          </div>
         </div>
-
-        <!-- Faiblesses -->
-        <div>
-          <h4 class="font-semibold mb-2 flex items-center text-red-400">
-            <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
-          </h4>
-          <ul class="space-y-2">
-            ${weaknesses.map(w => `
-              <li class="flex items-start">
-                <i class="fas fa-minus-circle text-red-400 mt-1 mr-2"></i>
-                <span>${w}</span>
-              </li>
-            `).join('')}
-          </ul>
-        </div>
       </div>
+    `;
+  });
 
-      <!-- Boutons d'action -->
-      <div class="mt-6 flex justify-end">
-        <button class="details-btn bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-3"
-                data-status-id="${recommendation.id}" aria-label="Voir les détails de ${status.name}">
-          <i class="fas fa-info-circle mr-2"></i> Plus de détails
+  // Stratégies pour la reco principale
+  resultsHTML += this.renderContextualStrategies(recommendations[0].id);
+
+  // Incompatibilités
+  resultsHTML += this.displayIncompatibilities(this.incompatibles);
+
+  resultsHTML += `
+      </div>
+      <div class="text-center mt-10">
+        <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+          <i class="fas fa-redo mr-2"></i> Refaire le test
+        </button>
+        <button id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-6 py-3 rounded-lg ml-4">
+          <i class="fas fa-balance-scale mr-2"></i> Comparer les statuts
         </button>
       </div>
     </div>
-  </div>
-`;
-        });
-        
-        // Ajouter les stratégies contextuelles pour la recommandation principale
-        if (recommendations.length > 0) {
-            resultsHTML += this.renderContextualStrategies(recommendations[0].id);
-        }
-        
-        // Afficher les incompatibilités
-        resultsHTML += this.displayIncompatibilities(this.incompatibles);
-        
-        // Fermer les conteneurs
-resultsHTML += `
-        </div>
-        
-        <div class="text-center mt-10">
-            <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
-                <i class="fas fa-redo mr-2"></i> Refaire le test
-            </button>
-            <button id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-6 py-3 rounded-lg ml-4">
-                <i class="fas fa-balance-scale mr-2"></i> Comparer les statuts
-            </button>
-        </div>
-    </div>
-`;
+  `;
 
-// Injecter le HTML dans le conteneur
-resultsContainer.innerHTML = resultsHTML;
+  resultsContainer.innerHTML = resultsHTML;
 
-// Délégation d'événements
-resultsContainer.addEventListener('click', (e) => {
-  const restart = e.target.closest('#restart-btn');
-  if (restart) {
-    location.reload();
-    return;
-  }
-
-  const compare = e.target.closest('#compare-btn');
-  if (compare) {
-    const tabItems = document.querySelectorAll('.tab-item');
-    let opened = false;
-    tabItems.forEach((tab) => {
-      if (tab.textContent.trim() === 'Comparatif des statuts') {
-        tab.click();
-        opened = true;
-      }
-    });
-    if (opened) window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-
-  const details = e.target.closest('.details-btn');
-  if (details) {
-    const statusId = details.dataset.statusId; // ex: 'SASU', 'MICRO', ...
-    const rec = (recommendations || []).find(r => r.id === statusId);
-    if (rec) this.showStatusDetails(rec);
-  }
-});
-        
-        // Événement pour le bouton de téléchargement PDF
-        const downloadBtn = document.querySelector('.download-btn');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', () => {
-                alert('Fonctionnalité de téléchargement PDF à implémenter');
-            });
-        }
+  // Délégation d'événements
+  resultsContainer.addEventListener('click', (e) => {
+    const restart = e.target.closest('#restart-btn');
+    if (restart) {
+      location.reload();
+      return;
     }
+
+    const compare = e.target.closest('#compare-btn');
+    if (compare) {
+      const tabItems = document.querySelectorAll('.tab-item');
+      let opened = false;
+      tabItems.forEach((tab) => {
+        if (tab.textContent.trim() === 'Comparatif des statuts') {
+          tab.click();
+          opened = true;
+        }
+      });
+      if (opened) window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const details = e.target.closest('.details-btn');
+    if (details) {
+      const statusId = details.dataset.statusId; // ex: 'SASU', 'MICRO', ...
+      const rec = (recommendations || []).find(r => r.id === statusId);
+      if (rec) this.showStatusDetails(rec);
+    }
+  });
+
+  // Événement pour le bouton de téléchargement PDF
+  const downloadBtn = document.querySelector('.download-btn');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      alert('Fonctionnalité de téléchargement PDF à implémenter');
+    });
+  }
+}
+
     
   /**
  * Affiche les statuts juridiques incompatibles avec suggestions alternatives
