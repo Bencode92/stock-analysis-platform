@@ -1,6 +1,6 @@
 /**
  * comparatif-statuts.js - Tableau comparatif des formes juridiques
- * À inclure dans la page "Comparatif des statuts"
+ * Version 2025 avec seuils à jour et comparaison intelligente
  */
 
 // Fonction d'initialisation disponible globalement pour être appelée depuis app.js
@@ -279,6 +279,10 @@ window.initComparatifStatuts = function() {
                 .notes-list {
                     grid-template-columns: 1fr;
                 }
+
+                #smart-comparison .grid {
+                    grid-template-columns: 1fr !important;
+                }
             }
 
             /* NOUVELLES AMÉLIORATIONS ESTHÉTIQUES */
@@ -483,9 +487,106 @@ window.initComparatifStatuts = function() {
                 transform: translateY(-2px);
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             }
+
+            /* Comparaison intelligente */
+            #smart-comparison {
+                margin-top: 0.75rem;
+            }
+
+            #smart-comparison .grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            #smart-comparison b {
+                color: #00FF87;
+            }
         `;
         document.head.appendChild(style);
     }
+
+    // ========== NOUVEAUX UTILITAIRES 2025 ==========
+    
+    // Helpers légers
+    const $ = (s, r=document)=>r.querySelector(s);
+    const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+    const toText = v => (v==null || v==='') ? '—' : String(v);
+    const fmtEuro = n => Number.isFinite(+n) ? (+n).toLocaleString('fr-FR')+' €' : toText(n);
+    const debounce = (fn, ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+
+    // Seuils 2025 (priorité à tes données si présentes)
+    function getThresholds2025() {
+        const T = (window.recoEngine && window.recoEngine.thresholds2025) || window.thresholds2025 || {};
+        const def = {
+            micro: { bic_sales:188700, bic_service:77700, bnc:77700, meuble_classe_ca:77700, meuble_non_classe_ca:15000 },
+            tva_franchise_base: { ventes:85000, services:37500, tolerance_ventes:93500, tolerance_services:41250 }
+        };
+        return {
+            micro: { ...def.micro, ...(T.micro||{}) },
+            tva_franchise_base: { ...def.tva_franchise_base, ...(T.tva_franchise_base||{}) }
+        };
+    }
+
+    // Obligations clefs pour pédagogie (micro / EURL / SASU)
+    function deriveObligations(shortName) {
+        const T = getThresholds2025();
+        const tvaFr = `Franchise TVA 2025 : ventes ${fmtEuro(T.tva_franchise_base.ventes)} (${fmtEuro(T.tva_franchise_base.tolerance_ventes)} tol.) • services ${fmtEuro(T.tva_franchise_base.services)} (${fmtEuro(T.tva_franchise_base.tolerance_services)} tol.)`;
+        const microPlaf = `Ventes/Hébergement ${fmtEuro(T.micro.bic_sales)} • Services/BIC ${fmtEuro(T.micro.bic_service)} • BNC ${fmtEuro(T.micro.bnc)} • Meublés tourisme ${fmtEuro(T.micro.meuble_classe_ca)} (classé) / ${fmtEuro(T.micro.meuble_non_classe_ca)} (non classé)`;
+
+        const SN = (shortName||'').toUpperCase();
+        if (SN.includes('MICRO')) {
+            return {
+                obligationsCle: [
+                    'Déclaration du CA (URSSAF) mensuelle/trimestrielle',
+                    'Livre des recettes (+ registre achats si ventes)',
+                    'Franchise TVA par défaut (option possible)',
+                    'CFE (souvent exonérée la 1ʳᵉ année)',
+                    'Compte pro dédié si CA > 10 000 € deux années de suite'
+                ].join(' · '),
+                plafondCA: microPlaf,
+                regimeTVA: tvaFr
+            };
+        }
+        if (SN==='EURL') {
+            return {
+                obligationsCle: [
+                    'Comptabilité d\'engagement, dépôt des comptes',
+                    'AG d\'approbation < 6 mois après clôture',
+                    'TVA : réel simplifié/normal ou franchise si éligible',
+                    'Cotisations TNS (et sur dividendes > 10 % si IS)'
+                ].join(' · ')
+            };
+        }
+        if (SN==='SASU') {
+            return {
+                obligationsCle: [
+                    'Comptabilité d\'engagement, dépôt des comptes',
+                    'Paie & DSN si rémunération du président',
+                    'TVA : réel simplifié/normal ou franchise si éligible',
+                    'Dividendes non soumis à cotisations sociales (PFU/barème)'
+                ].join(' · ')
+            };
+        }
+        return { obligationsCle: '' };
+    }
+
+    // Normalise une fiche statut pour l'affichage
+    function enrichForDisplay(statut) {
+        const derived = deriveObligations(statut.shortName || statut.name);
+        const km = statut.key_metrics || {};
+        return {
+            ...statut,
+            regimeTVA: statut.regimeTVA || derived.regimeTVA,
+            plafondCA: statut.plafondCA || derived.plafondCA || '—',
+            obligationsCle: statut.obligationsCle || derived.obligationsCle || '—',
+            // Pour la colonne "Protection patrimoine": on affiche étoiles + texte si dispo
+            _pp_stars: Number.isFinite(km.patrimony_protection) ? km.patrimony_protection : null,
+            _pp_text: toText(statut.protectionPatrimoine)
+        };
+    }
+
+    // ========== FIN NOUVEAUX UTILITAIRES ==========
 
     // Fonction principale pour créer le tableau comparatif - exposée globalement
     window.createComparatifTable = function(containerId) {
@@ -575,12 +676,6 @@ window.initComparatifStatuts = function() {
                 
                 <!-- Boutons d'action flottants -->
                 <div class="actions-floating-bar">
-                    <button class="action-btn" title="Télécharger en PDF" id="download-pdf-btn">
-                        <i class="fas fa-file-pdf"></i>
-                    </button>
-                    <button class="action-btn" title="Exporter en Excel" id="export-excel-btn">
-                        <i class="fas fa-file-excel"></i>
-                    </button>
                     <button class="action-btn" title="Imprimer" id="print-btn">
                         <i class="fas fa-print"></i>
                     </button>
@@ -643,20 +738,14 @@ window.initComparatifStatuts = function() {
             });
         });
 
-        document.getElementById('search-input').addEventListener('input', (e) => {
+        // ========== DEBOUNCE SUR LA RECHERCHE ==========
+        const debouncedUpdate = debounce(()=>{ updateTable(); }, 200);
+        $('#search-input').addEventListener('input', (e)=>{
             searchTerm = e.target.value.toLowerCase();
-            updateTable();
+            debouncedUpdate();
         });
         
-        // Ajouter les écouteurs d'événements pour les boutons d'action
-        document.getElementById('download-pdf-btn').addEventListener('click', () => {
-            alert('Fonctionnalité de téléchargement PDF à implémenter');
-        });
-        
-        document.getElementById('export-excel-btn').addEventListener('click', () => {
-            alert('Fonctionnalité d\'export Excel à implémenter');
-        });
-        
+        // Ajouter les écouteurs d'événements pour les boutons d'action        
         document.getElementById('print-btn').addEventListener('click', () => {
             window.print();
         });
@@ -671,9 +760,9 @@ window.initComparatifStatuts = function() {
                 if (window.legalStatuses) {
                     statusDropdown.innerHTML = '<option value="">Sélectionner un statut...</option>';
                     
-                    // Trier les statuts par nom
-                    const statuts = Object.values(window.legalStatuses).sort((a, b) => 
-                        a.shortName.localeCompare(b.shortName));
+                    // Trier les statuts par nom avec locale fr
+                    const statuts = Object.values(window.legalStatuses)
+                        .sort((a,b)=> a.shortName.localeCompare(b.shortName,'fr',{sensitivity:'base'}));
                     
                     statuts.forEach(statut => {
                         const option = document.createElement('option');
@@ -724,6 +813,9 @@ window.initComparatifStatuts = function() {
                     }
                 }, 500);
             }
+
+            // Écouter l'événement custom si disponible
+            window.addEventListener('legalStatuses:ready', ()=>populateStatusDropdown(), { once:true });
         }
         
         // Fonction pour ajouter un statut à la comparaison
@@ -774,6 +866,59 @@ window.initComparatifStatuts = function() {
                 
                 comparisonItems.appendChild(itemDiv);
             });
+
+            // ========== COMPARAISON INTELLIGENTE ==========
+            renderSmartComparison();
+        }
+
+        // ========== FONCTION COMPARAISON INTELLIGENTE ==========
+        function renderSmartComparison(){
+            let host = $('#smart-comparison');
+            if (!host){
+                host = document.createElement('div');
+                host.id = 'smart-comparison';
+                host.style.marginTop = '0.75rem';
+                const header = $('.comparatif-header');
+                header && header.appendChild(host);
+            }
+            host.innerHTML = '';
+
+            const has = x => compareStatuts.includes(x);
+            const get = sn => enrichForDisplay(Object.values(window.legalStatuses||{}).find(s=>s.shortName===sn) || { shortName: sn, name: sn });
+
+            if (has('EURL') && has('SASU')) {
+                const eurl = get('EURL'), sasu = get('SASU');
+                host.innerHTML = `
+                    <div style="border:1px solid rgba(0,255,135,.3);border-radius:8px;padding:12px;background:rgba(1,35,65,.6)">
+                        <div style="font-weight:600;color:#00FF87;margin-bottom:6px">💡 EURL vs SASU — points décisifs</div>
+                        <div class="grid">
+                            <div>
+                                <div><b>Social dirigeant</b> : ${toText(eurl.regimeSocial)}</div>
+                                <div><b>Fiscalité par défaut</b> : ${toText(eurl.fiscalite)}</div>
+                                <div><b>Dividendes</b> : assujettis TNS au-delà de 10 % (si IS)</div>
+                                <div><b>Capital</b> : ${toText(eurl.capital)}</div>
+                            </div>
+                            <div>
+                                <div><b>Social dirigeant</b> : ${toText(sasu.regimeSocial)}</div>
+                                <div><b>Fiscalité par défaut</b> : ${toText(sasu.fiscalite)}</div>
+                                <div><b>Dividendes</b> : pas de cotisations sociales (PFU/barème)</div>
+                                <div><b>Capital</b> : ${toText(sasu.capital)}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:8px;font-size:.9rem;opacity:.9">
+                            <b>Raccourci</b> : EURL = cotisations souvent plus basses (TNS) si salaire, SASU = meilleure couverture (assimilé salarié) et plus simple si investisseurs/associés arrivent.
+                        </div>
+                    </div>`;
+            } else if (compareStatuts.length===1 && has('MICRO')) {
+                const m = get('MICRO');
+                host.innerHTML = `
+                    <div style="border:1px solid rgba(0,255,135,.3);border-radius:8px;padding:12px;background:rgba(1,35,65,.6)">
+                        <div style="font-weight:600;color:#00FF87;margin-bottom:6px">📋 Freelance en micro — ce qu'il faut faire en 2025</div>
+                        <div style="line-height:1.5">${m.obligationsCle.split(' · ').map(x=>`• ${x}`).join('<br>')}</div>
+                        <div style="margin-top:6px;font-size:.9rem;opacity:.9"><b>Plafonds</b> : ${m.plafondCA}</div>
+                        <div style="font-size:.9rem;opacity:.9"><b>TVA</b> : ${m.regimeTVA || '—'}</div>
+                    </div>`;
+            }
         }
 
         // Fonction pour générer une notation par étoiles
@@ -787,18 +932,22 @@ window.initComparatifStatuts = function() {
             return stars;
         }
         
-        // Fonction pour obtenir un tooltip pour une propriété
+        // ========== TOOLTIPS ENRICHIS ==========
         function getTooltipForProperty(propertyKey) {
             const tooltips = {
                 'responsabilite': 'Niveau de responsabilité financière personnelle du dirigeant',
                 'capital': 'Montant minimum légal pour constituer la société',
                 'fiscalite': 'Régime fiscal par défaut (IR: Impôt sur le Revenu, IS: Impôt sur les Sociétés)',
+                'fiscaliteOption': 'Options IR/IS/versement libératoire et fenêtres d\'option',
                 'regimeSocial': 'Statut social du dirigeant (TNS: indépendant, Assimilé salarié: régime général)',
+                'chargesSociales': 'Où se calculent les cotisations (rémunération, bénéfice, dividendes…)',
                 'associes': 'Nombre minimum et maximum d\'associés autorisés',
                 'protectionPatrimoine': 'Niveau de séparation entre patrimoines personnel et professionnel',
                 'regimeTVA': 'Régime de TVA applicable',
                 'formalites': 'Complexité des démarches administratives',
-                'publicationComptes': 'Obligation de publier les comptes annuels'
+                'publicationComptes': 'Obligation de publier les comptes annuels',
+                'obligationsCle': 'Obligations déclaratives/comptables clés 2025',
+                'plafondCA': 'Plafonds micro 2025 selon l\'activité'
             };
             
             return tooltips[propertyKey] || 'Information complémentaire';
@@ -842,9 +991,12 @@ window.initComparatifStatuts = function() {
                     }
                 }, 500);
             }
+
+            // Écouter l'événement custom si disponible
+            window.addEventListener('legalStatuses:ready', ()=>renderTable(window.legalStatuses), { once:true });
         }
 
-        // Fonction pour obtenir les propriétés à afficher selon le critère sélectionné
+        // ========== COLONNES ENRICHIES ==========
         function getColumnsForCriterion(criterion) {
             switch (criterion) {
                 case 'basic':
@@ -873,7 +1025,8 @@ window.initComparatifStatuts = function() {
                         { key: 'name', label: 'Statut' },
                         { key: 'formalites', label: 'Formalités' },
                         { key: 'publicationComptes', label: 'Publication comptes' },
-                        { key: 'plafondCA', label: 'Plafond CA' }
+                        { key: 'plafondCA', label: 'Plafond CA' },
+                        { key: 'obligationsCle', label: 'Obligations clés' }
                     ];
                 default: // 'all'
                     return [
@@ -882,7 +1035,8 @@ window.initComparatifStatuts = function() {
                         { key: 'capital', label: 'Capital social' },
                         { key: 'responsabilite', label: 'Responsabilité' },
                         { key: 'fiscalite', label: 'Régime fiscal' },
-                        { key: 'regimeSocial', label: 'Régime social' }
+                        { key: 'regimeSocial', label: 'Régime social' },
+                        { key: 'plafondCA', label: 'Plafond CA' }
                     ];
             }
         }
@@ -925,10 +1079,13 @@ window.initComparatifStatuts = function() {
             // Filtrer les statuts
             const filteredStatuts = filterStatuts(window.legalStatuses, searchTerm);
             
+            // ========== ENRICHISSEMENT DES DONNÉES ==========
+            const rowsData = filteredStatuts.map(enrichForDisplay);
+            
             // Générer les lignes du tableau
             const tableBody = document.getElementById('table-body');
             
-            if (filteredStatuts.length === 0) {
+            if (rowsData.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
                         <td colspan="${columns.length}" style="text-align: center; padding: 2rem;">
@@ -939,7 +1096,7 @@ window.initComparatifStatuts = function() {
                 return;
             }
             
-            tableBody.innerHTML = filteredStatuts.map((statut, index) => {
+            tableBody.innerHTML = rowsData.map((statut, index) => {
                 // Ajouter animation avec délai progressif
                 let row = `<tr style="animation-delay: ${index * 0.05}s;">`;
                 
@@ -965,18 +1122,23 @@ window.initComparatifStatuts = function() {
                         row += `
                             <td class="${isLimited ? 'highlighted-value' : ''}">
                                 <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
-                                    ${statut[column.key] || 'Non spécifié'}
+                                    ${toText(statut[column.key])}
                                     ${isLimited ? ' <i class="fas fa-shield-alt text-green-400 ml-1"></i>' : ''}
                                 </span>
                             </td>
                         `;
-                    } else if (column.key === 'protectionPatrimoine' && statut.key_metrics && typeof statut.key_metrics.patrimony_protection === 'number') {
-                        // Notation par étoiles pour certains critères
+                    } else if (column.key === 'protectionPatrimoine') {
+                        // ========== ÉTOILES + TEXTE ==========
+                        const stars = Number.isFinite(statut._pp_stars) ? `
+                            <div class="rating-stars" title="${statut._pp_stars}/5">
+                                ${generateStarRating(statut._pp_stars)}
+                            </div>` : '';
                         row += `
                             <td>
-                                <div class="rating-stars" title="${statut.key_metrics.patrimony_protection}/5">
-                                    ${generateStarRating(statut.key_metrics.patrimony_protection)}
-                                </div>
+                                <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
+                                    ${stars}
+                                    <span>${toText(statut._pp_text)}</span>
+                                </span>
                             </td>
                         `;
                     } else if (column.key === 'capital') {
@@ -984,7 +1146,7 @@ window.initComparatifStatuts = function() {
                         row += `
                             <td class="key-cell">
                                 <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
-                                    ${statut[column.key] || 'Non spécifié'}
+                                    ${toText(statut[column.key])}
                                 </span>
                             </td>
                         `;
@@ -993,7 +1155,7 @@ window.initComparatifStatuts = function() {
                         row += `
                             <td>
                                 <span class="info-tooltip" data-tooltip="${getTooltipForProperty(column.key)}">
-                                    ${statut[column.key] || 'Non spécifié'}
+                                    ${toText(statut[column.key])}
                                 </span>
                             </td>
                         `;
@@ -1016,7 +1178,7 @@ window.initComparatifStatuts = function() {
                 
                 // Ajouter clic pour sélectionner pour comparaison
                 row.addEventListener('click', () => {
-                    const statut = filteredStatuts[index];
+                    const statut = rowsData[index];
                     if (statut) {
                         addToComparison(statut.shortName);
                     }
