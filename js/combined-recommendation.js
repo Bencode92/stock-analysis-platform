@@ -2521,40 +2521,43 @@ this.thresholds2025 = {
         console.log("RecommendationEngine initialisé avec succès");
     }
 
-   /**
+/**
  * Calculer les recommandations basées sur les réponses
  * @param {Object} answers - Les réponses au questionnaire
  */
-// ── Normalisation des clés hétérogènes ─────────────────────────────
-const norm = { ...answers };
-const toYN = (v) => (v === true ? 'yes' : v === false ? 'no' : v);
+calculateRecommendations(answers) {
+  console.log("Début du calcul des recommandations (avant normalisation)", answers);
 
-// Unifie le nombre d'associés (conserve "inconnu" = null)
-const assocRaw = norm.associates_number ?? norm.associates_count ?? norm.investors_count;
-if (assocRaw == null || assocRaw === '') {
-  norm.associates_number = null;
-} else {
-  const parsed = parseInt(assocRaw, 10);
-  norm.associates_number = Number.isFinite(parsed) ? parsed : null;
-}
+  // ── Normalisation des clés hétérogènes ─────────────────────────────
+  const norm = { ...answers };
+  const toYN = (v) => (v === true ? 'yes' : v === false ? 'no' : v);
 
-// Unifie la présence d'investisseurs
-norm.investors = toYN(
-  norm.investors ?? (norm.team_structure === 'investors' ? 'yes' : 'no')
-);
+  // Unifie le nombre d'associés (conserve "inconnu" = null)
+  const assocRaw = norm.associates_number ?? norm.associates_count ?? norm.investors_count;
+  if (assocRaw == null || assocRaw === '') {
+    norm.associates_number = null;
+  } else {
+    const parsed = parseInt(assocRaw, 10);
+    norm.associates_number = Number.isFinite(parsed) ? parsed : null;
+  }
 
-// Unifie les flags liés à la cotation / appel public à l’épargne
-norm.public_listing  = toYN(norm.public_listing);
-norm.public_offering = toYN(norm.public_offering);
-norm.ipo_path        = toYN(norm.ipo_path);
-norm.public_listing_or_aps = toYN(
-  norm.public_listing_or_aps ?? (
-    (norm.public_listing === 'yes' || norm.public_offering === 'yes' || norm.ipo_path === 'yes')
-      ? 'yes' : 'no'
-  )
-);
+  // Unifie la présence d'investisseurs
+  norm.investors = toYN(
+    norm.investors ?? (norm.team_structure === 'investors' ? 'yes' : 'no')
+  );
 
-console.log("Réponses normalisées", norm);
+  // Unifie les flags liés à la cotation / appel public à l’épargne
+  norm.public_listing  = toYN(norm.public_listing);
+  norm.public_offering = toYN(norm.public_offering);
+  norm.ipo_path        = toYN(norm.ipo_path);
+  norm.public_listing_or_aps = toYN(
+    norm.public_listing_or_aps ?? (
+      (norm.public_listing === 'yes' || norm.public_offering === 'yes' || norm.ipo_path === 'yes')
+        ? 'yes' : 'no'
+    )
+  );
+
+  console.log("Réponses normalisées", norm);
 
   // ── Mémoïsation avec les réponses normalisées ──────────────────────
   const answersKey = JSON.stringify(norm);
