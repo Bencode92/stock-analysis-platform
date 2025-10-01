@@ -1630,20 +1630,20 @@ const scoringRules = [
 {
   id: 'sharing_instruments_bonus',
   description: 'Instruments de partage (BSPCE, BSA AIR, AGA…)',
-  condition: answers => Array.isArray(answers.sharing_instruments) && answers.sharing_instruments.length > 0,
+  condition: (answers) =>
+    Array.isArray(answers?.sharing_instruments) && answers.sharing_instruments.length > 0,
   apply: (statusId, score) => {
-    // BSPCE uniquement sociétés par actions (SAS/SASU/SA/SELAS)
-    const hasBSPCE = (answers.sharing_instruments || []).includes('BSPCE');
-    const hasBSAair = (answers.sharing_instruments || []).includes('BSA_AIR');
-    const hasAGA = (answers.sharing_instruments || []).includes('AGA');
+    const hasBSPCE = (answers?.sharing_instruments || []).includes('BSPCE');
+    const hasBSAair = (answers?.sharing_instruments || []).includes('BSA_AIR');
+    const hasAGA   = (answers?.sharing_instruments || []).includes('AGA');
+
     let delta = 0;
-  if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) {
-  if (hasBSPCE) delta += 1;
-  if (hasBSAair) delta += 0.75;
-  if (hasAGA) delta += 0.5;
-}
-    // Les autres formes ne tirent pas (ou peu) parti de ces instruments
-    return score + delta;
+    if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) {
+      if (hasBSPCE) delta += 1;
+      if (hasBSAair) delta += 0.75;
+      if (hasAGA)   delta += 0.5;
+    }
+    return score + delta;          // ← manquait
   },
   criteria: 'fundraising_capacity'
 },
