@@ -4813,13 +4813,6 @@ if (A.projected_revenue != null) {
 }
 
 
-/**
- * Génère des explications personnalisées sur pourquoi un statut est recommandé
- * MAJ 30/09/2025 — cohérente avec thresholds2025 & référentiel statuts
- * @param {string} statusId - Identifiant du statut (ex: 'SAS', 'MICRO'…)
- * @param {Object} answers  - Réponses utilisateur (facultatif : this.answers sera utilisé par défaut)
- * @returns {Array<{title:string, explanation:string}>}
- */
 getStatusExplanations(statusId, answers) {
   const A = answers || this.answers || {};
   const out = [];
@@ -4867,7 +4860,7 @@ getStatusExplanations(statusId, answers) {
     const cap   = this.thresholds2025?.is_reduced_rate?.profit_cap   ?? 42500;
     const caCap = this.thresholds2025?.is_reduced_rate?.turnover_cap ?? 10_000_000;
     if (Number.isFinite(projectedRevenue) && projectedRevenue < caCap) {
-      return `Éligibilité possible au taux réduit d’IS à 15 % jusqu’à ${fmt€(cap)} (CA < ${fmt€(caCap)} et autres conditions).`;
+      return `Éligibilité possible au taux réduit d’IS à 15 % jusqu’à ${fmtEUR(cap)} (CA < ${fmtEUR(caCap)} et autres conditions).`;
     }
     return null;
   })();
@@ -4878,7 +4871,7 @@ getStatusExplanations(statusId, answers) {
     const seuil = ['ventes','hébergement','hebergement','bic_sales'].includes(nature)
       ? tvaBase.ventes : tvaBase.services;
     if (Number.isFinite(projectedRevenue) && projectedRevenue <= seuil) {
-      return `Franchise en base de TVA possible (seuils 2025 : ${fmt€(tvaBase.ventes)} ventes / ${fmt€(tvaBase.services)} services; tolérance ${fmt€(tvaBase.tolerance_ventes)} / ${fmt€(tvaBase.tolerance_services)}).`;
+      return `Franchise en base de TVA possible (seuils 2025 : ${fmtEUR(tvaBase.ventes)} ventes / ${fmtEUR(tvaBase.services)} services; tolérance ${fmtEUR(tvaBase.tolerance_ventes)} / ${fmtEUR(tvaBase.tolerance_services)}).`;
     }
     return null;
   })();
@@ -4904,7 +4897,7 @@ getStatusExplanations(statusId, answers) {
     if (Number.isFinite(projectedRevenue) && Number.isFinite(microThreshold)) {
       out.push({
         title: "Cohérence avec votre niveau de CA",
-        explanation: `Votre CA prévisionnel (${fmt€(projectedRevenue)}) se situe sous le plafond micro applicable (${fmt€(microThreshold)} — 2025).`
+        explanation: `Votre CA prévisionnel (${fmtEUR(projectedRevenue)}) se situe sous le plafond micro applicable (${fmtEUR(microThreshold)} — 2025).`
       });
     }
     if (tmiLabel && ['non imposable','11%'].includes(tmiLabel)) {
@@ -5050,7 +5043,7 @@ getStatusExplanations(statusId, answers) {
     if (ratio >= 0.7 && ratio < 1) {
       out.push({
         title: "Vigilance ‘proche du plafond’",
-        explanation: `Votre CA prévisionnel approche le plafond micro (${fmt€(projectedRevenue)} / ${fmt€(microThreshold)}). Anticipez un basculement au réel si dépassement.`
+        explanation: `Votre CA prévisionnel approche le plafond micro (${fmtEUR(projectedRevenue)} / ${fmtEUR(microThreshold)}). Anticipez un basculement au réel si dépassement.`
       });
     }
   }
