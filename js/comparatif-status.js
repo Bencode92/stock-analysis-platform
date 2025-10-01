@@ -87,7 +87,6 @@ window.initComparatifStatuts = function() {
             .diff-mode-toggle { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(1, 42, 74, 0.5); border-radius: 6px; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; }
             .diff-mode-toggle:hover { background: rgba(1, 42, 74, 0.8); }
             .diff-mode-toggle.active { background: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.4); }
-            .status-score { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; background: rgba(0, 255, 135, 0.1); border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-left: 0.5rem; }
             .status-why { font-size: 0.7rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem; font-style: italic; }
             #simulator-panel { position: fixed; right: -400px; top: 100px; width: 380px; max-height: calc(100vh - 120px); background: rgba(1, 22, 39, 0.95); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); z-index: 100; transition: right 0.3s; overflow-y: auto; }
             #simulator-panel.open { right: 20px; }
@@ -235,7 +234,7 @@ window.initComparatifStatuts = function() {
         return { obligationsCle: '' };
     }
 
-    // ========== PATCH 1 : INTENT HELPERS ==========
+    // ========== INTENT HELPERS ==========
     function parseAssociesMin(text) {
         if (!text) return 1;
         const t = String(text).toLowerCase();
@@ -274,58 +273,48 @@ window.initComparatifStatuts = function() {
         // 2) Dividendes : garder uniquement ceux qui permettent effectivement des dividendes
         if (ans.veut_dividendes && !canPayDividends(statut)) return false;
 
-        // 3) Salaire : optionnel - décommenter si tu veux exclure EI/Micro quand "je veux du salaire" est coché
-        // if (ans.veut_salaire && !(statut.meta_payout||{}).peut_salaire) return false;
-
-        // 4) Chômage (ARE) : on n'exclut rien (on ajoute un encart explicatif)
+        // 3) Chômage (ARE) : on n'exclut rien (on ajoute un encart explicatif)
         return true;
     }
 
-    // ========== MOTEUR DE SCORING ==========
+    // ========== MOTEUR DE SCORING (SIMPLIFIÉ - SANS SALAIRE) ==========
     function scoreStatut(statut, answers) {
         let s = 0;
         const why = [];
         const meta = statut.meta_payout || {};
         const areM = statut.meta_are || {};
         const evoM = statut.meta_evolution || {};
-        const dirM = statut.meta_dirigeant || {};
 
-        if (answers.veut_salaire) {
-            if (meta.peut_salaire) { s += 3; } 
-            else { why.push('Pas de salaire possible'); }
-        }
-        if (answers.veut_dividendes) {
-            if (meta.peut_dividendes) { 
-                s += 3;
-                if (meta.dividendes_cot_sociales === 'non') {
-                    s += 2;
-                    why.push('Dividendes sans cotisations');
-                }
+        // Dividendes
+        if (answers.veut_dividendes && meta.peut_dividendes) {
+            s += 3;
+            if (meta.dividendes_cot_sociales === 'non') {
+                s += 2;
+                why.push('Dividendes sans cotis');
+            }
+            if (meta.dividendes_cot_sociales === '>10%') {
+                why.push('Dividendes >10% cotisés');
             }
         }
 
-        if (answers.en_chomage) {
-            if (areM.are_compatible_sans_salaire) { s += 2; why.push('ARE ok sans salaire'); }
-            if (areM.are_baisse_si_salaire && answers.veut_salaire) { 
-                s -= 1; 
-                why.push('Salaire ↓ ARE'); 
-            }
+        // ARE
+        if (answers.en_chomage && areM.are_compatible_sans_salaire) {
+            s += 2;
+            why.push('ARE possible sans salaire');
         }
 
+        // Associés
         if (answers.prevoit_associes !== 'non') {
-            if (evoM.entree_associes_facile) { s += 2; } 
+            if (evoM.entree_associes_facile) { s += 2; }
             else { s -= 1; why.push('Entrée associés encadrée'); }
         }
+
+        // Levée de fonds
         if (answers.levee_fonds !== 'non') {
             const level = evoM.accueil_investisseurs;
             if (level === 'élevé') { s += 3; why.push('Investisseurs friendly'); }
             else if (level === 'moyen') { s += 1; }
             else { s -= 1; }
-        }
-
-        if (answers.veut_salaire && dirM.statut_dirigeant === 'assimilé salarié') { 
-            s += 1; 
-            why.push('Assimilé salarié');
         }
 
         return { score: s, why: why.slice(0, 3) };
@@ -402,7 +391,7 @@ window.initComparatifStatuts = function() {
         return { net: Math.round(net), cout: Math.round(cout) };
     }
 
-    // ========== PATCH 3 : ENCART ARE/ARCE ==========
+    // ========== ENCART ARE/ARCE ==========
     function renderAREHelper(intentAnswers) {
         let host = document.getElementById('are-helper');
         if (!host) {
@@ -443,6 +432,7 @@ window.initComparatifStatuts = function() {
 
         injectCSS();
 
+        // ========== HTML AVEC SEULEMENT 4 FILTRES ==========
         container.innerHTML = `
             <div class="comparatif-container">
                 <div class="comparatif-header">
@@ -452,10 +442,6 @@ window.initComparatifStatuts = function() {
                     </p>
 
                     <div class="intent-filters" id="intent-filters">
-                        <div class="intent-filter-item" data-intent="veut_salaire">
-                            <input type="checkbox" id="filter-salaire">
-                            <label for="filter-salaire">💼 Je veux du salaire</label>
-                        </div>
                         <div class="intent-filter-item" data-intent="veut_dividendes">
                             <input type="checkbox" id="filter-dividendes">
                             <label for="filter-dividendes">💰 Je vise des dividendes</label>
@@ -591,8 +577,9 @@ window.initComparatifStatuts = function() {
         let searchTerm = '';
         let compareStatuts = [];
         let diffMode = false;
+        
+        // ========== INTENTANSWERS SANS SALAIRE ==========
         let intentAnswers = {
-            veut_salaire: false,
             veut_dividendes: false,
             en_chomage: false,
             prevoit_associes: 'non',
@@ -604,7 +591,6 @@ window.initComparatifStatuts = function() {
         initSimulator();
         loadStatutData();
 
-        // Render ARE helper initialement
         renderAREHelper(intentAnswers);
 
         document.querySelectorAll('.criteria-button').forEach(button => {
@@ -655,7 +641,6 @@ window.initComparatifStatuts = function() {
                         intentAnswers[intent] = checkbox.checked;
                     }
                     
-                    // PATCH 3 : appeler renderAREHelper
                     renderAREHelper(intentAnswers);
                     updateTable();
                 });
@@ -967,16 +952,13 @@ window.initComparatifStatuts = function() {
             }
         }
 
-        // ========== PATCH 2 : FILTRE AVEC INTENTIONS + TRI ==========
         function filterStatuts(statuts, term) {
             let list = Object.values(statuts);
 
-            // Mode comparaison : restreint à la sélection
             if (compareStatuts.length > 0) {
                 list = list.filter(statut => compareStatuts.includes(statut.shortName));
             }
 
-            // Recherche texte
             if (term) {
                 const tt = term.toLowerCase();
                 list = list.filter(statut =>
@@ -986,12 +968,10 @@ window.initComparatifStatuts = function() {
                 );
             }
 
-            // ➜ IMPORTANT : enrichir PUIS filtrer par intentions
             list = list.map(s => enrichForDisplay(s, intentAnswers))
                        .filter(s => matchIntent(s, intentAnswers));
 
-            // Si au moins un intent est actif, on trie par score décroissant
-            const anyIntent = intentAnswers.veut_salaire || intentAnswers.veut_dividendes || intentAnswers.en_chomage ||
+            const anyIntent = intentAnswers.veut_dividendes || intentAnswers.en_chomage ||
                             intentAnswers.prevoit_associes === 'oui' || intentAnswers.levee_fonds === 'oui';
             if (anyIntent) {
                 list.sort((a,b) => (b._score||0) - (a._score||0));
@@ -1005,7 +985,7 @@ window.initComparatifStatuts = function() {
             
             let columns = getColumnsForCriterion(selectedCriterion);
             const filteredStatuts = filterStatuts(window.legalStatuses, searchTerm);
-            const rowsData = filteredStatuts; // déjà enrichis + filtrés
+            const rowsData = filteredStatuts;
 
             if (diffMode && compareStatuts.length >= 2) {
                 const diffKeys = onlyDifferences(rowsData, columns);
@@ -1031,7 +1011,6 @@ window.initComparatifStatuts = function() {
                 return;
             }
             
-            // ========== PATCH 4 : BADGES AVEC ARE CONTEXTUEL ==========
             function generateBadges(statut) {
                 const badges = [];
                 const meta = statut.meta_payout || {};
@@ -1046,7 +1025,6 @@ window.initComparatifStatuts = function() {
                     }
                 }
                 
-                // PATCH 4 : Badge ARE uniquement si filtre chômage actif
                 if (intentAnswers.en_chomage && statut.meta_are && statut.meta_are.are_compatible_sans_salaire) {
                     badges.push('<span class="status-badge badge-are">🛡️ ARE ok</span>');
                 }
@@ -1068,9 +1046,7 @@ window.initComparatifStatuts = function() {
                 
                 columns.forEach(column => {
                     if (column.key === 'name') {
-                        const scoreHtml = statut._score !== undefined 
-                            ? `<span class="status-score">Score: ${statut._score}</span>` 
-                            : '';
+                        // ========== PAS DE SCORE AFFICHÉ ==========
                         const whyHtml = statut._why && statut._why.length > 0
                             ? `<div class="status-why">${statut._why.join(', ')}</div>`
                             : '';
@@ -1085,7 +1061,6 @@ window.initComparatifStatuts = function() {
                                     <div class="statut-info">
                                         <div>
                                             <span class="statut-name">${statut.shortName}</span>
-                                            ${scoreHtml}
                                         </div>
                                         <span class="statut-fullname">${statut.name}</span>
                                         ${whyHtml}
