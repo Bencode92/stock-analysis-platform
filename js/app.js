@@ -1,5 +1,41 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
+/**
+ * ========== NOUVEAU : Initialiser le comparateur automatiquement ==========
+ * (détecte #comparatif-container sur les pages en sections, ex. types-entreprise-v2.html)
+ */
+function initComparatifAuto() {
+    // Attendre un peu que tous les scripts soient chargés
+    setTimeout(() => {
+        const comparatifContainer = document.getElementById('comparatif-container');
+
+        if (comparatifContainer && typeof window.initComparatifStatuts === 'function') {
+            console.log('✅ Conteneur comparatif détecté, initialisation automatique...');
+            try {
+                window.initComparatifStatuts();
+                console.log('✅ Comparateur initialisé avec succès');
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'initialisation du comparateur:', error);
+            }
+        } else if (comparatifContainer && typeof window.initComparatifStatuts !== 'function') {
+            console.warn('⚠️ Conteneur présent mais fonction initComparatifStatuts non disponible, nouvelle tentative...');
+            // Réessayer après 1 seconde
+            setTimeout(() => {
+                if (typeof window.initComparatifStatuts === 'function') {
+                    try {
+                        window.initComparatifStatuts();
+                        console.log('✅ Comparateur initialisé avec succès (2ème tentative)');
+                    } catch (error) {
+                        console.error('❌ Erreur lors de l\'initialisation du comparateur (2ème tentative):', error);
+                    }
+                } else {
+                    console.error('❌ Fonction initComparatifStatuts toujours non disponible');
+                }
+            }, 1000);
+        }
+    }, 500);
+}
+
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
     // Mettre à jour la date de dernière mise à jour
@@ -13,6 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialiser le moteur de recommandation de manière asynchrone
     initRecommendationEngine();
+
+    // ========== NOUVEAU : Initialiser le comparateur ==========
+    initComparatifAuto();
 });
 
 /**
@@ -652,3 +691,4 @@ function initUIEvents() {
         changeTab(0);
     }
 }
+
