@@ -1,11 +1,11 @@
 /**
  * comparatif-statuts.js - Tableau comparatif des formes juridiques
- * Version 2025 ULTRA - Métas, scoring, diff-only, badges, simulateur
+ * Version 2025 ULTRA++ - Métas, scoring, diff-only, badges, simulateur + FILTRES INTENTIONS
  */
 
 // Fonction d'initialisation disponible globalement pour être appelée depuis app.js
 window.initComparatifStatuts = function() {
-    console.log("Initialisation du tableau comparatif des statuts (version ultra 2025)");
+    console.log("Initialisation du tableau comparatif des statuts (version ultra++ 2025)");
     window.createComparatifTable('comparatif-container');
 };
 
@@ -58,502 +58,89 @@ window.initComparatifStatuts = function() {
         cot_sasu_salarie: 0.22,
         cot_tns: 0.45,
         seuil_div_tns: 0.10,
-        is_rate: 0.15 // jusqu'à 42.5k, puis 25%
+        is_rate: 0.15
     };
 
-    // Injecter le CSS nécessaire pour le tableau
+    // Injecter le CSS (idem que précédemment - je garde le même pour ne pas alourdir)
     function injectCSS() {
         const style = document.createElement('style');
         style.textContent = `
-            /* Conteneur principal */
-            .comparatif-container {
-                max-width: 100%;
-                overflow-x: auto;
-                font-family: 'Inter', sans-serif;
-                color: #E6E6E6;
-            }
-
-            /* En-tête */
-            .comparatif-header {
-                margin-bottom: 1.5rem;
-            }
-
-            .comparatif-title {
-                font-size: 1.75rem;
-                font-weight: 700;
-                margin-bottom: 0.75rem;
-                color: #00FF87;
-            }
-
-            .comparatif-description {
-                color: rgba(230, 230, 230, 0.8);
-                margin-bottom: 1.5rem;
-                line-height: 1.5;
-            }
-
-            /* NOUVEAUX STYLES - Filtres d'intention */
-            .intent-filters {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.75rem;
-                margin-bottom: 1.5rem;
-                padding: 1rem;
-                background: rgba(1, 35, 65, 0.5);
-                border-radius: 8px;
-                border: 1px solid rgba(0, 255, 135, 0.2);
-            }
-
-            .intent-filter-item {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                padding: 0.5rem 0.75rem;
-                background: rgba(1, 42, 74, 0.5);
-                border-radius: 6px;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .intent-filter-item:hover {
-                background: rgba(1, 42, 74, 0.8);
-            }
-
-            .intent-filter-item.active {
-                background: rgba(0, 255, 135, 0.15);
-                border: 1px solid rgba(0, 255, 135, 0.4);
-            }
-
-            .intent-filter-item input[type="checkbox"] {
-                width: 16px;
-                height: 16px;
-                cursor: pointer;
-                accent-color: #00FF87;
-            }
-
-            .intent-filter-item label {
-                cursor: pointer;
-                font-size: 0.875rem;
-                user-select: none;
-            }
-
-            /* Badges sur les lignes */
-            .status-badges {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.25rem;
-                margin-top: 0.25rem;
-            }
-
-            .status-badge {
-                display: inline-flex;
-                align-items: center;
-                padding: 0.125rem 0.375rem;
-                border-radius: 3px;
-                font-size: 0.65rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.03em;
-            }
-
+            /* Le CSS complet reste identique - je ne le répète pas pour gagner de la place */
+            .comparatif-container { max-width: 100%; overflow-x: auto; font-family: 'Inter', sans-serif; color: #E6E6E6; }
+            .comparatif-header { margin-bottom: 1.5rem; }
+            .comparatif-title { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.75rem; color: #00FF87; }
+            .comparatif-description { color: rgba(230, 230, 230, 0.8); margin-bottom: 1.5rem; line-height: 1.5; }
+            .intent-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; padding: 1rem; background: rgba(1, 35, 65, 0.5); border-radius: 8px; border: 1px solid rgba(0, 255, 135, 0.2); }
+            .intent-filter-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(1, 42, 74, 0.5); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+            .intent-filter-item:hover { background: rgba(1, 42, 74, 0.8); }
+            .intent-filter-item.active { background: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.4); }
+            .intent-filter-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #00FF87; }
+            .intent-filter-item label { cursor: pointer; font-size: 0.875rem; user-select: none; }
+            .status-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.25rem; }
+            .status-badge { display: inline-flex; align-items: center; padding: 0.125rem 0.375rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
             .badge-salary { background: rgba(59, 130, 246, 0.2); color: #60A5FA; }
             .badge-dividends { background: rgba(236, 72, 153, 0.2); color: #EC4899; }
             .badge-are { background: rgba(16, 185, 129, 0.2); color: #10B981; }
             .badge-investors { background: rgba(245, 158, 11, 0.2); color: #F59E0B; }
             .badge-tns { background: rgba(139, 92, 246, 0.2); color: #A78BFA; }
             .badge-assimile { background: rgba(34, 211, 238, 0.2); color: #22D3EE; }
-
-            /* Mode Diff-only */
-            .diff-mode-toggle {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                padding: 0.5rem 0.75rem;
-                background: rgba(1, 42, 74, 0.5);
-                border-radius: 6px;
-                margin-bottom: 1rem;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .diff-mode-toggle:hover {
-                background: rgba(1, 42, 74, 0.8);
-            }
-
-            .diff-mode-toggle.active {
-                background: rgba(0, 255, 135, 0.15);
-                border: 1px solid rgba(0, 255, 135, 0.4);
-            }
-
-            /* Score et pourquoi */
-            .status-score {
-                display: inline-flex;
-                align-items: center;
-                padding: 0.25rem 0.5rem;
-                background: rgba(0, 255, 135, 0.1);
-                border-radius: 4px;
-                font-size: 0.75rem;
-                font-weight: 700;
-                margin-left: 0.5rem;
-            }
-
-            .status-why {
-                font-size: 0.7rem;
-                color: rgba(255, 255, 255, 0.6);
-                margin-top: 0.25rem;
-                font-style: italic;
-            }
-
-            /* Simulateur Net Perso */
-            #simulator-panel {
-                position: fixed;
-                right: -400px;
-                top: 100px;
-                width: 380px;
-                max-height: calc(100vh - 120px);
-                background: rgba(1, 22, 39, 0.95);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                border-radius: 12px;
-                padding: 1.5rem;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-                z-index: 100;
-                transition: right 0.3s;
-                overflow-y: auto;
-            }
-
-            #simulator-panel.open {
-                right: 20px;
-            }
-
-            .simulator-toggle-btn {
-                position: fixed;
-                right: 20px;
-                top: 120px;
-                background: rgba(0, 255, 135, 0.2);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                color: #00FF87;
-                padding: 0.75rem 1rem;
-                border-radius: 8px;
-                cursor: pointer;
-                z-index: 99;
-                transition: all 0.2s;
-                font-weight: 600;
-            }
-
-            .simulator-toggle-btn:hover {
-                background: rgba(0, 255, 135, 0.3);
-                transform: translateY(-2px);
-            }
-
-            .scenario-result {
-                background: rgba(1, 42, 74, 0.5);
-                padding: 1rem;
-                border-radius: 8px;
-                margin-top: 1rem;
-                border-left: 3px solid #00FF87;
-            }
-
-            /* Filtres */
-            .comparatif-filters {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 1rem;
-                margin-bottom: 1.5rem;
-                align-items: flex-end;
-            }
-
-            .filter-group {
-                flex: 1;
-                min-width: 200px;
-            }
-
-            .filter-label {
-                display: block;
-                margin-bottom: 0.5rem;
-                color: rgba(230, 230, 230, 0.7);
-                font-size: 0.875rem;
-            }
-
-            .criteria-buttons {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                gap: 0.5rem;
-            }
-
-            .criteria-button {
-                padding: 0.5rem 0.75rem;
-                border-radius: 0.375rem;
-                font-size: 0.875rem;
-                cursor: pointer;
-                background-color: rgba(1, 42, 74, 0.5);
-                border: 1px solid rgba(0, 255, 135, 0.2);
-                color: rgba(230, 230, 230, 0.8);
-                transition: all 0.2s ease;
-            }
-
-            .criteria-button:hover {
-                border-color: rgba(0, 255, 135, 0.4);
-                background-color: rgba(1, 42, 74, 0.7);
-            }
-
-            .criteria-button.active {
-                background-color: rgba(0, 255, 135, 0.15);
-                border-color: rgba(0, 255, 135, 0.7);
-                color: #00FF87;
-            }
-
-            .search-input {
-                width: 100%;
-                padding: 0.625rem 1rem;
-                border-radius: 0.375rem;
-                border: 1px solid rgba(1, 42, 74, 0.8);
-                background-color: rgba(1, 42, 74, 0.5);
-                color: #E6E6E6;
-                transition: all 0.2s ease;
-            }
-
-            .search-input:focus {
-                outline: none;
-                border-color: rgba(0, 255, 135, 0.5);
-                box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
-            }
-
-            /* Tableau */
-            .comparatif-table-container {
-                border-radius: 0.75rem;
-                border: 1px solid rgba(1, 42, 74, 0.8);
-                overflow: hidden;
-                background-color: rgba(1, 42, 74, 0.3);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-                position: relative;
-            }
-
-            .comparatif-table {
-                width: 100%;
-                border-collapse: collapse;
-                text-align: left;
-            }
-
-            .comparatif-table th {
-                padding: 1rem;
-                background-color: rgba(1, 22, 39, 0.8);
-                font-weight: 600;
-                color: #00FF87;
-                font-size: 0.875rem;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-                border-bottom: 1px solid rgba(1, 42, 74, 0.8);
-                position: sticky;
-                top: 0;
-                z-index: 10;
-            }
-
-            .comparatif-table td {
-                padding: 0.875rem 1rem;
-                border-bottom: 1px solid rgba(1, 42, 74, 0.5);
-                font-size: 0.875rem;
-                vertical-align: top;
-            }
-
-            .comparatif-table tr:last-child td {
-                border-bottom: none;
-            }
-
-            .comparatif-table tr:nth-child(odd) {
-                background-color: rgba(1, 42, 74, 0.2);
-            }
-
-            .comparatif-table tr:hover {
-                background-color: rgba(0, 255, 135, 0.05);
-            }
-
-            /* Cellules spécifiques */
-            .statut-cell {
-                display: flex;
-                align-items: flex-start;
-                gap: 0.75rem;
-            }
-
-            .statut-icon {
-                width: 2.5rem;
-                height: 2.5rem;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                background-color: rgba(1, 42, 74, 0.5);
-                color: #00FF87;
-                font-size: 1rem;
-                flex-shrink: 0;
-            }
-
-            .statut-info {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .statut-name {
-                font-weight: 600;
-                color: #E6E6E6;
-            }
-
-            .statut-fullname {
-                font-size: 0.75rem;
-                color: rgba(230, 230, 230, 0.6);
-            }
-
-            /* État du chargement */
-            .loading-state {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 200px;
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .spinner {
-                width: 40px;
-                height: 40px;
-                border: 3px solid rgba(0, 255, 135, 0.3);
-                border-radius: 50%;
-                border-top-color: #00FF87;
-                animation: spin 1s ease-in-out infinite;
-            }
-
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-
-            /* Légende et notes */
-            .comparatif-notes {
-                margin-top: 1.5rem;
-                padding: 1rem;
-                border-radius: 0.5rem;
-                background-color: rgba(1, 42, 74, 0.3);
-                font-size: 0.875rem;
-            }
-
-            .notes-title {
-                font-weight: 600;
-                color: #00FF87;
-                margin-bottom: 0.5rem;
-            }
-
-            .notes-list {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-                gap: 0.5rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .notes-item {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-            .notes-term {
-                color: #00FF87;
-                font-weight: 500;
-            }
-
-            .notes-disclaimer {
-                font-style: italic;
-                color: rgba(230, 230, 230, 0.6);
-                font-size: 0.8125rem;
-                text-align: center;
-                margin-top: 0.75rem;
-            }
-
-            /* Responsive */
+            .diff-mode-toggle { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(1, 42, 74, 0.5); border-radius: 6px; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; }
+            .diff-mode-toggle:hover { background: rgba(1, 42, 74, 0.8); }
+            .diff-mode-toggle.active { background: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.4); }
+            .status-score { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; background: rgba(0, 255, 135, 0.1); border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-left: 0.5rem; }
+            .status-why { font-size: 0.7rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem; font-style: italic; }
+            #simulator-panel { position: fixed; right: -400px; top: 100px; width: 380px; max-height: calc(100vh - 120px); background: rgba(1, 22, 39, 0.95); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); z-index: 100; transition: right 0.3s; overflow-y: auto; }
+            #simulator-panel.open { right: 20px; }
+            .simulator-toggle-btn { position: fixed; right: 20px; top: 120px; background: rgba(0, 255, 135, 0.2); border: 1px solid rgba(0, 255, 135, 0.3); color: #00FF87; padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; z-index: 99; transition: all 0.2s; font-weight: 600; }
+            .simulator-toggle-btn:hover { background: rgba(0, 255, 135, 0.3); transform: translateY(-2px); }
+            .scenario-result { background: rgba(1, 42, 74, 0.5); padding: 1rem; border-radius: 8px; margin-top: 1rem; border-left: 3px solid #00FF87; }
+            .comparatif-filters { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end; }
+            .filter-group { flex: 1; min-width: 200px; }
+            .filter-label { display: block; margin-bottom: 0.5rem; color: rgba(230, 230, 230, 0.7); font-size: 0.875rem; }
+            .criteria-buttons { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
+            .criteria-button { padding: 0.5rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; cursor: pointer; background-color: rgba(1, 42, 74, 0.5); border: 1px solid rgba(0, 255, 135, 0.2); color: rgba(230, 230, 230, 0.8); transition: all 0.2s ease; }
+            .criteria-button:hover { border-color: rgba(0, 255, 135, 0.4); background-color: rgba(1, 42, 74, 0.7); }
+            .criteria-button.active { background-color: rgba(0, 255, 135, 0.15); border-color: rgba(0, 255, 135, 0.7); color: #00FF87; }
+            .search-input { width: 100%; padding: 0.625rem 1rem; border-radius: 0.375rem; border: 1px solid rgba(1, 42, 74, 0.8); background-color: rgba(1, 42, 74, 0.5); color: #E6E6E6; transition: all 0.2s ease; }
+            .search-input:focus { outline: none; border-color: rgba(0, 255, 135, 0.5); box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2); }
+            .comparatif-table-container { border-radius: 0.75rem; border: 1px solid rgba(1, 42, 74, 0.8); overflow: hidden; background-color: rgba(1, 42, 74, 0.3); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); position: relative; }
+            .comparatif-table { width: 100%; border-collapse: collapse; text-align: left; }
+            .comparatif-table th { padding: 1rem; background-color: rgba(1, 22, 39, 0.8); font-weight: 600; color: #00FF87; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(1, 42, 74, 0.8); position: sticky; top: 0; z-index: 10; }
+            .comparatif-table td { padding: 0.875rem 1rem; border-bottom: 1px solid rgba(1, 42, 74, 0.5); font-size: 0.875rem; vertical-align: top; }
+            .comparatif-table tr:last-child td { border-bottom: none; }
+            .comparatif-table tr:nth-child(odd) { background-color: rgba(1, 42, 74, 0.2); }
+            .comparatif-table tr:hover { background-color: rgba(0, 255, 135, 0.05); }
+            .statut-cell { display: flex; align-items: flex-start; gap: 0.75rem; }
+            .statut-icon { width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: rgba(1, 42, 74, 0.5); color: #00FF87; font-size: 1rem; flex-shrink: 0; }
+            .statut-info { display: flex; flex-direction: column; }
+            .statut-name { font-weight: 600; color: #E6E6E6; }
+            .statut-fullname { font-size: 0.75rem; color: rgba(230, 230, 230, 0.6); }
+            .loading-state { display: flex; justify-content: center; align-items: center; height: 200px; flex-direction: column; gap: 1rem; }
+            .spinner { width: 40px; height: 40px; border: 3px solid rgba(0, 255, 135, 0.3); border-radius: 50%; border-top-color: #00FF87; animation: spin 1s ease-in-out infinite; }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            .comparatif-notes { margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; background-color: rgba(1, 42, 74, 0.3); font-size: 0.875rem; }
+            .notes-title { font-weight: 600; color: #00FF87; margin-bottom: 0.5rem; }
+            .notes-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; margin-bottom: 0.75rem; }
+            .notes-item { display: flex; align-items: center; gap: 0.5rem; }
+            .notes-term { color: #00FF87; font-weight: 500; }
+            .notes-disclaimer { font-style: italic; color: rgba(230, 230, 230, 0.6); font-size: 0.8125rem; text-align: center; margin-top: 0.75rem; }
             @media (max-width: 768px) {
-                .comparatif-filters {
-                    flex-direction: column;
-                }
-                
-                .criteria-buttons {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-                
-                .statut-icon {
-                    width: 2rem;
-                    height: 2rem;
-                    font-size: 0.875rem;
-                }
-                
-                .comparatif-table th, 
-                .comparatif-table td {
-                    padding: 0.75rem 0.5rem;
-                    font-size: 0.75rem;
-                }
-                
-                .notes-list {
-                    grid-template-columns: 1fr;
-                }
-
-                #smart-comparison .grid {
-                    grid-template-columns: 1fr !important;
-                }
-
-                #simulator-panel {
-                    width: 100%;
-                    right: -100%;
-                    left: 0;
-                    top: 0;
-                    max-height: 100vh;
-                    border-radius: 0;
-                }
-
-                #simulator-panel.open {
-                    right: 0;
-                }
+                .comparatif-filters { flex-direction: column; }
+                .criteria-buttons { grid-template-columns: repeat(2, 1fr); }
+                .statut-icon { width: 2rem; height: 2rem; font-size: 0.875rem; }
+                .comparatif-table th, .comparatif-table td { padding: 0.75rem 0.5rem; font-size: 0.75rem; }
+                .notes-list { grid-template-columns: 1fr; }
+                #smart-comparison .grid { grid-template-columns: 1fr !important; }
+                #simulator-panel { width: 100%; right: -100%; left: 0; top: 0; max-height: 100vh; border-radius: 0; }
+                #simulator-panel.open { right: 0; }
             }
-
-            /* NOUVELLES AMÉLIORATIONS ESTHÉTIQUES */
-
-            /* 1. Mise en valeur des cellules importantes */
-            .comparatif-table .key-cell {
-                background-color: rgba(0, 255, 135, 0.05);
-                font-weight: 500;
-            }
-
-            .comparatif-table .highlighted-value {
-                color: #00FF87;
-                font-weight: 600;
-            }
-
-            /* 3. Système d'évaluation visuelle (notation par étoiles) */
-            .rating-stars {
-                display: inline-flex;
-                align-items: center;
-            }
-
-            .rating-stars .star {
-                color: rgba(255, 255, 255, 0.2);
-                margin-right: 2px;
-            }
-
-            .rating-stars .star.filled {
-                color: #00FF87;
-            }
-
-            /* 4. Animation d'apparition en cascade */
-            @keyframes fadeInUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(10px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .comparatif-table tr {
-                animation: fadeInUp 0.3s ease forwards;
-                opacity: 0;
-            }
-
+            .comparatif-table .key-cell { background-color: rgba(0, 255, 135, 0.05); font-weight: 500; }
+            .comparatif-table .highlighted-value { color: #00FF87; font-weight: 600; }
+            .rating-stars { display: inline-flex; align-items: center; }
+            .rating-stars .star { color: rgba(255, 255, 255, 0.2); margin-right: 2px; }
+            .rating-stars .star.filled { color: #00FF87; }
+            @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            .comparatif-table tr { animation: fadeInUp 0.3s ease forwards; opacity: 0; }
             .comparatif-table tr:nth-child(1) { animation-delay: 0.05s; }
             .comparatif-table tr:nth-child(2) { animation-delay: 0.1s; }
             .comparatif-table tr:nth-child(3) { animation-delay: 0.15s; }
@@ -564,182 +151,36 @@ window.initComparatifStatuts = function() {
             .comparatif-table tr:nth-child(8) { animation-delay: 0.4s; }
             .comparatif-table tr:nth-child(9) { animation-delay: 0.45s; }
             .comparatif-table tr:nth-child(10) { animation-delay: 0.5s; }
-
-            /* 5. Barre de comparaison interactive */
-            .comparison-bar {
-                display: flex;
-                align-items: center;
-                padding: 0.75rem 1rem;
-                background-color: rgba(1, 35, 65, 0.7);
-                border-radius: 8px;
-                margin-bottom: 1rem;
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-
-            .comparison-title {
-                font-size: 0.875rem;
-                font-weight: 500;
-                color: rgba(255, 255, 255, 0.8);
-                margin-right: 1rem;
-            }
-
-            .comparison-items {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.5rem;
-                flex-grow: 1;
-            }
-
-            .comparison-item {
-                display: flex;
-                align-items: center;
-                padding: 0.375rem 0.75rem;
-                background-color: rgba(0, 255, 135, 0.15);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                border-radius: 4px;
-                font-size: 0.8125rem;
-                color: #00FF87;
-            }
-
-            .comparison-item .remove-btn {
-                background: none;
-                border: none;
-                color: rgba(255, 255, 255, 0.6);
-                font-size: 0.75rem;
-                margin-left: 0.5rem;
-                cursor: pointer;
-                padding: 2px;
-            }
-
-            .comparison-item .remove-btn:hover {
-                color: #FF6B6B;
-            }
-
-            .add-comparison-btn,
-            .add-comparison-select {
-                padding: 0.375rem 0.75rem;
-                background-color: rgba(1, 42, 74, 0.5);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                border-radius: 4px;
-                font-size: 0.8125rem;
-                color: rgba(255, 255, 255, 0.7);
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .add-comparison-btn:hover {
-                background-color: rgba(1, 42, 74, 0.7);
-                border-color: rgba(255, 255, 255, 0.5);
-                color: #fff;
-            }
-            
-            .status-dropdown {
-                margin-right: 0.5rem;
-                width: 200px;
-                padding: 0.5rem;
-                background-color: rgba(1, 42, 74, 0.7);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                border-radius: 4px;
-                color: #E6E6E6;
-                appearance: none;
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300FF87' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-                background-repeat: no-repeat;
-                background-position: calc(100% - 0.75rem) center;
-                padding-right: 2rem;
-            }
-            
-            .status-dropdown:focus {
-                outline: none;
-                border-color: rgba(0, 255, 135, 0.5);
-                box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
-            }
-
-            /* 6. Tooltips informatifs */
-            .info-tooltip {
-                position: relative;
-                cursor: help;
-            }
-
-            .info-tooltip:hover::after {
-                content: attr(data-tooltip);
-                position: absolute;
-                left: 50%;
-                transform: translateX(-50%);
-                bottom: 100%;
-                background-color: rgba(1, 22, 39, 0.95);
-                color: #fff;
-                padding: 6px 10px;
-                border-radius: 6px;
-                font-size: 0.875rem;
-                white-space: nowrap;
-                z-index: 10;
-                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                margin-bottom: 5px;
-            }
-
-            /* Boutons d'action flottants */
-            .actions-floating-bar {
-                position: fixed;
-                bottom: 1.5rem;
-                right: 1.5rem;
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-                z-index: 20;
-            }
-
-            .action-btn {
-                width: 3rem;
-                height: 3rem;
-                border-radius: 50%;
-                background-color: rgba(0, 255, 135, 0.2);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                color: #00FF87;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.125rem;
-                cursor: pointer;
-                transition: all 0.2s;
-                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            }
-
-            .action-btn:hover {
-                background-color: rgba(0, 255, 135, 0.3);
-                transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            }
-
-            /* Comparaison intelligente */
-            #smart-comparison {
-                margin-top: 0.75rem;
-            }
-
-            #smart-comparison .grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-            }
-
-            #smart-comparison b {
-                color: #00FF87;
-            }
+            .comparison-bar { display: flex; align-items: center; padding: 0.75rem 1rem; background-color: rgba(1, 35, 65, 0.7); border-radius: 8px; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+            .comparison-title { font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.8); margin-right: 1rem; }
+            .comparison-items { display: flex; flex-wrap: wrap; gap: 0.5rem; flex-grow: 1; }
+            .comparison-item { display: flex; align-items: center; padding: 0.375rem 0.75rem; background-color: rgba(0, 255, 135, 0.15); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 4px; font-size: 0.8125rem; color: #00FF87; }
+            .comparison-item .remove-btn { background: none; border: none; color: rgba(255, 255, 255, 0.6); font-size: 0.75rem; margin-left: 0.5rem; cursor: pointer; padding: 2px; }
+            .comparison-item .remove-btn:hover { color: #FF6B6B; }
+            .add-comparison-btn, .add-comparison-select { padding: 0.375rem 0.75rem; background-color: rgba(1, 42, 74, 0.5); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 4px; font-size: 0.8125rem; color: rgba(255, 255, 255, 0.7); cursor: pointer; transition: all 0.2s; }
+            .add-comparison-btn:hover { background-color: rgba(1, 42, 74, 0.7); border-color: rgba(255, 255, 255, 0.5); color: #fff; }
+            .status-dropdown { margin-right: 0.5rem; width: 200px; padding: 0.5rem; background-color: rgba(1, 42, 74, 0.7); border: 1px solid rgba(0, 255, 135, 0.3); border-radius: 4px; color: #E6E6E6; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300FF87' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: calc(100% - 0.75rem) center; padding-right: 2rem; }
+            .status-dropdown:focus { outline: none; border-color: rgba(0, 255, 135, 0.5); box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2); }
+            .info-tooltip { position: relative; cursor: help; }
+            .info-tooltip:hover::after { content: attr(data-tooltip); position: absolute; left: 50%; transform: translateX(-50%); bottom: 100%; background-color: rgba(1, 22, 39, 0.95); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.875rem; white-space: nowrap; z-index: 10; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2); border: 1px solid rgba(0, 255, 135, 0.3); margin-bottom: 5px; }
+            .actions-floating-bar { position: fixed; bottom: 1.5rem; right: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 20; }
+            .action-btn { width: 3rem; height: 3rem; border-radius: 50%; background-color: rgba(0, 255, 135, 0.2); border: 1px solid rgba(0, 255, 135, 0.3); color: #00FF87; display: flex; align-items: center; justify-content: center; font-size: 1.125rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+            .action-btn:hover { background-color: rgba(0, 255, 135, 0.3); transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
+            #smart-comparison { margin-top: 0.75rem; }
+            #smart-comparison .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+            #smart-comparison b { color: #00FF87; }
         `;
         document.head.appendChild(style);
     }
 
     // ========== NOUVEAUX UTILITAIRES 2025 ==========
     
-    // Helpers légers
     const $ = (s, r=document)=>r.querySelector(s);
     const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
     const toText = v => (v==null || v==='') ? '—' : String(v);
     const fmtEuro = n => Number.isFinite(+n) ? (+n).toLocaleString('fr-FR')+' €' : toText(n);
     const debounce = (fn, ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
 
-    // Seuils 2025 (priorité à tes données si présentes)
     function getThresholds2025() {
         const T = (window.recoEngine && window.recoEngine.thresholds2025) || window.thresholds2025 || {};
         const def = {
@@ -752,7 +193,6 @@ window.initComparatifStatuts = function() {
         };
     }
 
-    // Obligations clefs pour pédagogie (micro / EURL / SASU)
     function deriveObligations(shortName) {
         const T = getThresholds2025();
         const tvaFr = `Franchise TVA 2025 : ventes ${fmtEuro(T.tva_franchise_base.ventes)} (${fmtEuro(T.tva_franchise_base.tolerance_ventes)} tol.) • services ${fmtEuro(T.tva_franchise_base.services)} (${fmtEuro(T.tva_franchise_base.tolerance_services)} tol.)`;
@@ -795,6 +235,52 @@ window.initComparatifStatuts = function() {
         return { obligationsCle: '' };
     }
 
+    // ========== PATCH 1 : INTENT HELPERS ==========
+    function parseAssociesMin(text) {
+        if (!text) return 1;
+        const t = String(text).toLowerCase();
+        const nums = (t.match(/\d+/g) || []).map(n => parseInt(n, 10)).sort((a,b)=>a-b);
+        if (nums.length) return nums[0];
+        if (/\b2\+|\bplusieurs|\bdeux\b/.test(t)) return 2;
+        return /1/.test(t) ? 1 : 1;
+    }
+
+    function allowsMultipleAssociates(statut) {
+        return parseAssociesMin(statut.associes) >= 2;
+    }
+
+    function hasISByDefault(statut) {
+        const f = (statut.fiscalite || '').toLowerCase();
+        return /\bis\b/.test(f) && !/\bir\b/.test(f);
+    }
+
+    function canOptIS(statut) {
+        const opt = (statut.fiscaliteOption || '').toLowerCase();
+        return /option|possible/.test(opt) && /\bis\b/.test(opt);
+    }
+
+    function canPayDividends(statut) {
+        const meta = statut.meta_payout || {};
+        if (meta.peut_dividendes) return true;
+        if (hasISByDefault(statut)) return true;
+        if (canOptIS(statut)) return true;
+        return false;
+    }
+
+    function matchIntent(statut, ans) {
+        // 1) Associés : supprimer les statuts purement solo
+        if (ans.prevoit_associes === 'oui' && !allowsMultipleAssociates(statut)) return false;
+
+        // 2) Dividendes : garder uniquement ceux qui permettent effectivement des dividendes
+        if (ans.veut_dividendes && !canPayDividends(statut)) return false;
+
+        // 3) Salaire : optionnel - décommenter si tu veux exclure EI/Micro quand "je veux du salaire" est coché
+        // if (ans.veut_salaire && !(statut.meta_payout||{}).peut_salaire) return false;
+
+        // 4) Chômage (ARE) : on n'exclut rien (on ajoute un encart explicatif)
+        return true;
+    }
+
     // ========== MOTEUR DE SCORING ==========
     function scoreStatut(statut, answers) {
         let s = 0;
@@ -804,7 +290,6 @@ window.initComparatifStatuts = function() {
         const evoM = statut.meta_evolution || {};
         const dirM = statut.meta_dirigeant || {};
 
-        // Salaire / dividendes
         if (answers.veut_salaire) {
             if (meta.peut_salaire) { s += 3; } 
             else { why.push('Pas de salaire possible'); }
@@ -819,7 +304,6 @@ window.initComparatifStatuts = function() {
             }
         }
 
-        // ARE
         if (answers.en_chomage) {
             if (areM.are_compatible_sans_salaire) { s += 2; why.push('ARE ok sans salaire'); }
             if (areM.are_baisse_si_salaire && answers.veut_salaire) { 
@@ -828,7 +312,6 @@ window.initComparatifStatuts = function() {
             }
         }
 
-        // Associés / Levée
         if (answers.prevoit_associes !== 'non') {
             if (evoM.entree_associes_facile) { s += 2; } 
             else { s -= 1; why.push('Entrée associés encadrée'); }
@@ -840,16 +323,14 @@ window.initComparatifStatuts = function() {
             else { s -= 1; }
         }
 
-        // Couverture sociale
         if (answers.veut_salaire && dirM.statut_dirigeant === 'assimilé salarié') { 
             s += 1; 
             why.push('Assimilé salarié');
         }
 
-        return { score: s, why: why.slice(0, 3) }; // Max 3 raisons
+        return { score: s, why: why.slice(0, 3) };
     }
 
-    // ========== MODE DIFF-ONLY ==========
     function onlyDifferences(rows, columns) {
         const keys = columns.map(c => c.key).filter(k => k !== 'name');
         return keys.filter(k => {
@@ -858,12 +339,9 @@ window.initComparatifStatuts = function() {
         });
     }
 
-    // Normalise une fiche statut pour l'affichage
     function enrichForDisplay(statut, answers = {}) {
         const derived = deriveObligations(statut.shortName || statut.name);
         const km = statut.key_metrics || {};
-        
-        // Merge avec métas fallback si manquant
         const shortName = (statut.shortName || '').toUpperCase();
         const fallback = META_FALLBACK[shortName] || {};
         
@@ -880,7 +358,6 @@ window.initComparatifStatuts = function() {
             meta_dirigeant: statut.meta_dirigeant || fallback.meta_dirigeant || {}
         };
 
-        // Scoring si answers fourni
         if (Object.keys(answers).length > 0) {
             const scoring = scoreStatut(enriched, answers);
             enriched._score = scoring.score;
@@ -890,42 +367,34 @@ window.initComparatifStatuts = function() {
         return enriched;
     }
 
-    // ========== SIMULATEUR NET PERSO ==========
     function simulateNet(statut, benef, scenario) {
         const meta = statut.meta_payout || {};
         let net = 0, cout = 0;
 
         if (scenario === 'salaire' && meta.peut_salaire) {
-            // Salaire 100% (SASU/SAS style)
             const brut = benef / (1 + RATES_2025.cot_sasu_employeur);
-            const charges = brut * (RATES_2025.cot_sasu_employeur + RATES_2025.cot_sasu_salarie);
             net = brut * (1 - RATES_2025.cot_sasu_salarie);
             cout = benef;
         } else if (scenario === 'dividendes' && meta.peut_dividendes) {
-            // Dividendes 100% (après IS)
             const is = benef * RATES_2025.is_rate;
             const dividBrut = benef - is;
             
             if (meta.dividendes_cot_sociales === '>10%') {
-                // EURL/SARL : cotis sur part >10%
                 const seuil = benef * RATES_2025.seuil_div_tns;
                 const partCotis = Math.max(0, dividBrut - seuil);
                 const cotisSociales = partCotis * RATES_2025.cot_tns;
                 net = dividBrut * (1 - RATES_2025.pfu) - cotisSociales;
             } else {
-                // SASU/SAS : PFU seulement
                 net = dividBrut * (1 - RATES_2025.pfu);
             }
             cout = benef;
         } else if (scenario === 'mix' && meta.peut_salaire && meta.peut_dividendes) {
-            // 50/50
             const half = benef / 2;
             const resultSal = simulateNet(statut, half, 'salaire');
             const resultDiv = simulateNet(statut, half, 'dividendes');
             net = resultSal.net + resultDiv.net;
             cout = benef;
         } else {
-            // TNS ou impossible
             net = benef * (1 - RATES_2025.cot_tns);
             cout = benef;
         }
@@ -933,21 +402,47 @@ window.initComparatifStatuts = function() {
         return { net: Math.round(net), cout: Math.round(cout) };
     }
 
-    // ========== FIN NOUVEAUX UTILITAIRES ==========
+    // ========== PATCH 3 : ENCART ARE/ARCE ==========
+    function renderAREHelper(intentAnswers) {
+        let host = document.getElementById('are-helper');
+        if (!host) {
+            host = document.createElement('div');
+            host.id = 'are-helper';
+            host.style.marginTop = '0.5rem';
+            const header = document.querySelector('.comparatif-header');
+            header && header.appendChild(host);
+        }
 
-    // Fonction principale pour créer le tableau comparatif - exposée globalement
+        if (!intentAnswers.en_chomage) {
+            host.innerHTML = '';
+            host.style.display = 'none';
+            return;
+        }
+
+        host.style.display = 'block';
+        host.innerHTML = `
+            <div style="border:1px solid rgba(0,255,135,.35);border-radius:8px;padding:12px;background:rgba(1,35,65,.6)">
+                <div style="font-weight:600;color:#00FF87;margin-bottom:6px">🛡️ Chômage (ARE) — points clés</div>
+                <ul style="margin:0; padding-left:18px; line-height:1.4">
+                    <li><b>Salaire</b> versé par la société ⇒ <b>réduction/ajustement</b> de l'ARE.</li>
+                    <li><b>Dividendes SAS/SASU/SA/SELAS</b> ⇒ en principe <b>non pris en compte</b> par l'ARE 
+                        (<span style="opacity:.8">attention au risque de <i>requalification</i> si abus</span>).</li>
+                    <li><b>EURL/SARL à l'IS</b> ⇒ dividendes au-delà de <b>10&nbsp;%</b> (capital+primes+CCA) soumis à cotisations TNS.</li>
+                    <li><b>ARCE</b> possible (versement en capital) vs <b>maintien ARE</b> : à arbitrer selon trésorerie & plan de rémunération.</li>
+                </ul>
+            </div>`;
+    }
+
+    // ========== CRÉATION TABLEAU ==========
     window.createComparatifTable = function(containerId) {
-        // S'assurer que le conteneur existe
         const container = document.getElementById(containerId);
         if (!container) {
             console.error(`Conteneur #${containerId} non trouvé`);
             return;
         }
 
-        // Injecter le CSS
         injectCSS();
 
-        // Créer la structure HTML de base
         container.innerHTML = `
             <div class="comparatif-container">
                 <div class="comparatif-header">
@@ -956,7 +451,6 @@ window.initComparatifStatuts = function() {
                         Tableau comparatif intelligent : filtrez par intention, comparez les différences clés, simulez votre rémunération.
                     </p>
 
-                    <!-- NOUVEAUX FILTRES D'INTENTION -->
                     <div class="intent-filters" id="intent-filters">
                         <div class="intent-filter-item" data-intent="veut_salaire">
                             <input type="checkbox" id="filter-salaire">
@@ -991,7 +485,6 @@ window.initComparatifStatuts = function() {
                         </button>
                     </div>
 
-                    <!-- TOGGLE DIFF-ONLY -->
                     <div class="diff-mode-toggle" id="diff-mode-toggle">
                         <input type="checkbox" id="diff-mode-checkbox">
                         <label for="diff-mode-checkbox">📊 Afficher uniquement les différences</label>
@@ -1043,7 +536,6 @@ window.initComparatifStatuts = function() {
                     </p>
                 </div>
                 
-                <!-- SIMULATEUR NET PERSO -->
                 <button class="simulator-toggle-btn" id="simulator-toggle-btn">
                     📊 Simulateur Net Perso
                 </button>
@@ -1070,7 +562,6 @@ window.initComparatifStatuts = function() {
                     </button>
                 </div>
                 
-                <!-- Boutons d'action flottants -->
                 <div class="actions-floating-bar">
                     <button class="action-btn" title="Imprimer" id="print-btn">
                         <i class="fas fa-print"></i>
@@ -1079,7 +570,6 @@ window.initComparatifStatuts = function() {
             </div>
         `;
 
-        // Définir les critères de comparaison
         const criteria = [
             { id: 'all', label: 'Tous les critères' },
             { id: 'basic', label: 'Critères de base' },
@@ -1088,7 +578,6 @@ window.initComparatifStatuts = function() {
             { id: 'creation', label: 'Création et gestion' }
         ];
 
-        // Générer les boutons de critère
         const criteriaButtons = document.getElementById('criteria-buttons');
         criteria.forEach(criterion => {
             const button = document.createElement('button');
@@ -1098,7 +587,6 @@ window.initComparatifStatuts = function() {
             criteriaButtons.appendChild(button);
         });
 
-        // Variables pour le filtrage et la comparaison
         let selectedCriterion = 'all';
         let searchTerm = '';
         let compareStatuts = [];
@@ -1111,15 +599,14 @@ window.initComparatifStatuts = function() {
             levee_fonds: 'non'
         };
         
-        // Initialiser les événements de comparaison
         initComparisonEvents();
         initIntentFilters();
         initSimulator();
-
-        // Charger et afficher les données
         loadStatutData();
 
-        // Ajouter les écouteurs d'événements pour le filtrage
+        // Render ARE helper initialement
+        renderAREHelper(intentAnswers);
+
         document.querySelectorAll('.criteria-button').forEach(button => {
             button.addEventListener('click', () => {
                 document.querySelectorAll('.criteria-button').forEach(btn => {
@@ -1131,26 +618,22 @@ window.initComparatifStatuts = function() {
             });
         });
 
-        // Debounce sur la recherche
         const debouncedUpdate = debounce(()=>{ updateTable(); }, 200);
         $('#search-input').addEventListener('input', (e)=>{
             searchTerm = e.target.value.toLowerCase();
             debouncedUpdate();
         });
 
-        // Diff mode toggle
         $('#diff-mode-checkbox').addEventListener('change', (e) => {
             diffMode = e.target.checked;
             $('#diff-mode-toggle').classList.toggle('active', diffMode);
             updateTable();
         });
         
-        // Bouton imprimer
         document.getElementById('print-btn').addEventListener('click', () => {
             window.print();
         });
 
-        // ========== INIT FILTRES D'INTENTION ==========
         function initIntentFilters() {
             $$('.intent-filter-item').forEach(item => {
                 const intent = item.dataset.intent;
@@ -1172,12 +655,13 @@ window.initComparatifStatuts = function() {
                         intentAnswers[intent] = checkbox.checked;
                     }
                     
+                    // PATCH 3 : appeler renderAREHelper
+                    renderAREHelper(intentAnswers);
                     updateTable();
                 });
             });
         }
 
-        // ========== INIT SIMULATEUR ==========
         function initSimulator() {
             const panel = $('#simulator-panel');
             const toggleBtn = $('#simulator-toggle-btn');
@@ -1228,7 +712,6 @@ window.initComparatifStatuts = function() {
             });
         }
 
-        // Fonction pour initialiser les événements de comparaison
         function initComparisonEvents() {
             const addComparisonBtn = document.getElementById('add-comparison-btn');
             const statusDropdown = document.getElementById('status-dropdown');
@@ -1332,7 +815,6 @@ window.initComparatifStatuts = function() {
             renderSmartComparison();
         }
 
-        // ========== COMPARAISON INTELLIGENTE ==========
         function renderSmartComparison(){
             let host = $('#smart-comparison');
             if (!host){
@@ -1386,7 +868,7 @@ window.initComparatifStatuts = function() {
             if (typeof rating !== 'number') return 'Non évalué';
             let stars = '';
             for (let i = 1; i <= 5; i++) {
-                stars += `<span class="star ${i <= rating ? 'filled' : ''}">★</span>`;
+                stars += `<span class="star ${i <= rating ? 'filled' : ''}\">★</span>`;
             }
             return stars;
         }
@@ -1472,7 +954,7 @@ window.initComparatifStatuts = function() {
                         { key: 'plafondCA', label: 'Plafond CA' },
                         { key: 'obligationsCle', label: 'Obligations clés' }
                     ];
-                default: // 'all'
+                default:
                     return [
                         { key: 'name', label: 'Statut' },
                         { key: 'associes', label: 'Nombre d\'associés' },
@@ -1485,23 +967,37 @@ window.initComparatifStatuts = function() {
             }
         }
 
+        // ========== PATCH 2 : FILTRE AVEC INTENTIONS + TRI ==========
         function filterStatuts(statuts, term) {
-            let filteredList = Object.values(statuts);
-            
+            let list = Object.values(statuts);
+
+            // Mode comparaison : restreint à la sélection
             if (compareStatuts.length > 0) {
-                filteredList = filteredList.filter(statut => 
-                    compareStatuts.includes(statut.shortName));
+                list = list.filter(statut => compareStatuts.includes(statut.shortName));
             }
-            
+
+            // Recherche texte
             if (term) {
-                filteredList = filteredList.filter(statut =>
-                    statut.name.toLowerCase().includes(term) || 
-                    statut.shortName.toLowerCase().includes(term) ||
-                    (statut.description && statut.description.toLowerCase().includes(term))
+                const tt = term.toLowerCase();
+                list = list.filter(statut =>
+                    (statut.name || '').toLowerCase().includes(tt) ||
+                    (statut.shortName || '').toLowerCase().includes(tt) ||
+                    (statut.description || '').toLowerCase().includes(tt)
                 );
             }
-            
-            return filteredList;
+
+            // ➜ IMPORTANT : enrichir PUIS filtrer par intentions
+            list = list.map(s => enrichForDisplay(s, intentAnswers))
+                       .filter(s => matchIntent(s, intentAnswers));
+
+            // Si au moins un intent est actif, on trie par score décroissant
+            const anyIntent = intentAnswers.veut_salaire || intentAnswers.veut_dividendes || intentAnswers.en_chomage ||
+                            intentAnswers.prevoit_associes === 'oui' || intentAnswers.levee_fonds === 'oui';
+            if (anyIntent) {
+                list.sort((a,b) => (b._score||0) - (a._score||0));
+            }
+
+            return list;
         }
 
         function updateTable() {
@@ -1509,9 +1005,8 @@ window.initComparatifStatuts = function() {
             
             let columns = getColumnsForCriterion(selectedCriterion);
             const filteredStatuts = filterStatuts(window.legalStatuses, searchTerm);
-            const rowsData = filteredStatuts.map(s => enrichForDisplay(s, intentAnswers));
+            const rowsData = filteredStatuts; // déjà enrichis + filtrés
 
-            // ========== MODE DIFF-ONLY ==========
             if (diffMode && compareStatuts.length >= 2) {
                 const diffKeys = onlyDifferences(rowsData, columns);
                 columns = [
@@ -1536,7 +1031,7 @@ window.initComparatifStatuts = function() {
                 return;
             }
             
-            // ========== GÉNÉRATION DES BADGES ==========
+            // ========== PATCH 4 : BADGES AVEC ARE CONTEXTUEL ==========
             function generateBadges(statut) {
                 const badges = [];
                 const meta = statut.meta_payout || {};
@@ -1550,9 +1045,12 @@ window.initComparatifStatuts = function() {
                         badges.push('<span class="status-badge badge-dividends">💰 Dividendes</span>');
                     }
                 }
-                if (statut.meta_are && statut.meta_are.are_compatible_sans_salaire) {
+                
+                // PATCH 4 : Badge ARE uniquement si filtre chômage actif
+                if (intentAnswers.en_chomage && statut.meta_are && statut.meta_are.are_compatible_sans_salaire) {
                     badges.push('<span class="status-badge badge-are">🛡️ ARE ok</span>');
                 }
+                
                 if (statut.meta_evolution && statut.meta_evolution.accueil_investisseurs === 'élevé') {
                     badges.push('<span class="status-badge badge-investors">🚀 Investisseurs</span>');
                 }
@@ -1664,6 +1162,4 @@ window.initComparatifStatuts = function() {
         }
     };
 
-    // Ne pas exécuter automatiquement au chargement pour éviter les conflits
-    // L'initialisation se fera via window.initComparatifStatuts
 })();
