@@ -3250,7 +3250,14 @@ calculateCriteriaScore(criteria, statusId, metrics) {
     const before = score;
 
     // Compat : rule.apply peut renvoyer un nombre ou { score, note }
-    let out = rule.apply(statusId, score, this.answers, metrics);
+    let out;
+    try {
+      out = rule.apply(statusId, score, this.answers, metrics);
+    } catch (err) {
+      console.error('Rule apply error:', rule.id || '(sans id)', err);
+      continue; // ignore la règle fautive, on poursuit
+    }
+
     if (out && typeof out === 'object') {
       if (Number.isFinite(out.score)) score = out.score;
       // tu peux aussi logger out.note si tu en fournis
@@ -3293,7 +3300,7 @@ calculateCriteriaScore(criteria, statusId, metrics) {
   this.auditTrail.scores[statusId][criteria].final_score = score;
 
   return score; // 1..5
-}    
+}
 /**
  * Explication détaillée et robuste d'une recommandation
  * - Compatible avec les logs d'audit issus de calculateScores ET/OU calculateCriteriaScore
