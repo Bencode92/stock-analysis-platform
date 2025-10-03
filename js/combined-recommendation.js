@@ -2115,165 +2115,203 @@ apply: (statusId, score, answers, metrics) => {
 // answers.family_project ∈ ['yes','no']
 // answers.bank_financing ∈ ['yes','no']
 // answers.income_objective_year1 : number (€, pour jauger "petite activité meublée")
-
-// 1) Immobilier patrimonial (NU) : SCI très favorisée (ajustée)
-   {
-      id: 'immobilier_activity_sci_mega_bonus',
-      description: 'Immobilier patrimonial (nu) : SCI fortement recommandée',
-      condition: a =>
-        IS_IMMO(a) &&
-        ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model ?? null),
-      apply: (statusId, score) => {
-        if (statusId === 'SCI') return score + 3;
-        if (['MICRO','EI'].includes(statusId)) return score - 1;
-        return score;
-      },
-      criteria: 'administrative_simplicity'
+// --- 0) TYPE DE BIENS (résidentiel / commercial / mixte) -----------------
+  {
+    id: 'immo_property_use_residential_sci_bonus',
+    description: 'Biens résidentiels (location nue) : SCI ++',
+    condition: (a) =>
+      IS_IMMO(a)
+      && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model ?? null)
+      && a.real_estate_property_use === 'residential',
+    apply: (statusId, score) => (statusId === 'SCI' ? score + 0.5 : score),
+    criteria: 'administrative_simplicity'
+  },
+  {
+    id: 'immo_property_use_commercial_credit_boost',
+    description: 'Biens commerciaux/pro : + SCI/SARL/SAS (baux + crédibilité), - EI/Micro',
+    condition: (a) =>
+      IS_IMMO(a)
+      && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model ?? null)
+      && a.real_estate_property_use === 'commercial',
+    apply: (statusId, score) => {
+      if (['SCI','SARL','SAS'].includes(statusId)) return score + 0.5;
+      if (['EI','MICRO'].includes(statusId)) return score - 0.25;
+      return score;
     },
-    // 1.b) Distribution par quotes-parts (SCI IR) — approx via préférence non "salaire"
-   {
-  id: 'immo_distribution_sci_ir',
-  description: 'Immo patrimonial (nu) : distribution par quotes-parts (SCI IR)',
-  condition: a => IS_IMMO(a)
-    && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model)
-    && ['dividends','mixed','flexible'].includes(a.remuneration_preference),
-  apply: (statusId, score) => statusId === 'SCI' ? score + 0.5 : score,
-  criteria: 'taxation_optimization'
-},
-
-
-    // 2) Meublé : + SARL/EURL/EI/Micro, - SCI
-    {
-      id: 'immobilier_meuble_pref_sarlfam_ei',
-      description: 'Location meublée : + SARL (famille, IR) / EI / EURL, - SCI',
-      condition: a => IS_IMMO(a) && a.real_estate_model === 'meuble',
-      apply: (statusId, score, a) => {
-        if (statusId === 'SCI')  return score - 2;
-        if (statusId === 'SARL') return score + 1.25;
-        if (statusId === 'EURL') return score + 0.75;
-        if (statusId === 'EI')   return score + 0.75;
-        if (statusId === 'MICRO') return score + (a._meuble_small_activity ? 0.5 : 0.25);
-        return score;
-      },
-      criteria: 'taxation_optimization'
+    criteria: 'credibility'
+  },
+  {
+    id: 'immo_property_use_mixed_governance',
+    description: 'Biens mixtes : souplesse utile (SAS/SARL +)',
+    condition: (a) =>
+      IS_IMMO(a)
+      && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model ?? null)
+      && a.real_estate_property_use === 'mixed_use',
+    apply: (statusId, score) => {
+      if (['SAS','SARL'].includes(statusId)) return score + 0.5;
+      return score;
     },
+    criteria: 'governance_flexibility'
+  },
 
-    // 3) Para-hôtelier (si un jour ajouté au questionnaire)
-    {
-      id: 'immobilier_parahotelier_pref_societes_commerciales',
-      description: 'Para-hôtelier : SAS/SARL préférées, SCI dissuadée',
-      condition: a => IS_IMMO(a) && a.real_estate_model === 'para_hotel',
-      apply: (statusId, score) => {
-        if (statusId === 'SCI')  return score - 2;
-        if (statusId === 'SAS')  return score + 1.5;
-        if (statusId === 'SARL') return score + 1;
-        if (statusId === 'SASU') return score + 1;
-        return score;
-      },
-      criteria: 'credibility'
+  // --- 1) IMMOBILIER PATRIMONIAL (NU) --------------------------------------
+  {
+    id: 'immobilier_activity_sci_mega_bonus',
+    description: 'Immobilier patrimonial (nu) : SCI fortement recommandée',
+    condition: (a) =>
+      IS_IMMO(a)
+      && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model ?? null),
+    apply: (statusId, score) => {
+      if (statusId === 'SCI') return score + 3;
+      if (['MICRO','EI'].includes(statusId)) return score - 1;
+      return score;
     },
+    criteria: 'administrative_simplicity'
+  },
+  {
+    id: 'immo_distribution_sci_ir',
+    description: 'Immo patrimonial (nu) : distribution par quotes-parts (SCI IR)',
+    condition: (a) =>
+      IS_IMMO(a)
+      && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model)
+      && ['dividends','mixed','flexible'].includes(a.remuneration_preference),
+    apply: (statusId, score) => (statusId === 'SCI' ? score + 0.5 : score),
+    criteria: 'taxation_optimization'
+  },
 
-    // 4) Marchand / Promotion / Lotissement
-    {
-      id: 'immobilier_marchand_promo_pref_sas_sarl',
-      description: 'Marchand de biens / promo : SAS/SARL ++ ; SCI fortement déconseillée',
-      condition: a => IS_IMMO(a) && ['marchand','promotion','lotissement'].includes(a.real_estate_model),
-      apply: (statusId, score) => {
-        if (statusId === 'SCI')  return score - 3;
-        if (statusId === 'SNC')  return score - 1;
-        if (statusId === 'SAS')  return score + 2;
-        if (statusId === 'SARL') return score + 1.5;
-        if (statusId === 'SASU') return score + 1.25;
-        if (statusId === 'SA')   return score + 1;
-        return score;
-      },
-      criteria: 'governance_flexibility'
+  // --- 2) MEUBLÉ (LMNP/LMP) -------------------------------------------------
+  {
+    id: 'immobilier_meuble_pref_sarlfam_ei',
+    description: 'Location meublée : + SARL (famille, IR) / EI / EURL, - SCI',
+    condition: (a) => IS_IMMO(a) && a.real_estate_model === 'meuble',
+    apply: (statusId, score, a) => {
+      if (statusId === 'SCI')  return score - 2;
+      if (statusId === 'SARL') return score + 1.25;
+      if (statusId === 'EURL') return score + 0.75;
+      if (statusId === 'EI')   return score + 0.75;
+      if (statusId === 'MICRO') return score + (a?._meuble_small_activity ? 0.5 : 0.25);
+      return score;
     },
+    criteria: 'taxation_optimization'
+  },
 
-    // 5) Plusieurs associés
-    {
-      id: 'multiple_partners_bonus_collective',
-      description: 'Plusieurs associés : bonus pour gestion collective',
-      condition: a =>
-        ['family','associates','investors'].includes(a.team_structure) &&
-        parseInt(a.associates_number || 2, 10) >= 2,
-      apply: (statusId, score) => {
-        if (['SARL','SNC','SCI'].includes(statusId)) return score + 0.75;
-        if (['SASU','EURL','EI'].includes(statusId)) return score - 0.75;
-        return score;
-      },
-      criteria: 'governance_flexibility'
+  // --- 3) PARA-HÔTELIER -----------------------------------------------------
+  {
+    id: 'immobilier_parahotelier_pref_societes_commerciales',
+    description: 'Para-hôtelier : SAS/SARL préférées, SCI dissuadée',
+    condition: (a) => IS_IMMO(a) && a.real_estate_model === 'para_hotel',
+    apply: (statusId, score) => {
+      if (statusId === 'SCI')  return score - 2;
+      if (statusId === 'SAS')  return score + 1.5;
+      if (statusId === 'SARL') return score + 1;
+      if (statusId === 'SASU') return score + 1;
+      return score;
     },
+    criteria: 'credibility'
+  },
 
-    // 6) Solo
-    {
-      id: 'solo_project_penalty_multi_partner_statutes',
-      description: 'Projet solo : pénalise statuts qui exigent ≥ 2 associés',
-      condition: a => a.team_structure === 'solo',
-      apply: (statusId, score) => (['SNC','SCI','SARL'].includes(statusId) ? score - 1 : score),
-      criteria: 'governance_flexibility'
+  // --- 4) MARCHAND / PROMOTION / LOTISSEMENT --------------------------------
+  {
+    id: 'immobilier_marchand_promo_pref_sas_sarl',
+    description: 'Marchand de biens / promo : SAS/SARL ++ ; SCI fortement déconseillée',
+    condition: (a) => IS_IMMO(a) && ['marchand','promotion','lotissement'].includes(a.real_estate_model),
+    apply: (statusId, score) => {
+      if (statusId === 'SCI')  return score - 3;
+      if (statusId === 'SNC')  return score - 1;
+      if (statusId === 'SAS')  return score + 2;
+      if (statusId === 'SARL') return score + 1.5;
+      if (statusId === 'SASU') return score + 1.25;
+      if (statusId === 'SA')   return score + 1;
+      return score;
     },
+    criteria: 'governance_flexibility'
+  },
 
-    // 7) Gouvernance sur-mesure
-    {
-      id: 'flexible_statutes_bonus',
-      description: 'Gouvernance sur-mesure : bonus SAS / SASU / SELAS / SCA',
-      condition: a => ['complex','moderate'].includes(a.governance_complexity),
-      apply: (statusId, score) => {
-        if (['SAS','SASU','SELAS','SCA'].includes(statusId)) return score + 1;
-        if (['SARL','SNC','SCI','EI','MICRO'].includes(statusId)) return score - 0.5;
-        return score;
-      },
-      criteria: 'governance_flexibility'
+  // --- 5) PLUSIEURS ASSOCIÉS -------------------------------------------------
+  {
+    id: 'multiple_partners_bonus_collective',
+    description: 'Plusieurs associés : bonus pour gestion collective',
+    condition: (a) =>
+      ['family','associates','investors'].includes(a.team_structure)
+      && parseInt(a.associates_number || 2, 10) >= 2,
+    apply: (statusId, score) => {
+      if (['SARL','SNC','SCI'].includes(statusId)) return score + 0.75;
+      if (['SASU','EURL','EI'].includes(statusId)) return score - 0.75;
+      return score;
     },
+    criteria: 'governance_flexibility'
+  },
 
-    // 8) Gouvernance très simple
-    {
-      id: 'simple_governance_penalty_flexible_statutes',
-      description: 'Gouvernance très simple souhaitée : SAS / SCA moins pertinentes',
-      condition: a => a.governance_complexity === 'simple',
-      apply: (statusId, score) => (['SAS','SCA'].includes(statusId) ? score - 0.5 : score),
-      criteria: 'governance_flexibility'
+  // --- 6) SOLO ---------------------------------------------------------------
+  {
+    id: 'solo_project_penalty_multi_partner_statutes',
+    description: 'Projet solo : pénalise statuts qui exigent ≥ 2 associés',
+    condition: (a) => a.team_structure === 'solo',
+    apply: (statusId, score) => (['SNC','SCI','SARL'].includes(statusId) ? score - 1 : score),
+    criteria: 'governance_flexibility'
+  },
+
+  // --- 7) GOUVERNANCE SUR-MESURE --------------------------------------------
+  {
+    id: 'flexible_statutes_bonus',
+    description: 'Gouvernance sur-mesure : bonus SAS / SASU / SELAS / SCA',
+    condition: (a) => ['complex','moderate'].includes(a.governance_complexity),
+    apply: (statusId, score) => {
+      if (['SAS','SASU','SELAS','SCA'].includes(statusId)) return score + 1;
+      if (['SARL','SNC','SCI','EI','MICRO'].includes(statusId)) return score - 0.5;
+      return score;
     },
+    criteria: 'governance_flexibility'
+  },
 
-    // 9) Immo + projet familial (inféré)
-    {
-      id: 'immobilier_family_project_sci_bonus',
-      description: 'Immobilier familial : SCI ++ (agréments, démembrement, transmission)',
-      condition: a => IS_IMMO(a)
-        && a.family_project === 'yes'
-        && ['patrimonial_nue','bureaux_nus'].includes(a.real_estate_model ?? 'patrimonial_nue'),
-      apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
-      criteria: 'transmission'
+  // --- 8) GOUVERNANCE TRÈS SIMPLE -------------------------------------------
+  {
+    id: 'simple_governance_penalty_flexible_statutes',
+    description: 'Gouvernance très simple souhaitée : SAS / SCA moins pertinentes',
+    condition: (a) => a.governance_complexity === 'simple',
+    apply: (statusId, score) => (['SAS','SCA'].includes(statusId) ? score - 0.5 : score),
+    criteria: 'governance_flexibility'
+  },
+
+  // --- 9) IMMO + PROJET FAMILIAL --------------------------------------------
+  {
+    id: 'immobilier_family_project_sci_bonus',
+    description: 'Immobilier familial : SCI ++ (agréments, démembrement, transmission)',
+    condition: (a) =>
+      IS_IMMO(a)
+      && a.family_project === 'yes'
+      && ['patrimonial_nue','bureaux_nus'].includes(a.real_estate_model ?? 'patrimonial_nue'),
+    apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
+    criteria: 'transmission'
+  },
+
+  // --- 10) INVESTISSEURS EXTERNES -------------------------------------------
+  {
+    id: 'immobilier_investors_pref_sas_sca',
+    description: 'Investisseurs externes : SAS (souplesse) ou SCA (contrôle familial)',
+    condition: (a) => IS_IMMO(a) && a.team_structure === 'investors',
+    apply: (statusId, score) => {
+      if (statusId === 'SAS') return score + 1.25;
+      if (statusId === 'SCA') return score + 1;
+      if (statusId === 'SCI') return score + 0.25; // toléré en patrimonial simple
+      return score;
     },
+    criteria: 'fundraising_capacity'
+  },
 
-    // 10) Investisseurs externes
-    {
-      id: 'immobilier_investors_pref_sas_sca',
-      description: 'Investisseurs externes : SAS (souplesse) ou SCA (contrôle familial)',
-      condition: a => IS_IMMO(a) && a.team_structure === 'investors',
-      apply: (statusId, score) => {
-        if (statusId === 'SAS') return score + 1.25;
-        if (statusId === 'SCA') return score + 1;
-        if (statusId === 'SCI') return score + 0.25;
-        return score;
-      },
-      criteria: 'fundraising_capacity'
+  // --- 11) FINANCEMENT BANCAIRE ---------------------------------------------
+  {
+    id: 'immobilier_bank_financing_bonus',
+    description: 'Financement bancaire : + SCI/SARL/SAS, - MICRO/EI',
+    condition: (a) => IS_IMMO(a) && a.bank_financing === 'yes',
+    apply: (statusId, score) => {
+      if (['SCI','SARL','SAS'].includes(statusId)) return score + 0.75;
+      if (['MICRO','EI'].includes(statusId))      return score - 0.5;
+      return score;
     },
-
-    // 11) Financement bancaire (inféré depuis caution/prêt)
-    {
-      id: 'immobilier_bank_financing_bonus',
-      description: 'Financement bancaire : + SCI/SARL/SAS, - MICRO/EI',
-      condition: a => IS_IMMO(a) && a.bank_financing === 'yes',
-      apply: (statusId, score) => {
-        if (['SCI','SARL','SAS'].includes(statusId)) return score + 0.75;
-        if (['MICRO','EI'].includes(statusId))      return score - 0.5;
-        return score;
-      },
-      criteria: 'credibility'
-    }
-  ];
+    criteria: 'credibility'
+  }
+];
     
 window.scoringRules = scoringRules;
 
