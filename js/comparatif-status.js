@@ -1,11 +1,12 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room + Phase 1 improvements
+ * Comparatif statuts — v2025 UX Clean Room + Phase 1 improvements + Decision helpers
  * Ajouts Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
+ * Ajouts Phase 2: blocs d'aide à la décision pour paires populaires
  * Fix: regimeTVA affiché en entier (tooltip désactivé)
  */
 
 window.initComparatifStatuts = function() {
-  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1)");
+  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1 + Decision helpers)");
   window.createComparatifTable('comparatif-container');
 };
 
@@ -159,6 +160,113 @@ window.initComparatifStatuts = function() {
     return statut.shortName + badges;
   }
 
+  // ============ DECISION CONTENT ============
+  // format: { a: 'GAUCHE', b: 'DROITE', chooseA:[], chooseB:[], caveats:[], oneLine:'' }
+  const DECISIONS = {
+    'EURL|SASU': {
+      a:'EURL', b:'SASU',
+      chooseB: [
+        "Tu touches l'ARE et ne veux pas de salaire au début → les dividendes **ne réduisent pas l'ARE**",
+        "Tu vises **investisseurs/BSPCE** ou une **entrée d'associés** rapide",
+        "Tu préfères la **protection sociale du régime général**"
+      ],
+      chooseA: [
+        "Tu te verses un **petit salaire régulier** et veux des **cotisations plus basses** (gérant **TNS**)",
+        "Pas d'investisseurs prévus et tu veux **maîtriser le coût social** au lancement"
+      ],
+      caveats: [
+        "EURL à l'IS : **dividendes > 10 %** (capital+primes+CC) = **cotisations TNS**",
+        "SASU : **coût social élevé** dès qu'il y a **salaire**, **pas d'assurance chômage**"
+      ],
+      oneLine: "ARE sans salaire / investisseurs → **SASU** ; salaire régulier mini → **EURL**."
+    },
+    'SAS|SARL': {
+      a:'SAS', b:'SARL',
+      chooseA: [
+        "Tu veux des **statuts très souples** (pactes, clauses sur-mesure)",
+        "Tu prévois **investisseurs** (BSPCE, actions de préférence)",
+        "Entrées/sorties d'associés doivent être **fluides**"
+      ],
+      chooseB: [
+        "**Société familiale/PME** avec cadre légal **encadré et stable**",
+        "**Gérant majoritaire** qui vise un **coût social plus bas** (**TNS**)",
+        "Vous voulez des **cessions contrôlées** (**agrément**)"
+      ],
+      caveats: [
+        "SARL à l'IS + gérant majoritaire : **dividendes > 10 % = cotisations TNS**",
+        "SAS : **charges plus élevées** en cas de **salaire** du président"
+      ],
+      oneLine: "Investisseurs & souplesse → **SAS** ; PME familiale & TNS moins cher → **SARL**."
+    },
+    'MICRO|EI': {
+      a:'MICRO', b:'EI',
+      chooseA: [
+        "Tu veux la **simplicité maximale** (déclaratif, pas de compta complète)",
+        "Ton **CA** reste **sous les plafonds** (188 700 € ventes / 77 700 € services/BNC)",
+        "Tu as **peu de frais** ⇒ l'**abattement** suffit"
+      ],
+      chooseB: [
+        "Tu as **beaucoup de frais** à **déduire** (véhicule, matériel, sous-traitance…)",
+        "Tu veux **récupérer la TVA** et **aucun plafond de CA**",
+        "Tu cherches **crédibilité** et **montée en puissance**"
+      ],
+      caveats: [
+        "Micro : **pas de déduction au réel**, crédibilité parfois limitée",
+        "EI (réel/IS) : **compta complète** + **formalités** supplémentaires"
+      ],
+      oneLine: "Simplicité & peu de frais → **Micro** ; frais réels/TVA/aucun plafond → **EI**."
+    },
+    'SASU|SARL': {
+      a:'SASU', b:'SARL',
+      chooseA: [
+        "Tu démarres **solo** avec image **corporate** et **associés plus tard** (passage en SAS)",
+        "Tu privilégies **dividendes** (non cotisés) et/ou **investisseurs** à moyen terme",
+        "Tu veux la **protection sociale** du **régime général**"
+      ],
+      chooseB: [
+        "Vous êtes **plusieurs** et voulez un cadre **connu et protecteur** (assemblées, gérance)",
+        "Le **gérant majoritaire** vise un **coût social plus bas** (**TNS**)",
+        "Vous voulez des **transferts de parts contrôlés** (**agrément**)"
+      ],
+      caveats: [
+        "SARL à l'IS + gérant maj. : **dividendes > 10 % = cotisations TNS**",
+        "SASU : dès qu'il y a **salaire**, le **coût social grimpe**"
+      ],
+      oneLine: "Solo & futurs associés → **SASU** ; gérant maj. TNS moins cher → **SARL**."
+    }
+  };
+
+  // rend un bloc "aide à la décision" pour une paire donnée
+  function renderDecision(pairKey){
+    const d = DECISIONS[pairKey]; if(!d) return '';
+    const [left, right] = pairKey.split('|');
+    return `
+      <div class="advice-card decision-card">
+        <div class="title"><i class="fas fa-balance-scale"></i> ${left} vs ${right} — aide à la décision</div>
+        <div class="decision-grid">
+          <div>
+            <div class="decision-sub">Choisis ${left} si :</div>
+            <ul class="decision-list">
+              ${d.chooseA.map(x=>`<li><span class="pro">•</span> ${x}</li>`).join('')}
+            </ul>
+          </div>
+          <div>
+            <div class="decision-sub">Choisis ${right} si :</div>
+            <ul class="decision-list">
+              ${d.chooseB.map(x=>`<li><span class="pro">•</span> ${x}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+        <div class="decision-caveats">
+          <span class="decision-kicker">Points d'attention :</span>
+          <ul class="decision-list caveats">
+            ${d.caveats.map(x=>`<li><span class="con">•</span> ${x}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="decision-one-liner">${d.oneLine}</div>
+      </div>`;
+  }
+
   function getThresholds2025() {
     const T = (window.recoEngine && window.recoEngine.thresholds2025) || window.thresholds2025 || {};
     const def = {
@@ -291,6 +399,27 @@ window.initComparatifStatuts = function() {
       .advice-card .con{color:#EF4444;font-weight:500}
       .advice-card .arbitrage{margin-top:${TOKENS.spacing.md}px;padding-top:${TOKENS.spacing.md}px;border-top:1px solid rgba(255,255,255,.1);font-style:italic;color:${TOKENS.text.secondary}}
 
+      /* ==== decision blocks ==== */
+      .decision-card{border-color:rgba(0,255,135,.35)}
+      .decision-grid{
+        display:grid;grid-template-columns:1fr 1fr;gap:${TOKENS.spacing.lg}px;
+      }
+      .decision-sub{
+        font-weight:600;color:${TOKENS.accent};margin-bottom:${TOKENS.spacing.sm}px;
+      }
+      .decision-list{margin:0;padding-left:18px;line-height:1.6}
+      .decision-list li{margin-bottom:${TOKENS.spacing.sm}px}
+      .decision-caveats{margin-top:${TOKENS.spacing.md}px;padding-top:${TOKENS.spacing.md}px;border-top:1px solid rgba(255,255,255,.08)}
+      .decision-kicker{font-weight:600;color:${TOKENS.text.secondary};margin-right:6px}
+      .decision-one-liner{
+        margin-top:${TOKENS.spacing.md}px;
+        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
+        border:1px dashed rgba(0,255,135,.35);
+        border-radius:${TOKENS.radius.sm}px;
+        color:${TOKENS.text.primary};
+        font-size:.875rem;
+      }
+
       .comparatif-filters{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.lg}px;margin-bottom:${TOKENS.spacing.xl}px;align-items:flex-end}
       .filter-group{flex:1;min-width:200px}
       .filter-label{display:block;margin-bottom:${TOKENS.spacing.md}px;color:${TOKENS.text.secondary};font-size:.875rem;font-weight:500}
@@ -360,6 +489,8 @@ window.initComparatifStatuts = function() {
         .comparatif-table th,.comparatif-table td{padding:${TOKENS.spacing.md}px ${TOKENS.spacing.sm}px;font-size:.8125rem}
         .comparatif-table th:first-child,.comparatif-table td:first-child{position:static}
         .notes-list{grid-template-columns:1fr}
+        .decision-grid{grid-template-columns:1fr}
+        .decision-one-liner{font-size:.85rem}
       }
     `;
     document.head.appendChild(style);
@@ -624,54 +755,35 @@ window.initComparatifStatuts = function() {
     }
 
     function renderSmartComparison(){
-      let host=$('#smart-comparison'); if(!host){ host=document.createElement('div'); host.id='smart-comparison'; $('.comparatif-header')?.appendChild(host); }
-      host.innerHTML='';
-      const has=x=>compareStatuts.includes(x);
-      const get=sn=>enrichForDisplay(Object.values(window.legalStatuses||{}).find(s=>s.shortName===sn)||{shortName:sn,name:sn}, intentAnswers);
+      let host = $('#smart-comparison');
+      if(!host){
+        host = document.createElement('div');
+        host.id = 'smart-comparison';
+        $('.comparatif-header')?.appendChild(host);
+      }
+      host.innerHTML = '';
 
-      if(has('EURL') && has('SASU')){
-        const eurl=get('EURL'), sasu=get('SASU');
-        host.innerHTML+=`
-          <div class="advice-card">
-            <div class="title"><i class="fas fa-balance-scale"></i> EURL vs SASU — points décisifs</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:${TOKENS.spacing.lg}px">
-              <div>
-                <div style="font-weight:600;margin-bottom:${TOKENS.spacing.sm}px">EURL (gérant TNS)</div>
-                <ul style="padding-left:18px;margin:0">
-                  <li><span class="pro">+</span> Cotisations plus basses sur salaire</li>
-                  <li><span class="con">−</span> Dividendes >10% soumis cotis TNS</li>
-                </ul>
-              </div>
-              <div>
-                <div style="font-weight:600;margin-bottom:${TOKENS.spacing.sm}px">SASU (assimilé salarié)</div>
-                <ul style="padding-left:18px;margin:0">
-                  <li><span class="pro">+</span> Dividendes non cotisés (PFU)</li>
-                  <li><span class="con">−</span> Cotisations salariales plus élevées</li>
-                </ul>
-              </div>
-            </div>
-            <div class="arbitrage"><strong>Arbitrage:</strong> Objectif ARE sans salaire → SASU. Salaire régulier minimal → EURL souvent moins coûteuse.</div>
-          </div>`;
+      const has = x => compareStatuts.includes(x);
+
+      // pairs supportées
+      const PAIRS = [
+        ['EURL','SASU','EURL|SASU'],
+        ['SAS','SARL','SAS|SARL'],
+        ['MICRO','EI','MICRO|EI'],
+        ['SASU','SARL','SASU|SARL'],
+      ];
+
+      let rendered = false;
+      for(const [a,b,key] of PAIRS){
+        if(has(a) && has(b)){ host.innerHTML += renderDecision(key); rendered = true; }
       }
-      if(has('SAS') && has('SARL')){
-        host.innerHTML+=`
+
+      // fallback: si on compare autre chose, garder ton résumé
+      if(!rendered && compareStatuts.length>=2){
+        host.innerHTML = `
           <div class="advice-card">
-            <div class="title"><i class="fas fa-balance-scale"></i> SAS vs SARL — gouvernance & investisseurs</div>
-            <ul style="padding-left:18px;margin:0">
-              <li><strong>SAS:</strong> statuts très souples, accueil investisseurs élevé (BSPCE, actions de préférence)</li>
-              <li><strong>SARL:</strong> cadre plus encadré, cessions encadrées, gérant TNS</li>
-            </ul>
-          </div>`;
-      }
-      if(has('MICRO') && has('EI')){
-        const micro=get('MICRO');
-        host.innerHTML+=`
-          <div class="advice-card">
-            <div class="title"><i class="fas fa-balance-scale"></i> Micro vs EI — simplicité vs souplesse</div>
-            <ul style="padding-left:18px;margin:0">
-              <li><strong>Micro:</strong> obligations ultra-légères, plafonds ${toText(micro.plafondCA)}</li>
-              <li><strong>EI réel:</strong> plus de charges/tenue comptable mais déduction des frais réels</li>
-            </ul>
+            <div class="title"><i class="fas fa-info-circle"></i> Résumé</div>
+            <div>Vous comparez <strong>${compareStatuts.join(' vs ')}</strong>. Les colonnes affichées ci-dessous sont limitées aux différences pour gagner du temps.</div>
           </div>`;
       }
     }
