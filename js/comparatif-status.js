@@ -1,19 +1,10 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room
- * Refonte complète UX/UI pour clarté, cohérence et accessibilité
- *
- * Changements:
- * - Hiérarchie visuelle repensée (intentions → cas typiques → presets → comparaison)
- * - Segmented toggles au lieu de checkboxes
- * - Micro-copy optimisée et tooltips ARIA
- * - Résumé comparatif avec +/- pour gagnant/perdant
- * - Colonne statut sticky, mode diff avec badge visible
- * - Design tokens cohérents (spacing, radius, surfaces)
- * - Accessibilité AA et focus visible partout
+ * Comparatif statuts — v2025 UX Clean Room + Phase 1 improvements
+ * Ajouts Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
  */
 
 window.initComparatifStatuts = function() {
-  console.log("✅ Initialisation du tableau comparatif (UX Clean Room)");
+  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1)");
   window.createComparatifTable('comparatif-container');
 };
 
@@ -32,6 +23,11 @@ window.initComparatifStatuts = function() {
       primary: '#E6E6E6',
       secondary: 'rgba(230, 230, 230, 0.7)',
       muted: 'rgba(230, 230, 230, 0.5)'
+    },
+    semantic: {
+      success: '#10B981',
+      warning: '#F59E0B',
+      danger: '#EF4444'
     }
   };
 
@@ -72,6 +68,12 @@ window.initComparatifStatuts = function() {
       meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE' },
       meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'Actions préférence, BSPCE' },
       meta_dirigeant: { statut_dirigeant: 'assimilé salarié', couverture_dirigeant: 'élevée' }
+    },
+    'SNC': {
+      meta_payout: { peut_salaire: false, peut_dividendes: true, dividendes_cot_sociales: 'n/a', base_cotisations: 'bénéfice' },
+      meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true },
+      meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false },
+      meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'faible' }
     }
   };
 
@@ -81,6 +83,80 @@ window.initComparatifStatuts = function() {
   const toText = v => (v==null || v==='') ? '—' : String(v);
   const fmtEuro = n => Number.isFinite(+n) ? (+n).toLocaleString('fr-FR')+' €' : toText(n);
   const debounce = (fn, ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+
+  // ===================== PHASE 1 RENDERERS =====================
+  
+  // 1. Renderer pour règles de dividendes
+  function renderDividendRule(statut) {
+    const sn = (statut.shortName || '').toUpperCase();
+    const fisc = (statut.fiscalite || '').toUpperCase();
+    
+    if (/SASU|SAS|SA|SELAS|SCA/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.success};font-weight:500">PFU, non cotisés</span>`;
+    }
+    if (/EURL|SARL|SELARL/.test(sn) && /IS/.test(fisc)) {
+      return `<span style="color:${TOKENS.semantic.warning};font-weight:500">PFU, >10% cotisés TNS</span>`;
+    }
+    if (/MICRO|EI/.test(sn)) {
+      return '<span style="color:'+TOKENS.text.muted+'">— (pas de dividendes)</span>';
+    }
+    return '—';
+  }
+
+  // 2. Renderer pour ARE
+  function renderARE(statut) {
+    const areM = statut.meta_are || {};
+    if (areM.are_compatible_sans_salaire) {
+      return `<span style="color:${TOKENS.semantic.success};font-weight:500">OK sans salaire</span>`;
+    }
+    return `<span style="color:${TOKENS.text.secondary}">Réduit si salaire</span>`;
+  }
+
+  // 3. Tooltip pour textes longs
+  function renderWithTooltip(text, maxLen=80) {
+    if (!text || text.length <= maxLen) return toText(text);
+    const truncated = text.slice(0, maxLen).trim();
+    return `<span class="truncate" title="${text}">${truncated}… <i class="fas fa-info-circle" style="color:${TOKENS.accent};font-size:.75rem;cursor:help"></i></span>`;
+  }
+
+  // 4. Signaux visuels pour responsabilité
+  function renderResponsabilite(statut) {
+    const resp = statut.responsabilite || '';
+    const isLimited = /limitée/i.test(resp);
+    const isUnlimited = /illimitée/i.test(resp);
+    
+    if (isUnlimited) {
+      return `<span style="color:${TOKENS.semantic.danger};font-weight:600">${resp} <i class="fas fa-exclamation-triangle"></i></span>`;
+    }
+    if (isLimited) {
+      return `${resp} <i class="fas fa-shield-alt" style="color:${TOKENS.accent}"></i>`;
+    }
+    return toText(resp);
+  }
+
+  // 5. Signal pour capital élevé
+  function renderCapital(statut) {
+    const cap = statut.capital || '';
+    const capNum = parseInt((cap.match(/\d+/g) || ['0']).join(''));
+    
+    if (capNum >= 37000) {
+      return `<span style="color:${TOKENS.accent};font-weight:600">${cap}</span>`;
+    }
+    return toText(cap);
+  }
+
+  // 6. Tag CIVIL pour SCI
+  function renderStatutName(statut) {
+    const sn = (statut.shortName || '').toUpperCase();
+    const isCivil = /SCI|SCM|SCP/.test(sn);
+    
+    let badges = '';
+    if (isCivil) {
+      badges += `<span class="status-badge" style="background:rgba(139,92,246,.2);color:#A78BFA;margin-left:4px">CIVIL</span>`;
+    }
+    
+    return statut.shortName + badges;
+  }
 
   function getThresholds2025() {
     const T = (window.recoEngine && window.recoEngine.thresholds2025) || window.thresholds2025 || {};
@@ -257,7 +333,7 @@ window.initComparatifStatuts = function() {
       .badge-tns{background:rgba(139,92,246,.2);color:#A78BFA}
       .badge-assimile{background:rgba(34,211,238,.2);color:#22D3EE}
 
-      .abbr{text-decoration:underline dotted;cursor:help}
+      .truncate{cursor:help}
 
       .loading-state{display:flex;justify-content:center;align-items:center;height:200px;flex-direction:column;gap:${TOKENS.spacing.lg}px}
       .spinner{width:40px;height:40px;border:3px solid rgba(0,255,135,.2);border-radius:50%;border-top-color:${TOKENS.accent};animation:spin 1s ease-in-out infinite}
@@ -645,11 +721,39 @@ window.initComparatifStatuts = function() {
 
     function getColumnsForCriterion(criterion){
       switch(criterion){
-        case 'basic': return [ {key:'name',label:'Statut'}, {key:'associes',label:"Nb d'associés"}, {key:'capital',label:'Capital'}, {key:'responsabilite',label:'Resp.'} ];
-        case 'fiscal': return [ {key:'name',label:'Statut'}, {key:'fiscalite',label:'Régime fiscal'}, {key:'fiscaliteOption',label:'Option fiscale'}, {key:'regimeTVA',label:'Régime TVA'} ];
-        case 'social': return [ {key:'name',label:'Statut'}, {key:'regimeSocial',label:'Régime social'}, {key:'chargesSociales',label:'Charges sociales'} ];
-        case 'creation': return [ {key:'name',label:'Statut'}, {key:'formalites',label:'Formalités'}, {key:'plafondCA',label:'Plafond CA'}, {key:'obligationsCle',label:'Obligations clés'} ];
-        default: return [ {key:'name',label:'Statut'}, {key:'associes',label:"Nb d'associés"}, {key:'capital',label:'Capital'}, {key:'responsabilite',label:'Resp.'}, {key:'fiscalite',label:'Régime fiscal'}, {key:'regimeSocial',label:'Régime social'}, {key:'plafondCA',label:'Plafond CA'} ];
+        case 'basic': return [ 
+          {key:'name',label:'Statut'}, 
+          {key:'associes',label:"Nb d'associés"}, 
+          {key:'capital',label:'Capital'}, 
+          {key:'responsabilite',label:'Resp.'} 
+        ];
+        case 'fiscal': return [ 
+          {key:'name',label:'Statut'}, 
+          {key:'fiscalite',label:'Régime fiscal'}, 
+          {key:'dividendes',label:'Dividendes'}, 
+          {key:'regimeTVA',label:'Régime TVA'} 
+        ];
+        case 'social': return [ 
+          {key:'name',label:'Statut'}, 
+          {key:'regimeSocial',label:'Régime social'}, 
+          {key:'are',label:'ARE'},
+          {key:'chargesSociales',label:'Charges sociales'} 
+        ];
+        case 'creation': return [ 
+          {key:'name',label:'Statut'}, 
+          {key:'formalites',label:'Formalités'}, 
+          {key:'plafondCA',label:'Plafond CA'}, 
+          {key:'obligationsCle',label:'Obligations clés'} 
+        ];
+        default: return [ 
+          {key:'name',label:'Statut'}, 
+          {key:'associes',label:"Nb d'associés"}, 
+          {key:'capital',label:'Capital'}, 
+          {key:'responsabilite',label:'Resp.'}, 
+          {key:'fiscalite',label:'Régime fiscal'}, 
+          {key:'regimeSocial',label:'Régime social'}, 
+          {key:'plafondCA',label:'Plafond CA'} 
+        ];
       }
     }
 
@@ -680,7 +784,6 @@ window.initComparatifStatuts = function() {
       const th=$('#table-headers'); 
       th.innerHTML = columns.map((c,i)=>`<th${i>0 && applyDiff?' class="diff-col"':''}>${c.label}</th>`).join('');
 
-      // Compteur
       const countEl=$('#column-count');
       if(applyDiff && diffKeys.length>0){
         countEl.innerHTML = `<strong>${diffKeys.length}</strong> colonne${diffKeys.length>1?'s':''} affichée${diffKeys.length>1?'s':''} (différences)`;
@@ -692,7 +795,7 @@ window.initComparatifStatuts = function() {
       if(rowsData.length===0){ body.innerHTML=`<tr><td colspan="${columns.length}" style="text-align:center;padding:2rem;">Aucun statut ne correspond à votre recherche.</td></tr>`; return; }
 
       function genBadges(st){
-        const badges=[]; const meta=st.meta_payout||{}; const dir=st.meta_dirigeant||{};
+        const badges=[]; const meta=st.meta_payout||{};
         if(meta.peut_dividendes && meta.dividendes_cot_sociales==='non'){ badges.push('<span class="status-badge badge-dividends">Div. sans cotis</span>'); }
         if(intentAnswers.en_chomage && st.meta_are?.are_compatible_sans_salaire) badges.push('<span class="status-badge badge-are">ARE ok</span>');
         if(st.meta_evolution?.accueil_investisseurs==='élevé') badges.push('<span class="status-badge badge-investors">Investisseurs</span>');
@@ -704,14 +807,17 @@ window.initComparatifStatuts = function() {
         columns.forEach((col,idx)=>{
           const diffClass = idx>0 && applyDiff?' diff-col':'';
           if(col.key==='name'){
-            row+=`<td><div class="statut-cell"><div class="statut-icon"><i class="fas ${st.logo||'fa-building'}"></i></div><div class="statut-info"><div class="statut-name">${st.shortName}</div><div class="statut-fullname">${st.name}</div><div class="status-badges">${genBadges(st)}</div></div></div></td>`;
+            row+=`<td><div class="statut-cell"><div class="statut-icon"><i class="fas ${st.logo||'fa-building'}"></i></div><div class="statut-info"><div class="statut-name">${renderStatutName(st)}</div><div class="statut-fullname">${st.name}</div><div class="status-badges">${genBadges(st)}</div></div></div></td>`;
           } else if(col.key==='responsabilite'){
-            const isLimited=st[col.key] && st[col.key].toLowerCase().includes('limitée');
-            row+=`<td class="${diffClass}">${toText(st[col.key])}${isLimited?' <i class="fas fa-shield-alt" style="color:'+TOKENS.accent+'"></i>':''}</td>`;
-          } else if(col.key==='fiscalite' || col.key==='regimeSocial'){
-            const txt=toText(st[col.key]);
-            const hasAbbr=/\b(IR|IS|TNS|PFU|ARE)\b/.test(txt);
-            row+=`<td class="${diffClass}">${hasAbbr?txt.replace(/\b(IR|IS|TNS|PFU|ARE)\b/g,'<abbr class="abbr" title="Voir légende">$1</abbr>'):txt}</td>`;
+            row+=`<td class="${diffClass}">${renderResponsabilite(st)}</td>`;
+          } else if(col.key==='capital'){
+            row+=`<td class="${diffClass}">${renderCapital(st)}</td>`;
+          } else if(col.key==='dividendes'){
+            row+=`<td class="${diffClass}">${renderDividendRule(st)}</td>`;
+          } else if(col.key==='are'){
+            row+=`<td class="${diffClass}">${renderARE(st)}</td>`;
+          } else if(col.key==='regimeTVA' || col.key==='fiscaliteOption'){
+            row+=`<td class="${diffClass}">${renderWithTooltip(st[col.key], 60)}</td>`;
           } else {
             row+=`<td class="${diffClass}">${toText(st[col.key])}</td>`;
           }
