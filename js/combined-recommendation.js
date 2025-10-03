@@ -2117,7 +2117,7 @@ apply: (statusId, score, answers, metrics) => {
 // answers.income_objective_year1 : number (€, pour jauger "petite activité meublée")
 
 // 1) Immobilier patrimonial (NU) : SCI très favorisée (ajustée)
-{
+   {
       id: 'immobilier_activity_sci_mega_bonus',
       description: 'Immobilier patrimonial (nu) : SCI fortement recommandée',
       condition: a =>
@@ -2131,15 +2131,16 @@ apply: (statusId, score, answers, metrics) => {
       criteria: 'administrative_simplicity'
     },
     // 1.b) Distribution par quotes-parts (SCI IR) — approx via préférence non "salaire"
-    {
-      id: 'immo_distribution_sci_ir',
-      description: 'Immo patrimonial (nu) : distribution par quotes-parts (SCI IR)',
-      condition: a => IS_IMMO(a)
-        && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model)
-        && !!a.prefers_distribution,
-      apply: (statusId, score) => statusId === 'SCI' ? score + 0.5 : score,
-      criteria: 'taxation_optimization'
-    },
+   {
+  id: 'immo_distribution_sci_ir',
+  description: 'Immo patrimonial (nu) : distribution par quotes-parts (SCI IR)',
+  condition: a => IS_IMMO(a)
+    && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model)
+    && ['dividends','mixed','flexible'].includes(a.remuneration_preference),
+  apply: (statusId, score) => statusId === 'SCI' ? score + 0.5 : score,
+  criteria: 'taxation_optimization'
+},
+
 
     // 2) Meublé : + SARL/EURL/EI/Micro, - SCI
     {
