@@ -427,21 +427,6 @@ const questions = [
     showIf: { "real_estate_activity": ["lmnp_lmp"] }
 },
 {
-    id: "real_estate_ownership",
-    sectionId: "activity",
-    title: "Mode de détention des biens",
-    description: "Comment seront détenus les biens immobiliers ?",
-    type: "radio",
-    required: false,
-    options: [
-        { id: "nom_propre", label: "En nom propre", icon: "fa-user" },
-        { id: "sci_ir", label: "SCI à l’IR", icon: "fa-balance-scale" },
-        { id: "sci_is", label: "SCI à l’IS", icon: "fa-file-invoice-dollar" },
-        { id: "societe_commerciale", label: "SAS / SARL / autre société", icon: "fa-building" }
-    ],
-    showIf: { "activity_type": ["immobilier"] }
-},
-{
     id: "real_estate_property_use",
     sectionId: "activity",
     title: "Type de biens",
