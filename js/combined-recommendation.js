@@ -991,7 +991,7 @@ const scoringRules = [
   id: 'essential_patrimony_protection',
   description: 'Protection du patrimoine essentielle',
   condition: answers => answers.patrimony_protection === 'essential',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     // +1 pour toutes les formes à responsabilité limitée (hors SCI et SCA)
     if ([
       'SASU', 'SAS', 'SARL', 'EURL', 'SA',
@@ -1008,7 +1008,7 @@ const scoringRules = [
   id: 'high_risk_activity_ei_micro', // on garde l'id pour compatibilité, mais on corrige la logique
   description: 'Activité à risque élevé : pénalise surtout les formes à responsabilité illimitée',
   condition: answers => answers.high_professional_risk === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SNC') return score - 1.5;            // illimitée & solidaire
     if (statusId === 'SCA') return score - 1;               // commandités illimités
     if (statusId === 'SCI') return score - 0.5;             // illimitée mais proportionnelle
@@ -1045,7 +1045,7 @@ const scoringRules = [
   condition: answers =>
     answers.risk_appetite !== undefined &&
     answers.risk_appetite <= 2,
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SNC') return score - 0.75;            // illimitée & solidaire
     if (statusId === 'SCA') return score - 0.5;             // commandités illimités
     // Bonus aux formes limitées (y compris EI/MICRO depuis 2022). On exclut la SCI.
@@ -1061,7 +1061,7 @@ const scoringRules = [
   id: 'bank_guarantee_liability_penalty',
   description: 'Caution bancaire personnelle : neutralise la protection, quel que soit le statut',
   condition: answers => answers.bank_guarantee === 'yes',
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     // La caution perso expose le patrimoine perso dans tous les cas → malus uniforme
     return score - 0.5;
   },
@@ -1072,7 +1072,7 @@ const scoringRules = [
   id: 'holding_asset_separation_bonus',
   description: 'Holding de tête : bonus pour dissocier patrimoine et opérationnel',
   condition: answers => answers.holding_company === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     // Holding pertinent surtout en sociétés (pas en EI/MICRO)
     if (['SAS', 'SASU', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL'].includes(statusId)) {
       return score + 0.5;
@@ -1088,7 +1088,7 @@ const scoringRules = [
   condition: answers =>
     answers.patrimony_protection === 'essential' ||
     answers.high_professional_risk === 'yes',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SNC') return score - 2;
     if (statusId === 'SCA') return score - 1;               // vise la position de commandité
     // SCI : pénalité seulement hors cas immobilier (sinon règles dédiées ci-dessus)
@@ -1103,7 +1103,7 @@ const scoringRules = [
   id: 'ei_2022_partial_shield',
   description: 'Entreprise individuelle (réforme 2022) : séparation patrimoine pro/perso',
   condition: () => true, // toujours évaluée
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     if (statusId === 'EI' || statusId === 'MICRO') {
       return score + 0.5;
     }
@@ -1116,7 +1116,7 @@ const scoringRules = [
   id: 'collaborating_spouse_shared_risk',
   description: 'Conjoint collaborateur : accroît le risque sur les formes illimitées',
   condition: answers => answers.collaborating_spouse === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SNC') return score - 0.5;             // illimitée & solidaire
     // EI/MICRO : depuis 2022, protection améliorée → malus allégé ou nul
     if (statusId === 'EI' || statusId === 'MICRO') return score - 0.25;
@@ -1163,7 +1163,7 @@ const scoringRules = [
   id: 'high_revenue_small_structures',
   description: 'CA élevé pour petites structures',
   condition: answers => parseFloat(answers.projected_revenue ?? 0) > 100_000,
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     // À partir d'un certain volume, EI/MICRO deviennent moins “simples” (TVA, obligations…)
     if (['EI', 'MICRO'].includes(statusId)) return score - 1;
     return score;
@@ -1175,7 +1175,7 @@ const scoringRules = [
   id: 'low_revenue_structure_penalty',
   description: 'Faible CA : structures complexes inadaptées',
   condition: answers => parseFloat(answers.projected_revenue ?? 0) < 50_000,
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (['SAS', 'SA', 'SARL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score - 1;
     return score;
   },
@@ -1186,7 +1186,7 @@ const scoringRules = [
   id: 'high_revenue_complex_structures',
   description: 'CA élevé pour structures sociétaires complètes',
   condition: answers => parseFloat(answers.projected_revenue ?? 0) > 300_000,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SAS', 'SA', 'SARL', 'SELAS', 'SELARL'].includes(statusId)) return score + 0.5;
     return score;
   },
@@ -1197,7 +1197,7 @@ const scoringRules = [
   id: 'accounting_complexity_simple',
   description: 'Préférence pour comptabilité simple',
   condition: answers => answers.accounting_complexity === 'simple',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     // Pénalise les formes avec formalisme/comptabilité plus lourds
     if (['SAS', 'SA', 'SARL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score - 1;
     return score;
@@ -1263,7 +1263,7 @@ const scoringRules = [
   id: 'solo_project_bonus_solo_status',
   description: 'Projet solo : bonus EI/MICRO/EURL/SASU, malus statuts collectifs',
   condition: answers => answers.team_structure === 'solo',
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     if (['EI', 'MICRO', 'EURL', 'SASU'].includes(statusId)) return score + 0.5;
     if (['SNC', 'SCI', 'SARL', 'SAS', 'SA', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score - 0.5;
     return score;
@@ -1275,7 +1275,7 @@ const scoringRules = [
   id: 'associate_number_complexity',
   description: 'Plus de 10 associés : pénalité croissante',
   condition: answers => parseInt(answers.associates_number ?? 0, 10) > 10,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SA', 'SCA'].includes(statusId)) return score - 2;
     if (['SAS', 'SARL', 'SCI', 'SELARL', 'SELAS'].includes(statusId)) return score - 1;
     return score;
@@ -1312,7 +1312,7 @@ const scoringRules = [
   id: 'high_tmi_ir_malus',
   description: 'TMI élevée défavorable pour IR',
   condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     // Formes à l’IR (ou transparentes) pénalisées si TMI élevée
     if (['EI', 'MICRO', 'SNC'].includes(statusId)) return score - 1.5;
     return score;
@@ -1324,7 +1324,7 @@ const scoringRules = [
   id: 'high_tmi_is_bonus',
   description: 'TMI élevée favorable pour IS',
   condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     // Toutes formes IS structurellement avantagées quand TMI perso est élevé
     if (['SASU', 'SAS', 'SA', 'SARL', 'EURL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score + 1;
     return score;
@@ -1353,7 +1353,7 @@ const scoringRules = [
   id: 'expense_ratio_micro_rules_malus',
   description: 'Charges élevées : micro défavorable, réel/IS favorables',
   condition: answers => parseFloat(answers.expense_ratio ?? -1) >= 0.50,
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (statusId === 'MICRO') return score - 1;
     if (['EI', 'EURL', 'SARL', 'SASU', 'SAS', 'SA', 'SELARL', 'SELAS'].includes(statusId)) return score + 0.5;
     return score;
@@ -1365,7 +1365,7 @@ const scoringRules = [
   id: 'dividend_preference_is',
   description: 'Préférence dividendes : favorable aux formes IS',
   condition: answers => answers.remuneration_preference === 'dividends',
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     // Dividendes + : SASU/SAS/SA/SELAS (pas de cotisations sociales en principe)
     if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) return score + 0.75;
     // EURL / SARL : bonus bridé (risque cotisations TNS >10 %)
@@ -1386,7 +1386,7 @@ const scoringRules = [
   id: 'dividends_tns_penalty_sarl_eurl',
   description: 'Dividendes TNS : pénalité EURL / SARL (gérant majoritaire)',
   condition: answers => answers.remuneration_preference === 'dividends',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'EURL') return score - 0.5; // TNS par nature
     if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
     return score;
@@ -1398,7 +1398,7 @@ const scoringRules = [
   id: 'salary_preference_is',
   description: 'Préférence salaire : favorable aux formes IS (déductible)',
   condition: answers => answers.remuneration_preference === 'salary',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     // Le “salaire” du dirigeant est une charge déductible en société à l’IS
     if (['SASU', 'SAS', 'SA', 'SARL', 'EURL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score + 0.75;
     // En EI/MICRO, les “prélèvements” ne sont pas déductibles → pas de bonus
@@ -1411,7 +1411,7 @@ const scoringRules = [
   id: 'profit_reinvestment_is_bonus',
   description: 'Réinvestissement des bénéfices : avantage IS',
   condition: answers => answers.profit_reinvestment === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SASU','SAS','SA','SARL','EURL','SELARL','SELAS','SCA'].includes(statusId)) return score + 0.5;
     return score;
   },
@@ -1422,7 +1422,7 @@ const scoringRules = [
   id: 'innovation_devices_bonus',
   description: 'Dispositifs innovation (JEI/CIR/CII)',
   condition: answers => Array.isArray(answers.jei_cir_cii) && answers.jei_cir_cii.length > 0,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     // Structures IS les plus usuelles pour ces dispositifs
     if (['SASU', 'SAS', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL'].includes(statusId)) return score + 0.5;
     // MICRO/EI : souvent inadapté (procédures, base imposable, etc.)
@@ -1438,7 +1438,7 @@ const scoringRules = [
   id: 'tns_preference_bonus',
   description: 'Préférence TNS favorable',
   condition: answers => answers.social_regime === 'tns',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (['EI', 'MICRO', 'EURL'].includes(statusId)) return score + 1;
     // SARL/SELARL : bonus TNS pertinent seulement si gérant majoritaire (règles dédiées ci-dessous)
     return score;
@@ -1480,7 +1480,7 @@ const scoringRules = [
   id: 'employee_preference_bonus',
   description: 'Préférence assimilé salarié favorable',
   condition: answers => answers.social_regime === 'assimilated_employee',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (['SASU', 'SAS', 'SA', 'SELAS', 'SCA'].includes(statusId)) return score + 1;
     // SARL/SELARL gérant minoritaire/égalitaire : bonus fin réglé ci-dessous
     return score;
@@ -1520,7 +1520,7 @@ const scoringRules = [
   id: 'low_income_tns_minima_malus',
   description: 'Très faibles revenus : malus TNS (cotisations minimales)',
   condition: answers => parseFloat(answers.income_objective_year1 ?? 0) < 1000,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['EI', 'EURL'].includes(statusId)) return score - 0.5;
     if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
     if (statusId === 'SELARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
@@ -1541,7 +1541,7 @@ const scoringRules = [
   id: 'high_income_tns_bonus',
   description: 'Revenus élevés : TNS souvent plus économique (taux globaux inférieurs)',
   condition: answers => parseFloat(answers.income_objective_year1 ?? 0) > 5000,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['EI', 'EURL'].includes(statusId)) return score + 0.25;
     if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score + 0.25;
     if (statusId === 'SELARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score + 0.25;
@@ -1563,7 +1563,7 @@ const scoringRules = [
   id: 'dividends_tns_social_malus',
   description: 'Dividendes > 10% (EURL / SARL gérant majoritaire) : cotisations TNS',
   condition: answers => answers.remuneration_preference === 'dividends',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (statusId === 'EURL') return score - 0.5;
     if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
     return score;
@@ -1588,7 +1588,7 @@ const scoringRules = [
   condition: answers =>
     (answers.other_employee_job === 'yes' || answers.remuneration_preference === 'dividends') &&
     parseFloat(answers.income_objective_year1 ?? 0) <= 500,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['EI', 'EURL'].includes(statusId)) return score - 0.5;
     if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
     if (statusId === 'SELARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
@@ -1619,7 +1619,7 @@ const scoringRules = [
   id: 'fundraising_sas_sa_bonus',
   description: 'Levée de fonds favorable pour SAS/SASU/SA',
   condition: answers => answers.fundraising === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SASU', 'SAS', 'SA'].includes(statusId)) return score + 1.5;
     if (['SARL', 'EURL'].includes(statusId)) return score + 0.5;
     return score;
@@ -1632,7 +1632,7 @@ const scoringRules = [
   description: 'Instruments de partage (BSPCE, BSA AIR, AGA…)',
   condition: (answers) =>
     Array.isArray(answers?.sharing_instruments) && answers.sharing_instruments.length > 0,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     const hasBSPCE = (answers?.sharing_instruments || []).includes('BSPCE');
     const hasBSAair = (answers?.sharing_instruments || []).includes('BSA_AIR');
     const hasAGA   = (answers?.sharing_instruments || []).includes('AGA');
@@ -1652,7 +1652,7 @@ const scoringRules = [
   id: 'investors_ei_micro_malus',
   description: 'Investisseurs en capital : défavorable pour EI/MICRO/SNC',
   condition: answers => answers.team_structure === 'investors',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['EI', 'MICRO', 'SNC'].includes(statusId)) return score - 2;
     if (statusId === 'SCI') return score - 1; // peu adaptée à l’equity généraliste
     return score;
@@ -1664,7 +1664,7 @@ const scoringRules = [
   id: 'liberal_fundraising_selas',
   description: 'Libéral réglementé : levée de fonds favorise SELAS',
   condition: answers => answers.professional_order === 'yes' && answers.fundraising === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SELAS') return score + 1.5;
     if (statusId === 'SELARL') return score + 0.5;
     return score;
@@ -1676,7 +1676,7 @@ const scoringRules = [
   id: 'crowdfunding_equity_bonus',
   description: 'Crowdfunding equity (plateformes) favorable aux sociétés par actions',
   condition: answers => answers.crowdfunding_equity === 'yes',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (['SASU', 'SAS'].includes(statusId)) return score + 0.75;
     if (statusId === 'SA') return score + 0.5;
     if (['SARL', 'EURL'].includes(statusId)) return score + 0.25;
@@ -1689,7 +1689,7 @@ const scoringRules = [
   id: 'bank_debt_bonus',
   description: 'Dette bancaire : crédibilité des formes sociétaires',
   condition: answers => answers.bank_debt === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SA', 'SAS', 'SARL', 'EURL'].includes(statusId)) return score + 0.5;
     if (statusId === 'SASU') return score + 0.4;
     if (statusId === 'EI') return score + 0.25;
@@ -1704,7 +1704,7 @@ const scoringRules = [
   id: 'many_investors_bonus_sas',
   description: 'Nombre élevé d’investisseurs (angel/seed) → SAS/SA',
   condition: answers => parseInt(answers.investors_count ?? answers.associates_number ?? 0, 10) > 20,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SAS', 'SA'].includes(statusId)) return score + 0.75;
     if (['SARL', 'EURL'].includes(statusId)) return score - 0.25; // agrément et formalisme
     return score;
@@ -1724,7 +1724,7 @@ const scoringRules = [
   id: 'ipo_path_sa_bonus',
   description: 'Projet de cotation (IPO) : avantage SA',
   condition: answers => answers.ipo_path === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SA') return score + 2;
     if (statusId === 'SAS') return score + 0.5; // transformation en SA anticipable
     return score;
@@ -1736,7 +1736,7 @@ const scoringRules = [
   id: 'control_preservation_sas_bonus',
   description: 'Préservation du contrôle via actions de préférence / pactes',
   condition: answers => answers.fundraising === 'yes' && ['important','essential'].includes(answers.control_preservation),
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     if (['SAS', 'SASU'].includes(statusId)) return score + 0.5; // grande liberté statutaire
     return score;
   },
@@ -1766,7 +1766,7 @@ const scoringRules = [
   id: 'vc_preference_bonus',
   description: 'VC/business angels : préférence SAS/SA, SARL/EURL moins adaptée',
   condition: answers => ['vc', 'business_angels', 'mixed'].includes(answers.investor_type),
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SAS', 'SA'].includes(statusId)) return score + 1;
     if (['SARL', 'EURL'].includes(statusId)) return score - 0.25;
     return score;
@@ -1795,7 +1795,7 @@ const scoringRules = [
   id: 'sale_exit_bonus',
   description: 'Sortie par vente – sociétés commerciales',
   condition: answers => answers.exit_intention === 'sale',
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) return score + 1;
     return score;
   },
@@ -1830,7 +1830,7 @@ const scoringRules = [
   id: 'sci_family_transmission_bonus',
   description: 'SCI : transmission familiale facilitée (immobilier)',
   condition: answers => answers.family_transmission === 'yes',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (statusId !== 'SCI') return score;
     // +1 si projet immo, sinon +0.5 (gestion patrimoniale)
     return score + (answers.activity_sector === 'real_estate' ? 1 : 0.5);
@@ -1852,7 +1852,7 @@ const scoringRules = [
   condition: answers =>
     (answers.exit_intention === 'transmission' || answers.exit_intention === 'gift') &&
     answers.family_transmission === 'yes',
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     // Dutreil : EI (fonds exploité) et titres de sociétés opérationnelles (SARL/EURL/SAS/SASU/SA/SELARL/SELAS)
     const eligible = ['EI','SARL','EURL','SAS','SASU','SA','SELARL','SELAS'];
     return eligible.includes(statusId) ? score + 1.25 : score;
@@ -1864,7 +1864,7 @@ const scoringRules = [
   id: 'liberal_transmission_sel_bonus',
   description: 'Libéral réglementé : transmission facilitée via SEL',
   condition: answers => answers.professional_order === 'yes' && answers.exit_intention === 'transmission',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SELAS') return score + 0.75;
     if (statusId === 'SELARL') return score + 0.5;
     return score;
@@ -1876,7 +1876,7 @@ const scoringRules = [
   id: 'mbo_lbo_bonus',
   description: 'Reprise par management (MBO/LBO) – sociétés par actions/SARL',
   condition: answers => answers.mbo_lbo === 'yes',
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     if (['SAS','SASU','SA'].includes(statusId)) return score + 1;
     if (['SARL','EURL'].includes(statusId)) return score + 0.5;
     return score;
@@ -1896,7 +1896,7 @@ const scoringRules = [
   id: 'asset_deal_bonus_ei_sarl',
   description: 'Préférence pour cession de fonds/actifs (asset deal)',
   condition: answers => answers.sale_mode === 'assets', // 'shares' | 'assets'
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['EI','SARL','EURL'].includes(statusId)) return score + 0.5;
     if (statusId === 'SCI' && answers.activity_sector === 'real_estate') return score + 0.5;
     return score;
@@ -1916,7 +1916,7 @@ const scoringRules = [
   id: 'many_heirs_shares_bonus',
   description: 'Plusieurs héritiers : souplesse de répartition via titres',
   condition: answers => parseInt(answers.heirs_count ?? 0, 10) >= 2 && answers.exit_intention === 'transmission',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SAS','SA'].includes(statusId)) return score + 0.5;
     if (statusId === 'SCI' && answers.activity_sector === 'real_estate') return score + 0.5;
     return score;
@@ -1956,7 +1956,7 @@ const scoringRules = [
   condition: answers =>
     answers.professional_order === 'yes' ||
     answers.regulated_profession === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SELARL') return score + 2; // fort bonus SELARL
     if (['MICRO', 'EI', 'SNC'].includes(statusId)) return score - 1; // pénalité
     return score;
@@ -1970,7 +1970,7 @@ const scoringRules = [
   condition: answers =>
     answers.professional_order === 'yes' &&
     answers.governance_flexibility === 'essential',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SELAS') return score + 2;   // bonus principal
     if (statusId === 'SELARL') return score + 1;  // bonus secondaire
     return score;
@@ -1983,7 +1983,7 @@ const scoringRules = [
   id: 'regulated_non_sel_malus',
   description: 'Prof. réglementée : malus si SAS/SASU/SARL/EURL non-SEL',
   condition: answers => answers.professional_order === 'yes' || answers.regulated_profession === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SAS','SASU','SARL','EURL'].includes(statusId)) return score - 1; // préférer SELAS/SELARL
     return score;
   },
@@ -1995,7 +1995,7 @@ const scoringRules = [
   id: 'regulated_multi_partners_bonus',
   description: 'Prof. réglementée à plusieurs : SELAS/SELARL favorisées',
   condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && parseInt(answers.associates_count ?? 1, 10) >= 2,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SELAS') return score + 1;
     if (statusId === 'SELARL') return score + 0.75;
     return score;
@@ -2037,7 +2037,7 @@ const scoringRules = [
   id: 'regulated_investors_pref_selas',
   description: 'Investisseurs externes (quotas ordre) : avantage SELAS',
   condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && answers.team_structure === 'investors',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SELAS') return score + 0.75;
     if (statusId === 'SELARL') return score + 0.25;
     return score;
@@ -2066,7 +2066,7 @@ const scoringRules = [
   id: 'regulated_patrimony_protection_sel_bonus',
   description: 'Protection patrimoniale essentielle : SEL privilégiées',
   condition: answers => (answers.professional_order === 'yes' || answers.regulated_profession === 'yes') && answers.patrimony_protection === 'essential',
-  apply: (statusId, score) => {
+ apply: (statusId, score, answers, metrics) => {
     if (['SELAS','SELARL'].includes(statusId)) return score + 0.75;
     if (['EI','MICRO'].includes(statusId)) return score - 0.5;
     return score;
@@ -2097,7 +2097,7 @@ const scoringRules = [
   id: 'regulated_healthcare_assimile_hint',
   description: 'Actes médicaux (souvent hors TVA) : préférence protection sociale',
   condition: answers => answers.professional_order === 'yes' && answers.activity_sector === 'healthcare',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SELAS' && answers.social_regime === 'assimilated_employee') return score + 0.5;
     if (statusId === 'SELARL' && answers.social_regime === 'tns') return score + 0.25;
     return score;
@@ -2120,7 +2120,7 @@ const scoringRules = [
   condition: answers =>
     answers.activity_type === 'immobilier' &&
     ['patrimonial_nue','bureaux_nus', null, undefined].includes(answers.real_estate_model ?? null),
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SCI') return score + 3;        // Bonus fort pour la détention/gestion nue
     if (['MICRO','EI'].includes(statusId)) return score - 1; // EI/Micro moins lisibles en détention collective
     return score;
@@ -2135,7 +2135,7 @@ const scoringRules = [
   condition: answers =>
     answers.activity_type === 'immobilier' &&
     answers.real_estate_model === 'meuble',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SCI') return score - 2;              // SCI inadaptée au meublé habituel (requalification IS)
     if (statusId === 'SARL') return score + 1.25;          // SARL de famille à l’IR très pertinente
     if (statusId === 'EURL') return score + 0.75;          // EURL à l’IR possible (micro-BIC éligible)
@@ -2157,7 +2157,7 @@ const scoringRules = [
   condition: answers =>
     answers.activity_type === 'immobilier' &&
     answers.real_estate_model === 'para_hotel',
-  apply: (statusId, score) => {
+apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SCI') return score - 2;
     if (statusId === 'SAS') return score + 1.5;
     if (statusId === 'SARL') return score + 1;
@@ -2174,7 +2174,7 @@ const scoringRules = [
   condition: answers =>
     answers.activity_type === 'immobilier' &&
     ['marchand','promotion','lotissement'].includes(answers.real_estate_model),
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SCI') return score - 3;
     if (statusId === 'SNC') return score - 1;       // responsabilité illimitée
     if (statusId === 'SAS') return score + 2;
@@ -2193,7 +2193,7 @@ const scoringRules = [
   condition: answers =>
     ['family','associates','investors'].includes(answers.team_structure) &&
     parseInt(answers.associates_number || 2, 10) >= 2,
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SARL','SNC','SCI'].includes(statusId)) return score + 0.75;
     if (['SASU','EURL','EI'].includes(statusId)) return score - 0.75;
     return score;
@@ -2217,7 +2217,7 @@ const scoringRules = [
   condition: answers =>
     answers.governance_complexity === 'complex' ||
     answers.governance_complexity === 'moderate',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SAS','SASU','SELAS','SCA'].includes(statusId)) return score + 1;
     if (['SARL','SNC','SCI','EI','MICRO'].includes(statusId)) return score - 0.5;
     return score;
@@ -2251,7 +2251,7 @@ const scoringRules = [
   description: 'Investisseurs externes : SAS (souplesse) ou SCA (contrôle familial)',
   condition: answers =>
     answers.activity_type === 'immobilier' && answers.team_structure === 'investors',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SAS') return score + 1.25;
     if (statusId === 'SCA') return score + 1; // contrôle par les commandités
     if (statusId === 'SCI') return score + 0.25; // toléré en patrimonial simple
@@ -2266,7 +2266,7 @@ const scoringRules = [
   description: 'Financement bancaire : + SCI/SARL/SAS, - MICRO/EI',
   condition: answers =>
     answers.activity_type === 'immobilier' && answers.bank_financing === 'yes',
-  apply: (statusId, score) => {
+  apply: (statusId, score, answers, metrics) => {
     if (['SCI','SARL','SAS'].includes(statusId)) return score + 0.75;
     if (['MICRO','EI'].includes(statusId)) return score - 0.5;
     return score;
