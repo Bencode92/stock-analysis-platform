@@ -744,11 +744,13 @@ const exclusionFilters = [
   // Solo : on masque les formes nécessitant ≥ 2 associés
   // (on NE masque PAS SELARL/SELAS pour permettre SELARLU/SELASU)
   {
-    id: "team_structure",
-    condition: (answers) => answers.team_structure === "solo",
-    excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SCA"],
-    tolerance_message: null
-  },
+  id: "team_structure",
+  condition: (answers) =>
+    answers.team_structure === "solo" &&
+    !(answers.activity_type === 'immobilier' && answers.family_project === 'yes'),
+  excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SCA"],
+  tolerance_message: null
+},
 
   // Capital disponible : seuil utile pour SA/SCA (≥ 37 000 € dont 50 % à la constitution)
   {
@@ -1551,15 +1553,6 @@ apply: (statusId, score, answers, metrics) => {
 },
 
 {
-  id: 'dividends_social_bonus_sas',
-  description: 'Préférence dividendes : bonus social pour SAS/SASU/SELAS/SA (pas de cotisations)',
-  condition: answers => answers.remuneration_preference === 'dividends',
-  apply: (statusId, score) =>
-    ['SASU', 'SAS', 'SELAS', 'SA'].includes(statusId) ? score + 0.5 : score,
-  criteria: 'social_charges'
-},
-
-{
   id: 'dividends_tns_social_malus',
   description: 'Dividendes > 10% (EURL / SARL gérant majoritaire) : cotisations TNS',
   condition: answers => answers.remuneration_preference === 'dividends',
@@ -1799,6 +1792,16 @@ apply: (statusId, score, answers, metrics) => {
     if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) return score + 1;
     return score;
   },
+  criteria: 'transmission'
+},
+  {
+  id: 'immo_transmission_priority_sci',
+  description: 'Transmission immo prioritaire : SCI renforcée',
+  condition: a => a.activity_type === 'immobilier'
+            && a.exit_intention === 'transmission'
+            && Array.isArray(a.priorities)
+            && a.priorities.map(p => String(p).toLowerCase()).includes('transmission'),
+  apply: (statusId, score) => statusId === 'SCI' ? score + 0.75 : score,
   criteria: 'transmission'
 },
 
@@ -2127,7 +2130,15 @@ apply: (statusId, score, answers, metrics) => {
   },
   criteria: 'administrative_simplicity'
 },
-
+{
+  id: 'immo_distribution_sci_ir',
+  description: 'Immo patrimonial (nu) : distribution par quotes-parts (SCI IR)',
+  condition: a => IS_IMMO?.(a)
+    && ['patrimonial_nue','bureaux_nus', null, undefined].includes(a.real_estate_model)
+    && a.remuneration_preference === 'distribution',
+  apply: (statusId, score) => statusId === 'SCI' ? score + 0.5 : score,
+  criteria: 'taxation_optimization'
+},
 // 2) Meublé (LMNP/LMP) : éviter SCI (IR), favoriser SARL de famille / EI-MICRO/EURL
 {
   id: 'immobilier_meuble_pref_sarlfam_ei',
@@ -2527,10 +2538,18 @@ this.thresholds2025 = {
  */
 calculateRecommendations(answers) {
   console.log("Début du calcul des recommandations (avant normalisation)", answers);
+  
 
   // ── Normalisation des clés hétérogènes ─────────────────────────────
   const norm = { ...answers };
   const toYN = (v) => (v === true ? 'yes' : v === false ? 'no' : v);
+
+  // --- Normalisation "dividendes" pour l'immobilier nu (SCI à l'IR)
+if (IS_IMMO?.(norm) && ['patrimonial_nue','bureaux_nus', null, undefined].includes(norm.real_estate_model)) {
+  if (norm.remuneration_preference === 'dividends') {
+    norm.remuneration_preference = 'distribution';
+  }
+}
 
   // Unifie le nombre d'associés (conserve "inconnu" = null)
   const assocRaw = norm.associates_number ?? norm.associates_count ?? norm.investors_count;
@@ -2803,19 +2822,19 @@ applySpecificFilters() {
   /* ------------------------------------------------------------------
    * 7) Régime social souhaité
    * ------------------------------------------------------------------ */
-  if (A.social_regime === 'assimilated_employee') {
-    // Statuts TNS (par défaut) exclus
-    this.excludeStatuses(
-      ['EI', 'MICRO', 'EURL', 'SARL', 'SNC'],
-      'Régime assimilé salarié souhaité – statuts TNS exclus (préférez SAS/SASU/SA/SELAS)'
-    );
-  } else if (A.social_regime === 'tns') {
-    // Statuts assimilé salarié exclus
-    this.excludeStatuses(
-      ['SAS', 'SASU', 'SA', 'SELAS', 'SCA'],
-      'Régime TNS souhaité – statuts assimilé salarié exclus'
-    );
-  }
+ if (A.social_regime === 'assimilated_employee') {
+  // N'exclus pas EURL/SARL ; laisse le scoring gérer les cas "gérant minoritaire/égalitaire"
+  this.excludeStatuses(
+    ['EI', 'MICRO', 'SNC'],
+    'Assimilé salarié souhaité – EI/Micro/SNC inadaptés'
+  );
+} else if (A.social_regime === 'tns') {
+  // Statuts assimilé salarié exclus
+  this.excludeStatuses(
+    ['SAS', 'SASU', 'SA', 'SELAS', 'SCA'],
+    'Régime TNS souhaité – statuts assimilé salarié exclus'
+  );
+}
 
   /* ------------------------------------------------------------------
    * 8) Protection du patrimoine essentielle
@@ -2831,16 +2850,28 @@ applySpecificFilters() {
    *    - À plusieurs : exclure les formes unipersonnelles
    *    (règles légales appliquées uniquement si nbAssoc connu)
    * ------------------------------------------------------------------ */
-  if (teamSolo === true) {
-    this.excludeStatuses(['SARL','SAS','SA','SNC','SCI','SCA'], 'Un seul associé – statuts pluripersonnels exclus');
-  } else if (nbAssoc != null && nbAssoc >= 2) {
-    this.excludeStatuses(['EI','MICRO','EURL','SASU'], 'Plusieurs associés – statuts unipersonnels exclus');
-  }
-  if (nbAssoc != null) {
-    if (nbAssoc > 100) this.excludeStatus('SARL', 'SARL limitée à 100 associés');
-    if (nbAssoc < 2)   this.excludeStatus('SA',   'SA requiert au moins 2 actionnaires (7 si cotée)');
-    if (nbAssoc < 4)   this.excludeStatus('SCA',  'SCA requiert au moins 4 associés (1 commandité + 3 commanditaires)');
-  }
+ if (teamSolo === true) {
+  const immoFamily = (A.activity_type === 'immobilier' && A.family_project === 'yes');
+  const baseList = ['SARL','SAS','SA','SNC','SCA'];
+  // Ne PAS exclure la SCI si projet immo familial
+  const list = immoFamily ? baseList : [...baseList, 'SCI'];
+  this.excludeStatuses(
+    list,
+    'Un seul associé – statuts pluripersonnels exclus (tolérance SCI si immo + projet familial)'
+  );
+} else if (nbAssoc != null && nbAssoc >= 2) {
+  this.excludeStatuses(
+    ['EI','MICRO','EURL','SASU'],
+    'Plusieurs associés – statuts unipersonnels exclus'
+  );
+}
+
+// Bornes légales selon le nombre d’associés connu
+if (nbAssoc != null) {
+  if (nbAssoc > 100) this.excludeStatus('SARL', 'SARL limitée à 100 associés');
+  if (nbAssoc < 2)   this.excludeStatus('SA',   'SA requiert au moins 2 actionnaires (7 si cotée)');
+  if (nbAssoc < 4)   this.excludeStatus('SCA',  'SCA requiert au moins 4 associés (1 commandité + 3 commanditaires)');
+}
 
   /* ------------------------------------------------------------------
    * 10) Capital social minimum (SA & SCA) + cas cotée/IPO
@@ -3240,7 +3271,7 @@ calculateCriteriaScore(criteria, statusId, metrics) {
 
   // 3) Cap optionnel de l'impact net par critère (désactivé)
   const ENABLE_NET_CAP = false;    // mets true pour activer
-  const NET_CAP_VALUE = 2;         // impact net max (+/-) autorisé sur 1..5
+  const NET_CAP_VALUE = 1.5;         // impact net max (+/-) autorisé sur 1..5
   let netDelta = 0;
 
   for (const rule of rulesForCriterion) {
