@@ -1,0 +1,38 @@
+{
+  "Agressif": {
+    "Commentaire": "Dans un contexte de tensions commerciales et de volatilité accrue, ce portefeuille vise une croissance agressive en capitalisant sur des secteurs et des marchés à fort potentiel de rendement. Les tensions entre les États-Unis et la Chine influencent les choix d'investissement, favorisant les secteurs de la défense et de la technologie. L'approche quantitative privilégie un équilibre entre risque et potentiel de croissance, avec une préférence pour les actifs à score positif.",
+    "Lignes": [
+      {"id":"EQ_9", "name":"LOCKHEED MARTIN CORP", "category":"Actions", "allocation_pct":10.00, "justification":"Pondération 10.00% — bénéficie de la croissance du secteur de la défense dans un contexte géopolitique instable; Score +1.10, risque low. Réfs: [BR6]", "score":1.099, "risk_class":"low"},
+      {"id":"EQ_16", "name":"JSW STEEL LTD", "category":"Actions", "allocation_pct":8.00, "justification":"Pondération 8.00% — exposition au secteur des matériaux en Inde, marché émergent avec forte croissance; Score +1.17, risque low. Réfs: [BR7]", "score":1.174, "risk_class":"low"},
+      {"id":"ETF_s3", "name":"Global X Uranium ETF", "category":"ETF", "allocation_pct":12.00, "justification":"Pondération 12.00% — investissement dans l'uranium, secteur énergétique avec potentiel de croissance; Score +2.43, risque mid. Réfs: [BR4]", "score":2.432, "risk_class":"mid"},
+      {"id":"ETF_s4", "name":"SPDR S&P Metals & Mining ETF", "category":"ETF", "allocation_pct":12.00, "justification":"Pondération 12.00% — diversification dans les métaux et l'exploitation minière, secteurs bénéficiant de la demande industrielle; Score +2.39, risque mid. Réfs: [BR5]", "score":2.391, "risk_class":"mid"},
+      {"id":"CR_1", "name":"DCR/USD", "category":"Crypto", "allocation_pct":5.00, "justification":"Pondération 5.00% — exposition à la crypto-monnaie avec tendance positive sur 7 jours; Score +3.49, risque low. Réfs: [BR1]", "score":3.493, "risk_class":"low"},
+      {"id":"CR_5", "name":"BNB/USD", "category":"Crypto", "allocation_pct":5.00, "justification":"Pondération 5.00% — diversification dans la crypto-monnaie BNB, performance solide YTD; Score +2.18, risque low. Réfs: [BR1]", "score":2.177, "risk_class":"low"},
+      {"id":"ETF_b3", "name":"PIMCO Multisector Bond Active ETF", "category":"Obligations", "allocation_pct":15.00, "justification":"Pondération 15.00% — diversification dans les obligations multisectorielles, offre une stabilité relative; Score +1.18, risque bond. Réfs: [BR2]", "score":1.183, "risk_class":"bond"},
+      {"id":"ETF_b4", "name":"Quadratic Interest Rate Volatility and Inflation Hedge ETF", "category":"Obligations", "allocation_pct":15.00, "justification":"Pondération 15.00% — protection contre la volatilité des taux d'intérêt et l'inflation; Score +1.07, risque bond. Réfs: [BR4]", "score":1.065, "risk_class":"bond"},
+      {"id":"EQ_8", "name":"HALLIBURTON", "category":"Actions", "allocation_pct":8.00, "justification":"Pondération 8.00% — engagement dans le secteur de l'énergie, en particulier les services pétroliers et gaziers; Score +1.13, risque mid. Réfs: [BR4]", "score":1.126, "risk_class":"mid"}
+    ],
+    "ActifsExclus": [
+      {"name":"ZOOM COMMUNICATIONS INC CLASS A", "reason":"Performance YTD faible et score négatif; risque de sous-performance.", "refs":["BR1","EQ_22"]},
+      {"name":"Hartford Strategic Income ETF", "reason":"Score négatif et performance YTD faible, risque élevé de sous-performance.", "refs":["ETF_b10"]}
+    ],
+    "Compliance": {
+      "Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
+      "Risques": [
+        "Perte en capital possible",
+        "Performances passées ne préjugent pas des performances futures",
+        "Volatilité accrue selon les classes d'actifs",
+        "Crypto-actifs : volatilité élevée, perte totale possible",
+        "Risques de change pour les actifs internationaux",
+        "Risque de liquidité sur certains marchés"
+      ],
+      "Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
+    }
+  },
+  "Modéré": {
+    "Commentaire": "Ce portefeuille modéré cherche à équilibrer le risque et le rendement en se concentrant sur des actifs stables avec un potentiel de croissance modéré. Les tensions commerciales et les politiques monétaires influencent les choix d'investissement, favorisant les secteurs de la santé et des biens de consommation. L'approche quantitative vise à maintenir un équilibre entre les différentes classes de risque tout en maximisant le score global.",
+    "Lignes": [
+      {"id":"EQ_2", "name":"ABBVIE INC", "category":"Actions", "allocation_pct":10.00, "justification":"Pondération 10.00% — forte présence dans le secteur de la santé, bénéficiant de la stabilité du marché américain; Score +1.53, risque low. Réfs: [BR3]", "score":1.528, "risk_class":"low"},
+      {"id":"EQ_13", "name":"JOHNSON & JOHNSON", "category":"Actions", "allocation_pct":10.00, "justification":"Pondération 10.00% — leader dans le secteur de la santé, offre une diversification et une stabilité; Score +1.49, risque low. Réfs: [BR3]", "score":1.493, "risk_class":"low"},
+      {"id":"ETF_s10", "name":"iShares MSCI Spain ETF", "category":"ETF", "allocation_pct":10.00, "justification":"Pondération 10.00% — exposition au marché espagnol, bénéficiant de la résilience des marchés européens; Score +1.64, risque low. Réfs: [BR5]", "score":1.643, "risk_class":"low"},
+      {"id":"ETF_s11", "name":"iShares U.S. Aerospace & Defense ETF", "category":"ETF", "allocation_pct":10.00, "justification":"Pondération 10.00% —
