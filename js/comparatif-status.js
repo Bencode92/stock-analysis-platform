@@ -2,7 +2,7 @@
  * Comparatif statuts — v2025 UX Clean Room + Phase 1 improvements + Decision helpers
  * Ajouts Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
  * Ajouts Phase 2: blocs d'aide à la décision pour paires populaires
- * Fix: regimeTVA affiché en entier (tooltip désactivé)
+ * Fix: regimeTVA affiché en entier (tooltip désactivé) + markdown rendering
  */
 
 window.initComparatifStatuts = function() {
@@ -85,6 +85,12 @@ window.initComparatifStatuts = function() {
   const toText = v => (v==null || v==='') ? '—' : String(v);
   const fmtEuro = n => Number.isFinite(+n) ? (+n).toLocaleString('fr-FR')+' €' : toText(n);
   const debounce = (fn, ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+  
+  // Convertir markdown basique en HTML
+  const md2html = (text) => {
+    if (!text) return '';
+    return String(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  };
 
   // ===================== PHASE 1 RENDERERS =====================
   
@@ -247,23 +253,23 @@ window.initComparatifStatuts = function() {
           <div>
             <div class="decision-sub">Choisis ${left} si :</div>
             <ul class="decision-list">
-              ${d.chooseA.map(x=>`<li><span class="pro">•</span> ${x}</li>`).join('')}
+              ${d.chooseA.map(x=>`<li><span class="pro">•</span> ${md2html(x)}</li>`).join('')}
             </ul>
           </div>
           <div>
             <div class="decision-sub">Choisis ${right} si :</div>
             <ul class="decision-list">
-              ${d.chooseB.map(x=>`<li><span class="pro">•</span> ${x}</li>`).join('')}
+              ${d.chooseB.map(x=>`<li><span class="pro">•</span> ${md2html(x)}</li>`).join('')}
             </ul>
           </div>
         </div>
         <div class="decision-caveats">
           <span class="decision-kicker">Points d'attention :</span>
           <ul class="decision-list caveats">
-            ${d.caveats.map(x=>`<li><span class="con">•</span> ${x}</li>`).join('')}
+            ${d.caveats.map(x=>`<li><span class="con">•</span> ${md2html(x)}</li>`).join('')}
           </ul>
         </div>
-        <div class="decision-one-liner">${d.oneLine}</div>
+        <div class="decision-one-liner">${md2html(d.oneLine)}</div>
       </div>`;
   }
 
