@@ -377,25 +377,85 @@ const questions = [
         ],
         required: false
     },
-
     // Section 3: Nature de l'activité
-    {
-        id: "activity_type",
-        sectionId: "activity",
-        title: "Type d'activité",
-        description: "Quelle est la nature de votre activité ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "bic_sales", label: "BIC - Vente", icon: "fa-store" },
-            { id: "bic_service", label: "BIC - Service", icon: "fa-concierge-bell" },
-            { id: "mixed", label: "Mixte", icon: "fa-store-alt" },
-            { id: "bnc", label: "BNC (professions libérales)", icon: "fa-user-md" },
-            { id: "craft", label: "Artisanat", icon: "fa-hammer" },
-            { id: "agricultural", label: "Agricole", icon: "fa-tractor" },
-            { id: "immobilier", label: "Immobilier", icon: "fa-building" }
-        ]
-    },
+{
+    id: "activity_type",
+    sectionId: "activity",
+    title: "Type d'activité",
+    description: "Quelle est la nature de votre activité ?",
+    type: "radio",
+    required: true,
+    options: [
+        { id: "bic_sales", label: "BIC - Vente", icon: "fa-store" },
+        { id: "bic_service", label: "BIC - Service", icon: "fa-concierge-bell" },
+        { id: "mixed", label: "Mixte", icon: "fa-store-alt" },
+        { id: "bnc", label: "BNC (professions libérales)", icon: "fa-user-md" },
+        { id: "craft", label: "Artisanat", icon: "fa-hammer" },
+        { id: "agricultural", label: "Agricole", icon: "fa-tractor" },
+        { id: "immobilier", label: "Immobilier", icon: "fa-building" }
+    ]
+},
+
+// --- Début : questions spécifiques "Immobilier" (affichage conditionnel) ---
+{
+    id: "real_estate_activity",
+    sectionId: "activity",
+    title: "Type d’activité immobilière",
+    description: "Précisez votre activité principale en immobilier",
+    type: "radio",
+    required: true,
+    options: [
+        { id: "lmnp_lmp", label: "Location meublée (LMNP / LMP)", icon: "fa-bed" },
+        { id: "location_nue", label: "Location nue (habitation / pro)", icon: "fa-home" },
+        { id: "marchand_biens", label: "Marchand de biens", icon: "fa-exchange-alt" },
+        { id: "promotion", label: "Promotion immobilière", icon: "fa-city" },
+        { id: "agence_gestion", label: "Agence / gestion immobilière", icon: "fa-user-tie" }
+    ],
+    showIf: { "activity_type": ["immobilier"] }
+},
+{
+    id: "real_estate_rental_regime",
+    sectionId: "activity",
+    title: "Régime location meublée",
+    description: "Si location meublée : précisez le régime",
+    type: "radio",
+    required: false,
+    options: [
+        { id: "lmnp", label: "LMNP (non professionnel)", icon: "fa-tag" },
+        { id: "lmp", label: "LMP (professionnel)", icon: "fa-briefcase" }
+    ],
+    showIf: { "real_estate_activity": ["lmnp_lmp"] }
+},
+{
+    id: "real_estate_ownership",
+    sectionId: "activity",
+    title: "Mode de détention des biens",
+    description: "Comment seront détenus les biens immobiliers ?",
+    type: "radio",
+    required: false,
+    options: [
+        { id: "nom_propre", label: "En nom propre", icon: "fa-user" },
+        { id: "sci_ir", label: "SCI à l’IR", icon: "fa-balance-scale" },
+        { id: "sci_is", label: "SCI à l’IS", icon: "fa-file-invoice-dollar" },
+        { id: "societe_commerciale", label: "SAS / SARL / autre société", icon: "fa-building" }
+    ],
+    showIf: { "activity_type": ["immobilier"] }
+},
+{
+    id: "real_estate_property_use",
+    sectionId: "activity",
+    title: "Type de biens",
+    description: "Quel type de biens visez-vous ?",
+    type: "radio",
+    required: false,
+    options: [
+        { id: "residential", label: "Résidentiel", icon: "fa-home" },
+        { id: "commercial", label: "Commercial / professionnel", icon: "fa-store-alt" },
+        { id: "mixed_use", label: "Mixte", icon: "fa-layer-group" }
+    ],
+    showIf: { "activity_type": ["immobilier"] }
+},
+// --- Fin : questions spécifiques "Immobilier" ---
     {
         id: "regulated_activity",
         sectionId: "activity",
