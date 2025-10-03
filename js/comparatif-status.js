@@ -1,6 +1,7 @@
 /*
  * Comparatif statuts — v2025 UX Clean Room + Phase 1 improvements
  * Ajouts Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
+ * Fix: regimeTVA affiché en entier (tooltip désactivé)
  */
 
 window.initComparatifStatuts = function() {
@@ -112,8 +113,8 @@ window.initComparatifStatuts = function() {
     return `<span style="color:${TOKENS.text.secondary}">Réduit si salaire</span>`;
   }
 
-  // 3. Tooltip pour textes longs
-  function renderWithTooltip(text, maxLen=80) {
+  // 3. Tooltip pour textes longs (seulement fiscaliteOption)
+  function renderWithTooltip(text, maxLen=100) {
     if (!text || text.length <= maxLen) return toText(text);
     const truncated = text.slice(0, maxLen).trim();
     return `<span class="truncate" title="${text}">${truncated}… <i class="fas fa-info-circle" style="color:${TOKENS.accent};font-size:.75rem;cursor:help"></i></span>`;
@@ -816,8 +817,8 @@ window.initComparatifStatuts = function() {
             row+=`<td class="${diffClass}">${renderDividendRule(st)}</td>`;
           } else if(col.key==='are'){
             row+=`<td class="${diffClass}">${renderARE(st)}</td>`;
-          } else if(col.key==='regimeTVA' || col.key==='fiscaliteOption'){
-            row+=`<td class="${diffClass}">${renderWithTooltip(st[col.key], 60)}</td>`;
+          } else if(col.key==='fiscaliteOption'){
+            row+=`<td class="${diffClass}">${renderWithTooltip(st[col.key], 100)}</td>`;
           } else {
             row+=`<td class="${diffClass}">${toText(st[col.key])}</td>`;
           }
