@@ -1,12 +1,13 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room + Phase 1 improvements + Decision helpers
+ * Comparatif statuts — v2025 UX Clean Room + Phase 1 improvements + Decision helpers + Security & A11y
  * Ajouts Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
  * Ajouts Phase 2: blocs d'aide à la décision pour paires populaires
- * Fix: regimeTVA affiché en entier (tooltip désactivé) + markdown rendering
+ * Ajouts Phase 3: XSS protection, keyboard accessibility, URL state persistence
+ * Fix: regimeTVA affiché en entier (tooltip désactivé) + markdown rendering + security
  */
 
 window.initComparatifStatuts = function() {
-  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1 + Decision helpers)");
+  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1-3)");
   window.createComparatifTable('comparatif-container');
 };
 
@@ -82,14 +83,22 @@ window.initComparatifStatuts = function() {
   // ===================== UTILS =====================
   const $ = (s, r=document)=>r.querySelector(s);
   const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+  
+  // Sécurité XSS
+  const escapeHTML = (s='') => String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  
   const toText = v => (v==null || v==='') ? '—' : String(v);
+  const toHTML = v => escapeHTML(toText(v)); // pour cellules texte brutes
   const fmtEuro = n => Number.isFinite(+n) ? (+n).toLocaleString('fr-FR')+' €' : toText(n);
   const debounce = (fn, ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
   
-  // Convertir markdown basique en HTML
+  // Markdown basique **bold** mais en version safe (on échappe d'abord)
   const md2html = (text) => {
     if (!text) return '';
-    return String(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    const safe = escapeHTML(String(text));
+    return safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   };
 
   // ===================== PHASE 1 RENDERERS =====================
@@ -120,11 +129,14 @@ window.initComparatifStatuts = function() {
     return `<span style="color:${TOKENS.text.secondary}">Réduit si salaire</span>`;
   }
 
-  // 3. Tooltip pour textes longs (seulement fiscaliteOption)
+  // 3. Tooltip pour textes longs (version sécurisée)
   function renderWithTooltip(text, maxLen=100) {
-    if (!text || text.length <= maxLen) return toText(text);
-    const truncated = text.slice(0, maxLen).trim();
-    return `<span class="truncate" title="${text}">${truncated}… <i class="fas fa-info-circle" style="color:${TOKENS.accent};font-size:.75rem;cursor:help"></i></span>`;
+    if (!text) return '—';
+    const raw = String(text);
+    if (raw.length <= maxLen) return toHTML(raw);
+    const truncated = escapeHTML(raw.slice(0, maxLen).trim());
+    const full = escapeHTML(raw);
+    return `<span class="truncate" title="${full}">${truncated}… <i class="fas fa-info-circle" style="color:${TOKENS.accent};font-size:.75rem;cursor:help"></i></span>`;
   }
 
   // 4. Signaux visuels pour responsabilité
@@ -134,12 +146,12 @@ window.initComparatifStatuts = function() {
     const isUnlimited = /illimitée/i.test(resp);
     
     if (isUnlimited) {
-      return `<span style="color:${TOKENS.semantic.danger};font-weight:600">${resp} <i class="fas fa-exclamation-triangle"></i></span>`;
+      return `<span style="color:${TOKENS.semantic.danger};font-weight:600">${escapeHTML(resp)} <i class="fas fa-exclamation-triangle"></i></span>`;
     }
     if (isLimited) {
-      return `${resp} <i class="fas fa-shield-alt" style="color:${TOKENS.accent}"></i>`;
+      return `${escapeHTML(resp)} <i class="fas fa-shield-alt" style="color:${TOKENS.accent}"></i>`;
     }
-    return toText(resp);
+    return toHTML(resp);
   }
 
   // 5. Signal pour capital élevé
@@ -148,9 +160,9 @@ window.initComparatifStatuts = function() {
     const capNum = parseInt((cap.match(/\d+/g) || ['0']).join(''));
     
     if (capNum >= 37000) {
-      return `<span style="color:${TOKENS.accent};font-weight:600">${cap}</span>`;
+      return `<span style="color:${TOKENS.accent};font-weight:600">${escapeHTML(cap)}</span>`;
     }
-    return toText(cap);
+    return toHTML(cap);
   }
 
   // 6. Tag CIVIL pour SCI
@@ -163,11 +175,10 @@ window.initComparatifStatuts = function() {
       badges += `<span class="status-badge" style="background:rgba(139,92,246,.2);color:#A78BFA;margin-left:4px">CIVIL</span>`;
     }
     
-    return statut.shortName + badges;
+    return escapeHTML(statut.shortName) + badges;
   }
 
   // ============ DECISION CONTENT ============
-  // format: { a: 'GAUCHE', b: 'DROITE', chooseA:[], chooseB:[], caveats:[], oneLine:'' }
   const DECISIONS = {
     'EURL|SASU': {
       a:'EURL', b:'SASU',
@@ -248,16 +259,16 @@ window.initComparatifStatuts = function() {
     const [left, right] = pairKey.split('|');
     return `
       <div class="advice-card decision-card">
-        <div class="title"><i class="fas fa-balance-scale"></i> ${left} vs ${right} — aide à la décision</div>
+        <div class="title"><i class="fas fa-balance-scale"></i> ${escapeHTML(left)} vs ${escapeHTML(right)} — aide à la décision</div>
         <div class="decision-grid">
           <div>
-            <div class="decision-sub">Choisis ${left} si :</div>
+            <div class="decision-sub">Choisis ${escapeHTML(left)} si :</div>
             <ul class="decision-list">
               ${d.chooseA.map(x=>`<li><span class="pro">•</span> ${md2html(x)}</li>`).join('')}
             </ul>
           </div>
           <div>
-            <div class="decision-sub">Choisis ${right} si :</div>
+            <div class="decision-sub">Choisis ${escapeHTML(right)} si :</div>
             <ul class="decision-list">
               ${d.chooseB.map(x=>`<li><span class="pro">•</span> ${md2html(x)}</li>`).join('')}
             </ul>
@@ -365,7 +376,7 @@ window.initComparatifStatuts = function() {
       .intent-toggles{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.md}px;margin-bottom:${TOKENS.spacing.lg}px;padding:${TOKENS.spacing.lg}px;background:${TOKENS.surface.base};border-radius:${TOKENS.radius.lg}px;border:1px solid rgba(0,255,135,.15)}
       .intent-toggle{position:relative;display:flex;align-items:center;gap:${TOKENS.spacing.sm}px;padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;background:${TOKENS.surface.raised};border:1px solid rgba(0,255,135,.2);border-radius:999px;font-size:.875rem;color:${TOKENS.text.secondary};cursor:pointer;transition:all .15s ease;user-select:none}
       .intent-toggle:hover{background:rgba(1,42,74,.85);transform:scale(1.02)}
-      .intent-toggle:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px}
+      .intent-toggle:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
       .intent-toggle.active{background:rgba(0,255,135,.15);border-color:${TOKENS.accent};color:${TOKENS.accent}}
       .intent-toggle .icon{font-size:1rem}
       .intent-toggle[aria-pressed="true"] .icon{color:${TOKENS.accent}}
@@ -383,7 +394,7 @@ window.initComparatifStatuts = function() {
       .quick-presets{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;margin-bottom:${TOKENS.spacing.lg}px}
       .preset-btn{padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;border:1px solid rgba(0,255,135,.35);background:rgba(0,255,135,.08);border-radius:999px;font-size:.8125rem;color:${TOKENS.accent};cursor:pointer;transition:all .15s ease}
       .preset-btn:hover{background:rgba(0,255,135,.18);transform:scale(1.02)}
-      .preset-btn:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px}
+      .preset-btn:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
 
       .comparison-bar{display:flex;align-items:center;padding:${TOKENS.spacing.lg}px;background:${TOKENS.surface.base};border-radius:${TOKENS.radius.lg}px;margin-bottom:${TOKENS.spacing.lg}px;flex-wrap:wrap;gap:${TOKENS.spacing.md}px;border:1px solid rgba(0,255,135,.15)}
       .comparison-title{font-size:.875rem;font-weight:600;color:${TOKENS.text.secondary};margin-right:auto}
@@ -392,7 +403,7 @@ window.initComparatifStatuts = function() {
       .comparison-item .remove-btn{background:none;border:none;color:${TOKENS.text.muted};font-size:.75rem;cursor:pointer;padding:2px;transition:color .15s}
       .comparison-item .remove-btn:hover{color:#FF6B6B}
       .status-dropdown{width:200px;padding:${TOKENS.spacing.md}px;background:${TOKENS.surface.raised};border:1px solid rgba(0,255,135,.25);border-radius:${TOKENS.radius.sm}px;color:${TOKENS.text.primary};font-size:.875rem}
-      .status-dropdown:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px}
+      .status-dropdown:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
 
       .diff-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(0,255,135,.15);border:1px solid rgba(0,255,135,.4);border-radius:999px;font-size:.75rem;font-weight:600;color:${TOKENS.accent}}
       .diff-badge .icon{font-size:.875rem}
@@ -432,7 +443,7 @@ window.initComparatifStatuts = function() {
       .criteria-buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:${TOKENS.spacing.sm}px}
       .criteria-button{padding:${TOKENS.spacing.md}px;border-radius:${TOKENS.radius.sm}px;font-size:.875rem;cursor:pointer;background:${TOKENS.surface.raised};border:1px solid rgba(0,255,135,.2);color:${TOKENS.text.secondary};transition:all .15s ease;text-align:center}
       .criteria-button:hover{border-color:rgba(0,255,135,.4);background:rgba(1,42,74,.85)}
-      .criteria-button:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px}
+      .criteria-button:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
       .criteria-button.active{background:rgba(0,255,135,.15);border-color:${TOKENS.accent};color:${TOKENS.accent};font-weight:600}
 
       .search-input{width:100%;padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border-radius:${TOKENS.radius.sm}px;border:1px solid rgba(1,42,74,.8);background:${TOKENS.surface.raised};color:${TOKENS.text.primary};transition:all .15s ease;font-size:.875rem}
@@ -513,7 +524,9 @@ window.initComparatifStatuts = function() {
       <div class="comparatif-container">
         <div class="comparatif-header">
           <h1 class="comparatif-title">Comparatif des formes juridiques 2025</h1>
-          <p class="comparatif-subtitle">Choisissez votre situation, ajoutez 2 statuts, on affiche seulement les différences.</p>
+          <p class="comparatif-subtitle">
+            Ajoutez deux statuts (ex. EURL vs SASU). On n'affiche que les différences clés et on vous suggère le meilleur choix selon vos objectifs (dividendes, ARE, associés, levée de fonds).
+          </p>
 
           <div class="section-label">Vos objectifs</div>
           <div class="intent-toggles" role="group" aria-label="Vos objectifs">
@@ -552,6 +565,7 @@ window.initComparatifStatuts = function() {
             </select>
             <div class="comparison-items" id="comparison-items"></div>
             <div id="diff-badge-container"></div>
+            <button id="share-link" class="preset-btn" aria-label="Copier le lien de cette comparaison">Partager</button>
           </div>
 
           <div id="smart-comparison" aria-live="polite"></div>
@@ -628,6 +642,51 @@ window.initComparatifStatuts = function() {
       eviter_salaire:false
     };
 
+    // ---------- URL state persistence ----------
+    function persistStateToURL(){
+      const i = [];
+      if(intentAnswers.veut_dividendes) i.push('dividendes');
+      if(intentAnswers.en_chomage) i.push('are');
+      if(intentAnswers.prevoit_associes==='oui') i.push('associes');
+      if(intentAnswers.levee_fonds==='oui') i.push('levee');
+      const params = new URLSearchParams();
+      if(compareStatuts.length) params.set('c', compareStatuts.join(','));
+      if(i.length) params.set('i', i.join(','));
+      if(selectedCriterion!=='all') params.set('k', selectedCriterion);
+      if(searchTerm) params.set('q', searchTerm);
+      const url = `${location.pathname}?${params.toString()}`;
+      history.replaceState(null, '', url);
+    }
+
+    function restoreStateFromURL(){
+      const p = new URLSearchParams(location.search);
+      const c = (p.get('c')||'').split(',').filter(Boolean);
+      const i = (p.get('i')||'').split(',').filter(Boolean);
+      const k = p.get('k')||'all';
+      const q = p.get('q')||'';
+
+      if(c.length){ compareStatuts = c.slice(0,3); }
+      if(i.length){
+        intentAnswers.veut_dividendes = i.includes('dividendes');
+        intentAnswers.en_chomage = i.includes('are');
+        intentAnswers.prevoit_associes = i.includes('associes') ? 'oui' : 'non';
+        intentAnswers.levee_fonds = i.includes('levee') ? 'oui' : 'non';
+      }
+      selectedCriterion = ['all','basic','fiscal','social','creation'].includes(k) ? k : 'all';
+      searchTerm = q.toLowerCase();
+
+      // sync UI
+      syncIntentUI();
+      $$('.criteria-button').forEach(b=>{
+        const isActive = b.getAttribute('data-criterion')===selectedCriterion;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-pressed', isActive?'true':'false');
+      });
+      const searchEl = $('#search-input'); if(searchEl) searchEl.value = q;
+
+      updateComparisonBar(); updateTable(); renderPersonaAdvice();
+    }
+
     // ---------- hooks publics ----------
     window.__comparatifHooks = window.__comparatifHooks || {};
     window.__comparatifHooks.setComparison=function(statuts){ compareStatuts=statuts||[]; updateComparisonBar(); updateTable(); renderPersonaAdvice(); };
@@ -640,6 +699,22 @@ window.initComparatifStatuts = function() {
     renderPersonas();
     loadStatutData();
     renderAREHelper(intentAnswers);
+    restoreStateFromURL();
+
+    // Bouton partage
+    const shareBtn = $('#share-link');
+    if(shareBtn){
+      shareBtn.addEventListener('click', async ()=>{
+        persistStateToURL();
+        try{
+          await navigator.clipboard.writeText(location.href);
+          shareBtn.textContent = 'Lien copié ✓';
+          setTimeout(()=>shareBtn.textContent='Partager',1200);
+        }catch{
+          // Fallback silencieux si clipboard API pas disponible
+        }
+      });
+    }
 
     // ---------- events UI ----------
     $$('.criteria-button').forEach(btn=>{
@@ -665,10 +740,12 @@ window.initComparatifStatuts = function() {
         btn.setAttribute('aria-pressed', isActive?'true':'false');
       });
     }
+
     function initIntentFilters(){
       $$('.intent-toggle').forEach(btn=>{
         const intent=btn.dataset.intent;
-        btn.addEventListener('click',()=>{
+
+        const toggle = ()=>{
           const isActive = btn.getAttribute('aria-pressed')==='true';
           btn.classList.toggle('active', !isActive);
           btn.setAttribute('aria-pressed', !isActive?'true':'false');
@@ -679,8 +756,28 @@ window.initComparatifStatuts = function() {
             intentAnswers[intent]=!isActive; 
           }
           
-          renderAREHelper(intentAnswers); updateTable(); renderPersonaAdvice();
+          renderAREHelper(intentAnswers); updateTable(); renderPersonaAdvice(); syncIntentUI(); persistStateToURL();
+        };
+
+        // Click
+        btn.addEventListener('click', toggle);
+
+        // Keyboard accessibility
+        btn.setAttribute('tabindex','0');
+        btn.addEventListener('keydown', (e)=>{
+          if(e.key==='Enter' || e.key===' '){
+            e.preventDefault(); 
+            toggle();
+          }
         });
+
+        // ARIA tooltip
+        const tip = btn.querySelector('.tooltip');
+        if(tip){
+          const tipId = `tip-${intent}`;
+          tip.id = tipId;
+          btn.setAttribute('aria-describedby', tipId);
+        }
       });
     }
 
@@ -691,7 +788,7 @@ window.initComparatifStatuts = function() {
       host.innerHTML = presets.map(p=>`<button class="preset-btn" data-preset="${p.join(',')}" aria-label="Comparer ${p[0]} et ${p[1]}">${p[0]} ↔ ${p[1]}</button>`).join('');
       host.querySelectorAll('.preset-btn').forEach(b=>b.addEventListener('click',()=>{
         const [a,bis]=b.getAttribute('data-preset').split(',');
-        compareStatuts=[a,bis]; updateComparisonBar(); updateTable(); renderPersonaAdvice();
+        compareStatuts=[a,bis]; updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
       }));
     }
 
@@ -699,10 +796,10 @@ window.initComparatifStatuts = function() {
     function renderPersonas(){
       const host=$('#personas'); if(!host) return;
       const personas=[
-        { id:'freelance-are', label:'Freelance au chômage (ARE)', baseline:'éviter salaire, dividendes OK en SASU', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:true,veut_dividendes:true,eviter_salaire:true,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); }},
-        { id:'consultant-solo', label:'Consultant solo', baseline:'un associé, dividendes si possible', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:false,veut_dividendes:true,eviter_salaire:false,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); }},
-        { id:'startup-fundraise', label:'Startup (lever des fonds)', baseline:'BSPCE, actions de préférence (SAS)', apply:()=>{ intentAnswers={...intentAnswers,levee_fonds:'oui',prevoit_associes:'oui',en_chomage:false}; compareStatuts=['SASU','SAS']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); }},
-        { id:'artisan-tns', label:'Artisan budget serré (TNS)', baseline:'charges basses, comptabilité simple', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:false,en_chomage:false,prevoit_associes:'non'}; compareStatuts=['EURL','MICRO']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); }}
+        { id:'freelance-are', label:'Freelance au chômage (ARE)', baseline:'éviter salaire, dividendes OK en SASU', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:true,veut_dividendes:true,eviter_salaire:true,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); }},
+        { id:'consultant-solo', label:'Consultant solo', baseline:'un associé, dividendes si possible', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:false,veut_dividendes:true,eviter_salaire:false,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); }},
+        { id:'startup-fundraise', label:'Startup (lever des fonds)', baseline:'BSPCE, actions de préférence (SAS)', apply:()=>{ intentAnswers={...intentAnswers,levee_fonds:'oui',prevoit_associes:'oui',en_chomage:false}; compareStatuts=['SASU','SAS']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); }},
+        { id:'artisan-tns', label:'Artisan budget serré (TNS)', baseline:'charges basses, comptabilité simple', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:false,en_chomage:false,prevoit_associes:'non'}; compareStatuts=['EURL','MICRO']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); }}
       ];
       host.innerHTML = personas.map(p=>`<button class="persona-chip" data-id="${p.id}" aria-label="${p.label}">${p.label}<div class="baseline">${p.baseline}</div></button>`).join('');
       host.querySelectorAll('.persona-chip').forEach(el=>{
@@ -746,7 +843,7 @@ window.initComparatifStatuts = function() {
       compareStatuts.forEach(shortName=>{
         const statut=(Object.values(window.legalStatuses||{}).find(s=>s.shortName===shortName)); if(!statut) return;
         const div=document.createElement('div'); div.className='comparison-item';
-        div.innerHTML=`<i class="fas ${statut.logo||'fa-building'}"></i> ${shortName} <button class="remove-btn" aria-label="Retirer ${shortName}"><i class="fas fa-times"></i></button>`;
+        div.innerHTML=`<i class="fas ${statut.logo||'fa-building'}"></i> ${escapeHTML(shortName)} <button class="remove-btn" aria-label="Retirer ${escapeHTML(shortName)}"><i class="fas fa-times"></i></button>`;
         div.querySelector('.remove-btn').addEventListener('click',()=>removeFromComparison(shortName));
         wrap.appendChild(div);
       });
@@ -758,6 +855,7 @@ window.initComparatifStatuts = function() {
       }
       
       renderSmartComparison();
+      persistStateToURL();
     }
 
     function renderSmartComparison(){
@@ -789,7 +887,7 @@ window.initComparatifStatuts = function() {
         host.innerHTML = `
           <div class="advice-card">
             <div class="title"><i class="fas fa-info-circle"></i> Résumé</div>
-            <div>Vous comparez <strong>${compareStatuts.join(' vs ')}</strong>. Les colonnes affichées ci-dessous sont limitées aux différences pour gagner du temps.</div>
+            <div>Vous comparez <strong>${compareStatuts.map(s=>escapeHTML(s)).join(' vs ')}</strong>. Les colonnes affichées ci-dessous sont limitées aux différences pour gagner du temps.</div>
           </div>`;
       }
     }
@@ -824,7 +922,7 @@ window.initComparatifStatuts = function() {
         host.innerHTML = `
           <div class="advice-card">
             <div class="title"><i class="fas fa-info-circle"></i> Résumé</div>
-            <div>Vous comparez <strong>${compareStatuts.join(' vs ')}</strong>. Les colonnes affichées ci-dessous sont limitées aux différences pour gagner du temps.</div>
+            <div>Vous comparez <strong>${compareStatuts.map(s=>escapeHTML(s)).join(' vs ')}</strong>. Les colonnes affichées ci-dessous sont limitées aux différences pour gagner du temps.</div>
           </div>`;
       }
     }
@@ -901,7 +999,7 @@ window.initComparatifStatuts = function() {
       }
 
       const th=$('#table-headers'); 
-      th.innerHTML = columns.map((c,i)=>`<th${i>0 && applyDiff?' class="diff-col"':''}>${c.label}</th>`).join('');
+      th.innerHTML = columns.map((c,i)=>`<th${i>0 && applyDiff?' class="diff-col"':''}>${escapeHTML(c.label)}</th>`).join('');
 
       const countEl=$('#column-count');
       if(applyDiff && diffKeys.length>0){
@@ -922,11 +1020,11 @@ window.initComparatifStatuts = function() {
       }
 
       body.innerHTML = rowsData.map((st,i)=>{
-        let row=`<tr style="animation-delay:${i*0.04}s;" data-statut="${st.shortName}">`;
+        let row=`<tr style="animation-delay:${i*0.04}s;" data-statut="${escapeHTML(st.shortName)}">`;
         columns.forEach((col,idx)=>{
           const diffClass = idx>0 && applyDiff?' diff-col':'';
           if(col.key==='name'){
-            row+=`<td><div class="statut-cell"><div class="statut-icon"><i class="fas ${st.logo||'fa-building'}"></i></div><div class="statut-info"><div class="statut-name">${renderStatutName(st)}</div><div class="statut-fullname">${st.name}</div><div class="status-badges">${genBadges(st)}</div></div></div></td>`;
+            row+=`<td><div class="statut-cell"><div class="statut-icon"><i class="fas ${st.logo||'fa-building'}"></i></div><div class="statut-info"><div class="statut-name">${renderStatutName(st)}</div><div class="statut-fullname">${escapeHTML(st.name)}</div><div class="status-badges">${genBadges(st)}</div></div></div></td>`;
           } else if(col.key==='responsabilite'){
             row+=`<td class="${diffClass}">${renderResponsabilite(st)}</td>`;
           } else if(col.key==='capital'){
@@ -938,13 +1036,15 @@ window.initComparatifStatuts = function() {
           } else if(col.key==='fiscaliteOption'){
             row+=`<td class="${diffClass}">${renderWithTooltip(st[col.key], 100)}</td>`;
           } else {
-            row+=`<td class="${diffClass}">${toText(st[col.key])}</td>`;
+            row+=`<td class="${diffClass}">${toHTML(st[col.key])}</td>`;
           }
         });
         row+='</tr>'; return row;
       }).join('');
 
       $$('#table-body tr').forEach(row=>{ row.addEventListener('click',()=>{ const sn=row.getAttribute('data-statut'); if(sn) addToComparison(sn); }); });
+      
+      persistStateToURL();
     }
 
     function renderTable(data){ updateTable(); }
