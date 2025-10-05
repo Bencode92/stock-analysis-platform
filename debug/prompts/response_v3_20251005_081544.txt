@@ -1,0 +1,38 @@
+{
+  "Agressif": {
+    "Commentaire": "Dans un contexte de tensions commerciales et de volatilité accrue, ce portefeuille vise une croissance agressive en capitalisant sur des actifs à haut potentiel de rendement. Les marchés émergents et les secteurs de la technologie et de la santé sont privilégiés, reflétant une recherche de croissance malgré les risques géopolitiques et économiques. L'approche quantitative favorise un équilibre entre les scores de risque et de performance, tout en respectant une diversification sectorielle et géographique.",
+    "Lignes": [
+      {"id":"EQ_2", "name":"ABBVIE INC", "category":"Actions", "allocation_pct":8.00, "justification":"Pondération 8.00% — Forte performance dans le secteur de la santé, bénéficiant de l'innovation continue; Score +1.53, risque low. Réfs: [BR1,MC6]", "score":1.528, "risk_class":"low"},
+      {"id":"EQ_3", "name":"TJX INC", "category":"Actions", "allocation_pct":7.00, "justification":"Pondération 7.00% — Exposition au secteur des biens de consommation cycliques, résilient malgré les tensions commerciales; Score +1.50, risque low. Réfs: [BR5,MC1]", "score":1.501, "risk_class":"low"},
+      {"id":"EQ_8", "name":"HALLIBURTON", "category":"Actions", "allocation_pct":6.00, "justification":"Pondération 6.00% — Secteur de l'énergie, potentiel de rebond avec la stabilisation des prix du pétrole; Score +1.13, risque mid. Réfs: [BR6,MC3]", "score":1.126, "risk_class":"mid"},
+      {"id":"EQ_16", "name":"JSW STEEL LTD", "category":"Actions", "allocation_pct":5.50, "justification":"Pondération 5.50% — Forte croissance dans le secteur des matériaux en Inde, tirant parti de l'urbanisation; Score +1.17, risque low. Réfs: [BR7,MC2]", "score":1.174, "risk_class":"low"},
+      {"id":"ETF_s1", "name":"iShares Silver Trust", "category":"ETF", "allocation_pct":10.00, "justification":"Pondération 10.00% — Exposition au marché de l'argent, bénéficiant de la demande industrielle et d'investissement; Score +3.18, risque mid. Réfs: [BR2,MC4]", "score":3.184, "risk_class":"mid"},
+      {"id":"ETF_s3", "name":"Global X MSCI Greece ETF", "category":"ETF", "allocation_pct":9.00, "justification":"Pondération 9.00% — Exposition aux marchés émergents européens, potentiel de croissance post-crise économique; Score +2.70, risque mid. Réfs: [BR5,MC5]", "score":2.701, "risk_class":"mid"},
+      {"id":"ETF_s6", "name":"SPDR S&P Metals & Mining ETF", "category":"ETF", "allocation_pct":8.00, "justification":"Pondération 8.00% — Investissement dans les métaux et l'exploitation minière, secteurs bénéficiant de la reprise économique mondiale; Score +2.35, risque mid. Réfs: [BR4,MC4]", "score":2.354, "risk_class":"mid"},
+      {"id":"CR_1", "name":"CELO/USD", "category":"Crypto", "allocation_pct":4.00, "justification":"Pondération 4.00% — Crypto-monnaie avec potentiel de croissance dans les paiements numériques; Score +3.43, risque mid. Réfs: [BR3,MC6]", "score":3.431, "risk_class":"mid"},
+      {"id":"CR_2", "name":"HTR/USD", "category":"Crypto", "allocation_pct":3.50, "justification":"Pondération 3.50% — Crypto-actif innovant dans la sécurisation des transactions blockchain; Score +3.40, risque mid. Réfs: [BR1,MC5]", "score":3.4, "risk_class":"mid"}
+    ],
+    "ActifsExclus": [
+      {"name":"ZOOM COMMUNICATIONS INC CLASS A", "reason":"Performance récente faible et risque de sur-extension dans un marché volatile.", "refs":["BR2","EQ_22"]},
+      {"name":"FERROVIAL", "reason":"Exposition élevée aux risques géopolitiques et économiques en Europe.", "refs":["BR5","EQ_20"]}
+    ],
+    "Compliance": {
+      "Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
+      "Risques": [
+        "Perte en capital possible",
+        "Performances passées ne préjugent pas des performances futures",
+        "Volatilité accrue selon les classes d'actifs",
+        "Crypto-actifs : volatilité élevée, perte totale possible",
+        "Risques de change pour les actifs internationaux",
+        "Risque de liquidité sur certains marchés"
+      ],
+      "Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
+    }
+  },
+  "Modéré": {
+    "Commentaire": "Ce portefeuille modéré cherche à équilibrer le risque et le rendement en intégrant des actifs stables et des opportunités de croissance. Il se concentre sur les secteurs de la santé, des biens de consommation et des technologies, tout en intégrant des obligations pour la stabilité. L'approche quantitative vise à maintenir un score de risque modéré tout en cherchant des opportunités de rendement dans un environnement de marché incertain.",
+    "Lignes": [
+      {"id":"EQ_1", "name":"AMERICAN FINANCIAL GROUP INC", "category":"Actions", "allocation_pct":8.50, "justification":"Pondération 8.50% — Stabilité dans le secteur financier, bénéficiant d'une régulation favorable; Score +1.58, risque low. Réfs: [BR1,MC1]", "score":1.579, "risk_class":"low"},
+      {"id":"EQ_13", "name":"JOHNSON & JOHNSON", "category":"Actions", "allocation_pct":7.50, "justification":"Pondération 7.50% — Leader dans le secteur de la santé, avec une forte capacité d'innovation et de distribution; Score +1.49, risque low. Réfs: [BR1,MC6]", "score":1.493, "risk_class":"low"},
+      {"id":"EQ_17", "name":"IMPERIAL BRANDS PLC", "category":"Actions", "allocation_pct":6.50, "justification":"Pondération 6.50% — Performance solide dans les biens de consommation de base, avec une orientation vers des marchés stables; Score +1.18, risque low. Réfs: [BR5,MC5]", "score":1.181, "risk_class":"low"},
+      {"id":"ETF_s5", "name

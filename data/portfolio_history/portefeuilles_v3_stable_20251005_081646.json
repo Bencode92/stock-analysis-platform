@@ -1,0 +1,241 @@
+{
+    "version": "v3_quantitatif_compliance_amf_stable",
+    "timestamp": "20251005_081646",
+    "date": "2025-10-05T08:16:46.466156",
+    "portfolios": {
+        "Portfolios": [
+            {
+                "Name": "Agressif",
+                "Assets": [
+                    {
+                        "id": "EQ_16",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "EQ_24",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "EQ_13",
+                        "allocation": 6.0
+                    },
+                    {
+                        "id": "EQ_2",
+                        "allocation": 6.0
+                    },
+                    {
+                        "id": "EQ_8",
+                        "allocation": 5.0
+                    },
+                    {
+                        "id": "EQ_19",
+                        "allocation": 5.0
+                    },
+                    {
+                        "id": "ETF_s3",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_s6",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "CR_1",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "CR_2",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "CR_3",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "CR_4",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "CR_5",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b1",
+                        "allocation": 8.0
+                    }
+                ],
+                "Compliance": {
+                    "TotalAllocation": 100.0,
+                    "AssetCategoriesIncluded": [
+                        "Equities",
+                        "ETFs",
+                        "Crypto",
+                        "Bonds"
+                    ],
+                    "MaxOneETFPerTheme": true,
+                    "NoCryptoInStable": true
+                }
+            },
+            {
+                "Name": "Modéré",
+                "Assets": [
+                    {
+                        "id": "EQ_12",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "EQ_1",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "EQ_7",
+                        "allocation": 6.0
+                    },
+                    {
+                        "id": "EQ_9",
+                        "allocation": 6.0
+                    },
+                    {
+                        "id": "EQ_18",
+                        "allocation": 6.0
+                    },
+                    {
+                        "id": "EQ_23",
+                        "allocation": 6.0
+                    },
+                    {
+                        "id": "ETF_s5",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_s8",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b2",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b3",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "CR_1",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "CR_3",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "CR_5",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b4",
+                        "allocation": 6.0
+                    }
+                ],
+                "Compliance": {
+                    "TotalAllocation": 100.0,
+                    "AssetCategoriesIncluded": [
+                        "Equities",
+                        "ETFs",
+                        "Crypto",
+                        "Bonds"
+                    ],
+                    "MaxOneETFPerTheme": true,
+                    "NoCryptoInStable": true
+                }
+            },
+            {
+                "Name": "Stable",
+                "Assets": [
+                    {
+                        "id": "EQ_6",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "EQ_17",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "EQ_11",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "EQ_14",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "EQ_20",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "EQ_21",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "ETF_s5",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_s8",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b2",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b3",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b5",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b6",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b7",
+                        "allocation": 6.0
+                    }
+                ],
+                "Compliance": {
+                    "TotalAllocation": 100.0,
+                    "AssetCategoriesIncluded": [
+                        "Equities",
+                        "ETFs",
+                        "Bonds"
+                    ],
+                    "MaxOneETFPerTheme": true,
+                    "NoCryptoInStable": true
+                }
+            }
+        ]
+    },
+    "overlap_report": {
+        "Agressif": [],
+        "Modéré": [],
+        "Stable": []
+    },
+    "features": [
+        "drawdown_normalisé",
+        "diversification_round_robin",
+        "validation_anti_fin_cycle",
+        "fallback_crypto_progressif",
+        "cache_univers_hash",
+        "retry_api_robuste",
+        "compliance_amf",
+        "sanitisation_marketing",
+        "disclaimer_automatique",
+        "regex_pandas_fixed",
+        "etf_detection_fixed",
+        "timeout_extended",
+        "type_safety_improved",
+        "cache_fallback_system"
+    ]
+}
