@@ -132,6 +132,35 @@ const questions = [
         }
     },
     {
+  id: "matrimonial_regime",
+  sectionId: "profile",
+  title: "Régime matrimonial",
+  description: "Influe sur la propriété/valeur des parts et l’exposition des biens",
+  type: "radio",
+  required: true,
+  options: [
+    { id: "separation", label: "Séparation de biens", icon: "fa-unlink" },
+    { id: "community", label: "Communauté réduite aux acquêts", icon: "fa-link" },
+    { id: "universal_community", label: "Communauté universelle", icon: "fa-infinity" },
+    { id: "unknown", label: "Je ne sais pas", icon: "fa-question-circle" }
+  ],
+  showIf: { "marital_status": ["married"] }
+},
+    {
+  id: "apport_origin",
+  sectionId: "profile",
+  title: "Origine des fonds d’apport",
+  description: "Détermine si l’apport/les parts sont propres ou communs",
+  type: "radio",
+  required: true,
+  options: [
+    { id: "personal_funds", label: "Fonds propres (biens personnels)", icon: "fa-user-lock" },
+    { id: "community_funds", label: "Fonds communs au couple", icon: "fa-hand-holding-usd" },
+    { id: "mixed", label: "Mixte (personnels + communs)", icon: "fa-exchange-alt" }
+  ],
+  showIf: { "marital_status": ["married"] }
+},
+    {
         id: "other_income",
         sectionId: "profile",
         title: "Autres revenus salariés",
@@ -604,6 +633,20 @@ const questions = [
             { id: "no", label: "Non", icon: "fa-times-circle" }
         ]
     },
+    {
+  id: "personal_guarantee_scope",
+  sectionId: "finances",
+  title: "Périmètre des cautions",
+  description: "Accepter que des biens communs puissent être engagés par une caution personnelle ?",
+  type: "radio",
+  required: true,
+  options: [
+    { id: "exclude_common", label: "Non, exclure autant que possible", icon: "fa-ban" },
+    { id: "limit_common", label: "Oui mais encadrer fortement", icon: "fa-exclamation-triangle" },
+    { id: "no_preference", label: "Sans préférence", icon: "fa-balance-scale" }
+  ],
+  showIf: { "bank_guarantee": ["yes"], "marital_status": ["married"] }
+},
     {
         id: "bank_loan_amount",
         sectionId: "finances",
