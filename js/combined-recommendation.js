@@ -815,7 +815,7 @@ const exclusionFilters = [
 
 window.exclusionFilters = exclusionFilters;
 const ratingScales = {
-  taxation: {
+  taxation_optimization: {
     EI: 3,
     MICRO: 4,
     EURL: 4,
@@ -829,7 +829,7 @@ const ratingScales = {
     SELAS: 3,
     SCA: 3
   },
-  social_cost: {
+  social_charges: {
     EI: 3,
     MICRO: 4, // ajusté (était 5) pour coller à tes key_metrics
     EURL: 3,
