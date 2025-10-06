@@ -729,13 +729,17 @@ const legalStatuses = {
 // S'assurer que window.legalStatuses est défini immédiatement
 window.legalStatuses = legalStatuses;
 
-// Barèmes et filtres (PLACEHOLDERS, À REMPLACER)
+// Helper yes/no (au cas où il n’est pas déjà défini plus haut)
+const isYes = v => String(v).toLowerCase() === 'yes';
+
+// Barèmes et filtres (corrigés)
 const exclusionFilters = [
   // Professions avec ordre (avocats, médecins, EC, etc.)
   // -> On N'EXCLUT PLUS la MICRO globalement ; on écarte surtout la SNC.
   {
     id: "professional_order",
-      isYes(answers.professional_order),
+    condition: (answers) =>
+      isYes(answers.professional_order) || isYes(answers.regulated_profession),
     excluded_statuses: ["SNC"],
     tolerance_message:
       "Si vous exercez à titre individuel, EI/Micro peuvent rester possibles selon l’ordre. En exercice en société, privilégiez les SEL (SELARL/SELAS)."
@@ -744,13 +748,13 @@ const exclusionFilters = [
   // Solo : on masque les formes nécessitant ≥ 2 associés
   // (on NE masque PAS SELARL/SELAS pour permettre SELARLU/SELASU)
   {
-  id: "team_structure",
-  condition: (answers) =>
-    answers.team_structure === "solo" &&
-     !(answers.activity_type === 'immobilier' && isYes(answers.family_project)),
-  excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SCA"],
-  tolerance_message: null
-},
+    id: "team_structure",
+    condition: (answers) =>
+      answers.team_structure === "solo" &&
+      !(answers.activity_type === 'immobilier' && isYes(answers.family_project)),
+    excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SCA"],
+    tolerance_message: null
+  },
 
   // Capital disponible : seuil utile pour SA/SCA (≥ 37 000 € dont 50 % à la constitution)
   {
@@ -797,7 +801,7 @@ const exclusionFilters = [
   {
     id: "public_listing_or_aps",
     condition: (answers) =>
-     isYes(answers.emancipated_minor)
+      isYes(answers.public_listing_or_aps) || isYes(answers.ipo_path),
     excluded_statuses: ["EI", "MICRO", "EURL", "SASU", "SAS", "SARL", "SNC", "SCI", "SELARL", "SELAS"],
     tolerance_message:
       "Pour une cotation ou un appel public à l’épargne, orientez-vous vers une SA (ou SCA)."
@@ -2299,7 +2303,7 @@ apply: (statusId, score, answers, metrics) => {
     ['patrimonial_nue', 'bureaux_nus'].includes(String(a.real_estate_model ?? 'patrimonial_nue')),
   apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
   criteria: 'transmission'
-}
+},
 
   // --- 10) INVESTISSEURS EXTERNES -------------------------------------------
   {
@@ -2316,6 +2320,7 @@ apply: (statusId, score, answers, metrics) => {
   },
 
   // --- 11) FINANCEMENT BANCAIRE ---------------------------------------------
+  {
   id: 'immobilier_bank_financing_bonus',
   description: 'Financement bancaire : + SCI/SARL/SAS, - MICRO/EI',
   condition: (a) =>
