@@ -3185,7 +3185,6 @@ calculatePriorityWeights() {
   console.log('Poids des priorités (normalisés):', this.priorityWeights);
 }
 
-
 /**
  * Calcul des scores (v2, MAJ 30/09/2025)
  * - Tous les critères passent par calculateCriteriaScore
@@ -3303,89 +3302,93 @@ calculateScores() {
   });
 
   console.log('Scores pondérés (0..100):', this.weightedScores);
-}
-// ─────────────────────────────────────────────────────────────
-// FINALISATION SECTORIELLE — Immobilier patrimonial (nu/bureaux)
-// ─────────────────────────────────────────────────────────────
-(() => {
-  const A = this.answers || {};
-  if (!isImmoPatrimonial(A)) return;
 
-  // 3.1 Planchers minimaux par critère pour la SCI (empêche un affaissement artificiel)
-  const floors = {
-    patrimony_protection: 4.2,
-    transmission: 4.2,
-    credibility: 3.2,
-    administrative_simplicity: 2.5
-  };
+  // ─────────────────────────────────────────────────────────────
+  // FINALISATION SECTORIELLE — Immobilier patrimonial (nu/bureaux)
+  // ─────────────────────────────────────────────────────────────
+  (() => {
+    const A = this.answers || {};
+    if (!(typeof isImmoPatrimonial === 'function' && isImmoPatrimonial(A))) return;
 
-  const sciNode = this.auditTrail?.scores?.SCI;
-  if (sciNode) {
-    Object.entries(floors).forEach(([crit, minFloor]) => {
-      const n = sciNode[crit];
-      if (!n) return;
-      if ((n.final_score ?? n.base_score ?? 0) < minFloor) {
-        n.final_score = minFloor;
-        n.weighted_score = +(minFloor * (n.weight ?? 1)).toFixed(4);
-      }
-    });
-
-    // Recalcule la moyenne pondérée SCI → score 0..100
-    const recomputeSCI = () => {
-      const CRITERIA = [
-        'patrimony_protection','administrative_simplicity','taxation_optimization',
-        'social_charges','fundraising_capacity','credibility','governance_flexibility','transmission'
-      ];
-      let tw=0, tws=0, minCrit=Infinity;
-      CRITERIA.forEach(c=>{
-        const n = sciNode[c];
-        if (!n) return;
-        const s = Number(n.final_score ?? n.base_score ?? 3);
-        const w = Number(n.weight ?? 1);
-        tws += s*w; tw += w; minCrit = Math.min(minCrit, s);
-      });
-      const avg = tw>0 ? (tws/tw) : 0;
-      const to100 = (x)=> Math.max(0, Math.min(100, ((x-1)/4)*100));
-      let sc = to100(avg);
-      if (minCrit < 2) sc = +(sc*0.95).toFixed(2);
-      this.scores.SCI = +avg.toFixed(4);
-      this.weightedScores.SCI = +sc.toFixed(2);
-      sciNode.__summary = sciNode.__summary || {};
-      sciNode.__summary.avg_1to5 = this.scores.SCI;
-      sciNode.__summary.score_0to100 = this.weightedScores.SCI;
-      sciNode.__summary.min_criterion = minCrit;
+    // 3.1 Planchers minimaux par critère pour la SCI (empêche un affaissement artificiel)
+    const floors = {
+      patrimony_protection: 4.2,
+      transmission: 4.2,
+      credibility: 3.2,
+      administrative_simplicity: 2.5
     };
-    recomputeSCI();
-  }
 
-  // 3.2 Démagnétisation légère SAS/SARL quand l'objet est patrimonial nu
-  const dampen = (id, factor) => {
-    if (!this.weightedScores[id]) return;
-    this.weightedScores[id] = +(this.weightedScores[id] * factor).toFixed(2);
-    if (this.auditTrail?.scores?.[id]?.__summary) {
-      this.auditTrail.scores[id].__summary.post_sector_dampen = factor;
-      this.auditTrail.scores[id].__summary.score_0to100 = this.weightedScores[id];
+    const sciNode = this.auditTrail?.scores?.SCI;
+    if (sciNode) {
+      Object.entries(floors).forEach(([crit, minFloor]) => {
+        const n = sciNode[crit];
+        if (!n) return;
+        if ((n.final_score ?? n.base_score ?? 0) < minFloor) {
+          n.final_score = minFloor;
+          n.weighted_score = +(minFloor * (n.weight ?? 1)).toFixed(4);
+        }
+      });
+
+      // Recalcule la moyenne pondérée SCI → score 0..100
+      const recomputeSCI = () => {
+        const CRITERIA = [
+          'patrimony_protection','administrative_simplicity','taxation_optimization',
+          'social_charges','fundraising_capacity','credibility','governance_flexibility','transmission'
+        ];
+        let tw=0, tws=0, minCrit=Infinity;
+        CRITERIA.forEach(c=>{
+          const n = sciNode[c];
+          if (!n) return;
+          const s = Number(n.final_score ?? n.base_score ?? 3);
+          const w = Number(n.weight ?? 1);
+          tws += s*w; tw += w; minCrit = Math.min(minCrit, s);
+        });
+        const avg = tw>0 ? (tws/tw) : 0;
+        const to100 = (x)=> Math.max(0, Math.min(100, ((x-1)/4)*100));
+        let sc = to100(avg);
+        if (minCrit < 2) sc = +(sc*0.95).toFixed(2);
+        this.scores.SCI = +avg.toFixed(4);
+        this.weightedScores.SCI = +sc.toFixed(2);
+        sciNode.__summary = sciNode.__summary || {};
+        sciNode.__summary.avg_1to5 = this.scores.SCI;
+        sciNode.__summary.score_0to100 = this.weightedScores.SCI;
+        sciNode.__summary.min_criterion = minCrit;
+      };
+      recomputeSCI();
     }
-  };
 
-  // Dampen piloté par le besoin (si aucune levée/investisseurs)
-  const noEquity = A.fundraising !== 'yes' && A.team_structure !== 'investors';
-  if (noEquity) {
-    dampen('SAS', 0.92);
-    dampen('SASU',0.94);
-    dampen('SARL',0.94);
-  }
+    // 3.2 Démagnétisation légère SAS/SARL quand l'objet est patrimonial nu
+    const dampen = (id, factor) => {
+      if (!this.weightedScores[id]) return;
+      this.weightedScores[id] = +(this.weightedScores[id] * factor).toFixed(2);
+      if (this.auditTrail?.scores?.[id]?.__summary) {
+        this.auditTrail.scores[id].__summary.post_sector_dampen = factor;
+        this.auditTrail.scores[id].__summary.score_0to100 = this.weightedScores[id];
+      }
+    };
 
-  // 3.3 Micro tie-break en faveur de la SCI si à < 4 points du #1
-  const entries = Object.entries(this.weightedScores).sort((a,b)=>b[1]-a[1]);
-  if (entries.length >= 2) {
-    const topId = entries[0][0], sciScore = this.weightedScores.SCI ?? 0, topScore = this.weightedScores[topId] ?? 0;
-    const delta = topScore - sciScore;
-    if (sciScore > 0 && delta > 0 && delta <= 4) {
-      this.weightedScores.SCI = topScore + 0.01;
+    // Dampen piloté par le besoin (si aucune levée/investisseurs)
+    const noEquity = A.fundraising !== 'yes' && A.team_structure !== 'investors';
+    if (noEquity) {
+      dampen('SAS', 0.92);
+      dampen('SASU',0.94);
+      dampen('SARL',0.94);
     }
-  }
-})();
+
+    // 3.3 Micro tie-break en faveur de la SCI si à < 4 points du #1
+    const entries = Object.entries(this.weightedScores).sort((a,b)=>b[1]-a[1]);
+    if (entries.length >= 2) {
+      const topId = entries[0][0], sciScore = this.weightedScores.SCI ?? 0, topScore = this.weightedScores[topId] ?? 0;
+      const delta = topScore - sciScore;
+      if (sciScore > 0 && delta > 0 && delta <= 4) {
+        this.weightedScores.SCI = topScore + 0.01;
+      }
+    }
+  })();
+
+  // (optionnel) log après finalisation
+  console.log('Scores pondérés après finalisation immo:', this.weightedScores);
+}
 
 
     
