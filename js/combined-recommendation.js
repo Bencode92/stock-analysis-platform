@@ -970,6 +970,12 @@ const IS_IMMO = (ans) =>
   (typeof window.isRealEstateSector === 'function' && window.isRealEstateSector(ans)) ||
   String(ans?.activity_type || '').toLowerCase() === 'immobilier';
 window.IS_IMMO = IS_IMMO; // optionnel : exposer globalement
+// Helpers immo fins
+const isImmoPatrimonial = (a) =>
+  IS_IMMO(a) && ['patrimonial_nue','bureaux_nus', null, undefined].includes((a?.real_estate_model ?? null));
+
+const isImmoCommercial = (a) =>
+  IS_IMMO(a) && ['marchand','promotion','lotissement','para_hotel','para-hotelier'].includes(String(a?.real_estate_model||'').toLowerCase());
 
 // ------------------------------------------------
 // PARTIE 2: MOTEUR DE RECOMMANDATION (COMPLET)
@@ -3058,6 +3064,25 @@ calculatePriorityWeights() {
 
   const raw = Array.isArray(this.answers?.priorities) ? this.answers.priorities : [];
   if (!raw.length) {
+    // —— BOOST SECTORIEL IMMOBILIER (ne change pas l'UI des priorités) ——
+    if (typeof isImmoPatrimonial === 'function' && isImmoPatrimonial(this.answers)) {
+      this.priorityWeights.patrimony_protection      = (this.priorityWeights.patrimony_protection ?? 1) * 1.8;
+      this.priorityWeights.transmission              = (this.priorityWeights.transmission ?? 1) * 1.6;
+      this.priorityWeights.credibility               = (this.priorityWeights.credibility ?? 1) * 1.25;
+      this.priorityWeights.administrative_simplicity = (this.priorityWeights.administrative_simplicity ?? 1) * 1.15;
+
+      // Renormalisation immédiate (moyenne = 1)
+      const vals0 = CRITERIA_KEYS.map(k => this.priorityWeights[k] ?? 1);
+      const mean0 = vals0.reduce((a,b)=>a+b,0) / vals0.length || 1;
+      const f0 = mean0 === 0 ? 1 : (1/mean0);
+      CRITERIA_KEYS.forEach(k => { this.priorityWeights[k] = +(this.priorityWeights[k]*f0).toFixed(6); });
+      this.auditTrail.weightingRules.push({
+        normalization: 'mean_to_1_after_boost',
+        before_mean: mean0,
+        factor_applied: f0
+      });
+    }
+
     console.log('Poids des priorités:', this.priorityWeights);
     return;
   }
@@ -3133,6 +3158,15 @@ calculatePriorityWeights() {
     });
   });
 
+  // —— BOOST SECTORIEL IMMOBILIER (ne change pas l'UI des priorités) ——
+  if (typeof isImmoPatrimonial === 'function' && isImmoPatrimonial(this.answers)) {
+    // facteur multiplicatif doux (sera renormalisé juste après)
+    this.priorityWeights.patrimony_protection      = (this.priorityWeights.patrimony_protection ?? 1) * 1.8;
+    this.priorityWeights.transmission              = (this.priorityWeights.transmission ?? 1) * 1.6;
+    this.priorityWeights.credibility               = (this.priorityWeights.credibility ?? 1) * 1.25;
+    this.priorityWeights.administrative_simplicity = (this.priorityWeights.administrative_simplicity ?? 1) * 1.15;
+  }
+
   // 6) normalisation pour que la moyenne des critères reste = 1
   const values = CRITERIA_KEYS.map(k => this.priorityWeights[k] ?? 1);
   const mean = values.reduce((a, b) => a + b, 0) / values.length || 1;
@@ -3150,6 +3184,7 @@ calculatePriorityWeights() {
 
   console.log('Poids des priorités (normalisés):', this.priorityWeights);
 }
+
 
 /**
  * Calcul des scores (v2, MAJ 30/09/2025)
@@ -3269,6 +3304,88 @@ calculateScores() {
 
   console.log('Scores pondérés (0..100):', this.weightedScores);
 }
+// ─────────────────────────────────────────────────────────────
+// FINALISATION SECTORIELLE — Immobilier patrimonial (nu/bureaux)
+// ─────────────────────────────────────────────────────────────
+(() => {
+  const A = this.answers || {};
+  if (!isImmoPatrimonial(A)) return;
+
+  // 3.1 Planchers minimaux par critère pour la SCI (empêche un affaissement artificiel)
+  const floors = {
+    patrimony_protection: 4.2,
+    transmission: 4.2,
+    credibility: 3.2,
+    administrative_simplicity: 2.5
+  };
+
+  const sciNode = this.auditTrail?.scores?.SCI;
+  if (sciNode) {
+    Object.entries(floors).forEach(([crit, minFloor]) => {
+      const n = sciNode[crit];
+      if (!n) return;
+      if ((n.final_score ?? n.base_score ?? 0) < minFloor) {
+        n.final_score = minFloor;
+        n.weighted_score = +(minFloor * (n.weight ?? 1)).toFixed(4);
+      }
+    });
+
+    // Recalcule la moyenne pondérée SCI → score 0..100
+    const recomputeSCI = () => {
+      const CRITERIA = [
+        'patrimony_protection','administrative_simplicity','taxation_optimization',
+        'social_charges','fundraising_capacity','credibility','governance_flexibility','transmission'
+      ];
+      let tw=0, tws=0, minCrit=Infinity;
+      CRITERIA.forEach(c=>{
+        const n = sciNode[c];
+        if (!n) return;
+        const s = Number(n.final_score ?? n.base_score ?? 3);
+        const w = Number(n.weight ?? 1);
+        tws += s*w; tw += w; minCrit = Math.min(minCrit, s);
+      });
+      const avg = tw>0 ? (tws/tw) : 0;
+      const to100 = (x)=> Math.max(0, Math.min(100, ((x-1)/4)*100));
+      let sc = to100(avg);
+      if (minCrit < 2) sc = +(sc*0.95).toFixed(2);
+      this.scores.SCI = +avg.toFixed(4);
+      this.weightedScores.SCI = +sc.toFixed(2);
+      sciNode.__summary = sciNode.__summary || {};
+      sciNode.__summary.avg_1to5 = this.scores.SCI;
+      sciNode.__summary.score_0to100 = this.weightedScores.SCI;
+      sciNode.__summary.min_criterion = minCrit;
+    };
+    recomputeSCI();
+  }
+
+  // 3.2 Démagnétisation légère SAS/SARL quand l'objet est patrimonial nu
+  const dampen = (id, factor) => {
+    if (!this.weightedScores[id]) return;
+    this.weightedScores[id] = +(this.weightedScores[id] * factor).toFixed(2);
+    if (this.auditTrail?.scores?.[id]?.__summary) {
+      this.auditTrail.scores[id].__summary.post_sector_dampen = factor;
+      this.auditTrail.scores[id].__summary.score_0to100 = this.weightedScores[id];
+    }
+  };
+
+  // Dampen piloté par le besoin (si aucune levée/investisseurs)
+  const noEquity = A.fundraising !== 'yes' && A.team_structure !== 'investors';
+  if (noEquity) {
+    dampen('SAS', 0.92);
+    dampen('SASU',0.94);
+    dampen('SARL',0.94);
+  }
+
+  // 3.3 Micro tie-break en faveur de la SCI si à < 4 points du #1
+  const entries = Object.entries(this.weightedScores).sort((a,b)=>b[1]-a[1]);
+  if (entries.length >= 2) {
+    const topId = entries[0][0], sciScore = this.weightedScores.SCI ?? 0, topScore = this.weightedScores[topId] ?? 0;
+    const delta = topScore - sciScore;
+    if (sciScore > 0 && delta > 0 && delta <= 4) {
+      this.weightedScores.SCI = topScore + 0.01;
+    }
+  }
+})();
 
 
     
