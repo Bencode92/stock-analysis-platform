@@ -729,8 +729,13 @@ const legalStatuses = {
 // S'assurer que window.legalStatuses est défini immédiatement
 window.legalStatuses = legalStatuses;
 
-// Helper yes/no (au cas où il n’est pas déjà défini plus haut)
-const isYes = v => String(v).toLowerCase() === 'yes';
+// Helper yes/no — définition unique + réutilisable
+if (typeof window.isYes !== 'function') {
+  window.isYes = function (v) {
+    return String(v).toLowerCase() === 'yes';
+  };
+}
+const isYes = window.isYes;
 
 // Barèmes et filtres (corrigés)
 const exclusionFilters = [
@@ -966,9 +971,7 @@ const isImmoPatrimonial = (a) =>
 const isImmoCommercial = (a) =>
   IS_IMMO(a) && ['marchand','promotion','lotissement','para_hotel','para-hotelier'].includes(String(a?.real_estate_model||'').toLowerCase());
 
-// NEW → helper yes/no
-const isYes = v => String(v).toLowerCase() === 'yes';
-window.isYes = isYes; // optionnel : pour debug/usage externe
+
 // ------------------------------------------------
 // PARTIE 2: MOTEUR DE RECOMMANDATION (COMPLET)
 // ------------------------------------------------
