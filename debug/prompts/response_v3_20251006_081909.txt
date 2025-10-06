@@ -1,0 +1,38 @@
+{
+  "Agressif": {
+    "Commentaire": "Dans un contexte de tensions commerciales et de volatilité accrue, ce portefeuille vise une croissance agressive en capitalisant sur des actifs à haut potentiel de rendement. Les marchés émergents et les secteurs de la technologie et de la santé sont privilégiés, reflétant une recherche de diversification et de potentiel de croissance élevé. L'approche quantitative favorise un équilibre entre risque et rendement, avec une préférence pour les actifs à score positif.",
+    "Lignes": [
+      {"id":"EQ_2", "name":"ABBVIE INC", "category":"Actions", "allocation_pct":8.00, "justification":"Pondération 8.00% — forte croissance dans le secteur de la santé, bénéficiant de l'innovation et de la demande stable; Score +1.53, risque low. Réfs: [BR1,MC2]", "score":1.528, "risk_class":"low"},
+      {"id":"EQ_3", "name":"TJX INC", "category":"Actions", "allocation_pct":7.00, "justification":"Pondération 7.00% — exposition aux biens de consommation cycliques, résilient malgré les incertitudes économiques; Score +1.50, risque low. Réfs: [BR5,MC1]", "score":1.501, "risk_class":"low"},
+      {"id":"EQ_16", "name":"JSW STEEL LTD", "category":"Actions", "allocation_pct":6.00, "justification":"Pondération 6.00% — forte croissance dans le secteur des matériaux en Inde, tirant parti de la construction et de l'infrastructure; Score +1.17, risque low. Réfs: [BR7,MC4]", "score":1.174, "risk_class":"low"},
+      {"id":"ETF_s3", "name":"Global X MSCI Greece ETF", "category":"ETF", "allocation_pct":9.00, "justification":"Pondération 9.00% — exposition au marché grec, potentiel de récupération économique; Score +2.70, risque mid. Réfs: [BR5,MC1]", "score":2.701, "risk_class":"mid"},
+      {"id":"ETF_s6", "name":"SPDR S&P Metals & Mining ETF", "category":"ETF", "allocation_pct":8.00, "justification":"Pondération 8.00% — investissement dans les métaux et l'exploitation minière, secteurs bénéficiant de la demande industrielle; Score +2.35, risque mid. Réfs: [BR6,MC5]", "score":2.354, "risk_class":"mid"},
+      {"id":"CR_2", "name":"CAKE/USD", "category":"Crypto", "allocation_pct":4.00, "justification":"Pondération 4.00% — exposition à la crypto-monnaie avec une performance récente positive; Score +2.25, risque mid. Réfs: [BR1,MC3]", "score":2.25, "risk_class":"mid"},
+      {"id":"CR_3", "name":"SCRTn/USD", "category":"Crypto", "allocation_pct":3.00, "justification":"Pondération 3.00% — diversification dans les crypto-monnaies avec un potentiel de croissance; Score +2.21, risque mid. Réfs: [BR1,MC3]", "score":2.208, "risk_class":"mid"},
+      {"id":"ETF_b1", "name":"Aptus Defined Risk ETF", "category":"Obligations", "allocation_pct":10.00, "justification":"Pondération 10.00% — couverture de risque avec un ETF obligataire, offrant une stabilité relative; Score +2.03, risque bond. Réfs: [BR4,MC2]", "score":2.03, "risk_class":"bond"},
+      {"id":"ETF_b3", "name":"PIMCO Multisector Bond Active ETF", "category":"Obligations", "allocation_pct":9.00, "justification":"Pondération 9.00% — diversification obligataire multisectorielle, adaptée à un profil agressif; Score +1.35, risque bond. Réfs: [BR4,MC2]", "score":1.346, "risk_class":"bond"},
+      {"id":"ETF_b4", "name":"iShares Flexible Income Active ETF", "category":"Obligations", "allocation_pct":8.00, "justification":"Pondération 8.00% — flexibilité dans les revenus fixes, adaptée aux fluctuations du marché; Score +1.08, risque bond. Réfs: [BR4,MC2]", "score":1.075, "risk_class":"bond"},
+      {"id":"ETF_b5", "name":"Hartford Strategic Income ETF", "category":"Obligations", "allocation_pct":7.00, "justification":"Pondération 7.00% — stratégie de revenu stratégique, offrant une protection dans un environnement de taux élevés; Score +0.10, risque bond. Réfs: [BR4,MC2]", "score":0.102, "risk_class":"bond"},
+      {"id":"ETF_b9", "name":"SPDR DoubleLine Total Return Tactical ETF", "category":"Obligations", "allocation_pct":6.00, "justification":"Pondération 6.00% — approche tactique de retour total, visant à maximiser les rendements dans divers environnements de marché; Score -0.24, risque bond. Réfs: [BR4,MC2]", "score":-0.235, "risk_class":"bond"}
+    ],
+    "ActifsExclus": [
+      {"name":"ZOOM COMMUNICATIONS INC CLASS A", "reason":"Score très bas et performance récente faible", "refs":["BR1","MC3"]},
+      {"name":"FERROVIAL", "reason":"Performance YTD élevée avec une performance mensuelle négative", "refs":["BR2","MC5"]}
+    ],
+    "Compliance": {
+      "Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
+      "Risques": [
+        "Perte en capital possible",
+        "Performances passées ne préjugent pas des performances futures",
+        "Volatilité accrue selon les classes d'actifs",
+        "Crypto-actifs : volatilité élevée, perte totale possible",
+        "Risques de change pour les actifs internationaux",
+        "Risque de liquidité sur certains marchés"
+      ],
+      "Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
+    }
+  },
+  "Modéré": {
+    "Commentaire": "Ce portefeuille modéré cherche à équilibrer croissance et protection du capital en période d'incertitude économique. Il combine des actifs stables et des opportunités de croissance, en mettant l'accent sur les secteurs de la santé et des biens de consommation. L'approche quantitative vise à maintenir un équilibre entre les actifs à faible et moyen risque, avec une exposition limitée aux crypto-monnaies.",
+    "Lignes": [
+      {"id":"EQ_1", "name":"AMERICAN FINANCIAL GROUP INC", "category":"Actions", "allocation_pct":
