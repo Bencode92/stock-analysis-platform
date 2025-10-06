@@ -953,7 +953,7 @@ function getSector(answers) {
 }
 function isRealEstateSector(answers) {
   const s = getSector(answers);
-  return ['immobilier','real_estate','realestate','real-estate','immo'].includes(s);
+  return ['immobilier', 'real_estate', 'realestate', 'real-estate', 'immo'].includes(s);
 }
 // Optionnel : exposer pour d'autres modules / debug
 window.getSector = getSector;
@@ -964,206 +964,313 @@ const IS_IMMO = (ans) =>
   (typeof window.isRealEstateSector === 'function' && window.isRealEstateSector(ans)) ||
   String(ans?.activity_type || '').toLowerCase() === 'immobilier';
 window.IS_IMMO = IS_IMMO; // optionnel : exposer globalement
+
 // Helpers immo fins
 const isImmoPatrimonial = (a) =>
-  IS_IMMO(a) && ['patrimonial_nue','bureaux_nus', null, undefined].includes((a?.real_estate_model ?? null));
+  IS_IMMO(a) && ['patrimonial_nue', 'bureaux_nus', null, undefined].includes((a?.real_estate_model ?? null));
 
 const isImmoCommercial = (a) =>
-  IS_IMMO(a) && ['marchand','promotion','lotissement','para_hotel','para-hotelier'].includes(String(a?.real_estate_model||'').toLowerCase());
+  IS_IMMO(a) &&
+  ['marchand', 'promotion', 'lotissement', 'para_hotel', 'para-hotelier'].includes(
+    String(a?.real_estate_model || '').toLowerCase()
+  );
 
+// ─────────────────────────────
+// Gestionnaire d'erreurs & logs
+// ─────────────────────────────
+window.addEventListener(
+  'error',
+  (e) => {
+    const f = e?.filename || '';
+    if (f.includes('recommendation-engine.js') || f.includes('combined-recommendation.js')) {
+      console.error('Erreur bloquante dans le moteur de recommandation', e);
+    }
+  },
+  true
+);
+console.log('Chargement du recommendation-engine.js commencé');
+window.engineLoadingStarted = true;
+
+// ─────────────────────────────
+// Sets utiles (déclarés AVANT le tableau de règles)
+// ─────────────────────────────
+const ALL_STATUS_IDS = [
+  'MICRO',
+  'EI',
+  'EURL',
+  'SASU',
+  'SARL',
+  'SAS',
+  'SA',
+  'SNC',
+  'SCI',
+  'SELARL',
+  'SELAS',
+  'SCA'
+];
+// Statuts “avec titres/parts” (on exclut EI/MICRO)
+const SHARE_BASED_STATUS_IDS = [
+  'EURL',
+  'SARL',
+  'SASU',
+  'SAS',
+  'SA',
+  'SELARL',
+  'SELAS',
+  'SCI',
+  'SCA',
+  'SNC'
+];
 
 // ------------------------------------------------
 // PARTIE 2: MOTEUR DE RECOMMANDATION (COMPLET)
 // ------------------------------------------------
-
-// Gestionnaire d'erreurs spécifique pour ce fichier
-window.addEventListener('error', (e) => {
-  const f = e?.filename || '';
-  if (f.includes('recommendation-engine.js') || f.includes('combined-recommendation.js')) {
-    console.error('Erreur bloquante dans le moteur de recommandation', e);
-  }
-}, true);
-// Logs de débogage pour traquer le chargement
-console.log("Chargement du recommendation-engine.js commencé");
-window.engineLoadingStarted = true;
-
-// Règles de scoring configurables
 const scoringRules = [
-    // Règles pour la protection du patrimoine
-{
-  id: 'essential_patrimony_protection',
-  description: 'Protection du patrimoine essentielle',
-  condition: answers => answers.patrimony_protection === 'essential',
- apply: (statusId, score, answers, metrics) => {
-    // +1 pour toutes les formes à responsabilité limitée (hors SCI et SCA)
-    if ([
-      'SASU', 'SAS', 'SARL', 'EURL', 'SA',
-      'SELAS', 'SELARL', 'EI', 'MICRO'
-    ].includes(statusId)) {
-      return score + 1;
-    }
-    return score;
+  // ──────────────────────────────────────────────
+  // Règles pour la protection du patrimoine
+  // ──────────────────────────────────────────────
+  {
+    id: 'essential_patrimony_protection',
+    description: 'Protection du patrimoine essentielle',
+    condition: (a) => a.patrimony_protection === 'essential',
+    apply: (statusId, score) => {
+      // +1 pour toutes les formes à responsabilité limitée (hors SCI et SCA)
+      if (['SASU', 'SAS', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL', 'EI', 'MICRO'].includes(statusId)) {
+        return score + 1;
+      }
+      return score;
+    },
+    criteria: 'patrimony_protection'
   },
-  criteria: 'patrimony_protection'
-},
 
-{
-  id: 'high_risk_activity_ei_micro', // on garde l'id pour compatibilité, mais on corrige la logique
-  description: 'Activité à risque élevé : pénalise surtout les formes à responsabilité illimitée',
-  condition: answers => answers.high_professional_risk === 'yes',
-  apply: (statusId, score, answers, metrics) => {
-    if (statusId === 'SNC') return score - 1.5;            // illimitée & solidaire
-    if (statusId === 'SCA') return score - 1;               // commandités illimités
-    if (statusId === 'SCI') return score - 0.5;             // illimitée mais proportionnelle
-    // EI/MICRO ne sont plus illimitées depuis 2022 → pas de malus spécifique ici
-    return score;
+  {
+    id: 'high_risk_activity_ei_micro', // id conservé, logique corrigée
+    description:
+      'Activité à risque élevé : pénalise surtout les formes à responsabilité illimitée',
+    condition: (a) => a.high_professional_risk === 'yes',
+    apply: (statusId, score) => {
+      if (statusId === 'SNC') return score - 1.5; // illimitée & solidaire
+      if (statusId === 'SCA') return score - 1; // commandités illimités
+      if (statusId === 'SCI') return score - 0.5; // illimitée mais proportionnelle
+      // EI/MICRO ne sont plus illimitées depuis 2022 → pas de malus spécifique ici
+      return score;
+    },
+    criteria: 'patrimony_protection'
   },
-  criteria: 'patrimony_protection'
-},
-{
-  id: 'sca_anti_takeover_protection',
-  description: 'SCA : protection anti-OPA',
-  condition: (a) => isYes(a.takeover_protection) || isYes(a.hostile_takeover_concern),
-  apply: (statusId, score) => (statusId === 'SCA' ? score + 1.5 : score),
-  criteria: 'patrimony_protection'
-},
 
-{
-  id: 'sci_patrimony_separation_bonus',
-  description: 'SCI : séparation du patrimoine immobilier (pertinent si activité immobilière)',
-  condition: (a) =>
-    a.patrimony_protection === 'essential' &&
-    String(a.activity_type || '').toLowerCase() === 'immobilier' &&
-    !isYes(a.bank_guarantee),
-  apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
-  criteria: 'patrimony_protection'
-},
-{
-  id: 'risk_aversion_liability_shift',
-  description: 'Appétence au risque faible : privilégier la responsabilité limitée',
-  condition: answers =>
-    answers.risk_appetite !== undefined &&
-    answers.risk_appetite <= 2,
- apply: (statusId, score, answers, metrics) => {
-    if (statusId === 'SNC') return score - 0.75;            // illimitée & solidaire
-    if (statusId === 'SCA') return score - 0.5;             // commandités illimités
-    // Bonus aux formes limitées (y compris EI/MICRO depuis 2022). On exclut la SCI.
-    if ([
-      'SASU', 'SAS', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL', 'EI', 'MICRO'
-    ].includes(statusId)) return score + 0.5;
-    return score;
+  {
+    id: 'sca_anti_takeover_protection',
+    description: 'SCA : protection anti-OPA',
+    condition: (a) => isYes(a.takeover_protection) || isYes(a.hostile_takeover_concern),
+    apply: (statusId, score) => (statusId === 'SCA' ? score + 1.5 : score),
+    criteria: 'patrimony_protection'
   },
-  criteria: 'patrimony_protection'
-},
 
-{
-  id: 'bank_guarantee_liability_penalty',
-  description: 'Caution bancaire personnelle : neutralise la protection, quel que soit le statut',
-  condition: a => isYes(a.bank_guarantee),
-apply: (statusId, score, answers, metrics) => {
-    // La caution perso expose le patrimoine perso dans tous les cas → malus uniforme
-    return score - 0.5;
+  {
+    id: 'sci_patrimony_separation_bonus',
+    description: 'SCI : séparation du patrimoine immobilier (pertinent si activité immobilière)',
+    condition: (a) =>
+      a.patrimony_protection === 'essential' &&
+      String(a.activity_type || '').toLowerCase() === 'immobilier' &&
+      !isYes(a.bank_guarantee),
+    apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
+    criteria: 'patrimony_protection'
   },
-  criteria: 'patrimony_protection'
-},
-{
-  id: 'holding_asset_separation_bonus',
-  description: 'Holding de tête : bonus pour dissocier patrimoine et opérationnel',
-  condition: (a) => isYes(a.holding_company),
-  apply: (statusId, score) => {
-    // Holding pertinent surtout en sociétés (pas en EI/MICRO)
-    if (['SAS', 'SASU', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL'].includes(statusId)) {
-      return score + 0.5;
-    }
-    return score;
+
+  {
+    id: 'risk_aversion_liability_shift',
+    description: 'Appétence au risque faible : privilégier la responsabilité limitée',
+    condition: (a) => a.risk_appetite !== undefined && a.risk_appetite <= 2,
+    apply: (statusId, score) => {
+      if (statusId === 'SNC') return score - 0.75; // illimitée & solidaire
+      if (statusId === 'SCA') return score - 0.5; // commandités illimités
+      // Bonus aux formes limitées (y compris EI/MICRO depuis 2022). On exclut la SCI.
+      if (['SASU', 'SAS', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL', 'EI', 'MICRO'].includes(statusId))
+        return score + 0.5;
+      return score;
+    },
+    criteria: 'patrimony_protection'
   },
-  criteria: 'patrimony_protection'
-},
 
-{
-  id: 'unlimited_liability_penalty',
-  description: 'Responsabilité illimitée pénalisée si protection essentielle ou activité à risque',
-  condition: (a) =>
-    a.patrimony_protection === 'essential' || isYes(a.high_professional_risk),
-  apply: (statusId, score, a) => {
-    const isImmo =
-      typeof IS_IMMO === 'function'
-        ? IS_IMMO(a)
-        : String(a.activity_type || '').toLowerCase() === 'immobilier';
-
-    if (statusId === 'SNC') return score - 2;    // illimitée & solidaire
-    if (statusId === 'SCA') return score - 1;    // commandités illimités
-    // SCI : pénalité seulement hors cas immobilier
-    if (statusId === 'SCI' && !isImmo) return score - 0.5;
-
-    // EI / MICRO ne sont plus illimitées depuis 2022 → pas de malus
-    return score;
+  {
+    id: 'bank_guarantee_liability_penalty',
+    description:
+      'Caution bancaire personnelle : neutralise la protection, quel que soit le statut',
+    condition: (a) => isYes(a.bank_guarantee),
+    apply: (statusId, score) => {
+      // La caution perso expose le patrimoine perso dans tous les cas → malus uniforme
+      return score - 0.5;
+    },
+    criteria: 'patrimony_protection'
   },
-  criteria: 'patrimony_protection'
-},
-{
-  id: 'ei_2022_partial_shield',
-  description: 'Entreprise individuelle (réforme 2022) : séparation patrimoine pro/perso',
-  condition: () => true, // toujours évaluée
-apply: (statusId, score, answers, metrics) => {
-    if (statusId === 'EI' || statusId === 'MICRO') {
-      return score + 0.5;
-    }
-    return score;
+
+  {
+    id: 'holding_asset_separation_bonus',
+    description: 'Holding de tête : bonus pour dissocier patrimoine et opérationnel',
+    condition: (a) => isYes(a.holding_company),
+    apply: (statusId, score) => {
+      // Holding pertinent surtout en sociétés (pas en EI/MICRO)
+      if (['SAS', 'SASU', 'SARL', 'EURL', 'SA', 'SELAS', 'SELARL'].includes(statusId)) {
+        return score + 0.5;
+      }
+      return score;
+    },
+    criteria: 'patrimony_protection'
   },
-  criteria: 'patrimony_protection'
-},
 
-{
-  id: 'collaborating_spouse_shared_risk',
-  description: 'Conjoint collaborateur : accroît le risque sur les formes illimitées',
-  condition: (a) => isYes(a.collaborating_spouse),
-  apply: (statusId, score) => {
-    if (statusId === 'SNC') return score - 0.5;        // illimitée & solidaire
-    // EI/MICRO : depuis 2022, protection améliorée → malus allégé
-    if (statusId === 'EI' || statusId === 'MICRO') return score - 0.25;
-    return score;
+  {
+    id: 'unlimited_liability_penalty',
+    description:
+      'Responsabilité illimitée pénalisée si protection essentielle ou activité à risque',
+    condition: (a) => a.patrimony_protection === 'essential' || isYes(a.high_professional_risk),
+    apply: (statusId, score, a) => {
+      const isImmo =
+        typeof IS_IMMO === 'function' ? IS_IMMO(a) : String(a.activity_type || '').toLowerCase() === 'immobilier';
+      if (statusId === 'SNC') return score - 2; // illimitée & solidaire
+      if (statusId === 'SCA') return score - 1; // commandités illimités
+      // SCI : pénalité seulement hors cas immobilier
+      if (statusId === 'SCI' && !isImmo) return score - 0.5;
+      // EI / MICRO ne sont plus illimitées depuis 2022 → pas de malus
+      return score;
+    },
+    criteria: 'patrimony_protection'
   },
-  criteria: 'patrimony_protection'
-},
 
-{
-  id: 'sci_real_estate_shield',
-  description: 'Immobilier sans caution bancaire : la SCI isole le bien',
-  condition: (a) => {
-    const isImmo =
-      typeof IS_IMMO === 'function'
-        ? IS_IMMO(a)
-        : String(a.activity_type || '').toLowerCase() === 'immobilier';
-    return isImmo && !isYes(a.bank_guarantee);
+  {
+    id: 'ei_2022_partial_shield',
+    description:
+      'Entreprise individuelle (réforme 2022) : séparation patrimoine pro/perso',
+    condition: () => true, // toujours évaluée
+    apply: (statusId, score) => {
+      if (statusId === 'EI' || statusId === 'MICRO') {
+        return score + 0.5;
+      }
+      return score;
+    },
+    criteria: 'patrimony_protection'
   },
-  apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
-  criteria: 'patrimony_protection'
-},
 
-{
-  id: 'eurl_majority_penalty',
-  description: 'Associé ≥ 75 % + caution perso : pénalité EURL / SARL',
-  condition: (a) => {
-    const pct = parseFloat(a.capital_percentage ?? 0);
-    return Number.isFinite(pct) && pct >= 75 && isYes(a.bank_guarantee);
+  {
+    id: 'collaborating_spouse_shared_risk',
+    description: 'Conjoint collaborateur : accroît le risque sur les formes illimitées',
+    condition: (a) => isYes(a.collaborating_spouse),
+    apply: (statusId, score) => {
+      if (statusId === 'SNC') return score - 0.5; // illimitée & solidaire
+      // EI/MICRO : depuis 2022, protection améliorée → malus allégé
+      if (statusId === 'EI' || statusId === 'MICRO') return score - 0.25;
+      return score;
+    },
+    criteria: 'patrimony_protection'
   },
-  apply: (statusId, score) =>
-    (['EURL', 'SARL'].includes(statusId) ? score - 0.5 : score),
-  criteria: 'patrimony_protection'
-},
 
-{
-  id: 'multiple_housing_units_bonus',
-  description: 'Portefeuille immo (> 120 k€ CA) : bonus SCI pour cantonnement',
-  condition: answers =>
-    answers.activity_type === 'immobilier' &&
-    parseFloat(answers.projected_revenue || 0) > 120_000,
-  apply: (statusId, score) => statusId === 'SCI' ? score + 1 : score,
-  criteria: 'patrimony_protection'
-},
+  {
+    id: 'sci_real_estate_shield',
+    description: 'Immobilier sans caution bancaire : la SCI isole le bien',
+    condition: (a) => {
+      const isImmo =
+        typeof IS_IMMO === 'function' ? IS_IMMO(a) : String(a.activity_type || '').toLowerCase() === 'immobilier';
+      return isImmo && !isYes(a.bank_guarantee);
+    },
+    apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
+    criteria: 'patrimony_protection'
+  },
 
-    
+  {
+    id: 'eurl_majority_penalty',
+    description: 'Associé ≥ 75 % + caution perso : pénalité EURL / SARL',
+    condition: (a) => {
+      const pct = parseFloat(a.capital_percentage ?? 0);
+      return Number.isFinite(pct) && pct >= 75 && isYes(a.bank_guarantee);
+    },
+    apply: (statusId, score) => (['EURL', 'SARL'].includes(statusId) ? score - 0.5 : score),
+    criteria: 'patrimony_protection'
+  },
+
+  {
+    id: 'multiple_housing_units_bonus',
+    description: 'Portefeuille immo (> 120 k€ CA) : bonus SCI pour cantonnement',
+    condition: (a) => String(a.activity_type || '').toLowerCase() === 'immobilier' && parseFloat(a.projected_revenue || 0) > 120_000,
+    apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
+    criteria: 'patrimony_protection'
+  },
+
+  // ──────────────────────────────────────────────
+  // MATRIMONIAL & CAUTION – Patrimoine / Transmission / Crédibilité
+  // ──────────────────────────────────────────────
+
+  // 1) Séparation de biens : micro-bonus patrimoine (toutes formes)
+  {
+    id: 'matri_sep_bonus',
+    description: 'Séparation de biens : meilleure étanchéité perso/couple',
+    condition: (a) => a._is_sep,
+    apply: (statusId, score) => (ALL_STATUS_IDS.includes(statusId) ? score + 0.25 : score),
+    criteria: 'patrimony_protection',
+    priority: 60
+  },
+
+  // 2) Communauté (réduite ou universelle) : léger malus patrimoine (toutes formes)
+  {
+    id: 'matri_community_soft_malus',
+    description: 'Communauté : exposition potentielle des biens communs',
+    condition: (a) => a._is_community,
+    apply: (statusId, score) => (ALL_STATUS_IDS.includes(statusId) ? score - 0.25 : score),
+    criteria: 'patrimony_protection',
+    priority: 61
+  },
+
+  // 3) Caution perso avec périmètre commun : malus plus fort (toutes formes)
+  {
+    id: 'guarantee_common_scope_strong_malus',
+    description: 'Caution personnelle susceptible d’engager les biens communs',
+    condition: (a) => !!a._bank_guarantee_common_scope,
+    apply: (statusId, score) => (ALL_STATUS_IDS.includes(statusId) ? score - 0.5 : score),
+    criteria: 'patrimony_protection',
+    priority: 62
+  },
+
+  // 4) Caution négociée “exclusion biens communs” : on atténue le malus générique
+  {
+    id: 'guarantee_exclude_common_relief',
+    description: 'Caution négociée : exclusion des biens communs',
+    condition: (a) =>
+      a._is_community && a.personal_guarantee_scope === 'exclude_common' && isYes(a.bank_guarantee),
+    apply: (statusId, score) => (ALL_STATUS_IDS.includes(statusId) ? score + 0.25 : score),
+    criteria: 'patrimony_protection',
+    priority: 63
+  },
+
+  // 5) Apport en biens communs → parts potentiellement communes : malus transmission
+  {
+    id: 'apport_common_transmission_malus',
+    description: 'Apport en biens communs : droits/parts potentiellement communs',
+    condition: (a) => !!a._shares_may_be_common,
+    apply: (statusId, score) => (SHARE_BASED_STATUS_IDS.includes(statusId) ? score - 0.25 : score),
+    criteria: 'transmission',
+    priority: 64
+  },
+
+  // 6) Apport strictement personnel : titres plus faciles à céder/donner (bonus)
+  {
+    id: 'apport_personal_transmission_bonus',
+    description: 'Apport en biens propres : titres plus aisés à céder/donner',
+    condition: (a) => a._is_married && a.apport_origin === 'personal_funds',
+    apply: (statusId, score) => (SHARE_BASED_STATUS_IDS.includes(statusId) ? score + 0.25 : score),
+    criteria: 'transmission',
+    priority: 65
+  },
+
+  // 7) Régime matrimonial “inconnu” : petit malus crédibilité (toutes formes)
+  {
+    id: 'matri_unknown_credibility_malus',
+    description: 'Régime matrimonial non renseigné',
+    condition: (a) => !!a._matrimonial_unknown,
+    apply: (statusId, score) => (ALL_STATUS_IDS.includes(statusId) ? score - 0.25 : score),
+    criteria: 'credibility',
+    priority: 90
+  }
+];
+
+
     // Règles pour la simplicité administrative
         {
 
@@ -2660,12 +2767,12 @@ calculateRecommendations(answers) {
   // bank_debt: “oui” si un prêt >0 ou caution bancaire
   if (norm.bank_debt == null) {
     const loan = parseFloat(norm.bank_loan_amount || 0);
-     norm.bank_debt = toYN((loan > 0) || isYes(norm.bank_guarantee));
+    norm.bank_debt = toYN((loan > 0) || isYes(norm.bank_guarantee));
   }
 
   // family_project: “oui” si team = famille
   if (norm.family_project == null) {
-   norm.family_project = toYN(norm.team_structure === 'family');
+    norm.family_project = toYN(norm.team_structure === 'family');
   }
 
   // buyer_type: défaut 'third_party' (sera affiné si transmission familiale)
@@ -2678,7 +2785,7 @@ calculateRecommendations(answers) {
 
   // regulated_profession: miroir simplifié de professional_order
   if (norm.regulated_profession == null) {
-  norm.regulated_profession = toYN(isYes(norm.professional_order));
+    norm.regulated_profession = toYN(isYes(norm.professional_order));
   }
 
   // activity_sector: déduction large depuis activity_type
@@ -2704,8 +2811,31 @@ calculateRecommendations(answers) {
 
   // Autre emploi salarié (pour stratégie 0 salaire) – approximation depuis “other_income”
   if (norm.other_employee_job == null) {
-  norm.other_employee_job = toYN(isYes(norm.other_income));
+    norm.other_employee_job = toYN(isYes(norm.other_income));
   }
+
+  // ── MATRIMONIAL & CAUTIONS (normalisation + dérivés) ───────────────────────
+  norm.marital_status            = norm.marital_status || 'single';
+  norm.matrimonial_regime        = norm.matrimonial_regime || 'unknown'; // 'separation'|'community'|'universal_community'|'unknown'
+  norm.apport_origin             = norm.apport_origin || null;           // 'personal_funds'|'community_funds'|'mixed'|null
+  norm.personal_guarantee_scope  = norm.personal_guarantee_scope || 'no_preference'; // 'exclude_common'|'limit_common'|'no_preference'
+
+  // Dérivés rapides
+  norm._is_married   = String(norm.marital_status).toLowerCase() === 'married';
+  norm._is_community = norm._is_married && ['community','universal_community'].includes(norm.matrimonial_regime);
+  norm._is_sep       = norm._is_married && norm.matrimonial_regime === 'separation';
+
+  // Parts potentiellement communes (utile pour transmission / risques)
+  norm._shares_may_be_common =
+    norm._is_community && (norm.apport_origin === 'community_funds' || norm.apport_origin === 'mixed');
+
+  // Caution engageant (ou pouvant engager) des biens communs
+  norm._bank_guarantee_common_scope =
+    isYes(norm.bank_guarantee) && norm._is_community &&
+    (norm.personal_guarantee_scope === 'no_preference' || norm.personal_guarantee_scope === 'limit_common');
+
+  // Signal qualité d’info
+  norm._matrimonial_unknown = norm._is_married && norm.matrimonial_regime === 'unknown';
 
   // ────────────────────────────────────────────────────────────────────────────
   console.log("Réponses normalisées", norm);
