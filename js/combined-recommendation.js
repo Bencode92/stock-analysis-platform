@@ -1267,9 +1267,7 @@ const scoringRules = [
     apply: (statusId, score) => (ALL_STATUS_IDS.includes(statusId) ? score - 0.25 : score),
     criteria: 'credibility',
     priority: 90
-  }
-];
-
+  },
 
     // Règles pour la simplicité administrative
         {
