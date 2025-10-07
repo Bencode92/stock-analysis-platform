@@ -1071,7 +1071,7 @@ const scoringRules = [
     description: 'SCI : séparation du patrimoine immobilier (pertinent si activité immobilière)',
     condition: (a) =>
       a.patrimony_protection === 'essential' &&
-      String(a.activity_type || '').toLowerCase() === 'immobilier' &&
+      IS_IMMO(a) &&
       !isYes(a.bank_guarantee),
     apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
     criteria: 'patrimony_protection'
@@ -1189,7 +1189,7 @@ const scoringRules = [
   {
     id: 'multiple_housing_units_bonus',
     description: 'Portefeuille immo (> 120 k€ CA) : bonus SCI pour cantonnement',
-    condition: (a) => String(a.activity_type || '').toLowerCase() === 'immobilier' && parseFloat(a.projected_revenue || 0) > 120_000,
+    IS_IMMO(a) && parseFloat(a.projected_revenue || 0) > 120_000,
     apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
     criteria: 'patrimony_protection'
   },
@@ -1811,7 +1811,7 @@ apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SASU') return score + 0.4;
     if (statusId === 'EI') return score + 0.25;
     if (statusId === 'MICRO') return score + 0.1;
-    if (statusId === 'SCI' && String(a.activity_sector).toLowerCase() === 'real_estate') return score + 0.5; // hypothèque/adossement immo
+if (statusId === 'SCI' && IS_IMMO(a)) return score + 0.5; // hypothèque/adossement immo
     return score;
   },
   criteria: 'fundraising_capacity'
@@ -1897,8 +1897,7 @@ apply: (statusId, score, answers, metrics) => {
   id: 'real_estate_equity_malus_sci',
   description: 'Equity hors immobilier : SCI inadaptée',
   condition: (a) =>
-    String(a.activity_sector || '').toLowerCase() !== 'real_estate' &&
-    isYes(a.fundraising),
+    !IS_IMMO(a) && isYes(a.fundraising),
   apply: (statusId, score) => (statusId === 'SCI' ? score - 1 : score),
   criteria: 'fundraising_capacity'
 },
@@ -1927,7 +1926,7 @@ apply: (statusId, score, answers, metrics) => {
   {
   id: 'immo_transmission_priority_sci',
   description: 'Transmission immo prioritaire : SCI renforcée',
-  condition: a => a.activity_type === 'immobilier'
+  condition: IS_IMMO(a)
             && a.exit_intention === 'transmission'
             && Array.isArray(a.priorities)
             && a.priorities.map(p => String(p).toLowerCase()).includes('transmission'),
@@ -1964,9 +1963,8 @@ apply: (statusId, score, answers, metrics) => {
   condition: (a) => isYes(a.family_transmission),
   apply: (statusId, score, a) => {
     if (statusId !== 'SCI') return score;
-    const isRE = String(a.activity_sector || '').toLowerCase() === 'real_estate';
-    // +1 si projet immo, sinon +0.5 (gestion patrimoniale)
-    return score + (isRE ? 1 : 0.5);
+const isRE = IS_IMMO(a);
+return score + (isRE ? 1 : 0.5);
   },
   criteria: 'transmission'
 },
@@ -2033,7 +2031,7 @@ apply: (statusId, score, answers, metrics) => {
   condition: answers => answers.sale_mode === 'assets', // 'shares' | 'assets'
   apply: (statusId, score, answers, metrics) => {
     if (['EI','SARL','EURL'].includes(statusId)) return score + 0.5;
-    if (statusId === 'SCI' && answers.activity_sector === 'real_estate') return score + 0.5;
+    if (statusId === 'SCI' && IS_IMMO(answers) return score + 0.5;
     return score;
   },
   criteria: 'transmission'
@@ -2053,7 +2051,7 @@ apply: (statusId, score, answers, metrics) => {
   condition: answers => parseInt(answers.heirs_count ?? 0, 10) >= 2 && answers.exit_intention === 'transmission',
   apply: (statusId, score, answers, metrics) => {
     if (['SAS','SA'].includes(statusId)) return score + 0.5;
-    if (statusId === 'SCI' && answers.activity_sector === 'real_estate') return score + 0.5;
+    if (statusId === 'SCI' && IS_IMMO(answers)) return score + 0.5;
     return score;
   },
   criteria: 'transmission'
@@ -2132,7 +2130,7 @@ apply: (statusId, score, answers, metrics) => {
   description: 'Prof. réglementée à plusieurs : SELAS/SELARL favorisées',
   condition: (a) =>
     (isYes(a.professional_order) || isYes(a.regulated_profession)) &&
-    parseInt(a.associates_count ?? 1, 10) >= 2,
+    parseInt(a.associates_number ?? 1, 10) >= 2,
   apply: (statusId, score) => {
     if (statusId === 'SELAS') return score + 1;
     if (statusId === 'SELARL') return score + 0.75;
@@ -2268,7 +2266,7 @@ apply: (statusId, score, answers, metrics) => {
   id: 'sca_investor_control_bigbonus',
   description: 'Investisseurs + gouvernance complexe + volonté de contrôle (commandités)',
   condition: (a) => a.team_structure==='investors'
-                 && (a.fundraising==='yes' || a.investors==='yes')
+                 && isYes(a.fundraising)
                  && parseFloat(a.fundraising_amount||0) >= 2_000_000
                  && a.governance_complexity==='complex'
                  && String(a.control_preservation||'').toLowerCase()==='essential',
