@@ -1325,19 +1325,48 @@ apply: (statusId, score, answers, metrics) => {
 
 {
   id: 'sca_large_capital_requirement',
-  description: 'SCA : capital disponible < 37 000 €',
-  condition: answers => parseFloat(answers.available_capital ?? 0) < 37_000,
-  apply: (statusId, score) => (statusId === 'SCA' ? score - 2 : score),
+  description: 'SCA : capital dispo < 37 000 € (sauf si levée ≥ 2 M€ prévue)',
+  condition: a => parseFloat(a.available_capital ?? 0) < 37_000
+                  && parseFloat(a.fundraising_amount ?? 0) < 2_000_000,
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 1.25 : score), // ← avant -2
   criteria: 'administrative_simplicity'
 },
 
 {
   id: 'sca_complexity_penalty',
-  description: 'SCA : complexité pénalisante si CA < 500 k€',
-  condition: answers => parseFloat(answers.projected_revenue ?? 0) < 500_000,
-  apply: (statusId, score) => (statusId === 'SCA' ? score - 1.5 : score),
+  description: 'SCA : complexité pénalisante si CA < 500 k€ ET gouvernance simple',
+  condition: a => parseFloat(a.projected_revenue ?? 0) < 500_000
+                  && String(a.governance_complexity || '').toLowerCase() === 'simple',
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 1 : score), // ← avant -1.5 tjs
   criteria: 'administrative_simplicity'
 },
+{
+  id: 'sca_control_with_investors_bonus',
+  description: 'Investisseurs + volonté de contrôle : SCA pertinente',
+  condition: (a) =>
+    a.team_structure === 'investors' &&
+    (a.fundraising === 'yes' || isYes(a.fundraising)) &&
+    ['important','essential'].includes(String(a.control_preservation || '').toLowerCase()),
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 1 : score),
+  criteria: 'governance_flexibility'
+},
+{
+  id: 'sca_family_control_bonus',
+  description: 'Projet familial avec associés : SCA renforce le noyau de contrôle',
+  condition: (a) =>
+    (isYes(a.family_project) || a.family_project === 'yes') &&
+    parseInt(a.associates_number ?? 0, 10) >= 2,
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 0.75 : score),
+  criteria: 'transmission'
+},
+{
+  id: 'sca_international_investors_bonus',
+  description: 'Investisseurs internationaux : gouvernance SCA protectrice',
+  condition: (a) => a.team_structure === 'investors' && a.investor_origin === 'international',
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 0.5 : score),
+  criteria: 'fundraising_capacity'
+},
+  
 {
   id: 'non_liberal_sel_exclusion',
   description: 'SEL : exclusion si activité non libérale',
@@ -2289,9 +2318,9 @@ return score + (isRE ? 1 : 0.5);
 },
 {
   id: 'sca_default_soft_malus',
-  description: 'SCA par défaut lourde/rare : malus doux',
+  description: 'SCA par défaut lourde/rare : malus doux (assoupli)',
   condition: () => true,
-  apply: (statusId, score) => (statusId === 'SCA' ? score - 1 : score),
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 0.5 : score), // ← avant -1
   criteria: 'administrative_simplicity'
 },
 {
