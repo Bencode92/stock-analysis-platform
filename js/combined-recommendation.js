@@ -1540,6 +1540,13 @@ apply: (statusId, score, answers, metrics) => {
   },
   criteria: 'taxation_optimization'
 },
+  {
+  id: 'immobilier_meuble_sci_strong_malus',
+  description: 'SCI très défavorable en meublé (risque IS/requalification)',
+  condition: (a) => IS_IMMO(a) && String(a.real_estate_model||'').toLowerCase()==='meuble',
+  apply: (statusId, score) => (statusId === 'SCI' ? score - 3 : score),
+  criteria: 'taxation_optimization'
+},
     
  // RÈGLES — CHARGES SOCIALES (MAJ 30/09/2025)
 
@@ -1703,6 +1710,23 @@ apply: (statusId, score, answers, metrics) => {
   description: 'ACRE en micro : allègement de taux sur 12 mois',
   condition: (a) => isYes(a.acre),
   apply: (statusId, score) => (statusId === 'MICRO' ? score + 0.25 : score),
+  criteria: 'social_charges'
+},
+  {
+  id: 'sarl_tns_salary_now_boost',
+  description: 'SARL (gérant majoritaire TNS) + besoin de salaire immédiat',
+  condition: (a) =>
+    a.social_regime==='tns' &&
+    parseFloat(a.capital_percentage||0) >= 50 &&
+    (a.immediate_income === 'yes' || a.remuneration_preference === 'salary'),
+  apply: (statusId, score) => (statusId === 'SARL' ? score + 2.5 : score),
+  criteria: 'social_charges'
+},
+{
+  id: 'sarl_social_cost_priority_bonus',
+  description: 'Priorité “coût social” : avantage SARL (TNS)',
+  condition: (a) => Array.isArray(a.priorities) && a.priorities.map(p=>String(p).toLowerCase()).includes('social_cost'),
+  apply: (statusId, score) => (statusId === 'SARL' ? score + 1 : score),
   criteria: 'social_charges'
 },
 
@@ -2233,7 +2257,63 @@ apply: (statusId, score, answers, metrics) => {
   },
   criteria: 'social_charges'
 },
-
+{
+  id: 'sca_default_soft_malus',
+  description: 'SCA par défaut lourde/rare : malus doux',
+  condition: () => true,
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 1 : score),
+  criteria: 'administrative_simplicity'
+},
+{
+  id: 'sca_investor_control_bigbonus',
+  description: 'Investisseurs + gouvernance complexe + volonté de contrôle (commandités)',
+  condition: (a) => a.team_structure==='investors'
+                 && (a.fundraising==='yes' || a.investors==='yes')
+                 && parseFloat(a.fundraising_amount||0) >= 2_000_000
+                 && a.governance_complexity==='complex'
+                 && String(a.control_preservation||'').toLowerCase()==='essential',
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 4 : score),
+  criteria: 'governance_flexibility'
+},
+  {
+  id: 'snc_default_malus',
+  description: 'SNC hors cas très spécifiques : malus (responsabilité illimitée)',
+  condition: () => true,
+  apply: (statusId, score) => (statusId === 'SNC' ? score - 1.5 : score),
+  criteria: 'patrimony_protection'
+},
+{
+  id: 'snc_strict_usecase_bonus',
+  description: 'SNC seulement si petit groupe, risque max accepté, caution bancaire',
+  condition: (a) =>
+    ['associates','family'].includes(a.team_structure) &&
+    parseInt(a.associates_number||2,10) <= 3 &&
+    (a.risk_appetite||0) >= 5 &&
+    a.patrimony_protection === 'secondary' &&
+    (a.activity_type==='bic_sales' || a.activity_type==='bic_service') &&
+    a.bank_guarantee === 'yes',
+  apply: (statusId, score) => (statusId === 'SNC' ? score + 4 : score),
+  criteria: 'credibility'
+},{
+  id: 'sa_large_scale_bonus',
+  description: 'SA pour projets d’envergure (≥7-10 associés, levée importante, gouvernance complexe)',
+  condition: (a) =>
+    (parseInt(a.associates_number||0,10) >= 7 || parseInt(a.investors_count||0,10) >= 10) &&
+    (parseFloat(a.fundraising_amount||0) >= 2_000_000 || a.target_valuation >= 10_000_000) &&
+    a.governance_complexity === 'complex',
+  apply: (statusId, score) => (statusId === 'SA' ? score + 3.5 : score),
+  criteria: 'fundraising_capacity'
+},
+{
+  id: 'sa_heavy_structure_malus',
+  description: 'SA trop lourde si pas de besoin “entreprise de taille”',
+  condition: (a) =>
+    !((parseInt(a.associates_number||0,10) >= 7 || parseInt(a.investors_count||0,10) >= 10) &&
+      (parseFloat(a.fundraising_amount||0) >= 2_000_000 || a.target_valuation >= 10_000_000) &&
+      a.governance_complexity === 'complex'),
+  apply: (statusId, score) => (statusId === 'SA' ? score - 1 : score),
+  criteria: 'administrative_simplicity'
+},
 
   // RÈGLES — ACTIVITÉ IMMOBILIÈRE (MAJ 30/09/2025)
 
