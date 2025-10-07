@@ -869,7 +869,7 @@ const ratingScales = {
     SCI: 4,
     SELARL: 3,
     SELAS: 5,  // ajusté (était 4)
-    SCA: 3     // ajusté (était 2)
+    SCA: 4     // ajusté (était 4)
   },
   fundraising: {
     EI: 1,
@@ -1340,15 +1340,15 @@ apply: (statusId, score, answers, metrics) => {
   apply: (statusId, score) => (statusId === 'SCA' ? score - 1 : score), // ← avant -1.5 tjs
   criteria: 'administrative_simplicity'
 },
-{
-  id: 'sca_control_with_investors_bonus',
-  description: 'Investisseurs + volonté de contrôle : SCA pertinente',
+  {
+  id: 'sca_minoritary_control_bonus',
+  description: 'Contrôle essentiel avec part de capital faible : schéma typique des commandités',
   condition: (a) =>
-    a.team_structure === 'investors' &&
-    (a.fundraising === 'yes' || isYes(a.fundraising)) &&
-    ['important','essential'].includes(String(a.control_preservation || '').toLowerCase()),
-  apply: (statusId, score) => (statusId === 'SCA' ? score + 1 : score),
-  criteria: 'governance_flexibility'
+    ['important','essential'].includes(String(a.control_preservation||'').toLowerCase()) &&
+    parseFloat(a.capital_percentage ?? 0) <= 20 &&
+    a.team_structure === 'investors',
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 1.25 : score),
+ criteria: 'governance_flexibility'
 },
 {
   id: 'sca_family_control_bonus',
@@ -1366,7 +1366,25 @@ apply: (statusId, score, answers, metrics) => {
   apply: (statusId, score) => (statusId === 'SCA' ? score + 0.5 : score),
   criteria: 'fundraising_capacity'
 },
-  
+  {
+  id: 'sca_control_with_investors_bonus',
+  description: 'Investisseurs + volonté de contrôle : SCA pertinente',
+  condition: (a) =>
+    a.team_structure === 'investors' &&
+    (a.fundraising === 'yes' || isYes(a.fundraising)) &&
+    ['important','essential'].includes(String(a.control_preservation || '').toLowerCase()),
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 1.5 : score),
+  criteria: 'governance_flexibility'
+},
+{
+  id: 'sas_dilution_risk_penalty',
+  description: 'Contrôle essentiel + ≥20 investisseurs : risque de dilution/pactes lourds',
+  condition: (a) =>
+    ['important','essential'].includes(String(a.control_preservation||'').toLowerCase()) &&
+    (parseInt(a.investors_count ?? a.associates_number ?? 0, 10) >= 20),
+  apply: (statusId, score) => (statusId === 'SAS' ? score - 0.5 : score),
+  criteria: 'governance_flexibility'
+},
 {
   id: 'non_liberal_sel_exclusion',
   description: 'SEL : exclusion si activité non libérale',
@@ -2318,9 +2336,12 @@ return score + (isRE ? 1 : 0.5);
 },
 {
   id: 'sca_default_soft_malus',
-  description: 'SCA par défaut lourde/rare : malus doux (assoupli)',
-  condition: () => true,
-  apply: (statusId, score) => (statusId === 'SCA' ? score - 0.5 : score), // ← avant -1
+  description: 'SCA par défaut lourde/rare : malus doux (sauf si contrôle essentiel + investisseurs)',
+  condition: (a) => !(
+     a.team_structure === 'investors' &&
+     ['important','essential'].includes(String(a.control_preservation||'').toLowerCase())
+  ),
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 0.5 : score),
   criteria: 'administrative_simplicity'
 },
 {
@@ -3787,6 +3808,44 @@ calculateScores() {
       }
     }
   })();
+  // ─────────────────────────────────────────────────────────────
+// TIE-BREAKER — SCA si contrôle essentiel + investisseurs
+// (placer ce bloc juste avant le dernier console.log du calcul)
+// ─────────────────────────────────────────────────────────────
+(() => {
+  const A = this.answers || {};
+  const wantsControl = ['important', 'essential'].includes(String(A.control_preservation || '').toLowerCase());
+  const hasInvestors = String(A.team_structure || '').toLowerCase() === 'investors';
+
+  if (!wantsControl || !hasInvestors) return;
+  if (!this.weightedScores || !Number.isFinite(this.weightedScores.SCA)) return;
+
+  const sorted = Object.entries(this.weightedScores).sort((a, b) => (b[1] || 0) - (a[1] || 0));
+  if (!sorted.length) return;
+
+  const [topId, topScore] = sorted[0];
+  if (topId === 'SCA') return; // déjà #1
+
+  const scaScore = this.weightedScores.SCA || 0;
+  const delta = (topScore || 0) - scaScore;
+  const MAX_DELTA = 3; // “à portée” : ≤ 3 points
+
+  if (scaScore > 0 && delta > 0 && delta <= MAX_DELTA) {
+    this.weightedScores.SCA = +(Math.min(100, topScore + 0.01)).toFixed(2);
+
+    // Audit
+    if (!this.auditTrail) this.auditTrail = {};
+    if (!this.auditTrail.scores) this.auditTrail.scores = {};
+    if (!this.auditTrail.scores.SCA) this.auditTrail.scores.SCA = {};
+    this.auditTrail.scores.SCA.__summary = {
+      ...(this.auditTrail.scores.SCA.__summary || {}),
+      tie_breaker: 'sca_control_investors',
+      tie_breaker_threshold: MAX_DELTA,
+      pre_tie_breaker_score_0to100: scaScore,
+      score_0to100: this.weightedScores.SCA
+    };
+  }
+})();
 
   // (optionnel) log après finalisation
   console.log('Scores pondérés après finalisation immo:', this.weightedScores);
