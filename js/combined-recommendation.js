@@ -1107,6 +1107,13 @@ const scoringRules = [
     },
     criteria: 'patrimony_protection'
   },
+{
+  id: 'unlimited_vs_protection_malus',
+  description: 'Responsabilité illimitée vs priorité de protection patrimoniale',
+  condition: (a) => ['essential','important'].includes(String(a?.patrimony_protection || '').toLowerCase()),
+  apply: (statusId, score) => (['SCA','SCS','SNC'].includes(statusId) ? score - 2 : score),
+  criteria: 'patrimony_protection'
+},
 
   {
     id: 'sca_anti_takeover_protection',
@@ -1417,6 +1424,17 @@ apply: (statusId, score, answers, metrics) => {
   criteria: 'fundraising_capacity'
 },
   {
+  id: 'sa_scale_bonus',
+  description: 'SA adaptée aux projets d’envergure (CA, levée, #associés, gouvernance complexe)',
+  condition: (a) =>
+    (Number(a?.projected_revenue) >= 800000) ||
+    (String(a?.fundraising).toLowerCase() === 'yes' && Number(a?.fundraising_amount) >= 2000000) ||
+    (Number(a?.associates_number || 0) >= 7) ||
+    (String(a?.governance_complexity || '').toLowerCase() === 'complex'),
+  apply: (statusId, score) => (statusId === 'SA' ? score + 2 : score),
+  criteria: 'fundraising_capacity'
+},
+  {
   id: 'sca_control_with_investors_bonus',
   description: 'Investisseurs + volonté de contrôle : SCA pertinente',
   condition: (a) =>
@@ -1424,6 +1442,13 @@ apply: (statusId, score, answers, metrics) => {
     (a.fundraising === 'yes' || isYes(a.fundraising)) &&
     ['important','essential'].includes(String(a.control_preservation || '').toLowerCase()),
   apply: (statusId, score) => (statusId === 'SCA' ? score + 2 : score),
+  criteria: 'governance_flexibility'
+},
+  {
+  id: 'sas_flex_bonus',
+  description: 'Priorité à la souplesse de gouvernance',
+  condition: (a) => Array.isArray(a?.priorities) && a.priorities.includes('governance_flexibility'),
+  apply: (statusId, score) => (['SAS','SASU','SELAS'].includes(statusId) ? score + 1.5 : score),
   criteria: 'governance_flexibility'
 },
 {
@@ -3315,6 +3340,19 @@ applySpecificFilters() {
     }
     return MICRO.bic_service;     // 77 700 €
   })();
+  
+  /* ------------------------------------------------------------------
+   * 0) Garde-fou responsabilité illimitée (SCA/SCS – commandités – et SNC)
+   *     → exclusion dure si l’utilisateur refuse
+   * ------------------------------------------------------------------ */
+  const acceptUnlimitedRaw = (A?.accept_unlimited_liability ?? A?.accept_unlimited_liility);
+  const acceptUnlimited = String(acceptUnlimitedRaw || '').toLowerCase();
+  if (acceptUnlimited === 'no') {
+    this.excludeStatuses(
+      ['SCA', 'SCS', 'SNC'],
+      'Responsabilité illimitée refusée – SCA/SCS (commandités) et SNC exclus'
+    );
+  }
 
   /* ------------------------------------------------------------------
    * 1) Activité relevant d’un ordre professionnel
