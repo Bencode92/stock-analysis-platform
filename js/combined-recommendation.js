@@ -3808,41 +3808,73 @@ calculateScores() {
       }
     }
   })();
-  // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // TIE-BREAKER — SCA si contrôle essentiel + investisseurs
 // (placer ce bloc juste avant le dernier console.log du calcul)
 // ─────────────────────────────────────────────────────────────
 (() => {
   const A = this.answers || {};
-  const wantsControl = ['important', 'essential'].includes(String(A.control_preservation || '').toLowerCase());
-  const hasInvestors = String(A.team_structure || '').toLowerCase() === 'investors';
+  const norm = (s) => String(s || '')
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '') // retire accents
+    .toLowerCase().trim();
 
-  if (!wantsControl || !hasInvestors) return;
-  if (!this.weightedScores || !Number.isFinite(this.weightedScores.SCA)) return;
+  const ctrl = norm(A.control_preservation);
+  const team = norm(A.team_structure);
 
-  const sorted = Object.entries(this.weightedScores).sort((a, b) => (b[1] || 0) - (a[1] || 0));
-  if (!sorted.length) return;
+  // accepte FR/EN et quelques synonymes
+  const CONTROL_OK = new Set(['essentiel','essential','important','eleve','crucial','prioritaire']).has(ctrl);
+  const INVESTORS_OK = ['investors','investisseur','investisseurs','fonds','vc','pe','capital-investissement']
+    .includes(team);
 
-  const [topId, topScore] = sorted[0];
-  if (topId === 'SCA') return; // déjà #1
-
-  const scaScore = this.weightedScores.SCA || 0;
-  const delta = (topScore || 0) - scaScore;
-  const MAX_DELTA = 3; // “à portée” : ≤ 3 points
-
-  if (scaScore > 0 && delta > 0 && delta <= MAX_DELTA) {
-    this.weightedScores.SCA = +(Math.min(100, topScore + 0.01)).toFixed(2);
-
-    // Audit
-    if (!this.auditTrail) this.auditTrail = {};
-    if (!this.auditTrail.scores) this.auditTrail.scores = {};
-    if (!this.auditTrail.scores.SCA) this.auditTrail.scores.SCA = {};
+  if (!(CONTROL_OK && INVESTORS_OK)) {
+    // audit: pourquoi non-déclenché
+    this.auditTrail = this.auditTrail || {};
+    this.auditTrail.scores = this.auditTrail.scores || {};
+    this.auditTrail.scores.SCA = this.auditTrail.scores.SCA || {};
     this.auditTrail.scores.SCA.__summary = {
       ...(this.auditTrail.scores.SCA.__summary || {}),
       tie_breaker: 'sca_control_investors',
+      tie_breaker_applied: false,
+      reason: !CONTROL_OK ? 'control_not_essential' : 'no_investors'
+    };
+    return;
+  }
+
+  if (!this.weightedScores || !Number.isFinite(this.weightedScores.SCA)) return;
+
+  const sorted = Object.entries(this.weightedScores)
+    .filter(([, v]) => Number.isFinite(v))
+    .sort((a, b) => b[1] - a[1]);
+  if (!sorted.length) return;
+
+  const [topId, topScore] = sorted[0];
+  if (topId === 'SCA') return;
+
+  const scaScore = this.weightedScores.SCA || 0;
+  const delta = (topScore || 0) - scaScore;
+
+  // Ajuste le seuil si tu veux qu’un 82 vs 87 passe (mettre 5 au lieu de 3)
+  const MAX_DELTA = 3;
+
+  if (scaScore > 0 && delta >= 0 && delta <= MAX_DELTA) {
+    this.weightedScores.SCA = +(Math.min(100, topScore + 0.01)).toFixed(2);
+    this.auditTrail.scores.SCA.__summary = {
+      ...(this.auditTrail.scores.SCA.__summary || {}),
+      tie_breaker: 'sca_control_investors',
+      tie_breaker_applied: true,
       tie_breaker_threshold: MAX_DELTA,
       pre_tie_breaker_score_0to100: scaScore,
       score_0to100: this.weightedScores.SCA
+    };
+  } else {
+    // audit: non appliqué car hors portée
+    this.auditTrail.scores.SCA.__summary = {
+      ...(this.auditTrail.scores.SCA.__summary || {}),
+      tie_breaker: 'sca_control_investors',
+      tie_breaker_applied: false,
+      reason: 'out_of_range',
+      delta,
+      threshold: MAX_DELTA
     };
   }
 })();
