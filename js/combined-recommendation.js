@@ -1373,7 +1373,7 @@ apply: (statusId, score, answers, metrics) => {
     a.team_structure === 'investors' &&
     (a.fundraising === 'yes' || isYes(a.fundraising)) &&
     ['important','essential'].includes(String(a.control_preservation || '').toLowerCase()),
-  apply: (statusId, score) => (statusId === 'SCA' ? score + 1.5 : score),
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 2 : score),
   criteria: 'governance_flexibility'
 },
 {
@@ -1382,7 +1382,7 @@ apply: (statusId, score, answers, metrics) => {
   condition: (a) =>
     ['important','essential'].includes(String(a.control_preservation||'').toLowerCase()) &&
     (parseInt(a.investors_count ?? a.associates_number ?? 0, 10) >= 20),
-  apply: (statusId, score) => (statusId === 'SAS' ? score - 0.5 : score),
+  apply: (statusId, score) => (statusId === 'SAS' ? score - 1 : score),
   criteria: 'governance_flexibility'
 },
 {
@@ -1912,7 +1912,7 @@ apply: (statusId, score, answers, metrics) => {
     isYes(a.fundraising) &&
     ['important','essential'].includes(String(a.control_preservation || '').toLowerCase()),
   apply: (statusId, score) => {
-    if (['SAS', 'SASU'].includes(statusId)) return score + 0.5; // grande liberté statutaire
+    if (['SAS', 'SASU'].includes(statusId)) return score + 0.25; // grande liberté statutaire
     return score;
   },
   criteria: 'fundraising_capacity'
@@ -3854,7 +3854,7 @@ calculateScores() {
   const delta = (topScore || 0) - scaScore;
 
   // Ajuste le seuil si tu veux qu’un 82 vs 87 passe (mettre 5 au lieu de 3)
-  const MAX_DELTA = 3;
+  const MAX_DELTA = 4;
 
   if (scaScore > 0 && delta >= 0 && delta <= MAX_DELTA) {
     this.weightedScores.SCA = +(Math.min(100, topScore + 0.01)).toFixed(2);
