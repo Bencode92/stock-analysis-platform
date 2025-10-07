@@ -736,6 +736,56 @@ if (typeof window.isYes !== 'function') {
   };
 }
 const isYes = window.isYes;
+function normalizeAnswers(a0 = {}) {
+  const a = { ...a0 };
+
+  // booleans texte → yes/no robustes
+  const yes = v => String(v).toLowerCase() === 'yes';
+
+  // investors_type (array) → minuscules
+  if (Array.isArray(a.investors_type)) {
+    a.investors_type = a.investors_type.map(x => String(x).toLowerCase());
+  }
+
+  // instruments normalisés
+  const si = (a.sharing_instruments || []).map(x => String(x).toLowerCase());
+  a.sharing_instruments_norm = [];
+  if (si.includes('bspce')) a.sharing_instruments_norm.push('BSPCE');
+  if (si.includes('aga'))   a.sharing_instruments_norm.push('AGA');
+  if (si.includes('bsa_air') || si.includes('bsa') || si.includes('stock_options')) {
+    a.sharing_instruments_norm.push('BSA_AIR');
+  }
+
+  // bank_debt (inféré si absent)
+  if (a.bank_debt == null) {
+    a.bank_debt = (a.bank_loan_amount > 0 || yes(a.bank_guarantee) || yes(a.bank_financing)) ? 'yes' : 'no';
+  }
+
+  // expense_ratio depuis real_expenses_rate (%)
+  if (a.expense_ratio == null && a.real_expenses_rate != null) {
+    const r = parseFloat(a.real_expenses_rate);
+    if (Number.isFinite(r)) a.expense_ratio = r / 100;
+  }
+
+  // activité santé via ordre
+  const order = String(a.order_type || '').toLowerCase();
+  if (!a.activity_sector && (order === 'cnom' || order === 'cno')) {
+    a.activity_sector = 'healthcare';
+  }
+
+  // dérivés “0 salaire”
+  if (a.other_employee_job == null) {
+    a.other_employee_job = yes(a.other_income) ? 'yes' : 'no';
+  }
+
+  // MBO/LBO ≈ cession partielle
+  if (a.mbo_lbo == null) {
+    a.mbo_lbo = yes(a.partial_transfer) ? 'yes' : 'no';
+  }
+
+  return a;
+}
+window.normalizeAnswers = normalizeAnswers;
 
 // Barèmes et filtres (corrigés)
 const exclusionFilters = [
@@ -1438,7 +1488,7 @@ apply: (statusId, score, answers, metrics) => {
   description: 'Plus de 10 associés : pénalité croissante',
   condition: answers => parseInt(answers.associates_number ?? 0, 10) > 10,
   apply: (statusId, score, answers, metrics) => {
-    if (['SA', 'SCA'].includes(statusId)) return score - 2;
+    if (['SA', 'SCA'].includes(statusId)) return score - 1;
     if (['SAS', 'SARL', 'SCI', 'SELARL', 'SELAS'].includes(statusId)) return score - 1;
     return score;
   },
@@ -1459,13 +1509,6 @@ apply: (statusId, score, answers, metrics) => {
   description: 'Holding de tête : pénalité de simplicité (sauf SCI)',
   condition: (a) => isYes(a.holding_company),
   apply: (statusId, score) => (statusId !== 'SCI' ? score - 0.5 : score),
-  criteria: 'administrative_simplicity'
-},
-{
-  id: 'sca_sa_capital_penalty',
-  description: 'Capital disponible < 37 000 € : pénalité SA et SCA',
-  condition: answers => parseFloat(answers.available_capital ?? 0) < 37_000,
-  apply: (statusId, score) => (['SA', 'SCA'].includes(statusId) ? score - 2 : score),
   criteria: 'administrative_simplicity'
 },
     // Règles pour l'optimisation fiscale
@@ -1785,20 +1828,17 @@ apply: (statusId, score, answers, metrics) => {
 {
   id: 'sharing_instruments_bonus',
   description: 'Instruments de partage (BSPCE, BSA AIR, AGA…)',
-  condition: (answers) =>
-    Array.isArray(answers?.sharing_instruments) && answers.sharing_instruments.length > 0,
-  apply: (statusId, score, answers, metrics) => {
-    const hasBSPCE = (answers?.sharing_instruments || []).includes('BSPCE');
-    const hasBSAair = (answers?.sharing_instruments || []).includes('BSA_AIR');
-    const hasAGA   = (answers?.sharing_instruments || []).includes('AGA');
-
+  condition: (a) => Array.isArray(a?.sharing_instruments) && a.sharing_instruments.length > 0,
+  apply: (statusId, score, a) => {
+    const src = a.sharing_instruments_norm || (a.sharing_instruments || []).map(x => String(x).toUpperCase());
+    const has = (k) => src.some(x => String(x).toUpperCase() === k);
     let delta = 0;
-    if (['SASU', 'SAS', 'SA', 'SELAS','SCA'].includes(statusId)) {
-      if (hasBSPCE) delta += 1;
-      if (hasBSAair) delta += 0.75;
-      if (hasAGA)   delta += 0.5;
+    if (['SASU','SAS','SA','SELAS','SCA'].includes(statusId)) {
+      if (has('BSPCE'))   delta += 1;
+      if (has('BSA_AIR')) delta += 0.75;
+      if (has('AGA'))     delta += 0.5;
     }
-    return score + delta;          // ← manquait
+    return score + delta;
   },
   criteria: 'fundraising_capacity'
 },
@@ -1855,7 +1895,11 @@ apply: (statusId, score, answers, metrics) => {
 {
   id: 'bank_debt_bonus',
   description: 'Dette bancaire : crédibilité des formes sociétaires',
-  condition: (a) => isYes(a.bank_debt),
+  condition: (a) =>
+    String(a.bank_debt || '').toLowerCase() === 'yes' ||
+    (parseFloat(a.bank_loan_amount) || 0) > 0 ||
+    String(a.bank_guarantee || '').toLowerCase() === 'yes' ||
+    String(a.bank_financing || '').toLowerCase() === 'yes',
   apply: (statusId, score, a) => {
     if (['SA', 'SAS', 'SARL', 'EURL'].includes(statusId)) return score + 0.5;
     if (statusId === 'SASU') return score + 0.4;
@@ -1871,7 +1915,6 @@ apply: (statusId, score, answers, metrics) => {
   },
   criteria: 'fundraising_capacity'
 },
-
 {
   id: 'many_investors_bonus_sas',
   description: 'Nombre élevé d’investisseurs (angel/seed) → SAS/SA',
@@ -1939,10 +1982,13 @@ apply: (statusId, score, answers, metrics) => {
 {
   id: 'vc_preference_bonus',
   description: 'VC/business angels : préférence SAS/SA, SARL/EURL moins adaptée',
-  condition: answers => ['vc', 'business_angels', 'mixed'].includes(answers.investor_type),
-  apply: (statusId, score, answers, metrics) => {
-    if (['SAS', 'SA'].includes(statusId)) return score + 1;
-    if (['SARL', 'EURL'].includes(statusId)) return score - 0.25;
+  condition: a => Array.isArray(a.investors_type) && a.investors_type.length > 0,
+  apply: (statusId, score, a) => {
+    const t = a.investors_type.map(x => String(x).toLowerCase());
+    const hasVC = t.includes('venture_capital');
+    const hasBA = t.includes('business_angels');
+    if (['SAS','SA'].includes(statusId) && (hasVC || hasBA)) return score + 1;
+    if (['SARL','EURL'].includes(statusId) && (hasVC || hasBA)) return score - 0.25;
     return score;
   },
   criteria: 'fundraising_capacity'
@@ -2400,15 +2446,6 @@ return score + (isRE ? 1 : 0.5);
     a.bank_guarantee === 'yes',
   apply: (statusId, score) => (statusId === 'SNC' ? score + 4 : score),
   criteria: 'credibility'
-},{
-  id: 'sa_large_scale_bonus',
-  description: 'SA pour projets d’envergure (≥7-10 associés, levée importante, gouvernance complexe)',
-  condition: (a) =>
-    (parseInt(a.associates_number||0,10) >= 7 || parseInt(a.investors_count||0,10) >= 10) &&
-    (parseFloat(a.fundraising_amount||0) >= 2_000_000 || a.target_valuation >= 10_000_000) &&
-    a.governance_complexity === 'complex',
-  apply: (statusId, score) => (statusId === 'SA' ? score + 3.5 : score),
-  criteria: 'fundraising_capacity'
 },
 {
   id: 'sa_heavy_structure_malus',
