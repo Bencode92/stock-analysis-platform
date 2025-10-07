@@ -281,131 +281,181 @@ const questions = [
             { id: "secondary", label: "Secondaire", icon: "fa-shield-alt" }
         ]
     },
+// Section 2: Équipe & gouvernance
+{
+  id: "team_structure",
+  sectionId: "team",
+  title: "Structure de l'équipe",
+  description: "Comment votre équipe sera-t-elle constituée ?",
+  type: "radio",
+  required: true,
+  options: [
+    { id: "solo", label: "Solo (entreprise individuelle)", icon: "fa-user" },
+    { id: "family", label: "Famille", icon: "fa-users" },
+    { id: "associates", label: "Associés", icon: "fa-people-carry" },
+    { id: "investors", label: "Avec investisseurs", icon: "fa-user-tie" }
+  ]
+},
+{
+  id: "associates_number",
+  sectionId: "team",
+  title: "Nombre d'associés",
+  description: "Combien d'associés prévoyez-vous dans votre structure ?",
+  type: "number",
+  min: 2,
+  max: 50,
+  step: 1,
+  default: 2,
+  showIf: { "team_structure": ["family", "associates", "investors"] },
+  required: false
+},
+{
+  id: "capital_percentage",
+  sectionId: "team",
+  title: "Pourcentage du capital",
+  description: "Quel pourcentage du capital social détiendrez-vous ?",
+  type: "slider",
+  min: 1,
+  max: 100,
+  step: 1,
+  default: 100,
+  format: "%",
+  showIf: { "team_structure": ["family", "associates", "investors"] },
+  required: true
+},
+{
+  id: "associate_current_account",
+  sectionId: "team",
+  title: "Compte courant d'associé",
+  description: "Envisagez-vous d'apporter des fonds en compte courant d'associé ?",
+  type: "radio",
+  options: [
+    { id: "yes", label: "Oui", icon: "fa-check-circle" },
+    { id: "no", label: "Non", icon: "fa-times-circle" }
+  ],
+  showIf: { "team_structure": ["family", "associates", "investors"] },
+  required: true
+},
+{
+  id: "approval_clause",
+  sectionId: "team",
+  title: "Clause d'agrément / préemption",
+  description: "Souhaitez-vous une clause d'agrément ou de préemption ?",
+  type: "radio",
+  options: [
+    { id: "yes", label: "Oui", icon: "fa-check-circle" },
+    { id: "no", label: "Non", icon: "fa-times-circle" }
+  ],
+  showIf: { "team_structure": ["family", "associates", "investors"] },
+  required: true
+},
+{
+  id: "investors_type",
+  sectionId: "team",
+  title: "Type d'investisseurs visés",
+  description: "Quel type d'investisseurs envisagez-vous ?",
+  type: "checkbox",
+  options: [
+    { id: "business_angels", label: "Business Angels", icon: "fa-angel" },
+    { id: "venture_capital", label: "Venture Capital", icon: "fa-chart-line" },
+    { id: "crowdfunding", label: "Crowdfunding", icon: "fa-users" }
+  ],
+  showIf: { "team_structure": ["investors"] },
+  required: false
+},
+{
+  id: "sharing_instruments",
+  sectionId: "team",
+  title: "Instruments de partage",
+  description: "Envisagez-vous d'utiliser des instruments de partage ?",
+  type: "checkbox",
+  options: [
+    { id: "bspce", label: "BSPCE", icon: "fa-certificate" },
+    { id: "aga", label: "AGA (Actions Gratuites)", icon: "fa-gift" },
+    { id: "stock_options", label: "Stock-options", icon: "fa-chart-bar" }
+  ],
+  showIf: { "team_structure": ["associates", "investors"] },
+  required: false
+},
+{
+  id: "governance_complexity",
+  sectionId: "team",
+  title: "Complexité de gouvernance",
+  description: "Quel niveau de complexité de gouvernance souhaitez-vous ?",
+  type: "radio",
+  showIf: { "team_structure": ["associates", "investors"] },
+  options: [
+    { id: "simple", label: "Simple (statuts types)", icon: "fa-file-alt" },
+    { id: "moderate", label: "Modérée (pacte d'associés)", icon: "fa-file-contract" },
+    { id: "complex", label: "Complexe (structure sur-mesure)", icon: "fa-sitemap" }
+  ],
+  required: false
+},
 
-    // Section 2: Équipe & gouvernance
-    {
-        id: "team_structure",
-        sectionId: "team",
-        title: "Structure de l'équipe",
-        description: "Comment votre équipe sera-t-elle constituée ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "solo", label: "Solo (entreprise individuelle)", icon: "fa-user" },
-            { id: "family", label: "Famille", icon: "fa-users" },
-            { id: "associates", label: "Associés", icon: "fa-people-carry" },
-            { id: "investors", label: "Avec investisseurs", icon: "fa-user-tie" }
-        ]
-    },
-    {
-        id: "associates_number",
-        sectionId: "team",
-        title: "Nombre d'associés",
-        description: "Combien d'associés prévoyez-vous dans votre structure ?",
-        type: "number",
-        min: 2,
-        max: 50,
-        step: 1,
-        default: 2,
-        showIf: {
-            "team_structure": ["family", "associates", "investors"]
-        },
-        required: false
-    },
-    {
-        id: "capital_percentage",
-        sectionId: "team",
-        title: "Pourcentage du capital",
-        description: "Quel pourcentage du capital social détiendrez-vous ?",
-        type: "slider",
-        min: 1,
-        max: 100,
-        step: 1,
-        default: 100,
-        format: "%",
-        showIf: {
-            "team_structure": ["family", "associates", "investors"]
-        },
-        required: true
-    },
-    {
-        id: "associate_current_account",
-        sectionId: "team",
-        title: "Compte courant d'associé",
-        description: "Envisagez-vous d'apporter des fonds en compte courant d'associé ?",
-        type: "radio",
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ],
-        showIf: {
-            "team_structure": ["family", "associates", "investors"]
-        },
-        required: true
-    },
-    {
-        id: "approval_clause",
-        sectionId: "team",
-        title: "Clause d'agrément / préemption",
-        description: "Souhaitez-vous une clause d'agrément ou de préemption ?",
-        type: "radio",
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ],
-        showIf: {
-            "team_structure": ["family", "associates", "investors"]
-        },
-        required: true
-    },
-    {
-        id: "investors_type",
-        sectionId: "team",
-        title: "Type d'investisseurs visés",
-        description: "Quel type d'investisseurs envisagez-vous ?",
-        type: "checkbox",
-        options: [
-            { id: "business_angels", label: "Business Angels", icon: "fa-angel" },
-            { id: "venture_capital", label: "Venture Capital", icon: "fa-chart-line" },
-            { id: "crowdfunding", label: "Crowdfunding", icon: "fa-users" }
-        ],
-        showIf: {
-            "team_structure": ["investors"]
-        },
-        required: false
-    },
-    {
-        id: "sharing_instruments",
-        sectionId: "team",
-        title: "Instruments de partage",
-        description: "Envisagez-vous d'utiliser des instruments de partage ?",
-        type: "checkbox",
-        options: [
-            { id: "bspce", label: "BSPCE", icon: "fa-certificate" },
-            { id: "aga", label: "AGA (Actions Gratuites)", icon: "fa-gift" },
-            { id: "stock_options", label: "Stock-options", icon: "fa-chart-bar" }
-        ],
-        showIf: {
-            "team_structure": ["associates", "investors"]
-        },
-        required: false
-    },
-    {
-        id: "governance_complexity",
-        sectionId: "team",
-        title: "Complexité de gouvernance",
-        description: "Quel niveau de complexité de gouvernance souhaitez-vous ?",
-        type: "radio",
-        showIf: {
-            "team_structure": ["associates", "investors"]
-        },
-        options: [
-            { id: "simple", label: "Simple (statuts types)", icon: "fa-file-alt" },
-            { id: "moderate", label: "Modérée (pacte d'associés)", icon: "fa-file-contract" },
-            { id: "complex", label: "Complexe (structure sur-mesure)", icon: "fa-sitemap" }
-        ],
-        required: false
-    },
+// --- Ajouts ciblés contrôle & investisseurs ---
+{
+  id: "control_preservation",
+  sectionId: "team",
+  title: "Préservation du contrôle",
+  description: "Importance de conserver un contrôle fort (commandités, veto, actions de préférence) ?",
+  type: "radio",
+  required: true,
+  options: [
+    { id: "essential",  label: "Essentiel",  icon: "fa-crown" },
+    { id: "important",  label: "Important",  icon: "fa-shield-alt" },
+    { id: "secondary",  label: "Secondaire", icon: "fa-balance-scale" }
+  ],
+  showIf: { "team_structure": ["associates","investors","family"] }
+},
+{
+  id: "family_project",
+  sectionId: "team",
+  title: "Projet familial",
+  description: "Le noyau de contrôle doit-il rester dans la famille (ou un petit cercle) ?",
+  type: "radio",
+  required: false,
+  options: [
+    { id: "yes", label: "Oui" },
+    { id: "no",  label: "Non" }
+  ],
+  showIf: { "team_structure": ["family","investors"] }
+},
+{
+  id: "takeover_protection",
+  sectionId: "team",
+  title: "Protection anti-prise de contrôle hostile",
+  description: "Souhaitez-vous des mécanismes anti-OPA/anti-dilution forts ?",
+  type: "radio",
+  required: false,
+  options: [
+    { id: "yes", label: "Oui" },
+    { id: "no",  label: "Non" }
+  ],
+  showIf: { "team_structure": ["associates","investors","family"] }
+},
+{
+  id: "investors_count",
+  sectionId: "team",
+  title: "Nombre d'investisseurs pressentis",
+  type: "number",
+  min: 0,
+  max: 200,
+  step: 1,
+  default: 0,
+  showIf: { "team_structure": ["investors"] }
+},
+{
+  id: "investor_origin",
+  sectionId: "team",
+  title: "Origine des investisseurs",
+  type: "radio",
+  options: [
+    { id: "domestic",      label: "France/UE" },
+    { id: "international", label: "International" }
+  ],
+  showIf: { "team_structure": ["investors"] }
+},
+
     // Section 3: Nature de l'activité
 {
     id: "activity_type",
