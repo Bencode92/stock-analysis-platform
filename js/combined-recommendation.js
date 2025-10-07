@@ -2864,6 +2864,64 @@ calculateRecommendations(answers) {
 
   // ── Normalisation des clés hétérogènes ─────────────────────────────
   const norm = { ...answers };
+  // --- TEAM STRUCTURE aliases ---
+if (norm.team_structure) {
+  const ts = String(norm.team_structure).toLowerCase();
+  if (['investisseur','investisseurs','investor','vc','fonds','capital-investissement'].includes(ts)) {
+    norm.team_structure = 'investors';
+  } else if (['associes','partners'].includes(ts)) {
+    norm.team_structure = 'associates';
+  } else if (['famille','family'].includes(ts)) {
+    norm.team_structure = 'family';
+  } else if (['solo','seul','individuel','individuelle'].includes(ts)) {
+    norm.team_structure = 'solo';
+  }
+}
+
+// --- CONTROL PRESERVATION aliases ---
+if (norm.control_preservation) {
+  const cp = String(norm.control_preservation).toLowerCase();
+  norm.control_preservation =
+    ['essential','essentiel','crucial','prioritaire'].includes(cp) ? 'essential' :
+    ['important','élevé','eleve','haut','high'].includes(cp)           ? 'important' :
+    'secondary';
+}
+
+// --- GOVERNANCE COMPLEXITY aliases ---
+if (norm.governance_complexity) {
+  const gc = String(norm.governance_complexity).toLowerCase();
+  norm.governance_complexity =
+    ['simple','lite','basique'].includes(gc)     ? 'simple' :
+    ['moderate','moderee','modérée'].includes(gc)? 'moderate' :
+    'complex'; // 'complexe', 'sur-mesure' etc. -> complex
+}
+
+// --- INVESTOR ORIGIN aliases ---
+if (norm.investor_origin) {
+  const io = String(norm.investor_origin).toLowerCase();
+  norm.investor_origin =
+    ['international','intl','monde','hors ue','global'].includes(io) ? 'international' : 'domestic';
+}
+
+// --- FUNDRAISING consistency ---
+if (norm.fundraising == null && +norm.fundraising_amount > 0) norm.fundraising = 'yes';
+if (norm.fundraising) norm.fundraising = String(norm.fundraising).toLowerCase() === 'yes' ? 'yes' : 'no';
+
+// --- ASSOCIATES / INVESTORS COUNT fallbacks ---
+const assoc = parseInt(norm.associates_number ?? norm.associates_count ?? norm.investors_count, 10);
+norm.associates_number = Number.isFinite(assoc) ? assoc : null;
+if (norm.investors_count == null && norm.team_structure === 'investors' && Number.isFinite(assoc)) {
+  norm.investors_count = assoc; // pour les règles SAS
+}
+
+// --- CAPITAL PERCENTAGE numeric ---
+norm.capital_percentage = parseFloat(norm.capital_percentage ?? 0) || 0;
+
+// --- Guard: if investors + control important/essential, neutralise le malus SCA par défaut ---
+if (norm.team_structure === 'investors' &&
+    ['important','essential'].includes(norm.control_preservation)) {
+  // rien à faire : juste s'assurer que les deux flags sont bien posés
+}
   const toYN = (v) => (v === true ? 'yes' : v === false ? 'no' : v);
 
   // --- Normalisation "dividendes" pour l'immobilier nu (SCI à l'IR)
