@@ -3975,7 +3975,7 @@ calculateScores() {
   const delta = (topScore || 0) - scaScore;
 
   // Ajuste le seuil si tu veux qu’un 82 vs 87 passe (mettre 5 au lieu de 3)
-  const MAX_DELTA = 4;
+  const MAX_DELTA = 5;
 
   if (scaScore > 0 && delta >= 0 && delta <= MAX_DELTA) {
     this.weightedScores.SCA = +(Math.min(100, topScore + 0.01)).toFixed(2);
