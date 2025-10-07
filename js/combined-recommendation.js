@@ -871,7 +871,7 @@ const ratingScales = {
     SELAS: 5,  // ajusté (était 4)
     SCA: 4     // ajusté (était 4)
   },
-  fundraising: {
+  fundraising_capacity: {
     EI: 1,
     MICRO: 1,
     EURL: 1,   // ajusté (était 2)
@@ -1542,19 +1542,6 @@ apply: (statusId, score, answers, metrics) => {
   },
   criteria: 'taxation_optimization'
 },
-
-{
-  id: 'dividends_tns_penalty_sarl_eurl',
-  description: 'Dividendes TNS : pénalité EURL / SARL (gérant majoritaire)',
-  condition: answers => answers.remuneration_preference === 'dividends',
-  apply: (statusId, score, answers, metrics) => {
-    if (statusId === 'EURL') return score - 0.5; // TNS par nature
-    if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
-    return score;
-  },
-  criteria: 'taxation_optimization'
-},
-
 {
   id: 'salary_preference_is',
   description: 'Préférence salaire : favorable aux formes IS (déductible)',
@@ -1852,7 +1839,19 @@ apply: (statusId, score, answers, metrics) => {
   },
   criteria: 'fundraising_capacity'
 },
-
+{
+  id: 'sa_large_scale_bonus',
+  description: 'SA pour projets d’envergure…',
+  condition: (a) => {
+    const nAssoc = parseInt(a.associates_number||0,10);
+    const nInv   = parseInt(a.investors_count||0,10);
+    const amt    = parseFloat(a.fundraising_amount||0);
+    const val    = parseFloat(a.target_valuation||0);
+    return ((nAssoc >= 7 || nInv >= 10) && (amt >= 2_000_000 || val >= 10_000_000) && a.governance_complexity === 'complex');
+  },
+  apply: (statusId, score) => (statusId === 'SA' ? score + 3.5 : score),
+  criteria: 'fundraising_capacity'
+},
 {
   id: 'bank_debt_bonus',
   description: 'Dette bancaire : crédibilité des formes sociétaires',
