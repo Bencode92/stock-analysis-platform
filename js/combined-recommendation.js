@@ -719,8 +719,8 @@ const legalStatuses = {
     taxation_optimization: 3,
     social_charges: 2,
     fundraising_capacity: 5,
-    credibility: 4,
-    governance_flexibility: 3,
+    credibility: 5,
+    governance_flexibility: 5,
     transmission: 4
   }
 }
@@ -869,7 +869,7 @@ const ratingScales = {
     SCI: 4,
     SELARL: 3,
     SELAS: 5,  // ajusté (était 4)
-    SCA: 4     // ajusté (était 4)
+    SCA: 5     // ajusté (était 4)
   },
   fundraising_capacity: {
     EI: 1,
@@ -1328,7 +1328,7 @@ apply: (statusId, score, answers, metrics) => {
   description: 'SCA : capital dispo < 37 000 € (sauf si levée ≥ 2 M€ prévue)',
   condition: a => parseFloat(a.available_capital ?? 0) < 37_000
                   && parseFloat(a.fundraising_amount ?? 0) < 2_000_000,
-  apply: (statusId, score) => (statusId === 'SCA' ? score - 1.25 : score), // ← avant -2
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 0.5 : score), // ← avant -2
   criteria: 'administrative_simplicity'
 },
 
@@ -1337,7 +1337,7 @@ apply: (statusId, score, answers, metrics) => {
   description: 'SCA : complexité pénalisante si CA < 500 k€ ET gouvernance simple',
   condition: a => parseFloat(a.projected_revenue ?? 0) < 500_000
                   && String(a.governance_complexity || '').toLowerCase() === 'simple',
-  apply: (statusId, score) => (statusId === 'SCA' ? score - 1 : score), // ← avant -1.5 tjs
+  apply: (statusId, score) => (statusId === 'SCA' ? score - 0.3 : score), // ← avant -1.5 tjs
   criteria: 'administrative_simplicity'
 },
   {
@@ -1793,7 +1793,7 @@ apply: (statusId, score, answers, metrics) => {
     const hasAGA   = (answers?.sharing_instruments || []).includes('AGA');
 
     let delta = 0;
-    if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) {
+    if (['SASU', 'SAS', 'SA', 'SELAS','SCA'].includes(statusId)) {
       if (hasBSPCE) delta += 1;
       if (hasBSAair) delta += 0.75;
       if (hasAGA)   delta += 0.5;
@@ -2280,6 +2280,13 @@ return score + (isRE ? 1 : 0.5);
   apply: (statusId, score) => (statusId === 'SNC' ? score - 0.5 : score),
   criteria: 'patrimony_protection'
 },
+  {
+  id: 'sca_commandite_holding_bonus',
+  description: 'Commandité via holding (pas de caution perso) : meilleure étanchéité',
+  condition: (a) => a.sca_general_partner_holding === 'yes' && a.bank_guarantee !== 'yes',
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 1 : score),
+  criteria: 'patrimony_protection'
+},
 
 // 8) Protection du patrimoine essentielle : privilégier SEL (vs EI/MICRO)
 {
@@ -2306,6 +2313,26 @@ return score + (isRE ? 1 : 0.5);
   apply: (statusId, score) => (statusId === 'SELAS' ? score + 0.5 : score),
   criteria: 'governance_flexibility'
 },
+  {
+  id: 'sca_control_essential_investors_mid_bonus',
+  description: 'Contrôle essentiel + investisseurs (même levée modeste)',
+  condition: (a) =>
+    a.team_structure === 'investors' &&
+    ['essential'].includes(String(a.control_preservation||'').toLowerCase()) &&
+    parseFloat(a.fundraising_amount ?? 0) >= 250_000,
+  apply: (statusId, score) => (statusId === 'SCA' ? score + 1.25 : score),
+  criteria: 'governance_flexibility'
+},
+  {
+  id: 'sas_control_essential_soft_malus',
+  description: 'Contrôle essentiel: pactes lourds en SAS',
+  condition: (a) =>
+    ['important','essential'].includes(String(a.control_preservation||'').toLowerCase()) &&
+    a.team_structure === 'investors',
+  apply: (statusId, score) => (statusId === 'SAS' ? score - 0.25 : score),
+  criteria: 'governance_flexibility'
+},
+  
 
 // 10) Dispositifs de partage (BSPCE/AGA…) quand éligible : avantage SELAS
 {
