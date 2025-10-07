@@ -1815,7 +1815,12 @@ apply: (statusId, score, answers, metrics) => {
     if (statusId === 'SASU') return score + 0.4;
     if (statusId === 'EI') return score + 0.25;
     if (statusId === 'MICRO') return score + 0.1;
-if (statusId === 'SCI' && IS_IMMO(a)) return score + 0.5; // hypothèque/adossement immo
+
+    const isImmo = (typeof IS_IMMO === 'function'
+      ? IS_IMMO(a)
+      : String(a.activity_type || '').toLowerCase() === 'immobilier');
+
+    if (statusId === 'SCI' && isImmo) return score + 0.5; // hypothèque/adossement immo
     return score;
   },
   criteria: 'fundraising_capacity'
@@ -1900,12 +1905,15 @@ if (statusId === 'SCI' && IS_IMMO(a)) return score + 0.5; // hypothèque/adossem
 {
   id: 'real_estate_equity_malus_sci',
   description: 'Equity hors immobilier : SCI inadaptée',
-  condition: (a) =>
-    !IS_IMMO(a) && isYes(a.fundraising),
+  condition: (a) => {
+    const isImmo = (typeof IS_IMMO === 'function'
+      ? IS_IMMO(a)
+      : String(a.activity_type || '').toLowerCase() === 'immobilier');
+    return !isImmo && isYes(a.fundraising);
+  },
   apply: (statusId, score) => (statusId === 'SCI' ? score - 1 : score),
   criteria: 'fundraising_capacity'
 },
-
 {
   id: 'employee_share_plan_bonus',
   description: 'Plan d’actionnariat salarié : sociétés par actions avantagées',
@@ -1927,14 +1935,19 @@ apply: (statusId, score, answers, metrics) => {
   },
   criteria: 'transmission'
 },
-  {
+ {
   id: 'immo_transmission_priority_sci',
   description: 'Transmission immo prioritaire : SCI renforcée',
-  condition: IS_IMMO(a)
-            && a.exit_intention === 'transmission'
-            && Array.isArray(a.priorities)
-            && a.priorities.map(p => String(p).toLowerCase()).includes('transmission'),
-  apply: (statusId, score) => statusId === 'SCI' ? score + 0.75 : score,
+  condition: (a) => {
+    const isImmo = (typeof IS_IMMO === 'function'
+      ? IS_IMMO(a)
+      : String(a.activity_type || '').toLowerCase() === 'immobilier');
+    return isImmo
+      && a.exit_intention === 'transmission'
+      && Array.isArray(a.priorities)
+      && a.priorities.map(p => String(p).toLowerCase()).includes('transmission');
+  },
+  apply: (statusId, score) => (statusId === 'SCI' ? score + 0.75 : score),
   criteria: 'transmission'
 },
 
@@ -2032,10 +2045,16 @@ return score + (isRE ? 1 : 0.5);
 {
   id: 'asset_deal_bonus_ei_sarl',
   description: 'Préférence pour cession de fonds/actifs (asset deal)',
-  condition: answers => answers.sale_mode === 'assets', // 'shares' | 'assets'
-  apply: (statusId, score, answers, metrics) => {
-    if (['EI','SARL','EURL'].includes(statusId)) return score + 0.5;
-    if (statusId === 'SCI' && IS_IMMO(answers) return score + 0.5;
+  condition: (answers) => answers.sale_mode === 'assets', // 'shares' | 'assets'
+  apply: (statusId, score, answers) => {
+    if (['EI', 'SARL', 'EURL'].includes(statusId)) return score + 0.5;
+
+    const isImmo =
+      (typeof IS_IMMO === 'function'
+        ? IS_IMMO(answers)
+        : String(answers.activity_type || '').toLowerCase() === 'immobilier');
+
+    if (statusId === 'SCI' && isImmo) return score + 0.5;
     return score;
   },
   criteria: 'transmission'
@@ -2052,14 +2071,23 @@ return score + (isRE ? 1 : 0.5);
 {
   id: 'many_heirs_shares_bonus',
   description: 'Plusieurs héritiers : souplesse de répartition via titres',
-  condition: answers => parseInt(answers.heirs_count ?? 0, 10) >= 2 && answers.exit_intention === 'transmission',
-  apply: (statusId, score, answers, metrics) => {
-    if (['SAS','SA'].includes(statusId)) return score + 0.5;
-    if (statusId === 'SCI' && IS_IMMO(answers)) return score + 0.5;
+  condition: (answers) =>
+    parseInt(answers.heirs_count ?? 0, 10) >= 2 &&
+    answers.exit_intention === 'transmission',
+  apply: (statusId, score, answers) => {
+    if (['SAS', 'SA'].includes(statusId)) return score + 0.5;
+
+    const isImmo =
+      (typeof IS_IMMO === 'function'
+        ? IS_IMMO(answers)
+        : String(answers.activity_type || '').toLowerCase() === 'immobilier');
+
+    if (statusId === 'SCI' && isImmo) return score + 0.5;
     return score;
   },
   criteria: 'transmission'
 },
+
 
 {
   id: 'family_control_sca_bonus',
@@ -2497,17 +2525,22 @@ return score + (isRE ? 1 : 0.5);
 
   // --- 10) INVESTISSEURS EXTERNES -------------------------------------------
   {
-    id: 'immobilier_investors_pref_sas_sca',
-    description: 'Investisseurs externes : SAS (souplesse) ou SCA (contrôle familial)',
-    condition: (a) => IS_IMMO(a) && a.team_structure === 'investors',
-    apply: (statusId, score) => {
-      if (statusId === 'SAS') return score + 1.25;
-      if (statusId === 'SCA') return score + 1;
-      if (statusId === 'SCI') return score + 0.25; // toléré en patrimonial simple
-      return score;
-    },
-    criteria: 'fundraising_capacity'
+  id: 'immobilier_investors_pref_sas_sca',
+  description: 'Investisseurs externes : SAS (souplesse) ou SCA (contrôle familial)',
+  condition: (a) => {
+    const isImmo = (typeof IS_IMMO === 'function'
+      ? IS_IMMO(a)
+      : String(a.activity_type || '').toLowerCase() === 'immobilier');
+    return isImmo && a.team_structure === 'investors';
   },
+  apply: (statusId, score) => {
+    if (statusId === 'SAS') return score + 1.25;
+    if (statusId === 'SCA') return score + 1;
+    if (statusId === 'SCI') return score + 0.25; // toléré en patrimonial simple
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
 
   // --- 11) FINANCEMENT BANCAIRE ---------------------------------------------
   {
