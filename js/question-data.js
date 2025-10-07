@@ -185,22 +185,23 @@ const questions = [
         ]
     },
     {
-        id: "risk_appetite",
-        sectionId: "profile",
-        title: "Appétence au risque / caution",
-        description: "Quel est votre niveau d'acceptation du risque professionnel ?",
-        type: "slider",
-        min: 1,
-        max: 5,
-        step: 1,
-        default: 3,
-        labels: {
-            1: "Très faible",
-            3: "Moyen",
-            5: "Très élevé"
-        },
-        required: true
-    },
+  id: "risk_appetite",
+  sectionId: "profile",
+  title: "Appétence au risque / caution",
+  description: "Quel est votre niveau d'acceptation du risque professionnel ?",
+  type: "slider",
+  min: 1,
+  max: 5,
+  step: 1,
+  default: 3,
+  labels: {
+    1: "Très faible",
+    3: "Moyen",
+    5: "Très élevé"
+  },
+  required: true,
+  infoText: "Valeur indicative utilisée pour nuancer les recommandations (ex. ouverture aux cautions personnelles, formes à responsabilité illimitée)."
+},
     {
         id: "social_regime",
         sectionId: "profile",
