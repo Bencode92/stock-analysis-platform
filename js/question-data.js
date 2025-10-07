@@ -640,8 +640,8 @@ const questions = [
         description: "Quel chiffre d'affaires annuel prévoyez-vous pour la première année ? (Rappel: seuils micro 2025 - BIC vente: 188 700€, BIC service: 77 700€, BNC: 77 700€)",
         type: "slider",
         min: 0,
-        max: 500000,
-        step: 5000,
+        max: 1000000,
+        step: 1000,
         default: 50000,
         format: "€",
         required: true
