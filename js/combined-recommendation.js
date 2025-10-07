@@ -1187,12 +1187,16 @@ const scoringRules = [
   },
 
   {
-    id: 'multiple_housing_units_bonus',
-    description: 'Portefeuille immo (> 120 k€ CA) : bonus SCI pour cantonnement',
-    IS_IMMO(a) && parseFloat(a.projected_revenue || 0) > 120_000,
-    apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
-    criteria: 'patrimony_protection'
-  },
+  id: 'multiple_housing_units_bonus',
+  description: 'Portefeuille immo (> 120 k€ CA) : bonus SCI pour cantonnement',
+  condition: (a) =>
+    ((typeof IS_IMMO === 'function'
+      ? IS_IMMO(a)
+      : String(a.activity_type || '').toLowerCase() === 'immobilier') &&
+     parseFloat(a.projected_revenue ?? 0) > 120000),
+  apply: (statusId, score) => (statusId === 'SCI' ? score + 1 : score),
+  criteria: 'patrimony_protection'
+},
 
   // ──────────────────────────────────────────────
   // MATRIMONIAL & CAUTION – Patrimoine / Transmission / Crédibilité
