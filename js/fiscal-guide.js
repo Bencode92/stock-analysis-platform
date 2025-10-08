@@ -647,10 +647,13 @@ function runComparison() {
     // Vider les résultats précédents
     resultsBody.innerHTML = '';
     
-    // Obtenir les statuts à simuler selon le filtre sélectionné
-    const statusFilter = document.getElementById('sim-status-filter');
-    const selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'all'); // Par défaut, tous les statuts
-  // Si multi-associés, retirer les statuts 1 associé max
+ // Obtenir les statuts à simuler selon le filtre sélectionné
+const statusFilter = document.getElementById('sim-status-filter');
+
+// utiliser let car on va potentiellement réassigner
+let selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'all');
+
+// Si multi-associés, retirer les statuts unipersonnels
 if (nbAssocies >= 2) {
   selectedStatuses = selectedStatuses.filter(id => !STATUTS_UNIPERSONNELS[id]);
 }
