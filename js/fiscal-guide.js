@@ -1298,9 +1298,9 @@ const STATUTS_MULTI_ASSOCIES = {
 // Barème IR 2025 - Fonction utilitaire pour calculer le TMI effectif
 function getTMI(revenu) {
     if (revenu <= 11497)   return 0;
-    if (revenu <= 26037)   return 11;
-    if (revenu <= 74545)   return 30;
-    if (revenu <= 160336)  return 41;
+    if (revenu <= 29315)   return 11;
+    if (revenu <= 83823)   return 30;
+    if (revenu <= 180294)  return 41;
     return 45;
 }
 
