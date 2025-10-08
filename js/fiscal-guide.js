@@ -1871,17 +1871,20 @@ const tauxIS = resultatApresRemuneration <= 42500 ? 15 : 25;
                 <td>Dividendes nets</td>
                 <td>${formatter.format(result.sim.dividendesNets)}</td>
             </tr>
-        </table>
-        ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 0 ? `
-        <div class="mt-3 p-3 bg-green-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-green-400">
-            <p><i class="fas fa-lightbulb text-green-400 mr-2"></i>
-            <strong>Optimisation fiscale appliquée :</strong> Avec votre TMI de ${tmiEffectif}%, 
-            le barème progressif est plus avantageux que le PFU. 
-            Économie réalisée : ${formatter.format(result.sim.economieMethode)}.</p>
-            <p class="mt-2 text-gray-400">
-            Note : Ce choix s'applique à tous vos revenus de capitaux mobiliers de l'année.</p>
-        </div>
-        ` : ''}
+</table>
+<div class="text-xs text-gray-400 mt-1">
+  Montants affichés = dividendes nets (après impôts/prélèvements).
+</div>
+${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 0 ? `
+  <div class="mt-3 p-3 bg-green-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-green-400">
+    <p><i class="fas fa-lightbulb text-green-400 mr-2"></i>
+      <strong>Optimisation fiscale appliquée :</strong> Avec votre TMI de ${tmiEffectif}%, 
+      le barème progressif est plus avantageux que le PFU.
+      Économie réalisée : ${formatter.format(result.sim.economieMethode)}.</p>
+    <p class="mt-2 text-gray-400">
+      Note : Ce choix s'applique à tous vos revenus de capitaux mobiliers de l'année.</p>
+  </div>
+` : ``}
         ${coutCAC > 0 ? `
         <div class="mt-3 p-3 bg-orange-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-orange-400">
             <p><i class="fas fa-gavel text-orange-400 mr-2"></i>
@@ -1927,7 +1930,8 @@ const tauxIS = resultatApresRemuneration <= 42500 ? 15 : 25;
         </table>
         
         <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
-            <h4 class="text-sm font-bold text-gray-300 mb-2">Récapitulatif fiscal :</h4>
+           <h4 class="text-sm font-bold text-gray-300">Récapitulatif fiscal :</h4>
+            <div class="text-xs text-gray-400 -mt-1 mb-2">rémunération uniquement</div>
             <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
                     <p class="text-gray-400">💰 Salaire net réel :</p>
@@ -2142,7 +2146,7 @@ ${hasDividendes ? `
                          <small class="text-gray-400 ml-2">(plus avantageux que le PFU)</small>` : 
                         '<span class="text-blue-400">PFU 30%</span>'}
                 </td>
-            </tr>
+         </tr>
             ${result.sim.methodeDividendes === 'PROGRESSIF' ? `
             <tr>
                 <td>Abattement de 40%</td>
@@ -2185,6 +2189,9 @@ ${hasDividendes ? `
                 <td>${formatter.format(result.sim.dividendesNets)}</td>
             </tr>
         </table>
+        <div class="text-xs text-gray-400 mt-1">
+          Montants affichés = dividendes nets (après impôts/prélèvements).
+        </div>
         ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 0 ? `
         <div class="mt-3 p-3 bg-green-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-green-400">
             <p><i class="fas fa-lightbulb text-green-400 mr-2"></i>
