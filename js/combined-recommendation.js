@@ -1867,6 +1867,27 @@ apply: (statusId, score, answers, metrics) => {
   },
   criteria: 'fundraising_capacity'
 },
+  {
+  id: 'sa_dominant_profile_override',
+  description: 'Profil grande envergure → SA devant SAS/SCA',
+  condition: (a) => {
+    const bigRevenue = parseFloat(a?.projected_revenue || 0) >= 800000;
+    const bigFundraise = String(a?.fundraising || '').toLowerCase() === 'yes'
+      && parseFloat(a?.fundraising_amount || 0) >= 2000000;
+    const manyPeople = (parseInt(a?.associates_number || 0, 10) >= 7)
+      || (parseInt(a?.investors_count || 0, 10) >= 10);
+    const complexGov = String(a?.governance_complexity || '').toLowerCase() === 'complex';
+    const noControlObsession = String(a?.control_preservation || 'secondary').toLowerCase() === 'secondary';
+    return (bigRevenue || bigFundraise) && manyPeople && complexGov && noControlObsession;
+  },
+  apply: (statusId, score) => {
+    if (statusId === 'SA')  return score + 2.5; // boost décisif
+    if (statusId === 'SAS') return score - 0.5;
+    if (statusId === 'SCA') return score - 1;
+    return score;
+  },
+  criteria: 'fundraising_capacity'
+},
 
 {
   id: 'investors_ei_micro_malus',
