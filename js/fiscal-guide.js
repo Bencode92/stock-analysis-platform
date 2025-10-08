@@ -191,6 +191,29 @@ function setupSimulator() {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', runComparison);
     });
+   // 🔓 Déclampage côté UI : autoriser 0 % de salaire
+  (function enableZeroPercentSalary() {
+    const el = document.getElementById('sim-salaire');
+    if (!el) return;
+
+    // Autoriser 0 en borne basse
+    el.setAttribute('min', '0');
+
+    // Facultatif : pas d’1 point (%)
+    if (!el.getAttribute('step')) el.setAttribute('step', '1');
+
+    // Sécurise la saisie: borne [0,100] sans réécrire 0
+    const clamp01 = v => Math.max(0, Math.min(100, v));
+    const normalize = () => {
+      if (el.value === '') return; // laisser vide si l’utilisateur efface
+      const n = parseFloat(el.value);
+      if (Number.isFinite(n)) el.value = clamp01(n);
+    };
+
+    el.addEventListener('input', normalize, { passive: true });
+    // Normalise la valeur initiale si besoin
+    normalize();
+  })();
     
     // Configurer l'accordéon pour les statuts juridiques
     setupAccordion();
@@ -574,7 +597,8 @@ function runComparison() {
     // Récupérer les valeurs du formulaire
     const ca = parseFloat(document.getElementById('sim-ca').value) || 50000;
     const marge = parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3;
-    const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
+    const _rawRatio = parseFloat(document.getElementById('sim-salaire').value);
+    const ratioSalaire = Number.isFinite(_rawRatio) ? Math.max(0, Math.min(1, _rawRatio / 100)) : 0.7;
     const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
     const nbAssocies = parseInt(document.getElementById('sim-nb-associes')?.value) || 1;
     const partAssociePct = parseFloat(document.getElementById('sim-part-associe')?.value) || 100;
@@ -674,10 +698,10 @@ function runComparison() {
     // Définir les stratégies d'optimisation par type de statut
     const optimisationParStatut = {
         // Structures assimilées salarié: charges lourdes (favoriser dividendes)
-        'sasu': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0.1, capitalSocial: 1000 },
-        'sas': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0.1, capitalSocial: 1000 },
-        'sa': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0.1, capitalSocial: 37000 },
-        'selas': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0.1, capitalSocial: 37000 },
+        'sasu':  { ratioMin: 0,    ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0,    capitalSocial: 1000 },
+        'sas':   { ratioMin: 0,    ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0,    capitalSocial: 1000 },
+        'sa':    { ratioMin: 0,    ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0,    capitalSocial: 37000 },
+        'selas': { ratioMin: 0,    ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0,    capitalSocial: 37000 },
         
         // Structures TNS: charges sociales sur dividendes >10% du capital (équilibre)
         'eurlIS': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
@@ -1226,8 +1250,8 @@ row.innerHTML = `
         ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
         ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
     </td>
-    <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
-    <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
+   <td class="px-4 py-3">${(res.brut === '-' || res.brut == null) ? '-' : formatter.format(res.brut)}</td>
+    <td class="px-4 py-3">${(res.charges === '-' || res.charges == null) ? '-' : formatter.format(res.charges)}</td>
     <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
     <td class="px-4 py-3">${res.dividendesNets ? formatter.format(res.dividendesNets) : '-'}</td>
    <td class="px-4 py-3">
@@ -1585,10 +1609,23 @@ if (statutId === 'micro') {
     // NOUVEAU : Calculer le TMI effectif sur la BASE IMPOSABLE (pas le salaire net)
     const tmiEffectif = getTMI(baseImposableIR);
     
-    // Calcul des taux
-    const tauxChargesPatronales = (result.sim.chargesPatronales / result.sim.remuneration * 100) || 55;
-    const tauxChargesSalariales = (result.sim.chargesSalariales / result.sim.remuneration * 100) || 22;
-    const tauxIS = result.sim.resultatApresRemuneration <= 42500 ? 15 : 25;
+  // Calcul des taux (robuste si rémunération = 0)
+const {
+  remuneration = 0,
+  chargesPatronales = 0,
+  chargesSalariales = 0,
+  resultatApresRemuneration = 0
+} = result.sim || {};
+
+const tauxChargesPatronales = remuneration > 0
+  ? (chargesPatronales / remuneration) * 100
+  : 0;
+
+const tauxChargesSalariales = remuneration > 0
+  ? (chargesSalariales / remuneration) * 100
+  : 0;
+
+const tauxIS = resultatApresRemuneration <= 42500 ? 15 : 25;
     
     // NOUVEAU : Gestion du CAC pour la SA
     const coutCAC = statutId === 'sa' ? (result.sim.coutCAC || 5000) : 0;
