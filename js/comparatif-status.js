@@ -1,5 +1,5 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room + Phase 1-4 + Mini Sprint + P0 Quick Wins + UX Improvements
+ * Comparatif statuts — v2025 UX Clean Room + Accessibilité AAA
  * Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
  * Phase 2: blocs d'aide à la décision pour paires populaires
  * Phase 3: XSS protection, keyboard accessibility, URL state persistence
@@ -7,10 +7,11 @@
  * Mini Sprint: Hero + CTA, sticky controls, toast, empty state
  * P0 Quick Wins: Diff by default, mobile sticky CTA, card affordance
  * UX Improvements: Limite MAX_COMPARE configurable, libellés clairs, lisibilité++
+ * Accessibilité P0/P1: Contraste AAA, focus visible, reduced motion, safe-area iOS
  */
 
 window.initComparatifStatuts = function() {
-  console.log("✅ Initialisation du tableau comparatif (v2025 + UX Improvements)");
+  console.log("✅ Initialisation du tableau comparatif (v2025 + Accessibilité AAA)");
   window.createComparatifTable('comparatif-container');
 };
 
@@ -20,20 +21,20 @@ window.initComparatifStatuts = function() {
     spacing: { xs:4, sm:8, md:12, lg:16, xl:24, xxl:28 },
     radius: { sm:4, md:6, lg:8, xl:12 },
     surface: {
-      base: 'rgba(1, 35, 65, 0.5)',
-      raised: 'rgba(1, 42, 74, 0.7)',
-      overlay: 'rgba(1, 35, 65, 0.6)'
+      base: 'rgba(1, 35, 65, 0.92)',
+      raised: 'rgba(1, 42, 74, 0.95)',
+      overlay: 'rgba(1, 35, 65, 0.92)'
     },
     accent: '#00FF87',
     text: {
       primary: '#E6E6E6',
-      secondary: 'rgba(230, 230, 230, 0.7)',
-      muted: 'rgba(230, 230, 230, 0.5)'
+      secondary: 'rgba(230, 230, 230, 0.82)',
+      muted: 'rgba(230, 230, 230, 0.65)'
     },
     semantic: {
       success: '#10B981',
       warning: '#F59E0B',
-      danger: '#EF4444'
+      danger: '#FF7B7B'
     }
   };
 
@@ -476,37 +477,87 @@ window.initComparatifStatuts = function() {
     if(document.getElementById('comparatif-status-styles')) return;
     const style=document.createElement('style'); style.id='comparatif-status-styles';
     style.textContent=`
+      /* Accessibilité: focus visible, reduced motion, safe-area */
+      :focus-visible {
+        outline: 2px solid ${TOKENS.accent};
+        outline-offset: 2px;
+      }
+      
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
       .comparatif-container{
         max-width:100%;
         overflow-x:auto;
         font-family:'Inter',sans-serif;
         color:${TOKENS.text.primary};
-        font-size:17px;
-        line-height:1.6;
+        font-size:18px;
+        line-height:1.7;
       }
       .comparatif-header{margin-bottom:${TOKENS.spacing.xl}px}
       .comparatif-title{font-size:1.75rem;font-weight:700;margin-bottom:${TOKENS.spacing.sm}px;color:${TOKENS.accent};line-height:1.2}
       .comparatif-subtitle{
-        color:rgba(230,230,230,.82);
+        color:${TOKENS.text.secondary};
         margin-bottom:${TOKENS.spacing.xl}px;
         font-size:1rem;
-        line-height:1.6;
+        line-height:1.7;
+        max-width:75ch;
       }
 
       .hero{margin-bottom:${TOKENS.spacing.xl}px;padding:${TOKENS.spacing.xl}px;background:linear-gradient(to right, rgba(0,255,135,.08), rgba(1,42,74,.35));border:1px solid rgba(0,255,135,.18);border-radius:${TOKENS.radius.xl}px}
       .hero h1{margin:0 0 ${TOKENS.spacing.sm}px 0;font-size:1.875rem;color:${TOKENS.accent};line-height:1.2}
-      .hero-sub{color:${TOKENS.text.secondary};margin:0 0 ${TOKENS.spacing.lg}px 0}
+      .hero-sub{color:${TOKENS.text.secondary};margin:0 0 ${TOKENS.spacing.lg}px 0;line-height:1.7}
       .hero-ctas{display:flex;gap:${TOKENS.spacing.sm}px;flex-wrap:wrap}
-      .btn{padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border-radius:999px;border:1px solid transparent;font-weight:600;cursor:pointer;transition:all .15s ease}
+      .btn{
+        min-height:44px;
+        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        border-radius:999px;
+        border:1px solid transparent;
+        font-weight:600;
+        cursor:pointer;
+        transition:all .15s ease;
+      }
       .btn-primary{background:${TOKENS.accent};color:#053;border-color:rgba(0,255,135,.8)}
       .btn-ghost{background:transparent;color:${TOKENS.accent};border-color:rgba(0,255,135,.35)}
       .btn:hover{filter:brightness(1.05);transform:scale(1.02)}
 
-      .table-controls{position:sticky;top:0;z-index:40;background:rgba(1,22,39,.92);backdrop-filter:saturate(140%) blur(6px);padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;border:1px solid rgba(0,255,135,.12);border-radius:${TOKENS.radius.lg}px;margin-bottom:${TOKENS.spacing.md}px;display:flex;align-items:center;gap:${TOKENS.spacing.lg}px}
+      .table-controls{
+        position:sticky;
+        top:0;
+        z-index:40;
+        background:${TOKENS.surface.raised};
+        backdrop-filter:saturate(140%) blur(6px);
+        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
+        border:1px solid rgba(0,255,135,.12);
+        border-radius:${TOKENS.radius.lg}px;
+        margin-bottom:${TOKENS.spacing.md}px;
+        display:flex;
+        align-items:center;
+        gap:${TOKENS.spacing.lg}px;
+      }
       .switch{display:inline-flex;align-items:center;gap:${TOKENS.spacing.sm}px;cursor:pointer;user-select:none}
       .switch input{accent-color:${TOKENS.accent};width:18px;height:18px;cursor:pointer}
 
-      .toast{position:fixed;right:16px;bottom:16px;background:rgba(1,42,74,.95);border:1px solid rgba(0,255,135,.35);padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border-radius:${TOKENS.radius.md}px;color:${TOKENS.text.primary};box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;transform:translateY(6px);transition:all .2s ease;z-index:9999}
+      .toast{
+        position:fixed;
+        right:16px;
+        bottom:16px;
+        background:${TOKENS.surface.raised};
+        border:1px solid rgba(0,255,135,.35);
+        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        border-radius:${TOKENS.radius.md}px;
+        color:${TOKENS.text.primary};
+        box-shadow:0 8px 24px rgba(0,0,0,.35);
+        opacity:0;
+        transform:translateY(6px);
+        transition:all .2s ease;
+        z-index:9999;
+      }
       .toast.show{opacity:1;transform:translateY(0)}
 
       .empty{padding:2rem;text-align:center;color:${TOKENS.text.secondary}}
@@ -514,94 +565,258 @@ window.initComparatifStatuts = function() {
 
       .section-label{font-size:0.9rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${TOKENS.text.secondary};margin-bottom:${TOKENS.spacing.md}px}
 
-      .intent-toggles{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.md}px;margin-bottom:${TOKENS.spacing.lg}px;padding:${TOKENS.spacing.lg}px;background:${TOKENS.surface.base};border-radius:${TOKENS.radius.lg}px;border:1px solid rgba(0,255,135,.15)}
+      .intent-toggles{
+        display:flex;
+        flex-wrap:wrap;
+        gap:${TOKENS.spacing.md}px;
+        margin-bottom:${TOKENS.spacing.lg}px;
+        padding:${TOKENS.spacing.lg}px;
+        background:${TOKENS.surface.base};
+        border-radius:${TOKENS.radius.lg}px;
+        border:1px solid rgba(0,255,135,.15);
+      }
       .intent-toggle{
         position:relative;
         display:flex;
         align-items:center;
         gap:${TOKENS.spacing.sm}px;
+        min-height:44px;
         padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
         background:${TOKENS.surface.raised};
         border:1px solid rgba(0,255,135,.2);
         border-radius:999px;
         font-size:.875rem;
-        color:rgba(230,230,230,.85);
+        color:${TOKENS.text.secondary};
         cursor:pointer;
         transition:all .15s ease;
         user-select:none;
       }
       .intent-toggle:hover{background:rgba(1,42,74,.85);transform:scale(1.02)}
-      .intent-toggle:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
       .intent-toggle.active{background:rgba(0,255,135,.15);border-color:${TOKENS.accent};color:${TOKENS.accent}}
       .intent-toggle .icon{font-size:1rem}
       .intent-toggle[aria-pressed="true"] .icon{color:${TOKENS.accent}}
 
-      .tooltip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:rgba(1,22,39,.95);border:1px solid rgba(0,255,135,.3);border-radius:${TOKENS.radius.sm}px;padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;font-size:.75rem;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100}
-      .intent-toggle:hover .tooltip{opacity:1}
+      .tooltip{
+        position:absolute;
+        bottom:calc(100% + 8px);
+        left:50%;
+        transform:translateX(-50%);
+        background:${TOKENS.surface.raised};
+        border:1px solid rgba(0,255,135,.3);
+        border-radius:${TOKENS.radius.sm}px;
+        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
+        font-size:.75rem;
+        white-space:nowrap;
+        pointer-events:none;
+        opacity:0;
+        transition:opacity .15s;
+        z-index:100;
+      }
+      .intent-toggle:hover .tooltip, .intent-toggle:focus-visible .tooltip{opacity:1}
 
       .personas{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;margin-bottom:${TOKENS.spacing.lg}px}
-      .persona-chip{position:relative;padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border:1px solid rgba(255,255,255,.2);border-radius:${TOKENS.radius.md}px;font-size:.8125rem;color:${TOKENS.text.primary};cursor:pointer;background:${TOKENS.surface.overlay};transition:all .15s ease}
+      .persona-chip{
+        position:relative;
+        min-height:44px;
+        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        border:1px solid rgba(255,255,255,.2);
+        border-radius:${TOKENS.radius.md}px;
+        font-size:.8125rem;
+        color:${TOKENS.text.primary};
+        cursor:pointer;
+        background:${TOKENS.surface.overlay};
+        transition:all .15s ease;
+      }
       .persona-chip:hover{border-color:${TOKENS.accent};background:rgba(1,42,74,.8)}
-      .persona-chip:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px}
-      .persona-chip .baseline{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(1,22,39,.95);border:1px solid rgba(0,255,135,.3);padding:4px 8px;border-radius:4px;font-size:.7rem;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s}
-      .persona-chip:hover .baseline{opacity:1}
+      .persona-chip .baseline{
+        position:absolute;
+        bottom:calc(100% + 6px);
+        left:50%;
+        transform:translateX(-50%);
+        background:${TOKENS.surface.raised};
+        border:1px solid rgba(0,255,135,.3);
+        padding:4px 8px;
+        border-radius:4px;
+        font-size:.7rem;
+        white-space:nowrap;
+        opacity:0;
+        pointer-events:none;
+        transition:opacity .15s;
+      }
+      .persona-chip:hover .baseline, .persona-chip:focus-visible .baseline{opacity:1}
 
       .quick-presets{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;margin-bottom:${TOKENS.spacing.lg}px}
-      .preset-btn{padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;border:1px solid rgba(0,255,135,.35);background:rgba(0,255,135,.08);border-radius:999px;font-size:.8125rem;color:${TOKENS.accent};cursor:pointer;transition:all .15s ease}
+      .preset-btn{
+        min-height:44px;
+        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
+        border:1px solid rgba(0,255,135,.35);
+        background:rgba(0,255,135,.08);
+        border-radius:999px;
+        font-size:.8125rem;
+        color:${TOKENS.accent};
+        cursor:pointer;
+        transition:all .15s ease;
+      }
       .preset-btn:hover{background:rgba(0,255,135,.18);transform:scale(1.02)}
-      .preset-btn:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
 
-      .comparison-bar{display:flex;align-items:center;padding:${TOKENS.spacing.lg}px;background:${TOKENS.surface.base};border-radius:${TOKENS.radius.lg}px;margin-bottom:${TOKENS.spacing.lg}px;flex-wrap:wrap;gap:${TOKENS.spacing.md}px;border:1px solid rgba(0,255,135,.15)}
+      .comparison-bar{
+        display:flex;
+        align-items:center;
+        padding:${TOKENS.spacing.lg}px;
+        background:${TOKENS.surface.base};
+        border-radius:${TOKENS.radius.lg}px;
+        margin-bottom:${TOKENS.spacing.lg}px;
+        flex-wrap:wrap;
+        gap:${TOKENS.spacing.md}px;
+        border:1px solid rgba(0,255,135,.15);
+      }
       .comparison-title{font-size:.875rem;font-weight:600;color:${TOKENS.text.secondary};margin-right:auto}
       .comparison-items{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;flex-grow:1}
-      .comparison-item{display:flex;align-items:center;gap:${TOKENS.spacing.sm}px;padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;background:rgba(0,255,135,.12);border:1px solid rgba(0,255,135,.35);border-radius:${TOKENS.radius.sm}px;font-size:.8125rem;color:${TOKENS.accent}}
-      .comparison-item .remove-btn{background:none;border:none;color:${TOKENS.text.muted};font-size:.75rem;cursor:pointer;padding:2px;transition:color .15s}
-      .comparison-item .remove-btn:hover{color:#FF6B6B}
-      .status-dropdown{width:200px;padding:${TOKENS.spacing.md}px;background:${TOKENS.surface.raised};border:1px solid rgba(0,255,135,.25);border-radius:${TOKENS.radius.sm}px;color:${TOKENS.text.primary};font-size:.875rem}
-      .status-dropdown:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
+      .comparison-item{
+        display:flex;
+        align-items:center;
+        gap:${TOKENS.spacing.sm}px;
+        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
+        background:rgba(0,255,135,.12);
+        border:1px solid rgba(0,255,135,.35);
+        border-radius:${TOKENS.radius.sm}px;
+        font-size:.8125rem;
+        color:${TOKENS.accent};
+      }
+      .comparison-item .remove-btn{
+        min-width:24px;
+        min-height:24px;
+        background:none;
+        border:none;
+        color:${TOKENS.text.muted};
+        font-size:.75rem;
+        cursor:pointer;
+        padding:2px;
+        transition:color .15s;
+      }
+      .comparison-item .remove-btn:hover{color:${TOKENS.semantic.danger}}
+      .status-dropdown{
+        width:200px;
+        min-height:44px;
+        padding:${TOKENS.spacing.md}px;
+        background:${TOKENS.surface.raised};
+        border:1px solid rgba(0,255,135,.25);
+        border-radius:${TOKENS.radius.sm}px;
+        color:${TOKENS.text.primary};
+        font-size:.875rem;
+      }
 
-      .diff-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(0,255,135,.15);border:1px solid rgba(0,255,135,.4);border-radius:999px;font-size:.75rem;font-weight:600;color:${TOKENS.accent}}
+      .diff-badge{
+        display:inline-flex;
+        align-items:center;
+        gap:4px;
+        padding:4px 10px;
+        background:rgba(0,255,135,.15);
+        border:1px solid rgba(0,255,135,.4);
+        border-radius:999px;
+        font-size:.75rem;
+        font-weight:600;
+        color:${TOKENS.accent};
+      }
       .diff-badge .icon{font-size:.875rem}
 
-      .advice-card{border:1px solid rgba(0,255,135,.3);border-radius:${TOKENS.radius.lg}px;padding:${TOKENS.spacing.lg}px;background:${TOKENS.surface.overlay};margin-bottom:${TOKENS.spacing.lg}px;animation:fadeIn .15s ease}
+      .advice-card{
+        border:1px solid rgba(0,255,135,.3);
+        border-radius:${TOKENS.radius.lg}px;
+        padding:${TOKENS.spacing.lg}px;
+        background:${TOKENS.surface.overlay};
+        margin-bottom:${TOKENS.spacing.lg}px;
+        animation:fadeIn .15s ease;
+      }
       .advice-card .title{font-weight:600;color:${TOKENS.accent};margin-bottom:${TOKENS.spacing.md}px;font-size:.9375rem}
-      .advice-card ul{margin:0;padding-left:20px;line-height:1.6}
+      .advice-card ul{margin:0;padding-left:20px;line-height:1.7}
       .advice-card li{margin-bottom:${TOKENS.spacing.sm}px}
-      .advice-card .pro{color:#10B981;font-weight:500}
-      .advice-card .con{color:#EF4444;font-weight:500}
-      .advice-card .arbitrage{margin-top:${TOKENS.spacing.md}px;padding-top:${TOKENS.spacing.md}px;border-top:1px solid rgba(255,255,255,.1);font-style:italic;color:${TOKENS.text.secondary}}
+      .advice-card .pro{color:${TOKENS.semantic.success};font-weight:500}
+      .advice-card .con{color:${TOKENS.semantic.danger};font-weight:500}
+      .advice-card .arbitrage{
+        margin-top:${TOKENS.spacing.md}px;
+        padding-top:${TOKENS.spacing.md}px;
+        border-top:1px solid rgba(255,255,255,.1);
+        font-style:italic;
+        color:${TOKENS.text.secondary};
+      }
 
       .decision-card{border-color:rgba(0,255,135,.35)}
       .decision-grid{display:grid;grid-template-columns:1fr 1fr;gap:${TOKENS.spacing.lg}px}
       .decision-sub{font-weight:600;color:${TOKENS.accent};margin-bottom:${TOKENS.spacing.sm}px}
-      .decision-list{margin:0;padding-left:18px;line-height:1.6}
+      .decision-list{margin:0;padding-left:18px;line-height:1.7}
       .decision-list li{margin-bottom:${TOKENS.spacing.sm}px}
       .decision-caveats{margin-top:${TOKENS.spacing.md}px;padding-top:${TOKENS.spacing.md}px;border-top:1px solid rgba(255,255,255,.08)}
       .decision-kicker{font-weight:600;color:${TOKENS.text.secondary};margin-right:6px}
-      .decision-one-liner{margin-top:${TOKENS.spacing.md}px;padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;border:1px dashed rgba(0,255,135,.35);border-radius:${TOKENS.radius.sm}px;color:${TOKENS.text.primary};font-size:.875rem}
+      .decision-one-liner{
+        margin-top:${TOKENS.spacing.md}px;
+        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
+        border:1px dashed rgba(0,255,135,.35);
+        border-radius:${TOKENS.radius.sm}px;
+        color:${TOKENS.text.primary};
+        font-size:.875rem;
+      }
 
-      .comparatif-filters{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.lg}px;margin-bottom:${TOKENS.spacing.xl}px;align-items:flex-end}
+      .comparatif-filters{
+        display:flex;
+        flex-wrap:wrap;
+        gap:${TOKENS.spacing.lg}px;
+        margin-bottom:${TOKENS.spacing.xl}px;
+        align-items:flex-end;
+      }
       .filter-group{flex:1;min-width:200px}
       .filter-label{display:block;margin-bottom:${TOKENS.spacing.md}px;color:${TOKENS.text.secondary};font-size:.875rem;font-weight:500}
       .criteria-buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:${TOKENS.spacing.sm}px}
-      .criteria-button{padding:${TOKENS.spacing.md}px;border-radius:${TOKENS.radius.sm}px;font-size:.875rem;cursor:pointer;background:${TOKENS.surface.raised};border:1px solid rgba(0,255,135,.2);color:${TOKENS.text.secondary};transition:all .15s ease;text-align:center}
+      .criteria-button{
+        min-height:44px;
+        padding:${TOKENS.spacing.md}px;
+        border-radius:${TOKENS.radius.sm}px;
+        font-size:.875rem;
+        cursor:pointer;
+        background:${TOKENS.surface.raised};
+        border:1px solid rgba(0,255,135,.2);
+        color:${TOKENS.text.secondary};
+        transition:all .15s ease;
+        text-align:center;
+      }
       .criteria-button:hover{border-color:rgba(0,255,135,.4);background:rgba(1,42,74,.85)}
-      .criteria-button:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
       .criteria-button.active{background:rgba(0,255,135,.15);border-color:${TOKENS.accent};color:${TOKENS.accent};font-weight:600}
 
-      .search-input{width:100%;padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border-radius:${TOKENS.radius.sm}px;border:1px solid rgba(1,42,74,.8);background:${TOKENS.surface.raised};color:${TOKENS.text.primary};transition:all .15s ease;font-size:.875rem}
+      .search-input{
+        width:100%;
+        min-height:44px;
+        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        border-radius:${TOKENS.radius.sm}px;
+        border:1px solid rgba(1,42,74,.8);
+        background:${TOKENS.surface.raised};
+        color:${TOKENS.text.primary};
+        transition:all .15s ease;
+        font-size:.875rem;
+      }
       .search-input:focus{outline:none;border-color:${TOKENS.accent};box-shadow:0 0 0 2px rgba(0,255,135,.15)}
       .search-input::placeholder{color:${TOKENS.text.muted}}
 
-      .table-header-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:${TOKENS.spacing.md}px;padding:${TOKENS.spacing.sm}px 0}
+      .table-header-bar{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:${TOKENS.spacing.md}px;
+        padding:${TOKENS.spacing.sm}px 0;
+      }
       .column-count{font-size:.8125rem;color:${TOKENS.text.secondary}}
       .column-count strong{color:${TOKENS.accent};font-weight:600}
 
-      .comparatif-table-container{border-radius:${TOKENS.radius.xl}px;border:1px solid rgba(1,42,74,.8);overflow:hidden;background:rgba(1,42,74,.25);box-shadow:0 4px 16px rgba(0,0,0,.15)}
+      .comparatif-table-container{
+        border-radius:${TOKENS.radius.xl}px;
+        border:1px solid rgba(1,42,74,.8);
+        overflow:hidden;
+        background:rgba(1,42,74,.25);
+        box-shadow:0 4px 16px rgba(0,0,0,.15);
+      }
       .comparatif-table{width:100%;border-collapse:collapse;text-align:left}
       .comparatif-table th{
         padding:${TOKENS.spacing.lg}px;
-        background:rgba(1,22,39,.9);
+        background:${TOKENS.surface.raised};
         font-weight:600;
         color:${TOKENS.accent};
         font-size:.9rem;
@@ -612,12 +827,12 @@ window.initComparatifStatuts = function() {
         top:0;
         z-index:20;
       }
-      .comparatif-table th:first-child{position:sticky;left:0;z-index:30;background:rgba(1,22,39,.95)}
+      .comparatif-table th:first-child{position:sticky;left:0;z-index:30;background:${TOKENS.surface.raised}}
       .comparatif-table td{
         padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
         border-bottom:1px solid rgba(1,42,74,.4);
         font-size:.93rem;
-        line-height:1.6;
+        line-height:1.7;
         vertical-align:top;
       }
       .comparatif-table td:first-child{position:sticky;left:0;background:rgba(1,42,74,.3);z-index:10}
@@ -629,37 +844,99 @@ window.initComparatifStatuts = function() {
       .comparatif-table .diff-col{background:rgba(0,255,135,.04)}
 
       .statut-cell{display:flex;align-items:flex-start;gap:${TOKENS.spacing.md}px}
-      .statut-icon{width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;border-radius:50%;background:${TOKENS.surface.raised};color:${TOKENS.accent};font-size:1rem;flex-shrink:0}
+      .statut-icon{
+        width:2.5rem;
+        height:2.5rem;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border-radius:50%;
+        background:${TOKENS.surface.raised};
+        color:${TOKENS.accent};
+        font-size:1rem;
+        flex-shrink:0;
+      }
       .statut-info{display:flex;flex-direction:column;min-width:0}
       .statut-name{font-weight:600;color:${TOKENS.text.primary};font-size:.9375rem}
       .statut-fullname{font-size:.75rem;color:${TOKENS.text.muted};margin-top:2px}
       .status-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:${TOKENS.spacing.sm}px}
-      .status-badge{display:inline-flex;align-items:center;padding:2px 6px;border-radius:3px;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
+      .status-badge{
+        display:inline-flex;
+        align-items:center;
+        padding:2px 6px;
+        border-radius:3px;
+        font-size:.65rem;
+        font-weight:600;
+        text-transform:uppercase;
+        letter-spacing:0.3px;
+      }
       .badge-dividends{background:rgba(236,72,153,.2);color:#EC4899}
-      .badge-are{background:rgba(16,185,129,.2);color:#10B981}
-      .badge-investors{background:rgba(245,158,11,.2);color:#F59E0B}
+      .badge-are{background:rgba(16,185,129,.2);color:${TOKENS.semantic.success}}
+      .badge-investors{background:rgba(189,162,255,.2);color:#BDA2FF}
       .badge-tns{background:rgba(139,92,246,.2);color:#A78BFA}
       .badge-assimile{background:rgba(34,211,238,.2);color:#22D3EE}
 
       .truncate{cursor:help}
 
-      .loading-state{display:flex;justify-content:center;align-items:center;height:200px;flex-direction:column;gap:${TOKENS.spacing.lg}px}
-      .spinner{width:40px;height:40px;border:3px solid rgba(0,255,135,.2);border-radius:50%;border-top-color:${TOKENS.accent};animation:spin 1s ease-in-out infinite}
+      .loading-state{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:200px;
+        flex-direction:column;
+        gap:${TOKENS.spacing.lg}px;
+      }
+      .spinner{
+        width:40px;
+        height:40px;
+        border:3px solid rgba(0,255,135,.2);
+        border-radius:50%;
+        border-top-color:${TOKENS.accent};
+        animation:spin 1s ease-in-out infinite;
+      }
       @keyframes spin{to{transform:rotate(360deg)}}
       @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-      .comparatif-notes{margin-top:${TOKENS.spacing.xl}px;padding:${TOKENS.spacing.lg}px;border-radius:${TOKENS.radius.lg}px;background:rgba(1,42,74,.25);font-size:.875rem}
+      .comparatif-notes{
+        margin-top:${TOKENS.spacing.xl}px;
+        padding:${TOKENS.spacing.lg}px;
+        border-radius:${TOKENS.radius.lg}px;
+        background:rgba(1,42,74,.25);
+        font-size:.875rem;
+      }
       .notes-title{font-weight:600;color:${TOKENS.accent};margin-bottom:${TOKENS.spacing.md}px}
-      .notes-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:${TOKENS.spacing.md}px;margin-bottom:${TOKENS.spacing.md}px}
+      .notes-list{
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+        gap:${TOKENS.spacing.md}px;
+        margin-bottom:${TOKENS.spacing.md}px;
+      }
       .notes-item{display:flex;align-items:center;gap:${TOKENS.spacing.sm}px}
       .notes-term{color:${TOKENS.accent};font-weight:600}
-      .notes-disclaimer{font-style:italic;color:${TOKENS.text.muted};font-size:.8125rem;text-align:center;margin-top:${TOKENS.spacing.md}px}
+      .notes-disclaimer{
+        font-style:italic;
+        color:${TOKENS.text.muted};
+        font-size:.8125rem;
+        text-align:center;
+        margin-top:${TOKENS.spacing.md}px;
+      }
 
       @keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
       .comparatif-table tbody tr{animation:fadeInUp .25s ease forwards;opacity:0}
 
       @media (max-width: 768px){
-        .mobile-sticky-cta{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:12px;background:rgba(1,22,39,.92);backdrop-filter:saturate(140%) blur(6px);border-top:1px solid rgba(0,255,135,.25)}
+        .mobile-sticky-cta{
+          position:fixed;
+          left:0;
+          right:0;
+          bottom:0;
+          z-index:60;
+          padding:12px;
+          padding-bottom:calc(12px + env(safe-area-inset-bottom));
+          background:${TOKENS.surface.raised};
+          backdrop-filter:saturate(140%) blur(6px);
+          border-top:1px solid rgba(0,255,135,.25);
+        }
         .mobile-sticky-cta .btn{width:100%}
         .hero h1{font-size:1.5rem}
         .hero-ctas{flex-direction:column}
@@ -676,14 +953,52 @@ window.initComparatifStatuts = function() {
         .decision-one-liner{font-size:.85rem}
         
         .cards-mobile{display:grid;grid-template-columns:1fr;gap:${TOKENS.spacing.md}px;margin-bottom:${TOKENS.spacing.lg}px}
-        .card{position:relative;border:1px solid rgba(0,255,135,.25);background:${TOKENS.surface.overlay};border-radius:${TOKENS.radius.lg}px;padding:${TOKENS.spacing.lg}px;cursor:pointer;transition:all .15s ease}
+        .card{
+          position:relative;
+          border:1px solid rgba(0,255,135,.25);
+          background:${TOKENS.surface.overlay};
+          border-radius:${TOKENS.radius.lg}px;
+          padding:${TOKENS.spacing.lg}px;
+          cursor:pointer;
+          transition:all .15s ease;
+          min-height:44px;
+        }
         .card:hover{border-color:${TOKENS.accent};background:rgba(0,255,135,.05)}
         .card.selected{border-color:${TOKENS.accent};box-shadow:0 0 0 2px rgba(0,255,135,.25) inset}
-        .card-checkbox{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,255,135,.35);background:rgba(0,255,135,.08);font-size:.75rem}
+        .card-checkbox{
+          position:absolute;
+          top:10px;
+          right:10px;
+          width:24px;
+          height:24px;
+          border-radius:50%;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          border:1px solid rgba(0,255,135,.35);
+          background:rgba(0,255,135,.08);
+          font-size:.75rem;
+        }
         .card.selected .card-checkbox{background:${TOKENS.accent};border-color:${TOKENS.accent};color:#053}
         .card h4{margin:0 0 6px 0;color:${TOKENS.accent};font-size:1rem}
-        .card ul{margin:8px 0 0 16px;line-height:1.5;font-size:.875rem}
+        .card ul{margin:8px 0 0 16px;line-height:1.7;font-size:.875rem}
         .comparatif-table-container{display:none}
+      }
+
+      /* Skip to content link pour a11y */
+      .skip-to-content {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: ${TOKENS.accent};
+        color: #053;
+        padding: 8px 16px;
+        text-decoration: none;
+        z-index: 100;
+        border-radius: 0 0 4px 0;
+      }
+      .skip-to-content:focus {
+        top: 0;
       }
     `;
     document.head.appendChild(style);
@@ -695,6 +1010,13 @@ window.initComparatifStatuts = function() {
     if(!container){ console.error(`❌ Conteneur #${containerId} non trouvé`); return; }
 
     injectCSS();
+
+    // Skip to content link pour accessibilité
+    const skipLink = document.createElement('a');
+    skipLink.href = '#comparatif-table';
+    skipLink.className = 'skip-to-content';
+    skipLink.textContent = 'Aller au tableau comparatif';
+    document.body.insertBefore(skipLink, document.body.firstChild);
 
     const heroHTML = `
       <div class="hero">
@@ -718,25 +1040,25 @@ window.initComparatifStatuts = function() {
 
           <div class="section-label">Vos objectifs</div>
           <div class="intent-toggles" role="group" aria-label="Vos objectifs">
-            <button class="intent-toggle" data-intent="veut_dividendes" role="button" aria-pressed="false" aria-label="Dividendes">
+            <button type="button" class="intent-toggle" data-intent="veut_dividendes" aria-pressed="false" aria-describedby="tip-veut_dividendes">
               <i class="fas fa-coins icon"></i>
               <span>Dividendes</span>
-              <div class="tooltip">Affiche les statuts où les dividendes sont possibles/optimisés</div>
+              <div class="tooltip" id="tip-veut_dividendes">Affiche les statuts où les dividendes sont possibles/optimisés</div>
             </button>
-            <button class="intent-toggle" data-intent="en_chomage" role="button" aria-pressed="false" aria-label="Je perçois l'ARE">
+            <button type="button" class="intent-toggle" data-intent="en_chomage" aria-pressed="false" aria-describedby="tip-en_chomage">
               <i class="fas fa-shield-alt icon"></i>
               <span>Je perçois l'ARE</span>
-              <div class="tooltip">Masque les choix qui réduisent fortement l'ARE si pas de salaire</div>
+              <div class="tooltip" id="tip-en_chomage">Masque les choix qui réduisent fortement l'ARE si pas de salaire</div>
             </button>
-            <button class="intent-toggle" data-intent="prevoit_associes" role="button" aria-pressed="false" aria-label="J'aurai des associés">
+            <button type="button" class="intent-toggle" data-intent="prevoit_associes" aria-pressed="false" aria-describedby="tip-prevoit_associes">
               <i class="fas fa-users icon"></i>
               <span>J'aurai des associés</span>
-              <div class="tooltip">Privilégie les statuts permettant plusieurs associés</div>
+              <div class="tooltip" id="tip-prevoit_associes">Privilégie les statuts permettant plusieurs associés</div>
             </button>
-            <button class="intent-toggle" data-intent="levee_fonds" role="button" aria-pressed="false" aria-label="Lever des fonds">
+            <button type="button" class="intent-toggle" data-intent="levee_fonds" aria-pressed="false" aria-describedby="tip-levee_fonds">
               <i class="fas fa-rocket icon"></i>
               <span>Lever des fonds</span>
-              <div class="tooltip">Recommande SAS/SASU pour BSPCE et actions de préférence</div>
+              <div class="tooltip" id="tip-levee_fonds">Recommande SAS/SASU pour BSPCE et actions de préférence</div>
             </button>
           </div>
 
@@ -753,7 +1075,7 @@ window.initComparatifStatuts = function() {
             </select>
             <div class="comparison-items" id="comparison-items"></div>
             <div id="diff-badge-container"></div>
-            <button id="share-link" class="preset-btn" aria-label="Copier le résumé de cette comparaison">Partager</button>
+            <button type="button" id="share-link" class="preset-btn" aria-label="Copier le résumé de cette comparaison">Partager</button>
           </div>
 
           <div id="impact-recommendations" aria-live="polite"></div>
@@ -777,8 +1099,8 @@ window.initComparatifStatuts = function() {
           </div>
         </div>
 
-        <div class="comparatif-table-container">
-          <table class="comparatif-table" id="comparatif-table">
+        <div class="comparatif-table-container" id="comparatif-table">
+          <table class="comparatif-table">
             <thead><tr id="table-headers"></tr></thead>
             <tbody id="table-body">
               <tr><td colspan="10"><div class="loading-state"><div class="spinner"></div><p>Chargement des données…</p></div></td></tr>
@@ -807,7 +1129,7 @@ window.initComparatifStatuts = function() {
     mobileCTA.className = 'mobile-sticky-cta';
     mobileCTA.style.display = 'none';
     mobileCTA.innerHTML = `
-      <button class="btn btn-primary" id="mobile-cta-btn">Ajouter des statuts (0/${MAX_COMPARE===Infinity?'∞':MAX_COMPARE})</button>
+      <button type="button" class="btn btn-primary" id="mobile-cta-btn">Ajouter des statuts (0/${MAX_COMPARE===Infinity?'∞':MAX_COMPARE})</button>
     `;
     document.body.appendChild(mobileCTA);
 
@@ -832,6 +1154,7 @@ window.initComparatifStatuts = function() {
     const criteriaButtons=$('#criteria-buttons');
     criteria.forEach(c=>{
       const b=document.createElement('button');
+      b.type = 'button';
       b.className='criteria-button'+(c.id==='all'?' active':'');
       b.setAttribute('data-criterion', c.id); 
       b.setAttribute('aria-pressed', c.id==='all'?'true':'false');
@@ -1033,27 +1356,19 @@ window.initComparatifStatuts = function() {
         };
 
         btn.addEventListener('click', toggle);
-        btn.setAttribute('tabindex','0');
         btn.addEventListener('keydown', (e)=>{
           if(e.key==='Enter' || e.key===' '){
             e.preventDefault(); 
             toggle();
           }
         });
-
-        const tip = btn.querySelector('.tooltip');
-        if(tip){
-          const tipId = `tip-${intent}`;
-          tip.id = tipId;
-          btn.setAttribute('aria-describedby', tipId);
-        }
       });
     }
 
     function renderQuickPresets(){
       const host=$('#quick-presets'); if(!host) return;
       const presets=[ ['EURL','SASU'], ['SAS','SARL'], ['MICRO','EI'], ['SASU','SARL'] ];
-      host.innerHTML = presets.map(p=>`<button class="preset-btn" data-preset="${p.join(',')}" aria-label="Comparer ${p[0]} et ${p[1]}">${p[0]} ↔ ${p[1]}</button>`).join('');
+      host.innerHTML = presets.map(p=>`<button type="button" class="preset-btn" data-preset="${p.join(',')}" aria-label="Comparer ${p[0]} et ${p[1]}">${p[0]} ↔ ${p[1]}</button>`).join('');
       host.querySelectorAll('.preset-btn').forEach(b=>b.addEventListener('click',()=>{
         const [a,bis]=b.getAttribute('data-preset').split(',');
         compareStatuts=[resolveStatutKey(a), resolveStatutKey(bis)];
@@ -1069,9 +1384,18 @@ window.initComparatifStatuts = function() {
         { id:'startup-fundraise', label:'Startup (lever des fonds)', baseline:'BSPCE, actions de préférence (SAS)', apply:()=>{ intentAnswers={...intentAnswers,levee_fonds:'oui',prevoit_associes:'oui',en_chomage:false}; compareStatuts=['SASU','SAS']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
         { id:'artisan-tns', label:'Artisan budget serré (TNS)', baseline:'charges basses, comptabilité simple', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:false,en_chomage:false,prevoit_associes:'non'}; compareStatuts=['EURL','MICRO']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }}
       ];
-      host.innerHTML = personas.map(p=>`<button class="persona-chip" data-id="${p.id}" aria-label="${p.label}">${p.label}<div class="baseline">${p.baseline}</div></button>`).join('');
+      host.innerHTML = personas.map(p=>`<button type="button" class="persona-chip" data-id="${p.id}" aria-label="${p.label}" tabindex="0">${p.label}<div class="baseline">${p.baseline}</div></button>`).join('');
       host.querySelectorAll('.persona-chip').forEach(el=>{
-        const p=personas.find(x=>x.id===el.getAttribute('data-id')); if(p) el.addEventListener('click',p.apply);
+        const p=personas.find(x=>x.id===el.getAttribute('data-id')); 
+        if(p) {
+          el.addEventListener('click',p.apply);
+          el.addEventListener('keydown', (e)=>{
+            if(e.key==='Enter' || e.key===' '){
+              e.preventDefault();
+              p.apply();
+            }
+          });
+        }
       });
     }
 
@@ -1083,7 +1407,7 @@ window.initComparatifStatuts = function() {
       host.innerHTML=`
         <div class="advice-card">
           <div class="title"><i class="fas fa-shield-alt"></i> Chômage (ARE) — points clés</div>
-          <div style="font-size:.875rem;line-height:1.6">
+          <div style="font-size:.875rem;line-height:1.7">
             Salaire versé ⇒ réduction ARE • Dividendes SAS/SASU ⇒ non pris en compte • Dividendes EURL/SARL >10% ⇒ cotisations TNS • ARCE vs maintien : à arbitrer
           </div>
         </div>`;
@@ -1141,7 +1465,7 @@ window.initComparatifStatuts = function() {
         const label = statut?.shortName || shortName;
         const div=document.createElement('div'); 
         div.className='comparison-item';
-        div.innerHTML=`<i class="fas ${icon}"></i> ${escapeHTML(label)} <button class="remove-btn" aria-label="Retirer ${escapeHTML(label)}"><i class="fas fa-times"></i></button>`;
+        div.innerHTML=`<i class="fas ${icon}"></i> ${escapeHTML(label)} <button type="button" class="remove-btn" aria-label="Retirer ${escapeHTML(label)}"><i class="fas fa-times"></i></button>`;
         div.querySelector('.remove-btn').addEventListener('click',()=>removeFromComparison(shortName));
         wrap.appendChild(div);
       });
@@ -1225,7 +1549,7 @@ window.initComparatifStatuts = function() {
     function loadStatutData(){
       if(window.legalStatuses){ renderTable(window.legalStatuses); }
       else {
-        setTimeout(()=>{ if(window.legalStatuses){ renderTable(window.legalStatuses); } else { const body=$('#table-body'); body.innerHTML=`<tr><td colspan="10"><div class="loading-state"><p style="color:#FF6B6B;"><i class="fas fa-exclamation-triangle"></i> Impossible de charger les données.</p><button id="retry-load" style="padding:.5rem 1rem;background:rgba(0,255,135,.2);border:1px solid ${TOKENS.accent};color:${TOKENS.accent};border-radius:${TOKENS.radius.sm}px;cursor:pointer;margin-top:.5rem;">Réessayer</button></div></td></tr>`; $('#retry-load').addEventListener('click',loadStatutData); } }, 500);
+        setTimeout(()=>{ if(window.legalStatuses){ renderTable(window.legalStatuses); } else { const body=$('#table-body'); body.innerHTML=`<tr><td colspan="10"><div class="loading-state"><p style="color:${TOKENS.semantic.danger};"><i class="fas fa-exclamation-triangle"></i> Impossible de charger les données.</p><button type="button" id="retry-load" style="min-height:44px;padding:.5rem 1rem;background:rgba(0,255,135,.2);border:1px solid ${TOKENS.accent};color:${TOKENS.accent};border-radius:${TOKENS.radius.sm}px;cursor:pointer;margin-top:.5rem;">Réessayer</button></div></td></tr>`; $('#retry-load').addEventListener('click',loadStatutData); } }, 500);
       }
       window.addEventListener('legalStatuses:ready',()=>renderTable(window.legalStatuses),{ once:true });
     }
@@ -1360,7 +1684,7 @@ window.initComparatifStatuts = function() {
         const mobileHost = document.createElement('div');
         mobileHost.className = 'cards-mobile';
         mobileHost.innerHTML = rowsData.map(st => `
-          <div class="card" data-statut="${escapeHTML(st.shortName)}">
+          <div class="card" data-statut="${escapeHTML(st.shortName)}" role="button" tabindex="0" aria-pressed="${compareStatuts.includes(st.shortName)?'true':'false'}">
             <div class="card-checkbox"><i class="fas fa-check-circle"></i></div>
             <h4>${renderStatutName(st)}</h4>
             <div style="opacity:.75;margin-bottom:8px">${toHTML(st.name)}</div>
@@ -1378,14 +1702,25 @@ window.initComparatifStatuts = function() {
         mobileHost.querySelectorAll('.card').forEach(card=>{
           const sn = card.getAttribute('data-statut');
           if(compareStatuts.includes(sn)) card.classList.add('selected');
-          card.addEventListener('click', ()=>{
+          
+          const toggleCard = ()=>{
             const already = compareStatuts.includes(sn);
             if(already){
               removeFromComparison(sn);
               card.classList.remove('selected');
+              card.setAttribute('aria-pressed', 'false');
             } else {
               addToComparison(sn);
               card.classList.add('selected');
+              card.setAttribute('aria-pressed', 'true');
+            }
+          };
+          
+          card.addEventListener('click', toggleCard);
+          card.addEventListener('keydown', (e)=>{
+            if(e.key==='Enter' || e.key===' '){
+              e.preventDefault();
+              toggleCard();
             }
           });
         });
@@ -1400,9 +1735,9 @@ window.initComparatifStatuts = function() {
               <div class="empty">
                 <p><i class="fas fa-search"></i> Aucun statut ne correspond à votre recherche.</p>
                 <div class="quick">
-                  <button class="preset-btn" data-preset="EURL,SASU">Essayer EURL ↔ SASU</button>
-                  <button class="preset-btn" data-preset="SAS,SARL">Essayer SAS ↔ SARL</button>
-                  <button class="preset-btn" data-preset="MICRO,EI">Essayer MICRO ↔ EI</button>
+                  <button type="button" class="preset-btn" data-preset="EURL,SASU">Essayer EURL ↔ SASU</button>
+                  <button type="button" class="preset-btn" data-preset="SAS,SARL">Essayer SAS ↔ SARL</button>
+                  <button type="button" class="preset-btn" data-preset="MICRO,EI">Essayer MICRO ↔ EI</button>
                 </div>
               </div>
             </td>
