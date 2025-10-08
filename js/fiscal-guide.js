@@ -1,5 +1,21 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
 // Version 3.7 - Mai 2025 - Mise à jour des taux et barèmes 2025
+// --- GLOBALE (hors DOMContentLoaded) : badge IS réduit ---
+function renderISReduceBadge() {
+  return `
+    <span class="regime-badge is" style="position:relative; cursor:help;">
+      IS 15%
+      <span class="tooltiptext">
+        Taux réduit sous conditions (PME) :
+        <br>• CA &lt; 10 M€
+        <br>• Capital entièrement libéré
+        <br>• ≥ 75% détenu par des personnes physiques
+        <br><small>Sinon : 25%.</small>
+      </span>
+    </span>`;
+}
+// Rendez-la visible même en <script type="module">
+if (typeof window !== 'undefined') window.renderISReduceBadge = renderISReduceBadge;
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -54,7 +70,6 @@ function addCustomStyles() {
         `;
     document.head.appendChild(style);
 }
-
 addCustomStyles();
 
 
@@ -1190,16 +1205,19 @@ row.innerHTML = `
     <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
     <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
     <td class="px-4 py-3">${res.dividendesNets ? formatter.format(res.dividendesNets) : '-'}</td>
-    <td class="px-4 py-3">
-        ${res.sim.methodeDividendes ? 
-            (res.sim.methodeDividendes === 'PROGRESSIF' ? 
-                '<span class="text-green-400 text-xs">Barème <i class="fas fa-check-circle ml-1"></i></span>' : 
-                '<span class="text-blue-400 text-xs">PFU 30%</span>') 
-            : '-'}
-        ${res.sim.economieMethode > 0 ? 
-            `<div class="text-xs text-gray-400">+${formatter.format(res.sim.economieMethode)}</div>` 
-            : ''}
-    </td>
+   <td class="px-4 py-3">
+  ${res.sim.methodeDividendes ? 
+    (res.sim.methodeDividendes === 'PROGRESSIF' ? 
+      '<span class="text-green-400 text-xs">Barème <i class="fas fa-check-circle ml-1"></i></span>' : 
+      '<span class="text-blue-400 text-xs">PFU 30%</span>') 
+    : '-'}
+  ${res.sim.economieMethode > 0 ? 
+    `<div class="text-xs text-gray-400">+${formatter.format(res.sim.economieMethode)}</div>` 
+    : ''}
+  ${res.sim.methodeDividendes === 'PROGRESSIF' && res.sim.economieMethode > 0
+    ? '<div class="text-[10px] text-gray-400 italic">Option barème = globale</div>'
+    : ''}
+</td>
     <td class="px-4 py-3">${optimisationValue}</td>
     <td class="px-4 py-3">
         <span class="net-value ${isTopResult ? 'top' : ''} cursor-pointer show-detail-btn" data-statut="${res.statutId}">
@@ -1266,6 +1284,25 @@ modeRow.innerHTML = `
     `;
     
     resultsBody.appendChild(warningRow);
+
+    const VFL_RFR_LIMIT_PER_PART_2025 = 28797; // € par part, N-2
+const VFL_DEADLINE_TXT = "Option avant le 31/12 pour l’année suivante";
+
+function isEligibleVFL({ rfrN2 = null, nbParts = 1 } = {}) {
+  if (rfrN2 == null) return null;
+  return (rfrN2 / Math.max(1, nbParts)) <= VFL_RFR_LIMIT_PER_PART_2025;
+}
+function renderVFLNote(typeMicro) {
+  const taux = { BIC_VENTE: "1%", BIC_SERVICE: "1,7%", BNC: "2,2%" }[typeMicro] || "1–2,2%";
+  return `
+  <div class="mt-3 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs">
+    <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+      <strong>Versement libératoire ${taux} du CA :</strong>
+      RFR N-2 ≤ <strong>${VFL_RFR_LIMIT_PER_PART_2025.toLocaleString("fr-FR")} €</strong> par part
+      • ${VFL_DEADLINE_TXT}
+    </p>
+  </div>`;
+}
     
     // Ajouter les gestionnaires d'événements pour afficher les détails
     const detailButtons = document.querySelectorAll('.show-detail-btn');
@@ -1302,6 +1339,20 @@ function getTMI(revenu) {
     if (revenu <= 83823)   return 30;
     if (revenu <= 180294)  return 41;
     return 45;
+}
+function getBaseSeuilDivTNS({ capitalLibere = 0, primesEmission = 0, comptesCourants = 0 } = {}) {
+  return Number(capitalLibere) + Number(primesEmission) + Number(comptesCourants);
+}
+function formatBaseSeuilDivTNSTooltip(base) {
+  return `
+    <span class="info-tooltip">
+      <i class="fas fa-question-circle text-gray-400"></i>
+      <span class="tooltiptext">
+        Seuil des 10% calculé sur :
+        <br>capital libéré + primes d’émission + sommes en compte courant.
+        <br><small>Si inconnu : application d’un taux TNS prudent (fallback).</small>
+      </span>
+    </span>`;
 }
 
 // Fonction améliorée pour afficher le détail des calculs avec pourcentages
@@ -1985,7 +2036,7 @@ const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS 
             Cette particularité s'applique aux TNS (gérants majoritaires de SARL, gérants d'EURL, etc.).</p>
         </div>
         
-        ${hasDividendes ? `
+${hasDividendes ? `
         <div class="detail-category">Dividendes</div>
         <table class="detail-table">
             <tr>
@@ -2004,11 +2055,17 @@ const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS 
                 <td>Dividendes bruts</td>
                 <td>${formatter.format(result.sim.dividendes)}</td>
             </tr>
-            ${result.sim.cotTNSDiv ? `
-            <tr>
-                <td>Cotisations TNS sur dividendes > 10% du capital (${formatPercent(tauxCotTNSDiv)})</td>
-                <td>${formatter.format(result.sim.cotTNSDiv)}</td>
-            </tr>` : ''}
+            ${(() => {
+              const baseSeuil = getBaseSeuilDivTNS(result.sim || {});
+              const libelleBase = baseSeuil > 0
+                ? `10% de ${formatter.format(baseSeuil)}`
+                : `10% de (capital libéré + primes + CCA)`;
+              return result.sim.cotTNSDiv ? `
+              <tr>
+                  <td>Cotisations TNS sur dividendes &gt; ${libelleBase} ${formatBaseSeuilDivTNSTooltip(baseSeuil)}</td>
+                  <td>${formatter.format(result.sim.cotTNSDiv)}</td>
+              </tr>` : '';
+            })()}
             <tr>
                 <td>Méthode de taxation choisie</td>
                 <td>
@@ -2588,8 +2645,8 @@ const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS 
         detailContent += `
  <li>
     <i class="fas fa-percentage text-green-400 mr-2"></i>
-    <strong>IS :</strong>
-    15% jusqu'à 42 500€
+  <strong>IS :</strong>
+    ${renderISReduceBadge()} jusqu'à 42 500€ puis 25%
     <span class="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 border border-yellow-600 align-middle">
       <em>(sous conditions PME)</em>
     </span>,
@@ -2611,6 +2668,7 @@ const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS 
 else if (statutId === 'micro') {
     const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
     const versementLiberatoire = result.sim.versementLiberatoire || false;
+    const __vflBanner = versementLiberatoire ? renderVFLNote(typeMicro) : '';
     
     detailContent += `
             <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Abattement forfaitaire :</strong> ${
