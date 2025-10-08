@@ -1,15 +1,15 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room + Phase 1-4 + Mini Sprint + Bugfixes
+ * Comparatif statuts — v2025 UX Clean Room + Phase 1-4 + Mini Sprint + P0 Quick Wins
  * Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
  * Phase 2: blocs d'aide à la décision pour paires populaires
  * Phase 3: XSS protection, keyboard accessibility, URL state persistence
  * Phase 4: bannières impact, limite 2 statuts, mode cartes mobile, partage intelligent
  * Mini Sprint: Hero + CTA, sticky controls, toast, empty state
- * Bugfixes: MICRO disappearing, fiscalité normalization, alias resolution
+ * P0 Quick Wins: Diff by default, mobile sticky CTA, card affordance
  */
 
 window.initComparatifStatuts = function() {
-  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1-4 + Mini Sprint + Bugfixes)");
+  console.log("✅ Initialisation du tableau comparatif (v2025 + P0 Quick Wins)");
   window.createComparatifTable('comparatif-container');
 };
 
@@ -37,7 +37,6 @@ window.initComparatifStatuts = function() {
   };
 
   // ===================== STATUT ALIASES =====================
-  // FIX: Handle MICRO variants
   const STATUT_ALIASES = {
     'MICRO': ['MICRO','MICRO-ENTREPRISE','AUTO-ENTREPRISE','ME'],
     'EI': ['EI','ENTREPRISE INDIVIDUELLE'],
@@ -108,7 +107,6 @@ window.initComparatifStatuts = function() {
   const $ = (s, r=document)=>r.querySelector(s);
   const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
   
-  // Sécurité XSS
   const escapeHTML = (s='') => String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -118,14 +116,12 @@ window.initComparatifStatuts = function() {
   const fmtEuro = n => Number.isFinite(+n) ? (+n).toLocaleString('fr-FR')+' €' : toText(n);
   const debounce = (fn, ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
   
-  // Markdown basique **bold** mais en version safe
   const md2html = (text) => {
     if (!text) return '';
     const safe = escapeHTML(String(text));
     return safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   };
 
-  // FIX: Normalize fiscalité for display
   function normalizeFiscalite(s=''){
     return String(s)
       .replace(/\s*\(\s*par défaut\s*\)/i, ' par défaut')
@@ -133,7 +129,6 @@ window.initComparatifStatuts = function() {
       .trim();
   }
 
-  // FIX: Normalize values for diff comparison
   function normalizeForDiff(key, val){
     const v = String(val||'').toLowerCase().trim();
     if(!v) return v;
@@ -149,7 +144,6 @@ window.initComparatifStatuts = function() {
     return v;
   }
 
-  // Toast notification
   function showToast(msg='Copié ✓'){
     let t = document.getElementById('toast');
     if(!t){
@@ -442,7 +436,6 @@ window.initComparatifStatuts = function() {
     return { score:s, why:why.slice(0,3) };
   }
 
-  // FIX: Use normalizeForDiff for robust comparison
   const onlyDifferences = (rows, columns)=>{
     const keys = columns.map(c=>c.key).filter(k=>k!=='name');
     return keys.filter(k=>{
@@ -457,7 +450,7 @@ window.initComparatifStatuts = function() {
     const fallback = META_FALLBACK[shortName] || {};
     const enriched = {
       ...statut,
-      fiscalite: normalizeFiscalite(statut.fiscalite || ''), // FIX: Normalize display
+      fiscalite: normalizeFiscalite(statut.fiscalite || ''),
       regimeTVA: statut.regimeTVA || derived.regimeTVA,
       plafondCA: statut.plafondCA || derived.plafondCA || '—',
       obligationsCle: statut.obligationsCle || derived.obligationsCle || '—',
@@ -617,6 +610,8 @@ window.initComparatifStatuts = function() {
       .comparatif-table tbody tr{animation:fadeInUp .25s ease forwards;opacity:0}
 
       @media (max-width: 768px){
+        .mobile-sticky-cta{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:12px;background:rgba(1,22,39,.92);backdrop-filter:saturate(140%) blur(6px);border-top:1px solid rgba(0,255,135,.25)}
+        .mobile-sticky-cta .btn{width:100%}
         .hero h1{font-size:1.5rem}
         .hero-ctas{flex-direction:column}
         .btn{width:100%;text-align:center}
@@ -632,8 +627,11 @@ window.initComparatifStatuts = function() {
         .decision-one-liner{font-size:.85rem}
         
         .cards-mobile{display:grid;grid-template-columns:1fr;gap:${TOKENS.spacing.md}px;margin-bottom:${TOKENS.spacing.lg}px}
-        .card{border:1px solid rgba(0,255,135,.25);background:${TOKENS.surface.overlay};border-radius:${TOKENS.radius.lg}px;padding:${TOKENS.spacing.lg}px;cursor:pointer;transition:all .15s ease}
+        .card{position:relative;border:1px solid rgba(0,255,135,.25);background:${TOKENS.surface.overlay};border-radius:${TOKENS.radius.lg}px;padding:${TOKENS.spacing.lg}px;cursor:pointer;transition:all .15s ease}
         .card:hover{border-color:${TOKENS.accent};background:rgba(0,255,135,.05)}
+        .card.selected{border-color:${TOKENS.accent};box-shadow:0 0 0 2px rgba(0,255,135,.25) inset}
+        .card-checkbox{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,255,135,.35);background:rgba(0,255,135,.08);font-size:.75rem}
+        .card.selected .card-checkbox{background:${TOKENS.accent};border-color:${TOKENS.accent};color:#053}
         .card h4{margin:0 0 6px 0;color:${TOKENS.accent};font-size:1rem}
         .card ul{margin:8px 0 0 16px;line-height:1.5;font-size:.875rem}
         .comparatif-table-container{display:none}
@@ -754,6 +752,16 @@ window.initComparatifStatuts = function() {
       </div>
     `;
 
+    // P0: Mobile sticky CTA
+    const mobileCTA = document.createElement('div');
+    mobileCTA.id = 'mobile-cta';
+    mobileCTA.className = 'mobile-sticky-cta';
+    mobileCTA.style.display = 'none';
+    mobileCTA.innerHTML = `
+      <button class="btn btn-primary" id="mobile-cta-btn">Ajouter un 2ᵉ statut (0/2)</button>
+    `;
+    document.body.appendChild(mobileCTA);
+
     const tableContainer = $('.comparatif-table-container');
     const controlsWrap = document.createElement('div');
     controlsWrap.className = 'table-controls';
@@ -765,7 +773,6 @@ window.initComparatifStatuts = function() {
     `;
     tableContainer.parentNode.insertBefore(controlsWrap, tableContainer);
 
-    // ---------- critères ----------
     const criteria=[
       { id:'all', label:'Tous' },
       { id:'basic', label:'Base' },
@@ -787,12 +794,14 @@ window.initComparatifStatuts = function() {
     let selectedCriterion='all';
     let searchTerm='';
     let compareStatuts=[];
-    let onlyDiffSwitch = false;
+    let onlyDiffSwitch = true; // P0: Diff by default
+    let lastDiffCount = 0; // P0: For mobile CTA badge
     
     let isMobile = window.matchMedia('(max-width:768px)').matches;
     window.matchMedia('(max-width:768px)').addEventListener('change', (e) => {
       isMobile = e.matches;
       updateTable();
+      updateMobileCTA(); // P0
     });
 
     let intentAnswers={
@@ -803,7 +812,40 @@ window.initComparatifStatuts = function() {
       eviter_salaire:false
     };
 
-    // ---------- URL state persistence ----------
+    // P0: Mobile CTA logic
+    function updateMobileCTA(){
+      const el = document.getElementById('mobile-cta');
+      const btn = document.getElementById('mobile-cta-btn');
+      if(!el || !btn) return;
+      if(!isMobile) { el.style.display = 'none'; return; }
+
+      const count = compareStatuts.length;
+      if(count === 0){
+        btn.textContent = 'Choisir 2 statuts à comparer (0/2)';
+        btn.onclick = () => {
+          document.querySelector('.quick-presets')?.scrollIntoView({behavior:'smooth', block:'start'});
+        };
+        el.style.display = 'block';
+      } else if(count === 1){
+        btn.textContent = 'Ajouter un 2ᵉ statut (1/2)';
+        btn.onclick = () => {
+          document.querySelector('.quick-presets')?.scrollIntoView({behavior:'smooth', block:'start'});
+        };
+        el.style.display = 'block';
+      } else {
+        const n = lastDiffCount || 0;
+        btn.textContent = `Voir les différences (${n})`;
+        btn.onclick = () => {
+          onlyDiffSwitch = true;
+          const switchEl = document.getElementById('only-diff-switch');
+          if(switchEl) switchEl.checked = true;
+          updateTable();
+          document.querySelector('.comparatif-table-container')?.scrollIntoView({behavior:'smooth', block:'start'});
+        };
+        el.style.display = 'block';
+      }
+    }
+
     function persistStateToURL(){
       const i = [];
       if(intentAnswers.veut_dividendes) i.push('dividendes');
@@ -822,11 +864,11 @@ window.initComparatifStatuts = function() {
 
     function restoreStateFromURL(){
       const p = new URLSearchParams(location.search);
-      const c = (p.get('c')||'').split(',').filter(Boolean).map(resolveStatutKey); // FIX: resolve aliases
+      const c = (p.get('c')||'').split(',').filter(Boolean).map(resolveStatutKey);
       const i = (p.get('i')||'').split(',').filter(Boolean);
       const k = p.get('k')||'all';
       const q = p.get('q')||'';
-      const d = p.get('d')==='1';
+      const d = p.get('d');
 
       if(c.length){ compareStatuts = c.slice(0,2); }
       if(i.length){
@@ -837,7 +879,11 @@ window.initComparatifStatuts = function() {
       }
       selectedCriterion = ['all','basic','fiscal','social','creation'].includes(k) ? k : 'all';
       searchTerm = q.toLowerCase();
-      onlyDiffSwitch = d;
+      
+      // P0: Respect URL state if present, otherwise default to true
+      if(d !== null) {
+        onlyDiffSwitch = d === '1';
+      }
 
       syncIntentUI();
       $$('.criteria-button').forEach(b=>{
@@ -848,15 +894,13 @@ window.initComparatifStatuts = function() {
       const searchEl = $('#search-input'); if(searchEl) searchEl.value = q;
       const switchEl = $('#only-diff-switch'); if(switchEl) switchEl.checked = onlyDiffSwitch;
 
-      updateComparisonBar(); updateTable(); renderPersonaAdvice();
+      updateComparisonBar(); updateTable(); renderPersonaAdvice(); updateMobileCTA(); // P0
     }
 
-    // ---------- hooks publics ----------
     window.__comparatifHooks = window.__comparatifHooks || {};
-    window.__comparatifHooks.setComparison=function(statuts){ compareStatuts=statuts||[]; updateComparisonBar(); updateTable(); renderPersonaAdvice(); };
+    window.__comparatifHooks.setComparison=function(statuts){ compareStatuts=statuts||[]; updateComparisonBar(); updateTable(); renderPersonaAdvice(); updateMobileCTA(); };
     window.__comparatifHooks.setIntents=function(intents){ Object.assign(intentAnswers, intents); syncIntentUI(); renderAREHelper(intentAnswers); updateTable(); renderPersonaAdvice(); };
 
-    // ---------- init ----------
     initIntentFilters();
     initComparisonEvents();
     renderQuickPresets();
@@ -867,7 +911,7 @@ window.initComparatifStatuts = function() {
 
     $('#hero-cta-eurl-sasu')?.addEventListener('click', ()=>{
       compareStatuts=['EURL','SASU'];
-      updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
+      updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); // P0
       document.querySelector('.comparatif-table-container')?.scrollIntoView({behavior:'smooth',block:'start'});
     });
     $('#hero-cta-see-table')?.addEventListener('click', ()=>{
@@ -895,7 +939,6 @@ window.initComparatifStatuts = function() {
       });
     }
 
-    // ---------- events UI ----------
     $$('.criteria-button').forEach(btn=>{
       btn.addEventListener('click',()=>{
         $$('.criteria-button').forEach(x=>{ x.classList.remove('active'); x.setAttribute('aria-pressed','false'); });
@@ -909,7 +952,6 @@ window.initComparatifStatuts = function() {
     const debouncedUpdate=debounce(()=>{ updateTable(); persistStateToURL(); },200);
     $('#search-input').addEventListener('input',e=>{ searchTerm=e.target.value.toLowerCase(); debouncedUpdate(); });
 
-    // ---------- intent toggles ----------
     function syncIntentUI(){
       $$('.intent-toggle').forEach(btn=>{
         const intent=btn.dataset.intent;
@@ -957,27 +999,24 @@ window.initComparatifStatuts = function() {
       });
     }
 
-    // ---------- Quick presets ----------
     function renderQuickPresets(){
       const host=$('#quick-presets'); if(!host) return;
       const presets=[ ['EURL','SASU'], ['SAS','SARL'], ['MICRO','EI'], ['SASU','SARL'] ];
       host.innerHTML = presets.map(p=>`<button class="preset-btn" data-preset="${p.join(',')}" aria-label="Comparer ${p[0]} et ${p[1]}">${p[0]} ↔ ${p[1]}</button>`).join('');
       host.querySelectorAll('.preset-btn').forEach(b=>b.addEventListener('click',()=>{
         const [a,bis]=b.getAttribute('data-preset').split(',');
-        // FIX: Resolve aliases
         compareStatuts=[resolveStatutKey(a), resolveStatutKey(bis)];
-        updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
+        updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); // P0
       }));
     }
 
-    // ---------- Personae ----------
     function renderPersonas(){
       const host=$('#personas'); if(!host) return;
       const personas=[
-        { id:'freelance-are', label:'Freelance au chômage (ARE)', baseline:'éviter salaire, dividendes OK en SASU', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:true,veut_dividendes:true,eviter_salaire:true,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); }},
-        { id:'consultant-solo', label:'Consultant solo', baseline:'un associé, dividendes si possible', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:false,veut_dividendes:true,eviter_salaire:false,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); }},
-        { id:'startup-fundraise', label:'Startup (lever des fonds)', baseline:'BSPCE, actions de préférence (SAS)', apply:()=>{ intentAnswers={...intentAnswers,levee_fonds:'oui',prevoit_associes:'oui',en_chomage:false}; compareStatuts=['SASU','SAS']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); }},
-        { id:'artisan-tns', label:'Artisan budget serré (TNS)', baseline:'charges basses, comptabilité simple', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:false,en_chomage:false,prevoit_associes:'non'}; compareStatuts=['EURL','MICRO']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); }}
+        { id:'freelance-are', label:'Freelance au chômage (ARE)', baseline:'éviter salaire, dividendes OK en SASU', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:true,veut_dividendes:true,eviter_salaire:true,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
+        { id:'consultant-solo', label:'Consultant solo', baseline:'un associé, dividendes si possible', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:false,veut_dividendes:true,eviter_salaire:false,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
+        { id:'startup-fundraise', label:'Startup (lever des fonds)', baseline:'BSPCE, actions de préférence (SAS)', apply:()=>{ intentAnswers={...intentAnswers,levee_fonds:'oui',prevoit_associes:'oui',en_chomage:false}; compareStatuts=['SASU','SAS']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
+        { id:'artisan-tns', label:'Artisan budget serré (TNS)', baseline:'charges basses, comptabilité simple', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:false,en_chomage:false,prevoit_associes:'non'}; compareStatuts=['EURL','MICRO']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }}
       ];
       host.innerHTML = personas.map(p=>`<button class="persona-chip" data-id="${p.id}" aria-label="${p.label}">${p.label}<div class="baseline">${p.baseline}</div></button>`).join('');
       host.querySelectorAll('.persona-chip').forEach(el=>{
@@ -985,7 +1024,6 @@ window.initComparatifStatuts = function() {
       });
     }
 
-    // ---------- ARE helper ----------
     function renderAREHelper(intentAnswers){
       let host=document.getElementById('are-helper');
       if(!host){ host=document.createElement('div'); host.id='are-helper'; host.style.marginBottom=TOKENS.spacing.lg+'px'; const header=$('.comparatif-header'); header && header.appendChild(host); }
@@ -1000,7 +1038,6 @@ window.initComparatifStatuts = function() {
         </div>`;
     }
 
-    // ---------- comparaison directe ----------
     function initComparisonEvents(){
       const statusDropdown=$('#status-dropdown');
       function populate(){ if(!window.legalStatuses) return; statusDropdown.innerHTML='<option value="">Ajouter un statut…</option>';
@@ -1010,12 +1047,10 @@ window.initComparatifStatuts = function() {
       if(window.legalStatuses) populate(); else { const it=setInterval(()=>{ if(window.legalStatuses){ populate(); clearInterval(it);} },400); }
       window.addEventListener('legalStatuses:ready',()=>{ 
         populate(); 
-        // FIX: Re-render smart comparison after data loads
         renderSmartComparison(); 
       },{ once:true });
     }
 
-    // FIX: Resolve alias before adding
     function addToComparison(sn){ 
       sn = resolveStatutKey(sn);
       if(compareStatuts.includes(sn)) return; 
@@ -1025,6 +1060,7 @@ window.initComparatifStatuts = function() {
       updateTable(); 
       renderPersonaAdvice();
       persistStateToURL();
+      updateMobileCTA(); // P0
     }
     
     function removeFromComparison(sn){ 
@@ -1035,10 +1071,10 @@ window.initComparatifStatuts = function() {
         updateTable(); 
         renderPersonaAdvice(); 
         persistStateToURL();
+        updateMobileCTA(); // P0
       }
     }
 
-    // FIX: Fallback when statut not found in legalStatuses
     function updateComparisonBar(){
       const wrap=$('#comparison-items'); wrap.innerHTML='';
       const badge=$('#diff-badge-container'); 
@@ -1048,7 +1084,7 @@ window.initComparatifStatuts = function() {
           s => (s.shortName||'').toUpperCase() === shortName.toUpperCase()
         ));
         const icon = statut?.logo || 'fa-building';
-        const label = statut?.shortName || shortName; // fallback to shortName
+        const label = statut?.shortName || shortName;
         const div=document.createElement('div'); 
         div.className='comparison-item';
         div.innerHTML=`<i class="fas ${icon}"></i> ${escapeHTML(label)} <button class="remove-btn" aria-label="Retirer ${escapeHTML(label)}"><i class="fas fa-times"></i></button>`;
@@ -1132,7 +1168,6 @@ window.initComparatifStatuts = function() {
       }
     }
 
-    // ---------- DATA / TABLE ----------
     function loadStatutData(){
       if(window.legalStatuses){ renderTable(window.legalStatuses); }
       else {
@@ -1179,17 +1214,14 @@ window.initComparatifStatuts = function() {
       }
     }
 
-    // FIX: Never filter by intent when statuts are selected
     function filterStatuts(statuts, term){
       let list = Object.values(statuts);
       
       const selected = new Set(compareStatuts.map(s => s.toUpperCase()));
       if (selected.size > 0) {
-        // Keep ONLY selected statuts and DON'T filter by intent
         list = list.filter(s => selected.has((s.shortName||'').toUpperCase()));
         list = list.map(s => enrichForDisplay(s, intentAnswers));
       } else {
-        // Normal flow when nothing is selected
         if (term) {
           const tt = term.toLowerCase();
           list = list.filter(s =>
@@ -1234,6 +1266,7 @@ window.initComparatifStatuts = function() {
               updateTable();
               renderPersonaAdvice();
               persistStateToURL();
+              updateMobileCTA(); // P0
             });
           }
         } else {
@@ -1246,6 +1279,7 @@ window.initComparatifStatuts = function() {
 
       if(compareStatuts.length>=2 && rowsData.length>=2){
         diffKeys = onlyDifferences(rowsData, columns);
+        lastDiffCount = diffKeys.length || 0; // P0: Track for mobile CTA
         
         if(onlyDiffSwitch && diffKeys.length){
           columns = [{key:'name', label:'Statut'}, ...columns.filter(c => diffKeys.includes(c.key))];
@@ -1267,11 +1301,13 @@ window.initComparatifStatuts = function() {
       const existingCards = document.querySelector('.cards-mobile');
       if(existingCards) existingCards.remove();
       
+      // P0: Mobile cards with checkbox + selected state
       if(isMobile && tableWrap && rowsData.length>0){
         const mobileHost = document.createElement('div');
         mobileHost.className = 'cards-mobile';
         mobileHost.innerHTML = rowsData.map(st => `
           <div class="card" data-statut="${escapeHTML(st.shortName)}">
+            <div class="card-checkbox"><i class="fas fa-check-circle"></i></div>
             <h4>${renderStatutName(st)}</h4>
             <div style="opacity:.75;margin-bottom:8px">${toHTML(st.name)}</div>
             <ul>
@@ -1284,8 +1320,20 @@ window.initComparatifStatuts = function() {
         `).join('');
         tableWrap.parentNode.insertBefore(mobileHost, tableWrap);
         
+        // P0: Toggle selection on click + visual feedback
         mobileHost.querySelectorAll('.card').forEach(card=>{
-          card.addEventListener('click', ()=> addToComparison(card.getAttribute('data-statut')));
+          const sn = card.getAttribute('data-statut');
+          if(compareStatuts.includes(sn)) card.classList.add('selected');
+          card.addEventListener('click', ()=>{
+            const already = compareStatuts.includes(sn);
+            if(already){
+              removeFromComparison(sn);
+              card.classList.remove('selected');
+            } else {
+              addToComparison(sn);
+              card.classList.add('selected');
+            }
+          });
         });
       }
 
@@ -1309,7 +1357,7 @@ window.initComparatifStatuts = function() {
           b.addEventListener('click', ()=>{
             const [a,bis]=b.getAttribute('data-preset').split(',');
             compareStatuts=[resolveStatutKey(a), resolveStatutKey(bis)];
-            updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
+            updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); // P0
           });
         });
         return; 
@@ -1347,6 +1395,8 @@ window.initComparatifStatuts = function() {
       }).join('');
 
       $$('#table-body tr').forEach(row=>{ row.addEventListener('click',()=>{ const sn=row.getAttribute('data-statut'); if(sn) addToComparison(sn); }); });
+      
+      updateMobileCTA(); // P0: Update CTA after table render
     }
 
     function renderTable(data){ updateTable(); }
