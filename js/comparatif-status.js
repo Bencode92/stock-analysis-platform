@@ -1,14 +1,15 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room + Phase 1-4 + Mini Sprint
+ * Comparatif statuts — v2025 UX Clean Room + Phase 1-4 + Mini Sprint + Bugfixes
  * Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
  * Phase 2: blocs d'aide à la décision pour paires populaires
  * Phase 3: XSS protection, keyboard accessibility, URL state persistence
  * Phase 4: bannières impact, limite 2 statuts, mode cartes mobile, partage intelligent
  * Mini Sprint: Hero + CTA, sticky controls, toast, empty state
+ * Bugfixes: MICRO disappearing, fiscalité normalization, alias resolution
  */
 
 window.initComparatifStatuts = function() {
-  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1-4 + Mini Sprint)");
+  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1-4 + Mini Sprint + Bugfixes)");
   window.createComparatifTable('comparatif-container');
 };
 
@@ -34,6 +35,28 @@ window.initComparatifStatuts = function() {
       danger: '#EF4444'
     }
   };
+
+  // ===================== STATUT ALIASES =====================
+  // FIX: Handle MICRO variants
+  const STATUT_ALIASES = {
+    'MICRO': ['MICRO','MICRO-ENTREPRISE','AUTO-ENTREPRISE','ME'],
+    'EI': ['EI','ENTREPRISE INDIVIDUELLE'],
+    'EURL': ['EURL'],
+    'SASU': ['SASU'],
+    'SARL': ['SARL'],
+    'SAS': ['SAS']
+  };
+  
+  const aliasIndex = Object.fromEntries(
+    Object.entries(STATUT_ALIASES).flatMap(([canon, arr]) =>
+      arr.map(a => [a.toUpperCase(), canon])
+    )
+  );
+  
+  function resolveStatutKey(input){
+    const k = (input||'').toUpperCase();
+    return aliasIndex[k] || k;
+  }
 
   // ===================== MÉTAS FALLBACK =====================
   const META_FALLBACK = {
@@ -102,7 +125,31 @@ window.initComparatifStatuts = function() {
     return safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   };
 
-  // NEW: Toast notification
+  // FIX: Normalize fiscalité for display
+  function normalizeFiscalite(s=''){
+    return String(s)
+      .replace(/\s*\(\s*par défaut\s*\)/i, ' par défaut')
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+
+  // FIX: Normalize values for diff comparison
+  function normalizeForDiff(key, val){
+    const v = String(val||'').toLowerCase().trim();
+    if(!v) return v;
+    if(key==='fiscalite'){
+      return v
+        .replace(/\s*\(\s*par défaut\s*\)/gi,' par défaut')
+        .replace(/[()]/g,'')
+        .replace(/\s+/g,' ');
+    }
+    if(key==='regimesocial'){
+      return v.replace(/assimil[eé][ -]?salari[eé]/g,'assimilé salarié');
+    }
+    return v;
+  }
+
+  // Toast notification
   function showToast(msg='Copié ✓'){
     let t = document.getElementById('toast');
     if(!t){
@@ -395,9 +442,13 @@ window.initComparatifStatuts = function() {
     return { score:s, why:why.slice(0,3) };
   }
 
+  // FIX: Use normalizeForDiff for robust comparison
   const onlyDifferences = (rows, columns)=>{
     const keys = columns.map(c=>c.key).filter(k=>k!=='name');
-    return keys.filter(k=>{ const vals=rows.map(r=>String(r[k]??'—').toLowerCase()); return new Set(vals).size>1; });
+    return keys.filter(k=>{
+      const vals = rows.map(r => normalizeForDiff(k.toLowerCase(), r[k]));
+      return new Set(vals).size>1;
+    });
   };
 
   function enrichForDisplay(statut, answers={}){
@@ -406,6 +457,7 @@ window.initComparatifStatuts = function() {
     const fallback = META_FALLBACK[shortName] || {};
     const enriched = {
       ...statut,
+      fiscalite: normalizeFiscalite(statut.fiscalite || ''), // FIX: Normalize display
       regimeTVA: statut.regimeTVA || derived.regimeTVA,
       plafondCA: statut.plafondCA || derived.plafondCA || '—',
       obligationsCle: statut.obligationsCle || derived.obligationsCle || '—',
@@ -431,7 +483,6 @@ window.initComparatifStatuts = function() {
       .comparatif-title{font-size:1.75rem;font-weight:700;margin-bottom:${TOKENS.spacing.sm}px;color:${TOKENS.accent};line-height:1.2}
       .comparatif-subtitle{color:${TOKENS.text.secondary};margin-bottom:${TOKENS.spacing.xl}px;font-size:1rem;line-height:1.4}
 
-      /* NEW: Hero */
       .hero{margin-bottom:${TOKENS.spacing.xl}px;padding:${TOKENS.spacing.xl}px;background:linear-gradient(to right, rgba(0,255,135,.08), rgba(1,42,74,.35));border:1px solid rgba(0,255,135,.18);border-radius:${TOKENS.radius.xl}px}
       .hero h1{margin:0 0 ${TOKENS.spacing.sm}px 0;font-size:1.875rem;color:${TOKENS.accent};line-height:1.2}
       .hero-sub{color:${TOKENS.text.secondary};margin:0 0 ${TOKENS.spacing.lg}px 0}
@@ -441,16 +492,13 @@ window.initComparatifStatuts = function() {
       .btn-ghost{background:transparent;color:${TOKENS.accent};border-color:rgba(0,255,135,.35)}
       .btn:hover{filter:brightness(1.05);transform:scale(1.02)}
 
-      /* NEW: Sticky controls */
       .table-controls{position:sticky;top:0;z-index:40;background:rgba(1,22,39,.92);backdrop-filter:saturate(140%) blur(6px);padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;border:1px solid rgba(0,255,135,.12);border-radius:${TOKENS.radius.lg}px;margin-bottom:${TOKENS.spacing.md}px;display:flex;align-items:center;gap:${TOKENS.spacing.lg}px}
       .switch{display:inline-flex;align-items:center;gap:${TOKENS.spacing.sm}px;cursor:pointer;user-select:none}
       .switch input{accent-color:${TOKENS.accent};width:18px;height:18px;cursor:pointer}
 
-      /* NEW: Toast */
       .toast{position:fixed;right:16px;bottom:16px;background:rgba(1,42,74,.95);border:1px solid rgba(0,255,135,.35);padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border-radius:${TOKENS.radius.md}px;color:${TOKENS.text.primary};box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;transform:translateY(6px);transition:all .2s ease;z-index:9999}
       .toast.show{opacity:1;transform:translateY(0)}
 
-      /* NEW: Empty state */
       .empty{padding:2rem;text-align:center;color:${TOKENS.text.secondary}}
       .empty .quick{margin-top:${TOKENS.spacing.md}px;display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;justify-content:center}
 
@@ -601,7 +649,6 @@ window.initComparatifStatuts = function() {
 
     injectCSS();
 
-    // NEW: Hero HTML
     const heroHTML = `
       <div class="hero">
         <h1>Choisis le bon statut en 2 minutes</h1>
@@ -707,7 +754,6 @@ window.initComparatifStatuts = function() {
       </div>
     `;
 
-    // NEW: Inject sticky controls BEFORE table
     const tableContainer = $('.comparatif-table-container');
     const controlsWrap = document.createElement('div');
     controlsWrap.className = 'table-controls';
@@ -741,7 +787,7 @@ window.initComparatifStatuts = function() {
     let selectedCriterion='all';
     let searchTerm='';
     let compareStatuts=[];
-    let onlyDiffSwitch = false; // NEW
+    let onlyDiffSwitch = false;
     
     let isMobile = window.matchMedia('(max-width:768px)').matches;
     window.matchMedia('(max-width:768px)').addEventListener('change', (e) => {
@@ -769,18 +815,18 @@ window.initComparatifStatuts = function() {
       if(i.length) params.set('i', i.join(','));
       if(selectedCriterion!=='all') params.set('k', selectedCriterion);
       if(searchTerm) params.set('q', searchTerm);
-      if(onlyDiffSwitch) params.set('d', '1'); // NEW
+      if(onlyDiffSwitch) params.set('d', '1');
       const url = `${location.pathname}?${params.toString()}`;
       history.replaceState(null, '', url);
     }
 
     function restoreStateFromURL(){
       const p = new URLSearchParams(location.search);
-      const c = (p.get('c')||'').split(',').filter(Boolean);
+      const c = (p.get('c')||'').split(',').filter(Boolean).map(resolveStatutKey); // FIX: resolve aliases
       const i = (p.get('i')||'').split(',').filter(Boolean);
       const k = p.get('k')||'all';
       const q = p.get('q')||'';
-      const d = p.get('d')==='1'; // NEW
+      const d = p.get('d')==='1';
 
       if(c.length){ compareStatuts = c.slice(0,2); }
       if(i.length){
@@ -791,9 +837,8 @@ window.initComparatifStatuts = function() {
       }
       selectedCriterion = ['all','basic','fiscal','social','creation'].includes(k) ? k : 'all';
       searchTerm = q.toLowerCase();
-      onlyDiffSwitch = d; // NEW
+      onlyDiffSwitch = d;
 
-      // sync UI
       syncIntentUI();
       $$('.criteria-button').forEach(b=>{
         const isActive = b.getAttribute('data-criterion')===selectedCriterion;
@@ -801,7 +846,7 @@ window.initComparatifStatuts = function() {
         b.setAttribute('aria-pressed', isActive?'true':'false');
       });
       const searchEl = $('#search-input'); if(searchEl) searchEl.value = q;
-      const switchEl = $('#only-diff-switch'); if(switchEl) switchEl.checked = onlyDiffSwitch; // NEW
+      const switchEl = $('#only-diff-switch'); if(switchEl) switchEl.checked = onlyDiffSwitch;
 
       updateComparisonBar(); updateTable(); renderPersonaAdvice();
     }
@@ -820,7 +865,6 @@ window.initComparatifStatuts = function() {
     renderAREHelper(intentAnswers);
     restoreStateFromURL();
 
-    // NEW: Hero CTA events
     $('#hero-cta-eurl-sasu')?.addEventListener('click', ()=>{
       compareStatuts=['EURL','SASU'];
       updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
@@ -830,14 +874,12 @@ window.initComparatifStatuts = function() {
       document.querySelector('.comparatif-table-container')?.scrollIntoView({behavior:'smooth',block:'start'});
     });
 
-    // NEW: Switch event
     $('#only-diff-switch')?.addEventListener('change', (e)=>{
       onlyDiffSwitch = !!e.target.checked;
       updateTable();
       persistStateToURL();
     });
 
-    // NEW: Improved share button with toast
     const shareBtn = $('#share-link');
     if(shareBtn){
       shareBtn.addEventListener('click', async ()=>{
@@ -922,7 +964,9 @@ window.initComparatifStatuts = function() {
       host.innerHTML = presets.map(p=>`<button class="preset-btn" data-preset="${p.join(',')}" aria-label="Comparer ${p[0]} et ${p[1]}">${p[0]} ↔ ${p[1]}</button>`).join('');
       host.querySelectorAll('.preset-btn').forEach(b=>b.addEventListener('click',()=>{
         const [a,bis]=b.getAttribute('data-preset').split(',');
-        compareStatuts=[a,bis]; updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
+        // FIX: Resolve aliases
+        compareStatuts=[resolveStatutKey(a), resolveStatutKey(bis)];
+        updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
       }));
     }
 
@@ -964,10 +1008,16 @@ window.initComparatifStatuts = function() {
         statuts.forEach(s=>{ const o=document.createElement('option'); o.value=s.shortName; o.textContent=s.shortName; statusDropdown.appendChild(o); }); }
       statusDropdown.addEventListener('change',()=>{ if(statusDropdown.value){ addToComparison(statusDropdown.value); statusDropdown.value=''; }});
       if(window.legalStatuses) populate(); else { const it=setInterval(()=>{ if(window.legalStatuses){ populate(); clearInterval(it);} },400); }
-      window.addEventListener('legalStatuses:ready',()=>populate(),{ once:true });
+      window.addEventListener('legalStatuses:ready',()=>{ 
+        populate(); 
+        // FIX: Re-render smart comparison after data loads
+        renderSmartComparison(); 
+      },{ once:true });
     }
 
+    // FIX: Resolve alias before adding
     function addToComparison(sn){ 
+      sn = resolveStatutKey(sn);
       if(compareStatuts.includes(sn)) return; 
       if(compareStatuts.length>=2) compareStatuts.shift();
       compareStatuts.push(sn); 
@@ -988,14 +1038,20 @@ window.initComparatifStatuts = function() {
       }
     }
 
+    // FIX: Fallback when statut not found in legalStatuses
     function updateComparisonBar(){
       const wrap=$('#comparison-items'); wrap.innerHTML='';
       const badge=$('#diff-badge-container'); 
       
       compareStatuts.forEach(shortName=>{
-        const statut=(Object.values(window.legalStatuses||{}).find(s=>s.shortName===shortName)); if(!statut) return;
-        const div=document.createElement('div'); div.className='comparison-item';
-        div.innerHTML=`<i class="fas ${statut.logo||'fa-building'}"></i> ${escapeHTML(shortName)} <button class="remove-btn" aria-label="Retirer ${escapeHTML(shortName)}"><i class="fas fa-times"></i></button>`;
+        const statut=(Object.values(window.legalStatuses||{}).find(
+          s => (s.shortName||'').toUpperCase() === shortName.toUpperCase()
+        ));
+        const icon = statut?.logo || 'fa-building';
+        const label = statut?.shortName || shortName; // fallback to shortName
+        const div=document.createElement('div'); 
+        div.className='comparison-item';
+        div.innerHTML=`<i class="fas ${icon}"></i> ${escapeHTML(label)} <button class="remove-btn" aria-label="Retirer ${escapeHTML(label)}"><i class="fas fa-times"></i></button>`;
         div.querySelector('.remove-btn').addEventListener('click',()=>removeFromComparison(shortName));
         wrap.appendChild(div);
       });
@@ -1123,13 +1179,32 @@ window.initComparatifStatuts = function() {
       }
     }
 
+    // FIX: Never filter by intent when statuts are selected
     function filterStatuts(statuts, term){
-      let list=Object.values(statuts);
-      if(compareStatuts.length>0) list=list.filter(s=>compareStatuts.includes(s.shortName));
-      if(term){ const tt=term.toLowerCase(); list=list.filter(s=> (s.name||'').toLowerCase().includes(tt) || (s.shortName||'').toLowerCase().includes(tt) || (s.description||'').toLowerCase().includes(tt)); }
-      list=list.map(s=>enrichForDisplay(s,intentAnswers)).filter(s=>matchIntent(s,intentAnswers));
-      const anyIntent=intentAnswers.veut_dividendes||intentAnswers.en_chomage||intentAnswers.prevoit_associes==='oui'||intentAnswers.levee_fonds==='oui';
-      if(anyIntent) list.sort((a,b)=>(b._score||0)-(a._score||0));
+      let list = Object.values(statuts);
+      
+      const selected = new Set(compareStatuts.map(s => s.toUpperCase()));
+      if (selected.size > 0) {
+        // Keep ONLY selected statuts and DON'T filter by intent
+        list = list.filter(s => selected.has((s.shortName||'').toUpperCase()));
+        list = list.map(s => enrichForDisplay(s, intentAnswers));
+      } else {
+        // Normal flow when nothing is selected
+        if (term) {
+          const tt = term.toLowerCase();
+          list = list.filter(s =>
+            (s.name||'').toLowerCase().includes(tt) ||
+            (s.shortName||'').toLowerCase().includes(tt) ||
+            (s.description||'').toLowerCase().includes(tt)
+          );
+        }
+        list = list.map(s => enrichForDisplay(s, intentAnswers))
+                   .filter(s => matchIntent(s, intentAnswers));
+      }
+      
+      const anyIntent = intentAnswers.veut_dividendes||intentAnswers.en_chomage||
+                        intentAnswers.prevoit_associes==='oui'||intentAnswers.levee_fonds==='oui';
+      if(anyIntent && selected.size===0) list.sort((a,b)=>(b._score||0)-(a._score||0));
       return list;
     }
 
@@ -1166,7 +1241,6 @@ window.initComparatifStatuts = function() {
         }
       }
 
-      // NEW: Improved diff logic
       let diffKeys=[]; 
       let applyDiff=false;
 
@@ -1174,7 +1248,6 @@ window.initComparatifStatuts = function() {
         diffKeys = onlyDifferences(rowsData, columns);
         
         if(onlyDiffSwitch && diffKeys.length){
-          // User wants only differences shown
           columns = [{key:'name', label:'Statut'}, ...columns.filter(c => diffKeys.includes(c.key))];
           applyDiff = true;
         }
@@ -1190,7 +1263,6 @@ window.initComparatifStatuts = function() {
         countEl.innerHTML = `<strong>${columns.length-1}</strong> colonne${columns.length-1>1?'s':''} affichée${columns.length-1>1?'s':''}`;
       }
 
-      // Mode cartes mobile
       const tableWrap = document.querySelector('.comparatif-table-container');
       const existingCards = document.querySelector('.cards-mobile');
       if(existingCards) existingCards.remove();
@@ -1219,7 +1291,6 @@ window.initComparatifStatuts = function() {
 
       const body=$('#table-body');
       
-      // NEW: Improved empty state with suggestions
       if(rowsData.length===0){ 
         body.innerHTML = `
           <tr>
@@ -1237,7 +1308,8 @@ window.initComparatifStatuts = function() {
         body.querySelectorAll('.preset-btn').forEach(b=>{
           b.addEventListener('click', ()=>{
             const [a,bis]=b.getAttribute('data-preset').split(',');
-            compareStatuts=[a,bis]; updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
+            compareStatuts=[resolveStatutKey(a), resolveStatutKey(bis)];
+            updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
           });
         });
         return; 
