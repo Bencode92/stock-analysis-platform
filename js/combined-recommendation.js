@@ -4062,30 +4062,55 @@ calculateScores() {
 (() => {
   const A = this.answers || {};
   const big =
-    (parseFloat(A.projected_revenue||0) >= 700000) ||
-    (parseFloat(A.fundraising_amount||0) >= 1500000) ||
-    (parseInt(A.associates_number||0,10) >= 5) ||
-    (String(A.ipo_path||'').toLowerCase()==='yes');
+    (parseFloat(A.projected_revenue || 0) >= 700_000) ||
+    (parseFloat(A.fundraising_amount || 0) >= 1_500_000) ||
+    (parseInt(A.associates_number || 0, 10) >= 5) ||
+    (String(A.ipo_path || '').toLowerCase() === 'yes');
 
-  if (!big || !this.weightedScores?.SA) return;
+  if (!big || !this.weightedScores?.SA) {
+    this.auditTrail.scores = this.auditTrail.scores || {};
+    this.auditTrail.scores.SA = this.auditTrail.scores.SA || {};
+    this.auditTrail.scores.SA.__summary = {
+      ...(this.auditTrail.scores.SA.__summary || {}),
+      tie_breaker: 'sa_enterprise_scale',
+      tie_breaker_applied: false,
+      reason: !big ? 'not_big_enough' : 'no_sa_score'
+    };
+    return;
+  }
 
-  const sorted = Object.entries(this.weightedScores).sort((a,b)=>b[1]-a[1]);
+  const sorted = Object.entries(this.weightedScores)
+    .filter(([, v]) => Number.isFinite(v))
+    .sort((a, b) => b[1] - a[1]);
+  if (!sorted.length) return;
+
   const [topId, topScore] = sorted[0];
   if (topId === 'SA') return;
 
   const sa = this.weightedScores.SA || 0;
-  const delta = (topScore||0) - sa;
-  const MAX_DELTA = 4; // seuil de rattrapage
+  const delta = (topScore || 0) - sa;
+  const MAX_DELTA = 5; // seuil de rattrapage
 
+  this.auditTrail.scores.SA = this.auditTrail.scores.SA || {};
   if (sa > 0 && delta >= 0 && delta <= MAX_DELTA) {
     this.weightedScores.SA = +(Math.min(100, topScore + 0.01)).toFixed(2);
-    this.auditTrail.scores.SA = this.auditTrail.scores.SA || {};
     this.auditTrail.scores.SA.__summary = {
-      ...(this.auditTrail.scores.SA.__summary||{}),
+      ...(this.auditTrail.scores.SA.__summary || {}),
       tie_breaker: 'sa_enterprise_scale',
       tie_breaker_applied: true,
       pre_tie_breaker_score_0to100: sa,
-      score_0to100: this.weightedScores.SA
+      score_0to100: this.weightedScores.SA,
+      delta,
+      threshold: MAX_DELTA
+    };
+  } else {
+    this.auditTrail.scores.SA.__summary = {
+      ...(this.auditTrail.scores.SA.__summary || {}),
+      tie_breaker: 'sa_enterprise_scale',
+      tie_breaker_applied: false,
+      reason: 'out_of_range_or_lower',
+      delta,
+      threshold: MAX_DELTA
     };
   }
 })();
