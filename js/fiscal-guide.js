@@ -35,6 +35,23 @@ function renderVFLNote(typeMicro) {
       </p>
     </div>`;
 }
+// --- Arrondis & fermeture d'équation (Option B) — GLOBAL ---
+const round2 = v => Math.round(v * 100) / 100;
+
+/**
+ * Ferme l'équation: brut + cotisations = resultatAvantRem
+ * en travaillant en centimes et en absorbant l’écart final (±1€) dans les cotisations.
+ */
+function closeEquation(brut, cotisations, resultatAvantRem, tol = 1) {
+  const b = round2(brut);
+  let c = round2(cotisations);
+  let reste = round2(resultatAvantRem - b - c);
+  if (Math.abs(reste) <= tol) {
+    c = round2(c + reste);
+    reste = 0;
+  }
+  return { brut: b, cotisations: c, reste };
+}
 
 if (typeof window !== "undefined") {
   window.renderVFLNote = renderVFLNote;
@@ -1065,126 +1082,189 @@ if (nbAssocies >= 2) {
     };
     
 // Simuler chaque statut sélectionné
-    for (const statutId of selectedStatuses) {
-        if (statutsComplets[statutId]) {
-            try {
-                const statut = statutsComplets[statutId];
-                const sim = statut.simuler();
-                
-                // Debug pour vérifier que les paramètres sont bien passés
-                console.log(`Simulation ${statutId}:`, sim);
-                
-                // Si incompatible, afficher un message
-                if (!sim.compatible) {
-                    resultats.push({
-                        statutId: statutId,
-                        statut: statut.nom,
-                        brut: '-',
-                        charges: '-',
-                        impots: '-',
-                        net: `<span class="text-red-400">${sim.message || 'Incompatible'}</span>`,
-                        sim: sim,
-                        score: 0
-                    });
-                    continue;
-                }
-                
-                // Déterminer les montants à afficher selon le type de statut
-                let brut, charges, impots, net;
-                
-                // Ces valeurs varient selon le type de statut
-                if (statutId === 'micro') {
-                    brut = sim.ca;
-                    charges = sim.cotisationsSociales + (sim.cfp || 0) + (sim.cfe || 0);
-                    impots = sim.impotRevenu;
-                    net = sim.revenuNetApresImpot;
-                } else if (statutId === 'ei') {
-                    brut = sim.beneficeAvantCotisations;
-                    charges = sim.cotisationsSociales;
-                    impots = sim.impotRevenu;
-                    net = sim.revenuNetApresImpot;
-                } else if (statutId === 'eurl' && !sim.is) {
-                    brut = sim.beneficeImposable + sim.cotisationsSociales;
-                    charges = sim.cotisationsSociales;
-                    impots = sim.impotRevenu;
-                    net = sim.revenuNetApresImpot;
-                } else if (statutId === 'snc') {
-                    brut = sim.beneficeAssociePrincipal;
-                    charges = sim.cotisationsSociales;
-                    impots = sim.impotRevenu;
-                    net = sim.revenuNetApresImpot;
-                } else if (statutId === 'sci') {
-                    // SCI est un cas particulier
-                    brut = sim.resultatFiscalAssocie;
-                    charges = sim.prelevementsSociaux || 0;
-                    impots = sim.impotRevenu;
-                    net = sim.revenuNetApresImpot;
-                } else {
-                      // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, etc.)
-                  brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
-                  charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
-                 impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
-                    if (sim.cotTNSDiv) impots += sim.cotTNSDiv; // Ajout des cotisations TNS sur dividendes
-    
-                 // Recalculer explicitement le net en tenant compte des charges mises à jour
-                const revenuNetSalaire = sim.salaireNetApresIR || sim.revenuNetSalaire || 0;
-                   const dividendesNets = sim.dividendesNets || 0;
-                 net = sim.revenuNetTotal || (revenuNetSalaire + dividendesNets);
-    
-                  // Log de debug pour vérifier les valeurs
-                     console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
-}
-                
-                // Calcul du score avec prise en compte de la progressivité fiscale
-                const scoreNet = 100 * (net / ca); // Score standard
-                
-                // Coefficient d'évolutivité: moins favorable aux statuts forfaitaires à CA élevé
-                let coeffEvolution = 1;
-                if (statutId === 'micro' && ca > 30000) {
-                    // Pénaliser légèrement la micro pour CA important (moins évolutif)
-                    coeffEvolution = 0.95;
-                } else if ((statutId === 'sasu' || statutId === 'sas' || statutId === 'selas') && ca > 80000) {
-                    // Légèrement favorable aux structures avec assimilé salarié à CA élevé
-                    coeffEvolution = 1.05;
-                }
-                
-                // Score avec coefficient d'évolutivité
-                const score = scoreNet * coeffEvolution;
-                
-                // Calculer la répartition rémunération/dividendes
-                const ratioEffectif = useOptimalRatio && sim.ratioOptimise ? sim.ratioOptimise : ratioSalaire;
-                
-                // NOUVEAU: Déterminer si l'optimisation était active pour ce statut
-                const optimisationActive = useOptimalRatio && sim.ratioOptimise !== undefined;
-                
-                resultats.push({
-                    statutId: statutId,
-                    statut: statut.nom,
-                    brut: brut,
-                    charges: charges,
-                    impots: impots,
-                    net: net,
-                    sim: sim,
-                    score: score,
-                    ratioOptimise: sim.ratioOptimise,
-                    dividendesNets: sim.dividendesNets || 0,
-                    ratioEffectif: ratioEffectif,
-                    optimisationActive: optimisationActive  // NOUVEAU
-                });
-            } catch (e) {
-                console.error(`Erreur lors de la simulation pour ${statutsComplets[statutId].nom}:`, e);
-                resultats.push({
-                    statutId: statutId,
-                    statut: statutsComplets[statutId].nom,
-                    brut: '-',
-                    charges: '-',
-                    impots: '-',
-                    net: `<span class="text-red-400">Erreur de calcul</span>`,
-                    score: 0
-                });
+for (const statutId of selectedStatuses) {
+  if (statutsComplets[statutId]) {
+    try {
+      const statut = statutsComplets[statutId];
+      const sim = statut.simuler();
+
+      // Debug pour vérifier que les paramètres sont bien passés
+      console.log(`Simulation ${statutId}:`, sim);
+
+      // --- Post-traitement d'équation + UX dividendes (après simuler) ---
+      if (sim && sim.compatible) {
+        const resultatAvantRem = round2(
+          sim.resultatAvantRemuneration
+          ?? sim.resultatEntreprise
+          ?? sim.beneficeAvantCotisations
+          ?? 0
+        );
+
+        // TNS (EURL-IS, SARL, SELARL, SCA) → absorber l’écart dans les cotisations sociales
+        if (['eurlIS','sarl','selarl','sca'].includes(statutId)) {
+          const brut = Number(sim.remuneration) || 0;
+          const cot  = Number(sim.cotisationsSociales) || 0;
+          const { brut: b, cotisations: c, reste } = closeEquation(brut, cot, resultatAvantRem);
+          if (reste === 0) {
+            sim.remuneration = b;
+            sim.cotisationsSociales = c;
+            sim.resultatApresRemuneration = 0;
+            if (sim.dividendes && Math.abs(sim.dividendes) < 5) {
+              sim.dividendes = 0; sim.prelevementForfaitaire = 0; sim.dividendesNets = 0;
             }
+          }
         }
+
+        // Assimilé salarié (SASU, SAS, SA, SELAS) → absorber l’écart côté charges patronales
+        if (['sasu','sas','sa','selas'].includes(statutId)) {
+          const brut   = Number(sim.remuneration) || 0;
+          const chPat  = Number(sim.chargesPatronales) || 0;
+          const chSal  = Number(sim.chargesSalariales) || 0;
+          const { brut: b, cotisations: totalCharges, reste } = closeEquation(brut, chPat + chSal, resultatAvantRem);
+          if (reste === 0) {
+            const delta = round2(totalCharges - (chPat + chSal));
+            sim.remuneration = b;
+            sim.chargesPatronales = round2(chPat + delta); // on ajuste côté employeur
+            sim.resultatApresRemuneration = 0;
+            if (sim.dividendes && Math.abs(sim.dividendes) < 5) {
+              sim.dividendes = 0; sim.prelevementForfaitaire = 0; sim.dividendesNets = 0;
+            }
+          }
+        }
+
+        // IR “purs” (EI, EURL-IR, SNC) si une rémunération est modélisée
+        if (['ei','eurl','snc'].includes(statutId) && sim.remuneration) {
+          const brut = Number(sim.remuneration) || 0;
+          const cot  = Number(sim.cotisationsSociales) || 0;
+          const { brut: b, cotisations: c, reste } = closeEquation(brut, cot, resultatAvantRem);
+          if (reste === 0) {
+            sim.remuneration = b;
+            sim.cotisationsSociales = c;
+          }
+        }
+      }
+      // --- fin post-traitement ---
+
+      // Si incompatible, afficher un message
+      if (!sim.compatible) {
+        resultats.push({
+          statutId: statutId,
+          statut: statut.nom,
+          brut: '-',
+          charges: '-',
+          impots: '-',
+          net: `<span class="text-red-400">${sim.message || 'Incompatible'}</span>`,
+          sim: sim,
+          score: 0
+        });
+        continue;
+      }
+
+      // Déterminer les montants à afficher selon le type de statut
+      let brut, charges, impots, net;
+
+      // Ces valeurs varient selon le type de statut
+      if (statutId === 'micro') {
+        brut = sim.ca;
+        charges = sim.cotisationsSociales + (sim.cfp || 0) + (sim.cfe || 0);
+        impots = sim.impotRevenu;
+        net = sim.revenuNetApresImpot;
+
+      } else if (statutId === 'ei') {
+        brut = sim.beneficeAvantCotisations;
+        charges = sim.cotisationsSociales;
+        impots = sim.impotRevenu;
+        net = sim.revenuNetApresImpot;
+
+      } else if (statutId === 'eurl' && !sim.is) {
+        brut = sim.beneficeImposable + sim.cotisationsSociales;
+        charges = sim.cotisationsSociales;
+        impots = sim.impotRevenu;
+        net = sim.revenuNetApresImpot;
+
+      } else if (statutId === 'snc') {
+        brut = sim.beneficeAssociePrincipal;
+        charges = sim.cotisationsSociales;
+        impots = sim.impotRevenu;
+        net = sim.revenuNetApresImpot;
+
+      } else if (statutId === 'sci') {
+        // SCI est un cas particulier
+        brut = sim.resultatFiscalAssocie;
+        charges = sim.prelevementsSociaux || 0;
+        impots = sim.impotRevenu;
+        net = sim.revenuNetApresImpot;
+
+      } else {
+        // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, etc.)
+        brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
+        charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
+        impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
+        if (sim.cotTNSDiv) impots += sim.cotTNSDiv; // Ajout des cotisations TNS sur dividendes
+
+        // Astuce UX : tuer les “dividendes 1 €” (seuil 5 €)
+        const dividendesNets = (sim.dividendesNets && Math.abs(sim.dividendesNets) >= 5) ? sim.dividendesNets : 0;
+
+        // Recalculer explicitement le net en tenant compte des charges mises à jour
+        const revenuNetSalaire = sim.salaireNetApresIR || sim.revenuNetSalaire || 0;
+        net = sim.revenuNetTotal || (revenuNetSalaire + dividendesNets);
+
+        // Log de debug pour vérifier les valeurs
+        console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
+      }
+
+      // Calcul du score avec prise en compte de la progressivité fiscale
+      const scoreNet = 100 * (net / ca); // Score standard
+
+      // Coefficient d'évolutivité
+      let coeffEvolution = 1;
+      if (statutId === 'micro' && ca > 30000) {
+        coeffEvolution = 0.95;
+      } else if ((statutId === 'sasu' || statutId === 'sas' || statutId === 'selas') && ca > 80000) {
+        coeffEvolution = 1.05;
+      }
+
+      // Score avec coefficient d'évolutivité
+      const score = scoreNet * coeffEvolution;
+
+      // Calculer la répartition rémunération/dividendes
+      const ratioEffectif = useOptimalRatio && sim.ratioOptimise ? sim.ratioOptimise : ratioSalaire;
+
+      // Déterminer si l'optimisation était active pour ce statut
+      const optimisationActive = useOptimalRatio && sim.ratioOptimise !== undefined;
+
+      // Astuce UX pour la colonne “Dividendes nets”
+      const dividendesNetsAff = (sim.dividendesNets && Math.abs(sim.dividendesNets) >= 5) ? sim.dividendesNets : 0;
+
+      resultats.push({
+        statutId: statutId,
+        statut: statut.nom,
+        brut: brut,
+        charges: charges,
+        impots: impots,
+        net: net,
+        sim: sim,
+        score: score,
+        ratioOptimise: sim.ratioOptimise,
+        dividendesNets: dividendesNetsAff,
+        ratioEffectif: ratioEffectif,
+        optimisationActive: optimisationActive
+      });
+
+    } catch (e) {
+      console.error(`Erreur lors de la simulation pour ${statutsComplets[statutId].nom}:`, e);
+      resultats.push({
+        statutId: statutId,
+        statut: statutsComplets[statutId].nom,
+        brut: '-',
+        charges: '-',
+        impots: '-',
+        net: `<span class="text-red-400">Erreur de calcul</span>`,
+        score: 0
+      });
     }
+  }
+}
     
     // Trier par net décroissant
     resultats.sort((a, b) => b.score - a.score);
