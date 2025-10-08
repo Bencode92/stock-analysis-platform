@@ -1505,7 +1505,7 @@ if (statutId === 'micro') {
             <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
             <strong>Conditions du versement libératoire (2025) :</strong></p>
             <ul class="mt-1 ml-6 space-y-1">
-                <li>• Revenu fiscal de référence N-2 < 27 478 € par part</li>
+                <li>• Revenu fiscal de référence N-2 < 28 797 € par part</li>
                 <li>• Option à exercer lors de la création ou avant le 31/12 pour l'année suivante</li>
                 <li>• Irrévocable pour l'année en cours</li>
             </ul>
@@ -1833,10 +1833,20 @@ if (statutId === 'micro') {
     // MODIFIÉ : Calculer le TMI sur la base imposable correcte
     const tmiEffectif = getTMI(baseImposableIR);
     
-    // Calcul des taux
-    const tauxCotisationsTNS = (result.sim.cotisationsSociales / result.sim.remuneration * 100) || 30;
-    const tauxIS = result.sim.resultatApresRemuneration <= 42500 ? 15 : 25;
-    const tauxCotTNSDiv = 30; // Cotisations TNS sur dividendes > 10% capital
+   // Calcul des taux (robuste et plus réaliste)
+const baseRem = Number(result.sim?.remuneration) || 0;
+const cotSoc  = Number(result.sim?.cotisationsSociales) || 0;
+
+// TNS effectif observé sur la rémunération (fallback 30 si info manquante)
+const tauxCotisationsTNS = baseRem > 0 ? Math.round((cotSoc / baseRem) * 100) : 30;
+
+// IS (15% sous conditions PME) sinon 25%
+const tauxIS = (Number(result.sim?.resultatApresRemuneration) || 0) <= 42500 ? 15 : 25;
+
+// Dividendes TNS (>10% capital) : réutilise le taux TNS effectif, fallback prudent 35
+const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS > 0
+  ? tauxCotisationsTNS
+  : 35;
     
     detailContent = `
         <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
@@ -2576,8 +2586,19 @@ if (statutId === 'micro') {
         statutId === 'sa' || statutId === 'selarl' || statutId === 'selas' || statutId === 'sca') {
         
         detailContent += `
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>IS :</strong> 15% jusqu'à 42 500€, puis 25%</li>
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>PFU sur dividendes :</strong> 30% (17.2% prélèvements sociaux + 12.8% IR)</li>`;
+ <li>
+    <i class="fas fa-percentage text-green-400 mr-2"></i>
+    <strong>IS :</strong>
+    15% jusqu'à 42 500€
+    <span class="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 border border-yellow-600 align-middle">
+      <em>(sous conditions PME)</em>
+    </span>,
+    puis 25%
+  </li>
+  <li>
+    <i class="fas fa-percentage text-green-400 mr-2"></i>
+    <strong>PFU sur dividendes :</strong> 30% (17.2% prélèvements sociaux + 12.8% IR)
+  </li>`;
         
         // Cotisations TNS sur dividendes pour certains statuts
         if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
