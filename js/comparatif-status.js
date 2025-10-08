@@ -1,9 +1,9 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room + Phase 1-3 improvements + Phase 4 (reco, impact, mobile cards)
+ * Comparatif statuts — v2025 UX Clean Room + Phase 1-3 improvements + Phase 4 (impact, mobile cards)
  * Ajouts Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
  * Ajouts Phase 2: blocs d'aide à la décision pour paires populaires
  * Ajouts Phase 3: XSS protection, keyboard accessibility, URL state persistence
- * Ajouts Phase 4: bannières reco/impact, limite 2 statuts, mode cartes mobile, partage intelligent
+ * Ajouts Phase 4: bannières impact, limite 2 statuts, mode cartes mobile, partage intelligent
  * Fix: regimeTVA affiché en entier (tooltip désactivé) + markdown rendering + security
  */
 
@@ -102,7 +102,7 @@ window.initComparatifStatuts = function() {
     return safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   };
 
-  // ===================== PHASE 4 - HELPERS RECO & IMPACTS =====================
+  // ===================== PHASE 4 - HELPERS IMPACTS =====================
   
   function computeCaveats(st){
     const sn = (st.shortName||'').toUpperCase();
@@ -113,24 +113,6 @@ window.initComparatifStatuts = function() {
       return "Dividendes >10% soumis à cotisations TNS.";
     }
     return '';
-  }
-
-  function renderRecommendationBlock(rows){
-    if(!rows?.length) return '';
-    const best = [...rows].sort((a,b)=>(b._score||0)-(a._score||0))[0];
-    if(!best || !best._score || best._score <= 0) return '';
-    const reasons = (best._why||[]).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('');
-    const caveat = best._caveat || best._blocked || '';
-    return `
-      <div class="advice-card" role="status" aria-live="polite" id="reco-banner">
-        <div class="title"><i class="fas fa-magic"></i> Recommandation</div>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <span class="diff-badge"><i class="fas fa-check-circle"></i> ${escapeHTML(best.shortName)}</span>
-          <span style="opacity:.8">Score : <strong>${best._score||0}</strong></span>
-        </div>
-        <ul style="margin-top:8px">${reasons}</ul>
-        ${caveat ? `<div class="decision-one-liner" style="margin-top:8px">${escapeHTML(caveat)}</div>`:''}
-      </div>`;
   }
 
   function renderIntentImpactBar(intents){
@@ -792,11 +774,8 @@ window.initComparatifStatuts = function() {
     if(shareBtn){
       shareBtn.addEventListener('click', async ()=>{
         persistStateToURL();
-        const rows = filterStatuts(window.legalStatuses, searchTerm).sort((a,b)=>(b._score||0)-(a._score||0));
-        const best = rows[0];
         const pair = compareStatuts.join(' vs ') || '—';
-        const reasons = best ? (best._why||[]).slice(0,2).join(' · ') : '';
-        const summary = `Recommandation: ${best?.shortName||'-'} (${reasons}) — Comparaison: ${pair} — ${location.href}`;
+        const summary = `Comparaison: ${pair} — ${location.href}`;
         try{
           await navigator.clipboard.writeText(summary);
           shareBtn.textContent = 'Résumé copié ✓';
@@ -1097,12 +1076,11 @@ window.initComparatifStatuts = function() {
       let columns=getColumnsForCriterion(selectedCriterion);
       const rowsData=filterStatuts(window.legalStatuses, searchTerm);
 
-      // PHASE 4: Afficher impact + reco
+      // PHASE 4: Afficher impact uniquement (recommandation retirée)
       const impactHost = $('#impact-recommendations');
       if(impactHost){
         const impact = renderIntentImpactBar(intentAnswers);
-        const reco = renderRecommendationBlock(rowsData);
-        impactHost.innerHTML = impact + reco;
+        impactHost.innerHTML = impact;
       }
 
       // Suggestion d'alternative si 1 seul statut
