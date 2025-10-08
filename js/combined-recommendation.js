@@ -1431,7 +1431,7 @@ apply: (statusId, score, answers, metrics) => {
     (String(a?.fundraising).toLowerCase() === 'yes' && Number(a?.fundraising_amount) >= 2000000) ||
     (Number(a?.associates_number || 0) >= 7) ||
     (String(a?.governance_complexity || '').toLowerCase() === 'complex'),
-  apply: (statusId, score) => (statusId === 'SA' ? score + 2 : score),
+  apply: (statusId, score) => (statusId === 'SA' ? score + 2.75 : score),
   criteria: 'fundraising_capacity'
 },
   {
@@ -1947,7 +1947,8 @@ apply: (statusId, score, answers, metrics) => {
     String(a.bank_guarantee || '').toLowerCase() === 'yes' ||
     String(a.bank_financing || '').toLowerCase() === 'yes',
   apply: (statusId, score, a) => {
-    if (['SA', 'SAS', 'SARL', 'EURL'].includes(statusId)) return score + 0.5;
+    if (statusId === 'SA') return score + 0.7;           // ← boost SA: 0.5 ➜ 0.7
+    if (['SAS', 'SARL', 'EURL'].includes(statusId)) return score + 0.5;
     if (statusId === 'SASU') return score + 0.4;
     if (statusId === 'EI') return score + 0.25;
     if (statusId === 'MICRO') return score + 0.1;
@@ -2500,7 +2501,7 @@ return score + (isRE ? 1 : 0.5);
     !((parseInt(a.associates_number||0,10) >= 7 || parseInt(a.investors_count||0,10) >= 10) &&
       (parseFloat(a.fundraising_amount||0) >= 2_000_000 || a.target_valuation >= 10_000_000) &&
       a.governance_complexity === 'complex'),
-  apply: (statusId, score) => (statusId === 'SA' ? score - 1 : score),
+  apply: (statusId, score) => (statusId === 'SA' ? score - 0.35 : score),
   criteria: 'administrative_simplicity'
 },
 
@@ -4055,6 +4056,36 @@ calculateScores() {
       reason: 'out_of_range',
       delta,
       threshold: MAX_DELTA
+    };
+  }
+})();
+(() => {
+  const A = this.answers || {};
+  const big =
+    (parseFloat(A.projected_revenue||0) >= 700000) ||
+    (parseFloat(A.fundraising_amount||0) >= 1500000) ||
+    (parseInt(A.associates_number||0,10) >= 5) ||
+    (String(A.ipo_path||'').toLowerCase()==='yes');
+
+  if (!big || !this.weightedScores?.SA) return;
+
+  const sorted = Object.entries(this.weightedScores).sort((a,b)=>b[1]-a[1]);
+  const [topId, topScore] = sorted[0];
+  if (topId === 'SA') return;
+
+  const sa = this.weightedScores.SA || 0;
+  const delta = (topScore||0) - sa;
+  const MAX_DELTA = 4; // seuil de rattrapage
+
+  if (sa > 0 && delta >= 0 && delta <= MAX_DELTA) {
+    this.weightedScores.SA = +(Math.min(100, topScore + 0.01)).toFixed(2);
+    this.auditTrail.scores.SA = this.auditTrail.scores.SA || {};
+    this.auditTrail.scores.SA.__summary = {
+      ...(this.auditTrail.scores.SA.__summary||{}),
+      tie_breaker: 'sa_enterprise_scale',
+      tie_breaker_applied: true,
+      pre_tie_breaker_score_0to100: sa,
+      score_0to100: this.weightedScores.SA
     };
   }
 })();
