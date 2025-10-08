@@ -16,6 +16,31 @@ function renderISReduceBadge() {
 }
 // Rendez-la visible même en <script type="module">
 if (typeof window !== 'undefined') window.renderISReduceBadge = renderISReduceBadge;
+// --- Helpers VFL (versement libératoire) — GLOBAL ---
+const VFL_RFR_LIMIT_PER_PART_2025 = 28797; // € / part, RFR N-2
+const VFL_DEADLINE_TXT = "Option avant le 31/12 pour l’année suivante";
+
+function isEligibleVFL({ rfrN2 = null, nbParts = 1 } = {}) {
+  if (rfrN2 == null) return null;
+  return (rfrN2 / Math.max(1, nbParts)) <= VFL_RFR_LIMIT_PER_PART_2025;
+}
+
+function renderVFLNote(typeMicro) {
+  const taux = { BIC_VENTE: "1%", BIC_SERVICE: "1,7%", BNC: "2,2%" }[typeMicro] || "1–2,2%";
+  return `
+    <div class="mt-3 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs">
+      <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+        <strong>Versement libératoire ${taux} du CA :</strong>
+        RFR N-2 ≤ <strong>${VFL_RFR_LIMIT_PER_PART_2025.toLocaleString("fr-FR")} €</strong> par part • ${VFL_DEADLINE_TXT}
+      </p>
+    </div>`;
+}
+
+if (typeof window !== "undefined") {
+  window.renderVFLNote = renderVFLNote;
+  window.isEligibleVFL = isEligibleVFL;
+}
+
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -1284,25 +1309,6 @@ modeRow.innerHTML = `
     `;
     
     resultsBody.appendChild(warningRow);
-
-    const VFL_RFR_LIMIT_PER_PART_2025 = 28797; // € par part, N-2
-const VFL_DEADLINE_TXT = "Option avant le 31/12 pour l’année suivante";
-
-function isEligibleVFL({ rfrN2 = null, nbParts = 1 } = {}) {
-  if (rfrN2 == null) return null;
-  return (rfrN2 / Math.max(1, nbParts)) <= VFL_RFR_LIMIT_PER_PART_2025;
-}
-function renderVFLNote(typeMicro) {
-  const taux = { BIC_VENTE: "1%", BIC_SERVICE: "1,7%", BNC: "2,2%" }[typeMicro] || "1–2,2%";
-  return `
-  <div class="mt-3 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs">
-    <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-      <strong>Versement libératoire ${taux} du CA :</strong>
-      RFR N-2 ≤ <strong>${VFL_RFR_LIMIT_PER_PART_2025.toLocaleString("fr-FR")} €</strong> par part
-      • ${VFL_DEADLINE_TXT}
-    </p>
-  </div>`;
-}
     
     // Ajouter les gestionnaires d'événements pour afficher les détails
     const detailButtons = document.querySelectorAll('.show-detail-btn');
