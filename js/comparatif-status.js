@@ -1,15 +1,16 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room + Phase 1-4 + Mini Sprint + P0 Quick Wins
+ * Comparatif statuts — v2025 UX Clean Room + Phase 1-4 + Mini Sprint + P0 Quick Wins + UX Improvements
  * Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
  * Phase 2: blocs d'aide à la décision pour paires populaires
  * Phase 3: XSS protection, keyboard accessibility, URL state persistence
- * Phase 4: bannières impact, limite 2 statuts, mode cartes mobile, partage intelligent
+ * Phase 4: bannières impact, limite paramétrable, mode cartes mobile, partage intelligent
  * Mini Sprint: Hero + CTA, sticky controls, toast, empty state
  * P0 Quick Wins: Diff by default, mobile sticky CTA, card affordance
+ * UX Improvements: Limite MAX_COMPARE configurable, libellés clairs, lisibilité++
  */
 
 window.initComparatifStatuts = function() {
-  console.log("✅ Initialisation du tableau comparatif (v2025 + P0 Quick Wins)");
+  console.log("✅ Initialisation du tableau comparatif (v2025 + UX Improvements)");
   window.createComparatifTable('comparatif-container');
 };
 
@@ -35,6 +36,10 @@ window.initComparatifStatuts = function() {
       danger: '#EF4444'
     }
   };
+
+  // ===================== CONFIG COMPARAISON =====================
+  // Mets 4 pour laisser plus de latitude, Infinity pour aucune limite côté UI
+  const MAX_COMPARE = 4;
 
   // ===================== STATUT ALIASES =====================
   const STATUT_ALIASES = {
@@ -471,10 +476,22 @@ window.initComparatifStatuts = function() {
     if(document.getElementById('comparatif-status-styles')) return;
     const style=document.createElement('style'); style.id='comparatif-status-styles';
     style.textContent=`
-      .comparatif-container{max-width:100%;overflow-x:auto;font-family:'Inter',sans-serif;color:${TOKENS.text.primary};font-size:16px}
+      .comparatif-container{
+        max-width:100%;
+        overflow-x:auto;
+        font-family:'Inter',sans-serif;
+        color:${TOKENS.text.primary};
+        font-size:17px;
+        line-height:1.6;
+      }
       .comparatif-header{margin-bottom:${TOKENS.spacing.xl}px}
       .comparatif-title{font-size:1.75rem;font-weight:700;margin-bottom:${TOKENS.spacing.sm}px;color:${TOKENS.accent};line-height:1.2}
-      .comparatif-subtitle{color:${TOKENS.text.secondary};margin-bottom:${TOKENS.spacing.xl}px;font-size:1rem;line-height:1.4}
+      .comparatif-subtitle{
+        color:rgba(230,230,230,.82);
+        margin-bottom:${TOKENS.spacing.xl}px;
+        font-size:1rem;
+        line-height:1.6;
+      }
 
       .hero{margin-bottom:${TOKENS.spacing.xl}px;padding:${TOKENS.spacing.xl}px;background:linear-gradient(to right, rgba(0,255,135,.08), rgba(1,42,74,.35));border:1px solid rgba(0,255,135,.18);border-radius:${TOKENS.radius.xl}px}
       .hero h1{margin:0 0 ${TOKENS.spacing.sm}px 0;font-size:1.875rem;color:${TOKENS.accent};line-height:1.2}
@@ -495,10 +512,24 @@ window.initComparatifStatuts = function() {
       .empty{padding:2rem;text-align:center;color:${TOKENS.text.secondary}}
       .empty .quick{margin-top:${TOKENS.spacing.md}px;display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;justify-content:center}
 
-      .section-label{font-size:0.8125rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${TOKENS.text.secondary};margin-bottom:${TOKENS.spacing.md}px}
+      .section-label{font-size:0.9rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${TOKENS.text.secondary};margin-bottom:${TOKENS.spacing.md}px}
 
       .intent-toggles{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.md}px;margin-bottom:${TOKENS.spacing.lg}px;padding:${TOKENS.spacing.lg}px;background:${TOKENS.surface.base};border-radius:${TOKENS.radius.lg}px;border:1px solid rgba(0,255,135,.15)}
-      .intent-toggle{position:relative;display:flex;align-items:center;gap:${TOKENS.spacing.sm}px;padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;background:${TOKENS.surface.raised};border:1px solid rgba(0,255,135,.2);border-radius:999px;font-size:.875rem;color:${TOKENS.text.secondary};cursor:pointer;transition:all .15s ease;user-select:none}
+      .intent-toggle{
+        position:relative;
+        display:flex;
+        align-items:center;
+        gap:${TOKENS.spacing.sm}px;
+        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        background:${TOKENS.surface.raised};
+        border:1px solid rgba(0,255,135,.2);
+        border-radius:999px;
+        font-size:.875rem;
+        color:rgba(230,230,230,.85);
+        cursor:pointer;
+        transition:all .15s ease;
+        user-select:none;
+      }
       .intent-toggle:hover{background:rgba(1,42,74,.85);transform:scale(1.02)}
       .intent-toggle:focus-visible{outline:2px solid ${TOKENS.accent};outline-offset:2px;box-shadow:0 0 0 3px rgba(0,255,135,.25)}
       .intent-toggle.active{background:rgba(0,255,135,.15);border-color:${TOKENS.accent};color:${TOKENS.accent}}
@@ -568,14 +599,32 @@ window.initComparatifStatuts = function() {
 
       .comparatif-table-container{border-radius:${TOKENS.radius.xl}px;border:1px solid rgba(1,42,74,.8);overflow:hidden;background:rgba(1,42,74,.25);box-shadow:0 4px 16px rgba(0,0,0,.15)}
       .comparatif-table{width:100%;border-collapse:collapse;text-align:left}
-      .comparatif-table th{padding:${TOKENS.spacing.lg}px;background:rgba(1,22,39,.9);font-weight:600;color:${TOKENS.accent};font-size:.8125rem;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid rgba(1,42,74,.8);position:sticky;top:0;z-index:20}
+      .comparatif-table th{
+        padding:${TOKENS.spacing.lg}px;
+        background:rgba(1,22,39,.9);
+        font-weight:600;
+        color:${TOKENS.accent};
+        font-size:.9rem;
+        text-transform:none;
+        letter-spacing:0;
+        border-bottom:1px solid rgba(1,42,74,.8);
+        position:sticky;
+        top:0;
+        z-index:20;
+      }
       .comparatif-table th:first-child{position:sticky;left:0;z-index:30;background:rgba(1,22,39,.95)}
-      .comparatif-table td{padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border-bottom:1px solid rgba(1,42,74,.4);font-size:.875rem;vertical-align:top}
+      .comparatif-table td{
+        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        border-bottom:1px solid rgba(1,42,74,.4);
+        font-size:.93rem;
+        line-height:1.6;
+        vertical-align:top;
+      }
       .comparatif-table td:first-child{position:sticky;left:0;background:rgba(1,42,74,.3);z-index:10}
       .comparatif-table tr:last-child td{border-bottom:none}
-      .comparatif-table tr:nth-child(odd) td{background:rgba(1,42,74,.15)}
+      .comparatif-table tr:nth-child(odd) td{background:rgba(1,42,74,.12)}
       .comparatif-table tr:nth-child(odd) td:first-child{background:rgba(1,42,74,.25)}
-      .comparatif-table tr:hover td{background:rgba(0,255,135,.04)}
+      .comparatif-table tr:hover td{background:rgba(0,255,135,.03)}
       .comparatif-table tr:hover td:first-child{background:rgba(0,255,135,.06)}
       .comparatif-table .diff-col{background:rgba(0,255,135,.04)}
 
@@ -650,7 +699,7 @@ window.initComparatifStatuts = function() {
     const heroHTML = `
       <div class="hero">
         <h1>Choisis le bon statut en 2 minutes</h1>
-        <p class="hero-sub">Compare 2 statuts, on montre uniquement les différences et on te guide selon tes objectifs (dividendes, ARE, associés, levée de fonds).</p>
+        <p class="hero-sub">Compare des statuts, on montre uniquement les différences et on te guide selon tes objectifs (dividendes, ARE, associés, levée de fonds).</p>
         <div class="hero-ctas">
           <button class="btn btn-primary" id="hero-cta-eurl-sasu">Comparer EURL ↔ SASU</button>
           <button class="btn btn-ghost" id="hero-cta-see-table">Voir tout le tableau</button>
@@ -664,7 +713,7 @@ window.initComparatifStatuts = function() {
         <div class="comparatif-header">
           <h1 class="comparatif-title">Comparatif des formes juridiques 2025</h1>
           <p class="comparatif-subtitle">
-            Ajoutez deux statuts (ex. EURL vs SASU). On n'affiche que les différences clés et on vous suggère le meilleur choix selon vos objectifs (dividendes, ARE, associés, levée de fonds).
+            Ajoutez des statuts (ex. EURL vs SASU). On n'affiche que les différences clés et on vous suggère le meilleur choix selon vos objectifs (dividendes, ARE, associés, levée de fonds).
           </p>
 
           <div class="section-label">Vos objectifs</div>
@@ -698,7 +747,7 @@ window.initComparatifStatuts = function() {
           <div class="quick-presets" id="quick-presets"></div>
 
           <div class="comparison-bar">
-            <span class="comparison-title">Candidats à comparer (max 2)</span>
+            <span class="comparison-title">Statuts à comparer (jusqu'à ${MAX_COMPARE === Infinity ? '∞' : MAX_COMPARE})</span>
             <select id="status-dropdown" class="status-dropdown" aria-label="Ajouter un statut">
               <option value="">Ajouter un statut…</option>
             </select>
@@ -758,7 +807,7 @@ window.initComparatifStatuts = function() {
     mobileCTA.className = 'mobile-sticky-cta';
     mobileCTA.style.display = 'none';
     mobileCTA.innerHTML = `
-      <button class="btn btn-primary" id="mobile-cta-btn">Ajouter un 2ᵉ statut (0/2)</button>
+      <button class="btn btn-primary" id="mobile-cta-btn">Ajouter des statuts (0/${MAX_COMPARE===Infinity?'∞':MAX_COMPARE})</button>
     `;
     document.body.appendChild(mobileCTA);
 
@@ -766,7 +815,7 @@ window.initComparatifStatuts = function() {
     const controlsWrap = document.createElement('div');
     controlsWrap.className = 'table-controls';
     controlsWrap.innerHTML = `
-      <label class="switch" title="N'afficher que les lignes qui diffèrent entre les deux statuts">
+      <label class="switch" title="N'afficher que les lignes qui diffèrent entre les statuts">
         <input type="checkbox" id="only-diff-switch" />
         <span>Afficher uniquement les différences</span>
       </label>
@@ -821,13 +870,13 @@ window.initComparatifStatuts = function() {
 
       const count = compareStatuts.length;
       if(count === 0){
-        btn.textContent = 'Choisir 2 statuts à comparer (0/2)';
+        btn.textContent = `Choisir des statuts à comparer (0/${MAX_COMPARE===Infinity?'∞':MAX_COMPARE})`;
         btn.onclick = () => {
           document.querySelector('.quick-presets')?.scrollIntoView({behavior:'smooth', block:'start'});
         };
         el.style.display = 'block';
-      } else if(count === 1){
-        btn.textContent = 'Ajouter un 2ᵉ statut (1/2)';
+      } else if(count < MAX_COMPARE){
+        btn.textContent = `Ajouter des statuts (${count}/${MAX_COMPARE===Infinity?'∞':MAX_COMPARE})`;
         btn.onclick = () => {
           document.querySelector('.quick-presets')?.scrollIntoView({behavior:'smooth', block:'start'});
         };
@@ -870,7 +919,7 @@ window.initComparatifStatuts = function() {
       const q = p.get('q')||'';
       const d = p.get('d');
 
-      if(c.length){ compareStatuts = c.slice(0,2); }
+      if(c.length){ compareStatuts = c.slice(0, MAX_COMPARE); }
       if(i.length){
         intentAnswers.veut_dividendes = i.includes('dividendes');
         intentAnswers.en_chomage = i.includes('are');
@@ -928,8 +977,10 @@ window.initComparatifStatuts = function() {
     if(shareBtn){
       shareBtn.addEventListener('click', async ()=>{
         persistStateToURL();
-        const pair = compareStatuts.join(' vs ') || '—';
-        const summary = `Comparaison: ${pair} — ${location.href}`;
+        const label = compareStatuts.length<=2
+          ? compareStatuts.join(' vs ')
+          : `${compareStatuts.length} statuts`;
+        const summary = `Comparaison: ${label} — ${location.href}`;
         try{
           await navigator.clipboard.writeText(summary);
           showToast('Résumé copié ✓');
@@ -1051,16 +1102,19 @@ window.initComparatifStatuts = function() {
       },{ once:true });
     }
 
-    function addToComparison(sn){ 
+    function addToComparison(sn){
       sn = resolveStatutKey(sn);
-      if(compareStatuts.includes(sn)) return; 
-      if(compareStatuts.length>=2) compareStatuts.shift();
+      if(compareStatuts.includes(sn)) return;
+      if(compareStatuts.length >= MAX_COMPARE){
+        showToast(`Maximum ${MAX_COMPARE} statuts. Retirez-en un pour continuer.`);
+        return;
+      }
       compareStatuts.push(sn); 
       updateComparisonBar(); 
       updateTable(); 
       renderPersonaAdvice();
       persistStateToURL();
-      updateMobileCTA(); // P0
+      updateMobileCTA();
     }
     
     function removeFromComparison(sn){ 
