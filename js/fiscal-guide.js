@@ -101,63 +101,57 @@ addCustomStyles();
 });
 
 function setupSectorOptions() {
-    // Find selector elements
-    const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
-    const tailleSelect = document.querySelector('#taille-select, [id$="taille-select"]');
-    console.log("Éléments trouvés:", !!secteurSelect, !!tailleSelect);
-    
-    // CRITICAL: Initialize immediately at load time
-    if (secteurSelect && tailleSelect) {
-        // Set initial values right away
-        window.sectorOptions = {
-            secteur: secteurSelect.value,
-            taille: tailleSelect.value
-        };
-        console.log("Options sectorielles initiales:", window.sectorOptions);
-        
-        // Broadcast initial values
-        document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
-            detail: window.sectorOptions 
-        }));
-        
-        // Add change listeners
-        secteurSelect.addEventListener('change', function() {
-            window.sectorOptions = {
-                secteur: this.value,
-                taille: tailleSelect.value
-            };
-            console.log("Options sectorielles mises à jour:", window.sectorOptions);
-            
-            // Broadcast changes
-            document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
-                detail: window.sectorOptions 
-            }));
-            
-            runComparison();
-        });
-        
-        tailleSelect.addEventListener('change', function() {
-            window.sectorOptions = {
-                secteur: secteurSelect.value,
-                taille: this.value
-            };
-            console.log("Options sectorielles mises à jour:", window.sectorOptions);
-            
-            // Broadcast changes
-            document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
-                detail: window.sectorOptions 
-            }));
-            
-            runComparison();
-        });
-    } else {
-        // Set defaults if elements not found
-        window.sectorOptions = {
-            secteur: "Tous",
-            taille: "<50"
-        };
-        console.log("Options sectorielles par défaut:", window.sectorOptions);
-    }
+  // Find selector elements
+  const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
+  const tailleSelect  = document.querySelector('#taille-select, [id$="taille-select"]');
+  console.log("Éléments trouvés:", !!secteurSelect, !!tailleSelect);
+
+  // CRITICAL: Initialize immediately at load time
+  if (secteurSelect && tailleSelect) {
+    // Set initial values right away
+    window.sectorOptions = {
+      secteur: secteurSelect.value,
+      taille:  tailleSelect.value
+    };
+    console.log("Options sectorielles initiales:", window.sectorOptions);
+
+    // Broadcast initial values
+    document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
+      detail: window.sectorOptions
+    }));
+    updateCustomStatusDisabling(); // ⬅️ premier passage
+
+    // Add change listeners
+    secteurSelect.addEventListener('change', function () {
+      window.sectorOptions = { secteur: this.value, taille: tailleSelect.value };
+      console.log("Options sectorielles mises à jour:", window.sectorOptions);
+
+      // Broadcast changes
+      document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
+        detail: window.sectorOptions
+      }));
+
+      runComparison();
+      updateCustomStatusDisabling(); // ⬅️ ici
+    });
+
+    tailleSelect.addEventListener('change', function () {
+      window.sectorOptions = { secteur: secteurSelect.value, taille: this.value };
+      console.log("Options sectorielles mises à jour:", window.sectorOptions);
+
+      // Broadcast changes
+      document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
+        detail: window.sectorOptions
+      }));
+
+      runComparison();
+      updateCustomStatusDisabling(); // ⬅️ ici
+    });
+  } else {
+    // Set defaults if elements not found
+    window.sectorOptions = { secteur: "Tous", taille: "<50" };
+    console.log("Options sectorielles par défaut:", window.sectorOptions);
+  }
 }
 
 // Add listener for debugging
@@ -318,7 +312,7 @@ function updateSimulatorInterface() {
 <div class="flex flex-col">
   <label class="flex items-center">
     <input type="checkbox" id="use-optimal-ratio"
-           class="mr-2 h-4 w-4" checked>
+           class="mr-2 h-4 w-4">
     <i class="fas fa-magic text-purple-400 mr-1"></i>
     <span class="text-sm">Ratio optimal</span>
   </label>
@@ -656,6 +650,10 @@ function runComparison() {
     // Obtenir les statuts à simuler selon le filtre sélectionné
     const statusFilter = document.getElementById('sim-status-filter');
     const selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'all'); // Par défaut, tous les statuts
+  // Si multi-associés, retirer les statuts 1 associé max
+if (nbAssocies >= 2) {
+  selectedStatuses = selectedStatuses.filter(id => !STATUTS_UNIPERSONNELS[id]);
+}
     
     // Tableau pour stocker les résultats de simulation
     const resultats = [];
@@ -1344,24 +1342,48 @@ modeRow.innerHTML = `
     });
 }
 
-// NOUVEAU: Configuration des statuts multi-associés (à ajouter au début de fiscal-guide.js)
+// NOUVEAU : Configuration des statuts multi-associés (à ajouter au début de fiscal-guide.js)
 const STATUTS_MULTI_ASSOCIES = {
-    'sci': true,
-    'snc': true,
-    'sarl': true,
-    'sas': true,
-    'sa': true,
-    'selarl': true,
-    'selas': true,
-    'sca': true,
-    // Les suivants sont unipersonnels
-    'ei': false,
-    'eurl': false,
-    'eurlIS': false,
-    'sasu': false,
-    'micro': false
+  'sci': true,
+  'snc': true,
+  'sarl': true,
+  'sas': true,
+  'sa': true,
+  'selarl': true,
+  'selas': true,
+  'sca': true,
+  // Les suivants sont unipersonnels
+  'ei': false,
+  'eurl': false,
+  'eurlIS': false,
+  'sasu': false,
+  'micro': false
 };
 
+// Statuts non pertinents si nbAssocies >= 2 (à filtrer automatiquement)
+const STATUTS_UNIPERSONNELS = {
+  'micro': true,
+  'ei': true,
+  'eurl': true,
+  'eurlIS': true,
+  'sasu': true
+};
+
+function updateCustomStatusDisabling() {
+  const nbAssocies = parseInt(document.getElementById('sim-nb-associes')?.value) || 1;
+  const customBoxEls = document.querySelectorAll('#custom-status-options .status-checkbox');
+  customBoxEls.forEach(cb => {
+    const isUni = !!STATUTS_UNIPERSONNELS[cb.value];
+    if (nbAssocies >= 2 && isUni) {
+      cb.checked = false;
+      cb.disabled = true;
+      cb.closest('.flex.items-center')?.classList.add('opacity-50','pointer-events-none');
+    } else {
+      cb.disabled = false;
+      cb.closest('.flex.items-center')?.classList.remove('opacity-50','pointer-events-none');
+    }
+  });
+}
 // Barème IR 2025 - Fonction utilitaire pour calculer le TMI effectif
 function getTMI(revenu) {
     if (revenu <= 11497)   return 0;
