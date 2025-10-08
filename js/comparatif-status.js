@@ -1,14 +1,14 @@
 /*
- * Comparatif statuts — v2025 UX Clean Room + Phase 1-3 improvements + Phase 4 (impact, mobile cards)
- * Ajouts Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
- * Ajouts Phase 2: blocs d'aide à la décision pour paires populaires
- * Ajouts Phase 3: XSS protection, keyboard accessibility, URL state persistence
- * Ajouts Phase 4: bannières impact, limite 2 statuts, mode cartes mobile, partage intelligent
- * Fix: regimeTVA affiché en entier (tooltip désactivé) + markdown rendering + security
+ * Comparatif statuts — v2025 UX Clean Room + Phase 1-4 + Mini Sprint
+ * Phase 1: renderDividendRule, colonne ARE, tooltips auto, signaux visuels
+ * Phase 2: blocs d'aide à la décision pour paires populaires
+ * Phase 3: XSS protection, keyboard accessibility, URL state persistence
+ * Phase 4: bannières impact, limite 2 statuts, mode cartes mobile, partage intelligent
+ * Mini Sprint: Hero + CTA, sticky controls, toast, empty state
  */
 
 window.initComparatifStatuts = function() {
-  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1-4)");
+  console.log("✅ Initialisation du tableau comparatif (UX Clean Room + Phase 1-4 + Mini Sprint)");
   window.createComparatifTable('comparatif-container');
 };
 
@@ -91,16 +91,32 @@ window.initComparatifStatuts = function() {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   
   const toText = v => (v==null || v==='') ? '—' : String(v);
-  const toHTML = v => escapeHTML(toText(v)); // pour cellules texte brutes
+  const toHTML = v => escapeHTML(toText(v));
   const fmtEuro = n => Number.isFinite(+n) ? (+n).toLocaleString('fr-FR')+' €' : toText(n);
   const debounce = (fn, ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
   
-  // Markdown basique **bold** mais en version safe (on échappe d'abord)
+  // Markdown basique **bold** mais en version safe
   const md2html = (text) => {
     if (!text) return '';
     const safe = escapeHTML(String(text));
     return safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   };
+
+  // NEW: Toast notification
+  function showToast(msg='Copié ✓'){
+    let t = document.getElementById('toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.className = 'toast';
+      t.setAttribute('role', 'status');
+      t.setAttribute('aria-live', 'polite');
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 1600);
+  }
 
   // ===================== PHASE 4 - HELPERS IMPACTS =====================
   
@@ -153,7 +169,6 @@ window.initComparatifStatuts = function() {
 
   // ===================== PHASE 1 RENDERERS =====================
   
-  // 1. Renderer pour règles de dividendes
   function renderDividendRule(statut) {
     const sn = (statut.shortName || '').toUpperCase();
     const fisc = (statut.fiscalite || '').toUpperCase();
@@ -170,7 +185,6 @@ window.initComparatifStatuts = function() {
     return '—';
   }
 
-  // 2. Renderer pour ARE
   function renderARE(statut) {
     const areM = statut.meta_are || {};
     if (areM.are_compatible_sans_salaire) {
@@ -179,7 +193,6 @@ window.initComparatifStatuts = function() {
     return `<span style="color:${TOKENS.text.secondary}">Réduit si salaire</span>`;
   }
 
-  // 3. Tooltip pour textes longs (version sécurisée)
   function renderWithTooltip(text, maxLen=100) {
     if (!text) return '—';
     const raw = String(text);
@@ -189,7 +202,6 @@ window.initComparatifStatuts = function() {
     return `<span class="truncate" title="${full}">${truncated}… <i class="fas fa-info-circle" style="color:${TOKENS.accent};font-size:.75rem;cursor:help"></i></span>`;
   }
 
-  // 4. Signaux visuels pour responsabilité
   function renderResponsabilite(statut) {
     const resp = statut.responsabilite || '';
     const isLimited = /limitée/i.test(resp);
@@ -204,7 +216,6 @@ window.initComparatifStatuts = function() {
     return toHTML(resp);
   }
 
-  // 5. Signal pour capital élevé
   function renderCapital(statut) {
     const cap = statut.capital || '';
     const capNum = parseInt((cap.match(/\d+/g) || ['0']).join(''));
@@ -215,7 +226,6 @@ window.initComparatifStatuts = function() {
     return toHTML(cap);
   }
 
-  // 6. Tag CIVIL pour SCI
   function renderStatutName(statut) {
     const sn = (statut.shortName || '').toUpperCase();
     const isCivil = /SCI|SCM|SCP/.test(sn);
@@ -303,7 +313,6 @@ window.initComparatifStatuts = function() {
     }
   };
 
-  // rend un bloc "aide à la décision" pour une paire donnée
   function renderDecision(pairKey){
     const d = DECISIONS[pairKey]; if(!d) return '';
     const [left, right] = pairKey.split('|');
@@ -422,6 +431,29 @@ window.initComparatifStatuts = function() {
       .comparatif-title{font-size:1.75rem;font-weight:700;margin-bottom:${TOKENS.spacing.sm}px;color:${TOKENS.accent};line-height:1.2}
       .comparatif-subtitle{color:${TOKENS.text.secondary};margin-bottom:${TOKENS.spacing.xl}px;font-size:1rem;line-height:1.4}
 
+      /* NEW: Hero */
+      .hero{margin-bottom:${TOKENS.spacing.xl}px;padding:${TOKENS.spacing.xl}px;background:linear-gradient(to right, rgba(0,255,135,.08), rgba(1,42,74,.35));border:1px solid rgba(0,255,135,.18);border-radius:${TOKENS.radius.xl}px}
+      .hero h1{margin:0 0 ${TOKENS.spacing.sm}px 0;font-size:1.875rem;color:${TOKENS.accent};line-height:1.2}
+      .hero-sub{color:${TOKENS.text.secondary};margin:0 0 ${TOKENS.spacing.lg}px 0}
+      .hero-ctas{display:flex;gap:${TOKENS.spacing.sm}px;flex-wrap:wrap}
+      .btn{padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border-radius:999px;border:1px solid transparent;font-weight:600;cursor:pointer;transition:all .15s ease}
+      .btn-primary{background:${TOKENS.accent};color:#053;border-color:rgba(0,255,135,.8)}
+      .btn-ghost{background:transparent;color:${TOKENS.accent};border-color:rgba(0,255,135,.35)}
+      .btn:hover{filter:brightness(1.05);transform:scale(1.02)}
+
+      /* NEW: Sticky controls */
+      .table-controls{position:sticky;top:0;z-index:40;background:rgba(1,22,39,.92);backdrop-filter:saturate(140%) blur(6px);padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;border:1px solid rgba(0,255,135,.12);border-radius:${TOKENS.radius.lg}px;margin-bottom:${TOKENS.spacing.md}px;display:flex;align-items:center;gap:${TOKENS.spacing.lg}px}
+      .switch{display:inline-flex;align-items:center;gap:${TOKENS.spacing.sm}px;cursor:pointer;user-select:none}
+      .switch input{accent-color:${TOKENS.accent};width:18px;height:18px;cursor:pointer}
+
+      /* NEW: Toast */
+      .toast{position:fixed;right:16px;bottom:16px;background:rgba(1,42,74,.95);border:1px solid rgba(0,255,135,.35);padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;border-radius:${TOKENS.radius.md}px;color:${TOKENS.text.primary};box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;transform:translateY(6px);transition:all .2s ease;z-index:9999}
+      .toast.show{opacity:1;transform:translateY(0)}
+
+      /* NEW: Empty state */
+      .empty{padding:2rem;text-align:center;color:${TOKENS.text.secondary}}
+      .empty .quick{margin-top:${TOKENS.spacing.md}px;display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;justify-content:center}
+
       .section-label{font-size:0.8125rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${TOKENS.text.secondary};margin-bottom:${TOKENS.spacing.md}px}
 
       .intent-toggles{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.md}px;margin-bottom:${TOKENS.spacing.lg}px;padding:${TOKENS.spacing.lg}px;background:${TOKENS.surface.base};border-radius:${TOKENS.radius.lg}px;border:1px solid rgba(0,255,135,.15)}
@@ -467,26 +499,14 @@ window.initComparatifStatuts = function() {
       .advice-card .con{color:#EF4444;font-weight:500}
       .advice-card .arbitrage{margin-top:${TOKENS.spacing.md}px;padding-top:${TOKENS.spacing.md}px;border-top:1px solid rgba(255,255,255,.1);font-style:italic;color:${TOKENS.text.secondary}}
 
-      /* ==== decision blocks ==== */
       .decision-card{border-color:rgba(0,255,135,.35)}
-      .decision-grid{
-        display:grid;grid-template-columns:1fr 1fr;gap:${TOKENS.spacing.lg}px;
-      }
-      .decision-sub{
-        font-weight:600;color:${TOKENS.accent};margin-bottom:${TOKENS.spacing.sm}px;
-      }
+      .decision-grid{display:grid;grid-template-columns:1fr 1fr;gap:${TOKENS.spacing.lg}px}
+      .decision-sub{font-weight:600;color:${TOKENS.accent};margin-bottom:${TOKENS.spacing.sm}px}
       .decision-list{margin:0;padding-left:18px;line-height:1.6}
       .decision-list li{margin-bottom:${TOKENS.spacing.sm}px}
       .decision-caveats{margin-top:${TOKENS.spacing.md}px;padding-top:${TOKENS.spacing.md}px;border-top:1px solid rgba(255,255,255,.08)}
       .decision-kicker{font-weight:600;color:${TOKENS.text.secondary};margin-right:6px}
-      .decision-one-liner{
-        margin-top:${TOKENS.spacing.md}px;
-        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
-        border:1px dashed rgba(0,255,135,.35);
-        border-radius:${TOKENS.radius.sm}px;
-        color:${TOKENS.text.primary};
-        font-size:.875rem;
-      }
+      .decision-one-liner{margin-top:${TOKENS.spacing.md}px;padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;border:1px dashed rgba(0,255,135,.35);border-radius:${TOKENS.radius.sm}px;color:${TOKENS.text.primary};font-size:.875rem}
 
       .comparatif-filters{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.lg}px;margin-bottom:${TOKENS.spacing.xl}px;align-items:flex-end}
       .filter-group{flex:1;min-width:200px}
@@ -549,6 +569,9 @@ window.initComparatifStatuts = function() {
       .comparatif-table tbody tr{animation:fadeInUp .25s ease forwards;opacity:0}
 
       @media (max-width: 768px){
+        .hero h1{font-size:1.5rem}
+        .hero-ctas{flex-direction:column}
+        .btn{width:100%;text-align:center}
         .comparatif-title{font-size:1.5rem}
         .intent-toggles,.personas,.quick-presets{flex-direction:column}
         .comparatif-filters{flex-direction:column}
@@ -560,7 +583,6 @@ window.initComparatifStatuts = function() {
         .decision-grid{grid-template-columns:1fr}
         .decision-one-liner{font-size:.85rem}
         
-        /* Mode cartes mobile */
         .cards-mobile{display:grid;grid-template-columns:1fr;gap:${TOKENS.spacing.md}px;margin-bottom:${TOKENS.spacing.lg}px}
         .card{border:1px solid rgba(0,255,135,.25);background:${TOKENS.surface.overlay};border-radius:${TOKENS.radius.lg}px;padding:${TOKENS.spacing.lg}px;cursor:pointer;transition:all .15s ease}
         .card:hover{border-color:${TOKENS.accent};background:rgba(0,255,135,.05)}
@@ -579,8 +601,21 @@ window.initComparatifStatuts = function() {
 
     injectCSS();
 
+    // NEW: Hero HTML
+    const heroHTML = `
+      <div class="hero">
+        <h1>Choisis le bon statut en 2 minutes</h1>
+        <p class="hero-sub">Compare 2 statuts, on montre uniquement les différences et on te guide selon tes objectifs (dividendes, ARE, associés, levée de fonds).</p>
+        <div class="hero-ctas">
+          <button class="btn btn-primary" id="hero-cta-eurl-sasu">Comparer EURL ↔ SASU</button>
+          <button class="btn btn-ghost" id="hero-cta-see-table">Voir tout le tableau</button>
+        </div>
+      </div>
+    `;
+
     container.innerHTML = `
       <div class="comparatif-container">
+        ${heroHTML}
         <div class="comparatif-header">
           <h1 class="comparatif-title">Comparatif des formes juridiques 2025</h1>
           <p class="comparatif-subtitle">
@@ -672,6 +707,18 @@ window.initComparatifStatuts = function() {
       </div>
     `;
 
+    // NEW: Inject sticky controls BEFORE table
+    const tableContainer = $('.comparatif-table-container');
+    const controlsWrap = document.createElement('div');
+    controlsWrap.className = 'table-controls';
+    controlsWrap.innerHTML = `
+      <label class="switch" title="N'afficher que les lignes qui diffèrent entre les deux statuts">
+        <input type="checkbox" id="only-diff-switch" />
+        <span>Afficher uniquement les différences</span>
+      </label>
+    `;
+    tableContainer.parentNode.insertBefore(controlsWrap, tableContainer);
+
     // ---------- critères ----------
     const criteria=[
       { id:'all', label:'Tous' },
@@ -694,8 +741,8 @@ window.initComparatifStatuts = function() {
     let selectedCriterion='all';
     let searchTerm='';
     let compareStatuts=[];
+    let onlyDiffSwitch = false; // NEW
     
-    // Cache pour matchMedia
     let isMobile = window.matchMedia('(max-width:768px)').matches;
     window.matchMedia('(max-width:768px)').addEventListener('change', (e) => {
       isMobile = e.matches;
@@ -722,6 +769,7 @@ window.initComparatifStatuts = function() {
       if(i.length) params.set('i', i.join(','));
       if(selectedCriterion!=='all') params.set('k', selectedCriterion);
       if(searchTerm) params.set('q', searchTerm);
+      if(onlyDiffSwitch) params.set('d', '1'); // NEW
       const url = `${location.pathname}?${params.toString()}`;
       history.replaceState(null, '', url);
     }
@@ -732,8 +780,9 @@ window.initComparatifStatuts = function() {
       const i = (p.get('i')||'').split(',').filter(Boolean);
       const k = p.get('k')||'all';
       const q = p.get('q')||'';
+      const d = p.get('d')==='1'; // NEW
 
-      if(c.length){ compareStatuts = c.slice(0,2); } // LIMITE À 2
+      if(c.length){ compareStatuts = c.slice(0,2); }
       if(i.length){
         intentAnswers.veut_dividendes = i.includes('dividendes');
         intentAnswers.en_chomage = i.includes('are');
@@ -742,6 +791,7 @@ window.initComparatifStatuts = function() {
       }
       selectedCriterion = ['all','basic','fiscal','social','creation'].includes(k) ? k : 'all';
       searchTerm = q.toLowerCase();
+      onlyDiffSwitch = d; // NEW
 
       // sync UI
       syncIntentUI();
@@ -751,6 +801,7 @@ window.initComparatifStatuts = function() {
         b.setAttribute('aria-pressed', isActive?'true':'false');
       });
       const searchEl = $('#search-input'); if(searchEl) searchEl.value = q;
+      const switchEl = $('#only-diff-switch'); if(switchEl) switchEl.checked = onlyDiffSwitch; // NEW
 
       updateComparisonBar(); updateTable(); renderPersonaAdvice();
     }
@@ -769,7 +820,24 @@ window.initComparatifStatuts = function() {
     renderAREHelper(intentAnswers);
     restoreStateFromURL();
 
-    // Bouton partage AMÉLIORÉ
+    // NEW: Hero CTA events
+    $('#hero-cta-eurl-sasu')?.addEventListener('click', ()=>{
+      compareStatuts=['EURL','SASU'];
+      updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
+      document.querySelector('.comparatif-table-container')?.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+    $('#hero-cta-see-table')?.addEventListener('click', ()=>{
+      document.querySelector('.comparatif-table-container')?.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+
+    // NEW: Switch event
+    $('#only-diff-switch')?.addEventListener('change', (e)=>{
+      onlyDiffSwitch = !!e.target.checked;
+      updateTable();
+      persistStateToURL();
+    });
+
+    // NEW: Improved share button with toast
     const shareBtn = $('#share-link');
     if(shareBtn){
       shareBtn.addEventListener('click', async ()=>{
@@ -778,10 +846,9 @@ window.initComparatifStatuts = function() {
         const summary = `Comparaison: ${pair} — ${location.href}`;
         try{
           await navigator.clipboard.writeText(summary);
-          shareBtn.textContent = 'Résumé copié ✓';
-          setTimeout(()=>shareBtn.textContent='Partager',1200);
+          showToast('Résumé copié ✓');
         }catch{
-          // Fallback silencieux si clipboard API pas disponible
+          showToast('Erreur de copie');
         }
       });
     }
@@ -794,9 +861,10 @@ window.initComparatifStatuts = function() {
         btn.setAttribute('aria-pressed','true');
         selectedCriterion=btn.getAttribute('data-criterion');
         updateTable();
+        persistStateToURL();
       });
     });
-    const debouncedUpdate=debounce(()=>updateTable(),200);
+    const debouncedUpdate=debounce(()=>{ updateTable(); persistStateToURL(); },200);
     $('#search-input').addEventListener('input',e=>{ searchTerm=e.target.value.toLowerCase(); debouncedUpdate(); });
 
     // ---------- intent toggles ----------
@@ -829,10 +897,7 @@ window.initComparatifStatuts = function() {
           renderAREHelper(intentAnswers); updateTable(); renderPersonaAdvice(); syncIntentUI(); persistStateToURL();
         };
 
-        // Click
         btn.addEventListener('click', toggle);
-
-        // Keyboard accessibility
         btn.setAttribute('tabindex','0');
         btn.addEventListener('keydown', (e)=>{
           if(e.key==='Enter' || e.key===' '){
@@ -841,7 +906,6 @@ window.initComparatifStatuts = function() {
           }
         });
 
-        // ARIA tooltip
         const tip = btn.querySelector('.tooltip');
         if(tip){
           const tipId = `tip-${intent}`;
@@ -905,7 +969,7 @@ window.initComparatifStatuts = function() {
 
     function addToComparison(sn){ 
       if(compareStatuts.includes(sn)) return; 
-      if(compareStatuts.length>=2) compareStatuts.shift(); // LIMITE À 2
+      if(compareStatuts.length>=2) compareStatuts.shift();
       compareStatuts.push(sn); 
       updateComparisonBar(); 
       updateTable(); 
@@ -956,7 +1020,6 @@ window.initComparatifStatuts = function() {
 
       const has = x => compareStatuts.includes(x);
 
-      // pairs supportées
       const PAIRS = [
         ['EURL','SASU','EURL|SASU'],
         ['SAS','SARL','SAS|SARL'],
@@ -969,7 +1032,6 @@ window.initComparatifStatuts = function() {
         if(has(a) && has(b)){ host.innerHTML += renderDecision(key); rendered = true; }
       }
 
-      // fallback: si on compare autre chose, garder ton résumé
       if(!rendered && compareStatuts.length>=2){
         host.innerHTML = `
           <div class="advice-card">
@@ -1076,21 +1138,18 @@ window.initComparatifStatuts = function() {
       let columns=getColumnsForCriterion(selectedCriterion);
       const rowsData=filterStatuts(window.legalStatuses, searchTerm);
 
-      // PHASE 4: Afficher impact uniquement (recommandation retirée)
       const impactHost = $('#impact-recommendations');
       if(impactHost){
         const impact = renderIntentImpactBar(intentAnswers);
         impactHost.innerHTML = impact;
       }
 
-      // Suggestion d'alternative si 1 seul statut
       const suggestionHost = $('#suggestion-bar');
       if(suggestionHost){
         if(compareStatuts.length===1 && rowsData.length>=2){
           const ranked = [...rowsData].sort((a,b)=>(b._score||0)-(a._score||0));
           const alt = ranked[1];
           suggestionHost.innerHTML = renderAlternativeSuggestion(compareStatuts[0], alt);
-          // Event listener pour le bouton suggéré
           const suggestBtn = $('#suggest-compare-btn');
           if(suggestBtn){
             suggestBtn.addEventListener('click', ()=>{
@@ -1107,13 +1166,18 @@ window.initComparatifStatuts = function() {
         }
       }
 
-      let diffKeys=[]; let applyDiff=false;
-      if(compareStatuts.length>=2 && rowsData.length>=2){ 
-        diffKeys=onlyDifferences(rowsData, columns); 
-        if(diffKeys.length){ 
-          columns=[{key:'name',label:'Statut'}, ...columns.filter(c=>diffKeys.includes(c.key))]; 
-          applyDiff=true; 
-        } 
+      // NEW: Improved diff logic
+      let diffKeys=[]; 
+      let applyDiff=false;
+
+      if(compareStatuts.length>=2 && rowsData.length>=2){
+        diffKeys = onlyDifferences(rowsData, columns);
+        
+        if(onlyDiffSwitch && diffKeys.length){
+          // User wants only differences shown
+          columns = [{key:'name', label:'Statut'}, ...columns.filter(c => diffKeys.includes(c.key))];
+          applyDiff = true;
+        }
       }
 
       const th=$('#table-headers'); 
@@ -1126,7 +1190,7 @@ window.initComparatifStatuts = function() {
         countEl.innerHTML = `<strong>${columns.length-1}</strong> colonne${columns.length-1>1?'s':''} affichée${columns.length-1>1?'s':''}`;
       }
 
-      // PHASE 4: Mode cartes mobile
+      // Mode cartes mobile
       const tableWrap = document.querySelector('.comparatif-table-container');
       const existingCards = document.querySelector('.cards-mobile');
       if(existingCards) existingCards.remove();
@@ -1148,14 +1212,36 @@ window.initComparatifStatuts = function() {
         `).join('');
         tableWrap.parentNode.insertBefore(mobileHost, tableWrap);
         
-        // Clic sur carte = ajout à la comparaison
         mobileHost.querySelectorAll('.card').forEach(card=>{
           card.addEventListener('click', ()=> addToComparison(card.getAttribute('data-statut')));
         });
       }
 
       const body=$('#table-body');
-      if(rowsData.length===0){ body.innerHTML=`<tr><td colspan="${columns.length}" style="text-align:center;padding:2rem;">Aucun statut ne correspond à votre recherche.</td></tr>`; return; }
+      
+      // NEW: Improved empty state with suggestions
+      if(rowsData.length===0){ 
+        body.innerHTML = `
+          <tr>
+            <td colspan="${columns.length}">
+              <div class="empty">
+                <p><i class="fas fa-search"></i> Aucun statut ne correspond à votre recherche.</p>
+                <div class="quick">
+                  <button class="preset-btn" data-preset="EURL,SASU">Essayer EURL ↔ SASU</button>
+                  <button class="preset-btn" data-preset="SAS,SARL">Essayer SAS ↔ SARL</button>
+                  <button class="preset-btn" data-preset="MICRO,EI">Essayer MICRO ↔ EI</button>
+                </div>
+              </div>
+            </td>
+          </tr>`;
+        body.querySelectorAll('.preset-btn').forEach(b=>{
+          b.addEventListener('click', ()=>{
+            const [a,bis]=b.getAttribute('data-preset').split(',');
+            compareStatuts=[a,bis]; updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL();
+          });
+        });
+        return; 
+      }
 
       function genBadges(st){
         const badges=[]; const meta=st.meta_payout||{};
@@ -1189,8 +1275,6 @@ window.initComparatifStatuts = function() {
       }).join('');
 
       $$('#table-body tr').forEach(row=>{ row.addEventListener('click',()=>{ const sn=row.getAttribute('data-statut'); if(sn) addToComparison(sn); }); });
-      
-      persistStateToURL();
     }
 
     function renderTable(data){ updateTable(); }
