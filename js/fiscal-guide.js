@@ -2717,16 +2717,13 @@ detailContent += `
   }</li>`;
 
 // Statuts à l'IS uniquement
-if (statutId === 'eurlIS' || statutId === 'sasu' || statutId === 'sarl' || statutId === 'sas' || 
+ if (statutId === 'eurlIS' || statutId === 'sasu' || statutId === 'sarl' || statutId === 'sas' || 
     statutId === 'sa' || statutId === 'selarl' || statutId === 'selas' || statutId === 'sca') {
   detailContent += `
     <li>
       <i class="fas fa-percentage text-green-400 mr-2"></i>
       <strong>IS :</strong>
-      ${renderISReduceBadge()} jusqu'à 42 500€ puis 25%
-      <span class="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 border border-yellow-600 align-middle">
-        <em>(sous conditions PME)</em>
-      </span>
+      ${renderISReduceBadge()} jusqu’à <strong>42 500 €</strong> (taux réduit 15% sous conditions PME), puis 25%
     </li>
     <li>
       <i class="fas fa-percentage text-green-400 mr-2"></i>
