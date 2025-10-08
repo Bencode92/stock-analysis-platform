@@ -2629,86 +2629,91 @@ ${hasDividendes ? `
         tmiEffectifFinal = getTMI(baseImposableIR);
     }
     
-    // CORRECTION : Ajouter une section récapitulative des taux utilisés ADAPTÉE au régime fiscal
+ // CORRECTION : Ajouter une section récapitulative des taux utilisés ADAPTÉE au régime fiscal
+detailContent += `
+  <div class="detail-category mt-6">Récapitulatif des taux utilisés</div>
+  <div class="mt-2 p-4 bg-green-900 bg-opacity-20 rounded-lg text-sm">
+    <ul class="space-y-1">`;
+
+// Charges sociales (toujours affichées)
+detailContent += `
+  <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Charges sociales :</strong> ${
+    statutId === 'micro' ? '12.3% à 24.6% selon activité' :
+    (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') ? '≈77% (22% salariales + 55% patronales)' :
+    statutId === 'sci' ? '17.2% (prélèvements sociaux sur revenus fonciers)' :
+    '≈30% (TNS)'
+  }</li>`;
+
+// Statuts à l'IS uniquement
+if (statutId === 'eurlIS' || statutId === 'sasu' || statutId === 'sarl' || statutId === 'sas' || 
+    statutId === 'sa' || statutId === 'selarl' || statutId === 'selas' || statutId === 'sca') {
+  detailContent += `
+    <li>
+      <i class="fas fa-percentage text-green-400 mr-2"></i>
+      <strong>IS :</strong>
+      ${renderISReduceBadge()} jusqu'à 42 500€ puis 25%
+      <span class="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 border border-yellow-600 align-middle">
+        <em>(sous conditions PME)</em>
+      </span>, puis 25%
+    </li>
+    <li>
+      <i class="fas fa-percentage text-green-400 mr-2"></i>
+      <strong>PFU sur dividendes :</strong> 30% (17.2% prélèvements sociaux + 12.8% IR)
+    </li>`;
+  
+  // Cotisations TNS sur dividendes pour certains statuts
+  if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
     detailContent += `
-        <div class="detail-category mt-6">Récapitulatif des taux utilisés</div>
-        <div class="mt-2 p-4 bg-green-900 bg-opacity-20 rounded-lg text-sm">
-            <ul class="space-y-1">`;
-    
-    // Charges sociales (toujours affichées)
-    detailContent += `
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Charges sociales :</strong> ${
-                    statutId === 'micro' ? '12.3% à 24.6% selon activité' :
-                    statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas' ? '≈77% (22% salariales + 55% patronales)' :
-                    statutId === 'sci' ? '17.2% (prélèvements sociaux sur revenus fonciers)' :
-                    '≈30% (TNS)'
-                }</li>`;
-    
-    // Statuts à l'IS uniquement
-    if (statutId === 'eurlIS' || statutId === 'sasu' || statutId === 'sarl' || statutId === 'sas' || 
-        statutId === 'sa' || statutId === 'selarl' || statutId === 'selas' || statutId === 'sca') {
-        
-        detailContent += `
- <li>
-    <i class="fas fa-percentage text-green-400 mr-2"></i>
-  <strong>IS :</strong>
-    ${renderISReduceBadge()} jusqu'à 42 500€ puis 25%
-    <span class="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 border border-yellow-600 align-middle">
-      <em>(sous conditions PME)</em>
-    </span>,
-    puis 25%
-  </li>
-  <li>
-    <i class="fas fa-percentage text-green-400 mr-2"></i>
-    <strong>PFU sur dividendes :</strong> 30% (17.2% prélèvements sociaux + 12.8% IR)
-  </li>`;
-        
-        // Cotisations TNS sur dividendes pour certains statuts
-        if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
-            detailContent += `
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 30% sur la part > 10% du capital social</li>`;
-        }
-    }
-    
-    // Statuts à l'IR - informations spécifiques
-else if (statutId === 'micro') {
-    const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
-    const versementLiberatoire = result.sim.versementLiberatoire || false;
-    const __vflBanner = versementLiberatoire ? renderVFLNote(typeMicro) : '';
-    
-    detailContent += `
-            <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Abattement forfaitaire :</strong> ${
-                typeMicro === 'BIC_VENTE' ? '71%' :
-                typeMicro === 'BIC_SERVICE' ? '50%' :
-                '34%'
-            } du CA</li>`;
-    
-    if (versementLiberatoire) {
-        detailContent += `
-            <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Versement libératoire :</strong> ${
-                typeMicro === 'BIC_VENTE' ? '1%' :
-                typeMicro === 'BIC_SERVICE' ? '1.7%' :
-                '2.2%'
-            } du CA (remplace l'IR progressif)</li>`;
-        // NE PAS afficher le TMI quand VFL activé
-    } else {
-        // Afficher le TMI seulement si pas de VFL
-        detailContent += `
-            <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>TMI effectif :</strong> ${tmiEffectifFinal}% (tranche atteinte)</li>`;
-    }
+      <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 30% sur la part > 10% du capital social</li>`;
+  }
 }
-    else if (statutId === 'sci') {
-        detailContent += `
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Régime fiscal :</strong> Revenus fonciers (IR)</li>
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>CSG déductible :</strong> 6.8% des revenus fonciers</li>`;
-    }
-    
-    // Pour tous : afficher le TMI effectif
+
+// Statuts à l'IR — Micro : abattement & VFL
+else if (statutId === 'micro') {
+  const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
+  const versementLiberatoire = result.sim.versementLiberatoire || false;
+  const __vflBanner = versementLiberatoire ? renderVFLNote(typeMicro) : '';
+
+  detailContent += `
+    <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Abattement forfaitaire :</strong> ${
+      typeMicro === 'BIC_VENTE' ? '71%' :
+      typeMicro === 'BIC_SERVICE' ? '50%' :
+      '34%'
+    } du CA</li>`;
+
+  if (versementLiberatoire) {
     detailContent += `
-                <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>TMI effectif :</strong> ${tmiEffectifFinal}% (tranche atteinte)</li>
-            </ul>
-        </div>
-    `;
+      <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Versement libératoire :</strong> ${
+        typeMicro === 'BIC_VENTE' ? '1%' :
+        typeMicro === 'BIC_SERVICE' ? '1.7%' :
+        '2.2%'
+      } du CA (remplace l'IR progressif)</li>`;
+    // (Optionnel) afficher la bannière VFL
+    detailContent += __vflBanner;
+  } 
+}
+
+// Statut SCI — infos spécifiques IR
+else if (statutId === 'sci') {
+  detailContent += `
+    <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Régime fiscal :</strong> Revenus fonciers (IR)</li>
+    <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>CSG déductible :</strong> 6.8% des revenus fonciers</li>`;
+}
+
+// --- AJOUT : n'afficher le TMI générique que si ce n'est pas "Micro avec VFL"
+if (!(statutId === 'micro' && result.sim.versementLiberatoire)) {
+  detailContent += `
+    <li>
+      <i class="fas fa-percentage text-green-400 mr-2"></i>
+      <strong>TMI effectif :</strong> ${tmiEffectifFinal}% (tranche atteinte)
+    </li>`;
+}
+
+// Fermeture de la liste + conteneur
+detailContent += `
+    </ul>
+  </div>`;
+
     
     // Ajouter une note explicative sur le régime fiscal
     if (statutId === 'micro' || statutId === 'ei' || statutId === 'eurl' || statutId === 'snc' || statutId === 'sci') {
