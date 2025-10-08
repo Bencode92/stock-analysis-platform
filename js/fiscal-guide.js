@@ -2685,18 +2685,21 @@ ${hasDividendes ? `
     let tmiEffectifFinal = 0;
     
     // Déterminer le TMI effectif selon le statut
-    if (statutId === 'micro') {
-        tmiEffectifFinal = getTMI(result.sim.revenuImposable || 0);
-    } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
-        tmiEffectifFinal = getTMI(result.sim.salaireNet || 0);
-    } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
-        tmiEffectifFinal = getTMI(result.sim.remunerationNetteSociale || 0);
-    } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
-        tmiEffectifFinal = getTMI(result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0);
-    } else if (statutId === 'sci') {
-        const baseImposableIR = (result.sim.resultatFiscalAssocie || 0) - ((result.sim.resultatFiscalAssocie || 0) * 6.8 / 100);
-        tmiEffectifFinal = getTMI(baseImposableIR);
-    }
+ if (statutId === 'micro') {
+  tmiEffectifFinal = getTMI(result.sim.revenuImposable || 0);
+} else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
+  const base = (result.sim.baseImposableIR ?? ((result.sim.salaireNet || 0) + (result.sim.csgNonDeductible || 0)));
+  tmiEffectifFinal = getTMI(base);
+} else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
+  const base = (result.sim.baseImposableIR ?? ((result.sim.remunerationNetteSociale || 0) + (result.sim.csgNonDeductible || 0)));
+  tmiEffectifFinal = getTMI(base);
+} else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
+  const base = (result.sim.baseImposableIR || result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0);
+  tmiEffectifFinal = getTMI(base);
+} else if (statutId === 'sci') {
+  const base = (result.sim.resultatFiscalAssocie || 0) * (1 - 6.8/100); // CSG déductible
+  tmiEffectifFinal = getTMI(base);
+}
     
  // CORRECTION : Ajouter une section récapitulative des taux utilisés ADAPTÉE au régime fiscal
 detailContent += `
@@ -2723,7 +2726,7 @@ if (statutId === 'eurlIS' || statutId === 'sasu' || statutId === 'sarl' || statu
       ${renderISReduceBadge()} jusqu'à 42 500€ puis 25%
       <span class="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 border border-yellow-600 align-middle">
         <em>(sous conditions PME)</em>
-      </span>, puis 25%
+      </span>
     </li>
     <li>
       <i class="fas fa-percentage text-green-400 mr-2"></i>
