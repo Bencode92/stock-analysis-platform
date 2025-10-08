@@ -1379,39 +1379,39 @@ modeRow.innerHTML = `
     resultsBody.appendChild(modeRow);
     
     // Ajouter ligne de ratio net/brut pour les statuts compatibles
-    const ratioRow = document.createElement('tr');
-    ratioRow.className = 'ratio-row';
-    
-    ratioRow.innerHTML = `
-        <td class="px-4 py-2 italic" colspan="6">Ratio net/CA</td>
-        <td class="px-4 py-2 font-medium">
-            ${scoresCompatibles.length > 0 
-                ? `${resultats[0].score.toFixed(1)}% (max) / ${scoresMoyen.toFixed(1)}% (moy)` 
-                : 'N/A'}
-        </td>
-    `;
-    
-    resultsBody.appendChild(ratioRow);
+   const ratioRow = document.createElement('tr');
+ratioRow.className = 'ratio-row';
+
+ratioRow.innerHTML = `
+    <td class="px-4 py-2 italic" colspan="7">Ratio net/CA</td>
+    <td class="px-4 py-2 font-medium">
+        ${scoresCompatibles.length > 0 
+            ? `${resultats[0].score.toFixed(1)}% (max) / ${scoresMoyen.toFixed(1)}% (moy)` 
+            : 'N/A'}
+    </td>
+`;
+
+resultsBody.appendChild(ratioRow);
     
     // Ajouter avertissement sur les limites de la simulation
     const warningRow = document.createElement('tr');
     warningRow.className = 'bg-blue-900 bg-opacity-30 text-xs border-t border-blue-800';
     
-    warningRow.innerHTML = `
-        <td colspan="7" class="px-4 py-3">
-            <div class="flex items-start">
-                <i class="fas fa-info-circle text-blue-400 mr-2 mt-0.5"></i>
-                <div>
-                    <strong class="text-blue-400">Note sur les limites de la simulation :</strong>
-                    <ul class="mt-1 space-y-1 text-gray-300">
-                        <li>• Les statuts à l'IR (Micro, EI, EURL IR) permettent plus de déductions fiscales que ce qui est simulé ici.</li>
-                        <li>• Dans le régime Micro, l'abattement forfaitaire peut être avantageux si vos charges réelles sont faibles.</li>
-                        <li>• Pour les statuts à l'IS, certaines optimisations spécifiques ne sont pas prises en compte (épargne salariale, etc.).</li>
-                    </ul>
-                </div>
+   warningRow.innerHTML = `
+    <td colspan="8" class="px-4 py-3">
+        <div class="flex items-start">
+            <i class="fas fa-info-circle text-blue-400 mr-2 mt-0.5"></i>
+            <div>
+                <strong class="text-blue-400">Note sur les limites de la simulation :</strong>
+                <ul class="mt-1 space-y-1 text-gray-300">
+                    <li>• Les statuts à l'IR (Micro, EI, EURL IR) permettent plus de déductions fiscales que ce qui est simulé ici.</li>
+                    <li>• Dans le régime Micro, l'abattement forfaitaire peut être avantageux si vos charges réelles sont faibles.</li>
+                    <li>• Pour les statuts à l'IS, certaines optimisations spécifiques ne sont pas prises en compte (épargne salariale, etc.).</li>
+                </ul>
             </div>
-        </td>
-    `;
+        </div>
+    </td>
+`;
     
     resultsBody.appendChild(warningRow);
     
