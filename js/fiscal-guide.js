@@ -487,11 +487,15 @@ function updateSimulatorInterface() {
   }
 // ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======
 (function injectBase10Inline() {
+  // on est dans updateSimulatorInterface(), on réutilise son scope
+  const simulatorContainer = document.getElementById('fiscal-simulator');
+  if (!simulatorContainer) return;
+
   const formGrid = simulatorContainer.querySelector('.grid');
   if (!formGrid || document.getElementById('base10-inline')) return;
 
   // repère le champ "Part détenue (%)"
-  const partInput   = document.getElementById('sim-part-associe');
+  const partInput = document.getElementById('sim-part-associe');
   const partWrapper = partInput
     ? partInput.closest('.col-span-1, .col-span-2, .col-span-full, .w-full')
     : null;
@@ -522,11 +526,10 @@ function updateSimulatorInterface() {
     <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
   `;
 
-  // insertion juste après le wrapper de "Part détenue (%)" (donc dans la même rangée en md+)
+  // insertion juste après le wrapper de "Part détenue (%)"
   if (partWrapper && formGrid.contains(partWrapper)) {
     partWrapper.insertAdjacentElement('afterend', inline);
   } else {
-    // fallback : on ajoute en fin de grille
     formGrid.appendChild(inline);
   }
 
@@ -555,6 +558,7 @@ function updateSimulatorInterface() {
 
   updateBase10FromParts();
 })();
+
 
  
 
