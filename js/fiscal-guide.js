@@ -485,46 +485,78 @@ function updateSimulatorInterface() {
       statusFilter.dispatchEvent(new Event('change'));
     }
   }
+// ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======
+(function injectBase10Inline() {
+  const formGrid = simulatorContainer.querySelector('.grid');
+  if (!formGrid || document.getElementById('base10-inline')) return;
 
-  // ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======
-  (function injectBase10Inline() {
-    const formGrid = simulatorContainer.querySelector('.grid');
-    if (!formGrid || document.getElementById('base10-inline')) return;
+  // repère le champ "Part détenue (%)"
+  const partInput   = document.getElementById('sim-part-associe');
+  const partWrapper = partInput
+    ? partInput.closest('.col-span-1, .col-span-2, .col-span-full, .w-full')
+    : null;
 
-    // repère le champ "Part détenue (%)"
-    const partInput = document.getElementById('sim-part-associe');
-    const partWrapper = partInput ? partInput.closest('.col-span-1, .col-span-2, .col-span-full, .w-full') : null;
+  // 👉 forcer le wrapper à ne prendre qu'UNE colonne dès md:
+  if (partWrapper) {
+    partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-full');
+    partWrapper.classList.add('col-span-1','md:col-span-1');
+  }
 
-    // bloc à insérer
-    const inline = document.createElement('div');
-    inline.id = 'base10-inline';
-   inline.className = 'col-span-1 md:col-start-2 self-end';
-    inline.innerHTML = `
-      <div class="grid grid-cols-3 gap-2">
-        <input id="base-capital" type="number" min="0" step="100"
-               placeholder="Capital" aria-label="Capital social"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-        <input id="base-primes" type="number" min="0" step="100"
-               placeholder="Primes" aria-label="Primes d’émission"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-        <input id="base-cca" type="number" min="0" step="100"
-               placeholder="CCA" aria-label="Comptes courants associés"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      </div>
-      <input id="base10-total" type="hidden" value="0">
-      <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
-    `;
+  // bloc à insérer (sans col-start-2)
+  const inline = document.createElement('div');
+  inline.id = 'base10-inline';
+  inline.className = 'col-span-1 md:col-span-1 self-end';
+  inline.innerHTML = `
+    <div class="grid grid-cols-3 gap-2">
+      <input id="base-capital" type="number" min="0" step="100"
+             placeholder="Capital" aria-label="Capital social"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <input id="base-primes" type="number" min="0" step="100"
+             placeholder="Primes" aria-label="Primes d’émission"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <input id="base-cca" type="number" min="0" step="100"
+             placeholder="CCA" aria-label="Comptes courants associés"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+    </div>
+    <input id="base10-total" type="hidden" value="0">
+    <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
+  `;
 
-    // insertion juste après le wrapper de "Part détenue (%)" (donc dans la colonne de droite)
-    if (partWrapper && formGrid.contains(partWrapper)) {
-      partWrapper.insertAdjacentElement('afterend', inline);
-    } else {
-      // fallback : on ajoute en fin de grille
-      formGrid.appendChild(inline);
-    }
+  // insertion juste après le wrapper de "Part détenue (%)" (donc dans la même rangée en md+)
+  if (partWrapper && formGrid.contains(partWrapper)) {
+    partWrapper.insertAdjacentElement('afterend', inline);
+  } else {
+    // fallback : on ajoute en fin de grille
+    formGrid.appendChild(inline);
+  }
 
-    // wiring + recalcul
-    const fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
+  // wiring + recalcul
+  const fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
+
+  function updateBase10FromParts() {
+    const vCap   = parseFloat(document.getElementById('base-capital')?.value) || 0;
+    const vPrime = parseFloat(document.getElementById('base-primes')?.value)  || 0;
+    const vCCA   = parseFloat(document.getElementById('base-cca')?.value)     || 0;
+    const total  = vCap + vPrime + vCCA;
+
+    const hidden = document.getElementById('base10-total');
+    if (hidden) hidden.value = String(total);
+
+    const seuilEl = document.getElementById('tns-mini-seuil');
+    if (seuilEl) seuilEl.textContent = total > 0 ? fmtEUR.format(total * 0.10) : '—';
+
+    if (typeof runComparison === 'function') runComparison();
+  }
+
+  ['base-capital','base-primes','base-cca'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) ['input','change'].forEach(ev => el.addEventListener(ev, updateBase10FromParts));
+  });
+
+  updateBase10FromParts();
+})();
+
+ 
 
     function updateBase10FromParts() {
       const vCap   = parseFloat(document.getElementById('base-capital')?.value) || 0;
