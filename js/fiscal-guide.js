@@ -202,6 +202,10 @@ function setupSimulator() {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', runComparison);
     });
+  // Rafraîchir l’état des cases "Personnalisé" quand le nb d’associés change
+  const nbAssociesEl = document.getElementById('sim-nb-associes');
+  if (nbAssociesEl) nbAssociesEl.addEventListener('change', updateCustomStatusDisabling);
+                                                  
    // 🔓 Déclampage côté UI : autoriser 0 % de salaire
   (function enableZeroPercentSalary() {
     const el = document.getElementById('sim-salaire');
@@ -673,6 +677,10 @@ let selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : '
 // Si multi-associés, retirer les statuts unipersonnels
 if (nbAssocies >= 2) {
   selectedStatuses = selectedStatuses.filter(id => !STATUTS_UNIPERSONNELS[id]);
+}
+// Si 1 seul associé, retirer les statuts qui exigent ≥2 associés
+else if (nbAssocies === 1) {
+  selectedStatuses = selectedStatuses.filter(id => !STATUTS_MIN_2[id]);
 }
     
     // Tableau pour stocker les résultats de simulation
@@ -1451,22 +1459,41 @@ const STATUTS_UNIPERSONNELS = {
   'eurlIS': true,
   'sasu': true
 };
+// Statuts qui demandent au moins 2 associés (les variantes 1 associé existent sous d'autres formes : EURL, SASU, …)
+const STATUTS_MIN_2 = {
+  'sarl':   true,
+  'sas':    true,
+  'sa':     true,
+  'snc':    true,
+  'sci':    true,
+  'selarl': true,
+  'selas':  true,
+  'sca':    true
+};
 
 function updateCustomStatusDisabling() {
   const nbAssocies = parseInt(document.getElementById('sim-nb-associes')?.value) || 1;
   const customBoxEls = document.querySelectorAll('#custom-status-options .status-checkbox');
+
   customBoxEls.forEach(cb => {
-    const isUni = !!STATUTS_UNIPERSONNELS[cb.value];
-    if (nbAssocies >= 2 && isUni) {
+    const id = cb.value;
+    const isUni  = !!STATUTS_UNIPERSONNELS[id]; // à masquer si nb ≥ 2
+    const isMin2 = !!STATUTS_MIN_2[id];         // à masquer si nb = 1
+
+    let mustDisable = false;
+    if (nbAssocies >= 2 && isUni)  mustDisable = true;
+    if (nbAssocies === 1 && isMin2) mustDisable = true;
+
+    cb.disabled = mustDisable;
+    if (mustDisable) {
       cb.checked = false;
-      cb.disabled = true;
       cb.closest('.flex.items-center')?.classList.add('opacity-50','pointer-events-none');
     } else {
-      cb.disabled = false;
       cb.closest('.flex.items-center')?.classList.remove('opacity-50','pointer-events-none');
     }
   });
 }
+
 // Barème IR 2025 - Fonction utilitaire pour calculer le TMI effectif
 function getTMI(revenu) {
     if (revenu <= 11497)   return 0;
@@ -1785,18 +1812,27 @@ const tauxIS = resultatApresRemuneration <= 42500 ? 15 : 25;
                 )}</td>
             </tr>
             <tr>
-                <td>Quote-part de dividendes (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%)</td>
+               <td>Quote-part de dividendes (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))})</td>
                 <td>${formatter.format(result.sim.dividendes)}</td>
             </tr>
             ` : ''}
-        </table>
+      </table>
 
-        <div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
-            <p><i class="fas fa-calculator text-blue-400 mr-2"></i>
-            <strong>Note :</strong> Les montants affichés correspondent uniquement à la quote-part 
-            de cet associé. Pour obtenir les résultats totaux de la société, divisez par ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%.</p>
-        </div>
-        ` : ''}
+<div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
+  ${(() => {
+    const pct = (result.sim.partAssociePct != null)
+      ? result.sim.partAssociePct
+      : (result.sim.partAssocie * 100);
+    const partDec = pct / 100;
+    const inv = partDec > 0 ? (1 / partDec) : 0;
+    return `<p><i class="fas fa-calculator text-blue-400 mr-2"></i>
+      <strong>Note :</strong> Les montants affichés correspondent uniquement à la quote-part 
+      de cet associé. Pour obtenir les résultats totaux de la société, divisez par ${partDec.toLocaleString('fr-FR',{maximumFractionDigits:2})}
+      (ou multipliez par ${inv.toLocaleString('fr-FR',{maximumFractionDigits:2})}).</p>`;
+  })()}
+</div>
+` : ''}
+
 
         ${/* NOUVEAU: Note pour SASU unipersonnelle */ ''}
         ${statutId === 'sasu' ? `
@@ -2106,7 +2142,7 @@ const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS 
                 )}</td>
             </tr>
             <tr>
-                <td>Quote-part de dividendes (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%)</td>
+             <td>Quote-part de dividendes (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))})</td>
                 <td>${formatter.format(result.sim.dividendes)}</td>
             </tr>
             ` : ''}
@@ -2119,14 +2155,22 @@ const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS 
                 </td>
             </tr>
             ` : ''}
-        </table>
-        
-        <div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
-            <p><i class="fas fa-calculator text-blue-400 mr-2"></i>
-            <strong>Note :</strong> Les montants affichés correspondent uniquement à la quote-part 
-            de cet associé. Pour obtenir les résultats totaux de la société, divisez par ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}%.</p>
-        </div>
-        ` : ''}
+       </table>
+
+<div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
+  ${(() => {
+    const pct = (result.sim.partAssociePct != null)
+      ? result.sim.partAssociePct
+      : (result.sim.partAssocie * 100);
+    const partDec = pct / 100;
+    const inv = partDec > 0 ? (1 / partDec) : 0;
+    return `<p><i class="fas fa-calculator text-blue-400 mr-2"></i>
+      <strong>Note :</strong> Les montants affichés correspondent uniquement à la quote-part 
+      de cet associé. Pour obtenir les résultats totaux de la société, divisez par ${partDec.toLocaleString('fr-FR',{maximumFractionDigits:2})}
+      (ou multipliez par ${inv.toLocaleString('fr-FR',{maximumFractionDigits:2})}).</p>`;
+  })()}
+</div>
+` : ''}
         
         ${/* NOUVEAU: Note pour EURL unipersonnelle */ ''}
         ${(statutId === 'eurl' || statutId === 'eurlIS') ? `
