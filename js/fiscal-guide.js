@@ -558,32 +558,6 @@ function updateSimulatorInterface() {
 
   updateBase10FromParts();
 })();
-
-
- 
-
-    function updateBase10FromParts() {
-      const vCap   = parseFloat(document.getElementById('base-capital')?.value) || 0;
-      const vPrime = parseFloat(document.getElementById('base-primes')?.value)  || 0;
-      const vCCA   = parseFloat(document.getElementById('base-cca')?.value)     || 0;
-      const total  = vCap + vPrime + vCCA;
-
-      const hidden = document.getElementById('base10-total');
-      if (hidden) hidden.value = String(total);
-
-      const seuilEl = document.getElementById('tns-mini-seuil');
-      if (seuilEl) seuilEl.textContent = total > 0 ? fmtEUR.format(total * 0.10) : '—';
-
-      if (typeof runComparison === 'function') runComparison();
-    }
-
-    ['base-capital','base-primes','base-cca'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) ['input','change'].forEach(ev => el.addEventListener(ev, updateBase10FromParts));
-    });
-
-    updateBase10FromParts();
-  })();
 }
 
 // Fonction pour obtenir les statuts sélectionnés selon le filtre
