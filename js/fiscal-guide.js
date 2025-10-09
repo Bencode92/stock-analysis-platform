@@ -498,7 +498,7 @@ function updateSimulatorInterface() {
     // bloc à insérer
     const inline = document.createElement('div');
     inline.id = 'base10-inline';
-    inline.className = 'col-span-1';
+   inline.className = 'col-span-1 md:col-start-2 self-end';
     inline.innerHTML = `
       <div class="grid grid-cols-3 gap-2">
         <input id="base-capital" type="number" min="0" step="100"
