@@ -242,347 +242,285 @@ function setupSimulator() {
 
 // Fonction pour mettre à jour l'interface du simulateur
 function updateSimulatorInterface() {
-    // Récupérer le conteneur du simulateur
-    const simulatorContainer = document.getElementById('fiscal-simulator');
-    if (!simulatorContainer) return;
-    
-    // Vérifier si les options existent déjà pour éviter les doublons
-    if (document.getElementById('sim-options-container')) {
-        console.log("Options de simulation déjà présentes, pas de reconstruction");
-        return;
-    }
-    
-    // Ajouter un sélecteur de statuts et des options de simulation avancées
-    const formContainer = simulatorContainer.querySelector('.grid');
-    
-    if (formContainer) {
-        // Ajouter une nouvelle ligne pour les options de simulation
-        const optionsRow = document.createElement('div');
-   optionsRow.className = 'col-span-full md:col-start-1 w-full mb-4 !ml-0 !mr-0';
-        optionsRow.id = 'sim-options-container';
-        optionsRow.innerHTML = `
+  // Récupérer le conteneur du simulateur
+  const simulatorContainer = document.getElementById('fiscal-simulator');
+  if (!simulatorContainer) return;
+
+  // Vérifier si les options existent déjà pour éviter les doublons
+  if (document.getElementById('sim-options-container')) {
+    console.log("Options de simulation déjà présentes, pas de reconstruction");
+    return;
+  }
+
+  // Ajouter un sélecteur de statuts et des options de simulation avancées
+  const formContainer = simulatorContainer.querySelector('.grid');
+
+  if (formContainer) {
+    // Ajouter une nouvelle ligne pour les options de simulation
+    const optionsRow = document.createElement('div');
+    optionsRow.className = 'col-span-full md:col-start-1 w-full mb-4 !ml-0 !mr-0';
+    optionsRow.id = 'sim-options-container';
+    optionsRow.innerHTML = `
 <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-    <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
-    
-    <!-- Filtres de statuts avec boutons visuels -->
-    <div class="mb-4">
-        <label class="block text-gray-300 mb-2">Filtres rapides</label>
-        <div class="flex flex-wrap gap-2" id="status-filter-buttons">
-            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="common">
-                <i class="fas fa-star mr-1"></i> Recommandés
-            </button>
-            <button class="status-filter-btn px-3 py-2 rounded-md bg-green-500 text-gray-900 font-medium" data-filter="all">
-                <i class="fas fa-list mr-1"></i> Tous
-            </button>
-            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="is_only">
-                <i class="fas fa-building mr-1"></i> IS uniquement
-            </button>
-            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="ir_only">
-                <i class="fas fa-user mr-1"></i> IR uniquement
-            </button>
-            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="commercial">
-                <i class="fas fa-store mr-1"></i> Commercial
-            </button>
-            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="liberal">
-                <i class="fas fa-briefcase-medical mr-1"></i> Libéral
-            </button>
-            <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="custom">
-                <i class="fas fa-sliders-h mr-1"></i> Personnalisé
-            </button>
-        </div>
+  <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
+
+  <!-- Filtres de statuts avec boutons visuels -->
+  <div class="mb-4">
+    <label class="block text-gray-300 mb-2">Filtres rapides</label>
+    <div class="flex flex-wrap gap-2" id="status-filter-buttons">
+      <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="common">
+        <i class="fas fa-star mr-1"></i> Recommandés
+      </button>
+      <button class="status-filter-btn px-3 py-2 rounded-md bg-green-500 text-gray-900 font-medium" data-filter="all">
+        <i class="fas fa-list mr-1"></i> Tous
+      </button>
+      <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="is_only">
+        <i class="fas fa-building mr-1"></i> IS uniquement
+      </button>
+      <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="ir_only">
+        <i class="fas fa-user mr-1"></i> IR uniquement
+      </button>
+      <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="commercial">
+        <i class="fas fa-store mr-1"></i> Commercial
+      </button>
+      <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="liberal">
+        <i class="fas fa-briefcase-medical mr-1"></i> Libéral
+      </button>
+      <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="custom">
+        <i class="fas fa-sliders-h mr-1"></i> Personnalisé
+      </button>
     </div>
-    
-    <div class="grid grid-cols-1 gap-4" id="sim-options">
-        <div>
-            <label class="block text-gray-300 mb-2">Statuts à comparer</label>
-            <select id="sim-status-filter" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
-                <option value="common">Statuts courants (5)</option>
-                <option value="all" selected>Tous les statuts (13)</option>
-                <option value="is_only">IS uniquement</option>
-                <option value="ir_only">IR uniquement</option>
-                <option value="commercial">Statuts commerciaux</option>
-                <option value="liberal">Professions libérales</option>
-                <option value="custom">Personnalisé</option>
-            </select>
-        </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4" id="sim-options">
+    <div>
+      <label class="block text-gray-300 mb-2">Statuts à comparer</label>
+      <select id="sim-status-filter" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+        <option value="common">Statuts courants (5)</option>
+        <option value="all" selected>Tous les statuts (13)</option>
+        <option value="is_only">IS uniquement</option>
+        <option value="ir_only">IR uniquement</option>
+        <option value="commercial">Statuts commerciaux</option>
+        <option value="liberal">Professions libérales</option>
+        <option value="custom">Personnalisé</option>
+      </select>
     </div>
+  </div>
 </div>
+
 <div class="mb-4">
   <label class="block text-gray-300 mb-2">Fonctionnalités activées</label>
 
-  <!-- FLEX : wrap sur mobile / nowrap dès md -->
   <div class="flex items-center flex-wrap md:flex-nowrap gap-x-6 gap-y-2">
-
     <!-- Mode expert (activé par défaut, input caché) -->
-<div class="flex flex-col">
-  <label class="flex items-center">
-    <input type="hidden" id="sim-expert-mode" checked>
-    <i class="fas fa-chart-line text-pink-400 mr-1"></i>
-    <span class="text-sm">Mode expert</span>
-  </label>
-  <span class="info-tooltip mt-1">
-    <i class="fas fa-question-circle text-gray-400"></i>
-    <span class="tooltiptext">
-      Calcul par tranches progressives d'IR
-      plutôt que le TMI simple.
-    </span>
-  </span>
+    <div class="flex flex-col">
+      <label class="flex items-center">
+        <input type="hidden" id="sim-expert-mode" checked>
+        <i class="fas fa-chart-line text-pink-400 mr-1"></i>
+        <span class="text-sm">Mode expert</span>
+      </label>
+      <span class="info-tooltip mt-1">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Calcul par tranches progressives d'IR
+          plutôt que le TMI simple.
+        </span>
+      </span>
+    </div>
+
+    <!-- Ratio optimal -->
+    <div class="flex flex-col">
+      <label class="flex items-center">
+        <input type="checkbox" id="use-optimal-ratio" class="mr-2 h-4 w-4">
+        <i class="fas fa-magic text-purple-400 mr-1"></i>
+        <span class="text-sm">Ratio optimal</span>
+      </label>
+      <span class="info-tooltip mt-1">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Optimise le ratio entre rémunération et dividendes
+          pour maximiser le revenu net.
+        </span>
+      </span>
+    </div>
+
+    <!-- Gérant minoritaire -->
+    <div class="flex flex-col">
+      <label class="flex items-center">
+        <input type="checkbox" id="sarl-gerant-minoritaire" class="mr-2 h-4 w-4">
+        <i class="fas fa-users text-blue-400 mr-1"></i>
+        <span class="text-sm">Gérant min.</span>
+      </label>
+      <span class="info-tooltip mt-1">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Le gérant détient moins de 50&nbsp;% des parts sociales
+          (assimilé salarié).
+        </span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Base 10% (unique) -->
+  <div class="mt-4 bg-blue-900 bg-opacity-30 p-4 rounded-lg" id="tns-base-block">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-green-400 font-medium">Base 10 % (capital + primes + CCA)</span>
+      <span class="info-tooltip">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Saisissez la somme: capital libéré + primes d’émission + comptes courants d’associés.
+          Sert à déterminer la part de dividendes soumise aux cotisations TNS (&gt; 10% de cette base).
+        </span>
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-gray-300 mb-1">Base totale (€)</label>
+        <input id="base10-total" type="number" min="0" step="100"
+               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+               placeholder="ex. 20 000">
+      </div>
+      <div class="flex items-end">
+        <div class="text-sm text-gray-300">
+          Seuil 10 % = <span id="tns-base-seuil">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Ratio optimal -->
-<div class="flex flex-col">
-  <label class="flex items-center">
-    <input type="checkbox" id="use-optimal-ratio"
-           class="mr-2 h-4 w-4">
-    <i class="fas fa-magic text-purple-400 mr-1"></i>
-    <span class="text-sm">Ratio optimal</span>
-  </label>
-  <span class="info-tooltip mt-1">
-    <i class="fas fa-question-circle text-gray-400"></i>
-    <span class="tooltiptext">
-      Optimise le ratio entre rémunération et dividendes
-      pour maximiser le revenu net.
-    </span>
-  </span>
+<!-- Sélecteurs Micro, VFL, avertissements + Personnalisé (inchangés) -->
+<div class="mt-4">
+  <label class="block text-gray-300 mb-2">Type d'activité pour Micro-entreprise</label>
+  <select id="micro-type" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+    <option value="BIC_SERVICE" selected>BIC Services (abattement 50%)</option>
+    <option value="BIC_VENTE">BIC Vente (abattement 71%)</option>
+    <option value="BNC">BNC (abattement 34%)</option>
+  </select>
 </div>
 
-<!-- Gérant minoritaire -->
-<div class="flex flex-col">
-  <label class="flex items-center">
-    <input type="checkbox" id="sarl-gerant-minoritaire"
-           class="mr-2 h-4 w-4">
-    <i class="fas fa-users text-blue-400 mr-1"></i>
-    <span class="text-sm">Gérant min.</span>
-  </label>
-  <span class="info-tooltip mt-1">
-    <i class="fas fa-question-circle text-gray-400"></i>
-    <span class="tooltiptext">
-      Le gérant détient moins de 50&nbsp;% des parts sociales
-      (assimilé salarié).
+<div class="mt-2">
+  <div class="flex items-center">
+    <input type="checkbox" id="micro-vfl" class="mr-2 h-4 w-4">
+    <label for="micro-vfl" class="text-gray-300">Versement libératoire de l'impôt sur le revenu</label>
+    <span class="info-tooltip ml-2">
+      <i class="fas fa-question-circle text-gray-400"></i>
+      <span class="tooltiptext">Remplace l'IR par un prélèvement de 1% (vente), 1,7% (services) ou 2,2% (libéral) sur votre CA.</span>
     </span>
-  </span>
+  </div>
 </div>
+
+<div class="fiscal-warning mt-4">
+  <p><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+     <strong>Limites du simulateur:</strong> Ce simulateur simplifie certains aspects fiscaux pour faciliter la comparaison. Pour une analyse complète, consultez un expert-comptable.</p>
 </div>
-                
-                <!-- Ajouter le sélecteur de type d'activité pour micro-entreprise -->
-                <div class="mt-4">
-                    <label class="block text-gray-300 mb-2">Type d'activité pour Micro-entreprise</label>
-                    <select id="micro-type" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
-                        <option value="BIC_SERVICE" selected>BIC Services (abattement 50%)</option>
-                        <option value="BIC_VENTE">BIC Vente (abattement 71%)</option>
-                        <option value="BNC">BNC (abattement 34%)</option>
-                    </select>
-                </div>
-                
-                <!-- Option versement libératoire pour micro-entreprise -->
-                <div class="mt-2">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="micro-vfl" class="mr-2 h-4 w-4">
-                        <label for="micro-vfl" class="text-gray-300">Versement libératoire de l'impôt sur le revenu</label>
-                        <span class="info-tooltip ml-2">
-                            <i class="fas fa-question-circle text-gray-400"></i>
-                            <span class="tooltiptext">Remplace l'IR par un prélèvement de 1% (vente), 1,7% (services) ou 2,2% (libéral) sur votre CA.</span>
-                        </span>
-                    </div>
-                </div>
-                
-                <!-- Avertissement sur les limites du simulateur -->
-                <div class="fiscal-warning mt-4">
-                    <p><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> <strong>Limites du simulateur:</strong> Ce simulateur simplifie certains aspects fiscaux pour faciliter la comparaison. Pour une analyse complète, consultez un expert-comptable.</p>
-                </div>
-                
-                <!-- Sélection personnalisée de statuts avec catégorisation -->
-                <div id="custom-status-options" class="hidden mt-4 p-4 rounded-lg">
-                    <div class="mb-2 text-green-400 font-medium">Sélectionnez les statuts à comparer</div>
-                    
-                    <!-- Catégorie IS -->
-                    <div class="mb-3">
-                        <div class="text-sm text-gray-300 mb-1 border-b border-gray-700 pb-1">
-                            <i class="fas fa-building mr-1 text-blue-400"></i> Statuts à l'IS
-                        </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-sm">
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-eurlIS" value="eurlIS" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-eurlIS" class="text-sm">
-                                    <span class="regime-badge is">IS</span> EURL-IS
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-sasu" value="sasu" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-sasu" class="text-sm">
-                                    <span class="regime-badge is">IS</span> SASU
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-sarl" value="sarl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-sarl" class="text-sm">
-                                    <span class="regime-badge is">IS</span> SARL
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-sas" value="sas" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-sas" class="text-sm">
-                                    <span class="regime-badge is">IS</span> SAS
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-sa" value="sa" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-sa" class="text-sm">
-                                    <span class="regime-badge is">IS</span> SA
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-selarl" value="selarl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-selarl" class="text-sm">
-                                    <span class="regime-badge is">IS</span> SELARL
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-selas" value="selas" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-selas" class="text-sm">
-                                    <span class="regime-badge is">IS</span> SELAS
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-sca" value="sca" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-sca" class="text-sm">
-                                    <span class="regime-badge is">IS</span> SCA
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Catégorie IR -->
-                    <div>
-                        <div class="text-sm text-gray-300 mb-1 border-b border-gray-700 pb-1">
-                            <i class="fas fa-user mr-1 text-green-400"></i> Statuts à l'IR
-                        </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-sm">
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-micro" value="micro" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-micro" class="text-sm">
-                                    <span class="regime-badge ir">IR</span> Micro
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-ei" value="ei" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-ei" class="text-sm">
-                                    <span class="regime-badge ir">IR</span> EI
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-eurl" value="eurl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-eurl" class="text-sm">
-                                    <span class="regime-badge ir">IR</span> EURL-IR
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-snc" value="snc" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-snc" class="text-sm">
-                                    <span class="regime-badge ir">IR</span> SNC
-                                </label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" id="status-sci" value="sci" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                                <label for="status-sci" class="text-sm">
-                                    <span class="regime-badge ir">IR</span> SCI
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Simplification de l'insertion pour éviter les doublons
-        try {
-            const compareButton = simulatorContainer.querySelector('#sim-compare-btn');
-            if (compareButton) {
-                const compareButtonWrapper = compareButton.closest('.col-span-1, .col-span-2');
-                if (compareButtonWrapper && formContainer.contains(compareButtonWrapper)) {
-                    formContainer.insertBefore(optionsRow, compareButtonWrapper);
-                } else {
-                    formContainer.appendChild(optionsRow);
-                }
-            } else {
-                formContainer.appendChild(optionsRow);
-            }
-        } catch (error) {
-            console.error("Erreur lors de l'insertion des options:", error);
-            formContainer.appendChild(optionsRow);
+
+<div id="custom-status-options" class="hidden mt-4 p-4 rounded-lg">
+  <!-- ... (bloc Personnalisé inchangé : cases IS/IR) ... -->
+</div>
+`;
+
+    // Insertion (sécurisée) dans le DOM
+    try {
+      const compareButton = simulatorContainer.querySelector('#sim-compare-btn');
+      if (compareButton) {
+        const compareButtonWrapper = compareButton.closest('.col-span-1, .col-span-2');
+        if (compareButtonWrapper && formContainer.contains(compareButtonWrapper)) {
+          formContainer.insertBefore(optionsRow, compareButtonWrapper);
+        } else {
+          formContainer.appendChild(optionsRow);
         }
-        
-        // Ajouter les événements
-        const statusFilter = document.getElementById('sim-status-filter');
-        statusFilter.addEventListener('change', function() {
-            const isCustom = this.value === 'custom';
-            document.getElementById('custom-status-options').style.display = isCustom ? 'block' : 'none';
-            
-            // Cocher/décocher les cases selon le filtre sélectionné
-            if (!isCustom) {
-                const selectedStatuses = getSelectedStatuses(this.value);
-                document.querySelectorAll('.status-checkbox').forEach(checkbox => {
-                    checkbox.checked = selectedStatuses.includes(checkbox.value);
-                });
-            }
-            
-            // Mettre à jour les boutons de filtre
-            document.querySelectorAll('.status-filter-btn').forEach(btn => {
-                const filter = btn.getAttribute('data-filter');
-                if (filter === this.value) {
-                    btn.classList.remove('bg-blue-800', 'text-white');
-                    btn.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
-                } else {
-                    btn.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
-                    btn.classList.add('bg-blue-800', 'text-white');
-                }
-            });
-            
-            // Relancer la comparaison
-            runComparison();
-        });
-        
-        // Ajouter des événements aux boutons de filtre
-        document.querySelectorAll('.status-filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                // Mettre à jour l'apparence des boutons
-                document.querySelectorAll('.status-filter-btn').forEach(b => {
-                    b.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
-                    b.classList.add('bg-blue-800', 'text-white');
-                });
-                this.classList.remove('bg-blue-800', 'text-white');
-                this.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
-                
-                // Mettre à jour le select
-                const filter = this.getAttribute('data-filter');
-                statusFilter.value = filter;
-                
-                // Afficher/masquer les options personnalisées
-                const isCustom = filter === 'custom';
-                document.getElementById('custom-status-options').style.display = isCustom ? 'block' : 'none';
-                
-                // Mettre à jour les cases à cocher
-                if (!isCustom) {
-                    const selectedStatuses = getSelectedStatuses(filter);
-                    document.querySelectorAll('.status-checkbox').forEach(checkbox => {
-                        checkbox.checked = selectedStatuses.includes(checkbox.value);
-                    });
-                }
-                
-                // Relancer la comparaison
-                runComparison();
-            });
-        });
-        
-        // Ajouter un événement aux cases à cocher et autres options
-        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire').forEach(checkbox => {
-            checkbox.addEventListener('change', runComparison);
-        });
-        
-        // Par défaut, sélectionner le filtre "all" pour afficher tous les statuts
-        statusFilter.value = "all";
-        statusFilter.dispatchEvent(new Event('change'));
+      } else {
+        formContainer.appendChild(optionsRow);
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'insertion des options:", error);
+      formContainer.appendChild(optionsRow);
     }
+
+    // === JS : affichage + écouteurs pour "Base 10 %" ===
+    const _fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
+
+    function _updateBase10Display() {
+      const v = parseFloat(document.getElementById('base10-total')?.value) || 0;
+      const seuil = v * 0.10;
+      const sEl = document.getElementById('tns-base-seuil');
+      if (sEl) sEl.textContent = v > 0 ? _fmtEUR.format(seuil) : '—';
+    }
+
+    const _base10El = document.getElementById('base10-total');
+    if (_base10El) {
+      ['input','change'].forEach(ev =>
+        _base10El.addEventListener(ev, () => { _updateBase10Display(); runComparison(); })
+      );
+      _updateBase10Display();
+    }
+    // === fin JS Base 10% ===
+
+    // Événements existants
+    const statusFilter = document.getElementById('sim-status-filter');
+    statusFilter.addEventListener('change', function() {
+      const isCustom = this.value === 'custom';
+      document.getElementById('custom-status-options').style.display = isCustom ? 'block' : 'none';
+
+      // Cocher/décocher les cases selon le filtre sélectionné
+      if (!isCustom) {
+        const selectedStatuses = getSelectedStatuses(this.value);
+        document.querySelectorAll('.status-checkbox').forEach(checkbox => {
+          checkbox.checked = selectedStatuses.includes(checkbox.value);
+        });
+      }
+
+      // Mettre à jour les boutons de filtre
+      document.querySelectorAll('.status-filter-btn').forEach(btn => {
+        const filter = btn.getAttribute('data-filter');
+        if (filter === this.value) {
+          btn.classList.remove('bg-blue-800', 'text-white');
+          btn.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
+        } else {
+          btn.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
+          btn.classList.add('bg-blue-800', 'text-white');
+        }
+      });
+
+      runComparison();
+    });
+
+    document.querySelectorAll('.status-filter-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.status-filter-btn').forEach(b => {
+          b.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
+          b.classList.add('bg-blue-800', 'text-white');
+        });
+        this.classList.remove('bg-blue-800', 'text-white');
+        this.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
+
+        const filter = this.getAttribute('data-filter');
+        statusFilter.value = filter;
+
+        const isCustom = filter === 'custom';
+        document.getElementById('custom-status-options').style.display = isCustom ? 'block' : 'none';
+
+        if (!isCustom) {
+          const selectedStatuses = getSelectedStatuses(filter);
+          document.querySelectorAll('.status-checkbox').forEach(checkbox => {
+            checkbox.checked = selectedStatuses.includes(checkbox.value);
+          });
+        }
+
+        runComparison();
+      });
+    });
+
+    document
+      .querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire')
+      .forEach(el => el.addEventListener('change', runComparison));
+
+    // Par défaut, sélectionner "all"
+    statusFilter.value = "all";
+    statusFilter.dispatchEvent(new Event('change'));
+  }
 }
 
 // Fonction pour obtenir les statuts sélectionnés selon le filtre
