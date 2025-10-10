@@ -496,29 +496,32 @@ function updateSimulatorInterface() {
   }
    }
 ;(() => {
-  // ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======
-  const simContainer2 = document.getElementById('fiscal-simulator');
-  if (!simContainer2) return;
+  const sim = document.getElementById('fiscal-simulator');
+  if (!sim) return;
 
-  const formGrid2 = simContainer2.querySelector('.grid');
-  if (!formGrid2 || document.getElementById('base10-inline')) return;
+  const formGrid = sim.querySelector('.grid');
+  if (!formGrid || document.getElementById('base10-inline')) return;
 
-  // 👉 forcer une grille 2 colonnes utilisable par notre CSS
-  formGrid2.classList.add('form-grid-2cols');
-
-  // repérer "Part détenue (%)"
+  // Cible l’input “Part détenue (%)”
   const partInput = document.getElementById('sim-part-associe');
-  const partWrapper = partInput
-    ? partInput.closest('.col-span-1, .col-span-2, .col-span-full, .w-full')
-    : null;
+  const partWrapper = partInput ? partInput.closest('div') : null;
+  if (!partWrapper) return;
 
-  // ancrer cette zone en colonne 1
-  if (partWrapper) partWrapper.classList.add('part-detenu-wrapper');
+  // 1) Wrapper de ligne dédié (2 colonnes dès md:)
+  const row = document.createElement('div');
+  row.className = 'part-detenu-row md:grid md:grid-cols-2 gap-4 items-end w-full';
+  formGrid.insertBefore(row, partWrapper);
 
-  // créer le bloc à mettre en colonne 2
+  // 2) Déplacer “Part détenue” dans la colonne 1
+  partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
+  partWrapper.style.gridColumn = 'auto';
+  row.appendChild(partWrapper);
+
+  // 3) Ajouter nos 3 champs en colonne 2
   const inline = document.createElement('div');
   inline.id = 'base10-inline';
   inline.innerHTML = `
+    <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
     <div class="grid grid-cols-3 gap-2">
       <input id="base-capital" type="number" min="0" step="100" placeholder="Capital"
              class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
@@ -530,28 +533,25 @@ function updateSimulatorInterface() {
     <input id="base10-total" type="hidden" value="0">
     <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
   `;
+  row.appendChild(inline);
 
-  // insérer juste après le wrapper "Part détenue (%)"
-  if (partWrapper && formGrid2.contains(partWrapper)) {
-    partWrapper.insertAdjacentElement('afterend', inline);
-  } else {
-    formGrid2.appendChild(inline);
-  }
+  // 4) Style local (empilement en mobile)
+  const style = document.createElement('style');
+  style.textContent = `
+    .part-detenu-row > * { min-width: 0; }
+    @media (max-width: 767.98px){ .part-detenu-row { display:block; } }
+  `;
+  document.head.appendChild(style);
 
-  // calcul & maj
-  const fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
+  // 5) Calcul dynamique + liaison
+  const fmtEUR = new Intl.NumberFormat('fr-FR',{ style:'currency', currency:'EUR', minimumFractionDigits:0 });
   function updateBase10(){
     const total =
       (parseFloat(document.getElementById('base-capital')?.value)||0) +
       (parseFloat(document.getElementById('base-primes')?.value)||0) +
       (parseFloat(document.getElementById('base-cca')?.value)||0);
-
-    const hidden = document.getElementById('base10-total');
-    if (hidden) hidden.value = String(total);
-
-    const seuil = document.getElementById('tns-mini-seuil');
-    if (seuil) seuil.textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
-
+    document.getElementById('base10-total').value = String(total);
+    document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
     if (typeof runComparison === 'function') runComparison();
   }
   ['base-capital','base-primes','base-cca'].forEach(id=>{
@@ -560,6 +560,7 @@ function updateSimulatorInterface() {
   });
   updateBase10();
 })();
+
 
 // Fonction pour obtenir les statuts sélectionnés selon le filtre
 function getSelectedStatuses(filter) {
