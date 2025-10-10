@@ -2218,108 +2218,129 @@ const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS 
         </div>
         
 ${hasDividendes ? `
-        <div class="detail-category">Dividendes</div>
-        <table class="detail-table">
-            <tr>
-                <td>Résultat après rémunération</td>
-                <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
-            </tr>
-            <tr>
-                <td>Impôt sur les sociétés (${formatPercent(tauxIS)})</td>
-                <td>${formatter.format(result.sim.is)}</td>
-            </tr>
-            <tr>
-                <td>Résultat après IS</td>
-                <td>${formatter.format(result.sim.resultatApresIS)}</td>
-            </tr>
-            <tr>
-                <td>Dividendes bruts</td>
-                <td>${formatter.format(result.sim.dividendes)}</td>
-            </tr>
-            ${(() => {
-              const baseSeuil = getBaseSeuilDivTNS(result.sim || {});
-              const libelleBase = baseSeuil > 0
-                ? `10% de ${formatter.format(baseSeuil)}`
-                : `10% de (capital libéré + primes + CCA)`;
-              return result.sim.cotTNSDiv ? `
-              <tr>
-                  <td>Cotisations TNS sur dividendes &gt; ${libelleBase} ${formatBaseSeuilDivTNSTooltip(baseSeuil)}</td>
-                  <td>${formatter.format(result.sim.cotTNSDiv)}</td>
-              </tr>` : '';
-            })()}
-            <tr>
-                <td>Méthode de taxation choisie</td>
-                <td>
-                    ${result.sim.methodeDividendes === 'PROGRESSIF' ? 
-                        `<span class="text-green-400">Barème progressif</span>
-                         <small class="text-gray-400 ml-2">(plus avantageux que le PFU)</small>` : 
-                        '<span class="text-blue-400">PFU 30%</span>'}
-                </td>
-         </tr>
-            ${result.sim.methodeDividendes === 'PROGRESSIF' ? `
-            <tr>
-                <td>Abattement de 40%</td>
-                <td>${formatter.format(result.sim.dividendes * 0.40)}</td>
-            </tr>
-            <tr>
-                <td>Base imposable après abattement</td>
-                <td>${formatter.format(result.sim.dividendes * 0.60)}</td>
-            </tr>
-            <tr>
-                <td>Impôt sur le revenu (TMI ${tmiEffectif}%)</td>
-                <td>${formatter.format(result.sim.dividendes * 0.60 * tmiEffectif / 100)}</td>
-            </tr>
-            <tr>
-                <td>Prélèvements sociaux (17,2%)</td>
-                <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
-            </tr>
-            ` : `
-            <tr>
-                <td>IR sur dividendes (12,8%)</td>
-                <td>${formatter.format(result.sim.dividendes * 0.128)}</td>
-            </tr>
-            <tr>
-                <td>Prélèvements sociaux (17,2%)</td>
-                <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
-            </tr>
-            `}
-            <tr>
-                <td>Total prélèvements sur dividendes</td>
-                <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
-            </tr>
-            ${result.sim.economieMethode > 0 ? `
-            <tr>
-                <td>Économie réalisée</td>
-                <td class="text-green-400">+ ${formatter.format(result.sim.economieMethode)}</td>
-            </tr>
-            ` : ''}
-            <tr>
-                <td>Dividendes nets</td>
-                <td>${formatter.format(result.sim.dividendesNets)}</td>
-            </tr>
-        </table>
-        <div class="text-xs text-gray-400 mt-1">
-          Montants affichés = dividendes nets (après impôts/prélèvements).
-        </div>
-        ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 0 ? `
-        <div class="mt-3 p-3 bg-green-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-green-400">
-            <p><i class="fas fa-lightbulb text-green-400 mr-2"></i>
-            <strong>Optimisation fiscale appliquée :</strong> Avec votre TMI de ${tmiEffectif}%, 
-            le barème progressif est plus avantageux que le PFU. 
-            Économie réalisée : ${formatter.format(result.sim.economieMethode)}.</p>
-            <p class="mt-2 text-gray-400">
-            Note : Ce choix s'applique à tous vos revenus de capitaux mobiliers de l'année.</p>
-        </div>
-        ` : ''}
-        ` : `
-        <div class="detail-category">Dividendes</div>
-        <div class="mt-2 p-4 bg-blue-900 bg-opacity-30 rounded-lg">
-            <p class="text-sm">
-                <i class="fas fa-info-circle text-blue-400 mr-2"></i>
-                <strong>Aucune distribution de dividendes</strong> - 100% du résultat est versé en rémunération.
-            </p>
-        </div>
-        `}
+  <div class="detail-category">Dividendes</div>
+  <table class="detail-table">
+    <tr>
+      <td>Résultat après rémunération</td>
+      <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
+    </tr>
+    <tr>
+      <td>Impôt sur les sociétés (${formatPercent(tauxIS)})</td>
+      <td>${formatter.format(result.sim.is)}</td>
+    </tr>
+    <tr>
+      <td>Résultat après IS</td>
+      <td>${formatter.format(result.sim.resultatApresIS)}</td>
+    </tr>
+    <tr>
+      <td>Dividendes bruts</td>
+      <td>${formatter.format(result.sim.dividendes)}</td>
+    </tr>
+
+    ${(() => {
+      // 🔹 Toujours afficher la base 10% : priorité aux champs UI, sinon fallback simulation
+      const uiBase = Number(document.getElementById('base10-total')?.value) || 0;
+      const baseSeuil = uiBase > 0 ? uiBase : getBaseSeuilDivTNS(result.sim || {});
+      const libelleBase = baseSeuil > 0
+        ? `10% de ${formatter.format(baseSeuil)}`
+        : `10% de (capital libéré + primes + CCA)`;
+
+      return `
+        <tr>
+          <td>Seuil TNS sur dividendes</td>
+          <td>${libelleBase} ${formatBaseSeuilDivTNSTooltip(baseSeuil)}</td>
+        </tr>
+        ${result.sim.cotTNSDiv ? `
+          <tr>
+            <td>Cotisations TNS sur dividendes &gt; seuil</td>
+            <td>${formatter.format(result.sim.cotTNSDiv)}</td>
+          </tr>` : `
+          <tr>
+            <td>Cotisations TNS sur dividendes &gt; seuil</td>
+            <td>0 €</td>
+          </tr>`}
+      `;
+    })()}
+
+    <tr>
+      <td>Méthode de taxation choisie</td>
+      <td>
+        ${result.sim.methodeDividendes === 'PROGRESSIF'
+          ? `<span class="text-green-400">Barème progressif</span><small class="text-gray-400 ml-2">(plus avantageux que le PFU)</small>`
+          : '<span class="text-blue-400">PFU 30%</span>'}
+      </td>
+    </tr>
+
+    ${result.sim.methodeDividendes === 'PROGRESSIF' ? `
+      <tr>
+        <td>Abattement de 40%</td>
+        <td>${formatter.format(result.sim.dividendes * 0.40)}</td>
+      </tr>
+      <tr>
+        <td>Base imposable après abattement</td>
+        <td>${formatter.format(result.sim.dividendes * 0.60)}</td>
+      </tr>
+      <tr>
+        <td>Impôt sur le revenu (TMI ${tmiEffectif}%)</td>
+        <td>${formatter.format(result.sim.dividendes * 0.60 * tmiEffectif / 100)}</td>
+      </tr>
+      <tr>
+        <td>Prélèvements sociaux (17,2%)</td>
+        <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
+      </tr>
+    ` : `
+      <tr>
+        <td>IR sur dividendes (12,8%)</td>
+        <td>${formatter.format(result.sim.dividendes * 0.128)}</td>
+      </tr>
+      <tr>
+        <td>Prélèvements sociaux (17,2%)</td>
+        <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
+      </tr>
+    `}
+    <tr>
+      <td>Total prélèvements sur dividendes</td>
+      <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
+    </tr>
+    ${result.sim.economieMethode > 0 ? `
+      <tr>
+        <td>Économie réalisée</td>
+        <td class="text-green-400">+ ${formatter.format(result.sim.economieMethode)}</td>
+      </tr>
+    ` : ''}
+    <tr>
+      <td>Dividendes nets</td>
+      <td>${formatter.format(result.sim.dividendesNets)}</td>
+    </tr>
+  </table>
+
+  <div class="text-xs text-gray-400 mt-1">
+    Montants affichés = dividendes nets (après impôts/prélèvements).
+  </div>
+
+  ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 0 ? `
+    <div class="mt-3 p-3 bg-green-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-green-400">
+      <p><i class="fas fa-lightbulb text-green-400 mr-2"></i>
+        <strong>Optimisation fiscale appliquée :</strong> Avec votre TMI de ${tmiEffectif}%, 
+        le barème progressif est plus avantageux que le PFU.
+        Économie réalisée : ${formatter.format(result.sim.economieMethode)}.</p>
+      <p class="mt-2 text-gray-400">Note : Ce choix s'applique à tous vos revenus de capitaux mobiliers de l'année.</p>
+    </div>
+  ` : ``}
+` : `
+  <div class="detail-category">Dividendes</div>
+  <div class="mt-2 p-4 bg-blue-900 bg-opacity-30 rounded-lg">
+    <p class="text-sm">
+      <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+      <strong>Aucune distribution de dividendes</strong> — 100% du résultat est versé en rémunération.
+    </p>
+    ${result.sim.resultatApresRemuneration < 0 ? `
+      <p class="text-sm mt-2 text-orange-400">
+        <i class="fas fa-exclamation-triangle mr-2"></i>
+        Note : Le résultat après rémunération est négatif (${formatter.format(result.sim.resultatApresRemuneration)}).
+      </p>` : ''}
+  </div>
+`}
         
         <div class="detail-category">Résultat final</div>
         <table class="detail-table">
