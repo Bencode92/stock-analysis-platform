@@ -494,6 +494,7 @@ function updateSimulatorInterface() {
       statusFilter.dispatchEvent(new Event('change'));
     }
   }
+   }
 ;(() => {
   // ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======
   const simContainer2 = document.getElementById('fiscal-simulator');
