@@ -494,15 +494,16 @@ function updateSimulatorInterface() {
       statusFilter.dispatchEvent(new Event('change'));
     }
   }
-// ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======(function injectBase10Inline() {
-  const simulatorContainer = document.getElementById('fiscal-simulator');
-  if (!simulatorContainer) return;
+;(() => {
+  // ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======
+  const simContainer2 = document.getElementById('fiscal-simulator');
+  if (!simContainer2) return;
 
-  const formGrid = simulatorContainer.querySelector('.grid');
-  if (!formGrid || document.getElementById('base10-inline')) return;
+  const formGrid2 = simContainer2.querySelector('.grid');
+  if (!formGrid2 || document.getElementById('base10-inline')) return;
 
   // 👉 forcer une grille 2 colonnes utilisable par notre CSS
-  formGrid.classList.add('form-grid-2cols');
+  formGrid2.classList.add('form-grid-2cols');
 
   // repérer "Part détenue (%)"
   const partInput = document.getElementById('sim-part-associe');
@@ -530,10 +531,10 @@ function updateSimulatorInterface() {
   `;
 
   // insérer juste après le wrapper "Part détenue (%)"
-  if (partWrapper && formGrid.contains(partWrapper)) {
+  if (partWrapper && formGrid2.contains(partWrapper)) {
     partWrapper.insertAdjacentElement('afterend', inline);
   } else {
-    formGrid.appendChild(inline);
+    formGrid2.appendChild(inline);
   }
 
   // calcul & maj
