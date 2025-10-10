@@ -74,48 +74,57 @@ document.addEventListener('DOMContentLoaded', function() {
     
 // Ajouter les styles personnalisés pour le simulateur
 function addCustomStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
+  const style = document.createElement('style');
+  style.textContent = `
 /* Conteneur du simulateur fiscal */
 #fiscal-simulator {
-    max-width: 980px;
-    margin-left: 0;
-    margin-right: auto;
+  max-width: 980px;
+  margin-left: 0;
+  margin-right: auto;
 }
 
 /* Grille alignée à gauche */
 #fiscal-simulator .grid {
-    justify-content: flex-start !important;
-    justify-items: start !important;
+  justify-content: flex-start !important;
+  justify-items: start !important;
 }
 
 /* Options sans centrage automatique */
 #sim-options-container {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    grid-column: 1 / -1; /* Force le bloc à occuper toute la largeur */
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  grid-column: 1 / -1; /* Force le bloc à occuper toute la largeur */
 }
 
 /* Conteneur global */
 #tab-content-container {
-    max-width: 1200px;
-    margin-left: 0;
-    margin-right: auto;
+  max-width: 1200px;
+  margin-left: 0;
+  margin-right: auto;
 }
+
+/* ---- placement des 3 champs base10 à DROITE de "Part détenue (%)" ---- */
+@media (min-width: 768px){
+  #fiscal-simulator .form-grid-2cols{
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 colonnes */
+    gap: 1rem;
+  }
+  .part-detenu-wrapper{ grid-column: 1 / span 1; }
+  #base10-inline{ grid-column: 2 / span 1; align-self: end; }
+}
+
 /* — Tooltips plus compacts — */
-            .tooltiptext {
-                font-size: 0.75rem;      /* 12 px */
-                line-height: 1rem;       /* 16 px */
-                padding: 0.4rem 0.6rem;  /* réduit le carré blanc */
-                max-width: 220px;        /* évite les bulles trop larges */
-            }
-        `;
-    document.head.appendChild(style);
+.tooltiptext {
+  font-size: 0.75rem;      /* 12 px */
+  line-height: 1rem;       /* 16 px */
+  padding: 0.4rem 0.6rem;  /* réduit le carré blanc */
+  max-width: 220px;        /* évite les bulles trop larges */
+}
+`;
+  document.head.appendChild(style);
 }
 addCustomStyles();
-
-
-});
 
 function setupSectorOptions() {
   // Find selector elements
@@ -485,80 +494,70 @@ function updateSimulatorInterface() {
       statusFilter.dispatchEvent(new Event('change'));
     }
   }
-// ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======
-(function injectBase10Inline() {
-  // on est dans updateSimulatorInterface(), on réutilise son scope
+// ====== AJOUT : 3 champs compacts à DROITE de "Part détenue (%)" ======(function injectBase10Inline() {
   const simulatorContainer = document.getElementById('fiscal-simulator');
   if (!simulatorContainer) return;
 
   const formGrid = simulatorContainer.querySelector('.grid');
   if (!formGrid || document.getElementById('base10-inline')) return;
 
-  // repère le champ "Part détenue (%)"
+  // 👉 forcer une grille 2 colonnes utilisable par notre CSS
+  formGrid.classList.add('form-grid-2cols');
+
+  // repérer "Part détenue (%)"
   const partInput = document.getElementById('sim-part-associe');
   const partWrapper = partInput
     ? partInput.closest('.col-span-1, .col-span-2, .col-span-full, .w-full')
     : null;
 
-  // 👉 forcer le wrapper à ne prendre qu'UNE colonne dès md:
-  if (partWrapper) {
-    partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-full');
-    partWrapper.classList.add('col-span-1','md:col-span-1');
-  }
+  // ancrer cette zone en colonne 1
+  if (partWrapper) partWrapper.classList.add('part-detenu-wrapper');
 
-  // bloc à insérer (sans col-start-2)
+  // créer le bloc à mettre en colonne 2
   const inline = document.createElement('div');
   inline.id = 'base10-inline';
-  inline.className = 'col-span-1 md:col-span-1 self-end';
   inline.innerHTML = `
     <div class="grid grid-cols-3 gap-2">
-      <input id="base-capital" type="number" min="0" step="100"
-             placeholder="Capital" aria-label="Capital social"
+      <input id="base-capital" type="number" min="0" step="100" placeholder="Capital"
              class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      <input id="base-primes" type="number" min="0" step="100"
-             placeholder="Primes" aria-label="Primes d’émission"
+      <input id="base-primes" type="number" min="0" step="100" placeholder="Primes"
              class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      <input id="base-cca" type="number" min="0" step="100"
-             placeholder="CCA" aria-label="Comptes courants associés"
+      <input id="base-cca" type="number" min="0" step="100" placeholder="CCA"
              class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
     </div>
     <input id="base10-total" type="hidden" value="0">
     <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
   `;
 
-  // insertion juste après le wrapper de "Part détenue (%)"
+  // insérer juste après le wrapper "Part détenue (%)"
   if (partWrapper && formGrid.contains(partWrapper)) {
     partWrapper.insertAdjacentElement('afterend', inline);
   } else {
     formGrid.appendChild(inline);
   }
 
-  // wiring + recalcul
+  // calcul & maj
   const fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
-
-  function updateBase10FromParts() {
-    const vCap   = parseFloat(document.getElementById('base-capital')?.value) || 0;
-    const vPrime = parseFloat(document.getElementById('base-primes')?.value)  || 0;
-    const vCCA   = parseFloat(document.getElementById('base-cca')?.value)     || 0;
-    const total  = vCap + vPrime + vCCA;
+  function updateBase10(){
+    const total =
+      (parseFloat(document.getElementById('base-capital')?.value)||0) +
+      (parseFloat(document.getElementById('base-primes')?.value)||0) +
+      (parseFloat(document.getElementById('base-cca')?.value)||0);
 
     const hidden = document.getElementById('base10-total');
     if (hidden) hidden.value = String(total);
 
-    const seuilEl = document.getElementById('tns-mini-seuil');
-    if (seuilEl) seuilEl.textContent = total > 0 ? fmtEUR.format(total * 0.10) : '—';
+    const seuil = document.getElementById('tns-mini-seuil');
+    if (seuil) seuil.textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
 
     if (typeof runComparison === 'function') runComparison();
   }
-
-  ['base-capital','base-primes','base-cca'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) ['input','change'].forEach(ev => el.addEventListener(ev, updateBase10FromParts));
+  ['base-capital','base-primes','base-cca'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
   });
-
-  updateBase10FromParts();
+  updateBase10();
 })();
-}
 
 // Fonction pour obtenir les statuts sélectionnés selon le filtre
 function getSelectedStatuses(filter) {
