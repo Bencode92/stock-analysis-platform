@@ -585,51 +585,60 @@ function getSelectedStatuses(filter) {
 }
 
 function runComparison() {
-    // Récupérer les valeurs du formulaire
-    const ca = parseFloat(document.getElementById('sim-ca').value) || 50000;
-    const marge = parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3;
-    const _rawRatio = parseFloat(document.getElementById('sim-salaire').value);
-    const ratioSalaire = Number.isFinite(_rawRatio) ? Math.max(0, Math.min(1, _rawRatio / 100)) : 0.7;
-    const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
-    const nbAssocies = parseInt(document.getElementById('sim-nb-associes')?.value) || 1;
-    const partAssociePct = parseFloat(document.getElementById('sim-part-associe')?.value) || 100;
-    const partAssocie = partAssociePct / 100;
-    
-    // Récupérer les options sectorielles actuelles
-    const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
-    const tailleSelect = document.querySelector('#taille-select, [id$="taille-select"]');
-    
-    if (secteurSelect && tailleSelect) {
-        window.sectorOptions = {
-            secteur: secteurSelect.value,
-            taille: tailleSelect.value
-        };
-        console.log("runComparison: Options sectorielles utilisées:", window.sectorOptions);
-    }
-    
-    // Récupérer les options avancées
-  const modeExpert = true; // Toujours activer le mode expert pour des calculs précis
-    const useOptimalRatio = document.getElementById('use-optimal-ratio') && document.getElementById('use-optimal-ratio').checked;
-    const useAvgChargeRate = document.getElementById('use-avg-charge-rate') && document.getElementById('use-avg-charge-rate').checked;
-    const versementLiberatoire = document.getElementById('micro-vfl') && document.getElementById('micro-vfl').checked;
-    const gerantMajoritaire = !(document.getElementById('sarl-gerant-minoritaire') && document.getElementById('sarl-gerant-minoritaire').checked);
-    
-    // Définir marge ou frais de façon exclusive selon l'option
-    const params = {
-        ca: ca,
-        tauxMarge: useAvgChargeRate ? undefined : marge,
-        tauxFrais: useAvgChargeRate ? (1 - marge) : undefined, // Changé de null à undefined
-        tauxRemuneration: ratioSalaire,
-        tmiActuel: tmi,
-        modeExpert: modeExpert,
-        gerantMajoritaire: gerantMajoritaire,
-        secteur: window.sectorOptions?.secteur, // Ajouter ces paramètres
-        taille: window.sectorOptions?.taille,
-        nbAssocies: nbAssocies,
-        partAssocie: partAssocie,
-        partAssociePrincipal: partAssocie,  // Pour compatibilité
-        partAssociePct: partAssociePct
-    };
+  // Récupérer les valeurs du formulaire
+  const ca = parseFloat(document.getElementById('sim-ca').value) || 50000;
+  const marge = parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3;
+  const _rawRatio = parseFloat(document.getElementById('sim-salaire').value);
+  const ratioSalaire = Number.isFinite(_rawRatio) ? Math.max(0, Math.min(1, _rawRatio / 100)) : 0.7;
+  const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
+  const nbAssocies = parseInt(document.getElementById('sim-nb-associes')?.value) || 1;
+  const partAssociePct = parseFloat(document.getElementById('sim-part-associe')?.value) || 100;
+  const partAssocie = partAssociePct / 100;
+
+  // Récupérer les options sectorielles actuelles
+  const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
+  const tailleSelect  = document.querySelector('#taille-select,  [id$="taille-select"]');
+  if (secteurSelect && tailleSelect) {
+    window.sectorOptions = { secteur: secteurSelect.value, taille: tailleSelect.value };
+    console.log("runComparison: Options sectorielles utilisées:", window.sectorOptions);
+  }
+
+  // Récupérer les options avancées
+  const modeExpert = true; // Toujours activer le mode expert
+  const useOptimalRatio     = document.getElementById('use-optimal-ratio')?.checked;
+  const useAvgChargeRate    = document.getElementById('use-avg-charge-rate')?.checked;
+  const versementLiberatoire= document.getElementById('micro-vfl')?.checked;
+  const gerantMajoritaire   = !(document.getElementById('sarl-gerant-minoritaire')?.checked);
+
+  // 🔹 LIRE Capital / Primes / CCA (base 10 % TNS)
+  const capitalLibere   = Number(document.getElementById('base-capital')?.value) || 0;
+  const primesEmission  = Number(document.getElementById('base-primes')?.value)  || 0;
+  const comptesCourants = Number(document.getElementById('base-cca')?.value)     || 0;
+  const baseSeuilDivTNS = capitalLibere + primesEmission + comptesCourants;
+
+  // Définir marge ou frais de façon exclusive selon l'option
+  const params = {
+    ca,
+    tauxMarge: useAvgChargeRate ? undefined : marge,
+    tauxFrais: useAvgChargeRate ? (1 - marge) : undefined,
+    tauxRemuneration: ratioSalaire,
+    tmiActuel: tmi,
+    modeExpert,
+    gerantMajoritaire,
+    secteur: window.sectorOptions?.secteur,
+    taille:   window.sectorOptions?.taille,
+    nbAssocies,
+    partAssocie,
+    partAssociePrincipal: partAssocie, // compat
+    partAssociePct,
+
+    // 🔹 NOUVEAUX CHAMPS POUR LE MOTEUR
+    capitalLibere,
+    primesEmission,
+    comptesCourants,
+    baseSeuilDivTNS,
+  };
+
 
     
     // Logger pour debug
