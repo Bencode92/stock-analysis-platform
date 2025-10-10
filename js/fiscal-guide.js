@@ -3052,7 +3052,7 @@ function getDefaultNomStatut(statutId) {
     };
     return noms[statutId] || statutId;
 }
-
+});
 // Fonction pour générer les informations fiscales de chaque statut
 function getStatutFiscalInfo(statutId) {
     // Informations fiscales par défaut pour chaque statut
