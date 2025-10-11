@@ -1,0 +1,210 @@
+{
+    "version": "v3_quantitatif_compliance_amf_stable",
+    "timestamp": "20251011_081713",
+    "date": "2025-10-11T08:17:13.967233",
+    "portfolios": {
+        "Portefeuilles": [
+            {
+                "Nom": "Agressif",
+                "Description": "Portefeuille avec une allocation axée sur la croissance à long terme, avec une exposition significative aux actions et aux ETFs de secteurs volatils.",
+                "Actifs": [
+                    {
+                        "id": "EQ_16",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "EQ_2",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "EQ_8",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "ETF_s4",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "ETF_s5",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "ETF_s6",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_s7",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_s8",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_s9",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b4",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "ETF_b7",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "EQ_19",
+                        "allocation": 5.0
+                    },
+                    {
+                        "id": "EQ_20",
+                        "allocation": 4.0
+                    }
+                ],
+                "Compliance": {
+                    "TotalAllocation": 100.0,
+                    "CategoriesIncluded": [
+                        "Actions",
+                        "ETF",
+                        "Obligations"
+                    ],
+                    "CryptoAllocation": 0.0
+                }
+            },
+            {
+                "Nom": "Modéré",
+                "Description": "Portefeuille équilibré avec une combinaison de croissance et de revenu, incluant des actions stables, des ETFs diversifiés et des obligations.",
+                "Actifs": [
+                    {
+                        "id": "EQ_1",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "EQ_13",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "EQ_12",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "EQ_9",
+                        "allocation": 7.0
+                    },
+                    {
+                        "id": "ETF_s1",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "ETF_s2",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "ETF_s3",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "ETF_b1",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b2",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b3",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b5",
+                        "allocation": 8.0
+                    },
+                    {
+                        "id": "ETF_b6",
+                        "allocation": 8.0
+                    }
+                ],
+                "Compliance": {
+                    "TotalAllocation": 100.0,
+                    "CategoriesIncluded": [
+                        "Actions",
+                        "ETF",
+                        "Obligations"
+                    ],
+                    "CryptoAllocation": 0.0
+                }
+            },
+            {
+                "Nom": "Stable",
+                "Description": "Portefeuille conservateur axé sur la préservation du capital et la génération de revenus stables, principalement à travers des obligations et des actions à faible volatilité.",
+                "Actifs": [
+                    {
+                        "id": "EQ_7",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "EQ_18",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "EQ_17",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "EQ_6",
+                        "allocation": 10.0
+                    },
+                    {
+                        "id": "ETF_b1",
+                        "allocation": 12.0
+                    },
+                    {
+                        "id": "ETF_b2",
+                        "allocation": 12.0
+                    },
+                    {
+                        "id": "ETF_b3",
+                        "allocation": 12.0
+                    },
+                    {
+                        "id": "ETF_b5",
+                        "allocation": 12.0
+                    },
+                    {
+                        "id": "ETF_b6",
+                        "allocation": 12.0
+                    }
+                ],
+                "Compliance": {
+                    "TotalAllocation": 100.0,
+                    "CategoriesIncluded": [
+                        "Actions",
+                        "Obligations"
+                    ],
+                    "CryptoAllocation": 0.0
+                }
+            }
+        ]
+    },
+    "overlap_report": {
+        "Agressif": [],
+        "Modéré": [],
+        "Stable": []
+    },
+    "features": [
+        "drawdown_normalisé",
+        "diversification_round_robin",
+        "validation_anti_fin_cycle",
+        "fallback_crypto_progressif",
+        "cache_univers_hash",
+        "retry_api_robuste",
+        "compliance_amf",
+        "sanitisation_marketing",
+        "disclaimer_automatique",
+        "regex_pandas_fixed",
+        "etf_detection_fixed",
+        "timeout_extended",
+        "type_safety_improved",
+        "cache_fallback_system"
+    ]
+}
