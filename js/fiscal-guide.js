@@ -124,7 +124,7 @@ function addCustomStyles() {
     grid-template-columns: 1fr 1fr; /* 2 colonnes */
     gap: 1rem;
   }
-  .part-detenu-wrapper{ grid-column: 1 / span 1; }
+  /* (ex- .part-detenu-wrapper supprimé) */
   #base10-inline{ grid-column: 2 / span 1; align-self: end; }
 }
 
@@ -150,23 +150,38 @@ function addCustomStyles() {
   max-width: 220px;        /* évite les bulles trop larges */
 }
 
-/* ==== AJOUT UX : Part détenue (%) alignée gauche + suffixe % ==== */
-#sim-part-associe { 
-  text-align: left !important; 
-  padding-right: 2.25rem;      /* place pour le % visuel */
+/* ---- correctifs Part détenue (%) ---- */
+
+/* ❶ Wrapper correct (coquille fixée) + shrink-wrap */
+.part-detenu-wrap { 
+  position: relative; 
+  display: inline-block;   /* largeur = celle de l’input */
+  width: 100%;             /* conserve le w-full de l’input */
 }
-.part-detenu-wrap { position: relative; }
+
+/* ❷ Suffixe % ancré dans le champ, pas la colonne */
 .part-detenu-wrap .suffix-pct {
-  position: absolute; 
-  right: .65rem; 
-  top: 50%; 
+  position: absolute;
+  right: .65rem;
+  top: 50%;
   transform: translateY(-50%);
-  pointer-events: none; 
-  font-weight: 600; 
+  pointer-events: none;
+  font-weight: 600;
   color: #cbd5e1;
 }
 
-/* ==== AJOUT UX : Base 10% — mini-labels + suffixe € fixe ==== */
+/* ❸ Le champ laisse la place au suffixe */
+#sim-part-associe { 
+  text-align: left !important; 
+  padding-right: 2.25rem;  /* espace pour le % visuel */
+}
+
+/* ❹ (facultatif) référence de classe cohérente dans la grille 2 colonnes */
+@media (min-width: 768px){
+  .part-detenu-wrap { grid-column: auto; }
+}
+
+/* ==== Base 10% — mini-labels + suffixe € fixe ==== */
 #base10-inline .money-wrap { position: relative; }
 #base10-inline .money-wrap input { padding-right: 2.25rem; }
 #base10-inline .money-wrap .suffix-eur {
@@ -197,7 +212,7 @@ function placeBase10UnderNbAssocies(){
   /* ==== AJOUT UX : suffixe % visuel + bornes 0..100 ==== */
   if (partInput && !partInput.closest('.part-detenu-wrap')) {
     const wrap = document.createElement('div');
-    wrap.className = 'part-detenu-wrap';
+   wrap.style.width = '100%';   // s’assure que l’absolu est borné à l’input
     const parent = partInput.parentNode;
     parent.insertBefore(wrap, partInput);
     wrap.appendChild(partInput);
