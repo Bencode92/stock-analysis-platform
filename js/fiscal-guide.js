@@ -2893,27 +2893,30 @@ ${hasDividendes ? `
         `;
     }
     
-    // NOUVEAU : Variable pour stocker le TMI effectif calculé
-    let tmiEffectifFinal = 0;
-    
-    // Déterminer le TMI effectif selon le statut
- if (statutId === 'micro') {
-  tmiEffectifFinal = getTMI(result.sim.revenuImposable || 0);
-} else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
-  const base = (result.sim.baseImposableIR ?? ((result.sim.salaireNet || 0) + (result.sim.csgNonDeductible || 0)));
-  tmiEffectifFinal = getTMI(base);
-} else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
-  const base = (result.sim.baseImposableIR ?? ((result.sim.remunerationNetteSociale || 0) + (result.sim.csgNonDeductible || 0)));
-  tmiEffectifFinal = getTMI(base);
-} else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
-  const base = (result.sim.baseImposableIR || result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0);
-  tmiEffectifFinal = getTMI(base);
-} else if (statutId === 'sci') {
-  const base = (result.sim.resultatFiscalAssocie || 0) * (1 - 6.8/100); // CSG déductible
-  tmiEffectifFinal = getTMI(base);
-}
-    
- // CORRECTION : Ajouter une section récapitulative des taux utilisés ADAPTÉE au régime fiscal
+ // TMI effectif (calculé une seule fois)
+const tmiEffectifFinal = (() => {
+  if (statutId === 'micro') {
+    return getTMI(result.sim.revenuImposable || 0);
+  }
+  if (['sasu','sas','sa','selas'].includes(statutId)) {
+    const base = result.sim.baseImposableIR ?? ((result.sim.salaireNet || 0) + (result.sim.csgNonDeductible || 0));
+    return getTMI(base);
+  }
+  if (['eurlIS','sarl','selarl','sca'].includes(statutId)) {
+    const base = result.sim.baseImposableIR ?? ((result.sim.remunerationNetteSociale || 0) + (result.sim.csgNonDeductible || 0));
+    return getTMI(base);
+  }
+  if (['ei','eurl','snc'].includes(statutId)) {
+    return getTMI(result.sim.baseImposableIR || result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0);
+  }
+  if (statutId === 'sci') {
+    const base = (result.sim.resultatFiscalAssocie || 0) * (1 - 6.8 / 100); // CSG déductible
+    return getTMI(base);
+  }
+  return 0;
+})();
+
+// CORRECTION : Ajouter une section récapitulative des taux utilisés ADAPTÉE au régime fiscal
 detailContent += `
   <div class="detail-category mt-6">Récapitulatif des taux utilisés</div>
   <div class="mt-2 p-4 bg-green-900 bg-opacity-20 rounded-lg text-sm">
@@ -2979,31 +2982,8 @@ if (
     <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>CSG déductible :</strong> 6.8% des revenus fonciers</li>`;
 }
 
-// Calcul du TMI effectif (avant affichage)
-const tmiEffectifFinal = (() => {
-  if (statutId === 'micro') {
-    return getTMI(result.sim.revenuImposable || 0);
-  }
-  if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
-    const base = (result.sim.baseImposableIR ?? ((result.sim.salaireNet || 0) + (result.sim.csgNonDeductible || 0)));
-    return getTMI(base);
-  }
-  if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
-    const base = (result.sim.baseImposableIR ?? ((result.sim.remunerationNetteSociale || 0) + (result.sim.csgNonDeductible || 0)));
-    return getTMI(base);
-  }
-  if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
-    return getTMI(result.sim.baseImposableIR || result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0);
-  }
-  if (statutId === 'sci') {
-    const base = (result.sim.resultatFiscalAssocie || 0) * (1 - 6.8 / 100); // CSG déductible
-    return getTMI(base);
-  }
-  return 0;
-})();
-
 // Afficher le TMI sauf pour Micro avec VFL
-if (!(statutId === 'micro' && result.sim.versementLiberatoire)) {
+if (!(statutId === 'micro' && (result.sim.versementLiberatoire === true))) {
   detailContent += `
     <li>
       <i class="fas fa-percentage text-green-400 mr-2"></i>
@@ -3015,6 +2995,7 @@ if (!(statutId === 'micro' && result.sim.versementLiberatoire)) {
 detailContent += `
     </ul>
   </div>`;
+
 
     
     // Ajouter une note explicative sur le régime fiscal
