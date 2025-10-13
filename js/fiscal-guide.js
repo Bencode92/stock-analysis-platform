@@ -948,7 +948,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Styles globaux utiles
   addCustomStyles();
 
-  /* ---------------- helpers UI ---------------- */
+ /* ---------------- helpers UI ---------------- */
 function addCustomStyles() {
   const style = document.createElement('style');
   style.textContent = `
@@ -987,12 +987,12 @@ function addCustomStyles() {
   max-width: 220px;
 }
 
-/* Ligne Part détenue + Base 10% */
+/* — Ligne Part détenue + Base 10% — */
 .part-detenu-row { align-items: end; }
-.part-detenu-row .percent-wrap { position: relative; }
+.part-detenu-row .percent-wrap { position: relative; width: 100%; }
 .part-detenu-row .percent-wrap input {
-  padding-right: 2.2rem;          /* place pour % */
-  text-align: right;              /* 100 à droite dans l'input */
+  padding-right: 2.2rem;      /* place pour le % interne */
+  text-align: right;          /* valeur alignée à droite */
 }
 .part-detenu-row .percent-wrap .suffix {
   position: absolute;
@@ -1001,13 +1001,22 @@ function addCustomStyles() {
   transform: translateY(-50%);
   pointer-events: none;
   color: #9ca3af;
+  font-weight: 600;
 }
+/* Masquer un éventuel ancien suffixe externe uniquement pour #sim-part-associe */
+#sim-part-associe + .unit,
+#sim-part-associe + .input-suffix,
+#sim-part-associe ~ .unit-suffix {
+  display: none !important;
+}
+
 @media (max-width: 767.98px) {
   .part-detenu-row { display: block; }
 }
 `;
   document.head.appendChild(style);
 }
+
   function setupSectorOptions() {
     const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
     const tailleSelect  = document.querySelector('#taille-select, [id$="taille-select"]');
@@ -1350,7 +1359,7 @@ function addCustomStyles() {
     statusFilter.dispatchEvent(new Event('change'));
   }
 
-  /* -------------------------------------------------------
+ /* -------------------------------------------------------
    Montage de la ligne “Part détenue (%) + Base 10%”
    => Ancrage juste après #sim-nb-associes, fallback sur l’ancien bloc
 ------------------------------------------------------- */
@@ -1397,6 +1406,10 @@ function mountBase10Row() {
     suf.textContent = '%';
     wrap.appendChild(suf);
 
+    // ✅ Nettoyer un éventuel ancien badge/suffixe externe ajouté par le thème
+    partWrapper.querySelectorAll('.unit, .input-suffix, .unit-suffix')
+      .forEach(el => el.remove());
+
     partInputEl.setAttribute('min','0');
     partInputEl.setAttribute('max','100');
     if (!partInputEl.getAttribute('step')) partInputEl.setAttribute('step','1');
@@ -1406,17 +1419,28 @@ function mountBase10Row() {
   const inline = document.createElement('div');
   inline.id = 'base10-inline';
   inline.innerHTML = `
-    <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
+    <div class="flex items-center justify-between mb-1">
+      <label class="block text-gray-300">Base 10% (TNS dividendes)</label>
+      <span id="tns-mini-badge" class="text-xs px-2 py-0.5 rounded bg-blue-800 border border-blue-600">
+        10% : —
+      </span>
+    </div>
     <div class="grid grid-cols-3 gap-2">
       <input id="base-capital" type="number" min="0" step="100" placeholder="Capital"
+             aria-label="Capital libéré"
              class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
       <input id="base-primes" type="number" min="0" step="100" placeholder="Primes"
+             aria-label="Primes d’émission"
              class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
       <input id="base-cca" type="number" min="0" step="100" placeholder="CCA"
+             aria-label="Comptes courants d’associés"
              class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
     </div>
+    <div class="text-[11px] text-gray-400 mt-1">
+      Seuil = 10% × (capital libéré + primes + CCA)
+      ${formatBaseSeuilDivTNSTooltip(0)}
+    </div>
     <input id="base10-total" type="hidden" value="0">
-    <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
   `;
   row.appendChild(inline);
 
@@ -1428,22 +1452,27 @@ function mountBase10Row() {
   `;
   document.head.appendChild(style);
 
-  // 5) Calcul dynamique + liaison
-  const fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
-  function updateBase10() {
+  // 5) Calcul dynamique + liaison (MAJ du badge)
+  const fmtEUR = new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', minimumFractionDigits:0 });
+  function updateBase10(){
     const total =
       (parseFloat(document.getElementById('base-capital')?.value) || 0) +
-      (parseFloat(document.getElementById('base-primes')?.value) || 0) +
-      (parseFloat(document.getElementById('base-cca')?.value) || 0);
+      (parseFloat(document.getElementById('base-primes')?.value)  || 0) +
+      (parseFloat(document.getElementById('base-cca')?.value)     || 0);
     document.getElementById('base10-total').value = String(total);
-    document.getElementById('tns-mini-seuil').textContent = total > 0 ? fmtEUR.format(total * 0.10) : '—';
-    if (typeof window.runComparison === 'function') window.runComparison?.();
+    const badge = document.getElementById('tns-mini-badge');
+    if (badge) badge.textContent = `10% : ${ total>0 ? fmtEUR.format(total*0.10) : '—' }`;
+    window.runComparison?.();
   }
+
   ['base-capital','base-primes','base-cca'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.addEventListener('input', updateBase10); el.addEventListener('change', updateBase10); }
   });
   updateBase10();
+}
+
+
 
   // ---- sync part détenue avec nb d'associés
   function clampPct(v){ return Math.max(0, Math.min(100, Math.round(v))); }
