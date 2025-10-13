@@ -2917,7 +2917,8 @@ ${hasDividendes ? `
 detailContent += `
   <div class="detail-category mt-6">Récapitulatif des taux utilisés</div>
   <div class="mt-2 p-4 bg-green-900 bg-opacity-20 rounded-lg text-sm">
-    <ul class="space-y-1">`;
+    <ul class="space-y-1">
+`;
 
 // Charges sociales (toujours affichées)
 detailContent += `
@@ -2928,9 +2929,11 @@ detailContent += `
     '≈30% (TNS)'
   }</li>`;
 
-// Statuts à l'IS uniquement
- if (statutId === 'eurlIS' || statutId === 'sasu' || statutId === 'sarl' || statutId === 'sas' || 
-    statutId === 'sa' || statutId === 'selarl' || statutId === 'selas' || statutId === 'sca') {
+// ── Branches MUTUELLEMENT EXCLUSIVES, SANS code intercalé ──
+if (
+  statutId === 'eurlIS' || statutId === 'sasu' || statutId === 'sarl' || statutId === 'sas' ||
+  statutId === 'sa' || statutId === 'selarl' || statutId === 'selas' || statutId === 'sca'
+) {
   detailContent += `
     <li>
       <i class="fas fa-percentage text-green-400 mr-2"></i>
@@ -2941,19 +2944,16 @@ detailContent += `
       <i class="fas fa-percentage text-green-400 mr-2"></i>
       <strong>PFU sur dividendes :</strong> 30% (17.2% prélèvements sociaux + 12.8% IR)
     </li>`;
-  
+
   // Cotisations TNS sur dividendes pour certains statuts
   if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
     detailContent += `
-      <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 30% sur la part > 10% du capital social</li>`;
+      <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 30% sur la part &gt; 10% du capital social</li>`;
   }
-}
 
-// Statuts à l'IR — Micro : abattement & VFL
-else if (statutId === 'micro') {
+} else if (statutId === 'micro') {
   const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
   const versementLiberatoire = result.sim.versementLiberatoire || false;
-  const __vflBanner = versementLiberatoire ? renderVFLNote(typeMicro) : '';
 
   detailContent += `
     <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Abattement forfaitaire :</strong> ${
@@ -2969,19 +2969,40 @@ else if (statutId === 'micro') {
         typeMicro === 'BIC_SERVICE' ? '1.7%' :
         '2.2%'
       } du CA (remplace l'IR progressif)</li>`;
-    // (Optionnel) afficher la bannière VFL
-    detailContent += __vflBanner;
-  } 
-}
+    // Ajouter la bannière séparément (évite l’imbrication de backticks)
+    detailContent += renderVFLNote(typeMicro);
+  }
 
-// Statut SCI — infos spécifiques IR
-else if (statutId === 'sci') {
+} else if (statutId === 'sci') {
   detailContent += `
     <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Régime fiscal :</strong> Revenus fonciers (IR)</li>
     <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>CSG déductible :</strong> 6.8% des revenus fonciers</li>`;
 }
 
-// --- AJOUT : n'afficher le TMI générique que si ce n'est pas "Micro avec VFL"
+// Calcul du TMI effectif (avant affichage)
+const tmiEffectifFinal = (() => {
+  if (statutId === 'micro') {
+    return getTMI(result.sim.revenuImposable || 0);
+  }
+  if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
+    const base = (result.sim.baseImposableIR ?? ((result.sim.salaireNet || 0) + (result.sim.csgNonDeductible || 0)));
+    return getTMI(base);
+  }
+  if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
+    const base = (result.sim.baseImposableIR ?? ((result.sim.remunerationNetteSociale || 0) + (result.sim.csgNonDeductible || 0)));
+    return getTMI(base);
+  }
+  if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
+    return getTMI(result.sim.baseImposableIR || result.sim.beneficeImposable || result.sim.beneficeApresCotisations || 0);
+  }
+  if (statutId === 'sci') {
+    const base = (result.sim.resultatFiscalAssocie || 0) * (1 - 6.8 / 100); // CSG déductible
+    return getTMI(base);
+  }
+  return 0;
+})();
+
+// Afficher le TMI sauf pour Micro avec VFL
 if (!(statutId === 'micro' && result.sim.versementLiberatoire)) {
   detailContent += `
     <li>
