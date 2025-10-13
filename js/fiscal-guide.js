@@ -3217,3 +3217,5 @@ function getStatutFiscalInfo(statutId) {
 
   return infosFiscales[statutId] || `<p>Informations non disponibles pour ${statutId}</p>`;
 }
+   // ——— Fin du listener DOMContentLoaded ———
+});
