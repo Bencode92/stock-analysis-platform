@@ -59,18 +59,32 @@ if (typeof window !== "undefined") {
 }
 
 
-document.addEventListener('DOMContentLoaded', function() {
-    // S'assurer que l'onglet Guide fiscal initialise correctement ce code
-    const guideTab = document.querySelector('.tab-item:nth-child(3)'); // Le 3ème onglet
-    
-    if (guideTab) {
-        guideTab.addEventListener('click', initFiscalSimulator);
+document.addEventListener('DOMContentLoaded', function () {
+  // --- Initialisation requise par les écouteurs (onglet + présence du simulateur) ---
+  let __fiscalSimInitDone = false;
+  function initFiscalSimulator() {
+    if (__fiscalSimInitDone) return;      // évite les ré-inits si on reclique l’onglet
+    __fiscalSimInitDone = true;
+    try {
+      setupSimulator();                    // ta vraie initialisation
+    } catch (e) {
+      console.error('initFiscalSimulator error:', e);
+      __fiscalSimInitDone = false;        // si échec, permettre une nouvelle tentative
     }
-    
-    // Chercher si le simulateur existe déjà sur la page
-    if (document.getElementById('fiscal-simulator')) {
-        initFiscalSimulator();
-    }
+  }
+  // (utile si d’autres scripts veulent l’appeler)
+  if (typeof window !== 'undefined') window.initFiscalSimulator = initFiscalSimulator;
+
+  // S'assurer que l'onglet Guide fiscal initialise correctement ce code
+  const guideTab = document.querySelector('.tab-item:nth-child(3)'); // Le 3ème onglet
+  if (guideTab) {
+    guideTab.addEventListener('click', initFiscalSimulator);
+  }
+
+  // Chercher si le simulateur existe déjà sur la page
+  if (document.getElementById('fiscal-simulator')) {
+    initFiscalSimulator();
+  }
     
 // ---------- Styles personnalisés ----------
 function addCustomStyles() {
