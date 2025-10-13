@@ -1,6 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
 // Version 3.7 - Mai 2025 - Mise à jour des taux et barèmes 2025
-
 // --- GLOBALE (hors DOMContentLoaded) : badge IS réduit ---
 function renderISReduceBadge() {
   return `
@@ -17,7 +16,6 @@ function renderISReduceBadge() {
 }
 // Rendez-la visible même en <script type="module">
 if (typeof window !== 'undefined') window.renderISReduceBadge = renderISReduceBadge;
-
 // --- Helpers VFL (versement libératoire) — GLOBAL ---
 const VFL_RFR_LIMIT_PER_PART_2025 = 28797; // € / part, RFR N-2
 const VFL_DEADLINE_TXT = "Option avant le 31/12 pour l’année suivante";
@@ -37,7 +35,6 @@ function renderVFLNote(typeMicro) {
       </p>
     </div>`;
 }
-
 // --- Arrondis & fermeture d'équation (Option B) — GLOBAL ---
 const round2 = v => Math.round(v * 100) / 100;
 
@@ -61,26 +58,24 @@ if (typeof window !== "undefined") {
   window.isEligibleVFL = isEligibleVFL;
 }
 
-/* -------------------------------------------------------
-   DOMContentLoaded
-------------------------------------------------------- */
-document.addEventListener('DOMContentLoaded', function () {
-  // S'assurer que l'onglet Guide fiscal initialise correctement ce code
-  const guideTab = document.querySelector('.tab-item:nth-child(3)'); // Le 3ème onglet
-  if (guideTab) guideTab.addEventListener('click', initFiscalSimulator);
 
-  // Si le simulateur est déjà présent à l’init
-  if (document.getElementById('fiscal-simulator')) {
-    initFiscalSimulator();
-  }
-
-  // Styles globaux utiles
-  addCustomStyles();
-
-  /* ---------------- helpers UI ---------------- */
-  function addCustomStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
+document.addEventListener('DOMContentLoaded', function() {
+    // S'assurer que l'onglet Guide fiscal initialise correctement ce code
+    const guideTab = document.querySelector('.tab-item:nth-child(3)'); // Le 3ème onglet
+    
+    if (guideTab) {
+        guideTab.addEventListener('click', initFiscalSimulator);
+    }
+    
+    // Chercher si le simulateur existe déjà sur la page
+    if (document.getElementById('fiscal-simulator')) {
+        initFiscalSimulator();
+    }
+    
+// Ajouter les styles personnalisés pour le simulateur
+function addCustomStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
 /* Conteneur du simulateur fiscal */
 #fiscal-simulator {
   max-width: 980px;
@@ -98,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function () {
 #sim-options-container {
   margin-left: 0 !important;
   margin-right: 0 !important;
-  grid-column: 1 / -1;
+  grid-column: 1 / -1; /* Force le bloc à occuper toute la largeur */
 }
 
 /* Conteneur global */
@@ -108,128 +103,171 @@ document.addEventListener('DOMContentLoaded', function () {
   margin-right: auto;
 }
 
+/* ---- placement des 3 champs base10 à DROITE de "Part détenue (%)" ---- */
+@media (min-width: 768px){
+  #fiscal-simulator .form-grid-2cols{
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 colonnes */
+    gap: 1rem;
+  }
+  .part-detenu-wrapper{ grid-column: 1 / span 1; }
+  #base10-inline{ grid-column: 2 / span 1; align-self: end; }
+}
+
 /* — Tooltips plus compacts — */
 .tooltiptext {
-  font-size: 0.75rem;
-  line-height: 1rem;
-  padding: 0.4rem 0.6rem;
-  max-width: 220px;
+  font-size: 0.75rem;      /* 12 px */
+  line-height: 1rem;       /* 16 px */
+  padding: 0.4rem 0.6rem;  /* réduit le carré blanc */
+  max-width: 220px;        /* évite les bulles trop larges */
 }
 `;
-    document.head.appendChild(style);
-  }
+  document.head.appendChild(style);
+}
+addCustomStyles();
 
-  function setupSectorOptions() {
-    const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
-    const tailleSelect  = document.querySelector('#taille-select, [id$="taille-select"]');
-    console.log("Éléments trouvés:", !!secteurSelect, !!tailleSelect);
+function setupSectorOptions() {
+  // Find selector elements
+  const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
+  const tailleSelect  = document.querySelector('#taille-select, [id$="taille-select"]');
+  console.log("Éléments trouvés:", !!secteurSelect, !!tailleSelect);
 
-    if (secteurSelect && tailleSelect) {
-      window.sectorOptions = { secteur: secteurSelect.value, taille: tailleSelect.value };
-      console.log("Options sectorielles initiales:", window.sectorOptions);
+  // CRITICAL: Initialize immediately at load time
+  if (secteurSelect && tailleSelect) {
+    // Set initial values right away
+    window.sectorOptions = {
+      secteur: secteurSelect.value,
+      taille:  tailleSelect.value
+    };
+    console.log("Options sectorielles initiales:", window.sectorOptions);
 
-      document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { detail: window.sectorOptions }));
-      if (typeof updateCustomStatusDisabling === 'function') updateCustomStatusDisabling();
+    // Broadcast initial values
+    document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
+      detail: window.sectorOptions
+    }));
+    updateCustomStatusDisabling(); // ⬅️ premier passage
 
-      secteurSelect.addEventListener('change', function () {
-        window.sectorOptions = { secteur: this.value, taille: tailleSelect.value };
-        document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { detail: window.sectorOptions }));
-        if (typeof runComparison === 'function') runComparison();
-        if (typeof updateCustomStatusDisabling === 'function') updateCustomStatusDisabling();
-      });
+    // Add change listeners
+    secteurSelect.addEventListener('change', function () {
+      window.sectorOptions = { secteur: this.value, taille: tailleSelect.value };
+      console.log("Options sectorielles mises à jour:", window.sectorOptions);
 
-      tailleSelect.addEventListener('change', function () {
-        window.sectorOptions = { secteur: secteurSelect.value, taille: this.value };
-        document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { detail: window.sectorOptions }));
-        if (typeof runComparison === 'function') runComparison();
-        if (typeof updateCustomStatusDisabling === 'function') updateCustomStatusDisabling();
-      });
-    } else {
-      window.sectorOptions = { secteur: "Tous", taille: "<50" };
-      console.log("Options sectorielles par défaut:", window.sectorOptions);
-    }
-  }
+      // Broadcast changes
+      document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
+        detail: window.sectorOptions
+      }));
 
-  document.addEventListener('sectorOptionsChanged', e => {
-    console.log("ÉVÉNEMENT: Options sectorielles modifiées:", e.detail);
-  });
-
-  function initFiscalSimulator() {
-    console.log("Initialisation du simulateur fiscal simplifié...");
-
-    // Attendre que les dépendances calculatoires soient prêtes
-    const checkDependencies = setInterval(() => {
-      if (window.SimulationsFiscales && window.FiscalUtils) {
-        clearInterval(checkDependencies);
-        console.log("Dépendances trouvées, configuration du simulateur...");
-        setupSimulator();
-        setupSectorOptions();
-      }
-    }, 200);
-  }
-
-  function setupSimulator() {
-    const compareBtn = document.getElementById('sim-compare-btn');
-    if (!compareBtn) return;
-
-    compareBtn.addEventListener('click', runComparison);
-
-    // Écoute les champs de base
-    ['sim-ca','sim-marge','sim-salaire','sim-tmi','sim-nb-associes','sim-part-associe'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('change', runComparison);
+      runComparison();
+      updateCustomStatusDisabling(); // ⬅️ ici
     });
 
-    // Rafraîchir l’état des cases "Personnalisé" quand le nb d’associés change
-    const nbAssociesEl = document.getElementById('sim-nb-associes');
-    if (nbAssociesEl && typeof updateCustomStatusDisabling === 'function') {
-      nbAssociesEl.addEventListener('change', updateCustomStatusDisabling);
-    }
+    tailleSelect.addEventListener('change', function () {
+      window.sectorOptions = { secteur: secteurSelect.value, taille: this.value };
+      console.log("Options sectorielles mises à jour:", window.sectorOptions);
 
-    // 🔓 Autoriser 0% de salaire
-    (function enableZeroPercentSalary() {
-      const el = document.getElementById('sim-salaire');
-      if (!el) return;
-      el.setAttribute('min','0');
-      if (!el.getAttribute('step')) el.setAttribute('step','1');
-      const clamp01 = v => Math.max(0, Math.min(100, v));
-      const normalize = () => {
-        if (el.value === '') return;
-        const n = parseFloat(el.value);
-        if (Number.isFinite(n)) el.value = clamp01(n);
-      };
-      el.addEventListener('input', normalize, { passive: true });
-      normalize();
-    })();
+      // Broadcast changes
+      document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
+        detail: window.sectorOptions
+      }));
 
-    // UI statuts
-    setupAccordion?.();
-    updateSimulatorInterface();
-
-    // ⚙️ Monte la ligne “Part détenue + Base 10%”
-    mountBase10Row();
-
-    // Première simulation
-    setTimeout(() => runComparison?.(), 100);
+      runComparison();
+      updateCustomStatusDisabling(); // ⬅️ ici
+    });
+  } else {
+    // Set defaults if elements not found
+    window.sectorOptions = { secteur: "Tous", taille: "<50" };
+    console.log("Options sectorielles par défaut:", window.sectorOptions);
   }
+}
 
-  // Fonction pour mettre à jour l'interface du simulateur
-  function updateSimulatorInterface() {
-    const simulatorContainer = document.getElementById('fiscal-simulator');
-    if (!simulatorContainer) return;
+// Add listener for debugging
+document.addEventListener('sectorOptionsChanged', function(e) {
+    console.log("ÉVÉNEMENT: Options sectorielles modifiées:", e.detail);
+});
 
-    if (document.getElementById('sim-options-container')) {
-      console.log("Options de simulation déjà présentes, pas de reconstruction");
-      return;
-    }
+function initFiscalSimulator() {
+    console.log("Initialisation du simulateur fiscal simplifié...");
+    
+    // Attendre que SimulationsFiscales et FiscalUtils soient chargés
+    const checkDependencies = setInterval(() => {
+        if (window.SimulationsFiscales && window.FiscalUtils) {
+            clearInterval(checkDependencies);
+            console.log("Dépendances trouvées, configuration du simulateur...");
+            setupSimulator();
+            setupSectorOptions(); // Ajout de cette ligne
+        }
+    }, 200);
+}
 
+function setupSimulator() {
+    const compareBtn = document.getElementById('sim-compare-btn');
+    if (!compareBtn) return;
+    
+    compareBtn.addEventListener('click', runComparison);
+    
+    // Écouter les changements dans les champs pour mettre à jour automatiquement
+    const inputFields = ['sim-ca', 'sim-marge', 'sim-salaire', 'sim-tmi', 'sim-nb-associes', 'sim-part-associe'];
+    inputFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', runComparison);
+    });
+  // Rafraîchir l’état des cases "Personnalisé" quand le nb d’associés change
+  const nbAssociesEl = document.getElementById('sim-nb-associes');
+  if (nbAssociesEl) nbAssociesEl.addEventListener('change', updateCustomStatusDisabling);
+                                                  
+   // 🔓 Déclampage côté UI : autoriser 0 % de salaire
+  (function enableZeroPercentSalary() {
+    const el = document.getElementById('sim-salaire');
+    if (!el) return;
+
+    // Autoriser 0 en borne basse
+    el.setAttribute('min', '0');
+
+    // Facultatif : pas d’1 point (%)
+    if (!el.getAttribute('step')) el.setAttribute('step', '1');
+
+    // Sécurise la saisie: borne [0,100] sans réécrire 0
+    const clamp01 = v => Math.max(0, Math.min(100, v));
+    const normalize = () => {
+      if (el.value === '') return; // laisser vide si l’utilisateur efface
+      const n = parseFloat(el.value);
+      if (Number.isFinite(n)) el.value = clamp01(n);
+    };
+
+    el.addEventListener('input', normalize, { passive: true });
+    // Normalise la valeur initiale si besoin
+    normalize();
+  })();
+    
+    // Configurer l'accordéon pour les statuts juridiques
+    setupAccordion();
+    
+    // Mettre à jour l'interface du simulateur pour inclure tous les statuts
+    updateSimulatorInterface();
+    
+    // Exécuter une première simulation au chargement
+    setTimeout(runComparison, 100);
+}
+
+// Fonction pour mettre à jour l'interface du simulateur
+function updateSimulatorInterface() {
+  // Récupérer le conteneur du simulateur
+  const simulatorContainer = document.getElementById('fiscal-simulator');
+  if (!simulatorContainer) return;
+
+  // Vérifier si les options existent déjà pour éviter les doublons
+  if (document.getElementById('sim-options-container')) {
+    console.log("Options de simulation déjà présentes, pas de reconstruction");
+  } else {
+    // Ajouter un sélecteur de statuts et des options de simulation avancées
     const formContainer = simulatorContainer.querySelector('.grid');
-    if (!formContainer) return;
 
-    const optionsRow = document.createElement('div');
-    optionsRow.className = 'col-span-full md:col-start-1 w-full mb-4 !ml-0 !mr-0';
-    optionsRow.id = 'sim-options-container';
-    optionsRow.innerHTML = `
+    if (formContainer) {
+      // Ajouter une nouvelle ligne pour les options de simulation
+      const optionsRow = document.createElement('div');
+      optionsRow.className = 'col-span-full md:col-start-1 w-full mb-4 !ml-0 !mr-0';
+      optionsRow.id = 'sim-options-container';
+      optionsRow.innerHTML = `
 <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
   <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
 
@@ -376,170 +414,152 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
   </div>
 </div>
-    `;
+      `;
 
-    // Insertion sans doublons
-    try {
-      const compareButton = simulatorContainer.querySelector('#sim-compare-btn');
-      if (compareButton) {
-        const compareButtonWrapper = compareButton.closest('.col-span-1, .col-span-2, .col-span-full') || compareButton.parentElement;
-        if (compareButtonWrapper && formContainer.contains(compareButtonWrapper)) {
-          formContainer.insertBefore(optionsRow, compareButtonWrapper);
+      // Insertion sans doublons
+      try {
+        const compareButton = simulatorContainer.querySelector('#sim-compare-btn');
+        if (compareButton) {
+          const compareButtonWrapper = compareButton.closest('.col-span-1, .col-span-2');
+          if (compareButtonWrapper && formContainer.contains(compareButtonWrapper)) {
+            formContainer.insertBefore(optionsRow, compareButtonWrapper);
+          } else {
+            formContainer.appendChild(optionsRow);
+          }
         } else {
           formContainer.appendChild(optionsRow);
         }
-      } else {
+      } catch (error) {
+        console.error("Erreur lors de l'insertion des options:", error);
         formContainer.appendChild(optionsRow);
       }
-    } catch (error) {
-      console.error("Erreur lors de l'insertion des options:", error);
-      formContainer.appendChild(optionsRow);
-    }
 
-    // Événements filtres
-    const statusFilter = document.getElementById('sim-status-filter');
-    const filterBtns = document.querySelectorAll('.status-filter-btn');
+      // Événements filtres
+      const statusFilter = document.getElementById('sim-status-filter');
+      statusFilter.addEventListener('change', function () {
+        const isCustom = this.value === 'custom';
+        document.getElementById('custom-status-options').style.display = isCustom ? 'block' : 'none';
 
-    statusFilter.addEventListener('change', function () {
-      const isCustom = this.value === 'custom';
-      const customBox = document.getElementById('custom-status-options');
-      if (customBox) customBox.style.display = isCustom ? 'block' : 'none';
-
-      if (!isCustom && typeof getSelectedStatuses === 'function') {
-        const selectedStatuses = getSelectedStatuses(this.value);
-        document.querySelectorAll('.status-checkbox').forEach(cb => {
-          cb.checked = selectedStatuses.includes(cb.value);
-        });
-      }
-
-      filterBtns.forEach(btn => {
-        const filter = btn.getAttribute('data-filter');
-        if (filter === this.value) {
-          btn.classList.remove('bg-blue-800','text-white');
-          btn.classList.add('bg-green-500','text-gray-900','font-medium');
-        } else {
-          btn.classList.remove('bg-green-500','text-gray-900','font-medium');
-          btn.classList.add('bg-blue-800','text-white');
-        }
-      });
-
-      runComparison?.();
-    });
-
-    filterBtns.forEach(btn => {
-      btn.addEventListener('click', function () {
-        filterBtns.forEach(b => {
-          b.classList.remove('bg-green-500','text-gray-900','font-medium');
-          b.classList.add('bg-blue-800','text-white');
-        });
-        this.classList.remove('bg-blue-800','text-white');
-        this.classList.add('bg-green-500','text-gray-900','font-medium');
-
-        const filter = this.getAttribute('data-filter');
-        statusFilter.value = filter;
-
-        const isCustom = filter === 'custom';
-        const customBox = document.getElementById('custom-status-options');
-        if (customBox) customBox.style.display = isCustom ? 'block' : 'none';
-
-        if (!isCustom && typeof getSelectedStatuses === 'function') {
-          const selectedStatuses = getSelectedStatuses(filter);
-          document.querySelectorAll('.status-checkbox').forEach(cb => {
-            cb.checked = selectedStatuses.includes(cb.value);
+        if (!isCustom) {
+          const selectedStatuses = getSelectedStatuses(this.value);
+          document.querySelectorAll('.status-checkbox').forEach(checkbox => {
+            checkbox.checked = selectedStatuses.includes(checkbox.value);
           });
         }
 
-        runComparison?.();
+        document.querySelectorAll('.status-filter-btn').forEach(btn => {
+          const filter = btn.getAttribute('data-filter');
+          if (filter === this.value) {
+            btn.classList.remove('bg-blue-800', 'text-white');
+            btn.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
+          } else {
+            btn.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
+            btn.classList.add('bg-blue-800', 'text-white');
+          }
+        });
+
+        runComparison();
       });
-    });
 
-    document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire')
-      .forEach(el => el.addEventListener('change', () => runComparison?.()));
+      document.querySelectorAll('.status-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.status-filter-btn').forEach(b => {
+            b.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
+            b.classList.add('bg-blue-800', 'text-white');
+          });
+          this.classList.remove('bg-blue-800', 'text-white');
+          this.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
 
-    // Valeur initiale
-    statusFilter.value = "all";
-    statusFilter.dispatchEvent(new Event('change'));
-  }
+          const filter = this.getAttribute('data-filter');
+          statusFilter.value = filter;
 
-  /* -------------------------------------------------------
-     Montage de la ligne “Part détenue (%) + Base 10%”
-     => Ancrage juste après #sim-nb-associes, fallback sur l’ancien bloc
-  ------------------------------------------------------- */
-  function mountBase10Row() {
-    const sim = document.getElementById('fiscal-simulator');
-    if (!sim) return;
+          const isCustom = filter === 'custom';
+          document.getElementById('custom-status-options').style.display = isCustom ? 'block' : 'none';
 
-    const formGrid = sim.querySelector('.grid');
-    if (!formGrid || document.getElementById('base10-inline')) return; // déjà monté
+          if (!isCustom) {
+            const selectedStatuses = getSelectedStatuses(filter);
+            document.querySelectorAll('.status-checkbox').forEach(checkbox => {
+              checkbox.checked = selectedStatuses.includes(checkbox.value);
+            });
+          }
 
-    const partInput = document.getElementById('sim-part-associe');
-    const partWrapper = partInput ? partInput.closest('div') : null;
-    if (!partWrapper) return;
+          runComparison();
+        });
+      });
 
-    const nbInput = document.getElementById('sim-nb-associes');
-    const nbWrapper = nbInput ? nbInput.closest('div') : null;
+      document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire')
+        .forEach(el => el.addEventListener('change', runComparison));
 
-    // 1) Wrapper de ligne dédié (2 colonnes dès md:)
-    const row = document.createElement('div');
-    row.className = 'part-detenu-row md:grid md:grid-cols-2 gap-4 items-end w-full';
-
-    // 👉 INSÉRER APRÈS "Nombre d’associés" si possible, sinon au niveau de partWrapper (fallback)
-    if (nbWrapper && formGrid.contains(nbWrapper)) {
-      nbWrapper.after(row);
-    } else {
-      formGrid.insertBefore(row, partWrapper);
+      statusFilter.value = "all";
+      statusFilter.dispatchEvent(new Event('change'));
     }
-
-    // 2) Déplacer “Part détenue” (colonne 1)
-    partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
-    partWrapper.style.gridColumn = 'auto';
-    row.appendChild(partWrapper);
-
-    // 3) Blocs Capital/Primes/CCA (colonne 2)
-    const inline = document.createElement('div');
-    inline.id = 'base10-inline';
-    inline.innerHTML = `
-      <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
-      <div class="grid grid-cols-3 gap-2">
-        <input id="base-capital" type="number" min="0" step="100" placeholder="Capital"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-        <input id="base-primes" type="number" min="0" step="100" placeholder="Primes"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-        <input id="base-cca" type="number" min="0" step="100" placeholder="CCA"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      </div>
-      <input id="base10-total" type="hidden" value="0">
-      <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
-    `;
-    row.appendChild(inline);
-
-    // 4) Style local (empilement en mobile)
-    const style = document.createElement('style');
-    style.textContent = `
-      .part-detenu-row > * { min-width: 0; }
-      @media (max-width: 767.98px){ .part-detenu-row { display:block; } }
-    `;
-    document.head.appendChild(style);
-
-    // 5) Calcul dynamique + liaison
-    const fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
-    function updateBase10() {
-      const total =
-        (parseFloat(document.getElementById('base-capital')?.value) || 0) +
-        (parseFloat(document.getElementById('base-primes')?.value) || 0) +
-        (parseFloat(document.getElementById('base-cca')?.value) || 0);
-      document.getElementById('base10-total').value = String(total);
-      document.getElementById('tns-mini-seuil').textContent = total > 0 ? fmtEUR.format(total * 0.10) : '—';
-      if (typeof runComparison === 'function') runComparison();
-    }
-    ['base-capital','base-primes','base-cca'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) { el.addEventListener('input', updateBase10); el.addEventListener('change', updateBase10); }
-    });
-    updateBase10();
   }
-});
+   }
+;(() => {
+  const sim = document.getElementById('fiscal-simulator');
+  if (!sim) return;
 
+  const formGrid = sim.querySelector('.grid');
+  if (!formGrid || document.getElementById('base10-inline')) return;
+
+  // Cible l’input “Part détenue (%)”
+  const partInput = document.getElementById('sim-part-associe');
+  const partWrapper = partInput ? partInput.closest('div') : null;
+  if (!partWrapper) return;
+
+  // 1) Wrapper de ligne dédié (2 colonnes dès md:)
+  const row = document.createElement('div');
+  row.className = 'part-detenu-row md:grid md:grid-cols-2 gap-4 items-end w-full';
+  formGrid.insertBefore(row, partWrapper);
+
+  // 2) Déplacer “Part détenue” dans la colonne 1
+  partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
+  partWrapper.style.gridColumn = 'auto';
+  row.appendChild(partWrapper);
+
+  // 3) Ajouter nos 3 champs en colonne 2
+  const inline = document.createElement('div');
+  inline.id = 'base10-inline';
+  inline.innerHTML = `
+    <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
+    <div class="grid grid-cols-3 gap-2">
+      <input id="base-capital" type="number" min="0" step="100" placeholder="Capital"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <input id="base-primes" type="number" min="0" step="100" placeholder="Primes"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <input id="base-cca" type="number" min="0" step="100" placeholder="CCA"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+    </div>
+    <input id="base10-total" type="hidden" value="0">
+    <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
+  `;
+  row.appendChild(inline);
+
+  // 4) Style local (empilement en mobile)
+  const style = document.createElement('style');
+  style.textContent = `
+    .part-detenu-row > * { min-width: 0; }
+    @media (max-width: 767.98px){ .part-detenu-row { display:block; } }
+  `;
+  document.head.appendChild(style);
+
+  // 5) Calcul dynamique + liaison
+  const fmtEUR = new Intl.NumberFormat('fr-FR',{ style:'currency', currency:'EUR', minimumFractionDigits:0 });
+  function updateBase10(){
+    const total =
+      (parseFloat(document.getElementById('base-capital')?.value)||0) +
+      (parseFloat(document.getElementById('base-primes')?.value)||0) +
+      (parseFloat(document.getElementById('base-cca')?.value)||0);
+    document.getElementById('base10-total').value = String(total);
+    document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
+    if (typeof runComparison === 'function') runComparison();
+  }
+  ['base-capital','base-primes','base-cca'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
+  });
+  updateBase10();
+})();
 
 
 // Fonction pour obtenir les statuts sélectionnés selon le filtre
