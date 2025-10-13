@@ -87,6 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
     
 // ---------- Styles personnalisés ----------
+// ---------- Styles personnalisés ----------
 function addCustomStyles() {
   const style = document.createElement('style');
   style.textContent = `
@@ -125,7 +126,7 @@ function addCustomStyles() {
     gap: 1rem;
   }
   /* (ex- .part-detenu-wrapper supprimé) */
-  #base10-inline{ grid-column: 2 / span 1; align-self: end; }
+  #base10-inline{ grid-column: 2 / span 1; align-self: start; } /* FIX */
 }
 
 /* NEW — Ligne 2 colonnes: "Part détenue (%)" | "Base 10%" (Capital/CCA/Primes) */
@@ -134,9 +135,9 @@ function addCustomStyles() {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-    align-items: end;
+    align-items: start; /* FIX */
   }
-  .part-detenu-row #base10-inline{ align-self: end; }
+  .part-detenu-row #base10-inline{ align-self: start; } /* FIX */
 }
 @media (max-width: 767.98px){
   .part-detenu-row{ display: block; }
@@ -193,6 +194,7 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 addCustomStyles();
+
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
 function placeBase10UnderNbAssocies(){
