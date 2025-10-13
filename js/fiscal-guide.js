@@ -1032,14 +1032,14 @@ function addCustomStyles() {
       secteurSelect.addEventListener('change', function () {
         window.sectorOptions = { secteur: this.value, taille: tailleSelect.value };
         document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { detail: window.sectorOptions }));
-        if (typeof window.runComparison === 'function') window.runComparison?.();
+        if (typeof window.runComparison === 'function') if (typeof window.runComparison === 'function') window.runComparison();
         if (typeof updateCustomStatusDisabling === 'function') updateCustomStatusDisabling();
       });
 
       tailleSelect.addEventListener('change', function () {
         window.sectorOptions = { secteur: secteurSelect.value, taille: this.value };
         document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { detail: window.sectorOptions }));
-        if (typeof window.runComparison === 'function') window.runComparison?.();
+        if (typeof window.runComparison === 'function') if (typeof window.runComparison === 'function') window.runComparison();
         if (typeof updateCustomStatusDisabling === 'function') updateCustomStatusDisabling();
       });
     } else {
@@ -1321,7 +1321,7 @@ function addCustomStyles() {
         }
       });
 
-     window.runComparison?.();
+    if (typeof window.runComparison === 'function') window.runComparison();
     });
 
     filterBtns.forEach(btn => {
@@ -1347,7 +1347,7 @@ function addCustomStyles() {
           });
         }
 
-        window.runComparison?.();
+       if (typeof window.runComparison === 'function') window.runComparison();
       });
     });
 
@@ -1472,7 +1472,7 @@ function mountBase10Row() {
     document.getElementById('base10-total').value = String(total);
     const badge = document.getElementById('tns-mini-badge');
     if (badge) badge.textContent = `10% : ${ total>0 ? fmtEUR.format(total*0.10) : '—' }`;
-    window.runComparison?.();
+    if (typeof window.runComparison === 'function') window.runComparison();
   }
 
   ['base-capital','base-primes','base-cca'].forEach(id => {
