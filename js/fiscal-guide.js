@@ -87,7 +87,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
     
 // ---------- Styles personnalisés ----------
-// ---------- Styles personnalisés ----------
 function addCustomStyles() {
   const style = document.createElement('style');
   style.textContent = `
@@ -98,7 +97,7 @@ function addCustomStyles() {
   margin-right: auto;
 }
 
-/* Grille alignée à gauche */
+/* Grille alignée à gauche (base) */
 #fiscal-simulator .grid {
   justify-content: flex-start !important;
   justify-items: start !important;
@@ -108,7 +107,7 @@ function addCustomStyles() {
 #sim-options-container {
   margin-left: 0 !important;
   margin-right: 0 !important;
-  grid-column: 1 / -1; /* Force le bloc à occuper toute la largeur */
+  grid-column: 1 / -1;
 }
 
 /* Conteneur global */
@@ -118,83 +117,72 @@ function addCustomStyles() {
   margin-right: auto;
 }
 
-/* ---- placement des 3 champs base10 à DROITE de "Part détenue (%)" ---- */
-@media (min-width: 768px){
-  #fiscal-simulator .form-grid-2cols{
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 colonnes */
-    gap: 1rem;
+/* ===== Grille 3 colonnes avec areas (selon le croquis) ===== */
+@media (min-width:768px){
+  #fiscal-simulator .form-layout-areas-3{
+    display:grid;
+    grid-template-columns: 1.25fr 1fr 1fr;      /* CA un peu plus large */
+    grid-auto-rows:auto;
+    gap:1rem;
+    grid-template-areas:
+      "ca     ca       marge"      /* R1 : CA (2 col) | Marge */
+      "part   salaire  associes"   /* R2 : Part | Salaire | Nb assoc. */
+      ".      base10   base10";    /* R3 : Base10 sous la droite (2 col) */
+    align-items:start;
   }
-  /* (ex- .part-detenu-wrapper supprimé) */
-  #base10-inline{ grid-column: 2 / span 1; align-self: start; } /* FIX */
+
+  /* mapping des zones */
+  .field-ca       { grid-area: ca; }
+  .field-marge    { grid-area: marge; }
+  .field-salaire  { grid-area: salaire; }
+  .field-associes { grid-area: associes; }
+  .field-part     { grid-area: part; }
+  #base10-inline,
+  .field-base10   { grid-area: base10; align-self:start; }
+
+  /* la "fausse" ligne devient transparente : ses enfants se placent dans la grille */
+  .part-detenu-row{ display: contents !important; }
 }
 
-/* NEW — Ligne 2 colonnes: "Part détenue (%)" | "Base 10%" (Capital/CCA/Primes) */
-@media (min-width: 768px){
-  .part-detenu-row{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    align-items: start; /* FIX */
-  }
-  .part-detenu-row #base10-inline{ align-self: start; } /* FIX */
-}
-@media (max-width: 767.98px){
-  .part-detenu-row{ display: block; }
+/* Mobile : on empile proprement */
+@media (max-width:767.98px){
+  #fiscal-simulator .form-layout-areas-3{ display:block; }
+  .part-detenu-row{ display:block; }
 }
 
-/* — Tooltips plus compacts — */
+/* — Tooltips plus compacts (inchangé) — */
 .tooltiptext {
-  font-size: 0.75rem;      /* 12 px */
-  line-height: 1rem;       /* 16 px */
-  padding: 0.4rem 0.6rem;  /* réduit le carré blanc */
-  max-width: 220px;        /* évite les bulles trop larges */
+  font-size: 0.75rem;
+  line-height: 1rem;
+  padding: 0.4rem 0.6rem;
+  max-width: 220px;
 }
 
-/* ---- correctifs Part détenue (%) ---- */
-
-/* ❶ Wrapper correct (coquille fixée) + shrink-wrap */
-.part-detenu-wrap { 
-  position: relative; 
-  display: inline-block;   /* largeur = celle de l’input */
-  width: 100%;             /* conserve le w-full de l’input */
+/* ---- Correctifs d’inputs ---- */
+.part-detenu-wrap{ position:relative; width:100%; display:inline-block; }
+.part-detenu-wrap .suffix-pct{
+  position:absolute; right:.65rem; top:50%; transform:translateY(-50%);
+  pointer-events:none; font-weight:600; color:#cbd5e1;
 }
 
-/* ❷ Suffixe % ancré dans le champ, pas la colonne */
-.part-detenu-wrap .suffix-pct {
-  position: absolute;
-  right: .65rem;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  font-weight: 600;
-  color: #cbd5e1;
+/* “100% à droite” → forcer à gauche + place pour le % */
+#sim-part-associe{
+  text-align:left !important;
+  padding-right:2.25rem;
 }
 
-/* ❸ Le champ laisse la place au suffixe */
-#sim-part-associe { 
-  text-align: left !important; 
-  padding-right: 2.25rem;  /* espace pour le % visuel */
+/* Base10 : suffixe € fixé */
+#base10-inline .money-wrap{ position:relative; }
+#base10-inline .money-wrap input{ padding-right:2.25rem; }
+#base10-inline .money-wrap .suffix-eur{
+  position:absolute; right:.65rem; top:50%; transform:translateY(-50%);
+  pointer-events:none; font-weight:600; color:#cbd5e1;
 }
-
-/* ❹ (facultatif) référence de classe cohérente dans la grille 2 colonnes */
-@media (min-width: 768px){
-  .part-detenu-wrap { grid-column: auto; }
-}
-
-/* ==== Base 10% — mini-labels + suffixe € fixe ==== */
-#base10-inline .money-wrap { position: relative; }
-#base10-inline .money-wrap input { padding-right: 2.25rem; }
-#base10-inline .money-wrap .suffix-eur {
-  position: absolute; right: .65rem; top: 50%; transform: translateY(-50%);
-  pointer-events: none; font-weight: 600; color: #cbd5e1;
-}
-#base10-inline .mini { font-size: .75rem; color: #cbd5e1; margin-bottom: .25rem; }
+#base10-inline .mini{ font-size:.75rem; color:#cbd5e1; margin-bottom:.25rem; }
 `;
   document.head.appendChild(style);
 }
 addCustomStyles();
-
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
 function placeBase10UnderNbAssocies(){
@@ -204,6 +192,9 @@ function placeBase10UnderNbAssocies(){
   const formGrid = sim.querySelector('.grid');
   if (!formGrid || document.getElementById('base10-inline')) return;
 
+  // ➊ activer le layout 3 colonnes à zones nommées
+  formGrid.classList.add('form-layout-areas-3');
+
   // wrappers existants
   const partInput = document.getElementById('sim-part-associe');
   const nbAssoc   = document.getElementById('sim-nb-associes');
@@ -211,10 +202,11 @@ function placeBase10UnderNbAssocies(){
   const nbAssocWrapper = nbAssoc ? nbAssoc.closest('div') : null;
   if (!partWrapper || !nbAssocWrapper) return;
 
-  /* ==== AJOUT UX : suffixe % visuel + bornes 0..100 ==== */
+  /* ➋ UX : wrapper + suffixe % + bornes 0..100 */
   if (partInput && !partInput.closest('.part-detenu-wrap')) {
     const wrap = document.createElement('div');
-   wrap.style.width = '100%';   // s’assure que l’absolu est borné à l’input
+    wrap.className = 'part-detenu-wrap w-full';     // IMPORTANT pour le %
+    wrap.style.width = '100%';
     const parent = partInput.parentNode;
     parent.insertBefore(wrap, partInput);
     wrap.appendChild(partInput);
@@ -227,38 +219,39 @@ function placeBase10UnderNbAssocies(){
   partInput?.setAttribute('min','0');
   partInput?.setAttribute('max','100');
   partInput?.setAttribute('step','1');
-  /* ==== fin ajout ==== */
 
-  // ligne 2 colonnes
+  // ➌ ligne “Part détenue | Base10”
   const row = document.createElement('div');
   row.className = 'part-detenu-row w-full';
 
-  // colonne gauche : “Part détenue (%)”
+  // colonne gauche : Part détenue (%)
   partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
+  partWrapper.classList.add('field-part');          // zone nommée
   row.appendChild(partWrapper);
 
-  // colonne droite : nos 3 inputs
+  // colonne droite : Base 10%
   const inline = document.createElement('div');
   inline.id = 'base10-inline';
+  inline.classList.add('field-base10');             // zone nommée
   inline.innerHTML = `
     <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
     <div class="grid grid-cols-3 gap-2">
       <div class="money-wrap">
         <div class="mini">Capital social</div>
         <input id="base-capital" type="number" min="0" step="100" placeholder="ex. 10 000"
-          class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
         <span class="suffix-eur">€</span>
       </div>
       <div class="money-wrap">
         <div class="mini">Compte courant</div>
         <input id="base-cca" type="number" min="0" step="100" placeholder="ex. 5 000"
-          class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
         <span class="suffix-eur">€</span>
       </div>
       <div class="money-wrap">
         <div class="mini">Primes</div>
         <input id="base-primes" type="number" min="0" step="100" placeholder="ex. 2 000"
-          class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
         <span class="suffix-eur">€</span>
       </div>
     </div>
@@ -267,10 +260,16 @@ function placeBase10UnderNbAssocies(){
   `;
   row.appendChild(inline);
 
-  // ➜ insérer la ligne juste APRÈS “Nombre d’associés”
+  // ➍ insérer juste APRÈS “Nombre d’associés”
   nbAssocWrapper.parentNode.insertBefore(row, nbAssocWrapper.nextElementSibling);
 
-  /* ===== (optionnel) Séparateurs de milliers en saisie ===== */
+  // ➎ marquer les autres champs pour la grille à areas
+  document.getElementById('sim-ca')?.closest('div')?.classList.add('field-ca');
+  document.getElementById('sim-marge')?.closest('div')?.classList.add('field-marge');
+  document.getElementById('sim-salaire')?.closest('div')?.classList.add('field-salaire');
+  nbAssocWrapper.classList.add('field-associes');
+
+  /* ===== Séparateurs de milliers en saisie (optionnel) ===== */
   const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
   const formatFR = n => n.toLocaleString('fr-FR');
   ['base-capital','base-cca','base-primes'].forEach(id=>{
@@ -285,10 +284,12 @@ function placeBase10UnderNbAssocies(){
       el.value = raw ? formatFR(raw) : '';
     }));
   });
-  function val(id){ const el=document.getElementById(id); return parseFR(el?.dataset.raw ?? el?.value); }
-  /* ===== fin optionnel ===== */
+  const val = id => {
+    const el = document.getElementById(id);
+    return parseFR(el?.dataset.raw ?? el?.value);
+  };
 
-  // calcul dynamique
+  // ===== calcul dynamique =====
   const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
   function updateBase10(){
     const total = val('base-capital') + val('base-primes') + val('base-cca');
@@ -302,7 +303,7 @@ function placeBase10UnderNbAssocies(){
   });
   updateBase10();
 
-  // visibilité intelligente (afficher seulement quand pertinent)
+  // ===== visibilité selon statuts =====
   function toggleBase10Visibility(){
     const filter = document.getElementById('sim-status-filter')?.value || 'all';
     const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
