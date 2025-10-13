@@ -1359,7 +1359,7 @@ function addCustomStyles() {
     statusFilter.dispatchEvent(new Event('change'));
   }
 
- //* -------------------------------------------------------
+/* -------------------------------------------------------
    Montage de la ligne “Part détenue (%) + Base 10%”
    => Ancrage juste après #sim-nb-associes, fallback sur l’ancien bloc
 ------------------------------------------------------- */
