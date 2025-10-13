@@ -1359,7 +1359,7 @@ function addCustomStyles() {
     statusFilter.dispatchEvent(new Event('change'));
   }
 
- /* -------------------------------------------------------
+ //* -------------------------------------------------------
    Montage de la ligne “Part détenue (%) + Base 10%”
    => Ancrage juste après #sim-nb-associes, fallback sur l’ancien bloc
 ------------------------------------------------------- */
@@ -1406,9 +1406,8 @@ function mountBase10Row() {
     suf.textContent = '%';
     wrap.appendChild(suf);
 
-    // ✅ Nettoyer un éventuel ancien badge/suffixe externe ajouté par le thème
-    partWrapper.querySelectorAll('.unit, .input-suffix, .unit-suffix')
-      .forEach(el => el.remove());
+    // Nettoyer un éventuel ancien badge/suffixe externe ajouté par le thème
+    partWrapper.querySelectorAll('.unit, .input-suffix, .unit-suffix').forEach(el => el.remove());
 
     partInputEl.setAttribute('min','0');
     partInputEl.setAttribute('max','100');
@@ -1418,6 +1417,12 @@ function mountBase10Row() {
   // 3) Blocs Capital/Primes/CCA (colonne 2)
   const inline = document.createElement('div');
   inline.id = 'base10-inline';
+
+  // ⚠️ Pré-calculer ici les sous-HTML pour éviter les backticks imbriqués dans un ${...}
+  const helpTooltipHTML = (typeof formatBaseSeuilDivTNSTooltip === 'function')
+    ? formatBaseSeuilDivTNSTooltip(0)
+    : '';
+
   inline.innerHTML = `
     <div class="flex items-center justify-between mb-1">
       <label class="block text-gray-300">Base 10% (TNS dividendes)</label>
@@ -1438,11 +1443,16 @@ function mountBase10Row() {
     </div>
     <div class="text-[11px] text-gray-400 mt-1">
       Seuil = 10% × (capital libéré + primes + CCA)
-      ${formatBaseSeuilDivTNSTooltip(0)}
+      <!-- tooltip injecté ci-dessous -->
+      <span id="tns-help-slot"></span>
     </div>
     <input id="base10-total" type="hidden" value="0">
   `;
   row.appendChild(inline);
+
+  // injecter le tooltip (évite l’interpolation complexe dans le template)
+  const helpSlot = inline.querySelector('#tns-help-slot');
+  if (helpSlot) helpSlot.innerHTML = helpTooltipHTML;
 
   // 4) Style local (empilement en mobile)
   const style = document.createElement('style');
