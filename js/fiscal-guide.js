@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
         initFiscalSimulator();
     }
     
-// Ajouter les styles personnalisés pour le simulateur
+// ---------- Styles personnalisés ----------
 function addCustomStyles() {
   const style = document.createElement('style');
   style.textContent = `
@@ -135,86 +135,37 @@ function addCustomStyles() {
   padding: 0.4rem 0.6rem;  /* réduit le carré blanc */
   max-width: 220px;        /* évite les bulles trop larges */
 }
+
+/* ==== AJOUT UX : Part détenue (%) alignée gauche + suffixe % ==== */
+#sim-part-associe { 
+  text-align: left !important; 
+  padding-right: 2.25rem;      /* place pour le % visuel */
+}
+.part-detenu-wrap { position: relative; }
+.part-detenu-wrap .suffix-pct {
+  position: absolute; 
+  right: .65rem; 
+  top: 50%; 
+  transform: translateY(-50%);
+  pointer-events: none; 
+  font-weight: 600; 
+  color: #cbd5e1;
+}
+
+/* ==== AJOUT UX : Base 10% — mini-labels + suffixe € fixe ==== */
+#base10-inline .money-wrap { position: relative; }
+#base10-inline .money-wrap input { padding-right: 2.25rem; }
+#base10-inline .money-wrap .suffix-eur {
+  position: absolute; right: .65rem; top: 50%; transform: translateY(-50%);
+  pointer-events: none; font-weight: 600; color: #cbd5e1;
+}
+#base10-inline .mini { font-size: .75rem; color: #cbd5e1; margin-bottom: .25rem; }
 `;
   document.head.appendChild(style);
 }
 addCustomStyles();
 
-
-
-function setupSectorOptions() {
-  // Find selector elements
-  const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
-  const tailleSelect  = document.querySelector('#taille-select, [id$="taille-select"]');
-  console.log("Éléments trouvés:", !!secteurSelect, !!tailleSelect);
-
-  // CRITICAL: Initialize immediately at load time
-  if (secteurSelect && tailleSelect) {
-    // Set initial values right away
-    window.sectorOptions = {
-      secteur: secteurSelect.value,
-      taille:  tailleSelect.value
-    };
-    console.log("Options sectorielles initiales:", window.sectorOptions);
-
-    // Broadcast initial values
-    document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
-      detail: window.sectorOptions
-    }));
-    updateCustomStatusDisabling(); // ⬅️ premier passage
-
-    // Add change listeners
-    secteurSelect.addEventListener('change', function () {
-      window.sectorOptions = { secteur: this.value, taille: tailleSelect.value };
-      console.log("Options sectorielles mises à jour:", window.sectorOptions);
-
-      // Broadcast changes
-      document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
-        detail: window.sectorOptions
-      }));
-
-      runComparison();
-      updateCustomStatusDisabling(); // ⬅️ ici
-    });
-
-    tailleSelect.addEventListener('change', function () {
-      window.sectorOptions = { secteur: secteurSelect.value, taille: this.value };
-      console.log("Options sectorielles mises à jour:", window.sectorOptions);
-
-      // Broadcast changes
-      document.dispatchEvent(new CustomEvent('sectorOptionsChanged', {
-        detail: window.sectorOptions
-      }));
-
-      runComparison();
-      updateCustomStatusDisabling(); // ⬅️ ici
-    });
-  } else {
-    // Set defaults if elements not found
-    window.sectorOptions = { secteur: "Tous", taille: "<50" };
-    console.log("Options sectorielles par défaut:", window.sectorOptions);
-  }
-}
-
-// Add listener for debugging
-document.addEventListener('sectorOptionsChanged', function(e) {
-    console.log("ÉVÉNEMENT: Options sectorielles modifiées:", e.detail);
-});
-
-function initFiscalSimulator() {
-    console.log("Initialisation du simulateur fiscal simplifié...");
-    
-    // Attendre que SimulationsFiscales et FiscalUtils soient chargés
-    const checkDependencies = setInterval(() => {
-        if (window.SimulationsFiscales && window.FiscalUtils) {
-            clearInterval(checkDependencies);
-            console.log("Dépendances trouvées, configuration du simulateur...");
-            setupSimulator();
-            setupSectorOptions(); // Ajout de cette ligne
-        }
-    }, 200);
-}
-  // --- Définition SANS exécution ---
+// ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
 function placeBase10UnderNbAssocies(){
   const sim = document.getElementById('fiscal-simulator');
   if (!sim) return;
@@ -228,6 +179,24 @@ function placeBase10UnderNbAssocies(){
   const partWrapper = partInput ? partInput.closest('div') : null;
   const nbAssocWrapper = nbAssoc ? nbAssoc.closest('div') : null;
   if (!partWrapper || !nbAssocWrapper) return;
+
+  /* ==== AJOUT UX : suffixe % visuel + bornes 0..100 ==== */
+  if (partInput && !partInput.closest('.part-detenu-wrap')) {
+    const wrap = document.createElement('div');
+    wrap.className = 'part-detenu-wrap';
+    const parent = partInput.parentNode;
+    parent.insertBefore(wrap, partInput);
+    wrap.appendChild(partInput);
+
+    const pct = document.createElement('span');
+    pct.className = 'suffix-pct';
+    pct.textContent = '%';
+    wrap.appendChild(pct);
+  }
+  partInput?.setAttribute('min','0');
+  partInput?.setAttribute('max','100');
+  partInput?.setAttribute('step','1');
+  /* ==== fin ajout ==== */
 
   // ligne 2 colonnes
   const row = document.createElement('div');
@@ -243,28 +212,55 @@ function placeBase10UnderNbAssocies(){
   inline.innerHTML = `
     <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
     <div class="grid grid-cols-3 gap-2">
-      <input id="base-capital" type="number" min="0" step="100" placeholder="Capital social"
-        class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      <input id="base-cca" type="number" min="0" step="100" placeholder="Compte courant associé"
-        class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      <input id="base-primes" type="number" min="0" step="100" placeholder="Primes d’émission"
-        class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <div class="money-wrap">
+        <div class="mini">Capital social</div>
+        <input id="base-capital" type="number" min="0" step="100" placeholder="ex. 10 000"
+          class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+        <span class="suffix-eur">€</span>
+      </div>
+      <div class="money-wrap">
+        <div class="mini">Compte courant</div>
+        <input id="base-cca" type="number" min="0" step="100" placeholder="ex. 5 000"
+          class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+        <span class="suffix-eur">€</span>
+      </div>
+      <div class="money-wrap">
+        <div class="mini">Primes</div>
+        <input id="base-primes" type="number" min="0" step="100" placeholder="ex. 2 000"
+          class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+        <span class="suffix-eur">€</span>
+      </div>
     </div>
     <input id="base10-total" type="hidden" value="0">
-    <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
+    <div class="text-xs text-gray-400 mt-1">10% = <span id="tns-mini-seuil">—</span></div>
   `;
   row.appendChild(inline);
 
   // ➜ insérer la ligne juste APRÈS “Nombre d’associés”
   nbAssocWrapper.parentNode.insertBefore(row, nbAssocWrapper.nextElementSibling);
 
+  /* ===== (optionnel) Séparateurs de milliers en saisie ===== */
+  const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
+  const formatFR = n => n.toLocaleString('fr-FR');
+  ['base-capital','base-cca','base-primes'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', ()=>{
+      const raw = parseFR(el.value);
+      el.dataset.raw = String(raw);
+    });
+    ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
+      const raw = parseFR(el.dataset.raw ?? el.value);
+      el.value = raw ? formatFR(raw) : '';
+    }));
+  });
+  function val(id){ const el=document.getElementById(id); return parseFR(el?.dataset.raw ?? el?.value); }
+  /* ===== fin optionnel ===== */
+
   // calcul dynamique
   const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
   function updateBase10(){
-    const total =
-      (parseFloat(document.getElementById('base-capital')?.value)||0) +
-      (parseFloat(document.getElementById('base-primes')?.value)||0) +
-      (parseFloat(document.getElementById('base-cca')?.value)||0);
+    const total = val('base-capital') + val('base-primes') + val('base-cca');
     document.getElementById('base10-total').value = String(total);
     document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
     if (typeof runComparison === 'function') runComparison();
@@ -288,6 +284,8 @@ function placeBase10UnderNbAssocies(){
   document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
   document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
 }
+
+
 
 
 function setupSimulator() {
