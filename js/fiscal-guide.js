@@ -949,9 +949,9 @@ document.addEventListener('DOMContentLoaded', function () {
   addCustomStyles();
 
   /* ---------------- helpers UI ---------------- */
-  function addCustomStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
+function addCustomStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
 /* Conteneur du simulateur fiscal */
 #fiscal-simulator {
   max-width: 980px;
@@ -986,10 +986,28 @@ document.addEventListener('DOMContentLoaded', function () {
   padding: 0.4rem 0.6rem;
   max-width: 220px;
 }
-`;
-    document.head.appendChild(style);
-  }
 
+/* Ligne Part détenue + Base 10% */
+.part-detenu-row { align-items: end; }
+.part-detenu-row .percent-wrap { position: relative; }
+.part-detenu-row .percent-wrap input {
+  padding-right: 2.2rem;          /* place pour % */
+  text-align: right;              /* 100 à droite dans l'input */
+}
+.part-detenu-row .percent-wrap .suffix {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #9ca3af;
+}
+@media (max-width: 767.98px) {
+  .part-detenu-row { display: block; }
+}
+`;
+  document.head.appendChild(style);
+}
   function setupSectorOptions() {
     const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
     const tailleSelect  = document.querySelector('#taille-select, [id$="taille-select"]');
@@ -1333,83 +1351,127 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* -------------------------------------------------------
-     Montage de la ligne “Part détenue (%) + Base 10%”
-     => Ancrage juste après #sim-nb-associes, fallback sur l’ancien bloc
-  ------------------------------------------------------- */
-  function mountBase10Row() {
-    const sim = document.getElementById('fiscal-simulator');
-    if (!sim) return;
+   Montage de la ligne “Part détenue (%) + Base 10%”
+   => Ancrage juste après #sim-nb-associes, fallback sur l’ancien bloc
+------------------------------------------------------- */
+function mountBase10Row() {
+  const sim = document.getElementById('fiscal-simulator');
+  if (!sim) return;
 
-    const formGrid = sim.querySelector('.grid');
-    if (!formGrid || document.getElementById('base10-inline')) return; // déjà monté
+  const formGrid = sim.querySelector('.grid');
+  if (!formGrid || document.getElementById('base10-inline')) return; // déjà monté
 
-    const partInput = document.getElementById('sim-part-associe');
-    const partWrapper = partInput ? partInput.closest('div') : null;
-    if (!partWrapper) return;
+  const partInput = document.getElementById('sim-part-associe');
+  const partWrapper = partInput ? partInput.closest('div') : null;
+  if (!partWrapper) return;
 
-    const nbInput = document.getElementById('sim-nb-associes');
-    const nbWrapper = nbInput ? nbInput.closest('div') : null;
+  const nbInput = document.getElementById('sim-nb-associes');
+  const nbWrapper = nbInput ? nbInput.closest('div') : null;
 
-    // 1) Wrapper de ligne dédié (2 colonnes dès md:)
-    const row = document.createElement('div');
-    row.className = 'part-detenu-row md:grid md:grid-cols-2 gap-4 items-end w-full';
+  // 1) Wrapper de ligne dédié (2 colonnes dès md:)
+  const row = document.createElement('div');
+  row.className = 'part-detenu-row md:grid md:grid-cols-2 gap-4 items-end w-full';
 
-    // 👉 INSÉRER APRÈS "Nombre d’associés" si possible, sinon au niveau de partWrapper (fallback)
-    if (nbWrapper && formGrid.contains(nbWrapper)) {
-      nbWrapper.after(row);
-    } else {
-      formGrid.insertBefore(row, partWrapper);
-    }
-
-    // 2) Déplacer “Part détenue” (colonne 1)
-    partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
-    partWrapper.style.gridColumn = 'auto';
-    row.appendChild(partWrapper);
-
-    // 3) Blocs Capital/Primes/CCA (colonne 2)
-    const inline = document.createElement('div');
-    inline.id = 'base10-inline';
-    inline.innerHTML = `
-      <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
-      <div class="grid grid-cols-3 gap-2">
-        <input id="base-capital" type="number" min="0" step="100" placeholder="Capital"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-        <input id="base-primes" type="number" min="0" step="100" placeholder="Primes"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-        <input id="base-cca" type="number" min="0" step="100" placeholder="CCA"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      </div>
-      <input id="base10-total" type="hidden" value="0">
-      <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
-    `;
-    row.appendChild(inline);
-
-    // 4) Style local (empilement en mobile)
-    const style = document.createElement('style');
-    style.textContent = `
-      .part-detenu-row > * { min-width: 0; }
-      @media (max-width: 767.98px){ .part-detenu-row { display:block; } }
-    `;
-    document.head.appendChild(style);
-
-    // 5) Calcul dynamique + liaison
-    const fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
-    function updateBase10() {
-      const total =
-        (parseFloat(document.getElementById('base-capital')?.value) || 0) +
-        (parseFloat(document.getElementById('base-primes')?.value) || 0) +
-        (parseFloat(document.getElementById('base-cca')?.value) || 0);
-      document.getElementById('base10-total').value = String(total);
-      document.getElementById('tns-mini-seuil').textContent = total > 0 ? fmtEUR.format(total * 0.10) : '—';
-      if (typeof window.runComparison === 'function') window.runComparison?.();
-    }
-    ['base-capital','base-primes','base-cca'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) { el.addEventListener('input', updateBase10); el.addEventListener('change', updateBase10); }
-    });
-    updateBase10();
+  // 👉 INSÉRER APRÈS "Nombre d’associés" si possible, sinon au niveau de partWrapper (fallback)
+  if (nbWrapper && formGrid.contains(nbWrapper)) {
+    nbWrapper.after(row);
+  } else {
+    formGrid.insertBefore(row, partWrapper);
   }
-});
+
+  // 2) Déplacer “Part détenue” (colonne 1)
+  partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
+  partWrapper.style.gridColumn = 'auto';
+  row.appendChild(partWrapper);
+
+  // ---- habillage "Part détenue (%)" avec suffixe %
+  const partInputEl = partWrapper.querySelector('#sim-part-associe');
+  if (partInputEl && !partWrapper.querySelector('.percent-wrap')) {
+    const wrap = document.createElement('div');
+    wrap.className = 'percent-wrap';
+    partInputEl.parentNode.insertBefore(wrap, partInputEl);
+    wrap.appendChild(partInputEl);
+
+    const suf = document.createElement('span');
+    suf.className = 'suffix';
+    suf.textContent = '%';
+    wrap.appendChild(suf);
+
+    partInputEl.setAttribute('min','0');
+    partInputEl.setAttribute('max','100');
+    if (!partInputEl.getAttribute('step')) partInputEl.setAttribute('step','1');
+  }
+
+  // 3) Blocs Capital/Primes/CCA (colonne 2)
+  const inline = document.createElement('div');
+  inline.id = 'base10-inline';
+  inline.innerHTML = `
+    <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
+    <div class="grid grid-cols-3 gap-2">
+      <input id="base-capital" type="number" min="0" step="100" placeholder="Capital"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <input id="base-primes" type="number" min="0" step="100" placeholder="Primes"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <input id="base-cca" type="number" min="0" step="100" placeholder="CCA"
+             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+    </div>
+    <input id="base10-total" type="hidden" value="0">
+    <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
+  `;
+  row.appendChild(inline);
+
+  // 4) Style local (empilement en mobile)
+  const style = document.createElement('style');
+  style.textContent = `
+    .part-detenu-row > * { min-width: 0; }
+    @media (max-width: 767.98px){ .part-detenu-row { display:block; } }
+  `;
+  document.head.appendChild(style);
+
+  // 5) Calcul dynamique + liaison
+  const fmtEUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
+  function updateBase10() {
+    const total =
+      (parseFloat(document.getElementById('base-capital')?.value) || 0) +
+      (parseFloat(document.getElementById('base-primes')?.value) || 0) +
+      (parseFloat(document.getElementById('base-cca')?.value) || 0);
+    document.getElementById('base10-total').value = String(total);
+    document.getElementById('tns-mini-seuil').textContent = total > 0 ? fmtEUR.format(total * 0.10) : '—';
+    if (typeof window.runComparison === 'function') window.runComparison?.();
+  }
+  ['base-capital','base-primes','base-cca'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.addEventListener('input', updateBase10); el.addEventListener('change', updateBase10); }
+  });
+  updateBase10();
+
+  // ---- sync part détenue avec nb d'associés
+  function clampPct(v){ return Math.max(0, Math.min(100, Math.round(v))); }
+
+  function syncPartDetenueFromNb(){
+    const nb = parseInt(nbInput?.value) || 1;
+    const partInput = document.getElementById('sim-part-associe');
+    if (!partInput) return;
+    const val = clampPct(100 / nb);
+    partInput.value = String(val);
+    partInput.dispatchEvent(new Event('change'));
+  }
+  if (nbInput) {
+    nbInput.addEventListener('change', syncPartDetenueFromNb);
+    // première mise en cohérence
+    syncPartDetenueFromNb();
+  }
+
+  // sécuriser la saisie manuelle
+  const partInputField = document.getElementById('sim-part-associe');
+  if (partInputField){
+    partInputField.addEventListener('input', () => {
+      if (partInputField.value === '') return;
+      const n = Number(partInputField.value);
+      if (Number.isFinite(n)) partInputField.value = String(clampPct(n));
+    }, {passive:true});
+  }
+}
 
 
 
