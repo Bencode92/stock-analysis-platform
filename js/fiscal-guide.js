@@ -114,6 +114,20 @@ function addCustomStyles() {
   #base10-inline{ grid-column: 2 / span 1; align-self: end; }
 }
 
+/* NEW — Ligne 2 colonnes: "Part détenue (%)" | "Base 10%" (Capital/CCA/Primes) */
+@media (min-width: 768px){
+  .part-detenu-row{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: end;
+  }
+  .part-detenu-row #base10-inline{ align-self: end; }
+}
+@media (max-width: 767.98px){
+  .part-detenu-row{ display: block; }
+}
+
 /* — Tooltips plus compacts — */
 .tooltiptext {
   font-size: 0.75rem;      /* 12 px */
@@ -125,6 +139,8 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 addCustomStyles();
+
+
 
 function setupSectorOptions() {
   // Find selector elements
@@ -198,6 +214,81 @@ function initFiscalSimulator() {
         }
     }, 200);
 }
+  // --- Définition SANS exécution ---
+function placeBase10UnderNbAssocies(){
+  const sim = document.getElementById('fiscal-simulator');
+  if (!sim) return;
+
+  const formGrid = sim.querySelector('.grid');
+  if (!formGrid || document.getElementById('base10-inline')) return;
+
+  // wrappers existants
+  const partInput = document.getElementById('sim-part-associe');
+  const nbAssoc   = document.getElementById('sim-nb-associes');
+  const partWrapper = partInput ? partInput.closest('div') : null;
+  const nbAssocWrapper = nbAssoc ? nbAssoc.closest('div') : null;
+  if (!partWrapper || !nbAssocWrapper) return;
+
+  // ligne 2 colonnes
+  const row = document.createElement('div');
+  row.className = 'part-detenu-row w-full';
+
+  // colonne gauche : “Part détenue (%)”
+  partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
+  row.appendChild(partWrapper);
+
+  // colonne droite : nos 3 inputs
+  const inline = document.createElement('div');
+  inline.id = 'base10-inline';
+  inline.innerHTML = `
+    <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
+    <div class="grid grid-cols-3 gap-2">
+      <input id="base-capital" type="number" min="0" step="100" placeholder="Capital social"
+        class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <input id="base-cca" type="number" min="0" step="100" placeholder="Compte courant associé"
+        class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      <input id="base-primes" type="number" min="0" step="100" placeholder="Primes d’émission"
+        class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+    </div>
+    <input id="base10-total" type="hidden" value="0">
+    <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
+  `;
+  row.appendChild(inline);
+
+  // ➜ insérer la ligne juste APRÈS “Nombre d’associés”
+  nbAssocWrapper.parentNode.insertBefore(row, nbAssocWrapper.nextElementSibling);
+
+  // calcul dynamique
+  const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
+  function updateBase10(){
+    const total =
+      (parseFloat(document.getElementById('base-capital')?.value)||0) +
+      (parseFloat(document.getElementById('base-primes')?.value)||0) +
+      (parseFloat(document.getElementById('base-cca')?.value)||0);
+    document.getElementById('base10-total').value = String(total);
+    document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
+    if (typeof runComparison === 'function') runComparison();
+  }
+  ['base-capital','base-primes','base-cca'].forEach(id=>{
+    const el=document.getElementById(id);
+    if (el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
+  });
+  updateBase10();
+
+  // visibilité intelligente (afficher seulement quand pertinent)
+  function toggleBase10Visibility(){
+    const filter = document.getElementById('sim-status-filter')?.value || 'all';
+    const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
+    const gerantMinoritaire = document.getElementById('sarl-gerant-minoritaire')?.checked;
+    const pertinents = ['eurlIS','sarl','selarl','sca']; // mécanisme 10% applicable
+    const applicable = selected.some(s => pertinents.includes(s)) && !gerantMinoritaire;
+    row.style.display = applicable ? '' : 'none';
+  }
+  toggleBase10Visibility();
+  document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
+  document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
+}
+
 
 function setupSimulator() {
     const compareBtn = document.getElementById('sim-compare-btn');
@@ -244,6 +335,9 @@ function setupSimulator() {
     
     // Mettre à jour l'interface du simulateur pour inclure tous les statuts
     updateSimulatorInterface();
+  
+   // ➜ Le DOM cible existe maintenant
+  placeBase10UnderNbAssocies();   // ✅ insertion des 3 champs “Base 10%”
     
     // Exécuter une première simulation au chargement
     setTimeout(runComparison, 100);
@@ -495,72 +589,6 @@ function updateSimulatorInterface() {
     }
   }
    }
-;(() => {
-  const sim = document.getElementById('fiscal-simulator');
-  if (!sim) return;
-
-  const formGrid = sim.querySelector('.grid');
-  if (!formGrid || document.getElementById('base10-inline')) return;
-
-  // Cible l’input “Part détenue (%)”
-  const partInput = document.getElementById('sim-part-associe');
-  const partWrapper = partInput ? partInput.closest('div') : null;
-  if (!partWrapper) return;
-
-  // 1) Wrapper de ligne dédié (2 colonnes dès md:)
-  const row = document.createElement('div');
-  row.className = 'part-detenu-row md:grid md:grid-cols-2 gap-4 items-end w-full';
-  formGrid.insertBefore(row, partWrapper);
-
-  // 2) Déplacer “Part détenue” dans la colonne 1
-  partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
-  partWrapper.style.gridColumn = 'auto';
-  row.appendChild(partWrapper);
-
-  // 3) Ajouter nos 3 champs en colonne 2
-  const inline = document.createElement('div');
-  inline.id = 'base10-inline';
-  inline.innerHTML = `
-    <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
-    <div class="grid grid-cols-3 gap-2">
-      <input id="base-capital" type="number" min="0" step="100" placeholder="Capital"
-             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      <input id="base-primes" type="number" min="0" step="100" placeholder="Primes"
-             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-      <input id="base-cca" type="number" min="0" step="100" placeholder="CCA"
-             class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
-    </div>
-    <input id="base10-total" type="hidden" value="0">
-    <div class="text-xs text-gray-400 mt-1">10% : <span id="tns-mini-seuil">—</span></div>
-  `;
-  row.appendChild(inline);
-
-  // 4) Style local (empilement en mobile)
-  const style = document.createElement('style');
-  style.textContent = `
-    .part-detenu-row > * { min-width: 0; }
-    @media (max-width: 767.98px){ .part-detenu-row { display:block; } }
-  `;
-  document.head.appendChild(style);
-
-  // 5) Calcul dynamique + liaison
-  const fmtEUR = new Intl.NumberFormat('fr-FR',{ style:'currency', currency:'EUR', minimumFractionDigits:0 });
-  function updateBase10(){
-    const total =
-      (parseFloat(document.getElementById('base-capital')?.value)||0) +
-      (parseFloat(document.getElementById('base-primes')?.value)||0) +
-      (parseFloat(document.getElementById('base-cca')?.value)||0);
-    document.getElementById('base10-total').value = String(total);
-    document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
-    if (typeof runComparison === 'function') runComparison();
-  }
-  ['base-capital','base-primes','base-cca'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
-  });
-  updateBase10();
-})();
-
 
 // Fonction pour obtenir les statuts sélectionnés selon le filtre
 function getSelectedStatuses(filter) {
