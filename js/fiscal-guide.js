@@ -85,7 +85,9 @@ document.addEventListener('DOMContentLoaded', function () {
   if (document.getElementById('fiscal-simulator')) {
     initFiscalSimulator();
   }
-// ---------- Styles personnalisés ----------
+Voilà la version prête à coller, avec l’alignement nickel entre **“Nombre d’associés”** et **“Part détenue (%)”**, la hauteur d’inputs unifiée et les spinners supprimés (qui causaient le décalage sur certains navigateurs).
+
+
 // ---------- Styles personnalisés ----------
 function addCustomStyles() {
   const style = document.createElement('style');
@@ -202,62 +204,37 @@ function addCustomStyles() {
 }
 #base10-inline .mini{ font-size:.8rem; color:#cbd5e1; margin-bottom:.25rem; }
 
-/* ========== ⬇️ BLOC REMPLACÉ PAR LE NOUVEAU ⬇️ ========== */
-
-/* ========== Alignement "Nombre d'associés" / "Part détenue (%)" ========== */
-@media (min-width:768px){
-  .field-associes label,
-  .field-part label{
-    display:block;
-    min-height:1.5rem;
-    margin-bottom:.5rem;
-    line-height:1.25rem;
-  }
-  .field-associes input,
-  .field-part input{
-    height:2.75rem;
-    padding: 0.75rem;
-  }
-}
-
 /* ========== Base 10% — carte et grille ========== */
 #base10-inline { 
   max-width: 100%;
   margin-top: 1.25rem;
 }
-
 .base10-card { 
   padding: 1.25rem 1.5rem; 
   position: relative;
 }
-
 #base10-inline .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(220px, 1fr));
   gap: 1.25rem;
 }
-
 @media (max-width: 1024px) {
   #base10-inline .grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
 }
 @media (max-width: 640px) {
   #base10-inline .grid { grid-template-columns: 1fr; }
 }
-
 #base10-inline .money-wrap { position: relative; }
-
 #base10-inline .money-wrap input {
   padding: 0.875rem 2.5rem 0.875rem 1rem;
   font-size: 0.95rem;
   height: 3rem;
 }
-
 #base10-inline .mini { 
   font-size: 0.85rem; 
   margin-bottom: 0.5rem; 
   font-weight: 500; 
 }
-
 #base10-inline .money-wrap .suffix-eur {
   position: absolute; 
   right: .65rem; 
@@ -267,17 +244,66 @@ function addCustomStyles() {
   font-weight: 600; 
   color: #cbd5e1;
 }
-
 #tns-mini-seuil { 
   font-size: 1.25rem; 
   font-weight: 700; 
+}
+
+/* ====== ALIGNER "Nombre d'associés" et "Part détenue (%)" ====== */
+@media (min-width:768px){
+  /* 1) Même ligne de label (avec ou sans tooltip à droite) */
+  .field-associes label,
+  .field-part label{
+    display:inline-flex;
+    align-items:flex-end;      /* cale la baseline */
+    gap:.375rem;
+    line-height:1.2;
+    min-height:1.6rem;         /* réserve fixe */
+    margin-bottom:.5rem;
+  }
+  /* si un tooltip suit le label, on l'aligne en bas aussi */
+  .field-associes label + .info-tooltip,
+  .field-part label + .info-tooltip{
+    align-self:flex-end;
+    margin-bottom:.5rem;
+  }
+
+  /* 2) Inputs : hauteur/padding identiques */
+  .field-associes input,
+  .field-part input{
+    box-sizing:border-box;
+    height:2.75rem;
+    padding:.75rem .75rem;
+    font-size:.95rem;
+  }
+  /* l’input “Part détenue” a un suffixe % => on garde de la place à droite */
+  .field-part .part-detenu-wrap input{
+    padding-right:2.25rem;
+  }
+}
+
+/* 3) Supprimer les spinners (évite une hauteur différente selon navigateur) */
+.field-associes input[type="number"],
+.field-part input[type="number"]{
+  -moz-appearance:textfield;
+}
+.field-associes input[type="number"]::-webkit-outer-spin-button,
+.field-associes input[type="number"]::-webkit-inner-spin-button,
+.field-part input[type="number"]::-webkit-outer-spin-button,
+.field-part input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin:0;
+}
+
+/* 4) Sécurité mobile pour l’espacement */
+@media (max-width:767.98px){
+  .field-associes label,
+  .field-part label{ margin-bottom:.4rem; }
 }
 `;
   document.head.appendChild(style);
 }
 addCustomStyles();
-
-
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
 function placeBase10UnderNbAssocies(){
