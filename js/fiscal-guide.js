@@ -86,6 +86,23 @@ document.addEventListener('DOMContentLoaded', function () {
     initFiscalSimulator();
   }
 
+  // --- Util commun : détecter LA bonne grille de formulaire ---
+  function getFormGrid(){
+    const sim = document.getElementById('fiscal-simulator');
+    if (!sim) return null;
+
+    const ids = ['sim-ca','sim-marge','sim-salaire','sim-nb-associes','sim-part-associe'];
+    const fields = ids.map(id=>document.getElementById(id)).filter(Boolean);
+    if (!fields.length) return sim.querySelector('.grid');
+
+    const grids = Array.from(sim.querySelectorAll('.grid'))
+      .filter(g => fields.every(f => g.contains(f)));
+    if (!grids.length) return sim.querySelector('.grid');
+
+    const depth = g => { let d=0, p=g; while (p && p!==sim){ d++; p=p.parentElement; } return d; };
+    grids.sort((a,b)=>depth(a)-depth(b));
+    return grids[0];
+  }
 // ---------- Styles personnalisés ----------
 function addCustomStyles() {
   const style = document.createElement('style');
@@ -100,8 +117,11 @@ function addCustomStyles() {
 /* Grille alignée à gauche (base) */
 #fiscal-simulator .grid {
   justify-content: flex-start !important;
-  justify-items: start !important;
+  /* ⚠️ ne pas forcer justify-items ici pour laisser les items s'étirer dans la grille à zones */
+  /* justify-items: start !important; */
 }
+/* Variante si tu veux garder justify-items:start globalement : */
+/* #fiscal-simulator .grid:not(.form-layout-areas-3){ justify-items:start !important; } */
 
 /* Options sans centrage automatique */
 #sim-options-container {
@@ -131,7 +151,12 @@ function addCustomStyles() {
       "part     salaire  associes"   /* R2 : Part | Salaire | Associes → 100% sous Part */
       "base10   base10   base10";    /* R3 : Base10 pleine largeur */
     align-items:start;
+    justify-items: stretch !important; /* ✅ essentiel pour étirer les items sur leurs zones */
   }
+  /* Sécurité overflow/shrink des enfants */
+  #fiscal-simulator .form-layout-areas-3 > * { min-width: 0; }
+  #base10-inline { width: 100%; }      /* ceinture + bretelles */
+
   /* mapping des zones */
   .field-ca       { grid-area: ca; }
   .field-marge    { grid-area: marge; }
@@ -312,41 +337,31 @@ function gridItem(el, grid) {
   return cur;
 }
 
+
 function placeBase10UnderNbAssocies(){
   const sim = document.getElementById('fiscal-simulator');
   if (!sim) return;
 
-  // --- TROUVER LA BONNE .grid (ancêtre commun des 5 champs) ---
+  // ✅ utilise la même détection partout
+  const formGrid = getFormGrid();
+  if (!formGrid || document.getElementById('base10-inline')) return;
+
+  // activer la grille à zones sur LE bon conteneur
+  formGrid.classList.add('form-layout-areas-3');
+
+  // champs
   const elCA      = document.getElementById('sim-ca');
   const elMarge   = document.getElementById('sim-marge');
   const elSalaire = document.getElementById('sim-salaire');
   const elNb      = document.getElementById('sim-nb-associes');
   const elPart    = document.getElementById('sim-part-associe');
-
   const fields = [elCA, elMarge, elSalaire, elNb, elPart].filter(Boolean);
   if (fields.length < 5) return;
 
-  const closestGrid = el => el.closest('.grid');
-  const candidates = fields.map(closestGrid).filter(Boolean);
+  // util : remonter jusqu’à l’enfant direct de formGrid
+  const gridItem = (el, grid) => { let cur = el; while (cur && cur.parentElement !== grid) cur = cur.parentElement; return cur; };
 
-  let formGrid = null;
-  for (const g of candidates) {
-    if (fields.every(f => g.contains(f))) { formGrid = g; break; }
-  }
-  if (!formGrid) return;                          // pas de grille commune trouvée
-  if (document.getElementById('base10-inline')) return; // éviter double insertion
-
-  // activer la grille à zones sur LE bon conteneur
-  formGrid.classList.add('form-layout-areas-3');
-
-  // util: remonter jusqu’à l’enfant direct de la grille
-  const gridItem = (el, grid) => {
-    let cur = el;
-    while (cur && cur.parentElement !== grid) cur = cur.parentElement;
-    return cur;
-  };
-
-  // récupérer LES ENFANTS DIRECTS de formGrid
+  // enfants directs
   const caItem      = gridItem(elCA,      formGrid);
   const margeItem   = gridItem(elMarge,   formGrid);
   const salaireItem = gridItem(elSalaire, formGrid);
@@ -354,7 +369,7 @@ function placeBase10UnderNbAssocies(){
   const partItem    = gridItem(elPart,    formGrid);
   if (!caItem || !margeItem || !salaireItem || !nbItem || !partItem) return;
 
-  // purge spans/tailwind récalcitrants
+  // purge des spans récalcitrants
   [caItem, margeItem, salaireItem, nbItem, partItem].forEach(w=>{
     w.classList.remove(
       'col-span-1','col-span-2','col-span-3','col-span-full',
@@ -372,7 +387,7 @@ function placeBase10UnderNbAssocies(){
   nbItem.classList.add('field-associes');
   partItem.classList.add('field-part');
 
-  // suffixe % pour Part détenue
+  // suffixe % pour “Part détenue”
   if (elPart && !elPart.closest('.part-detenu-wrap')) {
     const wrap = document.createElement('div');
     wrap.className = 'part-detenu-wrap w-full';
@@ -389,7 +404,7 @@ function placeBase10UnderNbAssocies(){
   elPart?.setAttribute('step','1');
   if (elPart) elPart.style.textAlign = 'left';
 
-  // créer le bloc Base10 (item de la grille)
+  // === bloc Base 10% ===
   const inline = document.createElement('div');
   inline.id = 'base10-inline';
   inline.classList.add('field-base10');
@@ -438,7 +453,7 @@ function placeBase10UnderNbAssocies(){
     </div>
   `;
 
-  // insérer Base10 juste APRÈS l’item "Nombre d’associés" (enfant direct)
+  // insérer Base10 juste APRÈS l’item "Nombre d’associés"
   nbItem.parentNode.insertBefore(inline, nbItem.nextElementSibling);
 
   // formatage FR des montants saisis
@@ -549,7 +564,8 @@ function updateSimulatorInterface() {
     console.log("Options de simulation déjà présentes, pas de reconstruction");
   } else {
     // Ajouter un sélecteur de statuts et des options de simulation avancées
-    const formContainer = simulatorContainer.querySelector('.grid');
+    const formContainer = getFormGrid() || simulatorContainer.querySelector('.grid');
+
 
     if (formContainer) {
       // Ajouter une nouvelle ligne pour les options de simulation
