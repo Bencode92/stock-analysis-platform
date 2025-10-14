@@ -316,25 +316,42 @@ function placeBase10UnderNbAssocies(){
   const sim = document.getElementById('fiscal-simulator');
   if (!sim) return;
 
-  const formGrid = sim.querySelector('.grid');
-  if (!formGrid || document.getElementById('base10-inline')) return;
-
-  // activer la grille à zones
-  formGrid.classList.add('form-layout-areas-3');
-
-  // cibler les inputs
+  // --- TROUVER LA BONNE .grid (ancêtre commun des 5 champs) ---
   const elCA      = document.getElementById('sim-ca');
   const elMarge   = document.getElementById('sim-marge');
   const elSalaire = document.getElementById('sim-salaire');
   const elNb      = document.getElementById('sim-nb-associes');
   const elPart    = document.getElementById('sim-part-associe');
 
-  // récupérer LES ENFANTS DIRECTS de .grid
-  const caItem      = elCA      ? gridItem(elCA,      formGrid) : null;
-  const margeItem   = elMarge   ? gridItem(elMarge,   formGrid) : null;
-  const salaireItem = elSalaire ? gridItem(elSalaire, formGrid) : null;
-  const nbItem      = elNb      ? gridItem(elNb,      formGrid) : null;
-  const partItem    = elPart    ? gridItem(elPart,    formGrid) : null;
+  const fields = [elCA, elMarge, elSalaire, elNb, elPart].filter(Boolean);
+  if (fields.length < 5) return;
+
+  const closestGrid = el => el.closest('.grid');
+  const candidates = fields.map(closestGrid).filter(Boolean);
+
+  let formGrid = null;
+  for (const g of candidates) {
+    if (fields.every(f => g.contains(f))) { formGrid = g; break; }
+  }
+  if (!formGrid) return;                          // pas de grille commune trouvée
+  if (document.getElementById('base10-inline')) return; // éviter double insertion
+
+  // activer la grille à zones sur LE bon conteneur
+  formGrid.classList.add('form-layout-areas-3');
+
+  // util: remonter jusqu’à l’enfant direct de la grille
+  const gridItem = (el, grid) => {
+    let cur = el;
+    while (cur && cur.parentElement !== grid) cur = cur.parentElement;
+    return cur;
+  };
+
+  // récupérer LES ENFANTS DIRECTS de formGrid
+  const caItem      = gridItem(elCA,      formGrid);
+  const margeItem   = gridItem(elMarge,   formGrid);
+  const salaireItem = gridItem(elSalaire, formGrid);
+  const nbItem      = gridItem(elNb,      formGrid);
+  const partItem    = gridItem(elPart,    formGrid);
   if (!caItem || !margeItem || !salaireItem || !nbItem || !partItem) return;
 
   // purge spans/tailwind récalcitrants
