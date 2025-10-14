@@ -339,9 +339,7 @@ function toggleBase10Visibility(){
 toggleBase10Visibility();
 document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
 document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
-
-
-
+  }
 
 
 function setupSimulator() {
