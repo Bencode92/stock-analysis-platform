@@ -120,8 +120,9 @@ function addCustomStyles() {
 @media (min-width:768px){
   #fiscal-simulator .form-layout-areas-3{
     display:grid;
-    grid-template-columns: 1.25fr 1fr 1fr;      /* CA un peu plus large */
+    grid-template-columns: 1.25fr 1fr 1fr !important; /* CA un peu plus large */
     grid-auto-rows:auto;
+    grid-auto-flow:dense;
     gap:1rem;
     grid-template-areas:
       "ca     ca       marge"      /* R1 : CA (2 col) | Marge */
@@ -149,18 +150,14 @@ function addCustomStyles() {
     grid-column: auto !important;
     grid-row: auto !important;
   }
-
-  /* la "fausse" ligne devient transparente : ses enfants se placent dans la grille */
-  .part-detenu-row{ display: contents !important; }
 }
 
 /* Mobile : on empile proprement */
 @media (max-width:767.98px){
   #fiscal-simulator .form-layout-areas-3{ display:block; }
-  .part-detenu-row{ display:block; }
 }
 
-/* — Tooltips plus compacts (inchangé) — */
+/* — Tooltips plus compacts — */
 .tooltiptext {
   font-size: 0.75rem;
   line-height: 1rem;
@@ -181,18 +178,28 @@ function addCustomStyles() {
   padding-right:2.25rem;
 }
 
-/* Base10 : suffixe € fixé */
-#base10-inline .money-wrap{ position:relative; }
+/* ---------- Carte Base 10% (Option A) ---------- */
+.base10-card { position: relative; }
+.base10-card-accent{
+  position:absolute; inset:0;
+  border-left:4px solid rgba(34,197,94,.8); /* border-l-4 border-green-500 */
+  border-radius: 12px;
+  pointer-events:none;
+}
+
+/* Champs un peu plus “respirants” */
+#base10-inline .money-wrap { position: relative; }
 #base10-inline .money-wrap input{ padding-right:2.25rem; }
 #base10-inline .money-wrap .suffix-eur{
   position:absolute; right:.65rem; top:50%; transform:translateY(-50%);
   pointer-events:none; font-weight:600; color:#cbd5e1;
 }
-#base10-inline .mini{ font-size:.75rem; color:#cbd5e1; margin-bottom:.25rem; }
+#base10-inline .mini{ font-size:.8rem; color:#cbd5e1; margin-bottom:.25rem; }
 `;
   document.head.appendChild(style);
 }
 addCustomStyles();
+
 
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
@@ -239,37 +246,72 @@ function placeBase10UnderNbAssocies(){
   partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
   partWrapper.classList.add('field-part');          // zone nommée
   row.appendChild(partWrapper);
+// colonne droite : Base 10%
+const inline = document.createElement('div');
+inline.id = 'base10-inline';
+inline.classList.add('field-base10'); // zone nommée
 
-  // colonne droite : Base 10%
-  const inline = document.createElement('div');
-  inline.id = 'base10-inline';
-  inline.classList.add('field-base10');             // zone nommée
-  inline.innerHTML = `
-    <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
-    <div class="grid grid-cols-3 gap-2">
+inline.innerHTML = `
+  <div class="base10-card bg-blue-900/40 border border-blue-700 rounded-xl p-4 md:p-5 relative">
+    <div class="flex items-center mb-3 gap-2">
+      <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-green-500/15 border border-green-500/30">
+        <i class="fas fa-calculator text-green-400 text-xs"></i>
+      </span>
+      <label class="text-green-300 font-medium">
+        Base 10% <span class="text-gray-400">(TNS dividendes)</span>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div class="money-wrap">
-        <div class="mini">Capital social</div>
+        <div class="mini flex items-center gap-1">
+          <i class="fas fa-piggy-bank text-gray-400"></i>
+          <span>Capital social</span>
+        </div>
         <input id="base-capital" type="number" min="0" step="100" placeholder="ex. 10 000"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+               class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
         <span class="suffix-eur">€</span>
       </div>
+
       <div class="money-wrap">
-        <div class="mini">Compte courant</div>
+        <div class="mini flex items-center gap-1">
+          <i class="fas fa-university text-gray-400"></i>
+          <span>Compte courant</span>
+        </div>
         <input id="base-cca" type="number" min="0" step="100" placeholder="ex. 5 000"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+               class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
         <span class="suffix-eur">€</span>
       </div>
+
       <div class="money-wrap">
-        <div class="mini">Primes</div>
+        <div class="mini flex items-center gap-1">
+          <i class="fas fa-gift text-gray-400"></i>
+          <span>Primes</span>
+        </div>
         <input id="base-primes" type="number" min="0" step="100" placeholder="ex. 2 000"
-               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+               class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
         <span class="suffix-eur">€</span>
       </div>
     </div>
+
     <input id="base10-total" type="hidden" value="0">
-    <div class="text-xs text-gray-400 mt-1">10% = <span id="tns-mini-seuil">—</span></div>
-  `;
-  row.appendChild(inline);
+
+    <div class="mt-3 flex items-center justify-between">
+      <div class="text-xs text-gray-400">
+        <i class="fas fa-info-circle mr-1"></i>
+        Capital libéré + primes + CCA
+      </div>
+      <div class="text-base md:text-lg font-semibold text-green-400">
+        10% = <span id="tns-mini-seuil">—</span>
+      </div>
+    </div>
+
+    <div class="base10-card-accent"></div>
+  </div>
+`;
+
+row.appendChild(inline);
+
 
   // ➍ insérer juste APRÈS “Nombre d’associés”
   nbAssocWrapper.parentNode.insertBefore(row, nbAssocWrapper.nextElementSibling);
