@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (document.getElementById('fiscal-simulator')) {
     initFiscalSimulator();
   }
-    
 // ---------- Styles personnalisés ----------
 function addCustomStyles() {
   const style = document.createElement('style');
@@ -140,6 +139,17 @@ function addCustomStyles() {
   #base10-inline,
   .field-base10   { grid-area: base10; align-self:start; }
 
+  /* ⛔ Neutraliser tout ancien col-span/row-span qui perturbe les areas */
+  #fiscal-simulator .form-layout-areas-3 .field-ca,
+  #fiscal-simulator .form-layout-areas-3 .field-marge,
+  #fiscal-simulator .form-layout-areas-3 .field-salaire,
+  #fiscal-simulator .form-layout-areas-3 .field-associes,
+  #fiscal-simulator .form-layout-areas-3 .field-part,
+  #fiscal-simulator .form-layout-areas-3 .field-base10{
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
   /* la "fausse" ligne devient transparente : ses enfants se placent dans la grille */
   .part-detenu-row{ display: contents !important; }
 }
@@ -183,6 +193,7 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 addCustomStyles();
+
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
 function placeBase10UnderNbAssocies(){
@@ -263,59 +274,72 @@ function placeBase10UnderNbAssocies(){
   // ➍ insérer juste APRÈS “Nombre d’associés”
   nbAssocWrapper.parentNode.insertBefore(row, nbAssocWrapper.nextElementSibling);
 
-  // ➎ marquer les autres champs pour la grille à areas
-  document.getElementById('sim-ca')?.closest('div')?.classList.add('field-ca');
-  document.getElementById('sim-marge')?.closest('div')?.classList.add('field-marge');
-  document.getElementById('sim-salaire')?.closest('div')?.classList.add('field-salaire');
-  nbAssocWrapper.classList.add('field-associes');
+ // ➎ marquer les autres champs pour la grille à areas (avec purge des anciens col-span)
+const caWrap      = document.getElementById('sim-ca')?.closest('div');
+const margeWrap   = document.getElementById('sim-marge')?.closest('div');
+const salaireWrap = document.getElementById('sim-salaire')?.closest('div');
 
-  /* ===== Séparateurs de milliers en saisie (optionnel) ===== */
-  const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
-  const formatFR = n => n.toLocaleString('fr-FR');
-  ['base-capital','base-cca','base-primes'].forEach(id=>{
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('input', ()=>{
-      const raw = parseFR(el.value);
-      el.dataset.raw = String(raw);
-    });
-    ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
-      const raw = parseFR(el.dataset.raw ?? el.value);
-      el.value = raw ? formatFR(raw) : '';
-    }));
+// ⛏️ neutraliser les anciens col-span sur TOUTES les 5 wrappers
+[caWrap, margeWrap, salaireWrap, nbAssocWrapper, partWrapper].forEach(w=>{
+  w?.classList.remove(
+    'col-span-1','col-span-2','col-span-3','col-span-full',
+    'md:col-span-1','md:col-span-2','md:col-span-3','md:col-span-4'
+  );
+});
+
+// 🏷️ appliquer les classes de zone (areas)
+caWrap?.classList.add('field-ca');
+margeWrap?.classList.add('field-marge');
+salaireWrap?.classList.add('field-salaire');
+nbAssocWrapper?.classList.add('field-associes'); // partWrapper a déjà 'field-part'
+
+/* ===== Séparateurs de milliers en saisie (optionnel) ===== */
+const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
+const formatFR = n => n.toLocaleString('fr-FR');
+['base-capital','base-cca','base-primes'].forEach(id=>{
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', ()=>{
+    const raw = parseFR(el.value);
+    el.dataset.raw = String(raw);
   });
-  const val = id => {
-    const el = document.getElementById(id);
-    return parseFR(el?.dataset.raw ?? el?.value);
-  };
+  ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
+    const raw = parseFR(el.dataset.raw ?? el.value);
+    el.value = raw ? formatFR(raw) : '';
+  }));
+});
+const val = id => {
+  const el = document.getElementById(id);
+  return parseFR(el?.dataset.raw ?? el?.value);
+};
 
-  // ===== calcul dynamique =====
-  const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
-  function updateBase10(){
-    const total = val('base-capital') + val('base-primes') + val('base-cca');
-    document.getElementById('base10-total').value = String(total);
-    document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
-    if (typeof runComparison === 'function') runComparison();
-  }
-  ['base-capital','base-primes','base-cca'].forEach(id=>{
-    const el=document.getElementById(id);
-    if (el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
-  });
-  updateBase10();
-
-  // ===== visibilité selon statuts =====
-  function toggleBase10Visibility(){
-    const filter = document.getElementById('sim-status-filter')?.value || 'all';
-    const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
-    const gerantMinoritaire = document.getElementById('sarl-gerant-minoritaire')?.checked;
-    const pertinents = ['eurlIS','sarl','selarl','sca']; // mécanisme 10% applicable
-    const applicable = selected.some(s => pertinents.includes(s)) && !gerantMinoritaire;
-    row.style.display = applicable ? '' : 'none';
-  }
-  toggleBase10Visibility();
-  document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
-  document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
+// ===== calcul dynamique =====
+const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
+function updateBase10(){
+  const total = val('base-capital') + val('base-primes') + val('base-cca');
+  document.getElementById('base10-total').value = String(total);
+  document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
+  if (typeof runComparison === 'function') runComparison();
 }
+['base-capital','base-primes','base-cca'].forEach(id=>{
+  const el=document.getElementById(id);
+  if (el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
+});
+updateBase10();
+
+// ===== visibilité selon statuts =====
+function toggleBase10Visibility(){
+  const filter = document.getElementById('sim-status-filter')?.value || 'all';
+  const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
+  const gerantMinoritaire = document.getElementById('sarl-gerant-minoritaire')?.checked;
+  const pertinents = ['eurlIS','sarl','selarl','sca']; // mécanisme 10% applicable
+  const applicable = selected.some(s => pertinents.includes(s)) && !gerantMinoritaire;
+  row.style.display = applicable ? '' : 'none';
+}
+toggleBase10Visibility();
+document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
+document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
+
 
 
 
