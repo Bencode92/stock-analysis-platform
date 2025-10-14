@@ -85,8 +85,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (document.getElementById('fiscal-simulator')) {
     initFiscalSimulator();
   }
-Voilà la version prête à coller, avec l’alignement nickel entre **“Nombre d’associés”** et **“Part détenue (%)”**, la hauteur d’inputs unifiée et les spinners supprimés (qui causaient le décalage sur certains navigateurs).
-
 
 // ---------- Styles personnalisés ----------
 function addCustomStyles() {
