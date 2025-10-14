@@ -123,10 +123,11 @@ function addCustomStyles() {
     grid-template-columns: 1.25fr 1fr 1fr !important; /* CA un peu plus large */
     grid-auto-rows:auto;
     grid-auto-flow:dense;
-    gap:1rem;
+    column-gap:1rem;              /* écart horizontal */
+    row-gap:1.25rem;              /* écart vertical (décoller Base10) */
     grid-template-areas:
       "ca       ca       marge"      /* R1 : CA (2 col) | Marge */
-      "associes part     salaire"    /* R2 : Assoc. | Part | Salaire  → 100% bien sous Part */
+      "associes part     salaire"    /* R2 : Assoc. | Part | Salaire → 100% sous Part */
       "base10   base10   base10";    /* R3 : Base10 pleine largeur */
     align-items:start;
   }
@@ -200,10 +201,14 @@ function addCustomStyles() {
   pointer-events:none; font-weight:600; color:#cbd5e1;
 }
 #base10-inline .mini{ font-size:.8rem; color:#cbd5e1; margin-bottom:.25rem; }
+
+/* Décoller légèrement Base10 si un thème tassait le row-gap */
+#base10-inline{ margin-top:.25rem; }
 `;
   document.head.appendChild(style);
 }
 addCustomStyles();
+
 
 
 
@@ -265,8 +270,7 @@ function placeBase10UnderNbAssocies(){
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div class="money-wrap">
         <div class="mini flex items-center gap-1">
-          <i class="fas fa-piggy-bank text-gray-400"></i>
-          <span>Capital social</span>
+          <i class="fas fa-piggy-bank text-gray-400"></i><span>Capital social</span>
         </div>
         <input id="base-capital" type="number" min="0" step="100" placeholder="ex. 10 000"
                class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
@@ -275,8 +279,7 @@ function placeBase10UnderNbAssocies(){
 
       <div class="money-wrap">
         <div class="mini flex items-center gap-1">
-          <i class="fas fa-university text-gray-400"></i>
-          <span>Compte courant</span>
+          <i class="fas fa-university text-gray-400"></i><span>Compte courant</span>
         </div>
         <input id="base-cca" type="number" min="0" step="100" placeholder="ex. 5 000"
                class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
@@ -285,8 +288,7 @@ function placeBase10UnderNbAssocies(){
 
       <div class="money-wrap">
         <div class="mini flex items-center gap-1">
-          <i class="fas fa-gift text-gray-400"></i>
-          <span>Primes</span>
+          <i class="fas fa-gift text-gray-400"></i><span>Primes</span>
         </div>
         <input id="base-primes" type="number" min="0" step="100" placeholder="ex. 2 000"
                class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
@@ -297,13 +299,8 @@ function placeBase10UnderNbAssocies(){
     <input id="base10-total" type="hidden" value="0">
 
     <div class="mt-3 flex items-center justify-between">
-      <div class="text-xs text-gray-400">
-        <i class="fas fa-info-circle mr-1"></i>
-        Capital libéré + primes + CCA
-      </div>
-      <div class="text-base md:text-lg font-semibold text-green-400">
-        10% = <span id="tns-mini-seuil">—</span>
-      </div>
+      <div class="text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Capital libéré + primes + CCA</div>
+      <div class="text-base md:text-lg font-semibold text-green-400">10% = <span id="tns-mini-seuil">—</span></div>
     </div>
 
     <div class="base10-card-accent"></div>
