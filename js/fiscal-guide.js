@@ -304,6 +304,14 @@ function addCustomStyles() {
 addCustomStyles();
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
+
+// util: remonter jusqu’à l’enfant direct de la grille
+function gridItem(el, grid) {
+  let cur = el;
+  while (cur && cur.parentElement !== grid) cur = cur.parentElement;
+  return cur;
+}
+
 function placeBase10UnderNbAssocies(){
   const sim = document.getElementById('fiscal-simulator');
   if (!sim) return;
@@ -311,140 +319,126 @@ function placeBase10UnderNbAssocies(){
   const formGrid = sim.querySelector('.grid');
   if (!formGrid || document.getElementById('base10-inline')) return;
 
-  // ➊ activer le layout 3 colonnes à zones nommées
+  // activer la grille à zones
   formGrid.classList.add('form-layout-areas-3');
 
-  // wrappers existants
-  const partInput = document.getElementById('sim-part-associe');
-  const nbAssoc   = document.getElementById('sim-nb-associes');
-  const partWrapper = partInput ? partInput.closest('div') : null;
-  const nbAssocWrapper = nbAssoc ? nbAssoc.closest('div') : null;
-  if (!partWrapper || !nbAssocWrapper) return;
+  // cibler les inputs
+  const elCA      = document.getElementById('sim-ca');
+  const elMarge   = document.getElementById('sim-marge');
+  const elSalaire = document.getElementById('sim-salaire');
+  const elNb      = document.getElementById('sim-nb-associes');
+  const elPart    = document.getElementById('sim-part-associe');
 
-  /* ➋ UX : wrapper + suffixe % + bornes 0..100 */
-  if (partInput && !partInput.closest('.part-detenu-wrap')) {
+  // récupérer LES ENFANTS DIRECTS de .grid
+  const caItem      = elCA      ? gridItem(elCA,      formGrid) : null;
+  const margeItem   = elMarge   ? gridItem(elMarge,   formGrid) : null;
+  const salaireItem = elSalaire ? gridItem(elSalaire, formGrid) : null;
+  const nbItem      = elNb      ? gridItem(elNb,      formGrid) : null;
+  const partItem    = elPart    ? gridItem(elPart,    formGrid) : null;
+  if (!caItem || !margeItem || !salaireItem || !nbItem || !partItem) return;
+
+  // purge spans/tailwind récalcitrants
+  [caItem, margeItem, salaireItem, nbItem, partItem].forEach(w=>{
+    w.classList.remove(
+      'col-span-1','col-span-2','col-span-3','col-span-full',
+      'md:col-span-1','md:col-span-2','md:col-span-3','md:col-span-4',
+      'md:col-start-1','lg:col-start-1'
+    );
+    w.style.gridColumn = 'auto';
+    w.style.gridRow = 'auto';
+  });
+
+  // mapping des zones
+  caItem.classList.add('field-ca');
+  margeItem.classList.add('field-marge');
+  salaireItem.classList.add('field-salaire');
+  nbItem.classList.add('field-associes');
+  partItem.classList.add('field-part');
+
+  // suffixe % pour Part détenue
+  if (elPart && !elPart.closest('.part-detenu-wrap')) {
     const wrap = document.createElement('div');
     wrap.className = 'part-detenu-wrap w-full';
-    wrap.style.width = '100%';
-    const parent = partInput.parentNode;
-    parent.insertBefore(wrap, partInput);
-    wrap.appendChild(partInput);
-
+    const parent = elPart.parentNode;
+    parent.insertBefore(wrap, elPart);
+    wrap.appendChild(elPart);
     const pct = document.createElement('span');
     pct.className = 'suffix-pct';
     pct.textContent = '%';
     wrap.appendChild(pct);
   }
-  partInput?.setAttribute('min','0');
-  partInput?.setAttribute('max','100');
-  partInput?.setAttribute('step','1');
+  elPart?.setAttribute('min','0');
+  elPart?.setAttribute('max','100');
+  elPart?.setAttribute('step','1');
+  elPart?.style.textAlign = 'left';
 
-  // ➌ Marquer les wrappers comme items du grid (PAS de row parent)
-  partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
-  partWrapper.classList.add('field-part');
-
-  // Créer Base 10% comme item du grid (sans row parent)
+  // créer le bloc Base10 (item de la grille)
   const inline = document.createElement('div');
   inline.id = 'base10-inline';
   inline.classList.add('field-base10');
   inline.innerHTML = `
-  <div class="base10-card bg-blue-900/40 border border-blue-700 rounded-xl p-4 md:p-5 relative">
-    <div class="flex items-center mb-3 gap-2">
-      <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-green-500/15 border border-green-500/30">
-        <i class="fas fa-calculator text-green-400 text-xs"></i>
-      </span>
-      <label class="text-green-300 font-medium">
-        Base 10% <span class="text-gray-400">(TNS dividendes)</span>
-      </label>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="money-wrap">
-        <div class="mini flex items-center gap-1">
-          <i class="fas fa-piggy-bank text-gray-400"></i><span>Capital social</span>
-        </div>
-        <input id="base-capital" type="number" min="0" step="100" placeholder="ex. 10 000"
-               class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
-        <span class="suffix-eur">€</span>
+    <div class="base10-card bg-blue-900/40 border border-blue-700 rounded-xl p-4 md:p-5 relative">
+      <div class="flex items-center mb-3 gap-2">
+        <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-green-500/15 border border-green-500/30">
+          <i class="fas fa-calculator text-green-400 text-xs"></i>
+        </span>
+        <label class="text-green-300 font-medium">
+          Base 10% <span class="text-gray-400">(TNS dividendes)</span>
+        </label>
       </div>
 
-      <div class="money-wrap">
-        <div class="mini flex items-center gap-1">
-          <i class="fas fa-university text-gray-400"></i><span>Compte courant</span>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="money-wrap">
+          <div class="mini flex items-center gap-1"><i class="fas fa-piggy-bank text-gray-400"></i><span>Capital social</span></div>
+          <input id="base-capital" type="number" min="0" step="100" placeholder="ex. 10 000"
+            class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
+          <span class="suffix-eur">€</span>
         </div>
-        <input id="base-cca" type="number" min="0" step="100" placeholder="ex. 5 000"
-               class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
-        <span class="suffix-eur">€</span>
+
+        <div class="money-wrap">
+          <div class="mini flex items-center gap-1"><i class="fas fa-university text-gray-400"></i><span>Compte courant</span></div>
+          <input id="base-cca" type="number" min="0" step="100" placeholder="ex. 5 000"
+            class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
+          <span class="suffix-eur">€</span>
+        </div>
+
+        <div class="money-wrap">
+          <div class="mini flex items-center gap-1"><i class="fas fa-gift text-gray-400"></i><span>Primes</span></div>
+          <input id="base-primes" type="number" min="0" step="100" placeholder="ex. 2 000"
+            class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
+          <span class="suffix-eur">€</span>
+        </div>
       </div>
 
-      <div class="money-wrap">
-        <div class="mini flex items-center gap-1">
-          <i class="fas fa-gift text-gray-400"></i><span>Primes</span>
-        </div>
-        <input id="base-primes" type="number" min="0" step="100" placeholder="ex. 2 000"
-               class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
-        <span class="suffix-eur">€</span>
+      <input id="base10-total" type="hidden" value="0">
+
+      <div class="mt-3 flex items-center justify-between">
+        <div class="text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Capital libéré + primes + CCA</div>
+        <div class="text-base md:text-lg font-semibold text-green-400">10% = <span id="tns-mini-seuil">—</span></div>
       </div>
+
+      <div class="base10-card-accent"></div>
     </div>
-
-    <input id="base10-total" type="hidden" value="0">
-
-    <div class="mt-3 flex items-center justify-between">
-      <div class="text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Capital libéré + primes + CCA</div>
-      <div class="text-base md:text-lg font-semibold text-green-400">10% = <span id="tns-mini-seuil">—</span></div>
-    </div>
-
-    <div class="base10-card-accent"></div>
-  </div>
   `;
 
-  // ➍ Insérer Base10 juste APRÈS “Nombre d’associés”
-  const insertAfter = nbAssocWrapper.nextElementSibling;
-  if (insertAfter) {
-    nbAssocWrapper.parentNode.insertBefore(inline, insertAfter);
-  } else {
-    nbAssocWrapper.parentNode.appendChild(inline);
-  }
+  // insérer Base10 juste APRÈS l’item "Nombre d’associés" (enfant direct)
+  nbItem.parentNode.insertBefore(inline, nbItem.nextElementSibling);
 
-  // ➎ marquer les autres champs pour la grille à areas (avec purge des anciens col-span)
-  const caWrap      = document.getElementById('sim-ca')?.closest('div');
-  const margeWrap   = document.getElementById('sim-marge')?.closest('div');
-  const salaireWrap = document.getElementById('sim-salaire')?.closest('div');
-
-  [caWrap, margeWrap, salaireWrap, nbAssocWrapper, partWrapper].forEach(w=>{
-    w?.classList.remove(
-      'col-span-1','col-span-2','col-span-3','col-span-full',
-      'md:col-span-1','md:col-span-2','md:col-span-3','md:col-span-4'
-    );
-  });
-
-  // 🏷️ appliquer les classes de zone (areas)
-  caWrap?.classList.add('field-ca');
-  margeWrap?.classList.add('field-marge');
-  salaireWrap?.classList.add('field-salaire');
-  nbAssocWrapper?.classList.add('field-associes'); // partWrapper a déjà 'field-part'
-
-  /* ===== Séparateurs de milliers en saisie (optionnel) ===== */
+  // formatage FR des montants saisis
   const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
   const formatFR = n => n.toLocaleString('fr-FR');
   ['base-capital','base-cca','base-primes'].forEach(id=>{
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input', ()=>{
-      const raw = parseFR(el.value);
-      el.dataset.raw = String(raw);
-    });
+    el.addEventListener('input', ()=> { el.dataset.raw = String(parseFR(el.value)); });
     ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
       const raw = parseFR(el.dataset.raw ?? el.value);
       el.value = raw ? formatFR(raw) : '';
     }));
   });
-  const val = id => {
-    const el = document.getElementById(id);
-    return parseFR(el?.dataset.raw ?? el?.value);
-  };
+  const val = id => { const el = document.getElementById(id); return parseFR(el?.dataset.raw ?? el?.value); };
 
-  // ===== calcul dynamique =====
+  // calcul dynamique du seuil 10%
   const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
   function updateBase10(){
     const total = val('base-capital') + val('base-primes') + val('base-cca');
@@ -458,19 +452,19 @@ function placeBase10UnderNbAssocies(){
   });
   updateBase10();
 
-  // ===== visibilité selon statuts =====
+  // visibilité selon statuts
   function toggleBase10Visibility(){
     const filter = document.getElementById('sim-status-filter')?.value || 'all';
     const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
     const gerantMinoritaire = document.getElementById('sarl-gerant-minoritaire')?.checked;
-    const pertinents = ['eurlIS','sarl','selarl','sca']; // mécanisme 10% applicable
-    const applicable = selected.some(s => pertinents.includes(s)) && !gerantMinoritaire;
-    inline.style.display = applicable ? '' : 'none';
+    const pertinents = ['eurlIS','sarl','selarl','sca'];
+    inline.style.display = (selected.some(s => pertinents.includes(s)) && !gerantMinoritaire) ? '' : 'none';
   }
   toggleBase10Visibility();
   document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
   document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
 }
+
 
 
 
