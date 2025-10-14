@@ -132,7 +132,6 @@ function addCustomStyles() {
       "base10   base10   base10";    /* R3 : Base10 pleine largeur */
     align-items:start;
   }
-
   /* mapping des zones */
   .field-ca       { grid-area: ca; }
   .field-marge    { grid-area: marge; }
