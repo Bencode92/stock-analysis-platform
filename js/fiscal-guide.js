@@ -127,7 +127,7 @@ function addCustomStyles() {
     row-gap:1.25rem;              /* écart vertical (décoller Base10) */
     grid-template-areas:
       "ca       ca       marge"      /* R1 : CA (2 col) | Marge */
-      "associes part     salaire"    /* R2 : Assoc. | Part | Salaire → 100% sous Part */
+      "part     salaire  associes"   /* R2 : Part | Salaire | Associes → 100% sous Part */
       "base10   base10   base10";    /* R3 : Base10 pleine largeur */
     align-items:start;
   }
@@ -208,8 +208,6 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 addCustomStyles();
-
-
 
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
