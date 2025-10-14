@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initFiscalSimulator();
   }
 // ---------- Styles personnalisés ----------
+// ---------- Styles personnalisés ----------
 function addCustomStyles() {
   const style = document.createElement('style');
   style.textContent = `
@@ -202,38 +203,81 @@ function addCustomStyles() {
 }
 #base10-inline .mini{ font-size:.8rem; color:#cbd5e1; margin-bottom:.25rem; }
 
-/* Décoller légèrement Base10 si un thème tassait le row-gap */
-#base10-inline{ margin-top:.25rem; }
+/* ========== ⬇️ BLOC REMPLACÉ PAR LE NOUVEAU ⬇️ ========== */
 
-/* ========== ⬇️ AJOUTS D'ALIGNEMENT & ESPACEMENT ⬇️ ========== */
-
-/* — Alignement "Nombre d'associés" / "Part détenue (%)" — */
+/* ========== Alignement "Nombre d'associés" / "Part détenue (%)" ========== */
 @media (min-width:768px){
-  /* même hauteur de label + marge uniforme */
   .field-associes label,
   .field-part label{
     display:block;
-    min-height:1.5rem;      /* assure l’alignement même avec un label long */
-    margin-bottom:.5rem;    /* un peu plus d’air */
-    line-height:1.25rem;    /* texte bien calé verticalement */
+    min-height:1.5rem;
+    margin-bottom:.5rem;
+    line-height:1.25rem;
   }
-  /* même hauteur d’input pour des champs bien à plat */
   .field-associes input,
-  .field-part input,
-  .field-part .part-detenu-wrap input{ /* au cas où l'input est wrappé */
+  .field-part input{
     height:2.75rem;
-    padding:0.75rem;        /* padding interne uniforme */
+    padding: 0.75rem;
   }
 }
 
-/* — Décoller un peu plus la carte Base 10 % du champ au-dessus — */
-#base10-inline{
-  margin-top:1.25rem !important;   /* vrai espace sans toucher la grille */
+/* ========== Base 10% — carte et grille ========== */
+#base10-inline { 
+  max-width: 100%;
+  margin-top: 1.25rem;
+}
+
+.base10-card { 
+  padding: 1.25rem 1.5rem; 
+  position: relative;
+}
+
+#base10-inline .grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  #base10-inline .grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+}
+@media (max-width: 640px) {
+  #base10-inline .grid { grid-template-columns: 1fr; }
+}
+
+#base10-inline .money-wrap { position: relative; }
+
+#base10-inline .money-wrap input {
+  padding: 0.875rem 2.5rem 0.875rem 1rem;
+  font-size: 0.95rem;
+  height: 3rem;
+}
+
+#base10-inline .mini { 
+  font-size: 0.85rem; 
+  margin-bottom: 0.5rem; 
+  font-weight: 500; 
+}
+
+#base10-inline .money-wrap .suffix-eur {
+  position: absolute; 
+  right: .65rem; 
+  top: 50%; 
+  transform: translateY(-50%);
+  pointer-events: none; 
+  font-weight: 600; 
+  color: #cbd5e1;
+}
+
+#tns-mini-seuil { 
+  font-size: 1.25rem; 
+  font-weight: 700; 
 }
 `;
   document.head.appendChild(style);
 }
 addCustomStyles();
+
 
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
@@ -756,12 +800,12 @@ function runComparison() {
   const versementLiberatoire= document.getElementById('micro-vfl')?.checked;
   const gerantMajoritaire   = !(document.getElementById('sarl-gerant-minoritaire')?.checked);
 
-  // 🔹 LIRE Capital / Primes / CCA (base 10 % TNS)
-  const capitalLibere   = Number(document.getElementById('base-capital')?.value) || 0;
-  const primesEmission  = Number(document.getElementById('base-primes')?.value)  || 0;
-  const comptesCourants = Number(document.getElementById('base-cca')?.value)     || 0;
-  const baseSeuilDivTNS = capitalLibere + primesEmission + comptesCourants;
-
+// 🔹 LIRE Capital / Primes / CCA (base 10 % TNS) - FIX: utiliser dataset.raw
+const capitalLibere   = Number(document.getElementById('base-capital')?.dataset.raw)  || 0;
+const primesEmission  = Number(document.getElementById('base-primes')?.dataset.raw)   || 0;
+const comptesCourants = Number(document.getElementById('base-cca')?.dataset.raw)      || 0;
+// Base unique utilisée partout (alimentée par updateBase10)
+const baseSeuilDivTNS = Number(document.getElementById('base10-total')?.value) || 0;
   // Définir marge ou frais de façon exclusive selon l'option
   const params = {
     ca,
