@@ -116,17 +116,17 @@ function addCustomStyles() {
   margin-right: auto;
 }
 
-/* ===== Grille 3 colonnes avec areas (selon le croquis) ===== */
+/* ===== Grille 3 colonnes avec areas (conforme au croquis) ===== */
 @media (min-width:768px){
   #fiscal-simulator .form-layout-areas-3{
     display:grid;
-    grid-template-columns: 1.25fr 1fr 1fr;      /* CA un peu plus large */
+    grid-template-columns: 1.4fr 1fr 1fr;         /* CA un peu plus large */
     grid-auto-rows:auto;
     gap:1rem;
     grid-template-areas:
-      "ca     ca       marge"      /* R1 : CA (2 col) | Marge */
-      "part   salaire  associes"   /* R2 : Part | Salaire | Nb assoc. */
-      ".      base10   base10";    /* R3 : Base10 sous la droite (2 col) */
+      "ca       marge    salaire"   /* L1 */
+      "associes part     ."         /* L2 */
+      "base10   .        .";        /* L3 : Base10 sous la colonne gauche */
     align-items:start;
   }
 
@@ -139,19 +139,14 @@ function addCustomStyles() {
   #base10-inline,
   .field-base10   { grid-area: base10; align-self:start; }
 
-  /* ⛔ Neutraliser tout ancien col-span/row-span qui perturbe les areas */
-  #fiscal-simulator .form-layout-areas-3 .field-ca,
-  #fiscal-simulator .form-layout-areas-3 .field-marge,
-  #fiscal-simulator .form-layout-areas-3 .field-salaire,
-  #fiscal-simulator .form-layout-areas-3 .field-associes,
-  #fiscal-simulator .form-layout-areas-3 .field-part,
-  #fiscal-simulator .form-layout-areas-3 .field-base10{
-    grid-column: auto !important;
-    grid-row: auto !important;
+  /* neutraliser tout vieux col-span/row-span qui perturbe les areas */
+  #fiscal-simulator .form-layout-areas-3 > *{
+    grid-column:auto !important;
+    grid-row:auto !important;
   }
 
-  /* la "fausse" ligne devient transparente : ses enfants se placent dans la grille */
-  .part-detenu-row{ display: contents !important; }
+  /* la "fausse" ligne devient transparente : enfants placés dans la grille */
+  .part-detenu-row { display: contents !important; }
 }
 
 /* Mobile : on empile proprement */
@@ -160,7 +155,7 @@ function addCustomStyles() {
   .part-detenu-row{ display:block; }
 }
 
-/* — Tooltips plus compacts (inchangé) — */
+/* — Tooltips plus compacts — */
 .tooltiptext {
   font-size: 0.75rem;
   line-height: 1rem;
@@ -195,6 +190,7 @@ function addCustomStyles() {
 addCustomStyles();
 
 
+
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
 function placeBase10UnderNbAssocies(){
   const sim = document.getElementById('fiscal-simulator');
@@ -206,6 +202,16 @@ function placeBase10UnderNbAssocies(){
   // ➊ activer le layout 3 colonnes à zones nommées
   formGrid.classList.add('form-layout-areas-3');
 
+  // ➊bis Purge globale des spans sur les enfants directs (anti-fuite Tailwind)
+  formGrid.querySelectorAll(':scope > *').forEach(el=>{
+    el.classList.remove(
+      'col-span-1','col-span-2','col-span-3','col-span-4','col-span-full',
+      'md:col-span-1','md:col-span-2','md:col-span-3','md:col-span-4'
+    );
+    el.style.gridColumn = 'auto';
+    el.style.gridRow = 'auto';
+  });
+
   // wrappers existants
   const partInput = document.getElementById('sim-part-associe');
   const nbAssoc   = document.getElementById('sim-nb-associes');
@@ -216,7 +222,7 @@ function placeBase10UnderNbAssocies(){
   /* ➋ UX : wrapper + suffixe % + bornes 0..100 */
   if (partInput && !partInput.closest('.part-detenu-wrap')) {
     const wrap = document.createElement('div');
-    wrap.className = 'part-detenu-wrap w-full';     // IMPORTANT pour le %
+    wrap.className = 'part-detenu-wrap w-full';
     wrap.style.width = '100%';
     const parent = partInput.parentNode;
     parent.insertBefore(wrap, partInput);
@@ -237,13 +243,13 @@ function placeBase10UnderNbAssocies(){
 
   // colonne gauche : Part détenue (%)
   partWrapper.classList.remove('col-span-2','col-span-full','md:col-span-2','md:col-span-3');
-  partWrapper.classList.add('field-part');          // zone nommée
+  partWrapper.classList.add('field-part');
   row.appendChild(partWrapper);
 
   // colonne droite : Base 10%
   const inline = document.createElement('div');
   inline.id = 'base10-inline';
-  inline.classList.add('field-base10');             // zone nommée
+  inline.classList.add('field-base10');
   inline.innerHTML = `
     <label class="block text-gray-300 mb-1">Base 10% (TNS dividendes)</label>
     <div class="grid grid-cols-3 gap-2">
@@ -274,72 +280,73 @@ function placeBase10UnderNbAssocies(){
   // ➍ insérer juste APRÈS “Nombre d’associés”
   nbAssocWrapper.parentNode.insertBefore(row, nbAssocWrapper.nextElementSibling);
 
- // ➎ marquer les autres champs pour la grille à areas (avec purge des anciens col-span)
-const caWrap      = document.getElementById('sim-ca')?.closest('div');
-const margeWrap   = document.getElementById('sim-marge')?.closest('div');
-const salaireWrap = document.getElementById('sim-salaire')?.closest('div');
+  // ➎ marquer les autres champs pour la grille à areas (avec purge locale de sécurité)
+  const caWrap      = document.getElementById('sim-ca')?.closest('div');
+  const margeWrap   = document.getElementById('sim-marge')?.closest('div');
+  const salaireWrap = document.getElementById('sim-salaire')?.closest('div');
 
-// ⛏️ neutraliser les anciens col-span sur TOUTES les 5 wrappers
-[caWrap, margeWrap, salaireWrap, nbAssocWrapper, partWrapper].forEach(w=>{
-  w?.classList.remove(
-    'col-span-1','col-span-2','col-span-3','col-span-full',
-    'md:col-span-1','md:col-span-2','md:col-span-3','md:col-span-4'
-  );
-});
-
-// 🏷️ appliquer les classes de zone (areas)
-caWrap?.classList.add('field-ca');
-margeWrap?.classList.add('field-marge');
-salaireWrap?.classList.add('field-salaire');
-nbAssocWrapper?.classList.add('field-associes'); // partWrapper a déjà 'field-part'
-
-/* ===== Séparateurs de milliers en saisie (optionnel) ===== */
-const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
-const formatFR = n => n.toLocaleString('fr-FR');
-['base-capital','base-cca','base-primes'].forEach(id=>{
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('input', ()=>{
-    const raw = parseFR(el.value);
-    el.dataset.raw = String(raw);
+  [caWrap, margeWrap, salaireWrap, nbAssocWrapper, partWrapper].forEach(w=>{
+    w?.classList.remove(
+      'col-span-1','col-span-2','col-span-3','col-span-4','col-span-full',
+      'md:col-span-1','md:col-span-2','md:col-span-3','md:col-span-4'
+    );
+    if (w){ w.style.gridColumn = 'auto'; w.style.gridRow = 'auto'; }
   });
-  ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
-    const raw = parseFR(el.dataset.raw ?? el.value);
-    el.value = raw ? formatFR(raw) : '';
-  }));
-});
-const val = id => {
-  const el = document.getElementById(id);
-  return parseFR(el?.dataset.raw ?? el?.value);
-};
 
-// ===== calcul dynamique =====
-const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
-function updateBase10(){
-  const total = val('base-capital') + val('base-primes') + val('base-cca');
-  document.getElementById('base10-total').value = String(total);
-  document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
-  if (typeof runComparison === 'function') runComparison();
-}
-['base-capital','base-primes','base-cca'].forEach(id=>{
-  const el=document.getElementById(id);
-  if (el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
-});
-updateBase10();
+  // 🏷️ appliquer les classes de zone (areas)
+  caWrap?.classList.add('field-ca');
+  margeWrap?.classList.add('field-marge');
+  salaireWrap?.classList.add('field-salaire');
+  nbAssocWrapper?.classList.add('field-associes'); // partWrapper a déjà 'field-part'
 
-// ===== visibilité selon statuts =====
-function toggleBase10Visibility(){
-  const filter = document.getElementById('sim-status-filter')?.value || 'all';
-  const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
-  const gerantMinoritaire = document.getElementById('sarl-gerant-minoritaire')?.checked;
-  const pertinents = ['eurlIS','sarl','selarl','sca']; // mécanisme 10% applicable
-  const applicable = selected.some(s => pertinents.includes(s)) && !gerantMinoritaire;
-  row.style.display = applicable ? '' : 'none';
-}
-toggleBase10Visibility();
-document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
-document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
+  /* ===== Séparateurs de milliers en saisie (optionnel) ===== */
+  const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
+  const formatFR = n => n.toLocaleString('fr-FR');
+  ['base-capital','base-cca','base-primes'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', ()=>{
+      const raw = parseFR(el.value);
+      el.dataset.raw = String(raw);
+    });
+    ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
+      const raw = parseFR(el.dataset.raw ?? el.value);
+      el.value = raw ? formatFR(raw) : '';
+    }));
+  });
+  const val = id => {
+    const el = document.getElementById(id);
+    return parseFR(el?.dataset.raw ?? el?.value);
+  };
+
+  // ===== calcul dynamique =====
+  const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
+  function updateBase10(){
+    const total = val('base-capital') + val('base-primes') + val('base-cca');
+    document.getElementById('base10-total').value = String(total);
+    document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
+    if (typeof runComparison === 'function') runComparison();
   }
+  ['base-capital','base-primes','base-cca'].forEach(id=>{
+    const el=document.getElementById(id);
+    if (el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
+  });
+  updateBase10();
+
+  // ===== visibilité selon statuts =====
+  function toggleBase10Visibility(){
+    const filter = document.getElementById('sim-status-filter')?.value || 'all';
+    const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
+    const gerantMinoritaire = document.getElementById('sarl-gerant-minoritaire')?.checked;
+    const pertinents = ['eurlIS','sarl','selarl','sca']; // mécanisme 10% applicable
+    const applicable = selected.some(s => pertinents.includes(s)) && !gerantMinoritaire;
+    row.style.display = applicable ? '' : 'none';
+  }
+  toggleBase10Visibility();
+  document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
+  document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
+}
+
 
 
 function setupSimulator() {
