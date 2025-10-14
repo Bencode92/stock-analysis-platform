@@ -370,7 +370,7 @@ function placeBase10UnderNbAssocies(){
   elPart?.setAttribute('min','0');
   elPart?.setAttribute('max','100');
   elPart?.setAttribute('step','1');
-  elPart?.style.textAlign = 'left';
+  if (elPart) elPart.style.textAlign = 'left';
 
   // créer le bloc Base10 (item de la grille)
   const inline = document.createElement('div');
