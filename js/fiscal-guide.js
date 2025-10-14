@@ -204,6 +204,32 @@ function addCustomStyles() {
 
 /* Décoller légèrement Base10 si un thème tassait le row-gap */
 #base10-inline{ margin-top:.25rem; }
+
+/* ========== ⬇️ AJOUTS D'ALIGNEMENT & ESPACEMENT ⬇️ ========== */
+
+/* — Alignement "Nombre d'associés" / "Part détenue (%)" — */
+@media (min-width:768px){
+  /* même hauteur de label + marge uniforme */
+  .field-associes label,
+  .field-part label{
+    display:block;
+    min-height:1.5rem;      /* assure l’alignement même avec un label long */
+    margin-bottom:.5rem;    /* un peu plus d’air */
+    line-height:1.25rem;    /* texte bien calé verticalement */
+  }
+  /* même hauteur d’input pour des champs bien à plat */
+  .field-associes input,
+  .field-part input,
+  .field-part .part-detenu-wrap input{ /* au cas où l'input est wrappé */
+    height:2.75rem;
+    padding:0.75rem;        /* padding interne uniforme */
+  }
+}
+
+/* — Décoller un peu plus la carte Base 10 % du champ au-dessus — */
+#base10-inline{
+  margin-top:1.25rem !important;   /* vrai espace sans toucher la grille */
+}
 `;
   document.head.appendChild(style);
 }
