@@ -137,7 +137,7 @@ function addCustomStyles() {
   margin-right: auto;
 }
 
-/* ===== Grille 3 colonnes avec areas (nouveau layout) ===== */
+/* ===== Grille 3 colonnes avec areas (layout corrigé) ===== */
 @media (min-width:768px){
   #fiscal-simulator .form-layout-areas-3{
     display:grid;
@@ -146,10 +146,15 @@ function addCustomStyles() {
     grid-auto-flow:dense;
     column-gap:1rem;              /* écart horizontal */
     row-gap:1.25rem;              /* écart vertical (décoller Base10) */
+
+    /* L1 : CA (2 col) | Marge
+       L2 : Part | Associés | Salaire
+       L3 : Base10 (2 col) | Salaire (suite) */
     grid-template-areas:
-      "ca       ca       marge"      /* R1 : CA (2 col) | Marge */
-      "part     salaire  associes"   /* R2 : Part | Salaire | Associes → 100% sous Part */
-      "base10   base10   base10";    /* R3 : Base10 pleine largeur */
+      "ca       ca       marge"
+      "part     associes salaire"
+      "base10   base10   salaire";
+
     align-items:start;
     justify-items: stretch !important; /* ✅ essentiel pour étirer les items sur leurs zones */
   }
@@ -327,6 +332,7 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 addCustomStyles();
+
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
 
