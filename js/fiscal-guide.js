@@ -2566,7 +2566,7 @@ ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 
       </tr>
     </table>
   </div>
-`;
+
         
         ${(statutId === 'eurl' || statutId === 'eurlIS') ? `
         <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
