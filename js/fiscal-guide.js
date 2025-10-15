@@ -2014,16 +2014,35 @@ function getTMI(revenu, nbParts = 1) {
   if (part <= 180294)  return 41;
   return 45;
 }
-function getBaseSeuilDivTNS({ capitalLibere = 0, primesEmission = 0, comptesCourants = 0 } = {}) {
-  return Number(capitalLibere) + Number(primesEmission) + Number(comptesCourants);
+// --- PATCH seuil dividendes TNS (inclut primes + CCA + quote-part) ---
+function getBaseSeuilDivTNS(sim = {}) {
+  const cap    = Number(sim.capitalLibere ?? sim.capital ?? 0);
+  const primes = Number(sim.primesEmission ?? sim.primes ?? 0);
+  const cca    = Number(sim.compteCourant ?? sim.comptesCourants ?? 0);
+
+  // part associée : accepte partAssocie (0–1) ou partAssociePct (0–100)
+  let part = (sim.partAssocie != null)
+    ? Number(sim.partAssocie)
+    : (sim.partAssociePct != null ? Number(sim.partAssociePct) / 100 : 1);
+
+  if (!Number.isFinite(part)) part = 1;
+  part = Math.min(1, Math.max(0, part));
+
+  const base = cap + primes + cca;
+  return Math.max(0, base * part);
 }
+
+function getSeuil10DivTNS(sim = {}) {
+  return 0.10 * getBaseSeuilDivTNS(sim);
+}
+
 function formatBaseSeuilDivTNSTooltip(base) {
   return `
     <span class="info-tooltip">
       <i class="fas fa-question-circle text-gray-400"></i>
       <span class="tooltiptext">
         Seuil des 10% calculé sur :
-        <br>capital libéré + primes d’émission + sommes en compte courant.
+        <br>capital libéré + primes d’émission + sommes en compte courant (× quote-part).
         <br><small>Si inconnu : application d’un taux TNS prudent (fallback).</small>
       </span>
     </span>`;
