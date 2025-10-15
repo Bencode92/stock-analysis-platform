@@ -1582,6 +1582,7 @@ net = sim.revenuNetTotal || (revenuNetSalaire + dividendesNets);
 
 // Log de debug
 console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
+        }
 
       // Calcul du score avec prise en compte de la progressivité fiscale
       const scoreNet = 100 * (net / ca); // Score standard
