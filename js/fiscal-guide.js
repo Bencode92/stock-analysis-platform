@@ -1631,6 +1631,7 @@ if (isTNSDiv && divBruts > 0 && typeof calcDivTNS === 'function') {
         + (Number(sim._divSplit?.ps172) || 0)
         + (Number(sim._divSplit?.cotTNS) || 0);
 }
+        }
 
 
       // Calcul du score avec prise en compte de la progressivité fiscale
