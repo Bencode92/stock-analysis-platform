@@ -148,19 +148,23 @@ function addCustomStyles() {
     row-gap:1.25rem;              /* écart vertical (décoller Base10) */
 
     /* L1 : CA (2 col) | Marge
-       L2 : Part | Associés | Salaire
+       L2 : Associés | Part | Salaire
        L3 : Base10 (2 col) | Salaire (suite) */
     grid-template-areas:
       "ca       ca       marge"
-      "part     associes salaire"
+      "associes part     salaire"
       "base10   base10   salaire";
 
     align-items:start;
     justify-items: stretch !important; /* ✅ essentiel pour étirer les items sur leurs zones */
   }
+
   /* Sécurité overflow/shrink des enfants */
-  #fiscal-simulator .form-layout-areas-3 > * { min-width: 0; }
-  #base10-inline { width: 100%; }      /* ceinture + bretelles */
+  #fiscal-simulator .form-layout-areas-3 > * { 
+    min-width: 0;
+    max-width: 100%;
+  }
+  #base10-inline { width: 100%; max-width: 100%; }  /* ceinture + bretelles */
 
   /* mapping des zones */
   .field-ca       { grid-area: ca; }
@@ -169,7 +173,12 @@ function addCustomStyles() {
   .field-associes { grid-area: associes; }
   .field-part     { grid-area: part; }
   #base10-inline,
-  .field-base10   { grid-area: base10; align-self:start; }
+  .field-base10   { 
+    grid-area: base10; 
+    align-self:start; 
+    grid-column: 1 / 3;  /* force bien 2 colonnes */
+    min-width: 0;        /* empêche tout débordement */
+  }
 
   /* ⛔ Neutraliser tout ancien col-span/row-span qui perturbe les areas */
   #fiscal-simulator .form-layout-areas-3 .field-ca,
@@ -332,6 +341,7 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 addCustomStyles();
+
 
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
