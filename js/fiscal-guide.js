@@ -119,7 +119,6 @@ function addCustomStyles() {
 #fiscal-simulator .grid {
   justify-content: flex-start !important;
   /* ⚠️ ne pas forcer justify-items ici pour laisser les items s'étirer dans la grille à zones */
-  /* justify-items: start !important; */
 }
 /* Variante si tu veux garder justify-items:start globalement : */
 /* #fiscal-simulator .grid:not(.form-layout-areas-3){ justify-items:start !important; } */
@@ -175,10 +174,10 @@ function addCustomStyles() {
   #fiscal-simulator .form-layout-areas-3 > .field-associes { grid-area: associes !important; }
   #fiscal-simulator .form-layout-areas-3 > .field-part     { grid-area: part !important; }
 
-  /* Base 10% : zone + 2 colonnes garanties */
+  /* Base 10% : zone + 2 colonnes garanties en MD */
   #fiscal-simulator .form-layout-areas-3 > .field-base10{
     grid-area: base10 !important;
-    grid-column: 1 / 3 !important;  /* force bien 2 colonnes */
+    grid-column: 1 / 3 !important;  /* 2 colonnes en >=768px */
     align-self:start;
     min-width:0;
     max-width:100%;
@@ -187,6 +186,18 @@ function addCustomStyles() {
   /* Ancien wrapper éventuel à neutraliser */
   #fiscal-simulator .form-layout-areas-3 .part-detenu-row{
     display:contents !important;
+  }
+}
+
+/* LG (>=1024px) : étirer la carte Base 10% sur toute la rangée (3 colonnes) */
+@media (min-width:1024px){
+  #fiscal-simulator .form-layout-areas-3 > .field-base10{
+    grid-column: 1 / -1 !important; /* plein largeur */
+  }
+  /* un peu plus d’air pour les 3 champs internes */
+  #base10-inline .grid{
+    grid-template-columns: repeat(3, minmax(240px,1fr));
+    gap: 1.25rem;
   }
 }
 
@@ -228,15 +239,6 @@ function addCustomStyles() {
   pointer-events:none;
 }
 
-/* Champs un peu plus “respirants” */
-#base10-inline .money-wrap { position: relative; }
-#base10-inline .money-wrap input{ padding-right:2.25rem; }
-#base10-inline .money-wrap .suffix-eur{
-  position:absolute; right:.65rem; top:50%; transform:translateY(-50%);
-  pointer-events:none; font-weight:600; color:#cbd5e1;
-}
-#base10-inline .mini{ font-size:.8rem; color:#cbd5e1; margin-bottom:.25rem; }
-
 /* ========== Base 10% — carte et grille ========== */
 #base10-inline { 
   max-width: 100%;
@@ -246,6 +248,8 @@ function addCustomStyles() {
   padding: 1.25rem 1.5rem; 
   position: relative;
 }
+
+/* Grille interne par défaut */
 #base10-inline .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(220px, 1fr));
@@ -257,25 +261,51 @@ function addCustomStyles() {
 @media (max-width: 640px) {
   #base10-inline .grid { grid-template-columns: 1fr; }
 }
-#base10-inline .money-wrap { position: relative; }
-#base10-inline .money-wrap input {
-  padding: 0.875rem 2.5rem 0.875rem 1rem;
-  font-size: 0.95rem;
-  height: 3rem;
+
+/* --- Alignements visuels de la carte (patch) --- */
+
+/* header de la carte : icône + libellé alignés sur la baseline */
+#base10-inline .base10-card > .flex{
+  align-items: baseline;
+  gap: .5rem;
 }
+#base10-inline .base10-card label{
+  line-height: 1.15;
+  margin: 0;
+}
+
+/* hauteur homogène des inputs + suffixe € parfaitement centré */
+#base10-inline .money-wrap{ position:relative; }
+#base10-inline .money-wrap input{
+  box-sizing: border-box;
+  height: 3.25rem;              /* + homogène */
+  padding: .875rem 2.5rem .875rem 1rem;
+  font-size: .95rem;
+}
+#base10-inline .money-wrap .suffix-eur{
+  position:absolute; right:.65rem; top:50%; transform:translateY(-50%);
+  pointer-events:none; font-weight:600; color:#cbd5e1;
+}
+
+/* micro-libellés alignés et cohérents */
+#base10-inline .mini{
+  display:flex; align-items:center; gap:.4rem;
+  font-size:.85rem; line-height:1.1; margin-bottom:.5rem; color:#cbd5e1;
+}
+
+/* bas de carte : texte info et résultat bien calés */
+#base10-inline .mt-3{
+  align-items: center;
+}
+
+/* Si jamais un col-span résiduel traîne dans la carte, on le neutralise */
+#base10-inline *[class*="col-span"]{ grid-column: auto !important; }
+
+/* (styles génériques déjà présents) */
 #base10-inline .mini { 
   font-size: 0.85rem; 
   margin-bottom: 0.5rem; 
   font-weight: 500; 
-}
-#base10-inline .money-wrap .suffix-eur {
-  position: absolute; 
-  right: .65rem; 
-  top: 50%; 
-  transform: translateY(-50%);
-  pointer-events: none; 
-  font-weight: 600; 
-  color: #cbd5e1;
 }
 #tns-mini-seuil { 
   font-size: 1.25rem; 
