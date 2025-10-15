@@ -580,20 +580,74 @@ function placeBase10UnderNbAssocies(){
 
   // insérer Base10 juste APRÈS l’item "Nombre d’associés"
   nbItem.parentNode.insertBefore(inline, nbItem.nextElementSibling);
+// ====== Formatage FR des montants saisis (robuste) ======
 
-  // formatage FR des montants saisis
-  const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
-  const formatFR = n => n.toLocaleString('fr-FR');
-  ['base-capital','base-cca','base-primes'].forEach(id=>{
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('input', ()=> { el.dataset.raw = String(parseFR(el.value)); });
-    ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
-      const raw = parseFR(el.dataset.raw ?? el.value);
-      el.value = raw ? formatFR(raw) : '';
-    }));
+// Parser FR : gère espaces fines, € , points/virgules, et distingue milliers vs décimales
+const parseFR = (val) => {
+  let s = String(val ?? '').trim();
+
+  // retirer € et espaces (y compris NBSP \u00A0 et espace fine \u202F)
+  s = s.replace(/[€\s\u00A0\u202F]/g, '');
+
+  const hasComma = s.includes(',');
+  const hasDot   = s.includes('.');
+
+  if (hasComma && hasDot) {
+    // style "1.234,56" → points = milliers, virgule = décimales
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    // style "1234,56" → virgule = décimales
+    s = s.replace(',', '.');
+  } else if (hasDot) {
+    // si pattern milliers "1.234.567" → retire les points, sinon garder comme décimal
+    if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  }
+
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// (optionnel) si tu veux forcer des entiers uniquement, dé-commente et remplace parseFR par parseFRint ci-dessous
+// const parseFR = (val) => { const s = String(val ?? '').replace(/[^\d]/g, ''); return s ? Number(s) : 0; };
+
+const formatFR = (n) => Number(n || 0).toLocaleString('fr-FR');
+
+// Initialisation des 3 inputs (type=text pour accepter "10 000", "1.000", etc.)
+['base-capital','base-cca','base-primes'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  // assurer un comportement "numérique" friendly
+  el.setAttribute('type', 'text');
+  el.setAttribute('inputmode', 'numeric');
+  el.setAttribute('autocomplete', 'off');
+  el.setAttribute('pattern', '[0-9\\s,.\u00A0\u202F€]*'); // tolère chiffres, espaces, ., , et €
+  el.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+
+  // — live parsing : stocke la valeur brute normalisée dans data-raw
+  el.addEventListener('input', () => {
+    el.dataset.raw = String(parseFR(el.value));
   });
-  const val = id => { const el = document.getElementById(id); return parseFR(el?.dataset.raw ?? el?.value); };
+
+  // — au blur/change : ré-affiche joliment en FR
+  ['change','blur'].forEach(ev => el.addEventListener(ev, () => {
+    const raw = parseFR(el.dataset.raw ?? el.value);
+    el.value = raw ? formatFR(raw) : '';
+  }));
+
+  // — si valeur initiale (placeholder ignoré), la normaliser
+  if (el.value) {
+    const raw = parseFR(el.value);
+    el.dataset.raw = String(raw);
+    el.value = raw ? formatFR(raw) : '';
+  }
+});
+
+// Helper pour lire la valeur numérique d'un champ
+const val = (id) => {
+  const el = document.getElementById(id);
+  return parseFR(el?.dataset.raw ?? el?.value);
+};
 
   // calcul dynamique du seuil 10%
   const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
