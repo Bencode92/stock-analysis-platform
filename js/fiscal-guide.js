@@ -2422,7 +2422,7 @@ ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 
             </div>
         </div>
     `;
-} } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
+ } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
   // Cas des structures à l'IS avec un gérant TNS
   const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
 
