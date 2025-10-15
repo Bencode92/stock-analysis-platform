@@ -123,11 +123,16 @@ function addCustomStyles() {
 /* Variante si tu veux garder justify-items:start globalement : */
 /* #fiscal-simulator .grid:not(.form-layout-areas-3){ justify-items:start !important; } */
 
-/* Options sans centrage automatique */
-#sim-options-container {
+/* --- PATCH CSS : "Options de simulation" en pleine largeur --- */
+/* renforce la spécificité + neutralise tout col-span résiduel */
+#fiscal-simulator .form-layout-areas-3 > #sim-options-container{
+  grid-column: 1 / -1 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
-  grid-column: 1 / -1;
+  width: 100%;
+}
+#sim-options-container[class*="col-span"]{
+  grid-column: 1 / -1 !important;
 }
 
 /* Conteneur global */
@@ -367,6 +372,7 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 addCustomStyles();
+
 
 /* ---------- util ---------- */
 /* util: remonter jusqu’à l’enfant direct de la grille */
