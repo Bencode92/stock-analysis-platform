@@ -57,7 +57,46 @@ if (typeof window !== "undefined") {
   window.renderVFLNote = renderVFLNote;
   window.isEligibleVFL = isEligibleVFL;
 }
+// --- Dividendes TNS : split PS 17,2% / Cotisations TNS (>10%) ---
+const TAUX_PS = 0.172;
+const TAUX_IR_PFU = 0.128;     // si PFU
+const TAUX_ABATT_DIV = 0.40;   // abattement 40% si barème
+const TAUX_TNS_DIV_FALLBACK = 0.40; // fallback ~40%
 
+function calcDivTNS({divBruts=0, baseSeuil10=0, methode='PFU', tmi=11, tauxTNS=TAUX_TNS_DIV_FALLBACK}){
+  const seuilMontant = 0.10 * (baseSeuil10 || 0);
+  const partPS  = Math.min(divBruts, seuilMontant);
+  const partTNS = Math.max(0, divBruts - seuilMontant);
+
+  // IR sur dividendes
+  let irDiv;
+  if (methode === 'PROGRESSIF') {
+    const baseIR = (partPS + partTNS) * (1 - TAUX_ABATT_DIV); // abattement 40%
+    irDiv = baseIR * (tmi/100);
+  } else {
+    irDiv = divBruts * TAUX_IR_PFU;
+  }
+
+  const ps172  = partPS * TAUX_PS;   // seulement sur part <=10%
+  const cotTNS = partTNS * tauxTNS;  // seulement sur part >10%
+
+  const totalPrels = irDiv + ps172 + cotTNS;
+  const nets = divBruts - totalPrels;
+
+  return { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets };
+}
+// --- Abattement 10% T&S 2025 (plancher / plafond) ---
+const CSG_NOND_TAUX = 0.029;
+const ABATT_TS_TAUX = 0.10;
+const ABATT_TS_MIN  = 472;
+const ABATT_TS_MAX  = 14171;
+
+function baseImposableTNS({remBrute=0, netSocial=0}) {
+  const csgND = remBrute * CSG_NOND_TAUX;
+  const abat  = Math.min(ABATT_TS_MAX, Math.max(ABATT_TS_MIN, remBrute * ABATT_TS_TAUX));
+  const base  = Math.max(0, (netSocial + csgND) - abat);
+  return { base, csgND, abat };
+}
 
 document.addEventListener('DOMContentLoaded', function () {
   // --- Initialisation requise par les écouteurs (onglet + présence du simulateur) ---
@@ -372,15 +411,6 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 addCustomStyles();
-
-
-/* ---------- util ---------- */
-/* util: remonter jusqu’à l’enfant direct de la grille */
-function gridItem(el, grid) {
-  let cur = el;
-  while (cur && cur.parentElement !== grid) cur = cur.parentElement;
-  return cur;
-}
 
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
@@ -1028,7 +1058,7 @@ else if (nbAssocies === 1) {
         
         // Structures TNS: charges sociales sur dividendes >10% du capital (équilibre)
         'eurlIS': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
-        'sarl': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
+        'sarl': { ratioMin: 0.6, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.6, capitalSocial: 1 },
         'selarl': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
         'sca': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 37000 },
         
@@ -1500,23 +1530,58 @@ for (const statutId of selectedStatuses) {
         impots = sim.impotRevenu;
         net = sim.revenuNetApresImpot;
 
-      } else {
-        // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, etc.)
-        brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
-        charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
-        impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
-        if (sim.cotTNSDiv) impots += sim.cotTNSDiv; // Ajout des cotisations TNS sur dividendes
+       } else {
+ // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, SELARL, SELAS, SA, SCA)
+brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
+charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
 
-        // Astuce UX : tuer les “dividendes 1 €” (seuil 5 €)
-        const dividendesNets = (sim.dividendesNets && Math.abs(sim.dividendesNets) >= 5) ? sim.dividendesNets : 0;
+// ⚠️ Dividendes TNS : uniquement pour SARL/EURL-IS/SELARL/SCA avec gérant majoritaire
+const isTNSDiv = ['sarl', 'eurlIS', 'selarl', 'sca'].includes(statutId) && gerantMajoritaire;
+const divBruts = Number(sim.dividendes) || 0;
+const base10   = Number(document.getElementById('base10-total')?.value) || getBaseSeuilDivTNS(sim) || 0;
+const tmiEff   = tmi; // suffisant pour un aperçu rapide
 
-        // Recalculer explicitement le net en tenant compte des charges mises à jour
-        const revenuNetSalaire = sim.salaireNetApresIR || sim.revenuNetSalaire || 0;
-        net = sim.revenuNetTotal || (revenuNetSalaire + dividendesNets);
+let split = null; // ← unique
+if (isTNSDiv && divBruts > 0 && typeof calcDivTNS === 'function') {
+  // Taux TNS effectif borné (35–55%) si on a une idée des charges, sinon 40%
+  const tauxTNS = (sim.remuneration > 0 && sim.cotisationsSociales > 0)
+    ? Math.max(0.35, Math.min(0.55, sim.cotisationsSociales / sim.remuneration))
+    : 0.40;
 
-        // Log de debug pour vérifier les valeurs
-        console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
-      }
+  const methode = (sim.methodeDividendes === 'PROGRESSIF') ? 'PROGRESSIF' : 'PFU';
+
+  // Split PS 17,2% (≤10%) / Cotisations TNS (>10%)
+  split = calcDivTNS({
+    divBruts,
+    baseSeuil10: base10,
+    methode,
+    tmi: tmiEff,
+    tauxTNS
+  });
+
+  // ✅ PERSISTE LE SPLIT POUR L’AFFICHEUR DE DÉTAILS
+  sim._divSplit              = split; // { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets }
+  sim.prelevementForfaitaire = split.irDiv + split.ps172; // IR dividendes + PS (≤10%)
+  sim.cotTNSDiv              = split.cotTNS;              // cotisations TNS (>10%)
+  sim.dividendesNets         = split.nets;
+
+  // Impôts totaux sans double PS
+  impots = (sim.impotRevenu || 0) + (sim.is || 0) + split.irDiv + split.ps172 + split.cotTNS;
+} else {
+  // Pas de TNS sur dividendes (ou pas de dividendes) : logique standard
+  impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
+  if (sim.cotTNSDiv) impots += sim.cotTNSDiv;
+}
+
+// Astuce UX : tuer les “dividendes 1 €” (seuil 5 €)
+const dividendesNets = (sim.dividendesNets && Math.abs(sim.dividendesNets) >= 5) ? sim.dividendesNets : 0;
+
+// Recalculer explicitement le net en tenant compte des charges mises à jour
+const revenuNetSalaire = sim.salaireNetApresIR || sim.revenuNetSalaire || 0;
+net = sim.revenuNetTotal || (revenuNetSalaire + dividendesNets);
+
+// Log de debug
+console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
 
       // Calcul du score avec prise en compte de la progressivité fiscale
       const scoreNet = 100 * (net / ca); // Score standard
@@ -2357,119 +2422,151 @@ ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 
             </div>
         </div>
     `;
-} else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
-    // Cas des structures à l'IS avec un gérant TNS
-    const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
-    const remunerationNetteSociale = result.sim.remunerationNetteSociale || 0;
-    
-    // NOUVEAU : Récupérer les valeurs CSG depuis la simulation
-    const csgNonDeductible = result.sim.csgNonDeductible || Math.round(result.sim.remuneration * 0.029);
-    const baseImposableIR = result.sim.baseImposableIR || (remunerationNetteSociale + csgNonDeductible);
-    
-    // MODIFIÉ : Calculer le TMI sur la base imposable correcte
-    const tmiEffectif = getTMI(baseImposableIR);
-    
-   // Calcul des taux (robuste et plus réaliste)
-const baseRem = Number(result.sim?.remuneration) || 0;
-const cotSoc  = Number(result.sim?.cotisationsSociales) || 0;
+} } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
+  // Cas des structures à l'IS avec un gérant TNS
+  const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
 
-// TNS effectif observé sur la rémunération (fallback 30 si info manquante)
-const tauxCotisationsTNS = baseRem > 0 ? Math.round((cotSoc / baseRem) * 100) : 30;
+  // Base imposable via baseImposableTNS (intègre CSG non déductible + abattement 10% min/max)
+  const remunerationNetteSociale = Number(result.sim.remunerationNetteSociale) || 0;
+  const remBrute = Number(result.sim.remuneration) || 0;
+  const netSoc   = Number(result.sim.remunerationNetteSociale) || 0;
+  const b = baseImposableTNS({ remBrute, netSocial: netSoc });
 
-// IS (15% sous conditions PME) sinon 25%
-const tauxIS = (Number(result.sim?.resultatApresRemuneration) || 0) <= 42500 ? 15 : 25;
+  const baseImposableIR   = b.base;
+  const csgNonDeductible  = b.csgND;
+  const abattement10      = b.abat;
 
-// Dividendes TNS (>10% capital) : réutilise le taux TNS effectif, fallback prudent 35
-const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS > 0
-  ? tauxCotisationsTNS
-  : 35;
-    
-    detailContent = `
-        <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
+  // TMI calculé sur la base imposable corrigée
+  const tmiEffectif = getTMI(baseImposableIR);
+
+  // Calcul des taux (robuste et plus réaliste)
+  const baseRem = Number(result.sim?.remuneration) || 0;
+  const cotSoc  = Number(result.sim?.cotisationsSociales) || 0;
+
+  // TNS effectif observé sur la rémunération (fallback 30 si info manquante)
+  const tauxCotisationsTNS = baseRem > 0 ? Math.round((cotSoc / baseRem) * 100) : 30;
+
+  // IS (15% sous conditions PME) sinon 25%
+  const tauxIS = (Number(result.sim?.resultatApresRemuneration) || 0) <= 42500 ? 15 : 25;
+
+  // Dividendes TNS (>10% capital) : réutilise le taux TNS effectif, fallback prudent 35
+  const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS > 0
+    ? tauxCotisationsTNS
+    : 35;
+
+  // 🔹 Split persistant calculé dans runComparison()
+  const split = result.sim._divSplit || null;   // { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets }
+  const pfu   = result.sim.methodeDividendes !== 'PROGRESSIF';
+
+  detailContent = `
+  <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
+
+  <div class="detail-category">Données de base</div>
+  <table class="detail-table">
+    <tr>
+      <td>Chiffre d'affaires</td>
+      <td>${formatter.format(result.sim.ca)}</td>
+    </tr>
+    <tr>
+      <td>Résultat de l'entreprise (marge ${formatPercent(((result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise) / result.sim.ca) * 100)})</td>
+      <td>${formatter.format(result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise)}</td>
+    </tr>
+    <tr>
+      <td>Ratio rémunération/dividendes ${optimisationActive ? '(optimisé)' : '(manuel)'}</td>
+      <td>
+        ${formatPercent(result.ratioEffectif * 100)} / ${formatPercent(100 - result.ratioEffectif * 100)}
+        ${!optimisationActive && result.ratioOptimise
+          ? `<small class="ml-2 text-gray-400">(optimum : ${formatPercent(result.ratioOptimise * 100)})</small>`
+          : ''}
+      </td>
+    </tr>
+    ${statutId === 'sarl' ? `
+    <tr>
+      <td>Statut du gérant</td>
+      <td>${result.sim.gerantMajoritaire ? 'Majoritaire (TNS)' : 'Minoritaire (assimilé salarié)'}</td>
+    </tr>` : ''}
+  </table>
+
+  ${STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
+  <div class="detail-category">Répartition entre associés</div>
+  <table class="detail-table">
+    <tr>
+      <td colspan="2" class="text-center text-sm text-green-400">
+        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
+        (société à ${result.sim.nbAssocies} associés)
+      </td>
+    </tr>
+    <tr>
+      <td>Nombre total d'associés</td>
+      <td>${result.sim.nbAssocies}</td>
+    </tr>
+    <tr>
+      <td>Part de l'associé simulé</td>
+      <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
+    </tr>
+    ${result.sim.dividendes > 0 ? `
+    <tr>
+      <td>Dividendes totaux de la société</td>
+      <td>${formatter.format(Math.round(result.sim.dividendes / (result.sim.partAssocie || 1)))}</td>
+    </tr>
+    <tr>
+      <td>Quote-part de dividendes (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))})</td>
+      <td>${formatter.format(result.sim.dividendes)}</td>
+    </tr>` : ''}
+    ${statutId === 'sarl' && result.sim.gerantMajoritaire ? `
+    <tr>
+      <td colspan="2" class="text-xs text-gray-400 italic">
+        <i class="fas fa-info-circle mr-1"></i>
+        En tant que gérant majoritaire, les cotisations TNS sur dividendes s'appliquent sur votre quote-part.
+      </td>
+    </tr>` : ''}
+  </table>
+
+  <div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
+    ${(() => {
+      const pct = (result.sim.partAssociePct != null) ? result.sim.partAssociePct : (result.sim.partAssocie * 100);
+      const partDec = pct / 100;
+      const inv = partDec > 0 ? (1 / partDec) : 0;
+      return `<p><i class="fas fa-calculator text-blue-400 mr-2"></i>
+        <strong>Note :</strong> Les montants affichés correspondent uniquement à la quote-part
+        de cet associé. Pour obtenir les résultats totaux de la société, divisez par ${partDec.toLocaleString('fr-FR',{maximumFractionDigits:2})}
+        (ou multipliez par ${inv.toLocaleString('fr-FR',{maximumFractionDigits:2})}).</p>`;
+    })()}
+  </div>
+  ` : ''}
+
+  <!-- Base imposable IR (gérant TNS) — version complète avec abattement -->
+  <div class="detail-category">Base imposable et impôt sur le revenu</div>
+  <div class="bg-blue-900 bg-opacity-30 rounded-lg p-4 mb-4">
+    <table class="w-full">
+      <tr>
+        <td class="text-gray-300 pb-2">Salaire net</td>
+        <td class="text-right text-lg font-semibold">
+          ${formatter.format(remunerationNetteSociale)}
+        </td>
+      </tr>
+      <tr>
+        <td class="text-gray-300 pb-2">+ CSG/CRDS non déductible (2,9% du brut)</td>
+        <td class="text-right text-lg font-semibold text-yellow-400">
+          + ${formatter.format(csgNonDeductible)}
+        </td>
+      </tr>
+      <tr>
+        <td class="text-gray-300 pb-2">- Abattement 10% (min/max appliqués)</td>
+        <td class="text-right text-lg font-semibold">
+          - ${formatter.format(abattement10)}
+        </td>
+      </tr>
+      <tr class="border-t border-gray-600 pt-2">
+        <td class="text-white font-semibold pt-2"><strong>= Base imposable IR</strong></td>
+        <td class="text-right text-xl font-bold text-white pt-2">
+          <strong>${formatter.format(baseImposableIR)}</strong>
+        </td>
+      </tr>
+    </table>
+  </div>
+`;
         
-        <div class="detail-category">Données de base</div>
-        <table class="detail-table">
-            <tr>
-                <td>Chiffre d'affaires</td>
-                <td>${formatter.format(result.sim.ca)}</td>
-            </tr>
-            <tr>
-                <td>Résultat de l'entreprise (marge ${formatPercent((result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise)/result.sim.ca*100)})</td>
-                <td>${formatter.format(result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise)}</td>
-            </tr>
-            <tr>
-                <td>Ratio rémunération/dividendes ${optimisationActive ? '(optimisé)' : '(manuel)'}</td>
-                <td>
-                    ${formatPercent(result.ratioEffectif * 100)} / ${formatPercent(100 - result.ratioEffectif * 100)}
-                    ${!optimisationActive && result.ratioOptimise ? 
-                        `<small class="ml-2 text-gray-400">(optimum : ${formatPercent(result.ratioOptimise * 100)})</small>` 
-                        : ''}
-                </td>
-            </tr>
-            ${statutId === 'sarl' ? `
-            <tr>
-                <td>Statut du gérant</td>
-                <td>${result.sim.gerantMajoritaire ? 'Majoritaire (TNS)' : 'Minoritaire (assimilé salarié)'}</td>
-            </tr>` : ''}
-        </table>
-        
-        ${/* NOUVEAU: Section associés pour SARL/SELARL/SCA */ ''}
-        ${STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
-        <div class="detail-category">Répartition entre associés</div>
-        <table class="detail-table">
-            <tr>
-                <td colspan="2" class="text-center text-sm text-green-400">
-                    Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
-                    (société à ${result.sim.nbAssocies} associés)
-                </td>
-            </tr>
-            <tr>
-                <td>Nombre total d'associés</td>
-                <td>${result.sim.nbAssocies}</td>
-            </tr>
-            <tr>
-                <td>Part de l'associé simulé</td>
-                <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
-            </tr>
-            ${result.sim.dividendes > 0 ? `
-            <tr>
-                <td>Dividendes totaux de la société</td>
-                <td>${formatter.format(
-                    Math.round(result.sim.dividendes / (result.sim.partAssocie || 1))
-                )}</td>
-            </tr>
-            <tr>
-             <td>Quote-part de dividendes (${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))})</td>
-                <td>${formatter.format(result.sim.dividendes)}</td>
-            </tr>
-            ` : ''}
-            ${statutId === 'sarl' && result.sim.gerantMajoritaire ? `
-            <tr>
-                <td colspan="2" class="text-xs text-gray-400 italic">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    En tant que gérant majoritaire, les cotisations TNS sur dividendes 
-                    s'appliquent sur votre quote-part.
-                </td>
-            </tr>
-            ` : ''}
-       </table>
-
-<div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
-  ${(() => {
-    const pct = (result.sim.partAssociePct != null)
-      ? result.sim.partAssociePct
-      : (result.sim.partAssocie * 100);
-    const partDec = pct / 100;
-    const inv = partDec > 0 ? (1 / partDec) : 0;
-    return `<p><i class="fas fa-calculator text-blue-400 mr-2"></i>
-      <strong>Note :</strong> Les montants affichés correspondent uniquement à la quote-part 
-      de cet associé. Pour obtenir les résultats totaux de la société, divisez par ${partDec.toLocaleString('fr-FR',{maximumFractionDigits:2})}
-      (ou multipliez par ${inv.toLocaleString('fr-FR',{maximumFractionDigits:2})}).</p>`;
-  })()}
-</div>
-` : ''}
-        
-        ${/* NOUVEAU: Note pour EURL unipersonnelle */ ''}
         ${(statutId === 'eurl' || statutId === 'eurlIS') ? `
         <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
             <p><i class="fas fa-user mr-1"></i> 
@@ -2492,26 +2589,7 @@ const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS 
                 <td>${formatter.format(result.sim.remunerationNetteSociale)}</td>
             </tr>
         </table>
-        
-                ${/* NOUVEAU : Section Base imposable et impôt sur le revenu */ ''}
-        <div class="detail-category">Base imposable et impôt sur le revenu</div>
-        <div class="bg-blue-900 bg-opacity-30 rounded-lg p-4 mb-4">
-            <table class="w-full">
-                <tr>
-                    <td class="text-gray-300 pb-2">Salaire net</td>
-                    <td class="text-right text-lg font-semibold">${formatter.format(remunerationNetteSociale)}</td>
-                </tr>
-                <tr>
-                    <td class="text-gray-300 pb-2">+ CSG/CRDS non déductible (2,9% du brut)</td>
-                    <td class="text-right text-lg font-semibold text-yellow-400">+ ${formatter.format(csgNonDeductible)}</td>
-                </tr>
-                <tr class="border-t border-gray-600 pt-2">
-                    <td class="text-white font-semibold pt-2">= Base imposable IR</td>
-                    <td class="text-right text-xl font-bold text-white pt-2">${formatter.format(baseImposableIR)}</td>
-                </tr>
-            </table>
-        </div>
-        
+
         <table class="detail-table">
             <tr>
                 <td>Impôt sur le revenu (${result.sim.modeExpert ? 'progressif, TMI: '+tmiEffectif+'%' : 'TMI: '+tmiEffectif+'%'})</td>
@@ -2583,47 +2661,44 @@ ${hasDividendes ? `
       </td>
     </tr>
 
-    ${result.sim.methodeDividendes === 'PROGRESSIF' ? `
-      <tr>
-        <td>Abattement de 40%</td>
-        <td>${formatter.format(result.sim.dividendes * 0.40)}</td>
-      </tr>
-      <tr>
-        <td>Base imposable après abattement</td>
-        <td>${formatter.format(result.sim.dividendes * 0.60)}</td>
-      </tr>
-      <tr>
-        <td>Impôt sur le revenu (TMI ${tmiEffectif}%)</td>
-        <td>${formatter.format(result.sim.dividendes * 0.60 * tmiEffectif / 100)}</td>
-      </tr>
-      <tr>
-        <td>Prélèvements sociaux (17,2%)</td>
-        <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
-      </tr>
+    ${pfu ? `
+      <tr><td>IR 12,8%</td>
+          <td>${formatter.format(split ? split.irDiv : (result.sim.dividendes || 0) * 0.128)}</td></tr>
+      <tr><td>Prélèvements sociaux 17,2% (≤10%)</td>
+          <td>${formatter.format(split ? split.ps172 : (result.sim.dividendes || 0) * 0.172)}</td></tr>
+      ${split && split.cotTNS ? `<tr><td>Cotisations TNS (>10%)</td><td>${formatter.format(split.cotTNS)}</td></tr>` : ''}
     ` : `
-      <tr>
-        <td>IR sur dividendes (12,8%)</td>
-        <td>${formatter.format(result.sim.dividendes * 0.128)}</td>
-      </tr>
-      <tr>
-        <td>Prélèvements sociaux (17,2%)</td>
-        <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
-      </tr>
+      <tr><td>Abattement de 40%</td>
+          <td>${formatter.format((result.sim.dividendes || 0) * 0.40)}</td></tr>
+      <tr><td>Base imposable après abattement</td>
+          <td>${formatter.format((result.sim.dividendes || 0) * 0.60)}</td></tr>
+      <tr><td>IR (TMI)</td>
+          <td>${formatter.format(split ? split.irDiv : (result.sim.dividendes || 0) * 0.60 * (tmiEffectif / 100))}</td></tr>
+      <tr><td>Prélèvements sociaux 17,2% (≤10%)</td>
+          <td>${formatter.format(split ? split.ps172 : (result.sim.dividendes || 0) * 0.172)}</td></tr>
+      ${split && split.cotTNS ? `<tr><td>Cotisations TNS (>10%)</td><td>${formatter.format(split.cotTNS)}</td></tr>` : ''}
     `}
+
     <tr>
       <td>Total prélèvements sur dividendes</td>
-      <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
+      <td>${formatter.format(
+        split
+          ? (split.totalPrels ?? (split.irDiv + split.ps172 + (split.cotTNS || 0)))
+          : ((result.sim.prelevementForfaitaire || 0) + (result.sim.cotTNSDiv || 0))
+      )}</td>
     </tr>
+
+    <tr>
+      <td>Dividendes nets</td>
+      <td>${formatter.format(result.sim.dividendesNets || (split ? split.nets : 0))}</td>
+    </tr>
+
     ${result.sim.economieMethode > 0 ? `
       <tr>
         <td>Économie réalisée</td>
         <td class="text-green-400">+ ${formatter.format(result.sim.economieMethode)}</td>
       </tr>
     ` : ''}
-    <tr>
-      <td>Dividendes nets</td>
-      <td>${formatter.format(result.sim.dividendesNets)}</td>
-    </tr>
   </table>
 
   <div class="text-xs text-gray-400 mt-1">
@@ -2663,7 +2738,7 @@ ${hasDividendes ? `
             ${hasDividendes ? `
             <tr>
                 <td>+ Dividendes nets</td>
-                <td>${formatter.format(result.sim.dividendesNets)}</td>
+                <td>${formatter.format(result.sim.dividendesNets || (split ? split.nets : 0))}</td>
             </tr>` : ''}
             <tr>
                 <td><strong>= Revenu net total</strong></td>
@@ -2675,6 +2750,8 @@ ${hasDividendes ? `
             </tr>
         </table>
     `;
+}
+
 } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
     // Cas des entreprises à l'IR
     const tauxCotisationsTNS = 30;
@@ -3143,87 +3220,63 @@ ${hasDividendes ? `
   tmiEffectifFinal = getTMI(base);
 }
     
- // CORRECTION : Ajouter une section récapitulative des taux utilisés ADAPTÉE au régime fiscal
+// --- Récapitulatif des taux utilisés ---
 detailContent += `
   <div class="detail-category mt-6">Récapitulatif des taux utilisés</div>
   <div class="mt-2 p-4 bg-green-900 bg-opacity-20 rounded-lg text-sm">
-    <ul class="space-y-1">`;
+    <ul class="space-y-1">
+      <li><i class="fas fa-percentage text-green-400 mr-2"></i>
+        <strong>Charges sociales :</strong> ${
+          statutId === 'micro'
+            ? '12,3% à 24,6% selon activité'
+            : (['sasu','sas','sa','selas'].includes(statutId)
+                ? '≈77% (22% salariales + 55% patronales)'
+                : (statutId === 'sci'
+                    ? '17,2% (prélèvements sociaux sur revenus fonciers)'
+                    : '≈30% (TNS)'))
+        }
+      </li>
 
-// Charges sociales (toujours affichées)
-detailContent += `
-  <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Charges sociales :</strong> ${
-    statutId === 'micro' ? '12.3% à 24.6% selon activité' :
-    (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') ? '≈77% (22% salariales + 55% patronales)' :
-    statutId === 'sci' ? '17.2% (prélèvements sociaux sur revenus fonciers)' :
-    '≈30% (TNS)'
-  }</li>`;
+      ${(['eurlIS','sasu','sarl','sas','sa','selarl','selas','sca'].includes(statutId)) ? `
+        <li><i class="fas fa-percentage text-green-400 mr-2"></i>
+          <strong>IS :</strong> ${renderISReduceBadge()} jusqu’à <strong>42 500 €</strong>, puis 25%
+        </li>
+        <li><i class="fas fa-percentage text-green-400 mr-2"></i>
+          <strong>PFU sur dividendes :</strong> 30% (17,2% PS + 12,8% IR)
+        </li>
+      ` : ''}
 
-// Statuts à l'IS uniquement
- if (statutId === 'eurlIS' || statutId === 'sasu' || statutId === 'sarl' || statutId === 'sas' || 
-    statutId === 'sa' || statutId === 'selarl' || statutId === 'selas' || statutId === 'sca') {
-  detailContent += `
-    <li>
-      <i class="fas fa-percentage text-green-400 mr-2"></i>
-      <strong>IS :</strong>
-      ${renderISReduceBadge()} jusqu’à <strong>42 500 €</strong> (taux réduit 15% sous conditions PME), puis 25%
-    </li>
-    <li>
-      <i class="fas fa-percentage text-green-400 mr-2"></i>
-      <strong>PFU sur dividendes :</strong> 30% (17.2% prélèvements sociaux + 12.8% IR)
-    </li>`;
-  
-  // Cotisations TNS sur dividendes pour certains statuts
-  if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
-    detailContent += `
-      <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Cotisations TNS sur dividendes :</strong> 30% sur la part > 10% du capital social</li>`;
-  }
-}
+      ${(['eurlIS','sarl','selarl','sca'].includes(statutId)) ? `
+        <li><i class="fas fa-percentage text-green-400 mr-2"></i>
+          <strong>Cotisations TNS sur dividendes :</strong> ≈ 40–45% sur la part &gt; 10%
+        </li>
+      ` : ''}
 
-// Statuts à l'IR — Micro : abattement & VFL
-else if (statutId === 'micro') {
-  const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
-  const versementLiberatoire = result.sim.versementLiberatoire || false;
-  const __vflBanner = versementLiberatoire ? renderVFLNote(typeMicro) : '';
+      ${(statutId === 'micro') ? `
+        <li><i class="fas fa-percentage text-green-400 mr-2"></i>
+          <strong>Abattement forfaitaire :</strong> ${
+            (result.sim.typeMicro || 'BIC_SERVICE') === 'BIC_VENTE' ? '71%' :
+            (result.sim.typeMicro || 'BIC_SERVICE') === 'BNC' ? '34%' : '50%'
+          } du CA
+        </li>
+        ${result.sim.versementLiberatoire ? `
+          <li><i class="fas fa-percentage text-green-400 mr-2"></i>
+            <strong>Versement libératoire :</strong> ${
+              (result.sim.typeMicro || 'BIC_SERVICE') === 'BIC_VENTE' ? '1%' :
+              (result.sim.typeMicro || 'BIC_SERVICE') === 'BNC' ? '2,2%' : '1,7%'
+            } du CA (remplace l’IR progressif)
+          </li>
+        ` : ''}
+      ` : ''}
 
-  detailContent += `
-    <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Abattement forfaitaire :</strong> ${
-      typeMicro === 'BIC_VENTE' ? '71%' :
-      typeMicro === 'BIC_SERVICE' ? '50%' :
-      '34%'
-    } du CA</li>`;
-
-  if (versementLiberatoire) {
-    detailContent += `
-      <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Versement libératoire :</strong> ${
-        typeMicro === 'BIC_VENTE' ? '1%' :
-        typeMicro === 'BIC_SERVICE' ? '1.7%' :
-        '2.2%'
-      } du CA (remplace l'IR progressif)</li>`;
-    // (Optionnel) afficher la bannière VFL
-    detailContent += __vflBanner;
-  } 
-}
-
-// Statut SCI — infos spécifiques IR
-else if (statutId === 'sci') {
-  detailContent += `
-    <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>Régime fiscal :</strong> Revenus fonciers (IR)</li>
-    <li><i class="fas fa-percentage text-green-400 mr-2"></i><strong>CSG déductible :</strong> 6.8% des revenus fonciers</li>`;
-}
-
-// --- AJOUT : n'afficher le TMI générique que si ce n'est pas "Micro avec VFL"
-if (!(statutId === 'micro' && result.sim.versementLiberatoire)) {
-  detailContent += `
-    <li>
-      <i class="fas fa-percentage text-green-400 mr-2"></i>
-      <strong>TMI effectif :</strong> ${tmiEffectifFinal}% (tranche atteinte)
-    </li>`;
-}
-
-// Fermeture de la liste + conteneur
-detailContent += `
+      ${!(statutId === 'micro' && result.sim.versementLiberatoire) ? `
+        <li><i class="fas fa-percentage text-green-400 mr-2"></i>
+          <strong>TMI effectif :</strong> ${tmiEffectifFinal}%
+        </li>
+      ` : ''}
     </ul>
   </div>`;
+
 
     
     // Ajouter une note explicative sur le régime fiscal
@@ -3432,7 +3485,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Social gérant majoritaire :</strong> TNS (~45% de cotisations)</p>
             <p class="mb-2"><strong>Social gérant minoritaire :</strong> Assimilé salarié (~80%)</p>
             <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> cotisations sociales sur la part &gt;10% (≈40–45%), sinon PS 17,2%.</p>
         `,
         'SAS': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
@@ -3465,7 +3518,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
             <p class="mb-2"><strong>Social :</strong> Gérant majoritaire = TNS</p>
             <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> cotisations sociales sur la part &gt;10% (≈40–45%), sinon PS 17,2%.</p>
         `,
         'SELAS': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
