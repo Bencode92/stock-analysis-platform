@@ -2750,7 +2750,6 @@ ${hasDividendes ? `
             </tr>
         </table>
     `;
-}
 
 } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
     // Cas des entreprises à l'IR
