@@ -104,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return grids[0];
   }
 // ---------- Styles personnalisés ----------
+// ===== styles + correctifs de layout =====
 function addCustomStyles() {
   const style = document.createElement('style');
   style.textContent = `
@@ -137,15 +138,15 @@ function addCustomStyles() {
   margin-right: auto;
 }
 
-/* ===== Grille 3 colonnes avec areas (layout corrigé) ===== */
+/* ===== Grille 3 colonnes avec areas (ordre corrigé) ===== */
 @media (min-width:768px){
   #fiscal-simulator .form-layout-areas-3{
     display:grid;
     grid-template-columns: 1.25fr 1fr 1fr !important; /* CA un peu plus large */
     grid-auto-rows:auto;
     grid-auto-flow:dense;
-    column-gap:1rem;              /* écart horizontal */
-    row-gap:1.25rem;              /* écart vertical (décoller Base10) */
+    column-gap:1rem;
+    row-gap:1.25rem;
 
     /* L1 : CA (2 col) | Marge
        L2 : Associés | Part | Salaire
@@ -153,47 +154,39 @@ function addCustomStyles() {
     grid-template-areas:
       "ca       ca       marge"
       "associes part     salaire"
-      "base10   base10   salaire";
+      "base10   base10   salaire" !important;
 
+    justify-items:stretch !important;
     align-items:start;
-    justify-items: stretch !important; /* ✅ essentiel pour étirer les items sur leurs zones */
   }
 
-  /* Sécurité overflow/shrink des enfants */
-  #fiscal-simulator .form-layout-areas-3 > * { 
-    min-width: 0;
-    max-width: 100%;
-  }
-  #base10-inline { width: 100%; max-width: 100%; }  /* ceinture + bretelles */
-
-  /* mapping des zones */
-  .field-ca       { grid-area: ca; }
-  .field-marge    { grid-area: marge; }
-  .field-salaire  { grid-area: salaire; }
-  .field-associes { grid-area: associes; }
-  .field-part     { grid-area: part; }
-  #base10-inline,
-  .field-base10   { 
-    grid-area: base10; 
-    align-self:start; 
-    grid-column: 1 / 3;  /* force bien 2 colonnes */
-    min-width: 0;        /* empêche tout débordement */
+  /* Anti-overflow + neutralise tout col/row-span résiduel (Tailwind) */
+  #fiscal-simulator .form-layout-areas-3 > *{
+    grid-column:auto !important;
+    grid-row:auto !important;
+    min-width:0;
+    max-width:100%;
   }
 
-  /* ⛔ Neutraliser tout ancien col-span/row-span qui perturbe les areas */
-  #fiscal-simulator .form-layout-areas-3 .field-ca,
-  #fiscal-simulator .form-layout-areas-3 .field-marge,
-  #fiscal-simulator .form-layout-areas-3 .field-salaire,
-  #fiscal-simulator .form-layout-areas-3 .field-associes,
-  #fiscal-simulator .form-layout-areas-3 .field-part,
-  #fiscal-simulator .form-layout-areas-3 .field-base10{
-    grid-column: auto !important;
-    grid-row: auto !important;
+  /* Mapping prioritaire des zones */
+  #fiscal-simulator .form-layout-areas-3 > .field-ca       { grid-area: ca !important; }
+  #fiscal-simulator .form-layout-areas-3 > .field-marge    { grid-area: marge !important; }
+  #fiscal-simulator .form-layout-areas-3 > .field-salaire  { grid-area: salaire !important; }
+  #fiscal-simulator .form-layout-areas-3 > .field-associes { grid-area: associes !important; }
+  #fiscal-simulator .form-layout-areas-3 > .field-part     { grid-area: part !important; }
+
+  /* Base 10% : zone + 2 colonnes garanties */
+  #fiscal-simulator .form-layout-areas-3 > .field-base10{
+    grid-area: base10 !important;
+    grid-column: 1 / 3 !important;  /* force bien 2 colonnes */
+    align-self:start;
+    min-width:0;
+    max-width:100%;
   }
 
-  /* Si un vieux wrapper existe encore, on le neutralise */
-  #fiscal-simulator .form-layout-areas-3 .part-detenu-row{ 
-    display: contents !important; 
+  /* Ancien wrapper éventuel à neutraliser */
+  #fiscal-simulator .form-layout-areas-3 .part-detenu-row{
+    display:contents !important;
   }
 }
 
@@ -201,6 +194,9 @@ function addCustomStyles() {
 @media (max-width:767.98px){
   #fiscal-simulator .form-layout-areas-3{ display:block; }
 }
+
+/* Sécurité supplémentaire pour la carte */
+#base10-inline{ width:100%; max-width:100%; }
 
 /* — Tooltips plus compacts — */
 .tooltiptext {
@@ -342,6 +338,13 @@ function addCustomStyles() {
 }
 addCustomStyles();
 
+/* ---------- util ---------- */
+/* util: remonter jusqu’à l’enfant direct de la grille */
+function gridItem(el, grid) {
+  let cur = el;
+  while (cur && cur.parentElement !== grid) cur = cur.parentElement;
+  return cur;
+}
 
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
@@ -421,96 +424,101 @@ function placeBase10UnderNbAssocies(){
   if (elPart) elPart.style.textAlign = 'left';
 
   // === bloc Base 10% ===
-  const inline = document.createElement('div');
-  inline.id = 'base10-inline';
-  inline.classList.add('field-base10');
-  inline.innerHTML = `
-    <div class="base10-card bg-blue-900/40 border border-blue-700 rounded-xl p-4 md:p-5 relative">
-      <div class="flex items-center mb-3 gap-2">
-        <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-green-500/15 border border-green-500/30">
-          <i class="fas fa-calculator text-green-400 text-xs"></i>
-        </span>
-        <label class="text-green-300 font-medium">
-          Base 10% <span class="text-gray-400">(TNS dividendes)</span>
-        </label>
-      </div>
+const inline = document.createElement('div');
+inline.id = 'base10-inline';
+inline.classList.add('field-base10');
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div class="money-wrap">
-          <div class="mini flex items-center gap-1"><i class="fas fa-piggy-bank text-gray-400"></i><span>Capital social</span></div>
-          <input id="base-capital" type="number" min="0" step="100" placeholder="ex. 10 000"
-            class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
-          <span class="suffix-eur">€</span>
-        </div>
+/* 🔒 Verrouillage position grille */
+inline.style.gridArea = 'base10';
+inline.style.gridColumn = '1 / 3';
 
-        <div class="money-wrap">
-          <div class="mini flex items-center gap-1"><i class="fas fa-university text-gray-400"></i><span>Compte courant</span></div>
-          <input id="base-cca" type="number" min="0" step="100" placeholder="ex. 5 000"
-            class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
-          <span class="suffix-eur">€</span>
-        </div>
-
-        <div class="money-wrap">
-          <div class="mini flex items-center gap-1"><i class="fas fa-gift text-gray-400"></i><span>Primes</span></div>
-          <input id="base-primes" type="number" min="0" step="100" placeholder="ex. 2 000"
-            class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
-          <span class="suffix-eur">€</span>
-        </div>
-      </div>
-
-      <input id="base10-total" type="hidden" value="0">
-
-      <div class="mt-3 flex items-center justify-between">
-        <div class="text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Capital libéré + primes + CCA</div>
-        <div class="text-base md:text-lg font-semibold text-green-400">10% = <span id="tns-mini-seuil">—</span></div>
-      </div>
-
-      <div class="base10-card-accent"></div>
+inline.innerHTML = `
+  <div class="base10-card bg-blue-900/40 border border-blue-700 rounded-xl p-4 md:p-5 relative">
+    <div class="flex items-center mb-3 gap-2">
+      <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-green-500/15 border border-green-500/30">
+        <i class="fas fa-calculator text-green-400 text-xs"></i>
+      </span>
+      <label class="text-green-300 font-medium">
+        Base 10% <span class="text-gray-400">(TNS dividendes)</span>
+      </label>
     </div>
-  `;
 
-  // insérer Base10 juste APRÈS l’item "Nombre d’associés"
-  nbItem.parentNode.insertBefore(inline, nbItem.nextElementSibling);
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="money-wrap">
+        <div class="mini flex items-center gap-1"><i class="fas fa-piggy-bank text-gray-400"></i><span>Capital social</span></div>
+        <input id="base-capital" type="number" min="0" step="100" placeholder="ex. 10 000"
+          class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
+        <span class="suffix-eur">€</span>
+      </div>
 
-  // formatage FR des montants saisis
-  const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
-  const formatFR = n => n.toLocaleString('fr-FR');
-  ['base-capital','base-cca','base-primes'].forEach(id=>{
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('input', ()=> { el.dataset.raw = String(parseFR(el.value)); });
-    ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
-      const raw = parseFR(el.dataset.raw ?? el.value);
-      el.value = raw ? formatFR(raw) : '';
-    }));
-  });
-  const val = id => { const el = document.getElementById(id); return parseFR(el?.dataset.raw ?? el?.value); };
+      <div class="money-wrap">
+        <div class="mini flex items-center gap-1"><i class="fas fa-university text-gray-400"></i><span>Compte courant</span></div>
+        <input id="base-cca" type="number" min="0" step="100" placeholder="ex. 5 000"
+          class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
+        <span class="suffix-eur">€</span>
+      </div>
 
-  // calcul dynamique du seuil 10%
-  const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
-  function updateBase10(){
-    const total = val('base-capital') + val('base-primes') + val('base-cca');
-    document.getElementById('base10-total').value = String(total);
-    document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
-    if (typeof runComparison === 'function') runComparison();
-  }
-  ['base-capital','base-primes','base-cca'].forEach(id=>{
-    const el=document.getElementById(id);
-    if (el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
-  });
-  updateBase10();
+      <div class="money-wrap">
+        <div class="mini flex items-center gap-1"><i class="fas fa-gift text-gray-400"></i><span>Primes</span></div>
+        <input id="base-primes" type="number" min="0" step="100" placeholder="ex. 2 000"
+          class="w-full bg-blue-900/60 border border-gray-700 rounded-lg px-3 py-3 text-white">
+        <span class="suffix-eur">€</span>
+      </div>
+    </div>
 
-  // visibilité selon statuts
-  function toggleBase10Visibility(){
-    const filter = document.getElementById('sim-status-filter')?.value || 'all';
-    const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
-    const gerantMinoritaire = document.getElementById('sarl-gerant-minoritaire')?.checked;
-    const pertinents = ['eurlIS','sarl','selarl','sca'];
-    inline.style.display = (selected.some(s => pertinents.includes(s)) && !gerantMinoritaire) ? '' : 'none';
-  }
-  toggleBase10Visibility();
-  document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
-  document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
+    <input id="base10-total" type="hidden" value="0">
+
+    <div class="mt-3 flex items-center justify-between">
+      <div class="text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Capital libéré + primes + CCA</div>
+      <div class="text-base md:text-lg font-semibold text-green-400">10% = <span id="tns-mini-seuil">—</span></div>
+    </div>
+
+    <div class="base10-card-accent"></div>
+  </div>
+`;
+
+// insérer Base10 juste APRÈS l’item "Nombre d’associés"
+nbItem.parentNode.insertBefore(inline, nbItem.nextElementSibling);
+
+// formatage FR des montants saisis
+const parseFR = s => Number(String(s||'').replace(/\s/g,'').replace(/[^\d.-]/g,''))||0;
+const formatFR = n => n.toLocaleString('fr-FR');
+['base-capital','base-cca','base-primes'].forEach(id=>{
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', ()=> { el.dataset.raw = String(parseFR(el.value)); });
+  ['change','blur'].forEach(ev=> el.addEventListener(ev, ()=>{
+    const raw = parseFR(el.dataset.raw ?? el.value);
+    el.value = raw ? formatFR(raw) : '';
+  }));
+});
+const val = id => { const el = document.getElementById(id); return parseFR(el?.dataset.raw ?? el?.value); };
+
+// calcul dynamique du seuil 10%
+const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
+function updateBase10(){
+  const total = val('base-capital') + val('base-primes') + val('base-cca');
+  document.getElementById('base10-total').value = String(total);
+  document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
+  if (typeof runComparison === 'function') runComparison();
+}
+['base-capital','base-primes','base-cca'].forEach(id=>{
+  const el=document.getElementById(id);
+  if (el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
+});
+updateBase10();
+
+// visibilité selon statuts
+function toggleBase10Visibility(){
+  const filter = document.getElementById('sim-status-filter')?.value || 'all';
+  const selected = typeof getSelectedStatuses==='function' ? getSelectedStatuses(filter) : [];
+  const gerantMinoritaire = document.getElementById('sarl-gerant-minoritaire')?.checked;
+  const pertinents = ['eurlIS','sarl','selarl','sca'];
+  inline.style.display = (selected.some(s => pertinents.includes(s)) && !gerantMinoritaire) ? '' : 'none';
+}
+toggleBase10Visibility();
+document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
+document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
 }
 
 
