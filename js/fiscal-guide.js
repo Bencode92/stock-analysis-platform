@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
     grids.sort((a,b)=>depth(a)-depth(b));
     return grids[0];
   }
+  window.getFormGrid = getFormGrid;
 // ---------- Styles personnalisés ----------
 // ===== styles + correctifs de layout =====
 function addCustomStyles() {
