@@ -61,7 +61,7 @@ if (typeof window !== "undefined") {
 const TAUX_PS = 0.172;
 const TAUX_IR_PFU = 0.128;     // si PFU
 const TAUX_ABATT_DIV = 0.40;   // abattement 40% si barème
-const TAUX_TNS_DIV_FALLBACK = 0.40; // fallback ~40%
+const TAUX_TNS_DIV_FALLBACK = 0.37; // fallback ~40%
 
 function calcDivTNS({divBruts=0, baseSeuil10=0, methode='PFU', tmi=11, tauxTNS=TAUX_TNS_DIV_FALLBACK}){
   const seuilMontant = 0.10 * (baseSeuil10 || 0);
@@ -1531,7 +1531,7 @@ for (const statutId of selectedStatuses) {
         net = sim.revenuNetApresImpot;
 
        } else {
- // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, SELARL, SELAS, SA, SCA)
+// Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, SELARL, SELAS, SA, SCA)
 brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
 charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
 
@@ -1543,10 +1543,14 @@ const tmiEff   = tmi; // suffisant pour un aperçu rapide
 
 let split = null; // ← unique
 if (isTNSDiv && divBruts > 0 && typeof calcDivTNS === 'function') {
-  // Taux TNS effectif borné (35–55%) si on a une idée des charges, sinon 40%
-  const tauxTNS = (sim.remuneration > 0 && sim.cotisationsSociales > 0)
-    ? Math.max(0.35, Math.min(0.55, sim.cotisationsSociales / sim.remuneration))
-    : 0.40;
+  // Taux TNS borné 35–40% si on a une info ; sinon fallback 37%
+  const tauxObserve = (sim.remuneration > 0 && sim.cotisationsSociales > 0)
+    ? (sim.cotisationsSociales / sim.remuneration)
+    : null;
+
+  const tauxTNS = tauxObserve != null
+    ? Math.max(0.35, Math.min(0.40, tauxObserve))
+    : 0.37; // fallback
 
   const methode = (sim.methodeDividendes === 'PROGRESSIF') ? 'PROGRESSIF' : 'PFU';
 
@@ -1582,7 +1586,7 @@ net = sim.revenuNetTotal || (revenuNetSalaire + dividendesNets);
 
 // Log de debug
 console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
-        }
+
 
       // Calcul du score avec prise en compte de la progressivité fiscale
       const scoreNet = 100 * (net / ca); // Score standard
