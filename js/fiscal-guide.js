@@ -128,6 +128,24 @@ document.addEventListener('DOMContentLoaded', function () {
   if (document.getElementById('fiscal-simulator')) {
     initFiscalSimulator();
   }
+  // --- IS réduit 15% : conditions légales + calcul par tranches ---
+const IS_15_SEUIL = 42500;     // plafond de la tranche à 15%
+const IS_TAUX_PLEIN = 0.25;    // 25%
+
+function isEligibleIS15({ ca = 0, capitalIntegralementLibere = false, pctDetentionPersPhysiques = 0 } = {}) {
+  // Conditions simplifiées : CA < 10 M€, capital entièrement libéré, >= 75% détenu par des personnes physiques
+  return ca < 10_000_000 && !!capitalIntegralementLibere && (pctDetentionPersPhysiques >= 75);
+}
+
+/** Calcule l'IS avec tranche 15% (si éligible) + 25% au-delà. */
+function calcISProgressif(beneficeIS, elig15) {
+  const b = Math.max(0, Number(beneficeIS) || 0);
+  const part15 = elig15 ? Math.min(b, IS_15_SEUIL) : 0;
+  const part25 = Math.max(0, b - part15);
+  const is = round2(part15 * 0.15 + part25 * IS_TAUX_PLEIN);
+  const tauxMoyen = b > 0 ? round2((is / b) * 100) : 0;
+  return { is, part15, part25, tauxMoyen };
+}
 
   // --- Util commun : détecter LA bonne grille de formulaire ---
   function getFormGrid(){
@@ -673,7 +691,6 @@ function updateSimulatorInterface() {
     // Ajouter un sélecteur de statuts et des options de simulation avancées
     const formContainer = getFormGrid() || simulatorContainer.querySelector('.grid');
 
-
     if (formContainer) {
       // Ajouter une nouvelle ligne pour les options de simulation
       const optionsRow = document.createElement('div');
@@ -788,6 +805,25 @@ function updateSimulatorInterface() {
     </div>
   </div>
 
+  <!-- 🔹 NOUVEAU : Éligibilité au taux réduit d'IS (15%) -->
+  <div class="mt-4">
+    <label class="block text-gray-300 mb-2">Éligibilité au taux réduit d'IS (15%)</label>
+    <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4" id="is-eligibility-block">
+      <label class="flex items-center gap-2">
+        <input type="checkbox" id="is-capital-fully-paid" class="h-4 w-4">
+        <span class="text-gray-300">Capital entièrement libéré</span>
+      </label>
+      <div>
+        <label class="block text-gray-300 mb-1">Part détenue par des personnes physiques</label>
+        <input id="is-pp-ownership" type="number" min="0" max="100" step="1" value="100"
+               class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-3 py-2 text-white">
+      </div>
+    </div>
+    <div class="text-xs text-gray-400 mt-2">
+      Conditions : CA &lt; 10 M€ • capital entièrement libéré • ≥ 75% détenu par des personnes physiques.
+    </div>
+  </div>
+
   <div class="fiscal-warning mt-4">
     <p><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
       <strong>Limites du simulateur:</strong> Ce simulateur simplifie certains aspects fiscaux pour faciliter la comparaison. Pour une analyse complète, consultez un expert-comptable.</p>
@@ -899,14 +935,19 @@ function updateSimulatorInterface() {
         });
       });
 
-      document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire')
+      // 🔗 Abonnements : inclut les 2 nouveaux champs IS
+      document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire, #is-capital-fully-paid, #is-pp-ownership')
         .forEach(el => el.addEventListener('change', runComparison));
+
+      // (optionnel) déclenche aussi sur saisie continue du % personnes physiques
+      document.getElementById('is-pp-ownership')?.addEventListener('input', runComparison);
 
       statusFilter.value = "all";
       statusFilter.dispatchEvent(new Event('change'));
     }
   }
-   }
+}
+
 
 // Fonction pour obtenir les statuts sélectionnés selon le filtre
 function getSelectedStatuses(filter) {
@@ -957,12 +998,13 @@ function runComparison() {
   const versementLiberatoire= document.getElementById('micro-vfl')?.checked;
   const gerantMajoritaire   = !(document.getElementById('sarl-gerant-minoritaire')?.checked);
 
-// 🔹 LIRE Capital / Primes / CCA (base 10 % TNS) - FIX: utiliser dataset.raw
-const capitalLibere   = Number(document.getElementById('base-capital')?.dataset.raw)  || 0;
-const primesEmission  = Number(document.getElementById('base-primes')?.dataset.raw)   || 0;
-const comptesCourants = Number(document.getElementById('base-cca')?.dataset.raw)      || 0;
-// Base unique utilisée partout (alimentée par updateBase10)
-const baseSeuilDivTNS = Number(document.getElementById('base10-total')?.value) || 0;
+  // 🔹 LIRE Capital / Primes / CCA (base 10 % TNS) - FIX: utiliser dataset.raw
+  const capitalLibere   = Number(document.getElementById('base-capital')?.dataset.raw)  || 0;
+  const primesEmission  = Number(document.getElementById('base-primes')?.dataset.raw)   || 0;
+  const comptesCourants = Number(document.getElementById('base-cca')?.dataset.raw)      || 0;
+  // Base unique utilisée partout (alimentée par updateBase10)
+  const baseSeuilDivTNS = Number(document.getElementById('base10-total')?.value) || 0;
+
   // Définir marge ou frais de façon exclusive selon l'option
   const params = {
     ca,
@@ -986,34 +1028,44 @@ const baseSeuilDivTNS = Number(document.getElementById('base10-total')?.value) |
     baseSeuilDivTNS,
   };
 
+  // 🔸 Éligibilité IS 15 % — AJOUT
+  // Juste après avoir construit params :
+  const capitalFullyPaid = !!document.getElementById('is-capital-fully-paid')?.checked;
+  const pctPP = Number(document.getElementById('is-pp-ownership')?.value) || 0;
 
-    
-    // Logger pour debug
-    console.log("Paramètres:", params);
-    console.log("useAvgChargeRate:", useAvgChargeRate);
-    console.log("versementLiberatoire:", versementLiberatoire);
-    console.log("gerantMajoritaire:", gerantMajoritaire);
-    
-    const resultsBody = document.getElementById('sim-results-body');
-    if (!resultsBody) return;
-    
-    // Vider les résultats précédents
-    resultsBody.innerHTML = '';
-    
- // Obtenir les statuts à simuler selon le filtre sélectionné
-const statusFilter = document.getElementById('sim-status-filter');
+  params.is15Eligible = isEligibleIS15({
+    ca,
+    capitalIntegralementLibere: capitalFullyPaid,
+    pctDetentionPersPhysiques: pctPP
+  });
+  // 🔸 Fin ajout
 
-// utiliser let car on va potentiellement réassigner
-let selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'all');
+  // Logger pour debug
+  console.log("Paramètres:", params);
+  console.log("useAvgChargeRate:", useAvgChargeRate);
+  console.log("versementLiberatoire:", versementLiberatoire);
+  console.log("gerantMajoritaire:", gerantMajoritaire);
 
-// Si multi-associés, retirer les statuts unipersonnels
-if (nbAssocies >= 2) {
-  selectedStatuses = selectedStatuses.filter(id => !STATUTS_UNIPERSONNELS[id]);
-}
-// Si 1 seul associé, retirer les statuts qui exigent ≥2 associés
-else if (nbAssocies === 1) {
-  selectedStatuses = selectedStatuses.filter(id => !STATUTS_MIN_2[id]);
-}
+  const resultsBody = document.getElementById('sim-results-body');
+  if (!resultsBody) return;
+
+  // Vider les résultats précédents
+  resultsBody.innerHTML = '';
+
+  // Obtenir les statuts à simuler selon le filtre sélectionné
+  const statusFilter = document.getElementById('sim-status-filter');
+
+  // utiliser let car on va potentiellement réassigner
+  let selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'all');
+
+  // Si multi-associés, retirer les statuts unipersonnels
+  if (nbAssocies >= 2) {
+    selectedStatuses = selectedStatuses.filter(id => !STATUTS_UNIPERSONNELS[id]);
+  }
+  // Si 1 seul associé, retirer les statuts qui exigent ≥2 associés
+  else if (nbAssocies === 1) {
+    selectedStatuses = selectedStatuses.filter(id => !STATUTS_MIN_2[id]);
+  }
     
     // Tableau pour stocker les résultats de simulation
     const resultats = [];
@@ -1427,44 +1479,72 @@ for (const statutId of selectedStatuses) {
     try {
       const statut = statutsComplets[statutId];
       const sim = statut.simuler();
+
+      // ----- Calcul IS par tranches pour les statuts à l’IS -----
+      {
+        const isStatutIS = ['eurlIS','sarl','selarl','sca','sasu','sas','sa','selas'].includes(statutId);
+        if (isStatutIS && sim && sim.compatible) {
+          // Bénéfice base IS = résultat après rémunération et charges sociales (avant IS)
+          const benefIS = Number(sim.resultatApresRemuneration ?? sim.resultatEntreprise ?? 0);
+
+          // Éligible 15% ?
+          const elig15 = !!params.is15Eligible;
+
+          // Calcul par tranches (15% jusqu'à 42 500 si éligible, 25% au-delà)
+          const isBreak = calcISProgressif(benefIS, elig15);
+
+          // Remplace/fiabilise les champs IS de la simulation
+          sim.is = isBreak.is;
+          sim._isDetail = { elig15, ...isBreak };
+
+          // Mets à jour l'après-IS et, si besoin, les dividendes bruts
+          sim.resultatApresIS = round2(Math.max(0, benefIS - sim.is));
+          if (typeof sim.dividendes === 'number') {
+            // si ton moteur ne recalculait pas, force la cohérence
+            sim.dividendes = sim.resultatApresIS * (sim.partAssocie || 1);
+          }
+        }
+      }
+      // ----- fin calcul IS par tranches -----
+
       // === IR sur la rémunération (base imposable + barème progressif) ===
-(() => {
-  // 1) Trouver les deux infos nécessaires
-  const brut       = Number(sim.remuneration) || 0;                                   // salaire/remu brut
-  const netSocial  = Number(sim.remunerationNetteSociale ?? sim.salaireNet) || 0;     // net "URSSAF"/net paie
-   sim.remunerationNetteSociale = netSocial;
+      (() => {
+        // 1) Trouver les deux infos nécessaires
+        const brut       = Number(sim.remuneration) || 0;                                   // salaire/remu brut
+        const netSocial  = Number(sim.remunerationNetteSociale ?? sim.salaireNet) || 0;     // net "URSSAF"/net paie
+        sim.remunerationNetteSociale = netSocial;
 
-  if (brut > 0 && netSocial > 0) {
-    // 2) Construire la base imposable (CSG non déductible + abattement 10% borné)
-    const { base, csgND, abat } = baseImposableTNS({ remBrute: brut, netSocial: netSocial });
-    sim.csgNonDeductible = csgND;
-    sim.abattement10     = abat;
-    sim.baseImposableIR  = base;
+        if (brut > 0 && netSocial > 0) {
+          // 2) Construire la base imposable (CSG non déductible + abattement 10% borné)
+          const { base, csgND, abat } = baseImposableTNS({ remBrute: brut, netSocial: netSocial });
+          sim.csgNonDeductible = csgND;
+          sim.abattement10     = abat;
+          sim.baseImposableIR  = base;
 
-    // 3) Nombre de parts (si tu as un input ; sinon 1)
-  const nbParts = getNbParts();
+          // 3) Nombre de parts (si tu as un input ; sinon 1)
+          const nbParts = getNbParts();
 
-    // 4) Calcul IR + TMI
-    sim.impotRevenu   = impotsIR2025(sim.baseImposableIR, nbParts);
-    sim.tmiEffectif   = getTMI(sim.baseImposableIR, nbParts);
+          // 4) Calcul IR + TMI
+          sim.impotRevenu   = impotsIR2025(sim.baseImposableIR, nbParts);
+          sim.tmiEffectif   = getTMI(sim.baseImposableIR, nbParts);
 
-    // 5) Salaire net après IR + net total
-    sim.revenuNetSalaire = Math.max(0, netSocial - sim.impotRevenu);
+          // 5) Salaire net après IR + net total
+          sim.revenuNetSalaire = Math.max(0, netSocial - sim.impotRevenu);
 
-    // Si tu as des dividendes nets déjà calculés, cumule pour afficher un "net total"
-    const dividendesNets = Number(sim.dividendesNets) || 0;
-    sim.revenuNetTotal   = (sim.revenuNetSalaire || 0) + dividendesNets;
-  } else {
-    // Pas de rémunération (ou incomplète) -> neutraliser proprement
-    sim.csgNonDeductible = sim.csgNonDeductible ?? 0;
-    sim.abattement10     = sim.abattement10 ?? 0;
-    sim.baseImposableIR  = sim.baseImposableIR ?? 0;
-    sim.impotRevenu      = sim.impotRevenu ?? 0;
-    sim.tmiEffectif      = sim.tmiEffectif ?? 0;
-    sim.revenuNetSalaire = sim.revenuNetSalaire ?? 0;
-    sim.revenuNetTotal   = sim.revenuNetTotal ?? (Number(sim.dividendesNets) || 0);
-  }
-})();
+          // Si tu as des dividendes nets déjà calculés, cumule pour afficher un "net total"
+          const dividendesNets = Number(sim.dividendesNets) || 0;
+          sim.revenuNetTotal   = (sim.revenuNetSalaire || 0) + dividendesNets;
+        } else {
+          // Pas de rémunération (ou incomplète) -> neutraliser proprement
+          sim.csgNonDeductible = sim.csgNonDeductible ?? 0;
+          sim.abattement10     = sim.abattement10 ?? 0;
+          sim.baseImposableIR  = sim.baseImposableIR ?? 0;
+          sim.impotRevenu      = sim.impotRevenu ?? 0;
+          sim.tmiEffectif      = sim.tmiEffectif ?? 0;
+          sim.revenuNetSalaire = sim.revenuNetSalaire ?? 0;
+          sim.revenuNetTotal   = sim.revenuNetTotal ?? (Number(sim.dividendesNets) || 0);
+        }
+      })();
 
       // Debug pour vérifier que les paramètres sont bien passés
       console.log(`Simulation ${statutId}:`, sim);
@@ -1975,7 +2055,13 @@ function showCalculationDetails(statutId, simulationResults) {
     const formatPercent = (value, decimals = 1) => {
         return `${value.toFixed(decimals)}%`;
     };
-    
+    /* === INSERT: libellé "IS 15%" pour l'affichage des détails === */
+const isD = result?.sim?._isDetail;
+const txtIS = isD
+  ? (isD.elig15
+      ? `15% sur ${formatter.format(isD.part15)} puis 25% sur ${formatter.format(isD.part25)}`
+      : `25% (non éligible au taux réduit)`)
+  : (result?.sim?.is ? '25%' : '—');
     // Créer le modal
     const modal = document.createElement('div');
     modal.className = 'detail-modal';
@@ -2190,7 +2276,6 @@ const tauxChargesSalariales = remuneration > 0
   ? (chargesSalariales / remuneration) * 100
   : 0;
 
-const tauxIS = resultatApresRemuneration <= 42500 ? 15 : 25;
     
     // NOUVEAU : Gestion du CAC pour la SA
     const coutCAC = statutId === 'sa' ? (result.sim.coutCAC || 5000) : 0;
@@ -2359,7 +2444,7 @@ const tauxIS = resultatApresRemuneration <= 42500 ? 15 : 25;
             </tr>
             ` : ''}
             <tr>
-                <td>Impôt sur les sociétés (${formatPercent(tauxIS)})</td>
+              <td>Impôt sur les sociétés (${txtIS})</td>
                 <td>${formatter.format(result.sim.is)}</td>
             </tr>
             <tr>
@@ -2517,8 +2602,6 @@ ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 
   // TNS effectif observé sur la rémunération (fallback 30 si info manquante)
   const tauxCotisationsTNS = baseRem > 0 ? Math.round((cotSoc / baseRem) * 100) : 30;
 
-  // IS (15% sous conditions PME) sinon 25%
-  const tauxIS = (Number(result.sim?.resultatApresRemuneration) || 0) <= 42500 ? 15 : 25;
 
   // Dividendes TNS (>10% capital) : réutilise le taux TNS effectif, fallback prudent 35
   const tauxCotTNSDiv = Number.isFinite(tauxCotisationsTNS) && tauxCotisationsTNS > 0
@@ -2686,7 +2769,7 @@ ${hasDividendes ? `
       <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
     </tr>
     <tr>
-      <td>Impôt sur les sociétés (${formatPercent(tauxIS)})</td>
+<td>Impôt sur les sociétés (${txtIS})</td>
       <td>${formatter.format(result.sim.is)}</td>
     </tr>
     <tr>
