@@ -61,7 +61,7 @@ if (typeof window !== "undefined") {
 const TAUX_PS = 0.172;
 const TAUX_IR_PFU = 0.128;     // si PFU
 const TAUX_ABATT_DIV = 0.40;   // abattement 40% si barème
-const TAUX_TNS_DIV_FALLBACK = 0.37; // fallback ~40%
+const TAUX_TNS_DIV_FALLBACK = 0.40;// fallback ~40%
 
 function calcDivTNS({divBruts=0, baseSeuil10=0, methode='PFU', tmi=11, tauxTNS=TAUX_TNS_DIV_FALLBACK}){
   const seuilMontant = 0.10 * (baseSeuil10 || 0);
@@ -97,7 +97,11 @@ function baseImposableTNS({remBrute=0, netSocial=0}) {
   const base  = Math.max(0, (netSocial + csgND) - abat);
   return { base, csgND, abat };
 }
-
+// --- Parts fiscales (quotient familial) — GLOBAL ---
+function getNbParts() {
+  const el = document.getElementById('sim-nb-parts');
+  return el ? (parseFloat(el.value) || 1) : 1;
+}
 document.addEventListener('DOMContentLoaded', function () {
   // --- Initialisation requise par les écouteurs (onglet + présence du simulateur) ---
   let __fiscalSimInitDone = false;
@@ -1422,6 +1426,44 @@ for (const statutId of selectedStatuses) {
     try {
       const statut = statutsComplets[statutId];
       const sim = statut.simuler();
+      // === IR sur la rémunération (base imposable + barème progressif) ===
+(() => {
+  // 1) Trouver les deux infos nécessaires
+  const brut       = Number(sim.remuneration) || 0;                                   // salaire/remu brut
+  const netSocial  = Number(sim.remunerationNetteSociale ?? sim.salaireNet) || 0;     // net "URSSAF"/net paie
+   sim.remunerationNetteSociale = netSocial;
+
+  if (brut > 0 && netSocial > 0) {
+    // 2) Construire la base imposable (CSG non déductible + abattement 10% borné)
+    const { base, csgND, abat } = baseImposableTNS({ remBrute: brut, netSocial: netSocial });
+    sim.csgNonDeductible = csgND;
+    sim.abattement10     = abat;
+    sim.baseImposableIR  = base;
+
+    // 3) Nombre de parts (si tu as un input ; sinon 1)
+  const nbParts = getNbParts();
+
+    // 4) Calcul IR + TMI
+    sim.impotRevenu   = impotsIR2025(sim.baseImposableIR, nbParts);
+    sim.tmiEffectif   = getTMI(sim.baseImposableIR, nbParts);
+
+    // 5) Salaire net après IR + net total
+    sim.revenuNetSalaire = Math.max(0, netSocial - sim.impotRevenu);
+
+    // Si tu as des dividendes nets déjà calculés, cumule pour afficher un "net total"
+    const dividendesNets = Number(sim.dividendesNets) || 0;
+    sim.revenuNetTotal   = (sim.revenuNetSalaire || 0) + dividendesNets;
+  } else {
+    // Pas de rémunération (ou incomplète) -> neutraliser proprement
+    sim.csgNonDeductible = sim.csgNonDeductible ?? 0;
+    sim.abattement10     = sim.abattement10 ?? 0;
+    sim.baseImposableIR  = sim.baseImposableIR ?? 0;
+    sim.impotRevenu      = sim.impotRevenu ?? 0;
+    sim.tmiEffectif      = sim.tmiEffectif ?? 0;
+    sim.revenuNetSalaire = sim.revenuNetSalaire ?? 0;
+    sim.revenuNetTotal   = sim.revenuNetTotal ?? (Number(sim.dividendesNets) || 0);
+  }
+})();
 
       // Debug pour vérifier que les paramètres sont bien passés
       console.log(`Simulation ${statutId}:`, sim);
@@ -1536,30 +1578,25 @@ brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratio
 charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
 
 // ⚠️ Dividendes TNS : uniquement pour SARL/EURL-IS/SELARL/SCA avec gérant majoritaire
-const isTNSDiv = ['sarl', 'eurlIS', 'selarl', 'sca'].includes(statutId) && gerantMajoritaire;
+const isTNSDiv = ['sarl','eurlIS','selarl','sca'].includes(statutId) && gerantMajoritaire;
 const divBruts = Number(sim.dividendes) || 0;
 const base10   = Number(document.getElementById('base10-total')?.value) || getBaseSeuilDivTNS(sim) || 0;
-const tmiEff   = tmi; // suffisant pour un aperçu rapide
 
-let split = null; // ← unique
+let split = null;
 if (isTNSDiv && divBruts > 0 && typeof calcDivTNS === 'function') {
-  // Taux TNS borné 35–40% si on a une info ; sinon fallback 37%
+  // bornage 0.40–0.45 si on observe quelque chose de cohérent, sinon 0.40
   const tauxObserve = (sim.remuneration > 0 && sim.cotisationsSociales > 0)
     ? (sim.cotisationsSociales / sim.remuneration)
     : null;
+  const tauxTNS = (tauxObserve != null)
+    ? Math.max(0.40, Math.min(0.45, tauxObserve))
+    : TAUX_TNS_DIV_FALLBACK;
 
-  const tauxTNS = tauxObserve != null
-    ? Math.max(0.35, Math.min(0.40, tauxObserve))
-    : 0.37; // fallback
-
-  const methode = (sim.methodeDividendes === 'PROGRESSIF') ? 'PROGRESSIF' : 'PFU';
-
-  // Split PS 17,2% (≤10%) / Cotisations TNS (>10%)
   split = calcDivTNS({
-    divBruts,
-    baseSeuil10: base10,
-    methode,
-    tmi: tmiEff,
+    divBruts: divBruts,
+    baseSeuil10: base10,     // ← utilise la base saisie (capital + primes + CCA)
+    methode: (sim.methodeDividendes === 'PROGRESSIF') ? 'PROGRESSIF' : 'PFU',
+    tmi: tmi,
     tauxTNS
   });
 
@@ -1577,15 +1614,22 @@ if (isTNSDiv && divBruts > 0 && typeof calcDivTNS === 'function') {
   if (sim.cotTNSDiv) impots += sim.cotTNSDiv;
 }
 
-// Astuce UX : tuer les “dividendes 1 €” (seuil 5 €)
-const dividendesNets = (sim.dividendesNets && Math.abs(sim.dividendesNets) >= 5) ? sim.dividendesNets : 0;
+// (4) Recomposition propre du net total + ratio (IS)
+{
+  const salaireApresIR = Number(sim.revenuNetSalaire) || 0; // net salarié après IR déjà calculé au-dessus
+  const divNets        = Number(sim.dividendesNets)   || 0; // nets après PFU/barème + PS/TNS
 
-// Recalculer explicitement le net en tenant compte des charges mises à jour
-const revenuNetSalaire = sim.salaireNetApresIR || sim.revenuNetSalaire || 0;
-net = sim.revenuNetTotal || (revenuNetSalaire + dividendesNets);
+  // Net total et ratio sur CA
+  sim.revenuNetTotal = round2(salaireApresIR + divNets);
+  sim.ratioNetCA     = ca > 0 ? round2((sim.revenuNetTotal / ca) * 100) : 0;
 
-// Log de debug
-console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
+  // Propager vers la ligne du tableau
+  net    = sim.revenuNetTotal;
+  impots = (Number(sim.is) || 0) + (Number(sim.impotRevenu) || 0)
+        + (Number(sim._divSplit?.irDiv) || 0)
+        + (Number(sim._divSplit?.ps172) || 0)
+        + (Number(sim._divSplit?.cotTNS) || 0);
+}
 
 
       // Calcul du score avec prise en compte de la progressivité fiscale
@@ -1860,14 +1904,33 @@ function updateCustomStatusDisabling() {
     }
   });
 }
-
+// 1) Montant d'IR 2025 (progressif) – avec quotient familial
+function impotsIR2025(baseImposable, nbParts = 1) {
+  const T = [
+    { min: 0,      max: 11497,  taux: 0.00 },
+    { min: 11497,  max: 29315,  taux: 0.11 },
+    { min: 29315,  max: 83823,  taux: 0.30 },
+    { min: 83823,  max: 180294, taux: 0.41 },
+    { min: 180294, max: Infinity, taux: 0.45 },
+  ];
+  const parts = Math.max(1, nbParts);
+  const qf = Math.max(0, baseImposable) / parts; // revenu par part
+  let impotsPart = 0;
+  for (const tr of T) {
+    const assiette = Math.min(qf, tr.max) - tr.min;
+    if (assiette > 0) impotsPart += assiette * tr.taux;
+    if (qf <= tr.max) break;
+  }
+  return Math.round(impotsPart * parts);
+}
 // Barème IR 2025 - Fonction utilitaire pour calculer le TMI effectif
-function getTMI(revenu) {
-    if (revenu <= 11497)   return 0;
-    if (revenu <= 29315)   return 11;
-    if (revenu <= 83823)   return 30;
-    if (revenu <= 180294)  return 41;
-    return 45;
+function getTMI(revenu, nbParts = 1) {
+  const part = Math.max(0, revenu) / Math.max(1, nbParts);
+  if (part <= 11497)   return 0;
+  if (part <= 29315)   return 11;
+  if (part <= 83823)   return 30;
+  if (part <= 180294)  return 41;
+  return 45;
 }
 function getBaseSeuilDivTNS({ capitalLibere = 0, primesEmission = 0, comptesCourants = 0 } = {}) {
   return Number(capitalLibere) + Number(primesEmission) + Number(comptesCourants);
@@ -1886,6 +1949,7 @@ function formatBaseSeuilDivTNSTooltip(base) {
 
 // Fonction améliorée pour afficher le détail des calculs avec pourcentages
 function showCalculationDetails(statutId, simulationResults) {
+  const nbParts = getNbParts();
     // Supprimer tout modal existant
     const existingModal = document.querySelector('.detail-modal');
     if (existingModal) {
@@ -1938,7 +2002,7 @@ if (statutId === 'micro') {
     const versementLiberatoire = result.sim.versementLiberatoire || false;
     
     // NOUVEAU : Calculer le TMI effectif SEULEMENT si pas de versement libératoire
-    const tmiEffectif = versementLiberatoire ? null : getTMI(revenuImposable);
+    const tmiEffectif = versementLiberatoire ? null : getTMI(revenuImposable, nbParts);
     
     const tauxCotisations = {
         'BIC_VENTE': 12.3,
@@ -2106,7 +2170,7 @@ if (statutId === 'micro') {
     const baseImposableIR = getNumber(result.sim.baseImposableIR) || (salaireNet + csgNonDeductible);
     
     // NOUVEAU : Calculer le TMI effectif sur la BASE IMPOSABLE (pas le salaire net)
-    const tmiEffectif = getTMI(baseImposableIR);
+   const tmiEffectif = getTMI(baseImposableIR, nbParts);
     
   // Calcul des taux (robuste si rémunération = 0)
 const {
@@ -2255,7 +2319,7 @@ const tauxIS = resultatApresRemuneration <= 42500 ? 15 : 25;
             </tr>
             <tr>
                 <td>Salaire net après IR</td>
-                <td>${formatter.format(result.sim.salaireNetApresIR)}</td>
+                <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
             </tr>
         </table>
         
@@ -2395,7 +2459,7 @@ ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 
         <table class="detail-table">
             <tr>
                 <td>Salaire net après IR</td>
-                <td>${formatter.format(result.sim.salaireNetApresIR)}</td>
+                <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
             </tr>
             ${hasDividendes ? `
             <tr>
@@ -2442,7 +2506,7 @@ ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 
   const abattement10      = b.abat;
 
   // TMI calculé sur la base imposable corrigée
-  const tmiEffectif = getTMI(baseImposableIR);
+  const tmiEffectif = getTMI(baseImposableIR, nbParts);
 
   // Calcul des taux (robuste et plus réaliste)
   const baseRem = Number(result.sim?.remuneration) || 0;
@@ -2788,7 +2852,7 @@ ${hasDividendes ? `
     );
     
     // NOUVEAU : Calculer le TMI effectif
-    const tmiEffectif = getTMI(baseImposableIR);
+    const tmiEffectif = getTMI(baseImposableIR, nbParts);
     
     detailContent = `
         <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
@@ -2991,7 +3055,7 @@ ${hasDividendes ? `
         const baseImposableIR = quotePartAssocie - csgDeductible;
         
         // Calcul du TMI effectif sur la base imposable nette
-        const tmiEffectif = getTMI(baseImposableIR);
+        const tmiEffectif = getTMI(baseImposableIR, nbParts);
         
         // Recalcul de l'impôt si nécessaire (si correction appliquée)
         let impotRevenu = result.sim.impotRevenu || 0;
@@ -3209,10 +3273,10 @@ ${hasDividendes ? `
     
     // Déterminer le TMI effectif selon le statut
  if (statutId === 'micro') {
-  tmiEffectifFinal = getTMI(result.sim.revenuImposable || 0);
+  tmiEffectifFinal = getTMI(result.sim.revenuImposable || 0, nbParts);
 } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
   const base = (result.sim.baseImposableIR ?? ((result.sim.salaireNet || 0) + (result.sim.csgNonDeductible || 0)));
-  tmiEffectifFinal = getTMI(base);
+  tmiEffectifFinal = getTMI(base, nbParts);
 } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
   const base = (result.sim.baseImposableIR ?? ((result.sim.remunerationNetteSociale || 0) + (result.sim.csgNonDeductible || 0)));
   tmiEffectifFinal = getTMI(base);
