@@ -3525,186 +3525,177 @@ detailContent += `
   </div>`;
 
 
-    
-    // Ajouter une note explicative sur le régime fiscal
-    if (statutId === 'micro' || statutId === 'ei' || statutId === 'eurl' || statutId === 'snc' || statutId === 'sci') {
-        detailContent += `
-        <div class="mt-2 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-blue-400">
-            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-            <strong>Régime IR :</strong> Cette structure est transparente fiscalement. 
-            Le résultat est directement imposé à l'IR du dirigeant/associé, sans IS ni distribution de dividendes.</p>
-        </div>`;
-    } else {
-        detailContent += `
-        <div class="mt-2 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-blue-400">
-            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-            <strong>Régime IS :</strong> La société paie l'IS sur ses bénéfices. 
-            Le dirigeant peut se verser une rémunération (imposée à l'IR) et/ou des dividendes (soumis au PFU).</p>
-        </div>`;
-    }
-    
-    // Créer le conteneur du contenu
-    const contentWrapper = document.createElement('div');
-    contentWrapper.style.cssText = `
-        background-color: #012a4a;
-        border-radius: 12px;
-        max-width: 800px;
-        max-height: 90vh;
-        overflow-y: auto;
-        position: relative;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(0, 255, 135, 0.3);
-    `;
-    
-    contentWrapper.innerHTML = `
-        <div class="detail-content" style="padding: 2rem;">
-            <span class="close-modal" style="position: absolute; top: 1rem; right: 1rem; cursor: pointer; font-size: 1.5rem; color: #00FF87;">
-                <i class="fas fa-times"></i>
-            </span>
-            ${detailContent}
-        </div>
-    `;
-    
-    modal.appendChild(contentWrapper);
-    document.body.appendChild(modal);
-    
-    // Ajouter un gestionnaire d'événement pour fermer le modal
-    modal.querySelector('.close-modal').addEventListener('click', function() {
-        modal.remove();
-    });
-    
-    // Fermer le modal en cliquant en dehors du contenu
-    modal.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            modal.remove();
-        }
-    });
+   // Ajouter une note explicative sur le régime fiscal
+if (statutId === 'micro' || statutId === 'ei' || statutId === 'eurl' || statutId === 'snc' || statutId === 'sci') {
+  detailContent += `
+  <div class="mt-2 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-blue-400">
+    <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+    <strong>Régime IR :</strong> Cette structure est transparente fiscalement. 
+    Le résultat est directement imposé à l'IR du dirigeant/associé, sans IS ni distribution de dividendes.</p>
+  </div>`;
+} else {
+  detailContent += `
+  <div class="mt-2 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-blue-400">
+    <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+    <strong>Régime IS :</strong> La société paie l'IS sur ses bénéfices. 
+    Le dirigeant peut se verser une rémunération (imposée à l'IR) et/ou des dividendes (soumis au PFU).</p>
+  </div>`;
 }
+
+// Créer le conteneur du contenu
+const contentWrapper = document.createElement('div');
+contentWrapper.style.cssText = `
+  background-color: #012a4a;
+  border-radius: 12px;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+`;
+
+contentWrapper.innerHTML = `
+  <div class="detail-content" style="padding: 2rem;">
+    <span class="close-modal" style="position: absolute; top: 1rem; right: 1rem; cursor: pointer; font-size: 1.5rem; color: #00FF87;">
+      <i class="fas fa-times"></i>
+    </span>
+    ${detailContent}
+  </div>
+`;
+
+modal.appendChild(contentWrapper);
+document.body.appendChild(modal);
+
+// Ajouter un gestionnaire d'événement pour fermer le modal
+modal.querySelector('.close-modal').addEventListener('click', function() {
+  modal.remove();
+});
+
+// Fermer le modal en cliquant en dehors du contenu
+modal.addEventListener('click', function(event) {
+  if (event.target === modal) {
+    modal.remove();
+  }
+});
+} // ← fin de showCalculationDetails
 
 // Configurer l'accordéon pour les sections d'informations fiscales
 function setupAccordion() {
+  // Récupérer le conteneur pour l'accordéon
   const accordionContainer = document.querySelector('.space-y-4');
   if (!accordionContainer) return;
 
-  // --- Lazy retry si legalStatuses n'est pas encore prêt ---
-  const hasLegal = !!window.legalStatuses;
-
-  // Si pas prêt et pas encore construit, on retente une fois un peu plus tard
-  if (!hasLegal && accordionContainer.dataset.built !== '1') {
-    if (!accordionContainer.dataset.retryScheduled) {
-      accordionContainer.dataset.retryScheduled = '1';
-      setTimeout(() => {
-        accordionContainer.dataset.retryScheduled = '';
-        setupAccordion();
-      }, 150);
-    }
-    // Ne pas toucher au contenu avant d'avoir legalStatuses pour éviter l'effet "fallback → rebuild"
-    return;
-  }
-
-  // Évite un double build si déjà fait
-  if (accordionContainer.dataset.built === '1') return;
-
-  // (Re)style du conteneur
+  // Vider le conteneur actuel
   accordionContainer.innerHTML = '';
+  // Ajouter le fond
   accordionContainer.style.background = 'rgba(1, 42, 74, 0.4)';
   accordionContainer.style.padding = '2rem';
   accordionContainer.style.borderRadius = '12px';
   accordionContainer.style.border = '1px solid rgba(0, 255, 135, 0.1)';
 
-  // Source des statuts : legalStatuses ou fallback
-  const statuts = window.legalStatuses
-    ? Object.keys(window.legalStatuses)
-    : ['MICRO','EI','EURL','SASU','SARL','SAS','SA','SNC','SCI','SELARL','SELAS','SCA'];
+  // Récupérer la liste des statuts depuis legalStatuses si disponible, sinon utiliser une liste par défaut
+  let statuts = [];
+  if (window.legalStatuses) {
+    statuts = Object.keys(window.legalStatuses);
+  } else {
+    // Liste des statuts par défaut
+    statuts = ['MICRO', 'EI', 'EURL', 'SASU', 'SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'];
+  }
 
-  // Icônes
+  // Icônes pour les statuts juridiques
   const statutIcons = {
-    'MICRO':'<i class="fas fa-store-alt text-green-400 mr-2"></i>',
-    'EI':'<i class="fas fa-user text-green-400 mr-2"></i>',
-    'EURL':'<i class="fas fa-user-tie text-green-400 mr-2"></i>',
-    'SASU':'<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
-    'SARL':'<i class="fas fa-users text-blue-400 mr-2"></i>',
-    'SAS':'<i class="fas fa-building text-blue-400 mr-2"></i>',
-    'SA':'<i class="fas fa-landmark text-blue-400 mr-2"></i>',
-    'SNC':'<i class="fas fa-handshake text-green-400 mr-2"></i>',
-    'SCI':'<i class="fas fa-home text-green-400 mr-2"></i>',
-    'SELARL':'<i class="fas fa-user-md text-blue-400 mr-2"></i>',
-    'SELAS':'<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
-    'SCA':'<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
+    'MICRO': '<i class="fas fa-store-alt text-green-400 mr-2"></i>',
+    'EI': '<i class="fas fa-user text-green-400 mr-2"></i>',
+    'EURL': '<i class="fas fa-user-tie text-green-400 mr-2"></i>',
+    'SASU': '<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
+    'SARL': '<i class="fas fa-users text-blue-400 mr-2"></i>',
+    'SAS': '<i class="fas fa-building text-blue-400 mr-2"></i>',
+    'SA': '<i class="fas fa-landmark text-blue-400 mr-2"></i>',
+    'SNC': '<i class="fas fa-handshake text-green-400 mr-2"></i>',
+    'SCI': '<i class="fas fa-home text-green-400 mr-2"></i>',
+    'SELARL': '<i class="fas fa-user-md text-blue-400 mr-2"></i>',
+    'SELAS': '<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
+    'SCA': '<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
   };
-
-  // Badges fiscaux
+  // Badge régime fiscal
   const regimeBadges = {
-    'MICRO':'<span class="status-badge ir">IR</span>',
-    'EI':'<span class="status-badge ir">IR</span>',
-    'EURL':'<span class="status-badge iris">IR/IS</span>',
-    'SASU':'<span class="status-badge is">IS</span>',
-    'SARL':'<span class="status-badge is">IS</span>',
-    'SAS':'<span class="status-badge is">IS</span>',
-    'SA':'<span class="status-badge is">IS</span>',
-    'SNC':'<span class="status-badge ir">IR</span>',
-    'SCI':'<span class="status-badge ir">IR</span>',
-    'SELARL':'<span class="status-badge is">IS</span>',
-    'SELAS':'<span class="status-badge is">IS</span>',
-    'SCA':'<span class="status-badge is">IS</span>'
+    'MICRO': '<span class="status-badge ir">IR</span>',
+    'EI': '<span class="status-badge ir">IR</span>',
+    'EURL': '<span class="status-badge iris">IR/IS</span>',
+    'SASU': '<span class="status-badge is">IS</span>',
+    'SARL': '<span class="status-badge is">IS</span>',
+    'SAS': '<span class="status-badge is">IS</span>',
+    'SA': '<span class="status-badge is">IS</span>',
+    'SNC': '<span class="status-badge ir">IR</span>',
+    'SCI': '<span class="status-badge ir">IR</span>',
+    'SELARL': '<span class="status-badge is">IS</span>',
+    'SELAS': '<span class="status-badge is">IS</span>',
+    'SCA': '<span class="status-badge is">IS</span>'
   };
 
-  // Génération
+  // Générer l'accordéon pour chaque statut
   statuts.forEach(statutId => {
-    const nomStatut = (window.legalStatuses && window.legalStatuses[statutId])
-      ? window.legalStatuses[statutId].name
-      : getDefaultNomStatut(statutId); // suppose dispo ailleurs
+    const nomStatut = window.legalStatuses && window.legalStatuses[statutId] 
+      ? window.legalStatuses[statutId].name 
+      : getDefaultNomStatut(statutId);
 
-    const item = document.createElement('div');
-    item.className = 'mb-3';
-    item.innerHTML = `
+    // Créer l'élément d'accordéon
+    const accordionItem = document.createElement('div');
+    accordionItem.className = 'mb-3';
+
+    // Contenu de l'accordéon basé sur le statut
+    accordionItem.innerHTML = `
       <button class="accordion-toggle w-full">
-        ${statutIcons[statutId] || ''} ${nomStatut}
+        ${statutIcons[statutId] || ''} ${nomStatut} 
         ${regimeBadges[statutId] || ''}
         <i class="fas fa-plus ml-auto"></i>
       </button>
       <div class="hidden px-4 py-3 border-t border-gray-700 bg-blue-900 bg-opacity-20 rounded-b-lg">
-        ${getStatutFiscalInfo(statutId)} <!-- suppose dispo ailleurs -->
+        ${getStatutFiscalInfo(statutId)}
       </div>
     `;
-    accordionContainer.appendChild(item);
+
+    accordionContainer.appendChild(accordionItem);
   });
 
-  // Interactions
-  accordionContainer.querySelectorAll('.accordion-toggle').forEach(btn => {
-    btn.addEventListener('click', function () {
+  // Attacher les événements aux boutons de l'accordéon
+  const toggleBtns = document.querySelectorAll('.accordion-toggle');
+  toggleBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
       const content = this.nextElementSibling;
       content.classList.toggle('hidden');
+
+      // Changer l'icône
       const icon = this.querySelector('i:last-child');
       icon.classList.toggle('fa-plus');
       icon.classList.toggle('fa-minus');
-      this.classList.toggle('active');
-    }, { passive: true });
-  });
 
-  // Verrou "déjà construit"
-  accordionContainer.dataset.built = '1';
+      // Ajouter/supprimer la classe active
+      this.classList.toggle('active');
+    });
+  });
 }
 
 // Fonction d'aide pour obtenir le nom par défaut si legalStatuses n'est pas disponible
 function getDefaultNomStatut(statutId) {
-    const noms = {
-        'MICRO': 'Micro-entreprise',
-        'EI': 'Entreprise Individuelle',
-        'EURL': 'Entreprise Unipersonnelle à Responsabilité Limitée',
-        'SASU': 'Société par Actions Simplifiée Unipersonnelle',
-        'SARL': 'Société à Responsabilité Limitée',
-        'SAS': 'Société par Actions Simplifiée',
-        'SA': 'Société Anonyme',
-        'SNC': 'Société en Nom Collectif',
-        'SCI': 'Société Civile Immobilière',
-        'SELARL': 'Société d\'Exercice Libéral à Responsabilité Limitée',
-        'SELAS': 'Société d\'Exercice Libéral par Actions Simplifiée',
-        'SCA': 'Société en Commandite par Actions'
-    };
-    return noms[statutId] || statutId;
+  const noms = {
+    'MICRO': 'Micro-entreprise',
+    'EI': 'Entreprise Individuelle',
+    'EURL': 'Entreprise Unipersonnelle à Responsabilité Limitée',
+    'SASU': 'Société par Actions Simplifiée Unipersonnelle',
+    'SARL': 'Société à Responsabilité Limitée',
+    'SAS': 'Société par Actions Simplifiée',
+    'SA': 'Société Anonyme',
+    'SNC': 'Société en Nom Collectif',
+    'SCI': 'Société Civile Immobilière',
+    'SELARL': 'Société d\'Exercice Libéral à Responsabilité Limitée',
+    'SELAS': 'Société d\'Exercice Libéral par Actions Simplifiée',
+    'SCA': 'Société en Commandite par Actions'
+  };
+  return noms[statutId] || statutId;
 }
-});
+
 // Fonction pour générer les informations fiscales de chaque statut
 function getStatutFiscalInfo(statutId) {
   // Informations fiscales par défaut pour chaque statut
@@ -3727,7 +3718,7 @@ function getStatutFiscalInfo(statutId) {
       <p class="mb-2"><strong>IR :</strong> Imposition sur la totalité du bénéfice</p>
       <p class="mb-2"><strong>IS :</strong> Impôt sur les sociétés + PFU sur dividendes</p>
       <p class="mb-2"><strong>Cotisations sociales :</strong> Environ 30% de la rémunération du gérant (TNS)</p>
-      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes &gt; 10% du capital</p>
+      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
     `,
     'SASU': `
       <p class="mb-2"><strong>Régime fiscal :</strong> IS uniquement</p>
@@ -3741,7 +3732,7 @@ function getStatutFiscalInfo(statutId) {
       <p class="mb-2"><strong>Social gérant majoritaire :</strong> TNS (~45% de cotisations)</p>
       <p class="mb-2"><strong>Social gérant minoritaire :</strong> Assimilé salarié (~80%)</p>
       <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-      <p class="mb-2"><strong>Dividendes TNS :</strong> cotisations sociales sur la part &gt;10% (≈40–45%), sinon PS 17,2%.</p>
+      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
     `,
     'SAS': `
       <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
@@ -3774,7 +3765,7 @@ function getStatutFiscalInfo(statutId) {
       <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
       <p class="mb-2"><strong>Social :</strong> Gérant majoritaire = TNS</p>
       <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-      <p class="mb-2"><strong>Dividendes TNS :</strong> cotisations sociales sur la part &gt;10% (≈40–45%), sinon PS 17,2%.</p>
+      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
     `,
     'SELAS': `
       <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
@@ -3788,12 +3779,10 @@ function getStatutFiscalInfo(statutId) {
       <p class="mb-2"><strong>Structure :</strong> Commandités (responsabilité illimitée) et commanditaires</p>
       <p class="mb-2"><strong>Social :</strong> Gérants = TNS</p>
       <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes &gt; 10% du capital</p>
+      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
       <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
     `
   };
 
   return infosFiscales[statutId] || `<p>Informations non disponibles pour ${statutId}</p>`;
 }
-
-
