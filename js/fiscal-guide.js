@@ -91,12 +91,21 @@ const ABATT_TS_TAUX = 0.10;
 const ABATT_TS_MIN  = 472;
 const ABATT_TS_MAX  = 14171;
 
-function baseImposableTNS({remBrute=0, netSocial=0}) {
-  const csgND = remBrute * CSG_NOND_TAUX;
-  const abat  = Math.min(ABATT_TS_MAX, Math.max(ABATT_TS_MIN, remBrute * ABATT_TS_TAUX));
-  const base  = Math.max(0, (netSocial + csgND) - abat);
+/**
+ * Base IR TNS = (net social + CSG/CRDS non déductible) - abattement 10% (min/max).
+ * ✅ Si pas de rémunération (remBrute=0 ou netSocial=0) : CSGND = 0 et abattement = 0 (pas de -472 €).
+ */
+function baseImposableTNS({ remBrute = 0, netSocial = 0 }) {
+  const hasRemu = (remBrute > 0) && (netSocial > 0);
+
+  const csgND   = hasRemu ? remBrute * CSG_NOND_TAUX : 0;
+  const abatCal = hasRemu ? remBrute * ABATT_TS_TAUX : 0;
+  const abat    = hasRemu ? Math.min(ABATT_TS_MAX, Math.max(ABATT_TS_MIN, abatCal)) : 0;
+
+  const base = Math.max(0, (netSocial + csgND) - abat);
   return { base, csgND, abat };
 }
+
 // --- Parts fiscales (quotient familial) — GLOBAL ---
 function getNbParts() {
   const el = document.getElementById('sim-nb-parts');
@@ -128,14 +137,15 @@ document.addEventListener('DOMContentLoaded', function () {
   if (document.getElementById('fiscal-simulator')) {
     initFiscalSimulator();
   }
-  // --- IS réduit 15% : conditions légales + calcul par tranches ---
-const IS_15_SEUIL = 42500;     // plafond de la tranche à 15%
-const IS_TAUX_PLEIN = 0.25;    // 25%
 
-function isEligibleIS15({ ca = 0, capitalIntegralementLibere = false, pctDetentionPersPhysiques = 0 } = {}) {
-  // Conditions simplifiées : CA < 10 M€, capital entièrement libéré, >= 75% détenu par des personnes physiques
-  return ca < 10_000_000 && !!capitalIntegralementLibere && (pctDetentionPersPhysiques >= 75);
-}
+  // --- IS réduit 15% : conditions légales + calcul par tranches ---
+  const IS_15_SEUIL = 42500;     // plafond de la tranche à 15%
+  const IS_TAUX_PLEIN = 0.25;    // 25%
+
+  function isEligibleIS15({ ca = 0, capitalIntegralementLibere = false, pctDetentionPersPhysiques = 0 } = {}) {
+    // Conditions simplifiées : CA < 10 M€, capital entièrement libéré, >= 75% détenu par des personnes physiques
+    return ca < 10_000_000 && !!capitalIntegralementLibere && (pctDetentionPersPhysiques >= 75);
+  }
 
 /** Calcule l'IS avec tranche 15% (si éligible) + 25% au-delà. */
 function calcISProgressif(beneficeIS, elig15) {
