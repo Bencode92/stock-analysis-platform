@@ -1696,56 +1696,61 @@ for (const statutId of selectedStatuses) {
 
        } else {
 // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, SELARL, SELAS, SA, SCA)
-brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
+brut    = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
 charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
 
-// ⚠️ Dividendes TNS : uniquement pour SARL/EURL-IS/SELARL/SCA avec gérant majoritaire
-const isTNSDiv = ['sarl','eurlIS','selarl','sca'].includes(statutId) && gerantMajoritaire;
+// ⚠️ Dividendes : TNS uniquement pour SARL/EURL-IS/SELARL/SCA avec gérant maj.
+// (SASU/SAS/SA/SELAS = non TNS -> PS 17,2% sur 100%, jamais de TNS)
 const divBruts = Number(sim.dividendes) || 0;
 const base10   = Number(document.getElementById('base10-total')?.value) || getBaseSeuilDivTNS(sim) || 0;
 
-let split = null;
-if (isTNSDiv && divBruts > 0 && typeof calcDivTNS === 'function') {
-  // bornage 0.40–0.45 si on observe quelque chose de cohérent, sinon 0.40
-  const tauxObserve = (sim.remuneration > 0 && sim.cotisationsSociales > 0)
-    ? (sim.cotisationsSociales / sim.remuneration)
-    : null;
-  const tauxTNS = (tauxObserve != null)
-    ? Math.max(0.40, Math.min(0.45, tauxObserve))
-    : TAUX_TNS_DIV_FALLBACK;
+const isTNSFamily = ['sarl','eurlIS','selarl','sca'].includes(statutId);
+const isGerantMaj = isTNSFamily ? !!gerantMajoritaire : false;
 
+// Taux TNS : observe si dispo, sinon fallback borné
+const tauxObserve = (Number(sim.cotisationsSociales) > 0 && Number(sim.remuneration) > 0)
+  ? (sim.cotisationsSociales / sim.remuneration)
+  : null;
+const tauxTNS = (tauxObserve != null)
+  ? Math.max(0.40, Math.min(0.45, tauxObserve))
+  : TAUX_TNS_DIV_FALLBACK;
+
+let split = null;
+if (divBruts > 0) {
   split = calcDivTNS({
-    divBruts: divBruts,
-    baseSeuil10: base10,     // ← utilise la base saisie (capital + primes + CCA)
-    methode: (sim.methodeDividendes === 'PROGRESSIF') ? 'PROGRESSIF' : 'PFU',
-    tmi: tmi,
-    tauxTNS
+    divBruts,
+    baseSeuil10: base10,        // capital + primes + CCA * 10%
+    methode: 'AUTO',            // 🔒 toujours AUTO (pas d’UI)
+    tmi,
+    tauxTNS,
+    isGerantMajoritaire: isGerantMaj,
+    eligibleAbattement40: true
   });
 
-  // ✅ PERSISTE LE SPLIT POUR L’AFFICHEUR DE DÉTAILS
-  sim._divSplit              = split; // { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets }
-  sim.prelevementForfaitaire = split.irDiv + split.ps172; // IR dividendes + PS (≤10%)
-  sim.cotTNSDiv              = split.cotTNS;              // cotisations TNS (>10%)
+  // Persistance pour l’affichage et les totaux
+  sim._divSplit              = split;                 // { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets, methode, economie }
+  sim.methodeDividendes      = split.methode;
+  sim.economieMethode        = split.economie;
+  sim.prelevementForfaitaire = split.irDiv + split.ps172; // IR + PS (≤10%)
+  sim.cotTNSDiv              = split.cotTNS;              // TNS (>10%)
   sim.dividendesNets         = split.nets;
 
-  // Impôts totaux sans double PS
+  // Totaux impôts (évite le double comptage des PS/TNS)
   impots = (sim.impotRevenu || 0) + (sim.is || 0) + split.irDiv + split.ps172 + split.cotTNS;
 } else {
-  // Pas de TNS sur dividendes (ou pas de dividendes) : logique standard
-  impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
-  if (sim.cotTNSDiv) impots += sim.cotTNSDiv;
+  // pas de dividendes
+  impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0) + (sim.cotTNSDiv || 0);
 }
 
 // (4) Recomposition propre du net total + ratio (IS)
 {
-  const salaireApresIR = Number(sim.revenuNetSalaire) || 0; // net salarié après IR déjà calculé au-dessus
+  const salaireApresIR = Number(sim.revenuNetSalaire) || 0; // net après IR déjà calculé
   const divNets        = Number(sim.dividendesNets)   || 0; // nets après PFU/barème + PS/TNS
 
-  // Net total et ratio sur CA
   sim.revenuNetTotal = round2(salaireApresIR + divNets);
   sim.ratioNetCA     = ca > 0 ? round2((sim.revenuNetTotal / ca) * 100) : 0;
 
-  // Propager vers la ligne du tableau
+  // Propager vers la ligne du tableau (recale impôts via _divSplit si présent)
   net    = sim.revenuNetTotal;
   impots = (Number(sim.is) || 0) + (Number(sim.impotRevenu) || 0)
         + (Number(sim._divSplit?.irDiv) || 0)
@@ -1755,43 +1760,43 @@ if (isTNSDiv && divBruts > 0 && typeof calcDivTNS === 'function') {
         }
 
 
-      // Calcul du score avec prise en compte de la progressivité fiscale
-      const scoreNet = 100 * (net / ca); // Score standard
+// Calcul du score avec prise en compte de la progressivité fiscale
+const scoreNet = 100 * (net / ca); // Score standard
 
-      // Coefficient d'évolutivité
-      let coeffEvolution = 1;
-      if (statutId === 'micro' && ca > 30000) {
-        coeffEvolution = 0.95;
-      } else if ((statutId === 'sasu' || statutId === 'sas' || statutId === 'selas') && ca > 80000) {
-        coeffEvolution = 1.05;
-      }
+// Coefficient d'évolutivité
+let coeffEvolution = 1;
+if (statutId === 'micro' && ca > 30000) {
+  coeffEvolution = 0.95;
+} else if ((statutId === 'sasu' || statutId === 'sas' || statutId === 'selas') && ca > 80000) {
+  coeffEvolution = 1.05;
+}
 
-      // Score avec coefficient d'évolutivité
-      const score = scoreNet * coeffEvolution;
+// Score avec coefficient d'évolutivité
+const score = scoreNet * coeffEvolution;
 
-      // Calculer la répartition rémunération/dividendes
-      const ratioEffectif = useOptimalRatio && sim.ratioOptimise ? sim.ratioOptimise : ratioSalaire;
+// Calculer la répartition rémunération/dividendes
+const ratioEffectif = useOptimalRatio && sim.ratioOptimise ? sim.ratioOptimise : ratioSalaire;
 
-      // Déterminer si l'optimisation était active pour ce statut
-      const optimisationActive = useOptimalRatio && sim.ratioOptimise !== undefined;
+// Déterminer si l'optimisation était active pour ce statut
+const optimisationActive = useOptimalRatio && sim.ratioOptimise !== undefined;
 
-      // Astuce UX pour la colonne “Dividendes nets”
-      const dividendesNetsAff = (sim.dividendesNets && Math.abs(sim.dividendesNets) >= 5) ? sim.dividendesNets : 0;
+// Astuce UX pour la colonne “Dividendes nets”
+const dividendesNetsAff = (sim.dividendesNets && Math.abs(sim.dividendesNets) >= 5) ? sim.dividendesNets : 0;
 
-      resultats.push({
-        statutId: statutId,
-        statut: statut.nom,
-        brut: brut,
-        charges: charges,
-        impots: impots,
-        net: net,
-        sim: sim,
-        score: score,
-        ratioOptimise: sim.ratioOptimise,
-        dividendesNets: dividendesNetsAff,
-        ratioEffectif: ratioEffectif,
-        optimisationActive: optimisationActive
-      });
+resultats.push({
+  statutId: statutId,
+  statut: statut.nom,
+  brut: brut,
+  charges: charges,
+  impots: impots,
+  net: net,
+  sim: sim,
+  score: score,
+  ratioOptimise: sim.ratioOptimise,
+  dividendesNets: dividendesNetsAff,
+  ratioEffectif: ratioEffectif,
+  optimisationActive: optimisationActive
+});
 
     } catch (e) {
       console.error(`Erreur lors de la simulation pour ${statutsComplets[statutId].nom}:`, e);
