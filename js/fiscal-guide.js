@@ -557,7 +557,7 @@ function placeBase10UnderNbAssocies(){
       <input id="base10-total" type="hidden" value="0">
 
       <div class="mt-3 flex items-center justify-between">
-        <div class="text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Capital libéré + primes + CCA <span class="text-gray-300">(× quote-part)</span></div>
+        <div class="text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Capital libéré + primes + CCA</div>
         <div class="text-base md:text-lg font-semibold text-green-400">10% = <span id="tns-mini-seuil">—</span></div>
       </div>
 
@@ -565,76 +565,99 @@ function placeBase10UnderNbAssocies(){
     </div>
   `;
 
-  // ➜ insérer le bloc PUIS seulement maintenant, toucher #base-capital/#base-cca/#base-primes
-  nbItem.parentNode.insertBefore(inline, nbItem.nextElementSibling);
-
-  // ====== Formatage FR des montants saisis (robuste) ======
-  const parseFR = (val) => {
-    let s = String(val ?? '').trim();
-    s = s.replace(/[€\s\u00A0\u202F]/g, '');
-    const hasComma = s.includes(','), hasDot = s.includes('.');
-    if (hasComma && hasDot) s = s.replace(/\./g, '').replace(',', '.');
-    else if (hasComma) s = s.replace(',', '.');
-    else if (hasDot && /^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
-    const n = parseFloat(s);
-    return Number.isFinite(n) ? n : 0;
-  };
-  const formatFR = (n) => Number(n || 0).toLocaleString('fr-FR');
-
-  // Initialisation des 3 inputs (type=text pour accepter "10 000", "1.000", etc.)
+  /* --- PATCH JS : inputs monnaie en <text> + clavier numérique --- */
   ['base-capital','base-cca','base-primes'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
+    // switch <number> -> <text> pour autoriser 1 000, 25 000, etc.
     el.setAttribute('type', 'text');
-    el.setAttribute('inputmode', 'numeric');
+    el.setAttribute('inputmode', 'numeric');   // clavier numérique mobile
     el.setAttribute('autocomplete', 'off');
-    el.setAttribute('pattern', '[0-9\\s,.\u00A0\u202F€]*');
+    el.setAttribute('pattern', '[0-9\\s,.]*'); // tolère espaces/virgules/points
+    // (optionnel) empêche la roulette de modifier la valeur
     el.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
-    el.addEventListener('input', () => { el.dataset.raw = String(parseFR(el.value)); });
-    ['change','blur'].forEach(ev => el.addEventListener(ev, () => {
-      const raw = parseFR(el.dataset.raw ?? el.value);
-      el.value = raw ? formatFR(raw) : '';
-    }));
-    if (el.value) {
-      const raw = parseFR(el.value);
-      el.dataset.raw = String(raw);
-      el.value = raw ? formatFR(raw) : '';
-    }
   });
 
-  // Helper pour lire la valeur numérique d'un champ
-  const val = (id) => {
-    const el = document.getElementById(id);
-    return parseFR(el?.dataset.raw ?? el?.value);
-  };
+  // insérer Base10 juste APRÈS l’item "Nombre d’associés"
+  nbItem.parentNode.insertBefore(inline, nbItem.nextElementSibling);
+// ====== Formatage FR des montants saisis (robuste) ======
 
-  // 🔄 calcul dynamique du seuil 10% — AVEC PRORATA DE PART DÉTENUE
+// Parser FR : gère espaces fines, € , points/virgules, et distingue milliers vs décimales
+const parseFR = (val) => {
+  let s = String(val ?? '').trim();
+
+  // retirer € et espaces (y compris NBSP \u00A0 et espace fine \u202F)
+  s = s.replace(/[€\s\u00A0\u202F]/g, '');
+
+  const hasComma = s.includes(',');
+  const hasDot   = s.includes('.');
+
+  if (hasComma && hasDot) {
+    // style "1.234,56" → points = milliers, virgule = décimales
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    // style "1234,56" → virgule = décimales
+    s = s.replace(',', '.');
+  } else if (hasDot) {
+    // si pattern milliers "1.234.567" → retire les points, sinon garder comme décimal
+    if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  }
+
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// (optionnel) si tu veux forcer des entiers uniquement, dé-commente et remplace parseFR par parseFRint ci-dessous
+// const parseFR = (val) => { const s = String(val ?? '').replace(/[^\d]/g, ''); return s ? Number(s) : 0; };
+
+const formatFR = (n) => Number(n || 0).toLocaleString('fr-FR');
+
+// Initialisation des 3 inputs (type=text pour accepter "10 000", "1.000", etc.)
+['base-capital','base-cca','base-primes'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  // assurer un comportement "numérique" friendly
+  el.setAttribute('type', 'text');
+  el.setAttribute('inputmode', 'numeric');
+  el.setAttribute('autocomplete', 'off');
+  el.setAttribute('pattern', '[0-9\\s,.\u00A0\u202F€]*'); // tolère chiffres, espaces, ., , et €
+  el.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+
+  // — live parsing : stocke la valeur brute normalisée dans data-raw
+  el.addEventListener('input', () => {
+    el.dataset.raw = String(parseFR(el.value));
+  });
+
+  // — au blur/change : ré-affiche joliment en FR
+  ['change','blur'].forEach(ev => el.addEventListener(ev, () => {
+    const raw = parseFR(el.dataset.raw ?? el.value);
+    el.value = raw ? formatFR(raw) : '';
+  }));
+
+  // — si valeur initiale (placeholder ignoré), la normaliser
+  if (el.value) {
+    const raw = parseFR(el.value);
+    el.dataset.raw = String(raw);
+    el.value = raw ? formatFR(raw) : '';
+  }
+});
+
+// Helper pour lire la valeur numérique d'un champ
+const val = (id) => {
+  const el = document.getElementById(id);
+  return parseFR(el?.dataset.raw ?? el?.value);
+};
+
+  // calcul dynamique du seuil 10%
   const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0});
   function updateBase10(){
     const total = val('base-capital') + val('base-primes') + val('base-cca');
-
-    // part détenue par l'associé simulé (0–1)
-    const partPctEl = document.getElementById('sim-part-associe');
-    const part = Math.max(0, Math.min(1, (parseFloat(partPctEl?.value) || 100) / 100));
-
-    // ✅ base proratisée = (capital + primes + CCA) × quote-part
-    const baseQuotePart = total * part;
-
-    // stocke la base PRORATISÉE pour le moteur (runComparison → calcDivTNS)
-    const hidden = document.getElementById('base10-total');
-    if (hidden) hidden.value = String(baseQuotePart);
-
-    // affiche "10% = ..." sur la base PRORATISÉE
-    const seuil10 = baseQuotePart > 0 ? baseQuotePart * 0.10 : 0;
-    const out = document.getElementById('tns-mini-seuil');
-    if (out) out.textContent = baseQuotePart > 0 ? fmtEUR.format(seuil10) : '—';
-
-    // relance la simu
+    document.getElementById('base10-total').value = String(total);
+    document.getElementById('tns-mini-seuil').textContent = total>0 ? fmtEUR.format(total*0.10) : '—';
     if (typeof runComparison === 'function') runComparison();
   }
-
-  // ⛓️ écouteurs (inclut la part détenue)
-  ['base-capital','base-primes','base-cca','sim-part-associe'].forEach(id=>{
+  ['base-capital','base-primes','base-cca'].forEach(id=>{
     const el=document.getElementById(id);
     if (el){ el.addEventListener('input',updateBase10); el.addEventListener('change',updateBase10); }
   });
@@ -651,14 +674,66 @@ function placeBase10UnderNbAssocies(){
   toggleBase10Visibility();
   document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
   document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
-
-  // 🔗 Attache robuste sur l’onglet “Guide fiscal” (ordre indépendant)
-  const guideTab = Array.from(document.querySelectorAll('.tab-item'))
-    .find(el => el.textContent?.includes('Guide fiscal'));
-  guideTab?.addEventListener('click', initFiscalSimulator);
 }
 
 
+
+
+function setupSimulator() {
+  // --- Valeurs par défaut cohérentes (si vides) ---
+  const setIfEmpty = (id, v) => {
+    const el = document.getElementById(id);
+    if (el && (el.value === '' || el.value == null)) el.value = v;
+  };
+  setIfEmpty('sim-nb-associes', '1');
+  setIfEmpty('sim-part-associe', '100');
+  setIfEmpty('sim-salaire', '70');
+  setIfEmpty('sim-marge', '30');
+
+  const compareBtn = document.getElementById('sim-compare-btn');
+  if (!compareBtn) return;
+
+  compareBtn.addEventListener('click', runComparison);
+
+  // Écouter les changements dans les champs pour MAJ auto
+  const inputFields = ['sim-ca', 'sim-marge', 'sim-salaire', 'sim-tmi', 'sim-nb-associes', 'sim-part-associe'];
+  inputFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', runComparison);
+  });
+
+  // Rafraîchir l’état des cases "Personnalisé" quand le nb d’associés change
+  const nbAssociesEl = document.getElementById('sim-nb-associes');
+  if (nbAssociesEl) nbAssociesEl.addEventListener('change', updateCustomStatusDisabling);
+
+  // 🔓 Autoriser 0 % de salaire et borner proprement [0,100]
+  (function enableZeroPercentSalary() {
+    const el = document.getElementById('sim-salaire');
+    if (!el) return;
+    el.setAttribute('min', '0');
+    if (!el.getAttribute('step')) el.setAttribute('step', '1');
+    const clamp01 = v => Math.max(0, Math.min(100, v));
+    const normalize = () => {
+      if (el.value === '') return;
+      const n = parseFloat(el.value);
+      if (Number.isFinite(n)) el.value = clamp01(n);
+    };
+    el.addEventListener('input', normalize, { passive: true });
+    normalize();
+  })();
+
+  // Configurer l'accordéon pour les statuts juridiques
+  setupAccordion();
+
+  // Mettre à jour l'interface du simulateur pour inclure tous les statuts
+  updateSimulatorInterface();
+
+  // ➜ Le DOM cible existe maintenant
+  placeBase10UnderNbAssocies(); // ✅ insertion des 3 champs “Base 10%”
+
+  // Exécuter une première simulation au chargement
+  setTimeout(runComparison, 100);
+}
 
 
 // Fonction pour mettre à jour l'interface du simulateur
@@ -3703,4 +3778,5 @@ function getStatutFiscalInfo(statutId) {
 
   return infosFiscales[statutId] || `<p>Informations non disponibles pour ${statutId}</p>`;
 }
+
 
