@@ -63,60 +63,27 @@ const TAUX_IR_PFU = 0.128;     // si PFU
 const TAUX_ABATT_DIV = 0.40;   // abattement 40% si barème
 const TAUX_TNS_DIV_FALLBACK = 0.40;// fallback ~40%
 
-function calcDivTNS({
-  divBruts = 0,
-  baseSeuil10 = 0,
-  methode = 'AUTO',
-  tmi = 30,
-  tauxTNS = TAUX_TNS_DIV_FALLBACK,
-  isGerantMajoritaire = true,
-  eligibleAbattement40 = true
-} = {}) {
-  // Normalisations
-  const dividendes = Math.max(0, Number(divBruts) || 0);
-  const base = Math.max(0, Number(baseSeuil10) || 0);
-  const seuilMontant = 0.10 * base;
+function calcDivTNS({divBruts=0, baseSeuil10=0, methode='PFU', tmi=11, tauxTNS=TAUX_TNS_DIV_FALLBACK}){
+  const seuilMontant = 0.10 * (baseSeuil10 || 0);
+  const partPS  = Math.min(divBruts, seuilMontant);
+  const partTNS = Math.max(0, divBruts - seuilMontant);
 
-  // Répartition PS/TNS
-  const partPS  = isGerantMajoritaire ? Math.min(dividendes, seuilMontant) : dividendes;
-  const partTNS = isGerantMajoritaire ? Math.max(0, dividendes - seuilMontant) : 0;
+  // IR sur dividendes
+  let irDiv;
+  if (methode === 'PROGRESSIF') {
+    const baseIR = (partPS + partTNS) * (1 - TAUX_ABATT_DIV); // abattement 40%
+    irDiv = baseIR * (tmi/100);
+  } else {
+    irDiv = divBruts * TAUX_IR_PFU;
+  }
 
-  const ps172  = partPS * TAUX_PS;           // PS 17,2% sur la part ≤10% (ou 100% si non-TNS)
-  const cotTNS = partTNS * Number(tauxTNS || 0); // TNS sur la part >10% (si gérant maj.)
+  const ps172  = partPS * TAUX_PS;   // seulement sur part <=10%
+  const cotTNS = partTNS * tauxTNS;  // seulement sur part >10%
 
-  // PFU
-  const irPFU = dividendes * TAUX_IR_PFU;
-  const totalPFU = irPFU + ps172 + cotTNS;
+  const totalPrels = irDiv + ps172 + cotTNS;
+  const nets = divBruts - totalPrels;
 
-  // Barème (abattement 40% si éligible)
-  const baseBareme = dividendes * (eligibleAbattement40 ? (1 - TAUX_ABATT_DIV) : 1);
-  const irBareme   = baseBareme * (Math.max(0, Number(tmi) || 0) / 100);
-  const totalBareme = irBareme + ps172 + cotTNS;
-
-  // Choix
-  let chosen = (methode || 'AUTO').toUpperCase();
-  if (chosen === 'AUTO') chosen = (totalPFU <= totalBareme) ? 'PFU' : 'PROGRESSIF';
-
-  const ret = (chosen === 'PFU')
-    ? {
-        methode: 'PFU',
-        partPS, partTNS, ps172, cotTNS,
-        irDiv: irPFU,
-        totalPrels: totalPFU,
-        nets: dividendes - totalPFU,
-        alt: { methode: 'PROGRESSIF', irDiv: irBareme, total: totalBareme }
-      }
-    : {
-        methode: 'PROGRESSIF',
-        partPS, partTNS, ps172, cotTNS,
-        irDiv: irBareme,
-        totalPrels: totalBareme,
-        nets: dividendes - totalBareme,
-        alt: { methode: 'PFU', irDiv: irPFU, total: totalPFU }
-      };
-
-  ret.economie = Math.abs(totalPFU - totalBareme);
-  return ret;
+  return { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets };
 }
 // --- Abattement 10% T&S 2025 (plancher / plafond) ---
 const CSG_NOND_TAUX = 0.029;
@@ -1729,61 +1696,56 @@ for (const statutId of selectedStatuses) {
 
        } else {
 // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, SELARL, SELAS, SA, SCA)
-brut    = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
+brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
 charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
 
-// ⚠️ Dividendes : TNS uniquement pour SARL/EURL-IS/SELARL/SCA avec gérant maj.
-// (SASU/SAS/SA/SELAS = non TNS -> PS 17,2% sur 100%, jamais de TNS)
+// ⚠️ Dividendes TNS : uniquement pour SARL/EURL-IS/SELARL/SCA avec gérant majoritaire
+const isTNSDiv = ['sarl','eurlIS','selarl','sca'].includes(statutId) && gerantMajoritaire;
 const divBruts = Number(sim.dividendes) || 0;
 const base10   = Number(document.getElementById('base10-total')?.value) || getBaseSeuilDivTNS(sim) || 0;
 
-const isTNSFamily = ['sarl','eurlIS','selarl','sca'].includes(statutId);
-const isGerantMaj = isTNSFamily ? !!gerantMajoritaire : false;
-
-// tente d’observer un taux TNS réel, sinon fallback
-const tauxObserve = (Number(sim.cotisationsSociales) > 0 && Number(sim.remuneration) > 0)
-  ? (sim.cotisationsSociales / sim.remuneration)
-  : null;
-const tauxTNS = (tauxObserve != null)
-  ? Math.max(0.40, Math.min(0.45, tauxObserve))
-  : TAUX_TNS_DIV_FALLBACK;
-
 let split = null;
-if (divBruts > 0) {
+if (isTNSDiv && divBruts > 0 && typeof calcDivTNS === 'function') {
+  // bornage 0.40–0.45 si on observe quelque chose de cohérent, sinon 0.40
+  const tauxObserve = (sim.remuneration > 0 && sim.cotisationsSociales > 0)
+    ? (sim.cotisationsSociales / sim.remuneration)
+    : null;
+  const tauxTNS = (tauxObserve != null)
+    ? Math.max(0.40, Math.min(0.45, tauxObserve))
+    : TAUX_TNS_DIV_FALLBACK;
+
   split = calcDivTNS({
-    divBruts,
-    baseSeuil10: base10,
-    methode: 'AUTO',                 // 🔒 toujours AUTO
+    divBruts: divBruts,
+    baseSeuil10: base10,     // ← utilise la base saisie (capital + primes + CCA)
+    methode: (sim.methodeDividendes === 'PROGRESSIF') ? 'PROGRESSIF' : 'PFU',
     tmi: tmi,
-    tauxTNS,
-    isGerantMajoritaire: isGerantMaj,
-    eligibleAbattement40: true
+    tauxTNS
   });
 
-  // Persistance pour l’affichage et les totaux
-  sim._divSplit              = split;
-  sim.methodeDividendes      = split.methode;
-  sim.economieMethode        = split.economie;
-  sim.prelevementForfaitaire = split.irDiv + split.ps172; // IR + PS (≤10%)
-  sim.cotTNSDiv              = split.cotTNS;              // TNS (>10%)
+  // ✅ PERSISTE LE SPLIT POUR L’AFFICHEUR DE DÉTAILS
+  sim._divSplit              = split; // { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets }
+  sim.prelevementForfaitaire = split.irDiv + split.ps172; // IR dividendes + PS (≤10%)
+  sim.cotTNSDiv              = split.cotTNS;              // cotisations TNS (>10%)
   sim.dividendesNets         = split.nets;
 
-  // Totaux impôts (évite un double comptage des PS/TNS)
+  // Impôts totaux sans double PS
   impots = (sim.impotRevenu || 0) + (sim.is || 0) + split.irDiv + split.ps172 + split.cotTNS;
 } else {
-  // pas de dividendes
-  impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0) + (sim.cotTNSDiv || 0);
+  // Pas de TNS sur dividendes (ou pas de dividendes) : logique standard
+  impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
+  if (sim.cotTNSDiv) impots += sim.cotTNSDiv;
 }
 
 // (4) Recomposition propre du net total + ratio (IS)
 {
-  const salaireApresIR = Number(sim.revenuNetSalaire) || 0; // net après IR déjà calculé
+  const salaireApresIR = Number(sim.revenuNetSalaire) || 0; // net salarié après IR déjà calculé au-dessus
   const divNets        = Number(sim.dividendesNets)   || 0; // nets après PFU/barème + PS/TNS
 
+  // Net total et ratio sur CA
   sim.revenuNetTotal = round2(salaireApresIR + divNets);
   sim.ratioNetCA     = ca > 0 ? round2((sim.revenuNetTotal / ca) * 100) : 0;
 
-  // Propager vers la ligne du tableau (recale impôts si besoin via _divSplit)
+  // Propager vers la ligne du tableau
   net    = sim.revenuNetTotal;
   impots = (Number(sim.is) || 0) + (Number(sim.impotRevenu) || 0)
         + (Number(sim._divSplit?.irDiv) || 0)
@@ -1878,128 +1840,132 @@ if (divBruts > 0) {
     `;
     }
     
-// Afficher les résultats dans le tableau
-resultats.forEach((res, index) => {
-  const isTopResult = index === 0;
-
-  const row = document.createElement('tr');
-  row.className = isTopResult
-    ? 'result-top-row'
-    : (index % 2 === 0 ? 'bg-blue-900 bg-opacity-20' : '');
-
-  // Valeur d'optimisation du ratio
-  let optimisationValue = "";
-  if (res.ratioOptimise) {
-    const ratioDisplay = Math.round(res.ratioOptimise * 100);
-    const isMicroOrEI = ['micro','ei','eurl','snc','sci'].includes(res.statutId);
-
-    if (useOptimalRatio && !isMicroOrEI) {
-      optimisationValue = `<span class="ratio-optimal-value">${ratioDisplay}% rém.</span>`;
-    } else if (isMicroOrEI) {
-      optimisationValue = "N/A";
-    } else {
-      const ratioManuel = Math.round(ratioSalaire * 100);
-      optimisationValue = `${ratioDisplay}% <small>(${ratioManuel}% manuel)</small>`;
-    }
-  } else {
-    optimisationValue = `${Math.round(ratioSalaire * 100)}% (manuel)`;
-  }
-
-  // Format avec dividendes et optimisation
-  row.innerHTML = `
+    // Afficher les résultats dans le tableau
+    resultats.forEach((res, index) => {
+        const isTopResult = index === 0;
+        
+        const row = document.createElement('tr');
+        row.className = isTopResult 
+            ? 'result-top-row' 
+            : (index % 2 === 0 ? 'bg-blue-900 bg-opacity-20' : '');
+        
+        // Valeur d'optimisation du ratio
+        let optimisationValue = "";
+        if (res.ratioOptimise) {
+            const ratioDisplay = Math.round(res.ratioOptimise*100);
+            const isMicroOrEI = res.statutId === 'micro' || res.statutId === 'ei' || res.statutId === 'eurl' || res.statutId === 'snc' || res.statutId === 'sci';
+            
+            if (useOptimalRatio && !isMicroOrEI) {
+                optimisationValue = `<span class="ratio-optimal-value">${ratioDisplay}% rém.</span>`;
+            } else if (isMicroOrEI) {
+                optimisationValue = "N/A";
+            } else {
+                const ratioManuel = Math.round(ratioSalaire*100); 
+                optimisationValue = `${ratioDisplay}% <small>(${ratioManuel}% manuel)</small>`;
+            }
+        } else {
+            optimisationValue = `${Math.round(ratioSalaire*100)}% (manuel)`;
+        }
+        
+        // Format avec dividendes et optimisation
+row.innerHTML = `
     <td class="px-4 py-3 font-medium">
-      ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
-      ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
+        ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
+        ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
     </td>
-    <td class="px-4 py-3">${(res.brut === '-' || res.brut == null) ? '-' : formatter.format(res.brut)}</td>
+   <td class="px-4 py-3">${(res.brut === '-' || res.brut == null) ? '-' : formatter.format(res.brut)}</td>
     <td class="px-4 py-3">${(res.charges === '-' || res.charges == null) ? '-' : formatter.format(res.charges)}</td>
     <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
     <td class="px-4 py-3">${res.dividendesNets ? formatter.format(res.dividendesNets) : '-'}</td>
-    <td class="px-4 py-3">
-      ${res.sim?.methodeDividendes
-        ? (res.sim.methodeDividendes === 'PROGRESSIF'
-            ? '<span class="text-green-400 text-xs">Barème</span>'
-            : '<span class="text-blue-400 text-xs">PFU 30%</span>')
-        : '-'}
-      ${Number(res.sim?.economieMethode) > 0
-        ? `<div class="text-xs text-gray-400">+${formatter.format(res.sim.economieMethode)}</div>`
-        : ''}
-      <div class="text-[10px] text-gray-400 italic">Option barème = globale</div>
-    </td>
+   <td class="px-4 py-3">
+  ${res.sim.methodeDividendes ? 
+    (res.sim.methodeDividendes === 'PROGRESSIF' ? 
+      '<span class="text-green-400 text-xs">Barème <i class="fas fa-check-circle ml-1"></i></span>' : 
+      '<span class="text-blue-400 text-xs">PFU 30%</span>') 
+    : '-'}
+  ${res.sim.economieMethode > 0 ? 
+    `<div class="text-xs text-gray-400">+${formatter.format(res.sim.economieMethode)}</div>` 
+    : ''}
+  ${res.sim.methodeDividendes === 'PROGRESSIF' && res.sim.economieMethode > 0
+    ? '<div class="text-[10px] text-gray-400 italic">Option barème = globale</div>'
+    : ''}
+</td>
     <td class="px-4 py-3">${optimisationValue}</td>
     <td class="px-4 py-3">
-      <span class="net-value ${isTopResult ? 'top' : ''} cursor-pointer show-detail-btn" data-statut="${res.statutId}">
-        ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
-      </span>
-      ${isTopResult
-        ? '<div class="text-xs text-green-400 mt-1"><i class="fas fa-check-circle mr-1"></i>Optimal pour ce CA</div>'
-        : ''}
-      <div class="text-xs text-blue-400 mt-1"><i class="fas fa-info-circle mr-1"></i>Cliquez pour détails</div>
+        <span class="net-value ${isTopResult ? 'top' : ''} cursor-pointer show-detail-btn" data-statut="${res.statutId}">
+            ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+        </span>
+        ${isTopResult ? 
+        '<div class="text-xs text-green-400 mt-1"><i class="fas fa-check-circle mr-1"></i>Optimal pour ce CA</div>' : ''}
+        <div class="text-xs text-blue-400 mt-1"><i class="fas fa-info-circle mr-1"></i>Cliquez pour détails</div>
     </td>
-  `;
+`;
 
-  resultsBody.appendChild(row);
-});
-
+resultsBody.appendChild(row);
+    });
+    
 // Ajouter une ligne de mode de calcul avec état de l'optimisation
 const modeRow = document.createElement('tr');
 modeRow.className = 'bg-pink-900 bg-opacity-20 text-sm border-t border-pink-800';
 
 modeRow.innerHTML = `
-  <td colspan="8" class="px-4 py-2 font-medium text-pink-300">
-    <i class="fas fa-calculator mr-2"></i>
-    Calculs fiscaux précis : IR progressif par tranches + ${useOptimalRatio ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
-    <span class="ml-2 text-xs text-gray-400">(Conforme au barème 2025)</span>
-    ${useAvgChargeRate ? '<span class="ml-3"><i class="fas fa-receipt mr-1"></i>Frais réels activés</span>' : ''}
-    ${versementLiberatoire ? '<span class="ml-3"><i class="fas fa-percentage mr-1"></i>VFL micro-entreprise</span>' : ''}
-  </td>
+    <td colspan="8" class="px-4 py-2 font-medium text-pink-300">
+        <i class="fas fa-calculator mr-2"></i> 
+        Calculs fiscaux précis : IR progressif par tranches + ${useOptimalRatio ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
+        <span class="ml-2 text-xs text-gray-400">(Conforme au barème 2025)</span>
+        ${useAvgChargeRate ? '<span class="ml-3"><i class="fas fa-receipt mr-1"></i>Frais réels activés</span>' : ''}
+        ${versementLiberatoire ? '<span class="ml-3"><i class="fas fa-percentage mr-1"></i>VFL micro-entreprise</span>' : ''}
+    </td>
 `;
-resultsBody.appendChild(modeRow);
-
-// Ajouter ligne de ratio net/brut pour les statuts compatibles
-const ratioRow = document.createElement('tr');
+    
+    resultsBody.appendChild(modeRow);
+    
+    // Ajouter ligne de ratio net/brut pour les statuts compatibles
+   const ratioRow = document.createElement('tr');
 ratioRow.className = 'ratio-row';
 
 ratioRow.innerHTML = `
-  <td class="px-4 py-2 italic" colspan="7">Ratio net/CA</td>
-  <td class="px-4 py-2 font-medium">
-    ${scoresCompatibles.length > 0
-      ? `${resultats[0].score.toFixed(1)}% (max) / ${scoresMoyen.toFixed(1)}% (moy)`
-      : 'N/A'}
-  </td>
+    <td class="px-4 py-2 italic" colspan="7">Ratio net/CA</td>
+    <td class="px-4 py-2 font-medium">
+        ${scoresCompatibles.length > 0 
+            ? `${resultats[0].score.toFixed(1)}% (max) / ${scoresMoyen.toFixed(1)}% (moy)` 
+            : 'N/A'}
+    </td>
 `;
+
 resultsBody.appendChild(ratioRow);
-
-// Avertissement sur les limites de la simulation
-const warningRow = document.createElement('tr');
-warningRow.className = 'bg-blue-900 bg-opacity-30 text-xs border-t border-blue-800';
-
-warningRow.innerHTML = `
-  <td colspan="8" class="px-4 py-3">
-    <div class="flex items-start">
-      <i class="fas fa-info-circle text-blue-400 mr-2 mt-0.5"></i>
-      <div>
-        <strong class="text-blue-400">Note sur les limites de la simulation :</strong>
-        <ul class="mt-1 space-y-1 text-gray-300">
-          <li>• Les statuts à l'IR (Micro, EI, EURL IR) permettent plus de déductions fiscales que ce qui est simulé ici.</li>
-          <li>• Dans le régime Micro, l'abattement forfaitaire peut être avantageux si vos charges réelles sont faibles.</li>
-          <li>• Pour les statuts à l'IS, certaines optimisations spécifiques ne sont pas prises en compte (épargne salariale, etc.).</li>
-        </ul>
-      </div>
-    </div>
-  </td>
+    
+    // Ajouter avertissement sur les limites de la simulation
+    const warningRow = document.createElement('tr');
+    warningRow.className = 'bg-blue-900 bg-opacity-30 text-xs border-t border-blue-800';
+    
+   warningRow.innerHTML = `
+    <td colspan="8" class="px-4 py-3">
+        <div class="flex items-start">
+            <i class="fas fa-info-circle text-blue-400 mr-2 mt-0.5"></i>
+            <div>
+                <strong class="text-blue-400">Note sur les limites de la simulation :</strong>
+                <ul class="mt-1 space-y-1 text-gray-300">
+                    <li>• Les statuts à l'IR (Micro, EI, EURL IR) permettent plus de déductions fiscales que ce qui est simulé ici.</li>
+                    <li>• Dans le régime Micro, l'abattement forfaitaire peut être avantageux si vos charges réelles sont faibles.</li>
+                    <li>• Pour les statuts à l'IS, certaines optimisations spécifiques ne sont pas prises en compte (épargne salariale, etc.).</li>
+                </ul>
+            </div>
+        </div>
+    </td>
 `;
-resultsBody.appendChild(warningRow);
-
-// Gestionnaires d'événements pour afficher les détails
-const detailButtons = document.querySelectorAll('.show-detail-btn');
-detailButtons.forEach(btn => {
-  btn.addEventListener('click', function () {
-    const statutId = this.getAttribute('data-statut');
-    showCalculationDetails(statutId, resultats);
-  });
-});
-
+    
+    resultsBody.appendChild(warningRow);
+    
+    // Ajouter les gestionnaires d'événements pour afficher les détails
+    const detailButtons = document.querySelectorAll('.show-detail-btn');
+    detailButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const statutId = this.getAttribute('data-statut');
+            showCalculationDetails(statutId, resultats);
+        });
+    });
+}
 
 // NOUVEAU : Configuration des statuts multi-associés (à ajouter au début de fiscal-guide.js)
 const STATUTS_MULTI_ASSOCIES = {
@@ -3525,177 +3491,186 @@ detailContent += `
   </div>`;
 
 
-   // Ajouter une note explicative sur le régime fiscal
-if (statutId === 'micro' || statutId === 'ei' || statutId === 'eurl' || statutId === 'snc' || statutId === 'sci') {
-  detailContent += `
-  <div class="mt-2 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-blue-400">
-    <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-    <strong>Régime IR :</strong> Cette structure est transparente fiscalement. 
-    Le résultat est directement imposé à l'IR du dirigeant/associé, sans IS ni distribution de dividendes.</p>
-  </div>`;
-} else {
-  detailContent += `
-  <div class="mt-2 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-blue-400">
-    <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-    <strong>Régime IS :</strong> La société paie l'IS sur ses bénéfices. 
-    Le dirigeant peut se verser une rémunération (imposée à l'IR) et/ou des dividendes (soumis au PFU).</p>
-  </div>`;
+    
+    // Ajouter une note explicative sur le régime fiscal
+    if (statutId === 'micro' || statutId === 'ei' || statutId === 'eurl' || statutId === 'snc' || statutId === 'sci') {
+        detailContent += `
+        <div class="mt-2 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-blue-400">
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+            <strong>Régime IR :</strong> Cette structure est transparente fiscalement. 
+            Le résultat est directement imposé à l'IR du dirigeant/associé, sans IS ni distribution de dividendes.</p>
+        </div>`;
+    } else {
+        detailContent += `
+        <div class="mt-2 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs border-l-4 border-blue-400">
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+            <strong>Régime IS :</strong> La société paie l'IS sur ses bénéfices. 
+            Le dirigeant peut se verser une rémunération (imposée à l'IR) et/ou des dividendes (soumis au PFU).</p>
+        </div>`;
+    }
+    
+    // Créer le conteneur du contenu
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.cssText = `
+        background-color: #012a4a;
+        border-radius: 12px;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(0, 255, 135, 0.3);
+    `;
+    
+    contentWrapper.innerHTML = `
+        <div class="detail-content" style="padding: 2rem;">
+            <span class="close-modal" style="position: absolute; top: 1rem; right: 1rem; cursor: pointer; font-size: 1.5rem; color: #00FF87;">
+                <i class="fas fa-times"></i>
+            </span>
+            ${detailContent}
+        </div>
+    `;
+    
+    modal.appendChild(contentWrapper);
+    document.body.appendChild(modal);
+    
+    // Ajouter un gestionnaire d'événement pour fermer le modal
+    modal.querySelector('.close-modal').addEventListener('click', function() {
+        modal.remove();
+    });
+    
+    // Fermer le modal en cliquant en dehors du contenu
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            modal.remove();
+        }
+    });
 }
-
-// Créer le conteneur du contenu
-const contentWrapper = document.createElement('div');
-contentWrapper.style.cssText = `
-  background-color: #012a4a;
-  border-radius: 12px;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 255, 135, 0.3);
-`;
-
-contentWrapper.innerHTML = `
-  <div class="detail-content" style="padding: 2rem;">
-    <span class="close-modal" style="position: absolute; top: 1rem; right: 1rem; cursor: pointer; font-size: 1.5rem; color: #00FF87;">
-      <i class="fas fa-times"></i>
-    </span>
-    ${detailContent}
-  </div>
-`;
-
-modal.appendChild(contentWrapper);
-document.body.appendChild(modal);
-
-// Ajouter un gestionnaire d'événement pour fermer le modal
-modal.querySelector('.close-modal').addEventListener('click', function() {
-  modal.remove();
-});
-
-// Fermer le modal en cliquant en dehors du contenu
-modal.addEventListener('click', function(event) {
-  if (event.target === modal) {
-    modal.remove();
-  }
-});
-} // ← fin de showCalculationDetails
 
 // Configurer l'accordéon pour les sections d'informations fiscales
 function setupAccordion() {
-  // Récupérer le conteneur pour l'accordéon
   const accordionContainer = document.querySelector('.space-y-4');
   if (!accordionContainer) return;
 
-  // Vider le conteneur actuel
+  // --- Lazy retry si legalStatuses n'est pas encore prêt ---
+  const hasLegal = !!window.legalStatuses;
+
+  // Si pas prêt et pas encore construit, on retente une fois un peu plus tard
+  if (!hasLegal && accordionContainer.dataset.built !== '1') {
+    if (!accordionContainer.dataset.retryScheduled) {
+      accordionContainer.dataset.retryScheduled = '1';
+      setTimeout(() => {
+        accordionContainer.dataset.retryScheduled = '';
+        setupAccordion();
+      }, 150);
+    }
+    // Ne pas toucher au contenu avant d'avoir legalStatuses pour éviter l'effet "fallback → rebuild"
+    return;
+  }
+
+  // Évite un double build si déjà fait
+  if (accordionContainer.dataset.built === '1') return;
+
+  // (Re)style du conteneur
   accordionContainer.innerHTML = '';
-  // Ajouter le fond
   accordionContainer.style.background = 'rgba(1, 42, 74, 0.4)';
   accordionContainer.style.padding = '2rem';
   accordionContainer.style.borderRadius = '12px';
   accordionContainer.style.border = '1px solid rgba(0, 255, 135, 0.1)';
 
-  // Récupérer la liste des statuts depuis legalStatuses si disponible, sinon utiliser une liste par défaut
-  let statuts = [];
-  if (window.legalStatuses) {
-    statuts = Object.keys(window.legalStatuses);
-  } else {
-    // Liste des statuts par défaut
-    statuts = ['MICRO', 'EI', 'EURL', 'SASU', 'SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'];
-  }
+  // Source des statuts : legalStatuses ou fallback
+  const statuts = window.legalStatuses
+    ? Object.keys(window.legalStatuses)
+    : ['MICRO','EI','EURL','SASU','SARL','SAS','SA','SNC','SCI','SELARL','SELAS','SCA'];
 
-  // Icônes pour les statuts juridiques
+  // Icônes
   const statutIcons = {
-    'MICRO': '<i class="fas fa-store-alt text-green-400 mr-2"></i>',
-    'EI': '<i class="fas fa-user text-green-400 mr-2"></i>',
-    'EURL': '<i class="fas fa-user-tie text-green-400 mr-2"></i>',
-    'SASU': '<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
-    'SARL': '<i class="fas fa-users text-blue-400 mr-2"></i>',
-    'SAS': '<i class="fas fa-building text-blue-400 mr-2"></i>',
-    'SA': '<i class="fas fa-landmark text-blue-400 mr-2"></i>',
-    'SNC': '<i class="fas fa-handshake text-green-400 mr-2"></i>',
-    'SCI': '<i class="fas fa-home text-green-400 mr-2"></i>',
-    'SELARL': '<i class="fas fa-user-md text-blue-400 mr-2"></i>',
-    'SELAS': '<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
-    'SCA': '<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
+    'MICRO':'<i class="fas fa-store-alt text-green-400 mr-2"></i>',
+    'EI':'<i class="fas fa-user text-green-400 mr-2"></i>',
+    'EURL':'<i class="fas fa-user-tie text-green-400 mr-2"></i>',
+    'SASU':'<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
+    'SARL':'<i class="fas fa-users text-blue-400 mr-2"></i>',
+    'SAS':'<i class="fas fa-building text-blue-400 mr-2"></i>',
+    'SA':'<i class="fas fa-landmark text-blue-400 mr-2"></i>',
+    'SNC':'<i class="fas fa-handshake text-green-400 mr-2"></i>',
+    'SCI':'<i class="fas fa-home text-green-400 mr-2"></i>',
+    'SELARL':'<i class="fas fa-user-md text-blue-400 mr-2"></i>',
+    'SELAS':'<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
+    'SCA':'<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
   };
-  // Badge régime fiscal
+
+  // Badges fiscaux
   const regimeBadges = {
-    'MICRO': '<span class="status-badge ir">IR</span>',
-    'EI': '<span class="status-badge ir">IR</span>',
-    'EURL': '<span class="status-badge iris">IR/IS</span>',
-    'SASU': '<span class="status-badge is">IS</span>',
-    'SARL': '<span class="status-badge is">IS</span>',
-    'SAS': '<span class="status-badge is">IS</span>',
-    'SA': '<span class="status-badge is">IS</span>',
-    'SNC': '<span class="status-badge ir">IR</span>',
-    'SCI': '<span class="status-badge ir">IR</span>',
-    'SELARL': '<span class="status-badge is">IS</span>',
-    'SELAS': '<span class="status-badge is">IS</span>',
-    'SCA': '<span class="status-badge is">IS</span>'
+    'MICRO':'<span class="status-badge ir">IR</span>',
+    'EI':'<span class="status-badge ir">IR</span>',
+    'EURL':'<span class="status-badge iris">IR/IS</span>',
+    'SASU':'<span class="status-badge is">IS</span>',
+    'SARL':'<span class="status-badge is">IS</span>',
+    'SAS':'<span class="status-badge is">IS</span>',
+    'SA':'<span class="status-badge is">IS</span>',
+    'SNC':'<span class="status-badge ir">IR</span>',
+    'SCI':'<span class="status-badge ir">IR</span>',
+    'SELARL':'<span class="status-badge is">IS</span>',
+    'SELAS':'<span class="status-badge is">IS</span>',
+    'SCA':'<span class="status-badge is">IS</span>'
   };
 
-  // Générer l'accordéon pour chaque statut
+  // Génération
   statuts.forEach(statutId => {
-    const nomStatut = window.legalStatuses && window.legalStatuses[statutId] 
-      ? window.legalStatuses[statutId].name 
-      : getDefaultNomStatut(statutId);
+    const nomStatut = (window.legalStatuses && window.legalStatuses[statutId])
+      ? window.legalStatuses[statutId].name
+      : getDefaultNomStatut(statutId); // suppose dispo ailleurs
 
-    // Créer l'élément d'accordéon
-    const accordionItem = document.createElement('div');
-    accordionItem.className = 'mb-3';
-
-    // Contenu de l'accordéon basé sur le statut
-    accordionItem.innerHTML = `
+    const item = document.createElement('div');
+    item.className = 'mb-3';
+    item.innerHTML = `
       <button class="accordion-toggle w-full">
-        ${statutIcons[statutId] || ''} ${nomStatut} 
+        ${statutIcons[statutId] || ''} ${nomStatut}
         ${regimeBadges[statutId] || ''}
         <i class="fas fa-plus ml-auto"></i>
       </button>
       <div class="hidden px-4 py-3 border-t border-gray-700 bg-blue-900 bg-opacity-20 rounded-b-lg">
-        ${getStatutFiscalInfo(statutId)}
+        ${getStatutFiscalInfo(statutId)} <!-- suppose dispo ailleurs -->
       </div>
     `;
-
-    accordionContainer.appendChild(accordionItem);
+    accordionContainer.appendChild(item);
   });
 
-  // Attacher les événements aux boutons de l'accordéon
-  const toggleBtns = document.querySelectorAll('.accordion-toggle');
-  toggleBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
+  // Interactions
+  accordionContainer.querySelectorAll('.accordion-toggle').forEach(btn => {
+    btn.addEventListener('click', function () {
       const content = this.nextElementSibling;
       content.classList.toggle('hidden');
-
-      // Changer l'icône
       const icon = this.querySelector('i:last-child');
       icon.classList.toggle('fa-plus');
       icon.classList.toggle('fa-minus');
-
-      // Ajouter/supprimer la classe active
       this.classList.toggle('active');
-    });
+    }, { passive: true });
   });
+
+  // Verrou "déjà construit"
+  accordionContainer.dataset.built = '1';
 }
 
 // Fonction d'aide pour obtenir le nom par défaut si legalStatuses n'est pas disponible
 function getDefaultNomStatut(statutId) {
-  const noms = {
-    'MICRO': 'Micro-entreprise',
-    'EI': 'Entreprise Individuelle',
-    'EURL': 'Entreprise Unipersonnelle à Responsabilité Limitée',
-    'SASU': 'Société par Actions Simplifiée Unipersonnelle',
-    'SARL': 'Société à Responsabilité Limitée',
-    'SAS': 'Société par Actions Simplifiée',
-    'SA': 'Société Anonyme',
-    'SNC': 'Société en Nom Collectif',
-    'SCI': 'Société Civile Immobilière',
-    'SELARL': 'Société d\'Exercice Libéral à Responsabilité Limitée',
-    'SELAS': 'Société d\'Exercice Libéral par Actions Simplifiée',
-    'SCA': 'Société en Commandite par Actions'
-  };
-  return noms[statutId] || statutId;
+    const noms = {
+        'MICRO': 'Micro-entreprise',
+        'EI': 'Entreprise Individuelle',
+        'EURL': 'Entreprise Unipersonnelle à Responsabilité Limitée',
+        'SASU': 'Société par Actions Simplifiée Unipersonnelle',
+        'SARL': 'Société à Responsabilité Limitée',
+        'SAS': 'Société par Actions Simplifiée',
+        'SA': 'Société Anonyme',
+        'SNC': 'Société en Nom Collectif',
+        'SCI': 'Société Civile Immobilière',
+        'SELARL': 'Société d\'Exercice Libéral à Responsabilité Limitée',
+        'SELAS': 'Société d\'Exercice Libéral par Actions Simplifiée',
+        'SCA': 'Société en Commandite par Actions'
+    };
+    return noms[statutId] || statutId;
 }
-
+});
 // Fonction pour générer les informations fiscales de chaque statut
 function getStatutFiscalInfo(statutId) {
   // Informations fiscales par défaut pour chaque statut
@@ -3718,7 +3693,7 @@ function getStatutFiscalInfo(statutId) {
       <p class="mb-2"><strong>IR :</strong> Imposition sur la totalité du bénéfice</p>
       <p class="mb-2"><strong>IS :</strong> Impôt sur les sociétés + PFU sur dividendes</p>
       <p class="mb-2"><strong>Cotisations sociales :</strong> Environ 30% de la rémunération du gérant (TNS)</p>
-      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes &gt; 10% du capital</p>
     `,
     'SASU': `
       <p class="mb-2"><strong>Régime fiscal :</strong> IS uniquement</p>
@@ -3732,7 +3707,7 @@ function getStatutFiscalInfo(statutId) {
       <p class="mb-2"><strong>Social gérant majoritaire :</strong> TNS (~45% de cotisations)</p>
       <p class="mb-2"><strong>Social gérant minoritaire :</strong> Assimilé salarié (~80%)</p>
       <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+      <p class="mb-2"><strong>Dividendes TNS :</strong> cotisations sociales sur la part &gt;10% (≈40–45%), sinon PS 17,2%.</p>
     `,
     'SAS': `
       <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
@@ -3765,7 +3740,7 @@ function getStatutFiscalInfo(statutId) {
       <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
       <p class="mb-2"><strong>Social :</strong> Gérant majoritaire = TNS</p>
       <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+      <p class="mb-2"><strong>Dividendes TNS :</strong> cotisations sociales sur la part &gt;10% (≈40–45%), sinon PS 17,2%.</p>
     `,
     'SELAS': `
       <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
@@ -3779,10 +3754,12 @@ function getStatutFiscalInfo(statutId) {
       <p class="mb-2"><strong>Structure :</strong> Commandités (responsabilité illimitée) et commanditaires</p>
       <p class="mb-2"><strong>Social :</strong> Gérants = TNS</p>
       <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+      <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes &gt; 10% du capital</p>
       <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
     `
   };
 
   return infosFiscales[statutId] || `<p>Informations non disponibles pour ${statutId}</p>`;
 }
+
+
