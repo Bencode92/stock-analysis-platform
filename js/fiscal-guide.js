@@ -668,9 +668,20 @@ function placeBase10UnderNbAssocies(){
   guideTab?.addEventListener('click', initFiscalSimulator);
 }
 
-
-
-
+// === Helpers ratio % (à coller AVANT setupSimulator) ===
+function getPctSalaire(){ 
+  const v = parseFloat(document.getElementById('sim-salaire')?.value);
+  return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 70;
+}
+function getPctDividendes(){
+  const el = document.getElementById('sim-dividendes'); // OPTIONNEL si tu ajoutes l'input
+  if (el) {
+    const v = parseFloat(el.value);
+    return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 20;
+  }
+  // défaut si pas d’input dédié :
+  return Math.max(0, 100 - getPctSalaire() - 10); // garde ~10% pour IS/réserve
+}
 
 function setupSimulator() {
   // --- Valeurs par défaut cohérentes (si vides) ---
@@ -1021,6 +1032,38 @@ function getSelectedStatuses(filter) {
         default:
             return ['micro', 'ei', 'eurl', 'eurlIS', 'sarl', 'sasu', 'sas', 'sa', 'snc', 'sci', 'selarl', 'selas', 'sca']; // Par défaut, tous les statuts
     }
+}
+  
+// Renvoie {blocRemTarget, profitPreIS}
+function computeTargets(R, pctSalaire, pctDiv){
+  const sum = Math.max(1, pctSalaire + pctDiv); // évite /0
+  const shareRem = pctSalaire / sum;
+  const blocRemTarget = R * shareRem;          // ce qu’on veut pour (brut + cotisations)
+  const profitPreIS   = Math.max(0, R - blocRemTarget);
+  return { blocRemTarget, profitPreIS };
+}
+
+// Estime brut/cotisations à partir d’un taux observé (fallback si absent)
+function splitBrutFromBloc(blocTarget, {observedRate=null, fallback=0.40}){
+  const tx = (observedRate!=null && isFinite(observedRate) && observedRate>=0) ? observedRate : fallback;
+  const brut = blocTarget / (1 + tx);
+  const cot  = blocTarget - brut;
+  return { brut: round2(brut), cotisations: round2(cot) };
+}
+
+// Détecte le taux "cotisations / brut" selon le statut simulé
+function getObservedRate(statutId, sim){
+  if (['sasu','sas','sa','selas'].includes(statutId)) {
+    const ch = (Number(sim.chargesPatronales)||0) + (Number(sim.chargesSalariales)||0);
+    const b  = Number(sim.remuneration)||0;
+    return b>0 ? (ch/b) : null;                // ~0.75–0.85
+  }
+  if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
+    const cot = Number(sim.cotisationsSociales)||0;
+    const b   = Number(sim.remuneration)||0;
+    return b>0 ? (cot/b) : null;               // ~0.40–0.45 (TNS)
+  }
+  return null;
 }
 
 function runComparison() {
@@ -1531,7 +1574,44 @@ for (const statutId of selectedStatuses) {
       const statut = statutsComplets[statutId];
       const sim = statut.simuler();
 
-      // ----- Calcul IS par tranches pour les statuts à l’IS -----
+      // --- C. Fixer le bloc rémunération selon % et NE PAS aplatir le reliquat ---
+      if (sim && sim.compatible) {
+        const R = round2(
+          sim.resultatAvantRemuneration
+          ?? sim.resultatEntreprise
+          ?? sim.beneficeAvantCotisations
+          ?? 0
+        );
+
+        // 1) Cible bloc rémunération (brut + cotisations) via % utilisateur
+        const pctSalaire = getPctSalaire();
+        const pctDiv     = getPctDividendes();
+        const { blocRemTarget, profitPreIS } = computeTargets(R, pctSalaire, pctDiv);
+
+        // 2) Taux observé → déduire un BRUT qui matche le bloc cible
+        const observed = getObservedRate(statutId, sim);
+        const fallback = ['sasu','sas','sa','selas'].includes(statutId) ? 0.80 : 0.42; // assimilé / TNS
+        const { brut, cotisations } = splitBrutFromBloc(blocRemTarget, { observedRate: observed, fallback });
+
+        // 3) Écritures propres (sans écraser le reliquat !)
+        if (['sasu','sas','sa','selas'].includes(statutId)) {
+          // Assimilé salarié : répartir cotisations entre patronales/salariales à l’échelle
+          const totCharges = (Number(sim.chargesPatronales)||0) + (Number(sim.chargesSalariales)||0);
+          const partPat = totCharges>0 ? (Number(sim.chargesPatronales)||0)/totCharges : 0.70; // approx
+          sim.remuneration      = brut;
+          sim.chargesPatronales = round2(cotisations * partPat);
+          sim.chargesSalariales = round2(cotisations * (1 - partPat));
+        } else if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
+          sim.remuneration        = brut;
+          sim.cotisationsSociales = cotisations;
+        }
+
+        // 4) Ne pas aplatir : conserver le bénéfice pour l’IS puis les dividendes
+        sim.resultatApresRemuneration = round2(profitPreIS);
+      }
+      // --- fin C ---
+
+      // ----- Calcul IS par tranches pour les statuts à l’IS (après C) -----
       {
         const isStatutIS = ['eurlIS','sarl','selarl','sca','sasu','sas','sa','selas'].includes(statutId);
         if (isStatutIS && sim && sim.compatible) {
@@ -1599,60 +1679,6 @@ for (const statutId of selectedStatuses) {
 
       // Debug pour vérifier que les paramètres sont bien passés
       console.log(`Simulation ${statutId}:`, sim);
-
-      // --- Post-traitement d'équation + UX dividendes (après simuler) ---
-      if (sim && sim.compatible) {
-        const resultatAvantRem = round2(
-          sim.resultatAvantRemuneration
-          ?? sim.resultatEntreprise
-          ?? sim.beneficeAvantCotisations
-          ?? 0
-        );
-
-        // TNS (EURL-IS, SARL, SELARL, SCA) → absorber l’écart dans les cotisations sociales
-        if (['eurlIS','sarl','selarl','sca'].includes(statutId)) {
-          const brut = Number(sim.remuneration) || 0;
-          const cot  = Number(sim.cotisationsSociales) || 0;
-          const { brut: b, cotisations: c, reste } = closeEquation(brut, cot, resultatAvantRem);
-          if (reste === 0) {
-            sim.remuneration = b;
-            sim.cotisationsSociales = c;
-            sim.resultatApresRemuneration = 0;
-            if (sim.dividendes && Math.abs(sim.dividendes) < 5) {
-              sim.dividendes = 0; sim.prelevementForfaitaire = 0; sim.dividendesNets = 0;
-            }
-          }
-        }
-
-        // Assimilé salarié (SASU, SAS, SA, SELAS) → absorber l’écart côté charges patronales
-        if (['sasu','sas','sa','selas'].includes(statutId)) {
-          const brut   = Number(sim.remuneration) || 0;
-          const chPat  = Number(sim.chargesPatronales) || 0;
-          const chSal  = Number(sim.chargesSalariales) || 0;
-          const { brut: b, cotisations: totalCharges, reste } = closeEquation(brut, chPat + chSal, resultatAvantRem);
-          if (reste === 0) {
-            const delta = round2(totalCharges - (chPat + chSal));
-            sim.remuneration = b;
-            sim.chargesPatronales = round2(chPat + delta); // on ajuste côté employeur
-            sim.resultatApresRemuneration = 0;
-            if (sim.dividendes && Math.abs(sim.dividendes) < 5) {
-              sim.dividendes = 0; sim.prelevementForfaitaire = 0; sim.dividendesNets = 0;
-            }
-          }
-        }
-
-        // IR “purs” (EI, EURL-IR, SNC) si une rémunération est modélisée
-        if (['ei','eurl','snc'].includes(statutId) && sim.remuneration) {
-          const brut = Number(sim.remuneration) || 0;
-          const cot  = Number(sim.cotisationsSociales) || 0;
-          const { brut: b, cotisations: c, reste } = closeEquation(brut, cot, resultatAvantRem);
-          if (reste === 0) {
-            sim.remuneration = b;
-            sim.cotisationsSociales = c;
-          }
-        }
-      }
-      // --- fin post-traitement ---
 
       // Si incompatible, afficher un message
       if (!sim.compatible) {
