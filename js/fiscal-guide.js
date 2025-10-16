@@ -680,57 +680,61 @@ const val = (id) => {
 
 
 function setupSimulator() {
-    const compareBtn = document.getElementById('sim-compare-btn');
-    if (!compareBtn) return;
-    
-    compareBtn.addEventListener('click', runComparison);
-    
-    // Écouter les changements dans les champs pour mettre à jour automatiquement
-    const inputFields = ['sim-ca', 'sim-marge', 'sim-salaire', 'sim-tmi', 'sim-nb-associes', 'sim-part-associe'];
-    inputFields.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('change', runComparison);
-    });
+  // --- Valeurs par défaut cohérentes (si vides) ---
+  const setIfEmpty = (id, v) => {
+    const el = document.getElementById(id);
+    if (el && (el.value === '' || el.value == null)) el.value = v;
+  };
+  setIfEmpty('sim-nb-associes', '1');
+  setIfEmpty('sim-part-associe', '100');
+  setIfEmpty('sim-salaire', '70');
+  setIfEmpty('sim-marge', '30');
+
+  const compareBtn = document.getElementById('sim-compare-btn');
+  if (!compareBtn) return;
+
+  compareBtn.addEventListener('click', runComparison);
+
+  // Écouter les changements dans les champs pour MAJ auto
+  const inputFields = ['sim-ca', 'sim-marge', 'sim-salaire', 'sim-tmi', 'sim-nb-associes', 'sim-part-associe'];
+  inputFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', runComparison);
+  });
+
   // Rafraîchir l’état des cases "Personnalisé" quand le nb d’associés change
   const nbAssociesEl = document.getElementById('sim-nb-associes');
   if (nbAssociesEl) nbAssociesEl.addEventListener('change', updateCustomStatusDisabling);
-                                                  
-   // 🔓 Déclampage côté UI : autoriser 0 % de salaire
+
+  // 🔓 Autoriser 0 % de salaire et borner proprement [0,100]
   (function enableZeroPercentSalary() {
     const el = document.getElementById('sim-salaire');
     if (!el) return;
-
-    // Autoriser 0 en borne basse
     el.setAttribute('min', '0');
-
-    // Facultatif : pas d’1 point (%)
     if (!el.getAttribute('step')) el.setAttribute('step', '1');
-
-    // Sécurise la saisie: borne [0,100] sans réécrire 0
     const clamp01 = v => Math.max(0, Math.min(100, v));
     const normalize = () => {
-      if (el.value === '') return; // laisser vide si l’utilisateur efface
+      if (el.value === '') return;
       const n = parseFloat(el.value);
       if (Number.isFinite(n)) el.value = clamp01(n);
     };
-
     el.addEventListener('input', normalize, { passive: true });
-    // Normalise la valeur initiale si besoin
     normalize();
   })();
-    
-    // Configurer l'accordéon pour les statuts juridiques
-    setupAccordion();
-    
-    // Mettre à jour l'interface du simulateur pour inclure tous les statuts
-    updateSimulatorInterface();
-  
-   // ➜ Le DOM cible existe maintenant
-  placeBase10UnderNbAssocies();   // ✅ insertion des 3 champs “Base 10%”
-    
-    // Exécuter une première simulation au chargement
-    setTimeout(runComparison, 100);
+
+  // Configurer l'accordéon pour les statuts juridiques
+  setupAccordion();
+
+  // Mettre à jour l'interface du simulateur pour inclure tous les statuts
+  updateSimulatorInterface();
+
+  // ➜ Le DOM cible existe maintenant
+  placeBase10UnderNbAssocies(); // ✅ insertion des 3 champs “Base 10%”
+
+  // Exécuter une première simulation au chargement
+  setTimeout(runComparison, 100);
 }
+
 
 // Fonction pour mettre à jour l'interface du simulateur
 function updateSimulatorInterface() {
@@ -3559,101 +3563,110 @@ detailContent += `
         }
     });
 }
+
 // Configurer l'accordéon pour les sections d'informations fiscales
 function setupAccordion() {
-    // Récupérer le conteneur pour l'accordéon
-    const accordionContainer = document.querySelector('.space-y-4');
-    if (!accordionContainer) return;
-    
-    // Vider le conteneur actuel
-    accordionContainer.innerHTML = '';
-        // Ajouter le fond
-    accordionContainer.style.background = 'rgba(1, 42, 74, 0.4)';
-    accordionContainer.style.padding = '2rem';
-    accordionContainer.style.borderRadius = '12px';
-    accordionContainer.style.border = '1px solid rgba(0, 255, 135, 0.1)';
-    
-    // Récupérer la liste des statuts depuis legalStatuses si disponible, sinon utiliser une liste par défaut
-    let statuts = [];
-    if (window.legalStatuses) {
-        statuts = Object.keys(window.legalStatuses);
-    } else {
-        // Liste des statuts par défaut
-        statuts = ['MICRO', 'EI', 'EURL', 'SASU', 'SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'];
+  const accordionContainer = document.querySelector('.space-y-4');
+  if (!accordionContainer) return;
+
+  // --- Lazy retry si legalStatuses n'est pas encore prêt ---
+  const hasLegal = !!window.legalStatuses;
+
+  // Si pas prêt et pas encore construit, on retente une fois un peu plus tard
+  if (!hasLegal && accordionContainer.dataset.built !== '1') {
+    if (!accordionContainer.dataset.retryScheduled) {
+      accordionContainer.dataset.retryScheduled = '1';
+      setTimeout(() => {
+        accordionContainer.dataset.retryScheduled = '';
+        setupAccordion();
+      }, 150);
     }
-    
-    // Icônes pour les statuts juridiques
-    const statutIcons = {
-        'MICRO': '<i class="fas fa-store-alt text-green-400 mr-2"></i>',
-        'EI': '<i class="fas fa-user text-green-400 mr-2"></i>',
-        'EURL': '<i class="fas fa-user-tie text-green-400 mr-2"></i>',
-        'SASU': '<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
-        'SARL': '<i class="fas fa-users text-blue-400 mr-2"></i>',
-        'SAS': '<i class="fas fa-building text-blue-400 mr-2"></i>',
-        'SA': '<i class="fas fa-landmark text-blue-400 mr-2"></i>',
-        'SNC': '<i class="fas fa-handshake text-green-400 mr-2"></i>',
-        'SCI': '<i class="fas fa-home text-green-400 mr-2"></i>',
-        'SELARL': '<i class="fas fa-user-md text-blue-400 mr-2"></i>',
-        'SELAS': '<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
-        'SCA': '<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
-    };
- // Badge régime fiscal
-    const regimeBadges = {
-        'MICRO': '<span class="status-badge ir">IR</span>',
-        'EI': '<span class="status-badge ir">IR</span>',
-        'EURL': '<span class="status-badge iris">IR/IS</span>',
-        'SASU': '<span class="status-badge is">IS</span>',
-        'SARL': '<span class="status-badge is">IS</span>',
-        'SAS': '<span class="status-badge is">IS</span>',
-        'SA': '<span class="status-badge is">IS</span>',
-        'SNC': '<span class="status-badge ir">IR</span>',
-        'SCI': '<span class="status-badge ir">IR</span>',
-        'SELARL': '<span class="status-badge is">IS</span>',
-        'SELAS': '<span class="status-badge is">IS</span>',
-        'SCA': '<span class="status-badge is">IS</span>'
-    };
-    
-    // Générer l'accordéon pour chaque statut
-    statuts.forEach(statutId => {
-        const nomStatut = window.legalStatuses && window.legalStatuses[statutId] 
-            ? window.legalStatuses[statutId].name 
-            : getDefaultNomStatut(statutId);
-        
-        // Créer l'élément d'accordéon
-        const accordionItem = document.createElement('div');
-        accordionItem.className = 'mb-3';
-        
-        // Contenu de l'accordéon basé sur le statut
-        accordionItem.innerHTML = `
-            <button class="accordion-toggle w-full">
-                ${statutIcons[statutId] || ''} ${nomStatut} 
-                ${regimeBadges[statutId] || ''}
-                <i class="fas fa-plus ml-auto"></i>
-            </button>
-            <div class="hidden px-4 py-3 border-t border-gray-700 bg-blue-900 bg-opacity-20 rounded-b-lg">
-                ${getStatutFiscalInfo(statutId)}
-            </div>
-        `;
-        
-        accordionContainer.appendChild(accordionItem);
-    });
-    
-    // Attacher les événements aux boutons de l'accordéon
-    const toggleBtns = document.querySelectorAll('.accordion-toggle');
-    toggleBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const content = this.nextElementSibling;
-            content.classList.toggle('hidden');
-            
-            // Changer l'icône
-            const icon = this.querySelector('i:last-child');
-            icon.classList.toggle('fa-plus');
-            icon.classList.toggle('fa-minus');
-            
-            // Ajouter/supprimer la classe active
-            this.classList.toggle('active');
-        });
-    });
+    // Ne pas toucher au contenu avant d'avoir legalStatuses pour éviter l'effet "fallback → rebuild"
+    return;
+  }
+
+  // Évite un double build si déjà fait
+  if (accordionContainer.dataset.built === '1') return;
+
+  // (Re)style du conteneur
+  accordionContainer.innerHTML = '';
+  accordionContainer.style.background = 'rgba(1, 42, 74, 0.4)';
+  accordionContainer.style.padding = '2rem';
+  accordionContainer.style.borderRadius = '12px';
+  accordionContainer.style.border = '1px solid rgba(0, 255, 135, 0.1)';
+
+  // Source des statuts : legalStatuses ou fallback
+  const statuts = window.legalStatuses
+    ? Object.keys(window.legalStatuses)
+    : ['MICRO','EI','EURL','SASU','SARL','SAS','SA','SNC','SCI','SELARL','SELAS','SCA'];
+
+  // Icônes
+  const statutIcons = {
+    'MICRO':'<i class="fas fa-store-alt text-green-400 mr-2"></i>',
+    'EI':'<i class="fas fa-user text-green-400 mr-2"></i>',
+    'EURL':'<i class="fas fa-user-tie text-green-400 mr-2"></i>',
+    'SASU':'<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
+    'SARL':'<i class="fas fa-users text-blue-400 mr-2"></i>',
+    'SAS':'<i class="fas fa-building text-blue-400 mr-2"></i>',
+    'SA':'<i class="fas fa-landmark text-blue-400 mr-2"></i>',
+    'SNC':'<i class="fas fa-handshake text-green-400 mr-2"></i>',
+    'SCI':'<i class="fas fa-home text-green-400 mr-2"></i>',
+    'SELARL':'<i class="fas fa-user-md text-blue-400 mr-2"></i>',
+    'SELAS':'<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
+    'SCA':'<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
+  };
+
+  // Badges fiscaux
+  const regimeBadges = {
+    'MICRO':'<span class="status-badge ir">IR</span>',
+    'EI':'<span class="status-badge ir">IR</span>',
+    'EURL':'<span class="status-badge iris">IR/IS</span>',
+    'SASU':'<span class="status-badge is">IS</span>',
+    'SARL':'<span class="status-badge is">IS</span>',
+    'SAS':'<span class="status-badge is">IS</span>',
+    'SA':'<span class="status-badge is">IS</span>',
+    'SNC':'<span class="status-badge ir">IR</span>',
+    'SCI':'<span class="status-badge ir">IR</span>',
+    'SELARL':'<span class="status-badge is">IS</span>',
+    'SELAS':'<span class="status-badge is">IS</span>',
+    'SCA':'<span class="status-badge is">IS</span>'
+  };
+
+  // Génération
+  statuts.forEach(statutId => {
+    const nomStatut = (window.legalStatuses && window.legalStatuses[statutId])
+      ? window.legalStatuses[statutId].name
+      : getDefaultNomStatut(statutId); // suppose dispo ailleurs
+
+    const item = document.createElement('div');
+    item.className = 'mb-3';
+    item.innerHTML = `
+      <button class="accordion-toggle w-full">
+        ${statutIcons[statutId] || ''} ${nomStatut}
+        ${regimeBadges[statutId] || ''}
+        <i class="fas fa-plus ml-auto"></i>
+      </button>
+      <div class="hidden px-4 py-3 border-t border-gray-700 bg-blue-900 bg-opacity-20 rounded-b-lg">
+        ${getStatutFiscalInfo(statutId)} <!-- suppose dispo ailleurs -->
+      </div>
+    `;
+    accordionContainer.appendChild(item);
+  });
+
+  // Interactions
+  accordionContainer.querySelectorAll('.accordion-toggle').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const content = this.nextElementSibling;
+      content.classList.toggle('hidden');
+      const icon = this.querySelector('i:last-child');
+      icon.classList.toggle('fa-plus');
+      icon.classList.toggle('fa-minus');
+      this.classList.toggle('active');
+    }, { passive: true });
+  });
+
+  // Verrou "déjà construit"
+  accordionContainer.dataset.built = '1';
 }
 
 // Fonction d'aide pour obtenir le nom par défaut si legalStatuses n'est pas disponible
