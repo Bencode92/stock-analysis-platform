@@ -840,29 +840,17 @@ function updateSimulatorInterface() {
   <div class="flex items-center flex-wrap md:flex-nowrap gap-x-6 gap-y-2">
     <div class="flex flex-col">
       <label class="flex items-center">
-        <input type="hidden" id="sim-expert-mode" checked>
-        <i class="fas fa-chart-line text-pink-400 mr-1"></i>
-        <span class="text-sm">Mode expert</span>
-      </label>
-      <span class="info-tooltip mt-1">
-        <i class="fas fa-question-circle text-gray-400"></i>
-        <span class="tooltiptext">Calcul par tranches progressives d'IR plutôt que le TMI simple.</span>
-      </span>
-    </div>
-
-    <div class="flex flex-col">
-      <label class="flex items-center">
         <input type="checkbox" id="use-optimal-ratio" class="mr-2 h-4 w-4">
         <i class="fas fa-magic text-purple-400 mr-1"></i>
         <span class="text-sm">Ratio optimal</span>
       </label>
       <span class="info-tooltip mt-1">
         <i class="fas fa-question-circle text-gray-400"></i>
-        <span class="tooltiptext">Optimise le ratio entre rémunération et dividendes pour maximiser le revenu net.</span>
+        <span class="tooltiptext">Optimise la part salaire/dividendes pour maximiser le net en poche.</span>
       </span>
     </div>
 
-    <!-- 🔹 Nouveau : Réserve légale auto -->
+    <!-- 🔹 Réserve légale auto -->
     <div class="flex flex-col">
       <label class="flex items-center">
         <input type="checkbox" id="sim-reserve-auto" class="mr-2 h-4 w-4" checked>
@@ -872,11 +860,12 @@ function updateSimulatorInterface() {
       <span class="info-tooltip mt-1">
         <i class="fas fa-question-circle text-gray-400"></i>
         <span class="tooltiptext">
-          Prélève 5% du bénéfice après IS jusqu’à atteindre 10% du capital social, puis plafonne les dividendes au distribuable réel.
+          Met de côté 5% du bénéfice (après IS) jusqu’à atteindre 10% du capital. 
+          Les dividendes sont ensuite limités au montant réellement distribuable.
         </span>
       </span>
     </div>
-    <!-- 🔹 Fin nouveau -->
+    <!-- 🔹 Fin -->
 
     <div class="flex flex-col">
       <label class="flex items-center">
@@ -911,7 +900,7 @@ function updateSimulatorInterface() {
     </div>
   </div>
 
-  <!-- 🔹 NOUVEAU : Éligibilité au taux réduit d'IS (15%) -->
+  <!-- 🔹 Éligibilité au taux réduit d'IS (15%) -->
   <div class="mt-4">
     <label class="block text-gray-300 mb-2">Éligibilité au taux réduit d'IS (15%)</label>
     <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4" id="is-eligibility-block">
@@ -968,6 +957,7 @@ function updateSimulatorInterface() {
     </div>
   </div>
 </div>
+
 
       `;
 
