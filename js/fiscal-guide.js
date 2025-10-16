@@ -683,6 +683,34 @@ function getPctDividendes(){
   return Math.max(0, 100 - getPctSalaire() - 10); // garde ~10% pour IS/réserve
 }
 
+  /** Réserve légale : prélève 5% du bénéfice (après IS) jusqu’à atteindre 10% du capital. */
+function calcReserveLegale({ resultatApresIS, capitalLibere=0, reserveExistante=0, appliquer=true }) {
+  if (!appliquer) return { reserve: 0, reste: round2(Math.max(0, resultatApresIS||0)) };
+  const cap = Number(capitalLibere)||0;
+  if (cap <= 0) return { reserve: 0, reste: round2(Math.max(0, resultatApresIS||0)) };
+
+  const cible10 = 0.10 * cap;                              // 10% du capital
+  const manque  = Math.max(0, cible10 - (Number(reserveExistante)||0));
+  const base    = Math.max(0, Number(resultatApresIS)||0);
+  const prelev  = Math.min( round2(base * 0.05), round2(manque) );  // 5% borné au manque
+  const reste   = round2(Math.max(0, base - prelev));
+  return { reserve: prelev, reste };
+}
+
+/** % UI */
+function getPctSalaire(){ 
+  const v = parseFloat(document.getElementById('sim-salaire')?.value);
+  return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 70;
+}
+function getPctDividendes(){
+  const el = document.getElementById('sim-dividendes');     // si tu ajoutes un champ dédié
+  if (el) {
+    const v = parseFloat(el.value);
+    return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 30;
+  }
+  // défaut simple = 100 - salaire
+  return Math.max(0, 100 - getPctSalaire());
+}
 function setupSimulator() {
   // --- Valeurs par défaut cohérentes (si vides) ---
   const setIfEmpty = (id, v) => {
@@ -834,6 +862,22 @@ function updateSimulatorInterface() {
       </span>
     </div>
 
+    <!-- 🔹 Nouveau : Réserve légale auto -->
+    <div class="flex flex-col">
+      <label class="flex items-center">
+        <input type="checkbox" id="sim-reserve-auto" class="mr-2 h-4 w-4" checked>
+        <i class="fas fa-shield-alt text-green-400 mr-1"></i>
+        <span class="text-sm">Respecter la réserve légale</span>
+      </label>
+      <span class="info-tooltip mt-1">
+        <i class="fas fa-question-circle text-gray-400"></i>
+        <span class="tooltiptext">
+          Prélève 5% du bénéfice après IS jusqu’à atteindre 10% du capital social, puis plafonne les dividendes au distribuable réel.
+        </span>
+      </span>
+    </div>
+    <!-- 🔹 Fin nouveau -->
+
     <div class="flex flex-col">
       <label class="flex items-center">
         <input type="checkbox" id="sarl-gerant-minoritaire" class="mr-2 h-4 w-4">
@@ -924,6 +968,7 @@ function updateSimulatorInterface() {
     </div>
   </div>
 </div>
+
       `;
 
       // Insertion sans doublons
@@ -1612,30 +1657,62 @@ for (const statutId of selectedStatuses) {
       // --- fin C ---
 
       // ----- Calcul IS par tranches pour les statuts à l’IS (après C) -----
-      {
-        const isStatutIS = ['eurlIS','sarl','selarl','sca','sasu','sas','sa','selas'].includes(statutId);
-        if (isStatutIS && sim && sim.compatible) {
-          // Bénéfice base IS = résultat après rémunération et charges sociales (avant IS)
-          const benefIS = Number(sim.resultatApresRemuneration ?? sim.resultatEntreprise ?? 0);
+{
+  const isStatutIS = ['eurlIS','sarl','selarl','sca','sasu','sas','sa','selas'].includes(statutId);
+  if (isStatutIS && sim && sim.compatible) {
+    // Bénéfice base IS = résultat après rémunération et charges sociales (avant IS)
+    const benefIS = Number(sim.resultatApresRemuneration ?? sim.resultatEntreprise ?? 0);
 
-          // Éligible 15% ?
-          const elig15 = !!params.is15Eligible;
+    // Éligible 15% ?
+    const elig15 = !!params.is15Eligible;
 
-          // Calcul par tranches (15% jusqu'à 42 500 si éligible, 25% au-delà)
-          const isBreak = calcISProgressif(benefIS, elig15);
+    // Calcul par tranches (15% jusqu'à 42 500 si éligible, 25% au-delà)
+    const isBreak = calcISProgressif(benefIS, elig15);
 
-          // Remplace/fiabilise les champs IS de la simulation
-          sim.is = isBreak.is;
-          sim._isDetail = { elig15, ...isBreak };
+    // Remplace/fiabilise les champs IS de la simulation
+    sim.is = isBreak.is;
+    sim._isDetail = { elig15, ...isBreak };
 
-          // Mets à jour l'après-IS et, si besoin, les dividendes bruts
-          sim.resultatApresIS = round2(Math.max(0, benefIS - sim.is));
-          if (typeof sim.dividendes === 'number') {
-            // si ton moteur ne recalculait pas, force la cohérence
-            sim.dividendes = sim.resultatApresIS * (sim.partAssocie || 1);
-          }
-        }
-      }
+    // 1) Après IS
+    sim.resultatApresIS = round2(Math.max(0, benefIS - sim.is));
+
+    // 2) Réserve légale (option)
+    const applyReserve = document.getElementById('sim-reserve-auto')
+      ? !!document.getElementById('sim-reserve-auto').checked
+      : true;
+
+    const { reserve, reste } = calcReserveLegale({
+      resultatApresIS: sim.resultatApresIS,
+      capitalLibere: params.capitalLibere,
+      // facultatif : primesEmission/compteCourant si ta fonction les accepte
+      primesEmission: params.primesEmission,
+      compteCourant: params.comptesCourants,
+      reserveExistante: 0,   // si tu ne suis pas l’historique, laisser 0
+      appliquer: applyReserve
+    });
+
+    sim.reserveLegalePrelevee = reserve;
+    const distribuableSociete = reste; // bénéfice distribuable (après IS & réserve)
+
+    // 3) Cible dividendes = % utilisateur (sur le R initial), CAPPE au distribuable réel
+    const pctSalaire = getPctSalaire();
+    const pctDiv     = getPctDividendes();
+    const R = round2(
+      sim.resultatAvantRemuneration
+      ?? sim.resultatEntreprise
+      ?? sim.beneficeAvantCotisations
+      ?? 0
+    );
+    const sumPct = Math.max(1, pctSalaire + pctDiv);
+    const targetDivSociete = round2(R * (pctDiv / sumPct));
+
+    // Plafonnement dur par le distribuable réel
+    const dividendesSociete = Math.min(targetDivSociete, distribuableSociete);
+
+    // Quote-part associé
+    sim.dividendes = round2(dividendesSociete * (sim.partAssocie || 1));
+  }
+}
       // ----- fin calcul IS par tranches -----
 
       // === IR sur la rémunération (base imposable + barème progressif) ===
