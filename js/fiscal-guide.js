@@ -2687,7 +2687,7 @@ ${abattement10 > 0 ? `
             </tr>
             `}
 <tr>
-  <td>Total prélèvements sur dividendes</td>
+ <td>Total prélèvements sur dividendes</td>
   <td>${
     formatter.format(
       (result.sim._divSplit
