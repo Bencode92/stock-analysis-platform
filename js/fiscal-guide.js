@@ -2786,20 +2786,24 @@ ${result.sim.methodeDividendes === 'PROGRESSIF' && result.sim.economieMethode > 
             </tr>
         </table>
         
-        <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
-           <h4 class="text-sm font-bold text-gray-300">Récapitulatif fiscal :</h4>
-            <div class="text-xs text-gray-400 -mt-1 mb-2">rémunération uniquement</div>
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                    <p class="text-gray-400">💰 Salaire net réel :</p>
-                    <p class="font-mono">${formatter.format(salaireNet)}</p>
-                </div>
-                <div>
-                    <p class="text-gray-400">📊 Base imposable IR :</p>
-                    <p class="font-mono">${formatter.format(salaireNet)} + ${formatter.format(csgNonDeductible)} = ${formatter.format(baseImposableIR)}</p>
-                </div>
-            </div>
-        </div>
+ <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+  <h4 class="text-sm font-bold text-gray-300">Récapitulatif fiscal :</h4>
+  <div class="text-xs text-gray-400 -mt-1 mb-2">rémunération uniquement</div>
+  <div class="grid grid-cols-2 gap-4 text-sm">
+    <div>
+      <p class="text-gray-400">💰 Salaire net réel :</p>
+      <p class="font-mono">${formatter.format(salaireNet)}</p>
+    </div>
+    <div>
+      <p class="text-gray-400">📊 Base imposable IR :</p>
+      <p class="font-mono">${
+        formatter.format(salaireNet)
+      } + ${formatter.format(csgNonDeductible)} − ${formatter.format(abattement10)} = ${
+        formatter.format(baseImposableIR)
+      }</p>
+    </div>
+  </div>
+</div>
     `;
  } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl' || statutId === 'sca') {
   // Cas des structures à l'IS avec un gérant TNS
