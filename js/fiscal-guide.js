@@ -57,6 +57,12 @@ if (typeof window !== "undefined") {
   window.renderVFLNote = renderVFLNote;
   window.isEligibleVFL = isEligibleVFL;
 }
+function cotisationsEIFromCash(sim) {
+  const benef = Number(sim.beneficeAvantCotisations ?? sim.resultatAvantRemuneration ?? 0);
+  const cash  = Number(sim.cashAvantIR ?? 0);
+  if (cash) return round2(Math.max(0, benef - cash));
+  return round2(Number(sim.cotisationsSociales ?? 0));
+}
 // --- Dividendes TNS : split PS 17,2% / Cotisations TNS (>10%) ---
 const TAUX_PS = 0.172;
 const TAUX_IR_PFU = 0.128;     // si PFU
@@ -1771,12 +1777,15 @@ for (const statutId of selectedStatuses) {
         charges = sim.cotisationsSociales + (sim.cfp || 0) + (sim.cfe || 0);
         impots = sim.impotRevenu;
         net = sim.revenuNetApresImpot;
+} else if (statutId === 'ei') {
+  brut = sim.beneficeAvantCotisations;
 
-      } else if (statutId === 'ei') {
-        brut = sim.beneficeAvantCotisations;
-        charges = sim.cotisationsSociales;
-        impots = sim.impotRevenu;
-        net = sim.revenuNetApresImpot;
+  // ✅ cotisations reconstituées depuis le cash si dispo (sinon fallback)
+  charges = Math.max(0, Math.round(cotisationsEIFromCash(sim)));
+
+  impots = sim.impotRevenu;
+  net = sim.revenuNetApresImpot;
+}
 
       } else if (statutId === 'eurl' && !sim.is) {
         brut = sim.beneficeImposable + sim.cotisationsSociales;
@@ -3074,36 +3083,37 @@ ${hasDividendes ? `
     `;
 
 } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
-    // Cas des entreprises à l'IR
-    const tauxCotisationsTNS = 30;
-    
-    // NOUVEAU : Fonction helper pour éviter les NaN
-    const getNumber = v => (typeof v === 'number' && !isNaN(v)) ? v : 0;
-    
-    // NOUVEAU : Récupérer le bénéfice de manière canonique selon le statut
-    const beneficeBrut = getNumber(
-        result.sim.beneficeAvantCotisations ??           // EI standard
-        result.sim.resultatAvantRemuneration ??          // EURL variante
-        result.sim.beneficeAssociePrincipal ??          // SNC quote-part
-        result.sim.benefice ??                           // Autre variante possible
-        result.brut                                      // Fallback ultime
-    );
-    
-    // Récupérer les autres valeurs de manière sûre
-    const cotisations = getNumber(result.sim.cotisationsSociales);
-    const csgNonDeductible = getNumber(result.sim.csgNonDeductible);
-    
-    // Calculer le cash de manière fiable
-    const cashAvantIR = getNumber(result.sim.cashAvantIR) || (beneficeBrut - cotisations);
-    
-    // Calculer la base imposable
-    const baseImposableIR = getNumber(
-        result.sim.baseImposableIR ??
-        result.sim.beneficeImposable ??
-        result.sim.beneficeApresCotisations ??
-        (cashAvantIR + csgNonDeductible)
-    );
-    
+  // Cas des entreprises à l'IR
+  const tauxCotisationsTNS = 30;
+
+  // Helper anti-NaN
+  const getNumber = v => (typeof v === 'number' && !isNaN(v)) ? v : 0;
+
+  // Bénéfice canonique selon le statut
+  const beneficeBrut = getNumber(
+    result.sim.beneficeAvantCotisations ??           // EI
+    result.sim.resultatAvantRemuneration ??          // EURL
+    result.sim.beneficeAssociePrincipal ??           // SNC (quote-part)
+    result.sim.benefice ??                           // fallback
+    result.brut
+  );
+
+  // ✅ Cotisations : reconstituées depuis le cash si dispo, sinon fallback
+  const cotisations = cotisationsEIFromCash(result.sim);
+
+  const csgNonDeductible = getNumber(result.sim.csgNonDeductible);
+
+  // ✅ Cash fiable : cash fourni, sinon bénéfice - cotisations reconstituées
+  const cashAvantIR = getNumber(result.sim.cashAvantIR)
+                   || Math.max(0, round2(beneficeBrut - cotisations));
+
+  // Base imposable
+  const baseImposableIR = getNumber(
+    result.sim.baseImposableIR ??
+    result.sim.beneficeImposable ??
+    result.sim.beneficeApresCotisations ??
+    (cashAvantIR + csgNonDeductible)
+  );
     // NOUVEAU : Calculer le TMI effectif
     const tmiEffectif = getTMI(baseImposableIR, nbParts);
     
