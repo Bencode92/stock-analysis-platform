@@ -1560,7 +1560,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     print(f"  🪙 Cryptos autorisées: {len(allowed_assets['allowed_crypto'])}")
 
     # Construire le prompt robuste v3 avec compliance AMF
-    prompt = build_robust_prompt_v3(structured_data, allowed_assets, current_month)
+    prompt = build_robust_prompt_v3(structured_data, allowed_assets, current_month, compact=True)
 
     # Horodatage pour les fichiers de debug
     debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
