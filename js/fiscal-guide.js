@@ -1772,11 +1772,12 @@ for (const statutId of selectedStatuses) {
       let brut, charges, impots, net;
 
       // Ces valeurs varient selon le type de statut
-      if (statutId === 'micro') {
-        brut = sim.ca;
-        charges = sim.cotisationsSociales + (sim.cfp || 0) + (sim.cfe || 0);
-        impots = sim.impotRevenu;
-        net = sim.revenuNetApresImpot;
+ if (statutId === 'micro') {
+  brut = sim.ca;
+  charges = sim.cotisationsSociales + (sim.cfp || 0) + (sim.cfe || 0);
+  impots = sim.impotRevenu;
+  net = sim.revenuNetApresImpot;
+
 } else if (statutId === 'ei') {
   brut = sim.beneficeAvantCotisations;
 
@@ -1785,28 +1786,27 @@ for (const statutId of selectedStatuses) {
 
   impots = sim.impotRevenu;
   net = sim.revenuNetApresImpot;
-}
 
-      } else if (statutId === 'eurl' && !sim.is) {
-        brut = sim.beneficeImposable + sim.cotisationsSociales;
-        charges = sim.cotisationsSociales;
-        impots = sim.impotRevenu;
-        net = sim.revenuNetApresImpot;
+} else if (statutId === 'eurl' && !sim.is) {
+  brut = sim.beneficeImposable + sim.cotisationsSociales;
+  charges = sim.cotisationsSociales;
+  impots = sim.impotRevenu;
+  net = sim.revenuNetApresImpot;
 
-      } else if (statutId === 'snc') {
-        brut = sim.beneficeAssociePrincipal;
-        charges = sim.cotisationsSociales;
-        impots = sim.impotRevenu;
-        net = sim.revenuNetApresImpot;
+} else if (statutId === 'snc') {
+  brut = sim.beneficeAssociePrincipal;
+  charges = sim.cotisationsSociales;
+  impots = sim.impotRevenu;
+  net = sim.revenuNetApresImpot;
 
-      } else if (statutId === 'sci') {
-        // SCI est un cas particulier
-        brut = sim.resultatFiscalAssocie;
-        charges = sim.prelevementsSociaux || 0;
-        impots = sim.impotRevenu;
-        net = sim.revenuNetApresImpot;
+} else if (statutId === 'sci') {
+  // SCI est un cas particulier
+  brut = sim.resultatFiscalAssocie;
+  charges = sim.prelevementsSociaux || 0;
+  impots = sim.impotRevenu;
+  net = sim.revenuNetApresImpot;
 
-       } else {
+} else {
 // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, SELARL, SELAS, SA, SCA)
 brut    = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
 charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
