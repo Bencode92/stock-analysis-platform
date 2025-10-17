@@ -1634,21 +1634,27 @@ for (const statutId of selectedStatuses) {
         const fallback = ['sasu','sas','sa','selas'].includes(statutId) ? 0.80 : 0.42; // assimilé / TNS
         const { brut, cotisations } = splitBrutFromBloc(blocRemTarget, { observedRate: observed, fallback });
 
-        // 3) Écritures propres (sans écraser le reliquat !)
-        if (['sasu','sas','sa','selas'].includes(statutId)) {
-          // Assimilé salarié : répartir cotisations entre patronales/salariales à l’échelle
-          const totCharges = (Number(sim.chargesPatronales)||0) + (Number(sim.chargesSalariales)||0);
-          const partPat = totCharges>0 ? (Number(sim.chargesPatronales)||0)/totCharges : 0.70; // approx
-          sim.remuneration      = brut;
-          sim.chargesPatronales = round2(cotisations * partPat);
-          sim.chargesSalariales = round2(cotisations * (1 - partPat));
-        } else if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
-          sim.remuneration        = brut;
-          sim.cotisationsSociales = cotisations;
-        }
+  // 3) Écritures propres (sans écraser le reliquat !)
+if (['sasu','sas','sa','selas'].includes(statutId)) {
+  // Assimilé salarié : répartir cotisations entre patronales/salariales à l’échelle
+  const totCharges = (Number(sim.chargesPatronales) || 0) + (Number(sim.chargesSalariales) || 0);
+  const partPat = totCharges > 0 ? (Number(sim.chargesPatronales) || 0) / totCharges : 0.70; // approx
 
-        // 4) Ne pas aplatir : conserver le bénéfice pour l’IS puis les dividendes
-        sim.resultatApresRemuneration = round2(profitPreIS);
+  sim.remuneration      = brut;
+  sim.chargesPatronales = round2(cotisations * partPat);
+  sim.chargesSalariales = round2(cotisations * (1 - partPat));
+
+  // ➜ Fix: alimente le "salaire net avant IR"
+  sim.salaireNet = round2(sim.remuneration - sim.chargesSalariales);
+  sim.remunerationNetteSociale = sim.salaireNet;
+
+} else if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
+  sim.remuneration        = brut;
+  sim.cotisationsSociales = cotisations;
+}
+
+// 4) Ne pas aplatir : conserver le bénéfice pour l’IS puis les dividendes
+sim.resultatApresRemuneration = round2(profitPreIS);
       }
       // --- fin C ---
 
@@ -2422,20 +2428,24 @@ if (statutId === 'micro') {
         ` : ''}
     `;
 } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
-    // Cas des structures avec dirigeant assimilé salarié
-    
-    // AJOUT : Fonction helper pour éviter les NaN
-    const getNumber = v => (typeof v === 'number' && !isNaN(v)) ? v : 0;
-    
-    const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
-    const salaireNet = result.sim.salaireNet || 0;
-    
-    // NOUVEAU : Récupérer la CSG non déductible et la base imposable
-    const csgNonDeductible = getNumber(result.sim.csgNonDeductible);
-    const baseImposableIR = getNumber(result.sim.baseImposableIR) || (salaireNet + csgNonDeductible);
-    
-    // NOUVEAU : Calculer le TMI effectif sur la BASE IMPOSABLE (pas le salaire net)
-   const tmiEffectif = getTMI(baseImposableIR, nbParts);
+  // Cas des structures avec dirigeant assimilé salarié
+
+  // Helper anti-NaN
+  const getNumber = v => (typeof v === 'number' && !isNaN(v)) ? v : 0;
+
+  const hasDividendes = result.sim.dividendes && result.sim.dividendes > 0;
+  const salaireNet = getNumber(result.sim.salaireNet);
+
+  // ✅ Récupère ce que baseImposableTNS() a calculé en amont
+  const csgNonDeductible = getNumber(result.sim.csgNonDeductible);
+  const abattement10     = getNumber(result.sim.abattement10);
+
+  // ✅ Base imposable = (net + CSG ND) − abattement (borné à 0)
+  const baseImposableIR  = getNumber(result.sim.baseImposableIR)
+                        || Math.max(0, (salaireNet + csgNonDeductible) - abattement10);
+
+  // TMI calculé sur la BASE IMPOSABLE (pas sur le net)
+  const tmiEffectif = getTMI(baseImposableIR, nbParts);
     
   // Calcul des taux (robuste si rémunération = 0)
 const {
@@ -2564,28 +2574,36 @@ const tauxChargesSalariales = remuneration > 0
         <div class="detail-category">Base imposable et impôt sur le revenu</div>
         <table class="detail-table">
             <tr>
-                <td>Salaire net</td>
-                <td>${formatter.format(salaireNet)}</td>
-            </tr>
-            ${csgNonDeductible > 0 ? `
-            <tr>
-                <td>+ CSG/CRDS non déductible (2,9% du brut)</td>
-                <td class="text-orange-400">+ ${formatter.format(csgNonDeductible)}</td>
-            </tr>
-            <tr class="border-t border-gray-600">
-                <td><strong>= Base imposable IR</strong></td>
-                <td><strong>${formatter.format(baseImposableIR)}</strong></td>
-            </tr>
-            ` : ''}
-            <tr>
-                <td>Impôt sur le revenu (${result.sim.modeExpert ? 'progressif, TMI: '+tmiEffectif+'%' : 'TMI: '+tmiEffectif+'%'})</td>
-                <td class="text-red-400">- ${formatter.format(result.sim.impotRevenu)}</td>
-            </tr>
-            <tr>
-                <td>Salaire net après IR</td>
-                <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
-            </tr>
-        </table>
+<td>Salaire net</td>
+<td>${formatter.format(salaireNet)}</td>
+</tr>
+
+${csgNonDeductible > 0 ? `
+<tr>
+  <td>+ CSG/CRDS non déductible (2,9% du brut)</td>
+  <td class="text-orange-400">+ ${formatter.format(csgNonDeductible)}</td>
+</tr>` : ''}
+
+${abattement10 > 0 ? `
+<tr>
+  <td>- Abattement 10% (min/max)</td>
+  <td>- ${formatter.format(abattement10)}</td>
+</tr>` : ''}
+
+<tr class="border-t border-gray-600">
+  <td><strong>= Base imposable IR</strong></td>
+  <td><strong>${formatter.format(baseImposableIR)}</strong></td>
+</tr>
+
+<tr>
+  <td>Impôt sur le revenu (${result.sim.modeExpert ? 'progressif, TMI: '+tmiEffectif+'%' : 'TMI: '+tmiEffectif+'%'})</td>
+  <td class="text-red-400">- ${formatter.format(result.sim.impotRevenu)}</td>
+</tr>
+<tr>
+  <td>Salaire net après IR</td>
+  <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
+</tr>
+</table>
         
         ${csgNonDeductible > 0 ? `
         <div class="mt-3 p-3 bg-blue-900 bg-opacity-30 rounded-lg text-xs">
@@ -2668,10 +2686,17 @@ const tauxChargesSalariales = remuneration > 0
                 <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
             </tr>
             `}
-            <tr>
-                <td>Total prélèvements sur dividendes</td>
-                <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
-            </tr>
+<tr>
+  <td>Total prélèvements sur dividendes</td>
+  <td>${
+    formatter.format(
+      (result.sim._divSplit
+        ? (result.sim._divSplit.irDiv + result.sim._divSplit.ps172)
+        : (result.sim.prelevementForfaitaire || 0)
+      )
+    )
+  }</td>
+</tr>
             ${result.sim.economieMethode > 0 ? `
             <tr>
                 <td>Économie réalisée</td>
