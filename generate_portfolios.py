@@ -1576,7 +1576,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         "Content-Type": "application/json",
     }
     data = {
-        "model": "gpt-4-turbo",
+        "model": "gpt-4.1-mini",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
         "response_format": {"type": "json_object"},
@@ -2903,7 +2903,7 @@ def generate_portfolios_v2(filtered_data):
     }
     
     data = {
-        "model": "gpt-4-turbo",
+        "model": "gpt-4.1-mini",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
         "response_format": {"type": "json_object"},
@@ -3016,7 +3016,7 @@ Format JSON strict:
     }
     
     data = {
-        "model": "gpt-4-turbo",
+       "model": "gpt-4.1-mini",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.3,
         "max_tokens": 1800  # FIX 3: Même limite pour legacy
