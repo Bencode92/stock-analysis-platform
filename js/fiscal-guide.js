@@ -1835,26 +1835,47 @@ const tauxTNS = (tauxObserve != null)
 
 let split = null;
 if (divBruts > 0) {
-  split = calcDivTNS({
-    divBruts,
-    baseSeuil10: base10,        // capital + primes + CCA * 10%
-    methode: 'AUTO',            // 🔒 toujours AUTO (pas d’UI)
-    tmi,
-    tauxTNS,
-    isGerantMajoritaire: isGerantMaj,
-    eligibleAbattement40: true
-  });
+  const isAssimile = ['sasu','sas','sa','selas'].includes(statutId);
 
-  // Persistance pour l’affichage et les totaux
-  sim._divSplit              = split;                 // { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets, methode, economie }
+  if (isAssimile) {
+    // PFU standard sur 100% des dividendes (aucune cotisation TNS)
+    const irDiv = divBruts * TAUX_IR_PFU; // 0.128
+    const ps172 = divBruts * TAUX_PS;     // 0.172
+
+    split = {
+      partPS: divBruts,    // PS sur 100%
+      partTNS: 0,
+      ps172,
+      cotTNS: 0,
+      irDiv,
+      totalPrels: irDiv + ps172,
+      nets: divBruts - (irDiv + ps172),
+      methode: 'PFU'
+    };
+  } else {
+    // TNS (EURL-IS / SARL / SELARL / SCA) : seuil 10% + cotisations TNS au-delà
+    split = calcDivTNS({
+      divBruts,
+      baseSeuil10: base10,        // capital + primes + CCA × quote-part
+      methode: 'AUTO',
+      tmi,
+      tauxTNS,
+      isGerantMajoritaire: isGerantMaj,
+      eligibleAbattement40: true
+    });
+  }
+
+  // Persistance & totaux communs
+  sim._divSplit              = split;                 // { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets, ... }
   sim.methodeDividendes      = split.methode;
   sim.economieMethode        = split.economie;
-  sim.prelevementForfaitaire = split.irDiv + split.ps172; // IR + PS (≤10%)
-  sim.cotTNSDiv              = split.cotTNS;              // TNS (>10%)
+  sim.prelevementForfaitaire = split.irDiv + split.ps172; // IR + PS
+  sim.cotTNSDiv              = split.cotTNS;              // 0 en assimilé
   sim.dividendesNets         = split.nets;
 
-  // Totaux impôts (évite le double comptage des PS/TNS)
-  impots = (sim.impotRevenu || 0) + (sim.is || 0) + split.irDiv + split.ps172 + split.cotTNS;
+  // Totaux impôts (évite le double comptage)
+  impots = (sim.impotRevenu || 0) + (sim.is || 0)
+         + (split.irDiv || 0) + (split.ps172 || 0) + (split.cotTNS || 0);
 } else {
   // pas de dividendes
   impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0) + (sim.cotTNSDiv || 0);
