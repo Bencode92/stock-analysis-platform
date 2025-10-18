@@ -2232,6 +2232,22 @@ function formatBaseSeuilDivTNSTooltip(base) {
       </span>
     </span>`;
 }
+  // % marge de la société (prend l'input UI si dispo, sinon recalcule)
+function getMargePct(sim){
+  const ui = parseFloat(document.getElementById('sim-marge')?.value);
+  if (Number.isFinite(ui)) return ui; // ex. 90
+  if (Number.isFinite(sim?.tauxMarge)) return sim.tauxMarge * 100;
+  const numer = Number(sim?.resultatEntreprise ?? sim?.resultatAvantRemuneration);
+  const denom = Number(sim?.ca);
+  return denom > 0 ? (numer / denom) * 100 : 0;
+}
+
+// % de quote-part de l’associé affiché
+function getQuotePartPct(sim){
+  if (sim?.partAssociePct != null) return Number(sim.partAssociePct);
+  if (sim?.partAssocie != null)    return Number(sim.partAssocie) * 100;
+  return 100;
+}
 
 // Fonction améliorée pour afficher le détail des calculs avec pourcentages
 function showCalculationDetails(statutId, simulationResults) {
@@ -3164,24 +3180,47 @@ ${hasDividendes ? `
     result.sim.beneficeApresCotisations ??
     (cashAvantIR + csgNonDeductible)
   );
+
+  // 🔹 Libellé clair "marge • quote-part" (SNC) ou juste "marge" (EI/EURL)
+  const margePct = (() => {
+    const ca = Number(result.sim.ca) || 0;
+    if (ca <= 0) return 0;
+    // Si on dispose d'un résultat d'entreprise global, l'utiliser ; sinon, lire l'input #sim-marge (fallback 90%)
+    const resTot = Number(result.sim.resultatEntrepriseTotale);
+    if (Number.isFinite(resTot)) return (resTot / ca) * 100;
+    const inputMarge = parseFloat(document.getElementById('sim-marge')?.value);
+    const tauxMarge = Number.isFinite(inputMarge) ? inputMarge / 100 : 0.90;
+    return tauxMarge * 100;
+  })();
+
+  const quotePct = (() => {
+    if (statutId !== 'snc') return null;
+    if (result.sim.partAssociePct != null) return Number(result.sim.partAssociePct);
+    if (result.sim.partAssocie != null)     return Number(result.sim.partAssocie) * 100;
+    return 100; // fallback
+  })();
+
+  const libelleBenef = (statutId === 'snc')
+    ? `Bénéfice avant cotisations (marge ${formatPercent(margePct)} • quote-part ${formatPercent(quotePct)})`
+    : `Bénéfice avant cotisations (marge ${formatPercent(margePct)})`;
     // NOUVEAU : Calculer le TMI effectif
     const tmiEffectif = getTMI(baseImposableIR, nbParts);
     
     detailContent = `
-        <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
-        
-        <div class="detail-category">Données de base</div>
-        <table class="detail-table">
-            <tr>
-                <td>Chiffre d'affaires</td>
-                <td>${formatter.format(result.sim.ca)}</td>
-            </tr>
-            <tr>
-                <td>Bénéfice avant cotisations (marge ${formatPercent((beneficeBrut/result.sim.ca)*100)})</td>
-                <td>${formatter.format(beneficeBrut)}</td>
-            </tr>
-        </table>
-        
+         <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
+    
+    <div class="detail-category">Données de base</div>
+    <table class="detail-table">
+      <tr>
+        <td>Chiffre d'affaires</td>
+        <td>${formatter.format(result.sim.ca)}</td>
+      </tr>
+      <tr>
+        <td>${libelleBenef}</td>
+        <td>${formatter.format(beneficeBrut)}</td>
+      </tr>
+    </table>
+    
         ${/* Section associés pour SNC */ ''}
         ${statutId === 'snc' && STATUTS_MULTI_ASSOCIES[statutId] && result.sim.nbAssocies > 1 ? `
         <div class="detail-category">Répartition entre associés</div>
