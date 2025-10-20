@@ -1848,58 +1848,70 @@ for (const statutId of selectedStatuses) {
  const isStatutIS = ['eurlIS','sarl','selarl','sca','sasu','sas','sa','selas','sciIS'].includes(statutId);
 
   if (isStatutIS && sim && sim.compatible) {
-    // Bénéfice base IS = résultat après rémunération et charges sociales (avant IS)
+    // Bénéfice base IS = résultat après rémunération (avant IS)
     const benefIS = Number(sim.resultatApresRemuneration ?? sim.resultatEntreprise ?? 0);
 
-    // Éligible 15% ?
-    const elig15 = !!params.is15Eligible;
+    // Éligible 15 % ?
+    const elig15  = !!params.is15Eligible;
 
-    // Calcul par tranches (15% jusqu'à 42 500 si éligible, 25% au-delà)
+    // IS progressif (15 % si éligible jusqu’à 42 500 €, puis 25 %)
     const isBreak = calcISProgressif(benefIS, elig15);
-
-    // Remplace/fiabilise les champs IS de la simulation
-    sim.is = isBreak.is;
+    sim.is        = isBreak.is;
     sim._isDetail = { elig15, ...isBreak };
-
-    // 1) Après IS
     sim.resultatApresIS = round2(Math.max(0, benefIS - sim.is));
 
-    // 2) Réserve légale (option)
+    // Réserve légale (option)
     const applyReserve = document.getElementById('sim-reserve-auto')
       ? !!document.getElementById('sim-reserve-auto').checked
       : true;
 
     const { reserve, reste } = calcReserveLegale({
       resultatApresIS: sim.resultatApresIS,
-      capitalLibere: params.capitalLibere,
-      // facultatif : primesEmission/compteCourant si ta fonction les accepte
-      primesEmission: params.primesEmission,
-      compteCourant: params.comptesCourants,
-      reserveExistante: 0,   // si tu ne suis pas l’historique, laisser 0
-      appliquer: applyReserve
+      capitalLibere:   params.capitalLibere,
+      // facultatif :
+      primesEmission:  params.primesEmission,
+      compteCourant:   params.comptesCourants,
+      reserveExistante: 0,
+      appliquer:       applyReserve
     });
 
     sim.reserveLegalePrelevee = reserve;
     const distribuableSociete = reste; // bénéfice distribuable (après IS & réserve)
 
-    // 3) Cible dividendes = % utilisateur (sur le R initial), CAPPE au distribuable réel
-    const pctSalaire = getPctSalaire();
-    const pctDiv     = getPctDividendes();
-    const R = round2(
-      sim.resultatAvantRemuneration
-      ?? sim.resultatEntreprise
-      ?? sim.beneficeAvantCotisations
-      ?? 0
-    );
-    const sumPct = Math.max(1, pctSalaire + pctDiv);
-    const targetDivSociete = round2(R * (pctDiv / sumPct));
+    // ⛔️ SCI-IS : 100% dividendes (on ignore totalement le ratio UI)
+    if (statutId === 'sciIS') {
+      const partDec = (() => {
+        const p = (sim.partAssocie ?? (sim.partAssociePct ?? 100) / 100);
+        return Math.max(0, Math.min(1, Number(p) || 0));
+      })();
 
-    // Plafonnement dur par le distribuable réel
-    const dividendesSociete = Math.min(targetDivSociete, distribuableSociete);
+      const dividendesBrutsAssocie = round2(Math.max(0, distribuableSociete) * partDec);
 
-    // Quote-part associé
-    sim.dividendes = round2(dividendesSociete * (sim.partAssocie || 1));
-  }
+      sim.dividendes            = dividendesBrutsAssocie;
+      sim.methodeDividendes     = 'PFU';
+      const ir  = round2(dividendesBrutsAssocie * 0.128);
+      const ps  = round2(dividendesBrutsAssocie * 0.172);
+      sim.prelevementForfaitaire = ir + ps; // IR + PS
+      sim.cotTNSDiv             = 0;        // jamais en SCI-IS
+      sim.dividendesNets        = round2(dividendesBrutsAssocie - ir - ps);
+
+    } else {
+      // Cas général (autres statuts IS) : on respecte le ratio UI, plafonné au distribuable
+      const pctSalaire = getPctSalaire();
+      const pctDiv     = getPctDividendes();
+      const R = round2(
+        sim.resultatAvantRemuneration
+        ?? sim.resultatEntreprise
+        ?? sim.beneficeAvantCotisations
+        ?? 0
+      );
+      const sumPct            = Math.max(1, pctSalaire + pctDiv);
+      const targetDivSociete  = round2(R * (pctDiv / sumPct));
+      const dividendesSociete = Math.min(targetDivSociete, distribuableSociete);
+
+      // Quote-part de l’associé simulé
+      sim.dividendes = round2(dividendesSociete * (sim.partAssocie || 1));
+    }
 }
       // ----- fin calcul IS par tranches -----
 
@@ -3698,13 +3710,11 @@ ${hasDividendes ? `
   const pfuTotal = n(sim.prelevementForfaitaire);
 
   detailContent = `
-    <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - SCI (option IS)</h2>
+   <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - SCI (option IS)</h2>
 
     <div class="detail-category">Données de base</div>
     <table class="detail-table">
       <tr><td>Revenus locatifs (CA)</td><td>${fmt(sim.ca)}</td></tr>
-      ${hasCharges ? `<tr><td>- Charges déductibles</td><td>${fmt(charges)}</td></tr>` : ``}
-      ${hasAmort   ? `<tr><td>- Amortissements</td><td>${fmt(amort)}</td></tr>` : ``}
       <tr>
         <td><strong>= Résultat fiscal (avant IS)</strong></td>
         <td><strong>${fmt(sim.resultatAvantRemuneration)}</strong></td>
@@ -3730,7 +3740,6 @@ ${hasDividendes ? `
       <tr><td>Dividendes bruts</td><td>${fmt(sim.dividendes)}</td></tr>
       <tr><td>Méthode de taxation</td><td><span class="text-blue-400">PFU 30%</span></td></tr>
       <tr><td>IR (12,8%) + PS (17,2%)</td><td>${fmt(pfuTotal)}</td></tr>
-      <tr><td>Cotisations TNS sur dividendes</td><td>0 € <span class="text-gray-400">(non applicable en SCI-IS)</span></td></tr>
       <tr><td><strong>Dividendes nets</strong></td><td><strong>${fmt(sim.dividendesNets)}</strong></td></tr>
     </table>
 
