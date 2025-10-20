@@ -119,16 +119,16 @@ function getNbParts() {
 }
 // --- ACRE (micro) ---
 const MICRO_SOC_TAUX = { BIC_VENTE: 0.123, BIC_SERVICE: 0.212, BNC: 0.246 };
-const ACRE_REMISE = 0.50;          // exonération ~50% 12 mois (ordre de grandeur)
-const ACRE_MOIS = 12;              // période d'exonération standard
+const ACRE_REMISE = 0.50;   // ~50%
+const ACRE_MOIS   = 12;
 
-/** Taux de cotisations micro, avec ou sans ACRE (et prorata en mois si besoin). */
-function microTauxCotisations(typeMicro='BIC_SERVICE', {acre=false, mois=12} = {}) {
+/** Taux de cotisations micro, avec ou sans ACRE (retour SANS arrondi !) */
+function microTauxCotisations(typeMicro='BIC_SERVICE', { acre=false, mois=12 } = {}) {
   const base = MICRO_SOC_TAUX[typeMicro] ?? MICRO_SOC_TAUX.BIC_SERVICE;
   if (!acre) return base;
   const prorata = Math.max(0, Math.min(12, mois)) / 12;
-  // réduction uniquement sur la période ACRE (ex: 6/12 mois → 50% * 0,5)
-  return round2(base * (1 - ACRE_REMISE * prorata));
+  // ❌ NE PAS arrondir ici : on garde toute la précision
+  return base * (1 - ACRE_REMISE * prorata);
 }
 document.addEventListener('DOMContentLoaded', function () {
   // --- Initialisation requise par les écouteurs (onglet + présence du simulateur) ---
@@ -1328,10 +1328,8 @@ function runComparison() {
       // nécessite les helpers:
       // const MICRO_SOC_TAUX = { BIC_VENTE: 0.123, BIC_SERVICE: 0.212, BNC: 0.246 };
       // function microTauxCotisations(type='BIC_SERVICE', {acre=false, mois=12}={}) { ... }
-      const txACRE = microTauxCotisations(type, { acre: true, mois: acreMois });
-
-      // Cotisations sociales recalculées sur le CA avec taux réduit
-      sim.cotisationsSociales = round2(ca * txACRE);
+     const txACRE = microTauxCotisations(type, { acre: true, mois: acreMois }); // p.ex. 0.106
+  sim.cotisationsSociales = round2(ca * txACRE);  // ✅ 70 000 × 0.106 = 7 420 €
 
       // IR ne change pas en micro :
       //  - VFL actif : impôt = taux * CA (déjà dans sim.impotRevenu)
@@ -2381,40 +2379,30 @@ const txtIS = isD
     let detailContent = '';
     
 if (statutId === 'micro') {
-  // Récupérer le type de micro et les taux associés
+  // ====== Micro-entreprise : bloc détail ======
   const typeMicro = result.sim.typeMicro || 'BIC_SERVICE';
-  const revenuImposable = result.sim.revenuImposable || 0;
-  const versementLiberatoire = result.sim.versementLiberatoire || false;
+  const versementLiberatoire = !!result.sim.versementLiberatoire;
+  const revenuImposable = Number(result.sim.revenuImposable) || 0;
 
-  // NOUVEAU : pour afficher le taux ACRE si appliqué
-  // (⚠️ nécessite les helpers MICRO_SOC_TAUX et microTauxCotisations)
-  const txSansAcre = (MICRO_SOC_TAUX?.[typeMicro] ?? { BIC_VENTE: 0.123, BIC_SERVICE: 0.212, BNC: 0.246 }[typeMicro]) * 100;
+  // Taux sociaux avec/sans ACRE (⚠ helpers requis : MICRO_SOC_TAUX + microTauxCotisations)
+  const txSansAcre = (MICRO_SOC_TAUX?.[typeMicro] ?? 0.212) * 100;
   const txAvecAcre = (typeof microTauxCotisations === 'function'
-    ? microTauxCotisations(typeMicro, { acre: !!result.sim._acre_applique, mois: result.sim._acre_applique?.mois || 12 }) * 100
+    ? microTauxCotisations(typeMicro, {
+        acre: !!result.sim._acre_applique,
+        mois: result.sim._acre_applique?.mois || 12
+      }) * 100
     : txSansAcre);
 
-  // NOUVEAU : Calculer le TMI effectif SEULEMENT si pas de versement libératoire
+  // TMI seulement si pas de versement libératoire
   const tmiEffectif = versementLiberatoire ? null : getTMI(revenuImposable, nbParts);
 
-  const tauxCotisations = {
-    'BIC_VENTE': 12.3,
-    'BIC_SERVICE': 21.2,
-    'BNC': 24.6
-  };
-  const tauxAbattement = {
-    'BIC_VENTE': 71,
-    'BIC_SERVICE': 50,
-    'BNC': 34
-  };
-  const tauxVFL = {
-    'BIC_VENTE': 1,
-    'BIC_SERVICE': 1.7,
-    'BNC': 2.2
-  };
+  // Tables de taux
+  const tauxAbattement = { BIC_VENTE: 71, BIC_SERVICE: 50, BNC: 34 };
+  const tauxVFL = { BIC_VENTE: 1, BIC_SERVICE: 1.7, BNC: 2.2 };
 
   detailContent = `
     <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - Micro-entreprise</h2>
-    
+
     <div class="detail-category">Données de base</div>
     <table class="detail-table">
       <tr>
@@ -2423,21 +2411,22 @@ if (statutId === 'micro') {
       </tr>
       <tr>
         <td>Type de micro-entreprise</td>
-        <td>${result.sim.typeMicro || 'BIC'}</td>
+        <td>${typeMicro}</td>
       </tr>
       <tr>
-        <td>Abattement forfaitaire (${formatPercent(tauxAbattement[typeMicro])})</td>
-        <td>${formatter.format(result.sim.ca * tauxAbattement[typeMicro] / 100)}</td>
+        <td>Abattement forfaitaire (${(tauxAbattement[typeMicro]||0).toFixed(0)}%)</td>
+        <td>${formatter.format(result.sim.ca * (tauxAbattement[typeMicro]||0) / 100)}</td>
       </tr>
       <tr>
         <td>Versement libératoire de l'IR</td>
-        <td>${versementLiberatoire ? 
-          `<span class="text-green-400">Activé (${formatPercent(tauxVFL[typeMicro])} du CA)</span>` : 
-          '<span class="text-gray-400">Non activé</span>'}
-        </td>
+        <td>${
+          versementLiberatoire
+            ? `<span class="text-green-400">Activé (${(tauxVFL[typeMicro]||0)}% du CA)</span>`
+            : '<span class="text-gray-400">Non activé</span>'
+        }</td>
       </tr>
     </table>
-    
+
     <div class="detail-category">Charges sociales</div>
     <table class="detail-table">
       <tr>
@@ -2445,122 +2434,84 @@ if (statutId === 'micro') {
         <td>${formatter.format(result.sim.ca)}</td>
       </tr>
 
-      <!-- 🔁 REMPLACE ICI l’ancienne ligne “Taux de cotisations sociales” par le bloc ci-dessous -->
+      <!-- Taux sociaux avec badge ACRE si applicable -->
       <tr>
         <td>Taux de cotisations sociales</td>
         <td>
-          ${result.sim._acre_applique
-            ? `<span class="text-green-400">${txAvecAcre.toFixed(1)}% (ACRE)</span>
-               <small class="text-gray-400 ml-2">au lieu de ${txSansAcre.toFixed(1)}%</small>`
-            : `${txSansAcre.toFixed(1)}%`}
+          ${
+            result.sim._acre_applique
+              ? `<span class="text-green-400">${txAvecAcre.toFixed(1)}% (ACRE)</span>
+                 <small class="text-gray-400 ml-2">au lieu de ${txSansAcre.toFixed(1)}%</small>`
+              : `${txSansAcre.toFixed(1)}%`
+          }
         </td>
       </tr>
-      ${result.sim._acre_applique ? `
-      <tr>
-        <td>ACRE appliquée</td>
-        <td>−50% sur ${result.sim._acre_applique.mois}/12 mois</td>
-      </tr>` : ''}
+      ${
+        result.sim._acre_applique
+          ? `<tr>
+              <td>ACRE appliquée</td>
+              <td>−50% sur ${result.sim._acre_applique.mois}/12 mois</td>
+             </tr>`
+          : ''
+      }
 
       <tr>
         <td>Montant des cotisations sociales</td>
         <td>${formatter.format(result.sim.cotisationsSociales)}</td>
       </tr>
-      ${result.sim.cfp ? `<tr>
-        <td>Contribution à la Formation Professionnelle (0.1% à 0.3%)</td>
-        <td>${formatter.format(result.sim.cfp)}</td>
-      </tr>` : ''}
-      ${result.sim.cfe ? `<tr>
-        <td>Cotisation Foncière des Entreprises (forfait)</td>
-        <td>${formatter.format(result.sim.cfe)}</td>
-      </tr>` : ''}
+      ${result.sim.cfp ? `
+        <tr><td>Contribution à la formation pro</td><td>${formatter.format(result.sim.cfp)}</td></tr>` : ''}
+      ${result.sim.cfe ? `
+        <tr><td>Cotisation foncière des entreprises</td><td>${formatter.format(result.sim.cfe)}</td></tr>` : ''}
     </table>
-    
+
     <div class="detail-category">Impôt sur le revenu</div>
     <table class="detail-table">
-      ${versementLiberatoire ? `
-        <tr>
-          <td>Versement libératoire de l'IR</td>
-          <td>${formatPercent(tauxVFL[typeMicro])} du CA</td>
-        </tr>
-        <tr>
-          <td>Montant du versement libératoire</td>
-          <td>${formatter.format(result.sim.impotRevenu)}</td>
-        </tr>
-        <tr>
-          <td colspan="2" class="text-xs text-gray-400 italic">
-            <i class="fas fa-info-circle mr-1"></i>
-            Avec le versement libératoire, l'IR est définitivement réglé. 
-            Le barème progressif ne s'applique pas.
-          </td>
-        </tr>
-      ` : `
-        <tr>
-          <td>Revenu imposable après abattement (${formatPercent(100 - tauxAbattement[typeMicro])} du CA)</td>
-          <td>${formatter.format(result.sim.revenuImposable)}</td>
-        </tr>
-        <tr>
-          <td>Tranche marginale d'imposition atteinte</td>
-          <td>${tmiEffectif}%</td>
-        </tr>
-        <tr>
-          <td>Impôt sur le revenu${result.sim.modeExpert ? ' (calcul progressif)' : ' (TMI appliquée)'}</td>
-          <td>${formatter.format(result.sim.impotRevenu)}</td>
-        </tr>
-      `}
+      ${
+        versementLiberatoire
+          ? `
+            <tr><td>Versement libératoire</td><td>${(tauxVFL[typeMicro]||0)}% du CA</td></tr>
+            <tr><td>Montant du versement</td><td>${formatter.format(result.sim.impotRevenu)}</td></tr>
+            <tr>
+              <td colspan="2" class="text-xs text-gray-400 italic">
+                <i class="fas fa-info-circle mr-1"></i>
+                Avec le versement libératoire, le barème progressif ne s'applique pas.
+              </td>
+            </tr>`
+          : `
+            <tr><td>Revenu imposable après abattement</td><td>${formatter.format(revenuImposable)}</td></tr>
+            <tr><td>Tranche marginale atteinte</td><td>${tmiEffectif}%</td></tr>
+            <tr><td>Impôt sur le revenu (progressif)</td><td>${formatter.format(result.sim.impotRevenu)}</td></tr>`
+      }
     </table>
-    
-    ${versementLiberatoire ? `
-    <div class="mt-4 p-3 bg-green-900 bg-opacity-20 rounded-lg text-sm border-l-4 border-green-400">
-      <p><i class="fas fa-check-circle text-green-400 mr-2"></i>
-      <strong>Versement libératoire activé :</strong> L'impôt est payé en même temps que les cotisations sociales, 
-      au taux de ${formatPercent(tauxVFL[typeMicro])} du CA. Le revenu après abattement (${formatter.format(revenuImposable)}) 
-      n'est pas soumis au barème progressif de l'IR.</p>
-    </div>
-    ` : ''}
-    
+
     <div class="detail-category">Résultat final</div>
     <table class="detail-table">
+      <tr><td>Chiffre d'affaires</td><td>${formatter.format(result.sim.ca)}</td></tr>
       <tr>
-        <td>Chiffre d'affaires</td>
-        <td>${formatter.format(result.sim.ca)}</td>
-      </tr>
-      <tr>
-        <td>- Cotisations sociales (${result.sim._acre_applique ? txAvecAcre.toFixed(1) + '%' : formatPercent(tauxCotisations[typeMicro])})</td>
+        <td>- Cotisations sociales (${
+          result.sim._acre_applique ? `${txAvecAcre.toFixed(1)}%` : `${txSansAcre.toFixed(1)}%`
+        })</td>
         <td>${formatter.format(result.sim.cotisationsSociales)}</td>
       </tr>
-      ${result.sim.cfp ? `<tr>
-        <td>- CFP</td>
-        <td>${formatter.format(result.sim.cfp)}</td>
-      </tr>` : ''}
-      ${result.sim.cfe ? `<tr>
-        <td>- CFE</td>
-        <td>${formatter.format(result.sim.cfe)}</td>
-      </tr>` : ''}
+      ${result.sim.cfp ? `<tr><td>- CFP</td><td>${formatter.format(result.sim.cfp)}</td></tr>` : ''}
+      ${result.sim.cfe ? `<tr><td>- CFE</td><td>${formatter.format(result.sim.cfe)}</td></tr>` : ''}
       <tr>
         <td>- ${versementLiberatoire ? 'Versement libératoire' : 'Impôt sur le revenu'}</td>
         <td>${formatter.format(result.sim.impotRevenu)}</td>
       </tr>
-      <tr>
-        <td><strong>= Revenu net en poche</strong></td>
-        <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
-      </tr>
-      <tr>
-        <td>Ratio Net/CA</td>
-        <td>${formatPercent(result.sim.ratioNetCA)}</td>
-      </tr>
+      <tr><td><strong>= Revenu net en poche</strong></td><td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td></tr>
+      <tr><td>Ratio Net/CA</td><td>${(result.sim.ratioNetCA || 0).toFixed(1)}%</td></tr>
     </table>
-    
-    ${versementLiberatoire ? `
-    <div class="mt-4 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs">
-      <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-      <strong>Conditions du versement libératoire (2025) :</strong></p>
-      <ul class="mt-1 ml-6 space-y-1">
-        <li>• Revenu fiscal de référence N-2 < 28 797 € par part</li>
-        <li>• Option à exercer lors de la création ou avant le 31/12 pour l'année suivante</li>
-        <li>• Irrévocable pour l'année en cours</li>
-      </ul>
-    </div>
-    ` : ''}
+
+    ${
+      versementLiberatoire
+        ? `<div class="mt-4 p-3 bg-blue-900 bg-opacity-20 rounded-lg text-xs">
+             <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+             Conditions VFL (2025) : RFR N-2 ≤ 28 797 € / part • option à l’ouverture ou avant le 31/12.</p>
+           </div>`
+        : ''
+    }
   `;
 } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
   // Cas des structures avec dirigeant assimilé salarié
