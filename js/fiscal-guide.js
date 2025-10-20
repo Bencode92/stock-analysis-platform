@@ -1165,6 +1165,9 @@ function runComparison() {
   const useOptimalRatio     = document.getElementById('use-optimal-ratio')?.checked;
   const useAvgChargeRate    = document.getElementById('use-avg-charge-rate')?.checked;
   const versementLiberatoire= document.getElementById('micro-vfl')?.checked;
+   // ✅ AJOUT : ACRE (pour le bandeau + éventuels besoins globaux)
+  const acreEnabled = !!document.getElementById('micro-acre')?.checked;
+  const acreMois    = parseInt(document.getElementById('micro-acre-mois')?.value) || 12;
   const gerantMajoritaire   = !(document.getElementById('sarl-gerant-minoritaire')?.checked);
 
   // 🔹 LIRE Capital / Primes / CCA (base 10 % TNS) - FIX: utiliser dataset.raw
