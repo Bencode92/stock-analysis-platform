@@ -1790,46 +1790,56 @@ for (const statutId of selectedStatuses) {
       const sim = statut.simuler();
 
       // --- C. Fixer le bloc rémunération selon % et NE PAS aplatir le reliquat ---
-      if (sim && sim.compatible) {
-        const R = round2(
-          sim.resultatAvantRemuneration
-          ?? sim.resultatEntreprise
-          ?? sim.beneficeAvantCotisations
-          ?? 0
-        );
+     if (sim && sim.compatible) {
 
-        // 1) Cible bloc rémunération (brut + cotisations) via % utilisateur
-        const pctSalaire = getPctSalaire();
-        const pctDiv     = getPctDividendes();
-        const { blocRemTarget, profitPreIS } = computeTargets(R, pctSalaire, pctDiv);
+  // ⛔️ SCI à l’IS : pas de rémunération, 100% dividendes
+  if (statutId === 'sciIS') {
+    sim.remuneration = 0;
+    sim.cotisationsSociales = 0;
+    sim.chargesPatronales = 0;
+    sim.chargesSalariales = 0;
 
-        // 2) Taux observé → déduire un BRUT qui matche le bloc cible
-        const observed = getObservedRate(statutId, sim);
-        const fallback = ['sasu','sas','sa','selas'].includes(statutId) ? 0.80 : 0.42; // assimilé / TNS
-        const { brut, cotisations } = splitBrutFromBloc(blocRemTarget, { observedRate: observed, fallback });
+    // Base IS = résultat avant IS (on ne retire aucun “salaire”)
+    sim.resultatApresRemuneration = round2(
+      sim.resultatAvantRemuneration ?? sim.resultatEntreprise ?? 0
+    );
 
-  // 3) Écritures propres (sans écraser le reliquat !)
-if (['sasu','sas','sa','selas'].includes(statutId)) {
-  // Assimilé salarié : répartir cotisations entre patronales/salariales à l’échelle
-  const totCharges = (Number(sim.chargesPatronales) || 0) + (Number(sim.chargesSalariales) || 0);
-  const partPat = totCharges > 0 ? (Number(sim.chargesPatronales) || 0) / totCharges : 0.70; // approx
+  } else {
+    const R = round2(
+      sim.resultatAvantRemuneration
+      ?? sim.resultatEntreprise
+      ?? sim.beneficeAvantCotisations
+      ?? 0
+    );
 
-  sim.remuneration      = brut;
-  sim.chargesPatronales = round2(cotisations * partPat);
-  sim.chargesSalariales = round2(cotisations * (1 - partPat));
+    // 1) Cible bloc rémunération (brut + cotisations) via % utilisateur
+    const pctSalaire = getPctSalaire();
+    const pctDiv     = getPctDividendes();
+    const { blocRemTarget, profitPreIS } = computeTargets(R, pctSalaire, pctDiv);
 
-  // ➜ Fix: alimente le "salaire net avant IR"
-  sim.salaireNet = round2(sim.remuneration - sim.chargesSalariales);
-  sim.remunerationNetteSociale = sim.salaireNet;
+    // 2) Taux observé → déduire un BRUT qui matche le bloc cible
+    const observed = getObservedRate(statutId, sim);
+    const fallback = ['sasu','sas','sa','selas'].includes(statutId) ? 0.80 : 0.42; // assimilé / TNS
+    const { brut, cotisations } = splitBrutFromBloc(blocRemTarget, { observedRate: observed, fallback });
 
-} else if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
-  sim.remuneration        = brut;
-  sim.cotisationsSociales = cotisations;
-}
+    // 3) Écritures propres (sans écraser le reliquat !)
+    if (['sasu','sas','sa','selas'].includes(statutId)) {
+      const totCharges = (Number(sim.chargesPatronales)||0) + (Number(sim.chargesSalariales)||0);
+      const partPat = totCharges > 0 ? (Number(sim.chargesPatronales)||0)/totCharges : 0.70;
+      sim.remuneration      = brut;
+      sim.chargesPatronales = round2(cotisations * partPat);
+      sim.chargesSalariales = round2(cotisations * (1 - partPat));
+      sim.salaireNet = round2(sim.remuneration - sim.chargesSalariales);
+      sim.remunerationNetteSociale = sim.salaireNet;
 
-// 4) Ne pas aplatir : conserver le bénéfice pour l’IS puis les dividendes
-sim.resultatApresRemuneration = round2(profitPreIS);
-      }
+    } else if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
+      sim.remuneration        = brut;
+      sim.cotisationsSociales = cotisations;
+    }
+
+    // 4) Le reliquat (profit avant IS) sert de base à l’IS
+    sim.resultatApresRemuneration = round2(profitPreIS);
+  }
       // --- fin C ---
 
       // ----- Calcul IS par tranches pour les statuts à l’IS (après C) -----
