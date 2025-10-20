@@ -3425,215 +3425,130 @@ ${hasDividendes ? `
         ` : ''}
     `;
 
-    } else if (statutId === 'sci') {
-        // Cas particulier de la SCI
-        const tauxPrelevementsSociaux = 17.2;
-        const tauxCSGDeductible = 6.8; // CSG déductible sur les revenus fonciers
-        
-        // Récupérer les données
-        const revenuLocatif = result.sim.ca || result.sim.revenuLocatif || 0;
-        const chargesDeductibles = result.sim.chargesDeductibles || 0;
-        const nombreAssocies = result.sim.nombreAssocies || 1;
-        
-        // Calcul du résultat fiscal de la SCI (niveau société)
-        const resultatFiscalSCI = revenuLocatif - chargesDeductibles;
-        
-        // Vérifier si le résultat est anormalement divisé
-        let quotePartAssocie = result.sim.resultatFiscalAssocie || 0;
-        let noteCorrection = '';
-        
-        // Si le résultat affiché semble être divisé par 2, le corriger
-        if (Math.abs(quotePartAssocie * 2 - resultatFiscalSCI) < 1 && nombreAssocies === 1) {
-            quotePartAssocie = resultatFiscalSCI;
-            noteCorrection = ' (corrigé)';
-        }
-        
-        // Calcul des prélèvements sociaux sur la quote-part
-        const prelevementsSociaux = quotePartAssocie * tauxPrelevementsSociaux / 100;
-        const csgDeductible = quotePartAssocie * tauxCSGDeductible / 100;
-        
-        // Base imposable après déduction de la CSG déductible
-        const baseImposableIR = quotePartAssocie - csgDeductible;
-        
-        // Calcul du TMI effectif sur la base imposable nette
-        const tmiEffectif = getTMI(baseImposableIR, nbParts);
-        
-        // Recalcul de l'impôt si nécessaire (si correction appliquée)
-        let impotRevenu = result.sim.impotRevenu || 0;
-        if (noteCorrection) {
-            // Recalculer l'impôt avec la base corrigée
-            if (result.sim.modeExpert) {
-                // Calcul progressif (simplifié ici)
-                impotRevenu = baseImposableIR * tmiEffectif / 100 * 0.8; // Approximation
-            } else {
-                impotRevenu = baseImposableIR * tmiEffectif / 100;
-            }
-        }
-        
-        // Revenu net après prélèvements et impôts
-        const revenuNetAssocie = quotePartAssocie - prelevementsSociaux - impotRevenu;
-        
-        detailContent = `
-            <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - SCI à l'IR</h2>
-            
-            <div class="detail-category">Données de base (niveau SCI)</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Revenus locatifs totaux</td>
-                    <td>${formatter.format(revenuLocatif)}</td>
-                </tr>
-                ${chargesDeductibles ? `
-                <tr>
-                    <td>- Charges déductibles</td>
-                    <td>${formatter.format(chargesDeductibles)}</td>
-                </tr>` : ''}
-                <tr>
-                    <td><strong>= Résultat fiscal de la SCI</strong></td>
-                    <td><strong>${formatter.format(resultatFiscalSCI)}</strong></td>
-                </tr>
-                ${nombreAssocies > 1 ? `
-                <tr>
-                    <td>Nombre d'associés</td>
-                    <td>${nombreAssocies}</td>
-                </tr>` : ''}
-            </table>
-            
-            ${/* NOUVEAU: Section associés pour SCI */ ''}
-            ${STATUTS_MULTI_ASSOCIES['sci'] && result.sim.nbAssocies > 1 ? `
-            <div class="detail-category">Répartition entre associés</div>
-            <table class="detail-table">
-                <tr>
-                    <td colspan="2" class="text-center text-sm text-green-400">
-                        Simulation pour <strong>1 associé détenant ${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</strong>
-                        (SCI à ${result.sim.nbAssocies} associés)
-                    </td>
-                </tr>
-                <tr>
-                    <td>Part de l'associé simulé</td>
-                    <td>${formatPercent(result.sim.partAssociePct || (result.sim.partAssocie * 100))}</td>
-                </tr>
-                <tr>
-                    <td>Quote-part du résultat fiscal</td>
-                    <td>${formatter.format(result.sim.resultatFiscalAssocie || quotePartAssocie)}</td>
-                </tr>
-            </table>
-            
-            <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
-                <p><i class="fas fa-balance-scale mr-1"></i> 
-                <strong>Transparence fiscale :</strong> Chaque associé déclare sa quote-part 
-                du résultat fiscal dans sa déclaration personnelle (case 4BA pour les revenus fonciers).</p>
-            </div>
-            ` : `
-            <div class="detail-category">Quote-part de l'associé${nombreAssocies > 1 ? ' (1/'+nombreAssocies+')' : ''}</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Quote-part du résultat fiscal${noteCorrection}</td>
-                    <td>${formatter.format(quotePartAssocie)}</td>
-                </tr>
-                <tr>
-                    <td colspan="2" class="text-xs text-gray-400 italic">
-                        Base imposable individuelle déclarée en revenus fonciers (case 4BA)
-                    </td>
-                </tr>
-            </table>
-            `}
-            
-            <div class="detail-category">Prélèvements sociaux</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Base de calcul (quote-part)</td>
-                    <td>${formatter.format(quotePartAssocie)}</td>
-                </tr>
-                <tr>
-                    <td>Taux de prélèvements sociaux</td>
-                    <td>${formatPercent(tauxPrelevementsSociaux)}</td>
-                </tr>
-                <tr>
-                    <td>Montant des prélèvements sociaux</td>
-                    <td>${formatter.format(prelevementsSociaux)}</td>
-                </tr>
-                <tr>
-                    <td colspan="2" class="text-xs text-gray-400 italic">
-                        Dont CSG déductible (${formatPercent(tauxCSGDeductible)}) : ${formatter.format(csgDeductible)}
-                    </td>
-                </tr>
-            </table>
-            
-            <div class="detail-category">Impôt sur le revenu</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Quote-part imposable</td>
-                    <td>${formatter.format(quotePartAssocie)}</td>
-                </tr>
-                <tr>
-                    <td>- CSG déductible (${formatPercent(tauxCSGDeductible)})</td>
-                    <td>${formatter.format(csgDeductible)}</td>
-                </tr>
-                <tr>
-                    <td>= Base nette imposable à l'IR</td>
-                    <td>${formatter.format(baseImposableIR)}</td>
-                </tr>
-                <tr>
-                    <td>Tranche marginale d'imposition</td>
-                    <td>${tmiEffectif}%</td>
-                </tr>
-                <tr>
-                    <td>Impôt sur le revenu${result.sim.modeExpert ? ' (calcul progressif)' : ''}</td>
-                    <td>${formatter.format(impotRevenu)}</td>
-                </tr>
-            </table>
-            
-            <div class="detail-category">Résultat final pour l'associé</div>
-            <table class="detail-table">
-                <tr>
-                    <td>Quote-part du résultat</td>
-                    <td>${formatter.format(quotePartAssocie)}</td>
-                </tr>
-                <tr>
-                    <td>- Prélèvements sociaux (${formatPercent(tauxPrelevementsSociaux)})</td>
-                    <td>${formatter.format(prelevementsSociaux)}</td>
-                </tr>
-                <tr>
-                    <td>- Impôt sur le revenu</td>
-                    <td>${formatter.format(impotRevenu)}</td>
-                </tr>
-                <tr>
-                    <td><strong>= Revenu net après impôts</strong></td>
-                    <td><strong>${formatter.format(revenuNetAssocie)}</strong></td>
-                </tr>
-                <tr>
-                    <td>Ratio net/revenus locatifs${nombreAssocies > 1 ? ' (pour cet associé)' : ''}</td>
-                    <td>${formatPercent((revenuNetAssocie / (revenuLocatif/nombreAssocies)) * 100)}</td>
-                </tr>
-            </table>
-            
-            ${nombreAssocies > 1 ? `
-            <div class="mt-4 p-4 bg-blue-900 bg-opacity-30 rounded-lg text-sm">
-                <p><i class="fas fa-info-circle text-blue-400 mr-2"></i> 
-                <strong>Note :</strong> Les montants affichés correspondent à la quote-part d'un associé détenant 1/${nombreAssocies} des parts.
-                Le résultat fiscal total de la SCI est de ${formatter.format(resultatFiscalSCI)}.</p>
-            </div>
-            ` : ''}
-            
-            ${noteCorrection ? `
-            <div class="mt-4 p-4 bg-yellow-900 bg-opacity-30 rounded-lg text-sm">
-                <p><i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i> 
-                <strong>Correction appliquée :</strong> Le résultat fiscal a été ajusté pour refléter le montant total de la SCI.
-                Vérifiez le paramétrage du nombre d'associés si ce n'est pas le résultat attendu.</p>
-            </div>
-            ` : ''}
-            
-            <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
-                <p><i class="fas fa-balance-scale mr-1"></i> 
-                <strong>Précisions fiscales :</strong></p>
-                <ul class="mt-2 space-y-1 ml-4">
-                    <li>• La CSG déductible (6,8%) vient minorer la base imposable à l'IR l'année suivante</li>
-                    <li>• Chaque associé déclare sa quote-part en case 4BA de la déclaration 2042</li>
-                    <li>• La SCI doit déposer une déclaration 2072 récapitulant les résultats</li>
-                    <li>• Régime de transparence fiscale (article 8 CGI)</li>
-                </ul>
-            </div>
-        `;
+  } else if (statutId === 'sci') {
+  // Cas particulier de la SCI à l'IR
+  const TAUX_PS = 17.2;
+  const TAUX_CSG_DEDUCT = 6.8;
+
+  // Données de base
+  const revenuLocatifTot = Number(result.sim.ca ?? result.sim.revenuLocatif ?? 0);
+  const chargesDeductibles = Number(result.sim.chargesDeductibles ?? 0);
+  const nbAssocies = Number(result.sim.nbAssocies ?? result.sim.nombreAssocies ?? 1);
+
+  // Résultat fiscal (niveau SCI)
+  const resultatFiscalSCI = Math.max(0, revenuLocatifTot - chargesDeductibles);
+
+  // Part détenue (décimal 0–1)
+  const partAssocieDec = (result.sim.partAssocie != null)
+    ? Number(result.sim.partAssocie)
+    : (result.sim.partAssociePct != null ? Number(result.sim.partAssociePct) / 100
+       : (nbAssocies > 0 ? 1 / nbAssocies : 1));
+
+  // Quote-part de résultat fiscal pour l'associé simulé
+  let quotePartAssocie = Number(result.sim.resultatFiscalAssocie);
+  if (!Number.isFinite(quotePartAssocie) || quotePartAssocie <= 0) {
+    quotePartAssocie = resultatFiscalSCI * Math.max(0, Math.min(1, partAssocieDec));
+  }
+
+  // Prélèvements sociaux & CSG déductible
+  const prelevementsSociaux = quotePartAssocie * (TAUX_PS / 100);
+  const csgDeductible = quotePartAssocie * (TAUX_CSG_DEDUCT / 100);
+
+  // Base imposable IR (après déduction CSG déductible)
+  const baseImposableIR = Math.max(0, quotePartAssocie - csgDeductible);
+
+  // TMI & IR (barème progressif 2025)
+  const tmiEffectif = getTMI(baseImposableIR, nbParts);
+  const impotRevenu = impotsIR2025(baseImposableIR, nbParts);
+
+  // Net après impôts pour l'associé
+  const revenuNetAssocie = quotePartAssocie - prelevementsSociaux - impotRevenu;
+
+  // 🔧 BASE CORRECTE DU RATIO : revenus locatifs de l'associé (CA total × quote-part)
+  const revenusLocatifsAssocie = revenuLocatifTot * Math.max(0, Math.min(1, partAssocieDec));
+  const ratioNetRevenusAssocie = revenusLocatifsAssocie > 0
+    ? (revenuNetAssocie / revenusLocatifsAssocie) * 100
+    : 0;
+
+  // (facultatif) autres ratios clarifiés
+  const ratioNetCATotal = revenuLocatifTot > 0 ? (revenuNetAssocie / revenuLocatifTot) * 100 : 0;
+  const ratioNetQuotePart = quotePartAssocie > 0 ? (revenuNetAssocie / quotePartAssocie) * 100 : 0;
+
+  // Rendu
+  detailContent = `
+    <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - SCI à l'IR</h2>
+
+    <div class="detail-category">Données de base (niveau SCI)</div>
+    <table class="detail-table">
+      <tr><td>Revenus locatifs totaux</td><td>${formatter.format(revenuLocatifTot)}</td></tr>
+      ${chargesDeductibles ? `<tr><td>- Charges déductibles</td><td>${formatter.format(chargesDeductibles)}</td></tr>` : ''}
+      <tr><td><strong>= Résultat fiscal de la SCI</strong></td><td><strong>${formatter.format(resultatFiscalSCI)}</strong></td></tr>
+      ${nbAssocies > 1 ? `<tr><td>Nombre d'associés</td><td>${nbAssocies}</td></tr>` : ''}
+    </table>
+
+    ${STATUTS_MULTI_ASSOCIES['sci'] && nbAssocies > 1 ? `
+      <div class="detail-category">Répartition entre associés</div>
+      <table class="detail-table">
+        <tr>
+          <td>Part de l'associé simulé</td>
+          <td>${formatPercent((result.sim.partAssociePct ?? (partAssocieDec * 100)), 1)}</td>
+        </tr>
+        <tr>
+          <td>Quote-part du résultat fiscal</td>
+          <td>${formatter.format(quotePartAssocie)}</td>
+        </tr>
+      </table>
+      <div class="mt-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
+        <p><i class="fas fa-balance-scale mr-1"></i>
+        <strong>Transparence fiscale :</strong> Chaque associé déclare sa quote-part du résultat fiscal dans sa déclaration personnelle (revenus fonciers).</p>
+      </div>
+    ` : ''}
+
+    <div class="detail-category">Prélèvements sociaux</div>
+    <table class="detail-table">
+      <tr><td>Base de calcul (quote-part)</td><td>${formatter.format(quotePartAssocie)}</td></tr>
+      <tr><td>Taux de prélèvements sociaux</td><td>${formatPercent(TAUX_PS)}</td></tr>
+      <tr><td>Montant des prélèvements sociaux</td><td>${formatter.format(prelevementsSociaux)}</td></tr>
+      <tr><td colspan="2" class="text-xs text-gray-400 italic">Dont CSG déductible (${formatPercent(TAUX_CSG_DEDUCT)}) : ${formatter.format(csgDeductible)}</td></tr>
+    </table>
+
+    <div class="detail-category">Impôt sur le revenu</div>
+    <table class="detail-table">
+      <tr><td>Quote-part imposable</td><td>${formatter.format(quotePartAssocie)}</td></tr>
+      <tr><td>- CSG déductible (${formatPercent(TAUX_CSG_DEDUCT)})</td><td>${formatter.format(csgDeductible)}</td></tr>
+      <tr><td>= Base nette imposable à l'IR</td><td>${formatter.format(baseImposableIR)}</td></tr>
+      <tr><td>Tranche marginale d'imposition</td><td>${tmiEffectif}%</td></tr>
+      <tr><td>Impôt sur le revenu (barème)</td><td>${formatter.format(impotRevenu)}</td></tr>
+    </table>
+
+    <div class="detail-category">Résultat final pour l'associé</div>
+    <table class="detail-table">
+      <tr><td>Quote-part du résultat</td><td>${formatter.format(quotePartAssocie)}</td></tr>
+      <tr><td>- Prélèvements sociaux (${formatPercent(TAUX_PS)})</td><td>${formatter.format(prelevementsSociaux)}</td></tr>
+      <tr><td>- Impôt sur le revenu</td><td>${formatter.format(impotRevenu)}</td></tr>
+      <tr><td><strong>= Revenu net après impôts</strong></td><td><strong>${formatter.format(revenuNetAssocie)}</strong></td></tr>
+
+      <!-- ✅ Ratio corrigé -->
+      <tr>
+        <td>Ratio net/revenus locatifs (pour cet associé)</td>
+        <td>${ratioNetRevenusAssocie.toFixed(1)}%</td>
+      </tr>
+
+      <!-- (facultatif) autres ratios pour transparence -->
+      <tr class="text-gray-400"><td>Ratio net / CA total de la SCI</td><td>${ratioNetCATotal.toFixed(1)}%</td></tr>
+      <tr class="text-gray-400"><td>Ratio net / quote-part du résultat</td><td>${ratioNetQuotePart.toFixed(1)}%</td></tr>
+    </table>
+
+    <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-400">
+      <p><i class="fas fa-balance-scale mr-1"></i><strong>Précisions fiscales :</strong></p>
+      <ul class="mt-2 space-y-1 ml-4">
+        <li>• La CSG déductible (6,8%) minore la base imposable l'année suivante.</li>
+        <li>• Chaque associé déclare sa quote-part dans la 2042 (revenus fonciers).</li>
+        <li>• La SCI dépose une 2072 récapitulative.</li>
+        <li>• Régime de transparence fiscale (article 8 CGI).</li>
+      </ul>
+    </div>
+  `;
     } else {
         // Cas par défaut
         detailContent = `
