@@ -1912,6 +1912,7 @@ for (const statutId of selectedStatuses) {
       // Quote-part de l’associé simulé
       sim.dividendes = round2(dividendesSociete * (sim.partAssocie || 1));
     }
+    }
 }
       // ----- fin calcul IS par tranches -----
 
