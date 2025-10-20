@@ -1092,9 +1092,9 @@ function getSelectedStatuses(filter) {
         case 'common':
             return ['micro', 'ei', 'eurl', 'eurlIS', 'sasu'];
         case 'all':
-            return ['micro', 'ei', 'eurl', 'eurlIS', 'sarl', 'sasu', 'sas', 'sa', 'snc', 'sci', 'selarl', 'selas', 'sca'];
-        case 'is_only':
-            return ['eurlIS', 'sasu', 'sarl', 'sas', 'sa', 'selarl', 'selas', 'sca'];
+             return ['micro','ei','eurl','eurlIS','sarl','sasu','sas','sa','snc','sci','sciIS','selarl','selas','sca'];
+       case 'is_only':
+              return ['eurlIS','sasu','sarl','sas','sa','selarl','selas','sca','sciIS'];
         case 'ir_only':
             return ['micro', 'ei', 'eurl', 'snc', 'sci'];
         case 'commercial':
@@ -1255,6 +1255,7 @@ function runComparison() {
         'sa': '<i class="fas fa-landmark text-blue-400 status-icon"></i>',
         'snc': '<i class="fas fa-handshake text-green-400 status-icon"></i>',
         'sci': '<i class="fas fa-home text-green-400 status-icon"></i>',
+      'sciIS': '<i class="fas fa-home text-blue-400 status-icon"></i>',
         'selarl': '<i class="fas fa-user-md text-blue-400 status-icon"></i>',
         'selas': '<i class="fas fa-stethoscope text-blue-400 status-icon"></i>',
         'sca': '<i class="fas fa-chart-line text-blue-400 status-icon"></i>'
@@ -1272,6 +1273,7 @@ function runComparison() {
         'sa': '<span class="regime-badge is">IS</span>',
         'snc': '<span class="regime-badge ir">IR</span>',
         'sci': '<span class="regime-badge ir">IR</span>',
+      'sciIS': '<span class="regime-badge is">IS</span>',
         'selarl': '<span class="regime-badge is">IS</span>',
         'selas': '<span class="regime-badge is">IS</span>',
         'sca': '<span class="regime-badge is">IS</span>'
@@ -1572,6 +1574,79 @@ function runComparison() {
                 });
             }
         },
+      'sciIS': {
+  nom: 'SCI (option IS)',
+  simuler: () => {
+    // Entrées “douces” (tombent à 0 si absentes)
+    const revenusLocatifs = Number(params.ca) || 0;
+    const chargesDeductibles = Number(params.chargesDeductibles ?? 0); // si tu l’as dans ton moteur
+    const amortissementAnnuel = Number(params.amortissementAnnuel ?? 0)  // facultatif
+                             || Number(window?.SimulationsFiscales?.amortissementAnnuel ?? 0)
+                             || Number(window?.amortissementAnnuel ?? 0) || 0;
+
+    // Résultat avant IS
+    const resultatAvantIS = round2(revenusLocatifs - chargesDeductibles - amortissementAnnuel);
+
+    // IS 15%/25% (tu l’as déjà : calcISProgressif + éligibilité)
+    const elig15 = !!params.is15Eligible;
+    const isBreak = calcISProgressif(resultatAvantIS, elig15);
+    const resultatApresIS = round2(Math.max(0, resultatAvantIS - isBreak.is));
+
+    // Politique de distribution : 100% par défaut si tu n’as pas d’input
+    // (sinon lis p.ex. document.getElementById('sim-distribution')?.value)
+    const pctDistribution = 1; // 100%
+    const dividendesSociete = round2(resultatApresIS * pctDistribution);
+
+    // Quote-part de l’associé simulé
+    const partAssocieDec = Math.max(0, Math.min(1, params.partAssocie || (params.partAssociePct||100)/100));
+    const dividendesBrutsAssocie = round2(dividendesSociete * partAssocieDec);
+
+    // Fiscalité des dividendes (PFU 12,8% + PS 17,2%, pas de TNS en SCI-IS)
+    const irDiv  = round2(dividendesBrutsAssocie * 0.128);
+    const ps172  = round2(dividendesBrutsAssocie * 0.172);
+    const nets   = round2(dividendesBrutsAssocie - irDiv - ps172);
+
+    // Sortie “compatible” avec ton tableau récap
+    const sim = {
+      compatible: true,
+      statutId: 'sciIS',
+      ca: revenusLocatifs,
+      resultatAvantRemuneration: resultatAvantIS, // pour cohérence écran
+      resultatApresRemuneration: resultatAvantIS, // pas de salaire
+      is: isBreak.is,
+      _isDetail: { elig15, ...isBreak },
+      resultatApresIS,
+
+      // Dividendes (quote-part)
+      dividendes: dividendesBrutsAssocie,
+      methodeDividendes: 'PFU',
+      prelevementForfaitaire: irDiv + ps172,
+      cotTNSDiv: 0,
+      dividendesNets: nets,
+      economieMethode: 0,
+
+      // Pas de salaire en SCI-IS
+      remuneration: 0,
+      cotisationsSociales: 0,
+      chargesPatronales: 0,
+      chargesSalariales: 0,
+      remunerationNetteSociale: 0,
+      salaireNet: 0,
+      revenuNetSalaire: 0,
+
+      // Paramètres associés
+      nbAssocies: params.nbAssocies,
+      partAssocie: partAssocieDec,
+      partAssociePct: params.partAssociePct,
+
+      // Net total (uniquement dividendes)
+      revenuNetTotal: nets,
+      ratioNetCA: revenusLocatifs > 0 ? round2((nets / revenusLocatifs) * 100) : 0,
+    };
+
+    return sim;
+  }
+},
         'selarl': { 
             nom: 'SELARL', 
             simuler: () => {
@@ -1735,7 +1810,8 @@ sim.resultatApresRemuneration = round2(profitPreIS);
 
       // ----- Calcul IS par tranches pour les statuts à l’IS (après C) -----
 {
-  const isStatutIS = ['eurlIS','sarl','selarl','sca','sasu','sas','sa','selas'].includes(statutId);
+ const isStatutIS = ['eurlIS','sarl','selarl','sca','sasu','sas','sa','selas','sciIS'].includes(statutId);
+
   if (isStatutIS && sim && sim.compatible) {
     // Bénéfice base IS = résultat après rémunération et charges sociales (avant IS)
     const benefIS = Number(sim.resultatApresRemuneration ?? sim.resultatEntreprise ?? 0);
@@ -1886,6 +1962,13 @@ sim.resultatApresRemuneration = round2(profitPreIS);
   charges = sim.prelevementsSociaux || 0;
   impots = sim.impotRevenu;
   net = sim.revenuNetApresImpot;
+   } else if (statutId === 'sciIS') {
+  // SCI à l’IS : pas de rémunération, tout en dividendes
+  brut    = 0;
+  charges = 0;
+  // impôts = IS + PFU (IR 12,8 + PS 17,2) déjà cumulés
+  impots  = (Number(sim.is)||0) + (Number(sim.prelevementForfaitaire)||0);
+  net     = Number(sim.dividendesNets)||0;
 
 } else {
 // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, SELARL, SELAS, SA, SCA)
@@ -2189,6 +2272,7 @@ resultsBody.appendChild(ratioRow);
 // NOUVEAU : Configuration des statuts multi-associés (à ajouter au début de fiscal-guide.js)
 const STATUTS_MULTI_ASSOCIES = {
   'sci': true,
+  'sciIS': true,
   'snc': true,
   'sarl': true,
   'sas': true,
@@ -2219,6 +2303,7 @@ const STATUTS_MIN_2 = {
   'sa':     true,
   'snc':    true,
   'sci':    true,
+  'sciIS': true,
   'selarl': true,
   'selas':  true,
   'sca':    true
@@ -2539,7 +2624,7 @@ const {
   chargesPatronales = 0,
   chargesSalariales = 0,
   resultatApresRemuneration = 0
-} = result.sim || {};
+} = result.sim || {};∂©
 
 const tauxChargesPatronales = remuneration > 0
   ? (chargesPatronales / remuneration) * 100
@@ -3549,6 +3634,55 @@ ${hasDividendes ? `
       </ul>
     </div>
   `;
+  } else if (statutId === 'sciIS') {
+  const revenus = Number(result.sim.ca)||0;
+  const isD = result?.sim?._isDetail;
+  const txtIS = isD
+    ? (isD.elig15 ? `15% sur ${formatter.format(isD.part15)} puis 25% sur ${formatter.format(isD.part25)}`
+                  : `25% (non éligible)`)
+    : (result?.sim?.is ? '25%' : '—');
+
+  detailContent = `
+    <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - SCI (option IS)</h2>
+
+    <div class="detail-category">Données de base</div>
+    <table class="detail-table">
+      <tr><td>Revenus locatifs</td><td>${formatter.format(revenus)}</td></tr>
+      ${ (result.sim.chargesDeductibles || result.sim._chargesDeductibles) ? `
+        <tr><td>- Charges déductibles</td><td>${formatter.format(result.sim.chargesDeductibles||result.sim._chargesDeductibles)}</td></tr>` : '' }
+      ${ (result.sim.amortissementAnnuel) ? `
+        <tr><td>- Amortissements</td><td>${formatter.format(result.sim.amortissementAnnuel)}</td></tr>` : '' }
+      <tr><td><strong>= Résultat fiscal (avant IS)</strong></td><td><strong>${formatter.format(result.sim.resultatAvantRemuneration)}</strong></td></tr>
+    </table>
+
+    <div class="detail-category">Impôt sur les sociétés</div>
+    <table class="detail-table">
+      <tr><td>Barème</td><td>${txtIS}</td></tr>
+      <tr><td>IS dû</td><td>${formatter.format(result.sim.is)}</td></tr>
+      <tr><td><strong>= Résultat après IS</strong></td><td><strong>${formatter.format(result.sim.resultatApresIS)}</strong></td></tr>
+    </table>
+
+    <div class="detail-category">Distribution (quote-part de cet associé)</div>
+    <table class="detail-table">
+      <tr><td>Part de l'associé simulé</td><td>${(result.sim.partAssociePct ?? (result.sim.partAssocie*100)).toFixed(1)}%</td></tr>
+      <tr><td>Dividendes bruts</td><td>${formatter.format(result.sim.dividendes)}</td></tr>
+      <tr><td>Méthode de taxation</td><td><span class="text-blue-400">PFU 30%</span></td></tr>
+      <tr><td>IR (12,8%) + PS (17,2%)</td><td>${formatter.format(result.sim.prelevementForfaitaire)}</td></tr>
+      <tr><td><strong>Dividendes nets</strong></td><td><strong>${formatter.format(result.sim.dividendesNets)}</strong></td></tr>
+    </table>
+
+    <div class="detail-category">Résultat final</div>
+    <table class="detail-table">
+      <tr><td><strong>Revenu net en poche</strong></td><td><strong>${formatter.format(result.sim.revenuNetTotal)}</strong></td></tr>
+      <tr><td>Ratio Net/CA</td><td>${(result.sim.ratioNetCA||0).toFixed(1)}%</td></tr>
+    </table>
+
+    <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-300">
+      <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+      A l’IS, la SCI est <strong>opaque</strong> : IS au niveau société, puis imposition des dividendes chez l’associé (PFU 30% par défaut).</p>
+    </div>
+  `;
+
     } else {
         // Cas par défaut
         detailContent = `
