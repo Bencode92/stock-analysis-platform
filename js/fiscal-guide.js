@@ -2624,7 +2624,7 @@ const {
   chargesPatronales = 0,
   chargesSalariales = 0,
   resultatApresRemuneration = 0
-} = result.sim || {};∂©
+} = result.sim || {};
 
 const tauxChargesPatronales = remuneration > 0
   ? (chargesPatronales / remuneration) * 100
