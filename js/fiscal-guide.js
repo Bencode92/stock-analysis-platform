@@ -1840,6 +1840,7 @@ for (const statutId of selectedStatuses) {
     // 4) Le reliquat (profit avant IS) sert de base à l’IS
     sim.resultatApresRemuneration = round2(profitPreIS);
   }
+       }
       // --- fin C ---
 
       // ----- Calcul IS par tranches pour les statuts à l’IS (après C) -----
