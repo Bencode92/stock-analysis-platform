@@ -3658,52 +3658,80 @@ ${hasDividendes ? `
       </ul>
     </div>
   `;
-  } else if (statutId === 'sciIS') {
-  const revenus = Number(result.sim.ca)||0;
-  const isD = result?.sim?._isDetail;
+ } else if (statutId === 'sciIS') {
+  const sim  = result.sim || {};
+  const fmt  = v => formatter.format(Number(v) || 0);
+  const pct  = v => `${(Number(v) || 0).toFixed(1)}%`;
+  const n    = v => Number(v) || 0;
+
+  // Libellé IS (15% si éligible puis 25%, sinon 25%)
+  const isD   = sim?._isDetail;
   const txtIS = isD
-    ? (isD.elig15 ? `15% sur ${formatter.format(isD.part15)} puis 25% sur ${formatter.format(isD.part25)}`
-                  : `25% (non éligible)`)
-    : (result?.sim?.is ? '25%' : '—');
+    ? (isD.elig15
+        ? `15% sur ${fmt(isD.part15)} puis 25% sur ${fmt(isD.part25)}`
+        : `25% (non éligible)`)
+    : (sim.is ? '25%' : '—');
+
+  // Champs optionnels (afficher seulement si > 0)
+  const hasCharges = n(sim.chargesDeductibles ?? sim._chargesDeductibles) > 0;
+  const charges    = n(sim.chargesDeductibles ?? sim._chargesDeductibles);
+  const hasAmort   = n(sim.amortissementAnnuel) > 0;
+  const amort      = n(sim.amortissementAnnuel);
+
+  // Quote-part affichée en %
+  const partPct = (sim.partAssociePct != null)
+    ? n(sim.partAssociePct)
+    : n(sim.partAssocie) * 100;
+
+  // PFU total (IR 12,8 + PS 17,2)
+  const pfuTotal = n(sim.prelevementForfaitaire);
 
   detailContent = `
     <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - SCI (option IS)</h2>
 
     <div class="detail-category">Données de base</div>
     <table class="detail-table">
-      <tr><td>Revenus locatifs</td><td>${formatter.format(revenus)}</td></tr>
-      ${ (result.sim.chargesDeductibles || result.sim._chargesDeductibles) ? `
-        <tr><td>- Charges déductibles</td><td>${formatter.format(result.sim.chargesDeductibles||result.sim._chargesDeductibles)}</td></tr>` : '' }
-      ${ (result.sim.amortissementAnnuel) ? `
-        <tr><td>- Amortissements</td><td>${formatter.format(result.sim.amortissementAnnuel)}</td></tr>` : '' }
-      <tr><td><strong>= Résultat fiscal (avant IS)</strong></td><td><strong>${formatter.format(result.sim.resultatAvantRemuneration)}</strong></td></tr>
+      <tr><td>Revenus locatifs (CA)</td><td>${fmt(sim.ca)}</td></tr>
+      ${hasCharges ? `<tr><td>- Charges déductibles</td><td>${fmt(charges)}</td></tr>` : ``}
+      ${hasAmort   ? `<tr><td>- Amortissements</td><td>${fmt(amort)}</td></tr>` : ``}
+      <tr>
+        <td><strong>= Résultat fiscal (avant IS)</strong></td>
+        <td><strong>${fmt(sim.resultatAvantRemuneration)}</strong></td>
+      </tr>
     </table>
 
     <div class="detail-category">Impôt sur les sociétés</div>
     <table class="detail-table">
       <tr><td>Barème</td><td>${txtIS}</td></tr>
-      <tr><td>IS dû</td><td>${formatter.format(result.sim.is)}</td></tr>
-      <tr><td><strong>= Résultat après IS</strong></td><td><strong>${formatter.format(result.sim.resultatApresIS)}</strong></td></tr>
+      <tr><td>IS dû</td><td>${fmt(sim.is)}</td></tr>
+      <tr>
+        <td><strong>= Résultat après IS</strong></td>
+        <td><strong>${fmt(sim.resultatApresIS)}</strong></td>
+      </tr>
+      ${n(sim.reserveLegalePrelevee) > 0
+        ? `<tr><td>Réserve légale (5%)</td><td>− ${fmt(sim.reserveLegalePrelevee)}</td></tr>`
+        : ``}
     </table>
 
     <div class="detail-category">Distribution (quote-part de cet associé)</div>
     <table class="detail-table">
-      <tr><td>Part de l'associé simulé</td><td>${(result.sim.partAssociePct ?? (result.sim.partAssocie*100)).toFixed(1)}%</td></tr>
-      <tr><td>Dividendes bruts</td><td>${formatter.format(result.sim.dividendes)}</td></tr>
+      <tr><td>Part de l'associé simulé</td><td>${pct(partPct)}</td></tr>
+      <tr><td>Dividendes bruts</td><td>${fmt(sim.dividendes)}</td></tr>
       <tr><td>Méthode de taxation</td><td><span class="text-blue-400">PFU 30%</span></td></tr>
-      <tr><td>IR (12,8%) + PS (17,2%)</td><td>${formatter.format(result.sim.prelevementForfaitaire)}</td></tr>
-      <tr><td><strong>Dividendes nets</strong></td><td><strong>${formatter.format(result.sim.dividendesNets)}</strong></td></tr>
+      <tr><td>IR (12,8%) + PS (17,2%)</td><td>${fmt(pfuTotal)}</td></tr>
+      <tr><td>Cotisations TNS sur dividendes</td><td>0 € <span class="text-gray-400">(non applicable en SCI-IS)</span></td></tr>
+      <tr><td><strong>Dividendes nets</strong></td><td><strong>${fmt(sim.dividendesNets)}</strong></td></tr>
     </table>
 
     <div class="detail-category">Résultat final</div>
     <table class="detail-table">
-      <tr><td><strong>Revenu net en poche</strong></td><td><strong>${formatter.format(result.sim.revenuNetTotal)}</strong></td></tr>
-      <tr><td>Ratio Net/CA</td><td>${(result.sim.ratioNetCA||0).toFixed(1)}%</td></tr>
+      <tr><td><strong>Revenu net en poche</strong></td><td><strong>${fmt(sim.revenuNetTotal)}</strong></td></tr>
+      <tr><td>Ratio Net/CA</td><td>${(n(sim.ratioNetCA)).toFixed(1)}%</td></tr>
     </table>
 
     <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-300">
       <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-      A l’IS, la SCI est <strong>opaque</strong> : IS au niveau société, puis imposition des dividendes chez l’associé (PFU 30% par défaut).</p>
+      À l’IS, la SCI est <strong>opaque</strong> : IS au niveau société, puis imposition des dividendes chez l’associé (PFU 30% par défaut). Aucune cotisation TNS n’est due sur les dividendes.</p>
     </div>
   `;
 
