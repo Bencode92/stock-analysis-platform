@@ -1574,58 +1574,82 @@ function runComparison() {
                 });
             }
         },
-      'sciIS': {
+     'sciIS': {
   nom: 'SCI (option IS)',
   simuler: () => {
-    // Entrées “douces” (tombent à 0 si absentes)
+    // 1) Entrées “douces”
     const revenusLocatifs = Number(params.ca) || 0;
-    const chargesDeductibles = Number(params.chargesDeductibles ?? 0); // si tu l’as dans ton moteur
-    const amortissementAnnuel = Number(params.amortissementAnnuel ?? 0)  // facultatif
-                             || Number(window?.SimulationsFiscales?.amortissementAnnuel ?? 0)
-                             || Number(window?.amortissementAnnuel ?? 0) || 0;
 
-    // Résultat avant IS
-    const resultatAvantIS = round2(revenusLocatifs - chargesDeductibles - amortissementAnnuel);
+    // Marge depuis l’UI (#sim-marge), défaut 30% si absent
+    const uiMarge = parseFloat(document.getElementById('sim-marge')?.value);
+    const tauxMarge = Number.isFinite(uiMarge)
+      ? Math.max(0, Math.min(1, uiMarge / 100))
+      : 0.30;
 
-    // IS 15%/25% (tu l’as déjà : calcISProgressif + éligibilité)
+    // Si ton moteur fournit des charges / amortissements détaillés, on les respecte.
+    // Sinon on dérive le résultat via la marge.
+    const chargesDeductiblesInput =
+      Number(params.chargesDeductibles ?? 0);
+    const amortissementAnnuelInput =
+      Number(params.amortissementAnnuel ?? 0)
+      || Number(window?.SimulationsFiscales?.amortissementAnnuel ?? 0)
+      || Number(window?.amortissementAnnuel ?? 0)
+      || 0;
+
+    const utiliserDetail =
+      (chargesDeductiblesInput > 0 || amortissementAnnuelInput > 0);
+
+    // 2) Résultat avant IS (bénéfice fiscal)
+    const resultatAvantIS = round2(
+      utiliserDetail
+        ? (revenusLocatifs - chargesDeductiblesInput - amortissementAnnuelInput)
+        : (revenusLocatifs * tauxMarge)
+    );
+
+    // 3) IS progressif (15% si éligible jusqu'au plafond, puis 25%)
     const elig15 = !!params.is15Eligible;
-    const isBreak = calcISProgressif(resultatAvantIS, elig15);
+    const isBreak = calcISProgressif(resultatAvantIS, elig15); // -> { is, part15, part25, tauxMoyen }
     const resultatApresIS = round2(Math.max(0, resultatAvantIS - isBreak.is));
 
-    // Politique de distribution : 100% par défaut si tu n’as pas d’input
-    // (sinon lis p.ex. document.getElementById('sim-distribution')?.value)
-    const pctDistribution = 1; // 100%
+    // 4) Politique de distribution : 100% (adapter si tu ajoutes un input)
+    const pctDistribution = 1;
     const dividendesSociete = round2(resultatApresIS * pctDistribution);
 
-    // Quote-part de l’associé simulé
-    const partAssocieDec = Math.max(0, Math.min(1, params.partAssocie || (params.partAssociePct||100)/100));
+    // 5) Quote-part de l’associé simulé (0–1)
+    const partAssocieDec = Math.max(
+      0,
+      Math.min(1, params.partAssocie || (params.partAssociePct || 100) / 100)
+    );
+
     const dividendesBrutsAssocie = round2(dividendesSociete * partAssocieDec);
 
-    // Fiscalité des dividendes (PFU 12,8% + PS 17,2%, pas de TNS en SCI-IS)
-    const irDiv  = round2(dividendesBrutsAssocie * 0.128);
-    const ps172  = round2(dividendesBrutsAssocie * 0.172);
-    const nets   = round2(dividendesBrutsAssocie - irDiv - ps172);
+    // 6) Fiscalité dividendes : PFU 30% (12,8% IR + 17,2% PS). Pas de TNS en SCI-IS.
+    const irDiv = round2(dividendesBrutsAssocie * 0.128);
+    const ps172 = round2(dividendesBrutsAssocie * 0.172);
+    const nets  = round2(dividendesBrutsAssocie - irDiv - ps172);
 
-    // Sortie “compatible” avec ton tableau récap
+    // 7) Sortie “compatible” avec ton tableau récap
     const sim = {
       compatible: true,
       statutId: 'sciIS',
+
+      // Base & résultats
       ca: revenusLocatifs,
       resultatAvantRemuneration: resultatAvantIS, // pour cohérence écran
-      resultatApresRemuneration: resultatAvantIS, // pas de salaire
+      resultatApresRemuneration: resultatAvantIS, // pas de salaire en SCI-IS
       is: isBreak.is,
       _isDetail: { elig15, ...isBreak },
       resultatApresIS,
 
-      // Dividendes (quote-part)
+      // Dividendes
       dividendes: dividendesBrutsAssocie,
       methodeDividendes: 'PFU',
-      prelevementForfaitaire: irDiv + ps172,
-      cotTNSDiv: 0,
+      prelevementForfaitaire: irDiv + ps172, // IR + PS
+      cotTNSDiv: 0,                          // jamais en SCI-IS
       dividendesNets: nets,
       economieMethode: 0,
 
-      // Pas de salaire en SCI-IS
+      // Pas de rémunération
       remuneration: 0,
       cotisationsSociales: 0,
       chargesPatronales: 0,
@@ -1634,12 +1658,12 @@ function runComparison() {
       salaireNet: 0,
       revenuNetSalaire: 0,
 
-      // Paramètres associés
+      // Paramètres d’associé
       nbAssocies: params.nbAssocies,
       partAssocie: partAssocieDec,
       partAssociePct: params.partAssociePct,
 
-      // Net total (uniquement dividendes)
+      // Net total = dividendes nets
       revenuNetTotal: nets,
       ratioNetCA: revenusLocatifs > 0 ? round2((nets / revenusLocatifs) * 100) : 0,
     };
