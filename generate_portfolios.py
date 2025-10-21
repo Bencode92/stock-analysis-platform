@@ -311,8 +311,8 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
     Construction de l'univers fermé avec scoring quantitatif
     Retourne les meilleurs actifs équilibrés par risque
     """
-logger.info("🧮 Construction de l'univers quantitatif v3...")
-    
+    logger.info("🧮 Construction de l'univers quantitatif v3...")
+
     # ====== ACTIONS (depuis les stocks_*.json) ======
     eq_rows = []
     total_stocks = 0
@@ -333,8 +333,8 @@ logger.info("🧮 Construction de l'univers quantitatif v3...")
                 "sector": it.get("sector", "Unknown"),
                 "country": it.get("country", "Unknown")
             })
-    
-logger.info("📊 Stocks chargées: %s → Analyse: %s", total_stocks, len(eq_rows))
+
+    logger.info("📊 Stocks chargées: %s → Analyse: %s", total_stocks, len(eq_rows))
     eq_rows = compute_score(eq_rows, "equity")
     
     # Filtrage actions : vol contrôlée + drawdown acceptable + pas de sur-extension
@@ -1357,10 +1357,9 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict)
                     best["allocation_pct"] = round(float(best.get("allocation_pct", 0)) + freed, 2)
 
         # Purge 0 et re-somme à 100.00
- pf["Lignes"] = adjust_to_100_safe(pf["Lignes"], prefer_category="Obligations")
+        pf["Lignes"] = adjust_to_100_safe(pf["Lignes"], prefer_category="Obligations")
 
     return portfolios
-
 
 def apply_compliance_sanitization(portfolios: Dict) -> Dict:
     """Sanitise les termes marketing interdits (AMF) dans commentaires/justifications/exclusions."""
@@ -1648,65 +1647,106 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-       data = {
+    data = {
         "model": "gpt-4.1-mini",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
         "seed": 42,
         "response_format": {
-          "type": "json_schema",
-          "json_schema": {
-            "name": "three_portfolios",
-            "schema": {
-              "type": "object",
-              "required": ["Agressif","Modéré","Stable"],
-              "properties": {
-                "Agressif": {"$ref": "#/$defs/Portfolio"},
-                "Modéré":   {"$ref": "#/$defs/Portfolio"},
-                "Stable":   {"$ref": "#/$defs/Portfolio"}
-              },
-              "$defs": {
-                "Line": {
-                  "type":"object",
-                  "required":["id","name","category","allocation_pct","justification","justificationRefs","score","risk_class"],
-                  "properties":{
-                    "id":{"type":"string"},
-                    "name":{"type":"string","minLength":1},
-                    "category":{"type":"string","enum":["Actions","ETF","Obligations","Crypto","Cash"]},
-                    "allocation_pct":{"type":"number","minimum":0,"maximum":100,"multipleOf":0.01},
-                    "justification":{"type":"string","maxLength":280},
-                    "justificationRefs":{"type":"array","items":{"type":"string"},"minItems":1,"maxItems":4},
-                    "score":{"type":"number"},
-                    "risk_class":{"type":"string","enum":["low","mid","bond"]}
-                  }
-                },
-                "Portfolio": {
-                  "type":"object",
-                  "required":["Commentaire","Lignes","ActifsExclus","Compliance"],
-                  "properties":{
-                    "Commentaire":{"type":"string","maxLength":1200},
-                    "Lignes":{"type":"array","items":{"$ref":"#/$defs/Line"},"minItems":12,"maxItems":15},
-                    "ActifsExclus":{"type":"array","items":{
-                      "type":"object","required":["name","reason","refs"],
-                      "properties":{"name":{"type":"string"},
-                                    "reason":{"type":"string","maxLength":160},
-                                    "refs":{"type":"array","items":{"type":"string"},"minItems":1,"maxItems":3}}
-                    },"maxItems":5},
-                    "Compliance":{"type":"object","required":["Disclaimer","Risques","Methodologie"],
-                      "properties":{
-                        "Disclaimer":{"type":"string","maxLength":300},
-                        "Risques":{"type":"array","items":{"type":"string"},"minItems":3,"maxItems":6},
-                        "Methodologie":{"type":"string","maxLength":240}
-                      }}
-                  }
+            "type": "json_schema",
+            "json_schema": {
+                "name": "three_portfolios",
+                "schema": {
+                    "type": "object",
+                    "required": ["Agressif", "Modéré", "Stable"],
+                    "properties": {
+                        "Agressif": {"$ref": "#/$defs/Portfolio"},
+                        "Modéré": {"$ref": "#/$defs/Portfolio"},
+                        "Stable": {"$ref": "#/$defs/Portfolio"}
+                    },
+                    "$defs": {
+                        "Line": {
+                            "type": "object",
+                            "required": [
+                                "id", "name", "category", "allocation_pct",
+                                "justification", "justificationRefs", "score", "risk_class"
+                            ],
+                            "properties": {
+                                "id": {"type": "string"},
+                                "name": {"type": "string", "minLength": 1},
+                                "category": {
+                                    "type": "string",
+                                    "enum": ["Actions", "ETF", "Obligations", "Crypto", "Cash"]
+                                },
+                                "allocation_pct": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100,
+                                    "multipleOf": 0.01
+                                },
+                                "justification": {"type": "string", "maxLength": 280},
+                                "justificationRefs": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "minItems": 1,
+                                    "maxItems": 4
+                                },
+                                "score": {"type": "number"},
+                                "risk_class": {"type": "string", "enum": ["low", "mid", "bond"]}
+                            }
+                        },
+                        "Portfolio": {
+                            "type": "object",
+                            "required": ["Commentaire", "Lignes", "ActifsExclus", "Compliance"],
+                            "properties": {
+                                "Commentaire": {"type": "string", "maxLength": 1200},
+                                "Lignes": {
+                                    "type": "array",
+                                    "items": {"$ref": "#/$defs/Line"},
+                                    "minItems": 12,
+                                    "maxItems": 15
+                                },
+                                "ActifsExclus": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "required": ["name", "reason", "refs"],
+                                        "properties": {
+                                            "name": {"type": "string"},
+                                            "reason": {"type": "string", "maxLength": 160},
+                                            "refs": {
+                                                "type": "array",
+                                                "items": {"type": "string"},
+                                                "minItems": 1,
+                                                "maxItems": 3
+                                            }
+                                        }
+                                    },
+                                    "maxItems": 5
+                                },
+                                "Compliance": {
+                                    "type": "object",
+                                    "required": ["Disclaimer", "Risques", "Methodologie"],
+                                    "properties": {
+                                        "Disclaimer": {"type": "string", "maxLength": 300},
+                                        "Risques": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "minItems": 3,
+                                            "maxItems": 6
+                                        },
+                                        "Methodologie": {"type": "string", "maxLength": 240}
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "additionalProperties": False
                 }
-              },
-              "additionalProperties": false
             }
-          }
         },
         "max_tokens": 1800
-  }
+    }
 
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v3 quantitatif + compliance)...")
     response = post_with_retry(
@@ -1784,10 +1824,10 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     try:
         score_guard(portfolios, allowed_assets)
     except ValueError as e:
-    logger.error("❌ Score guard failed: %s", e, exc_info=True)  # utile pour la stack
+        logger.error("❌ Score guard failed: %s", e, exc_info=True)  # utile pour la stack
         # ici on peut décider de régénérer ou de poursuivre avec avertissement
 
-   logger.info("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
+    logger.info("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
 
     # Petit récap console (facultatif)
     for portfolio_name, portfolio in portfolios.items():
@@ -1818,6 +1858,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
             print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
 
     return portfolios
+
 
 
     # === NORMALISATION V3 -> SCHÉMA FRONT HISTORIQUE (Agressif/Modéré/Stable) ===
@@ -3022,118 +3063,19 @@ def generate_portfolios_v2(filtered_data):
     
     # Construire le prompt v2
     prompt = build_robust_prompt_v2(structured_data, allowed_assets, current_month)
-    
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
-data = {
-    "model": "gpt-4.1-mini",
-    "messages": [{"role": "user", "content": prompt}],
-    "temperature": 0,
-    "seed": 42,
-    "response_format": {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "three_portfolios",
-            "schema": {
-                "type": "object",
-                "required": ["Agressif", "Modéré", "Stable"],
-                "properties": {
-                    "Agressif": {"$ref": "#/$defs/Portfolio"},
-                    "Modéré": {"$ref": "#/$defs/Portfolio"},
-                    "Stable": {"$ref": "#/$defs/Portfolio"}
-                },
-                "$defs": {
-                    "Line": {
-                        "type": "object",
-                        "required": [
-                            "id",
-                            "name",
-                            "category",
-                            "allocation_pct",
-                            "justification",
-                            "justificationRefs",
-                            "score",
-                            "risk_class"
-                        ],
-                        "properties": {
-                            "id": {"type": "string"},
-                            "name": {"type": "string", "minLength": 1},
-                            "category": {
-                                "type": "string",
-                                "enum": ["Actions", "ETF", "Obligations", "Crypto", "Cash"]
-                            },
-                            "allocation_pct": {
-                                "type": "number",
-                                "minimum": 0,
-                                "maximum": 100,
-                                "multipleOf": 0.01
-                            },
-                            "justification": {"type": "string", "maxLength": 280},
-                            "justificationRefs": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "minItems": 1,
-                                "maxItems": 4
-                            },
-                            "score": {"type": "number"},
-                            "risk_class": {"type": "string", "enum": ["low", "mid", "bond"]}
-                        }
-                    },
-                    "Portfolio": {
-                        "type": "object",
-                        "required": ["Commentaire", "Lignes", "ActifsExclus", "Compliance"],
-                        "properties": {
-                            "Commentaire": {"type": "string", "maxLength": 1200},
-                            "Lignes": {
-                                "type": "array",
-                                "items": {"$ref": "#/$defs/Line"},
-                                "minItems": 12,
-                                "maxItems": 15
-                            },
-                            "ActifsExclus": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "required": ["name", "reason", "refs"],
-                                    "properties": {
-                                        "name": {"type": "string"},
-                                        "reason": {"type": "string", "maxLength": 160},
-                                        "refs": {
-                                            "type": "array",
-                                            "items": {"type": "string"},
-                                            "minItems": 1,
-                                            "maxItems": 3
-                                        }
-                                    }
-                                },
-                                "maxItems": 5
-                            },
-                            "Compliance": {
-                                "type": "object",
-                                "required": ["Disclaimer", "Risques", "Methodologie"],
-                                "properties": {
-                                    "Disclaimer": {"type": "string", "maxLength": 300},
-                                    "Risques": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                        "minItems": 3,
-                                        "maxItems": 6
-                                    },
-                                    "Methodologie": {"type": "string", "maxLength": 240}
-                                }
-                            }
-                        }
-                    }
-                },
-                "additionalProperties": False
-            }
-        }
-    },
-    "max_tokens": 1800
-}
+
+    data = {
+        "model": "gpt-4.1-mini",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,
+        "seed": 42,
+        "response_format": { ... },
+        "max_tokens": 1800
+    }
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
     response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
