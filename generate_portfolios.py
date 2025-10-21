@@ -15,7 +15,13 @@ from typing import Dict, List, Any, Tuple, Optional
 from functools import lru_cache
 from collections import defaultdict
 import copy as _copy
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
+logger = logging.getLogger("alloc-v3")
 
 # Importer les fonctions d'ajustement des portefeuilles
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
@@ -24,15 +30,21 @@ from brief_formatter import format_brief_data
 # ============= PARSER JSON RÉPARATEUR (NOUVEAU) =============
 
 def parse_json_strict_or_repair(s: str) -> dict:
-    """Essaye json.loads, sinon répare: retire fences, extrait {...} externe,
-    normalise guillemets typographiques, échappe CR/LF dans les chaînes, supprime virgules traînantes."""
+    """Essaye json.loads, sinon répare légèrement :
+    - retire fences ```json ... ```
+    - isole le bloc JSON extérieur { ... }
+    - normalise guillemets typographiques
+    - remplace CR/LF bruts à l'intérieur des chaînes par \n
+    - supprime virgules traînantes
+    """
     try:
         return json.loads(s)
     except Exception:
-        print("⚠️ JSON invalide détecté, tentative de réparation...")
+        logger.warning("⚠️ JSON invalide détecté, tentative de réparation...")
 
-        s2 = s.strip()
-        # 1) retirer fences éventuels
+        s2 = (s or "").strip()
+
+        # 1) retirer éventuels fences
         s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
         s2 = re.sub(r'\s*```\s*$', '', s2)
 
@@ -42,12 +54,10 @@ def parse_json_strict_or_repair(s: str) -> dict:
         if start != -1 and end != -1 and end > start:
             s2 = s2[start:end+1]
 
-        # 3) normaliser guillemets typographiques vers ' et "
+        # 3) normaliser guillemets “ ” ‘ ’ → " '
         s2 = s2.translate({
-            0x2018: 39,  # ‘ -> '
-            0x2019: 39,  # ’ -> '
-            0x201C: 34,  # “ -> "
-            0x201D: 34,  # ” -> "
+            0x2018: 39, 0x2019: 39,  # ‘ ’ -> '
+            0x201C: 34, 0x201D: 34,  # “ ” -> "
         })
 
         # 4) remplacer CR/LF bruts à l’intérieur des chaînes par \n
@@ -78,19 +88,40 @@ def parse_json_strict_or_repair(s: str) -> dict:
         # 5) supprimer virgules finales avant } ou ]
         s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
 
-        print("✅ JSON réparé avec succès")
+        logger.info("✅ JSON réparé avec succès")
         return json.loads(s3)
 
 
 # ============= COMPLIANCE AMF - GARDE-FOUS RÉGLEMENTAIRES =============
 
 BANNED_MARKETING = [
-    r"\bacheter\b", r"\bvendre\b", r"\bconserver\b",
-    r"\b(prioriser|à\s*privilégier)\b", r"\bfortement recommandé\b",
-    r"\bgaranti(e|s)?\b", r"\bsans\s*risque\b",
-    r"\bobjectif de prix\b", r"\brendement attendu\b",
-    r"\bdevez\b", r"\bil faut\b", r"\bconseillons\b",
-    r"\brecommandons\b", r"\bvous devriez\b"
+    r"\bachet(?:er|ez|e|ons|ées?)\b",
+    r"\bvend(?:re|ez|e|ons|u(?:e|s|es)?)\b",
+    r"\bconserv(?:er|ez|e|ons|ation)\b",
+
+    # prioriser / privilégier (toutes variantes + accents)
+    r"\b(prioriser|prioritaire|privil[eé]g(?:ier|ie|i(?:e|ons))|à\s*privil[eé]gier)\b",
+
+    # fortement recommandé (toutes flexions + accents)
+    r"\bfortement\s+recommand[eé](?:e|es|s)?\b",
+
+    # garanti, sans risque
+    r"\bgaranti(?:e|es|s)?\b",
+    r"\bsans\s*risque(?:s)?\b",
+
+    # objectif/target de prix + price target
+    r"\b(objectif|target)\s+de\s+prix\b",
+    r"\bprice\s*target\b",
+
+    # rendement attendu (pluriels/féminins)
+    r"\brendement(?:s)?\s+attendu(?:s|e|es)?\b",
+
+    # injonctions
+    r"\b(vous\s+)?devez\b",
+    r"\bil\s*faut\b",
+    r"\bconseillons?\b",
+    r"\brecommand(?:ons|e|ez)\b",
+    r"\bvous\s+devriez\b"
 ]
 
 def sanitize_marketing_language(text: str) -> str:
@@ -280,7 +311,7 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
     Construction de l'univers fermé avec scoring quantitatif
     Retourne les meilleurs actifs équilibrés par risque
     """
-    print("🧮 Construction de l'univers quantitatif v3...")
+logger.info("🧮 Construction de l'univers quantitatif v3...")
     
     # ====== ACTIONS (depuis les stocks_*.json) ======
     eq_rows = []
@@ -303,7 +334,7 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
                 "country": it.get("country", "Unknown")
             })
     
-    print(f"  📊 Stocks chargées: {total_stocks} → Analyse: {len(eq_rows)}")
+logger.info("📊 Stocks chargées: %s → Analyse: %s", total_stocks, len(eq_rows))
     eq_rows = compute_score(eq_rows, "equity")
     
     # Filtrage actions : vol contrôlée + drawdown acceptable + pas de sur-extension
@@ -347,7 +378,7 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
         return 8 <= v <= 40
     
     etf_filtered = [r for r in etf_rows if _v_etf(r) and not r["flags"]["overextended"]]
-    print(f"  ✅ ETF standards filtrés: {len(etf_filtered)}/{len(etf_rows)} (vol 8-40%, non sur-étendus)")
+logger.info("✅ ETF standards filtrés: %s/%s", len(etf_filtered), len(etf_rows))
 
     # ETF obligataires (liste blanche, pas de filtre strict)
     bond_rows = compute_score(_etf_rows(etf_bonds), "etf")
@@ -614,7 +645,11 @@ def extract_allowed_assets(filtered_data: Dict) -> Dict:
                 "risk_class": it.get("risk_class", "mid"),
                 "ytd": fnum(it.get("ytd")),
                 "perf_1m": fnum(it.get("perf_1m")),
-            } for i, it in enumerate(u.get("crypto", []) or [])]
+            } for i, it in enumerate(u.get("crypto", []) or [])],
+            # 👇 NOUVEAU : tampon de liquidité optionnel (0–10% dans le prompt)
+            "allowed_cash": [
+                {"id": "CASH", "name": "Cash (placeholder)", "score": 0.0, "risk_class": "bond"}
+            ],
         }
 
     # ====== Fallback legacy : parsing texte ======
@@ -727,7 +762,10 @@ def extract_allowed_assets(filtered_data: Dict) -> Dict:
         "allowed_equities": allowed_equities,
         "allowed_etfs_standard": allowed_etfs_standard,
         "allowed_bond_etfs": allowed_bond_etfs,
-        "allowed_crypto": allowed_crypto
+        "allowed_crypto": allowed_crypto,
+        "allowed_cash": [  # 👈 ajouté aussi en fallback pour homogénéité
+            {"id": "CASH", "name": "Cash (placeholder)", "score": 0.0, "risk_class": "bond"}
+        ],
     }
 def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
     """Version legacy pour compatibilité"""
@@ -953,7 +991,7 @@ ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=Fals
 - Vérifie l'équilibrage risk_class selon profil.
 - Vérifie que chaque portefeuille contient le bloc `Compliance` complet.
 - Si une règle échoue, corrige puis ne sors que le JSON final conforme.
-- Ta réponse doit commencer par `{{` et finir par `}}` — **aucun autre caractère**.
+
 
 Contexte temporel: Portefeuilles optimisés pour {current_month} 2025.
 """
@@ -968,6 +1006,7 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
       - Contraintes de scores & risque
       - Anti-fin-de-cycle
       - Doublons ETF (thématique/holdings)
+      - Un seul ETF par ancre forte (sp500, nasdaq, world, gold, silver, treasury, eurozone, emerging, oil, energy)
       - Règles spécifiques profils :
           • Stable : Crypto interdite
           • Modéré : Crypto ≤ 5.00%
@@ -1025,6 +1064,19 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
             for field in ['Disclaimer', 'Risques', 'Methodologie']:
                 if not compliance.get(field):
                     errors.append(f"{portfolio_name}: champ Compliance.{field} manquant")
+
+        # 🔒 Un seul ETF par "ancre forte"
+        # (sp500, nasdaq, world, gold, silver, treasury, eurozone, emerging, oil, energy)
+        anchors = {"gold","sp500","nasdaq","world","treasury","eurozone","emerging","silver","oil","energy"}
+        anchors_seen = set()
+        for l in lignes:
+            if l.get('category') in ('ETF', 'Obligations'):
+                toks = _tokenize_theme(l.get('name', '') or '')
+                hit = next((a for a in anchors if a in toks), None)
+                if hit:
+                    if hit in anchors_seen:
+                        errors.append(f"{portfolio_name}: ancre ETF dupliquée ({hit})")
+                    anchors_seen.add(hit)
 
         # Contrôles quantitatifs & cohérences
         scores = []
@@ -1095,9 +1147,14 @@ def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool
                 n1, n2, typ, sc = o["names"][0], o["names"][1], o["type"], o["score"]
                 errors.append(f"{portfolio_name}: doublon ETF {n1} ↔ {n2} ({typ} {sc})")
         except Exception as e:
-            print(f"⚠️ Validation overlap: {portfolio_name}: {e}")
+            # Utiliser logger si disponible
+            try:
+                logger.warning("⚠️ Validation overlap: %s: %s", portfolio_name, e)
+            except Exception:
+                print(f"⚠️ Validation overlap: {portfolio_name}: {e}")
 
     return len(errors) == 0, errors
+
 
 
 def score_guard(portfolios: Dict, allowed_assets: Dict):
@@ -1121,6 +1178,23 @@ def score_guard(portfolios: Dict, allowed_assets: Dict):
             raise ValueError(f"{name}: score santé KO (médiane={med:.2f}<0) ou {neg_ratio:.0%} négatifs (>30%)")
 
     print("✅ Score guard: tous les portefeuilles passent les contrôles quantitatifs")
+    # ============= HELPERS ALLOCATION (ajustement à 100%) =============
+def adjust_to_100_safe(lines, prefer_category="Obligations"):
+    total = round(sum(float(l.get("allocation_pct", 0) or 0) for l in lines), 2)
+    if not lines or abs(total - 100.0) <= 0.01:
+        return lines
+    diff = round(100.0 - total, 2)
+    target = next((l for l in lines if l.get("category") == prefer_category), None)
+    if not target:
+        target = next((l for l in lines if l.get("category") == "Cash"), None)
+    if not target:
+        target = max(
+            (l for l in lines if l.get("category") != "Crypto"),
+            key=lambda x: float(x.get("allocation_pct", 0) or 0),
+            default=lines[-1]
+        )
+    target["allocation_pct"] = round(float(target.get("allocation_pct", 0) or 0) + diff, 2)
+    return lines
 
 
 def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict) -> Dict:
@@ -1283,11 +1357,7 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict)
                     best["allocation_pct"] = round(float(best.get("allocation_pct", 0)) + freed, 2)
 
         # Purge 0 et re-somme à 100.00
-        pf["Lignes"] = [l for l in lignes if float(l.get("allocation_pct", 0) or 0) > 0]
-        total_pf = sum(float(l.get('allocation_pct', 0) or 0) for l in pf["Lignes"])
-        if abs(total_pf - 100.0) > 0.01 and pf["Lignes"]:
-            diff = 100.0 - total_pf
-            pf["Lignes"][-1]["allocation_pct"] = round(float(pf["Lignes"][-1].get("allocation_pct", 0)) + diff, 2)
+ pf["Lignes"] = adjust_to_100_safe(pf["Lignes"], prefer_category="Obligations")
 
     return portfolios
 
@@ -1503,10 +1573,11 @@ def get_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str):
 
 # ============= FIX 3: RETRY API ROBUSTE AVEC TIMEOUTS ÉTENDUS =============
 
-def post_with_retry(url, headers, payload, tries=5, timeout=(20, 180), backoff=2.0):
+def post_with_retry(url, headers, payload, tries=5, timeout=(20, 180), backoff=2.0, jitter=0.25):
     """
-    FIX 3: Retry robuste avec timeouts étendus
-    timeout = (connect_timeout, read_timeout)
+    Retry robuste avec backoff exponentiel + jitter.
+    - timeout: tuple (connect_timeout, read_timeout)
+    - jitter: facteur aléatoire ±jitter autour du délai (ex: 0.25 => ±25%)
     """
     last_err = None
     for i in range(tries):
@@ -1514,8 +1585,10 @@ def post_with_retry(url, headers, payload, tries=5, timeout=(20, 180), backoff=2
             return requests.post(url, headers=headers, json=payload, timeout=timeout)
         except (requests.ReadTimeout, requests.ConnectionError, requests.Timeout) as e:
             last_err = e
-            wait = backoff ** i
-            print(f"  ⚠️ API retry {i+1}/{tries} dans {wait:.1f}s: {e}")
+            base = backoff ** i
+            factor = 1.0 + (random.uniform(-jitter, jitter) if jitter else 0.0)
+            wait = max(0.05, base * factor)  # évite un sleep trop court ou négatif
+            logger.warning("⚠️ API retry %s/%s dans %.2fs: %s", i + 1, tries, wait, e)
             time.sleep(wait)
     raise last_err
 
@@ -1560,7 +1633,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     print(f"  🪙 Cryptos autorisées: {len(allowed_assets['allowed_crypto'])}")
 
     # Construire le prompt robuste v3 avec compliance AMF
-    prompt = build_robust_prompt_v3(structured_data, allowed_assets, current_month, compact=True)
+    prompt = build_robust_prompt_v3(structured_data, allowed_assets, current_month)
 
     # Horodatage pour les fichiers de debug
     debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -1575,13 +1648,65 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    data = {
+       data = {
         "model": "gpt-4.1-mini",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
-        "response_format": {"type": "json_object"},
-        "max_tokens": 1800,
-    }
+        "seed": 42,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "three_portfolios",
+            "schema": {
+              "type": "object",
+              "required": ["Agressif","Modéré","Stable"],
+              "properties": {
+                "Agressif": {"$ref": "#/$defs/Portfolio"},
+                "Modéré":   {"$ref": "#/$defs/Portfolio"},
+                "Stable":   {"$ref": "#/$defs/Portfolio"}
+              },
+              "$defs": {
+                "Line": {
+                  "type":"object",
+                  "required":["id","name","category","allocation_pct","justification","justificationRefs","score","risk_class"],
+                  "properties":{
+                    "id":{"type":"string"},
+                    "name":{"type":"string","minLength":1},
+                    "category":{"type":"string","enum":["Actions","ETF","Obligations","Crypto","Cash"]},
+                    "allocation_pct":{"type":"number","minimum":0,"maximum":100,"multipleOf":0.01},
+                    "justification":{"type":"string","maxLength":280},
+                    "justificationRefs":{"type":"array","items":{"type":"string"},"minItems":1,"maxItems":4},
+                    "score":{"type":"number"},
+                    "risk_class":{"type":"string","enum":["low","mid","bond"]}
+                  }
+                },
+                "Portfolio": {
+                  "type":"object",
+                  "required":["Commentaire","Lignes","ActifsExclus","Compliance"],
+                  "properties":{
+                    "Commentaire":{"type":"string","maxLength":1200},
+                    "Lignes":{"type":"array","items":{"$ref":"#/$defs/Line"},"minItems":12,"maxItems":15},
+                    "ActifsExclus":{"type":"array","items":{
+                      "type":"object","required":["name","reason","refs"],
+                      "properties":{"name":{"type":"string"},
+                                    "reason":{"type":"string","maxLength":160},
+                                    "refs":{"type":"array","items":{"type":"string"},"minItems":1,"maxItems":3}}
+                    },"maxItems":5},
+                    "Compliance":{"type":"object","required":["Disclaimer","Risques","Methodologie"],
+                      "properties":{
+                        "Disclaimer":{"type":"string","maxLength":300},
+                        "Risques":{"type":"array","items":{"type":"string"},"minItems":3,"maxItems":6},
+                        "Methodologie":{"type":"string","maxLength":240}
+                      }}
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "max_tokens": 1800
+  }
 
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v3 quantitatif + compliance)...")
     response = post_with_retry(
@@ -1659,10 +1784,10 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     try:
         score_guard(portfolios, allowed_assets)
     except ValueError as e:
-        print(f"❌ Score guard failed: {e}")
+    logger.error("❌ Score guard failed: %s", e, exc_info=True)  # utile pour la stack
         # ici on peut décider de régénérer ou de poursuivre avec avertissement
 
-    print("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
+   logger.info("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
 
     # Petit récap console (facultatif)
     for portfolio_name, portfolio in portfolios.items():
@@ -1841,7 +1966,8 @@ def _to_float_pct(v):
 def _fmt_int_pct(x):
     # v1 = entiers avec "%" (ex: "12%")
     try:
-        return f"{int(round(float(x)))}%"
+        v = max(0.0, min(100.0, float(x)))
+        return f"{int(round(v))}%"
     except:
         return f"{x}%"
 
@@ -2167,7 +2293,7 @@ def build_overlap_report(
         if p.exists():
             etf_df = pd.read_csv(p)
     except Exception as e:
-        print(f"⚠️ Overlap: impossible de lire {etf_csv_path} ({e})")
+        logger.warning("⚠️ Overlap: impossible de lire %s (%s)", etf_csv_path, e)
 
     report: Dict[str, List[dict]] = {}
     for name in ("Agressif", "Modéré", "Stable"):
@@ -2902,13 +3028,112 @@ def generate_portfolios_v2(filtered_data):
         "Content-Type": "application/json"
     }
     
-    data = {
-        "model": "gpt-4.1-mini",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0,
-        "response_format": {"type": "json_object"},
-        "max_tokens": 1800  # FIX 3: Même limite pour v2
-    }
+data = {
+    "model": "gpt-4.1-mini",
+    "messages": [{"role": "user", "content": prompt}],
+    "temperature": 0,
+    "seed": 42,
+    "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "three_portfolios",
+            "schema": {
+                "type": "object",
+                "required": ["Agressif", "Modéré", "Stable"],
+                "properties": {
+                    "Agressif": {"$ref": "#/$defs/Portfolio"},
+                    "Modéré": {"$ref": "#/$defs/Portfolio"},
+                    "Stable": {"$ref": "#/$defs/Portfolio"}
+                },
+                "$defs": {
+                    "Line": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "name",
+                            "category",
+                            "allocation_pct",
+                            "justification",
+                            "justificationRefs",
+                            "score",
+                            "risk_class"
+                        ],
+                        "properties": {
+                            "id": {"type": "string"},
+                            "name": {"type": "string", "minLength": 1},
+                            "category": {
+                                "type": "string",
+                                "enum": ["Actions", "ETF", "Obligations", "Crypto", "Cash"]
+                            },
+                            "allocation_pct": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100,
+                                "multipleOf": 0.01
+                            },
+                            "justification": {"type": "string", "maxLength": 280},
+                            "justificationRefs": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1,
+                                "maxItems": 4
+                            },
+                            "score": {"type": "number"},
+                            "risk_class": {"type": "string", "enum": ["low", "mid", "bond"]}
+                        }
+                    },
+                    "Portfolio": {
+                        "type": "object",
+                        "required": ["Commentaire", "Lignes", "ActifsExclus", "Compliance"],
+                        "properties": {
+                            "Commentaire": {"type": "string", "maxLength": 1200},
+                            "Lignes": {
+                                "type": "array",
+                                "items": {"$ref": "#/$defs/Line"},
+                                "minItems": 12,
+                                "maxItems": 15
+                            },
+                            "ActifsExclus": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "required": ["name", "reason", "refs"],
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                        "reason": {"type": "string", "maxLength": 160},
+                                        "refs": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "minItems": 1,
+                                            "maxItems": 3
+                                        }
+                                    }
+                                },
+                                "maxItems": 5
+                            },
+                            "Compliance": {
+                                "type": "object",
+                                "required": ["Disclaimer", "Risques", "Methodologie"],
+                                "properties": {
+                                    "Disclaimer": {"type": "string", "maxLength": 300},
+                                    "Risques": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "minItems": 3,
+                                        "maxItems": 6
+                                    },
+                                    "Methodologie": {"type": "string", "maxLength": 240}
+                                }
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": False
+            }
+        }
+    },
+    "max_tokens": 1800
+}
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
     response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
@@ -3081,10 +3306,10 @@ def main():
     stocks_files_exist = [f for f in stocks_files if f.exists()]
     print(f"  Fichiers trouvés: {[f.name for f in stocks_files_exist]}")
     
-    print("\n📂 Chargement des nouveaux fichiers ETF/Bonds...")
+logger.info("📂 Chargement des nouveaux fichiers ETF/Bonds...")
     etf_csv = Path('data/combined_etfs.csv')
     bonds_csv = Path('data/combined_bonds.csv')
-    print(f"  ETF CSV existe: {etf_csv.exists()}")
+logger.info("ETF CSV existe: %s", etf_csv.exists())
     print(f"  Bonds CSV existe: {bonds_csv.exists()}")
     
     print("\n📂 Chargement du nouveau fichier crypto...")
