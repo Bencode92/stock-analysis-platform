@@ -378,7 +378,7 @@ def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
         return 8 <= v <= 40
     
     etf_filtered = [r for r in etf_rows if _v_etf(r) and not r["flags"]["overextended"]]
-logger.info("✅ ETF standards filtrés: %s/%s", len(etf_filtered), len(etf_rows))
+    logger.info("✅ ETF standards filtrés: %s/%s", len(etf_filtered), len(etf_rows))
 
     # ETF obligataires (liste blanche, pas de filtre strict)
     bond_rows = compute_score(_etf_rows(etf_bonds), "etf")
@@ -3225,7 +3225,6 @@ def save_portfolios(portfolios):
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde (wrapper): {e}")
 
-
 def main():
     """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF et fixes de stabilité."""
     print("🔍 Chargement des données financières...")
@@ -3248,10 +3247,10 @@ def main():
     stocks_files_exist = [f for f in stocks_files if f.exists()]
     print(f"  Fichiers trouvés: {[f.name for f in stocks_files_exist]}")
     
-logger.info("📂 Chargement des nouveaux fichiers ETF/Bonds...")
+    logger.info("📂 Chargement des nouveaux fichiers ETF/Bonds...")
     etf_csv = Path('data/combined_etfs.csv')
     bonds_csv = Path('data/combined_bonds.csv')
-logger.info("ETF CSV existe: %s", etf_csv.exists())
+    logger.info("ETF CSV existe: %s", etf_csv.exists())
     print(f"  Bonds CSV existe: {bonds_csv.exists()}")
     
     print("\n📂 Chargement du nouveau fichier crypto...")
