@@ -3078,16 +3078,15 @@ def generate_portfolios_v2(filtered_data):
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-
-   data = {
-    "model": "gpt-4.1-mini",
-    "messages": [{"role": "user", "content": prompt}],
-    "temperature": 0,
-    "seed": 42,
-    # Forcer une sortie JSON pure (même sans schéma)
-    "response_format": {"type": "json_object"},
-    "max_tokens": 1800,
-}
+data = {
+        "model": "gpt-4.1-mini",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,
+        "seed": 42,
+        # Forcer une sortie JSON pure (même sans schéma)
+        "response_format": {"type": "json_object"},
+        "max_tokens": 1800,
+    }
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
     response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
