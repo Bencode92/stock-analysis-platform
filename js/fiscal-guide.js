@@ -94,8 +94,8 @@ function calcDivTNS({divBruts=0, baseSeuil10=0, methode='PFU', tmi=11, tauxTNS=T
 // --- Abattement 10% T&S 2025 (plancher / plafond) ---
 const CSG_NOND_TAUX = 0.029;
 const ABATT_TS_TAUX = 0.10;
-const ABATT_TS_MIN  = 472;
-const ABATT_TS_MAX  = 14171;
+const ABATT_TS_MIN  = 504;
+const ABATT_TS_MAX  = 14426;
 
 /**
  * Base IR TNS = (net social + CSG/CRDS non déductible) - abattement 10% (min/max).
