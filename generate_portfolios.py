@@ -1360,9 +1360,9 @@ def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict)
         # Purge 0 et re-somme à 100.00
         pf["Lignes"] = adjust_to_100_safe(pf["Lignes"], prefer_category="Obligations")
 
-    return portfolios
+     return portfolios
 
-def apply_compliance_sanitization(portfolios: Dict) -> Dict:
+  def apply_compliance_sanitization(portfolios: Dict) -> Dict:
     """Sanitise les termes marketing interdits (AMF) dans commentaires/justifications/exclusions."""
     for _, portfolio in portfolios.items():
         if not isinstance(portfolio, dict):
@@ -1762,7 +1762,7 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
         "max_output_tokens": 1800
     }
 
-    print("🚀 Envoi de la requête à l'API OpenAI (Responses API, JSON strict)...")
+    print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
     response = post_with_retry(
         "https://api.openai.com/v1/responses",
         headers,
@@ -3107,7 +3107,7 @@ def generate_portfolios_v2(filtered_data):
         "max_tokens": 1800,
     }
     
-    print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
+print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
     response = post_with_retry(
         "https://api.openai.com/v1/chat/completions",
         headers,
