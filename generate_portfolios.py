@@ -1178,6 +1178,7 @@ def score_guard(portfolios: Dict, allowed_assets: Dict):
             raise ValueError(f"{name}: score santé KO (médiane={med:.2f}<0) ou {neg_ratio:.0%} négatifs (>30%)")
 
     print("✅ Score guard: tous les portefeuilles passent les contrôles quantitatifs")
+    
     # ============= HELPERS ALLOCATION (ajustement à 100%) =============
 def adjust_to_100_safe(lines, prefer_category="Obligations"):
     total = round(sum(float(l.get("allocation_pct", 0) or 0) for l in lines), 2)
@@ -1642,246 +1643,247 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
     debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
     print(f"✅ Prompt v3 sauvegardé dans {debug_file}")
 
- # Appel API (Responses API, JSON strict + seed + temperature 0)
-headers = {
-    "Authorization": f"Bearer {api_key}",
-    "Content-Type": "application/json",
-}
+    # ===================== Appel API (Responses API, JSON strict + seed + temperature 0) =====================
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
 
-data = {
-    "model": "gpt-4.1-mini",
-    "input": [
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt}
-            ]
-        }
-    ],
-    "temperature": 0,
-    "seed": 42,
-    "response_format": {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "three_portfolios",
-            "strict": True,  # empêche tout texte hors JSON / strings mal échappées
-            "schema": {
-                "type": "object",
-                "required": ["Agressif", "Modéré", "Stable"],
-                "properties": {
-                    "Agressif": {"$ref": "#/$defs/Portfolio"},
-                    "Modéré": {"$ref": "#/$defs/Portfolio"},
-                    "Stable": {"$ref": "#/$defs/Portfolio"}
-                },
-                "$defs": {
-                    "Line": {
-                        "type": "object",
-                        "required": [
-                            "id", "name", "category", "allocation_pct",
-                            "justification", "justificationRefs", "score", "risk_class"
-                        ],
-                        "properties": {
-                            "id": {"type": "string"},
-                            "name": {"type": "string", "minLength": 1},
-                            "category": {
-                                "type": "string",
-                                "enum": ["Actions", "ETF", "Obligations", "Crypto", "Cash"]
-                            },
-                            "allocation_pct": {
-                                "type": "number",
-                                "minimum": 0,
-                                "maximum": 100,
-                                "multipleOf": 0.01
-                            },
-                            "justification": {"type": "string", "maxLength": 280},
-                            "justificationRefs": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "minItems": 1,
-                                "maxItems": 4
-                            },
-                            "score": {"type": "number"},
-                            "risk_class": {"type": "string", "enum": ["low", "mid", "bond"]}
-                        },
-                        "additionalProperties": False
+    data = {
+        "model": "gpt-4.1-mini",
+        "input": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt}
+                ]
+            }
+        ],
+        "temperature": 0,
+        "seed": 42,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "three_portfolios",
+                "strict": True,  # empêche tout texte hors JSON / strings mal échappées
+                "schema": {
+                    "type": "object",
+                    "required": ["Agressif", "Modéré", "Stable"],
+                    "properties": {
+                        "Agressif": {"$ref": "#/$defs/Portfolio"},
+                        "Modéré": {"$ref": "#/$defs/Portfolio"},
+                        "Stable": {"$ref": "#/$defs/Portfolio"}
                     },
-                    "Portfolio": {
-                        "type": "object",
-                        "required": ["Commentaire", "Lignes", "ActifsExclus", "Compliance"],
-                        "properties": {
-                            "Commentaire": {"type": "string", "maxLength": 1200},
-                            "Lignes": {
-                                "type": "array",
-                                "items": {"$ref": "#/$defs/Line"},
-                                "minItems": 12,
-                                "maxItems": 15
+                    "$defs": {
+                        "Line": {
+                            "type": "object",
+                            "required": [
+                                "id", "name", "category", "allocation_pct",
+                                "justification", "justificationRefs", "score", "risk_class"
+                            ],
+                            "properties": {
+                                "id": {"type": "string"},
+                                "name": {"type": "string", "minLength": 1},
+                                "category": {
+                                    "type": "string",
+                                    "enum": ["Actions", "ETF", "Obligations", "Crypto", "Cash"]
+                                },
+                                "allocation_pct": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100,
+                                    "multipleOf": 0.01
+                                },
+                                "justification": {"type": "string", "maxLength": 280},
+                                "justificationRefs": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "minItems": 1,
+                                    "maxItems": 4
+                                },
+                                "score": {"type": "number"},
+                                "risk_class": {"type": "string", "enum": ["low", "mid", "bond"]}
                             },
-                            "ActifsExclus": {
-                                "type": "array",
-                                "items": {
+                            "additionalProperties": False
+                        },
+                        "Portfolio": {
+                            "type": "object",
+                            "required": ["Commentaire", "Lignes", "ActifsExclus", "Compliance"],
+                            "properties": {
+                                "Commentaire": {"type": "string", "maxLength": 1200},
+                                "Lignes": {
+                                    "type": "array",
+                                    "items": {"$ref": "#/$defs/Line"},
+                                    "minItems": 12,
+                                    "maxItems": 15
+                                },
+                                "ActifsExclus": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "required": ["name", "reason", "refs"],
+                                        "properties": {
+                                            "name": {"type": "string"},
+                                            "reason": {"type": "string", "maxLength": 160},
+                                            "refs": {
+                                                "type": "array",
+                                                "items": {"type": "string"},
+                                                "minItems": 1,
+                                                "maxItems": 3
+                                            }
+                                        },
+                                        "additionalProperties": False
+                                    },
+                                    "maxItems": 5
+                                },
+                                "Compliance": {
                                     "type": "object",
-                                    "required": ["name", "reason", "refs"],
+                                    "required": ["Disclaimer", "Risques", "Methodologie"],
                                     "properties": {
-                                        "name": {"type": "string"},
-                                        "reason": {"type": "string", "maxLength": 160},
-                                        "refs": {
+                                        "Disclaimer": {"type": "string", "maxLength": 300},
+                                        "Risques": {
                                             "type": "array",
                                             "items": {"type": "string"},
-                                            "minItems": 1,
-                                            "maxItems": 3
-                                        }
+                                            "minItems": 3,
+                                            "maxItems": 6
+                                        },
+                                        "Methodologie": {"type": "string", "maxLength": 240}
                                     },
                                     "additionalProperties": False
-                                },
-                                "maxItems": 5
+                                }
                             },
-                            "Compliance": {
-                                "type": "object",
-                                "required": ["Disclaimer", "Risques", "Methodologie"],
-                                "properties": {
-                                    "Disclaimer": {"type": "string", "maxLength": 300},
-                                    "Risques": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                        "minItems": 3,
-                                        "maxItems": 6
-                                    },
-                                    "Methodologie": {"type": "string", "maxLength": 240}
-                                },
-                                "additionalProperties": False
-                            }
-                        },
-                        "additionalProperties": False
-                    }
-                },
-                "additionalProperties": False
+                            "additionalProperties": False
+                        }
+                    },
+                    "additionalProperties": False
+                }
             }
-        }
-    },
-    "max_output_tokens": 1800
-}
+        },
+        "max_output_tokens": 1800
+    }
 
-print("🚀 Envoi de la requête à l'API OpenAI (Responses API, JSON strict)...")
-response = post_with_retry(
-    "https://api.openai.com/v1/responses",
-    headers,
-    data,
-    tries=5,
-    timeout=(20, 180),
-)
-response.raise_for_status()
+    print("🚀 Envoi de la requête à l'API OpenAI (Responses API, JSON strict)...")
+    response = post_with_retry(
+        "https://api.openai.com/v1/responses",
+        headers,
+        data,
+        tries=5,
+        timeout=(20, 180),
+    )
+    response.raise_for_status()
 
-result = response.json()
+    result = response.json()
 
-# ---- Récup contenu (Responses API) ----
-# 1) raccourci s'il est présent
-content = result.get("output_text")
-if not content:
-    # 2) parcours canonique
-    try:
-        content = result["output"][0]["content"][0]["text"]
-    except Exception:
-        # 3) dernier filet : quelques variantes observées
-        msg = (result.get("response") or {}).get("output", [])
-        if msg and "content" in msg[0] and msg[0]["content"]:
-            content = msg[0]["content"][0].get("text")
+    # ---- Récup contenu (Responses API) ----
+    # 1) raccourci s'il est présent
+    content = result.get("output_text")
+    if not content:
+        # 2) parcours canonique
+        try:
+            content = result["output"][0]["content"][0]["text"]
+        except Exception:
+            # 3) dernier filet : quelques variantes observées
+            msg = (result.get("response") or {}).get("output", [])
+            if msg and "content" in msg[0] and msg[0]["content"]:
+                content = msg[0]["content"][0].get("text")
 
-if content is None:
-    raise ValueError("Réponse vide du modèle (output_text/content introuvable)")
+    if content is None:
+        raise ValueError("Réponse vide du modèle (output_text/content introuvable)")
 
-# Sauvegarder la réponse brute pour debug
-response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
-os.makedirs("debug/prompts", exist_ok=True)
-with open(response_debug_file, "w", encoding="utf-8") as f:
-    f.write(content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, indent=2))
-print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
+    # Sauvegarder la réponse brute pour debug
+    response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
+    os.makedirs("debug/prompts", exist_ok=True)
+    with open(response_debug_file, "w", encoding="utf-8") as f:
+        f.write(content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, indent=2))
+    print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
 
-# Structured Outputs: le modèle peut renvoyer un objet dict directement
-if isinstance(content, dict):
-    portfolios = content
-else:
-    if not isinstance(content, str) or not content.strip():
-        raise ValueError("Réponse vide du modèle (content string)")
-    portfolios = parse_json_strict_or_repair(content)
-    # ---------- post-traitements communs (toujours exécutés) ----------
-    # Sanity check minimal
-    expected = {"Agressif", "Modéré", "Stable"}
-    if not isinstance(portfolios, dict) or not expected.issubset(portfolios.keys()):
-        raise ValueError("Réponse v3 invalide/partielle — pas de portefeuilles utilisables")
-    if any(not isinstance(portfolios[k], dict) for k in expected):
-        raise ValueError("Réponse v3 invalide — mauvais format (clé non-dict)")
-    if all(len(portfolios[k].get("Lignes", [])) == 0 for k in expected):
-        raise ValueError("Réponse v3 vide — aucune 'Lignes' fournie")
+    # Structured Outputs: le modèle peut renvoyer un objet dict directement
+    if isinstance(content, dict):
+        portfolios = content
+    else:
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("Réponse vide du modèle (content string)")
+        portfolios = parse_json_strict_or_repair(content)
 
-    # Attacher compliance + sanitisation
-    portfolios = attach_compliance(portfolios)
-    print("🛡️ Application de la sanitisation compliance AMF...")
-    portfolios = apply_compliance_sanitization(portfolios)
+        # ---------- post-traitements communs (toujours exécutés) ----------
+        # Sanity check minimal
+        expected = {"Agressif", "Modéré", "Stable"}
+        if not isinstance(portfolios, dict) or not expected.issubset(portfolios.keys()):
+            raise ValueError("Réponse v3 invalide/partielle — pas de portefeuilles utilisables")
+        if any(not isinstance(portfolios[k], dict) for k in expected):
+            raise ValueError("Réponse v3 invalide — mauvais format (clé non-dict)")
+        if all(len(portfolios[k].get("Lignes", [])) == 0 for k in expected):
+            raise ValueError("Réponse v3 vide — aucune 'Lignes' fournie")
 
-    # Validation & auto-fix
-    validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
-    if not validation_ok:
-        print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
-        portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
-        validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
+        # Attacher compliance + sanitisation
+        portfolios = attach_compliance(portfolios)
+        print("🛡️ Application de la sanitisation compliance AMF...")
+        portfolios = apply_compliance_sanitization(portfolios)
+
+        # Validation & auto-fix
+        validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
         if not validation_ok:
-            print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
+            print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
+            portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
+            validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
+            if not validation_ok:
+                print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
 
-    # Rapport overlaps (diagnostic)
-    try:
-        overlap_report = build_overlap_report(
-            portfolios,
-            allowed_assets,
-            etf_csv_path="data/combined_etfs.csv",
-        )
-        for k, v in overlap_report.items():
-            if v:
-                sample = v[0]
-                print(
-                    f"🔎 Overlap {k}: {len(v)} paire(s) suspecte(s) — "
-                    f"ex: {sample['names'][0]} ↔ {sample['names'][1]} "
-                    f"({sample['type']} {sample['score']})"
-                )
-            else:
-                print(f"🔎 Overlap {k}: RAS")
-    except Exception as e:
-        print(f"⚠️ Overlap: erreur durant l'analyse ({e})")
+        # Rapport overlaps (diagnostic)
+        try:
+            overlap_report = build_overlap_report(
+                portfolios,
+                allowed_assets,
+                etf_csv_path="data/combined_etfs.csv",
+            )
+            for k, v in overlap_report.items():
+                if v:
+                    sample = v[0]
+                    print(
+                        f"🔎 Overlap {k}: {len(v)} paire(s) suspecte(s) — "
+                        f"ex: {sample['names'][0]} ↔ {sample['names'][1]} "
+                        f"({sample['type']} {sample['score']})"
+                    )
+                else:
+                    print(f"🔎 Overlap {k}: RAS")
+        except Exception as e:
+            print(f"⚠️ Overlap: erreur durant l'analyse ({e})")
 
-    # Contrôle final des scores
-    try:
-        score_guard(portfolios, allowed_assets)
-    except ValueError as e:
-        logger.error("❌ Score guard failed: %s", e, exc_info=True)
+        # Contrôle final des scores
+        try:
+            score_guard(portfolios, allowed_assets)
+        except ValueError as e:
+            logger.error("❌ Score guard failed: %s", e, exc_info=True)
 
-    logger.info("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
+        logger.info("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
 
-    # Récap console (facultatif)
-    for portfolio_name, portfolio in portfolios.items():
-        if isinstance(portfolio, dict) and 'Lignes' in portfolio:
-            lignes = portfolio['Lignes']
-            total_alloc = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
-            categories = set(ligne.get('category') for ligne in lignes)
+        # Récap console (facultatif)
+        for portfolio_name, portfolio in portfolios.items():
+            if isinstance(portfolio, dict) and 'Lignes' in portfolio:
+                lignes = portfolio['Lignes']
+                total_alloc = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
+                categories = set(ligne.get('category') for ligne in lignes)
 
-            # Stats scores
-            scores = []
-            risk_counts = defaultdict(int)
-            for ligne in lignes:
-                asset_id = ligne.get('id', '')
-                for asset_type in ["allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"]:
-                    for asset in allowed_assets.get(asset_type, []):
-                        if asset["id"] == asset_id:
-                            scores.append(asset.get('score', 0))
-                            risk_counts[asset.get('risk_class', 'unknown')] += 1
-                            break
+                # Stats scores
+                scores = []
+                risk_counts = defaultdict(int)
+                for ligne in lignes:
+                    asset_id = ligne.get('id', '')
+                    for asset_type in ["allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"]:
+                        for asset in allowed_assets.get(asset_type, []):
+                            if asset["id"] == asset_id:
+                                scores.append(asset.get('score', 0))
+                                risk_counts[asset.get('risk_class', 'unknown')] += 1
+                                break
 
-            avg_score = np.mean(scores) if scores else 0
-            median_score = np.median(scores) if scores else 0
-            compliance_ok = bool(portfolio.get('Compliance'))
+                avg_score = np.mean(scores) if scores else 0
+                median_score = np.median(scores) if scores else 0
+                compliance_ok = bool(portfolio.get('Compliance'))
 
-            print(f"  📊 {portfolio_name}: {len(lignes)} actifs, {len(categories)} catégories, {total_alloc:.2f}%")
-            print(f"     Score moyen: {avg_score:.2f}, médiane: {median_score:.2f}")
-            print(f"     Répartition risque: {dict(risk_counts)}")
-            print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
+                print(f"  📊 {portfolio_name}: {len(lignes)} actifs, {len(categories)} catégories, {total_alloc:.2f}%")
+                print(f"     Score moyen: {avg_score:.2f}, médiane: {median_score:.2f}")
+                print(f"     Répartition risque: {dict(risk_counts)}")
+                print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
 
     return portfolios
 
@@ -3089,11 +3091,13 @@ def generate_portfolios_v2(filtered_data):
     
     # Construire le prompt v2
     prompt = build_robust_prompt_v2(structured_data, allowed_assets, current_month)
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-data = {
+
+    data = {
         "model": "gpt-4.1-mini",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
@@ -3104,7 +3108,13 @@ data = {
     }
     
     print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
-    response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
+    response = post_with_retry(
+        "https://api.openai.com/v1/chat/completions",
+        headers,
+        data,
+        tries=5,
+        timeout=(20, 180)
+    )
     response.raise_for_status()
     
     result = response.json()
@@ -3125,6 +3135,7 @@ data = {
     
     print("✅ Portefeuilles v2 générés avec succès (fallback + compliance)")
     return portfolios
+
 
 
 def build_robust_prompt_v2(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
