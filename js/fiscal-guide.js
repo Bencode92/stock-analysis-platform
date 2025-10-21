@@ -1792,54 +1792,65 @@ for (const statutId of selectedStatuses) {
       // --- C. Fixer le bloc rémunération selon % et NE PAS aplatir le reliquat ---
      if (sim && sim.compatible) {
 
-  // ⛔️ SCI à l’IS : pas de rémunération, 100% dividendes
-  if (statutId === 'sciIS') {
-    sim.remuneration = 0;
-    sim.cotisationsSociales = 0;
-    sim.chargesPatronales = 0;
-    sim.chargesSalariales = 0;
+ // ⛔️ SCI à l’IS : pas de rémunération, 100% dividendes
+if (statutId === 'sciIS') {
+  // A) Neutraliser toute rémunération
+  sim.remuneration = 0;
+  sim.cotisationsSociales = 0;
+  sim.chargesPatronales = 0;
+  sim.chargesSalariales = 0;
 
-    // Base IS = résultat avant IS (on ne retire aucun “salaire”)
-    sim.resultatApresRemuneration = round2(
-      sim.resultatAvantRemuneration ?? sim.resultatEntreprise ?? 0
-    );
+  // B) Base IS = résultat avant IS (on ne retire aucun “salaire”)
+  sim.resultatApresRemuneration = round2(
+    sim.resultatAvantRemuneration ?? sim.resultatEntreprise ?? 0
+  );
 
-  } else {
-    const R = round2(
-      sim.resultatAvantRemuneration
-      ?? sim.resultatEntreprise
-      ?? sim.beneficeAvantCotisations
-      ?? 0
-    );
+  // C) Forcer les champs "net total" côté associé (100% dividendes)
+  //    (si les dividendes nets sont déjà calculés ici, on fige tout de suite ;
+  //     sinon, ce sera réévalué plus loin après le calcul du PFU.)
+  sim.revenuNetSalaire = 0; // aucune rémunération en SCI-IS
 
-    // 1) Cible bloc rémunération (brut + cotisations) via % utilisateur
-    const pctSalaire = getPctSalaire();
-    const pctDiv     = getPctDividendes();
-    const { blocRemTarget, profitPreIS } = computeTargets(R, pctSalaire, pctDiv);
-
-    // 2) Taux observé → déduire un BRUT qui matche le bloc cible
-    const observed = getObservedRate(statutId, sim);
-    const fallback = ['sasu','sas','sa','selas'].includes(statutId) ? 0.80 : 0.42; // assimilé / TNS
-    const { brut, cotisations } = splitBrutFromBloc(blocRemTarget, { observedRate: observed, fallback });
-
-    // 3) Écritures propres (sans écraser le reliquat !)
-    if (['sasu','sas','sa','selas'].includes(statutId)) {
-      const totCharges = (Number(sim.chargesPatronales)||0) + (Number(sim.chargesSalariales)||0);
-      const partPat = totCharges > 0 ? (Number(sim.chargesPatronales)||0)/totCharges : 0.70;
-      sim.remuneration      = brut;
-      sim.chargesPatronales = round2(cotisations * partPat);
-      sim.chargesSalariales = round2(cotisations * (1 - partPat));
-      sim.salaireNet = round2(sim.remuneration - sim.chargesSalariales);
-      sim.remunerationNetteSociale = sim.salaireNet;
-
-    } else if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
-      sim.remuneration        = brut;
-      sim.cotisationsSociales = cotisations;
-    }
-
-    // 4) Le reliquat (profit avant IS) sert de base à l’IS
-    sim.resultatApresRemuneration = round2(profitPreIS);
+  if (typeof sim.dividendesNets === 'number') {
+    sim.revenuNetTotal = round2(sim.dividendesNets);
+    sim.ratioNetCA = sim.ca > 0 ? round2((sim.revenuNetTotal / sim.ca) * 100) : 0;
   }
+  
+} else {
+  const R = round2(
+    sim.resultatAvantRemuneration
+    ?? sim.resultatEntreprise
+    ?? sim.beneficeAvantCotisations
+    ?? 0
+  );
+
+  // 1) Cible bloc rémunération (brut + cotisations) via % utilisateur
+  const pctSalaire = getPctSalaire();
+  const pctDiv     = getPctDividendes();
+  const { blocRemTarget, profitPreIS } = computeTargets(R, pctSalaire, pctDiv);
+
+  // 2) Taux observé → déduire un BRUT qui matche le bloc cible
+  const observed = getObservedRate(statutId, sim);
+  const fallback = ['sasu','sas','sa','selas'].includes(statutId) ? 0.80 : 0.42; // assimilé / TNS
+  const { brut, cotisations } = splitBrutFromBloc(blocRemTarget, { observedRate: observed, fallback });
+
+  // 3) Écritures propres (sans écraser le reliquat !)
+  if (['sasu','sas','sa','selas'].includes(statutId)) {
+    const totCharges = (Number(sim.chargesPatronales)||0) + (Number(sim.chargesSalariales)||0);
+    const partPat = totCharges > 0 ? (Number(sim.chargesPatronales)||0)/totCharges : 0.70;
+    sim.remuneration      = brut;
+    sim.chargesPatronales = round2(cotisations * partPat);
+    sim.chargesSalariales = round2(cotisations * (1 - partPat));
+    sim.salaireNet = round2(sim.remuneration - sim.chargesSalariales);
+    sim.remunerationNetteSociale = sim.salaireNet;
+
+  } else if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
+    sim.remuneration        = brut;
+    sim.cotisationsSociales = cotisations;
+  }
+
+  // 4) Le reliquat (profit avant IS) sert de base à l’IS
+  sim.resultatApresRemuneration = round2(profitPreIS);
+}
        }
       // --- fin C ---
 
@@ -3709,52 +3720,56 @@ ${hasDividendes ? `
 
   // PFU total (IR 12,8 + PS 17,2)
   const pfuTotal = n(sim.prelevementForfaitaire);
+detailContent = `
+  <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - SCI (option IS)</h2>
 
-  detailContent = `
-   <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - SCI (option IS)</h2>
+  <div class="detail-category">Données de base</div>
+  <table class="detail-table">
+    <tr><td>Revenus locatifs (CA)</td><td>${fmt(sim.ca)}</td></tr>
+    <tr>
+      <td><strong>= Résultat fiscal (avant IS)</strong></td>
+      <td><strong>${fmt(sim.resultatAvantRemuneration)}</strong></td>
+    </tr>
+  </table>
 
-    <div class="detail-category">Données de base</div>
-    <table class="detail-table">
-      <tr><td>Revenus locatifs (CA)</td><td>${fmt(sim.ca)}</td></tr>
-      <tr>
-        <td><strong>= Résultat fiscal (avant IS)</strong></td>
-        <td><strong>${fmt(sim.resultatAvantRemuneration)}</strong></td>
-      </tr>
-    </table>
+  <div class="detail-category">Impôt sur les sociétés</div>
+  <table class="detail-table">
+    <tr><td>Barème</td><td>${txtIS}</td></tr>
+    <tr><td>IS dû</td><td>${fmt(sim.is)}</td></tr>
+    <tr>
+      <td><strong>= Résultat après IS</strong></td>
+      <td><strong>${fmt(sim.resultatApresIS)}</strong></td>
+    </tr>
+    ${n(sim.reserveLegalePrelevee) > 0
+      ? `<tr><td>Réserve légale (5%)</td><td>− ${fmt(sim.reserveLegalePrelevee)}</td></tr>`
+      : ``}
+  </table>
 
-    <div class="detail-category">Impôt sur les sociétés</div>
-    <table class="detail-table">
-      <tr><td>Barème</td><td>${txtIS}</td></tr>
-      <tr><td>IS dû</td><td>${fmt(sim.is)}</td></tr>
-      <tr>
-        <td><strong>= Résultat après IS</strong></td>
-        <td><strong>${fmt(sim.resultatApresIS)}</strong></td>
-      </tr>
-      ${n(sim.reserveLegalePrelevee) > 0
-        ? `<tr><td>Réserve légale (5%)</td><td>− ${fmt(sim.reserveLegalePrelevee)}</td></tr>`
-        : ``}
-    </table>
+  <div class="detail-category">Distribution (quote-part de cet associé)</div>
+  <table class="detail-table">
+    <tr><td>Part de l'associé simulé</td><td>${pct(partPct)}</td></tr>
+    <tr><td>Dividendes bruts</td><td>${fmt(sim.dividendes)}</td></tr>
+    <tr><td>Méthode de taxation</td><td><span class="text-blue-400">PFU 30%</span></td></tr>
+    <tr><td>IR (12,8%) + PS (17,2%)</td><td>${fmt(pfuTotal)}</td></tr>
+    <tr><td><strong>Dividendes nets</strong></td><td><strong>${fmt(sim.dividendesNets)}</strong></td></tr>
+  </table>
 
-    <div class="detail-category">Distribution (quote-part de cet associé)</div>
-    <table class="detail-table">
-      <tr><td>Part de l'associé simulé</td><td>${pct(partPct)}</td></tr>
-      <tr><td>Dividendes bruts</td><td>${fmt(sim.dividendes)}</td></tr>
-      <tr><td>Méthode de taxation</td><td><span class="text-blue-400">PFU 30%</span></td></tr>
-      <tr><td>IR (12,8%) + PS (17,2%)</td><td>${fmt(pfuTotal)}</td></tr>
-      <tr><td><strong>Dividendes nets</strong></td><td><strong>${fmt(sim.dividendesNets)}</strong></td></tr>
-    </table>
+  <div class="detail-category">Résultat final</div>
+  <table class="detail-table">
+    <tr><td><strong>Revenu net en poche</strong></td><td><strong>${fmt(sim.revenuNetTotal)}</strong></td></tr>
+    <tr><td>Ratio Net/CA</td><td>${(n(sim.ratioNetCA)).toFixed(1)}%</td></tr>
+  </table>
 
-    <div class="detail-category">Résultat final</div>
-    <table class="detail-table">
-      <tr><td><strong>Revenu net en poche</strong></td><td><strong>${fmt(sim.revenuNetTotal)}</strong></td></tr>
-      <tr><td>Ratio Net/CA</td><td>${(n(sim.ratioNetCA)).toFixed(1)}%</td></tr>
-    </table>
+  <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-300">
+    <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
+    À l’IS, la SCI est <strong>opaque</strong> : IS au niveau société, puis imposition des dividendes chez l’associé (PFU 30% par défaut). Aucune cotisation TNS n’est due sur les dividendes.</p>
+  </div>
+`;
 
-    <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-300">
-      <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-      À l’IS, la SCI est <strong>opaque</strong> : IS au niveau société, puis imposition des dividendes chez l’associé (PFU 30% par défaut). Aucune cotisation TNS n’est due sur les dividendes.</p>
-    </div>
-  `;
+// 🔒 Récap "taux utilisés" : ne pas l’injecter pour SCI-IS
+if (statutId !== 'sciIS') {
+  detailContent += renderRecapTauxUtilises(sim || {});
+}
 
     } else {
         // Cas par défaut
