@@ -36,981 +36,981 @@ def parse_json_strict_or_repair(s: str) -> dict:
         - normalise guillemets typographiques
         - remplace CR/LF bruts à l'intérieur des chaînes par \n
         - supprime virgules traînantes
-        """
-        try:
-            return json.loads(s)
-        except Exception:
+    """
+    try:
+        return json.loads(s)
+    except Exception:
         logger.warning("⚠️ JSON invalide détecté, tentative de réparation...")
 
-s2 = (s or "").strip()
+        s2 = (s or "").strip()
 
-# 1) retirer éventuels fences
-s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
-s2 = re.sub(r'\s*```\s*$', '', s2)
+        # 1) retirer éventuels fences
+        s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
+        s2 = re.sub(r'\s*```\s*$', '', s2)
 
-# 2) ne garder que le premier '{' jusqu'au dernier '}'
-start = s2.find('{')
-end = s2.rfind('}')
-if start != -1 and end != -1 and end > start:
-    s2 = s2[start:end+1]
+        # 2) ne garder que le premier '{' jusqu'au dernier '}'
+        start = s2.find('{')
+        end = s2.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            s2 = s2[start:end+1]
 
-# 3) normaliser guillemets “ ” ‘ ’ → " '
-s2 = s2.translate({
-0x2018: 39, 0x2019: 39,  # ‘ ’ -> '
-0x201C: 34, 0x201D: 34,  # “ ” -> "
-})
+            # 3) normaliser guillemets “ ” ‘ ’ → " '
+            s2 = s2.translate({
+            0x2018: 39, 0x2019: 39,  # ‘ ’ -> '
+            0x201C: 34, 0x201D: 34,  # “ ” -> "
+            })
 
-# 4) remplacer CR/LF bruts à l’intérieur des chaînes par \n
-out = []
-in_str = False
-esc = False
-for ch in s2:
-    if in_str:
-        if esc:
-            out.append(ch)
+            # 4) remplacer CR/LF bruts à l’intérieur des chaînes par \n
+            out = []
+            in_str = False
             esc = False
-        elif ch == '\\':
-        out.append(ch)
-        esc = True
-    elif ch == '"':
-    out.append(ch)
-    in_str = False
-elif ch in '\r\n':
-out.append('\\n')
-else:
-out.append(ch)
-else:
-out.append(ch)
-if ch == '"':
-    in_str = True
-    s3 = ''.join(out)
+            for ch in s2:
+                if in_str:
+                    if esc:
+                        out.append(ch)
+                        esc = False
+                    elif ch == '\\':
+                        out.append(ch)
+                        esc = True
+                    elif ch == '"':
+                        out.append(ch)
+                        in_str = False
+                    elif ch in '\r\n':
+                        out.append('\\n')
+                    else:
+                        out.append(ch)
+                    else:
+                        out.append(ch)
+                        if ch == '"':
+                            in_str = True
+                            s3 = ''.join(out)
 
-# 5) supprimer virgules finales avant } ou ]
-s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
+                            # 5) supprimer virgules finales avant } ou ]
+                            s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
 
-logger.info("✅ JSON réparé avec succès")
-return json.loads(s3)
+                            logger.info("✅ JSON réparé avec succès")
+                            return json.loads(s3)
 
 
-# ============= COMPLIANCE AMF - GARDE-FOUS RÉGLEMENTAIRES =============
+                            # ============= COMPLIANCE AMF - GARDE-FOUS RÉGLEMENTAIRES =============
 
-BANNED_MARKETING = [
-r"\bachet(?:er|ez|e|ons|ées?)\b",
-r"\bvend(?:re|ez|e|ons|u(?:e|s|es)?)\b",
-r"\bconserv(?:er|ez|e|ons|ation)\b",
+                            BANNED_MARKETING = [
+                            r"\bachet(?:er|ez|e|ons|ées?)\b",
+                            r"\bvend(?:re|ez|e|ons|u(?:e|s|es)?)\b",
+                            r"\bconserv(?:er|ez|e|ons|ation)\b",
 
-# prioriser / privilégier (toutes variantes + accents)
-r"\b(prioriser|prioritaire|privil[eé]g(?:ier|ie|i(?:e|ons))|à\s*privil[eé]gier)\b",
+                            # prioriser / privilégier (toutes variantes + accents)
+                            r"\b(prioriser|prioritaire|privil[eé]g(?:ier|ie|i(?:e|ons))|à\s*privil[eé]gier)\b",
 
-# fortement recommandé (toutes flexions + accents)
-r"\bfortement\s+recommand[eé](?:e|es|s)?\b",
+                            # fortement recommandé (toutes flexions + accents)
+                            r"\bfortement\s+recommand[eé](?:e|es|s)?\b",
 
-# garanti, sans risque
-r"\bgaranti(?:e|es|s)?\b",
-r"\bsans\s*risque(?:s)?\b",
+                            # garanti, sans risque
+                            r"\bgaranti(?:e|es|s)?\b",
+                            r"\bsans\s*risque(?:s)?\b",
 
-# objectif/target de prix + price target
-r"\b(objectif|target)\s+de\s+prix\b",
-r"\bprice\s*target\b",
+                            # objectif/target de prix + price target
+                            r"\b(objectif|target)\s+de\s+prix\b",
+                            r"\bprice\s*target\b",
 
-# rendement attendu (pluriels/féminins)
-r"\brendement(?:s)?\s+attendu(?:s|e|es)?\b",
+                            # rendement attendu (pluriels/féminins)
+                            r"\brendement(?:s)?\s+attendu(?:s|e|es)?\b",
 
-# injonctions
-r"\b(vous\s+)?devez\b",
-r"\bil\s*faut\b",
-r"\bconseillons?\b",
-r"\brecommand(?:ons|e|ez)\b",
-r"\bvous\s+devriez\b"
-]
+                            # injonctions
+                            r"\b(vous\s+)?devez\b",
+                            r"\bil\s*faut\b",
+                            r"\bconseillons?\b",
+                            r"\brecommand(?:ons|e|ez)\b",
+                            r"\bvous\s+devriez\b"
+                            ]
 
-def sanitize_marketing_language(text: str) -> str:
-    """Supprime le langage d'incitation interdit par l'AMF"""
-    out = text or ""
-    for pat in BANNED_MARKETING:
-        out = re.sub(pat, "[formulation neutre]", out, flags=re.IGNORECASE)
-        return out
+                            def sanitize_marketing_language(text: str) -> str:
+                                """Supprime le langage d'incitation interdit par l'AMF"""
+                                out = text or ""
+                                for pat in BANNED_MARKETING:
+                                    out = re.sub(pat, "[formulation neutre]", out, flags=re.IGNORECASE)
+                                    return out
 
-def get_compliance_block() -> Dict:
-    """Retourne le bloc de compliance standardisé AMF"""
-    return {
-    "jurisdiction": "FR",
-    "disclaimer": (
-    "Information à caractère purement indicatif et pédagogique. "
-    "Ce contenu ne constitue ni un conseil en investissement, ni une recommandation personnalisée, "
-    "ni une sollicitation d'achat/vente. Performances passées non indicatives des performances futures. "
-    "Vous restez seul responsable de vos décisions. Si besoin, consultez un conseiller en investissement financier (CIF) agréé."
-    ),
-    "risk_notice": [
-    "Les crypto-actifs sont très volatils et peuvent entraîner une perte totale.",
-    "Les ETF à effet de levier et produits inverses sont exclus.",
-    "Diversification et horizon d'investissement requis.",
-    "Risques de change pour les actifs internationaux.",
-    "Risque de liquidité sur certains marchés."
-    ],
-    "sources": ["Données de marché publiques/CSV internes"],
-    "last_update": datetime.datetime.utcnow().isoformat() + "Z"
-    }
+                                    def get_compliance_block() -> Dict:
+                                        """Retourne le bloc de compliance standardisé AMF"""
+                                        return {
+                                        "jurisdiction": "FR",
+                                        "disclaimer": (
+                                        "Information à caractère purement indicatif et pédagogique. "
+                                        "Ce contenu ne constitue ni un conseil en investissement, ni une recommandation personnalisée, "
+                                        "ni une sollicitation d'achat/vente. Performances passées non indicatives des performances futures. "
+                                        "Vous restez seul responsable de vos décisions. Si besoin, consultez un conseiller en investissement financier (CIF) agréé."
+                                        ),
+                                        "risk_notice": [
+                                        "Les crypto-actifs sont très volatils et peuvent entraîner une perte totale.",
+                                        "Les ETF à effet de levier et produits inverses sont exclus.",
+                                        "Diversification et horizon d'investissement requis.",
+                                        "Risques de change pour les actifs internationaux.",
+                                        "Risque de liquidité sur certains marchés."
+                                        ],
+                                        "sources": ["Données de marché publiques/CSV internes"],
+                                        "last_update": datetime.datetime.utcnow().isoformat() + "Z"
+                                        }
 
-def attach_compliance(portfolios: Dict) -> Dict:
-    """Attache le bloc compliance de manière sûre en vérifiant les types"""
-    if not isinstance(portfolios, dict):
-        return portfolios
+                                        def attach_compliance(portfolios: Dict) -> Dict:
+                                            """Attache le bloc compliance de manière sûre en vérifiant les types"""
+                                            if not isinstance(portfolios, dict):
+                                                return portfolios
 
-block = get_compliance_block()
-for key in ["Agressif", "Modéré", "Stable"]:
-    if isinstance(portfolios.get(key), dict):
-        portfolios[key]["Compliance"] = block
-        return portfolios
+                                                block = get_compliance_block()
+                                                for key in ["Agressif", "Modéré", "Stable"]:
+                                                    if isinstance(portfolios.get(key), dict):
+                                                        portfolios[key]["Compliance"] = block
+                                                        return portfolios
 
-# ============= NOUVEAU SYSTÈME DE SCORING V3 - QUANTITATIF =============
+                                                        # ============= NOUVEAU SYSTÈME DE SCORING V3 - QUANTITATIF =============
 
-# FIX 1: Regex non-capturant pour éviter le warning pandas
-LEVERAGED_RE = re.compile(r"(?:2x|3x|ultra|lev|leverage|inverse|bear|-1x|-2x|-3x)", re.I)
+                                                        # FIX 1: Regex non-capturant pour éviter le warning pandas
+                                                        LEVERAGED_RE = re.compile(r"(?:2x|3x|ultra|lev|leverage|inverse|bear|-1x|-2x|-3x)", re.I)
 
-def fnum(x):
-    """Conversion robuste vers float"""
-    s = re.sub(r"[^0-9.\-]", "", str(x or ""))
-    try:
-        return float(s) if s not in ("", "-", ".", "-.") else 0.0
-    except:
-    return 0.0
+                                                        def fnum(x):
+                                                            """Conversion robuste vers float"""
+                                                            s = re.sub(r"[^0-9.\-]", "", str(x or ""))
+                                                            try:
+                                                                return float(s) if s not in ("", "-", ".", "-.") else 0.0
+                                                            except:
+                                                                return 0.0
 
-def _winsor(x, p=0.02):
-    """Winsorisation pour éliminer les outliers"""
-    if len(x) == 0:
-        return np.array([])
-        lo, hi = np.nanpercentile(x, [p*100, 100-p*100])
-        return np.clip(x, lo, hi)
+                                                                def _winsor(x, p=0.02):
+                                                                    """Winsorisation pour éliminer les outliers"""
+                                                                    if len(x) == 0:
+                                                                        return np.array([])
+                                                                        lo, hi = np.nanpercentile(x, [p*100, 100-p*100])
+                                                                        return np.clip(x, lo, hi)
 
-def _z(arr):
-    """Z-score normalisé"""
-    v = np.array([fnum(a) for a in arr], dtype=float)
-    if len(v) == 0:
-        return v
-        v = _winsor(v)
-        mu, sd = np.nanmean(v), (np.nanstd(v) or 1.0)
-        return (v - mu) / sd
+                                                                        def _z(arr):
+                                                                            """Z-score normalisé"""
+                                                                            v = np.array([fnum(a) for a in arr], dtype=float)
+                                                                            if len(v) == 0:
+                                                                                return v
+                                                                                v = _winsor(v)
+                                                                                mu, sd = np.nanmean(v), (np.nanstd(v) or 1.0)
+                                                                                return (v - mu) / sd
 
-def compute_score(rows, kind):
-    """
+                                                                                def compute_score(rows, kind):
+                                                                                    """
     Calcul du score quantitatif : momentum - risque - sur-extension + liquidité
     rows: [{name, perf_1m, perf_3m, perf_90d, perf_24h, perf_7d, ytd, vol30, vol_3y, maxdd90, liquidity}]
     kind: 'equity' | 'etf' | 'crypto'
-    """
-    n = len(rows)
-    if n == 0:
-        return rows
+                                                                                    """
+                                                                                    n = len(rows)
+                                                                                    if n == 0:
+                                                                                        return rows
 
-# -- Momentum adaptatif selon le type d'actif
-if kind == "crypto":
-    mom_raw = [0.5*fnum(r.get("perf_7d")) + 0.5*fnum(r.get("perf_24h")) for r in rows]
-else:
-# Fallback robuste si 1m/3m manquants : 0.7*YTD + 0.3*Daily*20
-m1 = [fnum(r.get("perf_1m")) for r in rows]
-m3 = [fnum(r.get("perf_3m")) for r in rows]
-m90= [fnum(r.get("perf_90d")) for r in rows]
-ytd= [fnum(r.get("ytd")) for r in rows]
-d1 = [fnum(r.get("perf_24h")) for r in rows]
-have_m = any(m3) or any(m1) or any(m90)
-if have_m:
-    mom_raw = [0.5*m3[i] + 0.3*m1[i] + 0.2*m90[i] for i in range(n)]
-else:
-mom_raw = [0.7*ytd[i] + 0.3*(d1[i]*20.0) for i in range(n)]
-mom = _z(mom_raw)
+                                                                                        # -- Momentum adaptatif selon le type d'actif
+                                                                                        if kind == "crypto":
+                                                                                            mom_raw = [0.5*fnum(r.get("perf_7d")) + 0.5*fnum(r.get("perf_24h")) for r in rows]
+                                                                                        else:
+                                                                                            # Fallback robuste si 1m/3m manquants : 0.7*YTD + 0.3*Daily*20
+                                                                                            m1 = [fnum(r.get("perf_1m")) for r in rows]
+                                                                                            m3 = [fnum(r.get("perf_3m")) for r in rows]
+                                                                                            m90= [fnum(r.get("perf_90d")) for r in rows]
+                                                                                            ytd= [fnum(r.get("ytd")) for r in rows]
+                                                                                            d1 = [fnum(r.get("perf_24h")) for r in rows]
+                                                                                            have_m = any(m3) or any(m1) or any(m90)
+                                                                                            if have_m:
+                                                                                                mom_raw = [0.5*m3[i] + 0.3*m1[i] + 0.2*m90[i] for i in range(n)]
+                                                                                            else:
+                                                                                                mom_raw = [0.7*ytd[i] + 0.3*(d1[i]*20.0) for i in range(n)]
+                                                                                                mom = _z(mom_raw)
 
-# -- Mesure du risque (volatilité + drawdown)
-vol30 = [fnum(r.get("vol30")) for r in rows]
-vol3y = [fnum(r.get("vol_3y")) for r in rows]
-vol_used = [vol30[i] if vol30[i] != 0 else vol3y[i] for i in range(n)]
-risk_vol = _z(vol_used)
+                                                                                                # -- Mesure du risque (volatilité + drawdown)
+                                                                                                vol30 = [fnum(r.get("vol30")) for r in rows]
+                                                                                                vol3y = [fnum(r.get("vol_3y")) for r in rows]
+                                                                                                vol_used = [vol30[i] if vol30[i] != 0 else vol3y[i] for i in range(n)]
+                                                                                                risk_vol = _z(vol_used)
 
-# drawdown: toujours en valeur absolue
-dd = [abs(fnum(r.get("maxdd90"))) for r in rows]
-risk_dd = _z(dd) if any(dd) else np.zeros(n)
+                                                                                                # drawdown: toujours en valeur absolue
+                                                                                                dd = [abs(fnum(r.get("maxdd90"))) for r in rows]
+                                                                                                risk_dd = _z(dd) if any(dd) else np.zeros(n)
 
-# -- Détection de sur-extension (anti-fin-de-cycle)
-ytd = [fnum(r.get("ytd")) for r in rows]
-p1m = [fnum(r.get("perf_1m")) for r in rows]
-p7d = [fnum(r.get("perf_7d")) for r in rows]
-p24 = [fnum(r.get("perf_24h")) for r in rows]
-overext = []
-for i, r in enumerate(rows):
-    if kind == "crypto":
-        decel = p24[i] < (p7d[i]/3.0)
-    else:
-    decel = p1m[i] < (fnum(r.get("perf_3m"))/3.0)
+                                                                                                # -- Détection de sur-extension (anti-fin-de-cycle)
+                                                                                                ytd = [fnum(r.get("ytd")) for r in rows]
+                                                                                                p1m = [fnum(r.get("perf_1m")) for r in rows]
+                                                                                                p7d = [fnum(r.get("perf_7d")) for r in rows]
+                                                                                                p24 = [fnum(r.get("perf_24h")) for r in rows]
+                                                                                                overext = []
+                                                                                                for i, r in enumerate(rows):
+                                                                                                    if kind == "crypto":
+                                                                                                        decel = p24[i] < (p7d[i]/3.0)
+                                                                                                    else:
+                                                                                                        decel = p1m[i] < (fnum(r.get("perf_3m"))/3.0)
 
-flag = (ytd[i] > 80 and (p1m[i] <= 0 or decel)) or (ytd[i] > 150)
-overext.append(1.0 if flag else 0.0)
-r["flags"] = {"overextended": bool(flag)}
+                                                                                                        flag = (ytd[i] > 80 and (p1m[i] <= 0 or decel)) or (ytd[i] > 150)
+                                                                                                        overext.append(1.0 if flag else 0.0)
+                                                                                                        r["flags"] = {"overextended": bool(flag)}
 
-# -- Bonus liquidité (évite les nains illiquides)
-liq = _z([math.log(max(fnum(r.get("liquidity")), 1.0)) for r in rows]) if any(fnum(r.get("liquidity")) for r in rows) else np.zeros(n)
-liq_weight = 0.30 if kind == "etf" else (0.15 if kind == "equity" else 0.0)
+                                                                                                        # -- Bonus liquidité (évite les nains illiquides)
+                                                                                                        liq = _z([math.log(max(fnum(r.get("liquidity")), 1.0)) for r in rows]) if any(fnum(r.get("liquidity")) for r in rows) else np.zeros(n)
+                                                                                                        liq_weight = 0.30 if kind == "etf" else (0.15 if kind == "equity" else 0.0)
 
-# -- Score final : momentum - risque - sur-extension + liquidité
-score = mom - (0.6*risk_vol + 0.4*risk_dd) - np.array(overext)*0.8 + liq_weight*liq
+                                                                                                        # -- Score final : momentum - risque - sur-extension + liquidité
+                                                                                                        score = mom - (0.6*risk_vol + 0.4*risk_dd) - np.array(overext)*0.8 + liq_weight*liq
 
-for i, r in enumerate(rows):
-    r["score"] = float(score[i])
+                                                                                                        for i, r in enumerate(rows):
+                                                                                                            r["score"] = float(score[i])
 
-    return rows
+                                                                                                            return rows
 
-def read_combined_etf_csv(path_csv):
-    """
+                                                                                                            def read_combined_etf_csv(path_csv):
+                                                                                                                """
     Lecture et préparation des ETF avec détection corrigée des ETF à effet de levier
     + fallback robuste quand certaines colonnes manquent.
-    """
-    df = pd.read_csv(path_csv)
+                                                                                                                """
+                                                                                                                df = pd.read_csv(path_csv)
 
-# Cast des colonnes numériques (si présentes)
-num_cols = ["daily_change_pct", "ytd_return_pct", "one_year_return_pct",
-"vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio", "yield_ttm"]
-for c in num_cols:
-    if c in df.columns:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+                                                                                                                # Cast des colonnes numériques (si présentes)
+                                                                                                                num_cols = ["daily_change_pct", "ytd_return_pct", "one_year_return_pct",
+                                                                                                                "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio", "yield_ttm"]
+                                                                                                                for c in num_cols:
+                                                                                                                    if c in df.columns:
+                                                                                                                        df[c] = pd.to_numeric(df[c], errors="coerce")
 
-# ------ Fallback nom (assure la présence de df["name"]) ------
-name_col = next((c for c in ["name", "long_name", "etf_name", "symbol", "ticker"] if c in df.columns), None)
-if name_col is None:
-    df["name"] = [f"ETF_{i}" for i in range(len(df))]
-else:
-df["name"] = df[name_col].astype(str)
+                                                                                                                        # ------ Fallback nom (assure la présence de df["name"]) ------
+                                                                                                                        name_col = next((c for c in ["name", "long_name", "etf_name", "symbol", "ticker"] if c in df.columns), None)
+                                                                                                                        if name_col is None:
+                                                                                                                            df["name"] = [f"ETF_{i}" for i in range(len(df))]
+                                                                                                                        else:
+                                                                                                                            df["name"] = df[name_col].astype(str)
 
-# Helper pour récupérer une Series (sinon série vide alignée sur l’index)
-def _series(col, default=""):
-    return df[col] if col in df.columns else pd.Series(default, index=df.index)
+                                                                                                                            # Helper pour récupérer une Series (sinon série vide alignée sur l’index)
+                                                                                                                            def _series(col, default=""):
+                                                                                                                                return df[col] if col in df.columns else pd.Series(default, index=df.index)
 
-# --- Détection obligations (robuste si colonnes absentes)
-df["is_bond"] = (
-_series("fund_type").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
-| _series("etf_type").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
-)
+                                                                                                                                # --- Détection obligations (robuste si colonnes absentes)
+                                                                                                                                df["is_bond"] = (
+                                                                                                                                _series("fund_type").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
+                                                                                                                                | _series("etf_type").astype(str).str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
+                                                                                                                                )
 
-# --- Détection levier corrigée (valeur explicite OU mots-clés)
-lev_text = _series("leverage").fillna("").astype(str).str.strip().str.lower()
-has_lev_value = ~lev_text.isin(["", "0", "none", "nan", "na", "n/a"])
+                                                                                                                                # --- Détection levier corrigée (valeur explicite OU mots-clés)
+                                                                                                                                lev_text = _series("leverage").fillna("").astype(str).str.strip().str.lower()
+                                                                                                                                has_lev_value = ~lev_text.isin(["", "0", "none", "nan", "na", "n/a"])
 
-looks_leveraged = (
-_series("etf_type").astype(str).str.contains(r"\b(?:lev|inverse|bear|bull)\b", case=False, na=False)
-| df["name"].astype(str).str.contains(LEVERAGED_RE, na=False)
-)
+                                                                                                                                looks_leveraged = (
+                                                                                                                                _series("etf_type").astype(str).str.contains(r"\b(?:lev|inverse|bear|bull)\b", case=False, na=False)
+                                                                                                                                | df["name"].astype(str).str.contains(LEVERAGED_RE, na=False)
+                                                                                                                                )
 
 
-df["is_leveraged"] = has_lev_value | looks_leveraged
+                                                                                                                                df["is_leveraged"] = has_lev_value | looks_leveraged
 
-print(f"  🔍 Debug ETF: Total={len(df)}, Bonds={df['is_bond'].sum()}, Leveraged={df['is_leveraged'].sum()}")
-print(f"  📊 ETF standards disponibles: {len(df[~df['is_bond'] & ~df['is_leveraged']])}")
-print(f"  📉 ETF obligations disponibles: {len(df[df['is_bond'] & ~df['is_leveraged']])}")
+                                                                                                                                print(f"  🔍 Debug ETF: Total={len(df)}, Bonds={df['is_bond'].sum()}, Leveraged={df['is_leveraged'].sum()}")
+                                                                                                                                print(f"  📊 ETF standards disponibles: {len(df[~df['is_bond'] & ~df['is_leveraged']])}")
+                                                                                                                                print(f"  📉 ETF obligations disponibles: {len(df[df['is_bond'] & ~df['is_leveraged']])}")
 
-return df
+                                                                                                                                return df
 
-def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
-    """
+                                                                                                                                def build_scored_universe_v3(stocks_jsons, etf_csv_path, crypto_csv_path):
+                                                                                                                                    """
     Construction de l'univers fermé avec scoring quantitatif
     Retourne les meilleurs actifs équilibrés par risque
-    """
-    logger.info("🧮 Construction de l'univers quantitatif v3...")
+                                                                                                                                    """
+                                                                                                                                    logger.info("🧮 Construction de l'univers quantitatif v3...")
 
-# ====== ACTIONS (depuis les stocks_*.json) ======
-eq_rows = []
-total_stocks = 0
-for data in stocks_jsons:
-    for it in data.get("stocks", []):
-        total_stocks += 1
-        eq_rows.append({
-        "name": it.get("name") or it.get("ticker"),
-        "perf_1m": it.get("perf_1m"),
-        "perf_3m": it.get("perf_3m"),
-        "perf_90d": it.get("perf_3m"),     # fallback acceptable
-        "ytd": it.get("perf_ytd"),
-        "vol30": None,                     # pas de 30j; on utilisera vol_3y
-        "vol_3y": it.get("volatility_3y"),
-        "maxdd90": it.get("max_drawdown_ytd"),  # best proxy dispo
-        "perf_24h": it.get("perf_1d"),
-        "liquidity": it.get("market_cap"),
-        "sector": it.get("sector", "Unknown"),
-        "country": it.get("country", "Unknown")
-        })
+                                                                                                                                    # ====== ACTIONS (depuis les stocks_*.json) ======
+                                                                                                                                    eq_rows = []
+                                                                                                                                    total_stocks = 0
+                                                                                                                                    for data in stocks_jsons:
+                                                                                                                                        for it in data.get("stocks", []):
+                                                                                                                                            total_stocks += 1
+                                                                                                                                            eq_rows.append({
+                                                                                                                                            "name": it.get("name") or it.get("ticker"),
+                                                                                                                                            "perf_1m": it.get("perf_1m"),
+                                                                                                                                            "perf_3m": it.get("perf_3m"),
+                                                                                                                                            "perf_90d": it.get("perf_3m"),     # fallback acceptable
+                                                                                                                                            "ytd": it.get("perf_ytd"),
+                                                                                                                                            "vol30": None,                     # pas de 30j; on utilisera vol_3y
+                                                                                                                                            "vol_3y": it.get("volatility_3y"),
+                                                                                                                                            "maxdd90": it.get("max_drawdown_ytd"),  # best proxy dispo
+                                                                                                                                            "perf_24h": it.get("perf_1d"),
+                                                                                                                                            "liquidity": it.get("market_cap"),
+                                                                                                                                            "sector": it.get("sector", "Unknown"),
+                                                                                                                                            "country": it.get("country", "Unknown")
+                                                                                                                                            })
 
-logger.info("📊 Stocks chargées: %s → Analyse: %s", total_stocks, len(eq_rows))
-eq_rows = compute_score(eq_rows, "equity")
+                                                                                                                                            logger.info("📊 Stocks chargées: %s → Analyse: %s", total_stocks, len(eq_rows))
+                                                                                                                                            eq_rows = compute_score(eq_rows, "equity")
 
-# Filtrage actions : vol contrôlée + drawdown acceptable + pas de sur-extension
-def in_equity_bounds(r):
-    v = fnum(r.get("vol_3y"))
-    dd = abs(fnum(r.get("maxdd90")))
-    return 12 <= v <= 60 and dd <= 25 and not r["flags"]["overextended"]
+                                                                                                                                            # Filtrage actions : vol contrôlée + drawdown acceptable + pas de sur-extension
+                                                                                                                                            def in_equity_bounds(r):
+                                                                                                                                                v = fnum(r.get("vol_3y"))
+                                                                                                                                                dd = abs(fnum(r.get("maxdd90")))
+                                                                                                                                                return 12 <= v <= 60 and dd <= 25 and not r["flags"]["overextended"]
 
-eq_filtered = [r for r in eq_rows if in_equity_bounds(r)]
-print(f"  ✅ Actions filtrées: {len(eq_filtered)}/{len(eq_rows)} (vol 12-60%, DD≤25%, non sur-étendues)")
+                                                                                                                                                eq_filtered = [r for r in eq_rows if in_equity_bounds(r)]
+                                                                                                                                                print(f"  ✅ Actions filtrées: {len(eq_filtered)}/{len(eq_rows)} (vol 12-60%, DD≤25%, non sur-étendues)")
 
-# ====== ETFs (CSV combiné) ======
-etf_df = read_combined_etf_csv(etf_csv_path)
-etf_std = etf_df[~etf_df["is_bond"] & ~etf_df["is_leveraged"]]
-etf_bonds = etf_df[etf_df["is_bond"] & ~etf_df["is_leveraged"]]
+                                                                                                                                                # ====== ETFs (CSV combiné) ======
+                                                                                                                                                etf_df = read_combined_etf_csv(etf_csv_path)
+                                                                                                                                                etf_std = etf_df[~etf_df["is_bond"] & ~etf_df["is_leveraged"]]
+                                                                                                                                                etf_bonds = etf_df[etf_df["is_bond"] & ~etf_df["is_leveraged"]]
 
-print(f"  📊 ETF analysés: {len(etf_df)} → Standards: {len(etf_std)}, Obligations: {len(etf_bonds)}")
-print(f"  🚫 ETF à effet de levier exclus: {len(etf_df[etf_df['is_leveraged']])}")
+                                                                                                                                                print(f"  📊 ETF analysés: {len(etf_df)} → Standards: {len(etf_std)}, Obligations: {len(etf_bonds)}")
+                                                                                                                                                print(f"  🚫 ETF à effet de levier exclus: {len(etf_df[etf_df['is_leveraged']])}")
 
-def _etf_rows(df):
-    rows = []
-    for _, r in df.iterrows():
-        rows.append({
-        "name": str(r["name"]),
-        "perf_1m": None, "perf_3m": None, "perf_90d": None,
-        "perf_24h": r.get("daily_change_pct"),
-        "ytd": r.get("ytd_return_pct"),
-        "vol30": r.get("vol_pct") if str(r.get("vol_window", "")).lower() in ("30d", "1m", "30") else None,
-        "vol_3y": r.get("vol_3y_pct") or r.get("vol_pct"),
-        "maxdd90": None,
-        "liquidity": r.get("aum_usd"),
-        "flags": {"overextended": False},
-        })
-        return rows
+                                                                                                                                                def _etf_rows(df):
+                                                                                                                                                    rows = []
+                                                                                                                                                    for _, r in df.iterrows():
+                                                                                                                                                        rows.append({
+                                                                                                                                                        "name": str(r["name"]),
+                                                                                                                                                        "perf_1m": None, "perf_3m": None, "perf_90d": None,
+                                                                                                                                                        "perf_24h": r.get("daily_change_pct"),
+                                                                                                                                                        "ytd": r.get("ytd_return_pct"),
+                                                                                                                                                        "vol30": r.get("vol_pct") if str(r.get("vol_window", "")).lower() in ("30d", "1m", "30") else None,
+                                                                                                                                                        "vol_3y": r.get("vol_3y_pct") or r.get("vol_pct"),
+                                                                                                                                                        "maxdd90": None,
+                                                                                                                                                        "liquidity": r.get("aum_usd"),
+                                                                                                                                                        "flags": {"overextended": False},
+                                                                                                                                                        })
+                                                                                                                                                        return rows
 
-etf_rows = compute_score(_etf_rows(etf_std), "etf")
+                                                                                                                                                        etf_rows = compute_score(_etf_rows(etf_std), "etf")
 
-# Filtrage ETF standards
-def _v_etf(r):
-    v = fnum(r.get("vol30")) or fnum(r.get("vol_3y"))
-    return 8 <= v <= 40
+                                                                                                                                                        # Filtrage ETF standards
+                                                                                                                                                        def _v_etf(r):
+                                                                                                                                                            v = fnum(r.get("vol30")) or fnum(r.get("vol_3y"))
+                                                                                                                                                            return 8 <= v <= 40
 
-etf_filtered = [r for r in etf_rows if _v_etf(r) and not r["flags"]["overextended"]]
-logger.info("✅ ETF standards filtrés: %s/%s", len(etf_filtered), len(etf_rows))
+                                                                                                                                                            etf_filtered = [r for r in etf_rows if _v_etf(r) and not r["flags"]["overextended"]]
+                                                                                                                                                            logger.info("✅ ETF standards filtrés: %s/%s", len(etf_filtered), len(etf_rows))
 
-# ETF obligataires (liste blanche, pas de filtre strict)
-bond_rows = compute_score(_etf_rows(etf_bonds), "etf")
-print(f"  📋 ETF obligataires: {len(bond_rows)} (liste blanche)")
+                                                                                                                                                            # ETF obligataires (liste blanche, pas de filtre strict)
+                                                                                                                                                            bond_rows = compute_score(_etf_rows(etf_bonds), "etf")
+                                                                                                                                                            print(f"  📋 ETF obligataires: {len(bond_rows)} (liste blanche)")
 
-# ====== CRYPTO (CSV filtré volatilité) ======
-try:
-    cdf = pd.read_csv(crypto_csv_path)
-    # Cast des colonnes crypto
-    for c in ["ret_1d_pct", "ret_7d_pct", "ret_30d_pct", "ret_90d_pct", "ret_ytd_pct", "vol_30d_annual_pct", "drawdown_90d_pct", "atr14_pct"]:
-        if c in cdf.columns:
-            cdf[c] = pd.to_numeric(cdf[c], errors="coerce")
+                                                                                                                                                            # ====== CRYPTO (CSV filtré volatilité) ======
+                                                                                                                                                            try:
+                                                                                                                                                                cdf = pd.read_csv(crypto_csv_path)
+                                                                                                                                                                # Cast des colonnes crypto
+                                                                                                                                                                for c in ["ret_1d_pct", "ret_7d_pct", "ret_30d_pct", "ret_90d_pct", "ret_ytd_pct", "vol_30d_annual_pct", "drawdown_90d_pct", "atr14_pct"]:
+                                                                                                                                                                    if c in cdf.columns:
+                                                                                                                                                                        cdf[c] = pd.to_numeric(cdf[c], errors="coerce")
 
-cr_rows = []
-for _, r in cdf.iterrows():
-    cr_rows.append({
-    "name": str(r.get("symbol")),
-    "perf_24h": r.get("ret_1d_pct"),
-    "perf_7d": r.get("ret_7d_pct"),
-    "ytd": r.get("ret_ytd_pct"),
-    "vol30": r.get("vol_30d_annual_pct"),
-    "vol_3y": None,
-    "maxdd90": r.get("drawdown_90d_pct"),
-    "flags": {"overextended": False},
-    })
+                                                                                                                                                                        cr_rows = []
+                                                                                                                                                                        for _, r in cdf.iterrows():
+                                                                                                                                                                            cr_rows.append({
+                                                                                                                                                                            "name": str(r.get("symbol")),
+                                                                                                                                                                            "perf_24h": r.get("ret_1d_pct"),
+                                                                                                                                                                            "perf_7d": r.get("ret_7d_pct"),
+                                                                                                                                                                            "ytd": r.get("ret_ytd_pct"),
+                                                                                                                                                                            "vol30": r.get("vol_30d_annual_pct"),
+                                                                                                                                                                            "vol_3y": None,
+                                                                                                                                                                            "maxdd90": r.get("drawdown_90d_pct"),
+                                                                                                                                                                            "flags": {"overextended": False},
+                                                                                                                                                                            })
 
-cr_rows = compute_score(cr_rows, "crypto")
+                                                                                                                                                                            cr_rows = compute_score(cr_rows, "crypto")
 
-# Filtrage crypto : tendance + anti-spike + bornes vol
-crypto_filtered = []
-for r in cr_rows:
-    p7d = fnum(r["perf_7d"])
-    p24h = fnum(r["perf_24h"])
-    ok_trend = p7d > p24h > 0 and p24h <= 0.4 * p7d  # Anti-spike
+                                                                                                                                                                            # Filtrage crypto : tendance + anti-spike + bornes vol
+                                                                                                                                                                            crypto_filtered = []
+                                                                                                                                                                            for r in cr_rows:
+                                                                                                                                                                                p7d = fnum(r["perf_7d"])
+                                                                                                                                                                                p24h = fnum(r["perf_24h"])
+                                                                                                                                                                                ok_trend = p7d > p24h > 0 and p24h <= 0.4 * p7d  # Anti-spike
 
-v = fnum(r.get("vol30"))
-ok_vol = 40 <= v <= 140
-ok_dd = fnum(r.get("maxdd90")) > -40
+                                                                                                                                                                                v = fnum(r.get("vol30"))
+                                                                                                                                                                                ok_vol = 40 <= v <= 140
+                                                                                                                                                                                ok_dd = fnum(r.get("maxdd90")) > -40
 
-if ok_trend and ok_vol and ok_dd:
-    crypto_filtered.append(r)
+                                                                                                                                                                                if ok_trend and ok_vol and ok_dd:
+                                                                                                                                                                                    crypto_filtered.append(r)
 
-print(f"  ✅ Cryptos filtrées: {len(crypto_filtered)}/{len(cr_rows)} (tendance stable + vol 40-140% + DD>-40%)")
+                                                                                                                                                                                    print(f"  ✅ Cryptos filtrées: {len(crypto_filtered)}/{len(cr_rows)} (tendance stable + vol 40-140% + DD>-40%)")
 
-# Fallback: si trop peu de candidats, desserrer légèrement les critères
-if len(crypto_filtered) < 5:
-    crypto_relaxed = []
-    for r in cr_rows:
-        p7d  = fnum(r.get("perf_7d"))
-        p24h = fnum(r.get("perf_24h"))
-        v    = fnum(r.get("vol30"))
-        ddv  = abs(fnum(r.get("maxdd90")))
-        ok_trend2 = p7d > p24h > 0 and p24h <= 0.5 * p7d
-        ok_vol2   = 40 <= v <= 160
-        ok_dd2    = ddv <= 50
-        if ok_trend2 and ok_vol2 and ok_dd2:
-            crypto_relaxed.append(r)
+                                                                                                                                                                                    # Fallback: si trop peu de candidats, desserrer légèrement les critères
+                                                                                                                                                                                    if len(crypto_filtered) < 5:
+                                                                                                                                                                                        crypto_relaxed = []
+                                                                                                                                                                                        for r in cr_rows:
+                                                                                                                                                                                            p7d  = fnum(r.get("perf_7d"))
+                                                                                                                                                                                            p24h = fnum(r.get("perf_24h"))
+                                                                                                                                                                                            v    = fnum(r.get("vol30"))
+                                                                                                                                                                                            ddv  = abs(fnum(r.get("maxdd90")))
+                                                                                                                                                                                            ok_trend2 = p7d > p24h > 0 and p24h <= 0.5 * p7d
+                                                                                                                                                                                            ok_vol2   = 40 <= v <= 160
+                                                                                                                                                                                            ok_dd2    = ddv <= 50
+                                                                                                                                                                                            if ok_trend2 and ok_vol2 and ok_dd2:
+                                                                                                                                                                                                crypto_relaxed.append(r)
 
-# Concat sans doublon puis limite à 10
-seen = set(id(x) for x in crypto_filtered)
-for r in crypto_relaxed:
-    if id(r) not in seen:
-        crypto_filtered.append(r)
-        seen.add(id(r))
-        print(f"  🔁 Fallback crypto appliqué → {len(crypto_filtered)} candidats")
+                                                                                                                                                                                                # Concat sans doublon puis limite à 10
+                                                                                                                                                                                                seen = set(id(x) for x in crypto_filtered)
+                                                                                                                                                                                                for r in crypto_relaxed:
+                                                                                                                                                                                                    if id(r) not in seen:
+                                                                                                                                                                                                        crypto_filtered.append(r)
+                                                                                                                                                                                                        seen.add(id(r))
+                                                                                                                                                                                                        print(f"  🔁 Fallback crypto appliqué → {len(crypto_filtered)} candidats")
 
-    except Exception as e:
-        print(f"  ⚠️ Erreur crypto: {e}")
-        crypto_filtered = []
+                                                                                                                                                                                                    except Exception as e:
+                                                                                                                                                                                                        print(f"  ⚠️ Erreur crypto: {e}")
+                                                                                                                                                                                                        crypto_filtered = []
 
-# ====== CLASSIFICATION PAR RISQUE ET ÉQUILIBRAGE ======
-def risk_class(kind, r):
-    v = fnum(r.get("vol30") or r.get("vol_3y"))
-    if kind == "etf":
-        return "low" if 8 <= v <= 20 else ("mid" if 20 < v <= 40 else "out")
-        if kind == "equity":
-            return "low" if 12 <= v <= 25 else ("mid" if 25 < v <= 60 else "out")
-            return "low" if 40 <= v <= 70 else ("mid" if 70 < v <= 140 else "out")
+                                                                                                                                                                                                        # ====== CLASSIFICATION PAR RISQUE ET ÉQUILIBRAGE ======
+                                                                                                                                                                                                        def risk_class(kind, r):
+                                                                                                                                                                                                            v = fnum(r.get("vol30") or r.get("vol_3y"))
+                                                                                                                                                                                                            if kind == "etf":
+                                                                                                                                                                                                                return "low" if 8 <= v <= 20 else ("mid" if 20 < v <= 40 else "out")
+                                                                                                                                                                                                                if kind == "equity":
+                                                                                                                                                                                                                    return "low" if 12 <= v <= 25 else ("mid" if 25 < v <= 60 else "out")
+                                                                                                                                                                                                                    return "low" if 40 <= v <= 70 else ("mid" if 70 < v <= 140 else "out")
 
-for r in eq_filtered:    r["risk_class"] = risk_class("equity", r)
-for r in etf_filtered:   r["risk_class"] = risk_class("etf", r)
-for r in crypto_filtered: r["risk_class"] = risk_class("crypto", r)
-for r in bond_rows:      r["risk_class"] = "bond"
+                                                                                                                                                                                                                    for r in eq_filtered:    r["risk_class"] = risk_class("equity", r)
+                                                                                                                                                                                                                    for r in etf_filtered:   r["risk_class"] = risk_class("etf", r)
+                                                                                                                                                                                                                    for r in crypto_filtered: r["risk_class"] = risk_class("crypto", r)
+                                                                                                                                                                                                                    for r in bond_rows:      r["risk_class"] = "bond"
 
-def top_balanced(rows, n):
-    """Équilibrage low/mid risque pour éviter la surconcentration"""
-    rows = sorted(rows, key=lambda x: x["score"], reverse=True)
-    low = [x for x in rows if x["risk_class"] == "low"][:n//2]
-    mid = [x for x in rows if x["risk_class"] == "mid"][:n-len(low)]
-    return low + mid
+                                                                                                                                                                                                                    def top_balanced(rows, n):
+                                                                                                                                                                                                                        """Équilibrage low/mid risque pour éviter la surconcentration"""
+                                                                                                                                                                                                                        rows = sorted(rows, key=lambda x: x["score"], reverse=True)
+                                                                                                                                                                                                                        low = [x for x in rows if x["risk_class"] == "low"][:n//2]
+                                                                                                                                                                                                                        mid = [x for x in rows if x["risk_class"] == "mid"][:n-len(low)]
+                                                                                                                                                                                                                        return low + mid
 
-# Diversification sectorielle pour les actions
-def sector_balanced(eq_rows, n, sector_cap=0.30):
-    """Round-robin par secteur avec cap (30% par défaut)"""
-    if not eq_rows:
-        return []
+                                                                                                                                                                                                                        # Diversification sectorielle pour les actions
+                                                                                                                                                                                                                        def sector_balanced(eq_rows, n, sector_cap=0.30):
+                                                                                                                                                                                                                            """Round-robin par secteur avec cap (30% par défaut)"""
+                                                                                                                                                                                                                            if not eq_rows:
+                                                                                                                                                                                                                                return []
 
-# Tri par score décroissant et bucket par secteur
-buckets = defaultdict(list)
-for x in sorted(eq_rows, key=lambda x: x["score"], reverse=True):
-    buckets[x.get("sector", "Unknown")].append(x)
+                                                                                                                                                                                                                                # Tri par score décroissant et bucket par secteur
+                                                                                                                                                                                                                                buckets = defaultdict(list)
+                                                                                                                                                                                                                                for x in sorted(eq_rows, key=lambda x: x["score"], reverse=True):
+                                                                                                                                                                                                                                    buckets[x.get("sector", "Unknown")].append(x)
 
-# Ordre des secteurs: meilleur top-score en premier
-sector_order = sorted(
-buckets.keys(),
-key=lambda s: buckets[s][0]["score"] if buckets[s] else -1e9,
-reverse=True
-)
+                                                                                                                                                                                                                                    # Ordre des secteurs: meilleur top-score en premier
+                                                                                                                                                                                                                                    sector_order = sorted(
+                                                                                                                                                                                                                                    buckets.keys(),
+                                                                                                                                                                                                                                    key=lambda s: buckets[s][0]["score"] if buckets[s] else -1e9,
+                                                                                                                                                                                                                                    reverse=True
+                                                                                                                                                                                                                                    )
 
-out, picked_per_sector = [], defaultdict(int)
-max_per_sector = max(1, int(n * sector_cap))
+                                                                                                                                                                                                                                    out, picked_per_sector = [], defaultdict(int)
+                                                                                                                                                                                                                                    max_per_sector = max(1, int(n * sector_cap))
 
-# Round-robin
-while len(out) < n:
-    progressed = False
-    for s in sector_order:
-        if picked_per_sector[s] >= max_per_sector:
-            continue
-            if buckets[s]:
-                out.append(buckets[s].pop(0))
-                picked_per_sector[s] += 1
-                progressed = True
-                if len(out) >= n:
-                    break
-                    if not progressed:
-                        # plus rien à prendre
-                        break
+                                                                                                                                                                                                                                    # Round-robin
+                                                                                                                                                                                                                                    while len(out) < n:
+                                                                                                                                                                                                                                        progressed = False
+                                                                                                                                                                                                                                        for s in sector_order:
+                                                                                                                                                                                                                                            if picked_per_sector[s] >= max_per_sector:
+                                                                                                                                                                                                                                                continue
+                                                                                                                                                                                                                                                if buckets[s]:
+                                                                                                                                                                                                                                                    out.append(buckets[s].pop(0))
+                                                                                                                                                                                                                                                    picked_per_sector[s] += 1
+                                                                                                                                                                                                                                                    progressed = True
+                                                                                                                                                                                                                                                    if len(out) >= n:
+                                                                                                                                                                                                                                                        break
+                                                                                                                                                                                                                                                        if not progressed:
+                                                                                                                                                                                                                                                            # plus rien à prendre
+                                                                                                                                                                                                                                                            break
 
-                        return out[:n]
+                                                                                                                                                                                                                                                            return out[:n]
 
-# Limiter le nombre d'actifs pour réduire la taille du prompt
-universe = {
-"equities": sector_balanced(eq_filtered, min(25, len(eq_filtered))),  # Réduit de 30 à 25
-"etfs": top_balanced(etf_filtered, min(15, len(etf_filtered))),       # Réduit de 20 à 15
-"bonds": sorted(bond_rows, key=lambda x: x["score"], reverse=True)[:10],  # Réduit de 20 à 10
-"crypto": sorted(crypto_filtered, key=lambda x: x["score"], reverse=True)[:5],  # Réduit de 10 à 5
-}
+                                                                                                                                                                                                                                                            # Limiter le nombre d'actifs pour réduire la taille du prompt
+                                                                                                                                                                                                                                                            universe = {
+                                                                                                                                                                                                                                                            "equities": sector_balanced(eq_filtered, min(25, len(eq_filtered))),  # Réduit de 30 à 25
+                                                                                                                                                                                                                                                            "etfs": top_balanced(etf_filtered, min(15, len(etf_filtered))),       # Réduit de 20 à 15
+                                                                                                                                                                                                                                                            "bonds": sorted(bond_rows, key=lambda x: x["score"], reverse=True)[:10],  # Réduit de 20 à 10
+                                                                                                                                                                                                                                                            "crypto": sorted(crypto_filtered, key=lambda x: x["score"], reverse=True)[:5],  # Réduit de 10 à 5
+                                                                                                                                                                                                                                                            }
 
-# Stats de l'univers
-stats = {
-"equities_avg_score": np.mean([e["score"] for e in universe["equities"]]) if universe["equities"] else 0,
-"etfs_avg_score": np.mean([e["score"] for e in universe["etfs"]]) if universe["etfs"] else 0,
-"crypto_avg_score": np.mean([c["score"] for c in universe["crypto"]]) if universe["crypto"] else 0,
-"total_assets": sum(len(v) for v in universe.values())
-}
+                                                                                                                                                                                                                                                            # Stats de l'univers
+                                                                                                                                                                                                                                                            stats = {
+                                                                                                                                                                                                                                                            "equities_avg_score": np.mean([e["score"] for e in universe["equities"]]) if universe["equities"] else 0,
+                                                                                                                                                                                                                                                            "etfs_avg_score": np.mean([e["score"] for e in universe["etfs"]]) if universe["etfs"] else 0,
+                                                                                                                                                                                                                                                            "crypto_avg_score": np.mean([c["score"] for c in universe["crypto"]]) if universe["crypto"] else 0,
+                                                                                                                                                                                                                                                            "total_assets": sum(len(v) for v in universe.values())
+                                                                                                                                                                                                                                                            }
 
-print(f"  📊 Univers final: {stats['total_assets']} actifs (optimisé pour prompt)")
-print(f"     • Actions: {len(universe['equities'])} (score moy: {stats['equities_avg_score']:.2f})")
-print(f"     • ETF: {len(universe['etfs'])} (score moy: {stats['etfs_avg_score']:.2f})")
-print(f"     • Obligations: {len(universe['bonds'])}")
-print(f"     • Crypto: {len(universe['crypto'])} (score moy: {stats['crypto_avg_score']:.2f})")
+                                                                                                                                                                                                                                                            print(f"  📊 Univers final: {stats['total_assets']} actifs (optimisé pour prompt)")
+                                                                                                                                                                                                                                                            print(f"     • Actions: {len(universe['equities'])} (score moy: {stats['equities_avg_score']:.2f})")
+                                                                                                                                                                                                                                                            print(f"     • ETF: {len(universe['etfs'])} (score moy: {stats['etfs_avg_score']:.2f})")
+                                                                                                                                                                                                                                                            print(f"     • Obligations: {len(universe['bonds'])}")
+                                                                                                                                                                                                                                                            print(f"     • Crypto: {len(universe['crypto'])} (score moy: {stats['crypto_avg_score']:.2f})")
 
-return universe
+                                                                                                                                                                                                                                                            return universe
 
-# ============= NOUVELLES FONCTIONS ROBUSTES VERSION 3 =============
+                                                                                                                                                                                                                                                            # ============= NOUVELLES FONCTIONS ROBUSTES VERSION 3 =============
 
-def prepare_structured_data(filtered_data: Dict) -> Dict:
-    """
+                                                                                                                                                                                                                                                            def prepare_structured_data(filtered_data: Dict) -> Dict:
+                                                                                                                                                                                                                                                                """
     Transforme les données filtrées en format structuré avec IDs courts
     pour réduire les tokens et améliorer la précision
-    """
+                                                                                                                                                                                                                                                                """
 
-# 1. Brief en points numérotés
-brief_points = []
-if filtered_data.get('brief'):
-    brief_text = filtered_data['brief']
-    # Extraire les points clés du brief et les structurer
-    brief_lines = brief_text.split('\n')
-    point_id = 1
-    for line in brief_lines:
-        line = line.strip()
-        if line and len(line) > 20:  # Éviter les lignes trop courtes
-        brief_points.append({
-        "id": f"BR{point_id}",
-        "text": line[:150] + "..." if len(line) > 150 else line
-        })
-        point_id += 1
-        if point_id > 10:  # Limiter à 10 points max
-        break
+                                                                                                                                                                                                                                                                # 1. Brief en points numérotés
+                                                                                                                                                                                                                                                                brief_points = []
+                                                                                                                                                                                                                                                                if filtered_data.get('brief'):
+                                                                                                                                                                                                                                                                    brief_text = filtered_data['brief']
+                                                                                                                                                                                                                                                                    # Extraire les points clés du brief et les structurer
+                                                                                                                                                                                                                                                                    brief_lines = brief_text.split('\n')
+                                                                                                                                                                                                                                                                    point_id = 1
+                                                                                                                                                                                                                                                                    for line in brief_lines:
+                                                                                                                                                                                                                                                                        line = line.strip()
+                                                                                                                                                                                                                                                                        if line and len(line) > 20:  # Éviter les lignes trop courtes
+                                                                                                                                                                                                                                                                        brief_points.append({
+                                                                                                                                                                                                                                                                        "id": f"BR{point_id}",
+                                                                                                                                                                                                                                                                        "text": line[:150] + "..." if len(line) > 150 else line
+                                                                                                                                                                                                                                                                        })
+                                                                                                                                                                                                                                                                        point_id += 1
+                                                                                                                                                                                                                                                                        if point_id > 10:  # Limiter à 10 points max
+                                                                                                                                                                                                                                                                        break
 
-# 2. Points marchés (extraits depuis filtered_markets)
-market_points = []
-if filtered_data.get('markets'):
-    markets_text = filtered_data['markets']
-    market_lines = [line.strip() for line in markets_text.split('\n') if line.strip() and '•' in line]
-    for i, line in enumerate(market_lines[:8]):  # Max 8 points
-    market_points.append({
-    "id": f"MC{i+1}",
-    "text": line.replace('•', '').strip()[:120]
-    })
+                                                                                                                                                                                                                                                                        # 2. Points marchés (extraits depuis filtered_markets)
+                                                                                                                                                                                                                                                                        market_points = []
+                                                                                                                                                                                                                                                                        if filtered_data.get('markets'):
+                                                                                                                                                                                                                                                                            markets_text = filtered_data['markets']
+                                                                                                                                                                                                                                                                            market_lines = [line.strip() for line in markets_text.split('\n') if line.strip() and '•' in line]
+                                                                                                                                                                                                                                                                            for i, line in enumerate(market_lines[:8]):  # Max 8 points
+                                                                                                                                                                                                                                                                            market_points.append({
+                                                                                                                                                                                                                                                                            "id": f"MC{i+1}",
+                                                                                                                                                                                                                                                                            "text": line.replace('•', '').strip()[:120]
+                                                                                                                                                                                                                                                                            })
 
-# 3. Points sectoriels (extraits depuis filtered_sectors)
-sector_points = []
-if filtered_data.get('sectors'):
-    sectors_text = filtered_data['sectors']
-    sector_lines = [line.strip() for line in sectors_text.split('\n') if line.strip() and '•' in line]
-    for i, line in enumerate(sector_lines[:8]):  # Max 8 points
-    sector_points.append({
-    "id": f"SEC{i+1}",
-    "text": line.replace('•', '').strip()[:120]
-    })
+                                                                                                                                                                                                                                                                            # 3. Points sectoriels (extraits depuis filtered_sectors)
+                                                                                                                                                                                                                                                                            sector_points = []
+                                                                                                                                                                                                                                                                            if filtered_data.get('sectors'):
+                                                                                                                                                                                                                                                                                sectors_text = filtered_data['sectors']
+                                                                                                                                                                                                                                                                                sector_lines = [line.strip() for line in sectors_text.split('\n') if line.strip() and '•' in line]
+                                                                                                                                                                                                                                                                                for i, line in enumerate(sector_lines[:8]):  # Max 8 points
+                                                                                                                                                                                                                                                                                sector_points.append({
+                                                                                                                                                                                                                                                                                "id": f"SEC{i+1}",
+                                                                                                                                                                                                                                                                                "text": line.replace('•', '').strip()[:120]
+                                                                                                                                                                                                                                                                                })
 
-# 4. Thèmes (extraits depuis filtered_themes)
-theme_points = []
-if filtered_data.get('themes'):
-    themes_text = filtered_data['themes']
-    theme_lines = [line.strip() for line in themes_text.split('\n') if line.strip() and '•' in line]
-    for i, line in enumerate(theme_lines[:6]):  # Max 6 points
-    theme_points.append({
-    "id": f"TH{i+1}",
-    "text": line.replace('•', '').strip()[:120]
-    })
+                                                                                                                                                                                                                                                                                # 4. Thèmes (extraits depuis filtered_themes)
+                                                                                                                                                                                                                                                                                theme_points = []
+                                                                                                                                                                                                                                                                                if filtered_data.get('themes'):
+                                                                                                                                                                                                                                                                                    themes_text = filtered_data['themes']
+                                                                                                                                                                                                                                                                                    theme_lines = [line.strip() for line in themes_text.split('\n') if line.strip() and '•' in line]
+                                                                                                                                                                                                                                                                                    for i, line in enumerate(theme_lines[:6]):  # Max 6 points
+                                                                                                                                                                                                                                                                                    theme_points.append({
+                                                                                                                                                                                                                                                                                    "id": f"TH{i+1}",
+                                                                                                                                                                                                                                                                                    "text": line.replace('•', '').strip()[:120]
+                                                                                                                                                                                                                                                                                    })
 
-    return {
-    "brief_points": brief_points,
-    "market_points": market_points,
-    "sector_points": sector_points,
-    "theme_points": theme_points
-    }
+                                                                                                                                                                                                                                                                                    return {
+                                                                                                                                                                                                                                                                                    "brief_points": brief_points,
+                                                                                                                                                                                                                                                                                    "market_points": market_points,
+                                                                                                                                                                                                                                                                                    "sector_points": sector_points,
+                                                                                                                                                                                                                                                                                    "theme_points": theme_points
+                                                                                                                                                                                                                                                                                    }
 
-def extract_allowed_assets(filtered_data: Dict) -> Dict:
-    """
+                                                                                                                                                                                                                                                                                    def extract_allowed_assets(filtered_data: Dict) -> Dict:
+                                                                                                                                                                                                                                                                                        """
     Extrait les actifs autorisés depuis les données filtrées.
     NOUVEAU: déduplication des ETF standards par ancres (gold, sp500, nasdaq, world,
     treasury, eurozone, emerging, silver, oil, energy) via dedupe_by_anchors,
     afin de n'autoriser qu'UN seul ETF par thème fortement corrélé.
-    """
+                                                                                                                                                                                                                                                                                        """
 
-# ====== Cas v3 : univers quantitatif présent ======
-u = filtered_data.get("universe")
-if u:
-def mk(items, prefix):
-    out = []
-    for i, it in enumerate(items, start=1):
-        out.append({
-        "id": f"{prefix}{i}",
-        "name": it.get("name"),
-        "symbol": (it.get("name") or "").split()[0][:6].upper(),
-        "score": round(float(it.get("score", 0)), 3),
-        "risk_class": it.get("risk_class", "mid"),
-        "flags": it.get("flags", {}),
-        "sector": it.get("sector", "Unknown"),
-        "country": it.get("country", "Global"),
-        # métriques utiles pour les contrôles
-        "ytd": fnum(it.get("ytd")),
-        "perf_1m": fnum(it.get("perf_1m")),
-        })
-        return out
+                                                                                                                                                                                                                                                                                        # ====== Cas v3 : univers quantitatif présent ======
+                                                                                                                                                                                                                                                                                        u = filtered_data.get("universe")
+                                                                                                                                                                                                                                                                                        if u:
+                                                                                                                                                                                                                                                                                            def mk(items, prefix):
+                                                                                                                                                                                                                                                                                                out = []
+                                                                                                                                                                                                                                                                                                for i, it in enumerate(items, start=1):
+                                                                                                                                                                                                                                                                                                    out.append({
+                                                                                                                                                                                                                                                                                                    "id": f"{prefix}{i}",
+                                                                                                                                                                                                                                                                                                    "name": it.get("name"),
+                                                                                                                                                                                                                                                                                                    "symbol": (it.get("name") or "").split()[0][:6].upper(),
+                                                                                                                                                                                                                                                                                                    "score": round(float(it.get("score", 0)), 3),
+                                                                                                                                                                                                                                                                                                    "risk_class": it.get("risk_class", "mid"),
+                                                                                                                                                                                                                                                                                                    "flags": it.get("flags", {}),
+                                                                                                                                                                                                                                                                                                    "sector": it.get("sector", "Unknown"),
+                                                                                                                                                                                                                                                                                                    "country": it.get("country", "Global"),
+                                                                                                                                                                                                                                                                                                    # métriques utiles pour les contrôles
+                                                                                                                                                                                                                                                                                                    "ytd": fnum(it.get("ytd")),
+                                                                                                                                                                                                                                                                                                    "perf_1m": fnum(it.get("perf_1m")),
+                                                                                                                                                                                                                                                                                                    })
+                                                                                                                                                                                                                                                                                                    return out
 
-# Déduplique les ETF standards par ancres AVANT mappage ID
-etfs_raw = u.get("etfs", []) or []
-etfs_dedup = dedupe_by_anchors(etfs_raw)  # <= clé: max 1 "gold", "sp500", etc.
+                                                                                                                                                                                                                                                                                                    # Déduplique les ETF standards par ancres AVANT mappage ID
+                                                                                                                                                                                                                                                                                                    etfs_raw = u.get("etfs", []) or []
+                                                                                                                                                                                                                                                                                                    etfs_dedup = dedupe_by_anchors(etfs_raw)  # <= clé: max 1 "gold", "sp500", etc.
 
-return {
-"allowed_equities": mk(u.get("equities", []) or [], "EQ_"),
-"allowed_etfs_standard": mk(etfs_dedup, "ETF_s"),
-"allowed_bond_etfs": mk(u.get("bonds", []) or [], "ETF_b"),  # pas de dédup spécifique demandée côté bonds
-"allowed_crypto": [{
-"id": f"CR_{i+1}",
-"name": it.get("name"),
-"symbol": (it.get("name") or "")[:6].upper(),
-"sevenDaysPositif": True,
-"score": round(float(it.get("score", 0)), 3),
-"risk_class": it.get("risk_class", "mid"),
-"ytd": fnum(it.get("ytd")),
-"perf_1m": fnum(it.get("perf_1m")),
-} for i, it in enumerate(u.get("crypto", []) or [])],
-# 👇 NOUVEAU : tampon de liquidité optionnel (0–10% dans le prompt)
-"allowed_cash": [
-{"id": "CASH", "name": "Cash (placeholder)", "score": 0.0, "risk_class": "bond"}
-],
-}
+                                                                                                                                                                                                                                                                                                    return {
+                                                                                                                                                                                                                                                                                                    "allowed_equities": mk(u.get("equities", []) or [], "EQ_"),
+                                                                                                                                                                                                                                                                                                    "allowed_etfs_standard": mk(etfs_dedup, "ETF_s"),
+                                                                                                                                                                                                                                                                                                    "allowed_bond_etfs": mk(u.get("bonds", []) or [], "ETF_b"),  # pas de dédup spécifique demandée côté bonds
+                                                                                                                                                                                                                                                                                                    "allowed_crypto": [{
+                                                                                                                                                                                                                                                                                                    "id": f"CR_{i+1}",
+                                                                                                                                                                                                                                                                                                    "name": it.get("name"),
+                                                                                                                                                                                                                                                                                                    "symbol": (it.get("name") or "")[:6].upper(),
+                                                                                                                                                                                                                                                                                                    "sevenDaysPositif": True,
+                                                                                                                                                                                                                                                                                                    "score": round(float(it.get("score", 0)), 3),
+                                                                                                                                                                                                                                                                                                    "risk_class": it.get("risk_class", "mid"),
+                                                                                                                                                                                                                                                                                                    "ytd": fnum(it.get("ytd")),
+                                                                                                                                                                                                                                                                                                    "perf_1m": fnum(it.get("perf_1m")),
+                                                                                                                                                                                                                                                                                                    } for i, it in enumerate(u.get("crypto", []) or [])],
+                                                                                                                                                                                                                                                                                                    # 👇 NOUVEAU : tampon de liquidité optionnel (0–10% dans le prompt)
+                                                                                                                                                                                                                                                                                                    "allowed_cash": [
+                                                                                                                                                                                                                                                                                                    {"id": "CASH", "name": "Cash (placeholder)", "score": 0.0, "risk_class": "bond"}
+                                                                                                                                                                                                                                                                                                    ],
+                                                                                                                                                                                                                                                                                                    }
 
-# ====== Fallback legacy : parsing texte ======
-print("⚠️ Pas d'univers quantitatif, utilisation du fallback parsing texte")
-# Actions autorisées
-allowed_equities = []
-if filtered_data.get('lists'):
-    lists_text = filtered_data['lists']
-    equity_id = 1
-    for line in lists_text.split('\n'):
-        if '•' in line and 'YTD' in line:
-            parts = line.split(':')
-            if len(parts) >= 2:
-                name = parts[0].replace('•', '').strip()
-                name = re.sub(r'[🚩📉]', '', name).strip()
-                if '(' in name and 'potentielle' in name:
-                    name = name.split('(')[0].strip()
-                    region = "US" if any(x in name for x in ["Inc", "Corp", "LLC"]) else "Europe"
-                    sector = "Technology"
-                    allowed_equities.append({
-                    "id": f"EQ_{equity_id}",
-                    "name": name,
-                    "symbol": name.split()[0] if len(name.split()) > 0 else name[:4].upper(),
-                    "region": region,
-                    "sector": sector,
-                    "score": 0.0,
-                    "risk_class": "mid",
-                    "flags": {"overextended": False},
-                    "ytd": 0.0,
-                    "perf_1m": 0.0
-                    })
-                    equity_id += 1
-                    if equity_id > 30:
-                        break
+                                                                                                                                                                                                                                                                                                    # ====== Fallback legacy : parsing texte ======
+                                                                                                                                                                                                                                                                                                    print("⚠️ Pas d'univers quantitatif, utilisation du fallback parsing texte")
+                                                                                                                                                                                                                                                                                                    # Actions autorisées
+                                                                                                                                                                                                                                                                                                    allowed_equities = []
+                                                                                                                                                                                                                                                                                                    if filtered_data.get('lists'):
+                                                                                                                                                                                                                                                                                                        lists_text = filtered_data['lists']
+                                                                                                                                                                                                                                                                                                        equity_id = 1
+                                                                                                                                                                                                                                                                                                        for line in lists_text.split('\n'):
+                                                                                                                                                                                                                                                                                                            if '•' in line and 'YTD' in line:
+                                                                                                                                                                                                                                                                                                                parts = line.split(':')
+                                                                                                                                                                                                                                                                                                                if len(parts) >= 2:
+                                                                                                                                                                                                                                                                                                                    name = parts[0].replace('•', '').strip()
+                                                                                                                                                                                                                                                                                                                    name = re.sub(r'[🚩📉]', '', name).strip()
+                                                                                                                                                                                                                                                                                                                    if '(' in name and 'potentielle' in name:
+                                                                                                                                                                                                                                                                                                                        name = name.split('(')[0].strip()
+                                                                                                                                                                                                                                                                                                                        region = "US" if any(x in name for x in ["Inc", "Corp", "LLC"]) else "Europe"
+                                                                                                                                                                                                                                                                                                                        sector = "Technology"
+                                                                                                                                                                                                                                                                                                                        allowed_equities.append({
+                                                                                                                                                                                                                                                                                                                        "id": f"EQ_{equity_id}",
+                                                                                                                                                                                                                                                                                                                        "name": name,
+                                                                                                                                                                                                                                                                                                                        "symbol": name.split()[0] if len(name.split()) > 0 else name[:4].upper(),
+                                                                                                                                                                                                                                                                                                                        "region": region,
+                                                                                                                                                                                                                                                                                                                        "sector": sector,
+                                                                                                                                                                                                                                                                                                                        "score": 0.0,
+                                                                                                                                                                                                                                                                                                                        "risk_class": "mid",
+                                                                                                                                                                                                                                                                                                                        "flags": {"overextended": False},
+                                                                                                                                                                                                                                                                                                                        "ytd": 0.0,
+                                                                                                                                                                                                                                                                                                                        "perf_1m": 0.0
+                                                                                                                                                                                                                                                                                                                        })
+                                                                                                                                                                                                                                                                                                                        equity_id += 1
+                                                                                                                                                                                                                                                                                                                        if equity_id > 30:
+                                                                                                                                                                                                                                                                                                                            break
 
-# ETF standards autorisés (legacy) —> dédupliqués par ancres
-raw_etfs_standard = []
-if filtered_data.get('etfs'):
-    etfs_text = filtered_data['etfs']
-    for line in etfs_text.split('\n'):
-        if '•' in line and 'ETF' in line and 'OBLIGATAIRE' not in line.upper():
-            etf_name = line.split('•')[1].split(':')[0].strip() if '•' in line else ""
-            if etf_name and len(etf_name) > 5:
-                raw_etfs_standard.append({
-                "name": etf_name,
-                "score": 0.0,  # inconnu en legacy → neutre
-                "risk_class": "mid",
-                "flags": {"overextended": False},
-                "ytd": 0.0,
-                "perf_1m": 0.0
-                })
+                                                                                                                                                                                                                                                                                                                            # ETF standards autorisés (legacy) —> dédupliqués par ancres
+                                                                                                                                                                                                                                                                                                                            raw_etfs_standard = []
+                                                                                                                                                                                                                                                                                                                            if filtered_data.get('etfs'):
+                                                                                                                                                                                                                                                                                                                                etfs_text = filtered_data['etfs']
+                                                                                                                                                                                                                                                                                                                                for line in etfs_text.split('\n'):
+                                                                                                                                                                                                                                                                                                                                    if '•' in line and 'ETF' in line and 'OBLIGATAIRE' not in line.upper():
+                                                                                                                                                                                                                                                                                                                                        etf_name = line.split('•')[1].split(':')[0].strip() if '•' in line else ""
+                                                                                                                                                                                                                                                                                                                                        if etf_name and len(etf_name) > 5:
+                                                                                                                                                                                                                                                                                                                                            raw_etfs_standard.append({
+                                                                                                                                                                                                                                                                                                                                            "name": etf_name,
+                                                                                                                                                                                                                                                                                                                                            "score": 0.0,  # inconnu en legacy → neutre
+                                                                                                                                                                                                                                                                                                                                            "risk_class": "mid",
+                                                                                                                                                                                                                                                                                                                                            "flags": {"overextended": False},
+                                                                                                                                                                                                                                                                                                                                            "ytd": 0.0,
+                                                                                                                                                                                                                                                                                                                                            "perf_1m": 0.0
+                                                                                                                                                                                                                                                                                                                                            })
 
-# Déduplication par ancres (gold/sp500/nasdaq/world/treasury/…)
-etfs_dedup_legacy = dedupe_by_anchors(raw_etfs_standard)
+                                                                                                                                                                                                                                                                                                                                            # Déduplication par ancres (gold/sp500/nasdaq/world/treasury/…)
+                                                                                                                                                                                                                                                                                                                                            etfs_dedup_legacy = dedupe_by_anchors(raw_etfs_standard)
 
-# Réindexation propre des IDs après dédup
-allowed_etfs_standard = []
-for j, it in enumerate(etfs_dedup_legacy[:20], start=1):
-    allowed_etfs_standard.append({
-    "id": f"ETF_s{j}",
-    "name": it["name"],
-    "symbol": it["name"].split()[0][:4].upper() if it["name"].split() else "ETF",
-    "score": float(it.get("score", 0.0)),
-    "risk_class": it.get("risk_class", "mid"),
-    "flags": it.get("flags", {"overextended": False}),
-    "ytd": fnum(it.get("ytd")),
-    "perf_1m": fnum(it.get("perf_1m")),
-    })
+                                                                                                                                                                                                                                                                                                                                            # Réindexation propre des IDs après dédup
+                                                                                                                                                                                                                                                                                                                                            allowed_etfs_standard = []
+                                                                                                                                                                                                                                                                                                                                            for j, it in enumerate(etfs_dedup_legacy[:20], start=1):
+                                                                                                                                                                                                                                                                                                                                                allowed_etfs_standard.append({
+                                                                                                                                                                                                                                                                                                                                                "id": f"ETF_s{j}",
+                                                                                                                                                                                                                                                                                                                                                "name": it["name"],
+                                                                                                                                                                                                                                                                                                                                                "symbol": it["name"].split()[0][:4].upper() if it["name"].split() else "ETF",
+                                                                                                                                                                                                                                                                                                                                                "score": float(it.get("score", 0.0)),
+                                                                                                                                                                                                                                                                                                                                                "risk_class": it.get("risk_class", "mid"),
+                                                                                                                                                                                                                                                                                                                                                "flags": it.get("flags", {"overextended": False}),
+                                                                                                                                                                                                                                                                                                                                                "ytd": fnum(it.get("ytd")),
+                                                                                                                                                                                                                                                                                                                                                "perf_1m": fnum(it.get("perf_1m")),
+                                                                                                                                                                                                                                                                                                                                                })
 
-# ETF obligataires autorisés (legacy)
-allowed_bond_etfs = []
-if filtered_data.get('bond_etf_names'):
-    for i, name in enumerate(filtered_data['bond_etf_names'][:15]):
-        allowed_bond_etfs.append({
-        "id": f"ETF_b{i+1}",
-        "name": name,
-        "symbol": name.split()[0][:4].upper() if name.split() else "BOND",
-        "score": 0.0,
-        "risk_class": "bond",
-        "flags": {"overextended": False},
-        "ytd": 0.0,
-        "perf_1m": 0.0
-        })
+                                                                                                                                                                                                                                                                                                                                                # ETF obligataires autorisés (legacy)
+                                                                                                                                                                                                                                                                                                                                                allowed_bond_etfs = []
+                                                                                                                                                                                                                                                                                                                                                if filtered_data.get('bond_etf_names'):
+                                                                                                                                                                                                                                                                                                                                                    for i, name in enumerate(filtered_data['bond_etf_names'][:15]):
+                                                                                                                                                                                                                                                                                                                                                        allowed_bond_etfs.append({
+                                                                                                                                                                                                                                                                                                                                                        "id": f"ETF_b{i+1}",
+                                                                                                                                                                                                                                                                                                                                                        "name": name,
+                                                                                                                                                                                                                                                                                                                                                        "symbol": name.split()[0][:4].upper() if name.split() else "BOND",
+                                                                                                                                                                                                                                                                                                                                                        "score": 0.0,
+                                                                                                                                                                                                                                                                                                                                                        "risk_class": "bond",
+                                                                                                                                                                                                                                                                                                                                                        "flags": {"overextended": False},
+                                                                                                                                                                                                                                                                                                                                                        "ytd": 0.0,
+                                                                                                                                                                                                                                                                                                                                                        "perf_1m": 0.0
+                                                                                                                                                                                                                                                                                                                                                        })
 
-# Cryptos autorisées (legacy)
-allowed_crypto = []
-if filtered_data.get('crypto'):
-    crypto_text = filtered_data['crypto']
-    crypto_id = 1
-    for line in crypto_text.split('\n'):
-        if '•' in line and '7j:' in line:
-            parts = line.split('(')[0].replace('•', '').strip()
-            name = parts.split(':')[0].strip() if ':' in parts else parts
-            seven_days_positive = '7j: +' in line or ('7j:' in line and '+' in line.split('7j:')[1][:10])
-            allowed_crypto.append({
-            "id": f"CR_{crypto_id}",
-            "name": name,
-            "symbol": name.upper()[:3],
-            "sevenDaysPositif": seven_days_positive,
-            "score": 0.0,
-            "risk_class": "mid",
-            "ytd": 0.0,
-            "perf_1m": 0.0
-            })
-            crypto_id += 1
-            if crypto_id > 10:
-                break
+                                                                                                                                                                                                                                                                                                                                                        # Cryptos autorisées (legacy)
+                                                                                                                                                                                                                                                                                                                                                        allowed_crypto = []
+                                                                                                                                                                                                                                                                                                                                                        if filtered_data.get('crypto'):
+                                                                                                                                                                                                                                                                                                                                                            crypto_text = filtered_data['crypto']
+                                                                                                                                                                                                                                                                                                                                                            crypto_id = 1
+                                                                                                                                                                                                                                                                                                                                                            for line in crypto_text.split('\n'):
+                                                                                                                                                                                                                                                                                                                                                                if '•' in line and '7j:' in line:
+                                                                                                                                                                                                                                                                                                                                                                    parts = line.split('(')[0].replace('•', '').strip()
+                                                                                                                                                                                                                                                                                                                                                                    name = parts.split(':')[0].strip() if ':' in parts else parts
+                                                                                                                                                                                                                                                                                                                                                                    seven_days_positive = '7j: +' in line or ('7j:' in line and '+' in line.split('7j:')[1][:10])
+                                                                                                                                                                                                                                                                                                                                                                    allowed_crypto.append({
+                                                                                                                                                                                                                                                                                                                                                                    "id": f"CR_{crypto_id}",
+                                                                                                                                                                                                                                                                                                                                                                    "name": name,
+                                                                                                                                                                                                                                                                                                                                                                    "symbol": name.upper()[:3],
+                                                                                                                                                                                                                                                                                                                                                                    "sevenDaysPositif": seven_days_positive,
+                                                                                                                                                                                                                                                                                                                                                                    "score": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                    "risk_class": "mid",
+                                                                                                                                                                                                                                                                                                                                                                    "ytd": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                    "perf_1m": 0.0
+                                                                                                                                                                                                                                                                                                                                                                    })
+                                                                                                                                                                                                                                                                                                                                                                    crypto_id += 1
+                                                                                                                                                                                                                                                                                                                                                                    if crypto_id > 10:
+                                                                                                                                                                                                                                                                                                                                                                        break
 
-                return {
-                "allowed_equities": allowed_equities,
-                "allowed_etfs_standard": allowed_etfs_standard,
-                "allowed_bond_etfs": allowed_bond_etfs,
-                "allowed_crypto": allowed_crypto,
-                "allowed_cash": [  # 👈 ajouté aussi en fallback pour homogénéité
-                {"id": "CASH", "name": "Cash (placeholder)", "score": 0.0, "risk_class": "bond"}
-                ],
-                }
-def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
-    """Version legacy pour compatibilité"""
-    # Actions autorisées (extraire depuis filtered_lists)
-    allowed_equities = []
-    if filtered_data.get('lists'):
-        lists_text = filtered_data['lists']
-        equity_id = 1
-        for line in lists_text.split('\n'):
-            if '•' in line and 'YTD' in line:
-                parts = line.split(':')
-                if len(parts) >= 2:
-                    name = parts[0].replace('•', '').strip()
-                    name = re.sub(r'[🚩📉]', '', name).strip()
-                    if '(' in name and 'potentielle' in name:
-                        name = name.split('(')[0].strip()
+                                                                                                                                                                                                                                                                                                                                                                        return {
+                                                                                                                                                                                                                                                                                                                                                                        "allowed_equities": allowed_equities,
+                                                                                                                                                                                                                                                                                                                                                                        "allowed_etfs_standard": allowed_etfs_standard,
+                                                                                                                                                                                                                                                                                                                                                                        "allowed_bond_etfs": allowed_bond_etfs,
+                                                                                                                                                                                                                                                                                                                                                                        "allowed_crypto": allowed_crypto,
+                                                                                                                                                                                                                                                                                                                                                                        "allowed_cash": [  # 👈 ajouté aussi en fallback pour homogénéité
+                                                                                                                                                                                                                                                                                                                                                                        {"id": "CASH", "name": "Cash (placeholder)", "score": 0.0, "risk_class": "bond"}
+                                                                                                                                                                                                                                                                                                                                                                        ],
+                                                                                                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                                                                                                        def extract_allowed_assets_legacy(filtered_data: Dict) -> Dict:
+                                                                                                                                                                                                                                                                                                                                                                            """Version legacy pour compatibilité"""
+                                                                                                                                                                                                                                                                                                                                                                            # Actions autorisées (extraire depuis filtered_lists)
+                                                                                                                                                                                                                                                                                                                                                                            allowed_equities = []
+                                                                                                                                                                                                                                                                                                                                                                            if filtered_data.get('lists'):
+                                                                                                                                                                                                                                                                                                                                                                                lists_text = filtered_data['lists']
+                                                                                                                                                                                                                                                                                                                                                                                equity_id = 1
+                                                                                                                                                                                                                                                                                                                                                                                for line in lists_text.split('\n'):
+                                                                                                                                                                                                                                                                                                                                                                                    if '•' in line and 'YTD' in line:
+                                                                                                                                                                                                                                                                                                                                                                                        parts = line.split(':')
+                                                                                                                                                                                                                                                                                                                                                                                        if len(parts) >= 2:
+                                                                                                                                                                                                                                                                                                                                                                                            name = parts[0].replace('•', '').strip()
+                                                                                                                                                                                                                                                                                                                                                                                            name = re.sub(r'[🚩📉]', '', name).strip()
+                                                                                                                                                                                                                                                                                                                                                                                            if '(' in name and 'potentielle' in name:
+                                                                                                                                                                                                                                                                                                                                                                                                name = name.split('(')[0].strip()
 
-region = "US" if any(x in name for x in ["Inc", "Corp", "LLC"]) else "Europe"
-sector = "Technology"
+                                                                                                                                                                                                                                                                                                                                                                                                region = "US" if any(x in name for x in ["Inc", "Corp", "LLC"]) else "Europe"
+                                                                                                                                                                                                                                                                                                                                                                                                sector = "Technology"
 
-allowed_equities.append({
-"id": f"EQ_{equity_id}",
-"name": name,
-"symbol": name.split()[0] if len(name.split()) > 0 else name[:4].upper(),
-"region": region,
-"sector": sector,
-"score": 0.0,
-"risk_class": "mid",
-"flags": {"overextended": False},
-"ytd": 0.0,
-"perf_1m": 0.0
-})
-equity_id += 1
-if equity_id > 30:
-    break
+                                                                                                                                                                                                                                                                                                                                                                                                allowed_equities.append({
+                                                                                                                                                                                                                                                                                                                                                                                                "id": f"EQ_{equity_id}",
+                                                                                                                                                                                                                                                                                                                                                                                                "name": name,
+                                                                                                                                                                                                                                                                                                                                                                                                "symbol": name.split()[0] if len(name.split()) > 0 else name[:4].upper(),
+                                                                                                                                                                                                                                                                                                                                                                                                "region": region,
+                                                                                                                                                                                                                                                                                                                                                                                                "sector": sector,
+                                                                                                                                                                                                                                                                                                                                                                                                "score": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                                                "risk_class": "mid",
+                                                                                                                                                                                                                                                                                                                                                                                                "flags": {"overextended": False},
+                                                                                                                                                                                                                                                                                                                                                                                                "ytd": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                                                "perf_1m": 0.0
+                                                                                                                                                                                                                                                                                                                                                                                                })
+                                                                                                                                                                                                                                                                                                                                                                                                equity_id += 1
+                                                                                                                                                                                                                                                                                                                                                                                                if equity_id > 30:
+                                                                                                                                                                                                                                                                                                                                                                                                    break
 
-# ETF standards autorisés
-allowed_etfs_standard = []
-if filtered_data.get('etfs'):
-    etfs_text = filtered_data['etfs']
-    etf_id = 1
-    for line in etfs_text.split('\n'):
-        if '•' in line and 'ETF' in line and 'OBLIGATAIRE' not in line.upper():
-            etf_name = line.split('•')[1].split(':')[0].strip() if '•' in line else ""
-            if etf_name and len(etf_name) > 5:
-                allowed_etfs_standard.append({
-                "id": f"ETF_s{etf_id}",
-                "name": etf_name,
-                "symbol": etf_name.split()[0][:4].upper() if etf_name.split() else "ETF",
-                "score": 0.0,
-                "risk_class": "mid",
-                "flags": {"overextended": False},
-                "ytd": 0.0,
-                "perf_1m": 0.0
-                })
-                etf_id += 1
-                if etf_id > 20:
-                    break
+                                                                                                                                                                                                                                                                                                                                                                                                    # ETF standards autorisés
+                                                                                                                                                                                                                                                                                                                                                                                                    allowed_etfs_standard = []
+                                                                                                                                                                                                                                                                                                                                                                                                    if filtered_data.get('etfs'):
+                                                                                                                                                                                                                                                                                                                                                                                                        etfs_text = filtered_data['etfs']
+                                                                                                                                                                                                                                                                                                                                                                                                        etf_id = 1
+                                                                                                                                                                                                                                                                                                                                                                                                        for line in etfs_text.split('\n'):
+                                                                                                                                                                                                                                                                                                                                                                                                            if '•' in line and 'ETF' in line and 'OBLIGATAIRE' not in line.upper():
+                                                                                                                                                                                                                                                                                                                                                                                                                etf_name = line.split('•')[1].split(':')[0].strip() if '•' in line else ""
+                                                                                                                                                                                                                                                                                                                                                                                                                if etf_name and len(etf_name) > 5:
+                                                                                                                                                                                                                                                                                                                                                                                                                    allowed_etfs_standard.append({
+                                                                                                                                                                                                                                                                                                                                                                                                                    "id": f"ETF_s{etf_id}",
+                                                                                                                                                                                                                                                                                                                                                                                                                    "name": etf_name,
+                                                                                                                                                                                                                                                                                                                                                                                                                    "symbol": etf_name.split()[0][:4].upper() if etf_name.split() else "ETF",
+                                                                                                                                                                                                                                                                                                                                                                                                                    "score": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                                                                    "risk_class": "mid",
+                                                                                                                                                                                                                                                                                                                                                                                                                    "flags": {"overextended": False},
+                                                                                                                                                                                                                                                                                                                                                                                                                    "ytd": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                                                                    "perf_1m": 0.0
+                                                                                                                                                                                                                                                                                                                                                                                                                    })
+                                                                                                                                                                                                                                                                                                                                                                                                                    etf_id += 1
+                                                                                                                                                                                                                                                                                                                                                                                                                    if etf_id > 20:
+                                                                                                                                                                                                                                                                                                                                                                                                                        break
 
-# ETF obligataires autorisés
-allowed_bond_etfs = []
-if filtered_data.get('bond_etf_names'):
-    for i, name in enumerate(filtered_data['bond_etf_names'][:15]):
-        allowed_bond_etfs.append({
-        "id": f"ETF_b{i+1}",
-        "name": name,
-        "symbol": name.split()[0][:4].upper() if name.split() else "BOND",
-        "score": 0.0,
-        "risk_class": "bond",
-        "flags": {"overextended": False},
-        "ytd": 0.0,
-        "perf_1m": 0.0
-        })
+                                                                                                                                                                                                                                                                                                                                                                                                                        # ETF obligataires autorisés
+                                                                                                                                                                                                                                                                                                                                                                                                                        allowed_bond_etfs = []
+                                                                                                                                                                                                                                                                                                                                                                                                                        if filtered_data.get('bond_etf_names'):
+                                                                                                                                                                                                                                                                                                                                                                                                                            for i, name in enumerate(filtered_data['bond_etf_names'][:15]):
+                                                                                                                                                                                                                                                                                                                                                                                                                                allowed_bond_etfs.append({
+                                                                                                                                                                                                                                                                                                                                                                                                                                "id": f"ETF_b{i+1}",
+                                                                                                                                                                                                                                                                                                                                                                                                                                "name": name,
+                                                                                                                                                                                                                                                                                                                                                                                                                                "symbol": name.split()[0][:4].upper() if name.split() else "BOND",
+                                                                                                                                                                                                                                                                                                                                                                                                                                "score": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                                                                                "risk_class": "bond",
+                                                                                                                                                                                                                                                                                                                                                                                                                                "flags": {"overextended": False},
+                                                                                                                                                                                                                                                                                                                                                                                                                                "ytd": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                                                                                "perf_1m": 0.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                })
 
-# Cryptos autorisées
-allowed_crypto = []
-if filtered_data.get('crypto'):
-    crypto_text = filtered_data['crypto']
-    crypto_id = 1
-    for line in crypto_text.split('\n'):
-        if '•' in line and '7j:' in line:
-            parts = line.split('(')[0].replace('•', '').strip()
-            name = parts.split(':')[0].strip() if ':' in parts else parts
+                                                                                                                                                                                                                                                                                                                                                                                                                                # Cryptos autorisées
+                                                                                                                                                                                                                                                                                                                                                                                                                                allowed_crypto = []
+                                                                                                                                                                                                                                                                                                                                                                                                                                if filtered_data.get('crypto'):
+                                                                                                                                                                                                                                                                                                                                                                                                                                    crypto_text = filtered_data['crypto']
+                                                                                                                                                                                                                                                                                                                                                                                                                                    crypto_id = 1
+                                                                                                                                                                                                                                                                                                                                                                                                                                    for line in crypto_text.split('\n'):
+                                                                                                                                                                                                                                                                                                                                                                                                                                        if '•' in line and '7j:' in line:
+                                                                                                                                                                                                                                                                                                                                                                                                                                            parts = line.split('(')[0].replace('•', '').strip()
+                                                                                                                                                                                                                                                                                                                                                                                                                                            name = parts.split(':')[0].strip() if ':' in parts else parts
 
-seven_days_positive = '7j: +' in line or ('7j:' in line and '+' in line.split('7j:')[1][:10])
+                                                                                                                                                                                                                                                                                                                                                                                                                                            seven_days_positive = '7j: +' in line or ('7j:' in line and '+' in line.split('7j:')[1][:10])
 
-allowed_crypto.append({
-"id": f"CR_{crypto_id}",
-"name": name,
-"symbol": name.upper()[:3],
-"sevenDaysPositif": seven_days_positive,
-"score": 0.0,
-"risk_class": "mid",
-"ytd": 0.0,
-"perf_1m": 0.0
-})
-crypto_id += 1
-if crypto_id > 10:
-    break
+                                                                                                                                                                                                                                                                                                                                                                                                                                            allowed_crypto.append({
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "id": f"CR_{crypto_id}",
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "name": name,
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "symbol": name.upper()[:3],
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "sevenDaysPositif": seven_days_positive,
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "score": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "risk_class": "mid",
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "ytd": 0.0,
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "perf_1m": 0.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                            })
+                                                                                                                                                                                                                                                                                                                                                                                                                                            crypto_id += 1
+                                                                                                                                                                                                                                                                                                                                                                                                                                            if crypto_id > 10:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                break
 
-    return {
-    "allowed_equities": allowed_equities,
-    "allowed_etfs_standard": allowed_etfs_standard,
-    "allowed_bond_etfs": allowed_bond_etfs,
-    "allowed_crypto": allowed_crypto
-    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                return {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                "allowed_equities": allowed_equities,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                "allowed_etfs_standard": allowed_etfs_standard,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                "allowed_bond_etfs": allowed_bond_etfs,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                "allowed_crypto": allowed_crypto
+                                                                                                                                                                                                                                                                                                                                                                                                                                                }
 
-def build_robust_prompt_v3(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                def build_robust_prompt_v3(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
     Construit le prompt v3 avec univers quantitatif et garde-fous renforcés + COMPLIANCE AMF
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
 
-prompt = f"""Tu es un expert en allocation quantitative. Construis TROIS portefeuilles (Agressif, Modéré, Stable).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    prompt = f"""Tu es un expert en allocation quantitative. Construis TROIS portefeuilles (Agressif, Modéré, Stable).
 
-## Données structurées (univers fermés v3)
-BRIEF_POINTS = {json.dumps(structured_data['brief_points'], ensure_ascii=False)}
-MARKETS = {json.dumps(structured_data['market_points'], ensure_ascii=False)}
-SECTORS = {json.dumps(structured_data['sector_points'], ensure_ascii=False)}
-THEMES = {json.dumps(structured_data['theme_points'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    ## Données structurées (univers fermés v3)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    BRIEF_POINTS = {json.dumps(structured_data['brief_points'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    MARKETS = {json.dumps(structured_data['market_points'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    SECTORS = {json.dumps(structured_data['sector_points'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    THEMES = {json.dumps(structured_data['theme_points'], ensure_ascii=False)}
 
-ALLOWED_EQUITIES = {json.dumps(allowed_assets['allowed_equities'], ensure_ascii=False)}
-ALLOWED_ETFS_STANDARD = {json.dumps(allowed_assets['allowed_etfs_standard'], ensure_ascii=False)}
-ALLOWED_BOND_ETFS = {json.dumps(allowed_assets['allowed_bond_etfs'], ensure_ascii=False)}
-ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    ALLOWED_EQUITIES = {json.dumps(allowed_assets['allowed_equities'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    ALLOWED_ETFS_STANDARD = {json.dumps(allowed_assets['allowed_etfs_standard'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    ALLOWED_BOND_ETFS = {json.dumps(allowed_assets['allowed_bond_etfs'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=False)}
 
-## Règles ABSOLUES v3 (scoring quantitatif)
-- Choisir uniquement des actifs dont l'`id` figure dans les listes ALLOWED_*.
-- 3 portefeuilles : chacun **12 à 15** lignes (somme Actions+ETF+Obligations+Crypto).
-- **≥2 catégories** par portefeuille (parmi: Actions, ETF, Obligations, Crypto).
-- **Somme des allocations = 100.00** avec **2 décimales**. La **dernière ligne** ajuste pour atteindre 100.00.
-- Catégorie **Obligations** = ALLOWED_BOND_ETFS exclusivement. Interdit ailleurs.
-- Catégorie **ETF** = uniquement ALLOWED_ETFS_STANDARD (aucun bond ETF ici).
-- Catégorie **Crypto** = actifs de ALLOWED_CRYPTO avec `sevenDaysPositif=true`.
-- Un même `id` ne peut apparaître qu'**une fois** par portefeuille.
-- Diversification anti-doublon (ETF) :
-    - Éviter deux ETF offrant la même exposition (même thème/indice/métal).
-    - **Au plus 1 ETF par thème fortement corrélé** (gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).
-    - Interdit si overlap thématique ≥ 0.6 ou overlap de holdings ≥ 0.5.
-    - **Profil Modéré : somme des lignes `Crypto` ≤ 5.00%** (si aucun actif crypto éligible, mettre 0%).
-    - Spécifique au profil Stable :
-        - **Aucune ligne Crypto (0%)**.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    ## Règles ABSOLUES v3 (scoring quantitatif)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Choisir uniquement des actifs dont l'`id` figure dans les listes ALLOWED_*.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - 3 portefeuilles : chacun **12 à 15** lignes (somme Actions+ETF+Obligations+Crypto).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - **≥2 catégories** par portefeuille (parmi: Actions, ETF, Obligations, Crypto).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - **Somme des allocations = 100.00** avec **2 décimales**. La **dernière ligne** ajuste pour atteindre 100.00.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Catégorie **Obligations** = ALLOWED_BOND_ETFS exclusivement. Interdit ailleurs.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Catégorie **ETF** = uniquement ALLOWED_ETFS_STANDARD (aucun bond ETF ici).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Catégorie **Crypto** = actifs de ALLOWED_CRYPTO avec `sevenDaysPositif=true`.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Un même `id` ne peut apparaître qu'**une fois** par portefeuille.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Diversification anti-doublon (ETF) :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Éviter deux ETF offrant la même exposition (même thème/indice/métal).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        - **Au plus 1 ETF par thème fortement corrélé** (gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Interdit si overlap thématique ≥ 0.6 ou overlap de holdings ≥ 0.5.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        - **Profil Modéré : somme des lignes `Crypto` ≤ 5.00%** (si aucun actif crypto éligible, mettre 0%).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Spécifique au profil Stable :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - **Aucune ligne Crypto (0%)**.
 
-## Règles de scoring quantitatif (NOUVELLES)
-- N'utiliser que les actifs avec `flags.overextended=false`.
-- **≥70% des lignes** d'un portefeuille doivent avoir `score ≥ 0`.
-- La **médiane des scores par portefeuille ≥ 0**.
-- Interdit: ETF à effet de levier (déjà exclus en amont).
-- **Anti-fin-de-cycle**: Interdiction d'ajouter un actif avec `YTD>100%` si `Perf 1M ≤ 0`.
-- Privilégier équilibrage `risk_class` : mix low/mid selon profil (Stable=80% low, Modéré=60% low, Agressif=40% low).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            ## Règles de scoring quantitatif (NOUVELLES)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - N'utiliser que les actifs avec `flags.overextended=false`.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - **≥70% des lignes** d'un portefeuille doivent avoir `score ≥ 0`.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - La **médiane des scores par portefeuille ≥ 0**.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Interdit: ETF à effet de levier (déjà exclus en amont).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - **Anti-fin-de-cycle**: Interdiction d'ajouter un actif avec `YTD>100%` si `Perf 1M ≤ 0`.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Privilégier équilibrage `risk_class` : mix low/mid selon profil (Stable=80% low, Modéré=60% low, Agressif=40% low).
 
-## Style de justification (obligatoire, par ligne)
-- Commencer par: **"Pondération {{allocation_pct:.2f}}% —"**
-- Expliquer la logique: **marché** (MARKETS), **secteur** (SECTORS), **thème** (THEMES) et/ou **brief macro** (BRIEF), en reliant explicitement l’exposition visée (ex: "large cap US", "or physique", "obligations souveraines euro 3–5 ans").
-- Mentionner **le score** et **la classe de risque**: "Score {{score:+.2f}}, risque {{risk_class}}"
-- Terminer par **Réfs** avec des IDs (ex: `Réfs: [BR2,"MC1","SEC3"]`).
-- Ton neutre et descriptif (pas d’incitation). Exemple court:
-    "Pondération 7.50% — exposition théorique au S&P 500, portée par momentum US large cap et thématique IA diffuse; Score +0.82, risque mid. Réfs: [BR1, MC2, TH1]."
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            ## Style de justification (obligatoire, par ligne)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Commencer par: **"Pondération {{allocation_pct:.2f}}% —"**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Expliquer la logique: **marché** (MARKETS), **secteur** (SECTORS), **thème** (THEMES) et/ou **brief macro** (BRIEF), en reliant explicitement l’exposition visée (ex: "large cap US", "or physique", "obligations souveraines euro 3–5 ans").
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Mentionner **le score** et **la classe de risque**: "Score {{score:+.2f}}, risque {{risk_class}}"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Terminer par **Réfs** avec des IDs (ex: `Réfs: [BR2,"MC1","SEC3"]`).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Ton neutre et descriptif (pas d’incitation). Exemple court:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                "Pondération 7.50% — exposition théorique au S&P 500, portée par momentum US large cap et thématique IA diffuse; Score +0.82, risque mid. Réfs: [BR1, MC2, TH1]."
 
-## COMPLIANCE (obligatoire)
-- Ce contenu est une **information financière générale**. Il **ne constitue pas** un conseil en investissement personnalisé ni une recommandation individuelle.
-- N'utilise **aucune** donnée personnelle, ne déduis **aucun** profil de l'utilisateur et **n'adapte** pas les portefeuilles au lecteur. Reste **strictement générique**.
-- **Langage neutre uniquement** : interdit d'employer « acheter », « vendre », « conserver », « à privilégier », « fortement recommandé », « garanti », « sans risque », « objectif de prix », « rendement attendu ». Utiliser des formulations comme « pondération modèle », « exposition théorique », « scénarios possibles ».
-- **Aucune incitation** à passer un ordre, **aucun lien affilié**, **aucune promesse** de performance.
-- **Toujours** ajouter dans la sortie un bloc `Compliance` avec :
-    - `Disclaimer` : texte court (2–3 phrases) rappelant que c'est de l'information générale, que les performances passées ne préjugent pas des performances futures, et qu'il existe un risque de perte en capital.
-    - `Risques` : 3–6 puces, incluant au minimum : « Perte en capital possible », « Performances passées ≠ performances futures », « Volatilité des marchés », et pour la catégorie Crypto : « Forte volatilité, possibilité de perte totale ».
-    - `Methodologie` : 1–2 phrases sur l'approche quantitative (scoring momentum/risque/liquidité) et ses limites (incertitudes, données susceptibles d'évoluer).
-    - Les commentaires/justifications doivent rester **descriptifs** (pas d'impératifs, pas d'injonctions).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                ## COMPLIANCE (obligatoire)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Ce contenu est une **information financière générale**. Il **ne constitue pas** un conseil en investissement personnalisé ni une recommandation individuelle.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                - N'utilise **aucune** donnée personnelle, ne déduis **aucun** profil de l'utilisateur et **n'adapte** pas les portefeuilles au lecteur. Reste **strictement générique**.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Langage neutre uniquement** : interdit d'employer « acheter », « vendre », « conserver », « à privilégier », « fortement recommandé », « garanti », « sans risque », « objectif de prix », « rendement attendu ». Utiliser des formulations comme « pondération modèle », « exposition théorique », « scénarios possibles ».
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Aucune incitation** à passer un ordre, **aucun lien affilié**, **aucune promesse** de performance.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Toujours** ajouter dans la sortie un bloc `Compliance` avec :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - `Disclaimer` : texte court (2–3 phrases) rappelant que c'est de l'information générale, que les performances passées ne préjugent pas des performances futures, et qu'il existe un risque de perte en capital.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - `Risques` : 3–6 puces, incluant au minimum : « Perte en capital possible », « Performances passées ≠ performances futures », « Volatilité des marchés », et pour la catégorie Crypto : « Forte volatilité, possibilité de perte totale ».
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - `Methodologie` : 1–2 phrases sur l'approche quantitative (scoring momentum/risque/liquidité) et ses limites (incertitudes, données susceptibles d'évoluer).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Les commentaires/justifications doivent rester **descriptifs** (pas d'impératifs, pas d'injonctions).
 
-## Logique d'investissement (synthèse)
-- Chaque actif doit être justifié par **≥2 références** parmi BRIEF(Macro), MARKETS(Géo), SECTORS(Secteur), THEMES(Thèmes).
-Utilise les **IDs** (ex: ["BR2","MC1"]).
-- Ne **jamais** choisir sur la seule base de la perf YTD ou du score.
-- Mentionne brièvement le score et la classe de risque dans la justification.
-- Préférer les actifs avec score > 0 et diversification sectorielle/géographique.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ## Logique d'investissement (synthèse)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Chaque actif doit être justifié par **≥2 références** parmi BRIEF(Macro), MARKETS(Géo), SECTORS(Secteur), THEMES(Thèmes).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Utilise les **IDs** (ex: ["BR2","MC1"]).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Ne **jamais** choisir sur la seule base de la perf YTD ou du score.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Mentionne brièvement le score et la classe de risque dans la justification.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - Préférer les actifs avec score > 0 et diversification sectorielle/géographique.
 
-## Commentaires attendus (par portefeuille)
-- `Commentaire` (≤1200 caractères), structure:
-    1) Actualités (BRIEF) — 2–3 phrases neutres
-    2) Marchés (MARKETS) — 2–3 phrases
-    3) Secteurs (SECTORS/THEMES) — 2–3 phrases
-    4) Approche quantitative — 2–3 phrases sur l'équilibrage score/risque
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ## Commentaires attendus (par portefeuille)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - `Commentaire` (≤1200 caractères), structure:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        1) Actualités (BRIEF) — 2–3 phrases neutres
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        2) Marchés (MARKETS) — 2–3 phrases
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        3) Secteurs (SECTORS/THEMES) — 2–3 phrases
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        4) Approche quantitative — 2–3 phrases sur l'équilibrage score/risque
 
-## Actifs exclus
-- Fournis 2–3 `ActifsExclus` avec `reason` courte et `refs` (IDs) expliquant l'exclusion.
-- Priorité aux actifs sur-étendus ou à score très négatif.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ## Actifs exclus
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Fournis 2–3 `ActifsExclus` avec `reason` courte et `refs` (IDs) expliquant l'exclusion.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Priorité aux actifs sur-étendus ou à score très négatif.
 
-## Format de SORTIE (STRICT, JSON UNIQUEMENT, pas de markdown, aucun texte hors JSON)
-{{
-"Agressif": {{
-"Commentaire": "...",
-"Lignes": [
-{{"id":"EQ_1",   "name":"Microsoft Corporation", "category":"Actions",     "allocation_pct":12.50, "justificationRefs":["BR1","SEC2"], "justification":"Score 1.23 (momentum tech) + résilience IA face ralentissement", "score":1.23, "risk_class":"low"}},
-{{"id":"ETF_s1", "name":"Vanguard S&P 500 ETF",  "category":"ETF",         "allocation_pct":25.00, "justificationRefs":["MC1","TH1"],  "justification":"Score 0.87 + exposition théorique large marché US", "score":0.87, "risk_class":"mid"}},
-{{"id":"ETF_b1", "name":"iShares Euro Govt Bond", "category":"Obligations", "allocation_pct":15.00, "justificationRefs":["BR3","SEC4"], "justification":"Pondération refuge géopolitique", "score":0.12, "risk_class":"bond"}},
-{{"id":"CR_1",   "name":"Bitcoin",               "category":"Crypto",      "allocation_pct":5.00,  "justificationRefs":["TH3","MC2"],  "justification":"Score 2.15 + exposition institutionnelle", "score":2.15, "risk_class":"mid"}}
-],
-"ActifsExclus": [
-{{"name":"Tesla Inc", "reason":"Score -0.85 + sur-extension YTD >150%", "refs":["BR1","SEC1"]}},
-{{"name":"ARKK ETF", "reason":"Score -1.23 + exposition correction sévère", "refs":["BR2"]}}
-],
-"Compliance": {{
-"Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
-"Risques": [
-"Perte en capital possible",
-"Performances passées ne préjugent pas des performances futures",
-"Volatilité accrue selon les classes d'actifs",
-"Crypto-actifs : volatilité élevée, perte totale possible",
-"Risques de change pour les actifs internationaux",
-"Risque de liquidité sur certains marchés"
-],
-"Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
-}}
-}},
-"Modéré": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...], "Compliance": {{...}} }},
-"Stable": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...], "Compliance": {{...}} }}
-}}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ## Format de SORTIE (STRICT, JSON UNIQUEMENT, pas de markdown, aucun texte hors JSON)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Agressif": {{
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Commentaire": "...",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Lignes": [
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{"id":"EQ_1",   "name":"Microsoft Corporation", "category":"Actions",     "allocation_pct":12.50, "justificationRefs":["BR1","SEC2"], "justification":"Score 1.23 (momentum tech) + résilience IA face ralentissement", "score":1.23, "risk_class":"low"}},
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{"id":"ETF_s1", "name":"Vanguard S&P 500 ETF",  "category":"ETF",         "allocation_pct":25.00, "justificationRefs":["MC1","TH1"],  "justification":"Score 0.87 + exposition théorique large marché US", "score":0.87, "risk_class":"mid"}},
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{"id":"ETF_b1", "name":"iShares Euro Govt Bond", "category":"Obligations", "allocation_pct":15.00, "justificationRefs":["BR3","SEC4"], "justification":"Pondération refuge géopolitique", "score":0.12, "risk_class":"bond"}},
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{"id":"CR_1",   "name":"Bitcoin",               "category":"Crypto",      "allocation_pct":5.00,  "justificationRefs":["TH3","MC2"],  "justification":"Score 2.15 + exposition institutionnelle", "score":2.15, "risk_class":"mid"}}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "ActifsExclus": [
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{"name":"Tesla Inc", "reason":"Score -0.85 + sur-extension YTD >150%", "refs":["BR1","SEC1"]}},
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{"name":"ARKK ETF", "reason":"Score -1.23 + exposition correction sévère", "refs":["BR2"]}}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Compliance": {{
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Disclaimer": "Communication d'information financière à caractère général. Ce contenu n'est pas un conseil en investissement personnalisé. Les performances passées ne préjugent pas des performances futures. Investir comporte un risque de perte en capital. Aucune exécution ni transmission d'ordres n'est fournie.",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Risques": [
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Perte en capital possible",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Performances passées ne préjugent pas des performances futures",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Volatilité accrue selon les classes d'actifs",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Crypto-actifs : volatilité élevée, perte totale possible",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Risques de change pour les actifs internationaux",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Risque de liquidité sur certains marchés"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Methodologie": "Allocation issue d'un scoring quantitatif (momentum, volatilité, drawdown, liquidité). Les données et le classement peuvent évoluer. Cette approche ne garantit aucun résultat."
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }},
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Modéré": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...], "Compliance": {{...}} }},
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "Stable": {{ "Commentaire": "...", "Lignes": [...], "ActifsExclus": [...], "Compliance": {{...}} }}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }}
 
-### CONTRÔLE QUALITÉ v3 (obligatoire avant d'émettre la réponse)
-- Vérifie que chaque portefeuille a 12–15 lignes, ≥2 catégories, somme = 100.00 exactement (2 décimales).
-- Vérifie qu'aucun `id` n'est dupliqué et que chaque catégorie respecte ses univers autorisés.
-- Vérifie que ≥70% des actifs ont score ≥ 0 et médiane des scores ≥ 0.
-- Vérifie l'équilibrage risk_class selon profil.
-- Vérifie que chaque portefeuille contient le bloc `Compliance` complet.
-- Si une règle échoue, corrige puis ne sors que le JSON final conforme.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ### CONTRÔLE QUALITÉ v3 (obligatoire avant d'émettre la réponse)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Vérifie que chaque portefeuille a 12–15 lignes, ≥2 catégories, somme = 100.00 exactement (2 décimales).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Vérifie qu'aucun `id` n'est dupliqué et que chaque catégorie respecte ses univers autorisés.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Vérifie que ≥70% des actifs ont score ≥ 0 et médiane des scores ≥ 0.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Vérifie l'équilibrage risk_class selon profil.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Vérifie que chaque portefeuille contient le bloc `Compliance` complet.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Si une règle échoue, corrige puis ne sors que le JSON final conforme.
 
 
-Contexte temporel: Portefeuilles optimisés pour {current_month} 2025.
-"""
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Contexte temporel: Portefeuilles optimisés pour {current_month} 2025.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
 
 return prompt
 
 def validate_portfolios_v3(portfolios: Dict, allowed_assets: Dict) -> Tuple[bool, List[str]]:
-    """
-    Validation stricte des portefeuilles v3 :
-        - 12–15 lignes, ≥2 catégories, somme = 100.00%
-        - Bloc Compliance complet
-        - Contraintes de scores & risque
-        - Anti-fin-de-cycle
-        - Doublons ETF (thématique/holdings)
-        - Un seul ETF par ancre forte (sp500, nasdaq, world, gold, silver, treasury, eurozone, emerging, oil, energy)
-        - Règles spécifiques profils :
-            • Stable : Crypto interdite
-            • Modéré : Crypto ≤ 5.00%
-            """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Validation stricte des portefeuilles v3 :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - 12–15 lignes, ≥2 catégories, somme = 100.00%
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Bloc Compliance complet
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Contraintes de scores & risque
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Anti-fin-de-cycle
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Doublons ETF (thématique/holdings)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Un seul ETF par ancre forte (sp500, nasdaq, world, gold, silver, treasury, eurozone, emerging, oil, energy)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Règles spécifiques profils :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                • Stable : Crypto interdite
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                • Modéré : Crypto ≤ 5.00%
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                """
             errors = []
 
 # Map id -> actif (métadonnées: score, flags, risk_class, ytd, perf_1m)
@@ -1158,11 +1158,11 @@ try:
 
 
 def score_guard(portfolios: Dict, allowed_assets: Dict):
-    """
-    Garde-fou post-LLM sur la qualité des scores:
-        - médiane des scores >= 0
-        - ≤ 30% d'actifs score négatif
-        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Garde-fou post-LLM sur la qualité des scores:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - médiane des scores >= 0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - ≤ 30% d'actifs score négatif
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
         id2score = {}
         for k in ("allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"):
             for a in allowed_assets.get(k, []):
@@ -1199,15 +1199,15 @@ def adjust_to_100_safe(lines, prefer_category="Obligations"):
 
 
 def fix_portfolios_v3(portfolios: Dict, errors: List[str], allowed_assets: Dict) -> Dict:
-    """
-    Corrections post-LLM :
-        - Stable : supprime Crypto (réaffecte vers Obligations sinon dernière ligne)
-        - Modéré : cap Crypto ≤ 5% (réduit la/les lignes crypto, réaffecte)
-        - Somme = 100.00% (ajuste la dernière ligne)
-        - Ajout Compliance si manquant
-        - Remplacement des doublons d'ETF (overlaps) + 1 ETF / ancre forte
-        - Purge des lignes à 0 puis re-somme à 100.00%
-        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Corrections post-LLM :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Stable : supprime Crypto (réaffecte vers Obligations sinon dernière ligne)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Modéré : cap Crypto ≤ 5% (réduit la/les lignes crypto, réaffecte)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Somme = 100.00% (ajuste la dernière ligne)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Ajout Compliance si manquant
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Remplacement des doublons d'ETF (overlaps) + 1 ETF / ancre forte
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Purge des lignes à 0 puis re-somme à 100.00%
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
         # Helpers
 def _id2asset(aid: str) -> Dict:
     for k in ("allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"):
@@ -1384,12 +1384,12 @@ if 'ActifsExclus' in portfolio and isinstance(portfolio['ActifsExclus'], list):
             return portfolios
             # ---------- Générateur d'explications par actif (macro/secteur/thème + score) ----------
 def build_explanations(portfolios_obj: dict, allowed_assets: dict, structured_data: dict) -> dict:
-    """
-    Construit un dictionnaire d'explications par portefeuille.
-    - Compatible v3 : parcourt pf["Lignes"] (id, name, category, allocation_pct, justificationRefs, justification)
-    - Compatible v1 : parcourt pf["Actions"/"ETF"/"Obligations"/"Crypto"] (nom -> "12%")
-    et tente de reconstituer (id, score, risk_class) depuis allowed_assets.
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Construit un dictionnaire d'explications par portefeuille.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Compatible v3 : parcourt pf["Lignes"] (id, name, category, allocation_pct, justificationRefs, justification)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - Compatible v1 : parcourt pf["Actions"/"ETF"/"Obligations"/"Crypto"] (nom -> "12%")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        et tente de reconstituer (id, score, risk_class) depuis allowed_assets.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
     # --- Helpers LUT ---
 def _score_and_risk_by_id(aid: str):
     for k in ("allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"):
@@ -1574,11 +1574,11 @@ def get_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str):
 # ============= FIX 3: RETRY API ROBUSTE AVEC TIMEOUTS ÉTENDUS =============
 
 def post_with_retry(url, headers, payload, tries=5, timeout=(20, 180), backoff=2.0, jitter=0.25):
-    """
-    Retry robuste avec backoff exponentiel + jitter.
-    - timeout: tuple (connect_timeout, read_timeout)
-    - jitter: facteur aléatoire ±jitter autour du délai (ex: 0.25 => ±25%)
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Retry robuste avec backoff exponentiel + jitter.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - timeout: tuple (connect_timeout, read_timeout)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - jitter: facteur aléatoire ±jitter autour du délai (ex: 0.25 => ±25%)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
     last_err = None
     for i in range(tries):
         try:
@@ -1603,9 +1603,9 @@ def load_cached_portfolios(path="data/portefeuilles.json"):
         return None
 
 def generate_portfolios_v3(filtered_data: Dict) -> Dict:
-    """
-    Version 3 améliorée avec système de scoring quantitatif + COMPLIANCE AMF
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Version 3 améliorée avec système de scoring quantitatif + COMPLIANCE AMF
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
     api_key = os.environ.get('API_CHAT')
     if not api_key:
         raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
@@ -2041,11 +2041,11 @@ def _fmt_int_pct(x):
     return f"{x}%"
 
 def validate_and_fix_v1_sum(portfolios_v1: dict, fix: bool = True):
-    """
-    Vérifie que chaque portefeuille (Agressif/Modéré/Stable) en format v1
-    a une somme d'allocations = 100%. Si fix=True, ajuste la DERNIÈRE ligne rencontrée.
-    Retourne: (ok: bool, erreurs: [str], v1_fixed: dict)
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Vérifie que chaque portefeuille (Agressif/Modéré/Stable) en format v1
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        a une somme d'allocations = 100%. Si fix=True, ajuste la DERNIÈRE ligne rencontrée.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Retourne: (ok: bool, erreurs: [str], v1_fixed: dict)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
     errors = []
     fixed = _copy.deepcopy(portfolios_v1)
 
@@ -2132,12 +2132,12 @@ def _infer_category_from_id(asset_id: str) -> str:
 
 # ---------- Tokenisation thématique ----------
 def _tokenize_theme(name: str) -> set:
-    """
-    Tokenisation grossière du nom d’ETF pour comparer les thèmes :
-        - enlève stopwords & mots très courts
-        - normalise via _THEMATIC_SYNONYMS
-        - ajoute ancres fortes (sp500 / gold) si repérées
-        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Tokenisation grossière du nom d’ETF pour comparer les thèmes :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - enlève stopwords & mots très courts
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - normalise via _THEMATIC_SYNONYMS
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - ajoute ancres fortes (sp500 / gold) si repérées
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """
         low = (name or "").lower()
         toks = set()
 
@@ -2215,11 +2215,11 @@ _, _, fixed = validate_and_fix_v1_sum(fixed, fix=True)
 return fixed
 # ---------- Index des holdings ETF ----------
 def _build_etf_holdings_index(etf_df: Optional[pd.DataFrame]) -> dict:
-    """
-    Construit un index :
-        { etf_name: { 'holdings': set(tickers), 'tokens': set(...) } }
-        Reconnait des colonnes contenant 'holding' / 'constituent' si présentes.
-        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Construit un index :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                { etf_name: { 'holdings': set(tickers), 'tokens': set(...) } }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Reconnait des colonnes contenant 'holding' / 'constituent' si présentes.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                """
         idx: dict = {}
         if etf_df is None or etf_df.empty:
             return idx
@@ -2275,13 +2275,13 @@ idx: dict,
 theme_thresh: float = 0.6,
 hold_thresh: float = 0.5
 ) -> Tuple[Optional[str], float]:
-    """
-    Calcule un score d’overlap pour n1/n2 :
-        1) si 2 listes de holdings → Jaccard holdings
-        2) sinon ancres fortes (gold/sp500/nasdaq/world/treasury/…) à ~1.0
-        3) sinon Jaccard sur tokens thématiques
-        Retourne (type_overlap, score) ou (None, 0.0)
-        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Calcule un score d’overlap pour n1/n2 :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    1) si 2 listes de holdings → Jaccard holdings
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    2) sinon ancres fortes (gold/sp500/nasdaq/world/treasury/…) à ~1.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    3) sinon Jaccard sur tokens thématiques
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Retourne (type_overlap, score) ou (None, 0.0)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
         # 1) Overlap via holdings (si dispo)
         h1 = idx.get(n1, {}).get("holdings") or set()
         h2 = idx.get(n2, {}).get("holdings") or set()
@@ -2318,10 +2318,10 @@ etf_df: Optional[pd.DataFrame] = None,
 theme_thresh: float = 0.6,
 hold_thresh: float = 0.5
 ) -> List[dict]:
-    """
-    Inspecte un portefeuille v3 ('Lignes') et renvoie une liste de paires d’ETF potentiellement en doublon.
-    Inclut les ETF obligataires (catégorie 'Obligations') pour repérer les clusters thématiques (ex: plusieurs gold ETFs).
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Inspecte un portefeuille v3 ('Lignes') et renvoie une liste de paires d’ETF potentiellement en doublon.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Inclut les ETF obligataires (catégorie 'Obligations') pour repérer les clusters thématiques (ex: plusieurs gold ETFs).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
     lut = _build_asset_lookup(allowed_assets)
 
 etf_names: List[str] = []
@@ -2352,10 +2352,10 @@ etf_csv_path: str = "data/combined_etfs.csv",
 theme_thresh: float = 0.6,
 hold_thresh: float = 0.5
 ) -> Dict[str, List[dict]]:
-    """
-    Applique la détection d’overlap aux 3 portefeuilles et retourne un dict :
-        { "Agressif": [...], "Modéré": [...], "Stable": [...] }
-        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Applique la détection d’overlap aux 3 portefeuilles et retourne un dict :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        { "Agressif": [...], "Modéré": [...], "Stable": [...] }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
         etf_df: Optional[pd.DataFrame] = None
         try:
             p = Path(etf_csv_path)
@@ -2377,11 +2377,11 @@ def dedupe_by_anchors(
 items: List[dict],
 anchors: set = {"gold", "sp500", "nasdaq", "world", "treasury", "eurozone", "emerging", "silver", "oil", "energy"}
 ) -> List[dict]:
-    """
-    Garde au plus 1 ETF par grande ancre thématique (gold/sp500/…).
-    Trie d’abord par score décroissant, puis filtre.
-    items: liste d’objets de allowed_assets (ex: allowed_etfs_standard)
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Garde au plus 1 ETF par grande ancre thématique (gold/sp500/…).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Trie d’abord par score décroissant, puis filtre.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        items: liste d’objets de allowed_assets (ex: allowed_etfs_standard)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
     seen, out = set(), []
     for it in sorted(items or [], key=lambda x: x.get("score", 0), reverse=True):
         toks = _tokenize_theme(it.get("name", ""))
@@ -2431,12 +2431,12 @@ except Exception as e:
 print(f"⚠️ Avertissement: index non mis à jour ({e})")
 
 def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> None:
-    """
-    Sauvegarde double :
-        - vue normalisée v1 pour le front : data/portfolios.json
-        - archive v3 détaillée avec métadonnées : data/portfolio_history/portefeuilles_v3_stable_YYYYMMDD_HHMMSS.json
-        - met à jour l'index d'historique
-        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Sauvegarde double :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - vue normalisée v1 pour le front : data/portfolios.json
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - archive v3 détaillée avec métadonnées : data/portfolio_history/portefeuilles_v3_stable_YYYYMMDD_HHMMSS.json
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - met à jour l'index d'historique
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """
         try:
             os.makedirs("data", exist_ok=True)
             os.makedirs("data/portfolio_history", exist_ok=True)
@@ -3022,148 +3022,148 @@ h1, h2 {{ color: #2c3e50; }}
 <pre>{prompt.replace('<', '&lt;').replace('>', '&gt;')}</pre>
 </body>
 </html>
-"""
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """
 
-with open(html_file, 'w', encoding='utf-8') as f:
-    f.write(html_content)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            with open(html_file, 'w', encoding='utf-8') as f:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                f.write(html_content)
 
-print(f"✅ Fichier HTML lisible généré : {html_file}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print(f"✅ Fichier HTML lisible généré : {html_file}")
 
-return debug_file, html_file
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                return debug_file, html_file
 
-def generate_portfolios(filtered_data):
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                def generate_portfolios(filtered_data):
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
     FIX 4: Fonction principale de génération avec filet de sécurité cache
     (Validation "v1" effectuée en lecture seule sur une vue normalisée)
-    """
-    print("🚀 Lancement de la génération de portefeuilles v3 (scoring quantitatif + compliance AMF)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    print("🚀 Lancement de la génération de portefeuilles v3 (scoring quantitatif + compliance AMF)")
 
-try:
-    # Génération v3
-    portfolios = generate_portfolios_v3(filtered_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    try:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        # Génération v3
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        portfolios = generate_portfolios_v3(filtered_data)
 
-# ✅ Compatibilité: contrôle "v1" en lecture seule (pas de mutation du v3)
-try:
-    allowed_assets = extract_allowed_assets(filtered_data)
-    normalized_view = normalize_v3_to_frontend_v1(portfolios, allowed_assets)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        # ✅ Compatibilité: contrôle "v1" en lecture seule (pas de mutation du v3)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        try:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            allowed_assets = extract_allowed_assets(filtered_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            normalized_view = normalize_v3_to_frontend_v1(portfolios, allowed_assets)
 
-# NEW: forcer Somme=100% sur la vue v1 (lecture/affichage)
-ok100, errs100, normalized_view = validate_and_fix_v1_sum(normalized_view, fix=True)
-if not ok100 and errs100:
-    print(f"⚠️ Somme v1 non-100%: {errs100}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            # NEW: forcer Somme=100% sur la vue v1 (lecture/affichage)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ok100, errs100, normalized_view = validate_and_fix_v1_sum(normalized_view, fix=True)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if not ok100 and errs100:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print(f"⚠️ Somme v1 non-100%: {errs100}")
 
-ok, errs = check_portfolio_constraints(normalized_view)
-if not ok:
-    print(f"⚠️ Avertissements (schéma v1): {errs}")
-except Exception as e:
-print(f"ℹ️ Contrôle de compatibilité v1 ignoré: {e}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ok, errs = check_portfolio_constraints(normalized_view)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if not ok:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    print(f"⚠️ Avertissements (schéma v1): {errs}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                except Exception as e:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    print(f"ℹ️ Contrôle de compatibilité v1 ignoré: {e}")
 
-return portfolios
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    return portfolios
 
-except Exception as e:
-    print(f"❌ Erreur dans la génération v3: {e}\n⚠️ Fallback v2…")
-    try:
-        portfolios = generate_portfolios_v2(filtered_data)
-        return portfolios
-    except Exception as e2:
-    print(f"❌ Erreur v2: {e2}")
-    # Filet de sécurité - utiliser le cache
-    cached = load_cached_portfolios()
-    if cached:
-        print("🛟 API indisponible → on réutilise le dernier portefeuille en cache.")
-        cached = attach_compliance(cached)
-        return cached
-        raise  # plus rien en réserve → on laisse échouer
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                except Exception as e:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    print(f"❌ Erreur dans la génération v3: {e}\n⚠️ Fallback v2…")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    try:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        portfolios = generate_portfolios_v2(filtered_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return portfolios
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    except Exception as e2:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print(f"❌ Erreur v2: {e2}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        # Filet de sécurité - utiliser le cache
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        cached = load_cached_portfolios()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        if cached:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            print("🛟 API indisponible → on réutilise le dernier portefeuille en cache.")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            cached = attach_compliance(cached)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return cached
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            raise  # plus rien en réserve → on laisse échouer
 
-def generate_portfolios_v2(filtered_data):
-    """Version v2 en fallback si v3 échoue"""
-    print("⚠️ Utilisation de la version v2 en fallback")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            def generate_portfolios_v2(filtered_data):
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                """Version v2 en fallback si v3 échoue"""
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("⚠️ Utilisation de la version v2 en fallback")
 
-api_key = os.environ.get('API_CHAT')
-if not api_key:
-    raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                api_key = os.environ.get('API_CHAT')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if not api_key:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
 
-current_month = get_current_month_fr()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    current_month = get_current_month_fr()
 
-# Préparer les données structurées
-structured_data = prepare_structured_data(filtered_data)
-allowed_assets = extract_allowed_assets(filtered_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    # Préparer les données structurées
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    structured_data = prepare_structured_data(filtered_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    allowed_assets = extract_allowed_assets(filtered_data)
 
-# Construire le prompt v2
-prompt = build_robust_prompt_v2(structured_data, allowed_assets, current_month)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    # Construire le prompt v2
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    prompt = build_robust_prompt_v2(structured_data, allowed_assets, current_month)
 
-headers = {
-"Authorization": f"Bearer {api_key}",
-"Content-Type": "application/json"
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    headers = {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "Authorization": f"Bearer {api_key}",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "Content-Type": "application/json"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
 
-data = {
-"model": "gpt-4.1-mini",
-"messages": [{"role": "user", "content": prompt}],
-"temperature": 0,
-"seed": 42,
-# Forcer une sortie JSON pure (même sans schéma)
-"response_format": {"type": "json_object"},
-"max_tokens": 1800,
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    data = {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "model": "gpt-4.1-mini",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "messages": [{"role": "user", "content": prompt}],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "temperature": 0,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "seed": 42,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    # Forcer une sortie JSON pure (même sans schéma)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "response_format": {"type": "json_object"},
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "max_tokens": 1800,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
 
-print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
-response = post_with_retry(
-"https://api.openai.com/v1/chat/completions",
-headers,
-data,
-tries=5,
-timeout=(20, 180)
-)
-response.raise_for_status()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    print("🚀 Envoi de la requête à l'API OpenAI (prompt v2 fallback)...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    response = post_with_retry(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "https://api.openai.com/v1/chat/completions",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    headers,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    data,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    tries=5,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    timeout=(20, 180)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    response.raise_for_status()
 
-result = response.json()
-content = result["choices"][0]["message"]["content"]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    result = response.json()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    content = result["choices"][0]["message"]["content"]
 
-try:
-    portfolios = json.loads(content)
-except json.JSONDecodeError as e:
-print(f"❌ Erreur de parsing JSON: {e}")
-content = re.sub(r'^```json', '', content)
-content = re.sub(r'```$', '', content)
-content = content.strip()
-portfolios = json.loads(content)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    try:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        portfolios = json.loads(content)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    except json.JSONDecodeError as e:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print(f"❌ Erreur de parsing JSON: {e}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        content = re.sub(r'^```json', '', content)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        content = re.sub(r'```$', '', content)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        content = content.strip()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        portfolios = json.loads(content)
 
-# FIX 3: Attacher compliance de manière sûre même en fallback
-portfolios = attach_compliance(portfolios)
-portfolios = apply_compliance_sanitization(portfolios)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        # FIX 3: Attacher compliance de manière sûre même en fallback
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        portfolios = attach_compliance(portfolios)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        portfolios = apply_compliance_sanitization(portfolios)
 
-print("✅ Portefeuilles v2 générés avec succès (fallback + compliance)")
-return portfolios
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("✅ Portefeuilles v2 générés avec succès (fallback + compliance)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return portfolios
 
 
 
-def build_robust_prompt_v2(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
-    """Version v2 du prompt pour fallback"""
-    prompt = f"""Tu es un expert en allocation. Construis TROIS portefeuilles (Agressif, Modéré, Stable).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        def build_robust_prompt_v2(structured_data: Dict, allowed_assets: Dict, current_month: str) -> str:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """Version v2 du prompt pour fallback"""
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            prompt = f"""Tu es un expert en allocation. Construis TROIS portefeuilles (Agressif, Modéré, Stable).
 
-## Données structurées (univers fermés)
-BRIEF_POINTS = {json.dumps(structured_data['brief_points'], ensure_ascii=False)}
-MARKETS = {json.dumps(structured_data['market_points'], ensure_ascii=False)}
-SECTORS = {json.dumps(structured_data['sector_points'], ensure_ascii=False)}
-THEMES = {json.dumps(structured_data['theme_points'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ## Données structurées (univers fermés)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            BRIEF_POINTS = {json.dumps(structured_data['brief_points'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            MARKETS = {json.dumps(structured_data['market_points'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            SECTORS = {json.dumps(structured_data['sector_points'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            THEMES = {json.dumps(structured_data['theme_points'], ensure_ascii=False)}
 
-ALLOWED_EQUITIES = {json.dumps(allowed_assets['allowed_equities'], ensure_ascii=False)}
-ALLOWED_ETFS_STANDARD = {json.dumps(allowed_assets['allowed_etfs_standard'], ensure_ascii=False)}
-ALLOWED_BOND_ETFS = {json.dumps(allowed_assets['allowed_bond_etfs'], ensure_ascii=False)}
-ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ALLOWED_EQUITIES = {json.dumps(allowed_assets['allowed_equities'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ALLOWED_ETFS_STANDARD = {json.dumps(allowed_assets['allowed_etfs_standard'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ALLOWED_BOND_ETFS = {json.dumps(allowed_assets['allowed_bond_etfs'], ensure_ascii=False)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ALLOWED_CRYPTO = {json.dumps(allowed_assets['allowed_crypto'], ensure_ascii=False)}
 
-## Règles ABSOLUES
-- Choisir uniquement des actifs dont l'`id` figure dans les listes ALLOWED_*.
-- 3 portefeuilles : chacun **12 à 15** lignes (somme Actions+ETF+Obligations+Crypto).
-- **≥2 catégories** par portefeuille (parmi: Actions, ETF, Obligations, Crypto).
-- **Somme des allocations = 100.00** avec **2 décimales**. La **dernière ligne** ajuste pour atteindre 100.00.
-- Inclure un bloc `Compliance` dans chaque portefeuille.
-- 🔒 **Au plus 1 ETF par thème fortement corrélé** (ex: gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).  # ← NEW
-- 🔒 **Stable : aucune ligne Crypto (0%)**.  # ← NEW
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ## Règles ABSOLUES
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Choisir uniquement des actifs dont l'`id` figure dans les listes ALLOWED_*.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - 3 portefeuilles : chacun **12 à 15** lignes (somme Actions+ETF+Obligations+Crypto).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - **≥2 catégories** par portefeuille (parmi: Actions, ETF, Obligations, Crypto).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - **Somme des allocations = 100.00** avec **2 décimales**. La **dernière ligne** ajuste pour atteindre 100.00.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Inclure un bloc `Compliance` dans chaque portefeuille.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - 🔒 **Au plus 1 ETF par thème fortement corrélé** (ex: gold, S&P 500, Nasdaq 100, World, Treasuries, etc.).  # ← NEW
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - 🔒 **Stable : aucune ligne Crypto (0%)**.  # ← NEW
 
-Format JSON strict. Contexte temporel: Portefeuilles pour {current_month} 2025.
-"""
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Format JSON strict. Contexte temporel: Portefeuilles pour {current_month} 2025.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """
 return prompt
 
 def generate_portfolios_legacy(filtered_data):
@@ -3212,216 +3212,216 @@ Format JSON strict:
     "Modéré": {{...}},
     "Stable": {{...}}
     }}
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """
 
-headers = {
-"Authorization": f"Bearer {api_key}",
-"Content-Type": "application/json"
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            headers = {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "Authorization": f"Bearer {api_key}",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "Content-Type": "application/json"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
 
-data = {
-"model": "gpt-4.1-mini",
-"messages": [{"role": "user", "content": prompt}],
-"temperature": 0.3,
-"max_tokens": 1800  # FIX 3: Même limite pour legacy
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            data = {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "model": "gpt-4.1-mini",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "messages": [{"role": "user", "content": prompt}],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "temperature": 0.3,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "max_tokens": 1800  # FIX 3: Même limite pour legacy
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
 
-response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
-response.raise_for_status()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            response = post_with_retry("https://api.openai.com/v1/chat/completions", headers, data, tries=5, timeout=(20, 180))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            response.raise_for_status()
 
-result = response.json()
-content = result["choices"][0]["message"]["content"]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            result = response.json()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            content = result["choices"][0]["message"]["content"]
 
-content = re.sub(r'^```json', '', content)
-content = re.sub(r'```$', '', content)
-content = content.strip()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            content = re.sub(r'^```json', '', content)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            content = re.sub(r'```$', '', content)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            content = content.strip()
 
-portfolios = json.loads(content)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            portfolios = json.loads(content)
 
-# FIX 3: Attacher compliance même en legacy
-portfolios = attach_compliance(portfolios)
-portfolios = apply_compliance_sanitization(portfolios)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            # FIX 3: Attacher compliance même en legacy
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            portfolios = attach_compliance(portfolios)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            portfolios = apply_compliance_sanitization(portfolios)
 
-print("✅ Portefeuilles legacy générés avec succès")
-return portfolios
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            print("✅ Portefeuilles legacy générés avec succès")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return portfolios
 
-def save_portfolios(portfolios):
-    """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            def save_portfolios(portfolios):
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                """
     Wrapper rétro-compatibilité : délègue à save_portfolios_normalized.
     Évite l'appel à update_history_index() qui n'existe pas.
-    """
-    try:
-        # on peut passer un mapping vide : la normalisation saura inférer les catégories via les préfixes d'ID (EQ_/ETF_s/ETF_b/CR_)
-        allowed_assets_stub = {
-        "allowed_equities": [],
-        "allowed_etfs_standard": [],
-        "allowed_bond_etfs": [],
-        "allowed_crypto": []
-        }
-        save_portfolios_normalized(portfolios, allowed_assets_stub)
-    except Exception as e:
-    print(f"❌ Erreur lors de la sauvegarde (wrapper): {e}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                try:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    # on peut passer un mapping vide : la normalisation saura inférer les catégories via les préfixes d'ID (EQ_/ETF_s/ETF_b/CR_)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    allowed_assets_stub = {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "allowed_equities": [],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "allowed_etfs_standard": [],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "allowed_bond_etfs": [],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "allowed_crypto": []
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    save_portfolios_normalized(portfolios, allowed_assets_stub)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                except Exception as e:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    print(f"❌ Erreur lors de la sauvegarde (wrapper): {e}")
 
-def main():
-    """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF et fixes de stabilité."""
-    print("🔍 Chargement des données financières...")
-    print("=" * 60)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    def main():
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF et fixes de stabilité."""
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("🔍 Chargement des données financières...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("=" * 60)
 
-# ========== CHARGEMENT DES DONNÉES DEPUIS LES NOUVEAUX FICHIERS ==========
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        # ========== CHARGEMENT DES DONNÉES DEPUIS LES NOUVEAUX FICHIERS ==========
 
-print("\n📂 Chargement des fichiers JSON standards...")
-markets_data = load_json_data('data/markets.json')
-sectors_data = load_json_data('data/sectors.json')
-themes_data = load_json_data('data/themes.json')
-news_data = load_json_data('data/news.json')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("\n📂 Chargement des fichiers JSON standards...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        markets_data = load_json_data('data/markets.json')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        sectors_data = load_json_data('data/sectors.json')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        themes_data = load_json_data('data/themes.json')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        news_data = load_json_data('data/news.json')
 
-print("\n📂 Chargement des nouveaux fichiers stocks...")
-stocks_files = [
-Path('data/stocks_us.json'),
-Path('data/stocks_europe.json'),
-Path('data/stocks_asia.json')
-]
-stocks_files_exist = [f for f in stocks_files if f.exists()]
-print(f"  Fichiers trouvés: {[f.name for f in stocks_files_exist]}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("\n📂 Chargement des nouveaux fichiers stocks...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        stocks_files = [
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Path('data/stocks_us.json'),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Path('data/stocks_europe.json'),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Path('data/stocks_asia.json')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        stocks_files_exist = [f for f in stocks_files if f.exists()]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print(f"  Fichiers trouvés: {[f.name for f in stocks_files_exist]}")
 
-logger.info("📂 Chargement des nouveaux fichiers ETF/Bonds...")
-etf_csv = Path('data/combined_etfs.csv')
-bonds_csv = Path('data/combined_bonds.csv')
-logger.info("ETF CSV existe: %s", etf_csv.exists())
-print(f"  Bonds CSV existe: {bonds_csv.exists()}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        logger.info("📂 Chargement des nouveaux fichiers ETF/Bonds...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        etf_csv = Path('data/combined_etfs.csv')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        bonds_csv = Path('data/combined_bonds.csv')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        logger.info("ETF CSV existe: %s", etf_csv.exists())
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print(f"  Bonds CSV existe: {bonds_csv.exists()}")
 
-print("\n📂 Chargement du nouveau fichier crypto...")
-crypto_csv = Path('data/filtered/Crypto_filtered_volatility.csv')
-print(f"  Crypto CSV existe: {crypto_csv.exists()}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("\n📂 Chargement du nouveau fichier crypto...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        crypto_csv = Path('data/filtered/Crypto_filtered_volatility.csv')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print(f"  Crypto CSV existe: {crypto_csv.exists()}")
 
-print("\n📂 Recherche du brief stratégique...")
-brief_data = None
-brief_paths = ['brief_ia.json', './brief_ia.json', 'data/brief_ia.json']
-for path in brief_paths:
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            brief_data = json.load(f)
-            print(f"  ✅ Brief chargé depuis {path}")
-            break
-        except Exception:
-        pass
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("\n📂 Recherche du brief stratégique...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        brief_data = None
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        brief_paths = ['brief_ia.json', './brief_ia.json', 'data/brief_ia.json']
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        for path in brief_paths:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            try:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                with open(path, 'r', encoding='utf-8') as f:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    brief_data = json.load(f)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    print(f"  ✅ Brief chargé depuis {path}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    break
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                except Exception:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    pass
 
-if brief_data is None:
-    print("  ⚠️ Aucun fichier brief_ia.json trouvé")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    if brief_data is None:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("  ⚠️ Aucun fichier brief_ia.json trouvé")
 
-print("\n" + "=" * 60)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("\n" + "=" * 60)
 
-# ========== CONSTRUCTION DE L'UNIVERS QUANTITATIF V3 AVEC CACHE ==========
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        # ========== CONSTRUCTION DE L'UNIVERS QUANTITATIF V3 AVEC CACHE ==========
 
-print("\n🧮 Construction de l'univers quantitatif v3 (avec cache)...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        print("\n🧮 Construction de l'univers quantitatif v3 (avec cache)...")
 
-# Charger les données JSON des stocks
-stocks_jsons = []
-for f in stocks_files_exist:
-    stocks_jsons.append(load_json_data(str(f)))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        # Charger les données JSON des stocks
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        stocks_jsons = []
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        for f in stocks_files_exist:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            stocks_jsons.append(load_json_data(str(f)))
 
-# Hash des sources pour cache
-etf_hash    = file_sha1(etf_csv) if etf_csv.exists() else "NA"
-stocks_hash = json_sha1(stocks_jsons)
-crypto_hash = file_sha1(crypto_csv) if crypto_csv.exists() else "NA"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            # Hash des sources pour cache
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            etf_hash    = file_sha1(etf_csv) if etf_csv.exists() else "NA"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            stocks_hash = json_sha1(stocks_jsons)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            crypto_hash = file_sha1(crypto_csv) if crypto_csv.exists() else "NA"
 
-cached = get_cached_universe(etf_hash, stocks_hash, crypto_hash)
-if cached:
-    print("🗃️ Univers récupéré depuis le cache")
-    universe = cached
-else:
-universe = build_scored_universe_v3(
-stocks_jsons,
-str(etf_csv),
-str(crypto_csv)
-)
-set_cached_universe(etf_hash, stocks_hash, crypto_hash, universe)
-print("🗂️ Univers mis en cache")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            cached = get_cached_universe(etf_hash, stocks_hash, crypto_hash)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if cached:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("🗃️ Univers récupéré depuis le cache")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                universe = cached
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            else:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                universe = build_scored_universe_v3(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                stocks_jsons,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                str(etf_csv),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                str(crypto_csv)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                set_cached_universe(etf_hash, stocks_hash, crypto_hash, universe)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("🗂️ Univers mis en cache")
 
-# ========== FILTRAGE ET PRÉPARATION DES DONNÉES ==========
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # ========== FILTRAGE ET PRÉPARATION DES DONNÉES ==========
 
-print("\n🔄 Filtrage et préparation des données...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("\n🔄 Filtrage et préparation des données...")
 
-# Créer le résumé des stocks (pour compatibilité avec affichage)
-filtered_lists = build_lists_summary_from_stocks_files(stocks_files_exist)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # Créer le résumé des stocks (pour compatibilité avec affichage)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_lists = build_lists_summary_from_stocks_files(stocks_files_exist)
 
-# Charger et filtrer les ETF (pour compatibilité)
-etfs_data = load_etf_dict_from_csvs(str(etf_csv), str(bonds_csv))
-filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # Charger et filtrer les ETF (pour compatibilité)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                etfs_data = load_etf_dict_from_csvs(str(etf_csv), str(bonds_csv))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)
 
-# Charger et filtrer les cryptos (pour compatibilité)
-crypto_data = load_crypto_dict_from_csv(str(crypto_csv))
-filtered_crypto = filter_crypto_data(crypto_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # Charger et filtrer les cryptos (pour compatibilité)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                crypto_data = load_crypto_dict_from_csv(str(crypto_csv))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_crypto = filter_crypto_data(crypto_data)
 
-# Filtrer les autres données avec les fonctions existantes
-filtered_news = filter_news_data(news_data) if news_data else "Aucune donnée d'actualité disponible"
-filtered_markets = filter_markets_data(markets_data) if markets_data else "Aucune donnée de marché disponible"
-filtered_sectors = filter_sectors_data(sectors_data) if sectors_data else "Aucune donnée sectorielle disponible"
-filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances disponible"
-filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités disponible"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # Filtrer les autres données avec les fonctions existantes
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_news = filter_news_data(news_data) if news_data else "Aucune donnée d'actualité disponible"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_markets = filter_markets_data(markets_data) if markets_data else "Aucune donnée de marché disponible"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_sectors = filter_sectors_data(sectors_data) if sectors_data else "Aucune donnée sectorielle disponible"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances disponible"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités disponible"
 
-# ========== GÉNÉRATION DES PORTEFEUILLES AVEC UNIVERS QUANTITATIF ==========
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # ========== GÉNÉRATION DES PORTEFEUILLES AVEC UNIVERS QUANTITATIF ==========
 
-print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF + stabilité)...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF + stabilité)...")
 
-# Préparer le dictionnaire des données filtrées avec l'univers quantitatif
-filtered_data = {
-'news': filtered_news,
-'markets': filtered_markets,
-'sectors': filtered_sectors,
-'lists': filtered_lists,
-'etfs': filtered_etfs,
-'crypto': filtered_crypto,
-'themes': filtered_themes,
-'brief': filtered_brief,
-'bond_etf_names': bond_etf_names,
-'universe': universe  # <<—— NOUVEAU: Univers quantitatif
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # Préparer le dictionnaire des données filtrées avec l'univers quantitatif
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                filtered_data = {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'news': filtered_news,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'markets': filtered_markets,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'sectors': filtered_sectors,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'lists': filtered_lists,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'etfs': filtered_etfs,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'crypto': filtered_crypto,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'themes': filtered_themes,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'brief': filtered_brief,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'bond_etf_names': bond_etf_names,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'universe': universe  # <<—— NOUVEAU: Univers quantitatif
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
 
-# Générer les portefeuilles avec la nouvelle version quantitative v3
-portfolios = generate_portfolios(filtered_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # Générer les portefeuilles avec la nouvelle version quantitative v3
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                portfolios = generate_portfolios(filtered_data)
 
-# ========== SAUVEGARDE ==========
-print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
-allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
-structured_data_for_expl = prepare_structured_data(filtered_data)
-explanations = build_explanations(portfolios, allowed_assets, structured_data_for_expl)
-write_explanations_files(explanations)  # -> data/portfolio_explanations.{json,md}
-save_portfolios_normalized(portfolios, allowed_assets)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # ========== SAUVEGARDE ==========
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                structured_data_for_expl = prepare_structured_data(filtered_data)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                explanations = build_explanations(portfolios, allowed_assets, structured_data_for_expl)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                write_explanations_files(explanations)  # -> data/portfolio_explanations.{json,md}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                save_portfolios_normalized(portfolios, allowed_assets)
 
-print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
-print("🎯 Fonctionnalités activées:")
-print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
-print("   • Filtrage automatique des ETF à effet de levier")
-print("   • Détection des actifs sur-étendus")
-print("   • Équilibrage par classes de risque")
-print("   • Diversification sectorielle round-robin (cap 30%)")
-print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
-print("   • Fallback crypto progressif")
-print("   • Cache intelligent d'univers (hash fichiers)")
-print("   • Retry API robuste (5 tentatives, timeouts étendus)")
-print("   🛡️ COMPLIANCE AMF:")
-print("     ∘ Langage neutre (pas d'incitation)")
-print("     ∘ Disclaimer automatique")
-print("     ∘ Liste des risques")
-print("     ∘ Méthodologie transparente")
-print("     ∘ Sanitisation anti-marketing")
-print("   🔧 FIXES DE STABILITÉ:")
-print("     ∘ Regex pandas warning corrigé")
-print("     ∘ Détection ETF levier corrigée")
-print("     ∘ Timeouts API étendus (20s/180s)")
-print("     ∘ Protection de type améliorée")
-print("     ∘ Système de fallback cache")
-def load_json_data(file_path):
-    """Charger des données depuis un fichier JSON."""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-            print(f"  ✅ {file_path}: {len(data)} entrées")
-            return data
-        except Exception as e:
-        print(f"  ❌ Erreur {file_path}: {str(e)}")
-        return {}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("🎯 Fonctionnalités activées:")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Filtrage automatique des ETF à effet de levier")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Détection des actifs sur-étendus")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Équilibrage par classes de risque")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Diversification sectorielle round-robin (cap 30%)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Fallback crypto progressif")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Cache intelligent d'univers (hash fichiers)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   • Retry API robuste (5 tentatives, timeouts étendus)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   🛡️ COMPLIANCE AMF:")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Langage neutre (pas d'incitation)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Disclaimer automatique")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Liste des risques")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Méthodologie transparente")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Sanitisation anti-marketing")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("   🔧 FIXES DE STABILITÉ:")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Regex pandas warning corrigé")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Détection ETF levier corrigée")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Timeouts API étendus (20s/180s)")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Protection de type améliorée")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print("     ∘ Système de fallback cache")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                def load_json_data(file_path):
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    """Charger des données depuis un fichier JSON."""
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    try:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        with open(file_path, 'r', encoding='utf-8') as file:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            data = json.load(file)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            print(f"  ✅ {file_path}: {len(data)} entrées")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return data
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        except Exception as e:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            print(f"  ❌ Erreur {file_path}: {str(e)}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return {}
 
-if __name__ == "__main__":
-    main()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if __name__ == "__main__":
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                main()
