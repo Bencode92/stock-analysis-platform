@@ -716,20 +716,6 @@ function calcReserveLegale({ resultatApresIS, capitalLibere=0, reserveExistante=
   return { reserve: prelev, reste };
 }
 
-/** % UI */
-function getPctSalaire(){ 
-  const v = parseFloat(document.getElementById('sim-salaire')?.value);
-  return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 70;
-}
-function getPctDividendes(){
-  const el = document.getElementById('sim-dividendes');     // si tu ajoutes un champ dédié
-  if (el) {
-    const v = parseFloat(el.value);
-    return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 30;
-  }
-  // défaut simple = 100 - salaire
-  return Math.max(0, 100 - getPctSalaire());
-}
 function setupSimulator() {
   // --- Valeurs par défaut cohérentes (si vides) ---
   const setIfEmpty = (id, v) => {
@@ -1140,6 +1126,229 @@ function getObservedRate(statutId, sim){
   }
   return null;
 }
+// ====== FiscalUtils : Optimiseur de ratio salaire/dividendes (drop-in) ======
+window.FiscalUtils = window.FiscalUtils || {};
+
+// Choisit automatiquement PFU vs Barème pour LES dividendes d’un TNS/assimilé
+// Retourne { methode: 'PFU'|'PROGRESSIF', irDiv, ps172, cotTNS, nets, economie }
+// - baseSeuil10 : base servant au seuil des 10% (déjà proratisée quote-part)
+function chooseBestDividendMethod({ statutId, divBruts, tmi, baseSeuil10, tauxTNSDivFallback = 0.40 }) {
+  const isAssimile = ['sasu','sas','sa','selas'].includes(statutId);
+
+  // Calcule le split PFU (toujours valable)
+  const pfu = (() => {
+    if (isAssimile) {
+      const irDiv = divBruts * 0.128;
+      const ps172 = divBruts * 0.172;
+      return { methode:'PFU', irDiv, ps172, cotTNS:0, nets: divBruts - irDiv - ps172 };
+    } else {
+      const split = calcDivTNS({
+        divBruts,
+        baseSeuil10: baseSeuil10 || 0,
+        methode: 'PFU',
+        tmi,
+        tauxTNS: tauxTNSDivFallback
+      });
+      return { methode:'PFU', ...split };
+    }
+  })();
+
+  // Calcule le split Barème (abattement 40%)
+  const prog = (() => {
+    if (isAssimile) {
+      // Assimilé : abattement 40% puis IR au TMI sur 60% (PS 17,2% sur 100%)
+      const baseIR = divBruts * 0.60;
+      const irDiv = baseIR * (tmi/100);
+      const ps172 = divBruts * 0.172;
+      return { methode:'PROGRESSIF', irDiv, ps172, cotTNS:0, nets: divBruts - (irDiv + ps172) };
+    } else {
+      const split = calcDivTNS({
+        divBruts,
+        baseSeuil10: baseSeuil10 || 0,
+        methode: 'PROGRESSIF',
+        tmi,
+        tauxTNS: tauxTNSDivFallback
+      });
+      return { methode:'PROGRESSIF', ...split };
+    }
+  })();
+
+  // On garde la méthode qui donne le net le + élevé
+  const best = (pfu.nets >= prog.nets) ? pfu : prog;
+  const alt  = (best === pfu) ? prog : pfu;
+  return { ...best, economie: Math.max(0, best.nets - alt.nets) };
+}
+
+// Optimise r ∈ [ratioMin, ratioMax] pour maximiser le net en poche de l’associé
+// simulateFn(params) : ta fonction moteur par statut (ex: p => SimulationsFiscales.simulerSASU(p))
+window.FiscalUtils.optimiserRatioRemuneration = function optimiserRatioRemuneration(
+  params,
+  simulateFn,
+  opts = {}
+) {
+  const {
+    ratioMin = 0, ratioMax = 1, favoriserDividendes = false,
+    capitalSocial = 1, pasInitial = 0.01
+  } = params;
+
+  // Quick exit pour cas non optimisables
+  const statutId = params.statutId || params.statut || '';
+  if (['micro','ei','eurl','snc','sci','sciIS'].includes(statutId)) {
+    const sim = simulateFn({ ...params, tauxRemuneration: 1 });
+    return { resultat: sim, ratioOptimise: 1, methodeDividendes: sim?.methodeDividendes, economieMethode: sim?.economieMethode || 0 };
+  }
+
+  // Balayage grossier puis raffinement local
+  function evaluateAtRatio(r, bestSoFar) {
+    // 1) Simulation “brute” au ratio r pour avoir R (= résultat avant rémunération)
+    let sim = simulateFn({ ...params, tauxRemuneration: r });
+    if (!sim || sim.compatible === false) return null;
+
+    // 2) Recompose proprement rémunération/cotisations à partir de R comme dans runComparison
+    const R = round2(
+      sim.resultatAvantRemuneration
+      ?? sim.resultatEntreprise
+      ?? sim.beneficeAvantCotisations
+      ?? 0
+    );
+
+    // Si pas de résultat, rien à optimiser
+    if (R <= 0) {
+      sim.revenuNetTotal = round2(Number(sim.revenuNetSalaire || 0) + Number(sim.dividendesNets || 0));
+      return { r, sim, score: sim.revenuNetTotal };
+    }
+
+    // Bloc rémunération cible + déduction d’un brut via taux observé/fallback
+    const { blocRemTarget, profitPreIS } = computeTargets(R, r*100, Math.max(0, 100 - r*100));
+    const observed = getObservedRate(statutId, sim);
+    const fallback = ['sasu','sas','sa','selas'].includes(statutId) ? 0.80 : 0.42;
+    const { brut, cotisations } = splitBrutFromBloc(blocRemTarget, { observedRate: observed, fallback });
+
+    if (['sasu','sas','sa','selas'].includes(statutId)) {
+      const totCharges = (Number(sim.chargesPatronales)||0) + (Number(sim.chargesSalariales)||0);
+      const partPat = totCharges > 0 ? (Number(sim.chargesPatronales)||0)/totCharges : 0.70;
+      sim.remuneration      = brut;
+      sim.chargesPatronales = round2(cotisations * partPat);
+      sim.chargesSalariales = round2(cotisations * (1 - partPat));
+      sim.salaireNet = round2(sim.remuneration - sim.chargesSalariales);
+      sim.remunerationNetteSociale = sim.salaireNet;
+    } else {
+      sim.remuneration        = brut;
+      sim.cotisationsSociales = cotisations;
+    }
+
+    sim.resultatApresRemuneration = round2(Math.max(0, profitPreIS));
+
+    // 3) IS progressif, réserve légale, distribuable
+    const elig15 = !!params.is15Eligible;
+    const isBreak = calcISProgressif(sim.resultatApresRemuneration, elig15);
+    sim.is = isBreak.is;
+    sim._isDetail = { elig15, ...isBreak };
+    sim.resultatApresIS = round2(Math.max(0, sim.resultatApresRemuneration - sim.is));
+
+    const { reserve, reste: distribuableSociete } = calcReserveLegale({
+      resultatApresIS: sim.resultatApresIS,
+      capitalLibere:   Number(params.capitalLibere)||0,
+      reserveExistante: 0,
+      appliquer: true
+    });
+    sim.reserveLegalePrelevee = reserve;
+
+    // 4) Dividendes bruts (plafonnés au distribuable, puis quote-part)
+    const targetDivSociete = round2(R * (1 - r));
+    const divSociete       = Math.max(0, Math.min(targetDivSociete, distribuableSociete));
+    const partDec          = Math.max(0, Math.min(1, Number(params.partAssocie || params.partAssociePrincipal || (params.partAssociePct||100)/100)));
+    const divBrutsAssocie  = round2(divSociete * partDec);
+
+    // 5) IR sur rémunération
+    if (['sasu','sas','sa','selas'].includes(statutId)) {
+      const brutSalaire = Number(sim.remuneration)||0;
+      const netSocial   = Number(sim.salaireNet)||0;
+      const { base, csgND, abat } = baseImposableTNS({ remBrute: brutSalaire, netSocial });
+      sim.csgNonDeductible = csgND; sim.abattement10 = abat; sim.baseImposableIR = base;
+    } else {
+      const brutSalaire = Number(sim.remuneration)||0;
+      const netSocial   = Number(sim.remunerationNetteSociale||0);
+      const { base, csgND, abat } = baseImposableTNS({ remBrute: brutSalaire, netSocial });
+      sim.csgNonDeductible = csgND; sim.abattement10 = abat; sim.baseImposableIR = base;
+    }
+
+    const nbParts = (typeof getNbParts === 'function') ? getNbParts() : 1;
+    sim.impotRevenu = impotsIR2025(sim.baseImposableIR, nbParts);
+    const tmi = getTMI(sim.baseImposableIR, nbParts);
+    sim.revenuNetSalaire = Math.max(0, (sim.salaireNet || sim.remunerationNetteSociale || 0) - sim.impotRevenu);
+
+    // 6) Dividendes : choisir PFU vs Barème
+    const baseSeuil10 = Number(params.baseSeuilDivTNS) || getBaseSeuilDivTNS({
+      capitalLibere: params.capitalLibere||0,
+      primesEmission: params.primesEmission||0,
+      comptesCourants: params.comptesCourants||0,
+      partAssocie: partDec
+    });
+
+    const tauxTNSObserved = (sim.remuneration > 0 && sim.cotisationsSociales > 0)
+      ? Math.max(0.40, Math.min(0.45, sim.cotisationsSociales / sim.remuneration))
+      : 0.40;
+
+    let divChoice = { methode: null, irDiv: 0, ps172: 0, cotTNS: 0, nets: 0, economie: 0 };
+    if (divBrutsAssocie > 0) {
+      divChoice = chooseBestDividendMethod({
+        statutId, divBruts: divBrutsAssocie, tmi,
+        baseSeuil10, tauxTNSDivFallback: tauxTNSObserved
+      });
+    }
+    sim.dividendes = divBrutsAssocie;
+    sim.methodeDividendes = divChoice.methode;
+    sim.prelevementForfaitaire = (divChoice.irDiv||0) + (divChoice.ps172||0);
+    sim.cotTNSDiv = divChoice.cotTNS||0;
+    sim.dividendesNets = divChoice.nets||0;
+    sim.economieMethode = divChoice.economie||0;
+
+    // 7) Net total + score
+    sim.revenuNetTotal = round2((sim.revenuNetSalaire||0) + (sim.dividendesNets||0));
+    const score = sim.revenuNetTotal;
+
+    // Tiebreaks doux
+    if (bestSoFar && score === bestSoFar.score) {
+      if (favoriserDividendes && ['sasu','sas','sa','selas'].includes(statutId) && (1 - r) > (1 - bestSoFar.r)) {
+        return { r, sim, score, methodeDividendes: divChoice.methode, economieMethode: divChoice.economie };
+      }
+    }
+
+    return { r, sim, score, methodeDividendes: divChoice.methode, economieMethode: divChoice.economie };
+  }
+
+  // Balayage grossier
+  let step = pasInitial; // 1%
+  let best = null;
+  for (let r = ratioMin; r <= ratioMax + 1e-9; r += step) {
+    const e = evaluateAtRatio(r, best);
+    if (e && (!best || e.score > best.score)) best = e;
+  }
+
+  // Raffinement local autour du meilleur (±5 points → pas /10)
+  if (best) {
+    const left  = Math.max(ratioMin, best.r - 0.05);
+    const right = Math.min(ratioMax, best.r + 0.05);
+    step = Math.max(0.001, pasInitial / 10); // 0.1%
+    for (let r = left; r <= right + 1e-9; r += step) {
+      const e = evaluateAtRatio(r, best);
+      if (e && e.score > best.score) best = e;
+    }
+  }
+
+  if (!best) {
+    const sim = simulateFn({ ...params, tauxRemuneration: ratioMin });
+    return { resultat: sim, ratioOptimise: ratioMin, methodeDividendes: sim?.methodeDividendes, economieMethode: sim?.economieMethode||0 };
+  }
+
+  // Tag infos d’optimisation dans la simulation retournée
+  best.sim.ratioOptimise = round2(best.r);
+  best.sim.methodeDividendes = best.methodeDividendes ?? best.sim.methodeDividendes;
+  best.sim.economieMethode   = best.economieMethode   ?? best.sim.economieMethode;
+
+  return { resultat: best.sim, ratioOptimise: best.r, methodeDividendes: best.methodeDividendes, economieMethode: best.economieMethode };
+};
 
 function runComparison() {
   // Récupérer les valeurs du formulaire
@@ -2070,17 +2279,18 @@ if (divBruts > 0) {
       methode: 'PFU'
     };
   } else {
-    // TNS (EURL-IS / SARL / SELARL / SCA) : seuil 10% + cotisations TNS au-delà
-    split = calcDivTNS({
-      divBruts,
-      baseSeuil10: base10,        // capital + primes + CCA × quote-part
-      methode: 'AUTO',
-      tmi,
-      tauxTNS,
-      isGerantMajoritaire: isGerantMaj,
-      eligibleAbattement40: true
-    });
-  }
+   // ✅ TNS (EURL-IS / SARL / SELARL / SCA) : choisir automatiquement PFU vs Barème
+const choix = chooseBestDividendMethod({
+  statutId,
+  divBruts,
+  tmi,
+  baseSeuil10: base10,        // capital + primes + CCA × quote-part
+  tauxTNSDivFallback: tauxTNS,
+  isGerantMajoritaire: isGerantMaj, // optionnel : si ta logique en tient compte
+  eligibleAbattement40: true        // garde l'info si utile à ton moteur
+});
+     split = { ...choix }; // <-- IMPORTANT
+}
 
   // Persistance & totaux communs
   sim._divSplit              = split;                 // { partPS, partTNS, ps172, cotTNS, irDiv, totalPrels, nets, ... }
