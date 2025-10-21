@@ -3768,7 +3768,8 @@ detailContent = `
 
 // 🔒 Récap "taux utilisés" : ne pas l’injecter pour SCI-IS
 if (statutId !== 'sciIS') {
-  detailContent += renderRecapTauxUtilises(sim || {});
+  // Si tu as une fonction centralisée d’injection :
+  detailContent += renderRecapTauxUtilises(result.sim || {});
 }
 
     } else {
