@@ -39,90 +39,90 @@ def parse_json_strict_or_repair(s: str) -> dict:
     """
     try:
         return json.loads(s)
-    except Exception:
-        logger.warning("⚠️ JSON invalide détecté, tentative de réparation...")
+        except Exception:
+            logger.warning("⚠️ JSON invalide détecté, tentative de réparation...")
 
-        s2 = (s or "").strip()
+            s2 = (s or "").strip()
 
-        # 1) retirer éventuels fences
-        s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
-        s2 = re.sub(r'\s*```\s*$', '', s2)
+            # 1) retirer éventuels fences
+            s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
+            s2 = re.sub(r'\s*```\s*$', '', s2)
 
-        # 2) ne garder que le premier '{' jusqu'au dernier '}'
-        start = s2.find('{')
-        end = s2.rfind('}')
-        if start != -1 and end != -1 and end > start:
-            s2 = s2[start:end+1]
+            # 2) ne garder que le premier '{' jusqu'au dernier '}'
+            start = s2.find('{')
+            end = s2.rfind('}')
+            if start != -1 and end != -1 and end > start:
+                s2 = s2[start:end+1]
 
-            # 3) normaliser guillemets “ ” ‘ ’ → " '
-            s2 = s2.translate({
-            0x2018: 39, 0x2019: 39,  # ‘ ’ -> '
-            0x201C: 34, 0x201D: 34,  # “ ” -> "
-            })
+                # 3) normaliser guillemets “ ” ‘ ’ → " '
+                s2 = s2.translate({
+                0x2018: 39, 0x2019: 39,  # ‘ ’ -> '
+                0x201C: 34, 0x201D: 34,  # “ ” -> "
+                })
 
-            # 4) remplacer CR/LF bruts à l’intérieur des chaînes par \n
-            out = []
-            in_str = False
-            esc = False
-            for ch in s2:
-                if in_str:
-                    if esc:
-                        out.append(ch)
-                        esc = False
-                    elif ch == '\\':
-                        out.append(ch)
-                        esc = True
-                    elif ch == '"':
-                        out.append(ch)
-                        in_str = False
-                    elif ch in '\r\n':
-                        out.append('\\n')
-                    else:
-                        out.append(ch)
-                    else:
-                        out.append(ch)
-                        if ch == '"':
-                            in_str = True
-                            s3 = ''.join(out)
+                # 4) remplacer CR/LF bruts à l’intérieur des chaînes par \n
+                out = []
+                in_str = False
+                esc = False
+                for ch in s2:
+                    if in_str:
+                        if esc:
+                            out.append(ch)
+                            esc = False
+                            elif ch == '\\':
+                                out.append(ch)
+                                esc = True
+                                elif ch == '"':
+                                    out.append(ch)
+                                    in_str = False
+                                    elif ch in '\r\n':
+                                        out.append('\\n')
+                                        else:
+                                            out.append(ch)
+                        else:
+                            out.append(ch)
+                            if ch == '"':
+                                in_str = True
+                                s3 = ''.join(out)
 
-                            # 5) supprimer virgules finales avant } ou ]
-                            s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
+                                # 5) supprimer virgules finales avant } ou ]
+                                s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
 
-                            logger.info("✅ JSON réparé avec succès")
-                            return json.loads(s3)
+                                logger.info("✅ JSON réparé avec succès")
+                                return json.loads(s3)
 
 
-                            # ============= COMPLIANCE AMF - GARDE-FOUS RÉGLEMENTAIRES =============
+                                # ============= COMPLIANCE AMF - GARDE-FOUS RÉGLEMENTAIRES =============
 
-                            BANNED_MARKETING = [
-                            r"\bachet(?:er|ez|e|ons|ées?)\b",
-                            r"\bvend(?:re|ez|e|ons|u(?:e|s|es)?)\b",
-                            r"\bconserv(?:er|ez|e|ons|ation)\b",
+                                BANNED_MARKETING = [
+                                r"\bachet(?:er|ez|e|ons|ées?)\b",
+                                r"\bvend(?:re|ez|e|ons|u(?:e|s|es)?)\b",
+                                r"\bconserv(?:er|ez|e|ons|ation)\b",
 
-                            # prioriser / privilégier (toutes variantes + accents)
-                            r"\b(prioriser|prioritaire|privil[eé]g(?:ier|ie|i(?:e|ons))|à\s*privil[eé]gier)\b",
+                                # prioriser / privilégier (toutes variantes + accents)
+                                r"\b(prioriser|prioritaire|privil[eé]g(?:ier|ie|i(?:e|ons))|à\s*privil[eé]gier)\b",
 
-                            # fortement recommandé (toutes flexions + accents)
-                            r"\bfortement\s+recommand[eé](?:e|es|s)?\b",
+                                # fortement recommandé (toutes flexions + accents)
+                                r"\bfortement\s+recommand[eé](?:e|es|s)?\b",
 
-                            # garanti, sans risque
-                            r"\bgaranti(?:e|es|s)?\b",
-                            r"\bsans\s*risque(?:s)?\b",
+                                # garanti, sans risque
+                                r"\bgaranti(?:e|es|s)?\b",
+                                r"\bsans\s*risque(?:s)?\b",
 
-                            # objectif/target de prix + price target
-                            r"\b(objectif|target)\s+de\s+prix\b",
-                            r"\bprice\s*target\b",
+                                # objectif/target de prix + price target
+                                r"\b(objectif|target)\s+de\s+prix\b",
+                                r"\bprice\s*target\b",
 
-                            # rendement attendu (pluriels/féminins)
-                            r"\brendement(?:s)?\s+attendu(?:s|e|es)?\b",
+                                # rendement attendu (pluriels/féminins)
+                                r"\brendement(?:s)?\s+attendu(?:s|e|es)?\b",
 
-                            # injonctions
-                            r"\b(vous\s+)?devez\b",
-                            r"\bil\s*faut\b",
-                            r"\bconseillons?\b",
-                            r"\brecommand(?:ons|e|ez)\b",
-                            r"\bvous\s+devriez\b"
-                            ]
+                                # injonctions
+                                r"\b(vous\s+)?devez\b",
+                                r"\bil\s*faut\b",
+                                r"\bconseillons?\b",
+                                r"\brecommand(?:ons|e|ez)\b",
+                                r"\bvous\s+devriez\b"
+                                ]
 
 def sanitize_marketing_language(text: str) -> str:
     """Supprime le langage d'incitation interdit par l'AMF"""
@@ -173,8 +173,8 @@ def fnum(x):
     s = re.sub(r"[^0-9.\-]", "", str(x or ""))
     try:
         return float(s) if s not in ("", "-", ".", "-.") else 0.0
-    except:
-        return 0.0
+        except:
+            return 0.0
 
 def _winsor(x, p=0.02):
     """Winsorisation pour éliminer les outliers"""
@@ -205,57 +205,57 @@ def compute_score(rows, kind):
         # -- Momentum adaptatif selon le type d'actif
         if kind == "crypto":
             mom_raw = [0.5*fnum(r.get("perf_7d")) + 0.5*fnum(r.get("perf_24h")) for r in rows]
-        else:
-            # Fallback robuste si 1m/3m manquants : 0.7*YTD + 0.3*Daily*20
-            m1 = [fnum(r.get("perf_1m")) for r in rows]
-            m3 = [fnum(r.get("perf_3m")) for r in rows]
-            m90= [fnum(r.get("perf_90d")) for r in rows]
-            ytd= [fnum(r.get("ytd")) for r in rows]
-            d1 = [fnum(r.get("perf_24h")) for r in rows]
-            have_m = any(m3) or any(m1) or any(m90)
-            if have_m:
-                mom_raw = [0.5*m3[i] + 0.3*m1[i] + 0.2*m90[i] for i in range(n)]
             else:
-                mom_raw = [0.7*ytd[i] + 0.3*(d1[i]*20.0) for i in range(n)]
-                mom = _z(mom_raw)
-
-                # -- Mesure du risque (volatilité + drawdown)
-                vol30 = [fnum(r.get("vol30")) for r in rows]
-                vol3y = [fnum(r.get("vol_3y")) for r in rows]
-                vol_used = [vol30[i] if vol30[i] != 0 else vol3y[i] for i in range(n)]
-                risk_vol = _z(vol_used)
-
-                # drawdown: toujours en valeur absolue
-                dd = [abs(fnum(r.get("maxdd90"))) for r in rows]
-                risk_dd = _z(dd) if any(dd) else np.zeros(n)
-
-                # -- Détection de sur-extension (anti-fin-de-cycle)
-                ytd = [fnum(r.get("ytd")) for r in rows]
-                p1m = [fnum(r.get("perf_1m")) for r in rows]
-                p7d = [fnum(r.get("perf_7d")) for r in rows]
-                p24 = [fnum(r.get("perf_24h")) for r in rows]
-                overext = []
-                for i, r in enumerate(rows):
-                    if kind == "crypto":
-                        decel = p24[i] < (p7d[i]/3.0)
+                # Fallback robuste si 1m/3m manquants : 0.7*YTD + 0.3*Daily*20
+                m1 = [fnum(r.get("perf_1m")) for r in rows]
+                m3 = [fnum(r.get("perf_3m")) for r in rows]
+                m90= [fnum(r.get("perf_90d")) for r in rows]
+                ytd= [fnum(r.get("ytd")) for r in rows]
+                d1 = [fnum(r.get("perf_24h")) for r in rows]
+                have_m = any(m3) or any(m1) or any(m90)
+                if have_m:
+                    mom_raw = [0.5*m3[i] + 0.3*m1[i] + 0.2*m90[i] for i in range(n)]
                     else:
-                        decel = p1m[i] < (fnum(r.get("perf_3m"))/3.0)
+                        mom_raw = [0.7*ytd[i] + 0.3*(d1[i]*20.0) for i in range(n)]
+                        mom = _z(mom_raw)
 
-                        flag = (ytd[i] > 80 and (p1m[i] <= 0 or decel)) or (ytd[i] > 150)
-                        overext.append(1.0 if flag else 0.0)
-                        r["flags"] = {"overextended": bool(flag)}
+                        # -- Mesure du risque (volatilité + drawdown)
+                        vol30 = [fnum(r.get("vol30")) for r in rows]
+                        vol3y = [fnum(r.get("vol_3y")) for r in rows]
+                        vol_used = [vol30[i] if vol30[i] != 0 else vol3y[i] for i in range(n)]
+                        risk_vol = _z(vol_used)
 
-                        # -- Bonus liquidité (évite les nains illiquides)
-                        liq = _z([math.log(max(fnum(r.get("liquidity")), 1.0)) for r in rows]) if any(fnum(r.get("liquidity")) for r in rows) else np.zeros(n)
-                        liq_weight = 0.30 if kind == "etf" else (0.15 if kind == "equity" else 0.0)
+                        # drawdown: toujours en valeur absolue
+                        dd = [abs(fnum(r.get("maxdd90"))) for r in rows]
+                        risk_dd = _z(dd) if any(dd) else np.zeros(n)
 
-                        # -- Score final : momentum - risque - sur-extension + liquidité
-                        score = mom - (0.6*risk_vol + 0.4*risk_dd) - np.array(overext)*0.8 + liq_weight*liq
-
+                        # -- Détection de sur-extension (anti-fin-de-cycle)
+                        ytd = [fnum(r.get("ytd")) for r in rows]
+                        p1m = [fnum(r.get("perf_1m")) for r in rows]
+                        p7d = [fnum(r.get("perf_7d")) for r in rows]
+                        p24 = [fnum(r.get("perf_24h")) for r in rows]
+                        overext = []
                         for i, r in enumerate(rows):
-                            r["score"] = float(score[i])
+                            if kind == "crypto":
+                                decel = p24[i] < (p7d[i]/3.0)
+                                else:
+                                    decel = p1m[i] < (fnum(r.get("perf_3m"))/3.0)
 
-                            return rows
+                                    flag = (ytd[i] > 80 and (p1m[i] <= 0 or decel)) or (ytd[i] > 150)
+                                    overext.append(1.0 if flag else 0.0)
+                                    r["flags"] = {"overextended": bool(flag)}
+
+                                    # -- Bonus liquidité (évite les nains illiquides)
+                                    liq = _z([math.log(max(fnum(r.get("liquidity")), 1.0)) for r in rows]) if any(fnum(r.get("liquidity")) for r in rows) else np.zeros(n)
+                                    liq_weight = 0.30 if kind == "etf" else (0.15 if kind == "equity" else 0.0)
+
+                                    # -- Score final : momentum - risque - sur-extension + liquidité
+                                    score = mom - (0.6*risk_vol + 0.4*risk_dd) - np.array(overext)*0.8 + liq_weight*liq
+
+                                    for i, r in enumerate(rows):
+                                        r["score"] = float(score[i])
+
+                                        return rows
 
 def read_combined_etf_csv(path_csv):
     """
@@ -275,10 +275,10 @@ def read_combined_etf_csv(path_csv):
             name_col = next((c for c in ["name", "long_name", "etf_name", "symbol", "ticker"] if c in df.columns), None)
             if name_col is None:
                 df["name"] = [f"ETF_{i}" for i in range(len(df))]
-            else:
-                df["name"] = df[name_col].astype(str)
+                else:
+                    df["name"] = df[name_col].astype(str)
 
-                # Helper pour récupérer une Series (sinon série vide alignée sur l’index)
+                    # Helper pour récupérer une Series (sinon série vide alignée sur l’index)
 def _series(col, default=""):
     return df[col] if col in df.columns else pd.Series(default, index=df.index)
 
@@ -445,11 +445,11 @@ def _v_etf(r):
                                                 seen.add(id(r))
                                                 print(f"  🔁 Fallback crypto appliqué → {len(crypto_filtered)} candidats")
 
-                                            except Exception as e:
-                                                print(f"  ⚠️ Erreur crypto: {e}")
-                                                crypto_filtered = []
+        except Exception as e:
+            print(f"  ⚠️ Erreur crypto: {e}")
+            crypto_filtered = []
 
-                                                # ====== CLASSIFICATION PAR RISQUE ET ÉQUILIBRAGE ======
+            # ====== CLASSIFICATION PAR RISQUE ET ÉQUILIBRAGE ======
 def risk_class(kind, r):
     v = fnum(r.get("vol30") or r.get("vol_3y"))
     if kind == "etf":
@@ -1493,35 +1493,35 @@ def _pick_refs(name: str, category: str) -> list:
                                                             "justification": sanitize_marketing_language(base_just),
                                                             })
 
-                                                        else:
-                                                            # ---- Chemin v1 (dicos par catégories) ----
-                                                            for cat in ("Actions", "ETF", "Obligations", "Crypto"):
-                                                                d = pf.get(cat) or {}
-                                                                if not isinstance(d, dict):
-                                                                    continue
-                                                                    for nm, alloc in d.items():
-                                                                        # "12%" -> 12.0
-                                                                        try:
-                                                                            alloc_f = float(re.sub(r"[^0-9.\-]", "", str(alloc)) or 0.0)
-                                                                        except Exception:
-                                                                            alloc_f = 0.0
-                                                                            aid, score, risk, cat_norm = _find_meta_by_name(nm, cat)
-                                                                            refs = _pick_refs(nm, cat_norm)
-                                                                            base_just = f"Pondération {alloc_f:.2f}% — exposition {cat_norm.lower()} via {nm}; Score {score:+.2f}, risque {risk}. Réfs: {refs}."
-                                                                            lines.append({
-                                                                            "id": aid,
-                                                                            "name": nm,
-                                                                            "category": cat_norm,
-                                                                            "allocation_pct": round(alloc_f, 2),
-                                                                            "score": round(score, 3),
-                                                                            "risk_class": risk,
-                                                                            "refs": refs,
-                                                                            "justification": sanitize_marketing_language(base_just),
-                                                                            })
+                                                            else:
+                                                                # ---- Chemin v1 (dicos par catégories) ----
+                                                                for cat in ("Actions", "ETF", "Obligations", "Crypto"):
+                                                                    d = pf.get(cat) or {}
+                                                                    if not isinstance(d, dict):
+                                                                        continue
+                                                                        for nm, alloc in d.items():
+                                                                            # "12%" -> 12.0
+                                                                            try:
+                                                                                alloc_f = float(re.sub(r"[^0-9.\-]", "", str(alloc)) or 0.0)
+                                                                                except Exception:
+                                                                                    alloc_f = 0.0
+                                                                                    aid, score, risk, cat_norm = _find_meta_by_name(nm, cat)
+                                                                                    refs = _pick_refs(nm, cat_norm)
+                                                                                    base_just = f"Pondération {alloc_f:.2f}% — exposition {cat_norm.lower()} via {nm}; Score {score:+.2f}, risque {risk}. Réfs: {refs}."
+                                                                                    lines.append({
+                                                                                    "id": aid,
+                                                                                    "name": nm,
+                                                                                    "category": cat_norm,
+                                                                                    "allocation_pct": round(alloc_f, 2),
+                                                                                    "score": round(score, 3),
+                                                                                    "risk_class": risk,
+                                                                                    "refs": refs,
+                                                                                    "justification": sanitize_marketing_language(base_just),
+                                                                                    })
 
-                                                                            explanations[pf_name] = lines
+                                                                                    explanations[pf_name] = lines
 
-                                                                            return explanations
+                                                                                    return explanations
 
 
 def write_explanations_files(explanations: dict,
@@ -1561,8 +1561,8 @@ def json_sha1(obj: Any) -> str:
     try:
         blob = json.dumps(obj, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
         return _sha1_bytes(blob)
-    except Exception:
-        return str(random.random())
+        except Exception:
+            return str(random.random())
 
 def set_cached_universe(etf_hash: str, stocks_hash: str, crypto_hash: str, universe: Dict):
     _UNIVERSE_CACHE[(etf_hash, stocks_hash, crypto_hash)] = universe
@@ -1583,16 +1583,16 @@ def post_with_retry(url, headers, payload, tries=5, timeout=(20, 180), backoff=2
     for i in range(tries):
         try:
             return requests.post(url, headers=headers, json=payload, timeout=timeout)
-        except (requests.ReadTimeout, requests.ConnectionError, requests.Timeout) as e:
-            last_err = e
-            base = backoff ** i
-            factor = 1.0 + (random.uniform(-jitter, jitter) if jitter else 0.0)
-            wait = max(0.05, base * factor)  # évite un sleep trop court ou négatif
-            logger.warning("⚠️ API retry %s/%s dans %.2fs: %s", i + 1, tries, wait, e)
-            time.sleep(wait)
-            raise last_err
+            except (requests.ReadTimeout, requests.ConnectionError, requests.Timeout) as e:
+                last_err = e
+                base = backoff ** i
+                factor = 1.0 + (random.uniform(-jitter, jitter) if jitter else 0.0)
+                wait = max(0.05, base * factor)  # évite un sleep trop court ou négatif
+                logger.warning("⚠️ API retry %s/%s dans %.2fs: %s", i + 1, tries, wait, e)
+                time.sleep(wait)
+                raise last_err
 
-            # ============= FIX 4: FILET DE SÉCURITÉ CACHE =============
+                # ============= FIX 4: FILET DE SÉCURITÉ CACHE =============
 
 def load_cached_portfolios(path="data/portefeuilles.json"):
     """Charge le dernier portefeuille validé en cache"""
@@ -1781,115 +1781,115 @@ def generate_portfolios_v3(filtered_data: Dict) -> Dict:
                 # 2) parcours canonique
                 try:
                     content = result["output"][0]["content"][0]["text"]
-                except Exception:
-                    # 3) dernier filet : quelques variantes observées
-                    msg = (result.get("response") or {}).get("output", [])
-                    if msg and "content" in msg[0] and msg[0]["content"]:
-                        content = msg[0]["content"][0].get("text")
+                    except Exception:
+                        # 3) dernier filet : quelques variantes observées
+                        msg = (result.get("response") or {}).get("output", [])
+                        if msg and "content" in msg[0] and msg[0]["content"]:
+                            content = msg[0]["content"][0].get("text")
 
-                        if content is None:
-                            raise ValueError("Réponse vide du modèle (output_text/content introuvable)")
+                            if content is None:
+                                raise ValueError("Réponse vide du modèle (output_text/content introuvable)")
 
-                            # Sauvegarder la réponse brute pour debug
-                            response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
-                            os.makedirs("debug/prompts", exist_ok=True)
-                            with open(response_debug_file, "w", encoding="utf-8") as f:
-                                f.write(content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, indent=2))
-                                print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
+                                # Sauvegarder la réponse brute pour debug
+                                response_debug_file = f"debug/prompts/response_v3_{debug_timestamp}.txt"
+                                os.makedirs("debug/prompts", exist_ok=True)
+                                with open(response_debug_file, "w", encoding="utf-8") as f:
+                                    f.write(content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, indent=2))
+                                    print(f"✅ Réponse v3 sauvegardée dans {response_debug_file}")
 
-                                # Structured Outputs: le modèle peut renvoyer un objet dict directement
-                                if isinstance(content, dict):
-                                    portfolios = content
-                                else:
-                                    if not isinstance(content, str) or not content.strip():
-                                        raise ValueError("Réponse vide du modèle (content string)")
-                                        portfolios = parse_json_strict_or_repair(content)
+                                    # Structured Outputs: le modèle peut renvoyer un objet dict directement
+                                    if isinstance(content, dict):
+                                        portfolios = content
+                                        else:
+                                            if not isinstance(content, str) or not content.strip():
+                                                raise ValueError("Réponse vide du modèle (content string)")
+                                                portfolios = parse_json_strict_or_repair(content)
 
-                                        # ---------- post-traitements communs (toujours exécutés) ----------
-                                        # Sanity check minimal
-                                        expected = {"Agressif", "Modéré", "Stable"}
-                                        if not isinstance(portfolios, dict) or not expected.issubset(portfolios.keys()):
-                                            raise ValueError("Réponse v3 invalide/partielle — pas de portefeuilles utilisables")
-                                            if any(not isinstance(portfolios[k], dict) for k in expected):
-                                                raise ValueError("Réponse v3 invalide — mauvais format (clé non-dict)")
-                                                if all(len(portfolios[k].get("Lignes", [])) == 0 for k in expected):
-                                                    raise ValueError("Réponse v3 vide — aucune 'Lignes' fournie")
+                                                # ---------- post-traitements communs (toujours exécutés) ----------
+                                                # Sanity check minimal
+                                                expected = {"Agressif", "Modéré", "Stable"}
+                                                if not isinstance(portfolios, dict) or not expected.issubset(portfolios.keys()):
+                                                    raise ValueError("Réponse v3 invalide/partielle — pas de portefeuilles utilisables")
+                                                    if any(not isinstance(portfolios[k], dict) for k in expected):
+                                                        raise ValueError("Réponse v3 invalide — mauvais format (clé non-dict)")
+                                                        if all(len(portfolios[k].get("Lignes", [])) == 0 for k in expected):
+                                                            raise ValueError("Réponse v3 vide — aucune 'Lignes' fournie")
 
-                                                    # Attacher compliance + sanitisation
-                                                    portfolios = attach_compliance(portfolios)
-                                                    print("🛡️ Application de la sanitisation compliance AMF...")
-                                                    portfolios = apply_compliance_sanitization(portfolios)
+                                                            # Attacher compliance + sanitisation
+                                                            portfolios = attach_compliance(portfolios)
+                                                            print("🛡️ Application de la sanitisation compliance AMF...")
+                                                            portfolios = apply_compliance_sanitization(portfolios)
 
-                                                    # Validation & auto-fix
-                                                    validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
-                                                    if not validation_ok:
-                                                        print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
-                                                        portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
-                                                        validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
-                                                        if not validation_ok:
-                                                            print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
+                                                            # Validation & auto-fix
+                                                            validation_ok, errors = validate_portfolios_v3(portfolios, allowed_assets)
+                                                            if not validation_ok:
+                                                                print(f"⚠️ Erreurs de validation v3 détectées: {errors}")
+                                                                portfolios = fix_portfolios_v3(portfolios, errors, allowed_assets)
+                                                                validation_ok, remaining_errors = validate_portfolios_v3(portfolios, allowed_assets)
+                                                                if not validation_ok:
+                                                                    print(f"⚠️ Erreurs restantes après correction: {remaining_errors}")
 
-                                                            # Rapport overlaps (diagnostic)
-                                                            try:
-                                                                overlap_report = build_overlap_report(
-                                                                portfolios,
-                                                                allowed_assets,
-                                                                etf_csv_path="data/combined_etfs.csv",
-                                                                )
-                                                                for k, v in overlap_report.items():
-                                                                    if v:
-                                                                        sample = v[0]
-                                                                        print(
-                                                                        f"🔎 Overlap {k}: {len(v)} paire(s) suspecte(s) — "
-                                                                        f"ex: {sample['names'][0]} ↔ {sample['names'][1]} "
-                                                                        f"({sample['type']} {sample['score']})"
+                                                                    # Rapport overlaps (diagnostic)
+                                                                    try:
+                                                                        overlap_report = build_overlap_report(
+                                                                        portfolios,
+                                                                        allowed_assets,
+                                                                        etf_csv_path="data/combined_etfs.csv",
                                                                         )
-                                                                    else:
-                                                                        print(f"🔎 Overlap {k}: RAS")
-                                                                    except Exception as e:
-                                                                        print(f"⚠️ Overlap: erreur durant l'analyse ({e})")
+                                                                        for k, v in overlap_report.items():
+                                                                            if v:
+                                                                                sample = v[0]
+                                                                                print(
+                                                                                f"🔎 Overlap {k}: {len(v)} paire(s) suspecte(s) — "
+                                                                                f"ex: {sample['names'][0]} ↔ {sample['names'][1]} "
+                                                                                f"({sample['type']} {sample['score']})"
+                                                                                )
+                                                                                else:
+                                                                                    print(f"🔎 Overlap {k}: RAS")
+                                                                        except Exception as e:
+                                                                            print(f"⚠️ Overlap: erreur durant l'analyse ({e})")
 
-                                                                        # Contrôle final des scores
-                                                                        try:
-                                                                            score_guard(portfolios, allowed_assets)
-                                                                        except ValueError as e:
-                                                                            logger.error("❌ Score guard failed: %s", e, exc_info=True)
+                                                                            # Contrôle final des scores
+                                                                            try:
+                                                                                score_guard(portfolios, allowed_assets)
+                                                                                except ValueError as e:
+                                                                                    logger.error("❌ Score guard failed: %s", e, exc_info=True)
 
-                                                                            logger.info("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
+                                                                                    logger.info("✅ Portefeuilles v3 générés avec succès (scoring quantitatif + compliance AMF)")
 
-                                                                            # Récap console (facultatif)
-                                                                            for portfolio_name, portfolio in portfolios.items():
-                                                                                if isinstance(portfolio, dict) and 'Lignes' in portfolio:
-                                                                                    lignes = portfolio['Lignes']
-                                                                                    total_alloc = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
-                                                                                    categories = set(ligne.get('category') for ligne in lignes)
+                                                                                    # Récap console (facultatif)
+                                                                                    for portfolio_name, portfolio in portfolios.items():
+                                                                                        if isinstance(portfolio, dict) and 'Lignes' in portfolio:
+                                                                                            lignes = portfolio['Lignes']
+                                                                                            total_alloc = sum(ligne.get('allocation_pct', 0) for ligne in lignes)
+                                                                                            categories = set(ligne.get('category') for ligne in lignes)
 
-                                                                                    # Stats scores
-                                                                                    scores = []
-                                                                                    risk_counts = defaultdict(int)
-                                                                                    for ligne in lignes:
-                                                                                        asset_id = ligne.get('id', '')
-                                                                                        for asset_type in ["allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"]:
-                                                                                            for asset in allowed_assets.get(asset_type, []):
-                                                                                                if asset["id"] == asset_id:
-                                                                                                    scores.append(asset.get('score', 0))
-                                                                                                    risk_counts[asset.get('risk_class', 'unknown')] += 1
-                                                                                                    break
+                                                                                            # Stats scores
+                                                                                            scores = []
+                                                                                            risk_counts = defaultdict(int)
+                                                                                            for ligne in lignes:
+                                                                                                asset_id = ligne.get('id', '')
+                                                                                                for asset_type in ["allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"]:
+                                                                                                    for asset in allowed_assets.get(asset_type, []):
+                                                                                                        if asset["id"] == asset_id:
+                                                                                                            scores.append(asset.get('score', 0))
+                                                                                                            risk_counts[asset.get('risk_class', 'unknown')] += 1
+                                                                                                            break
 
-                                                                                                    avg_score = np.mean(scores) if scores else 0
-                                                                                                    median_score = np.median(scores) if scores else 0
-                                                                                                    compliance_ok = bool(portfolio.get('Compliance'))
+                                                                                                            avg_score = np.mean(scores) if scores else 0
+                                                                                                            median_score = np.median(scores) if scores else 0
+                                                                                                            compliance_ok = bool(portfolio.get('Compliance'))
 
-                                                                                                    print(f"  📊 {portfolio_name}: {len(lignes)} actifs, {len(categories)} catégories, {total_alloc:.2f}%")
-                                                                                                    print(f"     Score moyen: {avg_score:.2f}, médiane: {median_score:.2f}")
-                                                                                                    print(f"     Répartition risque: {dict(risk_counts)}")
-                                                                                                    print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
+                                                                                                            print(f"  📊 {portfolio_name}: {len(lignes)} actifs, {len(categories)} catégories, {total_alloc:.2f}%")
+                                                                                                            print(f"     Score moyen: {avg_score:.2f}, médiane: {median_score:.2f}")
+                                                                                                            print(f"     Répartition risque: {dict(risk_counts)}")
+                                                                                                            print(f"     Compliance AMF: {'✅' if compliance_ok else '❌'}")
 
-                                                                                                    return portfolios
+                                                                                                            return portfolios
 
 
 
-                                                                                                    # === NORMALISATION V3 -> SCHÉMA FRONT HISTORIQUE (Agressif/Modéré/Stable) ===
+                                                                                                            # === NORMALISATION V3 -> SCHÉMA FRONT HISTORIQUE (Agressif/Modéré/Stable) ===
 def _infer_category_from_id(asset_id: str) -> str:
     if str(asset_id).startswith("EQ_"):    return "Actions"
     if str(asset_id).startswith("ETF_b"):  return "Obligations"
@@ -1934,9 +1934,9 @@ def _sum_pct_dict(d: dict) -> float:
         for v in d.values():
             try:
                 tot += float(re.sub(r'[^0-9.\-]', '', str(v)))
-            except Exception:
-                pass
-                return round(tot)
+                except Exception:
+                    pass
+                    return round(tot)
 
 def _ensure_comment(pf_key: str, base_text: str = ""):
     base = sanitize_marketing_language((base_text or "").strip())
@@ -1982,16 +1982,16 @@ def _ensure_comment(pf_key: str, base_text: str = ""):
                         if asset_id in lut:
                             name = lut[asset_id]["name"]
                             category = lut[asset_id]["category"]
-                        else:
-                            name = ligne.get("name", asset_id)
-                            category = _infer_category_from_id(asset_id)
-                            _put(portfolio_name, category, name, alloc)
+                            else:
+                                name = ligne.get("name", asset_id)
+                                category = _infer_category_from_id(asset_id)
+                                _put(portfolio_name, category, name, alloc)
 
-                            _ensure_comment(portfolio_name, base_comment)
+                                _ensure_comment(portfolio_name, base_comment)
 
-                            # --- 2) Format "Portefeuilles" (archives non standard) ---
-                            if not out and isinstance(raw_obj, dict):
-                                pfs = raw_obj.get("Portefeuilles") or raw_obj.get("portefeuilles") or []
+                                # --- 2) Format "Portefeuilles" (archives non standard) ---
+                                if not out and isinstance(raw_obj, dict):
+                                    pfs = raw_obj.get("Portefeuilles") or raw_obj.get("portefeuilles") or []
 
 def canon(nom: str) -> str:
     s = (nom or "").lower()
@@ -2014,31 +2014,31 @@ def canon(nom: str) -> str:
             if asset_id in lut:
                 name = lut[asset_id]["name"]
                 category = lut[asset_id]["category"]
-            else:
-                name = it.get("name") or it.get("Nom") or asset_id
-                category = _infer_category_from_id(asset_id)
-                _put(pf_key, category, name, alloc)
+                else:
+                    name = it.get("name") or it.get("Nom") or asset_id
+                    category = _infer_category_from_id(asset_id)
+                    _put(pf_key, category, name, alloc)
 
-                _ensure_comment(pf_key, base_comment)
+                    _ensure_comment(pf_key, base_comment)
 
-                return out
+                    return out
 
 
-                # === V1: validation & auto-fix de la somme 100% ===
+                    # === V1: validation & auto-fix de la somme 100% ===
 def _to_float_pct(v):
     s = re.sub(r'[^0-9.\-\.]', '', str(v) if v is not None else '')
     try:
         return float(s) if s else 0.0
-    except:
-        return 0.0
+        except:
+            return 0.0
 
 def _fmt_int_pct(x):
     # v1 = entiers avec "%" (ex: "12%")
     try:
         v = max(0.0, min(100.0, float(x)))
         return f"{int(round(v))}%"
-    except:
-        return f"{x}%"
+        except:
+            return f"{x}%"
 
 def validate_and_fix_v1_sum(portfolios_v1: dict, fix: bool = True):
     """
@@ -2072,38 +2072,38 @@ def validate_and_fix_v1_sum(portfolios_v1: dict, fix: bool = True):
                                 cur = _to_float_pct(fixed[pf_name][cat][name])
                                 newv = max(0.0, min(100.0, cur + diff))  # borne prudente
                                 fixed[pf_name][cat][name] = _fmt_int_pct(newv)
-                            else:
-                                errors.append(f"{pf_name}: somme={total:.2f}% (≠ 100%)")
+                                else:
+                                    errors.append(f"{pf_name}: somme={total:.2f}% (≠ 100%)")
 
-                                return (len(errors) == 0), errors, fixed
+                                    return (len(errors) == 0), errors, fixed
 
-                                # === Module Overlap / Doublons ===
-                                # Détection de paires d’ETF potentiellement redondantes (mêmes thèmes ou mêmes principaux holdings).
+                                    # === Module Overlap / Doublons ===
+                                    # Détection de paires d’ETF potentiellement redondantes (mêmes thèmes ou mêmes principaux holdings).
 
-                                _THEMATIC_STOPWORDS = {
-                                "ishares","xtrackers","invesco","lyxor","spdr","vanguard","amundi","hsbc",
-                                "ucits","etf","acc","dist","eur","usd","gbp","inc","cap","accumulating",
-                                "distributing","hedged","unhedged","physically","replicating","swap","1c","1d","2d",
-                                "shares","share","trust","physical","core","ftse","all","fund","index","class","ucits"
-                                }
+                                    _THEMATIC_STOPWORDS = {
+                                    "ishares","xtrackers","invesco","lyxor","spdr","vanguard","amundi","hsbc",
+                                    "ucits","etf","acc","dist","eur","usd","gbp","inc","cap","accumulating",
+                                    "distributing","hedged","unhedged","physically","replicating","swap","1c","1d","2d",
+                                    "shares","share","trust","physical","core","ftse","all","fund","index","class","ucits"
+                                    }
 
-                                _THEMATIC_SYNONYMS = {
-                                "or":"gold","gold":"gold","xau":"gold",
-                                "metaux":"metals","métaux":"metals","precious":"metals","precieux":"metals","précieux":"metals",
-                                "miners":"miners","mineurs":"miners","miniers":"miners","mines":"miners",
-                                "sp500":"sp500","s&p":"sp500","s&p500":"sp500","sandp":"sp500",
-                                "nasdaq":"nasdaq","nasdaq100":"nasdaq",
-                                "world":"world","global":"world","acwi":"world","allworld":"world",
-                                "msci":"msci",
-                                "eurozone":"eurozone","euro":"eurozone",
-                                "gov":"treasury","sovereign":"treasury","treasury":"treasury",
-                                "oil":"oil","energy":"energy","bitcoin":"bitcoin","silver":"silver"
-                                }
+                                    _THEMATIC_SYNONYMS = {
+                                    "or":"gold","gold":"gold","xau":"gold",
+                                    "metaux":"metals","métaux":"metals","precious":"metals","precieux":"metals","précieux":"metals",
+                                    "miners":"miners","mineurs":"miners","miniers":"miners","mines":"miners",
+                                    "sp500":"sp500","s&p":"sp500","s&p500":"sp500","sandp":"sp500",
+                                    "nasdaq":"nasdaq","nasdaq100":"nasdaq",
+                                    "world":"world","global":"world","acwi":"world","allworld":"world",
+                                    "msci":"msci",
+                                    "eurozone":"eurozone","euro":"eurozone",
+                                    "gov":"treasury","sovereign":"treasury","treasury":"treasury",
+                                    "oil":"oil","energy":"energy","bitcoin":"bitcoin","silver":"silver"
+                                    }
 
-                                # ---------- Shims (sécurise l'exécution si tes helpers ne sont pas déjà importés) ----------
-                                try:
-                                    _build_asset_lookup  # type: ignore[name-defined]
-                                except NameError:  # pragma: no cover
+                                    # ---------- Shims (sécurise l'exécution si tes helpers ne sont pas déjà importés) ----------
+                                    try:
+                                        _build_asset_lookup  # type: ignore[name-defined]
+                                        except NameError:  # pragma: no cover
 def _build_asset_lookup(allowed_assets: dict) -> dict:
     """Fallback minimal : mappe id -> {name, category} depuis allowed_assets."""
     lut = {}
@@ -2120,7 +2120,7 @@ def _build_asset_lookup(allowed_assets: dict) -> dict:
 
             try:
                 _infer_category_from_id  # type: ignore[name-defined]
-            except NameError:  # pragma: no cover
+                except NameError:  # pragma: no cover
 def _infer_category_from_id(asset_id: str) -> str:
     """Fallback minimal : infère la catégorie depuis le préfixe de l'ID."""
     s = str(asset_id)
@@ -2199,21 +2199,21 @@ def tok(name: str) -> set:
                                     if pf.get("Obligations"):
                                         last_bond = next(reversed(pf["Obligations"]))
                                         target = ("Obligations", last_bond)
-                                    elif pf.get("ETF"):
-                                        last_etf = next(reversed(pf["ETF"]))
-                                        target = ("ETF", last_etf)
+                                        elif pf.get("ETF"):
+                                            last_etf = next(reversed(pf["ETF"]))
+                                            target = ("ETF", last_etf)
 
-                                        if target:
-                                            cat, name = target
-                                            cur = _to_float_pct(pf[cat][name])
-                                            pf[cat][name] = _fmt_int_pct(cur + surplus_pct)
+                                            if target:
+                                                cat, name = target
+                                                cur = _to_float_pct(pf[cat][name])
+                                                pf[cat][name] = _fmt_int_pct(cur + surplus_pct)
 
-                                            fixed[pf_name] = pf
+                                                fixed[pf_name] = pf
 
-                                            # somme = 100% sûre
-                                            _, _, fixed = validate_and_fix_v1_sum(fixed, fix=True)
-                                            return fixed
-                                            # ---------- Index des holdings ETF ----------
+                                                # somme = 100% sûre
+                                                _, _, fixed = validate_and_fix_v1_sum(fixed, fix=True)
+                                                return fixed
+                                                # ---------- Index des holdings ETF ----------
 def _build_etf_holdings_index(etf_df: Optional[pd.DataFrame]) -> dict:
     """
     Construit un index :
@@ -2254,20 +2254,20 @@ def _build_etf_holdings_index(etf_df: Optional[pd.DataFrame]) -> dict:
                                         for t in arr:
                                             if isinstance(t, str):
                                                 holdings.add(re.sub(r"[^A-Z0-9]", "", t.upper())[:8])
-                                            except Exception:
-                                                pass
-                                            else:
-                                                for t in re.findall(r"[A-Z]{2,6}", s.upper()):
-                                                    holdings.add(t)
+                                        except Exception:
+                                            pass
+                                    else:
+                                        for t in re.findall(r"[A-Z]{2,6}", s.upper()):
+                                            holdings.add(t)
 
-                                                    idx[name] = {
-                                                    "holdings": holdings,
-                                                    "tokens": _tokenize_theme(name),
-                                                    }
+                                            idx[name] = {
+                                            "holdings": holdings,
+                                            "tokens": _tokenize_theme(name),
+                                            }
 
-                                                    return idx
+                                            return idx
 
-                                                    # ---------- Score de recouvrement pour une paire d'ETF ----------
+                                            # ---------- Score de recouvrement pour une paire d'ETF ----------
 def _pair_overlap_score(
 n1: str,
 n2: str,
@@ -2427,8 +2427,8 @@ def update_history_index_from_normalized(normalized_json: dict, history_file: st
 
                             with open(index_file,'w',encoding='utf-8') as f:
                                 json.dump(index_data, f, ensure_ascii=False, indent=4)
-                            except Exception as e:
-                                print(f"⚠️ Avertissement: index non mis à jour ({e})")
+        except Exception as e:
+            print(f"⚠️ Avertissement: index non mis à jour ({e})")
 
 def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> None:
     """
@@ -2500,12 +2500,12 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
 
                 print(f"✅ Sauvegarde OK → {v1_path} (v1) + {hist_path} (archive v3)")
 
-            except Exception as e:
-                print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
+        except Exception as e:
+            print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
 
 
 
-                # ============= FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS (améliorées) =============
+            # ============= FONCTIONS HELPER POUR LES NOUVEAUX FICHIERS (améliorées) =============
 
 def build_lists_summary_from_stocks_files(stocks_paths):
     """Remplace filter_lists_data(lists_data) avec les nouveaux stocks_*.json."""
@@ -2539,39 +2539,39 @@ def load_json_safe(p):
                         display_name = name
                         if ytd_v > 50 and daily_v < 0:
                             display_name = f"🚩 {name} (potentielle surévaluation)"
-                        elif ytd_v > 10 and daily_v < -5:
-                            display_name = f"📉 {name} (forte baisse récente mais secteur haussier)"
+                            elif ytd_v > 10 and daily_v < -5:
+                                display_name = f"📉 {name} (forte baisse récente mais secteur haussier)"
 
-                            row = {
-                            "name": display_name,
-                            "ytd": ytd_v,
-                            "daily": daily_v,
-                            "sector": sector,
-                            "country": country,
-                            "original_name": name
-                            }
-                            by_sector.setdefault(sector, []).append(row)
-                            by_country.setdefault(country, []).append(row)
+                                row = {
+                                "name": display_name,
+                                "ytd": ytd_v,
+                                "daily": daily_v,
+                                "sector": sector,
+                                "country": country,
+                                "original_name": name
+                                }
+                                by_sector.setdefault(sector, []).append(row)
+                                by_country.setdefault(country, []).append(row)
 
-                            print(f"  ✅ Total stocks chargées: {total_stocks_loaded}")
-                            print(f"  ✅ Stocks filtrées (YTD -5% à 120% et Daily > -10%): {sum(len(v) for v in by_sector.values())}")
+                                print(f"  ✅ Total stocks chargées: {total_stocks_loaded}")
+                                print(f"  ✅ Stocks filtrées (YTD -5% à 120% et Daily > -10%): {sum(len(v) for v in by_sector.values())}")
 
-                            lines = ["📋 TOP 5 ACTIFS PAR SECTEUR (YTD -5% à 120% et Daily > -10%) :"]
-                            total = 0
+                                lines = ["📋 TOP 5 ACTIFS PAR SECTEUR (YTD -5% à 120% et Daily > -10%) :"]
+                                total = 0
 
-                            for sector in sorted(by_sector.keys()):
-                                xs = sorted(by_sector[sector], key=lambda r: r["ytd"], reverse=True)[:5]
-                                if not xs:
-                                    continue
-                                    lines.append(f"\n🏭 SECTEUR: {sector.upper()} ({len(xs)} actifs)")
-                                    for r in xs:
-                                        country_info = f" | Pays: {r['country']}" if r['country'] != "Non précisé" else ""
-                                        lines.append(f"• {r['name']}: YTD {r['ytd']:.2f}%, Daily {r['daily']:.2f}%{country_info}")
-                                        total += len(xs)
+                                for sector in sorted(by_sector.keys()):
+                                    xs = sorted(by_sector[sector], key=lambda r: r["ytd"], reverse=True)[:5]
+                                    if not xs:
+                                        continue
+                                        lines.append(f"\n🏭 SECTEUR: {sector.upper()} ({len(xs)} actifs)")
+                                        for r in xs:
+                                            country_info = f" | Pays: {r['country']}" if r['country'] != "Non précisé" else ""
+                                            lines.append(f"• {r['name']}: YTD {r['ytd']:.2f}%, Daily {r['daily']:.2f}%{country_info}")
+                                            total += len(xs)
 
-                                        lines.insert(1, f"Total: {total} actifs répartis dans {len(by_sector)} secteurs")
+                                            lines.insert(1, f"Total: {total} actifs répartis dans {len(by_sector)} secteurs")
 
-                                        return "\n".join(lines) if total else "Aucune donnée d'actifs significative"
+                                            return "\n".join(lines) if total else "Aucune donnée d'actifs significative"
 
 def load_etf_dict_from_csvs(etf_csv_path, bonds_csv_path):
     """Construit le dict attendu par filter_etf_data() à partir des CSV."""
@@ -2592,34 +2592,34 @@ def load_etf_dict_from_csvs(etf_csv_path, bonds_csv_path):
                     "name": str(r[name_col]),
                     "ytd": str(r[ytd_col]) if ytd_col and pd.notna(r[ytd_col]) else "N/A"
                     })
-                except Exception as e:
-                    print(f"  ⚠️ Erreur lors du chargement des bonds: {str(e)}")
+        except Exception as e:
+            print(f"  ⚠️ Erreur lors du chargement des bonds: {str(e)}")
 
-                    # Charger les ETF standards
-                    try:
-                        if Path(etf_csv_path).exists():
-                            df = pd.read_csv(etf_csv_path)
-                            print(f"  📊 ETF standards: {len(df)} trouvés")
+            # Charger les ETF standards
+            try:
+                if Path(etf_csv_path).exists():
+                    df = pd.read_csv(etf_csv_path)
+                    print(f"  📊 ETF standards: {len(df)} trouvés")
 
-                            name_col = next((c for c in df.columns if str(c).lower() in ["name", "etf_name", "long_name", "symbol"]), None)
-                            ytd_col = next((c for c in df.columns if "ytd" in str(c).lower()), None)
-                            dur_col = next((c for c in df.columns if "duration" in str(c).lower()), None)
+                    name_col = next((c for c in df.columns if str(c).lower() in ["name", "etf_name", "long_name", "symbol"]), None)
+                    ytd_col = next((c for c in df.columns if "ytd" in str(c).lower()), None)
+                    dur_col = next((c for c in df.columns if "duration" in str(c).lower()), None)
 
-                            if name_col:
-                                if ytd_col:
-                                    df_sorted = df.sort_values(ytd_col, ascending=False)
-                                else:
-                                    df_sorted = df
+                    if name_col:
+                        if ytd_col:
+                            df_sorted = df.sort_values(ytd_col, ascending=False)
+                            else:
+                                df_sorted = df
 
-                                    for _, r in df_sorted.head(50).iterrows():
-                                        etf["top50_etfs"].append({
-                                        "name": str(r[name_col]),
-                                        "ytd": str(r[ytd_col]) if ytd_col and pd.notna(r[ytd_col]) else "N/A"
-                                        })
+                                for _, r in df_sorted.head(50).iterrows():
+                                    etf["top50_etfs"].append({
+                                    "name": str(r[name_col]),
+                                    "ytd": str(r[ytd_col]) if ytd_col and pd.notna(r[ytd_col]) else "N/A"
+                                    })
 
-                                        # ETF court terme
-                                        if dur_col and dur_col in df.columns:
-                                            short = df[df[dur_col] <= 1.0]
+                                    # ETF court terme
+                                    if dur_col and dur_col in df.columns:
+                                        short = df[df[dur_col] <= 1.0]
                                         else:
                                             pattern = r"short\s*term|ultra\s*short|0[-–]1|1[-–]3\s*year"
                                             short = df[df[name_col].astype(str).str.contains(pattern, case=False, regex=True, na=False)]
@@ -2629,10 +2629,10 @@ def load_etf_dict_from_csvs(etf_csv_path, bonds_csv_path):
                                                 "name": str(r[name_col]),
                                                 "oneMonth": "N/A"
                                                 })
-                                            except Exception as e:
-                                                print(f"  ⚠️ Erreur lors du chargement des ETF: {str(e)}")
+                except Exception as e:
+                    print(f"  ⚠️ Erreur lors du chargement des ETF: {str(e)}")
 
-                                                return etf
+                    return etf
 
 def load_crypto_dict_from_csv(csv_path):
     """Construit une structure minimale compatible filter_crypto_data()."""
@@ -2642,9 +2642,9 @@ def load_crypto_dict_from_csv(csv_path):
         if Path(csv_path).exists():
             df = pd.read_csv(csv_path)
             print(f"  🪙 Cryptos: {len(df)} trouvées dans le CSV")
-        else:
-            print(f"  ⚠️ Fichier crypto non trouvé: {csv_path}")
-            return out
+            else:
+                print(f"  ⚠️ Fichier crypto non trouvé: {csv_path}")
+                return out
         except Exception as e:
             print(f"  ⚠️ Erreur lors du chargement des cryptos: {str(e)}")
             return out
@@ -2685,15 +2685,15 @@ def get_current_month_fr():
     """Retourne le nom du mois courant en français."""
     try:
         locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-    except locale.Error:
-        month_names = {
-        1: "janvier", 2: "février", 3: "mars", 4: "avril",
-        5: "mai", 6: "juin", 7: "juillet", 8: "août",
-        9: "septembre", 10: "octobre", 11: "novembre", 12: "décembre"
-        }
-        return month_names[datetime.datetime.now().month]
+        except locale.Error:
+            month_names = {
+            1: "janvier", 2: "février", 3: "mars", 4: "avril",
+            5: "mai", 6: "juin", 7: "juillet", 8: "août",
+            9: "septembre", 10: "octobre", 11: "novembre", 12: "décembre"
+            }
+            return month_names[datetime.datetime.now().month]
 
-        return datetime.datetime.now().strftime('%B').lower()
+            return datetime.datetime.now().strftime('%B').lower()
 
 def filter_news_data(news_data):
     """Filtre les données d'actualités pour n'inclure que les plus pertinentes."""
@@ -2790,18 +2790,18 @@ def filter_sectors_data(sectors_data):
                     key=lambda x: float(str(x.get("ytd", "0")).replace('%','').replace(',', '.')),
                     reverse=True
                     )
-                except (ValueError, TypeError):
-                    sector_list_sorted = sector_list
+                    except (ValueError, TypeError):
+                        sector_list_sorted = sector_list
 
-                    summary.append(f"🏭 {region}")
-                    for sec in sector_list_sorted[:5]:
-                        name = sec.get("name", "")
-                        var = sec.get("change", "")
-                        ytd = sec.get("ytd", "")
-                        if name and var:
-                            summary.append(f"• {name} : {var} | YTD : {ytd}")
+                        summary.append(f"🏭 {region}")
+                        for sec in sector_list_sorted[:5]:
+                            name = sec.get("name", "")
+                            var = sec.get("change", "")
+                            ytd = sec.get("ytd", "")
+                            if name and var:
+                                summary.append(f"• {name} : {var} | YTD : {ytd}")
 
-                            return "\n".join(summary) if summary else "Aucune donnée sectorielle significative"
+                                return "\n".join(summary) if summary else "Aucune donnée sectorielle significative"
 
 def filter_etf_data(etfs_data):
     """Filtre les ETF par catégories."""
@@ -2891,21 +2891,21 @@ def filter_crypto_data(crypto_data):
                         cryptos.append((name, symbol, price, c24, c7))
                         if i < 5:
                             print(f"   ✅ {name} PASSE le filtre ! 7j: {c7} > 24h: {c24} > 0")
-                        elif c24 > 0 and c7 > -5:
-                            alt_cryptos.append((name, symbol, price, c24, c7))
+                            elif c24 > 0 and c7 > -5:
+                                alt_cryptos.append((name, symbol, price, c24, c7))
 
-                        except Exception as e:
-                            if i < 5:
-                                print(f"   ⚠️ ERREUR pour {crypto.get('name', 'inconnu')}: {str(e)}")
-                                continue
+                except Exception as e:
+                    if i < 5:
+                        print(f"   ⚠️ ERREUR pour {crypto.get('name', 'inconnu')}: {str(e)}")
+                        continue
 
-                                # Fallback si aucun résultat strict
-                                if not cryptos and alt_cryptos:
-                                    print("⚠️ Aucune crypto ne respecte 7j > 24h > 0 → Fallback: 24h > 0 et 7j > -5")
-                                    cryptos = alt_cryptos
-                                    criteria_desc = "24h > 0 ET 7j > -5%"
-                                elif cryptos:
-                                    criteria_desc = "7j > 24h > 0%"
+                        # Fallback si aucun résultat strict
+                        if not cryptos and alt_cryptos:
+                            print("⚠️ Aucune crypto ne respecte 7j > 24h > 0 → Fallback: 24h > 0 et 7j > -5")
+                            cryptos = alt_cryptos
+                            criteria_desc = "24h > 0 ET 7j > -5%"
+                            elif cryptos:
+                                criteria_desc = "7j > 24h > 0%"
                                 else:
                                     criteria_desc = "aucun critère satisfait"
 
@@ -3122,19 +3122,19 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
 
                 try:
                     portfolios = json.loads(content)
-                except json.JSONDecodeError as e:
-                    print(f"❌ Erreur de parsing JSON: {e}")
-                    content = re.sub(r'^```json', '', content)
-                    content = re.sub(r'```$', '', content)
-                    content = content.strip()
-                    portfolios = json.loads(content)
+                    except json.JSONDecodeError as e:
+                        print(f"❌ Erreur de parsing JSON: {e}")
+                        content = re.sub(r'^```json', '', content)
+                        content = re.sub(r'```$', '', content)
+                        content = content.strip()
+                        portfolios = json.loads(content)
 
-                    # FIX 3: Attacher compliance de manière sûre même en fallback
-                    portfolios = attach_compliance(portfolios)
-                    portfolios = apply_compliance_sanitization(portfolios)
+                        # FIX 3: Attacher compliance de manière sûre même en fallback
+                        portfolios = attach_compliance(portfolios)
+                        portfolios = apply_compliance_sanitization(portfolios)
 
-                    print("✅ Portefeuilles v2 générés avec succès (fallback + compliance)")
-                    return portfolios
+                        print("✅ Portefeuilles v2 générés avec succès (fallback + compliance)")
+                        return portfolios
 
 
 
@@ -3329,89 +3329,89 @@ def build_robust_prompt_v2(structured_data: Dict, allowed_assets: Dict, current_
                                     if cached:
                                         print("🗃️ Univers récupéré depuis le cache")
                                         universe = cached
-                                    else:
-                                        universe = build_scored_universe_v3(
-                                        stocks_jsons,
-                                        str(etf_csv),
-                                        str(crypto_csv)
-                                        )
-                                        set_cached_universe(etf_hash, stocks_hash, crypto_hash, universe)
-                                        print("🗂️ Univers mis en cache")
+                                        else:
+                                            universe = build_scored_universe_v3(
+                                            stocks_jsons,
+                                            str(etf_csv),
+                                            str(crypto_csv)
+                                            )
+                                            set_cached_universe(etf_hash, stocks_hash, crypto_hash, universe)
+                                            print("🗂️ Univers mis en cache")
 
-                                        # ========== FILTRAGE ET PRÉPARATION DES DONNÉES ==========
+                                            # ========== FILTRAGE ET PRÉPARATION DES DONNÉES ==========
 
-                                        print("\n🔄 Filtrage et préparation des données...")
+                                            print("\n🔄 Filtrage et préparation des données...")
 
-                                        # Créer le résumé des stocks (pour compatibilité avec affichage)
-                                        filtered_lists = build_lists_summary_from_stocks_files(stocks_files_exist)
+                                            # Créer le résumé des stocks (pour compatibilité avec affichage)
+                                            filtered_lists = build_lists_summary_from_stocks_files(stocks_files_exist)
 
-                                        # Charger et filtrer les ETF (pour compatibilité)
-                                        etfs_data = load_etf_dict_from_csvs(str(etf_csv), str(bonds_csv))
-                                        filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)
+                                            # Charger et filtrer les ETF (pour compatibilité)
+                                            etfs_data = load_etf_dict_from_csvs(str(etf_csv), str(bonds_csv))
+                                            filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)
 
-                                        # Charger et filtrer les cryptos (pour compatibilité)
-                                        crypto_data = load_crypto_dict_from_csv(str(crypto_csv))
-                                        filtered_crypto = filter_crypto_data(crypto_data)
+                                            # Charger et filtrer les cryptos (pour compatibilité)
+                                            crypto_data = load_crypto_dict_from_csv(str(crypto_csv))
+                                            filtered_crypto = filter_crypto_data(crypto_data)
 
-                                        # Filtrer les autres données avec les fonctions existantes
-                                        filtered_news = filter_news_data(news_data) if news_data else "Aucune donnée d'actualité disponible"
-                                        filtered_markets = filter_markets_data(markets_data) if markets_data else "Aucune donnée de marché disponible"
-                                        filtered_sectors = filter_sectors_data(sectors_data) if sectors_data else "Aucune donnée sectorielle disponible"
-                                        filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances disponible"
-                                        filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités disponible"
+                                            # Filtrer les autres données avec les fonctions existantes
+                                            filtered_news = filter_news_data(news_data) if news_data else "Aucune donnée d'actualité disponible"
+                                            filtered_markets = filter_markets_data(markets_data) if markets_data else "Aucune donnée de marché disponible"
+                                            filtered_sectors = filter_sectors_data(sectors_data) if sectors_data else "Aucune donnée sectorielle disponible"
+                                            filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances disponible"
+                                            filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités disponible"
 
-                                        # ========== GÉNÉRATION DES PORTEFEUILLES AVEC UNIVERS QUANTITATIF ==========
+                                            # ========== GÉNÉRATION DES PORTEFEUILLES AVEC UNIVERS QUANTITATIF ==========
 
-                                        print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF + stabilité)...")
+                                            print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF + stabilité)...")
 
-                                        # Préparer le dictionnaire des données filtrées avec l'univers quantitatif
-                                        filtered_data = {
-                                        'news': filtered_news,
-                                        'markets': filtered_markets,
-                                        'sectors': filtered_sectors,
-                                        'lists': filtered_lists,
-                                        'etfs': filtered_etfs,
-                                        'crypto': filtered_crypto,
-                                        'themes': filtered_themes,
-                                        'brief': filtered_brief,
-                                        'bond_etf_names': bond_etf_names,
-                                        'universe': universe  # <<—— NOUVEAU: Univers quantitatif
-                                        }
+                                            # Préparer le dictionnaire des données filtrées avec l'univers quantitatif
+                                            filtered_data = {
+                                            'news': filtered_news,
+                                            'markets': filtered_markets,
+                                            'sectors': filtered_sectors,
+                                            'lists': filtered_lists,
+                                            'etfs': filtered_etfs,
+                                            'crypto': filtered_crypto,
+                                            'themes': filtered_themes,
+                                            'brief': filtered_brief,
+                                            'bond_etf_names': bond_etf_names,
+                                            'universe': universe  # <<—— NOUVEAU: Univers quantitatif
+                                            }
 
-                                        # Générer les portefeuilles avec la nouvelle version quantitative v3
-                                        portfolios = generate_portfolios(filtered_data)
+                                            # Générer les portefeuilles avec la nouvelle version quantitative v3
+                                            portfolios = generate_portfolios(filtered_data)
 
-                                        # ========== SAUVEGARDE ==========
-                                        print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
-                                        allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
-                                        structured_data_for_expl = prepare_structured_data(filtered_data)
-                                        explanations = build_explanations(portfolios, allowed_assets, structured_data_for_expl)
-                                        write_explanations_files(explanations)  # -> data/portfolio_explanations.{json,md}
-                                        save_portfolios_normalized(portfolios, allowed_assets)
+                                            # ========== SAUVEGARDE ==========
+                                            print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
+                                            allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
+                                            structured_data_for_expl = prepare_structured_data(filtered_data)
+                                            explanations = build_explanations(portfolios, allowed_assets, structured_data_for_expl)
+                                            write_explanations_files(explanations)  # -> data/portfolio_explanations.{json,md}
+                                            save_portfolios_normalized(portfolios, allowed_assets)
 
-                                        print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
-                                        print("🎯 Fonctionnalités activées:")
-                                        print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
-                                        print("   • Filtrage automatique des ETF à effet de levier")
-                                        print("   • Détection des actifs sur-étendus")
-                                        print("   • Équilibrage par classes de risque")
-                                        print("   • Diversification sectorielle round-robin (cap 30%)")
-                                        print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
-                                        print("   • Fallback crypto progressif")
-                                        print("   • Cache intelligent d'univers (hash fichiers)")
-                                        print("   • Retry API robuste (5 tentatives, timeouts étendus)")
-                                        print("   🛡️ COMPLIANCE AMF:")
-                                        print("     ∘ Langage neutre (pas d'incitation)")
-                                        print("     ∘ Disclaimer automatique")
-                                        print("     ∘ Liste des risques")
-                                        print("     ∘ Méthodologie transparente")
-                                        print("     ∘ Sanitisation anti-marketing")
-                                        print("   🔧 FIXES DE STABILITÉ:")
-                                        print("     ∘ Regex pandas warning corrigé")
-                                        print("     ∘ Détection ETF levier corrigée")
-                                        print("     ∘ Timeouts API étendus (20s/180s)")
-                                        print("     ∘ Protection de type améliorée")
-                                        print("     ∘ Système de fallback cache")
+                                            print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
+                                            print("🎯 Fonctionnalités activées:")
+                                            print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
+                                            print("   • Filtrage automatique des ETF à effet de levier")
+                                            print("   • Détection des actifs sur-étendus")
+                                            print("   • Équilibrage par classes de risque")
+                                            print("   • Diversification sectorielle round-robin (cap 30%)")
+                                            print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
+                                            print("   • Fallback crypto progressif")
+                                            print("   • Cache intelligent d'univers (hash fichiers)")
+                                            print("   • Retry API robuste (5 tentatives, timeouts étendus)")
+                                            print("   🛡️ COMPLIANCE AMF:")
+                                            print("     ∘ Langage neutre (pas d'incitation)")
+                                            print("     ∘ Disclaimer automatique")
+                                            print("     ∘ Liste des risques")
+                                            print("     ∘ Méthodologie transparente")
+                                            print("     ∘ Sanitisation anti-marketing")
+                                            print("   🔧 FIXES DE STABILITÉ:")
+                                            print("     ∘ Regex pandas warning corrigé")
+                                            print("     ∘ Détection ETF levier corrigée")
+                                            print("     ∘ Timeouts API étendus (20s/180s)")
+                                            print("     ∘ Protection de type améliorée")
+                                            print("     ∘ Système de fallback cache")
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
     try:
@@ -3425,6 +3425,7 @@ def load_json_data(file_path):
 
             if __name__ == "__main__":
                 main()()
+
 
 
 
