@@ -30,67 +30,104 @@ from brief_formatter import format_brief_data
 # ============= PARSER JSON RÉPARATEUR (NOUVEAU) =============
 
 def parse_json_strict_or_repair(s: str) -> dict:
-    """Essaye json.loads, sinon répare légèrement :
-    - retire fences ```json ... ```
-    - isole le bloc JSON extérieur { ... }
-    - normalise guillemets typographiques
-    - remplace CR/LF bruts à l'intérieur des chaînes par \n
-    - supprime virgules traînantes
     """
-    try:
-        return json.loads(s)
-    except Exception:
-        logger.warning("⚠️ JSON invalide détecté, tentative de réparation...")
+    Essaye json.loads, sinon répare:
+    - retire fences ```json … ```
+    - isole le bloc { ... }
+    - normalise guillemets typographiques
+    - remplace CR/LF bruts dans les chaînes par \\n
+    - supprime commentaires //... et /* ... */
+    - supprime virgules traînantes
+    - convertit "allocation_pct":"12.50%" -> 12.50 (et "score":"1.23" -> 1.23)
+    """
+    import json, re, logging
+    from pathlib import Path
 
-        s2 = (s or "").strip()
+    logger = logging.getLogger("alloc-v3")
 
-        # 1) retirer éventuels fences
-        s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
-        s2 = re.sub(r'\s*```\s*$', '', s2)
+    def _try_load(txt: str):
+        try:
+            return json.loads(txt), None
+        except json.JSONDecodeError as e:
+            return None, e
 
-        # 2) ne garder que le premier '{' jusqu'au dernier '}'
-        start = s2.find('{')
-        end = s2.rfind('}')
-        if start != -1 and end != -1 and end > start:
-            s2 = s2[start:end+1]
+    # 1) tentative brute
+    obj, err = _try_load(s)
+    if obj is not None:
+        return obj
 
-        # 3) normaliser guillemets “ ” ‘ ’ → " '
-        s2 = s2.translate({
-            0x2018: 39, 0x2019: 39,  # ‘ ’ -> '
-            0x201C: 34, 0x201D: 34,  # “ ” -> "
-        })
+    logger.warning("⚠️ JSON invalide détecté, tentative de réparation...")
 
-        # 4) remplacer CR/LF bruts à l’intérieur des chaînes par \n
-        out = []
-        in_str = False
-        esc = False
-        for ch in s2:
-            if in_str:
-                if esc:
-                    out.append(ch)
-                    esc = False
-                elif ch == '\\':
-                    out.append(ch)
-                    esc = True
-                elif ch == '"':
-                    out.append(ch)
-                    in_str = False
-                elif ch in '\r\n':
-                    out.append('\\n')
-                else:
-                    out.append(ch)
+    s2 = (s or "").strip()
+
+    # Fences ```...``` (début/fin)
+    s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
+    s2 = re.sub(r'\s*```\s*$', '', s2)
+
+    # Garder du 1er { au dernier }
+    start = s2.find('{')
+    end = s2.rfind('}')
+    if start != -1 and end != -1 and end > start:
+        s2 = s2[start:end+1]
+
+    # Guillemets typographiques → normaux
+    s2 = s2.translate({0x2018:39, 0x2019:39, 0x201C:34, 0x201D:34})
+    # Nettoyage BOM/NULL
+    s2 = s2.replace('\ufeff','').replace('\x00','')
+
+    # NEW: retirer commentaires //... et /* ... */
+    s2 = re.sub(r'//.*?$', '', s2, flags=re.MULTILINE)
+    s2 = re.sub(r'/\*.*?\*/', '', s2, flags=re.DOTALL)
+
+    # Remplacer CR/LF bruts à l’intérieur des chaînes
+    out = []
+    in_str = False
+    esc = False
+    for ch in s2:
+        if in_str:
+            if esc:
+                out.append(ch); esc = False
+            elif ch == '\\':
+                out.append(ch); esc = True
+            elif ch == '"':
+                out.append(ch); in_str = False
+            elif ch in '\r\n':
+                out.append('\\n')
             else:
                 out.append(ch)
-                if ch == '"':
-                    in_str = True
-        s3 = ''.join(out)
+        else:
+            out.append(ch)
+            if ch == '"':
+                in_str = True
+    s3 = ''.join(out)
 
-        # 5) supprimer virgules finales avant } ou ]
-        s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
+    # NEW: supprimer virgules traînantes profondes  ex: {"a":1,}  | [1,2,]
+    s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
 
+    # NEW: transformer "allocation_pct":"12.50%" -> 12.50
+    s3 = re.sub(r'("allocation_pct"\s*:\s*)"([0-9]+(?:\.[0-9]+)?)\s*%"', r'\1\2', s3)
+    # NEW: idem pour "score":"1.23" -> 1.23
+    s3 = re.sub(r'("score"\s*:\s*)"([\-0-9]+(?:\.[0-9]+)?)"', r'\1\2', s3)
+
+    # NEW: sécuriser quelques clés numériques communes (si renvoyées en string)
+    for key in ("allocation_pct", "score"):
+        s3 = re.sub(rf'("{key}"\s*:\s*)"(-?\d+(?:\.\d+)?)"', rf'\1\2', s3)
+
+    # Dernière tentative de chargement
+    obj, err2 = _try_load(s3)
+    if obj is not None:
         logger.info("✅ JSON réparé avec succès")
-        return json.loads(s3)
+        return obj
 
+    # Dump du JSON final cassé pour debug
+    try:
+        Path("debug/prompts").mkdir(parents=True, exist_ok=True)
+        with open("debug/prompts/last_broken_json.txt", "w", encoding="utf-8") as f:
+            f.write(s3)
+    except Exception:
+        pass
+
+    raise ValueError(f"JSON illisible après réparation: {err2}")
 
 # ============= COMPLIANCE AMF - GARDE-FOUS RÉGLEMENTAIRES =============
 
@@ -3323,6 +3360,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
