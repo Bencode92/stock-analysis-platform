@@ -1,5 +1,5 @@
 # Portefeuille_Agressif
 
-# Portefeuille_Modere
+# Portefeuille_Modéré
 
 # Portefeuille_Stable
