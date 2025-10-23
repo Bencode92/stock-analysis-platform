@@ -32,17 +32,18 @@ from brief_formatter import format_brief_data
 def parse_json_strict_or_repair(s: str) -> dict:
     """
     Essaye json.loads, sinon répare:
-    - retire fences ```json … ```
+    - retire fences ```json
     - isole le bloc { ... }
     - normalise guillemets typographiques
-    - remplace CR/LF bruts dans les chaînes par \\n
+    - remplace CR/LF bruts dans les chaînes par \n
     - supprime commentaires //... et /* ... */
     - supprime virgules traînantes
-    - convertit "allocation_pct":"12.50%" -> 12.50 (et "score":"1.23" -> 1.23)
+    - convertit "allocation_pct":"12.50%" -> 12.50 et "score":"1.23" -> 1.23
+    - remplace NaN/Infinity par null
+    - accepte quotes simples en les normalisant
     """
     import json, re, logging
     from pathlib import Path
-
     logger = logging.getLogger("alloc-v3")
 
     def _try_load(txt: str):
@@ -51,7 +52,7 @@ def parse_json_strict_or_repair(s: str) -> dict:
         except json.JSONDecodeError as e:
             return None, e
 
-    # 1) tentative brute
+    # tentative brute
     obj, err = _try_load(s)
     if obj is not None:
         return obj
@@ -60,29 +61,32 @@ def parse_json_strict_or_repair(s: str) -> dict:
 
     s2 = (s or "").strip()
 
-    # Fences ```...``` (début/fin)
+    # fences ```...```
     s2 = re.sub(r'^\s*```(?:json)?\s*', '', s2)
     s2 = re.sub(r'\s*```\s*$', '', s2)
 
-    # Garder du 1er { au dernier }
-    start = s2.find('{')
-    end = s2.rfind('}')
+    # ne garder que { … }
+    start = s2.find('{'); end = s2.rfind('}')
     if start != -1 and end != -1 and end > start:
         s2 = s2[start:end+1]
 
-    # Guillemets typographiques → normaux
+    # normalisation quotes typographiques + nettoyage BOM/NULL
     s2 = s2.translate({0x2018:39, 0x2019:39, 0x201C:34, 0x201D:34})
-    # Nettoyage BOM/NULL
     s2 = s2.replace('\ufeff','').replace('\x00','')
 
-    # NEW: retirer commentaires //... et /* ... */
+    # accepter quotes simples -> doubles (hors contextes JSON valides)
+    # prudence: sur les clés/valeurs basiques
+    s2 = re.sub(r"(?<=\{|,)\s*'([^']+)'\s*:", r'"\1":', s2)          # clés
+    s2 = re.sub(r':\s*\'([^\'\\]*(?:\\.[^\'\\]*)*)\'', r': "\1"', s2) # valeurs
+
+    # retirer commentaires //… et /* … */
     s2 = re.sub(r'//.*?$', '', s2, flags=re.MULTILINE)
     s2 = re.sub(r'/\*.*?\*/', '', s2, flags=re.DOTALL)
+    # retirer commentaires HTML <!-- … -->
+    s2 = re.sub(r'<!--.*?-->', '', s2, flags=re.DOTALL)
 
-    # Remplacer CR/LF bruts à l’intérieur des chaînes
-    out = []
-    in_str = False
-    esc = False
+    # remplacer CR/LF bruts dans les chaînes
+    out, in_str, esc = [], False, False
     for ch in s2:
         if in_str:
             if esc:
@@ -101,28 +105,28 @@ def parse_json_strict_or_repair(s: str) -> dict:
                 in_str = True
     s3 = ''.join(out)
 
-    # NEW: supprimer virgules traînantes profondes  ex: {"a":1,}  | [1,2,]
+    # supprimer virgules traînantes profondes
     s3 = re.sub(r',(\s*[}\]])', r'\1', s3)
 
-    # NEW: transformer "allocation_pct":"12.50%" -> 12.50
-    s3 = re.sub(r'("allocation_pct"\s*:\s*)"([0-9]+(?:\.[0-9]+)?)\s*%"', r'\1\2', s3)
-    # NEW: idem pour "score":"1.23" -> 1.23
-    s3 = re.sub(r'("score"\s*:\s*)"([\-0-9]+(?:\.[0-9]+)?)"', r'\1\2', s3)
+    # remplacer NaN/Infinity/−Infinity par null (JSON-compatible)
+    s3 = re.sub(r'\bNaN\b', 'null', s3)
+    s3 = re.sub(r'\b-?Infinity\b', 'null', s3)
 
-    # NEW: sécuriser quelques clés numériques communes (si renvoyées en string)
-    for key in ("allocation_pct", "score"):
+    # transformer "allocation_pct":"12.50%" -> 12.50 ; idem pour "score"
+    s3 = re.sub(r'("allocation_pct"\s*:\s*)"([0-9]+(?:\.[0-9]+)?)\s*%"', r'\1\2', s3)
+    s3 = re.sub(r'("score"\s*:\s*)"([\-0-9]+(?:\.[0-9]+)?)"', r'\1\2', s3)
+    for key in ("allocation_pct","score"):
         s3 = re.sub(rf'("{key}"\s*:\s*)"(-?\d+(?:\.\d+)?)"', rf'\1\2', s3)
 
-    # Dernière tentative de chargement
     obj, err2 = _try_load(s3)
     if obj is not None:
         logger.info("✅ JSON réparé avec succès")
         return obj
 
-    # Dump du JSON final cassé pour debug
+    # dump pour debug
     try:
         Path("debug/prompts").mkdir(parents=True, exist_ok=True)
-        with open("debug/prompts/last_broken_json.txt", "w", encoding="utf-8") as f:
+        with open("debug/prompts/last_broken_json.txt","w",encoding="utf-8") as f:
             f.write(s3)
     except Exception:
         pass
@@ -1846,9 +1850,63 @@ def _build_asset_lookup(allowed_assets: dict) -> dict:
 def _pct(v) -> str:
     try: return f"{round(float(v))}%"
     except: return f"{v}%"
+# === Helpers de conversion du schéma FR "Portefeuille_* / Allocations" -> v1 ===
+def _canon_pf_name_fr(key: str) -> str:
+    k = (key or "").lower()
+    if "agress" in k: return "Agressif"
+    if "mod"   in k: return "Modéré"
+    return "Stable"
+
+def _convert_fr_portefeuilles_schema(obj: dict) -> dict:
+    """
+    Convertit:
+      {"portfolios":{
+         "Portefeuille_Agressif":{"Description":"...", "Allocations":[{"id":"EQ_4","symbol":"AXIS","type":"Action","allocation":15.0}, ...]},
+         "Portefeuille_Modere":  {...},
+         "Portefeuille_Stable":  {...}
+      }}
+    en format v1:
+      {"Agressif":{"Commentaire": "...", "Actions": {...}, "ETF": {...}, "Obligations": {...}, "Crypto": {...}}, ...}
+    """
+    root = obj.get("portfolios") if isinstance(obj, dict) else None
+    if not isinstance(root, dict):
+        return {}
+
+    out: dict = {}
+    def _cat_fr_to_v1(t: str) -> str:
+        t = (t or "").strip().lower()
+        if t.startswith("act"): return "Actions"
+        if t.startswith("oblig"): return "Obligations"
+        if t.startswith("crypt"): return "Crypto"
+        return "ETF"
+
+    for k, pf in root.items():
+        pf_key = _canon_pf_name_fr(k)
+        out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
+
+        if isinstance(pf, dict):
+            if pf.get("Description"):
+                # sanitize_marketing_language est déjà défini plus haut
+                out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf["Description"]))
+            allocs = pf.get("Allocations") or []
+            for a in allocs:
+                try:
+                    nm   = a.get("name") or a.get("symbol") or a.get("id") or ""
+                    cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or "")
+                    pctf = float(a.get("allocation") or a.get("allocation_pct") or 0.0)
+                    out[pf_key][cat][str(nm)] = f"{int(round(pctf))}%"
+                except Exception:
+                    continue
+    return out
 
 def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
     """Convertit le format v3 (avec 'Lignes') vers le format v1 attendu par le front."""
+    # 0) Cas spécial: schéma français "portfolios" / "Portefeuille_*"
+    if isinstance(raw_obj, dict) and "portfolios" in raw_obj:
+        fr_v1 = _convert_fr_portefeuilles_schema(raw_obj)
+        if fr_v1:
+            return fr_v1
+
     lut = _build_asset_lookup(allowed_assets)
     out: dict = {}
 
@@ -2386,6 +2444,12 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
         # 1) Normaliser v3 -> v1
         normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
 
+        # 🔁 Filet: si la vue v1 est vide, tenter conversion du schéma FR "Portefeuille_*"
+        if not any((normalized_v1.get(pf) or {}) for pf in ("Agressif", "Modéré", "Stable")):
+            alt = _convert_fr_portefeuilles_schema(portfolios_v3)
+            if alt:
+                normalized_v1 = alt
+
         # 2) Filet post-génération : 1 ETF par ancre + pas de crypto en Stable
         normalized_v1 = enforce_one_per_anchor_v1(normalized_v1)
 
@@ -2426,7 +2490,7 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
         with open(hist_path, "w", encoding="utf-8") as f:
             json.dump(archive_payload, f, ensure_ascii=False, indent=4)
 
-        # 6) Mettre à jour l’index d’historique à partir de la vue normalisée
+        # 6) Mettre à jour l’index d'historique à partir de la vue normalisée
         update_history_index_from_normalized(
             normalized_json=normalized_v1,
             history_file=hist_path,
@@ -2437,6 +2501,7 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
 
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
+
 
 
 
@@ -3360,6 +3425,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
