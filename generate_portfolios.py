@@ -3269,7 +3269,6 @@ def save_portfolios(portfolios, allowed_assets=None):
     avec le *vrai* allowed_assets pour conserver les noms réels.
     """
     try:
-        # Si non fourni, on met un fallback ultra-minimal — mais on loggue pour le voir.
         if allowed_assets is None:
             allowed_assets = {
                 "allowed_equities": [],
@@ -3278,7 +3277,6 @@ def save_portfolios(portfolios, allowed_assets=None):
                 "allowed_crypto": []
             }
 
-        # Log de contrôle utile avant l'écriture
         print(
             "📝 Écriture portfolios.json — "
             f"equities={len(allowed_assets.get('allowed_equities', []))}, "
@@ -3287,20 +3285,20 @@ def save_portfolios(portfolios, allowed_assets=None):
             f"crypto={len(allowed_assets.get('allowed_crypto', []))}"
         )
 
-        save_portfolios(portfolios, allowed_assets)
+        # ✅ la bonne fonction :
+        save_portfolios_normalized(portfolios, allowed_assets)
 
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde (wrapper): {e}")
 
-    
+def main():
     # ========== CHARGEMENT DES DONNÉES DEPUIS LES NOUVEAUX FICHIERS ==========
-    
     print("\n📂 Chargement des fichiers JSON standards...")
     markets_data = load_json_data('data/markets.json')
     sectors_data = load_json_data('data/sectors.json')
     themes_data = load_json_data('data/themes.json')
     news_data = load_json_data('data/news.json')
-    
+
     print("\n📂 Chargement des nouveaux fichiers stocks...")
     stocks_files = [
         Path('data/stocks_us.json'),
@@ -3309,21 +3307,20 @@ def save_portfolios(portfolios, allowed_assets=None):
     ]
     stocks_files_exist = [f for f in stocks_files if f.exists()]
     print(f"  Fichiers trouvés: {[f.name for f in stocks_files_exist]}")
-    
+
     logger.info("📂 Chargement des nouveaux fichiers ETF/Bonds...")
     etf_csv = Path('data/combined_etfs.csv')
     bonds_csv = Path('data/combined_bonds.csv')
     logger.info("ETF CSV existe: %s", etf_csv.exists())
     print(f"  Bonds CSV existe: {bonds_csv.exists()}")
-    
+
     print("\n📂 Chargement du nouveau fichier crypto...")
     crypto_csv = Path('data/filtered/Crypto_filtered_volatility.csv')
     print(f"  Crypto CSV existe: {crypto_csv.exists()}")
-    
+
     print("\n📂 Recherche du brief stratégique...")
     brief_data = None
-    brief_paths = ['brief_ia.json', './brief_ia.json', 'data/brief_ia.json']
-    for path in brief_paths:
+    for path in ['brief_ia.json', './brief_ia.json', 'data/brief_ia.json']:
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 brief_data = json.load(f)
@@ -3331,22 +3328,15 @@ def save_portfolios(portfolios, allowed_assets=None):
                 break
         except Exception:
             pass
-    
     if brief_data is None:
         print("  ⚠️ Aucun fichier brief_ia.json trouvé")
-    
+
     print("\n" + "=" * 60)
-    
+
     # ========== CONSTRUCTION DE L'UNIVERS QUANTITATIF V3 AVEC CACHE ==========
-    
     print("\n🧮 Construction de l'univers quantitatif v3 (avec cache)...")
-    
-    # Charger les données JSON des stocks
-    stocks_jsons = []
-    for f in stocks_files_exist:
-        stocks_jsons.append(load_json_data(str(f)))
-    
-    # Hash des sources pour cache
+    stocks_jsons = [load_json_data(str(f)) for f in stocks_files_exist]
+
     etf_hash    = file_sha1(etf_csv) if etf_csv.exists() else "NA"
     stocks_hash = json_sha1(stocks_jsons)
     crypto_hash = file_sha1(crypto_csv) if crypto_csv.exists() else "NA"
@@ -3363,34 +3353,20 @@ def save_portfolios(portfolios, allowed_assets=None):
         )
         set_cached_universe(etf_hash, stocks_hash, crypto_hash, universe)
         print("🗂️ Univers mis en cache")
-    
+
     # ========== FILTRAGE ET PRÉPARATION DES DONNÉES ==========
-    
     print("\n🔄 Filtrage et préparation des données...")
-    
-    # Créer le résumé des stocks (pour compatibilité avec affichage)
     filtered_lists = build_lists_summary_from_stocks_files(stocks_files_exist)
-    
-    # Charger et filtrer les ETF (pour compatibilité)
     etfs_data = load_etf_dict_from_csvs(str(etf_csv), str(bonds_csv))
     filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)
-    
-    # Charger et filtrer les cryptos (pour compatibilité)
     crypto_data = load_crypto_dict_from_csv(str(crypto_csv))
     filtered_crypto = filter_crypto_data(crypto_data)
-    
-    # Filtrer les autres données avec les fonctions existantes
     filtered_news = filter_news_data(news_data) if news_data else "Aucune donnée d'actualité disponible"
     filtered_markets = filter_markets_data(markets_data) if markets_data else "Aucune donnée de marché disponible"
     filtered_sectors = filter_sectors_data(sectors_data) if sectors_data else "Aucune donnée sectorielle disponible"
     filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances disponible"
     filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités disponible"
-    
-    # ========== GÉNÉRATION DES PORTEFEUILLES AVEC UNIVERS QUANTITATIF ==========
-    
-    print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF + stabilité)...")
-    
-    # Préparer le dictionnaire des données filtrées avec l'univers quantitatif
+
     filtered_data = {
         'news': filtered_news,
         'markets': filtered_markets,
@@ -3401,15 +3377,16 @@ def save_portfolios(portfolios, allowed_assets=None):
         'themes': filtered_themes,
         'brief': filtered_brief,
         'bond_etf_names': bond_etf_names,
-        'universe': universe  # <<—— NOUVEAU: Univers quantitatif
+        'universe': universe
     }
-    
-    # Générer les portefeuilles avec la nouvelle version quantitative v3
+
+    # ========== GÉNÉRATION ==========
+    print("\n🧠 Génération des portefeuilles optimisés v3 (quantitatif + compliance AMF + stabilité)...")
     portfolios = generate_portfolios(filtered_data)
-    
-    # ========== SAUVEGARDE ==========
+
+    # ========== SAUVEGARDE & EXPLICATIONS ==========
     print("\n💾 Sauvegarde des portefeuilles + génération des explications...")
-    allowed_assets = extract_allowed_assets(filtered_data)  # mapping id -> nom/catégorie
+    allowed_assets = extract_allowed_assets(filtered_data)
     structured_data_for_expl = prepare_structured_data(filtered_data)
     explanations = build_explanations(portfolios, allowed_assets, structured_data_for_expl)
     write_explanations_files(explanations)  # -> data/portfolio_explanations.{json,md}
@@ -3418,26 +3395,16 @@ def save_portfolios(portfolios, allowed_assets=None):
     print("\n✨ Traitement terminé avec la version v3 quantitative + COMPLIANCE AMF + STABILITÉ!")
     print("🎯 Fonctionnalités activées:")
     print("   • Scoring quantitatif (momentum, volatilité, drawdown)")
-    print("   • Filtrage automatique des ETF à effet de levier")
-    print("   • Détection des actifs sur-étendus")
-    print("   • Équilibrage par classes de risque")
-    print("   • Diversification sectorielle round-robin (cap 30%)")
-    print("   • Validation anti-fin-de-cycle (YTD>100% & 1M≤0)")
-    print("   • Fallback crypto progressif")
-    print("   • Cache intelligent d'univers (hash fichiers)")
-    print("   • Retry API robuste (5 tentatives, timeouts étendus)")
-    print("   🛡️ COMPLIANCE AMF:")
-    print("     ∘ Langage neutre (pas d'incitation)")
-    print("     ∘ Disclaimer automatique")
-    print("     ∘ Liste des risques")
-    print("     ∘ Méthodologie transparente")
-    print("     ∘ Sanitisation anti-marketing")
-    print("   🔧 FIXES DE STABILITÉ:")
-    print("     ∘ Regex pandas warning corrigé")
-    print("     ∘ Détection ETF levier corrigée")
-    print("     ∘ Timeouts API étendus (20s/180s)")
-    print("     ∘ Protection de type améliorée")
-    print("     ∘ Système de fallback cache")
+    print("   • Déduplication thématique ETF / anti-overlap")
+    print("   • Compliance AMF & sanitisation du langage")
+    print("   • Cache univers + retry API")
+Puis tout en bas du fichier, ajoute (ou garde) simplement :
+
+python
+Copy code
+if __name__ == "__main__":
+    main()
+
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
     try:
