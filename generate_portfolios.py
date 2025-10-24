@@ -2475,6 +2475,60 @@ def update_history_index_from_normalized(normalized_json: dict, history_file: st
             json.dump(index_data, f, ensure_ascii=False, indent=4)
     except Exception as e:
         print(f"⚠️ Avertissement: index non mis à jour ({e})")
+def _to_int_pct_str(x):
+    try:
+        return f"{int(round(float(x or 0)))}%"
+    except Exception:
+        return "0%"
+
+def force_to_front_v1(any_portfolios_obj: dict) -> dict:
+    """
+    Convertit n'importe lequel des 3 schémas suivants vers le format v1 attendu par le front:
+    A) v3: {"Agressif":{"Lignes":[{"id","name","category","allocation_pct"},...]}, ...}
+    B) FR-archive: {"portfolios":{"Portefeuille_Agressif":{"allocations":[{"name","category","allocation"}]}}}
+    C) Déjà v1: {"Agressif":{"Actions": {...}, "ETF": {...}, "Obligations": {...}, "Crypto": {...}}, ...}
+    """
+    # Si déjà v1, on garde
+    if all(k in (any_portfolios_obj or {}) for k in ("Agressif", "Modéré", "Stable")) \
+       and any(isinstance((any_portfolios_obj.get(pf) or {}).get("ETF"), dict) for pf in ("Agressif","Modéré","Stable")):
+        return any_portfolios_obj
+
+    def _empty_pf():
+        return {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}}
+
+    out = {"Agressif": _empty_pf(), "Modéré": _empty_pf(), "Stable": _empty_pf()}
+
+    # --- Cas A : v3 avec "Lignes"
+    for pf_name in ("Agressif", "Modéré", "Stable"):
+        pf = (any_portfolios_obj or {}).get(pf_name)
+        if isinstance(pf, dict) and isinstance(pf.get("Lignes"), list):
+            for l in pf["Lignes"]:
+                cat = (l.get("category") or "").strip()
+                name = l.get("name") or l.get("id") or "Inconnu"
+                alloc = l.get("allocation_pct") or l.get("allocation") or 0
+                if cat not in ("Actions","ETF","Obligations","Crypto"):
+                    cat = "ETF"
+                out[pf_name][cat][str(name)] = _to_int_pct_str(alloc)
+
+    # --- Cas B : archive FR avec "portfolios" / "Portefeuille_*" / "allocations"
+    root = (any_portfolios_obj or {}).get("portfolios")
+    if isinstance(root, dict):
+        def _canon(k: str) -> str:
+            k = (k or "").lower()
+            if "agress" in k: return "Agressif"
+            if "mod" in k:    return "Modéré"
+            return "Stable"
+        for k, pf in root.items():
+            pf_key = _canon(k)
+            allocs = (pf or {}).get("allocations") or []
+            for it in allocs:
+                name = it.get("name") or it.get("id") or "Inconnu"
+                cat  = it.get("category") or it.get("type") or "ETF"
+                if cat not in ("Actions","ETF","Obligations","Crypto"):
+                    cat = "ETF"
+                out[pf_key][cat][str(name)] = _to_int_pct_str(it.get("allocation"))
+
+    return out
 
 def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> None:
     """
@@ -2494,7 +2548,7 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
             etf_csv_path="data/combined_etfs.csv"
         )
 
-        # 1) Normaliser v3 -> v1
+        # 1) Normaliser v3 -> v1 (voie classique)
         normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
 
         # 🔁 Filet: si la vue v1 est vide, tenter conversion du schéma FR "Portefeuille_*"
@@ -2503,13 +2557,17 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
             if alt:
                 normalized_v1 = alt
 
+        # 🛑 Filet dur: si c’est ENCORE vide, convertir « quoi qu’il arrive » vers v1
+        if not any((normalized_v1.get(pf) or {}) for pf in ("Agressif","Modéré","Stable")):
+            normalized_v1 = force_to_front_v1(portfolios_v3)
+
         # 2) Filet post-génération : 1 ETF par ancre + pas de crypto en Stable
         normalized_v1 = enforce_one_per_anchor_v1(normalized_v1)
 
         # 3) Force la somme = 100%
         _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
 
-        # 3bis) Méta-champ daté pour assurer une différence à chaque run
+        # 3bis) ✅ méta-bloc daté pour forcer un diff à chaque run
         normalized_v1.setdefault("_meta", {})
         normalized_v1["_meta"]["generated_at"] = datetime.datetime.now().isoformat()
         normalized_v1["_meta"]["version"] = "v3_quantitatif_compliance_amf_stable"
@@ -2559,6 +2617,7 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
 
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
+
 
 
 
@@ -3454,6 +3513,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
