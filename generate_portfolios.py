@@ -1913,9 +1913,9 @@ def _convert_fr_portefeuilles_schema(obj: dict) -> dict:
         mapped = True
         pf_key = _canon_pf_name_fr(k)
         out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
-        if pf.get("Description"):
-            out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf["Description"]))
-        for a in pf.get("Allocations") or []:
+        if pf.get("Description") or pf.get("description"):
+            out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
+        for a in (pf.get("Allocations") or pf.get("allocations") or []):
             try:
                 name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or ""
                 cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
@@ -1937,9 +1937,9 @@ def _convert_fr_portefeuilles_schema(obj: dict) -> dict:
             if not pf_key:
                 continue
             out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
-            if pf.get("Description"):
-                out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf["Description"]))
-            for a in pf.get("Allocations") or []:
+            if pf.get("Description") or pf.get("description"):
+                out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
+            for a in (pf.get("Allocations") or pf.get("allocations") or []):
                 try:
                     name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or ""
                     cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
@@ -2504,7 +2504,7 @@ def force_to_front_v1(any_portfolios_obj: dict) -> dict:
         if isinstance(pf, dict) and isinstance(pf.get("Lignes"), list):
             for l in pf["Lignes"]:
                 cat = (l.get("category") or "").strip()
-                name = l.get("name") or l.get("id") or "Inconnu"
+                name = l.get("name") or l.get("symbol") or l.get("id") or "Inconnu"
                 alloc = l.get("allocation_pct") or l.get("allocation") or 0
                 if cat not in ("Actions","ETF","Obligations","Crypto"):
                     cat = "ETF"
@@ -2520,9 +2520,9 @@ def force_to_front_v1(any_portfolios_obj: dict) -> dict:
             return "Stable"
         for k, pf in root.items():
             pf_key = _canon(k)
-            allocs = (pf or {}).get("allocations") or []
+            allocs = (pf or {}).get("Allocations") or (pf or {}).get("allocations") or []
             for it in allocs:
-                name = it.get("name") or it.get("id") or "Inconnu"
+                name  = it.get("name") or it.get("symbol") or it.get("id") or "Inconnu"
                 cat  = it.get("category") or it.get("type") or "ETF"
                 if cat not in ("Actions","ETF","Obligations","Crypto"):
                     cat = "ETF"
@@ -3522,6 +3522,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
