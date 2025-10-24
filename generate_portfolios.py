@@ -3398,12 +3398,7 @@ def main():
     print("   • Déduplication thématique ETF / anti-overlap")
     print("   • Compliance AMF & sanitisation du langage")
     print("   • Cache univers + retry API")
-Puis tout en bas du fichier, ajoute (ou garde) simplement :
 
-python
-Copy code
-if __name__ == "__main__":
-    main()
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
@@ -3418,6 +3413,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
