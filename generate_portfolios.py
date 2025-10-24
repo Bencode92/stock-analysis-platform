@@ -1877,20 +1877,20 @@ def _canon_pf_name_fr(key: str) -> str:
 
 def _convert_fr_portefeuilles_schema(obj: dict) -> dict:
     """
-    Convertit:
-      {"portfolios":{
-         "Portefeuille_Agressif":{"Description":"...", "Allocations":[{"id":"EQ_4","symbol":"AXIS","type":"Action","allocation":15.0}, ...]},
-         "Portefeuille_Modere":  {...},
-         "Portefeuille_Stable":  {...}
-      }}
-    en format v1:
-      {"Agressif":{"Commentaire": "...", "Actions": {...}, "ETF": {...}, "Obligations": {...}, "Crypto": {...}}, ...}
+    Convertit les schémas d'archives FR vers le format v1 front :
+      Entrées possibles :
+        A) {"portfolios": { "Portefeuille_Agressif": {...}, "Portefeuille_Modere": {...}, "Portefeuille_Stable": {...} }}
+        B) {"portfolios": { "Portfolios": [ { "Name": "Agressif", "Description": "...", "Allocations": [...] }, ... ] } }
+
+      Sortie v1 :
+        {"Agressif":{"Commentaire":"...", "Actions": {...}, "ETF": {...}, "Obligations": {...}, "Crypto": {...}}, ...}
     """
     root = obj.get("portfolios") if isinstance(obj, dict) else None
-    if not isinstance(root, dict):
-        return {}
-
     out: dict = {}
+
+    if not isinstance(root, dict):
+        return out
+
     def _cat_fr_to_v1(t: str) -> str:
         t = (t or "").strip().lower()
         if t.startswith("act"): return "Actions"
@@ -1898,24 +1898,59 @@ def _convert_fr_portefeuilles_schema(obj: dict) -> dict:
         if t.startswith("crypt"): return "Crypto"
         return "ETF"
 
-    for k, pf in root.items():
+    def _add_line(pf_key: str, cat: str, name: str, pctf: float):
+        out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
+        out[pf_key][cat][str(name)] = f"{int(round(float(pctf or 0.0)))}%"
+
+    # ----- Cas A : mapping par clés "Portefeuille_*" (ou noms directs) -----
+    mapped = False
+    for k, pf in (root.items() if isinstance(root, dict) else []):
+        if not isinstance(pf, dict):
+            continue
+        lowk = (k or "").lower()
+        if not (lowk.startswith("portefeuille_") or lowk in ("agressif","modéré","modere","stable")):
+            continue
+        mapped = True
         pf_key = _canon_pf_name_fr(k)
         out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
+        if pf.get("Description"):
+            out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf["Description"]))
+        for a in pf.get("Allocations") or []:
+            try:
+                name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or ""
+                cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
+                pctf = float(a.get("allocation") or a.get("allocation_pct") or a.get("Allocation") or 0.0)
+                _add_line(pf_key, cat, name, pctf)
+            except Exception:
+                continue
 
-        if isinstance(pf, dict):
+    if mapped:
+        return out
+
+    # ----- Cas B : liste sous "Portfolios" -----
+    lst = root.get("Portfolios")
+    if isinstance(lst, list):
+        for pf in lst:
+            if not isinstance(pf, dict):
+                continue
+            pf_key = _canon_pf_name_fr(pf.get("Name") or pf.get("Nom") or "")
+            if not pf_key:
+                continue
+            out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
             if pf.get("Description"):
-                # sanitize_marketing_language est déjà défini plus haut
                 out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf["Description"]))
-            allocs = pf.get("Allocations") or []
-            for a in allocs:
+            for a in pf.get("Allocations") or []:
                 try:
-                    nm   = a.get("name") or a.get("symbol") or a.get("id") or ""
-                    cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or "")
-                    pctf = float(a.get("allocation") or a.get("allocation_pct") or 0.0)
-                    out[pf_key][cat][str(nm)] = f"{int(round(pctf))}%"
+                    name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or ""
+                    cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
+                    pctf = float(a.get("allocation") or a.get("allocation_pct") or a.get("Allocation") or 0.0)
+                    _add_line(pf_key, cat, name, pctf)
                 except Exception:
                     continue
+        return out
+
     return out
+
 
 def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
     """Convertit le format v3 (avec 'Lignes') vers le format v1 attendu par le front."""
@@ -3413,6 +3448,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
