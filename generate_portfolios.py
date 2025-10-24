@@ -1428,37 +1428,48 @@ def apply_compliance_sanitization(portfolios: Dict) -> Dict:
 def build_explanations(portfolios_obj: dict, allowed_assets: dict, structured_data: dict) -> dict:
     """
     Construit un dictionnaire d'explications par portefeuille.
-    - Compatible v3 : parcourt pf["Lignes"] (id, name, category, allocation_pct, justificationRefs, justification)
-    - Compatible v1 : parcourt pf["Actions"/"ETF"/"Obligations"/"Crypto"] (nom -> "12%")
-      et tente de reconstituer (id, score, risk_class) depuis allowed_assets.
+    - v3 : parcourt pf["Lignes"] (id, name, category, allocation_pct, justificationRefs, justification)
+    - v1 : parcourt pf["Actions"/"ETF"/"Obligations"/"Crypto"] (nom -> "12%") et reconstitue id/score/risque depuis allowed_assets.
     """
-    # --- Helpers LUT ---
-    def _score_and_risk_by_id(aid: str):
-        for k in ("allowed_equities", "allowed_etfs_standard", "allowed_bond_etfs", "allowed_crypto"):
-            for a in allowed_assets.get(k, []) or []:
-                if a.get("id") == aid:
-                    return float(a.get("score", 0.0)), a.get("risk_class", "mid")
-        return 0.0, "mid"
 
-    def _find_meta_by_name(nm: str, category_hint: str):
-        """Retourne (id, score, risk_class, category_norm) en cherchant par nom exact dans allowed_assets."""
-        nm_low = (nm or "").strip().lower()
-        pools = [
-            ("Actions", "allowed_equities"),
-            ("ETF", "allowed_etfs_standard"),
-            ("Obligations", "allowed_bond_etfs"),
-            ("Crypto", "allowed_crypto"),
-        ]
-        # Priorité à la catégorie suggérée
-        pools.sort(key=lambda t: 0 if t[0] == category_hint else 1)
-        for cat, key in pools:
-            for a in allowed_assets.get(key, []) or []:
-                if str(a.get("name", "")).strip().lower() == nm_low:
-                    return a.get("id"), float(a.get("score", 0.0)), a.get("risk_class", "mid"), cat
-        # Défaut si introuvable
-        return nm, 0.0, "mid", category_hint
+    # ===== LUTs universels =====
+    id_lut = {}        # id -> {name, category, score, risk_class}
+    name_lut = {}      # name_lower -> {id, category, score, risk_class}
+    for k, cat in [
+        ("allowed_equities", "Actions"),
+        ("allowed_etfs_standard", "ETF"),
+        ("allowed_bond_etfs", "Obligations"),
+        ("allowed_crypto", "Crypto"),
+    ]:
+        for a in allowed_assets.get(k, []) or []:
+            aid = a.get("id")
+            nm  = a.get("name") or aid
+            sc  = float(a.get("score", 0.0))
+            rk  = a.get("risk_class", "mid")
+            if not aid:
+                continue
+            id_lut[aid] = {"name": nm, "category": cat, "score": sc, "risk_class": rk}
+            name_lut[str(nm).strip().lower()] = {"id": aid, "category": cat, "score": sc, "risk_class": rk}
 
-    # Index des points (pour générer des refs BR/MC/SEC/TH)
+    # ===== Helpers =====
+    def _meta_by_id_or_line(aid: str, line_name: str, cat_hint: str):
+        """Retourne (name, category, score, risk) avec fallback robuste."""
+        meta = id_lut.get(aid)
+        if meta:
+            return meta["name"], meta["category"], meta["score"], meta["risk_class"]
+        nm  = (line_name or "").strip() or (aid or "").strip() or "Inconnu"
+        cat = (cat_hint or "").strip() or _infer_category_from_id(aid)
+        return nm, cat, 0.0, "mid"
+
+    def _meta_by_name_v1(name: str, cat_hint: str):
+        """Pour le schéma v1: résolution par nom exact (lower), sinon fallback neutre."""
+        low = (name or "").strip().lower()
+        meta = name_lut.get(low)
+        if meta:
+            return meta["id"], meta["category"], meta["score"], meta["risk_class"]
+        # défaut si introuvable
+        return name, (cat_hint or "ETF"), 0.0, "mid"
+
     pools_idx = {
         "BR": structured_data.get("brief_points", []) or [],
         "MC": structured_data.get("market_points", []) or [],
@@ -1466,8 +1477,8 @@ def build_explanations(portfolios_obj: dict, allowed_assets: dict, structured_da
         "TH": structured_data.get("theme_points", []) or [],
     }
 
-    def _pick_refs(name: str, category: str) -> list:
-        nm = (name or "").lower()
+    def _pick_refs(asset_name: str, category: str) -> list:
+        nm = (asset_name or "").lower()
         refs = []
         anchors = [
             ("uranium", "TH"), ("metals", "SEC"), ("gold", "TH"),
@@ -1478,54 +1489,54 @@ def build_explanations(portfolios_obj: dict, allowed_assets: dict, structured_da
             ("software", "SEC"), ("energy", "SEC"), ("oil", "SEC"),
             ("bank", "SEC"), ("telecom", "SEC"), ("bitcoin", "TH"),
         ]
+        import re as _re
         for kw, key in anchors:
             if kw in nm:
-                cand = [p["id"] for p in pools_idx.get(key, []) if re.search(kw, p.get("text", ""), re.I)]
+                cand = [p["id"] for p in pools_idx.get(key, []) if _re.search(kw, p.get("text", ""), _re.I)]
                 if cand:
                     refs.append(cand[0])
-        # Compléter pour atteindre 2–4 réf.
+        # compléter 2–4 refs
         for key in ("BR", "MC", "SEC", "TH"):
             if len(refs) >= 4:
                 break
             arr = pools_idx.get(key, [])
             if arr:
                 refs.append(arr[0]["id"])
-        # Dédoublonner et limiter
-        seen, out = set(), []
+        # dédoublonner/limiter
+        out, seen = [], set()
         for r in refs:
             if r not in seen:
-                out.append(r)
-                seen.add(r)
+                out.append(r); seen.add(r)
         return out[:4]
 
     explanations: dict = {}
     if not isinstance(portfolios_obj, dict):
-        return explanations  # garde-fou
+        return explanations
 
-    # Détecter v3 (présence de 'Lignes' dans au moins un portefeuille)
     is_v3 = any(isinstance(p, dict) and "Lignes" in p for p in portfolios_obj.values())
 
     for pf_name, pf in portfolios_obj.items():
         if not isinstance(pf, dict):
             continue
-        lines = []
+        rows = []
 
         if is_v3 and isinstance(pf.get("Lignes"), list):
-            # ---- Chemin v3 ----
+            # ------- format v3 -------
             for l in pf["Lignes"]:
-                aid   = l.get("id") or ""
-                nm    = l.get("name") or ""
-                cat   = l.get("category") or ""
+                aid   = l.get("id", "")
                 alloc = float(l.get("allocation_pct", 0) or 0)
-                score, risk = _score_and_risk_by_id(aid)
-                refs  = l.get("justificationRefs") or _pick_refs(nm, cat)
+                nm, cat, score, risk = _meta_by_id_or_line(
+                    aid=aid, line_name=l.get("name", ""), cat_hint=l.get("category", "")
+                )
+                refs = l.get("justificationRefs") or _pick_refs(nm, cat)
 
-                base_just = l.get("justification")
-                if not base_just:
-                    base_just = f"Pondération {alloc:.2f}% — exposition {cat.lower()} via {nm}; Score {score:+.2f}, risque {risk}. Réfs: {refs}."
+                base_just = l.get("justification") or (
+                    f"Pondération {alloc:.2f}% — exposition {cat.lower()} via {nm}; "
+                    f"Score {score:+.2f}, risque {risk}. Réfs: {refs}."
+                )
 
-                lines.append({
-                    "id": aid,
+                rows.append({
+                    "id": aid or nm,
                     "name": nm,
                     "category": cat,
                     "allocation_pct": round(alloc, 2),
@@ -1536,34 +1547,41 @@ def build_explanations(portfolios_obj: dict, allowed_assets: dict, structured_da
                 })
 
         else:
-            # ---- Chemin v1 (dicos par catégories) ----
+            # ------- format v1 -------
             for cat in ("Actions", "ETF", "Obligations", "Crypto"):
                 d = pf.get(cat) or {}
                 if not isinstance(d, dict):
                     continue
-                for nm, alloc in d.items():
+                for nm, val in d.items():
                     # "12%" -> 12.0
+                    import re as _re
                     try:
-                        alloc_f = float(re.sub(r"[^0-9.\-]", "", str(alloc)) or 0.0)
+                        alloc = float(_re.sub(r"[^0-9.\-]", "", str(val)) or 0.0)
                     except Exception:
-                        alloc_f = 0.0
-                    aid, score, risk, cat_norm = _find_meta_by_name(nm, cat)
+                        alloc = 0.0
+
+                    aid, cat_norm, score, risk = _meta_by_name_v1(nm, cat)
                     refs = _pick_refs(nm, cat_norm)
-                    base_just = f"Pondération {alloc_f:.2f}% — exposition {cat_norm.lower()} via {nm}; Score {score:+.2f}, risque {risk}. Réfs: {refs}."
-                    lines.append({
+                    base_just = (
+                        f"Pondération {alloc:.2f}% — exposition {cat_norm.lower()} via {nm}; "
+                        f"Score {score:+.2f}, risque {risk}. Réfs: {refs}."
+                    )
+
+                    rows.append({
                         "id": aid,
                         "name": nm,
                         "category": cat_norm,
-                        "allocation_pct": round(alloc_f, 2),
+                        "allocation_pct": round(alloc, 2),
                         "score": round(score, 3),
                         "risk_class": risk,
                         "refs": refs,
                         "justification": sanitize_marketing_language(base_just),
                     })
 
-        explanations[pf_name] = lines
+        explanations[pf_name] = rows
 
     return explanations
+
 
 
 def write_explanations_files(explanations: dict,
@@ -3245,27 +3263,35 @@ Format JSON strict:
     print("✅ Portefeuilles legacy générés avec succès")
     return portfolios
 
-def save_portfolios(portfolios):
+def save_portfolios(portfolios, allowed_assets=None):
     """
-    Wrapper rétro-compatibilité : délègue à save_portfolios_normalized.
-    Évite l'appel à update_history_index() qui n'existe pas.
+    Wrapper rétro-compatibilité : délègue à save_portfolios_normalized
+    avec le *vrai* allowed_assets pour conserver les noms réels.
     """
     try:
-        # on peut passer un mapping vide : la normalisation saura inférer les catégories via les préfixes d'ID (EQ_/ETF_s/ETF_b/CR_)
-        allowed_assets_stub = {
-            "allowed_equities": [],
-            "allowed_etfs_standard": [],
-            "allowed_bond_etfs": [],
-            "allowed_crypto": []
-        }
-        save_portfolios_normalized(portfolios, allowed_assets_stub)
+        # Si non fourni, on met un fallback ultra-minimal — mais on loggue pour le voir.
+        if allowed_assets is None:
+            allowed_assets = {
+                "allowed_equities": [],
+                "allowed_etfs_standard": [],
+                "allowed_bond_etfs": [],
+                "allowed_crypto": []
+            }
+
+        # Log de contrôle utile avant l'écriture
+        print(
+            "📝 Écriture portfolios.json — "
+            f"equities={len(allowed_assets.get('allowed_equities', []))}, "
+            f"etfs={len(allowed_assets.get('allowed_etfs_standard', []))}, "
+            f"bonds={len(allowed_assets.get('allowed_bond_etfs', []))}, "
+            f"crypto={len(allowed_assets.get('allowed_crypto', []))}"
+        )
+
+        save_portfolios(portfolios, allowed_assets)
+
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde (wrapper): {e}")
 
-def main():
-    """Version modifiée pour utiliser le système de scoring quantitatif v3 avec compliance AMF et fixes de stabilité."""
-    print("🔍 Chargement des données financières...")
-    print("=" * 60)
     
     # ========== CHARGEMENT DES DONNÉES DEPUIS LES NOUVEAUX FICHIERS ==========
     
@@ -3425,6 +3451,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
