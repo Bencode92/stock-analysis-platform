@@ -1874,6 +1874,16 @@ def _canon_pf_name_fr(key: str) -> str:
     if "agress" in k: return "Agressif"
     if "mod"   in k: return "Modéré"
     return "Stable"
+    # === Utilitaire: lecture clé insensible à la casse / variantes ===
+def _vget(d: dict, *keys, default=None):
+    """
+    Retourne d[k] pour la 1ère clé trouvée parmi keys si elle existe et non-vide, sinon default.
+    Exemple: _vget(a, "name", "Name", "symbol", "Symbol", default="Inconnu")
+    """
+    for k in keys:
+        if isinstance(d, dict) and k in d and d[k] not in (None, ""):
+            return d[k]
+    return default
 
 # PATCH 1 — conversion FR -> V1 robuste
 def _convert_fr_portefeuilles_schema(obj: dict) -> dict:
@@ -1910,48 +1920,50 @@ def _convert_fr_portefeuilles_schema(obj: dict) -> dict:
     def _ensure_pf(k: str):
         out.setdefault(k, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
 
-    # --- Cas A: clés Portefeuille_* / ou noms directs dans root
-    mapped = False
-    for k, pf in (root.items() if isinstance(root, dict) else []):
+# --- Cas A: clés Portefeuille_* / ou noms directs dans root
+mapped = False
+for k, pf in (root.items() if isinstance(root, dict) else []):
+    if not isinstance(pf, dict):
+        continue
+    lk = (k or "").lower()
+    if lk.startswith("portefeuille_") or lk in ("agressif", "modéré", "modere", "stable"):
+        mapped = True
+        pf_key = _pf_key(k)
+        _ensure_pf(pf_key)
+        if pf.get("Description") or pf.get("description"):
+            out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
+        for a in (pf.get("Allocations") or pf.get("allocations") or []):
+            try:
+                # ⬇️ Patch insensible à la casse
+                name = _vget(a, "name", "Name", "Symbol", "symbol", "id", "Id", "ID", default="Inconnu")
+                cat  = _cat_fr_to_v1(_vget(a, "type", "Type", "category", "Category", default=""))
+                pctf = float(_vget(a, "allocation", "allocation_pct", "Allocation", default=0.0))
+                out[pf_key][cat][str(name)] = f"{int(round(pctf))}%"
+            except Exception:
+                pass
+if mapped:
+    return out
+
+# --- Cas B: liste "Portfolios" imbriquée dans root
+lst = root.get("Portfolios") if isinstance(root, dict) else None
+if isinstance(lst, list):
+    for pf in lst:
         if not isinstance(pf, dict):
             continue
-        lk = (k or "").lower()
-        if lk.startswith("portefeuille_") or lk in ("agressif", "modéré", "modere", "stable"):
-            mapped = True
-            pf_key = _pf_key(k)
-            _ensure_pf(pf_key)
-            if pf.get("Description") or pf.get("description"):
-                out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
-            for a in (pf.get("Allocations") or pf.get("allocations") or []):
-                try:
-                    name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or "Inconnu"
-                    cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
-                    pctf = float(a.get("allocation") or a.get("allocation_pct") or a.get("Allocation") or 0.0)
-                    out[pf_key][cat][str(name)] = f"{int(round(pctf))}%"
-                except Exception:
-                    pass
-    if mapped:
-        return out
-
-    # --- Cas B: liste "Portfolios" imbriquée dans root
-    lst = root.get("Portfolios") if isinstance(root, dict) else None
-    if isinstance(lst, list):
-        for pf in lst:
-            if not isinstance(pf, dict):
-                continue
-            pf_key = _pf_key(pf.get("Name") or pf.get("Nom") or "")
-            _ensure_pf(pf_key)
-            if pf.get("Description") or pf.get("description"):
-                out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
-            for a in (pf.get("Allocations") or pf.get("allocations") or []):
-                try:
-                    name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or "Inconnu"
-                    cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
-                    pctf = float(a.get("allocation") or a.get("allocation_pct") or a.get("Allocation") or 0.0)
-                    out[pf_key][cat][str(name)] = f"{int(round(pctf))}%"
-                except Exception:
-                    pass
-        return out
+        pf_key = _pf_key(pf.get("Name") or pf.get("Nom") or "")
+        _ensure_pf(pf_key)
+        if pf.get("Description") or pf.get("description"):
+            out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
+        for a in (pf.get("Allocations") or pf.get("allocations") or []):
+            try:
+                # ⬇️ Patch insensible à la casse
+                name = _vget(a, "name", "Name", "Symbol", "symbol", "id", "Id", "ID", default="Inconnu")
+                cat  = _cat_fr_to_v1(_vget(a, "type", "Type", "category", "Category", default=""))
+                pctf = float(_vget(a, "allocation", "allocation_pct", "Allocation", default=0.0))
+                out[pf_key][cat][str(name)] = f"{int(round(pctf))}%"
+            except Exception:
+                pass
+    return out
 
     # --- Cas C: racine directe "Portfolios" (obj = archive.portfolios)
     if obj.get("Portfolios") and isinstance(obj["Portfolios"], list):
@@ -2401,25 +2413,28 @@ def force_to_front_v1(any_portfolios_obj: dict) -> dict:
                     cat = "ETF"
                 out[pf_name][cat][str(name)] = _to_int_pct_str(alloc)
 
-    # --- Cas B : archive FR avec "portfolios" / "Portefeuille_*" / "allocations"
-    root = (any_portfolios_obj or {}).get("portfolios")
-    if isinstance(root, dict):
-        def _canon(k: str) -> str:
-            k = (k or "").lower()
-            if "agress" in k: return "Agressif"
-            if "mod" in k:    return "Modéré"
-            return "Stable"
-        for k, pf in root.items():
-            pf_key = _canon(k)
-            allocs = (pf or {}).get("Allocations") or (pf or {}).get("allocations") or []
-            for it in allocs:
-                name  = it.get("name") or it.get("symbol") or it.get("id") or "Inconnu"
-                cat  = it.get("category") or it.get("type") or "ETF"
-                if cat not in ("Actions","ETF","Obligations","Crypto"):
-                    cat = "ETF"
-                out[pf_key][cat][str(name)] = _to_int_pct_str(it.get("allocation"))
+# --- Cas B : archive FR avec "portfolios" / "Portefeuille_*" / "allocations"
+root = (any_portfolios_obj or {}).get("portfolios")
+if isinstance(root, dict):
+    def _canon(k: str) -> str:
+        k = (k or "").lower()
+        if "agress" in k: return "Agressif"
+        if "mod" in k:    return "Modéré"
+        return "Stable"
+    for k, pf in root.items():
+        pf_key = _canon(k)
+        allocs = (pf or {}).get("Allocations") or (pf or {}).get("allocations") or []
+        for it in allocs:
+            # ⬇️ Patch insensible à la casse
+            name = _vget(it, "name", "Name", "symbol", "Symbol", "id", "Id", "ID", default="Inconnu")
+            cat  = _vget(it, "category", "Category", "type", "Type", default="ETF")
+            if cat not in ("Actions","ETF","Obligations","Crypto"):
+                cat = "ETF"
+            out[pf_key][cat][str(name)] = _to_int_pct_str(
+                _vget(it, "allocation", "allocation_pct", "Allocation", default=0.0)
+            )
 
-    return out
+return out
 def _v1_is_effectively_empty(v1: dict) -> bool:
     if not isinstance(v1, dict):
         return True
@@ -3528,6 +3543,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
