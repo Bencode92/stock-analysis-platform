@@ -1,5 +1,0 @@
-# Portefeuille_Agressif
-
-# Portefeuille_Modéré
-
-# Portefeuille_Stable
