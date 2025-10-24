@@ -2529,6 +2529,14 @@ def force_to_front_v1(any_portfolios_obj: dict) -> dict:
                 out[pf_key][cat][str(name)] = _to_int_pct_str(it.get("allocation"))
 
     return out
+def _v1_is_effectively_empty(v1: dict) -> bool:
+    if not isinstance(v1, dict):
+        return True
+    def _count(pf: dict) -> int:
+        if not isinstance(pf, dict):
+            return 0
+        return sum(bool((pf.get(cat) or {})) for cat in ("Actions","ETF","Obligations","Crypto"))
+    return not any(_count(v1.get(pf, {})) for pf in ("Agressif","Modéré","Stable"))    
 
 def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> None:
     """
@@ -2552,13 +2560,13 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
         normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
 
         # 🔁 Filet: si la vue v1 est vide, tenter conversion du schéma FR "Portefeuille_*"
-        if not any((normalized_v1.get(pf) or {}) for pf in ("Agressif", "Modéré", "Stable")):
+        if _v1_is_effectively_empty(normalized_v1):
             alt = _convert_fr_portefeuilles_schema(portfolios_v3)
-            if alt:
+            if alt and not _v1_is_effectively_empty(alt):
                 normalized_v1 = alt
 
         # 🛑 Filet dur: si c’est ENCORE vide, convertir « quoi qu’il arrive » vers v1
-        if not any((normalized_v1.get(pf) or {}) for pf in ("Agressif","Modéré","Stable")):
+        if _v1_is_effectively_empty(normalized_v1):
             normalized_v1 = force_to_front_v1(portfolios_v3)
 
         # 2) Filet post-génération : 1 ETF par ancre + pas de crypto en Stable
@@ -2617,6 +2625,7 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
 
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
+
 
 
 
@@ -3513,6 +3522,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
