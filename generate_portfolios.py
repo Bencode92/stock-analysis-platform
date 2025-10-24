@@ -1875,199 +1875,90 @@ def _canon_pf_name_fr(key: str) -> str:
     if "mod"   in k: return "Modéré"
     return "Stable"
 
+# PATCH 1 — conversion FR -> V1 robuste
 def _convert_fr_portefeuilles_schema(obj: dict) -> dict:
     """
-    Convertit les schémas d'archives FR vers le format v1 front :
-      Entrées possibles :
-        A) {"portfolios": { "Portefeuille_Agressif": {...}, "Portefeuille_Modere": {...}, "Portefeuille_Stable": {...} }}
-        B) {"portfolios": { "Portfolios": [ { "Name": "Agressif", "Description": "...", "Allocations": [...] }, ... ] } }
-
-      Sortie v1 :
-        {"Agressif":{"Commentaire":"...", "Actions": {...}, "ETF": {...}, "Obligations": {...}, "Crypto": {...}}, ...}
+    Convertit des schémas FR variés vers le format V1 pour le front:
+      A) {"portfolios": {"Portefeuille_Agressif": {...}, ...}}
+      B) {"portfolios": {"Portfolios": [ {Name, Description, Allocations:[...]}, ... ]}}
+      C) {"Portfolios": [ ... ]}                       # racine directe
+      D) {"version": "...", "portfolios": {...}}       # wrapper
+    Retour: {"Agressif":{"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}}, ...}
     """
-    root = obj.get("portfolios") if isinstance(obj, dict) else None
-    out: dict = {}
+    out = {}
+    if not isinstance(obj, dict):
+        return out
 
+    # Déballage éventuel d’un wrapper {version/timestamp/portfolios}
+    root = obj.get("portfolios") if "portfolios" in obj else obj
     if not isinstance(root, dict):
         return out
 
+    def _pf_key(name: str) -> str:
+        s = (name or "").lower()
+        if "agress" in s: return "Agressif"
+        if "mod"   in s or "équili" in s or "equili" in s: return "Modéré"
+        return "Stable"
+
     def _cat_fr_to_v1(t: str) -> str:
         t = (t or "").strip().lower()
-        if t.startswith("act"): return "Actions"
+        if t.startswith("act"):   return "Actions"
         if t.startswith("oblig"): return "Obligations"
         if t.startswith("crypt"): return "Crypto"
         return "ETF"
 
-    def _add_line(pf_key: str, cat: str, name: str, pctf: float):
-        out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
-        out[pf_key][cat][str(name)] = f"{int(round(float(pctf or 0.0)))}%"
+    def _ensure_pf(k: str):
+        out.setdefault(k, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
 
-    # ----- Cas A : mapping par clés "Portefeuille_*" (ou noms directs) -----
+    # --- Cas A: clés Portefeuille_* / ou noms directs dans root
     mapped = False
     for k, pf in (root.items() if isinstance(root, dict) else []):
         if not isinstance(pf, dict):
             continue
-        lowk = (k or "").lower()
-        if not (lowk.startswith("portefeuille_") or lowk in ("agressif","modéré","modere","stable")):
-            continue
-        mapped = True
-        pf_key = _canon_pf_name_fr(k)
-        out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
-        if pf.get("Description") or pf.get("description"):
-            out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
-        for a in (pf.get("Allocations") or pf.get("allocations") or []):
-            try:
-                name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or ""
-                cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
-                pctf = float(a.get("allocation") or a.get("allocation_pct") or a.get("Allocation") or 0.0)
-                _add_line(pf_key, cat, name, pctf)
-            except Exception:
-                continue
-
-    if mapped:
-        return out
-
-    # ----- Cas B : liste sous "Portfolios" -----
-    lst = root.get("Portfolios")
-    if isinstance(lst, list):
-        for pf in lst:
-            if not isinstance(pf, dict):
-                continue
-            pf_key = _canon_pf_name_fr(pf.get("Name") or pf.get("Nom") or "")
-            if not pf_key:
-                continue
-            out.setdefault(pf_key, {"Commentaire":"", "Actions":{}, "ETF":{}, "Obligations":{}, "Crypto":{}})
+        lk = (k or "").lower()
+        if lk.startswith("portefeuille_") or lk in ("agressif", "modéré", "modere", "stable"):
+            mapped = True
+            pf_key = _pf_key(k)
+            _ensure_pf(pf_key)
             if pf.get("Description") or pf.get("description"):
                 out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
             for a in (pf.get("Allocations") or pf.get("allocations") or []):
                 try:
-                    name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or ""
+                    name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or "Inconnu"
                     cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
                     pctf = float(a.get("allocation") or a.get("allocation_pct") or a.get("Allocation") or 0.0)
-                    _add_line(pf_key, cat, name, pctf)
-                except Exception:
-                    continue
-        return out
-
-    return out
-
-
-def normalize_v3_to_frontend_v1(raw_obj: dict, allowed_assets: dict) -> dict:
-    """Convertit le format v3 (avec 'Lignes') vers le format v1 attendu par le front."""
-    # 0) Cas spécial: schéma français "portfolios" / "Portefeuille_*"
-    if isinstance(raw_obj, dict) and "portfolios" in raw_obj:
-        fr_v1 = _convert_fr_portefeuilles_schema(raw_obj)
-        if fr_v1:
-            return fr_v1
-
-    lut = _build_asset_lookup(allowed_assets)
-    out: dict = {}
-
-    def _put(pf_key: str, category: str, name: str, alloc):
-        # structure du portefeuille
-        out.setdefault(pf_key, {
-            "Commentaire": "",
-            "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
-        })
-        # cat inconnue -> ETF
-        if category not in ("Actions", "ETF", "Obligations", "Crypto"):
-            category = "ETF"
-        out[pf_key][category][name] = _pct(alloc)
-
-    def _sum_pct_dict(d: dict) -> float:
-        tot = 0.0
-        if isinstance(d, dict):
-            for v in d.values():
-                try:
-                    tot += float(re.sub(r'[^0-9.\-]', '', str(v)))
+                    out[pf_key][cat][str(name)] = f"{int(round(pctf))}%"
                 except Exception:
                     pass
-        return round(tot)
+    if mapped:
+        return out
 
-    def _ensure_comment(pf_key: str, base_text: str = ""):
-        base = sanitize_marketing_language((base_text or "").strip())
-        if base:
-            out[pf_key]["Commentaire"] = base
-            return
-        a = _sum_pct_dict(out[pf_key].get("Actions"))
-        e = _sum_pct_dict(out[pf_key].get("ETF"))
-        b = _sum_pct_dict(out[pf_key].get("Obligations"))
-        c = _sum_pct_dict(out[pf_key].get("Crypto"))
-        out[pf_key]["Commentaire"] = sanitize_marketing_language(
-            f"Portefeuille modèle {pf_key.lower()} : ≈{a}% Actions, ≈{e}% ETF, "
-            f"≈{b}% Obligations, ≈{c}% Crypto. Répartition indicative, non prescriptive. "
-            "Information générale ; performances passées non indicatives des performances futures."
-        )
+    # --- Cas B: liste "Portfolios" imbriquée dans root
+    lst = root.get("Portfolios") if isinstance(root, dict) else None
+    if isinstance(lst, list):
+        for pf in lst:
+            if not isinstance(pf, dict):
+                continue
+            pf_key = _pf_key(pf.get("Name") or pf.get("Nom") or "")
+            _ensure_pf(pf_key)
+            if pf.get("Description") or pf.get("description"):
+                out[pf_key]["Commentaire"] = sanitize_marketing_language(str(pf.get("Description") or pf.get("description")))
+            for a in (pf.get("Allocations") or pf.get("allocations") or []):
+                try:
+                    name = a.get("name") or a.get("Symbol") or a.get("symbol") or a.get("id") or "Inconnu"
+                    cat  = _cat_fr_to_v1(a.get("type") or a.get("category") or a.get("Type") or "")
+                    pctf = float(a.get("allocation") or a.get("allocation_pct") or a.get("Allocation") or 0.0)
+                    out[pf_key][cat][str(name)] = f"{int(round(pctf))}%"
+                except Exception:
+                    pass
+        return out
 
-    # --- 1) Clés directes: Agressif / Modéré / Stable ---
-    for portfolio_name in ["Agressif", "Modéré", "Stable"]:
-        pf = raw_obj.get(portfolio_name)
-        if not isinstance(pf, dict):
-            continue
-
-        base_comment = pf.get("Commentaire") or pf.get("Description") or ""
-
-        out.setdefault(portfolio_name, {
-            "Commentaire": "",
-            "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
-        })
-
-        # Cas v2 : catégories déjà présentes
-        if any(k in pf for k in ("Actions", "ETF", "Obligations", "Crypto")):
-            out[portfolio_name]["Actions"] = pf.get("Actions", {}) or {}
-            out[portfolio_name]["ETF"] = pf.get("ETF", {}) or {}
-            out[portfolio_name]["Obligations"] = pf.get("Obligations", {}) or {}
-            out[portfolio_name]["Crypto"] = pf.get("Crypto", {}) or {}
-            _ensure_comment(portfolio_name, base_comment)
-            continue
-
-        # Cas v3 : format 'Lignes'
-        for ligne in pf.get("Lignes", []) or []:
-            asset_id = ligne.get("id") or ligne.get("ID") or ""
-            alloc = ligne.get("allocation_pct") or ligne.get("allocation") or 0
-            if asset_id in lut:
-                name = lut[asset_id]["name"]
-                category = lut[asset_id]["category"]
-            else:
-                name = ligne.get("name", asset_id)
-                category = _infer_category_from_id(asset_id)
-            _put(portfolio_name, category, name, alloc)
-
-        _ensure_comment(portfolio_name, base_comment)
-
-    # --- 2) Format "Portefeuilles" (archives non standard) ---
-    if not out and isinstance(raw_obj, dict):
-        pfs = raw_obj.get("Portefeuilles") or raw_obj.get("portefeuilles") or []
-
-        def canon(nom: str) -> str:
-            s = (nom or "").lower()
-            if "agress" in s: return "Agressif"
-            if "mod" in s or "équili" in s or "equili" in s: return "Modéré"
-            return "Stable"
-
-        for pf in pfs:
-            pf_key = canon(pf.get("Nom") or pf.get("name"))
-            base_comment = pf.get("Commentaire") or pf.get("Description") or ""
-
-            out.setdefault(pf_key, {
-                "Commentaire": "",
-                "Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}
-            })
-
-            for it in pf.get("Actifs", []) or []:
-                asset_id = it.get("id") or it.get("ID") or ""
-                alloc = it.get("allocation") or it.get("allocation_pct") or 0
-                if asset_id in lut:
-                    name = lut[asset_id]["name"]
-                    category = lut[asset_id]["category"]
-                else:
-                    name = it.get("name") or it.get("Nom") or asset_id
-                    category = _infer_category_from_id(asset_id)
-                _put(pf_key, category, name, alloc)
-
-            _ensure_comment(pf_key, base_comment)
+    # --- Cas C: racine directe "Portfolios" (obj = archive.portfolios)
+    if obj.get("Portfolios") and isinstance(obj["Portfolios"], list):
+        return _convert_fr_portefeuilles_schema({"portfolios": obj})
 
     return out
+
 
 
 # === V1: validation & auto-fix de la somme 100% ===
@@ -2542,51 +2433,55 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
     """
     Sauvegarde double :
       - vue normalisée v1 pour le front : data/portfolios.json
-      - archive v3 détaillée avec métadonnées : data/portfolio_history/portefeuilles_v3_stable_YYYYMMDD_HHMMSS.json
+      - archive v3 + métadonnées        : data/portfolio_history/portefeuilles_v3_stable_YYYYMMDD_HHMMSS.json
       - met à jour l'index d'historique
     """
     try:
         os.makedirs("data", exist_ok=True)
         os.makedirs("data/portfolio_history", exist_ok=True)
 
-        # Rapport d’overlap (diagnostic)
-        overlap_report = build_overlap_report(
-            portfolios_v3,
-            allowed_assets,
-            etf_csv_path="data/combined_etfs.csv"
-        )
+        # 0) Diagnostic overlap (facultatif mais pratique au debug)
+        try:
+            overlap_report = build_overlap_report(
+                portfolios_v3, allowed_assets, etf_csv_path="data/combined_etfs.csv"
+            )
+        except Exception as _e:
+            print(f"⚠️ Overlap report indisponible: {_e}")
+            overlap_report = {}
 
-        # 1) Normaliser v3 -> v1 (voie classique)
+        # 1) Normalisation principale v3 -> v1
         normalized_v1 = normalize_v3_to_frontend_v1(portfolios_v3, allowed_assets)
+        print(f"ℹ️ Normalisation v3->v1: vide={_v1_is_effectively_empty(normalized_v1)}")
 
-        # 🔁 Filet: si la vue v1 est vide, tenter conversion du schéma FR "Portefeuille_*"
+        # 1bis) Filets anti-vide
         if _v1_is_effectively_empty(normalized_v1):
+            print("🔁 Fallback 1: _convert_fr_portefeuilles_schema()")
             alt = _convert_fr_portefeuilles_schema(portfolios_v3)
             if alt and not _v1_is_effectively_empty(alt):
                 normalized_v1 = alt
 
-        # 🛑 Filet dur: si c’est ENCORE vide, convertir « quoi qu’il arrive » vers v1
         if _v1_is_effectively_empty(normalized_v1):
+            print("🛑 Fallback 2: force_to_front_v1() (conversion coûte que coûte)")
             normalized_v1 = force_to_front_v1(portfolios_v3)
 
-        # 2) Filet post-génération : 1 ETF par ancre + pas de crypto en Stable
+        # 2) Post-traitements de robustesse (toujours côté v1)
+        #    - 1 ETF par ancre (gold/sp500/…) + pas de crypto en Stable
         normalized_v1 = enforce_one_per_anchor_v1(normalized_v1)
-
-        # 3) Force la somme = 100%
+        #    - somme = 100% (ajuste la dernière ligne)
         _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
 
-        # 3bis) ✅ méta-bloc daté pour forcer un diff à chaque run
+        # 3) Méta (force un diff à chaque run)
         normalized_v1.setdefault("_meta", {})
         normalized_v1["_meta"]["generated_at"] = datetime.datetime.now().isoformat()
         normalized_v1["_meta"]["version"] = "v3_quantitatif_compliance_amf_stable"
 
-        # 4) Fichier v1 (nom historique en anglais)
+        # 4) Écriture v1 (portfolios.json utilisé par le front)
         v1_path = "data/portfolios.json"
         with open(v1_path, "w", encoding="utf-8") as f:
             json.dump(normalized_v1, f, ensure_ascii=False, indent=4)
 
-        # 5) Archive v3 + métadonnées
-        ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        # 5) Archive v3 + métadonnées (pour audit / diff)
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         hist_path = f"data/portfolio_history/portefeuilles_v3_stable_{ts}.json"
         archive_payload = {
             "version": "v3_quantitatif_compliance_amf_stable",
@@ -2594,37 +2489,30 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
             "date": datetime.datetime.now().isoformat(),
             "portfolios": portfolios_v3,
             "overlap_report": overlap_report,
-            "features": [
-                "drawdown_normalisé",
-                "diversification_round_robin",
-                "validation_anti_fin_cycle",
-                "fallback_crypto_progressif",
-                "cache_univers_hash",
-                "retry_api_robuste",
-                "compliance_amf",
-                "sanitisation_marketing",
-                "disclaimer_automatique",
-                "regex_pandas_fixed",
-                "etf_detection_fixed",
-                "timeout_extended",
-                "type_safety_improved",
-                "cache_fallback_system"
-            ]
         }
         with open(hist_path, "w", encoding="utf-8") as f:
             json.dump(archive_payload, f, ensure_ascii=False, indent=4)
 
-        # 6) Mettre à jour l’index d'historique à partir de la vue normalisée
+        # 6) Index d’historique (récap utile côté UI)
         update_history_index_from_normalized(
             normalized_json=normalized_v1,
             history_file=hist_path,
-            version="v3_quantitatif_compliance_amf_stable"
+            version="v3_quantitatif_compliance_amf_stable",
         )
 
+        # 7) Logs récap
+        def _count_items(pf: dict) -> int:
+            return sum(len(pf.get(k, {})) for k in ("Actions", "ETF", "Obligations", "Crypto"))
+
+        ag = _count_items(normalized_v1.get("Agressif", {}))
+        md = _count_items(normalized_v1.get("Modéré", {}))
+        st = _count_items(normalized_v1.get("Stable", {}))
         print(f"✅ Sauvegarde OK → {v1_path} (v1) + {hist_path} (archive v3)")
+        print(f"   Contenu v1: Agressif={ag} | Modéré={md} | Stable={st}")
 
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
+
 
 
 
@@ -3522,6 +3410,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
