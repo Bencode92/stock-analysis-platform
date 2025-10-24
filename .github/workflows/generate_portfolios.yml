@@ -39,32 +39,32 @@ jobs:
       - name: 🚀 Exécuter le script
         run: python generate_portfolios.py
 
-      # (Optionnel) Inspecter rapidement les sorties
- - name: 🧾 Check outputs (optionnel)
-  if: always()
-  run: |
-    echo "== data =="
-    ls -lah data || true
-    echo "----"
-    [ -f data/portfolio_explanations.json ] && head -n 30 data/portfolio_explanations.json || true
-    echo "----"
-    if [ -f data/portfolios.json ]; then
-      echo "SHA1 portfolios.json:"
-      sha1sum data/portfolios.json || true
-      echo "STAT:"
-      stat data/portfolios.json || true
-      echo "----"
-      echo "CONTENU (premières lignes) :"
-      sed -n '1,200p' data/portfolios.json || true
-    else
-      echo "portfolios.json ABSENT"
-    fi
-    echo "----"
-    ls -lah data/portfolio_history || true
-    echo "== debug/prompts =="
-    ls -lah debug/prompts || true
+      - name: 🧾 Check outputs (optionnel)
+        if: always()
+        run: |
+          echo "== data =="
+          ls -lah data || true
+          echo "----"
+          [ -f data/portfolio_explanations.json ] && head -n 30 data/portfolio_explanations.json || true
+          echo "----"
+          if [ -f data/portfolios.json ]; then
+            echo "SHA1 portfolios.json:"
+            sha1sum data/portfolios.json || true
+            echo "STAT:"
+            stat data/portfolios.json || true
+            echo "----"
+            echo "CONTENU (premières lignes) :"
+            sed -n '1,200p' data/portfolios.json || true
+          else
+            echo "portfolios.json ABSENT"
+          fi
+          echo "----"
+          ls -lah data/portfolio_history || true
+          echo "== debug/prompts =="
+          ls -lah debug/prompts || true
 
       - name: 💾 Commit & push
+        if: always()
         run: |
           # Ajouter précisément les artefacts générés
           git add data/portfolios.json \
@@ -94,3 +94,4 @@ jobs:
 
           # Push simple; si ça échoue pour divergence, tenter un rebase rapide
           git push || (git pull --rebase && git push)
+
