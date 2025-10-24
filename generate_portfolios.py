@@ -2509,6 +2509,11 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
         # 3) Force la somme = 100%
         _, _, normalized_v1 = validate_and_fix_v1_sum(normalized_v1, fix=True)
 
+        # 3bis) Méta-champ daté pour assurer une différence à chaque run
+        normalized_v1.setdefault("_meta", {})
+        normalized_v1["_meta"]["generated_at"] = datetime.datetime.now().isoformat()
+        normalized_v1["_meta"]["version"] = "v3_quantitatif_compliance_amf_stable"
+
         # 4) Fichier v1 (nom historique en anglais)
         v1_path = "data/portfolios.json"
         with open(v1_path, "w", encoding="utf-8") as f:
@@ -2554,6 +2559,7 @@ def save_portfolios_normalized(portfolios_v3: dict, allowed_assets: dict) -> Non
 
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde normalisée: {e}")
+
 
 
 
@@ -3448,6 +3454,7 @@ def load_json_data(file_path):
 
 if __name__ == "__main__":
     main()
+
 
 
 
