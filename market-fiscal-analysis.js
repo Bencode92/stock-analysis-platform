@@ -74,41 +74,200 @@ function parseFloatOrDefault(elemId, def) {
 }
 
 class MarketFiscalAnalyzer {
-    constructor() {
-        this.simulateur = new SimulateurImmo();
-        this.comparateur = new FiscalComparator(this.simulateur);
-        this.propertyData = null;
-        this.marketAnalysis = null;
-        // Constante pour le vrai signe minus
-        this.SIGN_MINUS = '−'; // U+2212 (pas un tiret simple !)
-    }
+constructor() {
+  this.simulateur = new SimulateurImmo();
+  this.comparateur = new FiscalComparator(this.simulateur);
+  this.propertyData = null;
+  this.marketAnalysis = null;
 
+  // Constante pour le vrai signe moins
+  this.SIGN_MINUS = '−'; // U+2212
+
+  // État UI : régime sélectionné + mode "meilleur"
+  this.uiState = { selectedRegimeId: 'nu_micro', preferBest: false };
+}
+// ─────────────────────────────────────────────────────────────
+//  UI helpers (sélection régime & “meilleur”)
+// ─────────────────────────────────────────────────────────────
+setSelectedRegime(id) {
+  const key = this.normalizeRegimeKey({ id });
+  this.uiState.selectedRegimeId = key || 'nu_micro';
+  this.uiState.preferBest = false;
+  return this.uiState.selectedRegimeId;
+}
+
+setPreferBest(v) {
+  this.uiState.preferBest = !!v;
+  return this.uiState.preferBest;
+}
+
+getSelectedRegime() {
+  return this.uiState.selectedRegimeId || 'nu_micro';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Moteur de “prix d’équilibre” (recalc propre sans DOM)
+// ─────────────────────────────────────────────────────────────
+_buildInputForPrice(baseInput, price, params = {}) {
+  // on clone proprement l’entrée pré-calculée par prepareFiscalData()
+  const input = { ...baseInput };
+
+  // 1) mettre à jour le prix
+  input.price = Number(price) || 0;
+  input.prixBien = input.price;
+
+  // 2) recalculer frais d’acquisition et bancaires comme dans prepareFiscalData()
+  const typeAchat = input.typeAchat || 'classique';
+  const p = { ...params, ...this.getAllAdvancedParams?.() }; // tolérant
+  const fraisAcq = this.calculateFraisAcquisition(input.price, typeAchat, p);
+
+  const fraisDossier = Number(p.fraisBancairesDossier ?? 0);
+  const fraisCompte  = Number(p.fraisBancairesCompte ?? 0);
+  const tauxGarant   = Number(p.fraisGarantie ?? 0) / 100;
+
+  const coutHorsFraisB = input.price + Number(input.travauxRenovation ?? 0) + fraisAcq;
+
+  const loanAmount = (coutHorsFraisB - Number(input.apport ?? 0) + fraisDossier + fraisCompte) / (1 - tauxGarant);
+  const fraisBancaires = fraisDossier + fraisCompte + (loanAmount * tauxGarant);
+
+  const coutTotalFinal = coutHorsFraisB + fraisBancaires;
+
+  input.loanAmount = loanAmount;
+  input.monthlyPayment = this.calculateMonthlyPayment(
+    loanAmount,
+    Number(input.loanRate ?? input.taux ?? 0),
+    Number(input.loanDuration ?? input.duree ?? 0)
+  );
+
+  input.coutTotalAcquisition = coutTotalFinal;
+  input.fraisAcquisition = fraisAcq;
+  input.fraisBancaires = fraisBancaires;
+
+  // Revenus déjà dans baseInput (loyerHC/charges/vacance/gestion) → on ne touche pas
+  return input;
+}
+
+_computeCFAnnuelByRegime(input, regimeId, params = {}) {
+  // baseResults pour intérêts : on ne force pas d’échéancier, on garde analytique
+  const baseResults = {
+    mensualite: Number(input.monthlyPayment ?? 0),
+    tableauAmortissement: null
+  };
+
+  const registry = this.getRegimeRegistry();
+  const key = this.normalizeRegimeKey({ id: regimeId });
+  const meta = registry[key] || { id: key, nom: regimeId };
+
+  const detailed = this.getDetailedCalculations(meta, input, params, baseResults);
+  return {
+    regimeId: key,
+    regimeNom: (registry[key]?.nom || meta.nom || key),
+    cashflowAnnuel: Number(detailed.cashflowNetAnnuel || 0),
+    cashflowMensuel: Number(detailed.cashflowNetAnnuel || 0) / 12
+  };
+}
+
+_computeBestRegimeCFAnnuel(input, params = {}) {
+  const ids = ['nu_micro','nu_reel','lmnp_micro','lmnp_reel','lmp','sci_is'];
+  let best = { regimeId: null, regimeNom: '', cashflowAnnuel: -Infinity, cashflowMensuel: -Infinity };
+
+  for (const id of ids) {
+    const res = this._computeCFAnnuelByRegime(input, id, params);
+    if (res.cashflowAnnuel > best.cashflowAnnuel) best = res;
+  }
+  return best;
+}
+
+/**
+ * Trouve le prix qui donne un cash-flow mensuel cible.
+ * @param {object} baseInput - résultat de prepareFiscalData()
+ * @param {number} targetCFMensuel - ex: 0 pour “prix d’équilibre”
+ * @param {object} opts - { preferBest?:boolean, regimeId?:string, maxIter?:number, tol?:number }
+ */
+solvePriceForTargetCF(baseInput, targetCFMensuel = 0, opts = {}) {
+  const params = this.getAllAdvancedParams?.() || {};
+  const preferBest = (typeof opts.preferBest === 'boolean') ? opts.preferBest : !!this.uiState.preferBest;
+
+  const selectedId = opts.regimeId || this.getSelectedRegime();
+
+  // bornes de recherche (pratiques & prudentes)
+  const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
+  let lo = Math.max(1, p0 * 0.5);
+  let hi = Math.max(2, p0 * 1.8);
+
+  // si le CF est déjà >> cible, on peut monter la borne haute
+  const testBase = preferBest
+    ? this._computeBestRegimeCFAnnuel(this._buildInputForPrice(baseInput, p0, params), params)
+    : this._computeCFAnnuelByRegime(this._buildInputForPrice(baseInput, p0, params), selectedId, params);
+  if (testBase.cashflowMensuel > targetCFMensuel) {
+    // le CF est trop bon → on peut tester prix + élevés
+    hi = Math.max(hi, p0 * 2.5);
+  }
+
+  const maxIter = Number(opts.maxIter ?? 40);
+  const tol     = Number(opts.tol ?? 1); // 1 €/mois
+
+  let best = null;
+
+  for (let i = 0; i < maxIter; i++) {
+    const mid = (lo + hi) / 2;
+    const input = this._buildInputForPrice(baseInput, mid, params);
+
+    const res = preferBest
+      ? this._computeBestRegimeCFAnnuel(input, params)
+      : this._computeCFAnnuelByRegime(input, selectedId, params);
+
+    const diff = res.cashflowMensuel - targetCFMensuel;
+    best = { price: mid, ...res };
+
+    if (Math.abs(diff) <= tol) break;
+
+    // si CF trop haut → prix trop bas → on augmente le prix (lo = mid)
+    if (diff > 0) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+
+  // jolies sorties
+  const registry = this.getRegimeRegistry();
+  const regimeNom = registry[best.regimeId]?.nom || best.regimeNom || best.regimeId;
+
+  return {
+    price: Math.round(best.price),
+    cashflowMensuel: Math.round(best.cashflowMensuel),
+    cashflowAnnuel: Math.round(best.cashflowAnnuel),
+    regimeId: best.regimeId,
+    regimeNom
+  };
+}
     // ─────────────────────────────────────────────────────────────
     //  Normalisation robuste des régimes + registre unique
     // ─────────────────────────────────────────────────────────────
-    normalizeRegimeKey(reg) {
-        const raw = (reg?.id || reg?.nom || '').toString()
-            .toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // supprime les accents
+normalizeRegimeKey(reg) {
+  const raw = (reg?.id || reg?.nom || '').toString()
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // supprime les accents
 
-        // Normalisations usuelles
-        if (raw.includes('lmp'))                           return 'lmp';
-        if (raw.includes('lmnp') && raw.includes('reel'))  return 'lmnp_reel';
-        if (raw.includes('lmnp') && raw.includes('micro')) return 'lmnp_micro';
-        if (raw.includes('micro-foncier') || raw.includes('nu_micro')) return 'nu_micro';
-        if ((raw.includes('nu') || raw.includes('foncier')) && raw.includes('reel')) return 'nu_reel';
-        if (raw.includes('sci') && raw.includes('is'))     return 'sci_is';
+  // ⚠️ Tester LMNP AVANT LMP pour éviter la collision de sous-chaînes
+  if (raw.includes('lmnp') && raw.includes('reel'))  return 'lmnp_reel';
+  if (raw.includes('lmnp') && raw.includes('micro')) return 'lmnp_micro';
+  if (raw.includes('lmp'))                           return 'lmp';
+  if (raw.includes('micro-foncier') || raw.includes('nu_micro')) return 'nu_micro';
+  if ((raw.includes('nu') || raw.includes('foncier')) && raw.includes('reel')) return 'nu_reel';
+  if (raw.includes('sci') && raw.includes('is'))     return 'sci_is';
 
-        // Valeurs exactes utilisées par le formulaire
-        if (raw === 'nu_micro')   return 'nu_micro';
-        if (raw === 'nu_reel')    return 'nu_reel';
-        if (raw === 'lmnp_micro') return 'lmnp_micro';
-        if (raw === 'lmnp_reel')  return 'lmnp_reel';
-        if (raw === 'lmp_reel')   return 'lmp';
-        if (raw === 'sci_is')     return 'sci_is';
+  // Valeurs exactes utilisées par le formulaire
+  if (raw === 'nu_micro')   return 'nu_micro';
+  if (raw === 'nu_reel')    return 'nu_reel';
+  if (raw === 'lmnp_micro') return 'lmnp_micro';
+  if (raw === 'lmnp_reel')  return 'lmnp_reel';
+  if (raw === 'lmp_reel')   return 'lmp';
+  if (raw === 'sci_is')     return 'sci_is';
 
-        return raw.replace(/\s+/g,'-');
-    }
+  return raw.replace(/\s+/g,'-');
+}
 
     getRegimeRegistry() {
         return {
