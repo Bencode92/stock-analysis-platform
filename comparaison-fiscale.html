@@ -1912,7 +1912,7 @@ function drawBuyRent () {
                  oninput="br.loyerMarché=+this.value;
                           document.getElementById('brOutput').textContent=this.value+' €';
                           drawBuyRent()">
-          <output id="brOutput">${br.loyerMarché} €</o>
+          <output id="brOutput">${br.loyerMarché} €</output>
         </label>
       </div>
     </section>`;
@@ -1992,6 +1992,20 @@ document.addEventListener('DOMContentLoaded', function () {
     };
   }
 
+// ── Lier le choix du régime aux helpers UI ───────────────────────────────
+
+// Radios "régime actuel" → met à jour le régime sélectionné dans l'analyzer
+document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
+  r.addEventListener('change', (e) => {
+    window.analyzer?.setSelectedRegime?.(e.target.value);
+  });
+});
+
+// Bouton "meilleur cash-flow" → bascule en mode meilleur et relance l'analyse
+document.getElementById('btn-best-cashflow')?.addEventListener('click', async () => {
+  window.analyzer?.setPreferBest?.(true);
+  await proceedToFiscalAnalysis();
+});
   // Gestion des paramètres avancés
   document.getElementById('btn-advanced-toggle').addEventListener('click', function () {
     const advancedParams = document.getElementById('advanced-params');
@@ -2889,6 +2903,77 @@ document.addEventListener('DOMContentLoaded', () => {
     // Surbrillance manuelle
     wireManualHighlight();
   })();
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const REGIME_LABELS = window.REGIME_LABELS || {
+    'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
+    'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
+    'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
+    'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
+    'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
+    'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
+  };
+
+  function getResultsDiv() {
+    let results = document.getElementById('fiscal-comparison-results');
+    if (!results) {
+      const host = document.getElementById('section-3') || document.body;
+      results = document.createElement('div');
+      results.id = 'fiscal-comparison-results';
+      host.appendChild(results);
+    }
+    return results;
+  }
+
+  function renderRegimeSummary(code, mode = 'selection') {
+    const info = REGIME_LABELS[code] || { label: code || '—' };
+    const badge = mode === 'best'
+      ? '<span class="regime-badge best-regime">Mode meilleur</span>'
+      : '<span class="regime-badge current">Régime sélectionné</span>';
+
+    const html = `
+      <div class="best-regime-summary">
+        <div class="summary-title">
+          <i class="fas fa-balance-scale"></i>
+          Synthèse fiscale
+        </div>
+        <div class="summary-content">
+          <div class="regime-name">
+            ${info.label || '—'} ${badge}
+          </div>
+          <p style="margin-top:10px;color:#94a3b8">
+            Affichage direct demandé — aucun calcul lancé.
+          </p>
+        </div>
+      </div>
+    `;
+    getResultsDiv().innerHTML = html;
+  }
+
+  function showSection3() {
+    if (typeof window.goToStep === 'function') window.goToStep(3);
+    const s3 = document.getElementById('section-3');
+    if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Radios → afficher directement en section 3
+  document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
+    r.addEventListener('change', (e) => {
+      showSection3();
+      renderRegimeSummary(e.target.value, 'selection');
+    });
+  });
+
+  // Bouton "meilleur cash-flow" → affichage (sans calcul)
+  const bestBtn = document.getElementById('btn-best-cashflow');
+  if (bestBtn) {
+    bestBtn.addEventListener('click', () => {
+      const checked = document.querySelector('input[name="regime-actuel"]:checked');
+      const code = checked ? checked.value : 'nu_micro';
+      showSection3();
+      renderRegimeSummary(code, 'best');
+    });
+  }
 });
 </script>
 </body>
