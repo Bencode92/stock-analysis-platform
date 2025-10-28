@@ -1918,7 +1918,32 @@ function drawBuyRent () {
     </section>`;
 }
     </script>
-    
+<!-- ====== ACTIONS (AU-DESSUS DE LA COMPARAISON FISCALE) ====== -->
+<div class="breakeven-actions" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+  <button id="btn-breakeven-locatif" class="btn btn-primary">
+    Prix d’équilibre (Locatif)
+  </button>
+
+  <input id="input-conjoint" type="number" min="0" step="1" placeholder="Participation conjoint €/mois" style="width:220px;">
+  <label style="display:flex;gap:6px;align-items:center;">
+    <input id="rp-inclure-opportunite" type="checkbox">
+    Inclure loyer d’opportunité
+  </label>
+  <button id="btn-breakeven-rp" class="btn btn-secondary">
+    Prix d’équilibre (Rés. principale)
+  </button>
+
+  <label style="display:flex;gap:6px;align-items:center;margin-left:auto;">
+    <input id="prefer-best" type="checkbox">
+    Chercher “meilleur régime”
+  </label>
+</div>
+
+<!-- Ces deux conteneurs peuvent être placés ici, le pill sera REPOSITIONNÉ en JS -->
+<div id="breakeven-pill" class="mini-pill" style="display:none;"></div>
+<div id="breakeven-result" class="market-comparison-card" style="display:none;margin-top:12px;"></div>
+<!-- ====== /ACTIONS ====== -->
+
     <div id="fiscal-comparison-results">
                 <!-- Les résultats fiscaux seront insérés ici -->
             </div>
