@@ -72,177 +72,239 @@ function parseFloatOrDefault(elemId, def) {
     const v = parseFloat(document.getElementById(elemId)?.value);
     return Number.isNaN(v) ? def : v;   // 0 est conservé, '' ou 'abc' donnent def
 }
-
 class MarketFiscalAnalyzer {
-constructor() {
-  this.simulateur = new SimulateurImmo();
-  this.comparateur = new FiscalComparator(this.simulateur);
-  this.propertyData = null;
-  this.marketAnalysis = null;
+  constructor() {
+    this.simulateur = new SimulateurImmo();
+    this.comparateur = new FiscalComparator(this.simulateur);
+    this.propertyData = null;
+    this.marketAnalysis = null;
 
-  // Constante pour le vrai signe moins
-  this.SIGN_MINUS = '−'; // U+2212
+    // Constante pour le vrai signe moins
+    this.SIGN_MINUS = '−'; // U+2212
 
-  // État UI : régime sélectionné + mode "meilleur"
-  this.uiState = { selectedRegimeId: 'nu_micro', preferBest: false };
-}
-// ─────────────────────────────────────────────────────────────
-//  UI helpers (sélection régime & “meilleur”)
-// ─────────────────────────────────────────────────────────────
-setSelectedRegime(id) {
-  const key = this.normalizeRegimeKey({ id });
-  this.uiState.selectedRegimeId = key || 'nu_micro';
-  this.uiState.preferBest = false;
-  return this.uiState.selectedRegimeId;
-}
-
-setPreferBest(v) {
-  this.uiState.preferBest = !!v;
-  return this.uiState.preferBest;
-}
-
-getSelectedRegime() {
-  return this.uiState.selectedRegimeId || 'nu_micro';
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Moteur de “prix d’équilibre” (recalc propre sans DOM)
-// ─────────────────────────────────────────────────────────────
-_buildInputForPrice(baseInput, price, params = {}) {
-  // on clone proprement l’entrée pré-calculée par prepareFiscalData()
-  const input = { ...baseInput };
-
-  // 1) mettre à jour le prix
-  input.price = Number(price) || 0;
-  input.prixBien = input.price;
-
-  // 2) recalculer frais d’acquisition et bancaires comme dans prepareFiscalData()
-  const typeAchat = input.typeAchat || 'classique';
-  const p = { ...params, ...this.getAllAdvancedParams?.() }; // tolérant
-  const fraisAcq = this.calculateFraisAcquisition(input.price, typeAchat, p);
-
-  const fraisDossier = Number(p.fraisBancairesDossier ?? 0);
-  const fraisCompte  = Number(p.fraisBancairesCompte ?? 0);
-  const tauxGarant   = Number(p.fraisGarantie ?? 0) / 100;
-
-  const coutHorsFraisB = input.price + Number(input.travauxRenovation ?? 0) + fraisAcq;
-
-  const loanAmount = (coutHorsFraisB - Number(input.apport ?? 0) + fraisDossier + fraisCompte) / (1 - tauxGarant);
-  const fraisBancaires = fraisDossier + fraisCompte + (loanAmount * tauxGarant);
-
-  const coutTotalFinal = coutHorsFraisB + fraisBancaires;
-
-  input.loanAmount = loanAmount;
-  input.monthlyPayment = this.calculateMonthlyPayment(
-    loanAmount,
-    Number(input.loanRate ?? input.taux ?? 0),
-    Number(input.loanDuration ?? input.duree ?? 0)
-  );
-
-  input.coutTotalAcquisition = coutTotalFinal;
-  input.fraisAcquisition = fraisAcq;
-  input.fraisBancaires = fraisBancaires;
-
-  // Revenus déjà dans baseInput (loyerHC/charges/vacance/gestion) → on ne touche pas
-  return input;
-}
-
-_computeCFAnnuelByRegime(input, regimeId, params = {}) {
-  // baseResults pour intérêts : on ne force pas d’échéancier, on garde analytique
-  const baseResults = {
-    mensualite: Number(input.monthlyPayment ?? 0),
-    tableauAmortissement: null
-  };
-
-  const registry = this.getRegimeRegistry();
-  const key = this.normalizeRegimeKey({ id: regimeId });
-  const meta = registry[key] || { id: key, nom: regimeId };
-
-  const detailed = this.getDetailedCalculations(meta, input, params, baseResults);
-  return {
-    regimeId: key,
-    regimeNom: (registry[key]?.nom || meta.nom || key),
-    cashflowAnnuel: Number(detailed.cashflowNetAnnuel || 0),
-    cashflowMensuel: Number(detailed.cashflowNetAnnuel || 0) / 12
-  };
-}
-
-_computeBestRegimeCFAnnuel(input, params = {}) {
-  const ids = ['nu_micro','nu_reel','lmnp_micro','lmnp_reel','lmp','sci_is'];
-  let best = { regimeId: null, regimeNom: '', cashflowAnnuel: -Infinity, cashflowMensuel: -Infinity };
-
-  for (const id of ids) {
-    const res = this._computeCFAnnuelByRegime(input, id, params);
-    if (res.cashflowAnnuel > best.cashflowAnnuel) best = res;
-  }
-  return best;
-}
-
-/**
- * Trouve le prix qui donne un cash-flow mensuel cible.
- * @param {object} baseInput - résultat de prepareFiscalData()
- * @param {number} targetCFMensuel - ex: 0 pour “prix d’équilibre”
- * @param {object} opts - { preferBest?:boolean, regimeId?:string, maxIter?:number, tol?:number }
- */
-solvePriceForTargetCF(baseInput, targetCFMensuel = 0, opts = {}) {
-  const params = this.getAllAdvancedParams?.() || {};
-  const preferBest = (typeof opts.preferBest === 'boolean') ? opts.preferBest : !!this.uiState.preferBest;
-
-  const selectedId = opts.regimeId || this.getSelectedRegime();
-
-  // bornes de recherche (pratiques & prudentes)
-  const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
-  let lo = Math.max(1, p0 * 0.5);
-  let hi = Math.max(2, p0 * 1.8);
-
-  // si le CF est déjà >> cible, on peut monter la borne haute
-  const testBase = preferBest
-    ? this._computeBestRegimeCFAnnuel(this._buildInputForPrice(baseInput, p0, params), params)
-    : this._computeCFAnnuelByRegime(this._buildInputForPrice(baseInput, p0, params), selectedId, params);
-  if (testBase.cashflowMensuel > targetCFMensuel) {
-    // le CF est trop bon → on peut tester prix + élevés
-    hi = Math.max(hi, p0 * 2.5);
+    // État UI : régime sélectionné + mode "meilleur"
+    this.uiState = { selectedRegimeId: 'nu_micro', preferBest: false };
   }
 
-  const maxIter = Number(opts.maxIter ?? 40);
-  const tol     = Number(opts.tol ?? 1); // 1 €/mois
+  // ───────────────────────────────────────────────────────────
+  //  UI helpers (sélection régime & “meilleur”)
+  // ───────────────────────────────────────────────────────────
+  setSelectedRegime(id) {
+    const key = this.normalizeRegimeKey({ id });
+    this.uiState.selectedRegimeId = key || 'nu_micro';
+    this.uiState.preferBest = false;
+    return this.uiState.selectedRegimeId;
+  }
 
-  let best = null;
+  setPreferBest(v) {
+    this.uiState.preferBest = !!v;
+    return this.uiState.preferBest;
+  }
 
-  for (let i = 0; i < maxIter; i++) {
-    const mid = (lo + hi) / 2;
-    const input = this._buildInputForPrice(baseInput, mid, params);
+  getSelectedRegime() {
+    return this.uiState.selectedRegimeId || 'nu_micro';
+  }
 
-    const res = preferBest
-      ? this._computeBestRegimeCFAnnuel(input, params)
-      : this._computeCFAnnuelByRegime(input, selectedId, params);
+  // ───────────────────────────────────────────────────────────
+  //  Moteur de “prix d’équilibre” (recalc propre sans DOM)
+  // ───────────────────────────────────────────────────────────
+  _buildInputForPrice(baseInput, price, params = {}) {
+    // on clone proprement l’entrée pré-calculée par prepareFiscalData()
+    const input = { ...baseInput };
 
-    const diff = res.cashflowMensuel - targetCFMensuel;
-    best = { price: mid, ...res };
+    // 1) mettre à jour le prix
+    input.price = Number(price) || 0;
+    input.prixBien = input.price;
 
-    if (Math.abs(diff) <= tol) break;
+    // 2) recalculer frais d’acquisition et bancaires comme dans prepareFiscalData()
+    const typeAchat = input.typeAchat || 'classique';
+    const p = { ...params, ...this.getAllAdvancedParams?.() }; // tolérant
+    const fraisAcq = this.calculateFraisAcquisition(input.price, typeAchat, p);
 
-    // si CF trop haut → prix trop bas → on augmente le prix (lo = mid)
-    if (diff > 0) {
-      lo = mid;
-    } else {
-      hi = mid;
+    const fraisDossier = Number(p.fraisBancairesDossier ?? 0);
+    const fraisCompte  = Number(p.fraisBancairesCompte ?? 0);
+    const tauxGarant   = Number(p.fraisGarantie ?? 0) / 100;
+
+    const coutHorsFraisB = input.price + Number(input.travauxRenovation ?? 0) + fraisAcq;
+
+    const loanAmount = (coutHorsFraisB - Number(input.apport ?? 0) + fraisDossier + fraisCompte) / (1 - tauxGarant);
+    const fraisBancaires = fraisDossier + fraisCompte + (loanAmount * tauxGarant);
+
+    const coutTotalFinal = coutHorsFraisB + fraisBancaires;
+
+    input.loanAmount = loanAmount;
+    input.monthlyPayment = this.calculateMonthlyPayment(
+      loanAmount,
+      Number(input.loanRate ?? input.taux ?? 0),
+      Number(input.loanDuration ?? input.duree ?? 0)
+    );
+
+    input.coutTotalAcquisition = coutTotalFinal;
+    input.fraisAcquisition = fraisAcq;
+    input.fraisBancaires = fraisBancaires;
+
+    // Revenus déjà dans baseInput (loyerHC/charges/vacance/gestion) → on ne touche pas
+    return input;
+  }
+
+  _computeCFAnnuelByRegime(input, regimeId, params = {}) {
+    // baseResults pour intérêts : on ne force pas d’échéancier, on garde analytique
+    const baseResults = {
+      mensualite: Number(input.monthlyPayment ?? 0),
+      tableauAmortissement: null
+    };
+
+    const registry = this.getRegimeRegistry();
+    const key = this.normalizeRegimeKey({ id: regimeId });
+    const meta = registry[key] || { id: key, nom: regimeId };
+
+    const detailed = this.getDetailedCalculations(meta, input, params, baseResults);
+    return {
+      regimeId: key,
+      regimeNom: (registry[key]?.nom || meta.nom || key),
+      cashflowAnnuel: Number(detailed.cashflowNetAnnuel || 0),
+      cashflowMensuel: Number(detailed.cashflowNetAnnuel || 0) / 12
+    };
+  }
+
+  _computeBestRegimeCFAnnuel(input, params = {}) {
+    const ids = ['nu_micro','nu_reel','lmnp_micro','lmnp_reel','lmp','sci_is'];
+    let best = { regimeId: null, regimeNom: '', cashflowAnnuel: -Infinity, cashflowMensuel: -Infinity };
+
+    for (const id of ids) {
+      const res = this._computeCFAnnuelByRegime(input, id, params);
+      if (res.cashflowAnnuel > best.cashflowAnnuel) best = res;
     }
+    return best;
   }
 
-  // jolies sorties
-  const registry = this.getRegimeRegistry();
-  const regimeNom = registry[best.regimeId]?.nom || best.regimeNom || best.regimeId;
+  /**
+   * Trouve le prix qui donne un cash-flow mensuel cible.
+   * @param {object} baseInput - résultat de prepareFiscalData()
+   * @param {number} targetCFMensuel - ex: 0 pour “prix d’équilibre”
+   * @param {object} opts - { preferBest?:boolean, regimeId?:string, maxIter?:number, tol?:number }
+   */
+  solvePriceForTargetCF(baseInput, targetCFMensuel = 0, opts = {}) {
+    const params = this.getAllAdvancedParams?.() || {};
+    const preferBest = (typeof opts.preferBest === 'boolean') ? opts.preferBest : !!this.uiState.preferBest;
 
-  return {
-    price: Math.round(best.price),
-    cashflowMensuel: Math.round(best.cashflowMensuel),
-    cashflowAnnuel: Math.round(best.cashflowAnnuel),
-    regimeId: best.regimeId,
-    regimeNom
-  };
-}
-    // ─────────────────────────────────────────────────────────────
+    const selectedId = opts.regimeId || this.getSelectedRegime();
+
+    // bornes de recherche (pratiques & prudentes)
+    const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
+    let lo = Math.max(1, p0 * 0.5);
+    let hi = Math.max(2, p0 * 1.8);
+
+    // si le CF est déjà >> cible, on peut monter la borne haute
+    const testBase = preferBest
+      ? this._computeBestRegimeCFAnnuel(this._buildInputForPrice(baseInput, p0, params), params)
+      : this._computeCFAnnuelByRegime(this._buildInputForPrice(baseInput, p0, params), selectedId, params);
+    if (testBase.cashflowMensuel > targetCFMensuel) {
+      // le CF est trop bon → on peut tester prix + élevés
+      hi = Math.max(hi, p0 * 2.5);
+    }
+
+    const maxIter = Number(opts.maxIter ?? 40);
+    const tol     = Number(opts.tol ?? 1); // 1 €/mois
+
+    let best = null;
+
+    for (let i = 0; i < maxIter; i++) {
+      const mid = (lo + hi) / 2;
+      const input = this._buildInputForPrice(baseInput, mid, params);
+
+      const res = preferBest
+        ? this._computeBestRegimeCFAnnuel(input, params)
+        : this._computeCFAnnuelByRegime(input, selectedId, params);
+
+      const diff = res.cashflowMensuel - targetCFMensuel;
+      best = { price: mid, ...res };
+
+      if (Math.abs(diff) <= tol) break;
+
+      // si CF trop haut → prix trop bas → on augmente le prix (lo = mid)
+      if (diff > 0) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+
+    // jolies sorties
+    const registry = this.getRegimeRegistry();
+    const regimeNom = registry[best.regimeId]?.nom || best.regimeNom || best.regimeId;
+
+    return {
+      price: Math.round(best.price),
+      cashflowMensuel: Math.round(best.cashflowMensuel),
+      cashflowAnnuel: Math.round(best.cashflowAnnuel),
+      regimeId: best.regimeId,
+      regimeNom
+    };
+  }
+
+  /**
+   * Trouve le prix d'achat qui rend le coût d'occupation mensuel neutre (RP).
+   * @param {object} baseInput - sortie de prepareFiscalData() (on ignore les loyers pour le calcul RP)
+   * @param {number} contributionConjoint - € / mois payé par le conjoint
+   * @param {object} opts - { includeOpportunity?:boolean, tol?:number, maxIter?:number }
+   *   - includeOpportunity=false  ➜ vise  netPourVous = 0
+   *   - includeOpportunity=true   ➜ vise  netAvecOpportunite = 0 (inclut "loyer perdu")
+   */
+  solvePriceForNeutralOccupationRP(baseInput, contributionConjoint = 0, opts = {}) {
+    const params = this.getAllAdvancedParams?.() || {};
+    const includeOpp = !!opts.includeOpportunity;
+    const tol = Number(opts.tol ?? 1);         // € / mois
+    const maxIter = Number(opts.maxIter ?? 40);
+
+    // Fonction objectif: coût net mensuel (RP) à annuler
+    const targetFn = (inputBuilt) => {
+      const occ = this.computeOccupationCost(
+        {
+          ...inputBuilt,
+          // on s'assure que ces postes existent (€/mois sauf TF/entretien en /an déjà gérés en interne)
+          chargesCoproNonRecup: params.chargesCoproNonRecup,
+          entretienAnnuel: params.entretienAnnuel,
+          assurancePNO: params.assurancePNO,
+          monthlyCharges: baseInput.monthlyCharges ?? baseInput.charges ?? 0,
+          loyerCC: baseInput.loyerCC ?? ((baseInput.loyerHC ?? 0) + (baseInput.monthlyCharges ?? 0))
+        },
+        Number(contributionConjoint) || 0
+      );
+      return includeOpp ? occ.netAvecOpportunite : occ.netPourVous;
+    };
+
+    // Bornes de recherche (comme solvePriceForTargetCF)
+    const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
+    let lo = Math.max(1, p0 * 0.5);
+    let hi = Math.max(2, p0 * 1.8);
+
+    // Bisection
+    let best = null;
+    for (let i = 0; i < maxIter; i++) {
+      const mid = (lo + hi) / 2;
+      const inputBuilt = this._buildInputForPrice(baseInput, mid, params);
+      const cost = targetFn(inputBuilt);
+      best = { price: mid, monthlyNetOccupation: cost };
+
+      if (Math.abs(cost) <= tol) break;
+
+      // Monotone: plus le prix ↑, plus la mensualité ↑, donc le coût ↑
+      if (cost > 0) {
+        // coût trop élevé -> il faut baisser le prix
+        hi = mid;
+      } else {
+        // coût trop faible/neg -> on peut monter le prix
+        lo = mid;
+      }
+    }
+
+    return {
+      price: Math.round(best.price),
+      monthlyNetOccupation: Math.round(best.monthlyNetOccupation),
+      includeOpportunity: includeOpp
+    };
+  }
     //  Normalisation robuste des régimes + registre unique
     // ─────────────────────────────────────────────────────────────
 normalizeRegimeKey(reg) {
@@ -3203,7 +3265,96 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 // Helpers de debug V3 avec tests unitaires
 window.debugFiscalPipeline = function() {
     const analyzer = window.analyzer || new MarketFiscalAnalyzer();
-    
+(function(){
+  const analyzer = window.analyzer; // déjà créé
+  const outBox   = document.getElementById('breakeven-result');
+  const pill     = document.getElementById('breakeven-pill');
+  const preferBestEl = document.getElementById('prefer-best');
+
+  function mountPill(){
+    const benefits = document.querySelector('.best-regime-card .regime-benefits');
+    if (!benefits || !pill) return;
+    const first = benefits.children[0];
+    if (first && pill.parentNode !== benefits){
+      if (benefits.children.length >= 2){
+        benefits.insertBefore(pill, benefits.children[1]);
+      } else {
+        benefits.appendChild(pill);
+      }
+    }
+  }
+  mountPill();
+  document.addEventListener('fiscalView:updated', mountPill);
+
+  function setPill(contentHTML){
+    mountPill();
+    pill.style.display = 'block';
+    pill.innerHTML = contentHTML;
+  }
+  function setCard(html, isError=false){
+    outBox.style.display = 'block';
+    outBox.className = 'market-comparison-card' + (isError ? ' high' : '');
+    outBox.innerHTML = html;
+  }
+
+  // LOCATIF
+  document.getElementById('btn-breakeven-locatif')?.addEventListener('click', () => {
+    try {
+      analyzer.setPreferBest(!!preferBestEl?.checked);
+      const base = analyzer.prepareFiscalData();
+      const res = analyzer.solvePriceForTargetCF(base, 0, {
+        preferBest: analyzer.uiState.preferBest,
+        regimeId: analyzer.getSelectedRegime()
+      });
+
+      setPill(`
+        <span class="k">🎯 Prix d’équilibre (locatif)</span>
+        <span class="v">${analyzer.formatCurrency(res.price)}</span>
+        <span class="k" style="margin-left:10px;">Régime</span>
+        <span class="v">${res.regimeNom}</span>
+      `);
+
+      setCard(`
+        <h4>🎯 Prix d’équilibre (locatif)</h4>
+        <p>Régime: <strong>${res.regimeNom}</strong></p>
+        <p>Prix cible ≈ <strong>${analyzer.formatCurrency(res.price)}</strong></p>
+        <p>Cash-flow mensuel au point neutre: <strong>${analyzer.formatCurrency(res.cashflowMensuel)}</strong></p>
+      `);
+    } catch (e) {
+      console.error(e);
+      setCard(`<p>Erreur: ${e?.message || e}</p>`, true);
+    }
+  });
+
+  // RÉSIDENCE PRINCIPALE
+  document.getElementById('btn-breakeven-rp')?.addEventListener('click', () => {
+    try {
+      const base = analyzer.prepareFiscalData();
+      const part = parseFloat(document.getElementById('input-conjoint')?.value || '0') || 0;
+      const includeOpp = !!document.getElementById('rp-inclure-opportunite')?.checked;
+      const res = analyzer.solvePriceForNeutralOccupationRP(base, part, { includeOpportunity: includeOpp });
+
+      setPill(`
+        <span class="k">🏠 Prix d’équilibre (RP)</span>
+        <span class="v">${analyzer.formatCurrency(res.price)}</span>
+        <span class="k" style="margin-left:10px;">Conjoint</span>
+        <span class="v">${analyzer.formatCurrency(part)}/mois</span>
+      `);
+
+      setCard(`
+        <h4>🏠 Prix d’équilibre (résidence principale)</h4>
+        <p>Participation conjoint: <strong>${analyzer.formatCurrency(part)}</strong> / mois</p>
+        <p>Hypothèse: ${includeOpp ? 'inclure le loyer d’opportunité' : 'sans loyer d’opportunité'}</p>
+        <p>Prix cible ≈ <strong>${analyzer.formatCurrency(res.price)}</strong></p>
+        <p>Coût net mensuel au point neutre: <strong>${analyzer.formatCurrency(res.monthlyNetOccupation)}</strong></p>
+      `);
+    } catch (e) {
+      console.error(e);
+      setCard(`<p>Erreur: ${e?.message || e}</p>`, true);
+    }
+  });
+})();
+
     // Données de test
     const testData = {
         price: 200000,
