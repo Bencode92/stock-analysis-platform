@@ -2783,6 +2783,16 @@ resultsDiv.innerHTML = html;
         };
 
         console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
+                // 3) (Optionnel) Calcul auto au moment où tu arrives en Section 3
+        //    → déclenche le bon prix d’équilibre selon le mode choisi
+        try {
+          const mode = document.getElementById('occupationMode')?.value;
+          if (mode === 'residence') {
+            document.getElementById('btn-breakeven-rp')?.click();
+          } else {
+            document.getElementById('btn-breakeven-locatif')?.click();
+          }
+        } catch {}
 
     } catch (error) {
         console.error('Erreur lors de l\'analyse fiscale:', error);
@@ -2998,6 +3008,191 @@ document.addEventListener('DOMContentLoaded', () => {
       showSection3();
       renderRegimeSummary(code, 'best');
     });
+  }
+});
+</script>
+    <script>
+/* Utilitaires (ne pas redéclarer si déjà présents plus haut) */
+const $ = (sel) => document.querySelector(sel);
+const byId = (id) => document.getElementById(id);
+
+/* 🎨 Renderer officiel — place-le AVANT le wiring des boutons */
+window.renderBreakeven = function ({ mode, price, foot }) {
+  const pill = byId('breakeven-pill');
+  const card = byId('breakeven-result');
+  const isRP = (mode === 'residence');
+
+  const title = isRP
+    ? 'Prix d’équilibre — Résidence principale'
+    : 'Prix d’équilibre — Investissement locatif';
+
+  // Mini-pill compact
+  if (pill) {
+    pill.style.display = 'inline-block';
+    pill.innerHTML = `<strong>${title} :</strong> ${analyzer.formatCurrency(price)}`;
+  }
+
+  // Carte détaillée (neutre)
+  if (card) {
+    card.style.display = 'block';
+    card.classList.remove('low', 'high', 'average');
+    card.classList.add('average');
+    card.innerHTML = `
+      <div class="market-badge average">Cash-flow neutre</div>
+      <h3 style="margin:0 0 .5rem 0">${title}</h3>
+      <div class="metric-panel">
+        <div class="market-details">
+          <div class="market-metric">
+            <div class="market-metric-label">Prix d’achat cible</div>
+            <div class="market-metric-value">${analyzer.formatCurrency(price)}</div>
+            <div class="market-metric-comparison">Cash-flow mensuel ≈ 0 €</div>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top:12px;color:#94a3b8">${foot || ''}</p>
+      <div style="margin-top:16px;">
+        <button class="btn btn-outline" onclick="goToStep(1)">
+          <i class="fas fa-edit"></i> Affiner les entrées
+        </button>
+      </div>
+    `;
+  }
+};
+
+/* ---- Wiring des boutons (après le renderer) ---- */
+document.addEventListener('DOMContentLoaded', () => {
+  const btnLoc = byId('btn-breakeven-locatif');
+  const btnRP  = byId('btn-breakeven-rp');
+
+  // Locatif → CF mensuel = 0
+  if (btnLoc && !btnLoc.__wired) {
+    btnLoc.addEventListener('click', () => {
+      const baseInput = analyzer.prepareFiscalData();
+      const preferBest = !!byId('prefer-best')?.checked;
+      const regimeId = preferBest
+        ? null
+        : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
+
+      const res = analyzer.solvePriceForTargetCF(baseInput, 0, { preferBest, regimeId });
+
+      renderBreakeven({
+        mode: 'location',
+        price: res.price,
+        foot: `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`
+      });
+
+      if (typeof goToStep === 'function') goToStep(3);
+      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    btnLoc.__wired = true;
+  }
+
+  // Résidence principale → coût net = 0
+  if (btnRP && !btnRP.__wired) {
+    btnRP.addEventListener('click', () => {
+      const baseInput = analyzer.prepareFiscalData();
+
+      const partQuick   = parseFloat(byId('input-conjoint')?.value);
+      const partSection = parseFloat(byId('partnerContribution')?.value);
+      const part = Number.isFinite(partQuick) ? partQuick : (Number(partSection) || 0);
+
+      const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
+
+      const res = analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
+        includeOpportunity: includeOpp
+      });
+
+      renderBreakeven({
+        mode: 'residence',
+        price: res.price,
+        foot: `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`
+      });
+
+      if (typeof goToStep === 'function') goToStep(3);
+      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    btnRP.__wired = true;
+  }
+
+  // Recalcul auto selon le mode d’occupation sélectionné
+  const occ = byId('occupationMode');
+  const computeAuto = () => {
+    if (occ?.value === 'residence') btnRP?.click(); else btnLoc?.click();
+  };
+  if (occ && !occ.__wired) {
+    occ.addEventListener('change', computeAuto);
+    occ.__wired = true;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // B) Radios "régime actuel" & bouton "meilleur cash-flow"
+  // (affichage direct d’une synthèse sans relancer de calcul)
+  // ─────────────────────────────────────────────────────────
+  const REGIME_LABELS = window.REGIME_LABELS || {
+    'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
+    'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
+    'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
+    'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
+    'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
+    'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
+  };
+
+  const getResultsDiv = () => {
+    let results = byId('fiscal-comparison-results');
+    if (!results) {
+      const host = byId('section-3') || document.body;
+      results = document.createElement('div');
+      results.id = 'fiscal-comparison-results';
+      host.appendChild(results);
+    }
+    return results;
+  };
+
+  const renderRegimeSummary = (code, mode = 'selection') => {
+    const info = REGIME_LABELS[code] || { label: code || '—' };
+    const badge = mode === 'best'
+      ? '<span class="regime-badge best-regime">Mode meilleur</span>'
+      : '<span class="regime-badge current">Régime sélectionné</span>';
+    getResultsDiv().innerHTML = `
+      <div class="best-regime-summary">
+        <div class="summary-title">
+          <i class="fas fa-balance-scale"></i> Synthèse fiscale
+        </div>
+        <div class="summary-content">
+          <div class="regime-name">${info.label || '—'} ${badge}</div>
+          <p style="margin-top:10px;color:#94a3b8">Affichage direct demandé — aucun calcul lancé.</p>
+        </div>
+      </div>
+    `;
+  };
+
+  const showSection3 = () => {
+    if (typeof window.goToStep === 'function') window.goToStep(3);
+    const s3 = byId('section-3');
+    if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Radios
+  document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
+    if (!r.__wired) {
+      r.addEventListener('change', (e) => {
+        showSection3();
+        renderRegimeSummary(e.target.value, 'selection');
+      });
+      r.__wired = true;
+    }
+  });
+
+  // Bouton "meilleur cash-flow"
+  const bestBtn = byId('btn-best-cashflow');
+  if (bestBtn && !bestBtn.__wired) {
+    bestBtn.addEventListener('click', () => {
+      const checked = document.querySelector('input[name="regime-actuel"]:checked');
+      const code = checked ? checked.value : 'nu_micro';
+      showSection3();
+      renderRegimeSummary(code, 'best');
+    });
+    bestBtn.__wired = true;
   }
 });
 </script>
