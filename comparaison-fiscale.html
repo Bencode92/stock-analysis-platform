@@ -2201,6 +2201,80 @@ function computeAllAtPrice(baseInput, trialPrice) {
 
 // (optionnel) exposer globalement
 window.computeAllAtPrice = computeAllAtPrice;
+/* === Impôts mensuels estimés par régime (approx) ======================= */
+
+/** Loyer HC mensuel normalisé depuis baseInput (même logique que computeAllAtPrice) */
+function _resolveLoyerHC(baseInput) {
+  return Number(
+    baseInput.loyerActuel ??
+    baseInput.loyerHC ??
+    baseInput.monthlyRent ??
+    baseInput.loyer ??
+    (baseInput.loyerCC != null
+      ? baseInput.loyerCC - (Number(baseInput.monthlyCharges) || 0)
+      : undefined)
+  ) || 0;
+}
+
+/** Ratio vacance & gestion normalisés */
+function _resolveVacGest(baseInput) {
+  const vacRate  = (Number(baseInput.vacanceLocative)     || 0) / 100;
+  const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
+  return { vacRate, gestRate };
+}
+
+/** Taux marginal + prélèvements sociaux (17,2%) */
+function _resolveTauxGlobaux(baseInput) {
+  const TMI = (Number(baseInput.tmi) || 0) / 100;
+  const PS  = 0.172;
+  return { TMI, PS };
+}
+
+/** Micro-foncier : abattement 30% sur loyers encaissés (HC, après vacance/gestion) */
+function estTaxMensuelleMicroFoncier(baseInput) {
+  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
+  const { vacRate, gestRate } = _resolveVacGest(baseInput);
+  const loyerHC = _resolveLoyerHC(baseInput);
+
+  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
+  const baseImposableMensuelle = loyersEncaisses * 0.70; // 30% d’abattement
+
+  return baseImposableMensuelle * (TMI + PS);
+}
+
+/** LMNP micro-BIC : abattement 50% (cas standard meublé) */
+function estTaxMensuelleLmnpMicro(baseInput) {
+  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
+  const { vacRate, gestRate } = _resolveVacGest(baseInput);
+  const loyerHC = _resolveLoyerHC(baseInput);
+
+  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
+  const baseImposableMensuelle = loyersEncaisses * 0.50; // 50% d’abattement
+
+  return baseImposableMensuelle * (TMI + PS);
+}
+
+/** Fallback simple pour autres régimes (nu réel, LMNP réel, LMP, SCI IS) :
+ *  on renvoie 0 ici pour rester “Option B rapide”.
+ *  -> Pour une précision exacte, passer au solveur asynchrone (Option “version exacte”).
+ */
+function estTaxMensuelleZero() { return 0; }
+
+/** Sélecteur d’estimateur selon le code radio déjà présent dans ton form */
+function getTaxEstimator(regimeCode) {
+  switch ((regimeCode || '').toLowerCase()) {
+    case 'nu_micro':   return estTaxMensuelleMicroFoncier;
+    case 'lmnp_micro': return estTaxMensuelleLmnpMicro;
+    // autres régimes → approximation 0 (on laisse l’Option B “rapide”)
+    case 'nu_reel':
+    case 'lmnp_reel':
+    case 'lmp_reel':
+    case 'sci_is':
+    default:
+      return estTaxMensuelleZero;
+  }
+}
+        
 
 function solvePriceForCF0(baseInput, targetCF = 0) {
   // 🔒 Borne basse : juste au-dessus de l’apport → garantit un EMPRUNT > 0
@@ -2274,6 +2348,61 @@ window.calcFraisEncheres    = calcFraisEncheres;
             if (i === 0) return capital / n;
             return capital * i / (1 - Math.pow(1 + i, -n));
         }
+/** Solveur “cash-flow APRES impôts = targetCF” via bisection.
+ *  - Réutilise computeAllAtPrice (CF AVANT impôts)
+ *  - Soustrait une estimation d’impôt mensuel selon le régime choisi
+ */
+function solvePriceForCF0_apresImpots(baseInput, targetCF = 0, opts = {}) {
+  const apportNum = Number(baseInput.apport) || 0;
+  const regimeCode = opts.regime || baseInput.regimeActuel || 'nu_micro';
+  const taxFn = getTaxEstimator(regimeCode);
+
+  // Bornes initiales
+  let lo = Math.max(apportNum + 1000, 10_000);
+  let hi = Math.max(lo * 3, 2_000_000);
+
+  // Sanity
+  const sanity = computeAllAtPrice(baseInput, lo);
+  if (!sanity || !Number.isFinite(sanity.cfMensuel)) {
+    throw new Error("Entrées incomplètes pour le CF (taux, durée, loyer, charges…).");
+  }
+
+  // Fonction de coût “après impôts”
+  const f = (p) => {
+    const r = computeAllAtPrice(baseInput, p); // CF AVANT impôts
+    if (!r || !Number.isFinite(r.cfMensuel)) return NaN;
+    const taxM = Number(taxFn(baseInput)) || 0; // estimation mensuelle
+    const cfApres = r.cfMensuel - taxM;
+    return cfApres - targetCF;
+  };
+
+  // Étendre hi jusqu’à changement de signe
+  let flo = f(lo), fhi = f(hi);
+  let guard = 0;
+  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < 30) {
+    hi *= 1.5;
+    fhi = f(hi);
+  }
+
+  // Bisection
+  for (let iter = 0; iter < 60; iter++) {
+    const mid  = (lo + hi) / 2;
+    const diff = f(mid);
+    if (!Number.isFinite(diff)) { hi = mid; continue; }
+    if (Math.abs(diff) < 1e-2)  return computeAllAtPrice(baseInput, mid);
+    if (diff > 0) lo = mid; else hi = mid;
+  }
+
+  // Retourne le plus proche
+  const rLo = computeAllAtPrice(baseInput, lo);
+  const rHi = computeAllAtPrice(baseInput, hi);
+  const cfLo = (rLo?.cfMensuel ?? Infinity) - (Number(taxFn(baseInput)) || 0);
+  const cfHi = (rHi?.cfMensuel ?? Infinity) - (Number(taxFn(baseInput)) || 0);
+  return (Math.abs(cfLo - targetCF) < Math.abs(cfHi - targetCF)) ? rLo : rHi;
+}
+
+// Expose si besoin
+window.solvePriceForCF0_apresImpots = solvePriceForCF0_apresImpots;
 
         // Nouvelles fonctions pour le widget Buy vs Rent
 function buildChargesBreakdown(p) {
@@ -3092,22 +3221,26 @@ async function proceedToFiscalAnalysis() {
 ----------------------------------------------------------------- */
 try {
   // ❗️On copie l’entrée et on **force le gel de l’apport en €**
-const base = prepareBreakevenInput();
-base.apportMode = 'amount';    // on fige l’apport en euros
-delete base.apportPct;         // on neutralise tout % résiduel
+  const base = prepareBreakevenInput();
+  base.apportMode = 'amount';    // on fige l’apport en euros
+  delete base.apportPct;         // on neutralise tout % résiduel
   // base.apportPct = undefined; // (optionnel) on ignore l’apport %
 
   // ❗️On NE se sert PAS de base.prixPaye lors du solveur
   // Tout est recalculé à chaque essai via computeAllAtPrice(mid)
 
-  const res = await solvePriceForCF0(base, 0);
+  const regimeCode =
+    (document.querySelector('input[name="regime-actuel"]:checked')?.value) ||
+    base.regimeActuel || 'nu_micro';
 
-window.renderBreakeven?.({
-  mode : (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location',
-  price: res.price,
-  foot : `Apport figé : ${analyzer.formatCurrency(res.apport)} — Cash-flow mensuel cible : 0 €`
-  // (optionnel) ajouter :  + ` — Mensualité estimée : ${Number.isFinite(res.mensualite) ? analyzer.formatCurrency(res.mensualite) : '—'}`
-});
+  const res = await solvePriceForCF0_apresImpots(base, 0, { regime: regimeCode });
+
+  window.renderBreakeven?.({
+    mode : (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location',
+    price: res.price,
+    foot : `Apport figé : ${analyzer.formatCurrency(res.apport)} — Cash-flow cible : 0 € <strong>après impôts</strong> (approx ${regimeCode.replace(/_/g, ' ')})`
+    // (optionnel) ajouter :  + ` — Mensualité estimée : ${Number.isFinite(res.mensualite) ? analyzer.formatCurrency(res.mensualite) : '—'}`
+  });
 
   byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 } catch (e) {
@@ -3390,12 +3523,13 @@ delete baseInput.apportPct;
         ? null
         : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
 
-const res = await window.solvePriceForCF0(baseInput, 0);
+const regimeCode = document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
+const res = await window.solvePriceForCF0_apresImpots(baseInput, 0, { regime: regimeCode });
 
 renderBreakeven({
   mode : 'location',
   price: res.price,
-  foot : `Cash-flow mensuel cible : 0 €`
+  foot : `Cash-flow cible : 0 € **après impôts** (approx ${regimeCode.replace('_',' ')})`
 });
 
       if (typeof goToStep === 'function') goToStep(3);
