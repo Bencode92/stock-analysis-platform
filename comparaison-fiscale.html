@@ -3012,10 +3012,10 @@ function wireManualHighlight() {
     });
   });
 
-  // État initial : déclenche un change sur le radio déjà coché s'il existe
+  // ✅ Marquer visuellement l'état initial sans déclencher d'événement
   const checked = document.querySelector('input[name="regime-actuel"]:checked');
   if (checked) {
-    checked.dispatchEvent(new Event('change', { bubbles: false }));
+    checked.closest('.mode-option')?.classList.add('selected');
   }
 }
 // ✅ AJOUT : Fonction pour colorer les marqueurs selon le contexte
