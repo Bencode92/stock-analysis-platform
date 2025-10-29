@@ -2724,7 +2724,22 @@ function formatNumber(num) {
         maximumFractionDigits: 0 
     }).format(Math.round(num));
 }
+// Helper UI : surbrillance de la carte "régime" sélectionnée
+function wireManualHighlight() {
+  // Sur changement de radio, ajoute .selected à la carte cliquée
+  document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.querySelectorAll('.mode-option').forEach(el => el.classList.remove('selected'));
+      r.closest('.mode-option')?.classList.add('selected');
+    });
+  });
 
+  // État initial : déclenche un change sur le radio déjà coché s'il existe
+  const checked = document.querySelector('input[name="regime-actuel"]:checked');
+  if (checked) {
+    checked.dispatchEvent(new Event('change', { bubbles: false }));
+  }
+}
 // ✅ AJOUT : Fonction pour colorer les marqueurs selon le contexte
 function applyMarkerColors() {
     document.querySelectorAll('.position-marker').forEach(marker => {
