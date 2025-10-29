@@ -2612,204 +2612,209 @@ function generateRecommendations(pricePosition, rentPosition, data = {}) {
     return recommendations;
 }
         
-        // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
- async function proceedToFiscalAnalysis() {
-    console.log('🚀 Lancement de l\'analyse fiscale...');
+// NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
+async function proceedToFiscalAnalysis() {
+  console.log('🚀 Lancement de l\'analyse fiscale...');
 
-    goToStep(3);
+  goToStep(3);
 
-    // Afficher un loading
-    const resultsDiv = document.getElementById('fiscal-comparison-results');
-    resultsDiv.innerHTML = `
-        <div style="text-align: center; padding: 60px;">
-            <div class="loading-spinner"></div>
-            <div style="color: #00bfff; font-size: 1.2em; margin-top: 20px;">
-                Analyse des régimes fiscaux en cours...
-            </div>
-        </div>
-    `;
+  // Afficher un loading
+  const resultsDiv = document.getElementById('fiscal-comparison-results');
+  resultsDiv.innerHTML = `
+    <div style="text-align:center; padding:60px;">
+      <div class="loading-spinner"></div>
+      <div style="color:#00bfff; font-size:1.2em; margin-top:20px;">
+        Analyse des régimes fiscaux en cours...
+      </div>
+    </div>
+  `;
 
-    // Attendre un peu pour l'effet
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  // Petit délai pour l'effet
+  await new Promise(r => setTimeout(r, 1000));
 
-    try {
-        // 1) Récupérer les données du formulaire pour debug/graphes
-        const analysisData = analyzer.prepareFiscalData();
-        console.log('📊 Données d\'analyse complètes:', analysisData);
+  try {
+    // 1) Données d'entrée (pour graphes/debug)
+    const analysisData = analyzer.prepareFiscalData();
+    console.log('📊 Données d\'analyse complètes:', analysisData);
 
-        // 2) Vérifier les paramètres avancés modifiés
-        const modifiedParams = checkModifiedParameters?.() || [];
-        if (modifiedParams.length > 0) {
-            console.log('⚠️ Paramètres avancés modifiés:', modifiedParams);
-        }
-
-        // 3) Effectuer l'analyse complète (garde le comportement existant)
-        const analysis = await analyzer.performCompleteAnalysis(propertyData);
-
-        // Sécurité : aucun résultat
-        if (!analysis?.fiscal?.length) {
-            resultsDiv.innerHTML = `
-                <div class="market-comparison-card">
-                    <h3>Aucun résultat</h3>
-                    <p>Aucun régime n'a pu être calculé. Vérifiez vos paramètres puis réessayez.</p>
-                </div>
-            `;
-            return;
-        }
-
-        /* -----------------------------------------------------------------
-           4) Afficher le widget Buy vs Rent si résidence principale
-        ----------------------------------------------------------------- */
-        const isResidence = propertyData.occupationMode === 'residence';
-        if (isResidence) {
-            const tauxMensuel = (propertyData.taux || 0) / 100 / 12;
-            const montantEmprunte = (propertyData.prixPaye || 0) - (propertyData.apport || 0);
-            const interetsMensuel = montantEmprunte * tauxMensuel;
-
-            // Mise à jour des paramètres du widget
-            br.mensualité = Math.round(propertyData.mensualite || 0);
-
-            // Charges fixes & conjoint
-            const chargesBreak = buildChargesBreakdown(propertyData);
-            br.charges  = Math.round(sum(chargesBreak));
-            br.partner  = propertyData.partnerContribution || 0;
-            br.details  = chargesBreak;
-
-            br.loyerMarché = propertyData.ville
-                ? Math.round((propertyData.ville.loyer_m2 || 0) * (propertyData.surface || 0))
-                : Math.round(propertyData.loyerCC || 0);
-
-            br.amort = Math.round((propertyData.mensualite || 0) - interetsMensuel);
-
-            // Afficher le widget
-            drawBuyRent();
-        }
-
-/* -----------------------------------------------------------------
-   5) Régime à mettre en avant = le régime ACTUEL (si trouvé),
-      sinon on retombe sur le meilleur comme filet de sécurité.
-      → correspondance robuste par ID avec fallback par label
------------------------------------------------------------------ */
-// Meilleur régime (par cash-flow net annuel)
-const bestRegime = analysis.fiscal.reduce(
-  (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
-  analysis.fiscal[0]
-);
-
-// Code sélectionné dans l'UI → map vers {id,label}
-const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
-const mapEntry    = REGIME_LABELS?.[selectedCode];   // { id, label } ou undefined
-
-// Résultat correspondant au choix (si présent dans la liste)
-const selectedRes =
-  (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
-  (mapEntry?.label && analysis.fiscal.find(r => r.nom === mapEntry.label)) ||
-  (typeof mapEntry === 'string' && analysis.fiscal.find(r => r.nom === mapEntry)) ||
-  null;
-
-// 👉 On privilégie TOUJOURS le régime actuel si on l'a trouvé
-const detailRegime = selectedRes || bestRegime;
-
-/* -----------------------------------------------------------------
-   6) Génération HTML (on passe le détail = régime ACTUEL)
-      - bestId sert aux badges "Meilleur" dans le tableau
-      - forceRegime à true pour que le header prenne le régime détaillé
------------------------------------------------------------------ */
-const html = analyzer.generateFiscalResultsHTML(
-  analysis.fiscal,
-  analysisData,
-  {
-    detailId    : detailRegime.id,      // carte du haut = régime actuel
-    selectedId  : selectedRes?.id || null,
-    bestId      : bestRegime.id,        // conserve l'étoile "Meilleur" dans le tableau
-    forceRegime : !!selectedRes         // titre/visuel aligné sur le régime détaillé
-  }
-);
-resultsDiv.innerHTML = html;
-
-        // 7) Graphiques
-        setTimeout(() => {
-            try {
-                analyzer.createFiscalCharts(analysis.fiscal);
-            } catch (e) {
-                console.warn('Graphiques fiscaux non générés :', e);
-            }
-        }, 100);
-
-        // 8) Toggle du tableau détaillé
-        setTimeout(() => {
-            const toggleBtn = document.querySelector('.btn-expand-table');
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', function () {
-                    const table = document.getElementById('detailed-fiscal-table');
-                    if (!table) return;
-                    const hidden = (table.style.display === 'none' || table.style.display === '');
-                    table.style.display = hidden ? 'block' : 'none';
-                    this.classList.toggle('expanded', hidden);
-                    this.innerHTML = hidden
-                        ? '<i class="fas fa-chevron-up"></i> Masquer le détail'
-                        : '<i class="fas fa-chevron-down"></i> Voir le détail complet';
-                });
-            }
-        }, 200);
-
-        // 9) Debug
-        window.lastAnalysisData = {
-            input: analysisData,
-            results: analysis.fiscal,
-            timestamp: new Date()
-        };
-
-        console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
-                // 3) (Optionnel) Calcul auto au moment où tu arrives en Section 3
-        //    → déclenche le bon prix d’équilibre selon le mode choisi
-try {
-  const baseInput = analyzer.prepareFiscalData();
-  const mode = document.getElementById('occupationMode')?.value;
-
-  if (mode === 'residence') {
-    const part = Number(baseInput.partnerContribution || 0);
-    const res = analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
-      includeOpportunity: false // passe à true si tu veux inclure le loyer d’opportunité
-    });
-
-    renderBreakeven({
-      mode: 'residence',
-      price: res.price,
-      foot: `Sans loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`
-    });
-  } else {
-    const res = analyzer.solvePriceForTargetCF(baseInput, 0, {
-      preferBest: false,
-      regimeId: baseInput.regimeActuel || 'nu_micro'
-    });
-
-    renderBreakeven({
-      mode: 'location',
-      price: res.price,
-      foot: `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`
-    });
-  }
-
-  // Afficher et scroller vers la carte
-  const card = document.getElementById('breakeven-result');
-  if (card) {
-    card.style.display = 'block';
-    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-} catch (e) {
-  console.warn('Breakeven auto non généré :', e);
-}
-
-    } catch (error) {
-        console.error('Erreur lors de l\'analyse fiscale:', error);
-        resultsDiv.innerHTML = `
-            <div class="market-comparison-card">
-                <h3 style="color: #ef4444;">Erreur lors de l'analyse</h3>
-                <p>Une erreur est survenue. Veuillez réessayer.</p>
-            </div>
-        `;
+    // 2) Paramètres avancés (si modifiés)
+    const modifiedParams = checkModifiedParameters?.() || [];
+    if (modifiedParams.length) {
+      console.log('⚠️ Paramètres avancés modifiés:', modifiedParams);
     }
+
+    // 3) Analyse complète
+    const analysis = await analyzer.performCompleteAnalysis(propertyData);
+
+    if (!analysis?.fiscal?.length) {
+      resultsDiv.innerHTML = `
+        <div class="market-comparison-card">
+          <h3>Aucun résultat</h3>
+          <p>Aucun régime n'a pu être calculé. Vérifiez vos paramètres puis réessayez.</p>
+        </div>
+      `;
+      return;
+    }
+
+    /* -----------------------------------------------------------------
+       4) Widget Buy vs Rent si résidence principale
+    ----------------------------------------------------------------- */
+    const isResidence = propertyData.occupationMode === 'residence';
+    if (isResidence) {
+      const tauxMensuel = (propertyData.taux || 0) / 100 / 12;
+      const montantEmprunte = (propertyData.prixPaye || 0) - (propertyData.apport || 0);
+      const interetsMensuel = montantEmprunte * tauxMensuel;
+
+      // Mise à jour des paramètres du widget
+      br.mensualité = Math.round(propertyData.mensualite || 0);
+
+      // Charges fixes & conjoint
+      const chargesBreak = buildChargesBreakdown(propertyData);
+      br.charges = Math.round(sum(chargesBreak));
+      br.partner = propertyData.partnerContribution || 0;
+      br.details = chargesBreak;
+
+      br.loyerMarché = propertyData.ville
+        ? Math.round((propertyData.ville.loyer_m2 || 0) * (propertyData.surface || 0))
+        : Math.round(propertyData.loyerCC || 0);
+
+      br.amort = Math.round((propertyData.mensualite || 0) - interetsMensuel);
+
+      // Afficher le widget
+      drawBuyRent();
+    }
+
+    /* -----------------------------------------------------------------
+       5) Choix du régime détaillé = régime ACTUEL si dispo, sinon best
+    ----------------------------------------------------------------- */
+    const bestRegime = analysis.fiscal.reduce(
+      (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
+      analysis.fiscal[0]
+    );
+
+    const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
+    const mapEntry = REGIME_LABELS?.[selectedCode];      // { id, label } | undefined
+
+    const selectedRes =
+      (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
+      (mapEntry?.label && analysis.fiscal.find(r => r.nom === mapEntry.label)) ||
+      (typeof mapEntry === 'string' && analysis.fiscal.find(r => r.nom === mapEntry)) ||
+      null;
+
+    const detailRegime = selectedRes || bestRegime;
+
+    /* -----------------------------------------------------------------
+       6) Rendu HTML principal
+    ----------------------------------------------------------------- */
+    const html = analyzer.generateFiscalResultsHTML(
+      analysis.fiscal,
+      analysisData,
+      {
+        detailId    : detailRegime.id,
+        selectedId  : selectedRes?.id || null,
+        bestId      : bestRegime.id,
+        forceRegime : !!selectedRes
+      }
+    );
+    resultsDiv.innerHTML = html;
+
+    // 7) Graphiques
+    setTimeout(() => {
+      try {
+        analyzer.createFiscalCharts(analysis.fiscal);
+      } catch (e) {
+        console.warn('Graphiques fiscaux non générés :', e);
+      }
+    }, 100);
+
+    // 8) Toggle du tableau détaillé
+    setTimeout(() => {
+      const toggleBtn = document.querySelector('.btn-expand-table');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', function () {
+          const table = document.getElementById('detailed-fiscal-table');
+          if (!table) return;
+          const hidden = (table.style.display === 'none' || table.style.display === '');
+          table.style.display = hidden ? 'block' : 'none';
+          this.classList.toggle('expanded', hidden);
+          this.innerHTML = hidden
+            ? '<i class="fas fa-chevron-up"></i> Masquer le détail'
+            : '<i class="fas fa-chevron-down"></i> Voir le détail complet';
+        });
+      }
+    }, 200);
+
+    // 9) Debug helper
+    window.lastAnalysisData = {
+      input: analysisData,
+      results: analysis.fiscal,
+      timestamp: new Date()
+    };
+    console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
+
+    /* -----------------------------------------------------------------
+       10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
+    ----------------------------------------------------------------- */
+    try {
+      // Garde-fous
+      if (typeof renderBreakeven !== 'function') {
+        throw new Error('renderBreakeven manquant');
+      }
+      const baseInput = analyzer.prepareFiscalData();
+      const mode = document.getElementById('occupationMode')?.value;
+
+      // Résultat selon le mode
+      let res, footText, breakevenMode;
+      if (mode === 'residence') {
+        const part = Number(baseInput.partnerContribution || 0);
+        res = analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
+          includeOpportunity: false // mettre true si on veut le loyer d’opportunité
+        });
+        breakevenMode = 'residence';
+        footText = `Sans loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`;
+      } else {
+        res = analyzer.solvePriceForTargetCF(baseInput, 0, {
+          preferBest: false,
+          regimeId: baseInput.regimeActuel || 'nu_micro'
+        });
+        breakevenMode = 'location';
+        footText = `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`;
+      }
+
+      // Vérifs robustes
+      const price = Number(res?.price);
+      if (!Number.isFinite(price) || price <= 0) {
+        throw new Error('Prix d’équilibre invalide');
+      }
+
+      // Rendu du cadrant jaune
+      renderBreakeven({
+        mode: breakevenMode,
+        price,
+        foot: footText
+      });
+
+      // Afficher + scroller la carte
+      const card = document.getElementById('breakeven-result');
+      if (card) {
+        card.style.display = 'block';
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        console.warn('#breakeven-result introuvable — assure-toi que le conteneur HTML existe.');
+      }
+    } catch (e) {
+      console.warn('Breakeven auto non généré :', e);
+    }
+
+  } catch (error) {
+    console.error('Erreur lors de l\'analyse fiscale:', error);
+    resultsDiv.innerHTML = `
+      <div class="market-comparison-card">
+        <h3 style="color:#ef4444;">Erreur lors de l'analyse</h3>
+        <p>Une erreur est survenue. Veuillez réessayer.</p>
+      </div>
+    `;
+  }
 }
         // Fonction de debug
         window.debugFiscalAnalysis = function() {
