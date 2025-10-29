@@ -2137,6 +2137,7 @@ function computeAllAtPrice(baseInput, trialPrice) {
     cfMensuel,
     cf0
   };
+} 
 
 // (optionnel) l’exposer globalement
 window.computeAllAtPrice = computeAllAtPrice;
@@ -2351,18 +2352,18 @@ document.getElementById('property-form').addEventListener('submit', async functi
   const loyerHC = parseFloat(document.getElementById('monthlyRent').value);
   const charges = parseFloat(document.getElementById('monthlyCharges').value) || 50;
 
-  // Récupérer les paramètres avancés
+  // Récupérer le type d’achat
   const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
 
   // Récupérer les données du formulaire
   propertyData = {
-    ville: window.villeSearchManager?.getSelectedVilleData() || {}, // Patch Bonus: valeur par défaut
+    ville: window.villeSearchManager?.getSelectedVilleData() || {},
     prixPaye: parseFloat(document.getElementById('propertyPrice').value),
     surface: parseFloat(document.getElementById('propertySurface').value),
     loyerActuel: loyerHC,
     charges: charges,
-    monthlyCharges: charges, // ← AJOUT
-    loyerCC: loyerHC + charges, // Ajouter le loyer CC pour l'analyse
+    monthlyCharges: charges,
+    loyerCC: loyerHC + charges,
     apport: parseFloat(document.getElementById('apport').value),
     duree: parseFloat(document.getElementById('loanDuration').value),
     taux: parseFloat(document.getElementById('loanRate').value),
@@ -2371,7 +2372,7 @@ document.getElementById('property-form').addEventListener('submit', async functi
     occupationMode: document.getElementById('occupationMode').value,
     partnerContribution: parseFloat(document.getElementById('partnerContribution').value) || 0,
 
-    // Paramètres avancés
+    // Paramètres avancés (communs)
     fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
     fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
     fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
@@ -2384,72 +2385,52 @@ document.getElementById('property-form').addEventListener('submit', async functi
     chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
     assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
 
-    // Paramètres spécifiques selon le type
-    fraisNotaireTaux: typeAchat === 'classique'
-      ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8
-      : 0,
-    commissionImmo: typeAchat === 'classique'
-      ? parseFloat(document.getElementById('commission-immo').value) || 4
-      : 0,
+    // Paramètres "classique"
+    fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
+    commissionImmo:   typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value)   || 4 : 0,
 
-    droitsEnregistrement: typeAchat === 'encheres'
-      ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70
-      : 0,
-    coefMutation: typeAchat === 'encheres'
-      ? parseFloat(document.getElementById('coef-mutation').value) || 2.37
-      : 0,
-    honorairesAvocat: typeAchat === 'encheres'
-      ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500
-      : 0,
-    fraisFixes: typeAchat === 'encheres'
-      ? parseFloat(document.getElementById('frais-fixes').value) || 50
-      : 0,
+    // Paramètres "enchères"
+    droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
+    coefMutation:         typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value)         || 2.37 : 0,
+    honorairesAvocat:     typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value)     || 1500 : 0,
+    fraisFixes:           typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value)           || 50   : 0,
+    emolumentsTranche1:   typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche1').value)   || 0    : 0,
+    emolumentsTranche2:   typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche2').value)   || 0    : 0,
+    emolumentsTranche3:   typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche3').value)   || 0    : 0,
+    emolumentsTranche4:   typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche4').value)   || 0    : 0,
+    honorairesAvocatCoef: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat-coef').value)|| 0    : 0,
+    tvaHonoraires:        typeAchat === 'encheres' ? parseFloat(document.getElementById('tva-honoraires').value)        || 0    : 0,
+    publiciteFonciere:    typeAchat === 'encheres' ? parseFloat(document.getElementById('publicite-fonciere').value)    || 0    : 0,
+    avocatPorterEnchere:  typeAchat === 'encheres' ? parseFloat(document.getElementById('avocat-porter-enchere').value) || 0    : 0,
+    suiviDossier:         typeAchat === 'encheres' ? parseFloat(document.getElementById('suivi-dossier').value)         || 0    : 0,
+    cautionMisePrix:      typeAchat === 'encheres' ? parseFloat(document.getElementById('caution-mise-prix').value)     || 0    : 0,
+    cautionRestituee:     typeAchat === 'encheres' ? !!document.getElementById('caution-restituee').checked             : true,
 
-    // --- Paramètres enchères (complément) ---
-    emolumentsTranche1  : typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche1').value) || 0 : 0,
-    emolumentsTranche2  : typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche2').value) || 0 : 0,
-    emolumentsTranche3  : typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche3').value) || 0 : 0,
-    emolumentsTranche4  : typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche4').value) || 0 : 0,
-    honorairesAvocatCoef: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat-coef').value) || 0 : 0,
-    tvaHonoraires       : typeAchat === 'encheres' ? parseFloat(document.getElementById('tva-honoraires').value) || 0 : 0,
-    publiciteFonciere   : typeAchat === 'encheres' ? parseFloat(document.getElementById('publicite-fonciere').value) || 0 : 0,
-    avocatPorterEnchere : typeAchat === 'encheres' ? parseFloat(document.getElementById('avocat-porter-enchere').value) || 0 : 0,
-    suiviDossier        : typeAchat === 'encheres' ? parseFloat(document.getElementById('suivi-dossier').value) || 0 : 0,
-    cautionMisePrix     : typeAchat === 'encheres' ? parseFloat(document.getElementById('caution-mise-prix').value) || 0 : 0,
-    cautionRestituee    : typeAchat === 'encheres' ? !!document.getElementById('caution-restituee').checked : true,
-
-    // AJOUT: Récupérer le régime actuel sélectionné
+    // Régime actuel
     regimeActuel: document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro',
     forceRegime: document.getElementById('force-regime')?.checked || false
   };
 
-  // Calculer le montant emprunté et la mensualité
+  // Calculer la mensualité sur le montant emprunté
   const montantEmprunte = propertyData.prixPaye - propertyData.apport;
-  propertyData.mensualite = calcMensualite(
-    montantEmprunte,
-    propertyData.taux,
-    propertyData.duree
-  );
-});
-  // Calculer le prix au m² payé
-  propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
-  propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
-  propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface; // Loyer CC au m²
+  propertyData.mensualite = calcMensualite(montantEmprunte, propertyData.taux, propertyData.duree);
 
-  // Patch C: Passe d'abord à l'étape 2 puis analyse avec requestAnimationFrame
+  // ===== POST-TRAITEMENTS — déplacés ICI =====
+  propertyData.prixM2Paye    = propertyData.prixPaye    / propertyData.surface;
+  propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
+  propertyData.loyerCCM2     = propertyData.loyerCC     / propertyData.surface;
+
+  // Étape 2 + rendu
   goToStep(2);
 
-  // Rendu robuste avec requestAnimationFrame et try/catch
   const renderer = window.renderMarketAnalysis || window.analyzeMarket;
   requestAnimationFrame(() => {
-    goToStep(2); // Double appel au cas où un autre code l'aurait masquée
+    goToStep(2);
     const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
-
     if (!resultsDiv) {
       console.error('❌ Conteneur de résultats introuvable');
       return;
     }
-
     try {
       if (typeof renderer === 'function') {
         renderer(propertyData);
@@ -2467,12 +2448,12 @@ document.getElementById('property-form').addEventListener('submit', async functi
               <i class="fas fa-arrow-left"></i> Corriger les données
             </button>
           </div>
-        </div>
-      `;
+        </div>`;
       console.error(err);
     }
   });
 });
+  
 // ──────────────────────────────────────────────────────────────────────────
 // renderMarketAnalysis (version optimisée & sûre)
 //   - Patch B: Ciblage robuste du conteneur
