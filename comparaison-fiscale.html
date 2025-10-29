@@ -2936,7 +2936,7 @@ async function proceedToFiscalAnalysis() {
     );
 
     const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
-    const mapEntry = REGIME_LABELS?.[selectedCode];      // { id, label } | undefined
+    const mapEntry = (window.REGIME_LABELS || {})[selectedCode];      // { id, label } | undefined
 
     const selectedRes =
       (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
@@ -3156,14 +3156,18 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 });
 document.addEventListener('DOMContentLoaded', () => {
-  const REGIME_LABELS = window.REGIME_LABELS || {
-    'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
-    'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
-    'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
-    'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
-    'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
-    'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
+  // 🔓 Global
+  window.REGIME_LABELS = window.REGIME_LABELS || {
+    'nu_micro'  : { id: 'micro-foncier', label: 'Micro-foncier' },
+    'nu_reel'   : { id: 'reel-foncier',  label: 'Location nue au réel' },
+    'lmnp_micro': { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
+    'lmnp_reel' : { id: 'lmnp-reel',     label: 'LMNP au réel' },
+    'lmp_reel'  : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
+    'sci_is'    : { id: 'sci-is',        label: "SCI à l'IS" }
   };
+
+  // (facultatif) alias local sans redéfinir la map
+  const REGIME_LABELS = window.REGIME_LABELS;
 
   function getResultsDiv() {
     let results = document.getElementById('fiscal-comparison-results');
@@ -3361,14 +3365,17 @@ delete baseInput.apportPct;
   // B) Radios "régime actuel" & bouton "meilleur cash-flow"
   // (affichage direct d’une synthèse sans relancer de calcul)
   // ─────────────────────────────────────────────────────────
-  const REGIME_LABELS = window.REGIME_LABELS || {
-    'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
-    'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
-    'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
-    'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
-    'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
-    'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
+  window.REGIME_LABELS = window.REGIME_LABELS || {
+    'nu_micro'  : { id: 'micro-foncier', label: 'Micro-foncier' },
+    'nu_reel'   : { id: 'reel-foncier',  label: 'Location nue au réel' },
+    'lmnp_micro': { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
+    'lmnp_reel' : { id: 'lmnp-reel',     label: 'LMNP au réel' },
+    'lmp_reel'  : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
+    'sci_is'    : { id: 'sci-is',        label: "SCI à l'IS" }
   };
+
+  // (facultatif) alias local sans redéfinir la map
+  const REGIME_LABELS = window.REGIME_LABELS;
 
   const getResultsDiv = () => {
     let results = byId('fiscal-comparison-results');
