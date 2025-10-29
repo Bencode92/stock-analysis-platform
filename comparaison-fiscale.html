@@ -2146,21 +2146,22 @@ function computeAllAtPrice(baseInput, trialPrice) {
   // 3) Mensualité recalculée
   const m = calcMensualite(emprunte, taux, duree);
 
-  // 4) 🔹 Récurrents supplémentaires
-  //    - tenue de compte en €/an → €/mois
-  const bankAccountMonthly = (Number(baseInput.fraisBancairesCompte) || 0) / 12;
-  //    - assurance emprunteur en %/an du capital emprunté → €/mois
-  //      (ajoute un champ optionnel `tauxAssuranceEmprunteur` dans le formulaire, ex. 0.30)
-  const tauxAssur = (Number(baseInput.tauxAssuranceEmprunteur) || 0) / 100;
-  const assuranceEmprunteur = emprunte * tauxAssur / 12;
+// 4) 🔹 Récurrents supplémentaires
+//    - tenue de compte en €/an → €/mois
+const bankAccountMonthly = (Number(baseInput.fraisBancairesCompte) || 0) / 12;
 
-  // 5) Charges récurrentes complètes (mensuelles)
-  const chargesMensuelles =
-      (Number(baseInput.chargesCoproNonRecup) || 0) +
-      (Number(baseInput.assurancePNO) || 0) +
-      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
-      bankAccountMonthly +
-      assuranceEmprunteur;
+//    - assurance emprunteur (support du drapeau "assurance incluse dans le taux")
+const assuranceIncluse = !!baseInput.assuranceIncluseDansTaux; // <- nouveau
+const tauxAssur = (Number(baseInput.tauxAssuranceEmprunteur) || 0) / 100;
+const assuranceEmprunteur = assuranceIncluse ? 0 : (emprunte * tauxAssur / 12);
+
+// 5) Charges récurrentes complètes (mensuelles)
+const chargesMensuelles =
+    (Number(baseInput.chargesCoproNonRecup) || 0) +
+    (Number(baseInput.assurancePNO) || 0) +
+    ((Number(baseInput.entretienAnnuel) || 0) / 12) +
+    bankAccountMonthly +
+    assuranceEmprunteur;
 
   // 6) Loyer net perçu (vacance, gestion)
   const loyerHC = Number(
@@ -2403,6 +2404,82 @@ function solvePriceForCF0_apresImpots(baseInput, targetCF = 0, opts = {}) {
 
 // Expose si besoin
 window.solvePriceForCF0_apresImpots = solvePriceForCF0_apresImpots;
+<script>
+// ---- utils ----
+function debounce(fn, wait = 200) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+// ---- recalc central ----
+const recomputeBreakeven = debounce(async function () {
+  try {
+    // 1) base d'entrée normalisée
+    const base = prepareBreakevenInput();
+
+    // fige l'apport en €
+    base.apportMode = 'amount';
+    delete base.apportPct;
+
+    // si ton taux intègre déjà l'assurance → neutralise toute assurance ajoutée
+    base.assuranceIncluseDansTaux = true;
+    base.tauxAssuranceEmprunteur  = 0;
+
+    // régime sélectionné (radio)
+    const regimeCode =
+      document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
+
+    // 2) solve : cash-flow cible = 0 € APRÈS impôts (approx)
+    const res = await solvePriceForCF0_apresImpots(base, 0, { regime: regimeCode });
+
+    // 3) rendu
+    const mode =
+      (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location';
+
+    window.renderBreakeven?.({
+      mode,
+      price: res.price,
+      foot : `Cash-flow cible 0 € après impôts (${regimeCode.replace(/_/g,' ')})`
+    });
+
+    document.getElementById('breakeven-result')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    console.warn('Recompute breakeven error:', e);
+  }
+}, 250);
+
+// ---- branchements (événements) ----
+function wireBreakevenRecompute() {
+  // 1) Changement de régime => on affiche la section résultats puis recalcul immédiat
+  document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
+    r.addEventListener('change', () => {
+      if (typeof goToStep === 'function') goToStep(3);
+      recomputeBreakeven();
+    });
+  });
+
+  // 2) Tout changement de champ “CF-sensible” => recalcul (input vs select)
+  [
+    'loanRate','loanDuration','monthlyRent','monthlyCharges',
+    'vacanceLocative','gestionLocative','charges-copro-non-recup',
+    'taxeFonciere','entretien-annuel','assurance-pno',
+    'frais-bancaires-compte','apport','occupationMode',
+    // on garde aussi la part du conjoint si présente
+    'partnerContribution'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const evt = (el.tagName === 'SELECT') ? 'change' : 'input';
+    el.addEventListener(evt, recomputeBreakeven);
+    // sécurité : si c’est un input, on écoute aussi 'change'
+    if (evt === 'input') el.addEventListener('change', recomputeBreakeven);
+  });
+}
+
+// Appel à l'init (une seule fois)
+document.addEventListener('DOMContentLoaded', wireBreakevenRecompute);
+
 
         // Nouvelles fonctions pour le widget Buy vs Rent
 function buildChargesBreakdown(p) {
@@ -3314,7 +3391,6 @@ try {
 
         setInterval(updateTime, 1000);
         updateTime();
-    </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
   (function(){
@@ -3640,15 +3716,16 @@ delete baseInput.apportPct;
   };
 
   // Radios
-  document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
-    if (!r.__wired) {
-      r.addEventListener('change', (e) => {
-        showSection3();
-        renderRegimeSummary(e.target.value, 'selection');
-      });
-      r.__wired = true;
-    }
-  });
+document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
+  if (!r.__wired) {
+    r.addEventListener('change', () => {
+      if (typeof goToStep === 'function') goToStep(3); // rester sur la section résultats
+      recomputeBreakeven();                            // relance le calcul (CF≈0€ après impôts)
+    });
+    r.__wired = true;
+  }
+});
+
 
   // Bouton "meilleur cash-flow"
   const bestBtn = byId('btn-best-cashflow');
