@@ -1976,16 +1976,204 @@ function prepareBreakevenInput() {
   //    Si tu utilises un champ "apportPct", assure-toi que le solveur le lise.
   return b;
 }
-        
-        // Table de correspondance avec ID pour plus de robustesse
-const REGIME_LABELS = {
-  'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
-  'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
-  'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
-  'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
-  'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
-  'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
-};
+
+// A) Normaliser en gelant l’apport (mode solveur)
+// Utiliser CETTE version dans un solveur custom (bisection/newton) pour figer l’apport €
+function normalizeFinancingForSolve(baseInput, trialPrice) {
+  const price = Number(trialPrice) || 0;
+
+  // ❗️On fige l'apport en € (ce que l'utilisateur a mis)
+  const apport = Math.max(0, Number(baseInput.apport) || 0);
+
+  const emprunte = Math.max(0, price - apport);
+  return { price, apport, emprunte };
+}
+// Optionnel : exposer la fonction globalement si besoin ailleurs
+window.normalizeFinancingForSolve = normalizeFinancingForSolve;
+/* ⬇️ B) Fonctions pures de frais — dépendantes uniquement des arguments ⬇️ */
+
+// Frais d'acquisition calculés depuis un PRIX passé en argument (aucun accès global)
+function calcFraisAcquisition(price, params = {}) {
+  const p = Number(price) || 0;
+  const notaire    = ((Number(params.fraisNotaireTaux) || 0) / 100) * p;
+  const commission = ((Number(params.commissionImmo)   || 0) / 100) * p;
+  const fraisFixes = (Number(params.fraisBancairesDossier) || 0)
+                   + (Number(params.fraisBancairesCompte)  || 0);
+  return {
+    notaire,
+    commission,
+    fraisFixes,
+    total: notaire + commission + fraisFixes
+  };
+}
+        function calcFraisEncheres(price, params = {}) {
+  const p = Math.max(0, Number(price) || 0);
+
+  // Droits d'enregistrement (% du prix)
+  const droits = p * ((Number(params.droitsEnregistrement) || 0) / 100);
+
+  // Émoluments par tranches
+  const t1 = Math.min(p, 6500);
+  const t2 = Math.min(Math.max(p - 6500, 0), 23500 - 6500);
+  const t3 = Math.min(Math.max(p - 23500, 0), 83500 - 23500);
+  const t4 = Math.max(p - 83500, 0);
+
+  const r1 = (Number(params.emolumentsTranche1) || 0) / 100;
+  const r2 = (Number(params.emolumentsTranche2) || 0) / 100;
+  const r3 = (Number(params.emolumentsTranche3) || 0) / 100;
+  const r4 = (Number(params.emolumentsTranche4) || 0) / 100;
+
+  let emol = t1*r1 + t2*r2 + t3*r3 + t4*r4;
+
+  // Coefficient de mutation (ex: 2.37)
+  const coef = Number(params.coefMutation) || 1;
+  emol *= coef;
+
+  // Honoraires d’avocat = coef * price (+ TVA)
+  const honCoef = Number(params.honorairesAvocatCoef) || 0; // ex: 0.25
+  const tvaHon  = (Number(params.tvaHonoraires) || 0) / 100; // ex: 20%
+  const honorairesAvocat = honCoef > 0 ? (p * honCoef) * (1 + tvaHon) : 0;
+
+  // Publicité foncière = % * price
+  const pubFon = p * ((Number(params.publiciteFonciere) || 0) / 100);
+
+  // Frais fixes & divers en €
+  const fixes = (Number(params.fraisFixes) || 0)
+              + (Number(params.honorairesAvocat) || 0) // champ montant si saisi
+              + (Number(params.avocatPorterEnchere) || 0)
+              + (Number(params.suiviDossier) || 0);
+
+  // Caution si non restituée : % de "mise à prix" → à défaut on prend price d’essai
+  const cautionPct = (Number(params.cautionMisePrix) || 0) / 100;
+  const cautionIncluse = !!params.cautionRestituee ? 0 : (p * cautionPct);
+
+  const total = droits + emol + honorairesAvocat + pubFon + fixes + cautionIncluse;
+
+  return {
+    droitsEnregistrement: droits,
+    emoluments: emol,
+    honorairesAvocat,
+    publiciteFonciere: pubFon,
+    fraisFixes: fixes,
+    cautionIncluse,
+    total
+  };
+}
+
+// Frais de garantie calculés depuis le MONTANT EMPRUNTÉ passé en argument
+function calcFraisGarantie(emprunte, params = {}) {
+  const base = Math.max(0, Number(emprunte) || 0);
+  const taux = (Number(params.fraisGarantie) || 0) / 100;
+  const garantie = base * taux;
+  return { garantie, total: garantie };
+}
+        // C) Une fonction computeAll pour un prix d’essai
+function computeAllAtPrice(baseInput, trialPrice) {
+  // 1) Figer l’apport et recalculer l’emprunt sur trialPrice
+  const { price, apport, emprunte } = normalizeFinancingForSolve(baseInput, trialPrice);
+
+ // 2) Frais dépendants du prix/emprunt
+  let frais = { total: 0 };
+  if ((baseInput.typeAchat || '').toLowerCase() === 'encheres') {
+    frais = calcFraisEncheres(price, {
+      droitsEnregistrement : baseInput.droitsEnregistrement,
+      coefMutation         : baseInput.coefMutation,
+      emolumentsTranche1   : baseInput.emolumentsTranche1,
+      emolumentsTranche2   : baseInput.emolumentsTranche2,
+      emolumentsTranche3   : baseInput.emolumentsTranche3,
+      emolumentsTranche4   : baseInput.emolumentsTranche4,
+      honorairesAvocatCoef : baseInput.honorairesAvocatCoef,
+      tvaHonoraires        : baseInput.tvaHonoraires,
+      publiciteFonciere    : baseInput.publiciteFonciere,
+      honorairesAvocat     : baseInput.honorairesAvocat, // montant fixe en plus si saisi
+      fraisFixes           : baseInput.fraisFixes,
+      avocatPorterEnchere  : baseInput.avocatPorterEnchere,
+      suiviDossier         : baseInput.suiviDossier,
+      cautionMisePrix      : baseInput.cautionMisePrix,
+      cautionRestituee     : baseInput.cautionRestituee
+    });
+  } else {
+    // Achat classique = notaire% * price + commission% * price + frais bancaires fixes
+    frais = calcFraisAcquisition(price, baseInput);
+  }
+
+  // Frais de garantie toujours sur l'EMPRUNTÉ
+  const Fgar = calcFraisGarantie(emprunte, baseInput);
+
+  // 3) Mensualité recalculée (⚠️ utilise calcMensualite de ton fichier)
+  const m = calcMensualite(emprunte, baseInput.taux, baseInput.duree);
+
+  // 4) Charges récurrentes (constantes pré-calculées)
+  const chargesMensuelles =
+      (Number(baseInput.chargesCoproNonRecup) || 0)
+    + (Number(baseInput.assurancePNO) || 0)
+    + (Number(baseInput.entretienAnnuel) || 0) / 12
+    + 0; // + gestion locative si % * loyer HC etc. (à brancher si besoin)
+
+  // 5) Loyer net perçu (vacance, gestion)
+  const loyerHC = Number(baseInput.loyerActuel) || 0;
+  const vacRate = (Number(baseInput.vacanceLocative) || 0) / 100;
+  const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
+  const loyerAnnuelNet = loyerHC * 12 * (1 - vacRate) * (1 - gestRate);
+
+  // 6) (Optionnel) Intérêts mensuels approximatifs si tu veux tracer
+  const interetsMensuel = emprunte * ((Number(baseInput.taux) || 0) / 100 / 12);
+
+  // 7) Cash-flow mensuel (locatif)
+  const cfMensuel =
+      (loyerAnnuelNet / 12)
+    - m
+    - chargesMensuelles
+    - ((Number(baseInput.taxeFonciere) || 0) / 12);
+
+  // 8) CF0 (cash out initial) — basé sur les frais calculés ci-dessus
+  const cf0 = -apport - frais.total - Fgar.total - (Number(baseInput.travaux) || 0);
+
+  return {
+    price, apport, emprunte,
+    frais: { ...frais, ...Fgar }, // conserve la structure avec total, etc.
+    mensualite: m,
+    interetsMensuel, // utile en debug
+    cfMensuel,
+    cf0
+  };
+
+// (optionnel) l’exposer globalement
+window.computeAllAtPrice = computeAllAtPrice;
+
+
+function solvePriceForCF0(baseInput, targetCF = 0) {
+  let lo = 10_000;
+  let hi = 2_000_000;
+
+  if ((baseInput.apport || 0) >= hi) hi = (baseInput.apport * 2);
+
+  for (let iter = 0; iter < 60; iter++) {
+    const mid = (lo + hi) / 2;
+    const r = computeAllAtPrice(baseInput, mid);
+    const diff = r.cfMensuel - targetCF;
+
+    if (Math.abs(diff) < 1e-2) return r; // convergé
+    if (diff > 0) {
+      lo = mid;    // CF > 0 → prix trop bas → on monte
+    } else {
+      hi = mid;    // CF < 0 → prix trop haut → on baisse
+    }
+  }
+  const rLo = computeAllAtPrice(baseInput, lo);
+  const rHi = computeAllAtPrice(baseInput, hi);
+  return Math.abs(rLo.cfMensuel - targetCF) < Math.abs(rHi.cfMensuel - targetCF) ? rLo : rHi;
+}
+
+// 🔓 rendre dispo globalement
+window.solvePriceForCF0 = solvePriceForCF0;
+// ✅ Pas de doublon: on **n’ajoute pas** de `mensualite()` ici.
+//    Utiliser la fonction existante `calcMensualite(capital, tauxAnnuelPct, dureeAn)`.
+
+// (optionnel) Exposer globalement si tu veux les appeler ailleurs facilement
+window.calcFraisAcquisition = calcFraisAcquisition;
+window.calcFraisGarantie    = calcFraisGarantie;
+window.calcFraisEncheres    = calcFraisEncheres;
         // Helper pour calculer la mensualité
         function calcMensualite(capital, tauxAnnuelPct, dureeAn) {
             const i = (tauxAnnuelPct / 100) / 12;
@@ -2038,12 +2226,6 @@ document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
   r.addEventListener('change', (e) => {
     window.analyzer?.setSelectedRegime?.(e.target.value);
   });
-});
-
-// Bouton "meilleur cash-flow" → bascule en mode meilleur et relance l'analyse
-document.getElementById('btn-best-cashflow')?.addEventListener('click', async () => {
-  window.analyzer?.setPreferBest?.(true);
-  await proceedToFiscalAnalysis();
 });
   // Gestion des paramètres avancés
   document.getElementById('btn-advanced-toggle').addEventListener('click', function () {
@@ -2188,6 +2370,7 @@ document.getElementById('property-form').addEventListener('submit', async functi
     typeAchat: typeAchat,
     occupationMode: document.getElementById('occupationMode').value,
     partnerContribution: parseFloat(document.getElementById('partnerContribution').value) || 0,
+
     // Paramètres avancés
     fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
     fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
@@ -2200,13 +2383,41 @@ document.getElementById('property-form').addEventListener('submit', async functi
     entretienAnnuel: parseFloat(document.getElementById('entretien-annuel').value) || 500,
     chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
     assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
+
     // Paramètres spécifiques selon le type
-    fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
-    commissionImmo: typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value) || 4 : 0,
-    droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
-    coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
-    honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
-    fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0,
+    fraisNotaireTaux: typeAchat === 'classique'
+      ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8
+      : 0,
+    commissionImmo: typeAchat === 'classique'
+      ? parseFloat(document.getElementById('commission-immo').value) || 4
+      : 0,
+
+    droitsEnregistrement: typeAchat === 'encheres'
+      ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70
+      : 0,
+    coefMutation: typeAchat === 'encheres'
+      ? parseFloat(document.getElementById('coef-mutation').value) || 2.37
+      : 0,
+    honorairesAvocat: typeAchat === 'encheres'
+      ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500
+      : 0,
+    fraisFixes: typeAchat === 'encheres'
+      ? parseFloat(document.getElementById('frais-fixes').value) || 50
+      : 0,
+
+    // --- Paramètres enchères (complément) ---
+    emolumentsTranche1  : typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche1').value) || 0 : 0,
+    emolumentsTranche2  : typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche2').value) || 0 : 0,
+    emolumentsTranche3  : typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche3').value) || 0 : 0,
+    emolumentsTranche4  : typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche4').value) || 0 : 0,
+    honorairesAvocatCoef: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat-coef').value) || 0 : 0,
+    tvaHonoraires       : typeAchat === 'encheres' ? parseFloat(document.getElementById('tva-honoraires').value) || 0 : 0,
+    publiciteFonciere   : typeAchat === 'encheres' ? parseFloat(document.getElementById('publicite-fonciere').value) || 0 : 0,
+    avocatPorterEnchere : typeAchat === 'encheres' ? parseFloat(document.getElementById('avocat-porter-enchere').value) || 0 : 0,
+    suiviDossier        : typeAchat === 'encheres' ? parseFloat(document.getElementById('suivi-dossier').value) || 0 : 0,
+    cautionMisePrix     : typeAchat === 'encheres' ? parseFloat(document.getElementById('caution-mise-prix').value) || 0 : 0,
+    cautionRestituee    : typeAchat === 'encheres' ? !!document.getElementById('caution-restituee').checked : true,
+
     // AJOUT: Récupérer le régime actuel sélectionné
     regimeActuel: document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro',
     forceRegime: document.getElementById('force-regime')?.checked || false
@@ -2792,56 +3003,26 @@ async function proceedToFiscalAnalysis() {
    10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
 ----------------------------------------------------------------- */
 try {
-  // ✅ Toujours tester la version sur window
-  const doRenderBreakeven = window.renderBreakeven;
-  if (typeof doRenderBreakeven !== 'function') {
-    throw new Error('renderBreakeven manquant');
-  }
+  // ❗️On copie l’entrée et on **force le gel de l’apport en €**
+const base = prepareBreakevenInput();
+base.apportMode = 'amount';    // on fige l’apport en euros
+delete base.apportPct;         // on neutralise tout % résiduel
+  // base.apportPct = undefined; // (optionnel) on ignore l’apport %
 
-  const baseInput = prepareBreakevenInput();
-  const mode = document.getElementById('occupationMode')?.value;
+  // ❗️On NE se sert PAS de base.prixPaye lors du solveur
+  // Tout est recalculé à chaque essai via computeAllAtPrice(mid)
 
-  // Résultat selon le mode
-  let res, footText, breakevenMode;
-  if (mode === 'residence') {
-    const part = Number(baseInput.partnerContribution || 0);
-    res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
-      includeOpportunity: false // passer à true si tu veux intégrer le loyer d’opportunité
-    });
-    breakevenMode = 'residence';
-    footText = `Sans loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`;
-  } else {
-    res = await analyzer.solvePriceForTargetCF(baseInput, 0, {
-      preferBest: false,
-      regimeId: baseInput.regimeActuel || 'nu_micro'
-    });
-    breakevenMode = 'location';
-    footText = `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`;
-  }
+  const res = await solvePriceForCF0(base, 0);
 
-  // Vérifs robustes
-  const price = Number(res?.price);
-  if (!Number.isFinite(price) || price <= 0) {
-    throw new Error('Prix d’équilibre invalide');
-  }
-
-  // 👉 Appel via la fonction capturée
-  doRenderBreakeven({
-    mode: breakevenMode,
-    price,
-    foot: footText
+  window.renderBreakeven?.({
+    mode : (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location',
+    price: res.price,
+    foot : `Apport figé : ${analyzer.formatCurrency(res.apport)} — Mensualité ≈ ${analyzer.formatCurrency(res.mensualite)}`
   });
 
-  // Afficher + scroller la carte
-  const card = document.getElementById('breakeven-result');
-  if (card) {
-    card.style.display = 'block';
-    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } else {
-    console.warn('#breakeven-result introuvable — assure-toi que le conteneur HTML existe.');
-  }
+  byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 } catch (e) {
-  console.warn('Breakeven auto non généré :', e);
+  console.warn('Breakeven non calculé :', e);
 }
 
   } catch (error) {
@@ -2915,18 +3096,7 @@ try {
     <script>
 document.addEventListener('DOMContentLoaded', () => {
   (function(){
-    const byId = (id) => document.getElementById(id);
-
-    // Surbrillance quand on change manuellement de radio
-    function wireManualHighlight() {
-      document.querySelectorAll('input[name="regime-actuel"]').forEach(input => {
-        input.addEventListener('change', () => {
-          document.querySelectorAll('.mode-option').forEach(l => l.classList.remove('selected'));
-          const wrap = input.closest('.mode-option');
-          if (wrap) wrap.classList.add('selected');
-        });
-      });
-    }
+    const byId = (id) => document.getElementById(id); 
 
     async function pickAndShowBest() {
       const analyzer = window.analyzer || (window.analyzer = new MarketFiscalAnalyzer());
@@ -3120,18 +3290,20 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnLoc && !btnLoc.__wired) {
     btnLoc.addEventListener('click', async () => {
       const baseInput  = prepareBreakevenInput(); // ← ici
+        baseInput.apportMode = 'amount';
+delete baseInput.apportPct;
       const preferBest = !!byId('prefer-best')?.checked;
       const regimeId   = preferBest
         ? null
         : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
 
-      const res = await analyzer.solvePriceForTargetCF(baseInput, 0, { preferBest, regimeId });
+const res = await window.solvePriceForCF0(baseInput, 0);
 
-      renderBreakeven({
-        mode : 'location',
-        price: res.price,
-        foot : `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`
-      });
+renderBreakeven({
+  mode : 'location',
+  price: res.price,
+  foot : `CF≈ ${analyzer.formatCurrency(res.cfMensuel)}/mois`
+});
 
       if (typeof goToStep === 'function') goToStep(3);
       byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3145,6 +3317,8 @@ document.addEventListener('DOMContentLoaded', () => {
 if (btnRP && !btnRP.__wired) {
   btnRP.addEventListener('click', async () => {
     const baseInput = prepareBreakevenInput(); // ← ici
+      baseInput.apportMode = 'amount';
+delete baseInput.apportPct;
 
     const partQuick   = parseFloat(byId('input-conjoint')?.value);
     const partSection = parseFloat(byId('partnerContribution')?.value);
