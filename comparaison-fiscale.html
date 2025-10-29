@@ -1993,11 +1993,14 @@ function prepareBreakevenInput() {
   });
 
   // 4) Normaliser taux & durée (robuste aux alias)
-  b.taux = Number(b.taux ?? b.loanRate ?? b.tauxCredit ?? b.tauxAnnuel ?? b.tauxAnnuelPct ?? 3.5);
-  b.duree = Number(b.duree ?? b.loanDuration ?? b.dureeAn ?? b.dureeAnnees ?? 20);
+  b.taux  = Number(b.taux  ?? b.loanRate     ?? b.tauxCredit ?? b.tauxAnnuel ?? b.tauxAnnuelPct ?? 3.5);
+  b.duree = Number(b.duree ?? b.loanDuration ?? b.dureeAn    ?? b.dureeAnnees ?? 20);
 
   // 5) Intentions pour le solveur
   b._breakeven = { recomputeFeesFromPrice: true, ignoreProvidedMensualite: true };
+
+  // ✅ NOUVEAU : par défaut on finance les frais (si non défini ailleurs)
+  if (typeof b.financerFrais === 'undefined') b.financerFrais = true;
 
   // On laisse l’apport en € (le gel se fait au lancement du solveur)
   return b;
@@ -2143,42 +2146,48 @@ function computeAllAtPrice(baseInput, trialPrice) {
   // Frais de garantie toujours sur l'EMPRUNTÉ
   const Fgar = calcFraisGarantie(emprunte, baseInput);
 
-  // 3) Mensualité recalculée
-  const m = calcMensualite(emprunte, taux, duree);
+  // ✅ NOUVEAU : capital réellement financé (frais + garantie + travaux)
+  const financerFrais   = baseInput.financerFrais !== false; // défaut = true
+  const fraisInitials   = (frais.total || 0) + (Fgar.total || 0) + (Number(baseInput.travaux) || 0);
+  const capitalMensualise = financerFrais ? (emprunte + fraisInitials) : emprunte;
 
-// 4) 🔹 Récurrents supplémentaires
-//    - tenue de compte en €/an → €/mois
-const bankAccountMonthly = (Number(baseInput.fraisBancairesCompte) || 0) / 12;
+  // 3) Mensualité recalculée (sur le capital réellement financé)
+  const m = calcMensualite(capitalMensualise, taux, duree);
 
-//    - assurance emprunteur (support du drapeau "assurance incluse dans le taux")
-const assuranceIncluse = !!baseInput.assuranceIncluseDansTaux; // <- nouveau
-const tauxAssur = (Number(baseInput.tauxAssuranceEmprunteur) || 0) / 100;
-const assuranceEmprunteur = assuranceIncluse ? 0 : (emprunte * tauxAssur / 12);
+  // 4) 🔹 Récurrents supplémentaires
+  //    - tenue de compte en €/an → €/mois
+  const bankAccountMonthly = (Number(baseInput.fraisBancairesCompte) || 0) / 12;
 
-// 5) Charges récurrentes complètes (mensuelles)
-const chargesMensuelles =
-    (Number(baseInput.chargesCoproNonRecup) || 0) +
-    (Number(baseInput.assurancePNO) || 0) +
-    ((Number(baseInput.entretienAnnuel) || 0) / 12) +
-    bankAccountMonthly +
-    assuranceEmprunteur;
+  //    - assurance emprunteur (support du drapeau "assurance incluse dans le taux")
+  const assuranceIncluse = !!baseInput.assuranceIncluseDansTaux;
+  const tauxAssur = (Number(baseInput.tauxAssuranceEmprunteur) || 0) / 100;
+  const assuranceEmprunteur = assuranceIncluse ? 0 : (emprunte * tauxAssur / 12); // (laisse tel quel)
+
+  // 5) Charges récurrentes complètes (mensuelles)
+  const chargesMensuelles =
+      (Number(baseInput.chargesCoproNonRecup) || 0) +
+      (Number(baseInput.assurancePNO) || 0) +
+      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
+      bankAccountMonthly +
+      assuranceEmprunteur;
 
   // 6) Loyer net perçu (vacance, gestion)
   const loyerHC = Number(
-  baseInput.loyerActuel ??
-  baseInput.loyerHC ??
-  baseInput.monthlyRent ??
-  baseInput.loyer ??
-  (baseInput.loyerCC != null
-     ? baseInput.loyerCC - (Number(baseInput.monthlyCharges) || 0)
-     : undefined)
-) || 0;
+    baseInput.loyerActuel ??
+    baseInput.loyerHC ??
+    baseInput.monthlyRent ??
+    baseInput.loyer ??
+    (baseInput.loyerCC != null
+       ? baseInput.loyerCC - (Number(baseInput.monthlyCharges) || 0)
+       : undefined)
+  ) || 0;
+
   const vacRate  = (Number(baseInput.vacanceLocative)     || 0) / 100;
   const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
   const loyerAnnuelNet = loyerHC * 12 * (1 - vacRate) * (1 - gestRate);
 
-  // 7) Intérêts mensuels (indicatif)
-  const interetsMensuel = emprunte * ((Number(taux) || 0) / 100 / 12);
+  // 7) Intérêts mensuels (indicatif) — sur le capital réellement financé
+  const interetsMensuel = capitalMensualise * ((Number(taux) || 0) / 100 / 12);
 
   // 8) Cash-flow mensuel (locatif)
   const cfMensuel =
@@ -2187,8 +2196,8 @@ const chargesMensuelles =
     - chargesMensuelles
     - ((Number(baseInput.taxeFonciere) || 0) / 12);
 
-  // 9) CF0 (cash out initial)
-  const cf0 = -apport - frais.total - Fgar.total - (Number(baseInput.travaux) || 0);
+  // 9) CF0 (cash out initial) — si les frais sont financés, ils ne sortent pas en cash
+  const cf0 = -apport - (financerFrais ? 0 : fraisInitials);
 
   return {
     price, apport, emprunte,
@@ -2199,7 +2208,6 @@ const chargesMensuelles =
     cf0
   };
 }
-
 // (optionnel) exposer globalement
 window.computeAllAtPrice = computeAllAtPrice;
 /* === Impôts mensuels estimés par régime (approx) ======================= */
@@ -2420,9 +2428,13 @@ const recomputeBreakeven = debounce(async function () {
     base.apportMode = 'amount';
     delete base.apportPct;
 
+    // ✅ Harmonisation : on finance les frais dans le prêt
+    base.financerFrais = true;
+
     // si ton taux intègre déjà l'assurance → neutralise toute assurance ajoutée
     base.assuranceIncluseDansTaux = true;
     base.tauxAssuranceEmprunteur  = 0;
+
 
     // régime sélectionné (radio)
     const regimeCode =
@@ -2709,46 +2721,67 @@ document.getElementById('property-form').addEventListener('submit', async functi
   };
 
   // Calculer la mensualité sur le montant emprunté
-  const montantEmprunte = propertyData.prixPaye - propertyData.apport;
-  propertyData.mensualite = calcMensualite(montantEmprunte, propertyData.taux, propertyData.duree);
+const montantEmprunte = propertyData.prixPaye - propertyData.apport;
+const financerFrais = true; // même hypothèse partout
 
-  // ===== POST-TRAITEMENTS — déplacés ICI =====
-  propertyData.prixM2Paye    = propertyData.prixPaye    / propertyData.surface;
-  propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
-  propertyData.loyerCCM2     = propertyData.loyerCC     / propertyData.surface;
+const fraisInitials = (
+  (propertyData.typeAchat === 'classique'
+    ? calcFraisAcquisition(propertyData.prixPaye, propertyData).total
+    : calcFraisEncheres(propertyData.prixPaye, propertyData).total
+  )
+  + calcFraisGarantie(montantEmprunte, propertyData).total
+  + (Number(propertyData.travaux) || 0)
+);
 
-  // Étape 2 + rendu
+const capitalMensualise =
+  financerFrais ? (montantEmprunte + fraisInitials) : montantEmprunte;
+
+propertyData.mensualite = calcMensualite(
+  capitalMensualise,
+  propertyData.taux,
+  propertyData.duree
+);
+
+// (optionnel) utile plus tard
+propertyData.financerFrais = financerFrais;
+
+// ===== POST-TRAITEMENTS — déplacés ICI =====
+propertyData.prixM2Paye    = propertyData.prixPaye    / propertyData.surface;
+propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
+propertyData.loyerCCM2     = propertyData.loyerCC     / propertyData.surface;
+
+// Étape 2 + rendu
+goToStep(2);
+
+const renderer = window.renderMarketAnalysis || window.analyzeMarket;
+requestAnimationFrame(() => {
   goToStep(2);
-
-  const renderer = window.renderMarketAnalysis || window.analyzeMarket;
-  requestAnimationFrame(() => {
-    goToStep(2);
-    const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
-    if (!resultsDiv) {
-      console.error('❌ Conteneur de résultats introuvable');
-      return;
+  const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
+  if (!resultsDiv) {
+    console.error('❌ Conteneur de résultats introuvable');
+    return;
+  }
+  try {
+    if (typeof renderer === 'function') {
+      renderer(propertyData);
+    } else {
+      resultsDiv.innerHTML = '<div class="market-comparison-card average"><h3 style="color:#ef4444">Aucune fonction d\'analyse trouvée</h3></div>';
     }
-    try {
-      if (typeof renderer === 'function') {
-        renderer(propertyData);
-      } else {
-        resultsDiv.innerHTML = '<div class="market-comparison-card average"><h3 style="color:#ef4444">Aucune fonction d\'analyse trouvée</h3></div>';
-      }
-    } catch (err) {
-      resultsDiv.innerHTML = `
-        <div class="market-comparison-card average">
-          <div class="market-badge high">Erreur</div>
-          <h3 style="color:#ef4444;">Impossible d'analyser le marché</h3>
-          <p style="color:#94a3b8;">${err.message}</p>
-          <div class="recommendations-box" style="margin-top:20px;">
-            <button class="btn btn-outline" onclick="goToStep(1)">
-              <i class="fas fa-arrow-left"></i> Corriger les données
-            </button>
-          </div>
-        </div>`;
-      console.error(err);
-    }
-  });
+  } catch (err) {
+    resultsDiv.innerHTML = `
+      <div class="market-comparison-card average">
+        <div class="market-badge high">Erreur</div>
+        <h3 style="color:#ef4444;">Impossible d'analyser le marché</h3>
+        <p style="color:#94a3b8;">${err.message}</p>
+        <div class="recommendations-box" style="margin-top:20px;">
+          <button class="btn btn-outline" onclick="goToStep(1)">
+            <i class="fas fa-arrow-left"></i> Corriger les données
+          </button>
+        </div>
+      </div>`;
+    console.error(err);
+  }
+});
 });
   
 // ──────────────────────────────────────────────────────────────────────────
