@@ -1940,22 +1940,40 @@ function drawBuyRent () {
         let marketData = null;
         let propertyData = null;
         let analyzer = null;
-// Helper d'entrée pour les solveurs d'équilibre (locatif & RP)
+
+        // Helper d'entrée pour les solveurs d'équilibre (locatif & RP)
 function prepareBreakevenInput() {
   const src = analyzer.prepareFiscalData();
   const b = typeof structuredClone === 'function'
     ? structuredClone(src)
     : JSON.parse(JSON.stringify(src));
 
-  // Neutraliser les champs qui figent le prix/financement actuel
-  delete b.prixPaye;
-  delete b.prix;
-  delete b.price;
-  delete b.prixAcquisition;
-  delete b.montantEmprunte;
-  delete b.mensualite;
+  // 1) Supprimer tout ce qui fige le prix/financement courant
+  const hardPriceKeys = [
+    'prixPaye','prix','price','prixAcquisition',
+    'montantEmprunte','mensualite',
+    // parfois présents selon tes helpers :
+    'capitalEmprunte','mensualiteCredit'
+  ];
+  hardPriceKeys.forEach(k => delete b[k]);
 
-  // On garde le reste (taux, durée, apport, frais, loyers, charges, régime, partner, etc.)
+  // 2) Supprimer tous les MONTANTS de frais/commissions calculés en €,
+  //    on ne garde que les taux/coeffs pour recalculer à chaque essai de prix.
+  const isAmountKey = (k) =>
+    /montant|amount|euros?|total(?!Taux)(?!Rate)|en€|enEuros/i.test(k) ||
+    /(frais|droits|honoraires|commission|garantie|publicite|caution).*?(montant|amount)/i.test(k);
+
+  Object.keys(b).forEach(k => {
+    if (isAmountKey(k)) delete b[k];
+  });
+
+  // 3) Clarifier l'intention côté solveur (si ton analyzer le lit)
+  b._breakeven = { recomputeFeesFromPrice: true, ignoreProvidedMensualite: true };
+
+  // 4) Apport : on considérera par défaut un APPORT € FIXE.
+  //    (Si tu veux un apport en %, passe plutôt b.apportPct et supprime b.apport.)
+  //    Ici on ne touche pas à b.apport : il reste un nombre fixe (en €).
+  //    Si tu utilises un champ "apportPct", assure-toi que le solveur le lise.
   return b;
 }
         
