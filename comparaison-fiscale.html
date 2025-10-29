@@ -2752,59 +2752,59 @@ async function proceedToFiscalAnalysis() {
     };
     console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
 
-    /* -----------------------------------------------------------------
-       10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
-    ----------------------------------------------------------------- */
-    try {
-      // Garde-fous
-      if (typeof renderBreakeven !== 'function') {
-        throw new Error('renderBreakeven manquant');
-      }
-      const baseInput = analyzer.prepareFiscalData();
-      const mode = document.getElementById('occupationMode')?.value;
+/* -----------------------------------------------------------------
+   10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
+----------------------------------------------------------------- */
+try {
+  // Garde-fous
+  if (typeof renderBreakeven !== 'function') {
+    throw new Error('renderBreakeven manquant');
+  }
+  const baseInput = analyzer.prepareFiscalData();
+  const mode = document.getElementById('occupationMode')?.value;
 
-      // Résultat selon le mode
-      let res, footText, breakevenMode;
-      if (mode === 'residence') {
-        const part = Number(baseInput.partnerContribution || 0);
-        res = analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
-          includeOpportunity: false // mettre true si on veut le loyer d’opportunité
-        });
-        breakevenMode = 'residence';
-        footText = `Sans loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`;
-      } else {
-        res = analyzer.solvePriceForTargetCF(baseInput, 0, {
-          preferBest: false,
-          regimeId: baseInput.regimeActuel || 'nu_micro'
-        });
-        breakevenMode = 'location';
-        footText = `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`;
-      }
+  // Résultat selon le mode
+  let res, footText, breakevenMode;
+  if (mode === 'residence') {
+    const part = Number(baseInput.partnerContribution || 0);
+    res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
+      includeOpportunity: false // mettre true si on veut le loyer d’opportunité
+    });
+    breakevenMode = 'residence';
+    footText = `Sans loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`;
+  } else {
+    res = await analyzer.solvePriceForTargetCF(baseInput, 0, {
+      preferBest: false,
+      regimeId: baseInput.regimeActuel || 'nu_micro'
+    });
+    breakevenMode = 'location';
+    footText = `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`;
+  }
 
-      // Vérifs robustes
-      const price = Number(res?.price);
-      if (!Number.isFinite(price) || price <= 0) {
-        throw new Error('Prix d’équilibre invalide');
-      }
+  // Vérifs robustes
+  const price = Number(res?.price);
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error('Prix d’équilibre invalide');
+  }
 
-      // Rendu du cadrant jaune
-      renderBreakeven({
-        mode: breakevenMode,
-        price,
-        foot: footText
-      });
+  // Rendu du cadrant jaune
+  renderBreakeven({
+    mode: breakevenMode,
+    price,
+    foot: footText
+  });
 
-      // Afficher + scroller la carte
-      const card = document.getElementById('breakeven-result');
-      if (card) {
-        card.style.display = 'block';
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        console.warn('#breakeven-result introuvable — assure-toi que le conteneur HTML existe.');
-      }
-    } catch (e) {
-      console.warn('Breakeven auto non généré :', e);
-    }
+  // Afficher + scroller la carte
+  const card = document.getElementById('breakeven-result');
+  if (card) {
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    console.warn('#breakeven-result introuvable — assure-toi que le conteneur HTML existe.');
+  }
+} catch (e) {
+  console.warn('Breakeven auto non généré :', e);
+}
 
   } catch (error) {
     console.error('Erreur lors de l\'analyse fiscale:', error);
@@ -3078,14 +3078,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Locatif → CF mensuel = 0
   if (btnLoc && !btnLoc.__wired) {
-    btnLoc.addEventListener('click', () => {
+    btnLoc.addEventListener('click', async () => {
       const baseInput = analyzer.prepareFiscalData();
       const preferBest = !!byId('prefer-best')?.checked;
       const regimeId = preferBest
         ? null
         : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
 
-      const res = analyzer.solvePriceForTargetCF(baseInput, 0, { preferBest, regimeId });
+      const res = await analyzer.solvePriceForTargetCF(baseInput, 0, { preferBest, regimeId });
 
       renderBreakeven({
         mode: 'location',
@@ -3101,7 +3101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Résidence principale → coût net = 0
   if (btnRP && !btnRP.__wired) {
-    btnRP.addEventListener('click', () => {
+    btnRP.addEventListener('click', async () => {
       const baseInput = analyzer.prepareFiscalData();
 
       const partQuick   = parseFloat(byId('input-conjoint')?.value);
@@ -3110,7 +3110,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
 
-      const res = analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
+      const res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
         includeOpportunity: includeOpp
       });
 
