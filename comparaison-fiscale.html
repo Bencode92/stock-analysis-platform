@@ -3105,11 +3105,12 @@ delete base.apportPct;         // on neutralise tout % résiduel
 
   const res = await solvePriceForCF0(base, 0);
 
-  window.renderBreakeven?.({
-    mode : (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location',
-    price: res.price,
-    foot : `Apport figé : ${analyzer.formatCurrency(res.apport)} — Mensualité ≈ ${analyzer.formatCurrency(res.mensualite)}`
-  });
+window.renderBreakeven?.({
+  mode : (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location',
+  price: res.price,
+  foot : `Apport figé : ${analyzer.formatCurrency(res.apport)} — Cash-flow mensuel cible : 0 €`
+  // (optionnel) ajouter :  + ` — Mensualité estimée : ${Number.isFinite(res.mensualite) ? analyzer.formatCurrency(res.mensualite) : '—'}`
+});
 
   byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 } catch (e) {
@@ -3397,7 +3398,7 @@ const res = await window.solvePriceForCF0(baseInput, 0);
 renderBreakeven({
   mode : 'location',
   price: res.price,
-  foot : `CF≈ ${analyzer.formatCurrency(res.cfMensuel)}/mois`
+  foot : `Cash-flow mensuel cible : 0 €`
 });
 
       if (typeof goToStep === 'function') goToStep(3);
