@@ -1944,7 +1944,7 @@ function drawBuyRent () {
         // Helper d'entrée pour les solveurs d'équilibre (locatif & RP)
 function prepareBreakevenInput() {
   const src = analyzer.prepareFiscalData();
-  const b = typeof structuredClone === 'function'
+  const b = (typeof structuredClone === 'function')
     ? structuredClone(src)
     : JSON.parse(JSON.stringify(src));
 
@@ -1952,28 +1952,37 @@ function prepareBreakevenInput() {
   const hardPriceKeys = [
     'prixPaye','prix','price','prixAcquisition',
     'montantEmprunte','mensualite',
-    // parfois présents selon tes helpers :
     'capitalEmprunte','mensualiteCredit'
   ];
   hardPriceKeys.forEach(k => delete b[k]);
 
-  // 2) Supprimer tous les MONTANTS de frais/commissions calculés en €,
-  //    on ne garde que les taux/coeffs pour recalculer à chaque essai de prix.
+  // 2) Supprimer tous les montants en € (on garde taux/coeffs)
   const isAmountKey = (k) =>
     /montant|amount|euros?|total(?!Taux)(?!Rate)|en€|enEuros/i.test(k) ||
     /(frais|droits|honoraires|commission|garantie|publicite|caution).*?(montant|amount)/i.test(k);
+  Object.keys(b).forEach(k => { if (isAmountKey(k)) delete b[k]; });
 
-  Object.keys(b).forEach(k => {
-    if (isAmountKey(k)) delete b[k];
-  });
+  // ✅ 3) Garantir la présence de taux & durée sous les bons noms (sans casser l’existant)
+  b.taux  = Number(
+    b.taux ??
+    b.loanRate ??
+    b.tauxCredit ??
+    b.tauxAnnuel ??
+    b.tauxAnnuelPct ??
+    3.5
+  );
+  b.duree = Number(
+    b.duree ??
+    b.loanDuration ??
+    b.dureeAn ??
+    b.dureeAnnees ??
+    20
+  );
 
-  // 3) Clarifier l'intention côté solveur (si ton analyzer le lit)
+  // 4) Intentions pour le solveur
   b._breakeven = { recomputeFeesFromPrice: true, ignoreProvidedMensualite: true };
 
-  // 4) Apport : on considérera par défaut un APPORT € FIXE.
-  //    (Si tu veux un apport en %, passe plutôt b.apportPct et supprime b.apport.)
-  //    Ici on ne touche pas à b.apport : il reste un nombre fixe (en €).
-  //    Si tu utilises un champ "apportPct", assure-toi que le solveur le lise.
+  // 5) Apport : on conserve l’apport € fixe (si tu utilises un %: renseigner b.apportPct et supprimer b.apport)
   return b;
 }
 
@@ -2067,12 +2076,27 @@ function calcFraisGarantie(emprunte, params = {}) {
   const garantie = base * taux;
   return { garantie, total: garantie };
 }
-        // C) Une fonction computeAll pour un prix d’essai
+// C) Une fonction computeAll pour un prix d’essai — version robuste (taux/durée)
 function computeAllAtPrice(baseInput, trialPrice) {
   // 1) Figer l’apport et recalculer l’emprunt sur trialPrice
   const { price, apport, emprunte } = normalizeFinancingForSolve(baseInput, trialPrice);
 
- // 2) Frais dépendants du prix/emprunt
+  // ✅ taux & durée robustes (on accepte plusieurs alias)
+  const taux = Number(
+    baseInput.taux ??
+    baseInput.loanRate ??
+    baseInput.tauxCredit ??
+    baseInput.tauxAnnuel ??
+    baseInput.tauxAnnuelPct ?? 0
+  );
+  const duree = Number(
+    baseInput.duree ??
+    baseInput.loanDuration ??
+    baseInput.dureeAn ??
+    baseInput.dureeAnnees ?? 0
+  );
+
+  // 2) Frais dépendants du prix/emprunt
   let frais = { total: 0 };
   if ((baseInput.typeAchat || '').toLowerCase() === 'encheres') {
     frais = calcFraisEncheres(price, {
@@ -2083,9 +2107,9 @@ function computeAllAtPrice(baseInput, trialPrice) {
       emolumentsTranche3   : baseInput.emolumentsTranche3,
       emolumentsTranche4   : baseInput.emolumentsTranche4,
       honorairesAvocatCoef : baseInput.honorairesAvocatCoef,
-      tvaHonoraires        : baseInput.tvaHonoraires,
+      tvaHonoraires        : baseInput.tvaHonoroires ?? baseInput.tvaHonoraires, // tolère coquille éventuelle
       publiciteFonciere    : baseInput.publiciteFonciere,
-      honorairesAvocat     : baseInput.honorairesAvocat, // montant fixe en plus si saisi
+      honorairesAvocat     : baseInput.honorairesAvocat,
       fraisFixes           : baseInput.fraisFixes,
       avocatPorterEnchere  : baseInput.avocatPorterEnchere,
       suiviDossier         : baseInput.suiviDossier,
@@ -2100,46 +2124,45 @@ function computeAllAtPrice(baseInput, trialPrice) {
   // Frais de garantie toujours sur l'EMPRUNTÉ
   const Fgar = calcFraisGarantie(emprunte, baseInput);
 
-  // 3) Mensualité recalculée (⚠️ utilise calcMensualite de ton fichier)
-  const m = calcMensualite(emprunte, baseInput.taux, baseInput.duree);
+  // 3) Mensualité recalculée avec les valeurs robustes
+  const m = calcMensualite(emprunte, taux, duree);
 
-  // 4) Charges récurrentes (constantes pré-calculées)
+  // 4) Charges récurrentes
   const chargesMensuelles =
-      (Number(baseInput.chargesCoproNonRecup) || 0)
-    + (Number(baseInput.assurancePNO) || 0)
-    + (Number(baseInput.entretienAnnuel) || 0) / 12
-    + 0; // + gestion locative si % * loyer HC etc. (à brancher si besoin)
+    (Number(baseInput.chargesCoproNonRecup) || 0) +
+    (Number(baseInput.assurancePNO) || 0) +
+    ((Number(baseInput.entretienAnnuel) || 0) / 12);
 
   // 5) Loyer net perçu (vacance, gestion)
-  const loyerHC = Number(baseInput.loyerActuel) || 0;
-  const vacRate = (Number(baseInput.vacanceLocative) || 0) / 100;
+  const loyerHC  = Number(baseInput.loyerActuel) || 0;
+  const vacRate  = (Number(baseInput.vacanceLocative)   || 0) / 100;
   const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
   const loyerAnnuelNet = loyerHC * 12 * (1 - vacRate) * (1 - gestRate);
 
-  // 6) (Optionnel) Intérêts mensuels approximatifs si tu veux tracer
-  const interetsMensuel = emprunte * ((Number(baseInput.taux) || 0) / 100 / 12);
+  // 6) Intérêts mensuels (indicatif)
+  const interetsMensuel = emprunte * ((Number(taux) || 0) / 100 / 12);
 
   // 7) Cash-flow mensuel (locatif)
   const cfMensuel =
       (loyerAnnuelNet / 12)
-    - m
+    - (Number.isFinite(m) ? m : 0)
     - chargesMensuelles
     - ((Number(baseInput.taxeFonciere) || 0) / 12);
 
-  // 8) CF0 (cash out initial) — basé sur les frais calculés ci-dessus
+  // 8) CF0 (cash out initial)
   const cf0 = -apport - frais.total - Fgar.total - (Number(baseInput.travaux) || 0);
 
   return {
     price, apport, emprunte,
-    frais: { ...frais, ...Fgar }, // conserve la structure avec total, etc.
+    frais: { ...frais, ...Fgar },
     mensualite: m,
-    interetsMensuel, // utile en debug
+    interetsMensuel,
     cfMensuel,
     cf0
   };
-} 
+}
 
-// (optionnel) l’exposer globalement
+// (optionnel) exposer globalement
 window.computeAllAtPrice = computeAllAtPrice;
 
 
@@ -2147,23 +2170,48 @@ function solvePriceForCF0(baseInput, targetCF = 0) {
   let lo = 10_000;
   let hi = 2_000_000;
 
-  if ((baseInput.apport || 0) >= hi) hi = (baseInput.apport * 2);
+  // si l’apport dépasse hi, on élargit
+  if ((baseInput.apport || 0) >= hi) hi = baseInput.apport * 2;
 
-  for (let iter = 0; iter < 60; iter++) {
-    const mid = (lo + hi) / 2;
-    const r = computeAllAtPrice(baseInput, mid);
-    const diff = r.cfMensuel - targetCF;
+  // Fonction de coût
+  const f = (p) => {
+    const r = computeAllAtPrice(baseInput, p);
+    return (r && Number.isFinite(r.cfMensuel)) ? (r.cfMensuel - targetCF) : NaN;
+  };
 
-    if (Math.abs(diff) < 1e-2) return r; // convergé
-    if (diff > 0) {
-      lo = mid;    // CF > 0 → prix trop bas → on monte
-    } else {
-      hi = mid;    // CF < 0 → prix trop haut → on baisse
-    }
+  // Première évaluation
+  let flo = f(lo), fhi = f(hi);
+
+  // Si valeurs non finies → poser des valeurs par défaut pour taux/durée et réessayer
+  if (!Number.isFinite(flo) || !Number.isFinite(fhi)) {
+    baseInput.taux  = Number(baseInput.taux  ?? baseInput.loanRate      ?? 3.5);
+    baseInput.duree = Number(baseInput.duree ?? baseInput.loanDuration  ?? 20);
+    flo = f(lo); fhi = f(hi);
   }
+
+  // S’il n’y a pas de changement de signe, on étend hi progressivement
+  let guard = 0;
+  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < 30) {
+    hi *= 1.5;
+    fhi = f(hi);
+  }
+
+  // Bisection
+  for (let iter = 0; iter < 60; iter++) {
+    const mid  = (lo + hi) / 2;
+    const diff = f(mid);
+
+    if (!Number.isFinite(diff)) { hi = mid; continue; } // ✅ évite NaN
+    if (Math.abs(diff) < 1e-2)  return computeAllAtPrice(baseInput, mid);
+
+    if (diff > 0) lo = mid; else hi = mid;
+  }
+
+  // Retourne le plus proche si non convergé
   const rLo = computeAllAtPrice(baseInput, lo);
   const rHi = computeAllAtPrice(baseInput, hi);
-  return Math.abs(rLo.cfMensuel - targetCF) < Math.abs(rHi.cfMensuel - targetCF) ? rLo : rHi;
+  return (Math.abs((rLo.cfMensuel ?? Infinity) - targetCF) <
+          Math.abs((rHi.cfMensuel ?? Infinity) - targetCF)) ? rLo : rHi;
 }
 
 // 🔓 rendre dispo globalement
