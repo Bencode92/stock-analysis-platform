@@ -1948,6 +1948,24 @@ function prepareBreakevenInput() {
     ? structuredClone(src)
     : JSON.parse(JSON.stringify(src));
 
+  // 🔹 AJOUT ICI — garantir loyerActuel + garde-fous numériques
+  b.loyerActuel = Number(
+    b.loyerActuel ??
+    b.loyerHC ??
+    b.monthlyRent ??
+    b.loyer ??
+    (b.loyerCC != null
+      ? b.loyerCC - (Number(b.monthlyCharges) || 0)
+      : undefined) ??
+    (window.propertyData ? window.propertyData.loyerActuel : undefined)
+  ) || 0;
+
+  b.taxeFonciere         = Number(b.taxeFonciere)         || 0;
+  b.assurancePNO         = Number(b.assurancePNO)         || 0;
+  b.chargesCoproNonRecup = Number(b.chargesCoproNonRecup) || 0;
+  b.entretienAnnuel      = Number(b.entretienAnnuel)      || 0;
+  b.fraisBancairesCompte = Number(b.fraisBancairesCompte) || 0;
+
   // 1) Enlever tout ce qui fige le prix/financement actuel
   const hardPriceKeys = [
     'prixPaye','prix','price','prixAcquisition',
@@ -2148,7 +2166,15 @@ function computeAllAtPrice(baseInput, trialPrice) {
       assuranceEmprunteur;
 
   // 6) Loyer net perçu (vacance, gestion)
-  const loyerHC  = Number(baseInput.loyerActuel) || 0;
+  const loyerHC = Number(
+  baseInput.loyerActuel ??
+  baseInput.loyerHC ??
+  baseInput.monthlyRent ??
+  baseInput.loyer ??
+  (baseInput.loyerCC != null
+     ? baseInput.loyerCC - (Number(baseInput.monthlyCharges) || 0)
+     : undefined)
+) || 0;
   const vacRate  = (Number(baseInput.vacanceLocative)     || 0) / 100;
   const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
   const loyerAnnuelNet = loyerHC * 12 * (1 - vacRate) * (1 - gestRate);
@@ -2179,11 +2205,15 @@ function computeAllAtPrice(baseInput, trialPrice) {
 // (optionnel) exposer globalement
 window.computeAllAtPrice = computeAllAtPrice;
 
-
-
 function solvePriceForCF0(baseInput, targetCF = 0) {
   let lo = 10_000;
   let hi = 2_000_000;
+
+  // ✅ Sanity check pour éviter le "10000" silencieux
+  const sanity = computeAllAtPrice(baseInput, lo);
+  if (!Number.isFinite(sanity.cfMensuel)) {
+    throw new Error("Entrées incomplètes pour le calcul du cash-flow (vérifie le loyer, durée, taux, charges…).");
+  }
 
   // si l’apport dépasse hi, on élargit
   if ((baseInput.apport || 0) >= hi) hi = baseInput.apport * 2;
@@ -2192,6 +2222,8 @@ function solvePriceForCF0(baseInput, targetCF = 0) {
   const f = (p) => {
     const r = computeAllAtPrice(baseInput, p);
     return (r && Number.isFinite(r.cfMensuel)) ? (r.cfMensuel - targetCF) : NaN;
+    // Optionnel : tu peux aussi remonter une erreur ici si tu veux être strict
+    // if (!r || !Number.isFinite(r.cfMensuel)) throw new Error("Entrées incomplètes…");
   };
 
   // Première évaluation
@@ -2199,8 +2231,8 @@ function solvePriceForCF0(baseInput, targetCF = 0) {
 
   // Si valeurs non finies → poser des valeurs par défaut pour taux/durée et réessayer
   if (!Number.isFinite(flo) || !Number.isFinite(fhi)) {
-    baseInput.taux  = Number(baseInput.taux  ?? baseInput.loanRate      ?? 3.5);
-    baseInput.duree = Number(baseInput.duree ?? baseInput.loanDuration  ?? 20);
+    baseInput.taux  = Number(baseInput.taux  ?? baseInput.loanRate     ?? 3.5);
+    baseInput.duree = Number(baseInput.duree ?? baseInput.loanDuration ?? 20);
     flo = f(lo); fhi = f(hi);
   }
 
