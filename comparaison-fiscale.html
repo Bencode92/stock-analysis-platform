@@ -1948,41 +1948,46 @@ function prepareBreakevenInput() {
     ? structuredClone(src)
     : JSON.parse(JSON.stringify(src));
 
-  // 1) Supprimer tout ce qui fige le prix/financement courant
+  // 1) Enlever tout ce qui fige le prix/financement actuel
   const hardPriceKeys = [
     'prixPaye','prix','price','prixAcquisition',
-    'montantEmprunte','mensualite',
-    'capitalEmprunte','mensualiteCredit'
+    'montantEmprunte','mensualite','capitalEmprunte','mensualiteCredit'
   ];
   hardPriceKeys.forEach(k => delete b[k]);
 
-  // 2) Supprimer tous les montants en € (on garde taux/coeffs)
+  // 2) Ne PAS supprimer ces montants en € (récurrents mensuels/annuels utiles au CF)
+  const keepRecurringEuro = new Set([
+    'taxeFonciere',          // €/an
+    'assurancePNO',          // €/mois
+    'chargesCoproNonRecup',  // €/mois
+    'entretienAnnuel',       // €/an
+    'fraisBancairesCompte',  // €/an → sera /12
+    'monthlyCharges'         // charges récupérables (utile côté RP / widget)
+  ]);
+
+  // 3) Supprimer les autres montants en € (one-shot ou calculés à partir du prix)
   const isAmountKey = (k) =>
     /montant|amount|euros?|total(?!Taux)(?!Rate)|en€|enEuros/i.test(k) ||
     /(frais|droits|honoraires|commission|garantie|publicite|caution).*?(montant|amount)/i.test(k);
-  Object.keys(b).forEach(k => { if (isAmountKey(k)) delete b[k]; });
 
-  // ✅ 3) Garantir la présence de taux & durée sous les bons noms (sans casser l’existant)
-  b.taux  = Number(
-    b.taux ??
-    b.loanRate ??
-    b.tauxCredit ??
-    b.tauxAnnuel ??
-    b.tauxAnnuelPct ??
-    3.5
+  Object.keys(b).forEach(k => {
+    if (!keepRecurringEuro.has(k) && isAmountKey(k)) {
+      delete b[k];
+    }
+  });
+
+  // 4) Normaliser taux & durée (robuste aux alias)
+  b.taux = Number(
+    b.taux ?? b.loanRate ?? b.tauxCredit ?? b.tauxAnnuel ?? b.tauxAnnuelPct ?? 3.5
   );
   b.duree = Number(
-    b.duree ??
-    b.loanDuration ??
-    b.dureeAn ??
-    b.dureeAnnees ??
-    20
+    b.duree ?? b.loanDuration ?? b.dureeAn ?? b.dureeAnnees ?? 20
   );
 
-  // 4) Intentions pour le solveur
+  // 5) Intentions pour le solveur
   b._breakeven = { recomputeFeesFromPrice: true, ignoreProvidedMensualite: true };
 
-  // 5) Apport : on conserve l’apport € fixe (si tu utilises un %: renseigner b.apportPct et supprimer b.apport)
+  // On laisse l'apport en € (si tu utilises un % ailleurs, gère-le au moment du solve)
   return b;
 }
 
@@ -2006,8 +2011,7 @@ function calcFraisAcquisition(price, params = {}) {
   const p = Number(price) || 0;
   const notaire    = ((Number(params.fraisNotaireTaux) || 0) / 100) * p;
   const commission = ((Number(params.commissionImmo)   || 0) / 100) * p;
-  const fraisFixes = (Number(params.fraisBancairesDossier) || 0)
-                   + (Number(params.fraisBancairesCompte)  || 0);
+  const fraisFixes = (Number(params.fraisBancairesDossier) || 0);
   return {
     notaire,
     commission,
@@ -2076,7 +2080,7 @@ function calcFraisGarantie(emprunte, params = {}) {
   const garantie = base * taux;
   return { garantie, total: garantie };
 }
-// C) Une fonction computeAll pour un prix d’essai — version robuste (taux/durée)
+// C) computeAllAtPrice — inclut assurance emprunteur + tenue de compte (/12) dans le CF mensuel
 function computeAllAtPrice(baseInput, trialPrice) {
   // 1) Figer l’apport et recalculer l’emprunt sur trialPrice
   const { price, apport, emprunte } = normalizeFinancingForSolve(baseInput, trialPrice);
@@ -2107,7 +2111,7 @@ function computeAllAtPrice(baseInput, trialPrice) {
       emolumentsTranche3   : baseInput.emolumentsTranche3,
       emolumentsTranche4   : baseInput.emolumentsTranche4,
       honorairesAvocatCoef : baseInput.honorairesAvocatCoef,
-      tvaHonoraires        : baseInput.tvaHonoroires ?? baseInput.tvaHonoraires, // tolère coquille éventuelle
+      tvaHonoraires        : baseInput.tvaHonoroires ?? baseInput.tvaHonoraires,
       publiciteFonciere    : baseInput.publiciteFonciere,
       honorairesAvocat     : baseInput.honorairesAvocat,
       fraisFixes           : baseInput.fraisFixes,
@@ -2124,32 +2128,42 @@ function computeAllAtPrice(baseInput, trialPrice) {
   // Frais de garantie toujours sur l'EMPRUNTÉ
   const Fgar = calcFraisGarantie(emprunte, baseInput);
 
-  // 3) Mensualité recalculée avec les valeurs robustes
+  // 3) Mensualité recalculée
   const m = calcMensualite(emprunte, taux, duree);
 
-  // 4) Charges récurrentes
-  const chargesMensuelles =
-    (Number(baseInput.chargesCoproNonRecup) || 0) +
-    (Number(baseInput.assurancePNO) || 0) +
-    ((Number(baseInput.entretienAnnuel) || 0) / 12);
+  // 4) 🔹 Récurrents supplémentaires
+  //    - tenue de compte en €/an → €/mois
+  const bankAccountMonthly = (Number(baseInput.fraisBancairesCompte) || 0) / 12;
+  //    - assurance emprunteur en %/an du capital emprunté → €/mois
+  //      (ajoute un champ optionnel `tauxAssuranceEmprunteur` dans le formulaire, ex. 0.30)
+  const tauxAssur = (Number(baseInput.tauxAssuranceEmprunteur) || 0) / 100;
+  const assuranceEmprunteur = emprunte * tauxAssur / 12;
 
-  // 5) Loyer net perçu (vacance, gestion)
+  // 5) Charges récurrentes complètes (mensuelles)
+  const chargesMensuelles =
+      (Number(baseInput.chargesCoproNonRecup) || 0) +
+      (Number(baseInput.assurancePNO) || 0) +
+      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
+      bankAccountMonthly +
+      assuranceEmprunteur;
+
+  // 6) Loyer net perçu (vacance, gestion)
   const loyerHC  = Number(baseInput.loyerActuel) || 0;
-  const vacRate  = (Number(baseInput.vacanceLocative)   || 0) / 100;
+  const vacRate  = (Number(baseInput.vacanceLocative)     || 0) / 100;
   const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
   const loyerAnnuelNet = loyerHC * 12 * (1 - vacRate) * (1 - gestRate);
 
-  // 6) Intérêts mensuels (indicatif)
+  // 7) Intérêts mensuels (indicatif)
   const interetsMensuel = emprunte * ((Number(taux) || 0) / 100 / 12);
 
-  // 7) Cash-flow mensuel (locatif)
+  // 8) Cash-flow mensuel (locatif)
   const cfMensuel =
       (loyerAnnuelNet / 12)
     - (Number.isFinite(m) ? m : 0)
     - chargesMensuelles
     - ((Number(baseInput.taxeFonciere) || 0) / 12);
 
-  // 8) CF0 (cash out initial)
+  // 9) CF0 (cash out initial)
   const cf0 = -apport - frais.total - Fgar.total - (Number(baseInput.travaux) || 0);
 
   return {
@@ -2164,6 +2178,7 @@ function computeAllAtPrice(baseInput, trialPrice) {
 
 // (optionnel) exposer globalement
 window.computeAllAtPrice = computeAllAtPrice;
+
 
 
 function solvePriceForCF0(baseInput, targetCF = 0) {
