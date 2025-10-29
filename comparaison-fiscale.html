@@ -1940,6 +1940,24 @@ function drawBuyRent () {
         let marketData = null;
         let propertyData = null;
         let analyzer = null;
+// Helper d'entrée pour les solveurs d'équilibre (locatif & RP)
+function prepareBreakevenInput() {
+  const src = analyzer.prepareFiscalData();
+  const b = typeof structuredClone === 'function'
+    ? structuredClone(src)
+    : JSON.parse(JSON.stringify(src));
+
+  // Neutraliser les champs qui figent le prix/financement actuel
+  delete b.prixPaye;
+  delete b.prix;
+  delete b.price;
+  delete b.prixAcquisition;
+  delete b.montantEmprunte;
+  delete b.mensualite;
+
+  // On garde le reste (taux, durée, apport, frais, loyers, charges, régime, partner, etc.)
+  return b;
+}
         
         // Table de correspondance avec ID pour plus de robustesse
 const REGIME_LABELS = {
@@ -2760,7 +2778,7 @@ try {
   if (typeof renderBreakeven !== 'function') {
     throw new Error('renderBreakeven manquant');
   }
-  const baseInput = analyzer.prepareFiscalData();
+  const baseInput = prepareBreakevenInput();
   const mode = document.getElementById('occupationMode')?.value;
 
   // Résultat selon le mode
@@ -3076,21 +3094,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnLoc = byId('btn-breakeven-locatif');
   const btnRP  = byId('btn-breakeven-rp');
 
-  // Locatif → CF mensuel = 0
+  /* ─────────────────────────────────────────
+     LOCATIF → Cash-flow mensuel cible = 0 €
+  ───────────────────────────────────────── */
   if (btnLoc && !btnLoc.__wired) {
     btnLoc.addEventListener('click', async () => {
-      const baseInput = analyzer.prepareFiscalData();
+      const baseInput  = prepareBreakevenInput(); // ← ici
       const preferBest = !!byId('prefer-best')?.checked;
-      const regimeId = preferBest
+      const regimeId   = preferBest
         ? null
         : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
 
       const res = await analyzer.solvePriceForTargetCF(baseInput, 0, { preferBest, regimeId });
 
       renderBreakeven({
-        mode: 'location',
+        mode : 'location',
         price: res.price,
-        foot: `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`
+        foot : `Régime utilisé : ${res.regimeNom} — CF≈ ${analyzer.formatCurrency(res.cashflowMensuel)}/mois`
       });
 
       if (typeof goToStep === 'function') goToStep(3);
@@ -3099,25 +3119,30 @@ document.addEventListener('DOMContentLoaded', () => {
     btnLoc.__wired = true;
   }
 
-  // Résidence principale → coût net = 0
+  /* ─────────────────────────────────────────
+     RÉSIDENCE PRINCIPALE → Coût net cible = 0 €
+  ───────────────────────────────────────── */
   if (btnRP && !btnRP.__wired) {
     btnRP.addEventListener('click', async () => {
-      const baseInput = analyzer.prepareFiscalData();
+      const baseInput = prepareBreakevenInput(); // ← ici
 
       const partQuick   = parseFloat(byId('input-conjoint')?.value);
       const partSection = parseFloat(byId('partnerContribution')?.value);
-      const part = Number.isFinite(partQuick) ? partQuick : (Number(partSection) || 0);
+      const part        = Number.isFinite(partQuick) ? partQuick : (Number(partSection) || 0);
 
+      // “Inclure loyer d’opportunité” si la case existe
       const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
 
-      const res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
-        includeOpportunity: includeOpp
-      });
+const includeOpp = !!byId('rp-inclure-opportunite')?.checked || true; // true par défaut
+res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
+  includeOpportunity: includeOpp
+});
+footText = `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`;
 
       renderBreakeven({
-        mode: 'residence',
+        mode : 'residence',
         price: res.price,
-        foot: `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`
+        foot : `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`
       });
 
       if (typeof goToStep === 'function') goToStep(3);
@@ -3126,10 +3151,16 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRP.__wired = true;
   }
 
-  // Recalcul auto selon le mode d’occupation sélectionné
+  /* ─────────────────────────────────────────
+     Auto selon le mode sélectionné
+  ───────────────────────────────────────── */
   const occ = byId('occupationMode');
   const computeAuto = () => {
-    if (occ?.value === 'residence') btnRP?.click(); else btnLoc?.click();
+    if (occ?.value === 'residence') {
+      btnRP?.click();
+    } else {
+      btnLoc?.click();
+    }
   };
   if (occ && !occ.__wired) {
     occ.addEventListener('change', computeAuto);
