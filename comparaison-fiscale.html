@@ -1957,6 +1957,33 @@ function drawBuyRent () {
     <script src="./immo-simulation.js"></script>
     <script src="./fiscal-comparison-enhanced.js"></script>
     <script src="./market-fiscal-analysis.js"></script>
+    <script>
+// f(p) exact = cash-flow net MENSUEL APRÈS impôts via le moteur complet
+async function f_apresImpots_viaAnalyzer(trialPrice, baseInput, regimeCode) {
+  // 1) clone + imposer le prix testé
+  const data = { ...(baseInput || {}), prixPaye: Number(trialPrice) || 0 };
+
+  // (recommandé) garanties de cohérence coté financement
+  data.apportMode = 'amount';          // on fige l'apport en €
+  delete data.apportPct;               // pas d'apport en %
+  if (typeof data.financerFrais === 'undefined') data.financerFrais = true;
+  data.assuranceIncluseDansTaux = true; // si ton taux inclut déjà l'assurance
+  data.tauxAssuranceEmprunteur  = 0;
+
+  // 2) lancer le MÊME moteur que l’affichage
+  const out = await analyzer.performCompleteAnalysis(data);
+  const fiscal = out?.fiscal || [];
+  if (!fiscal.length) return NaN;
+
+  // 3) cibler le régime voulu (fallback = première ligne)
+  const code  = (regimeCode || '').toLowerCase();
+  const row   = fiscal.find(r => (r.id || '').toLowerCase().includes(code)) || fiscal[0];
+
+  // 4) moteur renvoie l’annuel → convertir en mensuel
+  const cfM = (row?.cashflowNetAnnuel ?? 0) / 12;
+  return cfM; // la bissection résout cfM - targetCF = 0
+}
+</script>
     
     <script>
         // Variables globales
@@ -2518,12 +2545,21 @@ window.calcFraisEncheres    = calcFraisEncheres;
  *  - Soustrait une estimation d’impôt mensuel selon le régime choisi
  */
 function solvePriceForCF0_apresImpots(baseInput, targetCF = 0, opts = {}) {
-  const apportNum  = Number(baseInput.apport) || 0;
-  const regimeCode = opts.regime || baseInput.regimeActuel || 'nu_micro';
+  const {
+    regime: regimeOpt,
+    minPrice = 10_000,
+    tol = 1e-2,
+    maxIter = 60,
+    expandFactor = 1.5,
+    maxExpand = 30,
+  } = opts;
+
+  const apportNum  = Math.max(0, Number(baseInput?.apport) || 0);
+  const regimeCode = regimeOpt || baseInput?.regimeActuel || 'nu_micro';
   const taxFn      = getTaxEstimator(regimeCode);
 
   // Bornes initiales
-  let lo = Math.max(apportNum + 1000, 10_000);
+  let lo = Math.max(apportNum + 1000, minPrice);
   let hi = Math.max(lo * 3, 2_000_000);
 
   // Sanity check
@@ -2532,33 +2568,32 @@ function solvePriceForCF0_apresImpots(baseInput, targetCF = 0, opts = {}) {
     throw new Error("Entrées incomplètes pour le CF (taux, durée, loyer, charges…).");
   }
 
-  // ⚡ Fonction "après impôts" dépendante du prix p via r = computeAllAtPrice(...)
+  // f(p) = CF_après_impôts(p) - targetCF via approximation d'impôt
   const f = (p) => {
-    const r = computeAllAtPrice(baseInput, p); // CF AVANT impôts
+    const r = computeAllAtPrice(baseInput, p);
     if (!r || !Number.isFinite(r.cfMensuel)) return NaN;
-    const taxM = Number(taxFn(baseInput, r)) || 0; // impôt mensuel dépendant de r
-    const cfApres = r.cfMensuel - taxM;
-    return cfApres - targetCF;
+    const taxM = Number(taxFn(baseInput, r)) || 0;
+    return (r.cfMensuel - taxM) - targetCF;
   };
 
   // Étendre hi jusqu’à changement de signe
   let flo = f(lo), fhi = f(hi);
   let guard = 0;
-  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < 30) {
-    hi *= 1.5;
+  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < maxExpand) {
+    hi *= expandFactor;
     fhi = f(hi);
   }
 
   // Bisection
-  for (let iter = 0; iter < 60; iter++) {
+  for (let iter = 0; iter < maxIter; iter++) {
     const mid  = (lo + hi) / 2;
     const diff = f(mid);
     if (!Number.isFinite(diff)) { hi = mid; continue; }
-    if (Math.abs(diff) < 1e-2)  return computeAllAtPrice(baseInput, mid);
+    if (Math.abs(diff) < tol)   return computeAllAtPrice(baseInput, mid);
     if (diff > 0) lo = mid; else hi = mid;
   }
 
-  // Retourne le plus proche de la cible (après impôts)
+  // Retourner l’extrémité la plus proche
   const rLo  = computeAllAtPrice(baseInput, lo);
   const rHi  = computeAllAtPrice(baseInput, hi);
   const taxLo = Number(taxFn(baseInput, rLo)) || 0;
@@ -2571,6 +2606,75 @@ function solvePriceForCF0_apresImpots(baseInput, targetCF = 0, opts = {}) {
 
 // Expose si besoin
 window.solvePriceForCF0_apresImpots = solvePriceForCF0_apresImpots;
+
+
+/**
+ * Solveur “cash-flow APRÈS impôts = targetCF” (EXACT, async)
+ * - Utilise le moteur complet via f_apresImpots_viaAnalyzer(p, baseInput, regimeCode)
+ * - Bisection robuste + extension automatique des bornes
+ * - Retourne l’objet computeAllAtPrice(...) au prix trouvé (plug-and-play avec ton rendu)
+ */
+async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts = {}) {
+  const {
+    regime: regimeOpt,
+    minPrice = 10_000,
+    tol = 1e-2,
+    maxIter = 60,
+    expandFactor = 1.5,
+    maxExpand = 30,
+  } = opts;
+
+  const regimeCode = (regimeOpt || baseInput?.regimeActuel || 'nu_micro');
+
+  // Bornes initiales robustes
+  const apport = Math.max(0, Number(baseInput?.apport) || 0);
+  let lo = Math.max(apport + 1000, minPrice);
+  let hi = Math.max(lo * 3, 2_000_000);
+
+  // Petite mémo pour éviter des recalculs identiques
+  const cache = new Map();
+  const F = async (p) => {
+    const key = Math.round(p); // granularité 1€
+    if (cache.has(key)) return cache.get(key);
+    const cf = await f_apresImpots_viaAnalyzer(p, baseInput, regimeCode);
+    const val = (Number.isFinite(cf) ? cf - targetCF : NaN);
+    cache.set(key, val);
+    return val;
+  };
+
+  // Évalue aux bornes
+  let flo = await F(lo);
+  let fhi = await F(hi);
+
+  // Étend hi jusqu’à changement de signe (ou plafond d’extensions)
+  let guard = 0;
+  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < maxExpand) {
+    hi *= expandFactor;
+    fhi = await F(hi);
+  }
+
+  // Bisection
+  for (let i = 0; i < maxIter; i++) {
+    const mid  = (lo + hi) / 2;
+    const fmid = await F(mid);
+
+    if (!Number.isFinite(fmid)) { hi = mid; continue; }
+    if (Math.abs(fmid) < tol) {
+      return computeAllAtPrice(baseInput, mid);
+    }
+    if (fmid > 0) lo = mid; else hi = mid;
+  }
+
+  // Fallback : renvoyer l’extrémité la plus proche de la cible (via moteur exact pour l’évaluation)
+  const [rLoCF, rHiCF] = await Promise.all([
+    f_apresImpots_viaAnalyzer(lo, baseInput, regimeCode),
+    f_apresImpots_viaAnalyzer(hi, baseInput, regimeCode)
+  ]);
+  const bestP = (Math.abs(rLoCF - targetCF) < Math.abs(rHiCF - targetCF)) ? lo : hi;
+  return computeAllAtPrice(baseInput, bestP);
+}
+
+window.solvePriceForCF0_apresImpots_exact = solvePriceForCF0_apresImpots_exact;
 // ---- utils ----
 function debounce(fn, wait = 200) {
   let t;
@@ -2600,7 +2704,7 @@ const recomputeBreakeven = debounce(async function () {
       document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
 
     // 2) solve : cash-flow cible = 0 € APRÈS impôts (approx)
-    const res = await solvePriceForCF0_apresImpots(base, 0, { regime: regimeCode });
+    const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
 
     // 3) rendu
     const mode =
@@ -3491,7 +3595,7 @@ try {
     (document.querySelector('input[name="regime-actuel"]:checked')?.value) ||
     base.regimeActuel || 'nu_micro';
 
-  const res = await solvePriceForCF0_apresImpots(base, 0, { regime: regimeCode });
+ const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
 
   window.renderBreakeven?.({
     mode : (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location',
@@ -3774,7 +3878,7 @@ delete baseInput.apportPct;
         : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
 
 const regimeCode = document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
-const res = await window.solvePriceForCF0_apresImpots(baseInput, 0, { regime: regimeCode });
+const res = await window.solvePriceForCF0_apresImpots_exact(baseInput, 0, { regime: regimeCode });
 
 renderBreakeven({
   mode : 'location',
