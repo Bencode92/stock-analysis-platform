@@ -2666,10 +2666,10 @@ async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts 
   const regimeCode = (regimeOpt || baseInput?.regimeActuel || 'nu_micro');
 
   // Bornes initiales robustes
-  const apport = Math.max(0, Number(baseInput?.apport) || 0);
-  let lo = Math.max(apport + 1000, minPrice);
-  let hi = Math.max(lo * 3, 2_000_000);
-
+const apport = Math.max(0, Number(baseInput?.apport) || 0);
+// tolérance de 1 € ou 0,1% de l’apport (le plus grand des deux)
+const eps = Math.max(1, Math.ceil(0.001 * apport));
+let lo = Math.max(apport + eps, minPrice);
   // Petite mémo pour éviter des recalculs identiques
   const cache = new Map();
   const F = async (p) => {
