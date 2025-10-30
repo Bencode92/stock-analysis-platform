@@ -2357,19 +2357,6 @@ function _resolveTauxGlobaux(baseInput) {
   const PS  = 0.172;
   return { TMI, PS };
 }
-
-/** Micro-foncier : abattement 30% sur loyers encaissés (HC, après vacance/gestion) */
-function estTaxMensuelleMicroFoncier(baseInput) {
-  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-  const baseImposableMensuelle = loyersEncaisses * 0.70; // 30% d’abattement
-
-  return baseImposableMensuelle * (TMI + PS);
-}
-
 /** LMNP micro-BIC : abattement 50% (cas standard meublé) */
 function estTaxMensuelleLmnpMicro(baseInput) {
   const { TMI, PS } = _resolveTauxGlobaux(baseInput);
@@ -3910,9 +3897,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
     <script>
-/* Utilitaires (ne pas redéclarer si déjà présents plus haut) */
-window.$    = window.$    || (sel => document.querySelector(sel));
-window.byId = window.byId || (id  => document.getElementById(id));
 
 /* 🎨 Renderer officiel — place-le AVANT le wiring des boutons */
 window.renderBreakeven = function ({ mode, price, foot }) {
@@ -3975,112 +3959,17 @@ window.renderBreakeven = function ({ mode, price, foot }) {
 
 /* ---- Wiring des boutons (après le renderer) ---- */
 document.addEventListener('DOMContentLoaded', () => {
-  const btnLoc = byId('btn-breakeven-locatif');
-  const btnRP  = byId('btn-breakeven-rp');
+  const byId = (id) => document.getElementById(id);
 
-  /* ─────────────────────────────────────────
-     LOCATIF → Cash-flow mensuel cible = 0 €
-  ───────────────────────────────────────── */
-if (btnLoc && !btnLoc.__wired) {
-  btnLoc.addEventListener('click', async () => {
-    try {
-      if (typeof prepareBreakevenInput !== 'function') {
-        throw new Error('prepareBreakevenInput() introuvable : vérifie l’ordre de chargement ou l’import.');
-      }
-
-      const baseInput = prepareBreakevenInput();
-
-      // 🧹 purge prix & mensualité
-      baseInput.apportMode = 'amount';
-      delete baseInput.apportPct;
-      delete baseInput.prixPaye;
-      delete baseInput.mensualite;
-
-      const preferBest = !!byId('prefer-best')?.checked;
-      const regimeCode = preferBest
-        ? null
-        : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
-
-      const res = await window.solvePriceForCF0_apresImpots_exact(
-        baseInput,
-        0,
-        { regime: regimeCode ?? 'nu_micro' }
-      );
-
-      renderBreakeven({
-        mode : 'location',
-        price: res?.price ?? 0,
-        foot : `Cash-flow cible : 0 € **après impôts** (approx ${(regimeCode ?? 'nu_micro').replace('_', ' ')})`
-      });
-
-      if (typeof goToStep === 'function') goToStep(3);
-      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (err) {
-      console.error('[Breakeven locatif] Erreur:', err);
-      alert('Une erreur est survenue lors du calcul. Ouvre la console pour les détails.');
-    }
-  });
-  btnLoc.__wired = true;
-}
-
-  /* ─────────────────────────────────────────
-     RÉSIDENCE PRINCIPALE → Coût net cible = 0 €
-  ───────────────────────────────────────── */
-if (btnRP && !btnRP.__wired) {
-  btnRP.addEventListener('click', async () => {
-    const baseInput = prepareBreakevenInput(); // ← ici
-
-    // 🧹 purge prix & mensualité
-    baseInput.apportMode = 'amount';
-    delete baseInput.apportPct;
-    delete baseInput.prixPaye;
-    delete baseInput.mensualite;
-
-    const partQuick   = parseFloat(byId('input-conjoint')?.value);
-    const partSection = parseFloat(byId('partnerContribution')?.value);
-    const part        = Number.isFinite(partQuick) ? partQuick : (Number(partSection) || 0);
-
-    // “Inclure loyer d’opportunité” si la case existe
-    const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
-
-    // Calcul du prix d’équilibre en RP
-    const res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
-      includeOpportunity: includeOpp
-    });
-
-    // Rendu (utilise la version attachée à window)
-    window.renderBreakeven?.({
-      mode : 'residence',
-      price: res.price,
-      foot : `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`
-    });
-
-    if (typeof goToStep === 'function') goToStep(3);
-    byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-  btnRP.__wired = true;
-}
-
-  /* ─────────────────────────────────────────
-     Auto selon le mode sélectionné
-  ───────────────────────────────────────── */
-  const occ = byId('occupationMode');
-  const computeAuto = () => {
-    if (occ?.value === 'residence') {
-      btnRP?.click();
-    } else {
-      btnLoc?.click();
-    }
+  // ─────────────────────────────────────────
+  // Helpers sûrs
+  // ─────────────────────────────────────────
+  const showSection3 = () => {
+    if (typeof window.goToStep === 'function') window.goToStep(3);
+    const s3 = byId('section-3');
+    if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-  if (occ && !occ.__wired) {
-    occ.addEventListener('change', computeAuto);
-    occ.__wired = true;
-  }
 
-  // ─────────────────────────────────────────────────────────
-  // B) Radios "régime actuel" & bouton "meilleur cash-flow"
-  // (affichage direct d’une synthèse sans relancer de calcul)
-  // ─────────────────────────────────────────────────────────
   window.REGIME_LABELS = window.REGIME_LABELS || {
     'nu_micro'  : { id: 'micro-foncier', label: 'Micro-foncier' },
     'nu_reel'   : { id: 'reel-foncier',  label: 'Location nue au réel' },
@@ -4089,8 +3978,6 @@ if (btnRP && !btnRP.__wired) {
     'lmp_reel'  : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
     'sci_is'    : { id: 'sci-is',        label: "SCI à l'IS" }
   };
-
-  // (facultatif) alias local sans redéfinir la map
   const REGIME_LABELS = window.REGIME_LABELS;
 
   const getResultsDiv = () => {
@@ -4121,50 +4008,16 @@ if (btnRP && !btnRP.__wired) {
       </div>
     `;
   };
-});
-const showSection3 = () => {
-  if (typeof window.goToStep === 'function') window.goToStep(3);
-  const s3 = byId('section-3');
-  if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
 
-  // Bouton "meilleur cash-flow" → affichage (sans calcul)
-  const bestBtn = document.getElementById('btn-best-cashflow');
-  if (bestBtn && !bestBtn.__wired2) {
-    bestBtn.addEventListener('click', () => {
-      const checked = document.querySelector('input[name="regime-actuel"]:checked');
-      const code = checked ? checked.value : 'nu_micro';
-      showSection3();
-      renderRegimeSummary(code, 'best');
-    });
-    bestBtn.__wired2 = true;
-  }
-
-  // Radios
-  document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
-    if (!r.__wired) {
-      r.addEventListener('change', (e) => {
-        // mémorise juste le choix (optionnel)
-        window.analyzer?.setSelectedRegime?.(e.target.value);
-        // pas de goToStep(3) ici
-        recomputeBreakeven(); // relance le calcul (CF ≈ 0 € après impôts)
-      });
-      r.__wired = true;
+  // Relance un calcul CF≈0€ selon l’occupation (fallback centralisé)
+  const recomputeBreakeven = () => {
+    const occ = byId('occupationMode');
+    if (occ?.value === 'residence') {
+      byId('btn-breakeven-rp')?.click();
+    } else {
+      byId('btn-breakeven-locatif')?.click();
     }
-  });
-}); 
-
-  // Bouton "meilleur cash-flow"
-  const bestBtn = byId('btn-best-cashflow');
-  if (bestBtn && !bestBtn.__wired) {
-    bestBtn.addEventListener('click', () => {
-      const checked = document.querySelector('input[name="regime-actuel"]:checked');
-      const code = checked ? checked.value : 'nu_micro';
-      showSection3();
-      renderRegimeSummary(code, 'best');
-    });
-    bestBtn.__wired = true;
-  }
+  };
 });
 </script>
 </body>
