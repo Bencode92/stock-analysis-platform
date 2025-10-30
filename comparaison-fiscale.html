@@ -8,10 +8,6 @@
   // Helpers globaux, à déclarer AVANT tout usage
   window.$    = window.$    || (sel => document.querySelector(sel));
   window.byId = window.byId || (id  => document.getElementById(id));
-   <script>
-    // Helpers globaux, à déclarer AVANT tout usage
-    window.$    = window.$    || (sel => document.querySelector(sel));
-    window.byId = window.byId || (id  => document.getElementById(id));
   </script>
 
   <!-- ⬇️ AJOUTE ICI : applyBreakevenPrice en global -->
@@ -4015,8 +4011,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* 🎨 Renderer officiel — place-le AVANT le wiring des boutons */
 window.renderBreakeven = function ({ mode, price, foot }) {
-  const pill = byId('breakeven-pill');
-  const card = byId('breakeven-result');
+  const pill = byId && typeof byId === 'function' ? byId('breakeven-pill') : document.getElementById('breakeven-pill');
+  const card = byId && typeof byId === 'function' ? byId('breakeven-result') : document.getElementById('breakeven-result');
   const isRP = (mode === 'residence');
 
   // Fallback de formatage si analyzer n'est pas prêt
@@ -4045,50 +4041,51 @@ window.renderBreakeven = function ({ mode, price, foot }) {
     pill.innerHTML = `<strong>${title} :</strong> ${fmtCurrency(price)}`;
   }
 
-
   // Carte détaillée (neutre)
-if (card) {
-  card.style.display = 'block'; // force l’affichage
-  card.classList.remove('low', 'high', 'average');
-  card.classList.add('average');
-  card.innerHTML = `
-    <div class="market-badge average">Cash-flow neutre</div>
-    <h3 style="margin:0 0 .5rem 0">${title}</h3>
-    <div class="metric-panel">
-      <div class="market-details">
-        <div class="market-metric">
-          <div class="market-metric-label">Prix d’achat cible</div>
-          <div class="market-metric-value">${fmtCurrency(price)}</div>
-          <div class="market-metric-comparison">Cash-flow mensuel ≈ 0 €</div>
+  if (card) {
+    card.style.display = 'block'; // force l’affichage
+    card.classList.remove('low', 'high', 'average');
+    card.classList.add('average');
+    card.innerHTML = `
+      <div class="market-badge average">Cash-flow neutre</div>
+      <h3 style="margin:0 0 .5rem 0">${title}</h3>
+      <div class="metric-panel">
+        <div class="market-details">
+          <div class="market-metric">
+            <div class="market-metric-label">Prix d’achat cible</div>
+            <div class="market-metric-value">${fmtCurrency(price)}</div>
+            <div class="market-metric-comparison">Cash-flow mensuel ≈ 0 €</div>
+          </div>
         </div>
       </div>
-    </div>
-    <p style="margin-top:12px;color:#94a3b8">${foot || ''}</p>
-    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-outline" onclick="goToStep(1)">
-        <i class="fas fa-edit"></i> Affiner les entrées
-      </button>
-      <button class="btn btn-outline" onclick="applyBreakevenPrice(${Math.round(price)})">
-        Utiliser ce prix
-      </button>
-    </div>
-  `;
+      <p style="margin-top:12px;color:#94a3b8">${foot || ''}</p>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline" onclick="goToStep(1)">
+          <i class="fas fa-edit"></i> Affiner les entrées
+        </button>
+        <button class="btn btn-outline" onclick="applyBreakevenPrice(${Math.round(price)})">
+          Utiliser ce prix
+        </button>
+      </div>
+    `;
   }
 };
 
 /* ---- Wiring des boutons (après le renderer) ---- */
 document.addEventListener('DOMContentLoaded', () => {
-  const byId = (id) => document.getElementById(id);
+  // Helpers sûrs (sans masquer la version globale)
+  const $id = (id) => (window.byId ? window.byId(id) : document.getElementById(id));
 
   // ─────────────────────────────────────────
-  // Helpers sûrs
+  // Navigation + accès section résultats
   // ─────────────────────────────────────────
   const showSection3 = () => {
     if (typeof window.goToStep === 'function') window.goToStep(3);
-    const s3 = byId('section-3');
+    const s3 = $id('section-3');
     if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // Libellés régimes (exposés globalement si besoin)
   window.REGIME_LABELS = window.REGIME_LABELS || {
     'nu_micro'  : { id: 'micro-foncier', label: 'Micro-foncier' },
     'nu_reel'   : { id: 'reel-foncier',  label: 'Location nue au réel' },
@@ -4100,9 +4097,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const REGIME_LABELS = window.REGIME_LABELS;
 
   const getResultsDiv = () => {
-    let results = byId('fiscal-comparison-results');
+    let results = $id('fiscal-comparison-results');
     if (!results) {
-      const host = byId('section-3') || document.body;
+      const host = $id('section-3') || document.body;
       results = document.createElement('div');
       results.id = 'fiscal-comparison-results';
       host.appendChild(results);
@@ -4130,11 +4127,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Relance un calcul CF≈0€ selon l’occupation (fallback centralisé)
   const recomputeBreakeven = () => {
-    const occ = byId('occupationMode');
+    const occ = $id('occupationMode');
     if (occ?.value === 'residence') {
-      byId('btn-breakeven-rp')?.click();
+      $id('btn-breakeven-rp')?.click();
     } else {
-      byId('btn-breakeven-locatif')?.click();
+      $id('btn-breakeven-locatif')?.click();
     }
   };
 });
