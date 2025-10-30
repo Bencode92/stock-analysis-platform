@@ -1461,7 +1461,31 @@ td.neutral {
 </div>
       </div>
 <!-- ⬆️ FIN NOUVEAU BLOC -->
+<script>
+// Flag global : a-t-on déjà exécuté une analyse fiscale ?
+window.__fiscalRan = window.__fiscalRan || false;
 
+document.addEventListener('DOMContentLoaded', () => {
+  // Purge d'anciens listeners éventuels
+  document.querySelectorAll('input[name="regime-actuel"]').forEach((oldEl) => {
+    const r = oldEl.cloneNode(true);
+    oldEl.replaceWith(r);
+
+    r.addEventListener('change', (e) => {
+      // 1) mémorise uniquement le choix
+      window.analyzer?.setSelectedRegime?.(e.target.value);
+
+      // 2) si on est déjà sur la section 3 ET qu'une analyse a déjà tourné → recalcul
+      if (window.currentStep === 3 && window.__fiscalRan) {
+        // recomputeBreakeven();        // léger
+        proceedToFiscalAnalysis();      // complet
+      }
+
+      // 3) sinon : ne rien faire
+    });
+  });
+});
+</script>
 <div class="continue-section">
   <button type="submit" class="btn-continue">
     Analyser mon investissement
@@ -1936,7 +1960,7 @@ function drawBuyRent () {
     
     <script>
         // Variables globales
-        let currentStep = 1;
+        window.currentStep = 1;
         let marketData = null;
         let propertyData = null;
         let analyzer = null;
@@ -2459,39 +2483,27 @@ const recomputeBreakeven = debounce(async function () {
     console.warn('Recompute breakeven error:', e);
   }
 }, 250);
-
-// ---- branchements (événements) ----
-function wireBreakevenRecompute() {
-  // 1) Changement de régime => on affiche la section résultats puis recalcul immédiat
-  document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
-    r.addEventListener('change', () => {
-      if (typeof goToStep === 'function') goToStep(3);
-      recomputeBreakeven();
-    });
-  });
-
-  // 2) Tout changement de champ “CF-sensible” => recalcul (input vs select)
-  [
+// ⚙️ Recalcul auto sur les champs "CF-sensibles" (hors radios)
+document.addEventListener('DOMContentLoaded', () => {
+  const ids = [
     'loanRate','loanDuration','monthlyRent','monthlyCharges',
     'vacanceLocative','gestionLocative','charges-copro-non-recup',
     'taxeFonciere','entretien-annuel','assurance-pno',
     'frais-bancaires-compte','apport','occupationMode',
-    // on garde aussi la part du conjoint si présente
     'partnerContribution'
-  ].forEach(id => {
+  ];
+
+  ids.forEach((id) => {
     const el = document.getElementById(id);
-    if (!el) return;
-    const evt = (el.tagName === 'SELECT') ? 'change' : 'input';
-    el.addEventListener(evt, recomputeBreakeven);
-    // sécurité : si c’est un input, on écoute aussi 'change'
-    if (evt === 'input') el.addEventListener('change', recomputeBreakeven);
+    if (!el || el.__cfWired) return; // évite les doublons
+
+    const mainEvt = (el.tagName === 'SELECT') ? 'change' : 'input';
+    el.addEventListener(mainEvt, recomputeBreakeven);
+    if (mainEvt === 'input') el.addEventListener('change', recomputeBreakeven);
+
+    el.__cfWired = true;
   });
-}
-
-// Appel à l'init (une seule fois)
-document.addEventListener('DOMContentLoaded', wireBreakevenRecompute);
-
-
+});
         // Nouvelles fonctions pour le widget Buy vs Rent
 function buildChargesBreakdown(p) {
   return {
@@ -2625,9 +2637,7 @@ function goToStep(step) {
 
   // Mettre à jour l'indicateur d'étapes
   updateStepIndicator(step);
-
-  currentStep = step;
-
+window.currentStep = currentStep = step;
   // Scroll to top
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -3190,6 +3200,8 @@ async function proceedToFiscalAnalysis() {
   console.log('🚀 Lancement de l\'analyse fiscale...');
 
   goToStep(3);
+      // (optionnel) on réinitialise le flag au lancement
+  window.__fiscalRan = false; // ⬅️ AJOUT
 
   // Afficher un loading
   const resultsDiv = document.getElementById('fiscal-comparison-results');
@@ -3290,6 +3302,8 @@ async function proceedToFiscalAnalysis() {
       }
     );
     resultsDiv.innerHTML = html;
+     // ✅ Marquer qu’une analyse a tourné
+    window.__fiscalRan = true; // ⬅️ AJOUT ICI  
 
     // 7) Graphiques
     setTimeout(() => {
@@ -3364,6 +3378,8 @@ try {
         <p>Une erreur est survenue. Veuillez réessayer.</p>
       </div>
     `;
+        // (optionnel) refléter l’échec
+    window.__fiscalRan = false; // ⬅️ AJOUT  
   }
 }
         // Fonction de debug
@@ -3543,14 +3559,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const s3 = document.getElementById('section-3');
     if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-
-  // Radios → afficher directement en section 3
-  document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
-    r.addEventListener('change', (e) => {
-      showSection3();
-      renderRegimeSummary(e.target.value, 'selection');
-    });
-  });
 
   // Bouton "meilleur cash-flow" → affichage (sans calcul)
   const bestBtn = document.getElementById('btn-best-cashflow');
@@ -3749,9 +3757,11 @@ delete baseInput.apportPct;
   // Radios
 document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
   if (!r.__wired) {
-    r.addEventListener('change', () => {
-      if (typeof goToStep === 'function') goToStep(3); // rester sur la section résultats
-      recomputeBreakeven();                            // relance le calcul (CF≈0€ après impôts)
+    r.addEventListener('change', (e) => {
+      // mémorise juste le choix (optionnel)
+      window.analyzer?.setSelectedRegime?.(e.target.value);
+      // pas de goToStep(3) ici
+      recomputeBreakeven(); // relance le calcul (CF ≈ 0 € après impôts)
     });
     r.__wired = true;
   }
