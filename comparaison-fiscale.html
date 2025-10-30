@@ -8,6 +8,87 @@
   // Helpers globaux, à déclarer AVANT tout usage
   window.$    = window.$    || (sel => document.querySelector(sel));
   window.byId = window.byId || (id  => document.getElementById(id));
+   <script>
+    // Helpers globaux, à déclarer AVANT tout usage
+    window.$    = window.$    || (sel => document.querySelector(sel));
+    window.byId = window.byId || (id  => document.getElementById(id));
+  </script>
+
+  <!-- ⬇️ AJOUTE ICI : applyBreakevenPrice en global -->
+  <script>
+  window.applyBreakevenPrice = function (newPrice) {
+    try {
+      const price = Math.max(0, Number(newPrice) || 0);
+
+      const priceInput = byId('propertyPrice');
+      if (priceInput) priceInput.value = String(Math.round(price));
+
+      const pd = window.propertyData || {};
+      const val = (id, fb=0) => Number(document.getElementById(id)?.value ?? fb) || fb;
+
+      pd.prixPaye = price;
+      pd.surface  = pd.surface || val('propertySurface', 0);
+      pd.apport   = val('apport', pd.apport || 0);
+      pd.taux     = val('loanRate', pd.taux || 3.5);
+      pd.duree    = val('loanDuration', pd.duree || 20);
+      pd.travaux  = val('travaux-renovation', pd.travaux || 0);
+
+      const typeAchat = document.querySelector('input[name="type-achat"]:checked')?.value || pd.typeAchat || 'classique';
+      pd.typeAchat = typeAchat;
+
+      if (typeAchat === 'classique') {
+        pd.fraisNotaireTaux = val('frais-notaire-taux', pd.fraisNotaireTaux || 8);
+        pd.commissionImmo   = val('commission-immo', pd.commissionImmo || 4);
+      }
+      if (typeAchat === 'encheres') {
+        pd.droitsEnregistrement = val('droits-enregistrement', pd.droitsEnregistrement || 5.70);
+        pd.coefMutation         = val('coef-mutation', pd.coefMutation || 2.37);
+        pd.honorairesAvocat     = val('honoraires-avocat', pd.honorairesAvocat || 1500);
+        pd.fraisFixes           = val('frais-fixes', pd.fraisFixes || 50);
+        pd.emolumentsTranche1   = val('emoluments-tranche1', pd.emolumentsTranche1 || 0);
+        pd.emolumentsTranche2   = val('emoluments-tranche2', pd.emolumentsTranche2 || 0);
+        pd.emolumentsTranche3   = val('emoluments-tranche3', pd.emolumentsTranche3 || 0);
+        pd.emolumentsTranche4   = val('emoluments-tranche4', pd.emolumentsTranche4 || 0);
+        pd.honorairesAvocatCoef = val('honoraires-avocat-coef', pd.honorairesAvocatCoef || 0.25);
+        pd.tvaHonoraires        = val('tva-honoraires', pd.tvaHonoraires || 20);
+        pd.publiciteFonciere    = val('publicite-fonciere', pd.publiciteFonciere || 0.10);
+        pd.avocatPorterEnchere  = val('avocat-porter-enchere', pd.avocatPorterEnchere || 300);
+        pd.suiviDossier         = val('suivi-dossier', pd.suiviDossier || 1200);
+        const cb = document.getElementById('caution-restituee');
+        pd.cautionRestituee     = cb ? !!cb.checked : true;
+        pd.cautionMisePrix      = val('caution-mise-prix', pd.cautionMisePrix || 5);
+      }
+
+      const montantEmprunte = pd.prixPaye - pd.apport;
+      const fraisInit = (
+        (typeAchat === 'classique'
+          ? calcFraisAcquisition(pd.prixPaye, pd).total
+          : calcFraisEncheres(pd.prixPaye, pd).total
+        )
+        + calcFraisGarantie(montantEmprunte, pd).total
+        + (Number(pd.travaux) || 0)
+      );
+      const capitalMensualise = (montantEmprunte + fraisInit);
+      pd.mensualite = calcMensualite(capitalMensualise, pd.taux, pd.duree);
+
+      pd.prixM2Paye = (pd.surface > 0) ? (pd.prixPaye / pd.surface) : pd.prixM2Paye;
+
+      window.propertyData = pd;
+
+      if (window.currentStep === 2) {
+        const renderer = window.renderMarketAnalysis || window.analyzeMarket;
+        if (typeof renderer === 'function') renderer(pd);
+      } else {
+        if (typeof proceedToFiscalAnalysis === 'function') proceedToFiscalAnalysis();
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      console.warn('applyBreakevenPrice failed:', e);
+      alert("Impossible d'appliquer le prix d’équilibre. Regarde la console pour les détails.");
+    }
+  };
+  </script>        
   </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
