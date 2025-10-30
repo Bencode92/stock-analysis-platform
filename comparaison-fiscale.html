@@ -2310,22 +2310,134 @@ function estTaxMensuelleLmnpMicro(baseInput) {
  *  on renvoie 0 ici pour rester “Option B rapide”.
  *  -> Pour une précision exacte, passer au solveur asynchrone (Option “version exacte”).
  */
+function estTaxMensuelleNuReel(baseInput, r) {
+  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
+  const { vacRate, gestRate } = _resolveVacGest(baseInput);
+  const loyerHC = _resolveLoyerHC(baseInput);
+
+  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
+
+  // Charges récurrentes déductibles (mensualisées)
+  const chargesDeduct =
+      ((Number(baseInput.taxeFonciere) || 0) / 12) +
+      (Number(baseInput.assurancePNO) || 0) +
+      (Number(baseInput.chargesCoproNonRecup) || 0) +
+      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
+      ((Number(baseInput.fraisBancairesCompte) || 0) / 12);
+
+  const interets = Number(r?.interetsMensuel) || 0;
+
+  const baseImpMensuelle = Math.max(0, loyersEncaisses - chargesDeduct - interets);
+  return baseImpMensuelle * (TMI + PS);
+}
+
+/** LMNP RÉEL : BIC = loyers - charges - intérêts - amortissements (non créateurs de déficit). */
+function estTaxMensuelleLmnpReel(baseInput, r) {
+  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
+  const { vacRate, gestRate } = _resolveVacGest(baseInput);
+  const loyerHC = _resolveLoyerHC(baseInput);
+
+  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
+
+  const chargesExploit =
+      (Number(baseInput.assurancePNO) || 0) +
+      (Number(baseInput.chargesCoproNonRecup) || 0) +
+      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
+      ((Number(baseInput.fraisBancairesCompte) || 0) / 12);
+
+  const interets = Number(r?.interetsMensuel) || 0;
+
+  // Hypothèses d'amortissement (paramétrables)
+  const ratioTerrain   = Number(baseInput.ratioTerrain ?? 0.20);      // 20% terrain
+  const dureeImmoAns   = Number(baseInput.dureeAmortImmo ?? 30);      // 30 ans
+  const valeurMeubles  = Number(baseInput.valeurMeubles ?? (0.05 * (r?.price || 0))); // 5%
+  const dureeMeubles   = Number(baseInput.dureeAmortMeubles ?? 7);    // 7 ans
+
+  const baseBatiment   = Math.max(0, (1 - ratioTerrain) * (r?.price || 0));
+  const amortImmoM     = baseBatiment  / (dureeImmoAns * 12);
+  const amortMeublesM  = valeurMeubles / (dureeMeubles * 12);
+  const amortTotalM    = (amortImmoM || 0) + (amortMeublesM || 0);
+
+  // Amortissements non créateurs de déficit (LMNP)
+  const avantAmort = loyersEncaisses - chargesExploit - interets;
+  const amortUtil  = Math.max(0, Math.min(amortTotalM, avantAmort));
+
+  const resultatMensuel     = avantAmort - amortUtil; // ≥ 0
+  const baseImpMensuelle    = Math.max(0, resultatMensuel);
+
+  return baseImpMensuelle * (TMI + PS);
+}
+
+/** LMP RÉEL : BIC pro => cotisations sociales SSI (~35%) + IR sur bénéfice ≥ 0 (sans PS 17,2%).
+    Amortissements comme LMNP, non créateurs de déficit. */
+function estTaxMensuelleLmpReel(baseInput, r) {
+  const { TMI } = _resolveTauxGlobaux(baseInput); // pas de PS, on applique cotisations + IR
+  const { vacRate, gestRate } = _resolveVacGest(baseInput);
+  const loyerHC = _resolveLoyerHC(baseInput);
+
+  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
+
+  const chargesExploit =
+      (Number(baseInput.assurancePNO) || 0) +
+      (Number(baseInput.chargesCoproNonRecup) || 0) +
+      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
+      ((Number(baseInput.fraisBancairesCompte) || 0) / 12);
+
+  const interets = Number(r?.interetsMensuel) || 0;
+
+  const ratioTerrain   = Number(baseInput.ratioTerrain ?? 0.20);
+  const dureeImmoAns   = Number(baseInput.dureeAmortImmo ?? 30);
+  const valeurMeubles  = Number(baseInput.valeurMeubles ?? (0.05 * (r?.price || 0)));
+  const dureeMeubles   = Number(baseInput.dureeAmortMeubles ?? 7);
+
+  const baseBatiment   = Math.max(0, (1 - ratioTerrain) * (r?.price || 0));
+  const amortImmoM     = baseBatiment  / (dureeImmoAns * 12);
+  const amortMeublesM  = valeurMeubles / (dureeMeubles * 12);
+  const amortTotalM    = (amortImmoM || 0) + (amortMeublesM || 0);
+
+  const avantAmort = loyersEncaisses - chargesExploit - interets;
+  const amortUtil  = Math.max(0, Math.min(amortTotalM, avantAmort));
+
+  const beneficeM  = Math.max(0, avantAmort - amortUtil);
+
+  const cotRate = Number(baseInput.lmpCotRate ?? 0.35); // 35% par défaut
+  return beneficeM * (TMI + cotRate);
+}
+
+/** Micro-régimes inchangés */
+function estTaxMensuelleMicroFoncier(baseInput /*, r */) {
+  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
+  const { vacRate, gestRate } = _resolveVacGest(baseInput);
+  const loyerHC = _resolveLoyerHC(baseInput);
+  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
+  const baseImposableMensuelle = loyersEncaisses * 0.70; // abattement 30%
+  return baseImposableMensuelle * (TMI + PS);
+}
+
+function estTaxMensuelleLmnpMicro(baseInput /*, r */) {
+  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
+  const { vacRate, gestRate } = _resolveVacGest(baseInput);
+  const loyerHC = _resolveLoyerHC(baseInput);
+  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
+  const baseImposableMensuelle = loyersEncaisses * 0.50; // abattement 50%
+  return baseImposableMensuelle * (TMI + PS);
+}
+
+// Fallback
 function estTaxMensuelleZero() { return 0; }
 
-/** Sélecteur d’estimateur selon le code radio déjà présent dans ton form */
+/** ✅ Nouveau getTaxEstimator : retourne (baseInput, r) => taxeMensuelle */
 function getTaxEstimator(regimeCode) {
   switch ((regimeCode || '').toLowerCase()) {
     case 'nu_micro':   return estTaxMensuelleMicroFoncier;
     case 'lmnp_micro': return estTaxMensuelleLmnpMicro;
-    // autres régimes → approximation 0 (on laisse l’Option B “rapide”)
-    case 'nu_reel':
-    case 'lmnp_reel':
-    case 'lmp_reel':
+    case 'nu_reel':    return estTaxMensuelleNuReel;
+    case 'lmnp_reel':  return estTaxMensuelleLmnpReel;
+    case 'lmp_reel':   return estTaxMensuelleLmpReel;
+    // TODO: 'sci_is' (IS + PFU éventuel) si tu veux l’intégrer au solver “après impôts”
     case 'sci_is':
-    default:
-      return estTaxMensuelleZero;
+    default:           return estTaxMensuelleZero;
   }
-}
         
 
 function solvePriceForCF0(baseInput, targetCF = 0) {
@@ -2405,25 +2517,25 @@ window.calcFraisEncheres    = calcFraisEncheres;
  *  - Soustrait une estimation d’impôt mensuel selon le régime choisi
  */
 function solvePriceForCF0_apresImpots(baseInput, targetCF = 0, opts = {}) {
-  const apportNum = Number(baseInput.apport) || 0;
+  const apportNum  = Number(baseInput.apport) || 0;
   const regimeCode = opts.regime || baseInput.regimeActuel || 'nu_micro';
-  const taxFn = getTaxEstimator(regimeCode);
+  const taxFn      = getTaxEstimator(regimeCode);
 
   // Bornes initiales
   let lo = Math.max(apportNum + 1000, 10_000);
   let hi = Math.max(lo * 3, 2_000_000);
 
-  // Sanity
+  // Sanity check
   const sanity = computeAllAtPrice(baseInput, lo);
   if (!sanity || !Number.isFinite(sanity.cfMensuel)) {
     throw new Error("Entrées incomplètes pour le CF (taux, durée, loyer, charges…).");
   }
 
-  // Fonction de coût “après impôts”
+  // ⚡ Fonction "après impôts" dépendante du prix p via r = computeAllAtPrice(...)
   const f = (p) => {
     const r = computeAllAtPrice(baseInput, p); // CF AVANT impôts
     if (!r || !Number.isFinite(r.cfMensuel)) return NaN;
-    const taxM = Number(taxFn(baseInput)) || 0; // estimation mensuelle
+    const taxM = Number(taxFn(baseInput, r)) || 0; // impôt mensuel dépendant de r
     const cfApres = r.cfMensuel - taxM;
     return cfApres - targetCF;
   };
@@ -2445,11 +2557,14 @@ function solvePriceForCF0_apresImpots(baseInput, targetCF = 0, opts = {}) {
     if (diff > 0) lo = mid; else hi = mid;
   }
 
-  // Retourne le plus proche
-  const rLo = computeAllAtPrice(baseInput, lo);
-  const rHi = computeAllAtPrice(baseInput, hi);
-  const cfLo = (rLo?.cfMensuel ?? Infinity) - (Number(taxFn(baseInput)) || 0);
-  const cfHi = (rHi?.cfMensuel ?? Infinity) - (Number(taxFn(baseInput)) || 0);
+  // Retourne le plus proche de la cible (après impôts)
+  const rLo  = computeAllAtPrice(baseInput, lo);
+  const rHi  = computeAllAtPrice(baseInput, hi);
+  const taxLo = Number(taxFn(baseInput, rLo)) || 0;
+  const taxHi = Number(taxFn(baseInput, rHi)) || 0;
+  const cfLo  = (rLo?.cfMensuel ?? Infinity) - taxLo;
+  const cfHi  = (rHi?.cfMensuel ?? Infinity) - taxHi;
+
   return (Math.abs(cfLo - targetCF) < Math.abs(cfHi - targetCF)) ? rLo : rHi;
 }
 
