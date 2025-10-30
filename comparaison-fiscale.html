@@ -3504,11 +3504,12 @@ function generateRecommendations(pricePosition, rentPosition, data = {}) {
 }
         
 // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
+// NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
 async function proceedToFiscalAnalysis() {
   console.log('🚀 Lancement de l\'analyse fiscale...');
-
   goToStep(3);
-      // (optionnel) on réinitialise le flag au lancement
+
+  // (optionnel) on réinitialise le flag au lancement
   window.__fiscalRan = false; // ⬅️ AJOUT
 
   // Afficher un loading
@@ -3585,8 +3586,8 @@ async function proceedToFiscalAnalysis() {
       analysis.fiscal[0]
     );
 
-    const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
-    const mapEntry = (window.REGIME_LABELS || {})[selectedCode];      // { id, label } | undefined
+    const selectedCode = propertyData?.regimeActuel;               // ex: 'nu_micro'
+    const mapEntry = (window.REGIME_LABELS || {})[selectedCode];   // { id, label } | string | undefined
 
     const selectedRes =
       (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
@@ -3610,16 +3611,14 @@ async function proceedToFiscalAnalysis() {
       }
     );
     resultsDiv.innerHTML = html;
-     // ✅ Marquer qu’une analyse a tourné
-    window.__fiscalRan = true; // ⬅️ AJOUT ICI  
+
+    // ✅ Marquer qu’une analyse a tourné
+    window.__fiscalRan = true; // ⬅️ AJOUT ICI
 
     // 7) Graphiques
     setTimeout(() => {
-      try {
-        analyzer.createFiscalCharts(analysis.fiscal);
-      } catch (e) {
-        console.warn('Graphiques fiscaux non générés :', e);
-      }
+      try { analyzer.createFiscalCharts(analysis.fiscal); }
+      catch (e) { console.warn('Graphiques fiscaux non générés :', e); }
     }, 100);
 
     // 8) Toggle du tableau détaillé
@@ -3647,45 +3646,66 @@ async function proceedToFiscalAnalysis() {
     };
     console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
 
-/* -----------------------------------------------------------------
-   10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
------------------------------------------------------------------ */
-try {
-  // ❗️On copie l’entrée et on **force le gel de l’apport en €**
-  const base = prepareBreakevenInput();
-  base.apportMode = 'amount';    // on fige l’apport en euros
-  delete base.apportPct;         // on neutralise tout % résiduel
-  // base.apportPct = undefined; // (optionnel) on ignore l’apport %
+    /* -----------------------------------------------------------------
+       10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
+    ----------------------------------------------------------------- */
 
-  // 🧹 purge prix & mensualité
-  delete base.prixPaye;
-  delete base.mensualite;
+    // Helper local pour la devise (fallback si analyzer n'est pas prêt)
+    const fmtCurrency = (val) => {
+      if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
+        return analyzer.formatCurrency(val);
+      }
+      try {
+        return new Intl.NumberFormat('fr-FR', {
+          style: 'currency', currency: 'EUR', maximumFractionDigits: 0
+        }).format(val);
+      } catch { return (Math.round(val) + ' €'); }
+    };
 
-  // ✅ Patch minimal : harmoniser les charges
-  base.financerFrais = true;
-  base.assuranceIncluseDansTaux = true;
-  base.tauxAssuranceEmprunteur  = 0;
+    try {
+      // ❗️On copie l’entrée et on **force le gel de l’apport en €**
+      const base = prepareBreakevenInput();
+      base.apportMode = 'amount';    // on fige l’apport en euros
+      delete base.apportPct;         // on neutralise tout % résiduel
 
-  // ❗️On NE se sert PAS de base.prixPaye lors du solveur
-  // Tout est recalculé à chaque essai via computeAllAtPrice(mid)
+      // 🧹 purge prix & mensualité
+      delete base.prixPaye;
+      delete base.mensualite;
 
-  const regimeCode =
-    (document.querySelector('input[name="regime-actuel"]:checked')?.value) ||
-    base.regimeActuel || 'nu_micro';
+      // ✅ Patch minimal : harmoniser les charges
+      base.financerFrais = true;
+      base.assuranceIncluseDansTaux = true;
+      base.tauxAssuranceEmprunteur  = 0;
 
- const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
+      // ❗️On NE se sert PAS de base.prixPaye lors du solveur
+      const regimeCode =
+        (document.querySelector('input[name="regime-actuel"]:checked')?.value) ||
+        base.regimeActuel || 'nu_micro';
 
-  window.renderBreakeven?.({
-    mode : (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location',
-    price: res.price,
-    foot : `Apport figé : ${analyzer.formatCurrency(res.apport)} — Cash-flow cible : 0 € <strong>après impôts</strong> (approx ${regimeCode.replace(/_/g, ' ')})`
-    // (optionnel) ajouter :  + ` — Mensualité estimée : ${Number.isFinite(res.mensualite) ? analyzer.formatCurrency(res.mensualite) : '—'}`
-  });
+      const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
 
-  byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-} catch (e) {
-  console.warn('Breakeven non calculé :', e);
-}
+      // Garde-fou : si solveur renvoie un résultat incomplet
+      const price = Number.isFinite(res?.price) ? res.price : 0;
+      const apport = Number.isFinite(res?.apport) ? res.apport : 0;
+
+      window.renderBreakeven?.({
+        mode : (byId('occupationMode')?.value === 'residence') ? 'residence' : 'location',
+        price: price,
+        foot : `Apport figé : ${fmtCurrency(apport)} — Cash-flow cible : 0 € <strong>après impôts</strong> (${String(regimeCode).replace(/_/g,' ')})`
+        // (optionnel) + ` — Mensualité estimée : ${Number.isFinite(res?.mensualite) ? fmtCurrency(res.mensualite) : '—'}`
+      });
+
+      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      console.warn('Breakeven non calculé :', e);
+      // Fallback visuel pour quand même afficher la carte plutôt que rien
+      window.renderBreakeven?.({
+        mode : (byId('occupationMode')?.value === 'residence') ? 'residence' : 'location',
+        price: 0,
+        foot : 'Impossible de calculer automatiquement le prix d’équilibre (voir console).'
+      });
+      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
   } catch (error) {
     console.error('Erreur lors de l\'analyse fiscale:', error);
@@ -3695,8 +3715,8 @@ try {
         <p>Une erreur est survenue. Veuillez réessayer.</p>
       </div>
     `;
-        // (optionnel) refléter l’échec
-    window.__fiscalRan = false; // ⬅️ AJOUT  
+    // (optionnel) refléter l’échec
+    window.__fiscalRan = false; // ⬅️ AJOUT
   }
 }
         // Fonction de debug
@@ -3900,6 +3920,22 @@ window.renderBreakeven = function ({ mode, price, foot }) {
   const card = byId('breakeven-result');
   const isRP = (mode === 'residence');
 
+  // Fallback de formatage si analyzer n'est pas prêt
+  const fmtCurrency = (val) => {
+    if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
+      return analyzer.formatCurrency(val);
+    }
+    try {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: 0
+      }).format(val);
+    } catch {
+      return (Math.round(val) + ' €');
+    }
+  };
+
   const title = isRP
     ? 'Prix d’équilibre — Résidence principale'
     : 'Prix d’équilibre — Investissement locatif';
@@ -3907,12 +3943,12 @@ window.renderBreakeven = function ({ mode, price, foot }) {
   // Mini-pill compact
   if (pill) {
     pill.style.display = 'inline-block';
-    pill.innerHTML = `<strong>${title} :</strong> ${analyzer.formatCurrency(price)}`;
+    pill.innerHTML = `<strong>${title} :</strong> ${fmtCurrency(price)}`;
   }
 
   // Carte détaillée (neutre)
   if (card) {
-    card.style.display = 'block';
+    card.style.display = 'block'; // force l’affichage
     card.classList.remove('low', 'high', 'average');
     card.classList.add('average');
     card.innerHTML = `
@@ -3922,7 +3958,7 @@ window.renderBreakeven = function ({ mode, price, foot }) {
         <div class="market-details">
           <div class="market-metric">
             <div class="market-metric-label">Prix d’achat cible</div>
-            <div class="market-metric-value">${analyzer.formatCurrency(price)}</div>
+            <div class="market-metric-value">${fmtCurrency(price)}</div>
             <div class="market-metric-comparison">Cash-flow mensuel ≈ 0 €</div>
           </div>
         </div>
