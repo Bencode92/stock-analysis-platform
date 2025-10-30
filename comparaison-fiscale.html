@@ -3932,34 +3932,47 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ─────────────────────────────────────────
      LOCATIF → Cash-flow mensuel cible = 0 €
   ───────────────────────────────────────── */
+if (btnLoc && !btnLoc.__wired) {
   btnLoc.addEventListener('click', async () => {
-    const baseInput  = prepareBreakevenInput(); // ← ici
+    try {
+      if (typeof prepareBreakevenInput !== 'function') {
+        throw new Error('prepareBreakevenInput() introuvable : vérifie l’ordre de chargement ou l’import.');
+      }
 
-    // 🧹 purge prix & mensualité
-    baseInput.apportMode = 'amount';
-    delete baseInput.apportPct;
-    delete baseInput.prixPaye;
-    delete baseInput.mensualite;
+      const baseInput = prepareBreakevenInput();
 
-    const preferBest = !!byId('prefer-best')?.checked;
-    const regimeId   = preferBest
-      ? null
-      : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
+      // 🧹 purge prix & mensualité
+      baseInput.apportMode = 'amount';
+      delete baseInput.apportPct;
+      delete baseInput.prixPaye;
+      delete baseInput.mensualite;
 
-    const regimeCode = document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
-    const res = await window.solvePriceForCF0_apresImpots_exact(baseInput, 0, { regime: regimeCode });
+      const preferBest = !!byId('prefer-best')?.checked;
+      const regimeCode = preferBest
+        ? null
+        : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
 
-renderBreakeven({
-  mode : 'location',
-  price: res.price,
-  foot : `Cash-flow cible : 0 € **après impôts** (approx ${regimeCode.replace('_',' ')})`
-});
+      const res = await window.solvePriceForCF0_apresImpots_exact(
+        baseInput,
+        0,
+        { regime: regimeCode ?? 'nu_micro' }
+      );
+
+      renderBreakeven({
+        mode : 'location',
+        price: res?.price ?? 0,
+        foot : `Cash-flow cible : 0 € **après impôts** (approx ${(regimeCode ?? 'nu_micro').replace('_', ' ')})`
+      });
 
       if (typeof goToStep === 'function') goToStep(3);
       byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    btnLoc.__wired = true;
-  }
+    } catch (err) {
+      console.error('[Breakeven locatif] Erreur:', err);
+      alert('Une erreur est survenue lors du calcul. Ouvre la console pour les détails.');
+    }
+  });
+  btnLoc.__wired = true;
+}
 
   /* ─────────────────────────────────────────
      RÉSIDENCE PRINCIPALE → Coût net cible = 0 €
