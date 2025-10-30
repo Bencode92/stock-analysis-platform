@@ -511,8 +511,8 @@ async performCompleteAnalysis(data) {
     this.marketAnalysis = this.analyzeMarketPosition(data);
 
     // 2) Préparer les données (form → comparateur)
-    const fiscalData     = this.prepareFiscalData(data);
-    const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
+const fiscalData     = this.prepareFiscalData(); // ← retiré l'argument
+const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
 
     // 3) Pseudo-résultat sans tableau d'amortissement (fallback analytique)
     const loanAmt  = Number(comparatorData.montantEmprunt ?? comparatorData.loanAmount ?? 0);
@@ -3360,28 +3360,29 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 }
 
 // Helpers de debug V3 avec tests unitaires
-window.debugFiscalPipeline = function() {
+window.debugFiscalPipeline = function () {
+  try {
     const analyzer = window.analyzer || new MarketFiscalAnalyzer();
-(function(){
-  const analyzer = window.analyzer; // déjà créé
-  const outBox   = document.getElementById('breakeven-result');
-  const pill     = document.getElementById('breakeven-pill');
-  const preferBestEl = document.getElementById('prefer-best');
 
-  function mountPill(){
-    const benefits = document.querySelector('.best-regime-card .regime-benefits');
-    if (!benefits || !pill) return;
-    const first = benefits.children[0];
-    if (first && pill.parentNode !== benefits){
-      if (benefits.children.length >= 2){
-        benefits.insertBefore(pill, benefits.children[1]);
-      } else {
-        benefits.appendChild(pill);
-      }
-    }
+    // Jeu de données de test minimal — à adapter à ton schéma
+    const testData = {
+      income: 50000,
+      status: "single",
+      country: "FR",
+      options: { preferBest: true }
+    };
+
+    // Si prepareFiscalData lit le DOM, on ne l’utilise pas ici :
+    // on ne teste que le formatage comparateur.
+    const comparatorData = analyzer.prepareFiscalDataForComparator(testData);
+
+    console.log("✅ Debug OK", { testData, comparatorData });
+    return { testData, comparatorData };
+  } catch (err) {
+    console.error("❌ Debug error in debugFiscalPipeline:", err);
+    return null;
   }
-  mountPill();
-  document.addEventListener('fiscalView:updated', mountPill);
+};
 
   function setPill(contentHTML){
     mountPill();
