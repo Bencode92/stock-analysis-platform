@@ -1990,6 +1990,25 @@ function prepareBreakevenInput() {
   b.entretienAnnuel      = Number(b.entretienAnnuel)      || 0;
   b.fraisBancairesCompte = Number(b.fraisBancairesCompte) || 0;
 
+  /* ⬇️ NOUVEAU : remonter les options PFU / distribution SCI vers le moteur */
+  try {
+    const elPFU  = document.getElementById('apply-pfu');
+    const elDist = document.getElementById('sci-distribution');
+
+    if (elPFU) {
+      b.applyPfu = !!elPFU.checked; // PFU 30% sur dividendes (SCI à l’IS)
+    }
+    if (elDist) {
+      const raw = String(elDist.value ?? '').trim();
+      if (raw !== '') {
+        const pct = Math.max(0, Math.min(100, Number(raw)));
+        b.sciDistribution = pct;     // pourcentage 0–100 (le helper gère la conversion)
+      }
+    }
+  } catch(e) {
+    console.warn('PFU/distribution passthrough skipped:', e);
+  }
+
   // 1) Purge de tout ce qui fige le prix/financement actuel
   const hardPriceKeys = [
     'prixPaye','prix','price','prixAcquisition',
