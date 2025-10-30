@@ -3095,36 +3095,48 @@ requestAnimationFrame(() => {
 //   - Patch D: generateRecommendations blindé
 // ──────────────────────────────────────────────────────────────────────────
 function renderMarketAnalysis(data) {
-  // Patch B: Ciblage robuste avec fallback
-  const resultsDiv = 
+  // Ciblage robuste avec fallback
+  const resultsDiv =
     document.querySelector('#section-2.market-analysis-section #market-analysis-results') ||
     document.getElementById('market-analysis-results');
-    
+
   if (!resultsDiv) {
     console.error('❌ #market-analysis-results introuvable');
     return;
   }
 
-  // Vérification que le renderer existe
-  const renderer = window.renderMarketAnalysis || window.analyzeMarket;
-  if (typeof renderer !== 'function') {
-    resultsDiv.innerHTML = '<div class="market-comparison-card high"><h3>Analyse indisponible</h3></div>';
-    return;
-  }
+  // Fallbacks si les helpers n'existent pas en global
+  const formatNumber = (typeof window.formatNumber === 'function')
+    ? window.formatNumber
+    : (n) => {
+        const v = Number(n);
+        return Number.isFinite(v) ? v.toLocaleString('fr-FR') : '—';
+      };
+
+  const generateRecommendations = (typeof window.generateRecommendations === 'function')
+    ? window.generateRecommendations
+    : () => '<div style="color:#94a3b8">Aucune recommandation disponible.</div>';
+
+  const applyMarkerColors = (typeof window.applyMarkerColors === 'function')
+    ? window.applyMarkerColors
+    : () => {};
 
   // Helpers locaux
-  const num = v => Number(v);
-  const finite = v => Number.isFinite(v);
+  const num     = v => Number(v);
+  const finite  = v => Number.isFinite(v);
   const safeDiv = (a, b) => (finite(a) && finite(b) && b !== 0) ? a / b : NaN;
 
   // Données utilisateur normalisées
-  const d = data || {};
-  const ville = d.ville || {};
+  const d         = data || {};
+  const ville     = d.ville || {};
   const surface   = num(d.surface);
   const prixPaye  = num(d.prixPaye);
   const loyerHC   = num(d.loyerActuel);
-  const chgRecup  = finite(num(d.monthlyCharges)) ? num(d.monthlyCharges) : num(d.charges) || 0;
-  const loyerCC   = finite(num(d.loyerCC)) ? num(d.loyerCC) : (finite(loyerHC) ? loyerHC : 0) + chgRecup;
+  const chgRecup0 = num(d.monthlyCharges);
+  const chgAlt    = num(d.charges);
+  const chgRecup  = finite(chgRecup0) ? chgRecup0 : (finite(chgAlt) ? chgAlt : 0);
+  const loyerCC0  = num(d.loyerCC);
+  const loyerCC   = finite(loyerCC0) ? loyerCC0 : (finite(loyerHC) ? loyerHC : 0) + chgRecup;
 
   // Ratios utilisateur (avec garde-fous)
   const prixM2Paye = finite(num(d.prixM2Paye)) ? num(d.prixM2Paye) : safeDiv(prixPaye, surface);
@@ -3134,8 +3146,9 @@ function renderMarketAnalysis(data) {
   // Marché
   const marketPriceM2 = num(ville.prix_m2);
   const marketRentM2  = num(ville.loyer_m2);
-  const hasMarket = finite(marketPriceM2) && marketPriceM2 > 0 &&
-                    finite(marketRentM2) && marketRentM2  > 0;
+  const hasMarket =
+    finite(marketPriceM2) && marketPriceM2 > 0 &&
+    finite(marketRentM2)  && marketRentM2  > 0;
 
   // Préconditions minimales
   if (!finite(prixM2Paye)) {
@@ -3326,7 +3339,7 @@ function renderMarketAnalysis(data) {
   setTimeout(applyMarkerColors, 0);
 }
 
-// Patch A: Export après la déclaration
+// Export après déclaration (pas d’auto-appel interne)
 window.renderMarketAnalysis = renderMarketAnalysis;
 
 // Fonction pour formater les nombres
