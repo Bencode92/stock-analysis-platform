@@ -2049,13 +2049,15 @@ function prepareBreakevenInput() {
   }
 
   // 1) Purge de tout ce qui fige le prix/financement actuel
+  // 🔻 complète/renforce la liste existante
   const hardPriceKeys = [
-    'prixPaye','prix','price','prixAcquisition',
-    'montantEmprunte','mensualite','capitalEmprunte','mensualiteCredit'
+    'prixPaye','prix','price','prixAcquisition','prixAchat','prixNetVendeur',
+    'montantEmprunte','capitalEmprunte','mensualite','mensualiteCredit','mensualiteInitiale',
+    'prixM2Paye'
   ];
   hardPriceKeys.forEach(k => delete b[k]);
 
-  // 🔒 Double filet anti-"prix payé"/mensualité (même si déjà supprimés via la liste)
+  // 🔒 Double filet anti-"prix payé"/mensualité (au cas où)
   delete b.prixM2Paye;   // dérivés du prix payé
   delete b.mensualite;   // mensualité calculée côté UI (au prix saisi)
 
@@ -2092,7 +2094,6 @@ function prepareBreakevenInput() {
   return b;
 }
 
-
 // A) Normaliser en gelant l’apport (mode solveur)
 // Utiliser CETTE version dans un solveur custom (bisection/newton) pour figer l’apport €
 function normalizeFinancingForSolve(baseInput, trialPrice) {
@@ -2109,6 +2110,7 @@ function normalizeFinancingForSolve(baseInput, trialPrice) {
 }
 // Optionnel : exposer la fonction globalement si besoin ailleurs
 window.normalizeFinancingForSolve = normalizeFinancingForSolve;
+
 /* ⬇️ B) Fonctions pures de frais — dépendantes uniquement des arguments ⬇️ */
 
 // Frais d'acquisition calculés depuis un PRIX passé en argument (aucun accès global)
@@ -2124,7 +2126,8 @@ function calcFraisAcquisition(price, params = {}) {
     total: notaire + commission + fraisFixes
   };
 }
-        function calcFraisEncheres(price, params = {}) {
+
+function calcFraisEncheres(price, params = {}) {
   const p = Math.max(0, Number(price) || 0);
 
   // Droits d'enregistrement (% du prix)
