@@ -1963,23 +1963,30 @@ async function f_apresImpots_viaAnalyzer(trialPrice, baseInput, regimeCode) {
   // 1) clone + imposer le prix testé
   const data = { ...(baseInput || {}), prixPaye: Number(trialPrice) || 0 };
 
-  // (recommandé) garanties de cohérence coté financement
-  data.apportMode = 'amount';          // on fige l'apport en €
-  delete data.apportPct;               // pas d'apport en %
-  if (typeof data.financerFrais === 'undefined') data.financerFrais = true;
-  data.assuranceIncluseDansTaux = true; // si ton taux inclut déjà l'assurance
+  // — Neutralisations côté financement (avant l'appel moteur) —
+  data.apportMode = 'amount';          // figer l’apport en €
+  delete data.apportPct;               // pas d’apport en %
+
+  data.financerFrais = true;           // financer les frais dans le prêt
+  data.assuranceIncluseDansTaux = true;
   data.tauxAssuranceEmprunteur  = 0;
 
-  // 2) lancer le MÊME moteur que l’affichage
+  // 🔒 éviter tout artefact issu d'un prix/financement précédent
+  delete data.mensualite;
+  delete data.capitalEmprunte;
+  delete data.montantEmprunte;
+  delete data.prixM2Paye;
+
+  // 2) lancer le même moteur que l’affichage
   const out = await analyzer.performCompleteAnalysis(data);
   const fiscal = out?.fiscal || [];
   if (!fiscal.length) return NaN;
 
   // 3) cibler le régime voulu (fallback = première ligne)
-  const code  = (regimeCode || '').toLowerCase();
-  const row   = fiscal.find(r => (r.id || '').toLowerCase().includes(code)) || fiscal[0];
+  const code = (regimeCode || '').toLowerCase();
+  const row  = fiscal.find(r => (r.id || '').toLowerCase().includes(code)) || fiscal[0];
 
-  // 4) moteur renvoie l’annuel → convertir en mensuel
+  // 4) annuel -> mensuel
   const cfM = (row?.cashflowNetAnnuel ?? 0) / 12;
   return cfM; // la bissection résout cfM - targetCF = 0
 }
@@ -2032,7 +2039,7 @@ function prepareBreakevenInput() {
         b.sciDistribution = pct;     // pourcentage 0–100 (le helper gère la conversion)
       }
     }
-  } catch(e) {
+  } catch (e) {
     console.warn('PFU/distribution passthrough skipped:', e);
   }
 
@@ -2042,6 +2049,10 @@ function prepareBreakevenInput() {
     'montantEmprunte','mensualite','capitalEmprunte','mensualiteCredit'
   ];
   hardPriceKeys.forEach(k => delete b[k]);
+
+  // 🔒 Double filet anti-"prix payé"/mensualité (même si déjà supprimés via la liste)
+  delete b.prixM2Paye;   // dérivés du prix payé
+  delete b.mensualite;   // mensualité calculée côté UI (au prix saisi)
 
   // 2) Préserver uniquement les € récurrents utiles au CF
   const keepRecurringEuro = new Set([
@@ -2069,12 +2080,13 @@ function prepareBreakevenInput() {
   // 5) Intentions pour le solveur
   b._breakeven = { recomputeFeesFromPrice: true, ignoreProvidedMensualite: true };
 
-  // ✅ NOUVEAU : par défaut on finance les frais (si non défini ailleurs)
+  // ✅ Par défaut on finance les frais (si non défini ailleurs)
   if (typeof b.financerFrais === 'undefined') b.financerFrais = true;
 
   // On laisse l’apport en € (le gel se fait au lancement du solveur)
   return b;
 }
+
 
 // A) Normaliser en gelant l’apport (mode solveur)
 // Utiliser CETTE version dans un solveur custom (bisection/newton) pour figer l’apport €
@@ -2718,6 +2730,13 @@ const recomputeBreakeven = debounce(async function () {
   try {
     // 1) base d'entrée normalisée
     const base = prepareBreakevenInput();
+
+    // 🧹 ceinture & bretelles (purge toute valeur résiduelle liée au prix)
+    const _b = base;
+    _b.apportMode = 'amount';
+    delete _b.apportPct;
+    delete _b.prixPaye;
+    delete _b.mensualite;
 
     // fige l'apport en €
     base.apportMode = 'amount';
@@ -3620,6 +3639,10 @@ try {
   delete base.apportPct;         // on neutralise tout % résiduel
   // base.apportPct = undefined; // (optionnel) on ignore l’apport %
 
+  // 🧹 purge prix & mensualité
+  delete base.prixPaye;
+  delete base.mensualite;
+
   // ✅ Patch minimal : harmoniser les charges
   base.financerFrais = true;
   base.assuranceIncluseDansTaux = true;
@@ -3904,18 +3927,22 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ─────────────────────────────────────────
      LOCATIF → Cash-flow mensuel cible = 0 €
   ───────────────────────────────────────── */
-  if (btnLoc && !btnLoc.__wired) {
-    btnLoc.addEventListener('click', async () => {
-      const baseInput  = prepareBreakevenInput(); // ← ici
-        baseInput.apportMode = 'amount';
-delete baseInput.apportPct;
-      const preferBest = !!byId('prefer-best')?.checked;
-      const regimeId   = preferBest
-        ? null
-        : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
+  btnLoc.addEventListener('click', async () => {
+    const baseInput  = prepareBreakevenInput(); // ← ici
 
-const regimeCode = document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
-const res = await window.solvePriceForCF0_apresImpots_exact(baseInput, 0, { regime: regimeCode });
+    // 🧹 purge prix & mensualité
+    baseInput.apportMode = 'amount';
+    delete baseInput.apportPct;
+    delete baseInput.prixPaye;
+    delete baseInput.mensualite;
+
+    const preferBest = !!byId('prefer-best')?.checked;
+    const regimeId   = preferBest
+      ? null
+      : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
+
+    const regimeCode = document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
+    const res = await window.solvePriceForCF0_apresImpots_exact(baseInput, 0, { regime: regimeCode });
 
 renderBreakeven({
   mode : 'location',
@@ -3935,8 +3962,12 @@ renderBreakeven({
 if (btnRP && !btnRP.__wired) {
   btnRP.addEventListener('click', async () => {
     const baseInput = prepareBreakevenInput(); // ← ici
-      baseInput.apportMode = 'amount';
-delete baseInput.apportPct;
+
+    // 🧹 purge prix & mensualité
+    baseInput.apportMode = 'amount';
+    delete baseInput.apportPct;
+    delete baseInput.prixPaye;
+    delete baseInput.mensualite;
 
     const partQuick   = parseFloat(byId('input-conjoint')?.value);
     const partSection = parseFloat(byId('partnerContribution')?.value);
