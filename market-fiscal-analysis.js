@@ -87,6 +87,103 @@ class MarketFiscalAnalyzer {
   }
 
   // ───────────────────────────────────────────────────────────
+  //  computeIRProgressif(...) est défini ici plus haut dans ta base
+  // ───────────────────────────────────────────────────────────
+
+  // --- Helper rapide d'estimation d'impôt mensuel par régime ---
+  estimateMonthlyTax(regime, baseInput = {}, trialCtx = {}, opts = {}) {
+    const code = String(regime || baseInput.regimeActuel || 'nu_micro').toLowerCase();
+
+    // helpers locaux (alignés avec tes conventions)
+    const TMI = (Number(baseInput.tmi) || 0) / 100;
+    const PS  = Number(FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX || 0.172);
+
+    const loyerHC = Number(
+      baseInput.loyerActuel ??
+      baseInput.loyerHC ??
+      baseInput.monthlyRent ??
+      baseInput.loyer ??
+      (baseInput.loyerCC != null
+        ? baseInput.loyerCC - (Number(baseInput.monthlyCharges) || 0)
+        : undefined)
+    ) || 0;
+
+    const vacRate  = (Number(baseInput.vacanceLocative)     || 0) / 100;
+    const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
+    const loyersMensuelsNet = loyerHC * (1 - vacRate) * (1 - gestRate);
+
+    const chargesMensuellesDed =
+        (Number(baseInput.chargesCoproNonRecup) || 0) +
+        (Number(baseInput.assurancePNO)         || 0) +
+        ((Number(baseInput.entretienAnnuel)     || 0) / 12) +
+        ((Number(baseInput.fraisBancairesCompte)|| 0) / 12);
+
+    // Intérêts mensuels au PRIX testé (fournis par solveur ou computeAllAtPrice)
+    const interetsMensuel = Number(trialCtx?.interetsMensuel) || 0;
+
+    // amortissements "light" (gardes ton calcul fin ailleurs)
+    const P = Number(trialCtx?.price) || 0;
+    const amortImmo    = (0.85 * P) / (30 * 12);   // 85% sur 30 ans
+    const amortMeubles = (0.10 * P) / (7  * 12);   // 10% sur 7 ans
+    const amortMensuel = amortImmo + amortMeubles;
+
+    // IS simplifié
+    function computeISMonthly(resultatMensuel) {
+      const Rann = Math.max(0, resultatMensuel * 12);
+      const seuil = Number(FISCAL_CONSTANTS.IS_PLAFOND_REDUIT || 42500);
+      const ISann = Rann <= seuil
+        ? 0.15 * Rann
+        : 0.15 * seuil + 0.25 * (Rann - seuil);
+      return ISann / 12;
+    }
+
+    // PFU éventuel (piloté par l’UI)
+    function maybePFU(beneficeMensuelApresIS) {
+      const applyPFU = !!baseInput.applyPfu || !!baseInput.applyPFU || !!baseInput.apply_pfu;
+      if (!applyPFU) return 0;
+      const distribPct = Number(baseInput.sciDistribution ?? baseInput.sci_distribution);
+      const d = Number.isFinite(distribPct) ? Math.max(0, Math.min(100, distribPct)) / 100 : 0;
+      return (beneficeMensuelApresIS * d) * 0.30; // PFU 30%
+    }
+
+    switch (code) {
+      case 'nu_micro': {
+        const baseMensuelle = loyersMensuelsNet * (1 - Number(FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT || 0.30));
+        return baseMensuelle * (TMI + PS);
+      }
+      case 'lmnp_micro': {
+        const baseMensuelle = loyersMensuelsNet * (1 - Number(FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT || 0.50));
+        return baseMensuelle * (TMI + PS);
+      }
+      case 'nu_reel': {
+        const revenuNet = loyersMensuelsNet - chargesMensuellesDed - interetsMensuel;
+        const baseImp = Math.max(0, revenuNet);
+        return baseImp * (TMI + PS);
+      }
+      case 'lmnp_reel':
+      case 'lmp_reel':
+      case 'lmp': {
+        const resultatBIC = loyersMensuelsNet - chargesMensuellesDed - interetsMensuel - amortMensuel;
+        const baseImp = Math.max(0, resultatBIC);
+        return baseImp * (TMI + PS); // approx (tes calculs complets restent dans getDetailedCalculations)
+      }
+      case 'sci_is': {
+        const resultatSociete = loyersMensuelsNet - chargesMensuellesDed - interetsMensuel - amortMensuel;
+        const ISmensuel = computeISMonthly(resultatSociete);
+        const benefApresIS = Math.max(0, resultatSociete) - ISmensuel;
+        const pfuMensuel = maybePFU(benefApresIS);
+        return ISmensuel + pfuMensuel;
+      }
+      default:
+        return 0;
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────
+  //  getDetailedCalculations(...) est défini juste après
+  // ───────────────────────────────────────────────────────────
+
+  // ───────────────────────────────────────────────────────────
   //  UI helpers (sélection régime & “meilleur”)
   // ───────────────────────────────────────────────────────────
   setSelectedRegime(id) {
