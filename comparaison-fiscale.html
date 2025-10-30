@@ -4060,11 +4060,11 @@ if (btnRP && !btnRP.__wired) {
     `;
   };
 
-    const showSection3 = () => {
-    if (typeof window.goToStep === 'function') window.goToStep(3);
-    const s3 = byId('section-3');
-    if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+const showSection3 = () => {
+  if (typeof window.goToStep === 'function') window.goToStep(3);
+  const s3 = byId('section-3');
+  if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
   // Bouton "meilleur cash-flow" → affichage (sans calcul)
   const bestBtn = document.getElementById('btn-best-cashflow');
