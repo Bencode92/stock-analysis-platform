@@ -2666,11 +2666,12 @@ async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts 
   const regimeCode = (regimeOpt || baseInput?.regimeActuel || 'nu_micro');
 
   // Bornes initiales robustes
-const apport = Math.max(0, Number(baseInput?.apport) || 0);
-// tolérance de 1 € ou 0,1% de l’apport (le plus grand des deux)
-const eps = Math.max(1, Math.ceil(0.001 * apport));
-let lo = Math.max(apport + eps, minPrice);
- let hi = Math.max(lo * 3, 2_000_000);    
+  const apport = Math.max(0, Number(baseInput?.apport) || 0);
+  // tolérance de 1 € ou 0,1% de l’apport (le plus grand des deux)
+  const eps = Math.max(1, Math.ceil(0.001 * apport));
+  let lo = Math.max(apport + eps, minPrice);
+  let hi = Math.max(lo * 3, 2_000_000);
+
   // Petite mémo pour éviter des recalculs identiques
   const cache = new Map();
   const F = async (p) => {
@@ -2680,6 +2681,13 @@ let lo = Math.max(apport + eps, minPrice);
     const val = (Number.isFinite(cf) ? cf - targetCF : NaN);
     cache.set(key, val);
     return val;
+  };
+
+  // Helper pour fabriquer l’objet enrichi (prix, mensualité, + CF après impôts)
+  const enrich = async (p) => {
+    const bestObj = computeAllAtPrice(baseInput, p);
+    bestObj.cfApresImpotsMensuel = await f_apresImpots_viaAnalyzer(p, baseInput, regimeCode);
+    return bestObj;
   };
 
   // Évalue aux bornes
@@ -2700,7 +2708,8 @@ let lo = Math.max(apport + eps, minPrice);
 
     if (!Number.isFinite(fmid)) { hi = mid; continue; }
     if (Math.abs(fmid) < tol) {
-      return computeAllAtPrice(baseInput, mid);
+      // ⬅️ maintenant on renvoie l’objet ENRICHI
+      return await enrich(mid);
     }
     if (fmid > 0) lo = mid; else hi = mid;
   }
@@ -2711,7 +2720,9 @@ let lo = Math.max(apport + eps, minPrice);
     f_apresImpots_viaAnalyzer(hi, baseInput, regimeCode)
   ]);
   const bestP = (Math.abs(rLoCF - targetCF) < Math.abs(rHiCF - targetCF)) ? lo : hi;
-  return computeAllAtPrice(baseInput, bestP);
+
+  // ⬅️ objet enrichi au retour
+  return await enrich(bestP);
 }
 
 window.solvePriceForCF0_apresImpots_exact = solvePriceForCF0_apresImpots_exact;
@@ -2745,13 +2756,31 @@ const recomputeBreakeven = debounce(async function () {
     base.assuranceIncluseDansTaux = true;
     base.tauxAssuranceEmprunteur  = 0;
 
-
     // régime sélectionné (radio)
     const regimeCode =
       document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
 
-    // 2) solve : cash-flow cible = 0 € APRÈS impôts (approx)
+    // 2) solve : cash-flow cible = 0 € APRÈS impôts (exact via moteur)
     const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
+
+    // 2bis) Vérifier le CF après impôts AU MÊME PRIX (preuve que ≈ 0)
+    const cfAfterTax = await f_apresImpots_viaAnalyzer(res.price, base, regimeCode);
+
+    // Petit helper de format monnaie
+    const fmtCurrency = (val) => {
+      if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
+        return analyzer.formatCurrency(val);
+      }
+      try {
+        return new Intl.NumberFormat('fr-FR', {
+          style: 'currency',
+          currency: 'EUR',
+          maximumFractionDigits: 0
+        }).format(val);
+      } catch {
+        return (Math.round(val) + ' €');
+      }
+    };
 
     // 3) rendu
     const mode =
@@ -2760,7 +2789,7 @@ const recomputeBreakeven = debounce(async function () {
     window.renderBreakeven?.({
       mode,
       price: res.price,
-      foot : `Cash-flow cible 0 € après impôts (${regimeCode.replace(/_/g,' ')})`
+      foot : `CF après impôts à ce prix : ${Math.round(cfAfterTax)} € / mois (cible 0) — Apport figé: ${fmtCurrency(res.apport)}`
     });
 
     document.getElementById('breakeven-result')
@@ -2769,6 +2798,7 @@ const recomputeBreakeven = debounce(async function () {
     console.warn('Recompute breakeven error:', e);
   }
 }, 250);
+
 // ⚙️ Recalcul auto sur les champs "CF-sensibles" (hors radios)
 document.addEventListener('DOMContentLoaded', () => {
   const ids = [
@@ -3934,30 +3964,34 @@ window.renderBreakeven = function ({ mode, price, foot }) {
     pill.innerHTML = `<strong>${title} :</strong> ${fmtCurrency(price)}`;
   }
 
+
   // Carte détaillée (neutre)
-  if (card) {
-    card.style.display = 'block'; // force l’affichage
-    card.classList.remove('low', 'high', 'average');
-    card.classList.add('average');
-    card.innerHTML = `
-      <div class="market-badge average">Cash-flow neutre</div>
-      <h3 style="margin:0 0 .5rem 0">${title}</h3>
-      <div class="metric-panel">
-        <div class="market-details">
-          <div class="market-metric">
-            <div class="market-metric-label">Prix d’achat cible</div>
-            <div class="market-metric-value">${fmtCurrency(price)}</div>
-            <div class="market-metric-comparison">Cash-flow mensuel ≈ 0 €</div>
-          </div>
+if (card) {
+  card.style.display = 'block'; // force l’affichage
+  card.classList.remove('low', 'high', 'average');
+  card.classList.add('average');
+  card.innerHTML = `
+    <div class="market-badge average">Cash-flow neutre</div>
+    <h3 style="margin:0 0 .5rem 0">${title}</h3>
+    <div class="metric-panel">
+      <div class="market-details">
+        <div class="market-metric">
+          <div class="market-metric-label">Prix d’achat cible</div>
+          <div class="market-metric-value">${fmtCurrency(price)}</div>
+          <div class="market-metric-comparison">Cash-flow mensuel ≈ 0 €</div>
         </div>
       </div>
-      <p style="margin-top:12px;color:#94a3b8">${foot || ''}</p>
-      <div style="margin-top:16px;">
-        <button class="btn btn-outline" onclick="goToStep(1)">
-          <i class="fas fa-edit"></i> Affiner les entrées
-        </button>
-      </div>
-    `;
+    </div>
+    <p style="margin-top:12px;color:#94a3b8">${foot || ''}</p>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="goToStep(1)">
+        <i class="fas fa-edit"></i> Affiner les entrées
+      </button>
+      <button class="btn btn-outline" onclick="applyBreakevenPrice(${Math.round(price)})">
+        Utiliser ce prix
+      </button>
+    </div>
+  `;
   }
 };
 
