@@ -2168,7 +2168,28 @@ function calcFraisGarantie(emprunte, params = {}) {
   const garantie = base * taux;
   return { garantie, total: garantie };
 }
-// C) computeAllAtPrice — inclut assurance emprunteur + tenue de compte (/12) dans le CF mensuel
+/* ──────────────────────────────────────────────────────────────
+   OPTION B (outil) — calcul “mois 1” du plan d’amortissement
+   👉 Laisse ce bloc ici (utilitaire). Active B plus bas si tu veux.
+────────────────────────────────────────────────────────────── */
+function amortMonth1(capital, tauxAnnuelPct, dureeAn) {
+  const i = (Number(tauxAnnuelPct) || 0) / 100 / 12;
+  const n = (Number(dureeAn) || 0) * 12;
+
+  // Mensualité (protégée si i = 0 ou non-fini)
+  const m = (i === 0 || !Number.isFinite(i))
+    ? (n > 0 ? capital / n : 0)
+    : (capital * i) / (1 - Math.pow(1 + i, -n));
+
+  const interets1  = capital * i;      // intérêts du 1er mois
+  const principal1 = m - interets1;    // amort. du 1er mois
+  const restant    = capital - principal1;
+
+  return { mensualite: m, interets1, principal1, restant };
+}
+
+/* ====================================================================== */
+
 function computeAllAtPrice(baseInput, trialPrice) {
   // 1) Figer l’apport et recalculer l’emprunt sur trialPrice
   const { price, apport, emprunte } = normalizeFinancingForSolve(baseInput, trialPrice);
@@ -2199,7 +2220,7 @@ function computeAllAtPrice(baseInput, trialPrice) {
       emolumentsTranche3   : baseInput.emolumentsTranche3,
       emolumentsTranche4   : baseInput.emolumentsTranche4,
       honorairesAvocatCoef : baseInput.honorairesAvocatCoef,
-      tvaHonoraires        : baseInput.tvaHonoroires ?? baseInput.tvaHonoraires,
+      tvaHonoroires        : baseInput.tvaHonoroires ?? baseInput.tvaHonoraires,
       publiciteFonciere    : baseInput.publiciteFonciere,
       honorairesAvocat     : baseInput.honorairesAvocat,
       fraisFixes           : baseInput.fraisFixes,
@@ -2256,8 +2277,18 @@ function computeAllAtPrice(baseInput, trialPrice) {
   const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
   const loyerAnnuelNet = loyerHC * 12 * (1 - vacRate) * (1 - gestRate);
 
-  // 7) Intérêts mensuels (indicatif) — sur le capital réellement financé
-  const interetsMensuel = capitalMensualise * ((Number(taux) || 0) / 100 / 12);
+  /* ────────────────────────────────────────────────────────────
+     7) Intérêts mensuels (indicatif) — CHOISIR A OU B
+     ➤ Garde UNE seule option et supprime l’autre.
+  ───────────────────────────────────────────────────────────── */
+
+  // ── OPTION A (active par défaut) — Approx rapide “linéaire”
+  let interetsMensuel = capitalMensualise * ((Number(taux) || 0) / 100 / 12);
+
+  // ── OPTION B (désactive A si tu actives celle-ci) — Intérêt du mois 1 (amort. exact)
+  // const a1 = amortMonth1(capitalMensualise, taux, duree);
+  // let interetsMensuel = a1.interets1;
+  // (facultatif) a1.mensualite / a1.principal1 / a1.restant sont dispo
 
   // 8) Cash-flow mensuel (locatif)
   const cfMensuel =
@@ -2278,6 +2309,7 @@ function computeAllAtPrice(baseInput, trialPrice) {
     cf0
   };
 }
+
 // (optionnel) exposer globalement
 window.computeAllAtPrice = computeAllAtPrice;
 /* === Impôts mensuels estimés par régime (approx) ======================= */
@@ -3587,6 +3619,11 @@ try {
   base.apportMode = 'amount';    // on fige l’apport en euros
   delete base.apportPct;         // on neutralise tout % résiduel
   // base.apportPct = undefined; // (optionnel) on ignore l’apport %
+
+  // ✅ Patch minimal : harmoniser les charges
+  base.financerFrais = true;
+  base.assuranceIncluseDansTaux = true;
+  base.tauxAssuranceEmprunteur  = 0;
 
   // ❗️On NE se sert PAS de base.prixPaye lors du solveur
   // Tout est recalculé à chaque essai via computeAllAtPrice(mid)
