@@ -4060,25 +4060,37 @@ if (btnRP && !btnRP.__wired) {
     `;
   };
 
-  const showSection3 = () => {
+    const showSection3 = () => {
     if (typeof window.goToStep === 'function') window.goToStep(3);
     const s3 = byId('section-3');
     if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-// Radios
-document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
-  if (!r.__wired) {
-    r.addEventListener('change', (e) => {
-      // mémorise juste le choix (optionnel)
-      window.analyzer?.setSelectedRegime?.(e.target.value);
-      // pas de goToStep(3) ici
-      recomputeBreakeven(); // relance le calcul (CF ≈ 0 € après impôts)
+  // Bouton "meilleur cash-flow" → affichage (sans calcul)
+  const bestBtn = document.getElementById('btn-best-cashflow');
+  if (bestBtn && !bestBtn.__wired2) {
+    bestBtn.addEventListener('click', () => {
+      const checked = document.querySelector('input[name="regime-actuel"]:checked');
+      const code = checked ? checked.value : 'nu_micro';
+      showSection3();
+      renderRegimeSummary(code, 'best');
     });
-    r.__wired = true;
+    bestBtn.__wired2 = true;
   }
-});
 
+  // Radios
+  document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
+    if (!r.__wired) {
+      r.addEventListener('change', (e) => {
+        // mémorise juste le choix (optionnel)
+        window.analyzer?.setSelectedRegime?.(e.target.value);
+        // pas de goToStep(3) ici
+        recomputeBreakeven(); // relance le calcul (CF ≈ 0 € après impôts)
+      });
+      r.__wired = true;
+    }
+  });
+}); 
 
   // Bouton "meilleur cash-flow"
   const bestBtn = byId('btn-best-cashflow');
