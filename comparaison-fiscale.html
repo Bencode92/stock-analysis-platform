@@ -11,7 +11,7 @@
   </script>
 
   <!-- ⬇️ AJOUTE ICI : applyBreakevenPrice en global -->
-  <script>
+<script>
   window.applyBreakevenPrice = function (newPrice) {
     try {
       const price = Math.max(0, Number(newPrice) || 0);
@@ -22,12 +22,27 @@
       const pd = window.propertyData || {};
       const val = (id, fb=0) => Number(document.getElementById(id)?.value ?? fb) || fb;
 
+      // Maj des valeurs de base
       pd.prixPaye = price;
       pd.surface  = pd.surface || val('propertySurface', 0);
       pd.apport   = val('apport', pd.apport || 0);
       pd.taux     = val('loanRate', pd.taux || 3.5);
       pd.duree    = val('loanDuration', pd.duree || 20);
       pd.travaux  = val('travaux-renovation', pd.travaux || 0);
+
+      // ⬇️ Alignement explicite avec le solveur "exact après impôts"
+      pd.apportMode = 'amount';
+      delete pd.apportPct;
+
+      pd.financerFrais = true;
+      pd.assuranceIncluseDansTaux = true;
+      pd.tauxAssuranceEmprunteur  = 0;
+
+      // Purge de valeurs figées précédentes (laisse le recalcul tout refaire proprement)
+      delete pd.mensualite;
+      delete pd.capitalEmprunte;
+      delete pd.montantEmprunte;
+      delete pd.prixM2Paye;
 
       const typeAchat = document.querySelector('input[name="type-achat"]:checked')?.value || pd.typeAchat || 'classique';
       pd.typeAchat = typeAchat;
@@ -56,6 +71,7 @@
       }
 
       const montantEmprunte = pd.prixPaye - pd.apport;
+
       const fraisInit = (
         (typeAchat === 'classique'
           ? calcFraisAcquisition(pd.prixPaye, pd).total
@@ -64,6 +80,7 @@
         + calcFraisGarantie(montantEmprunte, pd).total
         + (Number(pd.travaux) || 0)
       );
+
       const capitalMensualise = (montantEmprunte + fraisInit);
       pd.mensualite = calcMensualite(capitalMensualise, pd.taux, pd.duree);
 
@@ -78,13 +95,51 @@
         if (typeof proceedToFiscalAnalysis === 'function') proceedToFiscalAnalysis();
       }
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // ✅ Contrôle CF après impôts au prix appliqué (même régime que le solveur)
+      const regimeCode = document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
+
+      f_apresImpots_viaAnalyzer(price, window.propertyData, regimeCode)
+        .then((cf) => {
+          console.log('[Breakeven check] CF après impôts au prix appliqué =', Math.round(cf), '€/mois');
+
+          // (Optionnel) Afficher une petite pastille d’info dans #breakeven-result
+          const host = document.getElementById('breakeven-result');
+          if (host) {
+            let badge = host.querySelector('.cf-badge');
+            if (!badge) {
+              badge = document.createElement('span');
+              badge.className = 'cf-badge';
+              Object.assign(badge.style, {
+                marginLeft: '8px',
+                padding: '2px 6px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                display: 'inline-block',
+                background: '#eef2ff'
+              });
+              host.appendChild(badge);
+            }
+            badge.textContent = `CF après impôts: ${Math.round(cf)} €/mois`;
+          }
+        })
+        .catch((err) => {
+          console.warn('Breakeven CF check failed:', err);
+        })
+        .finally(() => {
+          // 🔁 Recalcul central pour tout remettre à plat
+          if (typeof recomputeBreakeven === 'function') {
+            recomputeBreakeven(); // revalide que CF ≈ 0 après impôts, même contexte
+          }
+          // Remonter en haut une fois tout fait
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
     } catch (e) {
       console.warn('applyBreakevenPrice failed:', e);
       alert("Impossible d'appliquer le prix d’équilibre. Regarde la console pour les détails.");
     }
   };
-  </script>        
+</script>
   </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
@@ -2760,7 +2815,7 @@ async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts 
     return val;
   };
 
-  // Helper pour fabriquer l’objet enrichi (prix, mensualité, + CF après impôts)
+  // Helper : objet enrichi (prix, mensualité, + CF après impôts exact)
   const enrich = async (p) => {
     const bestObj = computeAllAtPrice(baseInput, p);
     bestObj.cfApresImpotsMensuel = await f_apresImpots_viaAnalyzer(p, baseInput, regimeCode);
@@ -2778,6 +2833,25 @@ async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts 
     fhi = await F(hi);
   }
 
+  // ⬇️ Sécurisation supplémentaire contre les NaN et les faux équilibres
+
+  // Si l’une des bornes est non-finie (NaN/Inf), agrandir et réévaluer agressivement
+  if (!Number.isFinite(flo) || !Number.isFinite(fhi)) {
+    for (let k = 0; k < 5 && (!Number.isFinite(flo) || !Number.isFinite(fhi)); k++) {
+      hi *= 2;
+      fhi = await F(hi);
+      // (on garde flo tel quel pour rester ancré côté apport)
+    }
+  }
+
+  // Si toujours pas de changement de signe malgré tout, force une vraie exploration
+  if (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0) {
+    for (let k = 0; k < 10 && flo * fhi > 0; k++) {
+      hi *= 2;
+      fhi = await F(hi);
+    }
+  }
+
   // Bisection
   for (let i = 0; i < maxIter; i++) {
     const mid  = (lo + hi) / 2;
@@ -2785,21 +2859,27 @@ async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts 
 
     if (!Number.isFinite(fmid)) { hi = mid; continue; }
     if (Math.abs(fmid) < tol) {
-      // ⬅️ maintenant on renvoie l’objet ENRICHI
+      // ✅ retour objet ENRICHI
       return await enrich(mid);
     }
     if (fmid > 0) lo = mid; else hi = mid;
   }
 
-  // Fallback : renvoyer l’extrémité la plus proche de la cible (via moteur exact pour l’évaluation)
-  const [rLoCF, rHiCF] = await Promise.all([
-    f_apresImpots_viaAnalyzer(lo, baseInput, regimeCode),
-    f_apresImpots_viaAnalyzer(hi, baseInput, regimeCode)
-  ]);
-  const bestP = (Math.abs(rLoCF - targetCF) < Math.abs(rHiCF - targetCF)) ? lo : hi;
+  // 🔚 Fallback robuste : choisir parmi lo, mid, hi le meilleur vs cible (moteur exact)
+  const mid = (lo + hi) / 2;
+  const candidates = [lo, mid, hi];
+  const vals = await Promise.all(
+    candidates.map(p => f_apresImpots_viaAnalyzer(p, baseInput, regimeCode))
+  );
 
-  // ⬅️ objet enrichi au retour
-  return await enrich(bestP);
+  let bestIdx = 0;
+  let bestErr = Infinity;
+  for (let i = 0; i < candidates.length; i++) {
+    const err = Math.abs(vals[i] - targetCF);
+    if (Number.isFinite(err) && err < bestErr) { bestErr = err; bestIdx = i; }
+  }
+
+  return await enrich(candidates[bestIdx]);
 }
 
 window.solvePriceForCF0_apresImpots_exact = solvePriceForCF0_apresImpots_exact;
