@@ -3869,9 +3869,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 </script>
     <script>
-window.$    = window.$    || (sel => document.querySelector(sel));
-window.byId = window.byId || (id  => document.getElementById(id));
-
 /* 🎨 Renderer officiel — place-le AVANT le wiring des boutons */
 window.renderBreakeven = function ({ mode, price, foot }) {
   const pill = byId('breakeven-pill');
