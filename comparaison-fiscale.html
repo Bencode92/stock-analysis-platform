@@ -2382,10 +2382,7 @@ function estTaxMensuelleLmnpMicro(baseInput) {
   return baseImposableMensuelle * (TMI + PS);
 }
 
-/** Fallback simple pour autres régimes (nu réel, LMNP réel, LMP, SCI IS) :
- *  on renvoie 0 ici pour rester “Option B rapide”.
- *  -> Pour une précision exacte, passer au solveur asynchrone (Option “version exacte”).
- */
+/** Nu RÉEL : loyers - charges récurrentes - intérêts */
 function estTaxMensuelleNuReel(baseInput, r) {
   const { TMI, PS } = _resolveTauxGlobaux(baseInput);
   const { vacRate, gestRate } = _resolveVacGest(baseInput);
@@ -2407,7 +2404,7 @@ function estTaxMensuelleNuReel(baseInput, r) {
   return baseImpMensuelle * (TMI + PS);
 }
 
-/** LMNP RÉEL : BIC = loyers - charges - intérêts - amortissements (non créateurs de déficit). */
+/** LMNP RÉEL : BIC = loyers - charges - intérêts - amortissements (non créateurs de déficit) */
 function estTaxMensuelleLmnpReel(baseInput, r) {
   const { TMI, PS } = _resolveTauxGlobaux(baseInput);
   const { vacRate, gestRate } = _resolveVacGest(baseInput);
@@ -2424,10 +2421,10 @@ function estTaxMensuelleLmnpReel(baseInput, r) {
   const interets = Number(r?.interetsMensuel) || 0;
 
   // Hypothèses d'amortissement (paramétrables)
-  const ratioTerrain   = Number(baseInput.ratioTerrain ?? 0.20);      // 20% terrain
-  const dureeImmoAns   = Number(baseInput.dureeAmortImmo ?? 30);      // 30 ans
-  const valeurMeubles  = Number(baseInput.valeurMeubles ?? (0.05 * (r?.price || 0))); // 5%
-  const dureeMeubles   = Number(baseInput.dureeAmortMeubles ?? 7);    // 7 ans
+  const ratioTerrain   = Number(baseInput.ratioTerrain ?? 0.20);
+  const dureeImmoAns   = Number(baseInput.dureeAmortImmo ?? 30);
+  const valeurMeubles  = Number(baseInput.valeurMeubles ?? (0.05 * (r?.price || 0)));
+  const dureeMeubles   = Number(baseInput.dureeAmortMeubles ?? 7);
 
   const baseBatiment   = Math.max(0, (1 - ratioTerrain) * (r?.price || 0));
   const amortImmoM     = baseBatiment  / (dureeImmoAns * 12);
@@ -2438,16 +2435,15 @@ function estTaxMensuelleLmnpReel(baseInput, r) {
   const avantAmort = loyersEncaisses - chargesExploit - interets;
   const amortUtil  = Math.max(0, Math.min(amortTotalM, avantAmort));
 
-  const resultatMensuel     = avantAmort - amortUtil; // ≥ 0
-  const baseImpMensuelle    = Math.max(0, resultatMensuel);
+  const resultatMensuel  = avantAmort - amortUtil; // ≥ 0
+  const baseImpMensuelle = Math.max(0, resultatMensuel);
 
   return baseImpMensuelle * (TMI + PS);
 }
 
-/** LMP RÉEL : BIC pro => cotisations sociales SSI (~35%) + IR sur bénéfice ≥ 0 (sans PS 17,2%).
-    Amortissements comme LMNP, non créateurs de déficit. */
+/** LMP RÉEL : BIC pro => cotisations sociales SSI (~35%) + IR (sans PS 17,2%) */
 function estTaxMensuelleLmpReel(baseInput, r) {
-  const { TMI } = _resolveTauxGlobaux(baseInput); // pas de PS, on applique cotisations + IR
+  const { TMI } = _resolveTauxGlobaux(baseInput); // pas de PS : on applique cotisations + IR
   const { vacRate, gestRate } = _resolveVacGest(baseInput);
   const loyerHC = _resolveLoyerHC(baseInput);
 
@@ -2480,29 +2476,10 @@ function estTaxMensuelleLmpReel(baseInput, r) {
   return beneficeM * (TMI + cotRate);
 }
 
-/** Micro-régimes inchangés */
-function estTaxMensuelleMicroFoncier(baseInput /*, r */) {
-  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-  const baseImposableMensuelle = loyersEncaisses * 0.70; // abattement 30%
-  return baseImposableMensuelle * (TMI + PS);
-}
-
-function estTaxMensuelleLmnpMicro(baseInput /*, r */) {
-  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-  const baseImposableMensuelle = loyersEncaisses * 0.50; // abattement 50%
-  return baseImposableMensuelle * (TMI + PS);
-}
-
 // Fallback
 function estTaxMensuelleZero() { return 0; }
 
-/** ✅ Nouveau getTaxEstimator : retourne (baseInput, r) => taxeMensuelle */
+/** ✅ getTaxEstimator : retourne (baseInput, r) => taxeMensuelle */
 function getTaxEstimator(regimeCode) {
   switch ((regimeCode || '').toLowerCase()) {
     case 'nu_micro':   return estTaxMensuelleMicroFoncier;
@@ -2514,7 +2491,7 @@ function getTaxEstimator(regimeCode) {
     case 'sci_is':
     default:           return estTaxMensuelleZero;
   }
- }   
+}
         
 
 function solvePriceForCF0(baseInput, targetCF = 0) {
