@@ -2091,7 +2091,7 @@ function prepareBreakevenInput() {
   b._breakeven = { recomputeFeesFromPrice: true, ignoreProvidedMensualite: true };
 
   // On laisse l’apport en € (le gel se fait au lancement du solveur)
-  return
+    return b;
 
 
 // A) Normaliser en gelant l’apport (mode solveur)
@@ -2987,7 +2987,7 @@ toggleFieldsForRP();
 
 // CORRECTION 1: Force l'affichage avec style.display
 function goToStep(step) {
-  // 1) Cache TOUT, quoi qu'en disent les CSS (sécurité)
+  // 1) Cache TOUTES les sections et enlève "active"
   document.querySelectorAll('.market-analysis-section').forEach(section => {
     section.classList.remove('active');
     section.style.display = 'none'; // Force le masquage
@@ -3000,27 +3000,19 @@ function goToStep(step) {
     target.style.display = 'block'; // Force l'affichage
   }
 
-  // 3) Mets à jour l'étape courante et remonte la page
-  window.currentStep = currentStep = step;
+  // 3) État & UI
+  window.currentStep = step;
+  updateStepIndicator(step);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  // 4) Recalcul auto dès l'arrivée en étape 3
-  //    Micro-retard pour laisser le DOM/charts se stabiliser
+  // 4) Recalcul auto en étape 3 (laisser le DOM/charts se stabiliser)
   if (step === 3) {
     setTimeout(() => {
-      // recomputeBreakeven peut être undefined selon le contexte
       if (typeof window.recomputeBreakeven === 'function') {
         window.recomputeBreakeven();
       }
     }, 0);
   }
-}
-
-  // Mettre à jour l'indicateur d'étapes
-  updateStepIndicator(step);
-window.currentStep = currentStep = step;
-  // Scroll to top
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // FIX: Suppression du backslash parasite qui causait l'erreur de syntaxe
