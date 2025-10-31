@@ -86,172 +86,6 @@ class MarketFiscalAnalyzer {
     this.uiState = { selectedRegimeId: 'nu_micro', preferBest: false };
   }
 
-  // -- À partir d'ici, les méthodes charts sont DANS la classe --
-
-  createFiscalCharts(fiscalResults) {
-    if (typeof lazyLoadCharts === 'function') {
-      // Si tu as un lazy loader, délègue-lui l’injection/chargement
-      lazyLoadCharts('.charts-container', fiscalResults);
-    } else {
-      // Sinon, crée directement
-      this._createChartsDirectly(fiscalResults);
-    }
-  }
-
-  // Méthode interne (ex- fonction globale)
-  _createChartsDirectly(fiscalResults) {
-    const ctxCashflow = document.getElementById('fiscal-cashflow-chart')?.getContext('2d');
-    if (ctxCashflow) {
-      new Chart(ctxCashflow, {
-        type: 'bar',
-        data: {
-          labels: fiscalResults.map(r => r.nom),
-          datasets: [{
-            label: 'Cash-flow net annuel',
-            data: fiscalResults.map(r => r.cashflowNetAnnuel),
-            backgroundColor: fiscalResults.map((r,i)=> i===0 ? 'rgba(34,197,94,.7)' : 'rgba(0,191,255,.7)'),
-            borderColor:     fiscalResults.map((r,i)=> i===0 ? 'rgba(34,197,94,1)' : 'rgba(0,191,255,1)'),
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display:false } },
-          scales: {
-            y: { beginAtZero:true, grid:{ color:'rgba(255,255,255,.1)' } },
-            x: { grid:{ display:false } }
-          }
-        }
-      });
-    }
-
-    const ctxRendement = document.getElementById('fiscal-rendement-chart')?.getContext('2d');
-    if (ctxRendement) {
-      new Chart(ctxRendement, {
-        type: 'line',
-        data: {
-          labels: fiscalResults.map(r => r.nom),
-          datasets: [{
-            label: 'Rendement net',
-            data: fiscalResults.map(r => r.rendementNet),
-            borderColor: 'rgba(0,191,255,1)',
-            backgroundColor: 'rgba(0,191,255,.1)',
-            borderWidth: 3,
-            tension: .4,
-            pointRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display:false } },
-          scales: {
-            y: { beginAtZero:true, grid:{ color:'rgba(255,255,255,.1)' } },
-            x: { grid:{ display:false } }
-          }
-        }
-      });
-    }
-  }
-}
-  // ───────────────────────────────────────────────────────────
-  //  computeIRProgressif(...) est défini ici plus haut dans ta base
-  // ───────────────────────────────────────────────────────────
-
-  // --- Helper rapide d'estimation d'impôt mensuel par régime ---
-  estimateMonthlyTax(regime, baseInput = {}, trialCtx = {}, opts = {}) {
-    const code = String(regime || baseInput.regimeActuel || 'nu_micro').toLowerCase();
-
-    // helpers locaux (alignés avec tes conventions)
-    const TMI = (Number(baseInput.tmi) || 0) / 100;
-    const PS  = Number(FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX || 0.172);
-
-    const loyerHC = Number(
-      baseInput.loyerActuel ??
-      baseInput.loyerHC ??
-      baseInput.monthlyRent ??
-      baseInput.loyer ??
-      (baseInput.loyerCC != null
-        ? baseInput.loyerCC - (Number(baseInput.monthlyCharges) || 0)
-        : undefined)
-    ) || 0;
-
-    const vacRate  = (Number(baseInput.vacanceLocative)     || 0) / 100;
-    const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
-    const loyersMensuelsNet = loyerHC * (1 - vacRate) * (1 - gestRate);
-
-    const chargesMensuellesDed =
-        (Number(baseInput.chargesCoproNonRecup) || 0) +
-        (Number(baseInput.assurancePNO)         || 0) +
-        ((Number(baseInput.entretienAnnuel)     || 0) / 12) +
-        ((Number(baseInput.fraisBancairesCompte)|| 0) / 12);
-
-    // Intérêts mensuels au PRIX testé (fournis par solveur ou computeAllAtPrice)
-    const interetsMensuel = Number(trialCtx?.interetsMensuel) || 0;
-
-    // amortissements "light" (gardes ton calcul fin ailleurs)
-    const P = Number(trialCtx?.price) || 0;
-    const amortImmo    = (0.85 * P) / (30 * 12);   // 85% sur 30 ans
-    const amortMeubles = (0.10 * P) / (7  * 12);   // 10% sur 7 ans
-    const amortMensuel = amortImmo + amortMeubles;
-
-    // IS simplifié
-    function computeISMonthly(resultatMensuel) {
-      const Rann = Math.max(0, resultatMensuel * 12);
-      const seuil = Number(FISCAL_CONSTANTS.IS_PLAFOND_REDUIT || 42500);
-      const ISann = Rann <= seuil
-        ? 0.15 * Rann
-        : 0.15 * seuil + 0.25 * (Rann - seuil);
-      return ISann / 12;
-    }
-
-    // PFU éventuel (piloté par l’UI)
-    function maybePFU(beneficeMensuelApresIS) {
-      const applyPFU = !!baseInput.applyPfu || !!baseInput.applyPFU || !!baseInput.apply_pfu;
-      if (!applyPFU) return 0;
-      const distribPct = Number(baseInput.sciDistribution ?? baseInput.sci_distribution);
-      const d = Number.isFinite(distribPct) ? Math.max(0, Math.min(100, distribPct)) / 100 : 0;
-      return (beneficeMensuelApresIS * d) * 0.30; // PFU 30%
-    }
-
-    switch (code) {
-      case 'nu_micro': {
-        const baseMensuelle = loyersMensuelsNet * (1 - Number(FISCAL_CONSTANTS.MICRO_FONCIER_ABATTEMENT || 0.30));
-        return baseMensuelle * (TMI + PS);
-      }
-      case 'lmnp_micro': {
-        const baseMensuelle = loyersMensuelsNet * (1 - Number(FISCAL_CONSTANTS.MICRO_BIC_ABATTEMENT || 0.50));
-        return baseMensuelle * (TMI + PS);
-      }
-      case 'nu_reel': {
-        const revenuNet = loyersMensuelsNet - chargesMensuellesDed - interetsMensuel;
-        const baseImp = Math.max(0, revenuNet);
-        return baseImp * (TMI + PS);
-      }
-      case 'lmnp_reel':
-      case 'lmp_reel':
-      case 'lmp': {
-        const resultatBIC = loyersMensuelsNet - chargesMensuellesDed - interetsMensuel - amortMensuel;
-        const baseImp = Math.max(0, resultatBIC);
-        return baseImp * (TMI + PS); // approx (tes calculs complets restent dans getDetailedCalculations)
-      }
-      case 'sci_is': {
-        const resultatSociete = loyersMensuelsNet - chargesMensuellesDed - interetsMensuel - amortMensuel;
-        const ISmensuel = computeISMonthly(resultatSociete);
-        const benefApresIS = Math.max(0, resultatSociete) - ISmensuel;
-        const pfuMensuel = maybePFU(benefApresIS);
-        return ISmensuel + pfuMensuel;
-      }
-      default:
-        return 0;
-    }
-  }
-
-  // ───────────────────────────────────────────────────────────
-  //  getDetailedCalculations(...) est défini juste après
-  // ───────────────────────────────────────────────────────────
-
   // ───────────────────────────────────────────────────────────
   //  UI helpers (sélection régime & “meilleur”)
   // ───────────────────────────────────────────────────────────
@@ -580,8 +414,8 @@ async performCompleteAnalysis(data) {
     this.marketAnalysis = this.analyzeMarketPosition(data);
 
     // 2) Préparer les données (form → comparateur)
-const fiscalData     = this.prepareFiscalData(); // ← retiré l'argument
-const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
+    const fiscalData     = this.prepareFiscalData(data);
+    const comparatorData = this.prepareFiscalDataForComparator(fiscalData);
 
     // 3) Pseudo-résultat sans tableau d'amortissement (fallback analytique)
     const loanAmt  = Number(comparatorData.montantEmprunt ?? comparatorData.loanAmount ?? 0);
@@ -911,7 +745,7 @@ getAllAdvancedParams() {
     fraisGarantie:         parseFloatOrDefault('frais-garantie', 1.3709),
     taxeFonciere:          parseFloatOrDefault('taxeFonciere', 800),
     vacanceLocative:       parseFloatOrDefault('vacanceLocative', 0),
-    gestionLocativeTaux:   parseFloatOrDefault('gestionLocativeTaux', 0),
+    gestionLocativeTaux:   parseFloatOrDefault('gestionLocative', 0),
 
     // ───────── Entretien / travaux / assurances
     travauxRenovation:     parseFloatOrDefault('travaux-renovation', 0),
@@ -1723,12 +1557,12 @@ buildCoutInitialSection(inputData, params, coutTotalProjet = null) {
       <tr>
           <td>Apport personnel</td>
           <td class="text-right">${this.formatCurrency(inputData.apport)}</td>
-          <td class="formula">${((inputData.apport / (coutTotalOperation || 1)) * 100).toFixed(1)}% du total</td>
+          <td class="formula">${((inputData.apport / coutTotalOperation) * 100).toFixed(1)}% du total</td>
       </tr>
       <tr>
           <td>Montant emprunté</td>
           <td class="text-right">${this.formatCurrency(inputData.loanAmount)}</td>
-          <td class="formula">${((inputData.loanAmount / (coutTotalOperation || 1)) * 100).toFixed(1)}% du total</td>
+          <td class="formula">${((inputData.loanAmount / coutTotalOperation) * 100).toFixed(1)}% du total</td>
       </tr>
   `;
 }
@@ -3244,109 +3078,127 @@ generateDetailedComparisonTable(classique, encheres, modeActuel) {
         `;
     }
 
-/** ----------------------------------------------------------------------
- *  Création directe des graphiques (fallback ou après lazy load) — GLOBAL
- *  --------------------------------------------------------------------*/
-function _createChartsDirectly(fiscalResults) {
-  // Récupérer une instance disposant de formatNumber()
-  const a = (typeof window !== 'undefined' && window.analyzer)
-    ? window.analyzer
-    : new MarketFiscalAnalyzer();
-
-  // -------- Graphique des cash-flows (barres)
-  const ctxCashflow = document
-    .getElementById('fiscal-cashflow-chart')
-    ?.getContext('2d');
-
-  if (ctxCashflow) {
-    new Chart(ctxCashflow, {
-      type: 'bar',
-      data: {
-        labels: fiscalResults.map(r => r.nom),
-        datasets: [{
-          label: 'Cash-flow net annuel',
-          data: fiscalResults.map(r => r.cashflowNetAnnuel),
-          backgroundColor: fiscalResults.map((r, i) =>
-            i === 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(0, 191, 255, 0.7)'
-          ),
-          borderColor: fiscalResults.map((r, i) =>
-            i === 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(0, 191, 255, 1)'
-          ),
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: '#94a3b8',
-              callback: (value) =>
-                (a && a.formatNumber ? a.formatNumber(value) + ' €' : value + ' €')
-            },
-            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-          },
-          x: {
-            ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 },
-            grid: { display: false }
-          }
+    /**
+     * Crée les graphiques de comparaison fiscale avec lazy loading - V3
+     */
+    createFiscalCharts(fiscalResults) {
+        // Utiliser lazy loading si disponible
+        if (typeof lazyLoadCharts === 'function') {
+            lazyLoadCharts('.charts-container', fiscalResults);
+        } else {
+            // Fallback : création directe
+            this._createChartsDirectly(fiscalResults);
         }
-      }
-    });
-  }
-
-  // -------- Graphique des rendements (ligne)
-  const ctxRendement = document
-    .getElementById('fiscal-rendement-chart')
-    ?.getContext('2d');
-
-  if (ctxRendement) {
-    new Chart(ctxRendement, {
-      type: 'line',
-      data: {
-        labels: fiscalResults.map(r => r.nom),
-        datasets: [{
-          label: 'Rendement net',
-          data: fiscalResults.map(r => r.rendementNet),
-          borderColor: 'rgba(0, 191, 255, 1)',
-          backgroundColor: 'rgba(0, 191, 255, 0.1)',
-          borderWidth: 3,
-          tension: 0.4,
-          pointRadius: 6,
-          pointBackgroundColor: fiscalResults.map((r, i) =>
-            i === 0 ? '#22c55e' : '#00bfff'
-          ),
-          pointBorderColor: '#0a0f1e',
-          pointBorderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: '#94a3b8',
-              callback: (value) =>
-                (Number.isFinite(value) ? value.toFixed(1) + '%' : value)
-            },
-            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-          },
-          x: {
-            ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 },
-            grid: { display: false }
-          }
+    }
+    
+    /**
+     * Création directe des graphiques (fallback ou après lazy load)
+     */
+    _createChartsDirectly(fiscalResults) {
+        // Graphique des cash-flows
+        const ctxCashflow = document.getElementById('fiscal-cashflow-chart')?.getContext('2d');
+        if (ctxCashflow) {
+            new Chart(ctxCashflow, {
+                type: 'bar',
+                data: {
+                    labels: fiscalResults.map(r => r.nom),
+                    datasets: [{
+                        label: 'Cash-flow net annuel',
+                        data: fiscalResults.map(r => r.cashflowNetAnnuel),
+                        backgroundColor: fiscalResults.map((r, i) => i === 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(0, 191, 255, 0.7)'),
+                        borderColor: fiscalResults.map((r, i) => i === 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(0, 191, 255, 1)'),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: (value) => this.formatNumber(value) + ' €'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
         }
-      }
-    });
-  }
-  }   
         
+        // Graphique des rendements
+        const ctxRendement = document.getElementById('fiscal-rendement-chart')?.getContext('2d');
+        if (ctxRendement) {
+            new Chart(ctxRendement, {
+                type: 'line',
+                data: {
+                    labels: fiscalResults.map(r => r.nom),
+                    datasets: [{
+                        label: 'Rendement net',
+                        data: fiscalResults.map(r => r.rendementNet),
+                        borderColor: 'rgba(0, 191, 255, 1)',
+                        backgroundColor: 'rgba(0, 191, 255, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointBackgroundColor: fiscalResults.map((r, i) => i === 0 ? '#22c55e' : '#00bfff'),
+                        pointBorderColor: '#0a0f1e',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: (value) => value.toFixed(1) + '%'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
  // ─────────────────────────────────────────────
 //  utilitaire n°1 : coût d'occupation (RP)
 computeOccupationCost(data, partner = 0) {
@@ -3411,223 +3263,224 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 }
 
 // Helpers de debug V3 avec tests unitaires
-window.debugFiscalPipeline = function () {
-  try {
+window.debugFiscalPipeline = function() {
     const analyzer = window.analyzer || new MarketFiscalAnalyzer();
+(function(){
+  const analyzer = window.analyzer; // déjà créé
+  const outBox   = document.getElementById('breakeven-result');
+  const pill     = document.getElementById('breakeven-pill');
+  const preferBestEl = document.getElementById('prefer-best');
 
-    // Jeu de données de test minimal — à adapter à ton schéma
-    const testData = {
-      income: 50000,
-      status: "single",
-      country: "FR",
-      options: { preferBest: true }
-    };
-
-    // Si prepareFiscalData lit le DOM, on ne l’utilise pas ici :
-    // on ne teste que le formatage comparateur.
-    const comparatorData = analyzer.prepareFiscalDataForComparator(testData);
-
-    console.log("✅ Debug OK", { testData, comparatorData });
-    return { testData, comparatorData };
-  } catch (err) {
-    console.error("❌ Debug error in debugFiscalPipeline:", err);
-    return null;
+  function mountPill(){
+    const benefits = document.querySelector('.best-regime-card .regime-benefits');
+    if (!benefits || !pill) return;
+    const first = benefits.children[0];
+    if (first && pill.parentNode !== benefits){
+      if (benefits.children.length >= 2){
+        benefits.insertBefore(pill, benefits.children[1]);
+      } else {
+        benefits.appendChild(pill);
+      }
+    }
   }
-};
-
-function setPill(contentHTML){
   mountPill();
-  pill.style.display = 'block';
-  pill.innerHTML = contentHTML;
-}
-function setCard(html, isError=false){
-  outBox.style.display = 'block';
-  outBox.className = 'market-comparison-card' + (isError ? ' high' : '');
-  outBox.innerHTML = html;
-}
+  document.addEventListener('fiscalView:updated', mountPill);
 
-// LOCATIF
-document.getElementById('btn-breakeven-locatif')?.addEventListener('click', () => {
-  try {
-    analyzer.setPreferBest(!!preferBestEl?.checked);
-    const base = analyzer.prepareFiscalData();
-    const res = analyzer.solvePriceForTargetCF(base, 0, {
-      preferBest: analyzer.uiState.preferBest,
-      regimeId: analyzer.getSelectedRegime()
-    });
-
-    setPill(`
-      <span class="k">🎯 Prix d’équilibre (locatif)</span>
-      <span class="v">${analyzer.formatCurrency(res.price)}</span>
-      <span class="k" style="margin-left:10px;">Régime</span>
-      <span class="v">${res.regimeNom}</span>
-    `);
-
-    setCard(`
-      <h4>🎯 Prix d’équilibre (locatif)</h4>
-      <p>Régime: <strong>${res.regimeNom}</strong></p>
-      <p>Prix cible ≈ <strong>${analyzer.formatCurrency(res.price)}</strong></p>
-      <p>Cash-flow mensuel au point neutre: <strong>${analyzer.formatCurrency(res.cashflowMensuel)}</strong></p>
-    `);
-  } catch (e) {
-    console.error(e);
-    setCard(`<p>Erreur: ${e?.message || e}</p>`, true);
+  function setPill(contentHTML){
+    mountPill();
+    pill.style.display = 'block';
+    pill.innerHTML = contentHTML;
   }
-});
-
-// RÉSIDENCE PRINCIPALE
-document.getElementById('btn-breakeven-rp')?.addEventListener('click', () => {
-  try {
-    const base = analyzer.prepareFiscalData();
-    const part = parseFloat(document.getElementById('input-conjoint')?.value || '0') || 0;
-    const includeOpp = !!document.getElementById('rp-inclure-opportunite')?.checked;
-    const res = analyzer.solvePriceForNeutralOccupationRP(base, part, { includeOpportunity: includeOpp });
-
-    setPill(`
-      <span class="k">🏠 Prix d’équilibre (RP)</span>
-      <span class="v">${analyzer.formatCurrency(res.price)}</span>
-      <span class="k" style="margin-left:10px;">Conjoint</span>
-      <span class="v">${analyzer.formatCurrency(part)}/mois</span>
-    `);
-
-    setCard(`
-      <h4>🏠 Prix d’équilibre (résidence principale)</h4>
-      <p>Participation conjoint: <strong>${analyzer.formatCurrency(part)}</strong> / mois</p>
-      <p>Hypothèse: ${includeOpp ? 'inclure le loyer d’opportunité' : 'sans loyer d’opportunité'}</p>
-      <p>Prix cible ≈ <strong>${analyzer.formatCurrency(res.price)}</strong></p>
-      <p>Coût net mensuel au point neutre: <strong>${analyzer.formatCurrency(res.monthlyNetOccupation)}</strong></p>
-    `);
-  } catch (e) {
-    console.error(e);
-    setCard(`<p>Erreur: ${e?.message || e}</p>`, true);
+  function setCard(html, isError=false){
+    outBox.style.display = 'block';
+    outBox.className = 'market-comparison-card' + (isError ? ' high' : '');
+    outBox.innerHTML = html;
   }
-});
 
-// Données de test
-const testData = {
-  price: 200000,
-  surface: 60,
-  loyerHC: 800,
-  monthlyCharges: 50,
-  apport: 40000,
-  loanRate: 3.5,
-  loanDuration: 20,
-  tmi: 30,
-  typeAchat: 'classique',
-  vacanceLocative: 0,
-  taxeFonciere: 800,
-  gestionLocativeTaux: 0,
-  chargesCoproNonRecup: 50,
-  entretienAnnuel: 500,
-  assurancePNO: 15
-};
+  // LOCATIF
+  document.getElementById('btn-breakeven-locatif')?.addEventListener('click', () => {
+    try {
+      analyzer.setPreferBest(!!preferBestEl?.checked);
+      const base = analyzer.prepareFiscalData();
+      const res = analyzer.solvePriceForTargetCF(base, 0, {
+        preferBest: analyzer.uiState.preferBest,
+        regimeId: analyzer.getSelectedRegime()
+      });
 
-console.group('🔍 Debug Pipeline Fiscal V3');
+      setPill(`
+        <span class="k">🎯 Prix d’équilibre (locatif)</span>
+        <span class="v">${analyzer.formatCurrency(res.price)}</span>
+        <span class="k" style="margin-left:10px;">Régime</span>
+        <span class="v">${res.regimeNom}</span>
+      `);
 
-// 1. Test prepareFiscalData (sans DOM)
-const fiscalData = {
-  ...testData,
-  yearlyRent: testData.loyerHC * 12,
-  loanAmount: testData.price - testData.apport,
-  monthlyPayment: analyzer.calculateMonthlyPayment(160000, 3.5, 20)
-};
-console.log('1️⃣ Fiscal Data simulée:', fiscalData);
-
-// 2. Test adaptation
-const comparatorData = analyzer.prepareFiscalDataForComparator(fiscalData);
-console.log('2️⃣ Comparator Data:', comparatorData);
-console.log('   - loyerBrutHC:', comparatorData.loyerBrutHC);
-console.log('   - loyerBrutCC:', comparatorData.loyerBrutCC);
-console.log('   - chargesNonRecuperables annuel:', comparatorData.chargesNonRecuperables);
-
-// 3. Tests unitaires
-console.group('3️⃣ Tests unitaires');
-
-// Test Micro-foncier
-const microFoncierCalc = analyzer.getDetailedCalculations(
-  { nom: 'Micro-foncier' },
-  fiscalData,
-  analyzer.getAllAdvancedParams(),
-  { tableauAmortissement: [] }
-);
-const abattementTest = microFoncierCalc.baseImposable / (fiscalData.loyerHC * 12);
-console.log('✓ Micro-foncier abattement 30%:',
-  Math.abs(abattementTest - 0.70) < 0.01 ? '✅ PASS' : '❌ FAIL',
-  `(${abattementTest.toFixed(2)} vs 0.70 attendu)`
-);
-
-// Test LMNP base imposable jamais négative
-const lmnpCalc = analyzer.getDetailedCalculations(
-  { nom: 'LMNP au réel' },
-  { ...fiscalData, loyerHC: 100 }, // Très faible loyer
-  analyzer.getAllAdvancedParams(),
-  { tableauAmortissement: [] }
-);
-console.log('✓ LMNP base imposable >= 0:',
-  lmnpCalc.baseImposable >= 0 ? '✅ PASS' : '❌ FAIL',
-  `(${lmnpCalc.baseImposable})`
-);
-
-// Test SCI IS taux réduit
-const sciCalc = analyzer.getDetailedCalculations(
-  { nom: 'SCI à l\'IS' },
-  { ...fiscalData, loyerHC: 3000 },
-  analyzer.getAllAdvancedParams(),
-  { tableauAmortissement: [] }
-);
-const tauxEffectif = sciCalc.impotRevenu / sciCalc.baseImposable;
-console.log('✓ SCI IS taux 15% si < 42500€:',
-  Math.abs(tauxEffectif - 0.15) < 0.01 ? '✅ PASS' : '❌ FAIL',
-  `(${(tauxEffectif * 100).toFixed(1)}% vs 15% attendu)`
-);
-
-console.groupEnd();
-
-// 4. Vérifier chaque régime
-console.log('4️⃣ Test par régime:');
-['Micro-foncier', 'Location nue au réel', 'LMNP Micro-BIC', 'LMNP au réel', 'SCI à l\'IS'].forEach(regimeName => {
-  const regime = { nom: regimeName };
-  const calc = analyzer.getDetailedCalculations(regime, fiscalData, analyzer.getAllAdvancedParams(), {});
-  console.log(`${regimeName}:`, {
-    baseImposable: calc.baseImposable,
-    totalImpots: calc.totalImpots,
-    cashflow: calc.cashflowNetAnnuel,
-    chargesDeductibles: calc.totalCharges
+      setCard(`
+        <h4>🎯 Prix d’équilibre (locatif)</h4>
+        <p>Régime: <strong>${res.regimeNom}</strong></p>
+        <p>Prix cible ≈ <strong>${analyzer.formatCurrency(res.price)}</strong></p>
+        <p>Cash-flow mensuel au point neutre: <strong>${analyzer.formatCurrency(res.cashflowMensuel)}</strong></p>
+      `);
+    } catch (e) {
+      console.error(e);
+      setCard(`<p>Erreur: ${e?.message || e}</p>`, true);
+    }
   });
-});
 
-console.groupEnd();
+  // RÉSIDENCE PRINCIPALE
+  document.getElementById('btn-breakeven-rp')?.addEventListener('click', () => {
+    try {
+      const base = analyzer.prepareFiscalData();
+      const part = parseFloat(document.getElementById('input-conjoint')?.value || '0') || 0;
+      const includeOpp = !!document.getElementById('rp-inclure-opportunite')?.checked;
+      const res = analyzer.solvePriceForNeutralOccupationRP(base, part, { includeOpportunity: includeOpp });
+
+      setPill(`
+        <span class="k">🏠 Prix d’équilibre (RP)</span>
+        <span class="v">${analyzer.formatCurrency(res.price)}</span>
+        <span class="k" style="margin-left:10px;">Conjoint</span>
+        <span class="v">${analyzer.formatCurrency(part)}/mois</span>
+      `);
+
+      setCard(`
+        <h4>🏠 Prix d’équilibre (résidence principale)</h4>
+        <p>Participation conjoint: <strong>${analyzer.formatCurrency(part)}</strong> / mois</p>
+        <p>Hypothèse: ${includeOpp ? 'inclure le loyer d’opportunité' : 'sans loyer d’opportunité'}</p>
+        <p>Prix cible ≈ <strong>${analyzer.formatCurrency(res.price)}</strong></p>
+        <p>Coût net mensuel au point neutre: <strong>${analyzer.formatCurrency(res.monthlyNetOccupation)}</strong></p>
+      `);
+    } catch (e) {
+      console.error(e);
+      setCard(`<p>Erreur: ${e?.message || e}</p>`, true);
+    }
+  });
+})();
+
+    // Données de test
+    const testData = {
+        price: 200000,
+        surface: 60,
+        loyerHC: 800,
+        monthlyCharges: 50,
+        apport: 40000,
+        loanRate: 3.5,
+        loanDuration: 20,
+        tmi: 30,
+        typeAchat: 'classique',
+        vacanceLocative: 0,
+        taxeFonciere: 800,
+        gestionLocativeTaux: 0,
+        chargesCoproNonRecup: 50,
+        entretienAnnuel: 500,
+        assurancePNO: 15
+    };
+    
+    console.group('🔍 Debug Pipeline Fiscal V3');
+    
+    // 1. Test prepareFiscalData (sans DOM)
+    const fiscalData = {
+        ...testData,
+        yearlyRent: testData.loyerHC * 12,
+        loanAmount: testData.price - testData.apport,
+        monthlyPayment: analyzer.calculateMonthlyPayment(160000, 3.5, 20)
+    };
+    console.log('1️⃣ Fiscal Data simulée:', fiscalData);
+    
+    // 2. Test adaptation
+    const comparatorData = analyzer.prepareFiscalDataForComparator(fiscalData);
+    console.log('2️⃣ Comparator Data:', comparatorData);
+    console.log('   - loyerBrutHC:', comparatorData.loyerBrutHC);
+    console.log('   - loyerBrutCC:', comparatorData.loyerBrutCC);
+    console.log('   - chargesNonRecuperables annuel:', comparatorData.chargesNonRecuperables);
+    
+    // 3. Tests unitaires
+    console.group('3️⃣ Tests unitaires');
+    
+    // Test Micro-foncier
+    const microFoncierCalc = analyzer.getDetailedCalculations(
+        { nom: 'Micro-foncier' }, 
+        fiscalData, 
+        analyzer.getAllAdvancedParams(), 
+        { tableauAmortissement: [] }
+    );
+    const abattementTest = microFoncierCalc.baseImposable / (fiscalData.loyerHC * 12);
+    console.log('✓ Micro-foncier abattement 30%:', 
+        Math.abs(abattementTest - 0.70) < 0.01 ? '✅ PASS' : '❌ FAIL', 
+        `(${abattementTest.toFixed(2)} vs 0.70 attendu)`
+    );
+    
+    // Test LMNP base imposable jamais négative
+    const lmnpCalc = analyzer.getDetailedCalculations(
+        { nom: 'LMNP au réel' }, 
+        { ...fiscalData, loyerHC: 100 }, // Très faible loyer
+        analyzer.getAllAdvancedParams(), 
+        { tableauAmortissement: [] }
+    );
+    console.log('✓ LMNP base imposable >= 0:', 
+        lmnpCalc.baseImposable >= 0 ? '✅ PASS' : '❌ FAIL',
+        `(${lmnpCalc.baseImposable})`
+    );
+    
+    // Test SCI IS taux réduit
+    const sciCalc = analyzer.getDetailedCalculations(
+        { nom: 'SCI à l\'IS' }, 
+        { ...fiscalData, loyerHC: 3000 }, 
+        analyzer.getAllAdvancedParams(), 
+        { tableauAmortissement: [] }
+    );
+    const tauxEffectif = sciCalc.impotRevenu / sciCalc.baseImposable;
+    console.log('✓ SCI IS taux 15% si < 42500€:', 
+        Math.abs(tauxEffectif - 0.15) < 0.01 ? '✅ PASS' : '❌ FAIL',
+        `(${(tauxEffectif * 100).toFixed(1)}% vs 15% attendu)`
+    );
+    
+    console.groupEnd();
+    
+    // 4. Vérifier chaque régime
+    console.log('4️⃣ Test par régime:');
+    ['Micro-foncier', 'Location nue au réel', 'LMNP Micro-BIC', 'LMNP au réel', 'SCI à l\'IS'].forEach(regimeName => {
+        const regime = { nom: regimeName };
+        const calc = analyzer.getDetailedCalculations(regime, fiscalData, analyzer.getAllAdvancedParams(), {});
+        console.log(`${regimeName}:`, {
+            baseImposable: calc.baseImposable,
+            totalImpots: calc.totalImpots,
+            cashflow: calc.cashflowNetAnnuel,
+            chargesDeductibles: calc.totalCharges
+        });
+    });
+    
+    console.groupEnd();
+};
 
 // Nouvelle fonction de test pour vérifier les calculs
 window.testFiscalCalculations = function() {
-  console.group('🧪 Tests de calculs fiscaux');
-
-  const analyzer = new MarketFiscalAnalyzer();
-  let passed = 0;
-  let failed = 0;
-
-  // Test 1: Mensualité de prêt
-  const mensualite = analyzer.calculateMonthlyPayment(160000, 3.5, 20);
-  const expectedMensualite = 928.37; // Valeur attendue
-  if (Math.abs(mensualite - expectedMensualite) < 1) {
-    console.log('✅ Test mensualité: PASS');
-    passed++;
-  } else {
-    console.log('❌ Test mensualité: FAIL', mensualite, 'vs', expectedMensualite);
-    failed++;
-  }
-
-  // Test 2: Charges non récupérables annuelles
-  const testData = { chargesCoproNonRecup: 50 };
-  const adapted = analyzer.prepareFiscalDataForComparator(testData);
-  if (adapted.chargesNonRecuperables === 600) { // 50 * 12
-    console.log('✅ Test charges annuelles: PASS');
-    passed++;
-  } else {
-    console.log('❌ Test charges annuelles: FAIL', adapted.chargesNonRecuperables);
-    failed++;
-  }
-
-  console.log(`\n📊 Résultats: ${passed} PASS, ${failed} FAIL`);
-  console.groupEnd();
+    console.group('🧪 Tests de calculs fiscaux');
+    
+    const analyzer = new MarketFiscalAnalyzer();
+    let passed = 0;
+    let failed = 0;
+    
+    // Test 1: Mensualité de prêt
+    const mensualite = analyzer.calculateMonthlyPayment(160000, 3.5, 20);
+    const expectedMensualite = 928.37; // Valeur attendue
+    if (Math.abs(mensualite - expectedMensualite) < 1) {
+        console.log('✅ Test mensualité: PASS');
+        passed++;
+    } else {
+        console.log('❌ Test mensualité: FAIL', mensualite, 'vs', expectedMensualite);
+        failed++;
+    }
+    
+    // Test 2: Charges non récupérables annuelles
+    const testData = { chargesCoproNonRecup: 50 };
+    const adapted = analyzer.prepareFiscalDataForComparator(testData);
+    if (adapted.chargesNonRecuperables === 600) { // 50 * 12
+        console.log('✅ Test charges annuelles: PASS');
+        passed++;
+    } else {
+        console.log('❌ Test charges annuelles: FAIL', adapted.chargesNonRecuperables);
+        failed++;
+    }
+    
+    console.log(`\n📊 Résultats: ${passed} PASS, ${failed} FAIL`);
+    console.groupEnd();
 };
