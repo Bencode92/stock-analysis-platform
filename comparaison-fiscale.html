@@ -2909,40 +2909,38 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // ── Lier le choix du régime aux helpers UI ───────────────────────────────
 
-// Radios "régime actuel" → met à jour le régime sélectionné dans l'analyzer
-document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
-  r.addEventListener('change', (e) => {
-    window.analyzer?.setSelectedRegime?.(e.target.value);
+document.addEventListener('DOMContentLoaded', () => {
+  // Radios "régime actuel"
+  document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
+    r.addEventListener('change', (e) => {
+      window.analyzer?.setSelectedRegime?.(e.target.value);
+    });
   });
-});
-  // Gestion des paramètres avancés
-  document.getElementById('btn-advanced-toggle').addEventListener('click', function () {
-    const advancedParams = document.getElementById('advanced-params');
-    advancedParams.classList.toggle('hidden');
 
-    if (!advancedParams.classList.contains('hidden')) {
-      this.innerHTML = '<i class="fas fa-sliders-h"></i> Masquer les paramètres';
-    } else {
-      this.innerHTML = '<i class="fas fa-sliders-h"></i> Paramètres avancés';
-    }
-  });
+  // Gestion des paramètres avancés
+  const advBtn = document.getElementById('btn-advanced-toggle');
+  if (advBtn) {
+    advBtn.addEventListener('click', function () {
+      const advancedParams = document.getElementById('advanced-params');
+      advancedParams.classList.toggle('hidden');
+      this.innerHTML = advancedParams.classList.contains('hidden')
+        ? '<i class="fas fa-sliders-h"></i> Paramètres avancés'
+        : '<i class="fas fa-sliders-h"></i> Masquer les paramètres';
+    });
+  }
 
   // Gestion des tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', function () {
       const targetId = this.getAttribute('data-tab');
-
-      // Retirer active de tous les tabs et contenus
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-      // Ajouter active au tab cliqué et son contenu
       this.classList.add('active');
-      document.getElementById(targetId).classList.add('active');
+      document.getElementById(targetId)?.classList.add('active');
     });
   });
 
-  // --- PFU / Distribution : montrer/masquer en fonction de la case "apply-pfu"
+  // --- PFU / Distribution
   const pfuCb = document.getElementById('apply-pfu');
   const sciDistribGroup = document.getElementById('sci-distrib-group');
   const sciDistribInput = document.getElementById('sci-distribution');
@@ -2953,25 +2951,23 @@ document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
       const show = !!pfuCb.checked;
       sciDistribGroup.style.display = show ? '' : 'none';
 
-      // Si masqué → vider la valeur pour laisser le helper renvoyer "undefined"
       if (!show) {
         if (sciDistribInput) sciDistribInput.value = '';
         if (sciDistribOut) sciDistribOut.textContent = '—';
       } else {
-        // Si affiché et vide → initialiser à 0%
         if (sciDistribInput && sciDistribInput.value === '') sciDistribInput.value = 0;
-        if (sciDistribOut) sciDistribOut.textContent = (sciDistribInput?.value ?? '0') + ' %';
+        if (sciDistribOut) sciDistribOut.textContent = ((sciDistribInput?.value ?? '0') + ' %');
       }
     };
 
     pfuCb.addEventListener('change', toggleDistrib);
     if (sciDistribInput) {
       sciDistribInput.addEventListener('input', () => {
-        sciDistribOut.textContent = (sciDistribInput.value === '' ? '—' : sciDistribInput.value + ' %');
+        if (sciDistribOut) {
+          sciDistribOut.textContent = (sciDistribInput.value === '' ? '—' : sciDistribInput.value + ' %');
+        }
       });
     }
-
-    // État initial
     toggleDistrib();
   }
 });
