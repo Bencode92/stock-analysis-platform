@@ -3175,19 +3175,31 @@ generateDetailedComparisonTable(classique, encheres, modeActuel) {
         `;
     }
 
-    /**
-     * Crée les graphiques de comparaison fiscale avec lazy loading - V3
-     */
-    createFiscalCharts(fiscalResults) {
-        // Utiliser lazy loading si disponible
-        if (typeof lazyLoadCharts === 'function') {
-            lazyLoadCharts('.charts-container', fiscalResults);
-        } else {
-            // Fallback : création directe
-            this._createChartsDirectly(fiscalResults);
-        }
+  /**
+   * Crée les graphiques de comparaison fiscale avec lazy loading - V3
+   */
+  createFiscalCharts(fiscalResults) {
+    // Utiliser lazy loading si disponible
+    if (typeof lazyLoadCharts === 'function') {
+      lazyLoadCharts('.charts-container', fiscalResults);
+    } else {
+      // Fallback : création directe
+      this._createChartsDirectly(fiscalResults);
     }
-    
+  }
+} // <-- fermeture de la classe
+
+// ⬇️ Bootstrap de l’instance globale (à placer IMMÉDIATEMENT après la classe)
+;(function () {
+  const hasWindow = typeof window !== 'undefined';
+  const scope = hasWindow ? window : globalThis;
+
+  if (!(scope.analyzer instanceof MarketFiscalAnalyzer)) {
+    scope.analyzer = new MarketFiscalAnalyzer();
+  }
+})();
+// ⬇️ Alias local (facilite l’usage dans ce fichier)
+const analyzer = (typeof window !== 'undefined' ? window.analyzer : globalThis.analyzer);
     /**
      * Création directe des graphiques (fallback ou après lazy load)
      */
