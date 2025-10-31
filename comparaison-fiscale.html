@@ -3869,7 +3869,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 </script>
     <script>
-/* Utilitaires (ne pas redéclarer si déjà présents plus haut) */
 window.$    = window.$    || (sel => document.querySelector(sel));
 window.byId = window.byId || (id  => document.getElementById(id));
 
@@ -3940,14 +3939,54 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ─────────────────────────────────────────
      LOCATIF → Cash-flow mensuel cible = 0 €
   ───────────────────────────────────────── */
-if (btnLoc && !btnLoc.__wired) {
-  btnLoc.addEventListener('click', async () => {
-    try {
-      if (typeof prepareBreakevenInput !== 'function') {
-        throw new Error('prepareBreakevenInput() introuvable : vérifie l’ordre de chargement ou l’import.');
-      }
+  if (btnLoc && !btnLoc.__wired) {
+    btnLoc.addEventListener('click', async () => {
+      try {
+        if (typeof prepareBreakevenInput !== 'function') {
+          throw new Error('prepareBreakevenInput() introuvable : vérifie l’ordre de chargement ou l’import.');
+        }
 
-      const baseInput = prepareBreakevenInput();
+        const baseInput = prepareBreakevenInput();
+
+        // 🧹 purge prix & mensualité
+        baseInput.apportMode = 'amount';
+        delete baseInput.apportPct;
+        delete baseInput.prixPaye;
+        delete baseInput.mensualite;
+
+        const preferBest = !!byId('prefer-best')?.checked;
+        const regimeCode = preferBest
+          ? null
+          : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
+
+        const res = await window.solvePriceForCF0_apresImpots_exact(
+          baseInput,
+          0,
+          { regime: regimeCode ?? 'nu_micro' }
+        );
+
+        renderBreakeven({
+          mode : 'location',
+          price: res?.price ?? 0,
+          foot : `Cash-flow cible : 0 € **après impôts** (approx ${(regimeCode ?? 'nu_micro').replace('_', ' ')})`
+        });
+
+        if (typeof goToStep === 'function') goToStep(3);
+        byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        console.error('[Breakeven locatif] Erreur:', err);
+        alert('Une erreur est survenue lors du calcul. Ouvre la console pour les détails.');
+      }
+    });
+    btnLoc.__wired = true;
+  }
+
+  /* ─────────────────────────────────────────
+     RÉSIDENCE PRINCIPALE → Coût net cible = 0 €
+  ───────────────────────────────────────── */
+  if (btnRP && !btnRP.__wired) {
+    btnRP.addEventListener('click', async () => {
+      const baseInput = prepareBreakevenInput(); // ← ici
 
       // 🧹 purge prix & mensualité
       baseInput.apportMode = 'amount';
@@ -3955,70 +3994,30 @@ if (btnLoc && !btnLoc.__wired) {
       delete baseInput.prixPaye;
       delete baseInput.mensualite;
 
-      const preferBest = !!byId('prefer-best')?.checked;
-      const regimeCode = preferBest
-        ? null
-        : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
+      const partQuick   = parseFloat(byId('input-conjoint')?.value);
+      const partSection = parseFloat(byId('partnerContribution')?.value);
+      const part        = Number.isFinite(partQuick) ? partQuick : (Number(partSection) || 0);
 
-      const res = await window.solvePriceForCF0_apresImpots_exact(
-        baseInput,
-        0,
-        { regime: regimeCode ?? 'nu_micro' }
-      );
+      // “Inclure loyer d’opportunité” si la case existe
+      const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
 
-      renderBreakeven({
-        mode : 'location',
-        price: res?.price ?? 0,
-        foot : `Cash-flow cible : 0 € **après impôts** (approx ${(regimeCode ?? 'nu_micro').replace('_', ' ')})`
+      // Calcul du prix d’équilibre en RP
+      const res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
+        includeOpportunity: includeOpp
+      });
+
+      // Rendu (utilise la version attachée à window)
+      window.renderBreakeven?.({
+        mode : 'residence',
+        price: res.price,
+        foot : `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`
       });
 
       if (typeof goToStep === 'function') goToStep(3);
       byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (err) {
-      console.error('[Breakeven locatif] Erreur:', err);
-      alert('Une erreur est survenue lors du calcul. Ouvre la console pour les détails.');
-    }
-  });
-  btnLoc.__wired = true;
-}
-
-  /* ─────────────────────────────────────────
-     RÉSIDENCE PRINCIPALE → Coût net cible = 0 €
-  ───────────────────────────────────────── */
-if (btnRP && !btnRP.__wired) {
-  btnRP.addEventListener('click', async () => {
-    const baseInput = prepareBreakevenInput(); // ← ici
-
-    // 🧹 purge prix & mensualité
-    baseInput.apportMode = 'amount';
-    delete baseInput.apportPct;
-    delete baseInput.prixPaye;
-    delete baseInput.mensualite;
-
-    const partQuick   = parseFloat(byId('input-conjoint')?.value);
-    const partSection = parseFloat(byId('partnerContribution')?.value);
-    const part        = Number.isFinite(partQuick) ? partQuick : (Number(partSection) || 0);
-
-    // “Inclure loyer d’opportunité” si la case existe
-    const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
-
-    // Calcul du prix d’équilibre en RP
-    const res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
-      includeOpportunity: includeOpp
     });
-
-    // Rendu (utilise la version attachée à window)
-    window.renderBreakeven?.({
-      mode : 'residence',
-      price: res.price,
-      foot : `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`
-    });
-
-    if (typeof goToStep === 'function') goToStep(3);
-    byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-  btnRP.__wired = true;
-}
+    btnRP.__wired = true;
+  }
 
   /* ─────────────────────────────────────────
      Auto selon le mode sélectionné
@@ -4080,24 +4079,13 @@ if (btnRP && !btnRP.__wired) {
       </div>
     `;
   };
-});
-const showSection3 = () => {
-  if (typeof window.goToStep === 'function') window.goToStep(3);
-  const s3 = byId('section-3');
-  if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
 
-  // Bouton "meilleur cash-flow" → affichage (sans calcul)
-  const bestBtn = document.getElementById('btn-best-cashflow');
-  if (bestBtn && !bestBtn.__wired2) {
-    bestBtn.addEventListener('click', () => {
-      const checked = document.querySelector('input[name="regime-actuel"]:checked');
-      const code = checked ? checked.value : 'nu_micro';
-      showSection3();
-      renderRegimeSummary(code, 'best');
-    });
-    bestBtn.__wired2 = true;
-  }
+  // Helpers locaux pour la section 3
+  const showSection3 = () => {
+    if (typeof window.goToStep === 'function') window.goToStep(3);
+    const s3 = byId('section-3');
+    if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   // Radios
   document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
@@ -4105,14 +4093,15 @@ const showSection3 = () => {
       r.addEventListener('change', (e) => {
         // mémorise juste le choix (optionnel)
         window.analyzer?.setSelectedRegime?.(e.target.value);
-        // pas de goToStep(3) ici
-        recomputeBreakeven(); // relance le calcul (CF ≈ 0 € après impôts)
+        // relance le calcul (CF ≈ 0 € après impôts)
+        window.recomputeBreakeven?.();
       });
       r.__wired = true;
     }
   });
-  // Bouton "meilleur cash-flow"
-  const bestBtn = byId('btn-best-cashflow');
+
+  // Bouton "meilleur cash-flow" → affichage (sans calcul)
+  const bestBtn = byId('btn-best-cashflow'); // ← déclaré UNE seule fois
   if (bestBtn && !bestBtn.__wired) {
     bestBtn.addEventListener('click', () => {
       const checked = document.querySelector('input[name="regime-actuel"]:checked');
