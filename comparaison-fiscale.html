@@ -2658,66 +2658,92 @@ async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts 
     minPrice = 10_000,
     tol = 1e-2,
     maxIter = 60,
-    expandFactor = 1.5,
-    maxExpand = 30,
+    expandFactor = 1.7,   // un poil plus agressif
+    maxExpand = 40,       // un peu plus de tentatives
+    hardMax = 50_000_000  // plafond sécurité
   } = opts;
 
   const regimeCode = (regimeOpt || baseInput?.regimeActuel || 'nu_micro');
-
-  // Bornes initiales robustes
   const apport = Math.max(0, Number(baseInput?.apport) || 0);
-  let lo = Math.max(apport + 1000, minPrice);
-  let hi = Math.max(lo * 3, 2_000_000);
-   // 🔒 Sanitize une copie pour protéger les appels externes
-  const baseCopy = { ...(baseInput || {}) };
-  baseCopy.financerFrais = true;
-  baseCopy.assuranceIncluseDansTaux = true;
-  baseCopy.tauxAssuranceEmprunteur  = 0;
-  
 
-  // Petite mémo pour éviter des recalculs identiques
+  // bornes initiales : légèrement au-dessus de l’apport (emprunt > 0)
+  let lo = Math.max(apport + 1, minPrice);
+  let hi = Math.max(lo * 3, 2_000_000);
+
+  // copie durcie (ne dépend pas de "prix payé" et cie)
+  const base = { ...(baseInput || {}) };
+  base.apportMode = 'amount';
+  delete base.apportPct;
+  delete base.prixPaye;
+  delete base.mensualite;
+  base.financerFrais = true;
+  base.assuranceIncluseDansTaux = true;
+  base.tauxAssuranceEmprunteur  = 0;
+
+  // mémo des évaluations exactes (CF après impôts via analyzer)
   const cache = new Map();
   const F = async (p) => {
-    const key = Math.round(p); // granularité 1€
-    if (cache.has(key)) return cache.get(key);
-    const cf = await f_apresImpots_viaAnalyzer(p, baseInput, regimeCode);
-    const val = (Number.isFinite(cf) ? cf - targetCF : NaN);
-    cache.set(key, val);
+    const k = Math.round(p);
+    if (cache.has(k)) return cache.get(k);
+    const cfM = await f_apresImpots_viaAnalyzer(p, base, regimeCode); // (mensuel)
+    const val = (Number.isFinite(cfM) ? (cfM - targetCF) : NaN);
+    cache.set(k, val);
     return val;
   };
 
-  // Évalue aux bornes
+  // 1) Évaluer aux bornes
   let flo = await F(lo);
   let fhi = await F(hi);
 
-  // Étend hi jusqu’à changement de signe (ou plafond d’extensions)
+  // 2) Si pas de signe opposé, étendre hi
   let guard = 0;
-  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < maxExpand) {
-    hi *= expandFactor;
+  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < maxExpand && hi < hardMax) {
+    hi = Math.min(hardMax, hi * expandFactor);
     fhi = await F(hi);
   }
 
-  // Bisection
-  for (let i = 0; i < maxIter; i++) {
-    const mid  = (lo + hi) / 2;
-    const fmid = await F(mid);
-
-    if (!Number.isFinite(fmid)) { hi = mid; continue; }
-    if (Math.abs(fmid) < tol) {
-      return computeAllAtPrice(baseInput, mid);
+  // 3) Toujours pas de signe opposé ? Chercher finement près de lo
+  if (!(Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi <= 0)) {
+    const step = Math.max(500, Math.floor((hi - lo) / 50));
+    let found = false;
+    for (let p = lo; p <= lo + 10_000; p += step) {
+      const v = await F(p);
+      if (Number.isFinite(v)) {
+        if (flo * v <= 0) { hi = p; fhi = v; found = true; break; }
+        flo = v; lo = p;
+      }
     }
-    if (fmid > 0) lo = mid; else hi = mid;
+    // si toujours pas trouvé, abandon propre
+    if (!found) {
+      const bestP = (Math.abs(flo) < Math.abs(fhi)) ? lo : hi;
+      const approx = computeAllAtPrice(base, bestP);
+      approx.__noRoot = true;
+      approx.__msg = (flo > 0 && fhi > 0)
+        ? "Cash-flow toujours POSITIF : pas de prix d’équilibre (0 €) atteignable en augmentant le prix."
+        : "Cash-flow toujours NÉGATIF : pas de prix d’équilibre (0 €) atteignable avec ces paramètres.";
+      approx.__regime = regimeCode;
+      return approx;
+    }
   }
 
-  // Fallback : renvoyer l’extrémité la plus proche de la cible (via moteur exact pour l’évaluation)
-  const [rLoCF, rHiCF] = await Promise.all([
-    f_apresImpots_viaAnalyzer(lo, baseInput, regimeCode),
-    f_apresImpots_viaAnalyzer(hi, baseInput, regimeCode)
-  ]);
-  const bestP = (Math.abs(rLoCF - targetCF) < Math.abs(rHiCF - targetCF)) ? lo : hi;
-  return computeAllAtPrice(baseInput, bestP);
+  // 4) Bissection standard (les bornes encadrent bien la racine)
+  for (let i = 0; i < maxIter; i++) {
+    const mid  = 0.5 * (lo + hi);
+    const fmid = await F(mid);
+    if (!Number.isFinite(fmid)) { hi = mid; continue; }
+    if (Math.abs(fmid) < tol)   return computeAllAtPrice(base, mid);
+    if (flo * fmid <= 0) { hi = mid; fhi = fmid; } else { lo = mid; flo = fmid; }
+  }
+
+  // 5) Dernier recours : retourner la meilleure extrémité (annotée)
+  const bestP = (Math.abs(flo) < Math.abs(fhi)) ? lo : hi;
+  const approx = computeAllAtPrice(base, bestP);
+  approx.__approx = true;
+  approx.__regime = regimeCode;
+  return approx;
 }
 
+// (optionnel) exposer dans le scope global si nécessaire
 window.solvePriceForCF0_apresImpots_exact = solvePriceForCF0_apresImpots_exact;
 // ---- utils ----
 function debounce(fn, wait = 200) {
