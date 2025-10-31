@@ -2790,11 +2790,26 @@ const recomputeBreakeven = debounce(async function () {
     });
   }
 
+  // ⚠️ Patch A : Empêcher toute sensibilité CF sur le champ "Prix payé"
+  document.addEventListener('DOMContentLoaded', () => {
+    const pp = byId('propertyPrice');
+    if (pp) {
+      pp.classList.remove('cf-sensitive');
+      // optionnel si tu ajoutes data-no-breakeven="true" dans le HTML
+      // pp.dataset.noBreakeven = 'true';
+    }
+  });
+
   // 3) Délégation globale (debounce déjà géré dans recomputeBreakeven)
   function wireCFDelegates() {
     const handler = (e) => {
       const t = e.target;
       if (!(t instanceof HTMLElement)) return;
+
+      // Patch B : ignorer explicitement #propertyPrice (et tout champ marqué data-no-breakeven)
+      if (t.id === 'propertyPrice' || t.dataset?.noBreakeven === 'true') {
+        return; // ce champ n'influence pas le solveur
+      }
 
       // Cas spécial régimes : si déjà en étape 3 et une analyse a tourné,
       // on relance l’analyse complète (sinon un petit recompute suffit)
@@ -2815,10 +2830,18 @@ const recomputeBreakeven = debounce(async function () {
     document.addEventListener('input',  handler);
     document.addEventListener('change', handler);
 
-    // Bonus : si tu veux encapsuler sans marquer chaque champ,
-    // on écoute directement le conteneur des “paramètres avancés”.
-    byId('advanced-params')?.addEventListener('input',  recomputeBreakeven);
-    byId('advanced-params')?.addEventListener('change', recomputeBreakeven);
+    // Bonus initial : écoute du conteneur “paramètres avancés”
+    // 🔒 Filtré pour ignorer #propertyPrice également ici
+    const adv = byId('advanced-params');
+    if (adv) {
+      const containerHandler = (e) => {
+        const t = e.target;
+        if (t && (t.id === 'propertyPrice' || t.dataset?.noBreakeven === 'true')) return;
+        recomputeBreakeven();
+      };
+      adv.addEventListener('input',  containerHandler);
+      adv.addEventListener('change', containerHandler);
+    }
   }
 
   // 4) Initialisation
@@ -2827,7 +2850,26 @@ const recomputeBreakeven = debounce(async function () {
     wireCFDelegates();
   });
 })();
-        // Nouvelles fonctions pour le widget Buy vs Rent
+
+// ✅ Rappel C : double purge avant solveur (à conserver dans ton code existant)
+function recomputeBreakeven() {
+  const base = prepareBreakevenInput();
+  // ... tes calculs ...
+}
+
+function prepareBreakevenInput() {
+  const base = {/* ... construction de l'input ... */};
+
+  // Ceinture & bretelles : on purge toute trace du prix payé / financement courant
+  base.apportMode = 'amount';
+  delete base.apportPct;
+  delete base.prixPaye;
+  delete base.mensualite;
+
+  return base;
+}
+
+// ————— Nouvelles fonctions pour le widget Buy vs Rent —————
 function buildChargesBreakdown(p) {
   return {
     'Taxe foncière'          : -(p.taxeFonciere / 12),
@@ -2837,12 +2879,12 @@ function buildChargesBreakdown(p) {
     'Charges récupérables'   : -p.monthlyCharges
   };
 }
-        
-        function sum(obj) {
-          return Object.values(obj).reduce((a,b)=>a+Number(b),0);
-        }
-        
-// Initialisation
+
+function sum(obj) {
+  return Object.values(obj).reduce((a,b)=>a+Number(b),0);
+}
+
+// Initialisation additionnelle (ville, sections, etc.)
 document.addEventListener('DOMContentLoaded', function () {
   // Vérification initiale de la structure des sections
   (() => {
@@ -2863,6 +2905,7 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('propertyDepartment').value = villeData.departement || '';
     };
   }
+});
 
 // ── Lier le choix du régime aux helpers UI ───────────────────────────────
 
