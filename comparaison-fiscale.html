@@ -2078,6 +2078,11 @@ function prepareBreakevenInput() {
     if (!keepRecurringEuro.has(k) && isAmountKey(k)) delete b[k];
   });
 
+  // 🔒 Garanties solveur (indépendant de l'UI) — source de vérité
+  b.financerFrais = true;
+  b.assuranceIncluseDansTaux = true;
+  b.tauxAssuranceEmprunteur = 0;
+
   // 4) Normaliser taux & durée (robuste aux alias)
   b.taux  = Number(b.taux  ?? b.loanRate     ?? b.tauxCredit ?? b.tauxAnnuel ?? b.tauxAnnuelPct ?? 3.5);
   b.duree = Number(b.duree ?? b.loanDuration ?? b.dureeAn    ?? b.dureeAnnees ?? 20);
@@ -2085,12 +2090,8 @@ function prepareBreakevenInput() {
   // 5) Intentions pour le solveur
   b._breakeven = { recomputeFeesFromPrice: true, ignoreProvidedMensualite: true };
 
-  // ✅ Par défaut on finance les frais (si non défini ailleurs)
-  if (typeof b.financerFrais === 'undefined') b.financerFrais = true;
-
   // On laisse l’apport en € (le gel se fait au lancement du solveur)
-  return b;
-}
+  return
 
 
 // A) Normaliser en gelant l’apport (mode solveur)
@@ -2208,6 +2209,15 @@ function amortMonth1(capital, tauxAnnuelPct, dureeAn) {
 /* ====================================================================== */
 
 function computeAllAtPrice(baseInput, trialPrice) {
+  // 🔒 Forçages globaux attendus par le solveur
+  // Source de vérité pour les deux solveurs : on neutralise toujours même si l’UI a d’autres valeurs
+  baseInput = {
+    ...baseInput,
+    financerFrais: true,
+    assuranceIncluseDansTaux: true,
+    tauxAssuranceEmprunteur: 0,
+  };
+
   // 1) Figer l’apport et recalculer l’emprunt sur trialPrice
   const { price, apport, emprunte } = normalizeFinancingForSolve(baseInput, trialPrice);
 
@@ -2219,6 +2229,7 @@ function computeAllAtPrice(baseInput, trialPrice) {
     baseInput.tauxAnnuel ??
     baseInput.tauxAnnuelPct ?? 0
   );
+
   const duree = Number(
     baseInput.duree ??
     baseInput.loanDuration ??
@@ -2656,6 +2667,12 @@ async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts 
   const apport = Math.max(0, Number(baseInput?.apport) || 0);
   let lo = Math.max(apport + 1000, minPrice);
   let hi = Math.max(lo * 3, 2_000_000);
+   // 🔒 Sanitize une copie pour protéger les appels externes
+  const baseCopy = { ...(baseInput || {}) };
+  baseCopy.financerFrais = true;
+  baseCopy.assuranceIncluseDansTaux = true;
+  baseCopy.tauxAssuranceEmprunteur  = 0;
+  
 
   // Petite mémo pour éviter des recalculs identiques
   const cache = new Map();
@@ -2816,7 +2833,7 @@ const recomputeBreakeven = debounce(async function () {
       if (t.name === 'regime-actuel') {
         window.analyzer?.setSelectedRegime?.(t.value);
         if (window.currentStep === 3 && window.__fiscalRan) {
-          proceedToFiscalAnalysis();
+          window.recomputeBreakeven?.();
           return;
         }
       }
@@ -2850,24 +2867,6 @@ const recomputeBreakeven = debounce(async function () {
     wireCFDelegates();
   });
 })();
-
-// ✅ Rappel C : double purge avant solveur (à conserver dans ton code existant)
-function recomputeBreakeven() {
-  const base = prepareBreakevenInput();
-  // ... tes calculs ...
-}
-
-function prepareBreakevenInput() {
-  const base = {/* ... construction de l'input ... */};
-
-  // Ceinture & bretelles : on purge toute trace du prix payé / financement courant
-  base.apportMode = 'amount';
-  delete base.apportPct;
-  delete base.prixPaye;
-  delete base.mensualite;
-
-  return base;
-}
 
 // ————— Nouvelles fonctions pour le widget Buy vs Rent —————
 function buildChargesBreakdown(p) {
@@ -2988,18 +2987,34 @@ toggleFieldsForRP();
 
 // CORRECTION 1: Force l'affichage avec style.display
 function goToStep(step) {
-  // Cache tout, quoi qu'en disent les CSS
+  // 1) Cache TOUT, quoi qu'en disent les CSS (sécurité)
   document.querySelectorAll('.market-analysis-section').forEach(section => {
     section.classList.remove('active');
     section.style.display = 'none'; // Force le masquage
   });
 
-  // Affiche la cible
+  // 2) Affiche la section cible et marque comme active
   const target = document.getElementById(`section-${step}`);
   if (target) {
     target.classList.add('active');
     target.style.display = 'block'; // Force l'affichage
   }
+
+  // 3) Mets à jour l'étape courante et remonte la page
+  window.currentStep = currentStep = step;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // 4) Recalcul auto dès l'arrivée en étape 3
+  //    Micro-retard pour laisser le DOM/charts se stabiliser
+  if (step === 3) {
+    setTimeout(() => {
+      // recomputeBreakeven peut être undefined selon le contexte
+      if (typeof window.recomputeBreakeven === 'function') {
+        window.recomputeBreakeven();
+      }
+    }, 0);
+  }
+}
 
   // Mettre à jour l'indicateur d'étapes
   updateStepIndicator(step);
@@ -3573,8 +3588,7 @@ function generateRecommendations(pricePosition, rentPosition, data = {}) {
     
     return recommendations;
 }
-        
-// NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
+
 // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
 async function proceedToFiscalAnalysis() {
   console.log('🚀 Lancement de l\'analyse fiscale...');
@@ -3718,8 +3732,8 @@ async function proceedToFiscalAnalysis() {
     console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
 
     /* -----------------------------------------------------------------
-       10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
-    ----------------------------------------------------------------- */
+         10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
+       ----------------------------------------------------------------- */
 
     // Helper local pour la devise (fallback si analyzer n'est pas prêt)
     const fmtCurrency = (val) => {
@@ -3788,6 +3802,13 @@ async function proceedToFiscalAnalysis() {
     `;
     // (optionnel) refléter l’échec
     window.__fiscalRan = false; // ⬅️ AJOUT
+  } finally {
+    // ➜ Assure l’affichage/refresh de la carte d’équilibre une fois l’analyse finie
+    try {
+      if (typeof window.recomputeBreakeven === 'function') {
+        await window.recomputeBreakeven();
+      }
+    } catch {}
   }
 }
         // Fonction de debug
