@@ -3890,24 +3890,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     getResultsDiv().innerHTML = html;
   }
-
-  function showSection3() {
-    if (typeof window.goToStep === 'function') window.goToStep(3);
-    const s3 = document.getElementById('section-3');
-    if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  // Bouton "meilleur cash-flow" → affichage (sans calcul)
-  const bestBtn = document.getElementById('btn-best-cashflow');
-  if (bestBtn) {
-    bestBtn.addEventListener('click', () => {
-      const checked = document.querySelector('input[name="regime-actuel"]:checked');
-      const code = checked ? checked.value : 'nu_micro';
-      showSection3();
-      renderRegimeSummary(code, 'best');
-    });
-  }
-});
 </script>
     <script>
 /* Utilitaires (ne pas redéclarer si déjà présents plus haut) */
