@@ -3451,7 +3451,6 @@ window.debugFiscalPipeline = function () {
       setCard(`<p>Erreur: ${e?.message || e}</p>`, true);
     }
   });
-})();
 
     // Données de test
     const testData = {
