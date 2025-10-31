@@ -3175,18 +3175,21 @@ generateDetailedComparisonTable(classique, encheres, modeActuel) {
         `;
     }
 
-  /**
-   * Crée les graphiques de comparaison fiscale avec lazy loading - V3
-   */
+/**
+ * Crée les graphiques de comparaison fiscale avec lazy loading - V3
+ */
+class MarketFiscalAnalyzer {
   createFiscalCharts(fiscalResults) {
     // Utiliser lazy loading si disponible
     if (typeof lazyLoadCharts === 'function') {
       lazyLoadCharts('.charts-container', fiscalResults);
     } else {
       // Fallback : création directe
-      this._createChartsDirectly(fiscalResults);
+      _createChartsDirectly(fiscalResults);
     }
   }
+
+  // ... (autres méthodes de la classe, ex: formatNumber)
 } // <-- fermeture de la classe
 
 // ⬇️ Bootstrap de l’instance globale (à placer IMMÉDIATEMENT après la classe)
@@ -3198,116 +3201,114 @@ generateDetailedComparisonTable(classique, encheres, modeActuel) {
     scope.analyzer = new MarketFiscalAnalyzer();
   }
 })();
-// ⬇️ Alias local (facilite l’usage dans ce fichier)
-const analyzer = (typeof window !== 'undefined' ? window.analyzer : globalThis.analyzer);
-    /**
-     * Création directe des graphiques (fallback ou après lazy load)
-     */
-    _createChartsDirectly(fiscalResults) {
-        // Graphique des cash-flows
-        const ctxCashflow = document.getElementById('fiscal-cashflow-chart')?.getContext('2d');
-        if (ctxCashflow) {
-            new Chart(ctxCashflow, {
-                type: 'bar',
-                data: {
-                    labels: fiscalResults.map(r => r.nom),
-                    datasets: [{
-                        label: 'Cash-flow net annuel',
-                        data: fiscalResults.map(r => r.cashflowNetAnnuel),
-                        backgroundColor: fiscalResults.map((r, i) => i === 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(0, 191, 255, 0.7)'),
-                        borderColor: fiscalResults.map((r, i) => i === 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(0, 191, 255, 1)'),
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                color: '#94a3b8',
-                                callback: (value) => this.formatNumber(value) + ' €'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                color: '#94a3b8',
-                                maxRotation: 45,
-                                minRotation: 45
-                            },
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Graphique des rendements
-        const ctxRendement = document.getElementById('fiscal-rendement-chart')?.getContext('2d');
-        if (ctxRendement) {
-            new Chart(ctxRendement, {
-                type: 'line',
-                data: {
-                    labels: fiscalResults.map(r => r.nom),
-                    datasets: [{
-                        label: 'Rendement net',
-                        data: fiscalResults.map(r => r.rendementNet),
-                        borderColor: 'rgba(0, 191, 255, 1)',
-                        backgroundColor: 'rgba(0, 191, 255, 0.1)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        pointRadius: 6,
-                        pointBackgroundColor: fiscalResults.map((r, i) => i === 0 ? '#22c55e' : '#00bfff'),
-                        pointBorderColor: '#0a0f1e',
-                        pointBorderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                color: '#94a3b8',
-                                callback: (value) => value.toFixed(1) + '%'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                color: '#94a3b8',
-                                maxRotation: 45,
-                                minRotation: 45
-                            },
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    }
 
+// ⬇️ Alias local (facilite l’usage dans ce fichier)
+const analyzer =
+  (typeof window !== 'undefined' ? window.analyzer : globalThis.analyzer);
+
+/** ----------------------------------------------------------------------
+ *  Création directe des graphiques (fallback ou après lazy load) — GLOBAL
+ *  --------------------------------------------------------------------*/
+function _createChartsDirectly(fiscalResults) {
+  // Récupérer une instance disposant de formatNumber()
+  const a = (typeof window !== 'undefined' && window.analyzer)
+    ? window.analyzer
+    : new MarketFiscalAnalyzer();
+
+  // -------- Graphique des cash-flows (barres)
+  const ctxCashflow = document
+    .getElementById('fiscal-cashflow-chart')
+    ?.getContext('2d');
+
+  if (ctxCashflow) {
+    new Chart(ctxCashflow, {
+      type: 'bar',
+      data: {
+        labels: fiscalResults.map(r => r.nom),
+        datasets: [{
+          label: 'Cash-flow net annuel',
+          data: fiscalResults.map(r => r.cashflowNetAnnuel),
+          backgroundColor: fiscalResults.map((r, i) =>
+            i === 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(0, 191, 255, 0.7)'
+          ),
+          borderColor: fiscalResults.map((r, i) =>
+            i === 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(0, 191, 255, 1)'
+          ),
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: '#94a3b8',
+              callback: (value) =>
+                (a && a.formatNumber ? a.formatNumber(value) + ' €' : value + ' €')
+            },
+            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+          },
+          x: {
+            ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  // -------- Graphique des rendements (ligne)
+  const ctxRendement = document
+    .getElementById('fiscal-rendement-chart')
+    ?.getContext('2d');
+
+  if (ctxRendement) {
+    new Chart(ctxRendement, {
+      type: 'line',
+      data: {
+        labels: fiscalResults.map(r => r.nom),
+        datasets: [{
+          label: 'Rendement net',
+          data: fiscalResults.map(r => r.rendementNet),
+          borderColor: 'rgba(0, 191, 255, 1)',
+          backgroundColor: 'rgba(0, 191, 255, 0.1)',
+          borderWidth: 3,
+          tension: 0.4,
+          pointRadius: 6,
+          pointBackgroundColor: fiscalResults.map((r, i) =>
+            i === 0 ? '#22c55e' : '#00bfff'
+          ),
+          pointBorderColor: '#0a0f1e',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: '#94a3b8',
+              callback: (value) =>
+                (Number.isFinite(value) ? value.toFixed(1) + '%' : value)
+            },
+            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+          },
+          x: {
+            ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+  }   
+        
  // ─────────────────────────────────────────────
 //  utilitaire n°1 : coût d'occupation (RP)
 computeOccupationCost(data, partner = 0) {
