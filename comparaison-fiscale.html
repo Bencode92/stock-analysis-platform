@@ -2755,27 +2755,78 @@ const recomputeBreakeven = debounce(async function () {
     console.warn('Recompute breakeven error:', e);
   }
 }, 250);
-// ⚙️ Recalcul auto sur les champs "CF-sensibles" (hors radios)
-document.addEventListener('DOMContentLoaded', () => {
-  const ids = [
+// --------------------------------------------
+//  CF-SENSITIVE — marquage + déclencheurs
+// --------------------------------------------
+(function () {
+  // 1) Tous les IDs qui doivent impacter le cash-flow
+  const CF_IDS = [
+    // communs
     'loanRate','loanDuration','monthlyRent','monthlyCharges',
     'vacanceLocative','gestionLocative','charges-copro-non-recup',
     'taxeFonciere','entretien-annuel','assurance-pno',
     'frais-bancaires-compte','apport','occupationMode',
-    'partnerContribution'
+    'partnerContribution',
+    // achat classique
+    'frais-notaire-taux','commission-immo',
+    // enchères
+    'droits-enregistrement','coef-mutation','honoraires-avocat','frais-fixes',
+    'emoluments-tranche1','emoluments-tranche2','emoluments-tranche3','emoluments-tranche4',
+    'honoraires-avocat-coef','tva-honoraires','publicite-fonciere',
+    'avocat-porter-enchere','suivi-dossier','caution-mise-prix','caution-restituee',
+    // SCI / PFU
+    'apply-pfu','sci-distribution'
   ];
 
-  ids.forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el || el.__cfWired) return; // évite les doublons
+  // 2) Marquage automatique (évite de modifier le HTML partout)
+  function markCFSensitive() {
+    CF_IDS.forEach(id => {
+      const el = byId(id);
+      if (el) el.classList?.add('cf-sensitive');
+    });
+    // Régimes fiscaux (radios)
+    document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
+      r.classList.add('cf-sensitive');
+    });
+  }
 
-    const mainEvt = (el.tagName === 'SELECT') ? 'change' : 'input';
-    el.addEventListener(mainEvt, recomputeBreakeven);
-    if (mainEvt === 'input') el.addEventListener('change', recomputeBreakeven);
+  // 3) Délégation globale (debounce déjà géré dans recomputeBreakeven)
+  function wireCFDelegates() {
+    const handler = (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
 
-    el.__cfWired = true;
+      // Cas spécial régimes : si déjà en étape 3 et une analyse a tourné,
+      // on relance l’analyse complète (sinon un petit recompute suffit)
+      if (t.name === 'regime-actuel') {
+        window.analyzer?.setSelectedRegime?.(t.value);
+        if (window.currentStep === 3 && window.__fiscalRan) {
+          proceedToFiscalAnalysis();
+          return;
+        }
+      }
+
+      // Déclenchement standard pour tout input marqué
+      if (t.classList?.contains('cf-sensitive')) {
+        recomputeBreakeven();
+      }
+    };
+
+    document.addEventListener('input',  handler);
+    document.addEventListener('change', handler);
+
+    // Bonus : si tu veux encapsuler sans marquer chaque champ,
+    // on écoute directement le conteneur des “paramètres avancés”.
+    byId('advanced-params')?.addEventListener('input',  recomputeBreakeven);
+    byId('advanced-params')?.addEventListener('change', recomputeBreakeven);
+  }
+
+  // 4) Initialisation
+  document.addEventListener('DOMContentLoaded', () => {
+    markCFSensitive();
+    wireCFDelegates();
   });
-});
+})();
         // Nouvelles fonctions pour le widget Buy vs Rent
 function buildChargesBreakdown(p) {
   return {
