@@ -86,6 +86,75 @@ class MarketFiscalAnalyzer {
     this.uiState = { selectedRegimeId: 'nu_micro', preferBest: false };
   }
 
+  // -- À partir d'ici, les méthodes charts sont DANS la classe --
+
+  createFiscalCharts(fiscalResults) {
+    if (typeof lazyLoadCharts === 'function') {
+      // Si tu as un lazy loader, délègue-lui l’injection/chargement
+      lazyLoadCharts('.charts-container', fiscalResults);
+    } else {
+      // Sinon, crée directement
+      this._createChartsDirectly(fiscalResults);
+    }
+  }
+
+  // Méthode interne (ex- fonction globale)
+  _createChartsDirectly(fiscalResults) {
+    const ctxCashflow = document.getElementById('fiscal-cashflow-chart')?.getContext('2d');
+    if (ctxCashflow) {
+      new Chart(ctxCashflow, {
+        type: 'bar',
+        data: {
+          labels: fiscalResults.map(r => r.nom),
+          datasets: [{
+            label: 'Cash-flow net annuel',
+            data: fiscalResults.map(r => r.cashflowNetAnnuel),
+            backgroundColor: fiscalResults.map((r,i)=> i===0 ? 'rgba(34,197,94,.7)' : 'rgba(0,191,255,.7)'),
+            borderColor:     fiscalResults.map((r,i)=> i===0 ? 'rgba(34,197,94,1)' : 'rgba(0,191,255,1)'),
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display:false } },
+          scales: {
+            y: { beginAtZero:true, grid:{ color:'rgba(255,255,255,.1)' } },
+            x: { grid:{ display:false } }
+          }
+        }
+      });
+    }
+
+    const ctxRendement = document.getElementById('fiscal-rendement-chart')?.getContext('2d');
+    if (ctxRendement) {
+      new Chart(ctxRendement, {
+        type: 'line',
+        data: {
+          labels: fiscalResults.map(r => r.nom),
+          datasets: [{
+            label: 'Rendement net',
+            data: fiscalResults.map(r => r.rendementNet),
+            borderColor: 'rgba(0,191,255,1)',
+            backgroundColor: 'rgba(0,191,255,.1)',
+            borderWidth: 3,
+            tension: .4,
+            pointRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display:false } },
+          scales: {
+            y: { beginAtZero:true, grid:{ color:'rgba(255,255,255,.1)' } },
+            x: { grid:{ display:false } }
+          }
+        }
+      });
+    }
+  }
+}
   // ───────────────────────────────────────────────────────────
   //  computeIRProgressif(...) est défini ici plus haut dans ta base
   // ───────────────────────────────────────────────────────────
@@ -3174,37 +3243,6 @@ generateDetailedComparisonTable(classique, encheres, modeActuel) {
             </div>
         `;
     }
-
-/**
- * Crée les graphiques de comparaison fiscale avec lazy loading - V3
- */
-class MarketFiscalAnalyzer {
-  createFiscalCharts(fiscalResults) {
-    // Utiliser lazy loading si disponible
-    if (typeof lazyLoadCharts === 'function') {
-      lazyLoadCharts('.charts-container', fiscalResults);
-    } else {
-      // Fallback : création directe
-      _createChartsDirectly(fiscalResults);
-    }
-  }
-
-  // ... (autres méthodes de la classe, ex: formatNumber)
-} // <-- fermeture de la classe
-
-// ⬇️ Bootstrap de l’instance globale (à placer IMMÉDIATEMENT après la classe)
-;(function () {
-  const hasWindow = typeof window !== 'undefined';
-  const scope = hasWindow ? window : globalThis;
-
-  if (!(scope.analyzer instanceof MarketFiscalAnalyzer)) {
-    scope.analyzer = new MarketFiscalAnalyzer();
-  }
-})();
-
-// ⬇️ Alias local (facilite l’usage dans ce fichier)
-const analyzer =
-  (typeof window !== 'undefined' ? window.analyzer : globalThis.analyzer);
 
 /** ----------------------------------------------------------------------
  *  Création directe des graphiques (fallback ou après lazy load) — GLOBAL
