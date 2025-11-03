@@ -1993,10 +1993,7 @@ async function f_apresImpots_viaAnalyzer(trialPrice, baseInput, regimeCode) {
   // 4) annuel -> mensuel
   const cfM = (row?.cashflowNetAnnuel ?? 0) / 12;
   return cfM; // la bissection résout cfM - targetCF = 0
-}
-</script>
-    
-    <script>
+}   
         // Variables globales
         window.currentStep = 1;
         let marketData = null;
