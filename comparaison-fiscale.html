@@ -4027,9 +4027,8 @@ window.renderBreakeven = function ({ mode, price, foot }) {
 
   // Fallback de formatage si analyzer n'est pas prêt
   const fmtCurrency = (val) => {
-    if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
-      return analyzer.formatCurrency(val);
-    }
+    const f = window.analyzer?.formatCurrency;
+    if (typeof f === 'function') return f(val);
     try {
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
@@ -4077,6 +4076,7 @@ window.renderBreakeven = function ({ mode, price, foot }) {
     `;
   }
 };
+
 /* ---- Wiring des boutons (après le renderer) ---- */
 document.addEventListener('DOMContentLoaded', () => {
   const byId = (id) => document.getElementById(id);
@@ -4103,20 +4103,25 @@ document.addEventListener('DOMContentLoaded', () => {
         delete baseInput.mensualite;
 
         const preferBest = !!byId('prefer-best')?.checked;
-        const regimeCode = preferBest
-          ? null
-          : (document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro');
+        const regimeCode = document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
+
+        // Si "meilleur" est coché, on laisse le solver décider (on omet la clé)
+        const opts = preferBest ? {} : { regime: regimeCode };
 
         const res = await window.solvePriceForCF0_apresImpots_exact(
           baseInput,
           0,
-          { regime: regimeCode ?? 'nu_micro' }
+          opts
         );
+
+        const footText = preferBest
+          ? 'Cash-flow cible : 0 € **après impôts** (régime auto/best)'
+          : `Cash-flow cible : 0 € **après impôts** (approx ${(regimeCode || 'nu_micro').replace('_', ' ')})`;
 
         window.renderBreakeven({
           mode : 'location',
           price: res?.price ?? 0,
-          foot : `Cash-flow cible : 0 € **après impôts** (approx ${(regimeCode ?? 'nu_micro').replace('_', ' ')})`
+          foot : footText
         });
 
         if (typeof goToStep === 'function') goToStep(3);
@@ -4155,15 +4160,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
 
         // Calcul du prix d’équilibre en RP
-        const res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
-          includeOpportunity: includeOpp
-        });
+        const solver = window.analyzer?.solvePriceForNeutralOccupationRP;
+        if (typeof solver !== 'function') {
+          throw new Error('analyzer.solvePriceForNeutralOccupationRP introuvable.');
+        }
+        const res = await solver(baseInput, part, { includeOpportunity: includeOpp });
 
-        // Rendu (utilise la version attachée à window) — ⚠️ fmtCurrency sécurisé
+        // Formatter sûr (même logique que dans le renderer)
         const fmtCurrency = (val) => {
-          if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
-            return analyzer.formatCurrency(val);
-          }
+          const f = window.analyzer?.formatCurrency;
+          if (typeof f === 'function') return f(val);
           try {
             return new Intl.NumberFormat('fr-FR', {
               style: 'currency',
@@ -4177,7 +4183,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.renderBreakeven?.({
           mode : 'residence',
-          price: res.price,
+          price: res?.price ?? 0,
           foot : `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${fmtCurrency(part)}/mois`
         });
 
@@ -4290,6 +4296,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     bestBtn.__wired = true;
   }
-}); 
+});
 </body>
 </html>
