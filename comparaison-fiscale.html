@@ -4022,6 +4022,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 /* 🎨 Renderer officiel — place-le AVANT le wiring des boutons */
 window.renderBreakeven = function ({ mode, price, foot }) {
+  const byId = (id) => document.getElementById(id);
   const pill = byId('breakeven-pill');
   const card = byId('breakeven-result');
   const isRP = (mode === 'residence');
@@ -4071,7 +4072,7 @@ window.renderBreakeven = function ({ mode, price, foot }) {
       </div>
       <p style="margin-top:12px;color:#94a3b8">${foot || ''}</p>
       <div style="margin-top:16px;">
-        <button class="btn btn-outline" onclick="goToStep(1)">
+        <button class="btn btn-outline" onclick="goToStep && goToStep(1)">
           <i class="fas fa-edit"></i> Affiner les entrées
         </button>
       </div>
@@ -4081,6 +4082,8 @@ window.renderBreakeven = function ({ mode, price, foot }) {
 
 /* ---- Wiring des boutons (après le renderer) ---- */
 document.addEventListener('DOMContentLoaded', () => {
+  const byId = (id) => document.getElementById(id);
+
   const btnLoc = byId('btn-breakeven-locatif');
   const btnRP  = byId('btn-breakeven-rp');
 
@@ -4113,7 +4116,7 @@ document.addEventListener('DOMContentLoaded', () => {
           { regime: regimeCode ?? 'nu_micro' }
         );
 
-        renderBreakeven({
+        window.renderBreakeven({
           mode : 'location',
           price: res?.price ?? 0,
           foot : `Cash-flow cible : 0 € **après impôts** (approx ${(regimeCode ?? 'nu_micro').replace('_', ' ')})`
@@ -4134,35 +4137,59 @@ document.addEventListener('DOMContentLoaded', () => {
   ───────────────────────────────────────── */
   if (btnRP && !btnRP.__wired) {
     btnRP.addEventListener('click', async () => {
-      const baseInput = prepareBreakevenInput(); // ← ici
+      try {
+        if (typeof prepareBreakevenInput !== 'function') {
+          throw new Error('prepareBreakevenInput() introuvable : vérifie l’ordre de chargement ou l’import.');
+        }
 
-      // 🧹 purge prix & mensualité
-      baseInput.apportMode = 'amount';
-      delete baseInput.apportPct;
-      delete baseInput.prixPaye;
-      delete baseInput.mensualite;
+        const baseInput = prepareBreakevenInput();
 
-      const partQuick   = parseFloat(byId('input-conjoint')?.value);
-      const partSection = parseFloat(byId('partnerContribution')?.value);
-      const part        = Number.isFinite(partQuick) ? partQuick : (Number(partSection) || 0);
+        // 🧹 purge prix & mensualité
+        baseInput.apportMode = 'amount';
+        delete baseInput.apportPct;
+        delete baseInput.prixPaye;
+        delete baseInput.mensualite;
 
-      // “Inclure loyer d’opportunité” si la case existe
-      const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
+        const partQuick   = parseFloat(byId('input-conjoint')?.value);
+        const partSection = parseFloat(byId('partnerContribution')?.value);
+        const part        = Number.isFinite(partQuick) ? partQuick : (Number(partSection) || 0);
 
-      // Calcul du prix d’équilibre en RP
-      const res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
-        includeOpportunity: includeOpp
-      });
+        // “Inclure loyer d’opportunité” si la case existe
+        const includeOpp = !!byId('rp-inclure-opportunite')?.checked;
 
-      // Rendu (utilise la version attachée à window)
-      window.renderBreakeven?.({
-        mode : 'residence',
-        price: res.price,
-        foot : `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${analyzer.formatCurrency(part)}/mois`
-      });
+        // Calcul du prix d’équilibre en RP
+        const res = await analyzer.solvePriceForNeutralOccupationRP(baseInput, part, {
+          includeOpportunity: includeOpp
+        });
 
-      if (typeof goToStep === 'function') goToStep(3);
-      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Rendu (utilise la version attachée à window) — ⚠️ fmtCurrency sécurisé
+        const fmtCurrency = (val) => {
+          if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
+            return analyzer.formatCurrency(val);
+          }
+          try {
+            return new Intl.NumberFormat('fr-FR', {
+              style: 'currency',
+              currency: 'EUR',
+              maximumFractionDigits: 0
+            }).format(val);
+          } catch {
+            return (Math.round(val) + ' €');
+          }
+        };
+
+        window.renderBreakeven?.({
+          mode : 'residence',
+          price: res.price,
+          foot : `${includeOpp ? 'Avec' : 'Sans'} loyer d’opportunité — Part conjoint : ${fmtCurrency(part)}/mois`
+        });
+
+        if (typeof goToStep === 'function') goToStep(3);
+        byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        console.error('[Breakeven RP] Erreur:', err);
+        alert('Une erreur est survenue lors du calcul RP. Ouvre la console pour les détails.');
+      }
     });
     btnRP.__wired = true;
   }
@@ -4196,42 +4223,45 @@ document.addEventListener('DOMContentLoaded', () => {
     'sci_is'    : { id: 'sci-is',        label: "SCI à l'IS" }
   };
 
-  // (facultatif) alias local sans redéfinir la map
   const REGIME_LABELS = window.REGIME_LABELS;
 
-  const getResultsDiv = () => {
-    let results = byId('fiscal-comparison-results');
+  function getResultsDiv() {
+    let results = document.getElementById('fiscal-comparison-results');
     if (!results) {
-      const host = byId('section-3') || document.body;
+      const host = document.getElementById('section-3') || document.body;
       results = document.createElement('div');
       results.id = 'fiscal-comparison-results';
       host.appendChild(results);
     }
     return results;
-  };
+  }
 
-  const renderRegimeSummary = (code, mode = 'selection') => {
+  function renderRegimeSummary(code, mode = 'selection') {
     const info = REGIME_LABELS[code] || { label: code || '—' };
     const badge = mode === 'best'
       ? '<span class="regime-badge best-regime">Mode meilleur</span>'
       : '<span class="regime-badge current">Régime sélectionné</span>';
-    getResultsDiv().innerHTML = `
+
+    const html = `
       <div class="best-regime-summary">
         <div class="summary-title">
           <i class="fas fa-balance-scale"></i> Synthèse fiscale
         </div>
         <div class="summary-content">
           <div class="regime-name">${info.label || '—'} ${badge}</div>
-          <p style="margin-top:10px;color:#94a3b8">Affichage direct demandé — aucun calcul lancé.</p>
+          <p style="margin-top:10px;color:#94a3b8">
+            Affichage direct demandé — aucun calcul lancé.
+          </p>
         </div>
       </div>
     `;
-  };
+    getResultsDiv().innerHTML = html;
+  }
 
   // Helpers locaux pour la section 3
   const showSection3 = () => {
     if (typeof window.goToStep === 'function') window.goToStep(3);
-    const s3 = byId('section-3');
+    const s3 = document.getElementById('section-3');
     if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -4241,8 +4271,12 @@ document.addEventListener('DOMContentLoaded', () => {
       r.addEventListener('change', (e) => {
         // mémorise juste le choix (optionnel)
         window.analyzer?.setSelectedRegime?.(e.target.value);
-        // relance le calcul (CF ≈ 0 € après impôts)
-        window.recomputeBreakeven?.();
+        // relance le calcul (CF ≈ 0 € après impôts) avec fallback
+        if (typeof window.recomputeBreakeven === 'function') {
+          window.recomputeBreakeven();
+        } else {
+          typeof computeAuto === 'function' && computeAuto();
+        }
       });
       r.__wired = true;
     }
@@ -4260,6 +4294,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bestBtn.__wired = true;
   }
 });
-</script>
+</script>    
 </body>
 </html>
