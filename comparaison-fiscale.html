@@ -2652,6 +2652,7 @@ window.solvePriceForCF0_apresImpots = solvePriceForCF0_apresImpots;
  * - Bisection robuste + extension automatique des bornes
  * - Retourne l’objet computeAllAtPrice(...) au prix trouvé (plug-and-play avec ton rendu)
  */
+// Drop-in replacement
 async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts = {}) {
   const {
     regime: regimeOpt,
@@ -2745,6 +2746,7 @@ async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts 
 
 // (optionnel) exposer dans le scope global si nécessaire
 window.solvePriceForCF0_apresImpots_exact = solvePriceForCF0_apresImpots_exact;
+
 // ---- utils ----
 function debounce(fn, wait = 200) {
   let t;
@@ -3746,103 +3748,121 @@ async function proceedToFiscalAnalysis() {
     };
     console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
 
-    /* -----------------------------------------------------------------
+/* -----------------------------------------------------------------
          10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
-       ----------------------------------------------------------------- */
+   ----------------------------------------------------------------- */
 
-    // Helper local pour la devise (fallback si analyzer n'est pas prêt)
-    const fmtCurrency = (val) => {
-      if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
-        return analyzer.formatCurrency(val);
-      }
-      try {
-        return new Intl.NumberFormat('fr-FR', {
-          style: 'currency', currency: 'EUR', maximumFractionDigits: 0
-        }).format(val);
-      } catch { return (Math.round(val) + ' €'); }
-    };
-
+  // Helper local pour la devise (fallback si analyzer n'est pas prêt)
+  const fmtCurrency = (val) => {
+    if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
+      return analyzer.formatCurrency(val);
+    }
     try {
-      // ❗️On copie l’entrée et on **force le gel de l’apport en €**
-      const base = prepareBreakevenInput();
-      base.apportMode = 'amount';    // on fige l’apport en euros
-      delete base.apportPct;         // on neutralise tout % résiduel
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency', currency: 'EUR', maximumFractionDigits: 0
+      }).format(val);
+    } catch { return (Math.round(val) + ' €'); }
+  };
 
-      // 🧹 purge prix & mensualité
-      delete base.prixPaye;
-      delete base.mensualite;
+  try {
+    // ❗️On copie l’entrée et on **force le gel de l’apport en €**
+    const base = prepareBreakevenInput();
+    base.apportMode = 'amount';    // on fige l’apport en euros
+    delete base.apportPct;         // on neutralise tout % résiduel
 
-      // ✅ Patch minimal : harmoniser les charges
-      base.financerFrais = true;
-      base.assuranceIncluseDansTaux = true;
-      base.tauxAssuranceEmprunteur  = 0;
+    // 🧹 purge prix & mensualité
+    delete base.prixPaye;
+    delete base.mensualite;
 
-      // ❗️On NE se sert PAS de base.prixPaye lors du solveur
-      const regimeCode =
-        (document.querySelector('input[name="regime-actuel"]:checked')?.value) ||
-        base.regimeActuel || 'nu_micro';
+    // ✅ Patch minimal : harmoniser les charges
+    base.financerFrais = true;
+    base.assuranceIncluseDansTaux = true;
+    base.tauxAssuranceEmprunteur  = 0;
 
-      const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
+    // ❗️On NE se sert PAS de base.prixPaye lors du solveur
+    const regimeCode =
+      (document.querySelector('input[name="regime-actuel"]:checked')?.value) ||
+      base.regimeActuel || 'nu_micro';
 
-      // Garde-fou : si solveur renvoie un résultat incomplet
-      const price = Number.isFinite(res?.price) ? res.price : 0;
-      const apport = Number.isFinite(res?.apport) ? res.apport : 0;
+    const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
 
+    // ➜ Cas "aucune racine" : on rend un message clair et on quitte
+    if (res && res.__noRoot) {
       window.renderBreakeven?.({
         mode : (byId('occupationMode')?.value === 'residence') ? 'residence' : 'location',
-        price: price,
-        foot : `Apport figé : ${fmtCurrency(apport)} — Cash-flow cible : 0 € <strong>après impôts</strong> (${String(regimeCode).replace(/_/g,' ')})`
-        // (optionnel) + ` — Mensualité estimée : ${Number.isFinite(res?.mensualite) ? fmtCurrency(res.mensualite) : '—'}`
+        price: Number.isFinite(res?.price) ? res.price : 0, // ou masquer si souhaité
+        foot : `${res.__msg} — Régime: ${String(res.__regime).replace(/_/g,' ')}`
       });
 
+      // (optionnel) afficher le meilleur CF atteignable s'il est fourni par votre computeAllAtPrice(...)
+      // const cfBest = res?.cashflowNetMensuel ?? res?.cfApresImpotsMensuel;
+      // if (Number.isFinite(cfBest)) {
+      //   appendBreakevenNote?.(`Meilleur CF atteignable : ${fmtCurrency(cfBest)}/mois`);
+      // }
+
       byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (e) {
-      console.warn('Breakeven non calculé :', e);
-      // Fallback visuel pour quand même afficher la carte plutôt que rien
-      window.renderBreakeven?.({
-        mode : (byId('occupationMode')?.value === 'residence') ? 'residence' : 'location',
-        price: 0,
-        foot : 'Impossible de calculer automatiquement le prix d’équilibre (voir console).'
-      });
-      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return; // ⬅️ important
     }
 
-  } catch (error) {
-    console.error('Erreur lors de l\'analyse fiscale:', error);
-    resultsDiv.innerHTML = `
-      <div class="market-comparison-card">
-        <h3 style="color:#ef4444;">Erreur lors de l'analyse</h3>
-        <p>Une erreur est survenue. Veuillez réessayer.</p>
-      </div>
-    `;
-    // (optionnel) refléter l’échec
-    window.__fiscalRan = false; // ⬅️ AJOUT
-  } finally {
-    // ➜ Assure l’affichage/refresh de la carte d’équilibre une fois l’analyse finie
-    try {
-      if (typeof window.recomputeBreakeven === 'function') {
-        await window.recomputeBreakeven();
-      }
-    } catch {}
+    // ➜ Rendu normal si une racine a été trouvée (pas de __noRoot)
+    const price  = Number.isFinite(res?.price) ? res.price : 0;
+    const apport = Number.isFinite(res?.apport) ? res.apport : 0;
+
+    window.renderBreakeven?.({
+      mode : (byId('occupationMode')?.value === 'residence') ? 'residence' : 'location',
+      price: price,
+      foot : `Apport figé : ${fmtCurrency(apport)} — Cash-flow cible : 0 € <strong>après impôts</strong> (${String(regimeCode).replace(/_/g,' ')})`
+      // (optionnel) + ` — Mensualité estimée : ${Number.isFinite(res?.mensualite) ? fmtCurrency(res.mensualite) : '—'}`
+    });
+
+    byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    console.warn('Breakeven non calculé :', e);
+    // Fallback visuel pour quand même afficher la carte plutôt que rien
+    window.renderBreakeven?.({
+      mode : (byId('occupationMode')?.value === 'residence') ? 'residence' : 'location',
+      price: 0,
+      foot : 'Impossible de calculer automatiquement le prix d’équilibre (voir console).'
+    });
+    byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+
+} catch (error) {
+  console.error('Erreur lors de l\'analyse fiscale:', error);
+  resultsDiv.innerHTML = `
+    <div class="market-comparison-card">
+      <h3 style="color:#ef4444;">Erreur lors de l'analyse</h3>
+      <p>Une erreur est survenue. Veuillez réessayer.</p>
+    </div>
+  `;
+  // (optionnel) refléter l’échec
+  window.__fiscalRan = false; // ⬅️ AJOUT
+} finally {
+  // ➜ Assure l’affichage/refresh de la carte d’équilibre une fois l’analyse finie
+  try {
+    if (typeof window.recomputeBreakeven === 'function') {
+      await window.recomputeBreakeven();
+    }
+  } catch {}
 }
-        // Fonction de debug
-        window.debugFiscalAnalysis = function() {
-            if (!window.lastAnalysisData) {
-                console.log('❌ Aucune analyse disponible. Lancez d\'abord une analyse.');
-                return;
-            }
-            
-            const data = window.lastAnalysisData;
-            console.group('🔍 Debug Analyse Fiscale');
-            console.log('📅 Date:', data.timestamp);
-            console.log('📥 Données entrées:', data.input);
-            console.log('📊 Résultats:', data.results);
-            console.log('🏆 Meilleur régime:', data.results.reduce((a, b) => 
-                a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
-            ));
-            console.groupEnd();
-        };
+
+// Fonction de debug
+window.debugFiscalAnalysis = function() {
+  if (!window.lastAnalysisData) {
+    console.log('❌ Aucune analyse disponible. Lancez d\'abord une analyse.');
+    return;
+  }
+  
+  const data = window.lastAnalysisData;
+  console.group('🔍 Debug Analyse Fiscale');
+  console.log('📅 Date:', data.timestamp);
+  console.log('📥 Données entrées:', data.input);
+  console.log('📊 Résultats:', data.results);
+  console.log('🏆 Meilleur régime:', data.results.reduce((a, b) => 
+    a.cashflowNetAnnuel > b.cashflowNetAnnuel ? a : b
+  ));
+  console.groupEnd();
+};
         
         // Vérifier les paramètres modifiés
         function checkModifiedParameters() {
