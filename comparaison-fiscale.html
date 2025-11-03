@@ -1492,15 +1492,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <div class="continue-section">
-  <button type="button" id="analyze-btn" class="btn-continue">
+  <button type="submit" class="btn-continue">
     Analyser mon investissement
     <i class="fas fa-arrow-right" style="margin-left: 10px;"></i>
   </button>
-
   <button type="button" id="btn-advanced-toggle" class="btn btn-outline">
     <i class="fas fa-sliders-h"></i> Paramètres avancés
   </button>
 </div>
+</form>
+</div><!-- .card de #section-1 -->
 
 <!-- Paramètres avancés (masqués par défaut) -->
 <div id="advanced-params" class="hidden fade-in">
@@ -1993,7 +1994,10 @@ async function f_apresImpots_viaAnalyzer(trialPrice, baseInput, regimeCode) {
   // 4) annuel -> mensuel
   const cfM = (row?.cashflowNetAnnuel ?? 0) / 12;
   return cfM; // la bissection résout cfM - targetCF = 0
-}   
+}
+</script>
+    
+    <script>
         // Variables globales
         window.currentStep = 1;
         let marketData = null;
