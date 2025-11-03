@@ -4018,7 +4018,6 @@ document.addEventListener('DOMContentLoaded', () => {
     getResultsDiv().innerHTML = html;
   }
 });    
-</script>
 <script>
 /* 🎨 Renderer officiel — place-le AVANT le wiring des boutons */
 window.renderBreakeven = function ({ mode, price, foot }) {
@@ -4079,7 +4078,8 @@ window.renderBreakeven = function ({ mode, price, foot }) {
     `;
   }
 };
-
+</script>
+    <script>
 /* ---- Wiring des boutons (après le renderer) ---- */
 document.addEventListener('DOMContentLoaded', () => {
   const byId = (id) => document.getElementById(id);
