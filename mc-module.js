@@ -1826,8 +1826,9 @@
     }
   };
 
-// ==== SYSTÈME DE PRESETS v3.9 — sans fondamentaux (only perf/risque/dividendes) ====
+// ==== SYSTÈME DE PRESETS v3.10 — sans fondamentaux (perf/risque/dividendes) ====
 const PRESETS = {
+  // ----- Base -----
   defensif: {
     label: '🛡️ Défensif',
     mode: 'balanced', // moyenne de percentiles
@@ -1839,8 +1840,8 @@ const PRESETS = {
     geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics','Energie','Immobilier'] },
     customFilters: [
       { metric:'perf_daily',          operator:'>=', value:-0.5 },
-      { metric:'dividend_yield_reg',  operator:'>=', value:2.0 }, // évite 0% et quasi-0, plus sélectif
-      { metric:'volatility_3y',       operator:'<=', value:26 },  // borne max (cohérent défensif)
+      { metric:'dividend_yield_reg',  operator:'>=', value:2.0 },
+      { metric:'volatility_3y',       operator:'<=', value:26 },
       { metric:'max_drawdown_3y',     operator:'<=', value:35 },
       { metric:'payout_ratio',        operator:'<=', value:75 }   // passer à 90 si panier REITs
     ]
@@ -1861,7 +1862,7 @@ const PRESETS = {
       { metric:'payout_ratio',        operator:'<=', value:85 },  // monter à 110 si REITs
       { metric:'max_drawdown_3y',     operator:'<=', value:45 },
       { metric:'volatility_3y',       operator:'<=', value:35 },
-      { metric:'perf_1y',             operator:'>=', value:-5 }   // évite les pièges trop dégradés
+      { metric:'perf_1y',             operator:'>=', value:-5 }
     ]
   },
 
@@ -1875,9 +1876,9 @@ const PRESETS = {
     geoFilters: { regions:[], countries:[], sectors:['Technologie de l\'information','Santé','Industries','Biens de consommation cycliques','La communication','Matériaux'] },
     customFilters: [
       { metric:'perf_daily',          operator:'>=', value:0 },
-      { metric:'ytd',                 operator:'>=', value:10 },  // robuste
+      { metric:'ytd',                 operator:'>=', value:10 },
       { metric:'max_drawdown_3y',     operator:'<=', value:60 },
-      { metric:'volatility_3y',       operator:'<=', value:50 }   // pas de contrainte dividende/payout ici
+      { metric:'volatility_3y',       operator:'<=', value:50 }
     ]
   },
 
@@ -1890,11 +1891,86 @@ const PRESETS = {
     ],
     geoFilters: { regions:['US','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication'] },
     customFilters: [
-      { metric:'perf_3y',             operator:'>=', value:60 },  // moins strict que 80
+      { metric:'perf_3y',             operator:'>=', value:60 },
       { metric:'perf_1y',             operator:'>=', value:15 },
       { metric:'volatility_3y',       operator:'<=', value:35 },
-      { metric:'max_drawdown_3y',     operator:'<=', value:40 },  // desserré vs 30 pour capter le growth
-      { metric:'payout_ratio',        operator:'<=', value:70 }   // conserve le biais “growth”
+      { metric:'max_drawdown_3y',     operator:'<=', value:40 },
+      { metric:'payout_ratio',        operator:'<=', value:70 }
+    ]
+  },
+
+  // ----- Nouveaux presets -----
+  low_vol_income: {
+    label: '🧊 Low Vol Income',
+    mode: 'balanced',
+    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','perf_1y'],
+    geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics','Immobilier'] },
+    customFilters: [
+      { metric:'dividend_yield_reg',  operator:'>=', value:2.0 },
+      { metric:'dividend_yield_ttm',  operator:'<=', value:8.0 },
+      { metric:'payout_ratio',        operator:'<=', value:80 },
+      { metric:'volatility_3y',       operator:'<=', value:22 },
+      { metric:'max_drawdown_3y',     operator:'<=', value:30 },
+      { metric:'perf_1y',             operator:'>=', value:-2 }
+    ]
+  },
+
+  trend_12_3_1: {
+    label: '📊 Trend 12-3-1',
+    mode: 'lexico',
+    metrics: ['perf_1y','perf_3m','perf_1m','ytd','max_drawdown_3y'],
+    geoFilters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:[] },
+    customFilters: [
+      { metric:'perf_1y',         operator:'>=', value:12 },
+      { metric:'perf_3m',         operator:'>=', value:3 },
+      { metric:'perf_1m',         operator:'>=', value:0 },
+      { metric:'volatility_3y',   operator:'<=', value:45 },
+      { metric:'max_drawdown_3y', operator:'<=', value:55 }
+    ]
+  },
+
+  pullback_trend: {
+    label: '↩️ Pullback dans tendance',
+    mode: 'lexico',
+    metrics: ['perf_3m','ytd','perf_1m','perf_daily','max_drawdown_3y'],
+    geoFilters: { regions:['US','EUROPE'], countries:[], sectors:['Technologie de l\'information','Industries','La communication','Biens de consommation cycliques','Santé'] },
+    customFilters: [
+      { metric:'ytd',             operator:'>=', value:10 },
+      { metric:'perf_3m',         operator:'>=', value:5 },
+      { metric:'perf_1m',         operator:'>=', value:-8 },
+      { metric:'perf_1m',         operator:'<=', value:2 },
+      { metric:'perf_daily',      operator:'>=', value:0 },
+      { metric:'volatility_3y',   operator:'<=', value:40 },
+      { metric:'max_drawdown_3y', operator:'<=', value:50 }
+    ]
+  },
+
+  recovery_quality: {
+    label: '🪄 Recovery qualité',
+    mode: 'balanced',
+    metrics: ['perf_3m','perf_1m','max_drawdown_3y','volatility_3y'],
+    geoFilters: { regions:['EUROPE','US','ASIA'], countries:[], sectors:['Industries','Matériaux','Finance','Technologie de l\'information'] },
+    customFilters: [
+      { metric:'perf_1y',             operator:'>=', value:-25 },
+      { metric:'perf_3m',             operator:'>=', value:5 },
+      { metric:'volatility_3y',       operator:'<=', value:35 },
+      { metric:'max_drawdown_3y',     operator:'<=', value:55 },
+      { metric:'payout_ratio',        operator:'<=', value:70 },
+      { metric:'dividend_yield_reg',  operator:'>=', value:1.0 },
+      { metric:'dividend_yield_ttm',  operator:'<=', value:10 }
+    ]
+  },
+
+  anti_crash_minvol: {
+    label: '🛡️ Anti-Crash MinVol',
+    mode: 'lexico',
+    metrics: ['max_drawdown_3y','volatility_3y','perf_1y'],
+    geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics'] },
+    customFilters: [
+      { metric:'max_drawdown_3y', operator:'<=', value:25 },
+      { metric:'volatility_3y',   operator:'<=', value:22 },
+      { metric:'perf_1y',         operator:'>=', value:0 },
+      { metric:'payout_ratio',    operator:'<=', value:80 }
     ]
   }
 };
