@@ -1184,31 +1184,29 @@
   }
 
   // v3.8: Ajouter la barre de presets
-  function addPresetsBar() {
-    const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
-    if (!modeContainer || document.getElementById('mc-presets-bar')) return;
-    
-    const presetsBar = document.createElement('div');
-    presetsBar.id = 'mc-presets-bar';
-    presetsBar.innerHTML = `
-      <span class="presets-label"><i class="fas fa-magic mr-2"></i>Presets :</span>
-      <button class="preset-btn" data-preset="defensif">
-        🛡️ Défensif
-      </button>
-      <button class="preset-btn" data-preset="rendement">
-        💰 Rendement
-      </button>
-      <button class="preset-btn" data-preset="agressif">
-        🚀 Agressif
-      </button>
-      <button class="preset-btn" data-preset="croissance">
-        📈 Croissance
-      </button>
-    `;
-    
-    // Insérer avant le mode container
-    modeContainer.parentNode.insertBefore(presetsBar, modeContainer);
-  }
+function addPresetsBar() {
+  const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
+  if (!modeContainer || document.getElementById('mc-presets-bar')) return;
+  
+  const presetsBar = document.createElement('div');
+  presetsBar.id = 'mc-presets-bar';
+  
+  // Générer dynamiquement les boutons depuis l'objet PRESETS
+  const buttonsHTML = Object.entries(PRESETS).map(([key, preset]) => 
+    `<button class="preset-btn" data-preset="${key}" title="${preset.label}">
+      ${preset.label}
+    </button>`
+  ).join('');
+  
+  presetsBar.innerHTML = `
+    <span class="presets-label"><i class="fas fa-magic mr-2"></i>Presets :</span>
+    ${buttonsHTML}
+  `;
+  
+  // Insérer avant le mode container
+  modeContainer.parentNode.insertBefore(presetsBar, modeContainer);
+}
+
 
   // Popover au clic pour l'info payout v3.4
   function setupPayoutPopover() {
