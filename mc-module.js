@@ -1826,68 +1826,99 @@
     }
   };
 
-  // ==== SYSTÈME DE PRESETS v3.8 ====
-  const PRESETS = {
-    defensif: {
-      label: '🛡️ Défensif',
-      mode: 'balanced',
-      metrics: ['volatility_3y', 'max_drawdown_3y', 'dividend_yield_reg', 'dividend_yield_ttm', 'perf_1y'],
-      geoFilters: {
-        regions: ['EUROPE', 'US'],
-        countries: [],
-        sectors: ['Utilities', 'Consommation', 'Santé']
-      },
-      customFilters: [
-        { metric: 'perf_daily', operator: '>=', value: -1 },
-        { metric: 'volatility_3y', operator: '<=', value: 20 }
-      ]
+// ==== SYSTÈME DE PRESETS v3.8 — version optimisée (secteurs normalisés) ====
+const PRESETS = {
+  defensif: {
+    label: '🛡️ Défensif',
+    mode: 'balanced',
+    metrics: [
+      'volatility_3y','max_drawdown_3y',
+      'payout_ratio',
+      'dividend_yield_reg',
+      'perf_1y'
+    ],
+    geoFilters: {
+      regions: ['EUROPE','US'],
+      countries: [],
+      // Ancien: Santé / Consommation / Énergie / Immobilier
+      sectors: ['Santé','Biens de consommation de base','Services publics','Energie','Immobilier']
     },
-    
-    rendement: {
-      label: '💰 Rendement',
-      mode: 'lexico', // Priorités pour maximiser d'abord le dividende
-      metrics: ['dividend_yield_ttm', 'dividend_yield_reg', 'payout_ratio', 'volatility_3y', 'perf_1y'],
-      geoFilters: {
-        regions: ['EUROPE'],
-        countries: [],
-        sectors: ['Finance', 'Immobilier', 'Utilities']
-      },
-      customFilters: [
-        { metric: 'dividend_yield_ttm', operator: '>=', value: 3 },
-        { metric: 'payout_ratio', operator: '<=', value: 80 }
-      ]
+    customFilters: [
+      { metric:'perf_daily',      operator:'>=', value:-0.5 },
+      { metric:'volatility_3y',   operator:'<=', value:22   },
+      { metric:'max_drawdown_3y', operator:'<=', value:30   },
+      { metric:'payout_ratio',    operator:'<=', value:70   } // → 90 si REITs nombreux
+    ]
+  },
+
+  rendement: {
+    label: '💰 Rendement',
+    mode: 'lexico',
+    metrics: [
+      'dividend_yield_reg',
+      'dividend_yield_ttm',
+      'payout_ratio',
+      'volatility_3y',
+      'perf_1y'
+    ],
+    geoFilters: {
+      regions: ['EUROPE','US'],
+      countries: [],
+      // Ancien: Finance / Immobilier / Énergie / Consommation
+      sectors: ['Finance','Immobilier','Energie','Biens de consommation de base','Services publics']
     },
-    
-    agressif: {
-      label: '🚀 Agressif',
-      mode: 'lexico',
-      metrics: ['ytd', 'perf_1m', 'perf_3m', 'perf_1y', 'max_drawdown_3y'],
-      geoFilters: {
-        regions: [], // Global
-        countries: [],
-        sectors: ['Technologie', 'Consommation', 'Industrie']
-      },
-      customFilters: [
-        { metric: 'perf_daily', operator: '>=', value: 0 },
-        { metric: 'ytd', operator: '>=', value: 10 }
-      ]
+    customFilters: [
+      { metric:'dividend_yield_reg', operator:'>=', value:3.5 },
+      { metric:'payout_ratio',       operator:'<=', value:80  }, // → 110 si REITs majoritaires
+      { metric:'perf_1y',            operator:'>=', value:0   },
+      { metric:'max_drawdown_3y',    operator:'<=', value:40  }
+    ]
+  },
+
+  agressif: {
+    label: '🚀 Agressif',
+    mode: 'lexico',
+    metrics: [
+      'perf_1m','perf_3m','ytd',
+      'perf_1y',
+      'max_drawdown_3y'
+    ],
+    geoFilters: {
+      regions: [],
+      countries: [],
+      // Ancien: Technologie / Santé / Industrie / Consommation
+      sectors: ['Technologie de l\'information','Santé','Industries','Biens de consommation cycliques','La communication','Matériaux']
     },
-    
-    croissance: {
-      label: '📈 Croissance',
-      mode: 'lexico',
-      metrics: ['perf_3y', 'perf_1y', 'ytd', 'perf_3m', 'volatility_3y'],
-      geoFilters: {
-        regions: ['US', 'ASIA'],
-        countries: [],
-        sectors: ['Technologie', 'Santé', 'Énergie']
-      },
-      customFilters: [
-        { metric: 'perf_3y', operator: '>=', value: 50 },
-        { metric: 'perf_1y', operator: '>=', value: 15 }
-      ]
-    }
-  };
+    customFilters: [
+      { metric:'perf_daily',     operator:'>=', value:0  },
+      { metric:'ytd',            operator:'>=', value:15 },
+      { metric:'volatility_3y',  operator:'<=', value:55 },
+      { metric:'max_drawdown_3y',operator:'<=', value:65 }
+    ]
+  },
+
+  croissance: {
+    label: '📈 Croissance',
+    mode: 'lexico',
+    metrics: [
+      'perf_3y','perf_1y','perf_3m','ytd',
+      'volatility_3y'
+    ],
+    geoFilters: {
+      regions: ['US','ASIA'],
+      countries: [],
+      // Ancien: Technologie / Santé
+      sectors: ['Technologie de l\'information','Santé','La communication']
+    },
+    customFilters: [
+      { metric:'perf_3y',       operator:'>=', value:80 },
+      { metric:'perf_1y',       operator:'>=', value:20 },
+      { metric:'volatility_3y', operator:'<=', value:35 },
+      { metric:'payout_ratio',  operator:'<=', value:60 }
+    ]
+  }
+};
+
 
   // Fonction pour appliquer un preset
   function applyPreset(presetKey) {
