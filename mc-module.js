@@ -1,4 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.7 avec correctif priorités ▲▼ ===================
+// ===== MC (Multi-Critères) – Module Optimisé v3.8 avec Presets Complets ===================
+// v3.8: Système de presets complets avec API (Défensif, Rendement, Agressif, Croissance)
 // v3.7+: Boutons ▲▼ pour déplacement précis (1 clic = 1 place) + scroll stable
 // v3.7: Système de tags multi-select avec recherche intégrée pour les filtres géographiques
 // v3.6: Multi-sélection pour Région/Pays/Secteur avec interface améliorée
@@ -22,7 +23,7 @@
 
   console.log('✅ MC: Éléments DOM trouvés');
 
-  // ==== INJECTION DES STYLES POUR LES TAGS + BOUTONS ▲▼ ====
+  // ==== INJECTION DES STYLES POUR LES TAGS + BOUTONS ▲▼ + PRESETS ====
   if (!document.querySelector('#mc-tags-styles')) {
     const style = document.createElement('style');
     style.id = 'mc-tags-styles';
@@ -87,6 +88,45 @@
         cursor:pointer;transition:all 0.2s ease}
       .btn-up:hover,.btn-down:hover{opacity:1;background:rgba(0,255,135,.12);
         transform:translateY(-1px)}
+      
+      /* === Boutons Presets v3.8 === */
+      .preset-btn {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: 1px solid rgba(0,255,135,0.3);
+        background: rgba(0,255,135,0.05);
+        color: #fff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+      }
+      .preset-btn:hover {
+        background: rgba(0,255,135,0.1);
+        border-color: #00ff87;
+        transform: translateY(-2px);
+      }
+      .preset-btn.active {
+        background: rgba(0,255,135,0.2);
+        border-color: #00ff87;
+        box-shadow: 0 0 10px rgba(0,255,135,0.3);
+      }
+      #mc-presets-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding: 12px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+        border: 1px solid rgba(0,255,135,0.15);
+      }
+      .presets-label {
+        display: flex;
+        align-items: center;
+        margin-right: 12px;
+        font-size: 0.85rem;
+        opacity: 0.7;
+      }
       
       @media (min-width: 1024px){
         .msel-list{grid-template-columns:1fr 1fr}
@@ -248,7 +288,8 @@
     },
     availableRegions: new Set(),
     availableCountries: new Set(),
-    availableSectors: new Set()
+    availableSectors: new Set(),
+    currentPreset: null // v3.8: preset actuel
   };
 
   // Debounce pour auto-recompute avec indicateur visuel
@@ -1141,6 +1182,33 @@
     }
   }
 
+  // v3.8: Ajouter la barre de presets
+  function addPresetsBar() {
+    const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
+    if (!modeContainer || document.getElementById('mc-presets-bar')) return;
+    
+    const presetsBar = document.createElement('div');
+    presetsBar.id = 'mc-presets-bar';
+    presetsBar.innerHTML = `
+      <span class="presets-label"><i class="fas fa-magic mr-2"></i>Presets :</span>
+      <button class="preset-btn" data-preset="defensif">
+        🛡️ Défensif
+      </button>
+      <button class="preset-btn" data-preset="rendement">
+        💰 Rendement
+      </button>
+      <button class="preset-btn" data-preset="agressif">
+        🚀 Agressif
+      </button>
+      <button class="preset-btn" data-preset="croissance">
+        📈 Croissance
+      </button>
+    `;
+    
+    // Insérer avant le mode container
+    modeContainer.parentNode.insertBefore(presetsBar, modeContainer);
+  }
+
   // Popover au clic pour l'info payout v3.4
   function setupPayoutPopover() {
     const icon = document.getElementById('payout-info');
@@ -1625,7 +1693,12 @@
       ? ` • <span class="text-green-400">${rN ? 'R('+rN+')' : ''} ${cN ? 'P('+cN+')' : ''} ${sN ? 'S('+sN+')' : ''}</span>`.replace(/\s+/g,' ').trim() 
       : '';
     
-    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText}${autoText} • ${kept}/${total} actions`;
+    // v3.8: Ajouter le preset actuel
+    const presetText = state.currentPreset 
+      ? ` • <span class="text-purple-400">[Preset: ${state.currentPreset}]</span>`
+      : '';
+    
+    summary.innerHTML = `<strong>${mode}</strong> • ${labels || 'Aucun critère'} • ${visibleFilters} filtres${geoText}${autoText}${presetText} • ${kept}/${total} actions`;
   }
 
   // Fonction compute avec protections auto pour REG
@@ -1688,6 +1761,164 @@
     if (hadAutoTrap || hadAutoMinDY) cleanupAutoFilters();
   }
 
+  // ==== API v3.8 pour les presets ====
+  const api = {
+    // Définir le mode
+    setMode(mode) {
+      const radio = root.querySelector(`input[name="mc-mode"][value="${mode}"]`);
+      if (radio) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change'));
+      }
+      state.mode = mode;
+      updatePriorityDisplay();
+    },
+    
+    // Définir les métriques et leur ordre
+    setMetrics(metrics) {
+      // Décocher tout d'abord
+      Object.keys(METRICS).forEach(m => {
+        const cb = root.querySelector('#m-' + m);
+        if (cb) {
+          cb.checked = false;
+          cb.closest('.mc-pill')?.classList.remove('is-checked');
+        }
+      });
+      
+      // Cocher les nouvelles métriques
+      metrics.forEach(m => {
+        const cb = root.querySelector('#m-' + m);
+        if (cb) {
+          cb.checked = true;
+          cb.closest('.mc-pill')?.classList.add('is-checked');
+        }
+      });
+      
+      state.selectedMetrics = metrics.slice();
+      updatePriorityDisplay();
+    },
+    
+    // Définir les filtres géographiques
+    setGeoFilters({ regions = [], countries = [], sectors = [] }) {
+      state.geoFilters.regions.clear();
+      state.geoFilters.countries.clear();
+      state.geoFilters.sectors.clear();
+      
+      regions.forEach(r => state.geoFilters.regions.add(r));
+      countries.forEach(c => state.geoFilters.countries.add(c));
+      sectors.forEach(s => state.geoFilters.sectors.add(s));
+      
+      // Rafraîchir les UI tags
+      regionUI?.refresh();
+      countryUI?.refresh();
+      sectorUI?.refresh();
+      
+      // Invalider les masques
+      masks.geo = null;
+    },
+    
+    // Définir les filtres personnalisés
+    setCustomFilters(filters) {
+      state.customFilters = filters.slice();
+      masks.custom = null;
+      updateFiltersList();
+    }
+  };
+
+  // ==== SYSTÈME DE PRESETS v3.8 ====
+  const PRESETS = {
+    defensif: {
+      label: '🛡️ Défensif',
+      mode: 'balanced',
+      metrics: ['volatility_3y', 'max_drawdown_3y', 'dividend_yield_reg', 'dividend_yield_ttm', 'perf_1y'],
+      geoFilters: {
+        regions: ['EUROPE', 'US'],
+        countries: [],
+        sectors: ['Utilities', 'Consommation', 'Santé']
+      },
+      customFilters: [
+        { metric: 'perf_daily', operator: '>=', value: -1 },
+        { metric: 'volatility_3y', operator: '<=', value: 20 }
+      ]
+    },
+    
+    rendement: {
+      label: '💰 Rendement',
+      mode: 'lexico', // Priorités pour maximiser d'abord le dividende
+      metrics: ['dividend_yield_ttm', 'dividend_yield_reg', 'payout_ratio', 'volatility_3y', 'perf_1y'],
+      geoFilters: {
+        regions: ['EUROPE'],
+        countries: [],
+        sectors: ['Finance', 'Immobilier', 'Utilities']
+      },
+      customFilters: [
+        { metric: 'dividend_yield_ttm', operator: '>=', value: 3 },
+        { metric: 'payout_ratio', operator: '<=', value: 80 }
+      ]
+    },
+    
+    agressif: {
+      label: '🚀 Agressif',
+      mode: 'lexico',
+      metrics: ['ytd', 'perf_1m', 'perf_3m', 'perf_1y', 'max_drawdown_3y'],
+      geoFilters: {
+        regions: [], // Global
+        countries: [],
+        sectors: ['Technologie', 'Consommation', 'Industrie']
+      },
+      customFilters: [
+        { metric: 'perf_daily', operator: '>=', value: 0 },
+        { metric: 'ytd', operator: '>=', value: 10 }
+      ]
+    },
+    
+    croissance: {
+      label: '📈 Croissance',
+      mode: 'lexico',
+      metrics: ['perf_3y', 'perf_1y', 'ytd', 'perf_3m', 'volatility_3y'],
+      geoFilters: {
+        regions: ['US', 'ASIA'],
+        countries: [],
+        sectors: ['Technologie', 'Santé', 'Énergie']
+      },
+      customFilters: [
+        { metric: 'perf_3y', operator: '>=', value: 50 },
+        { metric: 'perf_1y', operator: '>=', value: 15 }
+      ]
+    }
+  };
+
+  // Fonction pour appliquer un preset
+  function applyPreset(presetKey) {
+    const preset = PRESETS[presetKey];
+    if (!preset) return;
+    
+    console.log(`🎯 Application du preset: ${preset.label}`);
+    
+    // 1. Enregistrer le preset actuel
+    state.currentPreset = preset.label;
+    
+    // 2. Mode
+    api.setMode(preset.mode);
+    
+    // 3. Métriques et ordre
+    api.setMetrics(preset.metrics);
+    
+    // 4. Filtres géographiques
+    api.setGeoFilters(preset.geoFilters);
+    
+    // 5. Filtres personnalisés
+    api.setCustomFilters(preset.customFilters);
+    
+    // 6. Mettre à jour l'UI des boutons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.preset === presetKey);
+    });
+    
+    // 7. Recalculer
+    scheduleCompute();
+  }
+
   // Event listeners
   modeRadios.forEach(r=>r.addEventListener('change',()=>{
     state.mode = modeRadios.find(x=>x.checked)?.value || 'balanced';
@@ -1716,6 +1947,7 @@
       state.selectedMetrics = ['ytd', 'dividend_yield_reg'];
       state.customFilters = [];
       state.geoFilters = { regions: new Set(), countries: new Set(), sectors: new Set() };
+      state.currentPreset = null; // v3.8
       
       // Invalider les caches
       masks.geo = masks.custom = masks.final = null;
@@ -1741,6 +1973,11 @@
       sectorUI?.clear();
       updateCountryFilter(); // Refresh la liste des pays
       
+      // Reset les boutons presets v3.8
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
       const balancedRadio = modeRadios.find(x=>x.value==='balanced');
       if (balancedRadio) balancedRadio.checked=true;
       state.mode='balanced';
@@ -1753,17 +1990,30 @@
 
   // Initialisation
   addExplanation();
+  addPresetsBar(); // v3.8
   setupMetricCheckboxes();
   setupCustomFilters();
   updatePriorityDisplay();
   setupPayoutPopover();
 
-  // expose
-  window.MC = { refresh: compute, loadData, state, cache };
+  // v3.8: Câbler les boutons de presets
+  setTimeout(() => {
+    const presetsBar = document.getElementById('mc-presets-bar');
+    if (presetsBar) {
+      presetsBar.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-preset]');
+        if (!btn) return;
+        applyPreset(btn.dataset.preset);
+      });
+    }
+  }, 100);
+
+  // Exposer l'API
+  window.MC = { refresh: compute, loadData, state, cache, api, applyPreset };
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.7+ - Correctif priorités ▲▼ appliqué avec succès !');
+    console.log('✅ MC Module v3.8 - Système de presets complets intégré !');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
