@@ -1838,11 +1838,11 @@ const PRESETS = {
     ],
     geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics','Energie','Immobilier'] },
     customFilters: [
-      { metric:'perf_daily',      operator:'>=', value:-0.5 },
-      { metric:'dividend_yield_reg', operator:'>=', value:1.0 }, // évite les 0%/quasi-0
-      { metric:'volatility_3y',   operator:'<=', value:26 },      // un peu plus souple que 22
-      { metric:'max_drawdown_3y', operator:'<=', value:35 },
-      { metric:'payout_ratio',    operator:'<=', value:75 }       // passer à 90 si panier REITs
+      { metric:'perf_daily',          operator:'>=', value:-0.5 },
+      { metric:'dividend_yield_reg',  operator:'>=', value:2.0 }, // évite 0% et quasi-0, plus sélectif
+      { metric:'volatility_3y',       operator:'<=', value:26 },  // borne max (cohérent défensif)
+      { metric:'max_drawdown_3y',     operator:'<=', value:35 },
+      { metric:'payout_ratio',        operator:'<=', value:75 }   // passer à 90 si panier REITs
     ]
   },
 
@@ -1857,11 +1857,11 @@ const PRESETS = {
     ],
     geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Immobilier','Energie','Biens de consommation de base','Services publics'] },
     customFilters: [
-      { metric:'dividend_yield_reg', operator:'>=', value:3.5 },
-      { metric:'payout_ratio',       operator:'<=', value:85 },   // monter à 110 si REITs
-      { metric:'max_drawdown_3y',    operator:'<=', value:45 },
-      { metric:'volatility_3y',      operator:'<=', value:35 },
-      { metric:'perf_1y',            operator:'>=', value:-5 }    // évite les pièges trop dégradés
+      { metric:'dividend_yield_reg',  operator:'>=', value:3.5 },
+      { metric:'payout_ratio',        operator:'<=', value:85 },  // monter à 110 si REITs
+      { metric:'max_drawdown_3y',     operator:'<=', value:45 },
+      { metric:'volatility_3y',       operator:'<=', value:35 },
+      { metric:'perf_1y',             operator:'>=', value:-5 }   // évite les pièges trop dégradés
     ]
   },
 
@@ -1874,10 +1874,10 @@ const PRESETS = {
     ],
     geoFilters: { regions:[], countries:[], sectors:['Technologie de l\'information','Santé','Industries','Biens de consommation cycliques','La communication','Matériaux'] },
     customFilters: [
-      { metric:'perf_daily',       operator:'>=', value:0 },
-      { metric:'ytd',              operator:'>=', value:10 },     // + robuste que 15
-      { metric:'max_drawdown_3y',  operator:'<=', value:60 },
-      { metric:'volatility_3y',    operator:'<=', value:50 }
+      { metric:'perf_daily',          operator:'>=', value:0 },
+      { metric:'ytd',                 operator:'>=', value:10 },  // robuste
+      { metric:'max_drawdown_3y',     operator:'<=', value:60 },
+      { metric:'volatility_3y',       operator:'<=', value:50 }   // pas de contrainte dividende/payout ici
     ]
   },
 
@@ -1890,13 +1890,15 @@ const PRESETS = {
     ],
     geoFilters: { regions:['US','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication'] },
     customFilters: [
-      { metric:'perf_3y',          operator:'>=', value:60 },     // moins strict que 80
-      { metric:'perf_1y',          operator:'>=', value:15 },
-      { metric:'volatility_3y',    operator:'<=', value:35 },
-      { metric:'payout_ratio',     operator:'<=', value:70 }      // garde un biais “growth”
+      { metric:'perf_3y',             operator:'>=', value:60 },  // moins strict que 80
+      { metric:'perf_1y',             operator:'>=', value:15 },
+      { metric:'volatility_3y',       operator:'<=', value:35 },
+      { metric:'max_drawdown_3y',     operator:'<=', value:40 },  // desserré vs 30 pour capter le growth
+      { metric:'payout_ratio',        operator:'<=', value:70 }   // conserve le biais “growth”
     ]
   }
 };
+
 
 
 
