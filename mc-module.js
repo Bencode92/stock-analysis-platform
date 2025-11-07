@@ -1736,3 +1736,287 @@
     console.timeEnd('Filtrage');
     
     console.log(`📊 Après filtres: ${pool.length} actions sur ${base.length}`);
+     setSummary(base.length, pool.length);
+    
+    if (pool.length === 0) {
+      results.innerHTML = '<div class="text-center text-cyan-400 py-4"><i class="fas fa-exclamation-triangle mr-2"></i>Aucune action ne passe les filtres</div>';
+      // Nettoie tous les filtres auto si ajoutés
+      if (hadAutoTrap || hadAutoMinDY) cleanupAutoFilters();
+      return;
+    }
+    
+    // Calcul optimisé
+    console.time('Ranking');
+    let out;
+    if (state.mode === 'balanced') {
+      out = rankBalanced(pool);
+    } else {
+      out = topNByLexico(pool, state.selectedMetrics);
+    }
+    console.timeEnd('Ranking');
+    
+    render(out);
+    console.log(`✅ MC: ${pool.length} actions filtrées, mode: ${state.mode}`)
+    
+    // Nettoie tous les filtres auto une fois le rendu fait
+    if (hadAutoTrap || hadAutoMinDY) cleanupAutoFilters();
+  }
+
+  // ==== API v3.8 pour les presets ====
+  const api = {
+    // Définir le mode
+    setMode(mode) {
+      const radio = root.querySelector(`input[name="mc-mode"][value="${mode}"]`);
+      if (radio) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change'));
+      }
+      state.mode = mode;
+      updatePriorityDisplay();
+    },
+    
+    // Définir les métriques et leur ordre
+    setMetrics(metrics) {
+      // Décocher tout d'abord
+      Object.keys(METRICS).forEach(m => {
+        const cb = root.querySelector('#m-' + m);
+        if (cb) {
+          cb.checked = false;
+          cb.closest('.mc-pill')?.classList.remove('is-checked');
+        }
+      });
+      
+      // Cocher les nouvelles métriques
+      metrics.forEach(m => {
+        const cb = root.querySelector('#m-' + m);
+        if (cb) {
+          cb.checked = true;
+          cb.closest('.mc-pill')?.classList.add('is-checked');
+        }
+      });
+      
+      state.selectedMetrics = metrics.slice();
+      updatePriorityDisplay();
+    },
+    
+    // Définir les filtres géographiques
+    setGeoFilters({ regions = [], countries = [], sectors = [] }) {
+      state.geoFilters.regions.clear();
+      state.geoFilters.countries.clear();
+      state.geoFilters.sectors.clear();
+      
+      regions.forEach(r => state.geoFilters.regions.add(r));
+      countries.forEach(c => state.geoFilters.countries.add(c));
+      sectors.forEach(s => state.geoFilters.sectors.add(s));
+      
+      // Rafraîchir les UI tags
+      regionUI?.refresh();
+      countryUI?.refresh();
+      sectorUI?.refresh();
+      
+      // Invalider les masques
+      masks.geo = null;
+    },
+    
+    // Définir les filtres personnalisés
+    setCustomFilters(filters) {
+      state.customFilters = filters.slice();
+      masks.custom = null;
+      updateFiltersList();
+    }
+  };
+
+  // ==== SYSTÈME DE PRESETS v3.8 ====
+  const PRESETS = {
+    defensif: {
+      label: '🛡️ Défensif',
+      mode: 'balanced',
+      metrics: ['volatility_3y', 'max_drawdown_3y', 'dividend_yield_reg', 'dividend_yield_ttm', 'perf_1y'],
+      geoFilters: {
+        regions: ['EUROPE', 'US'],
+        countries: [],
+        sectors: ['Utilities', 'Consommation', 'Santé']
+      },
+      customFilters: [
+        { metric: 'perf_daily', operator: '>=', value: -1 },
+        { metric: 'volatility_3y', operator: '<=', value: 20 }
+      ]
+    },
+    
+    rendement: {
+      label: '💰 Rendement',
+      mode: 'lexico', // Priorités pour maximiser d'abord le dividende
+      metrics: ['dividend_yield_ttm', 'dividend_yield_reg', 'payout_ratio', 'volatility_3y', 'perf_1y'],
+      geoFilters: {
+        regions: ['EUROPE'],
+        countries: [],
+        sectors: ['Finance', 'Immobilier', 'Utilities']
+      },
+      customFilters: [
+        { metric: 'dividend_yield_ttm', operator: '>=', value: 3 },
+        { metric: 'payout_ratio', operator: '<=', value: 80 }
+      ]
+    },
+    
+    agressif: {
+      label: '🚀 Agressif',
+      mode: 'lexico',
+      metrics: ['ytd', 'perf_1m', 'perf_3m', 'perf_1y', 'max_drawdown_3y'],
+      geoFilters: {
+        regions: [], // Global
+        countries: [],
+        sectors: ['Technologie', 'Consommation', 'Industrie']
+      },
+      customFilters: [
+        { metric: 'perf_daily', operator: '>=', value: 0 },
+        { metric: 'ytd', operator: '>=', value: 10 }
+      ]
+    },
+    
+    croissance: {
+      label: '📈 Croissance',
+      mode: 'lexico',
+      metrics: ['perf_3y', 'perf_1y', 'ytd', 'perf_3m', 'volatility_3y'],
+      geoFilters: {
+        regions: ['US', 'ASIA'],
+        countries: [],
+        sectors: ['Technologie', 'Santé', 'Énergie']
+      },
+      customFilters: [
+        { metric: 'perf_3y', operator: '>=', value: 50 },
+        { metric: 'perf_1y', operator: '>=', value: 15 }
+      ]
+    }
+  };
+
+  // Fonction pour appliquer un preset
+  function applyPreset(presetKey) {
+    const preset = PRESETS[presetKey];
+    if (!preset) return;
+    
+    console.log(`🎯 Application du preset: ${preset.label}`);
+    
+    // 1. Enregistrer le preset actuel
+    state.currentPreset = preset.label;
+    
+    // 2. Mode
+    api.setMode(preset.mode);
+    
+    // 3. Métriques et ordre
+    api.setMetrics(preset.metrics);
+    
+    // 4. Filtres géographiques
+    api.setGeoFilters(preset.geoFilters);
+    
+    // 5. Filtres personnalisés
+    api.setCustomFilters(preset.customFilters);
+    
+    // 6. Mettre à jour l'UI des boutons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.preset === presetKey);
+    });
+    
+    // 7. Recalculer
+    scheduleCompute();
+  }
+
+  // Event listeners
+  modeRadios.forEach(r=>r.addEventListener('change',()=>{
+    state.mode = modeRadios.find(x=>x.checked)?.value || 'balanced';
+    
+    const balancedExp = document.getElementById('balanced-explanation');
+    const priorityExp = document.getElementById('priority-explanation');
+    if (balancedExp && priorityExp) {
+      balancedExp.classList.toggle('hidden', state.mode !== 'balanced');
+      priorityExp.classList.toggle('hidden', state.mode !== 'lexico');
+    }
+    
+    updatePriorityDisplay();
+    scheduleCompute();
+  }));
+  
+  if (applyBtn) {
+    applyBtn.addEventListener('click', () => {
+      console.log('🎯 MC: Calcul demandé');
+      compute();
+    });
+  }
+  
+  // v3.7: Reset avec nettoyage des UI tags
+  if (resetBtn) {
+    resetBtn.addEventListener('click', ()=>{
+      state.selectedMetrics = ['ytd', 'dividend_yield_reg'];
+      state.customFilters = [];
+      state.geoFilters = { regions: new Set(), countries: new Set(), sectors: new Set() };
+      state.currentPreset = null; // v3.8
+      
+      // Invalider les caches
+      masks.geo = masks.custom = masks.final = null;
+      
+      Object.keys(METRICS).forEach(id => {
+        const checkbox = root.querySelector('#m-'+id);
+        if (checkbox) {
+          checkbox.checked = state.selectedMetrics.includes(id);
+        }
+      });
+      
+      // Synchroniser les pills après reset
+      root.querySelectorAll('.mc-pill input').forEach(inp => {
+        const label = inp.closest('.mc-pill');
+        if (label) {
+          label.classList.toggle('is-checked', inp.checked);
+        }
+      });
+      
+      // Reset des UI de filtres tags
+      regionUI?.clear();
+      countryUI?.clear();
+      sectorUI?.clear();
+      updateCountryFilter(); // Refresh la liste des pays
+      
+      // Reset les boutons presets v3.8
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      const balancedRadio = modeRadios.find(x=>x.value==='balanced');
+      if (balancedRadio) balancedRadio.checked=true;
+      state.mode='balanced';
+      
+      updatePriorityDisplay();
+      updateFiltersList();
+      compute();
+    });
+  }
+
+  // Initialisation
+  addExplanation();
+  addPresetsBar(); // v3.8
+  setupMetricCheckboxes();
+  setupCustomFilters();
+  updatePriorityDisplay();
+  setupPayoutPopover();
+
+  // v3.8: Câbler les boutons de presets
+  setTimeout(() => {
+    const presetsBar = document.getElementById('mc-presets-bar');
+    if (presetsBar) {
+      presetsBar.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-preset]');
+        if (!btn) return;
+        applyPreset(btn.dataset.preset);
+      });
+    }
+  }, 100);
+
+  // Exposer l'API
+  window.MC = { refresh: compute, loadData, state, cache, api, applyPreset };
+
+  // Charger et calculer au démarrage
+  loadData().then(() => {
+    console.log('✅ MC Module v3.8 - Système de presets complets intégré !');
+    if (state.selectedMetrics.length > 0) {
+      compute();
+    }
+  });
+})();
