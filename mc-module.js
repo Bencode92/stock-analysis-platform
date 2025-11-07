@@ -1899,7 +1899,6 @@ const PRESETS = {
     ]
   },
 
-  // ----- Nouveaux presets -----
   low_vol_income: {
     label: '🧊 Low Vol Income',
     mode: 'balanced',
