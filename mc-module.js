@@ -1826,52 +1826,42 @@
     }
   };
 
-// ==== SYSTÈME DE PRESETS v3.8 — version optimisée (secteurs normalisés) ====
+// ==== SYSTÈME DE PRESETS v3.9 — sans fondamentaux (only perf/risque/dividendes) ====
 const PRESETS = {
   defensif: {
     label: '🛡️ Défensif',
-    mode: 'balanced',
+    mode: 'balanced', // moyenne de percentiles
     metrics: [
       'volatility_3y','max_drawdown_3y',
-      'payout_ratio',
-      'dividend_yield_reg',
+      'dividend_yield_reg','payout_ratio',
       'perf_1y'
     ],
-    geoFilters: {
-      regions: ['EUROPE','US'],
-      countries: [],
-      // Ancien: Santé / Consommation / Énergie / Immobilier
-      sectors: ['Santé','Biens de consommation de base','Services publics','Energie','Immobilier']
-    },
+    geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics','Energie','Immobilier'] },
     customFilters: [
       { metric:'perf_daily',      operator:'>=', value:-0.5 },
-      { metric:'volatility_3y',   operator:'<=', value:22   },
-      { metric:'max_drawdown_3y', operator:'<=', value:30   },
-      { metric:'payout_ratio',    operator:'<=', value:70   } // → 90 si REITs nombreux
+      { metric:'dividend_yield_reg', operator:'>=', value:1.0 }, // évite les 0%/quasi-0
+      { metric:'volatility_3y',   operator:'<=', value:26 },      // un peu plus souple que 22
+      { metric:'max_drawdown_3y', operator:'<=', value:35 },
+      { metric:'payout_ratio',    operator:'<=', value:75 }       // passer à 90 si panier REITs
     ]
   },
 
   rendement: {
     label: '💰 Rendement',
-    mode: 'lexico',
+    mode: 'lexico', // priorité stricte par l’ordre ci-dessous
     metrics: [
-      'dividend_yield_reg',
-      'dividend_yield_ttm',
+      'dividend_yield_reg','dividend_yield_ttm',
       'payout_ratio',
-      'volatility_3y',
+      'max_drawdown_3y','volatility_3y',
       'perf_1y'
     ],
-    geoFilters: {
-      regions: ['EUROPE','US'],
-      countries: [],
-      // Ancien: Finance / Immobilier / Énergie / Consommation
-      sectors: ['Finance','Immobilier','Energie','Biens de consommation de base','Services publics']
-    },
+    geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Immobilier','Energie','Biens de consommation de base','Services publics'] },
     customFilters: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.5 },
-      { metric:'payout_ratio',       operator:'<=', value:80  }, // → 110 si REITs majoritaires
-      { metric:'perf_1y',            operator:'>=', value:0   },
-      { metric:'max_drawdown_3y',    operator:'<=', value:40  }
+      { metric:'payout_ratio',       operator:'<=', value:85 },   // monter à 110 si REITs
+      { metric:'max_drawdown_3y',    operator:'<=', value:45 },
+      { metric:'volatility_3y',      operator:'<=', value:35 },
+      { metric:'perf_1y',            operator:'>=', value:-5 }    // évite les pièges trop dégradés
     ]
   },
 
@@ -1879,21 +1869,15 @@ const PRESETS = {
     label: '🚀 Agressif',
     mode: 'lexico',
     metrics: [
-      'perf_1m','perf_3m','ytd',
-      'perf_1y',
-      'max_drawdown_3y'
+      'perf_3m','perf_1m','ytd','perf_1y',
+      'max_drawdown_3y','volatility_3y'
     ],
-    geoFilters: {
-      regions: [],
-      countries: [],
-      // Ancien: Technologie / Santé / Industrie / Consommation
-      sectors: ['Technologie de l\'information','Santé','Industries','Biens de consommation cycliques','La communication','Matériaux']
-    },
+    geoFilters: { regions:[], countries:[], sectors:['Technologie de l\'information','Santé','Industries','Biens de consommation cycliques','La communication','Matériaux'] },
     customFilters: [
-      { metric:'perf_daily',     operator:'>=', value:0  },
-      { metric:'ytd',            operator:'>=', value:15 },
-      { metric:'volatility_3y',  operator:'<=', value:55 },
-      { metric:'max_drawdown_3y',operator:'<=', value:65 }
+      { metric:'perf_daily',       operator:'>=', value:0 },
+      { metric:'ytd',              operator:'>=', value:10 },     // + robuste que 15
+      { metric:'max_drawdown_3y',  operator:'<=', value:60 },
+      { metric:'volatility_3y',    operator:'<=', value:50 }
     ]
   },
 
@@ -1902,22 +1886,18 @@ const PRESETS = {
     mode: 'lexico',
     metrics: [
       'perf_3y','perf_1y','perf_3m','ytd',
-      'volatility_3y'
+      'volatility_3y','max_drawdown_3y'
     ],
-    geoFilters: {
-      regions: ['US','ASIA'],
-      countries: [],
-      // Ancien: Technologie / Santé
-      sectors: ['Technologie de l\'information','Santé','La communication']
-    },
+    geoFilters: { regions:['US','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication'] },
     customFilters: [
-      { metric:'perf_3y',       operator:'>=', value:80 },
-      { metric:'perf_1y',       operator:'>=', value:20 },
-      { metric:'volatility_3y', operator:'<=', value:35 },
-      { metric:'payout_ratio',  operator:'<=', value:60 }
+      { metric:'perf_3y',          operator:'>=', value:60 },     // moins strict que 80
+      { metric:'perf_1y',          operator:'>=', value:15 },
+      { metric:'volatility_3y',    operator:'<=', value:35 },
+      { metric:'payout_ratio',     operator:'<=', value:70 }      // garde un biais “growth”
     ]
   }
 };
+
 
 
   // Fonction pour appliquer un preset
