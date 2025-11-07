@@ -1,4 +1,4 @@
-// Module MC adapté pour ETFs - v4.9.6 avec exclusion stricte volatilité manquante
+// Module MC adapté pour ETFs - v5.0 avec presets stratégiques et exclusion stricte volatilité manquante
 (function () {
   const waitFor=(c,b,t=40)=>c()?b():t<=0?console.error('❌ ETF MC: données introuvables'):setTimeout(()=>waitFor(c,b,t-1),250);
   const num=x=>Number.isFinite(+x)?+x:NaN, str=s=>s==null?'':String(s);
@@ -48,15 +48,15 @@
     const root=document.querySelector('#etf-mc-section');
     const results=document.querySelector('#etf-mc-results');
     const summary=document.getElementById('etf-mc-summary');
-    if(!root||!results){console.error('❌ ETF MC v4.9.6: DOM manquant');return;}
-    console.log('✅ ETF MC v4.9.6: Exclusion stricte volatilité manquante (si critère coché)');
+    if(!root||!results){console.error('❌ ETF MC v5.0: DOM manquant');return;}
+    console.log('✅ ETF MC v5.0: Presets stratégiques + exclusion stricte volatilité manquante');
 
     // Harmonisation du conteneur
     results.classList.add('glassmorphism','rounded-lg','p-4');
 
-    // Styles harmonisés avec nouveau drag&drop ultra-fluide + badges volatilité
-    if(!document.getElementById('etf-mc-v496-styles')){
-      const s=document.createElement('style'); s.id='etf-mc-v496-styles'; s.textContent=`
+    // Styles harmonisés avec nouveau drag&drop ultra-fluide + badges volatilité + PRESETS
+    if(!document.getElementById('etf-mc-v50-styles')){
+      const s=document.createElement('style'); s.id='etf-mc-v50-styles'; s.textContent=`
       #etf-mc-results { display:block }
       #etf-mc-results .space-y-2 > div { margin-bottom: .75rem }
       #etf-mc-results .etf-card{
@@ -139,6 +139,24 @@
       .type-filter-seg button{padding:8px 14px;border-radius:10px;font-weight:600;font-size:.85rem;opacity:.8;transition:all .2s;border:none;background:none;color:inherit;cursor:pointer}
       .type-filter-seg button:hover{background:rgba(0,255,255,.06);opacity:.95}
       .type-filter-seg button.active{background:rgba(0,255,255,.15);color:#00ffff;opacity:1;box-shadow:0 0 0 1px rgba(0,255,255,.3) inset}
+      
+      /* === STYLES PRESETS === */
+      .preset-btn{
+        padding:10px;border-radius:8px;background:rgba(0,255,255,0.05);
+        border:1px solid rgba(0,255,255,0.2);transition:all 0.2s;
+        display:flex;flex-direction:column;align-items:center;gap:4px;
+        cursor:pointer;text-align:center;color:inherit;
+      }
+      .preset-btn:hover{
+        background:rgba(0,255,255,0.12)!important;
+        border-color:rgba(0,255,255,0.4)!important;
+        transform:translateY(-2px);
+      }
+      .preset-btn.active{
+        background:rgba(0,255,255,0.2)!important;
+        border-color:#00ffff!important;
+        box-shadow:0 0 12px rgba(0,255,255,0.3);
+      }
       `;
       document.head.appendChild(s);
     }
@@ -162,7 +180,8 @@
       filters:{sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true}, // Pas de countries
       customFilters:[],
       data:[],
-      catalogs:{sectors:[],fundTypes:[],counts:{sectors:new Map(),fundTypes:new Map()}} // Pas de countries
+      catalogs:{sectors:[],fundTypes:[],counts:{sectors:new Map(),fundTypes:new Map()}}, // Pas de countries
+      activePreset:null // NEW: pour suivre le preset actif
     };
     const cache = {};
     const masks = { facets:null, custom:null, final:null };
@@ -193,6 +212,248 @@
       }}
     };
 
+    // ==== PRESETS ETF v1.0 ====
+    const PRESETS_ETF = {
+      coeur_global: {
+        label: '🌍 Cœur Global',
+        icon: '🌍',
+        description: 'ETFs diversifiés mondiaux, low-cost et liquides',
+        mode: 'balanced',
+        baseFilter: 'all',
+        excludeLeveraged: true,
+        metrics: ['ter','aum','volatility','return_ytd','return_1y','return_1d'],
+        sectors: [],
+        fundTypes: ['Large Blend','Foreign Large Blend','World Large Stock','Large Blend'],
+        customFilters: [
+          { metric:'ter', operator:'<=', value:0.15 },
+          { metric:'aum', operator:'>=', value:10000 }, // en M$
+          { metric:'volatility', operator:'<=', value:20 },
+          { metric:'return_1y', operator:'>=', value:-5 }
+        ]
+      },
+      rendement: {
+        label: '💰 Dividendes',
+        icon: '💰',
+        description: 'ETFs à haut rendement, secteurs défensifs',
+        mode: 'lexico',
+        baseFilter: 'equity',
+        excludeLeveraged: true,
+        metrics: ['dividend_yield','yield_net','volatility','return_ytd','return_1y','ter'],
+        sectors: ['Utilities','Energy','Consumer Defensive','Real Estate','Financial Services'],
+        fundTypes: ['Large Value','Dividend','High Dividend Yield','Equity Income','Derivative Income'],
+        customFilters: [
+          { metric:'dividend_yield', operator:'>=', value:3.0 },
+          { metric:'ter', operator:'<=', value:0.60 },
+          { metric:'aum', operator:'>=', value:1000 },
+          { metric:'volatility', operator:'<=', value:30 },
+          { metric:'return_1y', operator:'>=', value:-5 }
+        ]
+      },
+      croissance_tech: {
+        label: '🚀 Tech Growth',
+        icon: '🚀',
+        description: 'ETFs croissance technologique et innovation',
+        mode: 'lexico',
+        baseFilter: 'equity',
+        excludeLeveraged: true,
+        metrics: ['return_ytd','return_1y','return_1d','volatility','ter','aum'],
+        sectors: ['Technology','Communication Services','Healthcare'],
+        fundTypes: ['Technology','Large Growth','Mid-Cap Growth','Innovation','Large Growth'],
+        customFilters: [
+          { metric:'return_ytd', operator:'>=', value:15 },
+          { metric:'volatility', operator:'<=', value:35 },
+          { metric:'ter', operator:'<=', value:0.50 },
+          { metric:'aum', operator:'>=', value:1000 }
+        ]
+      },
+      defensif_oblig: {
+        label: '🛡️ Obligations',
+        icon: '🛡️',
+        description: 'ETFs obligations investment grade, faible risque',
+        mode: 'balanced',
+        baseFilter: 'bonds',
+        excludeLeveraged: true,
+        metrics: ['volatility','ter','aum','return_ytd','return_1y','yield_net'],
+        sectors: [],
+        fundTypes: ['Intermediate Core Bond','Government Bond','Corporate Bond','Target Maturity','Intermediate Core Bond'],
+        customFilters: [
+          { metric:'volatility', operator:'<=', value:12 },
+          { metric:'ter', operator:'<=', value:0.25 },
+          { metric:'aum', operator:'>=', value:1000 },
+          { metric:'yield_net', operator:'>=', value:2.0 }
+        ]
+      },
+      emergents: {
+        label: '🌏 Émergents',
+        icon: '🌏',
+        description: 'Marchés émergents diversifiés',
+        mode: 'balanced',
+        baseFilter: 'equity',
+        excludeLeveraged: true,
+        metrics: ['return_ytd','return_1y','volatility','ter','aum'],
+        sectors: [],
+        fundTypes: ['Emerging Markets','Diversified Emerging Mkts','China Region','Foreign Large Blend'],
+        customFilters: [
+          { metric:'return_ytd', operator:'>=', value:5 },
+          { metric:'volatility', operator:'<=', value:30 },
+          { metric:'ter', operator:'<=', value:0.35 },
+          { metric:'aum', operator:'>=', value:1000 }
+        ]
+      }
+    };
+
+    // === UI PRESETS ===
+    function createPresetsUI() {
+      const firstFieldset = root.querySelector('fieldset');
+      if (!firstFieldset || document.getElementById('etf-presets')) return;
+      
+      const presetsDiv = document.createElement('div');
+      presetsDiv.id = 'etf-presets';
+      presetsDiv.className = 'mb-4 p-3 rounded-lg bg-gradient-to-r from-cyan-900/10 to-blue-900/10 border border-cyan-500/20';
+      presetsDiv.innerHTML = `
+        <div class="text-xs uppercase tracking-wider opacity-70 mb-2 flex items-center gap-2">
+          <i class="fas fa-magic"></i> Stratégies prédéfinies
+        </div>
+        <div class="presets-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px;">
+          ${Object.entries(PRESETS_ETF).map(([key, preset]) => `
+            <button class="preset-btn" data-preset="${key}">
+              <span style="font-size: 1.5rem;">${preset.icon}</span>
+              <span style="font-size: 0.75rem; font-weight: 600;">${preset.label}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div id="preset-description" class="mt-2 text-xs opacity-60 text-center" style="min-height: 20px;"></div>
+      `;
+      
+      firstFieldset.parentNode.insertBefore(presetsDiv, firstFieldset);
+      
+      // Écouteurs
+      presetsDiv.querySelectorAll('.preset-btn').forEach(btn => {
+        // Hover pour description
+        btn.addEventListener('mouseenter', () => {
+          const preset = PRESETS_ETF[btn.dataset.preset];
+          document.getElementById('preset-description').textContent = preset.description;
+        });
+        
+        btn.addEventListener('mouseleave', () => {
+          document.getElementById('preset-description').textContent = '';
+        });
+        
+        // Click pour appliquer
+        btn.addEventListener('click', () => {
+          // Retirer active des autres
+          presetsDiv.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          
+          applyPreset(btn.dataset.preset);
+        });
+      });
+    }
+
+    // === APPLY PRESET ===
+    function applyPreset(presetKey) {
+      const preset = PRESETS_ETF[presetKey];
+      if (!preset) return;
+      
+      console.log(`✨ Application du preset: ${preset.label}`);
+      state.activePreset = presetKey;
+      
+      // 1. Mode de tri
+      state.mode = preset.mode;
+      const modeRadio = document.querySelector(`input[name="etf-mc-mode"][value="${preset.mode}"]`);
+      if (modeRadio) modeRadio.checked = true;
+      
+      // 2. Type de base (Global/Actions/Obligations)
+      state.baseFilter = preset.baseFilter;
+      document.querySelectorAll('#etf-base-filter button').forEach(b => b.classList.remove('active'));
+      const baseBtn = document.querySelector(`#etf-base-filter button[data-type="${preset.baseFilter}"]`);
+      if (baseBtn) baseBtn.classList.add('active');
+      
+      // 3. Exclude Leveraged
+      state.filters.excludeLeveraged = preset.excludeLeveraged;
+      const levCheckbox = document.getElementById('etf-filter-leveraged');
+      if (levCheckbox) levCheckbox.checked = preset.excludeLeveraged;
+      
+      // 4. Métriques sélectionnées
+      state.selectedMetrics = preset.metrics;
+      document.querySelectorAll('#etf-mc-section .mc-pill input[id^="etf-m-"]').forEach(inp => {
+        const metric = inp.id.replace('etf-m-', '');
+        const shouldCheck = preset.metrics.includes(metric);
+        inp.checked = shouldCheck;
+        inp.closest('.mc-pill')?.classList.toggle('is-checked', shouldCheck);
+      });
+      
+      // 5. Filtres secteurs
+      state.filters.sectors = new Set(preset.sectors);
+      
+      // 6. Filtres types de fonds
+      state.filters.fundTypes = new Set(preset.fundTypes);
+      
+      // 7. Filtres personnalisés
+      state.customFilters = [...preset.customFilters]; // copie
+      
+      // 8. Rebuild UI et recalculer
+      recomputeFacetCatalogs();
+      renderDynamicFacets();
+      buildPriorityUI();
+      
+      // Mettre à jour l'affichage des filtres custom
+      const listBox = document.getElementById('etf-custom-filters-list');
+      if (listBox) {
+        if (!state.customFilters.length) {
+          listBox.innerHTML = '<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';
+        } else {
+          renderCustomFiltersList();
+        }
+      }
+      
+      // 9. Lancer le calcul
+      compute();
+      
+      // 10. Feedback visuel
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/50 text-white z-50';
+      toast.innerHTML = `✨ Preset appliqué: ${preset.label}`;
+      toast.style.animation = 'fadeInOut 2s ease';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2000);
+    }
+
+    // === Fonction d'aide pour render custom filters ===
+    function renderCustomFiltersList() {
+      const listBox = document.getElementById('etf-custom-filters-list');
+      if (!listBox) return;
+      
+      if (!state.customFilters.length) {
+        listBox.innerHTML = '<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';
+        return;
+      }
+      
+      listBox.innerHTML = state.customFilters.map((f, i) => {
+        const d = METRICS[f.metric];
+        const unit = d.unit || '';
+        const col = (f.operator === '>=' || f.operator === '>') ? (d.max ? 'g' : 'y')
+                  : (f.operator === '<=' || f.operator === '<') ? (d.max ? 'r' : 'g')
+                  : 'y';
+        const qv = Math.round(+f.value * 10) / 10;
+        return `<div class="filter-item flex items-center gap-2 p-2 rounded">
+          <span class="flex-1">${d.label} <span class="${col} font-semibold">${f.operator} ${qv}${unit}</span></span>
+          <button class="remove-filter text-red-400 hover:text-red-300 text-sm" data-i="${i}">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>`;
+      }).join('');
+      
+      listBox.querySelectorAll('.remove-filter').forEach(b => {
+        b.addEventListener('click', e => {
+          const idx = +e.currentTarget.dataset.i;
+          state.customFilters.splice(idx, 1);
+          renderCustomFiltersList();
+          scheduleCompute();
+        });
+      });
+    }
+
     // ==== UI: Filtre type de base ====
     function createBaseFilterUI(){
       const firstFieldset = root.querySelector('fieldset');
@@ -216,6 +477,8 @@
           filterDiv.querySelectorAll('button').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           state.baseFilter = btn.dataset.type;
+          state.activePreset = null; // Désactiver le preset si changement manuel
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
           recomputeFacetCatalogs();
           renderDynamicFacets();
           scheduleCompute();
@@ -300,6 +563,8 @@
             const v = e.target.value;
             if(e.target.checked) set.add(v); else set.delete(v);
             e.target.closest('.facet-item')?.classList.toggle('is-checked', e.target.checked);
+            state.activePreset = null; // Désactiver preset si changement manuel
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
             scheduleCompute();
           });
         });
@@ -344,11 +609,19 @@
         if(e.target.checked){ if(!state.selectedMetrics.includes(metric)) state.selectedMetrics.push(metric); }
         else state.selectedMetrics=state.selectedMetrics.filter(m=>m!==metric);
         cb.closest('.mc-pill')?.classList.toggle('is-checked',cb.checked);
+        state.activePreset = null; // Désactiver preset si changement manuel
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
         buildPriorityUI(); scheduleCompute();
       });
     });
     root.addEventListener('change',(e)=>{
-      if(e.target && e.target.name==='etf-mc-mode'){ state.mode=e.target.value||'balanced'; buildPriorityUI(); scheduleCompute(); }
+      if(e.target && e.target.name==='etf-mc-mode'){ 
+        state.mode=e.target.value||'balanced'; 
+        state.activePreset = null; // Désactiver preset si changement manuel
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        buildPriorityUI(); 
+        scheduleCompute(); 
+      }
     });
 
     // ==== UI Priorités - VERSION AVEC FIX ÉCOUTEURS DUPLIQUÉS ====
@@ -919,6 +1192,7 @@
       if(!summary) return;
       const mode=state.mode==='balanced'?'Équilibre':'Priorités intelligentes';
       const typeLabel = state.baseFilter === 'equity' ? ' Actions' : state.baseFilter === 'bonds' ? ' Obligations' : '';
+      const presetLabel = state.activePreset ? ` (${PRESETS_ETF[state.activePreset]?.label || ''})` : '';
       const metrics=state.selectedMetrics.map(m=>METRICS[m]?.label).filter(Boolean).join(' · ');
       const tags=[];
       // MODIFIÉ : suppression du tag Pays
@@ -926,7 +1200,7 @@
       if(state.filters.sectors.size)   tags.push(`Secteurs(${state.filters.sectors.size})`);
       if(state.filters.fundTypes.size) tags.push(`Type(${state.filters.fundTypes.size})`);
       if(state.filters.excludeLeveraged) tags.push('No Lev/Inv');
-      summary.innerHTML=`<strong>${mode}${typeLabel}</strong> • ${metrics}${tags.length?' • '+tags.join(' '):''} • ${filtered}/${total} ETFs`;
+      summary.innerHTML=`<strong>${mode}${typeLabel}${presetLabel}</strong> • ${metrics}${tags.length?' • '+tags.join(' '):''} • ${filtered}/${total} ETFs`;
     }
 
     // ==== COMPUTE PIPELINE ====
@@ -1009,28 +1283,22 @@
       addBtn.addEventListener('click',()=>{
         const m=metricSel.value,op=opSel.value,val=parseFloat(valInp.value);
         if(!METRICS[m]||!Number.isFinite(val)) return;
-        state.customFilters.push({metric:m,operator:op,value:val}); valInp.value=''; renderList(); scheduleCompute();
+        state.customFilters.push({metric:m,operator:op,value:val}); 
+        valInp.value=''; 
+        state.activePreset = null; // Désactiver preset si ajout manuel
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        renderCustomFiltersList(); 
+        scheduleCompute();
       });
-      function renderList(){
-        if(!state.customFilters.length){listBox.innerHTML='<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnalisé</div>';return;}
-        listBox.innerHTML=state.customFilters.map((f,i)=>{
-          const d=METRICS[f.metric], unit=d.unit||'';
-          const col=(f.operator==='>='||f.operator==='>')?(d.max?'g':'y'):(f.operator==='<='||f.operator==='<')?(d.max?'r':'g'):'y';
-          const qv=Math.round(+f.value*10)/10;
-          return `<div class="filter-item flex items-center gap-2 p-2 rounded">
-            <span class="flex-1">${d.label} <span class="${col} font-semibold">${f.operator} ${qv}${unit}</span></span>
-            <button class="remove-filter text-red-400 hover:text-red-300 text-sm" data-i="${i}"><i class="fas fa-times"></i></button>
-          </div>`;
-        }).join('');
-        listBox.querySelectorAll('.remove-filter').forEach(b=>b.addEventListener('click',e=>{
-          const idx=+e.currentTarget.dataset.i; state.customFilters.splice(idx,1); renderList(); scheduleCompute();
-        }));
-      }
-      renderList();
+      
+      // Utiliser la fonction partagée
+      window.renderETFCustomFiltersList = renderCustomFiltersList;
     }
 
     document.getElementById('etf-filter-leveraged')?.addEventListener('change',e=>{
       state.filters.excludeLeveraged=!!e.target.checked;
+      state.activePreset = null; // Désactiver preset si changement manuel
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
       recomputeFacetCatalogs();
       renderDynamicFacets();
       scheduleCompute();
@@ -1044,6 +1312,8 @@
       state.selectedMetrics=['return_ytd','ter','aum','return_1y'];
       state.filters={sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true}; // MODIFIÉ : pas de countries
       state.customFilters=[];
+      state.activePreset = null;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('#etf-base-filter button').forEach(b=>b.classList.remove('active'));
       document.querySelector('#etf-base-filter button[data-type="all"]')?.classList.add('active');
       document.querySelectorAll('#etf-mc-section .mc-pill input').forEach(inp=>{
@@ -1062,10 +1332,11 @@
 
     // Initialisation
     createBaseFilterUI();
+    createPresetsUI(); // NEW: Ajouter les presets
     syncSelectedFromUI();
     setupCustomFiltersUI();
     setTimeout(()=>compute(), 300);
-    // NEW: Ajouter l'alias calculate pour compute
-    window.ETF_MC={compute,state,METRICS,cache, calculate: compute};
+    // NEW: Ajouter l'alias calculate pour compute et exposer presets
+    window.ETF_MC={compute,state,METRICS,cache,PRESETS_ETF,calculate:compute,applyPreset};
   }
 })();
