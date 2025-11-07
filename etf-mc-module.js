@@ -212,108 +212,194 @@
       }}
     };
 
-    // ==== PRESETS ETF v1.0 ====
+// ==== PRESETS ETF v2.0 - 10 stratégies avec métriques UI uniquement ====
 const PRESETS_ETF = {
+  // 1) Core monde
   coeur_global: {
     label: '🌍 Cœur Global',
     icon: '🌍',
-    description: 'World core, UCITS, réplication physique, coûts & suivi serrés',
+    description: 'World core UCITS, coûts bas & volatilité maîtrisée',
     mode: 'balanced',
     baseFilter: 'all',
     excludeLeveraged: true,
-    metrics: ['tracking_diff_1y','ter','bid_ask_spread_bp','aum','volatility','max_dd_3y','return_1y'],
+    metrics: ['ter','aum','volatility','return_1y','return_ytd'],
+    sectors: [],
     fundTypes: ['World Large Stock','Large Blend','Foreign Large Blend'],
     customFilters: [
-      { metric:'replication', operator:'==', value:'physical' },
       { metric:'ter', operator:'<=', value:0.15 },
-      { metric:'tracking_diff_1y', operator:'>=', value:-0.60 }, // pas trop sous-performant vs indice
-      { metric:'bid_ask_spread_bp', operator:'<=', value:10 },
       { metric:'aum', operator:'>=', value:5000 },
-      { metric:'top10_weight', operator:'<=', value:25 },
-      { metric:'overlap_pct_vs_core', operator:'<=', value:80 } // évite doublons si déjà un core
-    ],
-    tieBreakers: ['tracking_diff_1y','ter','bid_ask_spread_bp']
+      { metric:'volatility', operator:'<=', value:22 },
+      { metric:'return_1y', operator:'>=', value:-10 }
+    ]
   },
 
+  // 2) Dividendes
   rendement: {
     label: '💰 Dividendes',
     icon: '💰',
-    description: 'Rendement durable, qualité & volatilité contrôlée',
+    description: 'Rendement durable, volatilité contenue',
     mode: 'lexico',
     baseFilter: 'equity',
     excludeLeveraged: true,
-    metrics: ['dividend_yield','payout_stability','quality_score','volatility','max_dd_3y','ter','bid_ask_spread_bp'],
+    metrics: ['dividend_yield','volatility','ter','aum','return_1y'],
     sectors: ['Utilities','Energy','Consumer Defensive','Real Estate','Financial Services'],
     fundTypes: ['Dividend','High Dividend Yield','Equity Income','Large Value','Derivative Income'],
     customFilters: [
       { metric:'dividend_yield', operator:'>=', value:3.0 },
-      { metric:'payout_stability', operator:'>=', value:60 }, // % d’années sans coupe
-      { metric:'quality_score', operator:'>=', value:60 },
       { metric:'volatility', operator:'<=', value:30 },
-      { metric:'max_dd_3y', operator:'>=', value:-35 },
       { metric:'ter', operator:'<=', value:0.60 },
-      { metric:'bid_ask_spread_bp', operator:'<=', value:15 },
-      { metric:'aum', operator:'>=', value:1000 }
+      { metric:'aum', operator:'>=', value:1000 },
+      { metric:'return_1y', operator:'>=', value:-15 }
     ]
   },
 
+  // 3) Tech Growth
   croissance_tech: {
     label: '🚀 Tech Growth',
     icon: '🚀',
-    description: 'Croissance, mais gardes-fous de risque & concentration',
+    description: 'Croissance avec garde-fous simples',
     mode: 'lexico',
     baseFilter: 'equity',
     excludeLeveraged: true,
-    metrics: ['return_ytd','return_1y','sortino_3y','max_dd_3y','top10_weight','ter','bid_ask_spread_bp'],
+    metrics: ['return_ytd','return_1y','volatility','ter','aum'],
     sectors: ['Technology','Communication Services','Healthcare'],
     fundTypes: ['Technology','Large Growth','Mid-Cap Growth','Innovation'],
     customFilters: [
       { metric:'return_ytd', operator:'>=', value:15 },
-      { metric:'max_dd_3y', operator:'>=', value:-55 },
-      { metric:'top10_weight', operator:'<=', value:60 },
+      { metric:'volatility', operator:'<=', value:35 },
       { metric:'ter', operator:'<=', value:0.60 },
-      { metric:'bid_ask_spread_bp', operator:'<=', value:20 },
-      { metric:'aum', operator:'>=', value:1000 }
-    ],
-    tieBreakers: ['sortino_3y','return_1y','ter']
-  },
-
-  defensif_oblig: {
-    label: '🛡️ Obligations',
-    icon: '🛡️',
-    description: 'IG core : duration & rating sous contrôle',
-    mode: 'balanced',
-    baseFilter: 'bonds',
-    excludeLeveraged: true,
-    metrics: ['effective_duration','avg_rating','yield_to_maturity','ter','aum','volatility','return_ytd'],
-    fundTypes: ['Intermediate Core Bond','Government Bond','Corporate Bond','Target Maturity'],
-    customFilters: [
-      { metric:'avg_rating', operator:'>=', value:'BBB+' }, // plancher IG
-      { metric:'effective_duration', operator:'>=', value:4 },
-      { metric:'effective_duration', operator:'<=', value:7.5 },
-      { metric:'yield_to_maturity', operator:'>=', value:2.0 },
-      { metric:'ter', operator:'<=', value:0.25 },
       { metric:'aum', operator:'>=', value:1000 }
     ]
   },
 
+  // 4) Obligations IG core
+  defensif_oblig: {
+    label: '🛡️ Obligations',
+    icon: '🛡️',
+    description: 'IG core simple (coût bas, vol faible)',
+    mode: 'balanced',
+    baseFilter: 'bonds',
+    excludeLeveraged: true,
+    metrics: ['volatility','ter','aum','yield_net','return_ytd'],
+    sectors: [],
+    fundTypes: ['Intermediate Core Bond','Government Bond','Corporate Bond','Target Maturity'],
+    customFilters: [
+      { metric:'volatility', operator:'<=', value:12 },
+      { metric:'ter', operator:'<=', value:0.25 },
+      { metric:'aum', operator:'>=', value:1000 },
+      { metric:'yield_net', operator:'>=', value:2.0 }
+    ]
+  },
+
+  // 5) Marchés émergents
   emergents: {
     label: '🌏 Émergents',
     icon: '🌏',
-    description: 'EM diversifiés, coûts/FX maîtrisés',
+    description: 'EM diversifiés à coût raisonnable',
     mode: 'balanced',
     baseFilter: 'equity',
     excludeLeveraged: true,
-    metrics: ['return_ytd','return_1y','volatility','ter','aum','country_concentration','is_hedged'],
-    fundTypes: ['Emerging Markets','Diversified Emerging Mkts','Foreign Large Blend'],
+    metrics: ['ter','aum','volatility','return_ytd','return_1y'],
+    sectors: [],
+    fundTypes: ['Emerging Markets','Diversified Emerging Mkts','Foreign Large Blend','China Region'],
     customFilters: [
-      { metric:'country_concentration', operator:'<=', value:35 }, // poids pays max (ex. Chine)
       { metric:'ter', operator:'<=', value:0.35 },
       { metric:'aum', operator:'>=', value:1000 },
-      { metric:'volatility', operator:'<=', value:30 }
-    ],
-    preferences: [
-      { metric:'is_hedged', value:false } // par défaut non couvert, à inverser selon ton besoin EUR-hedged
+      { metric:'volatility', operator:'<=', value:30 },
+      { metric:'return_ytd', operator:'>=', value:5 }
+    ]
+  },
+
+  // 6) Value/Quality
+  qualite_value: {
+    label: '🏛️ Value/Quality',
+    icon: '🏛️',
+    description: 'Large caps value à vol modérée',
+    mode: 'lexico',
+    baseFilter: 'equity',
+    excludeLeveraged: true,
+    metrics: ['volatility','ter','aum','return_1y','dividend_yield'],
+    sectors: ['Financial Services','Industrial','Consumer Defensive','Energy'],
+    fundTypes: ['Large Value','Quality','Large Blend','Equity Income'],
+    customFilters: [
+      { metric:'volatility', operator:'<=', value:26 },
+      { metric:'ter', operator:'<=', value:0.30 },
+      { metric:'aum', operator:'>=', value:1000 },
+      { metric:'dividend_yield', operator:'>=', value:2.0 }
+    ]
+  },
+
+  // 7) Minimum Vol Global
+  min_vol_global: {
+    label: '🧊 Min Vol Global',
+    icon: '🧊',
+    description: 'Core défensif faible volatilité',
+    mode: 'balanced',
+    baseFilter: 'equity',
+    excludeLeveraged: true,
+    metrics: ['volatility','ter','aum','return_1y','return_ytd'],
+    sectors: [],
+    fundTypes: ['Low Volatility','Minimum Volatility','Large Blend','World Large Stock'],
+    customFilters: [
+      { metric:'volatility', operator:'<=', value:18 },
+      { metric:'ter', operator:'<=', value:0.30 },
+      { metric:'aum', operator:'>=', value:1000 }
+    ]
+  },
+
+  // 8) SMID Quality
+  smid_quality: {
+    label: '📈 SMID Quality',
+    icon: '📈',
+    description: 'Small/Mid diversifiées, vol contrôlée',
+    mode: 'lexico',
+    baseFilter: 'equity',
+    excludeLeveraged: true,
+    metrics: ['return_1y','ter','volatility','aum','return_ytd'],
+    sectors: [],
+    fundTypes: ['Mid-Cap Blend','Small Blend','Small/Mid Growth','Mid-Cap Growth'],
+    customFilters: [
+      { metric:'volatility', operator:'>=', value:24 },
+      { metric:'volatility', operator:'<=', value:38 },
+      { metric:'ter', operator:'<=', value:0.45 },
+      { metric:'aum', operator:'>=', value:500 }
+    ]
+  },
+
+  // 9) Cash / Ultra-Short
+  cash_ultra_short: {
+    label: '💧 Cash/Ultra-Short',
+    icon: '💧',
+    description: 'Parking de cash oblig court terme',
+    mode: 'lexico',
+    baseFilter: 'bonds',
+    excludeLeveraged: true,
+    metrics: ['volatility','ter','aum','yield_net','return_ytd'],
+    sectors: [],
+    fundTypes: ['Ultrashort Bond','Short Government','Short Corporate','Money Market'],
+    customFilters: [
+      { metric:'volatility', operator:'<=', value:5 },
+      { metric:'ter', operator:'<=', value:0.20 },
+      { metric:'aum', operator:'>=', value:500 }
+    ]
+  },
+
+  // 10) Bouclier inflation
+  inflation_shield: {
+    label: '🔥 Inflation Shield',
+    icon: '🔥',
+    description: 'TIPS/Commodities coût bas (protection inflation)',
+    mode: 'balanced',
+    baseFilter: 'all',
+    excludeLeveraged: true,
+    metrics: ['volatility','ter','aum','return_1y','return_ytd'],
+    sectors: ['Energy','Basic Materials','Real Estate'],
+    fundTypes: ['Inflation-Protected Bond','Commodities Focused','Broad Commodities','TIPS'],
+    customFilters: [
+      { metric:'ter', operator:'<=', value:0.35 },
+      { metric:'aum', operator:'>=', value:500 },
+      { metric:'volatility', operator:'>=', value:10 },
+      { metric:'volatility', operator:'<=', value:25 }
     ]
   }
 };
