@@ -1,4 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v3.8+ avec Presets Hard-Tuned ===================
+// ===== MC (Multi-Critères) – Module Optimisé v4.0 avec Presets Format ETF ===================
+// v4.0: Refonte complète des presets avec format moderne style ETF
 // v3.8+: Presets "hard-tuned" optimisés pour dénicher les vraies pépites
 // v3.8: Système de presets complets avec API (Défensif, Rendement, Agressif, Croissance)
 // v3.7+: Boutons ▲▼ pour déplacement précis (1 clic = 1 place) + scroll stable
@@ -90,7 +91,7 @@
       .btn-up:hover,.btn-down:hover{opacity:1;background:rgba(0,255,135,.12);
         transform:translateY(-1px)}
       
-      /* === Boutons Presets v3.8 === */
+      /* === Boutons Presets v4.0 - Format ETF === */
       .preset-btn {
         padding: 8px 16px;
         border-radius: 10px;
@@ -1193,8 +1194,8 @@ function addPresetsBar() {
   
   // Générer dynamiquement les boutons depuis l'objet PRESETS
   const buttonsHTML = Object.entries(PRESETS).map(([key, preset]) => 
-    `<button class="preset-btn" data-preset="${key}" title="${preset.label}">
-      ${preset.label}
+    `<button class="preset-btn" data-preset="${key}" title="${preset.tooltip || preset.description}">
+      ${preset.icon} ${preset.shortLabel}
     </button>`
   ).join('');
   
@@ -1824,158 +1825,327 @@ function addPresetsBar() {
     }
   };
 
-// ==== SYSTÈME DE PRESETS v3.10 — sans fondamentaux (perf/risque/dividendes) ====
+// ==== SYSTÈME DE PRESETS v4.0 — Format ETF Moderne ====
 const PRESETS = {
-  // ----- Base -----
   defensif: {
+    id: 'defensif',
     label: '🛡️ Défensif',
-    mode: 'balanced', // moyenne de percentiles
+    shortLabel: 'Défensif',
+    icon: '🛡️',
+    description: 'Faible volatilité • Dividendes stables • Protection capital',
+    tooltip: 'Stratégie conservatrice privilégiant la stabilité et les revenus réguliers',
+    color: '#4CAF50',
+    mode: 'balanced',
     metrics: [
-      'volatility_3y','max_drawdown_3y',
-      'dividend_yield_reg','payout_ratio',
+      'volatility_3y',
+      'max_drawdown_3y',
+      'dividend_yield_reg',
+      'payout_ratio',
       'perf_1y'
     ],
-    geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics','Energie','Immobilier'] },
-    customFilters: [
-      { metric:'perf_daily',          operator:'>=', value:-0.5 },
-      { metric:'dividend_yield_reg',  operator:'>=', value:2.0 },
-      { metric:'volatility_3y',       operator:'<=', value:26 },
-      { metric:'max_drawdown_3y',     operator:'<=', value:35 },
-      { metric:'payout_ratio',        operator:'<=', value:75 }   // passer à 90 si panier REITs
-    ]
+    filters: {
+      regions: ['EUROPE', 'US'],
+      countries: [],
+      sectors: ['Santé', 'Biens de consommation de base', 'Services publics']
+    },
+    criteria: [
+      { metric: 'perf_daily', operator: '>=', value: -0.5, label: 'Perf jour > -0.5%' },
+      { metric: 'dividend_yield_reg', operator: '>=', value: 2.0, label: 'Dividende > 2%' },
+      { metric: 'volatility_3y', operator: '<=', value: 26, label: 'Volatilité < 26%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 35, label: 'Max DD < 35%' },
+      { metric: 'payout_ratio', operator: '<=', value: 75, label: 'Payout < 75%' }
+    ],
+    stats: {
+      avgReturn: '8-12%',
+      risk: 'Faible',
+      horizon: '3-5 ans'
+    }
   },
 
   rendement: {
+    id: 'rendement',
     label: '💰 Rendement',
-    mode: 'lexico', // priorité stricte par l’ordre ci-dessous
+    shortLabel: 'Rendement',
+    icon: '💰',
+    description: 'Hauts dividendes • Payout soutenable • REITs inclus',
+    tooltip: 'Focus sur les revenus passifs avec dividendes élevés et durables',
+    color: '#FFD700',
+    mode: 'lexico',
     metrics: [
-      'dividend_yield_reg','dividend_yield_ttm',
+      'dividend_yield_reg',
+      'dividend_yield_ttm',
       'payout_ratio',
-      'max_drawdown_3y','volatility_3y',
+      'max_drawdown_3y',
+      'volatility_3y',
       'perf_1y'
     ],
-    geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Immobilier','Energie','Biens de consommation de base','Services publics'] },
-    customFilters: [
-      { metric:'dividend_yield_reg',  operator:'>=', value:3.5 },
-      { metric:'payout_ratio',        operator:'<=', value:85 },  // monter à 110 si REITs
-      { metric:'max_drawdown_3y',     operator:'<=', value:45 },
-      { metric:'volatility_3y',       operator:'<=', value:35 },
-      { metric:'perf_1y',             operator:'>=', value:-5 }
-    ]
+    filters: {
+      regions: ['EUROPE', 'US'],
+      countries: [],
+      sectors: ['Finance', 'Immobilier', 'Energie', 'Services publics']
+    },
+    criteria: [
+      { metric: 'dividend_yield_reg', operator: '>=', value: 3.5, label: 'Dividende > 3.5%' },
+      { metric: 'payout_ratio', operator: '<=', value: 85, label: 'Payout < 85%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 45, label: 'Max DD < 45%' },
+      { metric: 'volatility_3y', operator: '<=', value: 35, label: 'Volatilité < 35%' },
+      { metric: 'perf_1y', operator: '>=', value: -5, label: 'Perf 1Y > -5%' }
+    ],
+    stats: {
+      avgReturn: '10-15%',
+      risk: 'Modéré',
+      horizon: '2-4 ans'
+    }
   },
 
   agressif: {
+    id: 'agressif',
     label: '🚀 Agressif',
+    shortLabel: 'Agressif',
+    icon: '🚀',
+    description: 'Momentum fort • Croissance rapide • Tech/Biotech',
+    tooltip: 'Stratégie dynamique pour investisseurs acceptant la volatilité',
+    color: '#FF5722',
     mode: 'lexico',
     metrics: [
-      'perf_3m','perf_1m','ytd','perf_1y',
-      'max_drawdown_3y','volatility_3y'
+      'perf_3m',
+      'perf_1m',
+      'ytd',
+      'perf_1y',
+      'max_drawdown_3y',
+      'volatility_3y'
     ],
-    geoFilters: { regions:[], countries:[], sectors:['Technologie de l\'information','Santé','Industries','Biens de consommation cycliques','La communication','Matériaux'] },
-    customFilters: [
-      { metric:'perf_daily',          operator:'>=', value:0 },
-      { metric:'ytd',                 operator:'>=', value:10 },
-      { metric:'max_drawdown_3y',     operator:'<=', value:60 },
-      { metric:'volatility_3y',       operator:'<=', value:50 }
-    ]
+    filters: {
+      regions: [],
+      countries: [],
+      sectors: ['Technologie de l\'information', 'Santé', 'La communication']
+    },
+    criteria: [
+      { metric: 'perf_daily', operator: '>=', value: 0, label: 'Perf jour positive' },
+      { metric: 'ytd', operator: '>=', value: 10, label: 'YTD > 10%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 60, label: 'Max DD < 60%' },
+      { metric: 'volatility_3y', operator: '<=', value: 50, label: 'Volatilité < 50%' }
+    ],
+    stats: {
+      avgReturn: '20-30%',
+      risk: 'Élevé',
+      horizon: '1-3 ans'
+    }
   },
 
   croissance: {
+    id: 'croissance',
     label: '📈 Croissance',
+    shortLabel: 'Croissance',
+    icon: '📈',
+    description: 'Performance 3Y+ • Leaders sectoriels • Qualité',
+    tooltip: 'Entreprises en forte croissance avec track record solide',
+    color: '#2196F3',
     mode: 'lexico',
     metrics: [
-      'perf_3y','perf_1y','perf_3m','ytd',
-      'volatility_3y','max_drawdown_3y'
+      'perf_3y',
+      'perf_1y',
+      'perf_3m',
+      'ytd',
+      'volatility_3y',
+      'max_drawdown_3y'
     ],
-    geoFilters: { regions:['US','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication'] },
-    customFilters: [
-      { metric:'perf_3y',             operator:'>=', value:60 },
-      { metric:'perf_1y',             operator:'>=', value:15 },
-      { metric:'volatility_3y',       operator:'<=', value:35 },
-      { metric:'max_drawdown_3y',     operator:'<=', value:40 },
-      { metric:'payout_ratio',        operator:'<=', value:70 }
-    ]
+    filters: {
+      regions: ['US', 'ASIA'],
+      countries: [],
+      sectors: ['Technologie de l\'information', 'Santé', 'La communication']
+    },
+    criteria: [
+      { metric: 'perf_3y', operator: '>=', value: 60, label: 'Perf 3Y > 60%' },
+      { metric: 'perf_1y', operator: '>=', value: 15, label: 'Perf 1Y > 15%' },
+      { metric: 'volatility_3y', operator: '<=', value: 35, label: 'Volatilité < 35%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 40, label: 'Max DD < 40%' },
+      { metric: 'payout_ratio', operator: '<=', value: 70, label: 'Payout < 70%' }
+    ],
+    stats: {
+      avgReturn: '15-25%',
+      risk: 'Modéré-Élevé',
+      horizon: '3-5 ans'
+    }
   },
 
-  low_vol_income: {
-    label: '🧊 Low Vol Income',
+  value_dividend: {
+    id: 'value_dividend',
+    label: '💎 Value',
+    shortLabel: 'Value',
+    icon: '💎',
+    description: 'Value profonde • Dividendes élevés • Sous-évalué',
+    tooltip: 'Actions décotées avec rendement attractif',
+    color: '#9C27B0',
     mode: 'balanced',
-    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','perf_1y'],
-    geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics','Immobilier'] },
-    customFilters: [
-      { metric:'dividend_yield_reg',  operator:'>=', value:2.0 },
-      { metric:'dividend_yield_ttm',  operator:'<=', value:8.0 },
-      { metric:'payout_ratio',        operator:'<=', value:80 },
-      { metric:'volatility_3y',       operator:'<=', value:22 },
-      { metric:'max_drawdown_3y',     operator:'<=', value:30 },
-      { metric:'perf_1y',             operator:'>=', value:-2 }
-    ]
+    metrics: [
+      'dividend_yield_reg',
+      'payout_ratio',
+      'perf_3y',
+      'max_drawdown_3y'
+    ],
+    filters: {
+      regions: ['EUROPE', 'US'],
+      countries: [],
+      sectors: ['Finance', 'Energie', 'Services publics', 'Industrie']
+    },
+    criteria: [
+      { metric: 'dividend_yield_reg', operator: '>=', value: 4.0, label: 'Dividende > 4%' },
+      { metric: 'dividend_yield_ttm', operator: '<=', value: 8.0, label: 'Div TTM < 8%' },
+      { metric: 'payout_ratio', operator: '<=', value: 70, label: 'Payout < 70%' },
+      { metric: 'perf_3y', operator: '>=', value: 20, label: 'Perf 3Y > 20%' },
+      { metric: 'volatility_3y', operator: '<=', value: 25, label: 'Volatilité < 25%' }
+    ],
+    stats: {
+      avgReturn: '10-18%',
+      risk: 'Modéré',
+      horizon: '3-7 ans'
+    }
   },
 
-  trend_12_3_1: {
-    label: '📊 Trend 12-3-1',
+  quality_premium: {
+    id: 'quality_premium',
+    label: '⭐ Premium',
+    shortLabel: 'Premium',
+    icon: '⭐',
+    description: 'Leaders mondiaux • Moats • Innovation',
+    tooltip: 'Les meilleures entreprises mondiales avec avantages compétitifs',
+    color: '#FFC107',
     mode: 'lexico',
-    metrics: ['perf_1y','perf_3m','perf_1m','ytd','max_drawdown_3y'],
-    geoFilters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:[] },
-    customFilters: [
-      { metric:'perf_1y',         operator:'>=', value:12 },
-      { metric:'perf_3m',         operator:'>=', value:3 },
-      { metric:'perf_1m',         operator:'>=', value:0 },
-      { metric:'volatility_3y',   operator:'<=', value:45 },
-      { metric:'max_drawdown_3y', operator:'<=', value:55 }
-    ]
+    metrics: [
+      'perf_3y',
+      'volatility_3y',
+      'perf_1y',
+      'dividend_yield_reg'
+    ],
+    filters: {
+      regions: ['US', 'EUROPE'],
+      countries: [],
+      sectors: ['Technologie de l\'information', 'Santé', 'Biens de consommation de base']
+    },
+    criteria: [
+      { metric: 'perf_3y', operator: '>=', value: 80, label: 'Perf 3Y > 80%' },
+      { metric: 'volatility_3y', operator: '<=', value: 30, label: 'Volatilité < 30%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 35, label: 'Max DD < 35%' },
+      { metric: 'dividend_yield_reg', operator: '>=', value: 0.5, label: 'Dividende > 0.5%' }
+    ],
+    stats: {
+      avgReturn: '18-25%',
+      risk: 'Modéré',
+      horizon: '5+ ans'
+    }
   },
 
-  pullback_trend: {
-    label: '↩️ Pullback dans tendance',
+  momentum_trend: {
+    id: 'momentum_trend',
+    label: '📊 Momentum',
+    shortLabel: 'Momentum',
+    icon: '📊',
+    description: 'Suivi de tendance • Système quantitatif • 12-3-1',
+    tooltip: 'Stratégie momentum basée sur la force relative',
+    color: '#00BCD4',
     mode: 'lexico',
-    metrics: ['perf_3m','ytd','perf_1m','perf_daily','max_drawdown_3y'],
-    geoFilters: { regions:['US','EUROPE'], countries:[], sectors:['Technologie de l\'information','Industries','La communication','Biens de consommation cycliques','Santé'] },
-    customFilters: [
-      { metric:'ytd',             operator:'>=', value:10 },
-      { metric:'perf_3m',         operator:'>=', value:5 },
-      { metric:'perf_1m',         operator:'>=', value:-8 },
-      { metric:'perf_1m',         operator:'<=', value:2 },
-      { metric:'perf_daily',      operator:'>=', value:0 },
-      { metric:'volatility_3y',   operator:'<=', value:40 },
-      { metric:'max_drawdown_3y', operator:'<=', value:50 }
-    ]
+    metrics: [
+      'perf_1y',
+      'perf_3m',
+      'perf_1m',
+      'ytd',
+      'max_drawdown_3y'
+    ],
+    filters: {
+      regions: ['US', 'EUROPE', 'ASIA'],
+      countries: [],
+      sectors: []
+    },
+    criteria: [
+      { metric: 'perf_1y', operator: '>=', value: 12, label: 'Perf 1Y > 12%' },
+      { metric: 'perf_3m', operator: '>=', value: 3, label: 'Perf 3M > 3%' },
+      { metric: 'perf_1m', operator: '>=', value: 0, label: 'Perf 1M positive' },
+      { metric: 'volatility_3y', operator: '<=', value: 45, label: 'Volatilité < 45%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 55, label: 'Max DD < 55%' }
+    ],
+    stats: {
+      avgReturn: '15-30%',
+      risk: 'Élevé',
+      horizon: '6-18 mois'
+    }
   },
 
-  recovery_quality: {
-    label: '🪄 Recovery qualité',
+  low_volatility: {
+    id: 'low_volatility',
+    label: '🧊 Low Vol',
+    shortLabel: 'Low Vol',
+    icon: '🧊',
+    description: 'Volatilité minimale • Aristocrates • Revenus stables',
+    tooltip: 'Actions les plus stables avec historique de dividendes',
+    color: '#607D8B',
     mode: 'balanced',
-    metrics: ['perf_3m','perf_1m','max_drawdown_3y','volatility_3y'],
-    geoFilters: { regions:['EUROPE','US','ASIA'], countries:[], sectors:['Industries','Matériaux','Finance','Technologie de l\'information'] },
-    customFilters: [
-      { metric:'perf_1y',             operator:'>=', value:-25 },
-      { metric:'perf_3m',             operator:'>=', value:5 },
-      { metric:'volatility_3y',       operator:'<=', value:35 },
-      { metric:'max_drawdown_3y',     operator:'<=', value:55 },
-      { metric:'payout_ratio',        operator:'<=', value:70 },
-      { metric:'dividend_yield_reg',  operator:'>=', value:1.0 },
-      { metric:'dividend_yield_ttm',  operator:'<=', value:10 }
-    ]
+    metrics: [
+      'volatility_3y',
+      'max_drawdown_3y',
+      'dividend_yield_reg',
+      'perf_1y'
+    ],
+    filters: {
+      regions: ['EUROPE', 'US'],
+      countries: [],
+      sectors: ['Santé', 'Biens de consommation de base', 'Services publics']
+    },
+    criteria: [
+      { metric: 'dividend_yield_reg', operator: '>=', value: 2.0, label: 'Dividende > 2%' },
+      { metric: 'dividend_yield_ttm', operator: '<=', value: 8.0, label: 'Div TTM < 8%' },
+      { metric: 'payout_ratio', operator: '<=', value: 80, label: 'Payout < 80%' },
+      { metric: 'volatility_3y', operator: '<=', value: 22, label: 'Volatilité < 22%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 30, label: 'Max DD < 30%' },
+      { metric: 'perf_1y', operator: '>=', value: -2, label: 'Perf 1Y > -2%' }
+    ],
+    stats: {
+      avgReturn: '7-12%',
+      risk: 'Très faible',
+      horizon: '3-10 ans'
+    }
   },
 
-  anti_crash_minvol: {
-    label: '🛡️ Anti-Crash MinVol',
-    mode: 'lexico',
-    metrics: ['max_drawdown_3y','volatility_3y','perf_1y'],
-    geoFilters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics'] },
-    customFilters: [
-      { metric:'max_drawdown_3y', operator:'<=', value:25 },
-      { metric:'volatility_3y',   operator:'<=', value:22 },
-      { metric:'perf_1y',         operator:'>=', value:0 },
-      { metric:'payout_ratio',    operator:'<=', value:80 }
-    ]
+  recovery: {
+    id: 'recovery',
+    label: '🔄 Recovery',
+    shortLabel: 'Recovery',
+    icon: '🔄',
+    description: 'Rebond post-correction • Oversold • Turnaround',
+    tooltip: 'Actions en phase de récupération après une forte baisse',
+    color: '#E91E63',
+    mode: 'balanced',
+    metrics: [
+      'perf_3m',
+      'perf_1m',
+      'max_drawdown_3y',
+      'volatility_3y'
+    ],
+    filters: {
+      regions: ['EUROPE', 'US', 'ASIA'],
+      countries: [],
+      sectors: ['Industries', 'Matériaux', 'Finance']
+    },
+    criteria: [
+      { metric: 'perf_1y', operator: '>=', value: -25, label: 'Perf 1Y > -25%' },
+      { metric: 'perf_3m', operator: '>=', value: 5, label: 'Perf 3M > 5%' },
+      { metric: 'volatility_3y', operator: '<=', value: 35, label: 'Volatilité < 35%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 55, label: 'Max DD < 55%' },
+      { metric: 'payout_ratio', operator: '<=', value: 70, label: 'Payout < 70%' },
+      { metric: 'dividend_yield_reg', operator: '>=', value: 1.0, label: 'Dividende > 1%' }
+    ],
+    stats: {
+      avgReturn: '10-25%',
+      risk: 'Modéré-Élevé',
+      horizon: '1-2 ans'
+    }
   }
 };
 
 
 
 
-  // Fonction pour appliquer un preset
+  // Fonction pour appliquer un preset - Adaptée au nouveau format v4.0
   function applyPreset(presetKey) {
     const preset = PRESETS[presetKey];
     if (!preset) return;
@@ -1991,11 +2161,19 @@ const PRESETS = {
     // 3. Métriques et ordre
     api.setMetrics(preset.metrics);
     
-    // 4. Filtres géographiques
-    api.setGeoFilters(preset.geoFilters);
+    // 4. Filtres géographiques (adaptés au nouveau format)
+    api.setGeoFilters({
+      regions: preset.filters.regions,
+      countries: preset.filters.countries,
+      sectors: preset.filters.sectors
+    });
     
-    // 5. Filtres personnalisés
-    api.setCustomFilters(preset.customFilters);
+    // 5. Filtres personnalisés (adaptés au nouveau format)
+    api.setCustomFilters(preset.criteria.map(c => ({
+      metric: c.metric,
+      operator: c.operator,
+      value: c.value
+    })));
     
     // 6. Mettre à jour l'UI des boutons
     document.querySelectorAll('.preset-btn').forEach(btn => {
@@ -2096,11 +2274,11 @@ const PRESETS = {
   }, 100);
 
   // Exposer l'API
-  window.MC = { refresh: compute, loadData, state, cache, api, applyPreset };
+  window.MC = { refresh: compute, loadData, state, cache, api, applyPreset, PRESETS };
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v3.8 - Système de presets complets intégré !');
+    console.log('✅ MC Module v4.0 - Format ETF moderne intégré !');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
