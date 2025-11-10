@@ -1,4 +1,5 @@
-// ===== MC (Multi-Critères) – Module Optimisé v4.0 avec Presets Format ETF ===================
+// ===== MC (Multi-Critères) – Module Optimisé v4.1 avec Presets Format ETF Grid ===================
+// v4.1: Mise à jour UI presets vers format grille moderne style ETF avec descriptions hover
 // v4.0: Refonte complète des presets avec format moderne style ETF
 // v3.8+: Presets "hard-tuned" optimisés pour dénicher les vraies pépites
 // v3.8: Système de presets complets avec API (Défensif, Rendement, Agressif, Croissance)
@@ -91,43 +92,57 @@
       .btn-up:hover,.btn-down:hover{opacity:1;background:rgba(0,255,135,.12);
         transform:translateY(-1px)}
       
-      /* === Boutons Presets v4.0 - Format ETF === */
+      /* === PRESETS v4.1 - Format ETF Grid Moderne === */
       .preset-btn {
-        padding: 8px 16px;
-        border-radius: 10px;
-        border: 1px solid rgba(0,255,135,0.3);
+        padding: 10px;
+        border-radius: 8px;
         background: rgba(0,255,135,0.05);
-        color: #fff;
+        border: 1px solid rgba(0,255,135,0.2);
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
         cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 0.9rem;
+        text-align: center;
+        color: inherit;
       }
       .preset-btn:hover {
-        background: rgba(0,255,135,0.1);
-        border-color: #00ff87;
+        background: rgba(0,255,135,0.12) !important;
+        border-color: rgba(0,255,135,0.4) !important;
         transform: translateY(-2px);
       }
       .preset-btn.active {
-        background: rgba(0,255,135,0.2);
-        border-color: #00ff87;
-        box-shadow: 0 0 10px rgba(0,255,135,0.3);
+        background: rgba(0,255,135,0.2) !important;
+        border-color: #00ff87 !important;
+        box-shadow: 0 0 12px rgba(0,255,135,0.3);
       }
-      #mc-presets-bar {
-        display: flex;
-        flex-wrap: wrap;
+      .presets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 8px;
-        margin-bottom: 12px;
-        padding: 12px;
-        background: rgba(255,255,255,0.03);
-        border-radius: 12px;
-        border: 1px solid rgba(0,255,135,0.15);
       }
-      .presets-label {
-        display: flex;
-        align-items: center;
-        margin-right: 12px;
-        font-size: 0.85rem;
-        opacity: 0.7;
+      #mc-presets {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        background: linear-gradient(to right, rgba(0,255,135,0.05), rgba(0,200,255,0.05));
+        border: 1px solid rgba(0,255,135,0.2);
+      }
+      #preset-description {
+        min-height: 20px;
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        opacity: 0.6;
+        text-align: center;
+      }
+      
+      /* === Animation Toast === */
+      @keyframes fadeInOut {
+        0% { opacity: 0; transform: translateY(-10px); }
+        20% { opacity: 1; transform: translateY(0); }
+        80% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-10px); }
       }
       
       @media (min-width: 1024px){
@@ -1184,30 +1199,53 @@
     }
   }
 
-  // v3.8: Ajouter la barre de presets
-function addPresetsBar() {
-  const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
-  if (!modeContainer || document.getElementById('mc-presets-bar')) return;
-  
-  const presetsBar = document.createElement('div');
-  presetsBar.id = 'mc-presets-bar';
-  
-  // Générer dynamiquement les boutons depuis l'objet PRESETS
-  const buttonsHTML = Object.entries(PRESETS).map(([key, preset]) => 
-    `<button class="preset-btn" data-preset="${key}" title="${preset.tooltip || preset.description}">
-      ${preset.icon} ${preset.shortLabel}
-    </button>`
-  ).join('');
-  
-  presetsBar.innerHTML = `
-    <span class="presets-label"><i class="fas fa-magic mr-2"></i>Presets :</span>
-    ${buttonsHTML}
-  `;
-  
-  // Insérer avant le mode container
-  modeContainer.parentNode.insertBefore(presetsBar, modeContainer);
-}
-
+  // v4.1: Ajouter la barre de presets - Format ETF Grid moderne
+  function addPresetsBar() {
+    const modeContainer = root.querySelector('fieldset[role="radiogroup"]');
+    if (!modeContainer || document.getElementById('mc-presets')) return;
+    
+    const presetsDiv = document.createElement('div');
+    presetsDiv.id = 'mc-presets';
+    presetsDiv.innerHTML = `
+      <div class="text-xs uppercase tracking-wider opacity-70 mb-2 flex items-center gap-2">
+        <i class="fas fa-magic"></i> Stratégies prédéfinies
+      </div>
+      <div class="presets-grid">
+        ${Object.entries(PRESETS).map(([key, preset]) => `
+          <button class="preset-btn" data-preset="${key}">
+            <span style="font-size: 1.5rem;">${preset.icon}</span>
+            <span style="font-size: 0.75rem; font-weight: 600;">${preset.shortLabel}</span>
+          </button>
+        `).join('')}
+      </div>
+      <div id="preset-description" class="mt-2 text-xs opacity-60 text-center" style="min-height: 20px;"></div>
+    `;
+    
+    // Insérer avant le mode container
+    modeContainer.parentNode.insertBefore(presetsDiv, modeContainer);
+    
+    // Écouteurs d'événements
+    presetsDiv.querySelectorAll('.preset-btn').forEach(btn => {
+      // Hover pour description
+      btn.addEventListener('mouseenter', () => {
+        const preset = PRESETS[btn.dataset.preset];
+        document.getElementById('preset-description').textContent = preset.description;
+      });
+      
+      btn.addEventListener('mouseleave', () => {
+        document.getElementById('preset-description').textContent = '';
+      });
+      
+      // Click pour appliquer
+      btn.addEventListener('click', () => {
+        // Retirer active des autres
+        presetsDiv.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        applyPreset(btn.dataset.preset);
+      });
+    });
+  }
 
   // Popover au clic pour l'info payout v3.4
   function setupPayoutPopover() {
@@ -2145,7 +2183,7 @@ const PRESETS = {
 
 
 
-  // Fonction pour appliquer un preset - Adaptée au nouveau format v4.0
+  // v4.1: Fonction pour appliquer un preset - avec feedback toast
   function applyPreset(presetKey) {
     const preset = PRESETS[presetKey];
     if (!preset) return;
@@ -2161,14 +2199,14 @@ const PRESETS = {
     // 3. Métriques et ordre
     api.setMetrics(preset.metrics);
     
-    // 4. Filtres géographiques (adaptés au nouveau format)
+    // 4. Filtres géographiques
     api.setGeoFilters({
       regions: preset.filters.regions,
       countries: preset.filters.countries,
       sectors: preset.filters.sectors
     });
     
-    // 5. Filtres personnalisés (adaptés au nouveau format)
+    // 5. Filtres personnalisés
     api.setCustomFilters(preset.criteria.map(c => ({
       metric: c.metric,
       operator: c.operator,
@@ -2182,6 +2220,14 @@ const PRESETS = {
     
     // 7. Recalculer
     scheduleCompute();
+    
+    // 8. Feedback visuel (toast)
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/50 text-white z-50';
+    toast.innerHTML = `✨ Preset appliqué: ${preset.label}`;
+    toast.style.animation = 'fadeInOut 2s ease';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
   }
 
   // Event listeners
@@ -2255,17 +2301,17 @@ const PRESETS = {
 
   // Initialisation
   addExplanation();
-  addPresetsBar(); // v3.8
+  addPresetsBar(); // v4.1
   setupMetricCheckboxes();
   setupCustomFilters();
   updatePriorityDisplay();
   setupPayoutPopover();
 
-  // v3.8: Câbler les boutons de presets
+  // v4.1: Câbler les boutons de presets
   setTimeout(() => {
-    const presetsBar = document.getElementById('mc-presets-bar');
-    if (presetsBar) {
-      presetsBar.addEventListener('click', (e) => {
+    const presetsDiv = document.getElementById('mc-presets');
+    if (presetsDiv) {
+      presetsDiv.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-preset]');
         if (!btn) return;
         applyPreset(btn.dataset.preset);
@@ -2278,7 +2324,7 @@ const PRESETS = {
 
   // Charger et calculer au démarrage
   loadData().then(() => {
-    console.log('✅ MC Module v4.0 - Format ETF moderne intégré !');
+    console.log('✅ MC Module v4.1 - Format ETF Grid moderne intégré !');
     if (state.selectedMetrics.length > 0) {
       compute();
     }
