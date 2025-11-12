@@ -780,15 +780,3 @@ if (typeof window !== 'undefined') {
         sensitivites
     };
 }
-
-// Export ES6 si supporté
-export {
-    solveEquilibre,
-    renderEquilibre,
-    amortSchedule,
-    capexSeries,
-    taxLocatif,
-    cfNetAgg,
-    needAgg,
-    sensitivites
-};
