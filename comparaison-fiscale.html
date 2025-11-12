@@ -4,11 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analyse de Marché & Comparateur Fiscal - ImmoSim</title>
-     <script>
-  // Helpers globaux, à déclarer AVANT tout usage
-  window.$    = window.$    || (sel => document.querySelector(sel));
-  window.byId = window.byId || (id  => document.getElementById(id));
-  </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     
@@ -1466,31 +1461,7 @@ td.neutral {
 </div>
       </div>
 <!-- ⬆️ FIN NOUVEAU BLOC -->
-<script>
-// Flag global : a-t-on déjà exécuté une analyse fiscale ?
-window.__fiscalRan = window.__fiscalRan || false;
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Purge d'anciens listeners éventuels
-  document.querySelectorAll('input[name="regime-actuel"]').forEach((oldEl) => {
-    const r = oldEl.cloneNode(true);
-    oldEl.replaceWith(r);
-
-    r.addEventListener('change', (e) => {
-      // 1) mémorise uniquement le choix
-      window.analyzer?.setSelectedRegime?.(e.target.value);
-
-      // 2) si on est déjà sur la section 3 ET qu'une analyse a déjà tourné → recalcul
-      if (window.currentStep === 3 && window.__fiscalRan) {
-        // recomputeBreakeven();        // léger
-        proceedToFiscalAnalysis();      // complet
-      }
-
-      // 3) sinon : ne rien faire
-    });
-  });
-});
-</script>
 <div class="continue-section">
   <button type="submit" class="btn-continue">
     Analyser mon investissement
@@ -1947,10 +1918,7 @@ function drawBuyRent () {
     </section>`;
 }
     </script>
-<!-- ====== ACTIONS (AU-DESSUS DE LA COMPARAISON FISCALE) ====== -->
-<div id="breakeven-result" class="market-comparison-card" style="display:none;margin-top:12px;"></div>
-<!-- ====== /ACTIONS ====== -->
-
+    
     <div id="fiscal-comparison-results">
                 <!-- Les résultats fiscaux seront insérés ici -->
             </div>
@@ -1962,613 +1930,23 @@ function drawBuyRent () {
     <script src="./immo-simulation.js"></script>
     <script src="./fiscal-comparison-enhanced.js"></script>
     <script src="./market-fiscal-analysis.js"></script>
-    <script>
-// f(p) exact = cash-flow net MENSUEL APRÈS impôts via le moteur complet
-async function f_apresImpots_viaAnalyzer(trialPrice, baseInput, regimeCode) {
-  // 1) clone + imposer le prix testé
-  const data = { ...(baseInput || {}), prixPaye: Number(trialPrice) || 0 };
-
-  // — Neutralisations côté financement (avant l'appel moteur) —
-  data.apportMode = 'amount';          // figer l’apport en €
-  delete data.apportPct;               // pas d’apport en %
-
-  data.financerFrais = true;           // financer les frais dans le prêt
-  data.assuranceIncluseDansTaux = true;
-  data.tauxAssuranceEmprunteur  = 0;
-
-  // 🔒 éviter tout artefact issu d'un prix/financement précédent
-  delete data.mensualite;
-  delete data.capitalEmprunte;
-  delete data.montantEmprunte;
-  delete data.prixM2Paye;
-
-  // 2) lancer le même moteur que l’affichage
-  const out = await analyzer.performCompleteAnalysis(data);
-  const fiscal = out?.fiscal || [];
-  if (!fiscal.length) return NaN;
-
-  // 3) cibler le régime voulu (fallback = première ligne)
-  const code = (regimeCode || '').toLowerCase();
-  const row  = fiscal.find(r => (r.id || '').toLowerCase().includes(code)) || fiscal[0];
-
-  // 4) annuel -> mensuel
-  const cfM = (row?.cashflowNetAnnuel ?? 0) / 12;
-  return cfM; // la bissection résout cfM - targetCF = 0
-}
-</script>
     
     <script>
         // Variables globales
-        window.currentStep = 1;
+        let currentStep = 1;
         let marketData = null;
         let propertyData = null;
         let analyzer = null;
-
-        // Helper d'entrée pour les solveurs d'équilibre (locatif & RP)
-function prepareBreakevenInput() {
-  const src = analyzer.prepareFiscalData();
-  const b = (typeof structuredClone === 'function')
-    ? structuredClone(src)
-    : JSON.parse(JSON.stringify(src));
-
-  // 🔹 Garde-fous & normalisation des loyers/charges clés
-  b.loyerActuel = Number(
-    b.loyerActuel ??
-    b.loyerHC ??
-    b.monthlyRent ??
-    b.loyer ??
-    (b.loyerCC != null
-      ? b.loyerCC - (Number(b.monthlyCharges) || 0)
-      : undefined) ??
-    (window.propertyData ? window.propertyData.loyerActuel : undefined)
-  ) || 0;
-
-  b.taxeFonciere         = Number(b.taxeFonciere)         || 0;
-  b.assurancePNO         = Number(b.assurancePNO)         || 0;
-  b.chargesCoproNonRecup = Number(b.chargesCoproNonRecup) || 0;
-  b.entretienAnnuel      = Number(b.entretienAnnuel)      || 0;
-  b.fraisBancairesCompte = Number(b.fraisBancairesCompte) || 0;
-
-  /* ⬇️ NOUVEAU : remonter les options PFU / distribution SCI vers le moteur */
-  try {
-    const elPFU  = document.getElementById('apply-pfu');
-    const elDist = document.getElementById('sci-distribution');
-
-    if (elPFU) {
-      b.applyPfu = !!elPFU.checked; // PFU 30% sur dividendes (SCI à l’IS)
-    }
-    if (elDist) {
-      const raw = String(elDist.value ?? '').trim();
-      if (raw !== '') {
-        const pct = Math.max(0, Math.min(100, Number(raw)));
-        b.sciDistribution = pct;     // pourcentage 0–100 (le helper gère la conversion)
-      }
-    }
-  } catch (e) {
-    console.warn('PFU/distribution passthrough skipped:', e);
-  }
-
-  // 1) Purge de tout ce qui fige le prix/financement actuel
-  const hardPriceKeys = [
-    'prixPaye','prix','price','prixAcquisition',
-    'montantEmprunte','mensualite','capitalEmprunte','mensualiteCredit'
-  ];
-  hardPriceKeys.forEach(k => delete b[k]);
-
-  // 🔒 Double filet anti-"prix payé"/mensualité (même si déjà supprimés via la liste)
-  delete b.prixM2Paye;   // dérivés du prix payé
-  delete b.mensualite;   // mensualité calculée côté UI (au prix saisi)
-
-  // 2) Préserver uniquement les € récurrents utiles au CF
-  const keepRecurringEuro = new Set([
-    'taxeFonciere',          // €/an
-    'assurancePNO',          // €/mois
-    'chargesCoproNonRecup',  // €/mois
-    'entretienAnnuel',       // €/an
-    'fraisBancairesCompte',  // €/an → sera /12
-    'monthlyCharges'         // récupérables (utile pour RP/widget)
-  ]);
-
-  // 3) Supprimer les autres montants en € (one-shot / dépendants du prix)
-  const isAmountKey = (k) =>
-    /montant|amount|euros?|total(?!Taux)(?!Rate)|en€|enEuros/i.test(k) ||
-    /(frais|droits|honoraires|commission|garantie|publicite|caution).*?(montant|amount)/i.test(k);
-
-  Object.keys(b).forEach(k => {
-    if (!keepRecurringEuro.has(k) && isAmountKey(k)) delete b[k];
-  });
-
-  // 4) Normaliser taux & durée (robuste aux alias)
-  b.taux  = Number(b.taux  ?? b.loanRate     ?? b.tauxCredit ?? b.tauxAnnuel ?? b.tauxAnnuelPct ?? 3.5);
-  b.duree = Number(b.duree ?? b.loanDuration ?? b.dureeAn    ?? b.dureeAnnees ?? 20);
-
-  // 5) Intentions pour le solveur
-  b._breakeven = { recomputeFeesFromPrice: true, ignoreProvidedMensualite: true };
-
-  // ✅ Par défaut on finance les frais (si non défini ailleurs)
-  if (typeof b.financerFrais === 'undefined') b.financerFrais = true;
-
-  // On laisse l’apport en € (le gel se fait au lancement du solveur)
-  return b;
-}
-
-
-// A) Normaliser en gelant l’apport (mode solveur)
-// Utiliser CETTE version dans un solveur custom (bisection/newton) pour figer l’apport €
-function normalizeFinancingForSolve(baseInput, trialPrice) {
-  const price  = Number(trialPrice) || 0;
-  const apport = Math.max(0, Number(baseInput.apport) || 0);
-
-  if (price <= apport) {
-    // pas d’emprunt possible -> on signale au solveur d’écarter ce point
-    throw new Error("Trial price ≤ apport : pas d'emprunt.");
-  }
-
-  const emprunte = price - apport; // > 0 garanti par le check ci-dessus
-  return { price, apport, emprunte };
-}
-// Optionnel : exposer la fonction globalement si besoin ailleurs
-window.normalizeFinancingForSolve = normalizeFinancingForSolve;
-/* ⬇️ B) Fonctions pures de frais — dépendantes uniquement des arguments ⬇️ */
-
-// Frais d'acquisition calculés depuis un PRIX passé en argument (aucun accès global)
-function calcFraisAcquisition(price, params = {}) {
-  const p = Number(price) || 0;
-  const notaire    = ((Number(params.fraisNotaireTaux) || 0) / 100) * p;
-  const commission = ((Number(params.commissionImmo)   || 0) / 100) * p;
-  const fraisFixes = (Number(params.fraisBancairesDossier) || 0);
-  return {
-    notaire,
-    commission,
-    fraisFixes,
-    total: notaire + commission + fraisFixes
-  };
-}
-        function calcFraisEncheres(price, params = {}) {
-  const p = Math.max(0, Number(price) || 0);
-
-  // Droits d'enregistrement (% du prix)
-  const droits = p * ((Number(params.droitsEnregistrement) || 0) / 100);
-
-  // Émoluments par tranches
-  const t1 = Math.min(p, 6500);
-  const t2 = Math.min(Math.max(p - 6500, 0), 23500 - 6500);
-  const t3 = Math.min(Math.max(p - 23500, 0), 83500 - 23500);
-  const t4 = Math.max(p - 83500, 0);
-
-  const r1 = (Number(params.emolumentsTranche1) || 0) / 100;
-  const r2 = (Number(params.emolumentsTranche2) || 0) / 100;
-  const r3 = (Number(params.emolumentsTranche3) || 0) / 100;
-  const r4 = (Number(params.emolumentsTranche4) || 0) / 100;
-
-  let emol = t1*r1 + t2*r2 + t3*r3 + t4*r4;
-
-  // Coefficient de mutation (ex: 2.37)
-  const coef = Number(params.coefMutation) || 1;
-  emol *= coef;
-
-  // Honoraires d’avocat = coef * price (+ TVA)
-  const honCoef = Number(params.honorairesAvocatCoef) || 0; // ex: 0.25
-  const tvaHon  = (Number(params.tvaHonoraires) || 0) / 100; // ex: 20%
-  const honorairesAvocat = honCoef > 0 ? (p * honCoef) * (1 + tvaHon) : 0;
-
-  // Publicité foncière = % * price
-  const pubFon = p * ((Number(params.publiciteFonciere) || 0) / 100);
-
-  // Frais fixes & divers en €
-  const fixes = (Number(params.fraisFixes) || 0)
-              + (Number(params.honorairesAvocat) || 0) // champ montant si saisi
-              + (Number(params.avocatPorterEnchere) || 0)
-              + (Number(params.suiviDossier) || 0);
-
-  // Caution si non restituée : % de "mise à prix" → à défaut on prend price d’essai
-  const cautionPct = (Number(params.cautionMisePrix) || 0) / 100;
-  const cautionIncluse = !!params.cautionRestituee ? 0 : (p * cautionPct);
-
-  const total = droits + emol + honorairesAvocat + pubFon + fixes + cautionIncluse;
-
-  return {
-    droitsEnregistrement: droits,
-    emoluments: emol,
-    honorairesAvocat,
-    publiciteFonciere: pubFon,
-    fraisFixes: fixes,
-    cautionIncluse,
-    total
-  };
-}
-
-// Frais de garantie calculés depuis le MONTANT EMPRUNTÉ passé en argument
-function calcFraisGarantie(emprunte, params = {}) {
-  const base = Math.max(0, Number(emprunte) || 0);
-  const taux = (Number(params.fraisGarantie) || 0) / 100;
-  const garantie = base * taux;
-  return { garantie, total: garantie };
-}
-/* ──────────────────────────────────────────────────────────────
-   OPTION B (outil) — calcul “mois 1” du plan d’amortissement
-   👉 Laisse ce bloc ici (utilitaire). Active B plus bas si tu veux.
-────────────────────────────────────────────────────────────── */
-function amortMonth1(capital, tauxAnnuelPct, dureeAn) {
-  const i = (Number(tauxAnnuelPct) || 0) / 100 / 12;
-  const n = (Number(dureeAn) || 0) * 12;
-
-  // Mensualité (protégée si i = 0 ou non-fini)
-  const m = (i === 0 || !Number.isFinite(i))
-    ? (n > 0 ? capital / n : 0)
-    : (capital * i) / (1 - Math.pow(1 + i, -n));
-
-  const interets1  = capital * i;      // intérêts du 1er mois
-  const principal1 = m - interets1;    // amort. du 1er mois
-  const restant    = capital - principal1;
-
-  return { mensualite: m, interets1, principal1, restant };
-}
-
-/* ====================================================================== */
-
-function computeAllAtPrice(baseInput, trialPrice) {
-  // 1) Figer l’apport et recalculer l’emprunt sur trialPrice
-  const { price, apport, emprunte } = normalizeFinancingForSolve(baseInput, trialPrice);
-
-  // ✅ taux & durée robustes (on accepte plusieurs alias)
-  const taux = Number(
-    baseInput.taux ??
-    baseInput.loanRate ??
-    baseInput.tauxCredit ??
-    baseInput.tauxAnnuel ??
-    baseInput.tauxAnnuelPct ?? 0
-  );
-  const duree = Number(
-    baseInput.duree ??
-    baseInput.loanDuration ??
-    baseInput.dureeAn ??
-    baseInput.dureeAnnees ?? 0
-  );
-
-  // 2) Frais dépendants du prix/emprunt
-  let frais = { total: 0 };
-  if ((baseInput.typeAchat || '').toLowerCase() === 'encheres') {
-    frais = calcFraisEncheres(price, {
-      droitsEnregistrement : baseInput.droitsEnregistrement,
-      coefMutation         : baseInput.coefMutation,
-      emolumentsTranche1   : baseInput.emolumentsTranche1,
-      emolumentsTranche2   : baseInput.emolumentsTranche2,
-      emolumentsTranche3   : baseInput.emolumentsTranche3,
-      emolumentsTranche4   : baseInput.emolumentsTranche4,
-      honorairesAvocatCoef : baseInput.honorairesAvocatCoef,
-      tvaHonoroires        : baseInput.tvaHonoroires ?? baseInput.tvaHonoraires,
-      publiciteFonciere    : baseInput.publiciteFonciere,
-      honorairesAvocat     : baseInput.honorairesAvocat,
-      fraisFixes           : baseInput.fraisFixes,
-      avocatPorterEnchere  : baseInput.avocatPorterEnchere,
-      suiviDossier         : baseInput.suiviDossier,
-      cautionMisePrix      : baseInput.cautionMisePrix,
-      cautionRestituee     : baseInput.cautionRestituee
-    });
-  } else {
-    // Achat classique = notaire% * price + commission% * price + frais bancaires fixes
-    frais = calcFraisAcquisition(price, baseInput);
-  }
-
-  // Frais de garantie toujours sur l'EMPRUNTÉ
-  const Fgar = calcFraisGarantie(emprunte, baseInput);
-
-  // ✅ NOUVEAU : capital réellement financé (frais + garantie + travaux)
-  const financerFrais   = baseInput.financerFrais !== false; // défaut = true
-  const fraisInitials   = (frais.total || 0) + (Fgar.total || 0) + (Number(baseInput.travaux) || 0);
-  const capitalMensualise = financerFrais ? (emprunte + fraisInitials) : emprunte;
-
-  // 3) Mensualité recalculée (sur le capital réellement financé)
-  const m = calcMensualite(capitalMensualise, taux, duree);
-
-  // 4) 🔹 Récurrents supplémentaires
-  //    - tenue de compte en €/an → €/mois
-  const bankAccountMonthly = (Number(baseInput.fraisBancairesCompte) || 0) / 12;
-
-  //    - assurance emprunteur (support du drapeau "assurance incluse dans le taux")
-  const assuranceIncluse = !!baseInput.assuranceIncluseDansTaux;
-  const tauxAssur = (Number(baseInput.tauxAssuranceEmprunteur) || 0) / 100;
-  const assuranceEmprunteur = assuranceIncluse ? 0 : (emprunte * tauxAssur / 12); // (laisse tel quel)
-
-  // 5) Charges récurrentes complètes (mensuelles)
-  const chargesMensuelles =
-      (Number(baseInput.chargesCoproNonRecup) || 0) +
-      (Number(baseInput.assurancePNO) || 0) +
-      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
-      bankAccountMonthly +
-      assuranceEmprunteur;
-
-  // 6) Loyer net perçu (vacance, gestion)
-  const loyerHC = Number(
-    baseInput.loyerActuel ??
-    baseInput.loyerHC ??
-    baseInput.monthlyRent ??
-    baseInput.loyer ??
-    (baseInput.loyerCC != null
-       ? baseInput.loyerCC - (Number(baseInput.monthlyCharges) || 0)
-       : undefined)
-  ) || 0;
-
-  const vacRate  = (Number(baseInput.vacanceLocative)     || 0) / 100;
-  const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
-  const loyerAnnuelNet = loyerHC * 12 * (1 - vacRate) * (1 - gestRate);
-
-  /* ────────────────────────────────────────────────────────────
-     7) Intérêts mensuels (indicatif) — CHOISIR A OU B
-     ➤ Garde UNE seule option et supprime l’autre.
-  ───────────────────────────────────────────────────────────── */
-
-  // ── OPTION A (active par défaut) — Approx rapide “linéaire”
-  let interetsMensuel = capitalMensualise * ((Number(taux) || 0) / 100 / 12);
-
-  // ── OPTION B (désactive A si tu actives celle-ci) — Intérêt du mois 1 (amort. exact)
-  // const a1 = amortMonth1(capitalMensualise, taux, duree);
-  // let interetsMensuel = a1.interets1;
-  // (facultatif) a1.mensualite / a1.principal1 / a1.restant sont dispo
-
-  // 8) Cash-flow mensuel (locatif)
-  const cfMensuel =
-      (loyerAnnuelNet / 12)
-    - (Number.isFinite(m) ? m : 0)
-    - chargesMensuelles
-    - ((Number(baseInput.taxeFonciere) || 0) / 12);
-
-  // 9) CF0 (cash out initial) — si les frais sont financés, ils ne sortent pas en cash
-  const cf0 = -apport - (financerFrais ? 0 : fraisInitials);
-
-  return {
-    price, apport, emprunte,
-    frais: { ...frais, ...Fgar },
-    mensualite: m,
-    interetsMensuel,
-    cfMensuel,
-    cf0
-  };
-}
-
-// (optionnel) exposer globalement
-window.computeAllAtPrice = computeAllAtPrice;
-/* === Impôts mensuels estimés par régime (approx) ======================= */
-
-/** Loyer HC mensuel normalisé depuis baseInput (même logique que computeAllAtPrice) */
-function _resolveLoyerHC(baseInput) {
-  return Number(
-    baseInput.loyerActuel ??
-    baseInput.loyerHC ??
-    baseInput.monthlyRent ??
-    baseInput.loyer ??
-    (baseInput.loyerCC != null
-      ? baseInput.loyerCC - (Number(baseInput.monthlyCharges) || 0)
-      : undefined)
-  ) || 0;
-}
-
-/** Ratio vacance & gestion normalisés */
-function _resolveVacGest(baseInput) {
-  const vacRate  = (Number(baseInput.vacanceLocative)     || 0) / 100;
-  const gestRate = (Number(baseInput.gestionLocativeTaux) || 0) / 100;
-  return { vacRate, gestRate };
-}
-
-/** Taux marginal + prélèvements sociaux (17,2%) */
-function _resolveTauxGlobaux(baseInput) {
-  const TMI = (Number(baseInput.tmi) || 0) / 100;
-  const PS  = 0.172;
-  return { TMI, PS };
-}
-/** LMNP micro-BIC : abattement 50% (cas standard meublé) */
-function estTaxMensuelleLmnpMicro(baseInput) {
-  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-  const baseImposableMensuelle = loyersEncaisses * 0.50; // 50% d’abattement
-
-  return baseImposableMensuelle * (TMI + PS);
-}
-
-/** Fallback simple pour autres régimes (nu réel, LMNP réel, LMP, SCI IS) :
- *  on renvoie 0 ici pour rester “Option B rapide”.
- *  -> Pour une précision exacte, passer au solveur asynchrone (Option “version exacte”).
- */
-function estTaxMensuelleNuReel(baseInput, r) {
-  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-
-  // Charges récurrentes déductibles (mensualisées)
-  const chargesDeduct =
-      ((Number(baseInput.taxeFonciere) || 0) / 12) +
-      (Number(baseInput.assurancePNO) || 0) +
-      (Number(baseInput.chargesCoproNonRecup) || 0) +
-      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
-      ((Number(baseInput.fraisBancairesCompte) || 0) / 12);
-
-  const interets = Number(r?.interetsMensuel) || 0;
-
-  const baseImpMensuelle = Math.max(0, loyersEncaisses - chargesDeduct - interets);
-  return baseImpMensuelle * (TMI + PS);
-}
-
-/** LMNP RÉEL : BIC = loyers - charges - intérêts - amortissements (non créateurs de déficit). */
-function estTaxMensuelleLmnpReel(baseInput, r) {
-  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-
-  const chargesExploit =
-      (Number(baseInput.assurancePNO) || 0) +
-      (Number(baseInput.chargesCoproNonRecup) || 0) +
-      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
-      ((Number(baseInput.fraisBancairesCompte) || 0) / 12);
-
-  const interets = Number(r?.interetsMensuel) || 0;
-
-  // Hypothèses d'amortissement (paramétrables)
-  const ratioTerrain   = Number(baseInput.ratioTerrain ?? 0.20);      // 20% terrain
-  const dureeImmoAns   = Number(baseInput.dureeAmortImmo ?? 30);      // 30 ans
-  const valeurMeubles  = Number(baseInput.valeurMeubles ?? (0.05 * (r?.price || 0))); // 5%
-  const dureeMeubles   = Number(baseInput.dureeAmortMeubles ?? 7);    // 7 ans
-
-  const baseBatiment   = Math.max(0, (1 - ratioTerrain) * (r?.price || 0));
-  const amortImmoM     = baseBatiment  / (dureeImmoAns * 12);
-  const amortMeublesM  = valeurMeubles / (dureeMeubles * 12);
-  const amortTotalM    = (amortImmoM || 0) + (amortMeublesM || 0);
-
-  // Amortissements non créateurs de déficit (LMNP)
-  const avantAmort = loyersEncaisses - chargesExploit - interets;
-  const amortUtil  = Math.max(0, Math.min(amortTotalM, avantAmort));
-
-  const resultatMensuel     = avantAmort - amortUtil; // ≥ 0
-  const baseImpMensuelle    = Math.max(0, resultatMensuel);
-
-  return baseImpMensuelle * (TMI + PS);
-}
-
-/** LMP RÉEL : BIC pro => cotisations sociales SSI (~35%) + IR sur bénéfice ≥ 0 (sans PS 17,2%).
-    Amortissements comme LMNP, non créateurs de déficit. */
-function estTaxMensuelleLmpReel(baseInput, r) {
-  const { TMI } = _resolveTauxGlobaux(baseInput); // pas de PS, on applique cotisations + IR
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-
-  const chargesExploit =
-      (Number(baseInput.assurancePNO) || 0) +
-      (Number(baseInput.chargesCoproNonRecup) || 0) +
-      ((Number(baseInput.entretienAnnuel) || 0) / 12) +
-      ((Number(baseInput.fraisBancairesCompte) || 0) / 12);
-
-  const interets = Number(r?.interetsMensuel) || 0;
-
-  const ratioTerrain   = Number(baseInput.ratioTerrain ?? 0.20);
-  const dureeImmoAns   = Number(baseInput.dureeAmortImmo ?? 30);
-  const valeurMeubles  = Number(baseInput.valeurMeubles ?? (0.05 * (r?.price || 0)));
-  const dureeMeubles   = Number(baseInput.dureeAmortMeubles ?? 7);
-
-  const baseBatiment   = Math.max(0, (1 - ratioTerrain) * (r?.price || 0));
-  const amortImmoM     = baseBatiment  / (dureeImmoAns * 12);
-  const amortMeublesM  = valeurMeubles / (dureeMeubles * 12);
-  const amortTotalM    = (amortImmoM || 0) + (amortMeublesM || 0);
-
-  const avantAmort = loyersEncaisses - chargesExploit - interets;
-  const amortUtil  = Math.max(0, Math.min(amortTotalM, avantAmort));
-
-  const beneficeM  = Math.max(0, avantAmort - amortUtil);
-
-  const cotRate = Number(baseInput.lmpCotRate ?? 0.35); // 35% par défaut
-  return beneficeM * (TMI + cotRate);
-}
-
-/** Micro-régimes inchangés */
-function estTaxMensuelleMicroFoncier(baseInput /*, r */) {
-  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-  const baseImposableMensuelle = loyersEncaisses * 0.70; // abattement 30%
-  return baseImposableMensuelle * (TMI + PS);
-}
-
-function estTaxMensuelleLmnpMicro(baseInput /*, r */) {
-  const { TMI, PS } = _resolveTauxGlobaux(baseInput);
-  const { vacRate, gestRate } = _resolveVacGest(baseInput);
-  const loyerHC = _resolveLoyerHC(baseInput);
-  const loyersEncaisses = loyerHC * (1 - vacRate) * (1 - gestRate);
-  const baseImposableMensuelle = loyersEncaisses * 0.50; // abattement 50%
-  return baseImposableMensuelle * (TMI + PS);
-}
-
-// Fallback
-function estTaxMensuelleZero() { return 0; }
-
-/** ✅ Nouveau getTaxEstimator : retourne (baseInput, r) => taxeMensuelle */
-function getTaxEstimator(regimeCode) {
-  switch ((regimeCode || '').toLowerCase()) {
-    case 'nu_micro':   return estTaxMensuelleMicroFoncier;
-    case 'lmnp_micro': return estTaxMensuelleLmnpMicro;
-    case 'nu_reel':    return estTaxMensuelleNuReel;
-    case 'lmnp_reel':  return estTaxMensuelleLmnpReel;
-    case 'lmp_reel':   return estTaxMensuelleLmpReel;
-    // TODO: 'sci_is' (IS + PFU éventuel) si tu veux l’intégrer au solver “après impôts”
-    case 'sci_is':
-    default:           return estTaxMensuelleZero;
-  }
- }   
         
-
-function solvePriceForCF0(baseInput, targetCF = 0) {
-  // 🔒 Borne basse : juste au-dessus de l’apport → garantit un EMPRUNT > 0
-  const apportNum = Number(baseInput.apport) || 0;
-  let lo = Math.max(apportNum + 1000, 10_000);
-  let hi = Math.max(lo * 3, 2_000_000);
-
-  // ✅ Sanity check
-  const sanity = computeAllAtPrice(baseInput, lo);
-  if (!Number.isFinite(sanity.cfMensuel)) {
-    throw new Error("Entrées incomplètes pour le calcul du cash-flow (vérifie le loyer, durée, taux, charges…).");
-  }
-
-  // Si l’apport dépasse hi, on élargit
-  if ((baseInput.apport || 0) >= hi) hi = (Number(baseInput.apport) || 0) * 2;
-
-  // Fonction de coût
-  const f = (p) => {
-    const r = computeAllAtPrice(baseInput, p);
-    return (r && Number.isFinite(r.cfMensuel)) ? (r.cfMensuel - targetCF) : NaN;
-  };
-
-  // Première évaluation
-  let flo = f(lo), fhi = f(hi);
-
-  // Valeurs non finies → poser valeurs par défaut pour taux/durée et réessayer
-  if (!Number.isFinite(flo) || !Number.isFinite(fhi)) {
-    baseInput.taux  = Number(baseInput.taux  ?? baseInput.loanRate     ?? 3.5);
-    baseInput.duree = Number(baseInput.duree ?? baseInput.loanDuration ?? 20);
-    flo = f(lo); fhi = f(hi);
-  }
-
-  // Pas de changement de signe → étendre hi progressivement
-  let guard = 0;
-  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < 30) {
-    hi *= 1.5;
-    fhi = f(hi);
-  }
-
-  // Bisection
-  for (let iter = 0; iter < 60; iter++) {
-    const mid  = (lo + hi) / 2;
-    const diff = f(mid);
-
-    if (!Number.isFinite(diff)) { hi = mid; continue; } // évite NaN
-    if (Math.abs(diff) < 1e-2)  return computeAllAtPrice(baseInput, mid);
-
-    if (diff > 0) lo = mid; else hi = mid;
-  }
-
-  // Retourne le plus proche si non convergé
-  const rLo = computeAllAtPrice(baseInput, lo);
-  const rHi = computeAllAtPrice(baseInput, hi);
-  return (Math.abs((rLo.cfMensuel ?? Infinity) - targetCF) <
-          Math.abs((rHi.cfMensuel ?? Infinity) - targetCF)) ? rLo : rHi;
-}
-
-// 🔓 rendre dispo globalement
-window.solvePriceForCF0 = solvePriceForCF0;
-// ✅ Pas de doublon: on **n’ajoute pas** de `mensualite()` ici.
-//    Utiliser la fonction existante `calcMensualite(capital, tauxAnnuelPct, dureeAn)`.
-
-// (optionnel) Exposer globalement si tu veux les appeler ailleurs facilement
-window.calcFraisAcquisition = calcFraisAcquisition;
-window.calcFraisGarantie    = calcFraisGarantie;
-window.calcFraisEncheres    = calcFraisEncheres;
+        // Table de correspondance avec ID pour plus de robustesse
+const REGIME_LABELS = {
+  'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
+  'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
+  'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
+  'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
+  'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
+  'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
+};
         // Helper pour calculer la mensualité
         function calcMensualite(capital, tauxAnnuelPct, dureeAn) {
             const i = (tauxAnnuelPct / 100) / 12;
@@ -2576,216 +1954,7 @@ window.calcFraisEncheres    = calcFraisEncheres;
             if (i === 0) return capital / n;
             return capital * i / (1 - Math.pow(1 + i, -n));
         }
-/** Solveur “cash-flow APRES impôts = targetCF” via bisection.
- *  - Réutilise computeAllAtPrice (CF AVANT impôts)
- *  - Soustrait une estimation d’impôt mensuel selon le régime choisi
- */
-function solvePriceForCF0_apresImpots(baseInput, targetCF = 0, opts = {}) {
-  const {
-    regime: regimeOpt,
-    minPrice = 10_000,
-    tol = 1e-2,
-    maxIter = 60,
-    expandFactor = 1.5,
-    maxExpand = 30,
-  } = opts;
 
-  const apportNum  = Math.max(0, Number(baseInput?.apport) || 0);
-  const regimeCode = regimeOpt || baseInput?.regimeActuel || 'nu_micro';
-  const taxFn      = getTaxEstimator(regimeCode);
-
-  // Bornes initiales
-  let lo = Math.max(apportNum + 1000, minPrice);
-  let hi = Math.max(lo * 3, 2_000_000);
-
-  // Sanity check
-  const sanity = computeAllAtPrice(baseInput, lo);
-  if (!sanity || !Number.isFinite(sanity.cfMensuel)) {
-    throw new Error("Entrées incomplètes pour le CF (taux, durée, loyer, charges…).");
-  }
-
-  // f(p) = CF_après_impôts(p) - targetCF via approximation d'impôt
-  const f = (p) => {
-    const r = computeAllAtPrice(baseInput, p);
-    if (!r || !Number.isFinite(r.cfMensuel)) return NaN;
-    const taxM = Number(taxFn(baseInput, r)) || 0;
-    return (r.cfMensuel - taxM) - targetCF;
-  };
-
-  // Étendre hi jusqu’à changement de signe
-  let flo = f(lo), fhi = f(hi);
-  let guard = 0;
-  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < maxExpand) {
-    hi *= expandFactor;
-    fhi = f(hi);
-  }
-
-  // Bisection
-  for (let iter = 0; iter < maxIter; iter++) {
-    const mid  = (lo + hi) / 2;
-    const diff = f(mid);
-    if (!Number.isFinite(diff)) { hi = mid; continue; }
-    if (Math.abs(diff) < tol)   return computeAllAtPrice(baseInput, mid);
-    if (diff > 0) lo = mid; else hi = mid;
-  }
-
-  // Retourner l’extrémité la plus proche
-  const rLo  = computeAllAtPrice(baseInput, lo);
-  const rHi  = computeAllAtPrice(baseInput, hi);
-  const taxLo = Number(taxFn(baseInput, rLo)) || 0;
-  const taxHi = Number(taxFn(baseInput, rHi)) || 0;
-  const cfLo  = (rLo?.cfMensuel ?? Infinity) - taxLo;
-  const cfHi  = (rHi?.cfMensuel ?? Infinity) - taxHi;
-
-  return (Math.abs(cfLo - targetCF) < Math.abs(cfHi - targetCF)) ? rLo : rHi;
-}
-
-// Expose si besoin
-window.solvePriceForCF0_apresImpots = solvePriceForCF0_apresImpots;
-
-
-/**
- * Solveur “cash-flow APRÈS impôts = targetCF” (EXACT, async)
- * - Utilise le moteur complet via f_apresImpots_viaAnalyzer(p, baseInput, regimeCode)
- * - Bisection robuste + extension automatique des bornes
- * - Retourne l’objet computeAllAtPrice(...) au prix trouvé (plug-and-play avec ton rendu)
- */
-async function solvePriceForCF0_apresImpots_exact(baseInput, targetCF = 0, opts = {}) {
-  const {
-    regime: regimeOpt,
-    minPrice = 10_000,
-    tol = 1e-2,
-    maxIter = 60,
-    expandFactor = 1.5,
-    maxExpand = 30,
-  } = opts;
-
-  const regimeCode = (regimeOpt || baseInput?.regimeActuel || 'nu_micro');
-
-  // Bornes initiales robustes
-  const apport = Math.max(0, Number(baseInput?.apport) || 0);
-  let lo = Math.max(apport + 1000, minPrice);
-  let hi = Math.max(lo * 3, 2_000_000);
-
-  // Petite mémo pour éviter des recalculs identiques
-  const cache = new Map();
-  const F = async (p) => {
-    const key = Math.round(p); // granularité 1€
-    if (cache.has(key)) return cache.get(key);
-    const cf = await f_apresImpots_viaAnalyzer(p, baseInput, regimeCode);
-    const val = (Number.isFinite(cf) ? cf - targetCF : NaN);
-    cache.set(key, val);
-    return val;
-  };
-
-  // Évalue aux bornes
-  let flo = await F(lo);
-  let fhi = await F(hi);
-
-  // Étend hi jusqu’à changement de signe (ou plafond d’extensions)
-  let guard = 0;
-  while (Number.isFinite(flo) && Number.isFinite(fhi) && flo * fhi > 0 && guard++ < maxExpand) {
-    hi *= expandFactor;
-    fhi = await F(hi);
-  }
-
-  // Bisection
-  for (let i = 0; i < maxIter; i++) {
-    const mid  = (lo + hi) / 2;
-    const fmid = await F(mid);
-
-    if (!Number.isFinite(fmid)) { hi = mid; continue; }
-    if (Math.abs(fmid) < tol) {
-      return computeAllAtPrice(baseInput, mid);
-    }
-    if (fmid > 0) lo = mid; else hi = mid;
-  }
-
-  // Fallback : renvoyer l’extrémité la plus proche de la cible (via moteur exact pour l’évaluation)
-  const [rLoCF, rHiCF] = await Promise.all([
-    f_apresImpots_viaAnalyzer(lo, baseInput, regimeCode),
-    f_apresImpots_viaAnalyzer(hi, baseInput, regimeCode)
-  ]);
-  const bestP = (Math.abs(rLoCF - targetCF) < Math.abs(rHiCF - targetCF)) ? lo : hi;
-  return computeAllAtPrice(baseInput, bestP);
-}
-
-window.solvePriceForCF0_apresImpots_exact = solvePriceForCF0_apresImpots_exact;
-// ---- utils ----
-function debounce(fn, wait = 200) {
-  let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
-}
-
-// ---- recalc central ----
-const recomputeBreakeven = debounce(async function () {
-  try {
-    // 1) base d'entrée normalisée
-    const base = prepareBreakevenInput();
-
-    // 🧹 ceinture & bretelles (purge toute valeur résiduelle liée au prix)
-    const _b = base;
-    _b.apportMode = 'amount';
-    delete _b.apportPct;
-    delete _b.prixPaye;
-    delete _b.mensualite;
-
-    // fige l'apport en €
-    base.apportMode = 'amount';
-    delete base.apportPct;
-
-    // ✅ Harmonisation : on finance les frais dans le prêt
-    base.financerFrais = true;
-
-    // si ton taux intègre déjà l'assurance → neutralise toute assurance ajoutée
-    base.assuranceIncluseDansTaux = true;
-    base.tauxAssuranceEmprunteur  = 0;
-
-
-    // régime sélectionné (radio)
-    const regimeCode =
-      document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
-
-    // 2) solve : cash-flow cible = 0 € APRÈS impôts (approx)
-    const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
-
-    // 3) rendu
-    const mode =
-      (document.getElementById('occupationMode')?.value === 'residence') ? 'residence' : 'location';
-
-    window.renderBreakeven?.({
-      mode,
-      price: res.price,
-      foot : `Cash-flow cible 0 € après impôts (${regimeCode.replace(/_/g,' ')})`
-    });
-
-    document.getElementById('breakeven-result')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } catch (e) {
-    console.warn('Recompute breakeven error:', e);
-  }
-}, 250);
-// ⚙️ Recalcul auto sur les champs "CF-sensibles" (hors radios)
-document.addEventListener('DOMContentLoaded', () => {
-  const ids = [
-    'loanRate','loanDuration','monthlyRent','monthlyCharges',
-    'vacanceLocative','gestionLocative','charges-copro-non-recup',
-    'taxeFonciere','entretien-annuel','assurance-pno',
-    'frais-bancaires-compte','apport','occupationMode',
-    'partnerContribution'
-  ];
-
-  ids.forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el || el.__cfWired) return; // évite les doublons
-
-    const mainEvt = (el.tagName === 'SELECT') ? 'change' : 'input';
-    el.addEventListener(mainEvt, recomputeBreakeven);
-    if (mainEvt === 'input') el.addEventListener('change', recomputeBreakeven);
-
-    el.__cfWired = true;
-  });
-});
         // Nouvelles fonctions pour le widget Buy vs Rent
 function buildChargesBreakdown(p) {
   return {
@@ -2830,6 +1999,12 @@ document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
   r.addEventListener('change', (e) => {
     window.analyzer?.setSelectedRegime?.(e.target.value);
   });
+});
+
+// Bouton "meilleur cash-flow" → bascule en mode meilleur et relance l'analyse
+document.getElementById('btn-best-cashflow')?.addEventListener('click', async () => {
+  window.analyzer?.setPreferBest?.(true);
+  await proceedToFiscalAnalysis();
 });
   // Gestion des paramètres avancés
   document.getElementById('btn-advanced-toggle').addEventListener('click', function () {
@@ -2919,7 +2094,9 @@ function goToStep(step) {
 
   // Mettre à jour l'indicateur d'étapes
   updateStepIndicator(step);
-window.currentStep = currentStep = step;
+
+  currentStep = step;
+
   // Scroll to top
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2953,18 +2130,18 @@ document.getElementById('property-form').addEventListener('submit', async functi
   const loyerHC = parseFloat(document.getElementById('monthlyRent').value);
   const charges = parseFloat(document.getElementById('monthlyCharges').value) || 50;
 
-  // Récupérer le type d’achat
+  // Récupérer les paramètres avancés
   const typeAchat = document.querySelector('input[name="type-achat"]:checked').value;
 
   // Récupérer les données du formulaire
   propertyData = {
-    ville: window.villeSearchManager?.getSelectedVilleData() || {},
+    ville: window.villeSearchManager?.getSelectedVilleData() || {}, // Patch Bonus: valeur par défaut
     prixPaye: parseFloat(document.getElementById('propertyPrice').value),
     surface: parseFloat(document.getElementById('propertySurface').value),
     loyerActuel: loyerHC,
     charges: charges,
-    monthlyCharges: charges,
-    loyerCC: loyerHC + charges,
+    monthlyCharges: charges, // ← AJOUT
+    loyerCC: loyerHC + charges, // Ajouter le loyer CC pour l'analyse
     apport: parseFloat(document.getElementById('apport').value),
     duree: parseFloat(document.getElementById('loanDuration').value),
     taux: parseFloat(document.getElementById('loanRate').value),
@@ -2972,8 +2149,7 @@ document.getElementById('property-form').addEventListener('submit', async functi
     typeAchat: typeAchat,
     occupationMode: document.getElementById('occupationMode').value,
     partnerContribution: parseFloat(document.getElementById('partnerContribution').value) || 0,
-
-    // Paramètres avancés (communs)
+    // Paramètres avancés
     fraisBancairesDossier: parseFloat(document.getElementById('frais-bancaires-dossier').value) || 900,
     fraisBancairesCompte: parseFloat(document.getElementById('frais-bancaires-compte').value) || 150,
     fraisGarantie: parseFloat(document.getElementById('frais-garantie').value) || 1.3709,
@@ -2985,145 +2161,104 @@ document.getElementById('property-form').addEventListener('submit', async functi
     entretienAnnuel: parseFloat(document.getElementById('entretien-annuel').value) || 500,
     chargesCoproNonRecup: parseFloat(document.getElementById('charges-copro-non-recup').value) || 50,
     assurancePNO: parseFloat(document.getElementById('assurance-pno').value) || 15,
-
-    // Paramètres "classique"
+    // Paramètres spécifiques selon le type
     fraisNotaireTaux: typeAchat === 'classique' ? parseFloat(document.getElementById('frais-notaire-taux').value) || 8 : 0,
-    commissionImmo:   typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value)   || 4 : 0,
-
-    // Paramètres "enchères"
+    commissionImmo: typeAchat === 'classique' ? parseFloat(document.getElementById('commission-immo').value) || 4 : 0,
     droitsEnregistrement: typeAchat === 'encheres' ? parseFloat(document.getElementById('droits-enregistrement').value) || 5.70 : 0,
-    coefMutation:         typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value)         || 2.37 : 0,
-    honorairesAvocat:     typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value)     || 1500 : 0,
-    fraisFixes:           typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value)           || 50   : 0,
-    emolumentsTranche1:   typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche1').value)   || 0    : 0,
-    emolumentsTranche2:   typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche2').value)   || 0    : 0,
-    emolumentsTranche3:   typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche3').value)   || 0    : 0,
-    emolumentsTranche4:   typeAchat === 'encheres' ? parseFloat(document.getElementById('emoluments-tranche4').value)   || 0    : 0,
-    honorairesAvocatCoef: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat-coef').value)|| 0    : 0,
-    tvaHonoraires:        typeAchat === 'encheres' ? parseFloat(document.getElementById('tva-honoraires').value)        || 0    : 0,
-    publiciteFonciere:    typeAchat === 'encheres' ? parseFloat(document.getElementById('publicite-fonciere').value)    || 0    : 0,
-    avocatPorterEnchere:  typeAchat === 'encheres' ? parseFloat(document.getElementById('avocat-porter-enchere').value) || 0    : 0,
-    suiviDossier:         typeAchat === 'encheres' ? parseFloat(document.getElementById('suivi-dossier').value)         || 0    : 0,
-    cautionMisePrix:      typeAchat === 'encheres' ? parseFloat(document.getElementById('caution-mise-prix').value)     || 0    : 0,
-    cautionRestituee:     typeAchat === 'encheres' ? !!document.getElementById('caution-restituee').checked             : true,
-
-    // Régime actuel
+    coefMutation: typeAchat === 'encheres' ? parseFloat(document.getElementById('coef-mutation').value) || 2.37 : 0,
+    honorairesAvocat: typeAchat === 'encheres' ? parseFloat(document.getElementById('honoraires-avocat').value) || 1500 : 0,
+    fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0,
+    // AJOUT: Récupérer le régime actuel sélectionné
     regimeActuel: document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro',
     forceRegime: document.getElementById('force-regime')?.checked || false
   };
 
-  // Calculer la mensualité sur le montant emprunté
-const montantEmprunte = propertyData.prixPaye - propertyData.apport;
-const financerFrais = true; // même hypothèse partout
+  // Calculer le montant emprunté et la mensualité
+  const montantEmprunte = propertyData.prixPaye - propertyData.apport;
+  propertyData.mensualite = calcMensualite(
+    montantEmprunte,
+    propertyData.taux,
+    propertyData.duree
+  );
 
-const fraisInitials = (
-  (propertyData.typeAchat === 'classique'
-    ? calcFraisAcquisition(propertyData.prixPaye, propertyData).total
-    : calcFraisEncheres(propertyData.prixPaye, propertyData).total
-  )
-  + calcFraisGarantie(montantEmprunte, propertyData).total
-  + (Number(propertyData.travaux) || 0)
-);
+  // Calculer le prix au m² payé
+  propertyData.prixM2Paye = propertyData.prixPaye / propertyData.surface;
+  propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
+  propertyData.loyerCCM2 = propertyData.loyerCC / propertyData.surface; // Loyer CC au m²
 
-const capitalMensualise =
-  financerFrais ? (montantEmprunte + fraisInitials) : montantEmprunte;
-
-propertyData.mensualite = calcMensualite(
-  capitalMensualise,
-  propertyData.taux,
-  propertyData.duree
-);
-
-// (optionnel) utile plus tard
-propertyData.financerFrais = financerFrais;
-
-// ===== POST-TRAITEMENTS — déplacés ICI =====
-propertyData.prixM2Paye    = propertyData.prixPaye    / propertyData.surface;
-propertyData.loyerM2Actuel = propertyData.loyerActuel / propertyData.surface;
-propertyData.loyerCCM2     = propertyData.loyerCC     / propertyData.surface;
-
-// Étape 2 + rendu
-goToStep(2);
-
-const renderer = window.renderMarketAnalysis || window.analyzeMarket;
-requestAnimationFrame(() => {
+  // Patch C: Passe d'abord à l'étape 2 puis analyse avec requestAnimationFrame
   goToStep(2);
-  const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
-  if (!resultsDiv) {
-    console.error('❌ Conteneur de résultats introuvable');
-    return;
-  }
-  try {
-    if (typeof renderer === 'function') {
-      renderer(propertyData);
-    } else {
-      resultsDiv.innerHTML = '<div class="market-comparison-card average"><h3 style="color:#ef4444">Aucune fonction d\'analyse trouvée</h3></div>';
+
+  // Rendu robuste avec requestAnimationFrame et try/catch
+  const renderer = window.renderMarketAnalysis || window.analyzeMarket;
+  requestAnimationFrame(() => {
+    goToStep(2); // Double appel au cas où un autre code l'aurait masquée
+    const resultsDiv = document.querySelector('#section-2 #market-analysis-results');
+
+    if (!resultsDiv) {
+      console.error('❌ Conteneur de résultats introuvable');
+      return;
     }
-  } catch (err) {
-    resultsDiv.innerHTML = `
-      <div class="market-comparison-card average">
-        <div class="market-badge high">Erreur</div>
-        <h3 style="color:#ef4444;">Impossible d'analyser le marché</h3>
-        <p style="color:#94a3b8;">${err.message}</p>
-        <div class="recommendations-box" style="margin-top:20px;">
-          <button class="btn btn-outline" onclick="goToStep(1)">
-            <i class="fas fa-arrow-left"></i> Corriger les données
-          </button>
+
+    try {
+      if (typeof renderer === 'function') {
+        renderer(propertyData);
+      } else {
+        resultsDiv.innerHTML = '<div class="market-comparison-card average"><h3 style="color:#ef4444">Aucune fonction d\'analyse trouvée</h3></div>';
+      }
+    } catch (err) {
+      resultsDiv.innerHTML = `
+        <div class="market-comparison-card average">
+          <div class="market-badge high">Erreur</div>
+          <h3 style="color:#ef4444;">Impossible d'analyser le marché</h3>
+          <p style="color:#94a3b8;">${err.message}</p>
+          <div class="recommendations-box" style="margin-top:20px;">
+            <button class="btn btn-outline" onclick="goToStep(1)">
+              <i class="fas fa-arrow-left"></i> Corriger les données
+            </button>
+          </div>
         </div>
-      </div>`;
-    console.error(err);
-  }
+      `;
+      console.error(err);
+    }
+  });
 });
-});
-  
 // ──────────────────────────────────────────────────────────────────────────
 // renderMarketAnalysis (version optimisée & sûre)
 //   - Patch B: Ciblage robuste du conteneur
 //   - Patch D: generateRecommendations blindé
 // ──────────────────────────────────────────────────────────────────────────
 function renderMarketAnalysis(data) {
-  // Ciblage robuste avec fallback
-  const resultsDiv =
+  // Patch B: Ciblage robuste avec fallback
+  const resultsDiv = 
     document.querySelector('#section-2.market-analysis-section #market-analysis-results') ||
     document.getElementById('market-analysis-results');
-
+    
   if (!resultsDiv) {
     console.error('❌ #market-analysis-results introuvable');
     return;
   }
 
-  // Fallbacks si les helpers n'existent pas en global
-  const formatNumber = (typeof window.formatNumber === 'function')
-    ? window.formatNumber
-    : (n) => {
-        const v = Number(n);
-        return Number.isFinite(v) ? v.toLocaleString('fr-FR') : '—';
-      };
-
-  const generateRecommendations = (typeof window.generateRecommendations === 'function')
-    ? window.generateRecommendations
-    : () => '<div style="color:#94a3b8">Aucune recommandation disponible.</div>';
-
-  const applyMarkerColors = (typeof window.applyMarkerColors === 'function')
-    ? window.applyMarkerColors
-    : () => {};
+  // Vérification que le renderer existe
+  const renderer = window.renderMarketAnalysis || window.analyzeMarket;
+  if (typeof renderer !== 'function') {
+    resultsDiv.innerHTML = '<div class="market-comparison-card high"><h3>Analyse indisponible</h3></div>';
+    return;
+  }
 
   // Helpers locaux
-  const num     = v => Number(v);
-  const finite  = v => Number.isFinite(v);
+  const num = v => Number(v);
+  const finite = v => Number.isFinite(v);
   const safeDiv = (a, b) => (finite(a) && finite(b) && b !== 0) ? a / b : NaN;
 
   // Données utilisateur normalisées
-  const d         = data || {};
-  const ville     = d.ville || {};
+  const d = data || {};
+  const ville = d.ville || {};
   const surface   = num(d.surface);
   const prixPaye  = num(d.prixPaye);
   const loyerHC   = num(d.loyerActuel);
-  const chgRecup0 = num(d.monthlyCharges);
-  const chgAlt    = num(d.charges);
-  const chgRecup  = finite(chgRecup0) ? chgRecup0 : (finite(chgAlt) ? chgAlt : 0);
-  const loyerCC0  = num(d.loyerCC);
-  const loyerCC   = finite(loyerCC0) ? loyerCC0 : (finite(loyerHC) ? loyerHC : 0) + chgRecup;
+  const chgRecup  = finite(num(d.monthlyCharges)) ? num(d.monthlyCharges) : num(d.charges) || 0;
+  const loyerCC   = finite(num(d.loyerCC)) ? num(d.loyerCC) : (finite(loyerHC) ? loyerHC : 0) + chgRecup;
 
   // Ratios utilisateur (avec garde-fous)
   const prixM2Paye = finite(num(d.prixM2Paye)) ? num(d.prixM2Paye) : safeDiv(prixPaye, surface);
@@ -3133,9 +2268,8 @@ function renderMarketAnalysis(data) {
   // Marché
   const marketPriceM2 = num(ville.prix_m2);
   const marketRentM2  = num(ville.loyer_m2);
-  const hasMarket =
-    finite(marketPriceM2) && marketPriceM2 > 0 &&
-    finite(marketRentM2)  && marketRentM2  > 0;
+  const hasMarket = finite(marketPriceM2) && marketPriceM2 > 0 &&
+                    finite(marketRentM2) && marketRentM2  > 0;
 
   // Préconditions minimales
   if (!finite(prixM2Paye)) {
@@ -3326,7 +2460,7 @@ function renderMarketAnalysis(data) {
   setTimeout(applyMarkerColors, 0);
 }
 
-// Export après déclaration (pas d’auto-appel interne)
+// Patch A: Export après la déclaration
 window.renderMarketAnalysis = renderMarketAnalysis;
 
 // Fonction pour formater les nombres
@@ -3340,22 +2474,7 @@ function formatNumber(num) {
         maximumFractionDigits: 0 
     }).format(Math.round(num));
 }
-// Helper UI : surbrillance de la carte "régime" sélectionnée
-function wireManualHighlight() {
-  // Sur changement de radio, ajoute .selected à la carte cliquée
-  document.querySelectorAll('input[name="regime-actuel"]').forEach(r => {
-    r.addEventListener('change', () => {
-      document.querySelectorAll('.mode-option').forEach(el => el.classList.remove('selected'));
-      r.closest('.mode-option')?.classList.add('selected');
-    });
-  });
 
-  // ✅ Marquer visuellement l'état initial sans déclencher d'événement
-  const checked = document.querySelector('input[name="regime-actuel"]:checked');
-  if (checked) {
-    checked.closest('.mode-option')?.classList.add('selected');
-  }
-}
 // ✅ AJOUT : Fonction pour colorer les marqueurs selon le contexte
 function applyMarkerColors() {
     document.querySelectorAll('.position-marker').forEach(marker => {
@@ -3490,221 +2609,165 @@ function generateRecommendations(pricePosition, rentPosition, data = {}) {
     return recommendations;
 }
         
-// NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
-// NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
-async function proceedToFiscalAnalysis() {
-  console.log('🚀 Lancement de l\'analyse fiscale...');
-  goToStep(3);
+        // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
+ async function proceedToFiscalAnalysis() {
+    console.log('🚀 Lancement de l\'analyse fiscale...');
 
-  // (optionnel) on réinitialise le flag au lancement
-  window.__fiscalRan = false; // ⬅️ AJOUT
+    goToStep(3);
 
-  // Afficher un loading
-  const resultsDiv = document.getElementById('fiscal-comparison-results');
-  resultsDiv.innerHTML = `
-    <div style="text-align:center; padding:60px;">
-      <div class="loading-spinner"></div>
-      <div style="color:#00bfff; font-size:1.2em; margin-top:20px;">
-        Analyse des régimes fiscaux en cours...
-      </div>
-    </div>
-  `;
-
-  // Petit délai pour l'effet
-  await new Promise(r => setTimeout(r, 1000));
-
-  try {
-    // 1) Données d'entrée (pour graphes/debug)
-    const analysisData = analyzer.prepareFiscalData();
-    console.log('📊 Données d\'analyse complètes:', analysisData);
-
-    // 2) Paramètres avancés (si modifiés)
-    const modifiedParams = checkModifiedParameters?.() || [];
-    if (modifiedParams.length) {
-      console.log('⚠️ Paramètres avancés modifiés:', modifiedParams);
-    }
-
-    // 3) Analyse complète
-    const analysis = await analyzer.performCompleteAnalysis(propertyData);
-
-    if (!analysis?.fiscal?.length) {
-      resultsDiv.innerHTML = `
-        <div class="market-comparison-card">
-          <h3>Aucun résultat</h3>
-          <p>Aucun régime n'a pu être calculé. Vérifiez vos paramètres puis réessayez.</p>
+    // Afficher un loading
+    const resultsDiv = document.getElementById('fiscal-comparison-results');
+    resultsDiv.innerHTML = `
+        <div style="text-align: center; padding: 60px;">
+            <div class="loading-spinner"></div>
+            <div style="color: #00bfff; font-size: 1.2em; margin-top: 20px;">
+                Analyse des régimes fiscaux en cours...
+            </div>
         </div>
-      `;
-      return;
-    }
+    `;
 
-    /* -----------------------------------------------------------------
-       4) Widget Buy vs Rent si résidence principale
-    ----------------------------------------------------------------- */
-    const isResidence = propertyData.occupationMode === 'residence';
-    if (isResidence) {
-      const tauxMensuel = (propertyData.taux || 0) / 100 / 12;
-      const montantEmprunte = (propertyData.prixPaye || 0) - (propertyData.apport || 0);
-      const interetsMensuel = montantEmprunte * tauxMensuel;
-
-      // Mise à jour des paramètres du widget
-      br.mensualité = Math.round(propertyData.mensualite || 0);
-
-      // Charges fixes & conjoint
-      const chargesBreak = buildChargesBreakdown(propertyData);
-      br.charges = Math.round(sum(chargesBreak));
-      br.partner = propertyData.partnerContribution || 0;
-      br.details = chargesBreak;
-
-      br.loyerMarché = propertyData.ville
-        ? Math.round((propertyData.ville.loyer_m2 || 0) * (propertyData.surface || 0))
-        : Math.round(propertyData.loyerCC || 0);
-
-      br.amort = Math.round((propertyData.mensualite || 0) - interetsMensuel);
-
-      // Afficher le widget
-      drawBuyRent();
-    }
-
-    /* -----------------------------------------------------------------
-       5) Choix du régime détaillé = régime ACTUEL si dispo, sinon best
-    ----------------------------------------------------------------- */
-    const bestRegime = analysis.fiscal.reduce(
-      (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
-      analysis.fiscal[0]
-    );
-
-    const selectedCode = propertyData?.regimeActuel;               // ex: 'nu_micro'
-    const mapEntry = (window.REGIME_LABELS || {})[selectedCode];   // { id, label } | string | undefined
-
-    const selectedRes =
-      (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
-      (mapEntry?.label && analysis.fiscal.find(r => r.nom === mapEntry.label)) ||
-      (typeof mapEntry === 'string' && analysis.fiscal.find(r => r.nom === mapEntry)) ||
-      null;
-
-    const detailRegime = selectedRes || bestRegime;
-
-    /* -----------------------------------------------------------------
-       6) Rendu HTML principal
-    ----------------------------------------------------------------- */
-    const html = analyzer.generateFiscalResultsHTML(
-      analysis.fiscal,
-      analysisData,
-      {
-        detailId    : detailRegime.id,
-        selectedId  : selectedRes?.id || null,
-        bestId      : bestRegime.id,
-        forceRegime : !!selectedRes
-      }
-    );
-    resultsDiv.innerHTML = html;
-
-    // ✅ Marquer qu’une analyse a tourné
-    window.__fiscalRan = true; // ⬅️ AJOUT ICI
-
-    // 7) Graphiques
-    setTimeout(() => {
-      try { analyzer.createFiscalCharts(analysis.fiscal); }
-      catch (e) { console.warn('Graphiques fiscaux non générés :', e); }
-    }, 100);
-
-    // 8) Toggle du tableau détaillé
-    setTimeout(() => {
-      const toggleBtn = document.querySelector('.btn-expand-table');
-      if (toggleBtn) {
-        toggleBtn.addEventListener('click', function () {
-          const table = document.getElementById('detailed-fiscal-table');
-          if (!table) return;
-          const hidden = (table.style.display === 'none' || table.style.display === '');
-          table.style.display = hidden ? 'block' : 'none';
-          this.classList.toggle('expanded', hidden);
-          this.innerHTML = hidden
-            ? '<i class="fas fa-chevron-up"></i> Masquer le détail'
-            : '<i class="fas fa-chevron-down"></i> Voir le détail complet';
-        });
-      }
-    }, 200);
-
-    // 9) Debug helper
-    window.lastAnalysisData = {
-      input: analysisData,
-      results: analysis.fiscal,
-      timestamp: new Date()
-    };
-    console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
-
-    /* -----------------------------------------------------------------
-       10) ➡️ BLOC CALCUL DIRECT + renderBreakeven (APRES le rendu)
-    ----------------------------------------------------------------- */
-
-    // Helper local pour la devise (fallback si analyzer n'est pas prêt)
-    const fmtCurrency = (val) => {
-      if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
-        return analyzer.formatCurrency(val);
-      }
-      try {
-        return new Intl.NumberFormat('fr-FR', {
-          style: 'currency', currency: 'EUR', maximumFractionDigits: 0
-        }).format(val);
-      } catch { return (Math.round(val) + ' €'); }
-    };
+    // Attendre un peu pour l'effet
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     try {
-      // ❗️On copie l’entrée et on **force le gel de l’apport en €**
-      const base = prepareBreakevenInput();
-      base.apportMode = 'amount';    // on fige l’apport en euros
-      delete base.apportPct;         // on neutralise tout % résiduel
+        // 1) Récupérer les données du formulaire pour debug/graphes
+        const analysisData = analyzer.prepareFiscalData();
+        console.log('📊 Données d\'analyse complètes:', analysisData);
 
-      // 🧹 purge prix & mensualité
-      delete base.prixPaye;
-      delete base.mensualite;
+        // 2) Vérifier les paramètres avancés modifiés
+        const modifiedParams = checkModifiedParameters?.() || [];
+        if (modifiedParams.length > 0) {
+            console.log('⚠️ Paramètres avancés modifiés:', modifiedParams);
+        }
 
-      // ✅ Patch minimal : harmoniser les charges
-      base.financerFrais = true;
-      base.assuranceIncluseDansTaux = true;
-      base.tauxAssuranceEmprunteur  = 0;
+        // 3) Effectuer l'analyse complète (garde le comportement existant)
+        const analysis = await analyzer.performCompleteAnalysis(propertyData);
 
-      // ❗️On NE se sert PAS de base.prixPaye lors du solveur
-      const regimeCode =
-        (document.querySelector('input[name="regime-actuel"]:checked')?.value) ||
-        base.regimeActuel || 'nu_micro';
+        // Sécurité : aucun résultat
+        if (!analysis?.fiscal?.length) {
+            resultsDiv.innerHTML = `
+                <div class="market-comparison-card">
+                    <h3>Aucun résultat</h3>
+                    <p>Aucun régime n'a pu être calculé. Vérifiez vos paramètres puis réessayez.</p>
+                </div>
+            `;
+            return;
+        }
 
-      const res = await solvePriceForCF0_apresImpots_exact(base, 0, { regime: regimeCode });
+        /* -----------------------------------------------------------------
+           4) Afficher le widget Buy vs Rent si résidence principale
+        ----------------------------------------------------------------- */
+        const isResidence = propertyData.occupationMode === 'residence';
+        if (isResidence) {
+            const tauxMensuel = (propertyData.taux || 0) / 100 / 12;
+            const montantEmprunte = (propertyData.prixPaye || 0) - (propertyData.apport || 0);
+            const interetsMensuel = montantEmprunte * tauxMensuel;
 
-      // Garde-fou : si solveur renvoie un résultat incomplet
-      const price = Number.isFinite(res?.price) ? res.price : 0;
-      const apport = Number.isFinite(res?.apport) ? res.apport : 0;
+            // Mise à jour des paramètres du widget
+            br.mensualité = Math.round(propertyData.mensualite || 0);
 
-      window.renderBreakeven?.({
-        mode : (byId('occupationMode')?.value === 'residence') ? 'residence' : 'location',
-        price: price,
-        foot : `Apport figé : ${fmtCurrency(apport)} — Cash-flow cible : 0 € <strong>après impôts</strong> (${String(regimeCode).replace(/_/g,' ')})`
-        // (optionnel) + ` — Mensualité estimée : ${Number.isFinite(res?.mensualite) ? fmtCurrency(res.mensualite) : '—'}`
-      });
+            // Charges fixes & conjoint
+            const chargesBreak = buildChargesBreakdown(propertyData);
+            br.charges  = Math.round(sum(chargesBreak));
+            br.partner  = propertyData.partnerContribution || 0;
+            br.details  = chargesBreak;
 
-      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (e) {
-      console.warn('Breakeven non calculé :', e);
-      // Fallback visuel pour quand même afficher la carte plutôt que rien
-      window.renderBreakeven?.({
-        mode : (byId('occupationMode')?.value === 'residence') ? 'residence' : 'location',
-        price: 0,
-        foot : 'Impossible de calculer automatiquement le prix d’équilibre (voir console).'
-      });
-      byId('breakeven-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+            br.loyerMarché = propertyData.ville
+                ? Math.round((propertyData.ville.loyer_m2 || 0) * (propertyData.surface || 0))
+                : Math.round(propertyData.loyerCC || 0);
 
-  } catch (error) {
-    console.error('Erreur lors de l\'analyse fiscale:', error);
-    resultsDiv.innerHTML = `
-      <div class="market-comparison-card">
-        <h3 style="color:#ef4444;">Erreur lors de l'analyse</h3>
-        <p>Une erreur est survenue. Veuillez réessayer.</p>
-      </div>
-    `;
-    // (optionnel) refléter l’échec
-    window.__fiscalRan = false; // ⬅️ AJOUT
+            br.amort = Math.round((propertyData.mensualite || 0) - interetsMensuel);
+
+            // Afficher le widget
+            drawBuyRent();
+        }
+
+/* -----------------------------------------------------------------
+   5) Régime à mettre en avant = le régime ACTUEL (si trouvé),
+      sinon on retombe sur le meilleur comme filet de sécurité.
+      → correspondance robuste par ID avec fallback par label
+----------------------------------------------------------------- */
+// Meilleur régime (par cash-flow net annuel)
+const bestRegime = analysis.fiscal.reduce(
+  (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
+  analysis.fiscal[0]
+);
+
+// Code sélectionné dans l'UI → map vers {id,label}
+const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
+const mapEntry    = REGIME_LABELS?.[selectedCode];   // { id, label } ou undefined
+
+// Résultat correspondant au choix (si présent dans la liste)
+const selectedRes =
+  (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
+  (mapEntry?.label && analysis.fiscal.find(r => r.nom === mapEntry.label)) ||
+  (typeof mapEntry === 'string' && analysis.fiscal.find(r => r.nom === mapEntry)) ||
+  null;
+
+// 👉 On privilégie TOUJOURS le régime actuel si on l'a trouvé
+const detailRegime = selectedRes || bestRegime;
+
+/* -----------------------------------------------------------------
+   6) Génération HTML (on passe le détail = régime ACTUEL)
+      - bestId sert aux badges "Meilleur" dans le tableau
+      - forceRegime à true pour que le header prenne le régime détaillé
+----------------------------------------------------------------- */
+const html = analyzer.generateFiscalResultsHTML(
+  analysis.fiscal,
+  analysisData,
+  {
+    detailId    : detailRegime.id,      // carte du haut = régime actuel
+    selectedId  : selectedRes?.id || null,
+    bestId      : bestRegime.id,        // conserve l'étoile "Meilleur" dans le tableau
+    forceRegime : !!selectedRes         // titre/visuel aligné sur le régime détaillé
   }
+);
+resultsDiv.innerHTML = html;
+
+        // 7) Graphiques
+        setTimeout(() => {
+            try {
+                analyzer.createFiscalCharts(analysis.fiscal);
+            } catch (e) {
+                console.warn('Graphiques fiscaux non générés :', e);
+            }
+        }, 100);
+
+        // 8) Toggle du tableau détaillé
+        setTimeout(() => {
+            const toggleBtn = document.querySelector('.btn-expand-table');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function () {
+                    const table = document.getElementById('detailed-fiscal-table');
+                    if (!table) return;
+                    const hidden = (table.style.display === 'none' || table.style.display === '');
+                    table.style.display = hidden ? 'block' : 'none';
+                    this.classList.toggle('expanded', hidden);
+                    this.innerHTML = hidden
+                        ? '<i class="fas fa-chevron-up"></i> Masquer le détail'
+                        : '<i class="fas fa-chevron-down"></i> Voir le détail complet';
+                });
+            }
+        }, 200);
+
+        // 9) Debug
+        window.lastAnalysisData = {
+            input: analysisData,
+            results: analysis.fiscal,
+            timestamp: new Date()
+        };
+
+        console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
+
+    } catch (error) {
+        console.error('Erreur lors de l\'analyse fiscale:', error);
+        resultsDiv.innerHTML = `
+            <div class="market-comparison-card">
+                <h3 style="color: #ef4444;">Erreur lors de l'analyse</h3>
+                <p>Une erreur est survenue. Veuillez réessayer.</p>
+            </div>
+        `;
+    }
 }
         // Fonction de debug
         window.debugFiscalAnalysis = function() {
@@ -3763,9 +2826,22 @@ async function proceedToFiscalAnalysis() {
 
         setInterval(updateTime, 1000);
         updateTime();
+    </script>
+    <script>
 document.addEventListener('DOMContentLoaded', () => {
   (function(){
-    const byId = (id) => document.getElementById(id); 
+    const byId = (id) => document.getElementById(id);
+
+    // Surbrillance quand on change manuellement de radio
+    function wireManualHighlight() {
+      document.querySelectorAll('input[name="regime-actuel"]').forEach(input => {
+        input.addEventListener('change', () => {
+          document.querySelectorAll('.mode-option').forEach(l => l.classList.remove('selected'));
+          const wrap = input.closest('.mode-option');
+          if (wrap) wrap.classList.add('selected');
+        });
+      });
+    }
 
     async function pickAndShowBest() {
       const analyzer = window.analyzer || (window.analyzer = new MarketFiscalAnalyzer());
@@ -3829,18 +2905,14 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 });
 document.addEventListener('DOMContentLoaded', () => {
-  // 🔓 Global
-  window.REGIME_LABELS = window.REGIME_LABELS || {
-    'nu_micro'  : { id: 'micro-foncier', label: 'Micro-foncier' },
-    'nu_reel'   : { id: 'reel-foncier',  label: 'Location nue au réel' },
-    'lmnp_micro': { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
-    'lmnp_reel' : { id: 'lmnp-reel',     label: 'LMNP au réel' },
-    'lmp_reel'  : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
-    'sci_is'    : { id: 'sci-is',        label: "SCI à l'IS" }
+  const REGIME_LABELS = window.REGIME_LABELS || {
+    'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
+    'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
+    'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
+    'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
+    'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
+    'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
   };
-
-  // (facultatif) alias local sans redéfinir la map
-  const REGIME_LABELS = window.REGIME_LABELS;
 
   function getResultsDiv() {
     let results = document.getElementById('fiscal-comparison-results');
@@ -3884,6 +2956,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // Radios → afficher directement en section 3
+  document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
+    r.addEventListener('change', (e) => {
+      showSection3();
+      renderRegimeSummary(e.target.value, 'selection');
+    });
+  });
+
   // Bouton "meilleur cash-flow" → affichage (sans calcul)
   const bestBtn = document.getElementById('btn-best-cashflow');
   if (bestBtn) {
@@ -3894,130 +2974,6 @@ document.addEventListener('DOMContentLoaded', () => {
       renderRegimeSummary(code, 'best');
     });
   }
-});
-</script>
-    <script>
-
-/* 🎨 Renderer officiel — place-le AVANT le wiring des boutons */
-window.renderBreakeven = function ({ mode, price, foot }) {
-  const pill = byId('breakeven-pill');
-  const card = byId('breakeven-result');
-  const isRP = (mode === 'residence');
-
-  // Fallback de formatage si analyzer n'est pas prêt
-  const fmtCurrency = (val) => {
-    if (window.analyzer && typeof analyzer.formatCurrency === 'function') {
-      return analyzer.formatCurrency(val);
-    }
-    try {
-      return new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR',
-        maximumFractionDigits: 0
-      }).format(val);
-    } catch {
-      return (Math.round(val) + ' €');
-    }
-  };
-
-  const title = isRP
-    ? 'Prix d’équilibre — Résidence principale'
-    : 'Prix d’équilibre — Investissement locatif';
-
-  // Mini-pill compact
-  if (pill) {
-    pill.style.display = 'inline-block';
-    pill.innerHTML = `<strong>${title} :</strong> ${fmtCurrency(price)}`;
-  }
-
-  // Carte détaillée (neutre)
-  if (card) {
-    card.style.display = 'block'; // force l’affichage
-    card.classList.remove('low', 'high', 'average');
-    card.classList.add('average');
-    card.innerHTML = `
-      <div class="market-badge average">Cash-flow neutre</div>
-      <h3 style="margin:0 0 .5rem 0">${title}</h3>
-      <div class="metric-panel">
-        <div class="market-details">
-          <div class="market-metric">
-            <div class="market-metric-label">Prix d’achat cible</div>
-            <div class="market-metric-value">${fmtCurrency(price)}</div>
-            <div class="market-metric-comparison">Cash-flow mensuel ≈ 0 €</div>
-          </div>
-        </div>
-      </div>
-      <p style="margin-top:12px;color:#94a3b8">${foot || ''}</p>
-      <div style="margin-top:16px;">
-        <button class="btn btn-outline" onclick="goToStep(1)">
-          <i class="fas fa-edit"></i> Affiner les entrées
-        </button>
-      </div>
-    `;
-  }
-};
-
-/* ---- Wiring des boutons (après le renderer) ---- */
-document.addEventListener('DOMContentLoaded', () => {
-  const byId = (id) => document.getElementById(id);
-
-  // ─────────────────────────────────────────
-  // Helpers sûrs
-  // ─────────────────────────────────────────
-  const showSection3 = () => {
-    if (typeof window.goToStep === 'function') window.goToStep(3);
-    const s3 = byId('section-3');
-    if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  window.REGIME_LABELS = window.REGIME_LABELS || {
-    'nu_micro'  : { id: 'micro-foncier', label: 'Micro-foncier' },
-    'nu_reel'   : { id: 'reel-foncier',  label: 'Location nue au réel' },
-    'lmnp_micro': { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
-    'lmnp_reel' : { id: 'lmnp-reel',     label: 'LMNP au réel' },
-    'lmp_reel'  : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
-    'sci_is'    : { id: 'sci-is',        label: "SCI à l'IS" }
-  };
-  const REGIME_LABELS = window.REGIME_LABELS;
-
-  const getResultsDiv = () => {
-    let results = byId('fiscal-comparison-results');
-    if (!results) {
-      const host = byId('section-3') || document.body;
-      results = document.createElement('div');
-      results.id = 'fiscal-comparison-results';
-      host.appendChild(results);
-    }
-    return results;
-  };
-
-  const renderRegimeSummary = (code, mode = 'selection') => {
-    const info = REGIME_LABELS[code] || { label: code || '—' };
-    const badge = mode === 'best'
-      ? '<span class="regime-badge best-regime">Mode meilleur</span>'
-      : '<span class="regime-badge current">Régime sélectionné</span>';
-    getResultsDiv().innerHTML = `
-      <div class="best-regime-summary">
-        <div class="summary-title">
-          <i class="fas fa-balance-scale"></i> Synthèse fiscale
-        </div>
-        <div class="summary-content">
-          <div class="regime-name">${info.label || '—'} ${badge}</div>
-          <p style="margin-top:10px;color:#94a3b8">Affichage direct demandé — aucun calcul lancé.</p>
-        </div>
-      </div>
-    `;
-  };
-
-  // Relance un calcul CF≈0€ selon l’occupation (fallback centralisé)
-  const recomputeBreakeven = () => {
-    const occ = byId('occupationMode');
-    if (occ?.value === 'residence') {
-      byId('btn-breakeven-rp')?.click();
-    } else {
-      byId('btn-breakeven-locatif')?.click();
-    }
-  };
 });
 </script>
 </body>
