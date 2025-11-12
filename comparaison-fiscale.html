@@ -1926,6 +1926,7 @@ function drawBuyRent () {
     </div><!-- ✅ Fermeture du container principal -->
 
     <!-- Scripts -->
+    <script src="./js/equilibre.js"></script>
     <script src="./ville-search.js"></script>
     <script src="./immo-simulation.js"></script>
     <script src="./fiscal-comparison-enhanced.js"></script>
@@ -2756,6 +2757,42 @@ resultsDiv.innerHTML = html;
             results: analysis.fiscal,
             timestamp: new Date()
         };
+        // ─── Équilibre locatif (front-only) ───
+try {
+  const montantEmprunt = (propertyData.prixPaye || 0) - (propertyData.apport || 0);
+  const eqInputs = {
+    variable_cible: "loyer_mensuel",          // ou "prix_d_achat" selon ton UI
+    periode_base:   "annuel",                 // "mensuel" | "annuel" | "n_annees"
+    n_annees:       1,
+    prix_d_achat:   propertyData.prixPaye || 0,
+    montant_emprunt: montantEmprunt,
+    taux_annuel:    propertyData.taux || 0,
+    duree_annees:   propertyData.duree || 0,
+    differe_capital: 0,
+    loyer_mensuel:  propertyData.loyerActuel || 0,
+    vacance_pct:    propertyData.vacanceLocative || 0,
+    taxe_fonciere:  propertyData.taxeFonciere || 0,
+    charges_copro:  propertyData.chargesCoproNonRecup || 0,
+    assurance:      propertyData.assurancePNO || 0,
+    gestion:        propertyData.gestionLocativeTaux || 0,
+    entretien:      propertyData.entretienAnnuel || 0,
+    capex_annuel:   null,
+    capex_list:     null,
+    regime_fiscal:  propertyData.regimeActuel || "nu_micro",
+    tmi_ou_is:      propertyData.tmi || 0,
+    prelevements:   17.2,
+    indexation_loyer: 0,
+    inflation_charges: 0
+  };
+
+  const eq = window.Equilibre.solveEquilibre(eqInputs, { tol:1e-6, max_iter:100 });
+
+  const mount = document.getElementById('fiscal-comparison-results');
+  window.Equilibre.renderEquilibre(eq, mount);
+} catch (e) {
+  console.warn('Equilibre erreur:', e?.message || e);
+}
+
 
         console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
 
