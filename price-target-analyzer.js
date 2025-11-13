@@ -121,24 +121,20 @@ class PriceTargetAnalyzer {
    * Version simplifiée pour régime fixe (monotone)
    */
   _solveForEnrichment(baseInput, targetEnrichment, regimeId, opts = {}) {
-    const params = this.analyzer.getAllAdvancedParams?.() || {};
     const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
 
     // Bornes adaptatives
     let lo = Math.max(1, p0 * 0.3);
     let hi = Math.max(2, p0 * 2.0);
 
-const maxIter = Number(opts.maxIter ?? 80);   // Plus d'itérations
-const tol = Number(opts.tol ?? 1);            // Tolérance à 1€ au lieu de 10€
+    const maxIter = Number(opts.maxIter ?? 80);
+    const tol = Number(opts.tol ?? 1); // 1 € d'écart sur l'enrichissement
 
-    // Test infaisabilité aux bornes
+    // Test d’infaisabilité côté bas (même au prix minimal, on n’atteint pas la cible)
     const eLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId).enrichment;
-    
     if (eLo + tol < targetEnrichment) {
-      // Cible inatteignable même au prix le plus bas
       const registry = this.analyzer.getRegimeRegistry();
       const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
-      
       return {
         price: lo,
         regimeId: key,
@@ -150,36 +146,83 @@ const tol = Number(opts.tol ?? 1);            // Tolérance à 1€ au lieu de 1
       };
     }
 
-    // Bisection classique
+    // ---------- Newton-Raphson avec sauvegarde du "meilleur" ----------
+    let price = Math.min(Math.max(p0, lo), hi); // clamp point de départ
     let best = null;
-    for (let i = 0; i < maxIter; i++) {
-      const mid = (lo + hi) / 2;
-      const result = this._computeEnrichmentAtPrice(baseInput, mid, regimeId);
 
+    const bisectionStep = () => {
+      const mid = (lo + hi) / 2;
+      const r = this._computeEnrichmentAtPrice(baseInput, mid, regimeId);
       best = {
         price: mid,
-        regimeId: result.regimeId,
-        regimeNom: result.regimeNom,
-        enrichment: result.enrichment,
-        cashflow: result.cashflow,
-        capital: result.capital
+        regimeId: r.regimeId,
+        regimeNom: r.regimeNom,
+        enrichment: r.enrichment,
+        cashflow: r.cashflow,
+        capital: r.capital
       };
+      const diff = r.enrichment - targetEnrichment;
+      if (diff > 0) lo = mid; else hi = mid;
+      price = mid;
+      return Math.abs(diff) <= tol;
+    };
 
-      const diff = result.enrichment - targetEnrichment;
+    for (let i = 0; i < maxIter; i++) {
+      const cur = this._computeEnrichmentAtPrice(baseInput, price, regimeId);
+      const diff = cur.enrichment - targetEnrichment;
+
+      // MàJ best
+      if (!best || Math.abs(diff) < Math.abs(best.enrichment - targetEnrichment)) {
+        best = {
+          price,
+          regimeId: cur.regimeId,
+          regimeNom: cur.regimeNom,
+          enrichment: cur.enrichment,
+          cashflow: cur.cashflow,
+          capital: cur.capital
+        };
+      }
 
       if (Math.abs(diff) <= tol) break;
 
-      // Enrichissement décroît quand prix augmente
-      if (diff > 0) {
-        lo = mid; // Trop d'enrichissement → augmenter prix
-      } else {
-        hi = mid; // Pas assez → baisser prix
+      // Dérivée numérique locale
+      const h = Math.max(50, Math.abs(price) * 1e-3); // pas adaptatif
+      const nxt = this._computeEnrichmentAtPrice(baseInput, Math.min(price + h, hi), regimeId);
+      const derivative = (nxt.enrichment - cur.enrichment) / h;
+
+      // Si dérivée quasi nulle ou signe incohérent -> fallback bisection
+      if (!isFinite(derivative) || Math.abs(derivative) < 1e-8) {
+        if (bisectionStep()) break;
+        continue;
       }
+
+      // Pas de Newton avec amortissement
+      let step = diff / derivative; // NB: diff = f(price) - target
+      let newPrice = price - step;
+
+      // Si on sort des bornes, on réduit le pas (damping) jusqu'à rentrer dans [lo, hi]
+      let damping = 1;
+      while ((newPrice < lo || newPrice > hi) && damping > 1e-3) {
+        damping *= 0.5;
+        newPrice = price - step * damping;
+      }
+
+      // Si malgré le damping on reste hors bornes → fallback bisection
+      if (newPrice < lo || newPrice > hi || !isFinite(newPrice)) {
+        if (bisectionStep()) break;
+        continue;
+      }
+
+      // Avance Newton
+      price = newPrice;
+
+      // Maintien de l'invariant lo/hi (monotonicité attendue: diff>0 ⇒ prix trop bas)
+      if (diff > 0) lo = Math.max(lo, price); else hi = Math.min(hi, price);
     }
 
+    // Si pas de convergence stricte, on renvoie le meilleur rencontré
     return best;
   }
-
   /**
    * Génère une recommandation actionnable
    */
