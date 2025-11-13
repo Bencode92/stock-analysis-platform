@@ -3011,74 +3011,111 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 });
 document.addEventListener('DOMContentLoaded', () => {
-  const REGIME_LABELS = window.REGIME_LABELS || {
-    'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
-    'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
-    'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
-    'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
-    'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
-    'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
-  };
-
-  function getResultsDiv() {
-    let results = document.getElementById('fiscal-comparison-results');
-    if (!results) {
-      const host = document.getElementById('section-3') || document.body;
-      results = document.createElement('div');
-      results.id = 'fiscal-comparison-results';
-      host.appendChild(results);
+  // ═══════════════════════════════════════════════════════════════════════
+  // CORRECTION : Sélection de régime SANS navigation automatique
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  console.log('🔧 Module sélection régime : chargé');
+  
+  // ─────────────────────────────────────────────────────────────────────
+  // 1) Gestion des radios "Régime fiscal actuel"
+  // ─────────────────────────────────────────────────────────────────────
+  function wireManualHighlight() {
+    document.querySelectorAll('input[name="regime-actuel"]').forEach(input => {
+      input.addEventListener('change', (e) => {
+        // A) Informer l'analyzer (sans navigation)
+        if (window.analyzer?.setSelectedRegime) {
+          window.analyzer.setSelectedRegime(e.target.value);
+        }
+        
+        // B) Feedback visuel : highlighter la carte sélectionnée
+        document.querySelectorAll('.mode-option').forEach(card => {
+          card.classList.remove('selected');
+        });
+        const selectedCard = e.target.closest('.mode-option');
+        if (selectedCard) {
+          selectedCard.classList.add('selected');
+        }
+        
+        console.log('✅ Régime sélectionné :', e.target.value);
+      });
+    });
+  }
+  
+  // ─────────────────────────────────────────────────────────────────────
+  // 2) Bouton "Afficher le régime au meilleur cash-flow"
+  // ─────────────────────────────────────────────────────────────────────
+  async function pickAndShowBest() {
+    console.log('🔍 Calcul du meilleur régime...');
+    
+    const analyzer = window.analyzer;
+    if (!analyzer) {
+      alert('Erreur : Analyzer non initialisé');
+      return;
     }
-    return results;
+    
+    try {
+      // A) Calculer avec tous les régimes
+      const fiscalData = analyzer.prepareFiscalData();
+      fiscalData.regimeActuel = null; // Laisser l'algo choisir
+      
+      const result = await analyzer.performCompleteAnalysis(fiscalData);
+      const regimes = result?.fiscal || [];
+      
+      if (regimes.length === 0) {
+        alert("Impossible de calculer les régimes. Vérifiez vos données.");
+        return;
+      }
+      
+      // B) Meilleur = premier du tableau (déjà trié)
+      const best = regimes[0];
+      const bestId = analyzer.normalizeRegimeKey(best) || best.id;
+      
+      console.log('🏆 Meilleur régime :', best.nom, '(ID:', bestId, ')');
+      
+      // C) Cocher le radio correspondant
+      const bestRadio = 
+        document.querySelector(`input[name="regime-actuel"][value="${bestId}"]`) ||
+        document.querySelector(`input[name="regime-actuel"][value="${best.id}"]`);
+      
+      if (bestRadio) {
+        bestRadio.checked = true;
+        
+        // Déclencher visuellement le highlight
+        document.querySelectorAll('.mode-option').forEach(card => {
+          card.classList.remove('selected');
+        });
+        const card = bestRadio.closest('.mode-option');
+        if (card) card.classList.add('selected');
+        
+        // Feedback utilisateur
+        const cashflow = Math.round(best.cashflowNetAnnuel || 0);
+        alert(
+          `✅ Régime optimal sélectionné :\n\n` +
+          `${best.nom}\n` +
+          `Cash-flow annuel : ${cashflow.toLocaleString('fr-FR')} €`
+        );
+      } else {
+        console.error('❌ Impossible de trouver le radio pour', bestId);
+        alert('Erreur : Régime introuvable dans le formulaire');
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur calcul meilleur régime:', error);
+      alert('Erreur lors du calcul. Consultez la console (F12).');
+    }
   }
-
-  function renderRegimeSummary(code, mode = 'selection') {
-    const info = REGIME_LABELS[code] || { label: code || '—' };
-    const badge = mode === 'best'
-      ? '<span class="regime-badge best-regime">Mode meilleur</span>'
-      : '<span class="regime-badge current">Régime sélectionné</span>';
-
-    const html = `
-      <div class="best-regime-summary">
-        <div class="summary-title">
-          <i class="fas fa-balance-scale"></i>
-          Synthèse fiscale
-        </div>
-        <div class="summary-content">
-          <div class="regime-name">
-            ${info.label || '—'} ${badge}
-          </div>
-          <p style="margin-top:10px;color:#94a3b8">
-            Affichage direct demandé — aucun calcul lancé.
-          </p>
-        </div>
-      </div>
-    `;
-    getResultsDiv().innerHTML = html;
-  }
-
-  function showSection3() {
-    if (typeof window.goToStep === 'function') window.goToStep(3);
-    const s3 = document.getElementById('section-3');
-    if (s3) s3.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  // Radios → afficher directement en section 3
-  document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
-    r.addEventListener('change', (e) => {
-      showSection3();
-      renderRegimeSummary(e.target.value, 'selection');
-    });
-  });
-
-  // Bouton "meilleur cash-flow" → affichage (sans calcul)
+  
+  // ─────────────────────────────────────────────────────────────────────
+  // 3) Initialisation
+  // ─────────────────────────────────────────────────────────────────────
+  wireManualHighlight();
+  
   const bestBtn = document.getElementById('btn-best-cashflow');
-  if (bestBtn) {
-    bestBtn.addEventListener('click', () => {
-      const checked = document.querySelector('input[name="regime-actuel"]:checked');
-      const code = checked ? checked.value : 'nu_micro';
-      showSection3();
-      renderRegimeSummary(code, 'best');
-    });
+  if (bestBtn && !bestBtn.__wired) {
+    bestBtn.addEventListener('click', pickAndShowBest);
+    bestBtn.__wired = true; // Éviter les double listeners
+    console.log('✅ Bouton "meilleur cash-flow" : connecté');
   }
 });
 </script>
