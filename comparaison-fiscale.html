@@ -1817,7 +1817,41 @@ td.neutral {
     <!-- ════ PRICE TARGET WIDGET ════ -->
     <div id="price-target-widget" style="display:none;"></div>
     <!-- ═══════════════════════════════ -->
-    
+
+    <!-- ── Contrôles RP (affichés seulement en mode résidence) ── -->
+    <div id="rp-controls" style="margin:24px 0; display:none; background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(0,191,255,0.2);">
+      <h4 style="color:#00bfff; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;">
+        <i class="fas fa-sliders-h"></i> Ajustez vos paramètres
+      </h4>
+      
+      <div style="margin-bottom:16px;">
+        <label for="rpRentSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+          Loyer du marché (charges comprises)
+        </label>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <input type="range" id="rpRentSlider" min="400" max="4000" step="25" 
+                 style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
+          <output id="rpRentOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">— €</output>
+        </div>
+      </div>
+      
+      <div style="margin-bottom:16px;">
+        <label for="rpPartnerSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+          Participation conjoint / colocataire
+        </label>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <input type="range" id="rpPartnerSlider" min="0" max="2000" step="25" 
+                 style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
+          <output id="rpPartnerOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">0 €</output>
+        </div>
+      </div>
+      
+      <div style="margin-top:12px; color:#94a3b8; font-size:0.9em;">
+        💡 Modifiez ces valeurs pour recalculer le prix d'équilibre en temps réel
+      </div>
+    </div>
+    <!-- ─────────────────────────────────────────────────────────── -->
+
     <!-- Bouton retour -->
     <div class="continue-section" style="margin-bottom: 60px;">
         <button class="btn btn-outline" onclick="goToStep(2)">
@@ -1827,6 +1861,7 @@ td.neutral {
 
     <!-- MODULE RP – conteneur vide ; rempli dynamiquement -->
     <div id="rp-container"></div>
+</div>
 
     <!-- ▬▬▬▬▬▬▬ BUY‑RENT WIDGET ▬▬▬▬▬▬▬ -->
     <div id="buyRent"></div>
@@ -2773,92 +2808,132 @@ resultsDiv.innerHTML = html;
         };
 
         console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
-                // ═══════════════════════════════════════════════════════
-        // 🎯 PRICE TARGET ANALYZER
+        // ===== [NOUVEAU] rendu prix d’équilibre RP + contrôles =====
+async function renderRPPriceTargetWithControls({ rent, partner } = {}) {
+  const pta = new PriceTargetAnalyzer(analyzer);
+  const ui = new PriceTargetUI(pta, 'price-target-widget');
+  
+  const data = {
+    ...analyzer.prepareFiscalData(propertyData),
+    partnerContribution: propertyData.partnerContribution || 0,
+    entretienAnnuel: propertyData.entretienAnnuel || 500,
+    chargesCoproNonRecup: propertyData.chargesCoproNonRecup || 50,
+    assurancePNO: propertyData.assurancePNO || 15,
+    monthlyCharges: propertyData.monthlyCharges || propertyData.charges || 50,
+    ville: propertyData.ville || {},
+    loyerHC: propertyData.loyerActuel || 0,
+    surface: propertyData.surface || 0,
+    price: propertyData.prixPaye || propertyData.price || 0
+  };
+  
+  const res = pta.calculateRPPriceEquilibrium(data, {
+    loyerMarche: rent,
+    partnerContribution: partner
+  });
+  
+  ui.render(res);
+}
         // ═══════════════════════════════════════════════════════
-        setTimeout(async () => {
-            try {
-                console.log('🎯 Début calcul prix cible...');
-                
-                // Vérifications préalables
-                if (!analyzer || !analyzer.prepareFiscalData) {
-                    console.error('❌ Analyzer non disponible');
-                    return;
-                }
-                
-                if (!propertyData) {
-                    console.error('❌ propertyData manquant');
-                    return;
-                }
-                
-                // Récupérer le régime choisi
-                const regimeChoisi = propertyData.regimeActuel || 
-                                   document.querySelector('input[name="regime-actuel"]:checked')?.value || 
-                                   'nu_micro';
-                
-                console.log('   Régime sélectionné:', regimeChoisi);
-                
-                // Afficher le nom du régime dans le message d'intro
-                const regimeDisplayName = document.getElementById('regime-display-name');
-                if (regimeDisplayName) {
-                    const registry = analyzer.getRegimeRegistry();
-                    const key = analyzer.normalizeRegimeKey({ id: regimeChoisi });
-                    const nomRegime = registry[key]?.nom || regimeChoisi;
-                    regimeDisplayName.textContent = nomRegime;
-                    console.log('   Nom affiché:', nomRegime);
-                }
-                
-                // Vérifier que le conteneur existe
-                const widgetContainer = document.getElementById('price-target-widget');
-                if (!widgetContainer) {
-                    console.error('❌ Conteneur #price-target-widget introuvable');
-                    return;
-                }
-                
-                // Créer les instances
-                const priceTargetAnalyzer = new PriceTargetAnalyzer(analyzer);
-                const priceTargetUI = new PriceTargetUI(priceTargetAnalyzer, 'price-target-widget');
-                
-                // Afficher le loading
-                priceTargetUI.showLoading();
-                console.log('   Loading affiché');
-                
-                // Petit délai pour que le DOM soit prêt
-                await new Promise(resolve => setTimeout(resolve, 300));
-                
-                // Préparer les données
-                const fiscalData = analyzer.prepareFiscalData(propertyData);
-                console.log('   Données fiscales préparées');
-                
-                // Calculer le prix cible (enrichissement = 0)
-                const priceResult = priceTargetAnalyzer.calculatePriceTarget(fiscalData, 0, {
-                    regimeId: regimeChoisi
-                });
-                
-                console.log('   Prix cible calculé:', priceResult.priceTarget, '€');
-                console.log('   Gap:', priceResult.gap, '€');
-                
-                // Afficher le résultat
-                priceTargetUI.render(priceResult);
-                
-                // Stocker pour debug
-                window.lastPriceTarget = priceResult;
-                
-                console.log('✅ Prix cible affiché avec succès');
-                
-            } catch (priceError) {
-                console.error('❌ Erreur calcul prix cible:', priceError);
-                console.error('Stack:', priceError.stack);
-                
-                // Afficher une erreur dans le widget
-                try {
-                    const priceTargetUI = new PriceTargetUI(null, 'price-target-widget');
-                    priceTargetUI.showError('Impossible de calculer le prix cible. Vérifiez vos données.');
-                } catch (e) {
-                    console.error('❌ Impossible d\'afficher l\'erreur:', e);
-                }
-            }
-        }, 16); // Délai de 500ms pour s'assurer que tout est bien chargé
+// 🎯 PRICE TARGET ANALYZER (RP + Locatif)
+// ═══════════════════════════════════════════════════════
+setTimeout(async () => {
+  try {
+    console.log('🎯 Début calcul prix cible...');
+    
+    const pta = new PriceTargetAnalyzer(analyzer);
+    const ui  = new PriceTargetUI(pta, 'price-target-widget');
+    
+    if (propertyData.occupationMode === 'residence') {
+      // ══════════ MODE RÉSIDENCE PRINCIPALE ══════════
+      const box     = document.getElementById('rp-controls');
+      const rentEl  = document.getElementById('rpRentSlider');
+      const rentOut = document.getElementById('rpRentOut');
+      const partEl  = document.getElementById('rpPartnerSlider');
+      const partOut = document.getElementById('rpPartnerOut');
+      
+      if (box && rentEl && partEl) {
+        box.style.display = '';
+        
+        // Valeurs initiales (loyer marché CC & part conjoint)
+        const loyerInit = (propertyData?.ville?.loyer_m2 > 0 && propertyData.surface > 0)
+          ? Math.round(propertyData.ville.loyer_m2 * propertyData.surface)
+          : Math.round((propertyData.loyerActuel || 0) + (propertyData.monthlyCharges || 0));
+        
+        const partnerInit = Math.max(0, Number(propertyData.partnerContribution || 0));
+        
+        // Bornes dynamiques
+        const rentMin = Math.max(300, Math.floor(loyerInit * 0.4 / 25) * 25);
+        const rentMax = Math.max(rentMin + 500, Math.ceil(loyerInit * 1.8 / 25) * 25);
+        const partMax = Math.max(1000, Math.ceil((loyerInit * 1.2) / 25) * 25);
+        
+        rentEl.min = rentMin;
+        rentEl.max = rentMax;
+        rentEl.step = 25;
+        rentEl.value = loyerInit;
+        rentOut.textContent = new Intl.NumberFormat('fr-FR').format(loyerInit) + ' €';
+        
+        partEl.min = 0;
+        partEl.max = partMax;
+        partEl.step = 25;
+        partEl.value = partnerInit;
+        partOut.textContent = new Intl.NumberFormat('fr-FR').format(partnerInit) + ' €';
+        
+        // Premier rendu
+        await renderRPPriceTargetWithControls({ rent: loyerInit, partner: partnerInit });
+        
+        // Listeners (recalc dynamique, debounce léger)
+        let t;
+        const nf = new Intl.NumberFormat('fr-FR');
+        const recalc = () => {
+          const rent    = Number(rentEl.value) || 0;
+          const partner = Number(partEl.value) || 0;
+          clearTimeout(t);
+          t = setTimeout(() => renderRPPriceTargetWithControls({ rent, partner }), 80);
+        };
+        
+        rentEl.addEventListener('input', (e) => {
+          rentOut.textContent = nf.format(e.target.value) + ' €';
+          recalc();
+        });
+        partEl.addEventListener('input', (e) => {
+          partOut.textContent = nf.format(e.target.value) + ' €';
+          recalc();
+        });
+        
+        console.log('✅ Mode RP : sliders initialisés');
+      }
+      
+    } else {
+      // ══════════ MODE LOCATIF (inchangé) ══════════
+      document.getElementById('rp-controls')?.style.setProperty('display', 'none');
+      
+      const regimeChoisi = propertyData.regimeActuel || 
+        document.querySelector('input[name="regime-actuel"]:checked')?.value || 
+        'nu_micro';
+      
+      const regimeDisplayName = document.getElementById('regime-display-name');
+      if (regimeDisplayName) {
+        const registry = analyzer.getRegimeRegistry();
+        const key = analyzer.normalizeRegimeKey({ id: regimeChoisi });
+        regimeDisplayName.textContent = registry[key]?.nom || regimeChoisi;
+      }
+      
+      ui.showLoading();
+      await new Promise(r => setTimeout(r, 300));
+      
+      const fiscalData  = analyzer.prepareFiscalData(propertyData);
+      const priceResult = pta.calculatePriceTarget(fiscalData, 0, { regimeId: regimeChoisi });
+      
+      ui.render(priceResult);
+      console.log('✅ Mode Locatif : prix cible affiché');
+    }
+    
+  } catch (priceError) {
+    console.error('❌ Erreur calcul prix cible:', priceError);
+    const ui = new PriceTargetUI(null, 'price-target-widget');
+    ui.showError('Impossible de calculer le prix cible. Vérifiez vos données.');
+  }
+}, 16);
         // ═══════════════════════════════════════════════════════
 
     } catch (error) {
