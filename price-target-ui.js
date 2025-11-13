@@ -271,12 +271,3 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
   window.PriceTargetUI = PriceTargetUI;
 }
-```
-
-### ✅ **Checkpoint Étape 1**
-
-**Vérification :**
-```
-✓ 3 fichiers créés dans le bon dossier
-✓ Aucune erreur de copier-coller
-✓ Les fichiers font ~15Ko, ~10Ko, ~8Ko respectivement
