@@ -82,19 +82,19 @@ class PriceTargetUI {
               </div>
             </div>
 
-<!-- Prix cible -->
-<div class="price-box target">
-  <div class="price-box-label">Prix cible (fourchette)</div>
-  <div class="price-box-amount">
-    ${fmt(r.priceTarget - 100)} - ${fmt(r.priceTarget + 100)}
-  </div>
-  <div class="price-box-detail">
-    Enrichissement: 
-    <span style="color:#22c55e">
-      ≈ ${sign(r.targetEnrichment)}${fmt(abs(r.targetEnrichment))}/an
-    </span>
-  </div>
-</div>
+            <!-- Prix cible -->
+            <div class="price-box target">
+              <div class="price-box-label">Prix cible (fourchette)</div>
+              <div class="price-box-amount">
+                ${fmt(r.priceTarget - 100)} - ${fmt(r.priceTarget + 100)}
+              </div>
+              <div class="price-box-detail">
+                Enrichissement: 
+                <span style="color:#22c55e">
+                  ≈ ${sign(r.targetEnrichment)}${fmt(abs(r.targetEnrichment))}/an
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- Impact breakdown -->
@@ -182,6 +182,7 @@ class PriceTargetUI {
 
   /**
    * Génère la box de recommandation
+   * (correction: action optionnelle et message par défaut)
    */
   _generateRecommendation(rec) {
     return `
@@ -189,10 +190,10 @@ class PriceTargetUI {
         <div class="recommendation-icon">${rec.icon}</div>
         <div class="recommendation-content">
           <div class="recommendation-title">${rec.title}</div>
-          <div class="recommendation-message">${rec.message}</div>
-          <div class="recommendation-action">
+          <div class="recommendation-message">${rec.message ?? ''}</div>
+          ${rec.action ? `<div class="recommendation-action">
             <i class="fas fa-bullseye"></i> ${rec.action}
-          </div>
+          </div>` : ''}
         </div>
       </div>
     `;
