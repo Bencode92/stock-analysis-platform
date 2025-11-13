@@ -2129,25 +2129,27 @@ toggleFieldsForRP();
 
 // CORRECTION 1: Force l'affichage avec style.display
 function goToStep(step) {
-  // Cache tout, quoi qu'en disent les CSS
-  document.querySelectorAll('.market-analysis-section').forEach(section => {
-    section.classList.remove('active');
-    section.style.display = 'none'; // Force le masquage
-  });
+  // ✅ Masquer TOUTES les sections (1, 2 ET 3)
+  for (let i = 1; i <= 3; i++) {
+    const section = document.getElementById(`section-${i}`);
+    if (section) {
+      section.classList.remove('active');
+      section.style.display = 'none';
+    }
+  }
 
-  // Affiche la cible
+  // Afficher la section ciblée
   const target = document.getElementById(`section-${step}`);
   if (target) {
     target.classList.add('active');
-    target.style.display = 'block'; // Force l'affichage
+    target.style.display = 'block';
   }
 
-  // Mettre à jour l'indicateur d'étapes
+  // Mise à jour indicateur
   updateStepIndicator(step);
-
   currentStep = step;
 
-  // Scroll to top
+  // Scroll
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
