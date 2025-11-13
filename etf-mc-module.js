@@ -375,10 +375,10 @@ const PRESETS_ETF = {
     fundTypes: ['Mid-Cap Blend','Small Blend','Small/Mid Growth','Mid-Cap Growth'],
     // Optimum: Vol 24–38, TER ≤ 0.45, AUM ≥ 0.8bn
     customFilters: [
-      { metric:'volatility', operator:'>=', value:24 },
-      { metric:'volatility', operator:'<=', value:38 },
-      { metric:'ter', operator:'<=', value:0.45 },
-      { metric:'aum', operator:'>=', value:800 }
+      { metric:'volatility', operator:'>=', value:22 },
+      { metric:'volatility', operator:'<=', value:40 },
+      { metric:'ter', operator:'<=', value:0.50 },
+      { metric:'aum', operator:'>=', value:600 }
     ]
   },
 
@@ -417,10 +417,10 @@ const PRESETS_ETF = {
     fundTypes: ['Inflation-Protected Bond','Commodities Focused','Broad Commodities','TIPS'],
     // Optimum: TER ≤ 0.30–0.35, AUM ≥ 0.8bn, Vol 10–25
     customFilters: [
-      { metric:'ter', operator:'<=', value:0.35 },
-      { metric:'aum', operator:'>=', value:800 },
-      { metric:'volatility', operator:'>=', value:10 },
-      { metric:'volatility', operator:'<=', value:25 }
+      { metric:'ter', operator:'<=', value:0.45 },
+      { metric:'aum', operator:'>=', value:500 },
+      { metric:'volatility', operator:'>=', value:8 },
+      { metric:'volatility', operator:'<=', value:28 }
     ]
   }
 };
