@@ -2808,11 +2808,22 @@ resultsDiv.innerHTML = html;
         };
 
         console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
-        // ===== [NOUVEAU] rendu prix d’équilibre RP + contrôles =====
+// ─────────────────────────────────────────────────────────────
+// RP : rendu avec garde-fous (PriceTargetAnalyzer / UI présents)
+// ─────────────────────────────────────────────────────────────
 async function renderRPPriceTargetWithControls({ rent, partner } = {}) {
-  const pta = new PriceTargetAnalyzer(analyzer);
-  const ui = new PriceTargetUI(pta, 'price-target-widget');
-  
+  const PT = window.PriceTargetAnalyzer;
+  const UI = window.PriceTargetUI;
+  if (!PT || !UI) {
+    const ui = new (window.PriceTargetUI || function(){}) (null, 'price-target-widget');
+    ui?.showError?.("Moteur de prix cible indisponible.");
+    console.error("PriceTargetAnalyzer ou PriceTargetUI absent du scope global.");
+    return;
+  }
+
+  const pta = new PT(analyzer);
+  const ui  = new UI(pta, 'price-target-widget');
+
   const data = {
     ...analyzer.prepareFiscalData(propertyData),
     partnerContribution: propertyData.partnerContribution || 0,
@@ -2825,24 +2836,33 @@ async function renderRPPriceTargetWithControls({ rent, partner } = {}) {
     surface: propertyData.surface || 0,
     price: propertyData.prixPaye || propertyData.price || 0
   };
-  
+
   const res = pta.calculateRPPriceEquilibrium(data, {
     loyerMarche: rent,
     partnerContribution: partner
   });
-  
+
   ui.render(res);
 }
-        // ═══════════════════════════════════════════════════════
-// 🎯 PRICE TARGET ANALYZER (RP + Locatif)
+// ═══════════════════════════════════════════════════════
+// 🎯 PRICE TARGET ANALYZER (RP + Locatif) — avec garde-fous
 // ═══════════════════════════════════════════════════════
 setTimeout(async () => {
   try {
     console.log('🎯 Début calcul prix cible...');
-    
-    const pta = new PriceTargetAnalyzer(analyzer);
-    const ui  = new PriceTargetUI(pta, 'price-target-widget');
-    
+
+    const PT = window.PriceTargetAnalyzer;
+    const UI = window.PriceTargetUI;
+    if (!PT || !UI) {
+      const ui = new (window.PriceTargetUI || function(){}) (null, 'price-target-widget');
+      ui?.showError?.("Moteur de prix cible indisponible.");
+      console.error("PriceTargetAnalyzer ou PriceTargetUI absent du scope global.");
+      return;
+    }
+
+    const pta = new PT(analyzer);
+    const ui  = new UI(pta, 'price-target-widget');
+
     if (propertyData.occupationMode === 'residence') {
       // ══════════ MODE RÉSIDENCE PRINCIPALE ══════════
       const box     = document.getElementById('rp-controls');
@@ -2850,38 +2870,34 @@ setTimeout(async () => {
       const rentOut = document.getElementById('rpRentOut');
       const partEl  = document.getElementById('rpPartnerSlider');
       const partOut = document.getElementById('rpPartnerOut');
-      
+
       if (box && rentEl && partEl) {
         box.style.display = '';
-        
-        // Valeurs initiales (loyer marché CC & part conjoint)
+
         const loyerInit = (propertyData?.ville?.loyer_m2 > 0 && propertyData.surface > 0)
           ? Math.round(propertyData.ville.loyer_m2 * propertyData.surface)
           : Math.round((propertyData.loyerActuel || 0) + (propertyData.monthlyCharges || 0));
-        
+
         const partnerInit = Math.max(0, Number(propertyData.partnerContribution || 0));
-        
-        // Bornes dynamiques
+
         const rentMin = Math.max(300, Math.floor(loyerInit * 0.4 / 25) * 25);
         const rentMax = Math.max(rentMin + 500, Math.ceil(loyerInit * 1.8 / 25) * 25);
         const partMax = Math.max(1000, Math.ceil((loyerInit * 1.2) / 25) * 25);
-        
+
         rentEl.min = rentMin;
         rentEl.max = rentMax;
         rentEl.step = 25;
         rentEl.value = loyerInit;
         rentOut.textContent = new Intl.NumberFormat('fr-FR').format(loyerInit) + ' €';
-        
+
         partEl.min = 0;
         partEl.max = partMax;
         partEl.step = 25;
         partEl.value = partnerInit;
         partOut.textContent = new Intl.NumberFormat('fr-FR').format(partnerInit) + ' €';
-        
-        // Premier rendu
+
         await renderRPPriceTargetWithControls({ rent: loyerInit, partner: partnerInit });
-        
-        // Listeners (recalc dynamique, debounce léger)
+
         let t;
         const nf = new Intl.NumberFormat('fr-FR');
         const recalc = () => {
@@ -2890,7 +2906,7 @@ setTimeout(async () => {
           clearTimeout(t);
           t = setTimeout(() => renderRPPriceTargetWithControls({ rent, partner }), 80);
         };
-        
+
         rentEl.addEventListener('input', (e) => {
           rentOut.textContent = nf.format(e.target.value) + ' €';
           recalc();
@@ -2899,41 +2915,41 @@ setTimeout(async () => {
           partOut.textContent = nf.format(e.target.value) + ' €';
           recalc();
         });
-        
+
         console.log('✅ Mode RP : sliders initialisés');
       }
-      
     } else {
-      // ══════════ MODE LOCATIF (inchangé) ══════════
+      // ══════════ MODE LOCATIF ══════════
       document.getElementById('rp-controls')?.style.setProperty('display', 'none');
-      
-      const regimeChoisi = propertyData.regimeActuel || 
-        document.querySelector('input[name="regime-actuel"]:checked')?.value || 
+
+      const regimeChoisi = propertyData.regimeActuel ||
+        document.querySelector('input[name="regime-actuel"]:checked')?.value ||
         'nu_micro';
-      
+
       const regimeDisplayName = document.getElementById('regime-display-name');
       if (regimeDisplayName) {
         const registry = analyzer.getRegimeRegistry();
         const key = analyzer.normalizeRegimeKey({ id: regimeChoisi });
         regimeDisplayName.textContent = registry[key]?.nom || regimeChoisi;
       }
-      
+
       ui.showLoading();
       await new Promise(r => setTimeout(r, 300));
-      
+
       const fiscalData  = analyzer.prepareFiscalData(propertyData);
       const priceResult = pta.calculatePriceTarget(fiscalData, 0, { regimeId: regimeChoisi });
-      
+
       ui.render(priceResult);
       console.log('✅ Mode Locatif : prix cible affiché');
     }
-    
+
   } catch (priceError) {
     console.error('❌ Erreur calcul prix cible:', priceError);
     const ui = new PriceTargetUI(null, 'price-target-widget');
     ui.showError('Impossible de calculer le prix cible. Vérifiez vos données.');
   }
 }, 16);
+
         // ═══════════════════════════════════════════════════════
 
     } catch (error) {
