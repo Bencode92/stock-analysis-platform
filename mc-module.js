@@ -2024,39 +2024,45 @@ const PRESETS = {
   },
 
   // === QUALITY/PREMIUM — élargissement ciblé (perf↓, vol/DD↑) + secteurs élargis ===
-  quality_premium: {
-    id: 'quality_premium',
-    label: '⭐ Premium',
-    shortLabel: 'Premium',
-    icon: '⭐',
-    description: 'Leaders mondiaux • Moats • Innovation',
-    tooltip: 'Les meilleures entreprises mondiales avec avantages compétitifs',
-    color: '#FFC107',
-    mode: 'lexico',
-    coverage_target: [65, 120],
-    metrics: ['perf_3y','volatility_3y','perf_1y','dividend_yield_reg','max_drawdown_3y'],
-    filters: {
-      regions: ['US', 'EUROPE', 'ASIA'],
-      countries: [],
-      sectors: ['Technologie de l\'information', 'Santé', 'Biens de consommation de base', 'Industrie', 'Consommation discrétionnaire']
-    },
-    criteria: [
-      { metric: 'perf_3y', operator: '>=', value: 50, optimal: 60, range: [50, 85], label: 'Perf 3Y ≥ 50%' },
-      { metric: 'volatility_3y', operator: '<=', value: 35, optimal: 33, range: [31, 35], label: 'Volatilité ≤ 35%' },
-      { metric: 'max_drawdown_3y', operator: '<=', value: 42, optimal: 40, range: [38, 42], label: 'Max DD ≤ 42%' },
-      { metric: 'dividend_yield_reg', operator: '>=', value: 0.2, optimal: 0.4, range: [0.2, 2.0], label: 'Dividende ≥ 0.2%' }
-    ],
-    defaults: { perf_3y: 60, volatility_3y: 33, max_drawdown_3y: 40, dividend_yield_reg: 0.4 },
-    alerts: [
-      'Biais large caps “quality” (US/World).',
-      'Vol/DD plus permissifs peuvent faire entrer des quasi-growth à bêta plus élevé.'
-    ],
-    tradeoffs: [
-      'Si 0 résultat persiste: perf_3y→45 puis Vol→36 (garder MaxDD≤44).',
-      'Éviter perf_3y < 45% pour préserver le caractère “best-of premium”.'
+quality_premium: {
+  id: 'quality_premium',
+  label: '⭐ Premium',
+  shortLabel: 'Premium',
+  icon: '⭐',
+  description: 'Leaders mondiaux • Moats • Innovation',
+  tooltip: 'Les meilleures entreprises mondiales avec avantages compétitifs',
+  color: '#FFC107',
+  mode: 'lexico',
+  coverage_target: [70, 125], // +légère marge
+  metrics: ['perf_3y','volatility_3y','perf_1y','dividend_yield_reg','max_drawdown_3y'],
+  filters: {
+    regions: ['US', 'EUROPE', 'ASIA'],
+    countries: [],
+    sectors: [
+      'Technologie de l\'information',
+      'Santé',
+      'Biens de consommation de base',
+      'Industrie',
+      'Consommation discrétionnaire',
+      'La communication' // + méga-caps quality (Alphabet/Meta/Telecom leaders)
     ]
   },
-
+  criteria: [
+    { metric: 'perf_3y',            operator: '>=', value: 45, optimal: 55, range: [45, 85], label: 'Perf 3Y ≥ 45%' },
+    { metric: 'volatility_3y',      operator: '<=', value: 36, optimal: 34, range: [32, 36], label: 'Volatilité ≤ 36%' },
+    { metric: 'max_drawdown_3y',    operator: '<=', value: 44, optimal: 42, range: [40, 44], label: 'Max DD ≤ 44%' },
+    { metric: 'dividend_yield_reg', operator: '>=', value: 0.1, optimal: 0.4, range: [0.1, 2.0], label: 'Dividende ≥ 0.1%' }
+  ],
+  defaults: { perf_3y: 55, volatility_3y: 34, max_drawdown_3y: 42, dividend_yield_reg: 0.4 },
+  alerts: [
+    'Biais large caps “quality” (US/World).',
+    'Vol/DD plus permissifs peuvent faire entrer des quasi-growth à bêta plus élevé.'
+  ],
+  tradeoffs: [
+    'Si 0 résultat persiste: perf_3y→42 puis Vol→37 (garder MaxDD≤45).',
+    'Éviter perf_3y < 42% pour préserver le caractère “best-of premium”.'
+  ]
+},
   momentum_trend: {
     id: 'momentum_trend',
     label: '📊 Momentum',
