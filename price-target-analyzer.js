@@ -240,7 +240,7 @@ _generateRecommendation(gap, gapPercent, targetEnrichment, regimeNom, infeasible
   };
 }
 
-_generateRPRecommendation(gap, gapPercent, loyerMarche) {
+_generateRPRecommendation(gap, gapPercent /*, loyerMarche */) {
   if (Math.abs(gapPercent) < 2) {
     return {
       type: 'neutral',
@@ -260,24 +260,31 @@ _generateRPRecommendation(gap, gapPercent, loyerMarche) {
     icon: '✅',
     title: 'Excellent prix'
   };
-}{ type:'success', icon:'✅', title:'Excellent prix' };
-    }
+}
 
-    _safeDiv(a,b){ return (b && isFinite(b) && b!==0) ? (a/b) : 0; }
+_safeDiv(a, b) {
+  return (b && isFinite(b) && b !== 0) ? (a / b) : 0;
+}
 
-    _getCacheKey(baseInput, target, opts) {
-      const params = this.analyzer.getAllAdvancedParams?.() || {};
-      const price = Number(baseInput.price ?? baseInput.prixBien ?? 0);
-      return JSON.stringify({
-        price, apport: baseInput.apport, loyer: baseInput.loyerHC,
-        taux: baseInput.loanRate, duree: baseInput.loanDuration,
-        target, regime: opts.regimeId,
-        taxeFonciere: params.taxeFonciere, vacance: params.vacanceLocative
-      });
-    }
+_getCacheKey(baseInput, target, opts) {
+  const params = this.analyzer.getAllAdvancedParams?.() || {};
+  const price = Number(baseInput.price ?? baseInput.prixBien ?? 0);
+  return JSON.stringify({
+    price,
+    apport: baseInput.apport,
+    loyer: baseInput.loyerHC,
+    taux: baseInput.loanRate,
+    duree: baseInput.loanDuration,
+    target,
+    regime: opts.regimeId,
+    taxeFonciere: params.taxeFonciere,
+    vacanceLocative: params.vacanceLocative
+  });
+}
 
-    clearCache(){ this.cache.clear(); }
-  }
+clearCache() { this.cache.clear(); }
+}
 
-  window.PriceTargetAnalyzer = PriceTargetAnalyzer;
+// Exposition globale
+window.PriceTargetAnalyzer = PriceTargetAnalyzer;
 })();
