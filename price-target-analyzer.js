@@ -324,6 +324,176 @@ class PriceTargetAnalyzer {
   clearCache() {
     this.cache.clear();
   }
+  // ===========================================================
+// === RP (Résidence Principale) : prix d’équilibre vs loyer ===
+// ===========================================================
+
+calculateRPPriceEquilibrium(baseInput, opts = {}) {
+  const params = this._buildRPParams(baseInput, opts);
+  const targetResult = this._solveRPPrice(baseInput, params);
+
+  const currentPrice = Number(baseInput.price ?? baseInput.prixBien ?? 0);
+  const currentCost  = this._computeRPCostAtPrice(baseInput, currentPrice, params);
+
+  const gap        = currentPrice - targetResult.price;
+  const gapPercent = this._safeDiv(gap, currentPrice) * 100;
+
+  return {
+    // Prix
+    currentPrice: Math.round(currentPrice),
+    priceTarget:  Math.round(targetResult.price),
+    gap:          Math.round(gap),
+    gapPercent:   Math.round(gapPercent * 100) / 100,
+
+    // Coûts mensuels (net = après part conjoint)
+    currentMonthlyCost: Math.round(currentCost.net),
+    targetMonthlyCost:  0, // par construction : équilibre
+
+    // Métadonnées
+    regimeUsed: 'Résidence Principale',
+    regimeId:   'rp',
+    infeasible: !!targetResult.infeasible,
+
+    // Détails (mensuels)
+    targetBreakdown: {
+      mensualite:        Math.round(targetResult.mensualite),
+      chargesMensuelles: Math.round(targetResult.charges),
+      loyerMarche:       Math.round(params.loyerMarche),
+      partnerContribution: Math.round(params.partner)
+    },
+    currentBreakdown: {
+      mensualite:        Math.round(currentCost.mensualite),
+      chargesMensuelles: Math.round(currentCost.charges),
+      loyerMarche:       Math.round(params.loyerMarche),
+      partnerContribution: Math.round(params.partner)
+    },
+
+    // Reco
+    recommendation: this._generateRPRecommendation(gap, gapPercent, params.loyerMarche)
+  };
+}
+
+_buildRPParams(baseInput, opts) {
+  const p = v => Number(v) || 0;
+
+  const surface        = p(baseInput.surface);
+  const loyerM2Marche  = p(baseInput?.ville?.loyer_m2);
+  const loyerMarcheCal = (loyerM2Marche > 0 && surface > 0)
+    ? loyerM2Marche * surface
+    : (p(baseInput.loyerHC) + p(baseInput.monthlyCharges ?? baseInput.charges));
+
+  const loyerMarche = p(opts.loyerMarche) || loyerMarcheCal;
+
+  return {
+    // Référence marché et conjoint
+    loyerMarche,
+    partner: p(opts.partnerContribution ?? baseInput.partnerContribution),
+
+    // Charges propriétaire (mensualisées quand nécessaire)
+    taxeFonciere:      p(baseInput.taxeFonciere) / 12,
+    coproNonRecup:     p(baseInput.chargesCoproNonRecup),
+    entretien:         p(baseInput.entretienAnnuel) / 12,
+    pno:               p(baseInput.assurancePNO),
+
+    // Pour cohérence/fallback
+    chargesRecup:      p(baseInput.monthlyCharges ?? baseInput.charges)
+  };
+}
+
+_computeRPCostAtPrice(baseInput, price, params) {
+  const adv = this.analyzer.getAllAdvancedParams?.() || {};
+  const inputAtPrice = this.analyzer._buildInputForPrice(baseInput, price, adv);
+
+  const mensualite = Number(inputAtPrice.monthlyPayment ?? 0);
+
+  // NB: en RP, les charges récupérables locatives n’existent pas côté proprio,
+  // mais si tu souhaites conserver un terme fixe mensuel (ex: charges de copro non récup),
+  // on les agrège ici.
+  const charges =
+    Number(params.taxeFonciere) +
+    Number(params.coproNonRecup) +
+    Number(params.entretien) +
+    Number(params.pno);
+
+  const brut = mensualite + charges;
+  const net  = Math.max(0, brut - Number(params.partner || 0));
+
+  return { mensualite, charges, brut, net };
+}
+
+_solveRPPrice(baseInput, params) {
+  const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
+
+  // Bornes adaptatives
+  let lo = Math.max(1, p0 ? 0.3 * p0 : 50_000);
+  let hi = p0 ? 2.0 * p0 : 800_000;
+
+  const maxIter = 60;
+  const tol     = 1; // € / mois
+
+  // Test bas : si même très bas, le proprio reste plus cher que louer → infeasible
+  const costLo = this._computeRPCostAtPrice(baseInput, lo, params);
+  if (costLo.net > 0) {
+    return {
+      price:       lo,
+      mensualite:  costLo.mensualite,
+      charges:     costLo.charges,
+      net:         costLo.net,
+      infeasible:  true
+    };
+  }
+
+  let best = null;
+
+  for (let i = 0; i < maxIter; i++) {
+    const mid  = (lo + hi) / 2;
+    const cost = this._computeRPCostAtPrice(baseInput, mid, params);
+
+    best = { price: mid, mensualite: cost.mensualite, charges: cost.charges, net: cost.net };
+
+    // Équilibre atteint ?
+    if (Math.abs(cost.net) <= tol) break;
+
+    // Si net > 0 ⇒ coût proprio > loyer à deux ⇒ il faut baisser le prix ⇒ hi = mid
+    if (cost.net > 0) hi = mid; else lo = mid;
+  }
+
+  return best;
+}
+
+_generateRPRecommendation(gap, gapPercent, loyerMarche) {
+  const fmt = (v) => new Intl.NumberFormat('fr-FR', {
+    style: 'currency', currency: 'EUR', minimumFractionDigits: 0
+  }).format(v);
+
+  if (Math.abs(gapPercent) < 2) {
+    return {
+      type: 'neutral', icon: '⚖️', title: 'Prix à l’équilibre',
+      message: `Le prix actuel correspond au seuil où vous ne perdez ni ne gagnez par rapport à la location (loyer marché : ${fmt(loyerMarche)}/mois).`,
+      action: 'Prix acceptable'
+    };
+  }
+
+  if (gap > 0) {
+    if (gapPercent > 15) {
+      return {
+        type: 'danger', icon: '🚨', title: 'Prix trop élevé',
+        message: `Une baisse d’environ ${Math.round(gapPercent)}% est nécessaire pour que l’achat soit plus intéressant que la location.`,
+        action: 'Renégocier fortement'
+      };
+    }
+    return {
+      type: 'warning', icon: '⚠️', title: 'Marge de négociation',
+      message: `Une réduction d’environ ${Math.round(gapPercent)}% améliorerait votre situation par rapport à la location.`,
+      action: 'Négocier'
+    };
+  }
+
+  return {
+    type: 'success', icon: '✅', title: 'Excellent prix',
+    message: `Vous êtes ~${Math.abs(Math.round(gapPercent))}% sous le prix d’équilibre : l’achat est plus avantageux que la location dès maintenant.`,
+    action: 'Opportunité à saisir'
+  };
 }
 
 // Export
