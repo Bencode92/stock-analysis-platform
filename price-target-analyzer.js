@@ -207,35 +207,60 @@
       return best;
     }
 
-    _generateRecommendation(gap, gapPercent, targetEnrichment, regimeNom, infeasible) {
-      if (infeasible) {
-        return { type:'danger', icon:'🚨', title:'Cible inatteignable',
-          message:`Avec <strong>${regimeNom}</strong>, aucun prix n'atteint l'équilibre.` };
-      }
-      if (Math.abs(gapPercent) < 1) {
-        return { type:'neutral', icon:'⚖️', title:'Prix à l'équilibre',
-          message:`Prix actuel au seuil d'enrichissement.` };
-      }
-      if (gap > 0) {
-        return { type: gapPercent > 20 ? 'danger' : 'warning',
-          icon: gapPercent > 20 ? '🚨' : '⚠️',
-          title: gapPercent > 20 ? 'Prix trop élevé' : 'Marge de négociation',
-          message: `Baisse d'environ ${Math.round(gapPercent)}% nécessaire.` };
-      }
-      return { type:'success', icon:'✅', title:'Excellent prix',
-        message:`${Math.abs(Math.round(gapPercent))}% sous le prix d'équilibre.` };
-    }
+_generateRecommendation(gap, gapPercent, targetEnrichment, regimeNom, infeasible) {
+  if (infeasible) {
+    return {
+      type: 'danger',
+      icon: '🚨',
+      title: 'Cible inatteignable',
+      message: `Avec <strong>${regimeNom}</strong>, aucun prix n'atteint l'équilibre.`
+    };
+  }
+  if (Math.abs(gapPercent) < 1) {
+    return {
+      type: 'neutral',
+      icon: '⚖️',
+      title: `Prix à l'équilibre`,
+      message: `Prix actuel au seuil d'enrichissement.`
+    };
+  }
+  if (gap > 0) {
+    return {
+      type: gapPercent > 20 ? 'danger' : 'warning',
+      icon: gapPercent > 20 ? '🚨' : '⚠️',
+      title: gapPercent > 20 ? 'Prix trop élevé' : 'Marge de négociation',
+      message: `Baisse d'environ ${Math.round(gapPercent)}% nécessaire.`
+    };
+  }
+  return {
+    type: 'success',
+    icon: '✅',
+    title: 'Excellent prix',
+    message: `${Math.abs(Math.round(gapPercent))}% sous le prix d'équilibre.`
+  };
+}
 
-    _generateRPRecommendation(gap, gapPercent, loyerMarche) {
-      if (Math.abs(gapPercent) < 2) {
-        return { type:'neutral', icon:'⚖️', title:'Prix à l'équilibre' };
-      }
-      if (gap > 0) {
-        return { type: gapPercent > 15 ? 'danger' : 'warning',
-          icon: gapPercent > 15 ? '🚨' : '⚠️',
-          title: gapPercent > 15 ? 'Prix trop élevé' : 'Marge de négociation' };
-      }
-      return { type:'success', icon:'✅', title:'Excellent prix' };
+_generateRPRecommendation(gap, gapPercent, loyerMarche) {
+  if (Math.abs(gapPercent) < 2) {
+    return {
+      type: 'neutral',
+      icon: '⚖️',
+      title: `Prix à l'équilibre`
+    };
+  }
+  if (gap > 0) {
+    return {
+      type: gapPercent > 15 ? 'danger' : 'warning',
+      icon: gapPercent > 15 ? '🚨' : '⚠️',
+      title: gapPercent > 15 ? 'Prix trop élevé' : 'Marge de négociation'
+    };
+  }
+  return {
+    type: 'success',
+    icon: '✅',
+    title: 'Excellent prix'
+  };
+}{ type:'success', icon:'✅', title:'Excellent prix' };
     }
 
     _safeDiv(a,b){ return (b && isFinite(b) && b!==0) ? (a/b) : 0; }
