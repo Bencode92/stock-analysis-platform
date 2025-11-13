@@ -1802,6 +1802,22 @@ td.neutral {
 
 <!-- Section 3 : Optimisation fiscale -->
 <div class="market-analysis-section" id="section-3">
+    <!-- Message d'intro -->
+    <div style="text-align:center; padding:20px; 
+                background:rgba(0,191,255,0.05); 
+                border:2px solid rgba(0,191,255,0.2);
+                border-radius:15px; margin-bottom:30px;">
+        <p style="color:#94a3b8; font-size:1.1em; margin:0;">
+            Vous avez choisi le régime 
+            <strong style="color:#00bfff" id="regime-display-name">—</strong>. 
+            Voici le prix maximum pour vous enrichir avec ce régime :
+        </p>
+    </div>
+    
+    <!-- ════ PRICE TARGET WIDGET ════ -->
+    <div id="price-target-widget" style="display:none;"></div>
+    <!-- ═══════════════════════════════ -->
+    
     <!-- Bouton retour -->
     <div class="continue-section" style="margin-bottom: 60px;">
         <button class="btn btn-outline" onclick="goToStep(2)">
@@ -1930,6 +1946,9 @@ function drawBuyRent () {
     <script src="./immo-simulation.js"></script>
     <script src="./fiscal-comparison-enhanced.js"></script>
     <script src="./market-fiscal-analysis.js"></script>
+    <link rel="stylesheet" href="css/price-target-styles.css">
+    <script src="./price-target-analyzer.js"></script>
+    <script src="./price-target-ui.js"></script>
     
     <script>
         // Variables globales
