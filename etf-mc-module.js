@@ -222,12 +222,14 @@ const PRESETS_ETF = {
     mode: 'balanced',
     baseFilter: 'all',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['ter','aum','volatility','return_1y','return_ytd'],
     sectors: [],
     fundTypes: ['World Large Stock','Large Blend','Foreign Large Blend'],
+    // Optimum: TER ~0.17, AUM ≥ 8bn, Vol ≤ 20–22, 1Y ≥ -10
     customFilters: [
-      { metric:'ter', operator:'<=', value:0.15 },
-      { metric:'aum', operator:'>=', value:5000 },
+      { metric:'ter', operator:'<=', value:0.20 },
+      { metric:'aum', operator:'>=', value:8000 },     // en millions
       { metric:'volatility', operator:'<=', value:22 },
       { metric:'return_1y', operator:'>=', value:-10 }
     ]
@@ -241,15 +243,17 @@ const PRESETS_ETF = {
     mode: 'lexico',
     baseFilter: 'equity',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['dividend_yield','volatility','ter','aum','return_1y'],
     sectors: ['Utilities','Energy','Consumer Defensive','Real Estate','Financial Services'],
     fundTypes: ['Dividend','High Dividend Yield','Equity Income','Large Value','Derivative Income'],
+    // Optimum: DY ~4.0, Vol ≤ 27–30, TER ≤ 0.35–0.60, AUM ≥ 2bn
     customFilters: [
-      { metric:'dividend_yield', operator:'>=', value:3.0 },
+      { metric:'dividend_yield', operator:'>=', value:3.5 },
       { metric:'volatility', operator:'<=', value:30 },
       { metric:'ter', operator:'<=', value:0.60 },
-      { metric:'aum', operator:'>=', value:1000 },
-      { metric:'return_1y', operator:'>=', value:-15 }
+      { metric:'aum', operator:'>=', value:2000 },
+      { metric:'return_1y', operator:'>=', value:-10 }
     ]
   },
 
@@ -261,14 +265,16 @@ const PRESETS_ETF = {
     mode: 'lexico',
     baseFilter: 'equity',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['return_ytd','return_1y','volatility','ter','aum'],
     sectors: ['Technology','Communication Services','Healthcare'],
     fundTypes: ['Technology','Large Growth','Mid-Cap Growth','Innovation'],
+    // Optimum: YTD ≥ 20, Vol ≤ 32–35, TER ≤ 0.60, AUM ≥ 1.5bn
     customFilters: [
-      { metric:'return_ytd', operator:'>=', value:15 },
+      { metric:'return_ytd', operator:'>=', value:20 },
       { metric:'volatility', operator:'<=', value:35 },
       { metric:'ter', operator:'<=', value:0.60 },
-      { metric:'aum', operator:'>=', value:1000 }
+      { metric:'aum', operator:'>=', value:1500 }
     ]
   },
 
@@ -280,14 +286,16 @@ const PRESETS_ETF = {
     mode: 'balanced',
     baseFilter: 'bonds',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['volatility','ter','aum','yield_net','return_ytd'],
     sectors: [],
     fundTypes: ['Intermediate Core Bond','Government Bond','Corporate Bond','Target Maturity'],
+    // Optimum: Vol ~9–10, TER ≤ 0.15–0.20, AUM ≥ 2bn, Yield_net ≥ 3.0 (peut être 2.5 si couverture faible)
     customFilters: [
       { metric:'volatility', operator:'<=', value:12 },
-      { metric:'ter', operator:'<=', value:0.25 },
-      { metric:'aum', operator:'>=', value:1000 },
-      { metric:'yield_net', operator:'>=', value:2.0 }
+      { metric:'ter', operator:'<=', value:0.20 },
+      { metric:'aum', operator:'>=', value:2000 },
+      { metric:'yield_net', operator:'>=', value:2.5 }
     ]
   },
 
@@ -299,14 +307,16 @@ const PRESETS_ETF = {
     mode: 'balanced',
     baseFilter: 'equity',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['ter','aum','volatility','return_ytd','return_1y'],
     sectors: [],
     fundTypes: ['Emerging Markets','Diversified Emerging Mkts','Foreign Large Blend','China Region'],
+    // Optimum: TER ~0.28, AUM ≥ 2bn, Vol ≤ 30, YTD ≥ 8
     customFilters: [
-      { metric:'ter', operator:'<=', value:0.35 },
-      { metric:'aum', operator:'>=', value:1000 },
+      { metric:'ter', operator:'<=', value:0.30 },
+      { metric:'aum', operator:'>=', value:2000 },
       { metric:'volatility', operator:'<=', value:30 },
-      { metric:'return_ytd', operator:'>=', value:5 }
+      { metric:'return_ytd', operator:'>=', value:8 }
     ]
   },
 
@@ -318,14 +328,16 @@ const PRESETS_ETF = {
     mode: 'lexico',
     baseFilter: 'equity',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['volatility','ter','aum','return_1y','dividend_yield'],
     sectors: ['Financial Services','Industrial','Consumer Defensive','Energy'],
     fundTypes: ['Large Value','Quality','Large Blend','Equity Income'],
+    // Optimum: Vol ~24, TER ≤ 0.25–0.30, AUM ≥ 1.5bn, DY ≥ 2.5
     customFilters: [
       { metric:'volatility', operator:'<=', value:26 },
       { metric:'ter', operator:'<=', value:0.30 },
-      { metric:'aum', operator:'>=', value:1000 },
-      { metric:'dividend_yield', operator:'>=', value:2.0 }
+      { metric:'aum', operator:'>=', value:1500 },
+      { metric:'dividend_yield', operator:'>=', value:2.5 }
     ]
   },
 
@@ -337,13 +349,15 @@ const PRESETS_ETF = {
     mode: 'balanced',
     baseFilter: 'equity',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['volatility','ter','aum','return_1y','return_ytd'],
     sectors: [],
     fundTypes: ['Low Volatility','Minimum Volatility','Large Blend','World Large Stock'],
+    // Optimum: Vol ~16, TER ≤ 0.25–0.30, AUM ≥ 1.2bn
     customFilters: [
-      { metric:'volatility', operator:'<=', value:18 },
+      { metric:'volatility', operator:'<=', value:16 },
       { metric:'ter', operator:'<=', value:0.30 },
-      { metric:'aum', operator:'>=', value:1000 }
+      { metric:'aum', operator:'>=', value:1200 }
     ]
   },
 
@@ -355,14 +369,16 @@ const PRESETS_ETF = {
     mode: 'lexico',
     baseFilter: 'equity',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['return_1y','ter','volatility','aum','return_ytd'],
     sectors: [],
     fundTypes: ['Mid-Cap Blend','Small Blend','Small/Mid Growth','Mid-Cap Growth'],
+    // Optimum: Vol 24–38, TER ≤ 0.45, AUM ≥ 0.8bn
     customFilters: [
       { metric:'volatility', operator:'>=', value:24 },
       { metric:'volatility', operator:'<=', value:38 },
       { metric:'ter', operator:'<=', value:0.45 },
-      { metric:'aum', operator:'>=', value:500 }
+      { metric:'aum', operator:'>=', value:800 }
     ]
   },
 
@@ -374,13 +390,16 @@ const PRESETS_ETF = {
     mode: 'lexico',
     baseFilter: 'bonds',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['volatility','ter','aum','yield_net','return_ytd'],
     sectors: [],
     fundTypes: ['Ultrashort Bond','Short Government','Short Corporate','Money Market'],
+    // Optimum: Vol ≤ 3, TER ≤ 0.12–0.15, AUM ≥ 0.8bn
     customFilters: [
-      { metric:'volatility', operator:'<=', value:5 },
-      { metric:'ter', operator:'<=', value:0.20 },
-      { metric:'aum', operator:'>=', value:500 }
+      { metric:'volatility', operator:'<=', value:3 },
+      { metric:'ter', operator:'<=', value:0.15 },
+      { metric:'aum', operator:'>=', value:800 }
+      // Optionnel: { metric:'yield_net', operator:'>=', value:2.0 } selon cycle de taux
     ]
   },
 
@@ -392,12 +411,14 @@ const PRESETS_ETF = {
     mode: 'balanced',
     baseFilter: 'all',
     excludeLeveraged: true,
+    ucits: true,
     metrics: ['volatility','ter','aum','return_1y','return_ytd'],
     sectors: ['Energy','Basic Materials','Real Estate'],
     fundTypes: ['Inflation-Protected Bond','Commodities Focused','Broad Commodities','TIPS'],
+    // Optimum: TER ≤ 0.30–0.35, AUM ≥ 0.8bn, Vol 10–25
     customFilters: [
       { metric:'ter', operator:'<=', value:0.35 },
-      { metric:'aum', operator:'>=', value:500 },
+      { metric:'aum', operator:'>=', value:800 },
       { metric:'volatility', operator:'>=', value:10 },
       { metric:'volatility', operator:'<=', value:25 }
     ]
