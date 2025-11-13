@@ -128,8 +128,8 @@ class PriceTargetAnalyzer {
     let lo = Math.max(1, p0 * 0.3);
     let hi = Math.max(2, p0 * 2.0);
 
-    const maxIter = Number(opts.maxIter ?? 50);
-    const tol = Number(opts.tol ?? 10);
+const maxIter = Number(opts.maxIter ?? 80);   // Plus d'itérations
+const tol = Number(opts.tol ?? 1);            // Tolérance à 1€ au lieu de 10€
 
     // Test infaisabilité aux bornes
     const eLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId).enrichment;
