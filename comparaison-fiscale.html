@@ -2020,11 +2020,7 @@ document.querySelectorAll('input[name="regime-actuel"]').forEach((r) => {
   });
 });
 
-// Bouton "meilleur cash-flow" → bascule en mode meilleur et relance l'analyse
-document.getElementById('btn-best-cashflow')?.addEventListener('click', async () => {
-  window.analyzer?.setPreferBest?.(true);
-  await proceedToFiscalAnalysis();
-});
+
   // Gestion des paramètres avancés
   document.getElementById('btn-advanced-toggle').addEventListener('click', function () {
     const advancedParams = document.getElementById('advanced-params');
