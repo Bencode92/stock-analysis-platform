@@ -82,17 +82,19 @@ class PriceTargetUI {
               </div>
             </div>
 
-            <!-- Prix cible -->
-            <div class="price-box target">
-              <div class="price-box-label">Prix cible max</div>
-              <div class="price-box-amount">${fmt(r.priceTarget)}</div>
-              <div class="price-box-detail">
-                Enrichissement: 
-                <span style="color:#22c55e">
-                  ${sign(r.targetEnrichment)}${fmt(abs(r.targetEnrichment))}/an
-                </span>
-              </div>
-            </div>
+<!-- Prix cible -->
+<div class="price-box target">
+  <div class="price-box-label">Prix cible (fourchette)</div>
+  <div class="price-box-amount">
+    ${fmt(r.priceTarget - 100)} - ${fmt(r.priceTarget + 100)}
+  </div>
+  <div class="price-box-detail">
+    Enrichissement: 
+    <span style="color:#22c55e">
+      ≈ ${sign(r.targetEnrichment)}${fmt(abs(r.targetEnrichment))}/an
+    </span>
+  </div>
+</div>
           </div>
 
           <!-- Impact breakdown -->
