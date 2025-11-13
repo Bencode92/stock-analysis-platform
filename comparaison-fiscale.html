@@ -2777,6 +2777,93 @@ resultsDiv.innerHTML = html;
         };
 
         console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
+                // ═══════════════════════════════════════════════════════
+        // 🎯 PRICE TARGET ANALYZER
+        // ═══════════════════════════════════════════════════════
+        setTimeout(async () => {
+            try {
+                console.log('🎯 Début calcul prix cible...');
+                
+                // Vérifications préalables
+                if (!analyzer || !analyzer.prepareFiscalData) {
+                    console.error('❌ Analyzer non disponible');
+                    return;
+                }
+                
+                if (!propertyData) {
+                    console.error('❌ propertyData manquant');
+                    return;
+                }
+                
+                // Récupérer le régime choisi
+                const regimeChoisi = propertyData.regimeActuel || 
+                                   document.querySelector('input[name="regime-actuel"]:checked')?.value || 
+                                   'nu_micro';
+                
+                console.log('   Régime sélectionné:', regimeChoisi);
+                
+                // Afficher le nom du régime dans le message d'intro
+                const regimeDisplayName = document.getElementById('regime-display-name');
+                if (regimeDisplayName) {
+                    const registry = analyzer.getRegimeRegistry();
+                    const key = analyzer.normalizeRegimeKey({ id: regimeChoisi });
+                    const nomRegime = registry[key]?.nom || regimeChoisi;
+                    regimeDisplayName.textContent = nomRegime;
+                    console.log('   Nom affiché:', nomRegime);
+                }
+                
+                // Vérifier que le conteneur existe
+                const widgetContainer = document.getElementById('price-target-widget');
+                if (!widgetContainer) {
+                    console.error('❌ Conteneur #price-target-widget introuvable');
+                    return;
+                }
+                
+                // Créer les instances
+                const priceTargetAnalyzer = new PriceTargetAnalyzer(analyzer);
+                const priceTargetUI = new PriceTargetUI(priceTargetAnalyzer, 'price-target-widget');
+                
+                // Afficher le loading
+                priceTargetUI.showLoading();
+                console.log('   Loading affiché');
+                
+                // Petit délai pour que le DOM soit prêt
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Préparer les données
+                const fiscalData = analyzer.prepareFiscalData(propertyData);
+                console.log('   Données fiscales préparées');
+                
+                // Calculer le prix cible (enrichissement = 0)
+                const priceResult = priceTargetAnalyzer.calculatePriceTarget(fiscalData, 0, {
+                    regimeId: regimeChoisi
+                });
+                
+                console.log('   Prix cible calculé:', priceResult.priceTarget, '€');
+                console.log('   Gap:', priceResult.gap, '€');
+                
+                // Afficher le résultat
+                priceTargetUI.render(priceResult);
+                
+                // Stocker pour debug
+                window.lastPriceTarget = priceResult;
+                
+                console.log('✅ Prix cible affiché avec succès');
+                
+            } catch (priceError) {
+                console.error('❌ Erreur calcul prix cible:', priceError);
+                console.error('Stack:', priceError.stack);
+                
+                // Afficher une erreur dans le widget
+                try {
+                    const priceTargetUI = new PriceTargetUI(null, 'price-target-widget');
+                    priceTargetUI.showError('Impossible de calculer le prix cible. Vérifiez vos données.');
+                } catch (e) {
+                    console.error('❌ Impossible d\'afficher l\'erreur:', e);
+                }
+            }
+        }, 500); // Délai de 500ms pour s'assurer que tout est bien chargé
+        // ═══════════════════════════════════════════════════════
 
     } catch (error) {
         console.error('Erreur lors de l\'analyse fiscale:', error);
