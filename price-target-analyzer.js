@@ -31,6 +31,10 @@
         regimeUsed: targetResult.regimeNom,
         regimeId: targetResult.regimeId,
         infeasible: !!targetResult.infeasible,
+
+        // 🔹 AJOUT : exposer l’apport pour l’UI
+        apport: Number(baseInput.apport ?? 0),
+
         targetBreakdown: {
           cashflow: Math.round(targetResult.cashflow),
           capital: Math.round(targetResult.capital),
