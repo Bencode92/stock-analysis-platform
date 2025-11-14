@@ -1880,18 +1880,18 @@ const SORT_PROFILES = {
     ]
   },
 
-  defensif: {
-    mode: 'priorities',
-    smartTolerance: true,
-    priorities: [
-      { metric: 'volatility_3y',      direction: 'asc'  },
-      { metric: 'max_drawdown_3y',    direction: 'asc'  },
-      { metric: 'payout_ratio',       direction: 'asc'  },
-      { metric: 'dividend_yield_reg', direction: 'desc' },
-      { metric: 'perf_1y',            direction: 'desc' },
-      { metric: 'perf_3y',            direction: 'desc' }
-    ]
-  },
+ defensif: {
+  mode: 'priorities',
+  smartTolerance: true,
+  priorities: [
+    { metric: 'volatility_3y',      direction: 'asc'  },  // 1. Stabilité
+    { metric: 'max_drawdown_3y',    direction: 'asc'  },  // 2. Protection capital
+    { metric: 'dividend_yield_reg', direction: 'desc' },  // 3. Rendement (chercher ≥2.5%)
+    { metric: 'payout_ratio',       direction: 'asc'  },  // 4. Soutenabilité (vérifier ≤75%)
+    { metric: 'perf_1y',            direction: 'desc' },  // 5. Performance court terme
+    { metric: 'perf_3y',            direction: 'desc' }   // 6. Performance long terme
+  ]
+},
 
   agressif: {
     mode: 'priorities',
