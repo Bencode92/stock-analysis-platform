@@ -2011,7 +2011,6 @@ const PRESETS = {
     ],
     defaults: { volatility_3y:24, max_drawdown_3y:32, dividend_yield_reg:2.5, payout_ratio:75, perf_1y:2, perf_3y:10 },
     alerts: ['Biais défensif (utilities/staples). Payout bas peut exclure banques à dividendes variables.'],
-    tradeoffs: ['Si couverture <60: d'abord MaxDD→35 puis Vol→26. Ne pas descendre le dividend_yield_reg <2%.']
   },
 
   rendement: {
@@ -2037,7 +2036,6 @@ const PRESETS = {
     ],
     defaults: { dividend_yield_reg:4.2, payout_ratio:80, max_drawdown_3y:42, volatility_3y:32, perf_1y:-2 },
     alerts: ['Risque de "yield trap": vérifier FCF yield et ND/EBITDA.'],
-    tradeoffs: ['Si couverture faible: baisser d'abord le yield→3.8% puis relever payout→85%.']
   },
 
   agressif: {
@@ -2163,7 +2161,6 @@ const PRESETS = {
     ],
     defaults: { perf_1y:15, perf_3m:6, perf_1m:1, volatility_3y:38, max_drawdown_3y:52 },
     alerts: ['Risque de renversement brutal; concentration factorielle.'],
-    tradeoffs: ['Si whipsaw: relever perf_3m/1m d'1 pt; si faible couverture: abaisser perf_1m→0.']
   },
 
   low_volatility: {
