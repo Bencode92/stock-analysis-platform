@@ -32,7 +32,7 @@
         regimeId: targetResult.regimeId,
         infeasible: !!targetResult.infeasible,
 
-        // 🔹 AJOUT : exposer l’apport pour l’UI
+        // 🔹 AJOUT : exposer l'apport pour l'UI
         apport: Number(baseInput.apport ?? 0),
 
         targetBreakdown: {
@@ -153,23 +153,52 @@
       const gap = currentPrice - targetResult.price;
       const gapPercent = this._safeDiv(gap, currentPrice) * 100;
 
+      // ✅ FIX : Calculer l'enrichissement RP (économie vs location)
+      // Enrichissement RP = ce que vous économisez par rapport à louer
+      const loyerMarcheAnnuel = params.loyerMarche * 12;
+      const coutPossessionAnnuel = currentCost.brut * 12;
+      const currentEnrichmentAnnual = loyerMarcheAnnuel - coutPossessionAnnuel;
+      const targetEnrichmentAnnual = 0; // Par définition au prix cible
+
       return {
         currentPrice: Math.round(currentPrice),
         priceTarget: Math.round(targetResult.price),
         gap: Math.round(gap),
         gapPercent: Math.round(gapPercent * 100) / 100,
+        
+        // ✅ FIX : Ajout champs attendus par l'UI
+        currentEnrichment: Math.round(currentEnrichmentAnnual),
+        targetEnrichment: Math.round(targetEnrichmentAnnual),
+        enrichmentGain: Math.round(-currentEnrichmentAnnual), // Gain si on achète au prix cible
+        
         currentMonthlyCost: Math.round(currentCost.net),
         targetMonthlyCost: 0,
         regimeUsed: 'Résidence Principale',
         regimeId: 'rp',
         infeasible: !!targetResult.infeasible,
+
+        // ✅ FIX : Ajout apport pour rendement sur apport
+        apport: Number(baseInput.apport ?? 0),
+        
         targetBreakdown: {
+          // ✅ FIX : Champs compatibles UI
+          cashflow: Math.round(targetEnrichmentAnnual),
+          capital: 0, // Pas de remboursement capital en RP (concept différent)
+          enrichment: Math.round(targetEnrichmentAnnual),
+          
+          // Champs spécifiques RP (gardés pour info)
           mensualite: Math.round(targetResult.mensualite),
           chargesMensuelles: Math.round(targetResult.charges),
           loyerMarche: Math.round(params.loyerMarche),
           partnerContribution: Math.round(params.partner)
         },
         currentBreakdown: {
+          // ✅ FIX : Champs compatibles UI
+          cashflow: Math.round(currentEnrichmentAnnual),
+          capital: 0,
+          enrichment: Math.round(currentEnrichmentAnnual),
+          
+          // Champs spécifiques RP
           mensualite: Math.round(currentCost.mensualite),
           chargesMensuelles: Math.round(currentCost.charges),
           loyerMarche: Math.round(params.loyerMarche),
