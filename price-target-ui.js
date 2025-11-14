@@ -29,19 +29,51 @@ class PriceTargetUI {
   _generateHTML(r) {
     const fmt = (v) => this._formatCurrency(v);
     
-    // ✅ FIX 1 : Déterminer si le prix actuel est bon ou mauvais
-    const isPriceGood = r.gap > 0; // Prix actuel < prix cible = BON
+    // Prix actuel < prix cible = BON
+    const isPriceGood = r.gap > 0;
     const priceStatus = isPriceGood ? 'good' : 'bad';
-    
-    // ✅ FIX 2 : Message clair du gap
+
     const gapMessage = isPriceGood 
       ? `Marge de négociation : ${fmt(Math.abs(r.gap))}`
       : `Surpayé de : ${fmt(Math.abs(r.gap))}`;
-    
+
     const gapPercent = Math.abs(r.gapPercent);
-    
-    // ✅ FIX 3 : Arrondir le prix cible (inutile d'être précis à 100€)
+
+    // Prix cible arrondi pour affichage
     const priceTargetRounded = Math.round(r.priceTarget / 1000) * 1000;
+
+    // HERO KPI : enrichissement annuel au prix actuel
+    const heroKPI = `
+      <div style="
+        text-align:center;
+        padding:24px 0;
+        border-bottom:1px solid rgba(148,163,184,0.15);
+        margin-bottom:24px;
+      ">
+        <div style="
+          font-size:0.85rem;
+          text-transform:uppercase;
+          letter-spacing:0.1em;
+          color:#94a3b8;
+          margin-bottom:8px;
+        ">
+          ${isPriceGood ? '✓ Vous vous enrichissez' : '⚠ Vous vous appauvrissez'}
+        </div>
+        <div style="
+          font-size:3rem;
+          font-weight:900;
+          line-height:1;
+          color:${r.currentEnrichment >= 0 ? '#22c55e' : '#ef4444'};
+          margin-bottom:4px;
+        ">
+          ${r.currentEnrichment >= 0 ? '+' : '−'}${fmt(Math.abs(r.currentEnrichment))}
+          <span style="font-size:1.2rem; opacity:0.7;">/an</span>
+        </div>
+        <div style="font-size:0.9rem; color:#94a3b8;">
+          au prix actuel de ${fmt(r.currentPrice)}
+        </div>
+      </div>
+    `;
 
     return `
       <div class="price-target-container">
@@ -60,11 +92,16 @@ class PriceTargetUI {
             </p>
           </div>
 
-          <!-- Comparaison prix AMÉLIORÉE -->
+          <!-- HERO KPI (enrichissement annuel) -->
+          ${heroKPI}
+
+          <!-- Comparaison prix -->
           <div class="price-comparison-grid">
             <!-- Prix actuel -->
             <div class="price-box current ${priceStatus}">
-              <div class="price-box-label">Prix actuel</div>
+              <div class="price-box-label">
+                ${isPriceGood ? '✓ Prix actuel' : '⚠ Prix actuel'}
+              </div>
               <div class="price-box-amount">${fmt(r.currentPrice)}</div>
               <div class="price-box-detail ${r.currentEnrichment >= 0 ? 'positive' : 'negative'}">
                 Enrichissement : 
@@ -72,7 +109,7 @@ class PriceTargetUI {
               </div>
             </div>
 
-            <!-- Flèche + Gap AMÉLIORÉ -->
+            <!-- Flèche + Gap -->
             <div class="price-arrow">
               <div class="arrow-icon ${isPriceGood ? 'up' : 'down'}">
                 ${isPriceGood ? '↗' : '↘'}
@@ -87,9 +124,9 @@ class PriceTargetUI {
               </div>
             </div>
 
-            <!-- Prix cible SIMPLIFIÉ -->
+            <!-- Prix cible -->
             <div class="price-box target">
-              <div class="price-box-label">Prix d'équilibre</div>
+              <div class="price-box-label">🎯 Prix d'équilibre</div>
               <div class="price-box-amount">
                 ~${fmt(priceTargetRounded)}
               </div>
@@ -99,7 +136,7 @@ class PriceTargetUI {
             </div>
           </div>
 
-          <!-- Impact breakdown REFORMULÉ -->
+          <!-- Impact breakdown -->
           <div class="impact-breakdown">
             <div class="breakdown-title">
               <i class="fas fa-chart-bar"></i>
@@ -265,3 +302,4 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
   window.PriceTargetUI = PriceTargetUI;
 }
+
