@@ -28,6 +28,11 @@ class PriceTargetUI {
 
   _generateHTML(r) {
     const fmt = (v) => this._formatCurrency(v);
+
+    // 🔴 Cas particulier : cible inatteignable
+    if (r.infeasible) {
+      return this._generateInfeasibleHTML(r);
+    }
     
     // ✅ bon prix = prix actuel < prix cible => gap < 0
     const isPriceGood = r.gap < 0;
@@ -177,6 +182,80 @@ class PriceTargetUI {
     `;
   }
 
+  // 🔴 Rendu spécifique quand la cible est inatteignable
+  _generateInfeasibleHTML(r) {
+    const fmt = (v) => this._formatCurrency(v);
+    const isEnriching = r.currentEnrichment >= 0;
+
+    return `
+      <div class="price-target-container">
+        <div class="price-target-card">
+          <!-- Badge danger -->
+          <div class="price-target-badge danger">
+            🚨 Cible inatteignable avec les paramètres actuels
+          </div>
+
+          <!-- Header -->
+          <div class="price-target-header">
+            <h2 class="price-target-title">
+              🎯 Prix d'équilibre impossible à atteindre
+            </h2>
+            <p class="price-target-subtitle">
+              Avec le régime <strong>${r.regimeUsed}</strong>, aucun prix dans la plage testée
+              ne permet d'atteindre votre objectif d'enrichissement.
+            </p>
+          </div>
+
+          <!-- Situation actuelle -->
+          <div style="
+            text-align:center;
+            padding:24px 16px;
+            border-radius:16px;
+            border:1px solid rgba(248,113,113,0.4);
+            background:rgba(248,113,113,0.08);
+            margin-bottom:24px;
+          ">
+            <div style="
+              font-size:0.85rem;
+              text-transform:uppercase;
+              letter-spacing:0.1em;
+              color:#f87171;
+              margin-bottom:8px;
+            ">
+              Situation actuelle
+            </div>
+            <div style="font-size:1rem; color:#94a3b8; margin-bottom:4px;">
+              Prix actuel : <strong>${fmt(r.currentPrice)}</strong>
+            </div>
+            <div style="
+              font-size:2rem;
+              font-weight:800;
+              color:${isEnriching ? '#22c55e' : '#ef4444'};
+            ">
+              ${isEnriching ? '+' : '−'}${fmt(Math.abs(r.currentEnrichment))}
+              <span style="font-size:1rem; opacity:0.7;">/an</span>
+            </div>
+          </div>
+
+          <!-- Pistes d'action -->
+          <div class="recommendation-box danger">
+            <div class="recommendation-icon">💡</div>
+            <div class="recommendation-content">
+              <div class="recommendation-title">Pistes pour rendre le projet viable</div>
+              <div class="recommendation-message">
+                <ul style="margin:8px 0 0 18px; line-height:1.7;">
+                  <li>Revoir le <strong>niveau de loyer</strong> ou le type d'exploitation (meublé, colocation, saisonnier...)</li>
+                  <li>Réduire les <strong>charges récurrentes</strong> (gestion, vacance, travaux, copropriété)</li>
+                  <li>Augmenter votre <strong>apport</strong> pour diminuer la mensualité</li>
+                  <li>Tester un <strong>autre régime fiscal</strong> plus favorable à votre cas</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
   /**
    * ✅ FIX 4 : Breakdown avec messages positifs
@@ -325,4 +404,5 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
   window.PriceTargetUI = PriceTargetUI;
 }
+
 
