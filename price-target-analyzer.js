@@ -83,12 +83,38 @@
       const maxIter = Number(opts.maxIter ?? 80);
       const tol = Number(opts.tol ?? 1);
 
+      // ✅ FIX 1/2 : Test bracketing complet (borne basse)
       const eLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId).enrichment;
       if (eLo + tol < targetEnrichment) {
         const registry = this.analyzer.getRegimeRegistry();
         const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
-        return { price: lo, regimeId: key, regimeNom: registry[key]?.nom || key,
-                 enrichment: eLo, cashflow: 0, capital: 0, infeasible: true };
+        return { 
+          price: lo, 
+          regimeId: key, 
+          regimeNom: registry[key]?.nom || key,
+          enrichment: eLo, 
+          cashflow: 0, 
+          capital: 0, 
+          infeasible: true,
+          reason: 'Prix minimum trop élevé pour atteindre l\'objectif'
+        };
+      }
+
+      // ✅ FIX 2/2 : Test bracketing complet (borne haute)
+      const eHi = this._computeEnrichmentAtPrice(baseInput, hi, regimeId).enrichment;
+      if (eHi > targetEnrichment + tol) {
+        const registry = this.analyzer.getRegimeRegistry();
+        const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
+        return { 
+          price: hi, 
+          regimeId: key, 
+          regimeNom: registry[key]?.nom || key,
+          enrichment: eHi, 
+          cashflow: 0, 
+          capital: 0, 
+          infeasible: true,
+          reason: 'Objectif trop bas - même au prix minimal l\'enrichissement dépasse la cible'
+        };
       }
 
       let price = Math.min(Math.max(p0, lo), hi);
@@ -180,8 +206,13 @@
                     + Number(params.pno);
 
       const brut = mensualite + charges;
-      const net  = Math.max(0, brut - Number(params.partner || 0));
-      return { mensualite, charges, brut, net };
+      
+      // ✅ FIX : Intégration loyerMarche dans le calcul de l'équilibre
+      // Objectif économique : coût_possession = loyer_marché
+      // (Au lieu de : coût_net = 0, ce qui n'a pas de sens économique)
+      const net  = brut - Number(params.partner || 0) - Number(params.loyerMarche || 0);
+      
+      return { mensualite, charges, brut, net, loyerMarche: params.loyerMarche };
     }
 
     _solveRPPrice(baseInput, params) {
