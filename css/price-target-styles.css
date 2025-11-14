@@ -24,8 +24,9 @@
 }
 
 .price-target-card {
-  background: linear-gradient(135deg, 
-    rgba(0, 191, 255, 0.1), 
+  background: linear-gradient(
+    135deg,
+    rgba(0, 191, 255, 0.1),
     rgba(0, 153, 204, 0.05)
   );
   border: 2px solid rgba(0, 191, 255, 0.3);
@@ -124,6 +125,7 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
+/* État "par défaut" (avant logique good/bad) */
 .price-box.current {
   border-color: rgba(239, 68, 68, 0.4);
   background: rgba(239, 68, 68, 0.08);
@@ -179,8 +181,15 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.1); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
 }
 
 .arrow-label {
@@ -407,7 +416,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Highlight au hover */
@@ -416,4 +427,98 @@
   border-color: rgba(0, 191, 255, 0.3);
   transform: translateY(-2px);
   transition: all 0.2s ease;
+}
+
+/* ════════════════════════════════════════════════════════════ */
+/* EXTENSIONS : PRIX ACTUEL, FLÈCHES, GAPS, BADGE, ETC. */
+/* (CSS associé pour l'affichage "excellent / marge / équilibre") */
+/* ════════════════════════════════════════════════════════════ */
+
+/* Classes pour prix actuel (bon/mauvais) */
+.price-box.current.good {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.price-box.current.good .price-box-amount {
+  color: #22c55e;
+}
+
+.price-box.current.bad {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.price-box.current.bad .price-box-amount {
+  color: #ef4444;
+}
+
+/* Flèches directionnelles */
+.arrow-icon.up {
+  color: #22c55e;
+  font-size: 3em;
+}
+
+.arrow-icon.down {
+  color: #ef4444;
+  font-size: 3em;
+}
+
+/* Messages gap */
+.gap-message {
+  font-size: 0.95em;
+  margin-top: 5px;
+}
+
+.gap-message.positive {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.gap-message.negative {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Breakdown delta */
+.breakdown-delta {
+  font-size: 0.9em;
+  margin-top: 5px;
+}
+
+.breakdown-delta.better {
+  color: #22c55e;
+}
+
+.breakdown-delta.worse {
+  color: #94a3b8;
+}
+
+/* Classes de valeurs */
+.breakdown-current,
+.breakdown-target {
+  font-size: 1.1em;
+  margin: 5px 0;
+}
+
+.positive {
+  color: #22c55e;
+}
+
+.negative {
+  color: #ef4444;
+}
+
+.neutral {
+  color: #94a3b8;
+}
+
+/* Badge success élargi + plus vibrant */
+.price-target-badge.success {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  padding: 10px 30px;
+  border-radius: 30px;
+  font-weight: 800;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
 }
