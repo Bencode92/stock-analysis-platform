@@ -1863,6 +1863,126 @@
     }
   };
 
+// ====== PROFILS DE TRI (priorités) — à déclarer une fois ======
+const SORT_PROFILES = {
+  // Screenshot: Div.REG ↑, Div.TTM ↑, Payout ↓, MaxDD ↓, Vol ↓, Perf1Y ↑
+  rendement: {
+    mode: 'priorities',
+    smartTolerance: true,
+    rules: { minDividendIfSelected: 1 },
+    priorities: [
+      { metric: 'dividend_yield_reg', direction: 'desc' },
+      { metric: 'dividend_yield_ttm', direction: 'desc' },
+      { metric: 'payout_ratio',       direction: 'asc'  },
+      { metric: 'max_drawdown_3y',    direction: 'asc'  },
+      { metric: 'volatility_3y',      direction: 'asc'  },
+      { metric: 'perf_1y',            direction: 'desc' }
+    ]
+  },
+
+  defensif: {
+    mode: 'priorities',
+    smartTolerance: true,
+    priorities: [
+      { metric: 'volatility_3y',      direction: 'asc'  },
+      { metric: 'max_drawdown_3y',    direction: 'asc'  },
+      { metric: 'payout_ratio',       direction: 'asc'  },
+      { metric: 'dividend_yield_reg', direction: 'desc' },
+      { metric: 'perf_1y',            direction: 'desc' },
+      { metric: 'perf_3y',            direction: 'desc' }
+    ]
+  },
+
+  agressif: {
+    mode: 'priorities',
+    smartTolerance: true,
+    priorities: [
+      { metric: 'perf_3m',         direction: 'desc' },
+      { metric: 'perf_1m',         direction: 'desc' },
+      { metric: 'ytd',             direction: 'desc' },
+      { metric: 'perf_1y',         direction: 'desc' },
+      { metric: 'max_drawdown_3y', direction: 'asc'  },
+      { metric: 'volatility_3y',   direction: 'asc'  }
+    ]
+  },
+
+  croissance: {
+    mode: 'priorities',
+    smartTolerance: true,
+    priorities: [
+      { metric: 'perf_3y',         direction: 'desc' },
+      { metric: 'perf_1y',         direction: 'desc' },
+      { metric: 'perf_3m',         direction: 'desc' },
+      { metric: 'ytd',             direction: 'desc' },
+      { metric: 'max_drawdown_3y', direction: 'asc'  },
+      { metric: 'volatility_3y',   direction: 'asc'  }
+    ]
+  },
+
+  value_dividend: {
+    mode: 'priorities',
+    smartTolerance: true,
+    rules: { minDividendIfSelected: 1 },
+    priorities: [
+      { metric: 'dividend_yield_reg', direction: 'desc' },
+      { metric: 'dividend_yield_ttm', direction: 'desc' },
+      { metric: 'payout_ratio',       direction: 'asc'  },
+      { metric: 'max_drawdown_3y',    direction: 'asc'  },
+      { metric: 'volatility_3y',      direction: 'asc'  },
+      { metric: 'perf_3y',            direction: 'desc' }
+    ]
+  },
+
+  quality_premium: {
+    mode: 'priorities',
+    smartTolerance: true,
+    priorities: [
+      { metric: 'perf_3y',         direction: 'desc' },
+      { metric: 'volatility_3y',   direction: 'asc'  },
+      { metric: 'max_drawdown_3y', direction: 'asc'  },
+      { metric: 'perf_1y',         direction: 'desc' },
+      { metric: 'dividend_yield_reg', direction: 'desc' }
+    ]
+  },
+
+  momentum_trend: {
+    mode: 'priorities',
+    smartTolerance: true,
+    priorities: [
+      { metric: 'perf_1y',         direction: 'desc' },
+      { metric: 'perf_3m',         direction: 'desc' },
+      { metric: 'perf_1m',         direction: 'desc' },
+      { metric: 'ytd',             direction: 'desc' },
+      { metric: 'max_drawdown_3y', direction: 'asc'  },
+      { metric: 'volatility_3y',   direction: 'asc'  }
+    ]
+  },
+
+  low_volatility: {
+    mode: 'priorities',
+    smartTolerance: true,
+    priorities: [
+      { metric: 'volatility_3y',      direction: 'asc'  },
+      { metric: 'max_drawdown_3y',    direction: 'asc'  },
+      { metric: 'payout_ratio',       direction: 'asc'  },
+      { metric: 'dividend_yield_reg', direction: 'desc' },
+      { metric: 'perf_1y',            direction: 'desc' }
+    ]
+  },
+
+  recovery: {
+    mode: 'priorities',
+    smartTolerance: true,
+    priorities: [
+      { metric: 'perf_3m',         direction: 'desc' },
+      { metric: 'perf_1m',         direction: 'desc' },
+      { metric: 'perf_1y',         direction: 'desc' },
+      { metric: 'max_drawdown_3y', direction: 'asc'  },
+      { metric: 'volatility_3y',   direction: 'asc'  }
+    ]
+  }
+};
+
 // ==== SYSTÈME DE PRESETS v4.0 — Format ETF Moderne ====
 const PRESETS = {
   defensif: {
@@ -1874,6 +1994,7 @@ const PRESETS = {
     tooltip: 'Stratégie conservatrice privilégiant la stabilité et les revenus réguliers',
     color: '#4CAF50',
     mode: 'balanced',
+    sort: SORT_PROFILES.defensif,
     coverage_target: [60, 120],
     metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','payout_ratio','perf_1y','perf_3y'],
     filters: {
@@ -1882,7 +2003,6 @@ const PRESETS = {
       sectors: ['Santé', 'Biens de consommation de base', 'Services publics']
     },
     criteria: [
-      // Filtre jour supprimé pour réduire le bruit
       { metric: 'dividend_yield_reg', operator: '>=', value: 2.5, optimal: 2.5, range: [2.0, 3.0], label: 'Dividende ≥ 2.5%' },
       { metric: 'volatility_3y', operator: '<=', value: 26, optimal: 24, range: [22, 26], label: 'Volatilité ≤ 26%' },
       { metric: 'max_drawdown_3y', operator: '<=', value: 35, optimal: 32, range: [30, 35], label: 'Max DD ≤ 35%' },
@@ -1895,7 +2015,7 @@ const PRESETS = {
     tradeoffs: ['Si couverture <60: d’abord MaxDD→35 puis Vol→26. Ne pas baisser trop le dividend_yield_reg (<2%) pour éviter les faux “quality”.']
   },
 
- rendement: {
+  rendement: {
     id: 'rendement',
     label: '💰 Rendement',
     shortLabel: 'Rendement',
@@ -1904,6 +2024,7 @@ const PRESETS = {
     tooltip: 'Focus sur les revenus passifs avec dividendes élevés et durables',
     color: '#FFD700',
     mode: 'lexico',
+    sort: SORT_PROFILES.rendement,
     coverage_target: [80, 150],
     metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y'],
     filters: {
@@ -1933,6 +2054,7 @@ const PRESETS = {
     tooltip: 'Stratégie dynamique pour investisseurs acceptant la volatilité',
     color: '#FF5722',
     mode: 'lexico',
+    sort: SORT_PROFILES.agressif,
     coverage_target: [60, 100],
     metrics: ['perf_3m','perf_1m','ytd','perf_1y','max_drawdown_3y','volatility_3y'],
     filters: {
@@ -1941,7 +2063,6 @@ const PRESETS = {
       sectors: ['Technologie de l\'information', 'Santé', 'La communication']
     },
     criteria: [
-      // perf_daily retiré, focus sur 1m/3m/YTD/1Y
       { metric: 'ytd', operator: '>=', value: 10, optimal: 20, range: [10, 30], label: 'YTD ≥ 10%' },
       { metric: 'perf_1y', operator: '>=', value: 12, optimal: 16, range: [12, 20], label: 'Perf 1Y ≥ 12%' },
       { metric: 'perf_3m', operator: '>=', value: 3, optimal: 5, range: [3, 6], label: 'Perf 3M ≥ 3%' },
@@ -1954,7 +2075,6 @@ const PRESETS = {
     tradeoffs: ['Si trop peu de titres: desserrer perf_1m→0 puis perf_3m→3 avant de relever vol/DD.']
   },
 
-  // === CROISSANCE — growth + quality, seuils un peu assouplis ===
   croissance: {
     id: 'croissance',
     label: '📈 Croissance',
@@ -1964,6 +2084,7 @@ const PRESETS = {
     tooltip: 'Entreprises en forte croissance avec track record solide',
     color: '#2196F3',
     mode: 'lexico',
+    sort: SORT_PROFILES.croissance,
     coverage_target: [70, 140],
     metrics: ['perf_3y','perf_1y','perf_3m','ytd','volatility_3y','max_drawdown_3y','payout_ratio'],
     filters: {
@@ -1979,10 +2100,7 @@ const PRESETS = {
       { metric: 'payout_ratio', operator: '<=', value: 50, optimal: 40, range: [0, 50],  label: 'Payout ≤ 50%' }
     ],
     defaults: { perf_3y: 35, perf_1y: 8, volatility_3y: 35, max_drawdown_3y: 41, payout_ratio: 40 },
-    alerts: [
-      'Risque duration si taux remontent.',
-      'Sélection plus “growth pur”, moins GARP.'
-    ],
+    alerts: ['Risque duration si taux remontent.', 'Sélection plus “growth pur”, moins GARP.'],
     tradeoffs: [
       'Si encore trop court: perf_3y→22 puis perf_1y→3 avant de toucher Vol/MaxDD.',
       'Éviter MaxDD>48% pour garder un profil risque cohérent.'
@@ -1998,6 +2116,7 @@ const PRESETS = {
     tooltip: 'Actions décotées avec rendement attractif',
     color: '#9C27B0',
     mode: 'balanced',
+    sort: SORT_PROFILES.value_dividend,
     coverage_target: [80, 150],
     metrics: ['dividend_yield_reg','payout_ratio','perf_3y','max_drawdown_3y','volatility_3y','dividend_yield_ttm'],
     filters: {
@@ -2014,17 +2133,13 @@ const PRESETS = {
       { metric: 'volatility_3y', operator: '<=', value: 32, optimal: 30, range: [28, 32], label: 'Volatilité ≤ 32%' }
     ],
     defaults: { dividend_yield_reg: 4.0, payout_ratio: 75, perf_3y: 20, max_drawdown_3y: 43, volatility_3y: 30 },
-    alerts: [
-      'Risque “yield trap”: valider FCF yield, couverture d’intérêts, croissance EPS.',
-      'Secteurs cycliques: surveiller beta et sensibilité matières premières.'
-    ],
+    alerts: ['Risque “yield trap”: valider FCF yield, couverture d’intérêts, croissance EPS.', 'Secteurs cycliques: surveiller beta et sensibilité matières premières.'],
     tradeoffs: [
       'Si toujours 1 titre: abaisser perf_3y→10 puis relever MaxDD→48 avant d’abaisser le yield.',
       'Éviter dividend_yield_reg < 3.0% pour garder le caractère “value income”.'
     ]
   },
 
-  // === QUALITY/PREMIUM — quality global, seuils perf un peu assouplis ===
   quality_premium: {
     id: 'quality_premium',
     label: '⭐ Premium',
@@ -2034,7 +2149,8 @@ const PRESETS = {
     tooltip: 'Les meilleures entreprises mondiales avec avantages compétitifs',
     color: '#FFC107',
     mode: 'lexico',
-    coverage_target: [70, 125], // + légère marge
+    sort: SORT_PROFILES.quality_premium,
+    coverage_target: [70, 125],
     metrics: ['perf_3y','volatility_3y','perf_1y','dividend_yield_reg','max_drawdown_3y'],
     filters: {
       regions: ['US', 'EUROPE', 'ASIA'],
@@ -2055,10 +2171,7 @@ const PRESETS = {
       { metric: 'dividend_yield_reg', operator: '>=', value: 0.0, optimal: 0.4, range: [0.0, 2.0], label: 'Dividende ≥ 0%' }
     ],
     defaults: { perf_3y: 50, volatility_3y: 34, max_drawdown_3y: 42, dividend_yield_reg: 0.4 },
-    alerts: [
-      'Biais large caps “quality” (US/World).',
-      'Vol/DD plus permissifs peuvent faire entrer des quasi-growth à bêta plus élevé.'
-    ],
+    alerts: ['Biais large caps “quality” (US/World).', 'Vol/DD plus permissifs peuvent faire entrer des quasi-growth à bêta plus élevé.'],
     tradeoffs: [
       'Si 0 résultat persiste: perf_3y→32 puis Vol→37 (garder MaxDD≤45).',
       'Éviter perf_3y < 32% pour préserver le caractère “best-of premium”.'
@@ -2074,6 +2187,7 @@ const PRESETS = {
     tooltip: 'Stratégie momentum basée sur la force relative',
     color: '#00BCD4',
     mode: 'lexico',
+    sort: SORT_PROFILES.momentum_trend,
     coverage_target: [60, 100],
     metrics: ['perf_1y','perf_3m','perf_1m','ytd','max_drawdown_3y','volatility_3y'],
     filters: {
@@ -2102,6 +2216,7 @@ const PRESETS = {
     tooltip: 'Actions les plus stables avec historique de dividendes',
     color: '#607D8B',
     mode: 'balanced',
+    sort: SORT_PROFILES.low_volatility,
     coverage_target: [60, 120],
     metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','perf_1y','payout_ratio','dividend_yield_ttm'],
     filters: {
@@ -2131,6 +2246,7 @@ const PRESETS = {
     tooltip: 'Actions en phase de récupération après une forte baisse',
     color: '#E91E63',
     mode: 'balanced',
+    sort: SORT_PROFILES.recovery,
     coverage_target: [50, 90],
     metrics: ['perf_3m','perf_1m','max_drawdown_3y','volatility_3y','perf_1y'],
     filters: {
@@ -2150,7 +2266,6 @@ const PRESETS = {
     tradeoffs: ['Si sur-filtrage: perf_1y plancher→-25 puis perf_3m→5; garder MaxDD ≤55.']
   }
 };
-
   // v4.1: Fonction pour appliquer un preset - avec feedback toast
   function applyPreset(presetKey) {
     const preset = PRESETS[presetKey];
