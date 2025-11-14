@@ -1875,21 +1875,22 @@ const PRESETS = {
     color: '#4CAF50',
     mode: 'balanced',
     coverage_target: [60, 120],
-    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','payout_ratio','perf_1y'],
+    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','payout_ratio','perf_1y','perf_3y'],
     filters: {
       regions: ['EUROPE', 'US'],
       countries: [],
       sectors: ['Santé', 'Biens de consommation de base', 'Services publics']
     },
     criteria: [
-      { metric: 'perf_daily', operator: '>=', value: -0.5, label: 'Perf jour > -0.5%' },
+      // Filtre jour supprimé pour réduire le bruit
       { metric: 'dividend_yield_reg', operator: '>=', value: 2.5, optimal: 2.5, range: [2.0, 3.0], label: 'Dividende ≥ 2.5%' },
       { metric: 'volatility_3y', operator: '<=', value: 26, optimal: 24, range: [22, 26], label: 'Volatilité ≤ 26%' },
       { metric: 'max_drawdown_3y', operator: '<=', value: 35, optimal: 32, range: [30, 35], label: 'Max DD ≤ 35%' },
       { metric: 'payout_ratio', operator: '<=', value: 75, optimal: 75, range: [70, 80], label: 'Payout ≤ 75%' },
-      { metric: 'perf_1y', operator: '>=', value: -2, optimal: 0, range: [-2, 0], label: 'Perf 1Y ≥ -2%' }
+      { metric: 'perf_1y', operator: '>=', value: 0, optimal: 2, range: [-2, 5], label: 'Perf 1Y ≥ 0%' },
+      { metric: 'perf_3y', operator: '>=', value: 5, optimal: 10, range: [5, 20], label: 'Perf 3Y ≥ 5%' }
     ],
-    defaults: { volatility_3y: 24, max_drawdown_3y: 32, dividend_yield_reg: 2.5, payout_ratio: 75, perf_1y: 0 },
+    defaults: { volatility_3y: 24, max_drawdown_3y: 32, dividend_yield_reg: 2.5, payout_ratio: 75, perf_1y: 2, perf_3y: 10 },
     alerts: ['Biais défensif (utilities/staples). Payout bas peut exclure banques à dividendes variables.'],
     tradeoffs: ['Si couverture <60: d’abord MaxDD→35 puis Vol→26. Ne pas baisser trop le dividend_yield_reg (<2%) pour éviter les faux “quality”.']
   },
@@ -1904,21 +1905,22 @@ const PRESETS = {
     color: '#FFD700',
     mode: 'lexico',
     coverage_target: [80, 150],
-    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y'],
+    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y','perf_3y'],
     filters: {
       regions: ['EUROPE', 'US'],
       countries: [],
       sectors: ['Finance', 'Immobilier', 'Energie', 'Services publics']
     },
     criteria: [
-      { metric: 'dividend_yield_reg', operator: '>=', value: 3.5, optimal: 4.2, range: [3.5, 5.0], label: 'Dividende ≥ 3.5%' },
+      { metric: 'dividend_yield_reg', operator: '>=', value: 4.0, optimal: 4.2, range: [4.0, 5.5], label: 'Dividende ≥ 4.0%' },
       { metric: 'dividend_yield_ttm', operator: '<=', value: 10.0, optimal: 8.0, range: [8.0, 10.0], label: 'Div TTM ≤ 8–10% (anti piège)' },
       { metric: 'payout_ratio', operator: '<=', value: 85, optimal: 80, range: [75, 85], label: 'Payout ≤ 85%' },
-      { metric: 'max_drawdown_3y', operator: '<=', value: 45, optimal: 42, range: [40, 45], label: 'Max DD ≤ 45%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 40, optimal: 38, range: [35, 40], label: 'Max DD ≤ 40%' },
       { metric: 'volatility_3y', operator: '<=', value: 35, optimal: 32, range: [30, 35], label: 'Volatilité ≤ 35%' },
-      { metric: 'perf_1y', operator: '>=', value: -5, optimal: -2, range: [-5, 2], label: 'Perf 1Y ≥ -5%' }
+      { metric: 'perf_1y', operator: '>=', value: -5, optimal: -2, range: [-5, 2], label: 'Perf 1Y ≥ -5%' },
+      { metric: 'perf_3y', operator: '>=', value: 0, optimal: 5, range: [0, 15], label: 'Perf 3Y ≥ 0%' }
     ],
-    defaults: { dividend_yield_reg: 4.2, payout_ratio: 80, max_drawdown_3y: 42, volatility_3y: 32, perf_1y: -2 },
+    defaults: { dividend_yield_reg: 4.2, payout_ratio: 80, max_drawdown_3y: 38, volatility_3y: 32, perf_1y: -2, perf_3y: 5 },
     alerts: ['Yield↑ ↔ risque de “yield trap”. Vérifier FCF yield et leverage (ND/EBITDA).'],
     tradeoffs: ['Si couverture faible: baisser d’abord dividend_yield_reg→3.8% puis relever payout→85%.']
   },
@@ -1935,12 +1937,12 @@ const PRESETS = {
     coverage_target: [60, 100],
     metrics: ['perf_3m','perf_1m','ytd','perf_1y','max_drawdown_3y','volatility_3y'],
     filters: {
-      regions: [],
+      regions: ['US', 'ASIA'],
       countries: [],
       sectors: ['Technologie de l\'information', 'Santé', 'La communication']
     },
     criteria: [
-      { metric: 'perf_daily', operator: '>=', value: 0, label: 'Perf jour positive' },
+      // perf_daily retiré, focus sur 1m/3m/YTD/1Y
       { metric: 'ytd', operator: '>=', value: 10, optimal: 20, range: [10, 30], label: 'YTD ≥ 10%' },
       { metric: 'perf_1y', operator: '>=', value: 12, optimal: 16, range: [12, 20], label: 'Perf 1Y ≥ 12%' },
       { metric: 'perf_3m', operator: '>=', value: 3, optimal: 5, range: [3, 6], label: 'Perf 3M ≥ 3%' },
@@ -1953,7 +1955,7 @@ const PRESETS = {
     tradeoffs: ['Si trop peu de titres: desserrer perf_1m→0 puis perf_3m→3 avant de relever vol/DD.']
   },
 
-  // === CROISSANCE — léger assouplissement (perf & risque) + secteur élargi ===
+  // === CROISSANCE — growth + quality, seuils un peu assouplis ===
   croissance: {
     id: 'croissance',
     label: '📈 Croissance',
@@ -1964,26 +1966,26 @@ const PRESETS = {
     color: '#2196F3',
     mode: 'lexico',
     coverage_target: [70, 140],
-    metrics: ['perf_3y','perf_1y','perf_3m','ytd','volatility_3y','max_drawdown_3y'],
+    metrics: ['perf_3y','perf_1y','perf_3m','ytd','volatility_3y','max_drawdown_3y','payout_ratio'],
     filters: {
       regions: ['US', 'EUROPE', 'ASIA'],
       countries: [],
-      sectors: ['Technologie de l\'information', 'Santé', 'La communication', 'Consommation discrétionnaire']
+      sectors: ['Technologie de l\'information', 'Santé', 'La communication', 'Biens de consommation cycliques']
     },
     criteria: [
-      { metric: 'perf_3y', operator: '>=', value: 35, optimal: 50, range: [35, 70], label: 'Perf 3Y ≥ 35%' },
-      { metric: 'perf_1y', operator: '>=', value: 6,  optimal: 9,  range: [6, 15],  label: 'Perf 1Y ≥ 6%' },
+      { metric: 'perf_3y', operator: '>=', value: 25, optimal: 35, range: [25, 70], label: 'Perf 3Y ≥ 25%' },
+      { metric: 'perf_1y', operator: '>=', value: 4,  optimal: 8,  range: [4, 15],  label: 'Perf 1Y ≥ 4%' },
       { metric: 'volatility_3y', operator: '<=', value: 39, optimal: 35, range: [33, 39], label: 'Volatilité ≤ 39%' },
       { metric: 'max_drawdown_3y', operator: '<=', value: 46, optimal: 41, range: [39, 46], label: 'Max DD ≤ 46%' },
-      { metric: 'payout_ratio', operator: '<=', value: 80, optimal: 70, range: [0, 80],  label: 'Payout ≤ 80%' }
+      { metric: 'payout_ratio', operator: '<=', value: 50, optimal: 40, range: [0, 50],  label: 'Payout ≤ 50%' }
     ],
-    defaults: { perf_3y: 50, perf_1y: 9, volatility_3y: 35, max_drawdown_3y: 41, payout_ratio: 70 },
+    defaults: { perf_3y: 35, perf_1y: 8, volatility_3y: 35, max_drawdown_3y: 41, payout_ratio: 40 },
     alerts: [
       'Risque duration si taux remontent.',
-      'Relâchement des seuils dilue légèrement la pureté “growth” (biais GARP).'
+      'Sélection plus “growth pur”, moins GARP.'
     ],
     tradeoffs: [
-      'Si encore trop court: perf_3y→32 puis perf_1y→5 avant de toucher Vol/MaxDD.',
+      'Si encore trop court: perf_3y→22 puis perf_1y→3 avant de toucher Vol/MaxDD.',
       'Éviter MaxDD>48% pour garder un profil risque cohérent.'
     ]
   },
@@ -1998,71 +2000,72 @@ const PRESETS = {
     color: '#9C27B0',
     mode: 'balanced',
     coverage_target: [80, 150],
-    metrics: ['dividend_yield_reg','payout_ratio','perf_3y','max_drawdown_3y','volatility_3y'],
+    metrics: ['dividend_yield_reg','payout_ratio','perf_3y','max_drawdown_3y','volatility_3y','dividend_yield_ttm'],
     filters: {
       regions: ['EUROPE', 'US'],
       countries: [],
       sectors: ['Finance', 'Energie', 'Services publics', 'Industrie', 'Matériaux']
     },
     criteria: [
-      { metric: 'dividend_yield_reg', operator: '>=', value: 3.5, optimal: 4.0, range: [3.5, 5.0], label: 'Dividende ≥ 3.5%' },
+      { metric: 'dividend_yield_reg', operator: '>=', value: 3.0, optimal: 3.8, range: [3.0, 5.0], label: 'Dividende ≥ 3.0%' },
       { metric: 'dividend_yield_ttm', operator: '<=', value: 12.0, optimal: 9.0, range: [9.0, 12.0], label: 'Div TTM ≤ 12% (anti piège mais REIT OK)' },
       { metric: 'payout_ratio', operator: '<=', value: 80, optimal: 75, range: [70, 85], label: 'Payout ≤ 80%' },
-      { metric: 'perf_3y', operator: '>=', value: 10, optimal: 15, range: [0, 20], label: 'Perf 3Y ≥ 10%' },
-      { metric: 'max_drawdown_3y', operator: '<=', value: 50, optimal: 48, range: [45, 55], label: 'Max DD ≤ 50%' },
+      { metric: 'perf_3y', operator: '>=', value: 15, optimal: 20, range: [10, 25], label: 'Perf 3Y ≥ 15%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 45, optimal: 43, range: [40, 45], label: 'Max DD ≤ 45%' },
       { metric: 'volatility_3y', operator: '<=', value: 32, optimal: 30, range: [28, 32], label: 'Volatilité ≤ 32%' }
     ],
-    defaults: { dividend_yield_reg: 4.0, payout_ratio: 75, perf_3y: 15, max_drawdown_3y: 48, volatility_3y: 30 },
+    defaults: { dividend_yield_reg: 4.0, payout_ratio: 75, perf_3y: 20, max_drawdown_3y: 43, volatility_3y: 30 },
     alerts: [
       'Risque “yield trap”: valider FCF yield, couverture d’intérêts, croissance EPS.',
       'Secteurs cycliques: surveiller beta et sensibilité matières premières.'
     ],
     tradeoffs: [
-      'Si toujours 1 titre: abaisser perf_3y→0 puis relever MaxDD→52 avant d’abaisser le yield.',
-      'Éviter dividend_yield_reg < 3.5% pour garder le caractère “value income”.'
+      'Si toujours 1 titre: abaisser perf_3y→10 puis relever MaxDD→48 avant d’abaisser le yield.',
+      'Éviter dividend_yield_reg < 3.0% pour garder le caractère “value income”.'
     ]
   },
 
-  // === QUALITY/PREMIUM — élargissement ciblé (perf↓, vol/DD↑) + secteurs élargis ===
-quality_premium: {
-  id: 'quality_premium',
-  label: '⭐ Premium',
-  shortLabel: 'Premium',
-  icon: '⭐',
-  description: 'Leaders mondiaux • Moats • Innovation',
-  tooltip: 'Les meilleures entreprises mondiales avec avantages compétitifs',
-  color: '#FFC107',
-  mode: 'lexico',
-  coverage_target: [70, 125], // +légère marge
-  metrics: ['perf_3y','volatility_3y','perf_1y','dividend_yield_reg','max_drawdown_3y'],
-  filters: {
-    regions: ['US', 'EUROPE', 'ASIA'],
-    countries: [],
-    sectors: [
-      'Technologie de l\'information',
-      'Santé',
-      'Biens de consommation de base',
-      'Industrie',
-      'Consommation discrétionnaire',
-      'La communication' // + méga-caps quality (Alphabet/Meta/Telecom leaders)
+  // === QUALITY/PREMIUM — quality global, seuils perf un peu assouplis ===
+  quality_premium: {
+    id: 'quality_premium',
+    label: '⭐ Premium',
+    shortLabel: 'Premium',
+    icon: '⭐',
+    description: 'Leaders mondiaux • Moats • Innovation',
+    tooltip: 'Les meilleures entreprises mondiales avec avantages compétitifs',
+    color: '#FFC107',
+    mode: 'lexico',
+    coverage_target: [70, 125], // + légère marge
+    metrics: ['perf_3y','volatility_3y','perf_1y','dividend_yield_reg','max_drawdown_3y'],
+    filters: {
+      regions: ['US', 'EUROPE', 'ASIA'],
+      countries: [],
+      sectors: [
+        'Technologie de l\'information',
+        'Santé',
+        'Biens de consommation de base',
+        'Industrie',
+        'Biens de consommation cycliques',
+        'La communication'
+      ]
+    },
+    criteria: [
+      { metric: 'perf_3y',            operator: '>=', value: 35, optimal: 50, range: [35, 85], label: 'Perf 3Y ≥ 35%' },
+      { metric: 'volatility_3y',      operator: '<=', value: 36, optimal: 34, range: [32, 36], label: 'Volatilité ≤ 36%' },
+      { metric: 'max_drawdown_3y',    operator: '<=', value: 44, optimal: 42, range: [40, 44], label: 'Max DD ≤ 44%' },
+      { metric: 'dividend_yield_reg', operator: '>=', value: 0.0, optimal: 0.4, range: [0.0, 2.0], label: 'Dividende ≥ 0%' }
+    ],
+    defaults: { perf_3y: 50, volatility_3y: 34, max_drawdown_3y: 42, dividend_yield_reg: 0.4 },
+    alerts: [
+      'Biais large caps “quality” (US/World).',
+      'Vol/DD plus permissifs peuvent faire entrer des quasi-growth à bêta plus élevé.'
+    ],
+    tradeoffs: [
+      'Si 0 résultat persiste: perf_3y→32 puis Vol→37 (garder MaxDD≤45).',
+      'Éviter perf_3y < 32% pour préserver le caractère “best-of premium”.'
     ]
   },
-  criteria: [
-    { metric: 'perf_3y',            operator: '>=', value: 45, optimal: 55, range: [45, 85], label: 'Perf 3Y ≥ 45%' },
-    { metric: 'volatility_3y',      operator: '<=', value: 36, optimal: 34, range: [32, 36], label: 'Volatilité ≤ 36%' },
-    { metric: 'max_drawdown_3y',    operator: '<=', value: 44, optimal: 42, range: [40, 44], label: 'Max DD ≤ 44%' },
-    { metric: 'dividend_yield_reg', operator: '>=', value: 0.1, optimal: 0.4, range: [0.1, 2.0], label: 'Dividende ≥ 0.1%' }
-  ],
-  defaults: { perf_3y: 55, volatility_3y: 34, max_drawdown_3y: 42, dividend_yield_reg: 0.4 },
-  alerts: [
-    'Biais large caps “quality” (US/World).',
-    'Vol/DD plus permissifs peuvent faire entrer des quasi-growth à bêta plus élevé.'
-  ],
-  tradeoffs: [
-    'Si 0 résultat persiste: perf_3y→42 puis Vol→37 (garder MaxDD≤45).',
-    'Éviter perf_3y < 42% pour préserver le caractère “best-of premium”.'
-  ]
-},
+
   momentum_trend: {
     id: 'momentum_trend',
     label: '📊 Momentum',
@@ -2080,13 +2083,13 @@ quality_premium: {
       sectors: []
     },
     criteria: [
-      { metric: 'perf_1y', operator: '>=', value: 12, optimal: 16, range: [12, 20], label: 'Perf 1Y ≥ 12%' },
-      { metric: 'perf_3m', operator: '>=', value: 3, optimal: 5, range: [3, 6], label: 'Perf 3M ≥ 3%' },
+      { metric: 'perf_1y', operator: '>=', value: 10, optimal: 15, range: [10, 20], label: 'Perf 1Y ≥ 10%' },
+      { metric: 'perf_3m', operator: '>=', value: 4, optimal: 6, range: [4, 8], label: 'Perf 3M ≥ 4%' },
       { metric: 'perf_1m', operator: '>=', value: 0, optimal: 1, range: [0, 2], label: 'Perf 1M ≥ 0%' },
-      { metric: 'volatility_3y', operator: '<=', value: 45, optimal: 42, range: [40, 45], label: 'Volatilité ≤ 45%' },
+      { metric: 'volatility_3y', operator: '<=', value: 40, optimal: 38, range: [35, 40], label: 'Volatilité ≤ 40%' },
       { metric: 'max_drawdown_3y', operator: '<=', value: 55, optimal: 52, range: [50, 55], label: 'Max DD ≤ 55%' }
     ],
-    defaults: { perf_1y: 16, perf_3m: 5, perf_1m: 1, volatility_3y: 42, max_drawdown_3y: 52 },
+    defaults: { perf_1y: 15, perf_3m: 6, perf_1m: 1, volatility_3y: 38, max_drawdown_3y: 52 },
     alerts: ['Risque de renversement brutal; exposition factorielle concentrée.'],
     tradeoffs: ['Si whipsaw: relever perf_3m/1m d’1 pt; si couverture faible: abaisser perf_1m→0 en premier.']
   },
@@ -2101,21 +2104,21 @@ quality_premium: {
     color: '#607D8B',
     mode: 'balanced',
     coverage_target: [60, 120],
-    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','perf_1y','payout_ratio'],
+    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','perf_1y','payout_ratio','dividend_yield_ttm'],
     filters: {
       regions: ['EUROPE', 'US'],
       countries: [],
       sectors: ['Santé', 'Biens de consommation de base', 'Services publics']
     },
     criteria: [
-      { metric: 'dividend_yield_reg', operator: '>=', value: 2.0, optimal: 2.2, range: [2.0, 3.0], label: 'Dividende ≥ 2%' },
+      { metric: 'dividend_yield_reg', operator: '>=', value: 1.5, optimal: 2.0, range: [1.5, 3.0], label: 'Dividende ≥ 1.5%' },
       { metric: 'dividend_yield_ttm', operator: '<=', value: 8.0, optimal: 8.0, range: [8.0, 10.0], label: 'Div TTM ≤ 8–10%' },
       { metric: 'payout_ratio', operator: '<=', value: 80, optimal: 75, range: [70, 80], label: 'Payout ≤ 80%' },
       { metric: 'volatility_3y', operator: '<=', value: 22, optimal: 22, range: [22, 24], label: 'Volatilité ≤ 22%' },
       { metric: 'max_drawdown_3y', operator: '<=', value: 30, optimal: 30, range: [30, 35], label: 'Max DD ≤ 30%' },
       { metric: 'perf_1y', operator: '>=', value: -2, optimal: -2, range: [-2, 0], label: 'Perf 1Y ≥ -2%' }
     ],
-    defaults: { volatility_3y: 22, max_drawdown_3y: 30, dividend_yield_reg: 2.2, payout_ratio: 75, perf_1y: -2 },
+    defaults: { volatility_3y: 22, max_drawdown_3y: 30, dividend_yield_reg: 2.0, payout_ratio: 75, perf_1y: -2 },
     alerts: ['Risque de sous-performance en bull market prolongé.'],
     tradeoffs: ['Si couverture <60: MaxDD→35 puis Vol→24.']
   },
@@ -2130,24 +2133,22 @@ quality_premium: {
     color: '#E91E63',
     mode: 'balanced',
     coverage_target: [50, 90],
-    metrics: ['perf_3m','perf_1m','max_drawdown_3y','volatility_3y','perf_1y','payout_ratio','dividend_yield_reg'],
+    metrics: ['perf_3m','perf_1m','max_drawdown_3y','volatility_3y','perf_1y'],
     filters: {
       regions: ['EUROPE', 'US', 'ASIA'],
       countries: [],
       sectors: ['Industries', 'Matériaux', 'Finance']
     },
     criteria: [
-      { metric: 'perf_1y', operator: '>=', value: -25, optimal: -15, range: [-25, -10], label: 'Perf 1Y ≥ -25%' },
+      { metric: 'perf_1y', operator: '>=', value: -30, optimal: -20, range: [-30, -10], label: 'Perf 1Y ≥ -30%' },
       { metric: 'perf_3m', operator: '>=', value: 5, optimal: 7, range: [5, 10], label: 'Perf 3M ≥ 5%' },
       { metric: 'perf_1m', operator: '>=', value: 0, optimal: 0, range: [0, 2], label: 'Perf 1M ≥ 0%' },
       { metric: 'volatility_3y', operator: '<=', value: 35, optimal: 32, range: [30, 35], label: 'Volatilité ≤ 35%' },
-      { metric: 'max_drawdown_3y', operator: '<=', value: 55, optimal: 52, range: [50, 55], label: 'Max DD ≤ 55%' },
-      { metric: 'payout_ratio', operator: '<=', value: 70, optimal: 65, range: [0, 70], label: 'Payout ≤ 70%' },
-      { metric: 'dividend_yield_reg', operator: '>=', value: 1.0, optimal: 1.2, range: [1.0, 3.0], label: 'Dividende ≥ 1%' }
+      { metric: 'max_drawdown_3y', operator: '<=', value: 55, optimal: 52, range: [50, 55], label: 'Max DD ≤ 55%' }
     ],
-    defaults: { perf_1y: -15, perf_3m: 7, perf_1m: 0, volatility_3y: 32, max_drawdown_3y: 52, payout_ratio: 65, dividend_yield_reg: 1.2 },
+    defaults: { perf_1y: -20, perf_3m: 7, perf_1m: 0, volatility_3y: 32, max_drawdown_3y: 52 },
     alerts: ['Piège valeur si absence de catalyseur fondamental.'],
-    tradeoffs: ['Si sur-filtrage: perf_1y plancher→-20 puis perf_3m→5; garder MaxDD ≤55.']
+    tradeoffs: ['Si sur-filtrage: perf_1y plancher→-25 puis perf_3m→5; garder MaxDD ≤55.']
   }
 };
 
