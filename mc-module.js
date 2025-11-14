@@ -1987,6 +1987,7 @@ const SORT_PROFILES = {
 const useSort = (name) => ({ ...SORT_PROFILES[name], mode: 'priorities' });
 
 // ==== SYSTÈME DE PRESETS v4.0 — Format ETF Moderne ====
+// ==== SYSTÈME DE PRESETS v4.0 — Format ETF Moderne ====
 const PRESETS = {
   defensif: {
     id: 'defensif',
@@ -1999,7 +2000,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('defensif'),
     coverage_target: [60, 120],
-    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','payout_ratio','perf_1y','perf_3y'],
+    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','payout_ratio','perf_1y','perf_3y'], // ✅ OK
     filters: { regions: ['EUROPE','US'], countries: [], sectors: ['Santé','Biens de consommation de base','Services publics'] },
     criteria: [
       { metric: 'dividend_yield_reg', operator:'>=', value:2.5, optimal:2.5, range:[2.0,3.0], label:'Dividende ≥ 2.5%' },
@@ -2011,7 +2012,7 @@ const PRESETS = {
     ],
     defaults: { volatility_3y:24, max_drawdown_3y:32, dividend_yield_reg:2.5, payout_ratio:75, perf_1y:2, perf_3y:10 },
     alerts: ['Biais défensif (utilities/staples). Payout bas peut exclure banques à dividendes variables.'],
-    tradeoffs: ['Si couverture <60: d’abord MaxDD→35 puis Vol→26. Ne pas descendre le dividend_yield_reg <2%.']
+    tradeoffs: ['Si couverture <60: d'abord MaxDD→35 puis Vol→26. Ne pas descendre le dividend_yield_reg <2%.']
   },
 
   rendement: {
@@ -2025,7 +2026,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('rendement'),
     coverage_target: [80,150],
-    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y'],
+    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y'], // ✅ OK
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Immobilier','Energie','Services publics'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.5, optimal:4.2, range:[3.5,5.0], label:'Dividende ≥ 3.5%' },
@@ -2036,8 +2037,8 @@ const PRESETS = {
       { metric:'perf_1y',            operator:'>=', value:-5,   optimal:-2,  range:[-5,2],    label:'Perf 1Y ≥ -5%' }
     ],
     defaults: { dividend_yield_reg:4.2, payout_ratio:80, max_drawdown_3y:42, volatility_3y:32, perf_1y:-2 },
-    alerts: ['Risque de “yield trap”: vérifier FCF yield et ND/EBITDA.'],
-    tradeoffs: ['Si couverture faible: baisser d’abord le yield→3.8% puis relever payout→85%.']
+    alerts: ['Risque de "yield trap": vérifier FCF yield et ND/EBITDA.'],
+    tradeoffs: ['Si couverture faible: baisser d'abord le yield→3.8% puis relever payout→85%.']
   },
 
   agressif: {
@@ -2051,7 +2052,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('agressif'),
     coverage_target: [60,100],
-    metrics: ['perf_3m','perf_1m','ytd','perf_1y','max_drawdown_3y','volatility_3y'],
+    metrics: ['perf_3m','perf_1m','ytd','perf_1y','max_drawdown_3y','volatility_3y'], // ✅ OK
     filters: { regions:['US','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication'] },
     criteria: [
       { metric:'ytd',             operator:'>=', value:10, optimal:20, range:[10,30], label:'YTD ≥ 10%' },
@@ -2077,7 +2078,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('croissance'),
     coverage_target: [70,140],
-    metrics: ['perf_3y','perf_1y','perf_3m','ytd','volatility_3y','max_drawdown_3y','payout_ratio'],
+    metrics: ['perf_3y','perf_1y','perf_3m','ytd','max_drawdown_3y','volatility_3y'], // ✅ CORRIGÉ (supprimé payout, ordre fixé)
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication','Biens de consommation cycliques'] },
     criteria: [
       { metric:'perf_3y',         operator:'>=', value:25, optimal:35, range:[25,70], label:'Perf 3Y ≥ 25%' },
@@ -2087,7 +2088,7 @@ const PRESETS = {
       { metric:'payout_ratio',    operator:'<=', value:50, optimal:40, range:[0,50],  label:'Payout ≤ 50%' }
     ],
     defaults: { perf_3y:35, perf_1y:8, volatility_3y:35, max_drawdown_3y:41, payout_ratio:40 },
-    alerts: ['Risque duration si taux remontent.', 'Sélection plus “growth pur”, moins GARP.'],
+    alerts: ['Risque duration si taux remontent.', 'Sélection plus "growth pur", moins GARP.'],
     tradeoffs: ['Si trop court: perf_3y→22 puis perf_1y→3 avant de toucher Vol/MaxDD.', 'Éviter MaxDD>48%.']
   },
 
@@ -2102,7 +2103,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('value_dividend'),
     coverage_target: [80,150],
-    metrics: ['dividend_yield_reg','payout_ratio','perf_3y','max_drawdown_3y','volatility_3y','dividend_yield_ttm'],
+    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_3y'], // ✅ CORRIGÉ (ordre fixé)
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Energie','Services publics','Industrie','Matériaux'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.0, optimal:3.8, range:[3.0,5.0], label:'Dividende ≥ 3.0%' },
@@ -2128,7 +2129,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('quality_premium'),
     coverage_target: [70,125],
-    metrics: ['perf_3y','volatility_3y','perf_1y','dividend_yield_reg','max_drawdown_3y'],
+    metrics: ['perf_3y','volatility_3y','max_drawdown_3y','perf_1y','dividend_yield_reg'], // ✅ CORRIGÉ (ordre fixé)
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','Biens de consommation de base','Industrie','Biens de consommation cycliques','La communication'] },
     criteria: [
       { metric:'perf_3y',         operator:'>=', value:35, optimal:50, range:[35,85], label:'Perf 3Y ≥ 35%' },
@@ -2152,7 +2153,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('momentum_trend'),
     coverage_target: [60,100],
-    metrics: ['perf_1y','perf_3m','perf_1m','ytd','max_drawdown_3y','volatility_3y'],
+    metrics: ['perf_1y','perf_3m','perf_1m','ytd','max_drawdown_3y','volatility_3y'], // ✅ OK
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:[] },
     criteria: [
       { metric:'perf_1y', operator:'>=', value:10, optimal:15, range:[10,20], label:'Perf 1Y ≥ 10%' },
@@ -2163,7 +2164,7 @@ const PRESETS = {
     ],
     defaults: { perf_1y:15, perf_3m:6, perf_1m:1, volatility_3y:38, max_drawdown_3y:52 },
     alerts: ['Risque de renversement brutal; concentration factorielle.'],
-    tradeoffs: ['Si whipsaw: relever perf_3m/1m d’1 pt; si faible couverture: abaisser perf_1m→0.']
+    tradeoffs: ['Si whipsaw: relever perf_3m/1m d'1 pt; si faible couverture: abaisser perf_1m→0.']
   },
 
   low_volatility: {
@@ -2177,7 +2178,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('low_volatility'),
     coverage_target: [60,120],
-    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','perf_1y','payout_ratio','dividend_yield_ttm'],
+    metrics: ['volatility_3y','max_drawdown_3y','payout_ratio','dividend_yield_reg','perf_1y'], // ✅ CORRIGÉ (supprimé dividend_yield_ttm)
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:1.5, optimal:2.0, range:[1.5,3.0], label:'Dividende ≥ 1.5%' },
@@ -2203,7 +2204,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('recovery'),
     coverage_target: [50,90],
-    metrics: ['perf_3m','perf_1m','max_drawdown_3y','volatility_3y','perf_1y'],
+    metrics: ['perf_3m','perf_1m','perf_1y','max_drawdown_3y','volatility_3y'], // ✅ CORRIGÉ (ordre fixé)
     filters: { regions:['EUROPE','US','ASIA'], countries:[], sectors:['Industries','Matériaux','Finance'] },
     criteria: [
       { metric:'perf_1y',         operator:'>=', value:-30, optimal:-20, range:[-30,-10], label:'Perf 1Y ≥ -30%' },
