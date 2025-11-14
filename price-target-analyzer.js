@@ -32,7 +32,7 @@
         regimeId: targetResult.regimeId,
         infeasible: !!targetResult.infeasible,
 
-        // 🔹 AJOUT : exposer l'apport pour l'UI
+        // 🔹 AJOUT : exposer l’apport pour l’UI
         apport: Number(baseInput.apport ?? 0),
 
         targetBreakdown: {
@@ -79,6 +79,7 @@
       };
     }
 
+    // ✅ VERSION CORRIGÉE : décomposition cohérente même en cas infeasible
     _solveForEnrichment(baseInput, targetEnrichment, regimeId, opts = {}) {
       const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
       let lo = Math.max(1, p0 * 0.3);
@@ -87,35 +88,35 @@
       const maxIter = Number(opts.maxIter ?? 80);
       const tol = Number(opts.tol ?? 1);
 
-      // ✅ FIX 1/2 : Test bracketing complet (borne basse)
-      const eLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId).enrichment;
-      if (eLo + tol < targetEnrichment) {
+      // On garde l'objet complet (cashflow, capital, enrichment) à la borne basse
+      const eLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId);
+      if (eLo.enrichment + tol < targetEnrichment) {
         const registry = this.analyzer.getRegimeRegistry();
         const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
-        return { 
-          price: lo, 
-          regimeId: key, 
+        return {
+          price: lo,
+          regimeId: key,
           regimeNom: registry[key]?.nom || key,
-          enrichment: eLo, 
-          cashflow: 0, 
-          capital: 0, 
+          enrichment: eLo.enrichment,
+          cashflow: eLo.cashflow,
+          capital: eLo.capital,
           infeasible: true,
           reason: 'Prix minimum trop élevé pour atteindre l\'objectif'
         };
       }
 
-      // ✅ FIX 2/2 : Test bracketing complet (borne haute)
-      const eHi = this._computeEnrichmentAtPrice(baseInput, hi, regimeId).enrichment;
-      if (eHi > targetEnrichment + tol) {
+      // Idem borne haute
+      const eHi = this._computeEnrichmentAtPrice(baseInput, hi, regimeId);
+      if (eHi.enrichment > targetEnrichment + tol) {
         const registry = this.analyzer.getRegimeRegistry();
         const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
-        return { 
-          price: hi, 
-          regimeId: key, 
+        return {
+          price: hi,
+          regimeId: key,
           regimeNom: registry[key]?.nom || key,
-          enrichment: eHi, 
-          cashflow: 0, 
-          capital: 0, 
+          enrichment: eHi.enrichment,
+          cashflow: eHi.cashflow,
+          capital: eHi.capital,
           infeasible: true,
           reason: 'Objectif trop bas - même au prix minimal l\'enrichissement dépasse la cible'
         };
@@ -129,8 +130,14 @@
         const diff = cur.enrichment - targetEnrichment;
 
         if (!best || Math.abs(diff) < Math.abs(best.enrichment - targetEnrichment)) {
-          best = { price, regimeId: cur.regimeId, regimeNom: cur.regimeNom,
-                   enrichment: cur.enrichment, cashflow: cur.cashflow, capital: cur.capital };
+          best = {
+            price,
+            regimeId: cur.regimeId,
+            regimeNom: cur.regimeNom,
+            enrichment: cur.enrichment,
+            cashflow: cur.cashflow,
+            capital: cur.capital
+          };
         }
         if (Math.abs(diff) <= tol) break;
 
@@ -153,52 +160,23 @@
       const gap = currentPrice - targetResult.price;
       const gapPercent = this._safeDiv(gap, currentPrice) * 100;
 
-      // ✅ FIX : Calculer l'enrichissement RP (économie vs location)
-      // Enrichissement RP = ce que vous économisez par rapport à louer
-      const loyerMarcheAnnuel = params.loyerMarche * 12;
-      const coutPossessionAnnuel = currentCost.brut * 12;
-      const currentEnrichmentAnnual = loyerMarcheAnnuel - coutPossessionAnnuel;
-      const targetEnrichmentAnnual = 0; // Par définition au prix cible
-
       return {
         currentPrice: Math.round(currentPrice),
         priceTarget: Math.round(targetResult.price),
         gap: Math.round(gap),
         gapPercent: Math.round(gapPercent * 100) / 100,
-        
-        // ✅ FIX : Ajout champs attendus par l'UI
-        currentEnrichment: Math.round(currentEnrichmentAnnual),
-        targetEnrichment: Math.round(targetEnrichmentAnnual),
-        enrichmentGain: Math.round(-currentEnrichmentAnnual), // Gain si on achète au prix cible
-        
         currentMonthlyCost: Math.round(currentCost.net),
         targetMonthlyCost: 0,
         regimeUsed: 'Résidence Principale',
         regimeId: 'rp',
         infeasible: !!targetResult.infeasible,
-
-        // ✅ FIX : Ajout apport pour rendement sur apport
-        apport: Number(baseInput.apport ?? 0),
-        
         targetBreakdown: {
-          // ✅ FIX : Champs compatibles UI
-          cashflow: Math.round(targetEnrichmentAnnual),
-          capital: 0, // Pas de remboursement capital en RP (concept différent)
-          enrichment: Math.round(targetEnrichmentAnnual),
-          
-          // Champs spécifiques RP (gardés pour info)
           mensualite: Math.round(targetResult.mensualite),
           chargesMensuelles: Math.round(targetResult.charges),
           loyerMarche: Math.round(params.loyerMarche),
           partnerContribution: Math.round(params.partner)
         },
         currentBreakdown: {
-          // ✅ FIX : Champs compatibles UI
-          cashflow: Math.round(currentEnrichmentAnnual),
-          capital: 0,
-          enrichment: Math.round(currentEnrichmentAnnual),
-          
-          // Champs spécifiques RP
           mensualite: Math.round(currentCost.mensualite),
           chargesMensuelles: Math.round(currentCost.charges),
           loyerMarche: Math.round(params.loyerMarche),
@@ -239,12 +217,10 @@
                     + Number(params.pno);
 
       const brut = mensualite + charges;
-      
-      // ✅ FIX : Intégration loyerMarche dans le calcul de l'équilibre
+
       // Objectif économique : coût_possession = loyer_marché
-      // (Au lieu de : coût_net = 0, ce qui n'a pas de sens économique)
       const net  = brut - Number(params.partner || 0) - Number(params.loyerMarche || 0);
-      
+
       return { mensualite, charges, brut, net, loyerMarche: params.loyerMarche };
     }
 
@@ -271,84 +247,85 @@
       return best;
     }
 
-_generateRecommendation(gap, gapPercent, targetEnrichment, regimeNom, infeasible) {
-  if (infeasible) {
-    return {
-      type: 'danger',
-      icon: '🚨',
-      title: 'Cible inatteignable',
-      message: `Avec <strong>${regimeNom}</strong>, aucun prix n'atteint l'équilibre.`
-    };
-  }
-  if (Math.abs(gapPercent) < 1) {
-    return {
-      type: 'neutral',
-      icon: '⚖️',
-      title: `Prix à l'équilibre`,
-      message: `Prix actuel au seuil d'enrichissement.`
-    };
-  }
-  if (gap > 0) {
-    return {
-      type: gapPercent > 20 ? 'danger' : 'warning',
-      icon: gapPercent > 20 ? '🚨' : '⚠️',
-      title: gapPercent > 20 ? 'Prix trop élevé' : 'Marge de négociation',
-      message: `Baisse d'environ ${Math.round(gapPercent)}% nécessaire.`
-    };
-  }
-  return {
-    type: 'success',
-    icon: '✅',
-    title: 'Excellent prix',
-    message: `${Math.abs(Math.round(gapPercent))}% sous le prix d'équilibre.`
-  };
-}
+    _generateRecommendation(gap, gapPercent, targetEnrichment, regimeNom, infeasible) {
+      if (infeasible) {
+        return {
+          type: 'danger',
+          icon: '🚨',
+          title: 'Cible inatteignable',
+          message: `Avec <strong>${regimeNom}</strong>, aucun prix n'atteint l'équilibre.`
+        };
+      }
+      if (Math.abs(gapPercent) < 1) {
+        return {
+          type: 'neutral',
+          icon: '⚖️',
+          title: `Prix à l'équilibre`,
+          message: `Prix actuel au seuil d'enrichissement.`
+        };
+      }
+      if (gap > 0) {
+        return {
+          type: gapPercent > 20 ? 'danger' : 'warning',
+          icon: gapPercent > 20 ? '🚨' : '⚠️',
+          title: gapPercent > 20 ? 'Prix trop élevé' : 'Marge de négociation',
+          message: `Baisse d'environ ${Math.round(gapPercent)}% nécessaire.`
+        };
+      }
+      return {
+        type: 'success',
+        icon: '✅',
+        title: 'Excellent prix',
+        message: `${Math.abs(Math.round(gapPercent))}% sous le prix d'équilibre.`
+      };
+    }
 
-_generateRPRecommendation(gap, gapPercent /*, loyerMarche */) {
-  if (Math.abs(gapPercent) < 2) {
-    return {
-      type: 'neutral',
-      icon: '⚖️',
-      title: `Prix à l'équilibre`
-    };
+    _generateRPRecommendation(gap, gapPercent /*, loyerMarche */) {
+      if (Math.abs(gapPercent) < 2) {
+        return {
+          type: 'neutral',
+          icon: '⚖️',
+          title: `Prix à l'équilibre`
+        };
+      }
+      if (gap > 0) {
+        return {
+          type: gapPercent > 15 ? 'danger' : 'warning',
+          icon: gapPercent > 15 ? '🚨' : '⚠️',
+          title: gapPercent > 15 ? 'Prix trop élevé' : 'Marge de négociation'
+        };
+      }
+      return {
+        type: 'success',
+        icon: '✅',
+        title: 'Excellent prix'
+      };
+    }
+
+    _safeDiv(a, b) {
+      return (b && isFinite(b) && b !== 0) ? (a / b) : 0;
+    }
+
+    _getCacheKey(baseInput, target, opts) {
+      const params = this.analyzer.getAllAdvancedParams?.() || {};
+      const price = Number(baseInput.price ?? baseInput.prixBien ?? 0);
+      return JSON.stringify({
+        price,
+        apport: baseInput.apport,
+        loyer: baseInput.loyerHC,
+        taux: baseInput.loanRate,
+        duree: baseInput.loanDuration,
+        target,
+        regime: opts.regimeId,
+        taxeFonciere: params.taxeFonciere,
+        vacanceLocative: params.vacanceLocative
+      });
+    }
+
+    clearCache() { this.cache.clear(); }
   }
-  if (gap > 0) {
-    return {
-      type: gapPercent > 15 ? 'danger' : 'warning',
-      icon: gapPercent > 15 ? '🚨' : '⚠️',
-      title: gapPercent > 15 ? 'Prix trop élevé' : 'Marge de négociation'
-    };
-  }
-  return {
-    type: 'success',
-    icon: '✅',
-    title: 'Excellent prix'
-  };
-}
 
-_safeDiv(a, b) {
-  return (b && isFinite(b) && b !== 0) ? (a / b) : 0;
-}
-
-_getCacheKey(baseInput, target, opts) {
-  const params = this.analyzer.getAllAdvancedParams?.() || {};
-  const price = Number(baseInput.price ?? baseInput.prixBien ?? 0);
-  return JSON.stringify({
-    price,
-    apport: baseInput.apport,
-    loyer: baseInput.loyerHC,
-    taux: baseInput.loanRate,
-    duree: baseInput.loanDuration,
-    target,
-    regime: opts.regimeId,
-    taxeFonciere: params.taxeFonciere,
-    vacanceLocative: params.vacanceLocative
-  });
-}
-
-clearCache() { this.cache.clear(); }
-}
-
-// Exposition globale
-window.PriceTargetAnalyzer = PriceTargetAnalyzer;
+  // Exposition globale
+  window.PriceTargetAnalyzer = PriceTargetAnalyzer;
 })();
+
