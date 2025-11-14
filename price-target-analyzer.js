@@ -79,7 +79,6 @@
       };
     }
 
-    // ✅ VERSION CORRIGÉE : décomposition cohérente même en cas infeasible
     _solveForEnrichment(baseInput, targetEnrichment, regimeId, opts = {}) {
       const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
       let lo = Math.max(1, p0 * 0.3);
@@ -88,35 +87,35 @@
       const maxIter = Number(opts.maxIter ?? 80);
       const tol = Number(opts.tol ?? 1);
 
-      // On garde l'objet complet (cashflow, capital, enrichment) à la borne basse
-      const eLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId);
-      if (eLo.enrichment + tol < targetEnrichment) {
+      // ✅ Test bracketing complet (borne basse)
+      const eLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId).enrichment;
+      if (eLo + tol < targetEnrichment) {
         const registry = this.analyzer.getRegimeRegistry();
         const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
-        return {
-          price: lo,
-          regimeId: key,
+        return { 
+          price: lo, 
+          regimeId: key, 
           regimeNom: registry[key]?.nom || key,
-          enrichment: eLo.enrichment,
-          cashflow: eLo.cashflow,
-          capital: eLo.capital,
+          enrichment: eLo, 
+          cashflow: 0, 
+          capital: 0, 
           infeasible: true,
           reason: 'Prix minimum trop élevé pour atteindre l\'objectif'
         };
       }
 
-      // Idem borne haute
-      const eHi = this._computeEnrichmentAtPrice(baseInput, hi, regimeId);
-      if (eHi.enrichment > targetEnrichment + tol) {
+      // ✅ Test bracketing complet (borne haute)
+      const eHi = this._computeEnrichmentAtPrice(baseInput, hi, regimeId).enrichment;
+      if (eHi > targetEnrichment + tol) {
         const registry = this.analyzer.getRegimeRegistry();
         const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
-        return {
-          price: hi,
-          regimeId: key,
+        return { 
+          price: hi, 
+          regimeId: key, 
           regimeNom: registry[key]?.nom || key,
-          enrichment: eHi.enrichment,
-          cashflow: eHi.cashflow,
-          capital: eHi.capital,
+          enrichment: eHi, 
+          cashflow: 0, 
+          capital: 0, 
           infeasible: true,
           reason: 'Objectif trop bas - même au prix minimal l\'enrichissement dépasse la cible'
         };
@@ -130,13 +129,13 @@
         const diff = cur.enrichment - targetEnrichment;
 
         if (!best || Math.abs(diff) < Math.abs(best.enrichment - targetEnrichment)) {
-          best = {
-            price,
-            regimeId: cur.regimeId,
+          best = { 
+            price, 
+            regimeId: cur.regimeId, 
             regimeNom: cur.regimeNom,
-            enrichment: cur.enrichment,
-            cashflow: cur.cashflow,
-            capital: cur.capital
+            enrichment: cur.enrichment, 
+            cashflow: cur.cashflow, 
+            capital: cur.capital 
           };
         }
         if (Math.abs(diff) <= tol) break;
@@ -150,6 +149,7 @@
       return best;
     }
 
+    // ✅ RP avec enrichissement complet (Δcash + capital − coût d’opportunité)
     calculateRPPriceEquilibrium(baseInput, opts = {}) {
       const params = this._buildRPParams(baseInput, opts);
       const targetResult = this._solveRPPrice(baseInput, params);
@@ -165,11 +165,15 @@
         priceTarget: Math.round(targetResult.price),
         gap: Math.round(gap),
         gapPercent: Math.round(gapPercent * 100) / 100,
+
+        // Coût mensuel vs loyer (logique historique)
         currentMonthlyCost: Math.round(currentCost.net),
         targetMonthlyCost: 0,
         regimeUsed: 'Résidence Principale',
         regimeId: 'rp',
         infeasible: !!targetResult.infeasible,
+
+        // Décomposition mensuelle (inchangée)
         targetBreakdown: {
           mensualite: Math.round(targetResult.mensualite),
           chargesMensuelles: Math.round(targetResult.charges),
@@ -182,6 +186,22 @@
           loyerMarche: Math.round(params.loyerMarche),
           partnerContribution: Math.round(params.partner)
         },
+
+        // 🆕 ENRICHISSEMENT RP (deux versions, ANNUELLES)
+        rpCapitalAnnual: Math.round(currentCost.capitalAnnuel),
+        rpDeltaCashAnnual: Math.round(currentCost.deltaCash),
+
+        // Version sans coût d'opportunité (vue simple)
+        rpEnrichmentSimple: Math.round(currentCost.enrichissementRPSimple),
+
+        // Version avec coût d'opportunité (vue réaliste)
+        rpEnrichmentComplete: Math.round(currentCost.enrichissementRPComplet),
+
+        // Détail du coût d'opportunité
+        rpOpportunityCost: Math.round(currentCost.coutOpportuniteApport),
+        rpApport: Math.round(currentCost.apport),
+        rpOpportunityRate: currentCost.tauxOpportunite, // en %
+
         recommendation: this._generateRPRecommendation(gap, gapPercent, params.loyerMarche)
       };
     }
@@ -202,10 +222,14 @@
         coproNonRecup: p(baseInput.chargesCoproNonRecup),
         entretien: p(baseInput.entretienAnnuel) / 12,
         pno: p(baseInput.assurancePNO),
-        chargesRecup: p(baseInput.monthlyCharges ?? baseInput.charges)
+        chargesRecup: p(baseInput.monthlyCharges ?? baseInput.charges),
+
+        // Optionnel : permet de surcharger le taux d’opportunité depuis les opts
+        tauxOpportuniteApport: p(opts.tauxOpportuniteApport)
       };
     }
 
+    // ✅ Nouvelle version complète pour la RP
     _computeRPCostAtPrice(baseInput, price, params) {
       const adv = this.analyzer.getAllAdvancedParams?.() || {};
       const inputAtPrice = this.analyzer._buildInputForPrice(baseInput, price, adv);
@@ -218,10 +242,65 @@
 
       const brut = mensualite + charges;
 
-      // Objectif économique : coût_possession = loyer_marché
-      const net  = brut - Number(params.partner || 0) - Number(params.loyerMarche || 0);
+      // --- CAPITAL REMBOURSÉ ANNUEL (comme pour le locatif) ---
+      let capitalAnnuel = 0;
+      if (this.analyzer.getDetailedCalculations) {
+        const regimeId = this.analyzer.getSelectedRegime?.();
+        const registry = this.analyzer.getRegimeRegistry?.() || {};
+        const key = this.analyzer.normalizeRegimeKey?.({ id: regimeId }) ?? regimeId;
+        const meta = registry[key];
 
-      return { mensualite, charges, brut, net, loyerMarche: params.loyerMarche };
+        const calc = this.analyzer.getDetailedCalculations(meta, inputAtPrice, adv, {
+          mensualite,
+          tableauAmortissement: null
+        });
+        capitalAnnuel = Number(calc.capitalAnnuel || 0);
+      }
+
+      // --- COMPARAISON VS LOCATION ---
+      const loyerMensuel   = Number(params.loyerMarche || 0);
+      const loyerAnnuel    = loyerMensuel * 12;
+      const partnerMensuel = Number(params.partner || 0);
+      const partnerAnnuel  = partnerMensuel * 12;
+
+      // Coût de possession annuel net de la part du partenaire
+      const coutPossessionAnnuel = brut * 12 - partnerAnnuel;
+
+      // ΔCash = ce que paierait un locataire - ce que tu paies en tant que proprio
+      const deltaCash = loyerAnnuel - coutPossessionAnnuel;
+
+      // --- COÛT D'OPPORTUNITÉ DE L'APPORT ---
+      const apport = Number(baseInput.apport ?? 0);
+
+      // Taux d'opportunité : 7% par défaut, surcharge possible via params avancés
+      const tauxOpportunite =
+        Number(adv.tauxOpportuniteApport ?? params.tauxOpportuniteApport ?? 7) / 100;
+
+      const coutOpportuniteApport = apport * tauxOpportunite;
+
+      // --- KPIs D'ENRICHISSEMENT ---
+      const enrichissementRPSimple  = deltaCash + capitalAnnuel;                  // version "optimiste"
+      const enrichissementRPComplet = enrichissementRPSimple - coutOpportuniteApport; // version "réaliste"
+
+      // ⚠ On garde "net" mensuel pour la recherche du prix d'équilibre (logique existante)
+      const net  = brut - partnerMensuel - loyerMensuel;
+
+      return {
+        mensualite,
+        charges,
+        brut,
+        net,
+        loyerMarche: params.loyerMarche,
+
+        // KPIs annuels
+        capitalAnnuel,
+        deltaCash,
+        enrichissementRPSimple,
+        enrichissementRPComplet,
+        coutOpportuniteApport,
+        apport,
+        tauxOpportunite: tauxOpportunite * 100 // pour affichage (%)
+      };
     }
 
     _solveRPPrice(baseInput, params) {
