@@ -1987,7 +1987,6 @@ const SORT_PROFILES = {
 const useSort = (name) => ({ ...SORT_PROFILES[name], mode: 'priorities' });
 
 // ==== SYSTÈME DE PRESETS v4.0 — Format ETF Moderne ====
-// ==== SYSTÈME DE PRESETS v4.0 — Format ETF Moderne ====
 const PRESETS = {
   defensif: {
     id: 'defensif',
