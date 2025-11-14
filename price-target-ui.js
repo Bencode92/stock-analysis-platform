@@ -29,8 +29,8 @@ class PriceTargetUI {
   _generateHTML(r) {
     const fmt = (v) => this._formatCurrency(v);
     
-    // Prix actuel < prix cible = BON
-    const isPriceGood = r.gap > 0;
+    // ✅ FIX : bon prix = prix actuel < prix cible => gap < 0
+    const isPriceGood = r.gap < 0;
     const priceStatus = isPriceGood ? 'good' : 'bad';
 
     const gapMessage = isPriceGood 
@@ -42,7 +42,9 @@ class PriceTargetUI {
     // Prix cible arrondi pour affichage
     const priceTargetRounded = Math.round(r.priceTarget / 1000) * 1000;
 
-    // HERO KPI : enrichissement annuel au prix actuel
+    // Hero basé sur l'enrichissement réel (pas juste le gap)
+    const isEnriching = r.currentEnrichment >= 0;
+
     const heroKPI = `
       <div style="
         text-align:center;
@@ -57,16 +59,16 @@ class PriceTargetUI {
           color:#94a3b8;
           margin-bottom:8px;
         ">
-          ${isPriceGood ? '✓ Vous vous enrichissez' : '⚠ Vous vous appauvrissez'}
+          ${isEnriching ? '✓ Vous vous enrichissez' : '⚠ Vous vous appauvrissez'}
         </div>
         <div style="
           font-size:3rem;
           font-weight:900;
           line-height:1;
-          color:${r.currentEnrichment >= 0 ? '#22c55e' : '#ef4444'};
+          color:${isEnriching ? '#22c55e' : '#ef4444'};
           margin-bottom:4px;
         ">
-          ${r.currentEnrichment >= 0 ? '+' : '−'}${fmt(Math.abs(r.currentEnrichment))}
+          ${isEnriching ? '+' : '−'}${fmt(Math.abs(r.currentEnrichment))}
           <span style="font-size:1.2rem; opacity:0.7;">/an</span>
         </div>
         <div style="font-size:0.9rem; color:#94a3b8;">
@@ -212,7 +214,8 @@ class PriceTargetUI {
       return `<div class="price-target-badge danger">🚨 Cible inatteignable</div>`;
     }
 
-    const isPriceGood = r.gap > 0;
+    // ✅ FIX : bon prix = gap < 0
+    const isPriceGood = r.gap < 0;
     const gapPercent = Math.abs(r.gapPercent);
 
     if (Math.abs(r.gapPercent) < 2) {
