@@ -1895,7 +1895,7 @@ const PRESETS = {
     tradeoffs: ['Si couverture <60: d’abord MaxDD→35 puis Vol→26. Ne pas baisser trop le dividend_yield_reg (<2%) pour éviter les faux “quality”.']
   },
 
-  rendement: {
+ rendement: {
     id: 'rendement',
     label: '💰 Rendement',
     shortLabel: 'Rendement',
@@ -1905,22 +1905,21 @@ const PRESETS = {
     color: '#FFD700',
     mode: 'lexico',
     coverage_target: [80, 150],
-    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y','perf_3y'],
+    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y'],
     filters: {
       regions: ['EUROPE', 'US'],
       countries: [],
       sectors: ['Finance', 'Immobilier', 'Energie', 'Services publics']
     },
     criteria: [
-      { metric: 'dividend_yield_reg', operator: '>=', value: 4.0, optimal: 4.2, range: [4.0, 5.5], label: 'Dividende ≥ 4.0%' },
+      { metric: 'dividend_yield_reg', operator: '>=', value: 3.5, optimal: 4.2, range: [3.5, 5.0], label: 'Dividende ≥ 3.5%' },
       { metric: 'dividend_yield_ttm', operator: '<=', value: 10.0, optimal: 8.0, range: [8.0, 10.0], label: 'Div TTM ≤ 8–10% (anti piège)' },
       { metric: 'payout_ratio', operator: '<=', value: 85, optimal: 80, range: [75, 85], label: 'Payout ≤ 85%' },
-      { metric: 'max_drawdown_3y', operator: '<=', value: 40, optimal: 38, range: [35, 40], label: 'Max DD ≤ 40%' },
+      { metric: 'max_drawdown_3y', operator: '<=', value: 45, optimal: 42, range: [40, 45], label: 'Max DD ≤ 45%' },
       { metric: 'volatility_3y', operator: '<=', value: 35, optimal: 32, range: [30, 35], label: 'Volatilité ≤ 35%' },
-      { metric: 'perf_1y', operator: '>=', value: -5, optimal: -2, range: [-5, 2], label: 'Perf 1Y ≥ -5%' },
-      { metric: 'perf_3y', operator: '>=', value: 0, optimal: 5, range: [0, 15], label: 'Perf 3Y ≥ 0%' }
+      { metric: 'perf_1y', operator: '>=', value: -5, optimal: -2, range: [-5, 2], label: 'Perf 1Y ≥ -5%' }
     ],
-    defaults: { dividend_yield_reg: 4.2, payout_ratio: 80, max_drawdown_3y: 38, volatility_3y: 32, perf_1y: -2, perf_3y: 5 },
+    defaults: { dividend_yield_reg: 4.2, payout_ratio: 80, max_drawdown_3y: 42, volatility_3y: 32, perf_1y: -2 },
     alerts: ['Yield↑ ↔ risque de “yield trap”. Vérifier FCF yield et leverage (ND/EBITDA).'],
     tradeoffs: ['Si couverture faible: baisser d’abord dividend_yield_reg→3.8% puis relever payout→85%.']
   },
