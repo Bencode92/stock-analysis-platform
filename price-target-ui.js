@@ -29,7 +29,7 @@ class PriceTargetUI {
   _generateHTML(r) {
     const fmt = (v) => this._formatCurrency(v);
     
-    // ✅ FIX : bon prix = prix actuel < prix cible => gap < 0
+    // ✅ bon prix = prix actuel < prix cible => gap < 0
     const isPriceGood = r.gap < 0;
     const priceStatus = isPriceGood ? 'good' : 'bad';
 
@@ -42,8 +42,15 @@ class PriceTargetUI {
     // Prix cible arrondi pour affichage
     const priceTargetRounded = Math.round(r.priceTarget / 1000) * 1000;
 
-    // Hero basé sur l'enrichissement réel (pas juste le gap)
+    // Hero basé sur l'enrichissement réel
     const isEnriching = r.currentEnrichment >= 0;
+
+    // 🔹 Récupération de l’apport et calcul du rendement sur apport (ROE)
+    const equity = Number(r.apport ?? 0);
+    const hasEquity = equity > 0;
+    const yieldOnEquity = hasEquity
+      ? (r.currentEnrichment / equity) * 100
+      : 0;
 
     const heroKPI = `
       <div style="
@@ -71,9 +78,21 @@ class PriceTargetUI {
           ${isEnriching ? '+' : '−'}${fmt(Math.abs(r.currentEnrichment))}
           <span style="font-size:1.2rem; opacity:0.7;">/an</span>
         </div>
-        <div style="font-size:0.9rem; color:#94a3b8;">
+        <div style="font-size:0.9rem; color:#94a3b8; margin-bottom:2px;">
           au prix actuel de ${fmt(r.currentPrice)}
         </div>
+        ${
+          hasEquity
+            ? `
+        <div style="font-size:0.9rem; color:#64748b; margin-top:4px;">
+          Rendement sur apport :
+          <span style="font-weight:600; color:${yieldOnEquity >= 0 ? '#22c55e' : '#ef4444'};">
+            ${yieldOnEquity >= 0 ? '+' : ''}${yieldOnEquity.toFixed(2)}%/an
+          </span>
+        </div>
+        `
+            : ''
+        }
       </div>
     `;
 
@@ -94,7 +113,7 @@ class PriceTargetUI {
             </p>
           </div>
 
-          <!-- HERO KPI (enrichissement annuel) -->
+          <!-- HERO KPI (enrichissement annuel + rendement sur apport) -->
           ${heroKPI}
 
           <!-- Comparaison prix -->
@@ -157,6 +176,7 @@ class PriceTargetUI {
       </div>
     `;
   }
+
 
   /**
    * ✅ FIX 4 : Breakdown avec messages positifs
