@@ -230,78 +230,80 @@
     }
 
     // ✅ Nouvelle version complète pour la RP
-    _computeRPCostAtPrice(baseInput, price, params) {
-      const adv = this.analyzer.getAllAdvancedParams?.() || {};
-      const inputAtPrice = this.analyzer._buildInputForPrice(baseInput, price, adv);
-      const mensualite = Number(inputAtPrice.monthlyPayment ?? 0);
+// ✅ Nouvelle version complète pour la RP
+_computeRPCostAtPrice(baseInput, price, params) {
+  const adv = this.analyzer.getAllAdvancedParams?.() || {};
+  const inputAtPrice = this.analyzer._buildInputForPrice(baseInput, price, adv);
+  const mensualite = Number(inputAtPrice.monthlyPayment ?? 0);
 
-      const charges = Number(params.taxeFonciere)
-                    + Number(params.coproNonRecup)
-                    + Number(params.entretien)
-                    + Number(params.pno);
+  const charges = Number(params.taxeFonciere)
+                + Number(params.coproNonRecup)
+                + Number(params.entretien)
+                + Number(params.pno);
 
-      const brut = mensualite + charges;
+  const brut = mensualite + charges;
 
-      // --- CAPITAL REMBOURSÉ ANNUEL (comme pour le locatif) ---
-      let capitalAnnuel = 0;
-      if (this.analyzer.getDetailedCalculations) {
-        const regimeId = this.analyzer.getSelectedRegime?.();
-        const registry = this.analyzer.getRegimeRegistry?.() || {};
-        const key = this.analyzer.normalizeRegimeKey?.({ id: regimeId }) ?? regimeId;
-        const meta = registry[key];
+  // --- CAPITAL REMBOURSÉ ANNUEL (comme pour le locatif) ---
+  let capitalAnnuel = 0;
+  if (this.analyzer.getDetailedCalculations) {
+    const regimeId = this.analyzer.getSelectedRegime?.();
+    const registry = this.analyzer.getRegimeRegistry?.() || {};
+    const key = this.analyzer.normalizeRegimeKey?.({ id: regimeId }) ?? regimeId;
+    const meta = registry[key];
 
-        const calc = this.analyzer.getDetailedCalculations(meta, inputAtPrice, adv, {
-          mensualite,
-          tableauAmortissement: null
-        });
-        capitalAnnuel = Number(calc.capitalAnnuel || 0);
-      }
+    const calc = this.analyzer.getDetailedCalculations(meta, inputAtPrice, adv, {
+      mensualite,
+      tableauAmortissement: null
+    });
+    capitalAnnuel = Number(calc.capitalAnnuel || 0);
+  }
 
-      // --- COMPARAISON VS LOCATION ---
-      const loyerMensuel   = Number(params.loyerMarche || 0);
-      const loyerAnnuel    = loyerMensuel * 12;
-      const partnerMensuel = Number(params.partner || 0);
-      const partnerAnnuel  = partnerMensuel * 12;
+  // --- COMPARAISON VS LOCATION ---
+  const loyerMensuel   = Number(params.loyerMarche || 0);
+  const loyerAnnuel    = loyerMensuel * 12;
+  const partnerMensuel = Number(params.partner || 0);
+  const partnerAnnuel  = partnerMensuel * 12;
 
-      // Coût de possession annuel net de la part du partenaire
-      const coutPossessionAnnuel = brut * 12 - partnerAnnuel;
+  // Coût de possession annuel net de la part du partenaire
+  const coutPossessionAnnuel = brut * 12 - partnerAnnuel;
 
-      // ΔCash = ce que paierait un locataire - ce que tu paies en tant que proprio
-      const deltaCash = loyerAnnuel - coutPossessionAnnuel;
+  // ΔCash = ce que paierait un locataire - ce que tu paies en tant que proprio
+  const deltaCash = loyerAnnuel - coutPossessionAnnuel;
 
-      // --- COÛT D'OPPORTUNITÉ DE L'APPORT ---
-      const apport = Number(baseInput.apport ?? 0);
+  // --- COÛT D'OPPORTUNITÉ DE L'APPORT ---
+  const apport = Number(baseInput.apport ?? 0);
 
-      // Taux d'opportunité : 7% par défaut, surcharge possible via params avancés
-      const tauxOpportunite =
-        Number(adv.tauxOpportuniteApport ?? params.tauxOpportuniteApport ?? 7) / 100;
+  // Taux d'opportunité : 3% par défaut, surcharge possible via params avancés ou slider
+  const tauxOpportunite =
+    Number(adv.tauxOpportuniteApport ?? params.tauxOpportuniteApport ?? 3) / 100;
 
-      const coutOpportuniteApport = apport * tauxOpportunite;
+  const coutOpportuniteApport = apport * tauxOpportunite;
 
-      // --- KPIs D'ENRICHISSEMENT ---
-      const enrichissementRPSimple  = deltaCash + capitalAnnuel;                  // version "optimiste"
-      const enrichissementRPComplet = enrichissementRPSimple - coutOpportuniteApport; // version "réaliste"
+  // --- KPIs D'ENRICHISSEMENT ---
+  const enrichissementRPSimple  = deltaCash + capitalAnnuel;                      // version "optimiste"
+  const enrichissementRPComplet = enrichissementRPSimple - coutOpportuniteApport; // version "réaliste"
 
-      // ⚠ On garde "net" mensuel pour la recherche du prix d'équilibre (logique existante)
-      const net  = brut - partnerMensuel - loyerMensuel;
+  // ⚠ On garde "net" mensuel pour la recherche du prix d'équilibre (logique existante)
+  const net  = brut - partnerMensuel - loyerMensuel;
 
-      return {
-        mensualite,
-        charges,
-        brut,
-        net,
-        loyerMarche: params.loyerMarche,
+  return {
+    mensualite,
+    charges,
+    brut,
+    net,
+    loyerMarche: params.loyerMarche,
 
-        // KPIs annuels
-        capitalAnnuel,
-        deltaCash,
-        enrichissementRPSimple,
-        enrichissementRPComplet,
-        coutOpportuniteApport,
-        apport,
-        tauxOpportunite: tauxOpportunite * 100 // pour affichage (%)
-      };
-    }
+    // KPIs annuels
+    capitalAnnuel,
+    deltaCash,
+    enrichissementRPSimple,
+    enrichissementRPComplet,
+    coutOpportuniteApport,
+    apport,
+    tauxOpportunite: tauxOpportunite * 100 // pour affichage (%)
+  };
+}
+
 
     _solveRPPrice(baseInput, params) {
       const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
