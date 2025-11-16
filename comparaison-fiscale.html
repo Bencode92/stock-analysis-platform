@@ -1862,10 +1862,6 @@ td.neutral {
         step="0.5"
         value="3"
         style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;"
-        oninput="
-          document.getElementById('rpOppRateOut').textContent = this.value + ' %';
-          document.getElementById('taux-opportunite-apport').value = this.value;
-        "
       >
       <output id="rpOppRateOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">
         3 %
@@ -2933,26 +2929,40 @@ setTimeout(async () => {
         partOut.textContent = new Intl.NumberFormat('fr-FR').format(partnerInit) + ' €';
 
         await renderRPPriceTargetWithControls({ rent: loyerInit, partner: partnerInit });
+let t;
+const nf = new Intl.NumberFormat('fr-FR');
+const recalc = () => {
+  const rent    = Number(rentEl.value) || 0;
+  const partner = Number(partEl.value) || 0;
+  clearTimeout(t);
+  t = setTimeout(() => renderRPPriceTargetWithControls({ rent, partner }), 80);
+};
 
-        let t;
-        const nf = new Intl.NumberFormat('fr-FR');
-        const recalc = () => {
-          const rent    = Number(rentEl.value) || 0;
-          const partner = Number(partEl.value) || 0;
-          clearTimeout(t);
-          t = setTimeout(() => renderRPPriceTargetWithControls({ rent, partner }), 80);
-        };
+rentEl.addEventListener('input', (e) => {
+  rentOut.textContent = nf.format(e.target.value) + ' €';
+  recalc();
+});
 
-        rentEl.addEventListener('input', (e) => {
-          rentOut.textContent = nf.format(e.target.value) + ' €';
-          recalc();
-        });
-        partEl.addEventListener('input', (e) => {
-          partOut.textContent = nf.format(e.target.value) + ' €';
-          recalc();
-        });
+partEl.addEventListener('input', (e) => {
+  partOut.textContent = nf.format(e.target.value) + ' €';
+  recalc();
+});
 
-        console.log('✅ Mode RP : sliders initialisés');
+// 🆕 Slider taux d'opportunité
+const oppRateEl  = document.getElementById('rpOppRateSlider');
+const oppRateOut = document.getElementById('rpOppRateOut');
+const oppHidden  = document.getElementById('taux-opportunite-apport');
+
+if (oppRateEl && oppRateOut && oppHidden) {
+  oppRateEl.addEventListener('input', (e) => {
+    const val = e.target.value;
+    oppRateOut.textContent = val + ' %';
+    oppHidden.value = val;
+    recalc(); // 🔥 Déclenche le recalcul
+  });
+}
+
+console.log('✅ Mode RP : sliders initialisés');
       }
     } else {
       // ══════════ MODE LOCATIF ══════════
