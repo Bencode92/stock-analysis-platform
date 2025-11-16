@@ -187,46 +187,107 @@ class PriceTargetUI {
     `;
   }
 
-  // 🔵 Rendu spécifique Résidence Principale : acheter vs louer + placer l'apport
+  // 🔵 Rendu spécifique Résidence Principale : acheter vs louer + placer l'apport (version clarifiée)
   _generateRPRichHTML(r) {
     const fmt = (v) => this._formatCurrency(v);
 
-    const simple   = Number(r.rpEnrichmentSimple ?? 0);
-    const complete = Number(r.rpEnrichmentComplete ?? 0);
-    const deltaCash = Number(r.rpDeltaCashAnnual ?? 0);
-    const capital   = Number(r.rpCapitalAnnual ?? 0);
-    const oppCost   = Number(r.rpOpportunityCost ?? 0);
+    const simple     = Number(r.rpEnrichmentSimple ?? 0);     // ΔCash + capital
+    const realistic  = Number(r.rpEnrichmentComplete ?? 0);   // simple – coût d'opportunité
+    const deltaCash  = Number(r.rpDeltaCashAnnual ?? 0);
+    const capital    = Number(r.rpCapitalAnnual ?? 0);
+    const oppCost    = Number(r.rpOpportunityCost ?? 0);
+    const apport     = Number(r.rpApport ?? 0);
 
-    const isGoodReal = complete >= 0;
+    const currentPrice   = Number(r.currentPrice ?? 0);
+    const priceTarget    = Number(r.priceTarget ?? 0);
+    const priceTargetRnd = Math.round(priceTarget / 1000) * 1000;
 
-    const realMessage = isGoodReal
-      ? `À horizon 1 an, être propriétaire vous enrichit plus que louer <strong>en tenant compte</strong> de l'apport placé à ${r.rpOpportunityRate}%/an.`
-      : `À horizon 1 an, louer + placer l'apport à ${r.rpOpportunityRate}%/an est plus rentable que devenir propriétaire.`;
+    // gap = prix actuel − prix cible
+    const gap        = Number(r.gap ?? 0);
+    const gapPercent = Math.abs(Number(r.gapPercent ?? 0)); // en %
+
+    const isPriceUnderEquilibrium = currentPrice < priceTarget;
+    const roomToEquilibrium       = priceTarget - currentPrice;
+    const roomPercent             = currentPrice > 0 ? (roomToEquilibrium / currentPrice) * 100 : 0;
+
+    // KPI principal : enrichissement "réaliste" (vue patrimoniale)
+    const isRealPositive = realistic >= 0;
+
+    // Rendement réel sur apport
+    const hasEquity = apport > 0;
+    const roeReal   = hasEquity ? (realistic / apport) * 100 : 0;
+    const oppRate   = Number(r.rpOpportunityRate ?? 0); // déjà en %
+
+    // Badge : compétitivité vs location
+    let badgeClass = 'success';
+    let badgeText  = '✅ Propriété compétitive vs location';
+
+    if (!isRealPositive) {
+      badgeClass = 'danger';
+      badgeText  = `⚠️ Location + placement de l'apport plus rentable`;
+    } else if (hasEquity && roeReal < 1) {
+      badgeClass = 'warning';
+      badgeText  = `⚠️ Propriété marginalement compétitive vs location`;
+    }
+
+    // Message marge / surcoût
+    let gapLabel;
+    if (Math.abs(gap) < 500) {
+      gapLabel = 'Prix très proche du seuil d’équilibre';
+    } else if (isPriceUnderEquilibrium) {
+      gapLabel = `Marge théorique : ${fmt(roomToEquilibrium)} (+${roomPercent.toFixed(1)}% avant d’atteindre l’équilibre)`;
+    } else {
+      gapLabel = `Surcoût vs prix d’équilibre : ${fmt(Math.abs(gap))} (+${gapPercent.toFixed(1)}% au-dessus)`;
+    }
+
+    // Interprétation
+    const interpLines = [];
+    if (isPriceUnderEquilibrium) {
+      interpLines.push(
+        `Vous pouvez monter jusqu'à <strong>${fmt(priceTargetRnd)}</strong> sans perdre d'argent (≈ prix d'équilibre à 1 an).`
+      );
+      interpLines.push(
+        `Au-delà de ce prix, louer puis placer votre apport à ${oppRate}%/an devient plus rentable.`
+      );
+    } else {
+      interpLines.push(
+        `Pour que l'achat soit au moins aussi intéressant que la location, il faudrait viser un prix autour de <strong>${fmt(priceTargetRnd)}</strong>.`
+      );
+    }
+    if (hasEquity) {
+      interpLines.push(
+        `Au prix actuel, le gain patrimonial est de <strong>${fmt(realistic)}/an</strong>, soit <strong>${roeReal.toFixed(2)}%/an</strong> sur votre apport de ${fmt(apport)} ` +
+        `(à comparer aux <strong>${oppRate}%/an</strong> si vous laissiez l'apport placé).`
+      );
+    }
 
     return `
       <div class="price-target-container">
         <div class="price-target-card">
 
-          <!-- Badge -->
-          <div class="price-target-badge ${isGoodReal ? 'success' : 'warning'}">
-            ${isGoodReal 
-              ? '✅ Propriété compétitive vs location' 
-              : '⚠️ Location + placement de l\'apport plus intéressante'}
+          <!-- Badge global -->
+          <div class="price-target-badge ${badgeClass}">
+            ${badgeText}
+            ${
+              hasEquity
+                ? `&nbsp;(<span style="font-weight:600;">${fmt(realistic)}/an = ${roeReal.toFixed(2)}% sur apport</span>)`
+                : ''
+            }
           </div>
 
           <!-- Header -->
           <div class="price-target-header">
             <h2 class="price-target-title">
-              🏠 Acheter vs Louer – Résidence Principale
+              🏠 Prix cible – Acheter ou louer (Résidence principale)
             </h2>
             <p class="price-target-subtitle">
-              Comparaison annuelle entre l'achat au prix actuel (${fmt(r.currentPrice)}) 
+              Comparaison annuelle entre l'achat au prix actuel (${fmt(currentPrice)}) 
               et la location au loyer de marché, en supposant que votre apport 
-              (${fmt(r.rpApport || 0)}) soit placé à ${r.rpOpportunityRate}%/an.
+              (${fmt(apport)}) soit placé à ${oppRate}%/an.
             </p>
           </div>
 
-          <!-- Disclaimer -->
+          <!-- Disclaimer horizon -->
           <div style="
             padding:12px 16px;
             background:rgba(248,250,252,0.9);
@@ -242,67 +303,99 @@ class PriceTargetUI {
             après 15–20 ans selon les cas.
           </div>
 
-          <!-- Double héro : enrichissement "base" vs "réaliste" -->
+          <!-- HERO : 1 seul KPI = vue réaliste -->
           <div style="
-            display:grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap:16px;
-            margin-bottom:24px;
+            text-align:center;
+            padding:20px 0 24px;
+            border-bottom:1px solid rgba(148,163,184,0.15);
+            margin-bottom:20px;
           ">
             <div style="
-              padding:16px;
-              border-radius:14px;
-              border:1px solid rgba(148,163,184,0.35);
-              background:rgba(15,23,42,0.02);
+              font-size:0.85rem;
+              text-transform:uppercase;
+              letter-spacing:0.1em;
+              color:#94a3b8;
+              margin-bottom:6px;
             ">
-              <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:4px;">
-                Vue simple (sans coût d'opportunité)
+              ${isRealPositive ? '✓ Enrichissement patrimonial (vue réaliste)' : '⚠ Appauvrissement patrimonial (vue réaliste)'}
+            </div>
+            <div style="
+              font-size:2.6rem;
+              font-weight:900;
+              line-height:1;
+              color:${isRealPositive ? '#22c55e' : '#ef4444'};
+              margin-bottom:6px;
+            ">
+              ${realistic >= 0 ? '+' : '−'}${fmt(Math.abs(realistic))}
+              <span style="font-size:1.1rem; opacity:0.7;">/an</span>
+            </div>
+            <div style="font-size:0.9rem; color:#94a3b8;">
+              au prix actuel de ${fmt(currentPrice)} (après coût d'opportunité de l'apport à ${oppRate}%/an)
+            </div>
+            ${
+              hasEquity
+                ? `
+            <div style="font-size:0.9rem; color:#64748b; margin-top:6px;">
+              Rendement réel sur votre apport :
+              <span style="font-weight:600; color:${roeReal >= 0 ? '#22c55e' : '#ef4444'};">
+                ${roeReal >= 0 ? '+' : ''}${roeReal.toFixed(2)}%/an
+              </span>
+            </div>
+            `
+                : ''
+            }
+          </div>
+
+          <!-- Bloc : prix actuel vs prix d'équilibre -->
+          <div class="price-comparison-grid" style="margin-bottom:24px;">
+            <!-- Prix actuel -->
+            <div class="price-box current ${isPriceUnderEquilibrium ? 'good' : 'bad'}">
+              <div class="price-box-label">
+                ${isPriceUnderEquilibrium ? '✓ Prix actuel' : '⚠ Prix actuel'}
               </div>
-              <div style="
-                font-size:2rem;
-                font-weight:800;
-                color:${simple >= 0 ? '#22c55e' : '#ef4444'};
-                margin-bottom:4px;
-              ">
-                ${simple >= 0 ? '+' : '−'}${fmt(Math.abs(simple))}
-                <span style="font-size:0.9rem; opacity:0.7;">/an</span>
-              </div>
-              <div style="font-size:0.85rem; color:#64748b;">
-                ΔCash vs loyer + capital remboursé.
+              <div class="price-box-amount">${fmt(currentPrice)}</div>
+              <div class="price-box-detail ${isRealPositive ? 'positive' : 'negative'}">
+                Enrichissement réaliste : 
+                ${realistic >= 0 ? '+' : '−'}${fmt(Math.abs(realistic))}/an
               </div>
             </div>
 
-            <div style="
-              padding:16px;
-              border-radius:14px;
-              border:1px solid ${isGoodReal ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)'};
-              background:${isGoodReal ? 'rgba(22,163,74,0.08)' : 'rgba(239,68,68,0.06)'};
-            ">
-              <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:4px;">
-                Vue réaliste (avec coût d'opportunité)
+            <!-- Flèche + gap -->
+            <div class="price-arrow">
+              <div class="arrow-icon ${isPriceUnderEquilibrium ? 'up' : 'down'}">
+                ${isPriceUnderEquilibrium ? '↗' : '↘'}
               </div>
-              <div style="
-                font-size:2rem;
-                font-weight:800;
-                color:${isGoodReal ? '#22c55e' : '#ef4444'};
-                margin-bottom:4px;
-              ">
-                ${complete >= 0 ? '+' : '−'}${fmt(Math.abs(complete))}
-                <span style="font-size:0.9rem; opacity:0.7;">/an</span>
+              <div class="arrow-label">
+                <div class="gap-message ${isPriceUnderEquilibrium ? 'positive' : 'negative'}">
+                  ${gapLabel}
+                </div>
               </div>
-              <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">
-                ΔCash + capital remboursé − gain perdu sur l'apport.
+            </div>
+
+            <!-- Prix d'équilibre -->
+            <div class="price-box target">
+              <div class="price-box-label">🎯 Prix d'équilibre (horizon 1 an)</div>
+              <div class="price-box-amount">
+                ~${fmt(priceTargetRnd)}
               </div>
-              <div style="font-size:0.85rem; color:${isGoodReal ? '#16a34a' : '#b91c1c'};">
-                ${realMessage}
+              <div class="price-box-detail neutral">
+                Enrichissement réaliste : ≈ 0 €/an
               </div>
             </div>
           </div>
 
-          <!-- Décomposition détaillée -->
-          <details style="margin-bottom:16px;">
+          <!-- Interprétation synthétique -->
+          <div style="font-size:0.9rem; color:#475569; margin-bottom:20px;">
+            <div style="font-weight:600; margin-bottom:4px;">💡 Interprétation</div>
+            <ul style="margin:0 0 0 18px; padding:0; line-height:1.6;">
+              ${interpLines.map(l => `<li>${l}</li>`).join('')}
+            </ul>
+          </div>
+
+          <!-- Détail des flux annuels (accordion) -->
+          <details style="margin-bottom:4px;">
             <summary style="cursor:pointer; font-size:0.9rem; color:#475569;">
-              Voir le détail des flux annuels
+              🔍 Voir le détail des flux annuels
             </summary>
             <div style="margin-top:8px;">
               <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
@@ -321,7 +414,7 @@ class PriceTargetUI {
                   </tr>
                   <tr>
                     <td style="padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4);">
-                      <strong>= Enrichissement “base”</strong>
+                      <strong>= Enrichissement “comptable” (sans coût d'opportunité)</strong>
                     </td>
                     <td style="padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4); text-align:right; font-weight:700;">
                       ${simple >= 0 ? '+' : '−'}${fmt(Math.abs(simple))}
@@ -335,10 +428,10 @@ class PriceTargetUI {
                   </tr>
                   <tr>
                     <td style="padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4);">
-                      <strong>= Enrichissement “réaliste”</strong>
+                      <strong>= Enrichissement “patrimonial” (vue réaliste)</strong>
                     </td>
                     <td style="padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4); text-align:right; font-weight:700;">
-                      ${complete >= 0 ? '+' : '−'}${fmt(Math.abs(complete))}
+                      ${realistic >= 0 ? '+' : '−'}${fmt(Math.abs(realistic))}
                     </td>
                   </tr>
                 </tbody>
