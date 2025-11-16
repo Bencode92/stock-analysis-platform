@@ -229,13 +229,13 @@
       };
     }
 
-    // ✅ Nouvelle version complète pour la RP
 // ✅ Nouvelle version complète pour la RP
 _computeRPCostAtPrice(baseInput, price, params) {
   const adv = this.analyzer.getAllAdvancedParams?.() || {};
   const inputAtPrice = this.analyzer._buildInputForPrice(baseInput, price, adv);
   const mensualite = Number(inputAtPrice.monthlyPayment ?? 0);
 
+  // Charges de propriétaire (mensuelles)
   const charges = Number(params.taxeFonciere)
                 + Number(params.coproNonRecup)
                 + Number(params.entretien)
@@ -258,33 +258,38 @@ _computeRPCostAtPrice(baseInput, price, params) {
     capitalAnnuel = Number(calc.capitalAnnuel || 0);
   }
 
-  // --- COMPARAISON VS LOCATION ---
+  // --- COMPARAISON VS LOCATION (symétrique locataire / proprio) ---
   const loyerMensuel   = Number(params.loyerMarche || 0);
   const loyerAnnuel    = loyerMensuel * 12;
   const partnerMensuel = Number(params.partner || 0);
   const partnerAnnuel  = partnerMensuel * 12;
 
-  // Coût de possession annuel net de la part du partenaire
-  const coutPossessionAnnuel = brut * 12 - partnerAnnuel;
+  // Coût annuel si tu restes locataire (avec coloc / conjoint)
+  const coutLocataireAnnuel = loyerAnnuel - partnerAnnuel;
 
-  // ΔCash = ce que paierait un locataire - ce que tu paies en tant que proprio
-  const deltaCash = loyerAnnuel - coutPossessionAnnuel;
+  // Coût annuel si tu es proprio (avec même coloc / conjoint)
+  const coutProprioAnnuel   = brut * 12 - partnerAnnuel;
+
+  // ΔCash = cash économisé (ou perdu) en devenant proprio
+  const deltaCash = coutLocataireAnnuel - coutProprioAnnuel;
 
   // --- COÛT D'OPPORTUNITÉ DE L'APPORT ---
   const apport = Number(baseInput.apport ?? 0);
 
-  // Taux d'opportunité : 3% par défaut, surcharge possible via params avancés ou slider
+  // 3 % par défaut, surcharge via params avancés ou slider RP
   const tauxOpportunite =
     Number(adv.tauxOpportuniteApport ?? params.tauxOpportuniteApport ?? 3) / 100;
 
   const coutOpportuniteApport = apport * tauxOpportunite;
 
-  // --- KPIs D'ENRICHISSEMENT ---
-  const enrichissementRPSimple  = deltaCash + capitalAnnuel;                      // version "optimiste"
-  const enrichissementRPComplet = enrichissementRPSimple - coutOpportuniteApport; // version "réaliste"
+  // --- KPIs D'ENRICHISSEMENT (ANNUELS) ---
+  const enrichissementRPSimple  = deltaCash + capitalAnnuel;                      // vue "simple"
+  const enrichissementRPComplet = enrichissementRPSimple - coutOpportuniteApport; // vue "réaliste"
 
-  // ⚠ On garde "net" mensuel pour la recherche du prix d'équilibre (logique existante)
-  const net  = brut - partnerMensuel - loyerMensuel;
+  // Net mensuel : surcoût / économie mensuelle du proprio vs locataire
+  const coutLocataireMensuel = coutLocataireAnnuel / 12;
+  const coutProprioMensuel   = coutProprioAnnuel / 12;
+  const net = coutProprioMensuel - coutLocataireMensuel;
 
   return {
     mensualite,
@@ -303,7 +308,6 @@ _computeRPCostAtPrice(baseInput, price, params) {
     tauxOpportunite: tauxOpportunite * 100 // pour affichage (%)
   };
 }
-
 
     _solveRPPrice(baseInput, params) {
       const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
