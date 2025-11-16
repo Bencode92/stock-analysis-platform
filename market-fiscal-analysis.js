@@ -807,6 +807,9 @@ getAllAdvancedParams() {
     sciEligibleTauxReduit: isChecked('sci-taux-reduit', true),
     applyPFU:              isChecked('apply-pfu', false),
 
+    // ───────── RP : taux d'opportunité de l'apport
+    tauxOpportuniteApport: parseFloatOrDefault('taux-opportunite-apport', 3),
+
     // 🆕 Distribution SCI (valeur brute) — normalisée plus tard
     sciDistribution:       sciDistribRaw
   };
