@@ -1818,49 +1818,83 @@ td.neutral {
     <div id="price-target-widget" style="display:none;"></div>
     <!-- ═══════════════════════════════ -->
 
-    <!-- ── Contrôles RP (affichés seulement en mode résidence) ── -->
-    <div id="rp-controls" style="margin:24px 0; display:none; background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(0,191,255,0.2);">
-      <h4 style="color:#00bfff; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;">
-        <i class="fas fa-sliders-h"></i> Ajustez vos paramètres
-      </h4>
-      
-      <div style="margin-bottom:16px;">
-        <label for="rpRentSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
-          Loyer du marché (charges comprises)
-        </label>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <input type="range" id="rpRentSlider" min="400" max="4000" step="25" 
-                 style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
-          <output id="rpRentOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">— €</output>
-        </div>
-      </div>
-      
-      <div style="margin-bottom:16px;">
-        <label for="rpPartnerSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
-          Participation conjoint / colocataire
-        </label>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <input type="range" id="rpPartnerSlider" min="0" max="2000" step="25" 
-                 style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
-          <output id="rpPartnerOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">0 €</output>
-        </div>
-      </div>
-      
-      <div style="margin-top:12px; color:#94a3b8; font-size:0.9em;">
-        💡 Modifiez ces valeurs pour recalculer le prix d'équilibre en temps réel
-      </div>
+   <!-- ── Contrôles RP (affichés seulement en mode résidence) ── -->
+<div id="rp-controls" style="margin:24px 0; display:none; background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(0,191,255,0.2);">
+  <h4 style="color:#00bfff; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;">
+    <i class="fas fa-sliders-h"></i> Ajustez vos paramètres
+  </h4>
+  
+  <!-- Slider loyer marché -->
+  <div style="margin-bottom:16px;">
+    <label for="rpRentSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+      Loyer du marché (charges comprises)
+    </label>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <input type="range" id="rpRentSlider" min="400" max="4000" step="25" 
+             style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
+      <output id="rpRentOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">— €</output>
     </div>
-    <!-- ─────────────────────────────────────────────────────────── -->
+  </div>
+  
+  <!-- Slider participation conjoint / colocataire -->
+  <div style="margin-bottom:16px;">
+    <label for="rpPartnerSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+      Participation conjoint / colocataire
+    </label>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <input type="range" id="rpPartnerSlider" min="0" max="2000" step="25" 
+             style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
+      <output id="rpPartnerOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">0 €</output>
+    </div>
+  </div>
 
-    <!-- Bouton retour -->
-    <div class="continue-section" style="margin-bottom: 60px;">
-        <button class="btn btn-outline" onclick="goToStep(2)">
-            <i class="fas fa-arrow-left"></i> Retour à l'analyse de marché
-        </button>
+  <!-- Slider taux d'opportunité de l'apport (RP) -->
+  <div style="margin-bottom:16px;">
+    <label for="rpOppRateSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+      Taux d'opportunité de l'apport (RP)
+    </label>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <input
+        type="range"
+        id="rpOppRateSlider"
+        min="0"
+        max="12"
+        step="0.5"
+        value="3"
+        style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;"
+        oninput="
+          document.getElementById('rpOppRateOut').textContent = this.value + ' %';
+          document.getElementById('taux-opportunite-apport').value = this.value;
+        "
+      >
+      <output id="rpOppRateOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">
+        3 %
+      </output>
     </div>
 
-    <!-- MODULE RP – conteneur vide ; rempli dynamiquement -->
-    <div id="rp-container"></div>
+    <!-- Input caché lu par getAllAdvancedParams() -->
+    <input type="hidden" id="taux-opportunite-apport" value="3">
+
+    <p style="margin-top:6px; color:#94a3b8; font-size:0.85em;">
+      Rendement alternatif si l'apport était placé (ex : 2 % Livret A, 4 % obligations, 7 % actions).
+    </p>
+  </div>
+  
+  <div style="margin-top:12px; color:#94a3b8; font-size:0.9em;">
+    💡 Modifiez ces valeurs pour recalculer le prix d'équilibre en temps réel
+  </div>
+</div>
+<!-- ─────────────────────────────────────────────────────────── -->
+
+<!-- Bouton retour -->
+<div class="continue-section" style="margin-bottom: 60px;">
+  <button class="btn btn-outline" onclick="goToStep(2)">
+    <i class="fas fa-arrow-left"></i> Retour à l'analyse de marché
+  </button>
+</div>
+
+<!-- MODULE RP – conteneur vide ; rempli dynamiquement -->
+<div id="rp-container"></div>
 </div>
 
     <!-- ▬▬▬▬▬▬▬ BUY‑RENT WIDGET ▬▬▬▬▬▬▬ -->
