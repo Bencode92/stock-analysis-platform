@@ -1848,29 +1848,37 @@ td.neutral {
     </div>
   </div>
 
-  <!-- Slider taux d'opportunité de l'apport (RP) -->
-  <div style="margin-bottom:16px;">
-    <label for="rpOppRateSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
-      Taux d'opportunité de l'apport (RP)
-    </label>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <input
-        type="range"
-        id="rpOppRateSlider"
-        min="0"
-        max="12"
-        step="0.5"
-        value="3"
-        style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;"
-        oninput="
-          document.getElementById('rpOppRateOut').textContent = this.value + ' %';
-          document.getElementById('taux-opportunite-apport').value = this.value;
-        "
-      >
-      <output id="rpOppRateOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">
-        3 %
-      </output>
-    </div>
+<!-- Slider taux d'opportunité de l'apport (RP) -->
+<div style="margin-bottom:16px;">
+  <label for="rpOppRateSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+    Taux d'opportunité de l'apport (RP)
+  </label>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <input
+      type="range"
+      id="rpOppRateSlider"
+      min="0"
+      max="12"
+      step="0.5"
+      value="3"
+      style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;"
+      oninput="
+        document.getElementById('rpOppRateOut').textContent = this.value + ' %';
+        document.getElementById('taux-opportunite-apport').value = this.value;
+        updateRPPriceTarget();
+      "
+    >
+    <output id="rpOppRateOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">
+      3 %
+    </output>
+  </div>
+  <p style="color:#94a3b8; font-size:0.85rem; margin-top:4px;">
+    Rendement alternatif si l'apport était placé (ex&nbsp;: 2&nbsp;% Livret A, 4&nbsp;% obligations, 7&nbsp;% actions).
+  </p>
+</div>
+
+<!-- Input caché lu par getAllAdvancedParams() -->
+<input type="hidden" id="taux-opportunite-apport" value="3">
 
     <!-- Input caché lu par getAllAdvancedParams() -->
     <input type="hidden" id="taux-opportunite-apport" value="3">
@@ -2875,11 +2883,32 @@ async function renderRPPriceTargetWithControls({ rent, partner } = {}) {
 
   const res = pta.calculateRPPriceEquilibrium(data, {
     loyerMarche: rent,
-    partnerContribution: partner
+    partnerContribution: partner,
+    tauxOpportuniteApport: Number(
+      document.getElementById('taux-opportunite-apport')?.value || 3
+    )
   });
 
   ui.render(res);
 }
+  // 🆕 Recalcul automatique RP quand un slider bouge
+  let rpUpdateTimer;
+  function updateRPPriceTarget() {
+    clearTimeout(rpUpdateTimer);
+    rpUpdateTimer = setTimeout(() => {
+      const rent = Number(document.getElementById('rpRentSlider')?.value || 0);
+      const partner = Number(document.getElementById('rpPartnerSlider')?.value || 0);
+      renderRPPriceTargetWithControls({ rent, partner });
+    }, 200);
+  }
+
+  // Au chargement, on branche les sliders (sécurité si certains n'existent pas encore)
+  document.addEventListener('DOMContentLoaded', () => {
+    ['rpRentSlider', 'rpPartnerSlider', 'rpOppRateSlider'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateRPPriceTarget);
+    });
+  });        
 // ═══════════════════════════════════════════════════════
 // 🎯 PRICE TARGET ANALYZER (RP + Locatif) — avec garde-fous
 // ═══════════════════════════════════════════════════════
