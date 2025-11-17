@@ -1,4 +1,4 @@
-(function () {
+;(function () {
   'use strict';
 
   class PriceTargetAnalyzer {
@@ -39,6 +39,9 @@
 
         // Exposer l’apport pour l’UI
         apport: Number(baseInput.apport ?? 0),
+
+        // 🔹 On garde une copie de l'input d'origine pour les scénarios
+        _baseInput: baseInput,
 
         targetBreakdown: {
           cashflow: Math.round(targetResult.cashflow),
@@ -422,6 +425,182 @@
         icon: '✅',
         title: 'Excellent prix'
       };
+    }
+
+    /**
+     * 🔹 Analyse de sensibilité avec 3 scénarios (locatif)
+     */
+    analyzeScenarios(baseInput, targetEnrichment = 0, opts = {}) {
+      const scenarios = {
+        pessimiste: {
+          id: 'pessimiste',
+          name: '😰 Pessimiste',
+          description: 'Loyer -10%, vacance +5 pts, charges +20%',
+          adjustments: {
+            loyerMultiplier: 0.90,       // -10% loyer
+            vacanceAdd: 5,               // +5 points de vacance
+            chargesMultiplier: 1.20,     // +20% TF / copro / PNO
+            entretienMultiplier: 1.50    // +50% entretien
+          }
+        },
+        base: {
+          id: 'base',
+          name: '📊 Réaliste',
+          description: 'Vos paramètres actuels',
+          adjustments: {
+            loyerMultiplier: 1.00,
+            vacanceAdd: 0,
+            chargesMultiplier: 1.00,
+            entretienMultiplier: 1.00
+          }
+        },
+        optimiste: {
+          id: 'optimiste',
+          name: '🚀 Optimiste',
+          description: 'Loyer +10%, vacance -3 pts, charges -15%',
+          adjustments: {
+            loyerMultiplier: 1.10,       // +10% loyer
+            vacanceAdd: -3,              // -3 points de vacance
+            chargesMultiplier: 0.85,     // -15% TF / copro / PNO
+            entretienMultiplier: 0.75    // -25% entretien
+          }
+        }
+      };
+
+      const currentPrice = Number(baseInput.price ?? baseInput.prixBien ?? 0);
+      const regimeId = opts.regimeId || this.analyzer.getSelectedRegime();
+      const results = {};
+
+      Object.entries(scenarios).forEach(([key, scenario]) => {
+        const adjustedInput = this._adjustInputForScenario(baseInput, scenario.adjustments);
+
+        // Prix cible dans ce scénario (même moteur que d’habitude)
+        const priceResult = this.calculatePriceTarget(adjustedInput, targetEnrichment, { regimeId });
+
+        // Enrichissement au prix actuel dans ce scénario
+        const currentEnrichment = this._computeEnrichmentAtPrice(
+          adjustedInput,
+          currentPrice,
+          regimeId
+        );
+
+        results[key] = {
+          ...scenario,
+          priceTarget: priceResult.priceTarget,
+          gap: priceResult.gap,
+          gapPercent: priceResult.gapPercent,
+          currentEnrichment: currentEnrichment.enrichment,
+          cashflow: currentEnrichment.cashflow,
+          capital: currentEnrichment.capital,
+          adjustedParams: {
+            loyerHC: Number(adjustedInput.loyerHC ?? 0),
+            vacanceLocative: Number(adjustedInput.vacanceLocative ?? 0),
+            entretienAnnuel: Number(adjustedInput.entretienAnnuel ?? 0),
+            taxeFonciere: Number(adjustedInput.taxeFonciere ?? 0)
+          }
+        };
+      });
+
+      const stats = this._computeScenarioStats(results, currentPrice);
+
+      return {
+        scenarios: results,
+        stats,
+        currentPrice,
+        regime: regimeId
+      };
+    }
+
+    /**
+     * Ajuste les inputs selon un scénario (MVP : loyer, vacance, TF, entretien, copro, PNO)
+     */
+    _adjustInputForScenario(baseInput, adjustments) {
+      const a = adjustments;
+      const adjusted = { ...baseInput };
+      const num = v => Number(v ?? 0);
+
+      // Loyer
+      adjusted.loyerHC = num(baseInput.loyerHC) * a.loyerMultiplier;
+
+      // Vacance en points (0–100)
+      const baseVac = num(baseInput.vacanceLocative);
+      adjusted.vacanceLocative = Math.max(0, Math.min(100, baseVac + a.vacanceAdd));
+
+      // Charges : applique chargesMultiplier sur TF / copro / PNO
+      adjusted.taxeFonciere = num(baseInput.taxeFonciere) * a.chargesMultiplier;
+      adjusted.chargesCoproNonRecup = num(baseInput.chargesCoproNonRecup) * a.chargesMultiplier;
+      adjusted.assurancePNO = num(baseInput.assurancePNO) * a.chargesMultiplier;
+
+      // Entretien annuel
+      adjusted.entretienAnnuel = num(baseInput.entretienAnnuel) * a.entretienMultiplier;
+
+      return adjusted;
+    }
+
+    /**
+     * Statistiques globales (fourchette de prix et d’enrichissement)
+     */
+    _computeScenarioStats(results, currentPrice) {
+      const values = Object.values(results);
+      if (!values.length) {
+        return {
+          priceRange: { min: 0, max: 0, spread: 0, spreadPercent: 0 },
+          enrichmentRange: { min: 0, max: 0, spread: 0 },
+          riskProfile: { level: 'medium', label: '⚖️ Risque modéré', message: '' }
+        };
+      }
+
+      const prices = values.map(r => r.priceTarget);
+      const enrichments = values.map(r => r.currentEnrichment);
+
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      const spread = maxPrice - minPrice;
+      const spreadPercent = currentPrice
+        ? (spread / currentPrice) * 100
+        : 0;
+
+      return {
+        priceRange: {
+          min: minPrice,
+          max: maxPrice,
+          spread,
+          spreadPercent
+        },
+        enrichmentRange: {
+          min: Math.min(...enrichments),
+          max: Math.max(...enrichments),
+          spread: Math.max(...enrichments) - Math.min(...enrichments)
+        },
+        riskProfile: this._assessRiskProfile(results)
+      };
+    }
+
+    /**
+     * Profil de risque qualitatif (simple règle sur le scénario pessimiste)
+     */
+    _assessRiskProfile(results) {
+      const pess = results.pessimiste?.currentEnrichment ?? 0;
+
+      if (pess >= 0) {
+        return {
+          level: 'low',
+          label: '🛡️ Risque faible',
+          message: 'Rentable même en scénario pessimiste.'
+        };
+      } else if (pess < -5000) {
+        return {
+          level: 'high',
+          label: '⚠️ Risque élevé',
+          message: 'Pertes importantes possibles en scénario pessimiste.'
+        };
+      } else {
+        return {
+          level: 'medium',
+          label: '⚖️ Risque modéré',
+          message: 'Résultat sensible aux conditions de marché.'
+        };
+      }
     }
 
     _safeDiv(a, b) {
