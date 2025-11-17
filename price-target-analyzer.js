@@ -30,9 +30,14 @@
         enrichmentGain: Math.round(targetResult.enrichment - currentEnrichment.enrichment),
         regimeUsed: targetResult.regimeNom,
         regimeId: targetResult.regimeId,
-        infeasible: !!targetResult.infeasible,
 
-        // 🔹 AJOUT : exposer l’apport pour l’UI
+        infeasible: !!targetResult.infeasible,
+        infeasibleType: targetResult.infeasibleType ?? null,
+        outOfRange: !!targetResult.outOfRange,
+        outOfRangeType: targetResult.outOfRangeType ?? null,
+        solveReason: targetResult.reason ?? null,
+
+        // Exposer l’apport pour l’UI
         apport: Number(baseInput.apport ?? 0),
 
         targetBreakdown: {
@@ -46,7 +51,13 @@
           enrichment: Math.round(currentEnrichment.enrichment)
         },
         recommendation: this._generateRecommendation(
-          gap, gapPercent, targetResult.enrichment, targetResult.regimeNom, targetResult.infeasible
+          gap,
+          gapPercent,
+          targetResult.enrichment,
+          targetResult.regimeNom,
+          targetResult.infeasible,
+          targetResult.outOfRange,
+          targetResult.outOfRangeType
         )
       };
 
@@ -81,72 +92,85 @@
 
     _solveForEnrichment(baseInput, targetEnrichment, regimeId, opts = {}) {
       const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
-      let lo = Math.max(1, p0 * 0.3);
-      let hi = Math.max(2, p0 * 2.0);
+      let lo = Math.max(1, p0 * 0.3);   // ~ -70% sous le prix actuel
+      let hi = Math.max(2, p0 * 2.0);   // ~ 2x le prix actuel
 
       const maxIter = Number(opts.maxIter ?? 80);
       const tol = Number(opts.tol ?? 1);
 
-      // ✅ Test bracketing complet (borne basse)
-      const eLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId).enrichment;
-      if (eLo + tol < targetEnrichment) {
-        const registry = this.analyzer.getRegimeRegistry();
-        const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
-        return { 
-          price: lo, 
-          regimeId: key, 
-          regimeNom: registry[key]?.nom || key,
-          enrichment: eLo, 
-          cashflow: 0, 
-          capital: 0, 
+      // 1) Borne basse : bien structurellement trop peu rentable
+      const resLo = this._computeEnrichmentAtPrice(baseInput, lo, regimeId);
+      if (resLo.enrichment + tol < targetEnrichment) {
+        return {
+          ...resLo,
+          price: lo,
           infeasible: true,
-          reason: 'Prix minimum trop élevé pour atteindre l\'objectif'
+          infeasibleType: 'underperforming',
+          outOfRange: false,
+          outOfRangeType: null,
+          reason: 'Bien structurellement peu rentable - même à ~30% du prix actuel l\'enrichissement reste sous la cible'
         };
       }
 
-      // ✅ Test bracketing complet (borne haute)
-      const eHi = this._computeEnrichmentAtPrice(baseInput, hi, regimeId).enrichment;
-      if (eHi > targetEnrichment + tol) {
-        const registry = this.analyzer.getRegimeRegistry();
-        const key = this.analyzer.normalizeRegimeKey({ id: regimeId });
-        return { 
-          price: hi, 
-          regimeId: key, 
-          regimeNom: registry[key]?.nom || key,
-          enrichment: eHi, 
-          cashflow: 0, 
-          capital: 0, 
-          infeasible: true,
-          reason: 'Objectif trop bas - même au prix minimal l\'enrichissement dépasse la cible'
+      // 2) Borne haute : bien "trop rentable" dans la plage testée
+      const resHi = this._computeEnrichmentAtPrice(baseInput, hi, regimeId);
+      if (resHi.enrichment > targetEnrichment + tol) {
+        return {
+          ...resHi,
+          price: hi,
+          infeasible: false,
+          infeasibleType: null,
+          outOfRange: true,
+          outOfRangeType: 'overperforming',
+          reason: 'Bien exceptionnellement rentable - le prix d\'équilibre serait > ~2x le prix actuel'
         };
       }
 
-      let price = Math.min(Math.max(p0, lo), hi);
+      // 3) Bisection classique dans [lo, hi]
       let best = null;
 
       for (let i = 0; i < maxIter; i++) {
-        const cur = this._computeEnrichmentAtPrice(baseInput, price, regimeId);
+        const mid = (lo + hi) / 2;
+        const cur = this._computeEnrichmentAtPrice(baseInput, mid, regimeId);
         const diff = cur.enrichment - targetEnrichment;
 
         if (!best || Math.abs(diff) < Math.abs(best.enrichment - targetEnrichment)) {
-          best = { 
-            price, 
-            regimeId: cur.regimeId, 
-            regimeNom: cur.regimeNom,
-            enrichment: cur.enrichment, 
-            cashflow: cur.cashflow, 
-            capital: cur.capital 
-          };
+          best = { ...cur, price: mid };
         }
+
         if (Math.abs(diff) <= tol) break;
 
-        const mid = (lo + hi) / 2;
-        const r = this._computeEnrichmentAtPrice(baseInput, mid, regimeId);
-        if (r.enrichment > targetEnrichment) lo = mid; else hi = mid;
-        price = mid;
+        // Hypothèse : enrichissement décroît quand le prix augmente
+        if (cur.enrichment > targetEnrichment) {
+          // Trop d'enrichissement → on peut payer plus cher
+          lo = mid;
+        } else {
+          // Enrichissement insuffisant → on doit baisser le prix
+          hi = mid;
+        }
       }
 
-      return best;
+      // Sécurisation : si best reste null, on renvoie la borne basse "safe"
+      if (!best) {
+        return {
+          ...resLo,
+          price: lo,
+          infeasible: true,
+          infeasibleType: 'underperforming',
+          outOfRange: false,
+          outOfRangeType: null,
+          reason: 'Impossible de trouver un prix d\'équilibre dans la plage testée'
+        };
+      }
+
+      return {
+        ...best,
+        infeasible: false,
+        infeasibleType: null,
+        outOfRange: false,
+        outOfRangeType: null,
+        reason: null
+      };
     }
 
     // ✅ RP avec enrichissement complet (Δcash + capital − coût d’opportunité)
@@ -187,7 +211,7 @@
           partnerContribution: Math.round(params.partner)
         },
 
-        // 🆕 ENRICHISSEMENT RP (deux versions, ANNUELLES)
+        // ENRICHISSEMENT RP (deux versions, ANNUELLES)
         rpCapitalAnnual: Math.round(currentCost.capitalAnnuel),
         rpDeltaCashAnnual: Math.round(currentCost.deltaCash),
 
@@ -332,15 +356,28 @@
       return best;
     }
 
-    _generateRecommendation(gap, gapPercent, targetEnrichment, regimeNom, infeasible) {
+    _generateRecommendation(gap, gapPercent, targetEnrichment, regimeNom, infeasible, outOfRange, outOfRangeType) {
+      // 1) Cas cible vraiment inatteignable (bien trop peu rentable)
       if (infeasible) {
         return {
           type: 'danger',
           icon: '🚨',
           title: 'Cible inatteignable',
-          message: `Avec <strong>${regimeNom}</strong>, aucun prix n'atteint l'équilibre.`
+          message: `Avec <strong>${regimeNom}</strong>, même en baissant fortement le prix, l'enrichissement reste sous la cible.`
         };
       }
+
+      // 2) Cas "bien trop rentable" (overperforming) : prix d'équilibre > 2x
+      if (outOfRange && outOfRangeType === 'overperforming') {
+        return {
+          type: 'success',
+          icon: '✅',
+          title: 'Bien très rentable dans la plage testée',
+          message: `Même en doublant le prix, l'enrichissement reste au-dessus de la cible. Le prix d'équilibre réel est au-delà de la plage testée : marge théorique très importante.`
+        };
+      }
+
+      // 3) Cas "normal" : logique existante
       if (Math.abs(gapPercent) < 1) {
         return {
           type: 'neutral',
