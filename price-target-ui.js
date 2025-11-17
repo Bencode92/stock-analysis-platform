@@ -320,7 +320,9 @@ class PriceTargetUI {
             Le capital remboursé est faible en début de prêt ; 
             la résidence principale devient souvent plus intéressante que la location 
             après 15–20 ans selon les cas.
-          </div>
+            <div style="margin-top:4px; font-size:0.8rem;">
+              Cette analyse n’intègre pas la plus-value éventuelle à la revente du bien.
+            </div>
 
           <!-- HERO : 1 seul KPI = vue réaliste -->
           <div style="
