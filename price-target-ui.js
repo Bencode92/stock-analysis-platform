@@ -237,6 +237,15 @@ class PriceTargetUI {
     const roeReal   = hasEquity ? (realistic / apport) * 100 : 0;
     const oppRate   = Number(r.rpOpportunityRate ?? 0); // déjà en %
 
+    // 🔹 KPI mensuels pour la réconciliation trésorerie vs patrimoine
+    const monthlyNet     = Number(r.rpMonthlyNet ?? r.currentMonthlyCost ?? 0);
+    const monthlyEffort  = Math.abs(monthlyNet);                 // ex : 443 €/mois
+    const monthlyCapital = Math.round(Math.abs(capital / 12));   // ex : ~375 €/mois
+
+    const monthlyLabel = monthlyNet >= 0
+      ? 'Effort d\'épargne mensuel (proprio plus cher que locataire)'
+      : 'Économie de trésorerie mensuelle (proprio moins cher que locataire)';
+
     // Badge : compétitivité vs location
     let badgeClass = 'success';
     let badgeText  = '✅ Propriété compétitive vs location';
@@ -363,6 +372,56 @@ class PriceTargetUI {
             `
                 : ''
             }
+          </div>
+
+          <!-- 🔄 Réconciliation Trésorerie vs Patrimoine -->
+          <div class="cash-wealth-reconciliation" style="
+            background: linear-gradient(135deg, rgba(239,68,68,0.03), rgba(34,197,94,0.04));
+            border: 1px solid rgba(148,163,184,0.4);
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin-bottom: 20px;
+          ">
+            <h4 style="margin:0 0 10px; color:#64748b; font-size:0.95rem;">
+              🔄 Trésorerie vs patrimoine
+            </h4>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; align-items:center;">
+              <!-- Colonne 1 : trésorerie -->
+              <div style="text-align:center;">
+                <div style="font-size:0.8rem; color:#94a3b8;">${monthlyLabel}</div>
+                <div style="font-size:1.6rem; font-weight:700; color:${monthlyNet >= 0 ? '#ef4444' : '#22c55e'};">
+                  ${monthlyNet >= 0 ? '-' : '+'}${this._formatCurrency(monthlyEffort).replace('€',' €')}
+                </div>
+                <div style="font-size:0.75rem; color:#94a3b8;">par mois vs location</div>
+              </div>
+
+              <!-- Flèche / explication -->
+              <div style="text-align:center;">
+                <div style="font-size:2rem; line-height:1;">→</div>
+                <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">
+                  dont environ<br>
+                  <strong>${this._formatCurrency(monthlyCapital).replace('€',' €')}</strong><br>
+                  de capital remboursé / mois
+                </div>
+              </div>
+
+              <!-- Colonne 3 : enrichissement annuel -->
+              <div style="text-align:center;">
+                <div style="font-size:0.8rem; color:#94a3b8;">Enrichissement patrimonial (1 an)</div>
+                <div style="font-size:1.6rem; font-weight:700; color:${realistic >= 0 ? '#22c55e' : '#ef4444'};">
+                  ${realistic >= 0 ? '+' : '−'}${this._formatCurrency(Math.abs(realistic)).replace('€',' €')}
+                </div>
+                <div style="font-size:0.75rem; color:#94a3b8;">après coût d'opportunité</div>
+              </div>
+            </div>
+
+            <div style="margin-top:10px; padding:8px 10px; background:rgba(248,250,252,0.8); border-radius:8px; font-size:0.8rem; color:#475569;">
+              💡 <strong>Lecture :</strong> les ${this._formatCurrency(monthlyEffort).replace('€',' €')} de plus par mois ne sont pas "perdus" :
+              une grande partie correspond à du capital remboursé. C'est ce qui explique un gain patrimonial net de 
+              <strong>${realistic >= 0 ? '+' : '−'}${this._formatCurrency(Math.abs(realistic)).replace('€',' €')}/an</strong>
+              par rapport à la location + placement de l'apport.
+            </div>
           </div>
 
           <!-- Bloc : prix actuel vs prix d'équilibre -->
