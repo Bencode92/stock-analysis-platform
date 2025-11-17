@@ -1,4 +1,4 @@
-;(function () {
+(function () {
   'use strict';
 
   class PriceTargetAnalyzer {
@@ -40,7 +40,7 @@
         // Exposer l’apport pour l’UI
         apport: Number(baseInput.apport ?? 0),
 
-        // 🔹 On garde une copie de l'input d'origine pour les scénarios
+        // On garde une copie de l'input d'origine pour les scénarios
         _baseInput: baseInput,
 
         targetBreakdown: {
@@ -336,27 +336,70 @@
       };
     }
 
+    /**
+     * RP : cherche le prix d'équilibre sur l'ENRICHISSEMENT PATRIMONIAL COMPLET
+     * => on résout enrichissementRPComplet ≈ 0 (Δcash + capital − coût d'opportunité)
+     */
     _solveRPPrice(baseInput, params) {
       const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
+
+      // Plage de recherche autour du prix actuel
       let lo = Math.max(1, p0 ? 0.3 * p0 : 50_000);
       let hi = p0 ? 2.0 * p0 : 800_000;
 
-      const maxIter = 60, tol = 1;
-
-      const costLo = this._computeRPCostAtPrice(baseInput, lo, params);
-      if (costLo.net > 0) {
-        return { price: lo, mensualite: costLo.mensualite, charges: costLo.charges, net: costLo.net, infeasible: true };
-      }
+      const maxIter = 60;
+      const tol = 1; // ~1 €/an de tolérance sur l'enrichissement
 
       let best = null;
+
       for (let i = 0; i < maxIter; i++) {
-        const mid  = (lo + hi) / 2;
+        const mid = (lo + hi) / 2;
         const cost = this._computeRPCostAtPrice(baseInput, mid, params);
-        best = { price: mid, mensualite: cost.mensualite, charges: cost.charges, net: cost.net };
-        if (Math.abs(cost.net) <= tol) break;
-        if (cost.net > 0) hi = mid; else lo = mid;
+        const enr = Number(cost.enrichissementRPComplet || 0); // annuel
+
+        // On garde la solution la plus proche de 0
+        if (!best || Math.abs(enr) < Math.abs(best.enrichissementRPComplet)) {
+          best = {
+            price: mid,
+            mensualite: cost.mensualite,
+            charges: cost.charges,
+            net: cost.net,
+            enrichissementRPComplet: enr
+          };
+        }
+
+        // Assez proche de 0 → on s'arrête
+        if (Math.abs(enr) <= tol) break;
+
+        // Hypothèse : quand le prix MONTE, l'enrichissement patrimonial DIMINUE
+        if (enr > 0) {
+          // Projet encore gagnant → on peut payer plus cher
+          lo = mid;
+        } else {
+          // Projet perdant → il faut baisser le prix
+          hi = mid;
+        }
       }
-      return best;
+
+      // Fallback de sécurité si jamais best reste null (cas théorique)
+      if (!best) {
+        const fallback = this._computeRPCostAtPrice(baseInput, p0 || lo, params);
+        return {
+          price: p0 || lo,
+          mensualite: fallback.mensualite,
+          charges: fallback.charges,
+          net: fallback.net,
+          infeasible: true
+        };
+      }
+
+      return {
+        price: best.price,
+        mensualite: best.mensualite,
+        charges: best.charges,
+        net: best.net,
+        infeasible: false
+      };
     }
 
     _generateRecommendation(gap, gapPercent, targetEnrichment, regimeNom, infeasible, outOfRange, outOfRangeType) {
