@@ -668,56 +668,6 @@
 
     clearCache() { this.cache.clear(); }
   }
-     * Helper DEV : debug de la courbe d'enrichissement en fonction du prix
-   *
-   * Usage console :
-   *   const a = new PriceTargetAnalyzer(fiscalAnalyzer);
-   *   debugEnrichmentCurve(a, baseInput, 'lmnp_reel');
-   *   debugEnrichmentCurve(a, baseInput, 'rp');
-   */
-  window.debugEnrichmentCurve = function (analyzer, baseInput, regimeId) {
-    const p0 = Number(baseInput.price ?? baseInput.prixBien ?? 0) || 0;
-    const lo = Math.max(1, p0 ? 0.3 * p0 : 50_000);
-    const hi = p0 ? 2.0 * p0 : 800_000;
-    const steps = 8;
-
-    const results = [];
-    for (let i = 0; i <= steps; i++) {
-      const price = lo + (hi - lo) * (i / steps);
-
-      if (regimeId === 'rp') {
-        const params = analyzer._buildRPParams(baseInput, {});
-        const cost = analyzer._computeRPCostAtPrice(baseInput, price, params);
-        results.push({
-          price: Math.round(price),
-          enrichment: Math.round(cost.enrichissementRPComplet)
-        });
-      } else {
-        const enr = analyzer._computeEnrichmentAtPrice(baseInput, price, regimeId);
-        results.push({
-          price: Math.round(price),
-          enrichment: Math.round(enr.enrichment)
-        });
-      }
-    }
-
-    console.table(results);
-
-    for (let i = 1; i < results.length; i++) {
-      if (results[i].enrichment > results[i - 1].enrichment) {
-        console.warn(
-          '⚠️ Non-monotonie possible entre',
-          results[i - 1].price,
-          'et',
-          results[i].price
-        );
-      }
-    }
-  };
-
-  // Exposition globale
-  window.PriceTargetAnalyzer = PriceTargetAnalyzer;
-})();
 
   // Exposition globale
   window.PriceTargetAnalyzer = PriceTargetAnalyzer;
