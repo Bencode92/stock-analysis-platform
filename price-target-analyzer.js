@@ -229,6 +229,11 @@
         rpApport: Math.round(currentCost.apport),
         rpOpportunityRate: currentCost.tauxOpportunite, // en %
 
+        // 🔹 NOUVEAU : KPIs mensuels pour l’UI (effort / capital)
+        rpMonthlyNet: Math.round(currentCost.net),                    // signé (+ surcoût, - économie)
+        rpMonthlyEffortAbs: Math.round(Math.abs(currentCost.net)),   // toujours positif
+        rpMonthlyCapital: Math.round(currentCost.capitalAnnuel / 12),
+
         recommendation: this._generateRPRecommendation(gap, gapPercent, params.loyerMarche)
       };
     }
@@ -672,4 +677,5 @@
   // Exposition globale
   window.PriceTargetAnalyzer = PriceTargetAnalyzer;
 })();
+
 
