@@ -17,9 +17,28 @@ class PriceTargetUI {
       return;
     }
 
-    container.innerHTML = this._generateHTML(result);
+    // HTML principal (prix cible / RP etc.)
+    let html = this._generateHTML(result);
+
+    // 🔹 Scénarios uniquement pour le locatif faisable
+    if (result.regimeId !== 'rp' && !result.infeasible && this.analyzer?.analyzeScenarios) {
+      const baseInput = result._baseInput; // injecté côté analyzer
+      if (baseInput) {
+        const scenariosData = this.analyzer.analyzeScenarios(
+          baseInput,
+          0, // seuil d’équilibre
+          { regimeId: result.regimeId }
+        );
+        html += this._generateScenariosPanel(scenariosData);
+      }
+    }
+
+    container.innerHTML = html;
     container.style.display = 'block';
     this.isVisible = true;
+
+    // Activer le toggle du panneau scénarios (si présent)
+    this._attachScenarioToggle?.();
 
     setTimeout(() => {
       container.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -638,6 +657,102 @@ class PriceTargetUI {
     `;
   }
 
+  /**
+   * Panneau d’analyse de sensibilité (3 scénarios)
+   * @param {object} scenariosData - Retour de analyzer.analyzeScenarios(...)
+   */
+  _generateScenariosPanel(scenariosData) {
+    if (!scenariosData || !scenariosData.scenarios) return '';
+
+    const { scenarios, stats, currentPrice } = scenariosData;
+    const fmt = v => this._formatCurrency(v);
+
+    const rows = Object.values(scenarios).map(s => `
+      <tr class="scenario-row scenario-${s.id}">
+        <td>
+          <div class="scenario-label">
+            <div class="scenario-name">${s.name}</div>
+            <div class="scenario-desc">${s.description}</div>
+          </div>
+        </td>
+        <td style="text-align:right;"><strong>${fmt(s.priceTarget)}</strong></td>
+        <td style="text-align:right;" class="${s.gap >= 0 ? 'negative' : 'positive'}">
+          ${s.gapPercent >= 0 ? '+' : ''}${s.gapPercent.toFixed(1)}%
+        </td>
+        <td style="text-align:right;" class="${s.currentEnrichment >= 0 ? 'positive' : 'negative'}">
+          ${s.currentEnrichment >= 0 ? '+' : ''}${fmt(s.currentEnrichment)}/an
+        </td>
+        <td style="text-align:right;" class="${s.cashflow >= 0 ? 'positive' : 'negative'}">
+          ${s.cashflow >= 0 ? '+' : ''}${fmt(s.cashflow)}/an
+        </td>
+      </tr>
+    `).join('');
+
+    return `
+      <div class="scenarios-panel">
+        <div class="scenarios-header" onclick="window.toggleScenarios && window.toggleScenarios()">
+          <h3 class="scenarios-title">📊 Analyse de sensibilité (3 scénarios)</h3>
+          <button class="scenarios-toggle" type="button">
+            <span id="scenarios-chevron">▼</span>
+          </button>
+        </div>
+
+        <div class="scenarios-content" id="scenarios-content" style="display:none;">
+          
+          <div class="risk-profile risk-${stats.riskProfile.level}">
+            <div class="risk-badge">${stats.riskProfile.label}</div>
+            <p class="risk-message">${stats.riskProfile.message}</p>
+          </div>
+
+          <table class="scenarios-table">
+            <thead>
+              <tr>
+                <th>Scénario</th>
+                <th style="text-align:right;">Prix cible</th>
+                <th style="text-align:right;">Écart vs prix actuel</th>
+                <th style="text-align:right;">Enrichissement/an</th>
+                <th style="text-align:right;">Cash-flow/an</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+
+          <div class="scenarios-insights">
+            <ul>
+              <li>
+                Fourchette de prix cible :
+                <strong>${fmt(stats.priceRange.min)} – ${fmt(stats.priceRange.max)}</strong>
+                (~${stats.priceRange.spreadPercent.toFixed(0)}% de dispersion autour du prix actuel ${fmt(currentPrice)}).
+              </li>
+              <li>
+                Enrichissement potentiel (selon scénario) :
+                <strong>${fmt(stats.enrichmentRange.min)} à ${fmt(stats.enrichmentRange.max)}/an</strong>.
+              </li>
+              ${stats.enrichmentRange.min < 0 ? `
+              <li>
+                ⚠️ En scénario pessimiste, prévoir une réserve d’environ 
+                <strong>${fmt(Math.abs(stats.enrichmentRange.min))}/an</strong>.
+              </li>` : ''}
+            </ul>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  _attachScenarioToggle() {
+    window.toggleScenarios = function() {
+      const content = document.getElementById('scenarios-content');
+      const chevron = document.getElementById('scenarios-chevron');
+      if (!content || !chevron) return;
+      const isHidden = content.style.display === 'none';
+      content.style.display = isHidden ? 'block' : 'none';
+      chevron.textContent = isHidden ? '▲' : '▼';
+    };
+  }
+
   _getValueClass(value) {
     if (value > 100) return 'positive';
     if (value < -100) return 'negative';
@@ -664,5 +779,6 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
   window.PriceTargetUI = PriceTargetUI;
 }
+
 
 
