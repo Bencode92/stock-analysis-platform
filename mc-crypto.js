@@ -1457,48 +1457,62 @@ function ensureEl(parent, id, html) {
   }
 
   // === v4.5 - Masquer les filtres auto dans l'UI ===
-  function drawFilters() {
-    const cont = q('#crypto-cf-pills, #cf-pills, #crypto-mc-filters');
-    if (!cont) return;
-    
-    // Filtrer les filtres auto et preset pour l'affichage
-    const visible = state.filters.filter(f => !f.__auto && !f.__preset);
-    
-    cont.innerHTML = visible.map((f,idx)=>{
-      const lab = METRICS[f.metric].label;
-      // Normalisation de l'opérateur pour l'affichage
-      let displayOp = f.operator;
-      if (displayOp === '&gt;=') displayOp = '>=';
-      if (displayOp === '&gt;') displayOp = '>';
-      if (displayOp === '&lt;=') displayOp = '<=';
-      if (displayOp === '&lt;') displayOp = '<';
-      if (displayOp === '&ne;') displayOp = '!=';
-      
-      const color = (displayOp==='>='||displayOp==='>') ? 'text-green-400'
-                   : (displayOp==='<'||displayOp==='<=') ? 'text-red-400'
-                   : 'text-yellow-400';
-      
-      // Utiliser l'index dans le tableau filtré pour la suppression
-      const realIdx = state.filters.indexOf(f);
-      
-      return `<div class="filter-item flex items-center gap-2 p-2 rounded bg-white/5">
-        <span class="flex-1 min-w-0">
-          <span class="whitespace-nowrap overflow-hidden text-ellipsis">${lab} <span class="${color} font-semibold">${displayOp} ${fmtFR(f.value)}%</span></span>
+// === v4.5 - Masquer uniquement les filtres auto dans l'UI ===
+function drawFilters() {
+  const cont = q('#crypto-cf-pills, #cf-pills, #crypto-mc-filters');
+  if (!cont) return;
+  
+  // On masque seulement les filtres auto (__auto),
+  // mais on GARDE les filtres de preset (__preset) pour les afficher.
+  const visible = state.filters.filter(f => !f.__auto);
+  
+  cont.innerHTML = visible.map((f) => {
+    const lab = METRICS[f.metric].label;
+
+    // Normalisation de l'opérateur pour l'affichage
+    let displayOp = f.operator;
+    if (displayOp === '&gt;=') displayOp = '>=';
+    if (displayOp === '&gt;')  displayOp = '>';
+    if (displayOp === '&lt;=') displayOp = '<=';
+    if (displayOp === '&lt;')  displayOp = '<';
+    if (displayOp === '&ne;') displayOp = '!=';
+
+    const color =
+      (displayOp === '>=' || displayOp === '>')  ? 'text-green-400' :
+      (displayOp === '<'  || displayOp === '<=') ? 'text-red-400'   :
+                                                   'text-yellow-400';
+
+    // Index réel dans state.filters pour suppression
+    const realIdx  = state.filters.indexOf(f);
+    const isPreset = !!f.__preset;
+
+    return `<div class="filter-item flex items-center gap-2 p-2 rounded bg-white/5">
+      <span class="flex-1 min-w-0">
+        <span class="whitespace-nowrap overflow-hidden text-ellipsis">
+          ${lab} 
+          <span class="${color} font-semibold">${displayOp} ${fmtFR(f.value)}%</span>
+          ${isPreset ? '<span class="text-xs opacity-60 ml-1">(preset)</span>' : ''}
         </span>
-        <button class="remove-filter text-red-400 hover:text-red-300 text-sm shrink-0" data-i="${realIdx}"><i class="fas fa-times"></i></button>
-      </div>`;
-    }).join('') || '<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnel</div>';
-    
-    cont.querySelectorAll('.remove-filter').forEach(btn=>{
-      btn.addEventListener('click',e=>{
-        const i = parseInt(e.currentTarget.dataset.i,10);
-        state.filters.splice(i,1);
+      </span>
+      <button class="remove-filter text-red-400 hover:text-red-300 text-sm shrink-0" data-i="${realIdx}">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>`;
+  }).join('') || '<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnel</div>';
+  
+  cont.querySelectorAll('.remove-filter').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const i = parseInt(e.currentTarget.dataset.i, 10);
+      if (i >= 0) {
+        state.filters.splice(i, 1);
         drawFilters();
-        compactFilterUI(); // Re-compacte après suppression
-        refresh();  // réapplique immédiatement
-      });
+        compactFilterUI();
+        refresh();
+      }
     });
-  }
+  });
+}
+
 
   // Refresh (SÉCURISÉ)
   function refresh(){
