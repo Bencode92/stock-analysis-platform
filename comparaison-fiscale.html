@@ -1956,14 +1956,16 @@ td.neutral {
     <script src="./price-target-ui.js"></script>
     
     <script>
-        // Variables globales
-        let currentStep = 1;
-        let marketData = null;
-        let propertyData = null;
-        let analyzer = null;
-        
-        // Table de correspondance avec ID pour plus de robustesse
-const REGIME_LABELS = {
+  // Variables globales
+  let currentStep = 1;
+  let marketData = null;
+  let propertyData = null;
+  let analyzer = null;
+  let priceTargetAnalyzer = null;
+  let priceTargetUI = null;
+  
+  // Table de correspondance avec ID pour plus de robustesse
+  const REGIME_LABELS = {
   'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
   'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
   'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
@@ -2007,6 +2009,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
   window.analyzer = new MarketFiscalAnalyzer();
   analyzer = window.analyzer; // garde la variable existante utilisée plus bas
+
+  // ✅ Instanciation unique du moteur de prix cible
+  if (window.PriceTargetAnalyzer && window.PriceTargetUI) {
+    priceTargetAnalyzer = new window.PriceTargetAnalyzer(analyzer);
+    priceTargetUI       = new window.PriceTargetUI(priceTargetAnalyzer, 'price-target-widget');
+
+    // Optionnel : debug global
+    window.priceTargetAnalyzer = priceTargetAnalyzer;
+    window.priceTargetUI       = priceTargetUI;
+  } else {
+    console.warn('PriceTargetAnalyzer / PriceTargetUI non chargés au DOMContentLoaded');
+  }
 
   // Gérer les données de ville sélectionnée
   if (window.villeSearchManager) {
@@ -2630,323 +2644,319 @@ function generateRecommendations(pricePosition, rentPosition, data = {}) {
     
     return recommendations;
 }
-        
-        // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
- async function proceedToFiscalAnalysis() {
-    console.log('🚀 Lancement de l\'analyse fiscale...');
-
-    goToStep(3);
-
-    // Afficher un loading
-    const resultsDiv = document.getElementById('fiscal-comparison-results');
-    resultsDiv.innerHTML = `
-        <div style="text-align: center; padding: 60px;">
-            <div class="loading-spinner"></div>
-            <div style="color: #00bfff; font-size: 1.2em; margin-top: 20px;">
-                Analyse des régimes fiscaux en cours...
-            </div>
-        </div>
-    `;
-
-    // Attendre un peu pour l'effet
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    try {
-        // 1) Récupérer les données du formulaire pour debug/graphes
-        const analysisData = analyzer.prepareFiscalData();
-        console.log('📊 Données d\'analyse complètes:', analysisData);
-
-        // 2) Vérifier les paramètres avancés modifiés
-        const modifiedParams = checkModifiedParameters?.() || [];
-        if (modifiedParams.length > 0) {
-            console.log('⚠️ Paramètres avancés modifiés:', modifiedParams);
-        }
-
-        // 3) Effectuer l'analyse complète (garde le comportement existant)
-        const analysis = await analyzer.performCompleteAnalysis(propertyData);
-
-        // Sécurité : aucun résultat
-        if (!analysis?.fiscal?.length) {
-            resultsDiv.innerHTML = `
-                <div class="market-comparison-card">
-                    <h3>Aucun résultat</h3>
-                    <p>Aucun régime n'a pu être calculé. Vérifiez vos paramètres puis réessayez.</p>
-                </div>
-            `;
-            return;
-        }
-
-        /* -----------------------------------------------------------------
-           4) Afficher le widget Buy vs Rent si résidence principale
-        ----------------------------------------------------------------- */
-        const isResidence = propertyData.occupationMode === 'residence';
-        if (isResidence) {
-            const tauxMensuel = (propertyData.taux || 0) / 100 / 12;
-            const montantEmprunte = (propertyData.prixPaye || 0) - (propertyData.apport || 0);
-            const interetsMensuel = montantEmprunte * tauxMensuel;
-
-            // Mise à jour des paramètres du widget
-            br.mensualité = Math.round(propertyData.mensualite || 0);
-
-            // Charges fixes & conjoint
-            const chargesBreak = buildChargesBreakdown(propertyData);
-            br.charges  = Math.round(sum(chargesBreak));
-            br.partner  = propertyData.partnerContribution || 0;
-            br.details  = chargesBreak;
-
-            br.loyerMarché = propertyData.ville
-                ? Math.round((propertyData.ville.loyer_m2 || 0) * (propertyData.surface || 0))
-                : Math.round(propertyData.loyerCC || 0);
-
-            br.amort = Math.round((propertyData.mensualite || 0) - interetsMensuel);
-
-            // Afficher le widget
-            drawBuyRent();
-        }
-
-/* -----------------------------------------------------------------
-   5) Régime à mettre en avant = le régime ACTUEL (si trouvé),
-      sinon on retombe sur le meilleur comme filet de sécurité.
-      → correspondance robuste par ID avec fallback par label
------------------------------------------------------------------ */
-// Meilleur régime (par cash-flow net annuel)
-const bestRegime = analysis.fiscal.reduce(
-  (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
-  analysis.fiscal[0]
-);
-
-// Code sélectionné dans l'UI → map vers {id,label}
-const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
-const mapEntry    = REGIME_LABELS?.[selectedCode];   // { id, label } ou undefined
-
-// Résultat correspondant au choix (si présent dans la liste)
-const selectedRes =
-  (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
-  (mapEntry?.label && analysis.fiscal.find(r => r.nom === mapEntry.label)) ||
-  (typeof mapEntry === 'string' && analysis.fiscal.find(r => r.nom === mapEntry)) ||
-  null;
-
-// 👉 On privilégie TOUJOURS le régime actuel si on l'a trouvé
-const detailRegime = selectedRes || bestRegime;
-
-/* -----------------------------------------------------------------
-   6) Génération HTML (on passe le détail = régime ACTUEL)
-      - bestId sert aux badges "Meilleur" dans le tableau
-      - forceRegime à true pour que le header prenne le régime détaillé
------------------------------------------------------------------ */
-const html = analyzer.generateFiscalResultsHTML(
-  analysis.fiscal,
-  analysisData,
-  {
-    detailId    : detailRegime.id,      // carte du haut = régime actuel
-    selectedId  : selectedRes?.id || null,
-    bestId      : bestRegime.id,        // conserve l'étoile "Meilleur" dans le tableau
-    forceRegime : !!selectedRes         // titre/visuel aligné sur le régime détaillé
-  }
-);
-resultsDiv.innerHTML = html;
-
-        // 7) Graphiques
-        setTimeout(() => {
-            try {
-                analyzer.createFiscalCharts(analysis.fiscal);
-            } catch (e) {
-                console.warn('Graphiques fiscaux non générés :', e);
-            }
-        }, 100);
-
-        // 8) Toggle du tableau détaillé
-        setTimeout(() => {
-            const toggleBtn = document.querySelector('.btn-expand-table');
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', function () {
-                    const table = document.getElementById('detailed-fiscal-table');
-                    if (!table) return;
-                    const hidden = (table.style.display === 'none' || table.style.display === '');
-                    table.style.display = hidden ? 'block' : 'none';
-                    this.classList.toggle('expanded', hidden);
-                    this.innerHTML = hidden
-                        ? '<i class="fas fa-chevron-up"></i> Masquer le détail'
-                        : '<i class="fas fa-chevron-down"></i> Voir le détail complet';
-                });
-            }
-        }, 200);
-
-        // 9) Debug
-        window.lastAnalysisData = {
-            input: analysisData,
-            results: analysis.fiscal,
-            timestamp: new Date()
-        };
-
-        console.log('✅ Analyse terminée. Tapez debugFiscalAnalysis() pour voir les détails.');
-// ─────────────────────────────────────────────────────────────
-// RP : rendu avec garde-fous (PriceTargetAnalyzer / UI présents)
-// ─────────────────────────────────────────────────────────────
-async function renderRPPriceTargetWithControls({ rent, partner } = {}) {
-  const PT = window.PriceTargetAnalyzer;
-  const UI = window.PriceTargetUI;
-  if (!PT || !UI) {
-    const ui = new (window.PriceTargetUI || function(){}) (null, 'price-target-widget');
-    ui?.showError?.("Moteur de prix cible indisponible.");
-    console.error("PriceTargetAnalyzer ou PriceTargetUI absent du scope global.");
+function computePriceTargetLocatif(baseInput, regimeId = null) {
+  if (!priceTargetAnalyzer || !priceTargetUI) {
+    console.error('Price Target non initialisé');
     return;
   }
 
-  const pta = new PT(analyzer);
-  const ui  = new UI(pta, 'price-target-widget');
+  const result = priceTargetAnalyzer.calculatePriceTarget(
+    baseInput,
+    0, // enrichissement cible = 0 => prix d'équilibre
+    { regimeId: regimeId || analyzer?.getSelectedRegime?.() }
+  );
 
-  const data = {
-    ...analyzer.prepareFiscalData(propertyData),
-    partnerContribution: propertyData.partnerContribution || 0,
-    entretienAnnuel: propertyData.entretienAnnuel || 500,
-    chargesCoproNonRecup: propertyData.chargesCoproNonRecup || 50,
-    assurancePNO: propertyData.assurancePNO || 15,
-    monthlyCharges: propertyData.monthlyCharges || propertyData.charges || 50,
-    ville: propertyData.ville || {},
-    loyerHC: propertyData.loyerActuel || 0,
-    surface: propertyData.surface || 0,
-    price: propertyData.prixPaye || propertyData.price || 0
+  priceTargetUI.render(result);
+  return result;
+}
+
+function computePriceTargetRP(baseInput, options = {}) {
+  if (!priceTargetAnalyzer || !priceTargetUI) {
+    console.error('Price Target non initialisé');
+    return;
+  }
+
+  const enrichedInput = {
+    ...baseInput,
+    monthlyCharges: baseInput.monthlyCharges || baseInput.charges || 0
   };
 
-  const res = pta.calculateRPPriceEquilibrium(data, {
-    loyerMarche: rent,
-    partnerContribution: partner
+  const result = priceTargetAnalyzer.calculateRPPriceEquilibrium(
+    enrichedInput,
+    options
+  );
+
+  priceTargetUI.render(result);
+  return result;
+}
+
+function setupRPSliders(baseInput, defaults = {}) {
+  const box        = document.getElementById('rp-controls');
+  const rentEl     = document.getElementById('rpRentSlider');
+  const rentOut    = document.getElementById('rpRentOut');
+  const partEl     = document.getElementById('rpPartnerSlider');
+  const partOut    = document.getElementById('rpPartnerOut');
+  const oppRateEl  = document.getElementById('rpOppRateSlider');
+  const oppRateOut = document.getElementById('rpOppRateOut');
+  const oppHidden  = document.getElementById('taux-opportunite-apport');
+
+  if (!box || !rentEl || !partEl) return;
+
+  box.style.display = '';
+
+  const nf = new Intl.NumberFormat('fr-FR');
+
+  const loyerInit   = defaults.loyerMarche || 1000;
+  const partnerInit = defaults.partner     || 0;
+
+  const rentMin = Math.max(300, Math.floor(loyerInit * 0.4 / 25) * 25);
+  const rentMax = Math.max(rentMin + 500, Math.ceil(loyerInit * 1.8 / 25) * 25);
+  const partMax = Math.max(1000, Math.ceil((loyerInit * 1.2) / 25) * 25);
+
+  rentEl.min   = rentMin;
+  rentEl.max   = rentMax;
+  rentEl.step  = 25;
+  rentEl.value = loyerInit;
+  rentOut.textContent = nf.format(loyerInit) + ' €';
+
+  partEl.min   = 0;
+  partEl.max   = partMax;
+  partEl.step  = 25;
+  partEl.value = partnerInit;
+  partOut.textContent = nf.format(partnerInit) + ' €';
+
+  if (oppRateEl && oppRateOut && oppHidden) {
+    const startOpp = Number(oppHidden.value || 3);
+    oppRateEl.value        = startOpp;
+    oppRateOut.textContent = startOpp + ' %';
+  }
+
+  let t;
+  const recalc = () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const loyerMarche = Number(rentEl.value) || 0;
+      const partner     = Number(partEl.value) || 0;
+      const oppRate     = Number(oppRateEl?.value || oppHidden?.value || 3);
+
+      if (oppHidden) oppHidden.value = oppRate;
+
+      computePriceTargetRP(baseInput, {
+        loyerMarche,
+        partnerContribution: partner,
+        tauxOpportuniteApport: oppRate
+      });
+    }, 80);
+  };
+
+  rentEl.addEventListener('input', (e) => {
+    rentOut.textContent = nf.format(e.target.value) + ' €';
+    recalc();
   });
 
-  ui.render(res);
-}
-// ═══════════════════════════════════════════════════════
-// 🎯 PRICE TARGET ANALYZER (RP + Locatif) — avec garde-fous
-// ═══════════════════════════════════════════════════════
-setTimeout(async () => {
-  try {
-    console.log('🎯 Début calcul prix cible...');
+  partEl.addEventListener('input', (e) => {
+    partOut.textContent = nf.format(e.target.value) + ' €';
+    recalc();
+  });
 
-    const PT = window.PriceTargetAnalyzer;
-    const UI = window.PriceTargetUI;
-    if (!PT || !UI) {
-      const ui = new (window.PriceTargetUI || function(){}) (null, 'price-target-widget');
-      ui?.showError?.("Moteur de prix cible indisponible.");
-      console.error("PriceTargetAnalyzer ou PriceTargetUI absent du scope global.");
+  if (oppRateEl && oppRateOut) {
+    oppRateEl.addEventListener('input', (e) => {
+      const val = e.target.value;
+      oppRateOut.textContent = val + ' %';
+      recalc();
+    });
+  }
+}        
+        // NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
+// NOUVELLE FONCTION AMÉLIORÉE - Passer à l'analyse fiscale
+async function proceedToFiscalAnalysis() {
+  console.log('🚀 Lancement de l\'analyse fiscale...');
+
+  goToStep(3);
+
+  // Afficher un loading
+  const resultsDiv = document.getElementById('fiscal-comparison-results');
+  resultsDiv.innerHTML = `
+    <div style="text-align: center; padding: 60px;">
+      <div class="loading-spinner"></div>
+      <div style="color: #00bfff; font-size: 1.2em; margin-top: 20px;">
+        Analyse des régimes fiscaux en cours...
+      </div>
+    </div>
+  `;
+
+  // Petit délai pour l'effet visuel
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  try {
+    // 1) Données d'analyse (⚠️ avec propertyData)
+    const analysisData = analyzer.prepareFiscalData(propertyData);
+    console.log('📊 Données d\'analyse complètes:', analysisData);
+
+    // 2) Paramètres avancés modifiés
+    const modifiedParams = checkModifiedParameters?.() || [];
+    if (modifiedParams.length > 0) {
+      console.log('⚠️ Paramètres avancés modifiés:', modifiedParams);
+    }
+
+    // 3) Analyse complète
+    const analysis = await analyzer.performCompleteAnalysis(propertyData);
+
+    // Sécurité : aucun résultat
+    if (!analysis?.fiscal?.length) {
+      resultsDiv.innerHTML = `
+        <div class="market-comparison-card">
+          <h3>Aucun résultat</h3>
+          <p>Aucun régime n'a pu être calculé. Vérifiez vos paramètres puis réessayez.</p>
+        </div>
+      `;
       return;
     }
 
-    const pta = new PT(analyzer);
-    const ui  = new UI(pta, 'price-target-widget');
+    /* -----------------------------------------------------------------
+       4) Widget Buy vs Rent si résidence principale
+    ----------------------------------------------------------------- */
+    const isResidence = propertyData.occupationMode === 'residence';
+    if (isResidence) {
+      const tauxMensuel     = (propertyData.taux || 0) / 100 / 12;
+      const montantEmprunte = (propertyData.prixPaye || 0) - (propertyData.apport || 0);
+      const interetsMensuel = montantEmprunte * tauxMensuel;
+
+      // Mise à jour des paramètres du widget
+      br.mensualité = Math.round(propertyData.mensualite || 0);
+
+      // Charges fixes & conjoint
+      const chargesBreak = buildChargesBreakdown(propertyData);
+      br.charges  = Math.round(sum(chargesBreak));
+      br.partner  = propertyData.partnerContribution || 0;
+      br.details  = chargesBreak;
+
+      br.loyerMarché = propertyData.ville
+        ? Math.round((propertyData.ville.loyer_m2 || 0) * (propertyData.surface || 0))
+        : Math.round(propertyData.loyerCC || 0);
+
+      br.amort = Math.round((propertyData.mensualite || 0) - interetsMensuel);
+
+      // Afficher le widget
+      drawBuyRent();
+    }
+
+    /* -----------------------------------------------------------------
+       5) Régime à mettre en avant = le régime ACTUEL (si trouvé),
+          sinon on retombe sur le meilleur comme filet de sécurité.
+          → correspondance robuste par ID avec fallback par label
+    ----------------------------------------------------------------- */
+    // Meilleur régime (par cash-flow net annuel)
+    const bestRegime = analysis.fiscal.reduce(
+      (a, b) => ((a?.cashflowNetAnnuel ?? -Infinity) > (b?.cashflowNetAnnuel ?? -Infinity) ? a : b),
+      analysis.fiscal[0]
+    );
+
+    // Code sélectionné dans l'UI → map vers {id,label}
+    const selectedCode = propertyData?.regimeActuel;     // ex: 'nu_micro'
+    const mapEntry     = REGIME_LABELS?.[selectedCode];  // { id, label } ou undefined
+
+    // Résultat correspondant au choix (si présent dans la liste)
+    const selectedRes =
+      (mapEntry?.id    && analysis.fiscal.find(r => r.id  === mapEntry.id)) ||
+      (mapEntry?.label && analysis.fiscal.find(r => r.nom === mapEntry.label)) ||
+      (typeof mapEntry === 'string' && analysis.fiscal.find(r => r.nom === mapEntry)) ||
+      null;
+
+    // 👉 On privilégie TOUJOURS le régime actuel si on l'a trouvé
+    const detailRegime = selectedRes || bestRegime;
+
+    /* -----------------------------------------------------------------
+       6) Génération HTML (on passe le détail = régime ACTUEL)
+          - bestId sert aux badges "Meilleur" dans le tableau
+          - forceRegime à true pour que le header prenne le régime détaillé
+    ----------------------------------------------------------------- */
+    const html = analyzer.generateFiscalResultsHTML(
+      analysis.fiscal,
+      analysisData,
+      {
+        detailId    : detailRegime.id,      // carte du haut = régime actuel
+        selectedId  : selectedRes?.id || null,
+        bestId      : bestRegime.id,        // conserve l'étoile "Meilleur" dans le tableau
+        forceRegime : !!selectedRes         // titre/visuel aligné sur le régime détaillé
+      }
+    );
+    resultsDiv.innerHTML = html;
+
+    // 7) Graphiques
+    setTimeout(() => {
+      try {
+        analyzer.createFiscalCharts(analysis.fiscal);
+      } catch (e) {
+        console.warn('Graphiques fiscaux non générés :', e);
+      }
+    }, 100);
+
+    // 8) Toggle du tableau détaillé
+    setTimeout(() => {
+      const toggleBtn = document.querySelector('.btn-expand-table');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', function () {
+          const table = document.getElementById('detailed-fiscal-table');
+          if (!table) return;
+          const hidden = (table.style.display === 'none' || table.style.display === '');
+          table.style.display = hidden ? 'block' : 'none';
+          this.classList.toggle('expanded', hidden);
+          this.innerHTML = hidden
+            ? '<i class="fas fa-chevron-up"></i> Masquer le détail'
+            : '<i class="fas fa-chevron-down"></i> Voir le détail complet';
+        });
+      }
+    }, 200);
+
+    // 9) Debug
+    window.lastAnalysisData = {
+      input: analysisData,
+      results: analysis.fiscal,
+      timestamp: new Date()
+    };
+
+    console.log('✅ Analyse terminée. Prix cible à calculer via computePriceTargetRP/Locatif.');
+
+    /* -----------------------------------------------------------------
+       10) 🔹 Calcul du prix cible (RP + Locatif)
+           en utilisant le moteur centralisé PriceTarget
+    ----------------------------------------------------------------- */
+    const fiscalData = analyzer.prepareFiscalData(propertyData);
 
     if (propertyData.occupationMode === 'residence') {
-      // ══════════ MODE RÉSIDENCE PRINCIPALE ══════════
-      const box     = document.getElementById('rp-controls');
-      const rentEl  = document.getElementById('rpRentSlider');
-      const rentOut = document.getElementById('rpRentOut');
-      const partEl  = document.getElementById('rpPartnerSlider');
-      const partOut = document.getElementById('rpPartnerOut');
+      const loyerMarche = (propertyData?.ville?.loyer_m2 > 0 && propertyData.surface > 0)
+        ? Math.round(propertyData.ville.loyer_m2 * propertyData.surface)
+        : Math.round((propertyData.loyerActuel || 0) + (propertyData.monthlyCharges || 0));
 
-      if (box && rentEl && partEl) {
-        box.style.display = '';
+      const partner = propertyData.partnerContribution || 0;
+      const oppRate = Number(document.getElementById('taux-opportunite-apport')?.value) || 3;
 
-        const loyerInit = (propertyData?.ville?.loyer_m2 > 0 && propertyData.surface > 0)
-          ? Math.round(propertyData.ville.loyer_m2 * propertyData.surface)
-          : Math.round((propertyData.loyerActuel || 0) + (propertyData.monthlyCharges || 0));
+      // Afficher les contrôles RP
+      const rpBox = document.getElementById('rp-controls');
+      if (rpBox) rpBox.style.display = '';
 
-        const partnerInit = Math.max(0, Number(propertyData.partnerContribution || 0));
+      // 1er calcul de prix cible RP
+      computePriceTargetRP(fiscalData, {
+        loyerMarche,
+        partnerContribution: partner,
+        tauxOpportuniteApport: oppRate
+      });
 
-        const rentMin = Math.max(300, Math.floor(loyerInit * 0.4 / 25) * 25);
-        const rentMax = Math.max(rentMin + 500, Math.ceil(loyerInit * 1.8 / 25) * 25);
-        const partMax = Math.max(1000, Math.ceil((loyerInit * 1.2) / 25) * 25);
-
-        rentEl.min = rentMin;
-        rentEl.max = rentMax;
-        rentEl.step = 25;
-        rentEl.value = loyerInit;
-        rentOut.textContent = new Intl.NumberFormat('fr-FR').format(loyerInit) + ' €';
-
-        partEl.min = 0;
-        partEl.max = partMax;
-        partEl.step = 25;
-        partEl.value = partnerInit;
-        partOut.textContent = new Intl.NumberFormat('fr-FR').format(partnerInit) + ' €';
-
-        await renderRPPriceTargetWithControls({ rent: loyerInit, partner: partnerInit });
-let t;
-const nf = new Intl.NumberFormat('fr-FR');
-const recalc = () => {
-  const rent    = Number(rentEl.value) || 0;
-  const partner = Number(partEl.value) || 0;
-  clearTimeout(t);
-  t = setTimeout(() => renderRPPriceTargetWithControls({ rent, partner }), 80);
-};
-
-rentEl.addEventListener('input', (e) => {
-  rentOut.textContent = nf.format(e.target.value) + ' €';
-  recalc();
-});
-
-partEl.addEventListener('input', (e) => {
-  partOut.textContent = nf.format(e.target.value) + ' €';
-  recalc();
-});
-
-// 🆕 Slider taux d'opportunité
-const oppRateEl  = document.getElementById('rpOppRateSlider');
-const oppRateOut = document.getElementById('rpOppRateOut');
-const oppHidden  = document.getElementById('taux-opportunite-apport');
-
-if (oppRateEl && oppRateOut && oppHidden) {
-  oppRateEl.addEventListener('input', (e) => {
-    const val = e.target.value;
-    oppRateOut.textContent = val + ' %';
-    oppHidden.value = val;
-    recalc(); // 🔥 Déclenche le recalcul
-  });
-}
-
-console.log('✅ Mode RP : sliders initialisés');
-      }
+      // Sliders dynamiques RP
+      setupRPSliders(fiscalData, { loyerMarche, partner });
     } else {
-      // ══════════ MODE LOCATIF ══════════
-      document.getElementById('rp-controls')?.style.setProperty('display', 'none');
+      // Mode locatif : cacher les contrôles RP
+      const rpBox = document.getElementById('rp-controls');
+      if (rpBox) rpBox.style.display = 'none';
 
-      const regimeChoisi = propertyData.regimeActuel ||
+      const regimeId =
+        propertyData.regimeActuel ||
         document.querySelector('input[name="regime-actuel"]:checked')?.value ||
         'nu_micro';
 
-      const regimeDisplayName = document.getElementById('regime-display-name');
-      if (regimeDisplayName) {
-        const registry = analyzer.getRegimeRegistry();
-        const key = analyzer.normalizeRegimeKey({ id: regimeChoisi });
-        regimeDisplayName.textContent = registry[key]?.nom || regimeChoisi;
-      }
-
-      ui.showLoading();
-      await new Promise(r => setTimeout(r, 300));
-
-      const fiscalData  = analyzer.prepareFiscalData(propertyData);
-      const priceResult = pta.calculatePriceTarget(fiscalData, 0, { regimeId: regimeChoisi });
-
-      ui.render(priceResult);
-      console.log('✅ Mode Locatif : prix cible affiché');
+      computePriceTargetLocatif(fiscalData, regimeId);
     }
 
-  } catch (priceError) {
-    console.error('❌ Erreur calcul prix cible:', priceError);
-    const ui = new PriceTargetUI(null, 'price-target-widget');
-    ui.showError('Impossible de calculer le prix cible. Vérifiez vos données.');
+  } catch (error) {
+    console.error('Erreur lors de l\'analyse fiscale:', error);
+    resultsDiv.innerHTML = `
+      <div class="market-comparison-card">
+        <h3 style="color: #ef4444;">Erreur lors de l'analyse</h3>
+        <p>Une erreur est survenue. Veuillez réessayer.</p>
+      </div>
+    `;
   }
-}, 16);
-
-        // ═══════════════════════════════════════════════════════
-
-    } catch (error) {
-        console.error('Erreur lors de l\'analyse fiscale:', error);
-        resultsDiv.innerHTML = `
-            <div class="market-comparison-card">
-                <h3 style="color: #ef4444;">Erreur lors de l'analyse</h3>
-                <p>Une erreur est survenue. Veuillez réessayer.</p>
-            </div>
-        `;
-    }
 }
         // Fonction de debug
         window.debugFiscalAnalysis = function() {
