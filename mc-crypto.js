@@ -1,4 +1,4 @@
-// mc-crypto.js — Composer multi-critères (Crypto) v4.6 - Système de thème modulaire
+// mc-crypto.js — Composer multi-critères (Crypto) v5.0 - Avec système de presets
 // THEME TEAL/EMERAUDE par défaut (remplace le violet)
 // Lit data/filtered/Crypto_filtered_volatility.csv (CSV ou TSV)
 
@@ -17,6 +17,157 @@
     atr14:   {label:'ATR14%',        col:'atr14_pct',         unit:'%', max:false},
     dd90:    {label:'Drawdown 90j',  col:'drawdown_90d_pct',  unit:'%', max:false},
   };
+
+  // === CRYPTO PRESETS - VERSION QUANTILES ===========================
+  const CRYPTO_PRESETS = {
+    momentum24h: {
+      id: 'momentum24h',
+      name: '⚡ Momentum 24h',
+      icon: '⚡',
+      description: 'Cryptos qui bougent fort aujourd\'hui - Trading très court terme',
+      riskLevel: 'EXTRÊME',
+      criteria: ['ret_1d', 'ret_7d', 'vol_7d', 'atr14'],
+      weights: [40, 25, 20, 15],
+      sortMode: 'lexico',
+      filters: {
+        ret_1d: { min: 'q75' },      // Top 25% des perfs 24h
+        vol_7d: { min: 'q80' },       // Top 20% volatilité
+      },
+      dynamicFilters: true,
+      warnings: [
+        '⚠️ Risque de retournement brutal',
+        '⚠️ Position max 2% du portefeuille',
+        '⚠️ Stop-loss serré obligatoire'
+      ]
+    },
+
+    swing7_30: {
+      id: 'swing7_30',
+      name: '📊 Swing 7-30j',
+      icon: '📊',
+      description: 'Trades sur quelques jours/semaines - Évite le bruit 24h',
+      riskLevel: 'MODÉRÉ',
+      criteria: ['ret_7d', 'ret_30d', 'dd90', 'vol_30d'],
+      weights: [35, 30, 20, 15],
+      sortMode: 'balanced',
+      filters: {
+        ret_7d:  { min: 'q60' },      // Top 40% perf 7j
+        ret_30d: { min: 0 },          // Positive absolue
+        dd90:    { max: 'q25' },      // Évite pire 25%
+        vol_30d: { max: 'q75' }       // Volatilité modérée
+      },
+      dynamicFilters: true,
+      warnings: [
+        '⚠️ Vérifier RSI < 70',
+        '💡 Entrée fractionnée recommandée'
+      ]
+    },
+
+    trend3_12m: {
+      id: 'trend3_12m',
+      name: '📈 Tendance 3-12m',
+      icon: '📈',
+      description: 'Gagnants structurels moyen/long terme - Trend following',
+      riskLevel: 'FAIBLE-MODÉRÉ',
+      criteria: ['ret_90d', 'ret_1y', 'dd90', 'vol_30d'],
+      weights: [35, 30, 20, 15],
+      sortMode: 'balanced',
+      filters: {
+        ret_90d: { min: 'q70' },      // Top 30% sur 90j
+        ret_1y:  { min: 'q50' },      // Meilleure moitié sur 1 an
+        dd90:    { max: 'q30' },      // Évite pire 30%
+        vol_30d: { max: 'q60' }       // Vol raisonnable
+      },
+      dynamicFilters: true,
+      warnings: [
+        '💡 DCA sur 3-6 mois recommandé',
+        '⚠️ Surveiller rotation sectorielle'
+      ]
+    },
+
+    quality_risk: {
+      id: 'quality_risk',
+      name: '🛡️ Qualité/Risque',
+      icon: '🛡️',
+      description: 'Cryptos stables pour noyau de portefeuille',
+      riskLevel: 'FAIBLE',
+      criteria: ['dd90', 'vol_30d', 'ret_90d', 'ret_1y'],
+      weights: [35, 30, 20, 15],
+      sortMode: 'lexico',
+      filters: {
+        vol_30d: { max: 'q50' },      // Moitié moins volatile
+        dd90:    { max: 'q20' },      // Top 20% stabilité
+        ret_90d: { min: 'q40' },      // Pas les pires
+      },
+      dynamicFilters: true,
+      additionalCheck: function(crypto) {
+        // Si vous avez la market cap
+        return !crypto.market_cap || crypto.market_cap > 1000000000;
+      },
+      warnings: [
+        '💡 Pour allocation 40-60% du portefeuille',
+        '✅ Convient aux profils conservateurs'
+      ]
+    },
+
+    recovery: {
+      id: 'recovery',
+      name: '🔄 Recovery',
+      icon: '🔄',
+      description: 'Cryptos massacrées qui rebondissent - Contrarian',
+      riskLevel: 'ÉLEVÉ',
+      criteria: ['ret_7d', 'ret_1d', 'dd90', 'vol_30d'],
+      weights: [35, 25, 25, 15],
+      sortMode: 'lexico',
+      filters: {
+        ret_7d:  { min: 'q60' },      // Rebond récent
+        ret_30d: { max: 'q40' },      // Était en baisse
+        dd90:    { max: 'q10' },      // Forte correction (pire 10%)
+      },
+      dynamicFilters: true,
+      additionalCheck: function(crypto) {
+        // Éviter les microcaps si volume disponible
+        return !crypto.volume_24h || crypto.volume_24h > 1000000;
+      },
+      warnings: [
+        '⚠️ Value traps fréquents',
+        '⚠️ Max 5% par position',
+        '💡 Surveiller les volumes'
+      ]
+    },
+
+    highvol_lottery: {
+      id: 'highvol_lottery',
+      name: '🔥 High Vol/Lottery',
+      icon: '🔥',
+      description: 'Les plus explosives - Ticket loterie assumé',
+      riskLevel: 'EXTRÊME',
+      criteria: ['vol_30d', 'atr14', 'ret_30d', 'ret_90d'],
+      weights: [35, 30, 20, 15],
+      sortMode: 'lexico',
+      filters: {
+        vol_30d: { min: 'q90' },      // Top 10% volatilité
+        atr14:   { min: 'q85' },      // Top 15% ATR
+      },
+      dynamicFilters: true,
+      warnings: [
+        '🔥 Perte totale possible',
+        '🔥 MAX 1-2% du portefeuille',
+        '🔥 Ne pas moyenner à la baisse'
+      ]
+    }
+  };
+
+  const RISK_LEVELS = {
+    'FAIBLE':         { color: '#10b981', label: 'Faible',         icon: '🟢' },
+    'FAIBLE-MODÉRÉ':  { color: '#84cc16', label: 'Faible-modéré',  icon: '🟢' },
+    'MODÉRÉ':         { color: '#f59e0b', label: 'Modéré',         icon: '🟡' },
+    'ÉLEVÉ':          { color: '#f97316', label: 'Élevé',          icon: '🟠' },
+    'EXTRÊME':        { color: '#ef4444', label: 'Extrême',        icon: '🔴' }
+  };
+
+  // Cache des quantiles
+  let QUANTILES_CACHE = {};
 
   // --- Tolérance (v4.5 - Priorités intelligentes)
   const GAP_FLOOR = {        // planchers de gaps (en points de %)
@@ -37,11 +188,13 @@
     mode: 'balanced',                // 'balanced' | 'lexico'
     filters: [],                     // [{metric,operator,value}]
     cache: {},                       // {metric:{raw,rankPct,sorted,iqr}}
-    pref: {}                        // préférences direction (optionnel pour ↑↓)
+    pref: {},                        // préférences direction (optionnel pour ↑↓)
+    activePreset: null,              // Preset actif
+    customFilter: null               // Filtre custom du preset
   };
 
   // Expose pour debug console
-  window.MC = { state, METRICS };
+  window.MC = { state, METRICS, PRESETS: CRYPTO_PRESETS };
 
   // ---- Utils
   const $ = (id) => document.getElementById(id);
@@ -71,6 +224,259 @@
   // Scope helpers (inside this IIFE)
   const rootMc = () => document.getElementById('crypto-mc');
   const q  = (sel) => rootMc()?.querySelector(sel);       // scoped query
+
+  // === Fonctions pour les quantiles ===
+  function calculateQuantiles(data, metric, percentiles = [10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 85, 90, 95]) {
+    const values = data
+      .map(d => d[METRICS[metric].col])
+      .map(toNum)
+      .filter(v => Number.isFinite(v))
+      .sort((a, b) => a - b);
+    
+    const result = {};
+    percentiles.forEach(p => {
+      const index = Math.floor((values.length - 1) * p / 100);
+      result[`q${p}`] = values[index] || 0;
+    });
+    return result;
+  }
+
+  function updateQuantilesCache(data) {
+    Object.keys(METRICS).forEach(metric => {
+      QUANTILES_CACHE[metric] = calculateQuantiles(data, metric);
+    });
+  }
+
+  // === Fonctions pour les presets ===
+  function applyCryptoPreset(presetId) {
+    const preset = CRYPTO_PRESETS[presetId];
+    if (!preset) {
+      console.warn('Preset inconnu:', presetId);
+      return;
+    }
+
+    // Stocker le preset actif
+    state.activePreset = presetId;
+
+    // 1) Appliquer les critères
+    state.selected = preset.criteria.slice();
+    
+    // Mettre à jour les checkboxes
+    Object.keys(METRICS).forEach(id => {
+      const cb = document.getElementById('m-' + id);
+      if (!cb) return;
+      cb.checked = state.selected.includes(id);
+      cb.closest('.mc-pill')?.classList.toggle('is-checked', cb.checked);
+    });
+
+    // 2) Mode de tri
+    state.mode = preset.sortMode;
+    const root = document.getElementById('crypto-mc');
+    if (root) {
+      root.querySelectorAll('input[name="mc-mode"]').forEach(r => {
+        r.checked = r.value === state.mode;
+        r.closest('.mc-pill')?.classList.toggle('is-checked', r.checked);
+      });
+    }
+
+    // 3) Appliquer les filtres (avec gestion quantiles)
+    state.filters = state.filters.filter(f => f.__auto); // Garder seulement les filtres auto
+    
+    Object.entries(preset.filters || {}).forEach(([metric, cfg]) => {
+      let minValue = cfg.min;
+      let maxValue = cfg.max;
+
+      // Résoudre les quantiles
+      if (preset.dynamicFilters) {
+        if (typeof minValue === 'string' && minValue.startsWith('q')) {
+          const q = parseInt(minValue.substring(1));
+          minValue = QUANTILES_CACHE[metric]?.[`q${q}`] ?? minValue;
+        }
+        if (typeof maxValue === 'string' && maxValue.startsWith('q')) {
+          const q = parseInt(maxValue.substring(1));
+          maxValue = QUANTILES_CACHE[metric]?.[`q${q}`] ?? maxValue;
+        }
+      }
+
+      if (minValue != null) {
+        state.filters.push({ 
+          metric, 
+          operator: '>=', 
+          value: minValue,
+          isQuantile: preset.dynamicFilters,
+          __preset: true
+        });
+      }
+      if (maxValue != null) {
+        state.filters.push({ 
+          metric, 
+          operator: '<=', 
+          value: maxValue,
+          isQuantile: preset.dynamicFilters,
+          __preset: true 
+        });
+      }
+    });
+
+    // 4) Filtre additionnel custom
+    state.customFilter = preset.additionalCheck || null;
+
+    // 5) Mettre à jour l'UI
+    updatePresetUI(preset);
+    drawFilters();
+    updatePriorityUI();
+    refresh(true);
+  }
+
+  function clearCryptoPreset() {
+    state.activePreset = null;
+    state.customFilter = null;
+    state.filters = state.filters.filter(f => !f.__preset);
+    
+    // Désactiver visuel preset actif
+    const container = document.getElementById('crypto-presets-container');
+    if (container) {
+      container.querySelectorAll('.preset-card').forEach(card => {
+        card.classList.remove('active');
+      });
+    }
+    
+    // Masquer info preset
+    const info = document.getElementById('preset-info');
+    if (info) info.innerHTML = '';
+    
+    drawFilters();
+    refresh(false);
+  }
+
+  function renderCryptoPresetsUI() {
+    const container = document.getElementById('crypto-presets-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="presets-section">
+        <h3>⚙️ STRATÉGIES PRÉDÉFINIES</h3>
+        <div class="presets-grid">
+          ${Object.values(CRYPTO_PRESETS).map(p => `
+            <button class="preset-card ${state.activePreset === p.id ? 'active' : ''}"
+                    data-preset="${p.id}"
+                    title="${p.description}">
+              <div class="preset-card-content">
+                <span class="preset-card-icon">${p.icon}</span>
+                <span class="preset-card-name">${p.name.replace(p.icon, '').trim()}</span>
+              </div>
+              <div class="preset-risk-indicator"
+                   style="background-color:${RISK_LEVELS[p.riskLevel].color}20">
+                ${RISK_LEVELS[p.riskLevel].icon}
+              </div>
+            </button>
+          `).join('')}
+        </div>
+        <div id="preset-info" class="mt-3"></div>
+        <div id="preset-quantile-info" class="mt-2"></div>
+      </div>
+    `;
+
+    container.querySelectorAll('.preset-card').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.preset;
+        if (state.activePreset === id) {
+          clearCryptoPreset();
+        } else {
+          applyCryptoPreset(id);
+        }
+      });
+    });
+  }
+
+  function updatePresetUI(preset) {
+    const container = document.getElementById('crypto-presets-container');
+    if (!container) return;
+
+    // Highlight le preset actif
+    container.querySelectorAll('.preset-card').forEach(card => {
+      const isActive = card.dataset.preset === preset.id;
+      card.classList.toggle('active', isActive);
+    });
+
+    // Afficher les infos du preset
+    displayPresetInfo(preset);
+    
+    // Afficher les valeurs résolues des quantiles
+    if (preset.dynamicFilters) {
+      displayQuantileValues(preset);
+    }
+  }
+
+  function displayPresetInfo(preset) {
+    const info = document.getElementById('preset-info');
+    if (!info) return;
+    const r = RISK_LEVELS[preset.riskLevel];
+
+    info.innerHTML = `
+      <div class="preset-active-info">
+        <div class="preset-header">
+          <span class="preset-icon">${preset.icon}</span>
+          <h3>${preset.name}</h3>
+          <span class="risk-badge" style="background-color:${r.color}20;color:${r.color}">
+            ${r.icon} Risque ${r.label}
+          </span>
+        </div>
+        <p class="preset-description">${preset.description}</p>
+        ${(preset.warnings || []).length ? `
+          <div class="preset-warnings">
+            ${preset.warnings.map(w => `<div class="warning-item">${w}</div>`).join('')}
+          </div>` : ''}
+        <button type="button" class="btn-clear-preset" onclick="clearCryptoPreset()">
+          ✕ Désactiver le preset
+        </button>
+      </div>
+    `;
+  }
+
+  function displayQuantileValues(preset) {
+    const info = document.getElementById('preset-quantile-info');
+    if (!info) return;
+
+    const resolvedFilters = [];
+    Object.entries(preset.filters || {}).forEach(([metric, cfg]) => {
+      const metricInfo = METRICS[metric];
+      if (!metricInfo) return;
+
+      if (cfg.min != null) {
+        const value = typeof cfg.min === 'string' && cfg.min.startsWith('q')
+          ? QUANTILES_CACHE[metric]?.[cfg.min] ?? cfg.min
+          : cfg.min;
+        if (Number.isFinite(value)) {
+          resolvedFilters.push(
+            `${metricInfo.label} ≥ ${value.toFixed(2)}${metricInfo.unit}${typeof cfg.min === 'string' ? ` (${cfg.min})` : ''}`
+          );
+        }
+      }
+      if (cfg.max != null) {
+        const value = typeof cfg.max === 'string' && cfg.max.startsWith('q')
+          ? QUANTILES_CACHE[metric]?.[cfg.max] ?? cfg.max
+          : cfg.max;
+        if (Number.isFinite(value)) {
+          resolvedFilters.push(
+            `${metricInfo.label} ≤ ${value.toFixed(2)}${metricInfo.unit}${typeof cfg.max === 'string' ? ` (${cfg.max})` : ''}`
+          );
+        }
+      }
+    });
+
+    if (resolvedFilters.length) {
+      info.innerHTML = `
+        <div class="quantile-info">
+          <h4>Seuils dynamiques actuels:</h4>
+          <ul>
+            ${resolvedFilters.map(f => `<li>${f}</li>`).join('')}
+          </ul>
+          <small>Basés sur la distribution actuelle du marché</small>
+        </div>
+      `;
+    }
+  }
 
   // Helpers "garantis-moi ce noeud"
   function ensureEl(parent, id, html) {
@@ -177,6 +583,10 @@
   }
 
   function ensureMcShell(root) {
+    // Container pour les presets
+    ensureEl(root, 'crypto-presets-container',
+      '<div id="crypto-presets-container" class="mb-4"></div>');
+
     // résumé
     ensureEl(root, 'crypto-mc-summary',
       '<div id="crypto-mc-summary" class="text-xs opacity-70 mb-2"></div>');
@@ -203,12 +613,17 @@
         </div>
       </fieldset>
     `;
-    // Cherche où l'insérer (après les métriques ou au début)
-    const metrics = root.querySelector('#crypto-mc-metrics, fieldset:first-child');
-    if (metrics && metrics.nextSibling) {
-      root.insertBefore(wrap, metrics.nextSibling);
+    // Après les presets si possible
+    const presets = root.querySelector('#crypto-presets-container');
+    if (presets && presets.nextSibling) {
+      root.insertBefore(wrap, presets.nextSibling);
     } else {
-      root.appendChild(wrap);
+      const metrics = root.querySelector('#crypto-mc-metrics, fieldset:first-child');
+      if (metrics && metrics.nextSibling) {
+        root.insertBefore(wrap, metrics.nextSibling);
+      } else {
+        root.appendChild(wrap);
+      }
     }
   }
 
@@ -217,12 +632,18 @@
     if (Object.keys(METRICS).some(id => document.getElementById('m-' + id))) return;
 
     // conteneur dédié (ou créé à la volée)
-    let holder = root.querySelector('#crypto-mc-metrics, fieldset:first-child');
+    let holder = root.querySelector('#crypto-mc-metrics, fieldset:nth-of-type(2)');
     if (!holder) {
       holder = document.createElement('fieldset');
       holder.className = 'mb-4';
       holder.innerHTML = '<legend class="text-sm opacity-70 mb-2">Critères sélectionnés = Ordre de priorité</legend><div id="crypto-mc-metrics" class="flex flex-wrap gap-2"></div>';
-      root.insertBefore(holder, root.firstChild);
+      // Après les modes de tri
+      const modes = root.querySelector('fieldset[role="radiogroup"]');
+      if (modes && modes.nextSibling) {
+        root.insertBefore(holder, modes.nextSibling);
+      } else {
+        root.appendChild(holder);
+      }
       holder = holder.querySelector('#crypto-mc-metrics');
     }
 
@@ -435,6 +856,13 @@
   // v4.3 - Filtres personnalisés avec PRÉCISION ACCRUE (pas d'arrondi agressif)
   function passCustomFilters(i) {
     const EPS = 0.01; // tolérance réduite à 0.01% (uniquement pour l'égalité)
+    
+    // Filtre custom du preset
+    if (state.customFilter) {
+      const row = state.data[i];
+      if (!state.customFilter(row)) return false;
+    }
+
     for (const f of state.filters) {
       // Skip auto filters in validation (they are handled differently)
       if (f.__auto) continue;
@@ -651,7 +1079,8 @@
     if (!el) return;
     const mode = state.mode==='balanced' ? 'Équilibre' : 'Priorités';
     const labels = state.selected.map(m=>METRICS[m].label).join(' · ') || 'Aucun critère';
-    el.innerHTML = `<strong>${mode}</strong> • ${labels} • ${kept}/${total} cryptos`;
+    const presetLabel = state.activePreset ? ` • ${CRYPTO_PRESETS[state.activePreset].name}` : '';
+    el.innerHTML = `<strong>${mode}</strong>${presetLabel} • ${labels} • ${kept}/${total} cryptos`;
   }
 
   // ==== VERSION ULTRA-ROBUSTE : Gestion centralisée de l'affichage ====
@@ -806,7 +1235,7 @@
     const map = {'&gt;=':'>=','&gt;':'>','&lt;=':'<=','&lt;':'<','&ne;':'!='};
     operator = map[operator] || operator;
 
-    const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator && !f.__auto);
+    const idx = state.filters.findIndex(f => f.metric === metric && f.operator === operator && !f.__auto && !f.__preset);
     if (idx >= 0) state.filters[idx].value = value;
     else          state.filters.push({ metric, operator, value });
 
@@ -961,6 +1390,21 @@
       state.mode = 'balanced';
       state.filters = [];
       state.pref = {}; // Reset des préférences
+      state.activePreset = null;
+      state.customFilter = null;
+      
+      // Reset visuel presets
+      const container = document.getElementById('crypto-presets-container');
+      if (container) {
+        container.querySelectorAll('.preset-card').forEach(card => {
+          card.classList.remove('active');
+        });
+      }
+      const info = document.getElementById('preset-info');
+      if (info) info.innerHTML = '';
+      const qInfo = document.getElementById('preset-quantile-info');
+      if (qInfo) qInfo.innerHTML = '';
+
       Object.keys(METRICS).forEach(id=>{ 
         const cb=$(`m-${id}`); 
         if (cb) {
@@ -988,6 +1432,9 @@
     ['change','click'].forEach(evt => rootMcEl.addEventListener(evt, compactFilterUI, {passive:true}));
     window.addEventListener('resize', compactFilterUI, {passive:true});
     
+    // Expose globalement la fonction clearPreset
+    window.clearCryptoPreset = clearCryptoPreset;
+    
     // CORRIGÉ: Debug désactivé par défaut (enlève le || true)
     if (window.DEBUG_MC) {
       window.MC.refreshPriorityList = () => {
@@ -995,7 +1442,8 @@
           mode: state.mode,
           selected: state.selected,
           filters: state.filters.length,
-          data: state.data.length
+          data: state.data.length,
+          activePreset: state.activePreset
         });
         updatePriorityUI();
         refresh(false);
@@ -1003,6 +1451,7 @@
       
       window.MC.forceLexico = () => forcePriorities({scroll: true});
       window.MC.syncSelected = () => syncSelectedFromCheckboxes();
+      window.MC.applyPreset = (id) => applyCryptoPreset(id);
     }
   }
 
@@ -1011,8 +1460,8 @@
     const cont = q('#crypto-cf-pills, #cf-pills, #crypto-mc-filters');
     if (!cont) return;
     
-    // Filtrer les filtres auto
-    const visible = state.filters.filter(f => !f.__auto);
+    // Filtrer les filtres auto et preset pour l'affichage
+    const visible = state.filters.filter(f => !f.__auto && !f.__preset);
     
     cont.innerHTML = visible.map((f,idx)=>{
       const lab = METRICS[f.metric].label;
@@ -1037,7 +1486,7 @@
         </span>
         <button class="remove-filter text-red-400 hover:text-red-300 text-sm shrink-0" data-i="${realIdx}"><i class="fas fa-times"></i></button>
       </div>`;
-    }).join('') || '<div class="text-xs opacity-50 text-center py-2">Aucun filtre</div>';
+    }).join('') || '<div class="text-xs opacity-50 text-center py-2">Aucun filtre personnel</div>';
     
     cont.querySelectorAll('.remove-filter').forEach(btn=>{
       btn.addEventListener('click',e=>{
@@ -1134,6 +1583,13 @@
     renderTop10Blocks();      // remplit les 4 Top 10
 
     buildCache();
+    
+    // Calculer les quantiles après le cache
+    updateQuantilesCache(state.data);
+    
+    // Créer l'UI des presets
+    renderCryptoPresetsUI();
+    
     wireUI();
     refresh();
 
@@ -1146,6 +1602,173 @@
     // ---- CSS de base pour compactage et structure ----
     const mcCompactCSS = document.createElement('style');
     mcCompactCSS.textContent = `
+      /* === CSS pour les presets === */
+      .presets-section {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .presets-section h3 {
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        letter-spacing: 0.5px;
+        text-align: center;
+      }
+
+      .presets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .preset-card {
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .preset-card:hover {
+        background: rgba(51, 65, 85, 0.5);
+        border-color: #475569;
+        transform: translateY(-2px);
+      }
+
+      .preset-card.active {
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+        border-color: #14b8a6;
+      }
+
+      .preset-card-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .preset-card-icon {
+        font-size: 24px;
+      }
+
+      .preset-card-name {
+        color: #e2e8f0;
+        font-size: 12px;
+        font-weight: 500;
+        text-align: center;
+      }
+
+      .preset-risk-indicator {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+
+      .preset-active-info {
+        background: rgba(20, 184, 166, 0.1);
+        border: 1px solid rgba(20, 184, 166, 0.3);
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+      }
+
+      .preset-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .preset-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .risk-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .preset-description {
+        color: #cbd5e1;
+        font-size: 13px;
+        margin: 8px 0;
+      }
+
+      .preset-warnings {
+        margin-top: 12px;
+        padding: 8px;
+        background: rgba(251, 146, 60, 0.1);
+        border-radius: 6px;
+      }
+
+      .warning-item {
+        color: #fbbf24;
+        font-size: 13px;
+        margin: 4px 0;
+      }
+
+      .btn-clear-preset {
+        margin-top: 12px;
+        padding: 6px 12px;
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid #ef4444;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      .btn-clear-preset:hover {
+        background: rgba(239, 68, 68, 0.3);
+      }
+
+      .quantile-info {
+        background: rgba(20, 184, 166, 0.05);
+        border: 1px solid rgba(20, 184, 166, 0.2);
+        border-radius: 6px;
+        padding: 12px;
+      }
+
+      .quantile-info h4 {
+        margin: 0 0 8px 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: #14b8a6;
+      }
+
+      .quantile-info ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .quantile-info li {
+        font-size: 11px;
+        color: #94a3b8;
+        margin: 4px 0;
+      }
+
+      .quantile-info small {
+        font-size: 10px;
+        color: #64748b;
+        font-style: italic;
+      }
+
       /* Ligne des filtres personnalisés — compacte, une seule ligne, pas d'overflow */
       #crypto-mc fieldset > div:has(#crypto-cf-metric,#crypto-cf-op,#crypto-cf-val,#crypto-cf-add),
       #crypto-mc fieldset > div:has(#cf-metric,#cf-op,#cf-val,#cf-add),
