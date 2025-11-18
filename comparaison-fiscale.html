@@ -1818,88 +1818,93 @@ td.neutral {
     <div id="price-target-widget" style="display:none;"></div>
     <!-- ═══════════════════════════════ -->
 
-   <!-- ── Contrôles RP (affichés seulement en mode résidence) ── -->
-<div id="rp-controls" style="margin:24px 0; display:none; background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(0,191,255,0.2);">
-  <h4 style="color:#00bfff; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;">
-    <i class="fas fa-sliders-h"></i> Ajustez vos paramètres
-  </h4>
-  
-  <!-- Slider loyer marché -->
-  <div style="margin-bottom:16px;">
-    <label for="rpRentSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
-      Loyer du marché (charges comprises)
-    </label>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <input type="range" id="rpRentSlider" min="400" max="4000" step="25" 
-             style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
-      <output id="rpRentOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">— €</output>
+    <!-- ── Contrôles RP (affichés seulement en mode résidence) ── -->
+    <div id="rp-controls" style="margin:24px 0; display:none; background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(0,191,255,0.2);">
+      <h4 style="color:#00bfff; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;">
+        <i class="fas fa-sliders-h"></i> Ajustez vos paramètres
+      </h4>
+      
+      <!-- Slider loyer marché -->
+      <div style="margin-bottom:16px;">
+        <label for="rpRentSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+          Loyer du marché (charges comprises)
+        </label>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <input type="range" id="rpRentSlider" min="400" max="4000" step="25" 
+                 style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
+          <output id="rpRentOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">— €</output>
+        </div>
+      </div>
+      
+      <!-- Slider participation conjoint / colocataire -->
+      <div style="margin-bottom:16px;">
+        <label for="rpPartnerSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+          Participation conjoint / colocataire
+        </label>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <input type="range" id="rpPartnerSlider" min="0" max="2000" step="25" 
+                 style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
+          <output id="rpPartnerOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">0 €</output>
+        </div>
+      </div>
+
+      <!-- Slider taux d'opportunité de l'apport (RP) -->
+      <div style="margin-bottom:16px;">
+        <label for="rpOppRateSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
+          Taux d'opportunité de l'apport (RP)
+        </label>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <input
+            type="range"
+            id="rpOppRateSlider"
+            min="0"
+            max="12"
+            step="0.5"
+            value="3"
+            style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;"
+          >
+          <output id="rpOppRateOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">
+            3 %
+          </output>
+        </div>
+
+        <!-- Input caché lu par getAllAdvancedParams() -->
+        <input type="hidden" id="taux-opportunite-apport" value="3">
+
+        <p style="margin-top:6px; color:#94a3b8; font-size:0.85em;">
+          Rendement alternatif si l'apport était placé (ex : 2 % Livret A, 4 % obligations, 7 % actions).
+        </p>
+      </div>
+      
+      <div style="margin-top:12px; color:#94a3b8; font-size:0.9em;">
+        💡 Modifiez ces valeurs pour recalculer le prix d'équilibre en temps réel
+      </div>
     </div>
-  </div>
-  
-  <!-- Slider participation conjoint / colocataire -->
-  <div style="margin-bottom:16px;">
-    <label for="rpPartnerSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
-      Participation conjoint / colocataire
-    </label>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <input type="range" id="rpPartnerSlider" min="0" max="2000" step="25" 
-             style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;">
-      <output id="rpPartnerOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">0 €</output>
-    </div>
-  </div>
+    <!-- ─────────────────────────────────────────────────────────── -->
 
-  <!-- Slider taux d'opportunité de l'apport (RP) -->
-  <div style="margin-bottom:16px;">
-    <label for="rpOppRateSlider" style="display:block; color:#e2e8f0; margin-bottom:8px;">
-      Taux d'opportunité de l'apport (RP)
-    </label>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <input
-        type="range"
-        id="rpOppRateSlider"
-        min="0"
-        max="12"
-        step="0.5"
-        value="3"
-        style="flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px;"
-      >
-      <output id="rpOppRateOut" style="color:#00bfff; font-weight:600; min-width:80px; text-align:right;">
-        3 %
-      </output>
+    <!-- Bouton retour -->
+    <div class="continue-section" style="margin-bottom: 60px;">
+      <button class="btn btn-outline" onclick="goToStep(2)">
+        <i class="fas fa-arrow-left"></i> Retour à l'analyse de marché
+      </button>
     </div>
 
-    <!-- Input caché lu par getAllAdvancedParams() -->
-    <input type="hidden" id="taux-opportunite-apport" value="3">
+    <!-- MODULE RP – conteneur vide ; rempli dynamiquement -->
+    <div id="rp-container"></div>
 
-    <p style="margin-top:6px; color:#94a3b8; font-size:0.85em;">
-      Rendement alternatif si l'apport était placé (ex : 2 % Livret A, 4 % obligations, 7 % actions).
-    </p>
-  </div>
-  
-  <div style="margin-top:12px; color:#94a3b8; font-size:0.9em;">
-    💡 Modifiez ces valeurs pour recalculer le prix d'équilibre en temps réel
-  </div>
-</div>
-<!-- ─────────────────────────────────────────────────────────── -->
-
-<!-- Bouton retour -->
-<div class="continue-section" style="margin-bottom: 60px;">
-  <button class="btn btn-outline" onclick="goToStep(2)">
-    <i class="fas fa-arrow-left"></i> Retour à l'analyse de marché
-  </button>
-</div>
-
-<!-- MODULE RP – conteneur vide ; rempli dynamiquement -->
-<div id="rp-container"></div>
-</div>
-
-    <!-- ▬▬▬▬▬▬▬ BUY‑RENT WIDGET ▬▬▬▬▬▬▬ -->
+    <!-- ▬▬▬▬▬▬▬ BUY-RENT WIDGET ▬▬▬▬▬▬▬ -->
     <div id="buyRent"></div>
 
-    <!-- Séparateur bleu animé -->
-    <div class="section-divider"></div>
+    <!-- Résultats fiscaux -->
+    <div id="fiscal-comparison-results">
+        <!-- Les résultats fiscaux seront insérés ici -->
+    </div>
+</div><!-- ✅ Fermeture de #section-3 APRÈS tous les widgets -->
 
-    <script>
+<!-- Séparateur bleu animé -->
+<div class="section-divider"></div>
+
+<script>
     /* Paramètres de départ (ajustés dynamiquement depuis le formulaire) */
     const br = {
       loyerMarché: 1100, // € / mois qu'on paierait en restant locataire
@@ -1910,34 +1915,34 @@ td.neutral {
       details:       {}  // nouveau (breakdown des charges)
     };
 
-/* ─────────── rendu du widget ─────────── */
-function drawBuyRent () {
+    /* ─────────── rendu du widget ─────────── */
+    function drawBuyRent () {
 
-  /* helper pour un format uniforme – garde le signe +/‑ devant */
-  const fmt = n => (n > 0 ? '+' : '‑') + formatNumber(Math.abs(n));
+      /* helper pour un format uniforme – garde le signe +/- devant */
+      const fmt = n => (n > 0 ? '+' : '-') + formatNumber(Math.abs(n));
 
-  /* ─── 1.  TOT LOCATAIRE  ─── */
-  const costLoc  = -br.loyerMarché        // loyer que tu paierais (négatif)
-                 +  br.partner;           // aide du conjoint (positif)
+      /* ─── 1.  TOT LOCATAIRE  ─── */
+      const costLoc  = -br.loyerMarché        // loyer que tu paierais (négatif)
+                     +  br.partner;           // aide du conjoint (positif)
 
-  /* ─── 2.  TOT PROPRIÉTAIRE  ───
-     -> on RETIRE la mensualité (‑) et on additionne les autres charges déjà négatives */
-  const costProp =  br.partner            // même aide
-                 -  br.mensualité         // *** signe changé ici ***
-                 +  Object.values(br.details).reduce((a,b)=>a+b,0);
+      /* ─── 2.  TOT PROPRIÉTAIRE  ───
+         -> on RETIRE la mensualité (-) et on additionne les autres charges déjà négatives */
+      const costProp =  br.partner            // même aide
+                     -  br.mensualité         // *** signe changé ici ***
+                     +  Object.values(br.details).reduce((a,b)=>a+b,0);
 
-  /* ─── 3.  ÉCART  ───
-     Si costProp > costLoc ==> propriétaire dépense MOINS  ➜ vert */
-  const gap    = costProp - costLoc;      // signe naturel
-  const good   = gap > 0;                 // propriétaire gagnant ?
+      /* ─── 3.  ÉCART  ───
+         Si costProp > costLoc ==> propriétaire dépense MOINS  ➜ vert */
+      const gap    = costProp - costLoc;      // signe naturel
+      const good   = gap > 0;                 // propriétaire gagnant ?
 
-  const badgeTxt   = (good ? '+' : '‑') + formatNumber(Math.abs(gap)) + ' €/mois';
-  const badgeClass = good ? 'profit' : 'loss';   // vert / rouge
-  const gapClass   = good ? 'pos'    : 'neg';
+      const badgeTxt   = (good ? '+' : '-') + formatNumber(Math.abs(gap)) + ' €/mois';
+      const badgeClass = good ? 'profit' : 'loss';   // vert / rouge
+      const gapClass   = good ? 'pos'    : 'neg';
 
-  /* 2. Construction HTML -------------------------------------------------- */
-document.getElementById('buyRent').innerHTML = '';  // Conteneur vide - tableau supprimé
-}
+      /* 2. Construction HTML -------------------------------------------------- */
+      document.getElementById('buyRent').innerHTML = '';  // Conteneur vide - tableau supprimé
+    }
 </script>
 
 <div id="fiscal-comparison-results">
