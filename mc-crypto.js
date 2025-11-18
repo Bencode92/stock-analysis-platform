@@ -18,153 +18,174 @@
     dd90:    {label:'Drawdown 90j',  col:'drawdown_90d_pct',  unit:'%', max:false},
   };
 
-  // === CRYPTO PRESETS - VERSION QUANTILES ===========================
-  const CRYPTO_PRESETS = {
-    momentum24h: {
-      id: 'momentum24h',
-      name: '⚡ Momentum 24h',
-      icon: '⚡',
-      description: 'Cryptos qui bougent fort aujourd\'hui - Trading très court terme',
-      riskLevel: 'EXTRÊME',
-      criteria: ['ret_1d', 'ret_7d', 'vol_7d', 'atr14'],
-      weights: [40, 25, 20, 15],
-      sortMode: 'lexico',
-      filters: {
-        ret_1d: { min: 'q75' },      // Top 25% des perfs 24h
-        vol_7d: { min: 'q80' },       // Top 20% volatilité
-      },
-      dynamicFilters: true,
-      warnings: [
-        '⚠️ Risque de retournement brutal',
-        '⚠️ Position max 2% du portefeuille',
-        '⚠️ Stop-loss serré obligatoire'
-      ]
+// === CRYPTO PRESETS - VERSION QUANTILES ===========================
+const CRYPTO_PRESETS = {
+  momentum24h: {
+    id: 'momentum24h',
+    name: '⚡ Momentum 24h',
+    icon: '⚡',
+    description: 'Cryptos qui bougent fort aujourd\'hui - Trading très court terme',
+    riskLevel: 'EXTRÊME',
+    criteria: ['ret_1d', 'ret_7d', 'vol_7d', 'atr14'],
+    weights: [40, 25, 20, 15],
+    sortMode: 'lexico',
+    filters: {
+      ret_1d: { min: 'q75', max: 50 }, // Top 25% 24h, mais évite les +100% absurdes
+      vol_7d: { min: 'q80' },          // Top 20% volatilité 7j
+      dd90:   { min: -60 },            // Drawdown 90j ≥ -60% (évite les plus cassés)
     },
-
-    swing7_30: {
-      id: 'swing7_30',
-      name: '📊 Swing 7-30j',
-      icon: '📊',
-      description: 'Trades sur quelques jours/semaines - Évite le bruit 24h',
-      riskLevel: 'MODÉRÉ',
-      criteria: ['ret_7d', 'ret_30d', 'dd90', 'vol_30d'],
-      weights: [35, 30, 20, 15],
-      sortMode: 'balanced',
-      filters: {
-        ret_7d:  { min: 'q60' },      // Top 40% perf 7j
-        ret_30d: { min: 0 },          // Positive absolue
-        dd90:    { max: 'q25' },      // Évite pire 25%
-        vol_30d: { max: 'q75' }       // Volatilité modérée
-      },
-      dynamicFilters: true,
-      warnings: [
-        '⚠️ Vérifier RSI < 70',
-        '💡 Entrée fractionnée recommandée'
-      ]
+    dynamicFilters: true,
+    additionalCheck: function (crypto) {
+      const volOK = crypto.volume_24h && crypto.volume_24h > 5_000_000;
+      const mcOK  = crypto.market_cap && crypto.market_cap > 200_000_000;
+      return volOK && mcOK;
     },
+    warnings: [
+      '⚠️ Risque de retournement brutal',
+      '⚠️ Position max 2% du portefeuille',
+      '⚠️ Stop-loss serré obligatoire',
+    ],
+  },
 
-    trend3_12m: {
-      id: 'trend3_12m',
-      name: '📈 Tendance 3-12m',
-      icon: '📈',
-      description: 'Gagnants structurels moyen/long terme - Trend following',
-      riskLevel: 'FAIBLE-MODÉRÉ',
-      criteria: ['ret_90d', 'ret_1y', 'dd90', 'vol_30d'],
-      weights: [35, 30, 20, 15],
-      sortMode: 'balanced',
-      filters: {
-        ret_90d: { min: 'q70' },      // Top 30% sur 90j
-        ret_1y:  { min: 'q50' },      // Meilleure moitié sur 1 an
-        dd90:    { max: 'q30' },      // Évite pire 30%
-        vol_30d: { max: 'q60' }       // Vol raisonnable
-      },
-      dynamicFilters: true,
-      warnings: [
-        '💡 DCA sur 3-6 mois recommandé',
-        '⚠️ Surveiller rotation sectorielle'
-      ]
+  swing7_30: {
+    id: 'swing7_30',
+    name: '📊 Swing 7-30j',
+    icon: '📊',
+    description: 'Trades sur quelques jours/semaines - Évite le bruit 24h',
+    riskLevel: 'MODÉRÉ',
+    criteria: ['ret_7d', 'ret_30d', 'dd90', 'vol_30d'],
+    weights: [35, 30, 20, 15],
+    sortMode: 'balanced',
+    filters: {
+      ret_7d:  { min: 'q60' }, // Top 40% perf 7j
+      ret_30d: { min: 0 },     // Perf 30j positive
+      dd90:    { min: -40 },   // Drawdown 90j ≥ -40% (évite les pires -80/-90%)
+      vol_30d: { max: 'q75' }, // Volatilité modérée
     },
-
-    quality_risk: {
-      id: 'quality_risk',
-      name: '🛡️ Qualité/Risque',
-      icon: '🛡️',
-      description: 'Cryptos stables pour noyau de portefeuille',
-      riskLevel: 'FAIBLE',
-      criteria: ['dd90', 'vol_30d', 'ret_90d', 'ret_1y'],
-      weights: [35, 30, 20, 15],
-      sortMode: 'lexico',
-      filters: {
-        vol_30d: { max: 'q50' },      // Moitié moins volatile
-        dd90:    { max: 'q20' },      // Top 20% stabilité
-        ret_90d: { min: 'q40' },      // Pas les pires
-      },
-      dynamicFilters: true,
-      additionalCheck: function(crypto) {
-        // Si vous avez la market cap
-        return !crypto.market_cap || crypto.market_cap > 1000000000;
-      },
-      warnings: [
-        '💡 Pour allocation 40-60% du portefeuille',
-        '✅ Convient aux profils conservateurs'
-      ]
+    dynamicFilters: true,
+    additionalCheck: function (crypto) {
+      return crypto.volume_24h && crypto.volume_24h > 3_000_000;
     },
+    warnings: [
+      '⚠️ Vérifier RSI < 70',
+      '💡 Entrée fractionnée recommandée',
+    ],
+  },
 
-    recovery: {
-      id: 'recovery',
-      name: '🔄 Recovery',
-      icon: '🔄',
-      description: 'Cryptos massacrées qui rebondissent - Contrarian',
-      riskLevel: 'ÉLEVÉ',
-      criteria: ['ret_7d', 'ret_1d', 'dd90', 'vol_30d'],
-      weights: [35, 25, 25, 15],
-      sortMode: 'lexico',
-      filters: {
-        ret_7d:  { min: 'q60' },      // Rebond récent
-        ret_30d: { max: 'q40' },      // Était en baisse
-        dd90:    { max: 'q10' },      // Forte correction (pire 10%)
-      },
-      dynamicFilters: true,
-      additionalCheck: function(crypto) {
-        // Éviter les microcaps si volume disponible
-        return !crypto.volume_24h || crypto.volume_24h > 1000000;
-      },
-      warnings: [
-        '⚠️ Value traps fréquents',
-        '⚠️ Max 5% par position',
-        '💡 Surveiller les volumes'
-      ]
+  trend3_12m: {
+    id: 'trend3_12m',
+    name: '📈 Tendance 3-12m',
+    icon: '📈',
+    description: 'Gagnants structurels moyen/long terme - Trend following',
+    riskLevel: 'FAIBLE-MODÉRÉ',
+    criteria: ['ret_90d', 'ret_1y', 'dd90', 'vol_30d'],
+    weights: [35, 30, 20, 15],
+    sortMode: 'balanced',
+    filters: {
+      ret_90d: { min: 'q70' }, // Top 30% sur 90j
+      ret_1y:  { min: 0 },     // 1 an positif
+      dd90:    { min: -50 },   // Drawdown 90j ≥ -50%
+      vol_30d: { max: 'q60' }, // Vol raisonnable
     },
+    dynamicFilters: true,
+    additionalCheck: function (crypto) {
+      const mcOK  = crypto.market_cap && crypto.market_cap > 500_000_000;
+      const volOK = crypto.volume_24h && crypto.volume_24h > 10_000_000;
+      return mcOK && volOK;
+    },
+    warnings: [
+      '💡 DCA sur 3-6 mois recommandé',
+      '⚠️ Surveiller rotation sectorielle',
+    ],
+  },
 
-    highvol_lottery: {
-      id: 'highvol_lottery',
-      name: '🔥 High Vol/Lottery',
-      icon: '🔥',
-      description: 'Les plus explosives - Ticket loterie assumé',
-      riskLevel: 'EXTRÊME',
-      criteria: ['vol_30d', 'atr14', 'ret_30d', 'ret_90d'],
-      weights: [35, 30, 20, 15],
-      sortMode: 'lexico',
-      filters: {
-        vol_30d: { min: 'q90' },      // Top 10% volatilité
-        atr14:   { min: 'q85' },      // Top 15% ATR
-      },
-      dynamicFilters: true,
-      warnings: [
-        '🔥 Perte totale possible',
-        '🔥 MAX 1-2% du portefeuille',
-        '🔥 Ne pas moyenner à la baisse'
-      ]
-    }
-  };
+  quality_risk: {
+    id: 'quality_risk',
+    name: '🛡️ Qualité/Risque',
+    icon: '🛡️',
+    description: 'Cryptos stables pour noyau de portefeuille',
+    riskLevel: 'FAIBLE',
+    criteria: ['dd90', 'vol_30d', 'ret_90d', 'ret_1y'],
+    weights: [35, 30, 20, 15],
+    sortMode: 'balanced',
+    filters: {
+      vol_30d: { max: 'q50' }, // Moitié moins volatile
+      dd90:    { min: -40 },   // Drawdown 90j ≥ -40% (stabilité minimale)
+      ret_90d: { min: 'q40' }, // Pas dans les 40% pires sur 90j
+      ret_1y:  { min: 0 },     // Pas de perdant sur 1 an
+    },
+    dynamicFilters: true,
+    additionalCheck: function (crypto) {
+      const mcOK  = crypto.market_cap && crypto.market_cap > 1_000_000_000;
+      const volOK = crypto.volume_24h && crypto.volume_24h > 10_000_000;
+      return mcOK && volOK;
+    },
+    warnings: [
+      '💡 Pour allocation 40-60% du portefeuille',
+      '✅ Convient aux profils conservateurs',
+    ],
+  },
 
-  const RISK_LEVELS = {
-    'FAIBLE':         { color: '#10b981', label: 'Faible',         icon: '🟢' },
-    'FAIBLE-MODÉRÉ':  { color: '#84cc16', label: 'Faible-modéré',  icon: '🟢' },
-    'MODÉRÉ':         { color: '#f59e0b', label: 'Modéré',         icon: '🟡' },
-    'ÉLEVÉ':          { color: '#f97316', label: 'Élevé',          icon: '🟠' },
-    'EXTRÊME':        { color: '#ef4444', label: 'Extrême',        icon: '🔴' }
-  };
+  recovery: {
+    id: 'recovery',
+    name: '🔄 Recovery',
+    icon: '🔄',
+    description: 'Cryptos massacrées qui rebondissent - Contrarian',
+    riskLevel: 'ÉLEVÉ',
+    criteria: ['ret_7d', 'ret_1d', 'dd90', 'vol_30d'],
+    weights: [35, 25, 25, 15],
+    sortMode: 'lexico',
+    filters: {
+      ret_7d:  { min: 'q60' }, // Rebond récent
+      ret_30d: { max: 0 },     // Était en baisse sur 30j
+      dd90:    { max: -70 },   // Drawdown 90j ≤ -70% (fortement corrigé)
+    },
+    dynamicFilters: true,
+    additionalCheck: function (crypto) {
+      return crypto.volume_24h && crypto.volume_24h > 1_000_000;
+    },
+    warnings: [
+      '⚠️ Value traps fréquents',
+      '⚠️ Max 5% par position',
+      '💡 Surveiller les volumes',
+    ],
+  },
+
+  highvol_lottery: {
+    id: 'highvol_lottery',
+    name: '🔥 High Vol/Lottery',
+    icon: '🔥',
+    description: 'Les plus explosives - Ticket loterie assumé',
+    riskLevel: 'EXTRÊME',
+    criteria: ['vol_30d', 'atr14', 'ret_30d', 'ret_90d'],
+    weights: [35, 30, 20, 15],
+    sortMode: 'lexico',
+    filters: {
+      vol_30d: { min: 'q90', max: 200 }, // Top 10% vol, mais plafond à 200% ann.
+      atr14:   { min: 'q85' },           // Top 15% ATR
+      dd90:    { min: -80 },             // Drawdown 90j ≥ -80% (évite les cas encore plus extrêmes)
+      ret_1y:  { min: 'q20' },           // Évite le bottom 20% sur 1 an
+    },
+    dynamicFilters: true,
+    additionalCheck: function (crypto) {
+      return crypto.volume_24h && crypto.volume_24h > 2_000_000;
+    },
+    warnings: [
+      '🔥 Perte totale possible',
+      '🔥 MAX 1-2% du portefeuille',
+      '🔥 Ne pas moyenner à la baisse',
+    ],
+  },
+};
+
+const RISK_LEVELS = {
+  FAIBLE:        { color: '#10b981', label: 'Faible',         icon: '🟢' },
+  'FAIBLE-MODÉRÉ': { color: '#84cc16', label: 'Faible-modéré',  icon: '🟢' },
+  MODÉRÉ:        { color: '#f59e0b', label: 'Modéré',         icon: '🟡' },
+  ÉLEVÉ:         { color: '#f97316', label: 'Élevé',          icon: '🟠' },
+  EXTRÊME:       { color: '#ef4444', label: 'Extrême',        icon: '🔴' },
+};
+
 
   // Cache des quantiles
   let QUANTILES_CACHE = {};
