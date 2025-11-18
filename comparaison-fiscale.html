@@ -1936,75 +1936,14 @@ function drawBuyRent () {
   const gapClass   = good ? 'pos'    : 'neg';
 
   /* 2. Construction HTML -------------------------------------------------- */
-  document.getElementById('buyRent').innerHTML = `
-    <section class="br-card">
-      <span class="br-badge ${badgeClass}">${badgeTxt}</span>
-      <h3 class="br-title">Résidence principale – comparaison Loyer / Proprio</h3>
-<table class="br-table">
-  <thead>
-    <tr>
-      <th></th><th>Locataire</th><th>Propriétaire</th>
-    </tr>
-  </thead>
-  <tbody>
-    <!-- Loyer et part conjoint -->
-    <tr>
-      <td>Loyer payé</td>
-      <td class="neg">‑${formatNumber(br.loyerMarché)}</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>Part conjoint</td>
-      <td class="pos">${br.partner ? '+' + formatNumber(br.partner) : '—'}</td>
-      <td class="pos">${br.partner ? '+' + formatNumber(br.partner) : '—'}</td>
-    </tr>
-
-    <!-- ✅  Mensualité crédit (une seule fois) -->
-    <tr>
-      <td>Mensualité crédit</td>
-      <td>—</td>
-      <td class="neg">‑${formatNumber(br.mensualité)}</td>
-    </tr>
-
-    <!-- Autres charges du propriétaire -->
-    ${Object.entries(br.details).map(
-      ([lib, val]) =>
-        `<tr><td>${lib}</td><td>—</td><td class="neg">‑${formatNumber(Math.abs(val))}</td></tr>`
-    ).join('')}
-
-    <!-- Totaux -->
-    <tr class="total">
-      <td>Total sorties mensuelles</td>
-      <td class="neg">${fmt(costLoc)}</td>
-      <td class="neg">${fmt(costProp)}</td>
-    </tr>
-    <tr class="gap">
-      <td>Différence</td>
-      <td></td>
-      <td class="gap-cell ${gapClass}">${fmt(gap)}</td>
-    </tr>
-  </tbody>
-</table>
-
-      <div class="br-slider">
-        <label>Loyer du marché :
-          <input type="range" min="600" max="2000" step="50"
-                 value="${br.loyerMarché}"
-                 oninput="br.loyerMarché=+this.value;
-                          document.getElementById('brOutput').textContent=this.value+' €';
-                          drawBuyRent()">
-          <output id="brOutput">${br.loyerMarché} €</output>
-        </label>
-      </div>
-    </section>`;
+document.getElementById('buyRent').innerHTML = '';  // Conteneur vide - tableau supprimé
 }
-    </script>
-    
-    <div id="fiscal-comparison-results">
-                <!-- Les résultats fiscaux seront insérés ici -->
-            </div>
-        </div>
-    </div><!-- ✅ Fermeture du container principal -->
+</script>
+
+<div id="fiscal-comparison-results">
+    <!-- Les résultats fiscaux seront insérés ici -->
+</div>
+
 
     <!-- Scripts -->
     <script src="./ville-search.js"></script>
