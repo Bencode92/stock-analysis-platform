@@ -247,248 +247,249 @@
     });
   }
 
-  // === Fonctions pour les presets ===
-  function applyCryptoPreset(presetId) {
-    const preset = CRYPTO_PRESETS[presetId];
-    if (!preset) {
-      console.warn('Preset inconnu:', presetId);
-      return;
-    }
-
-    // Stocker le preset actif
-    state.activePreset = presetId;
-
-    // 1) Appliquer les critères
-    state.selected = preset.criteria.slice();
-    
-    // Mettre à jour les checkboxes
-    Object.keys(METRICS).forEach(id => {
-      const cb = document.getElementById('m-' + id);
-      if (!cb) return;
-      cb.checked = state.selected.includes(id);
-      cb.closest('.mc-pill')?.classList.toggle('is-checked', cb.checked);
-    });
-
-    // 2) Mode de tri
-    state.mode = preset.sortMode;
-    const root = document.getElementById('crypto-mc');
-    if (root) {
-      root.querySelectorAll('input[name="mc-mode"]').forEach(r => {
-        r.checked = r.value === state.mode;
-        r.closest('.mc-pill')?.classList.toggle('is-checked', r.checked);
-      });
-    }
-
-    // 3) Appliquer les filtres (avec gestion quantiles)
-    state.filters = state.filters.filter(f => f.__auto); // Garder seulement les filtres auto
-    
-    Object.entries(preset.filters || {}).forEach(([metric, cfg]) => {
-      let minValue = cfg.min;
-      let maxValue = cfg.max;
-
-      // Résoudre les quantiles
-      if (preset.dynamicFilters) {
-        if (typeof minValue === 'string' && minValue.startsWith('q')) {
-          const q = parseInt(minValue.substring(1));
-          minValue = QUANTILES_CACHE[metric]?.[`q${q}`] ?? minValue;
-        }
-        if (typeof maxValue === 'string' && maxValue.startsWith('q')) {
-          const q = parseInt(maxValue.substring(1));
-          maxValue = QUANTILES_CACHE[metric]?.[`q${q}`] ?? maxValue;
-        }
-      }
-
-      if (minValue != null) {
-        state.filters.push({ 
-          metric, 
-          operator: '>=', 
-          value: minValue,
-          isQuantile: preset.dynamicFilters,
-          __preset: true
-        });
-      }
-      if (maxValue != null) {
-        state.filters.push({ 
-          metric, 
-          operator: '<=', 
-          value: maxValue,
-          isQuantile: preset.dynamicFilters,
-          __preset: true 
-        });
-      }
-    });
-
-    // 4) Filtre additionnel custom
-    state.customFilter = preset.additionalCheck || null;
-
-    // 5) Mettre à jour l'UI
-    updatePresetUI(preset);
-    drawFilters();
-    updatePriorityUI();
-    refresh(true);
+// === Fonctions pour les presets ===
+function applyCryptoPreset(presetId) {
+  const preset = CRYPTO_PRESETS[presetId];
+  if (!preset) {
+    console.warn('Preset inconnu:', presetId);
+    return;
   }
 
-  function clearCryptoPreset() {
-    state.activePreset = null;
-    state.customFilter = null;
-    state.filters = state.filters.filter(f => !f.__preset);
-    
-    // Désactiver visuel preset actif
-    const container = document.getElementById('crypto-presets-container');
-    if (container) {
-      container.querySelectorAll('.preset-card').forEach(card => {
-        card.classList.remove('active');
-      });
-    }
-    
-    // Masquer info preset
-    const info = document.getElementById('preset-info');
-    if (info) info.innerHTML = '';
-    
-    drawFilters();
-    refresh(false);
-  }
+  // Stocker le preset actif
+  state.activePreset = presetId;
 
-  function renderCryptoPresetsUI() {
-    const container = document.getElementById('crypto-presets-container');
-    if (!container) return;
+  // 1) Appliquer les critères
+  state.selected = preset.criteria.slice();
+  
+  // Mettre à jour les checkboxes
+  Object.keys(METRICS).forEach(id => {
+    const cb = document.getElementById('m-' + id);
+    if (!cb) return;
+    cb.checked = state.selected.includes(id);
+    cb.closest('.mc-pill')?.classList.toggle('is-checked', cb.checked);
+  });
 
-    container.innerHTML = `
-      <div class="presets-section">
-        <h3>⚙️ STRATÉGIES PRÉDÉFINIES</h3>
-        <div class="presets-grid">
-          ${Object.values(CRYPTO_PRESETS).map(p => `
-            <button class="preset-card ${state.activePreset === p.id ? 'active' : ''}"
-                    data-preset="${p.id}"
-                    title="${p.description}">
-              <div class="preset-card-content">
-                <span class="preset-card-icon">${p.icon}</span>
-                <span class="preset-card-name">${p.name.replace(p.icon, '').trim()}</span>
-              </div>
-              <div class="preset-risk-indicator"
-                   style="background-color:${RISK_LEVELS[p.riskLevel].color}20">
-                ${RISK_LEVELS[p.riskLevel].icon}
-              </div>
-            </button>
-          `).join('')}
-        </div>
-        <div id="preset-info" class="mt-3"></div>
-        <div id="preset-quantile-info" class="mt-2"></div>
-      </div>
-    `;
-
-    container.querySelectorAll('.preset-card').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.preset;
-        if (state.activePreset === id) {
-          clearCryptoPreset();
-        } else {
-          applyCryptoPreset(id);
-        }
-      });
+  // 2) Mode de tri
+  state.mode = preset.sortMode;
+  const root = document.getElementById('crypto-mc');
+  if (root) {
+    root.querySelectorAll('input[name="mc-mode"]').forEach(r => {
+      r.checked = r.value === state.mode;
+      r.closest('.mc-pill')?.classList.toggle('is-checked', r.checked);
     });
   }
 
-  function updatePresetUI(preset) {
-    const container = document.getElementById('crypto-presets-container');
-    if (!container) return;
+  // 3) Appliquer les filtres (avec gestion quantiles)
+  // IMPORTANT : on conserve les filtres manuels, on supprime seulement les anciens filtres de preset
+  state.filters = state.filters.filter(f => !f.__preset);
+  
+  Object.entries(preset.filters || {}).forEach(([metric, cfg]) => {
+    let minValue = cfg.min;
+    let maxValue = cfg.max;
 
-    // Highlight le preset actif
-    container.querySelectorAll('.preset-card').forEach(card => {
-      const isActive = card.dataset.preset === preset.id;
-      card.classList.toggle('active', isActive);
-    });
-
-    // Afficher les infos du preset
-    displayPresetInfo(preset);
-    
-    // Afficher les valeurs résolues des quantiles
+    // Résoudre les quantiles
     if (preset.dynamicFilters) {
-      displayQuantileValues(preset);
+      if (typeof minValue === 'string' && minValue.startsWith('q')) {
+        const q = parseInt(minValue.substring(1));
+        minValue = QUANTILES_CACHE[metric]?.[`q${q}`] ?? minValue;
+      }
+      if (typeof maxValue === 'string' && maxValue.startsWith('q')) {
+        const q = parseInt(maxValue.substring(1));
+        maxValue = QUANTILES_CACHE[metric]?.[`q${q}`] ?? maxValue;
+      }
     }
+
+    if (minValue != null) {
+      state.filters.push({ 
+        metric, 
+        operator: '>=', 
+        value: minValue,
+        isQuantile: preset.dynamicFilters,
+        __preset: true
+      });
+    }
+    if (maxValue != null) {
+      state.filters.push({ 
+        metric, 
+        operator: '<=', 
+        value: maxValue,
+        isQuantile: preset.dynamicFilters,
+        __preset: true 
+      });
+    }
+  });
+
+  // 4) Filtre additionnel custom
+  state.customFilter = preset.additionalCheck || null;
+
+  // 5) Mettre à jour l'UI
+  updatePresetUI(preset);
+  drawFilters();
+  updatePriorityUI();
+  refresh(true);
+}
+
+function clearCryptoPreset() {
+  state.activePreset = null;
+  state.customFilter = null;
+  state.filters = state.filters.filter(f => !f.__preset);
+  
+  // Désactiver visuel preset actif
+  const container = document.getElementById('crypto-presets-container');
+  if (container) {
+    container.querySelectorAll('.preset-card').forEach(card => {
+      card.classList.remove('active');
+    });
   }
+  
+  // Masquer info preset
+  const info = document.getElementById('preset-info');
+  if (info) info.innerHTML = '';
+  
+  drawFilters();
+  refresh(false);
+}
 
-  function displayPresetInfo(preset) {
-    const info = document.getElementById('preset-info');
-    if (!info) return;
-    const r = RISK_LEVELS[preset.riskLevel];
+function renderCryptoPresetsUI() {
+  const container = document.getElementById('crypto-presets-container');
+  if (!container) return;
 
+  container.innerHTML = `
+    <div class="presets-section">
+      <h3>⚙️ STRATÉGIES PRÉDÉFINIES</h3>
+      <div class="presets-grid">
+        ${Object.values(CRYPTO_PRESETS).map(p => `
+          <button class="preset-card ${state.activePreset === p.id ? 'active' : ''}"
+                  data-preset="${p.id}"
+                  title="${p.description}">
+            <div class="preset-card-content">
+              <span class="preset-card-icon">${p.icon}</span>
+              <span class="preset-card-name">${p.name.replace(p.icon, '').trim()}</span>
+            </div>
+            <div class="preset-risk-indicator"
+                 style="background-color:${RISK_LEVELS[p.riskLevel].color}20">
+              ${RISK_LEVELS[p.riskLevel].icon}
+            </div>
+          </button>
+        `).join('')}
+      </div>
+      <div id="preset-info" class="mt-3"></div>
+      <div id="preset-quantile-info" class="mt-2"></div>
+    </div>
+  `;
+
+  container.querySelectorAll('.preset-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.preset;
+      if (state.activePreset === id) {
+        clearCryptoPreset();
+      } else {
+        applyCryptoPreset(id);
+      }
+    });
+  });
+}
+
+function updatePresetUI(preset) {
+  const container = document.getElementById('crypto-presets-container');
+  if (!container) return;
+
+  // Highlight le preset actif
+  container.querySelectorAll('.preset-card').forEach(card => {
+    const isActive = card.dataset.preset === preset.id;
+    card.classList.toggle('active', isActive);
+  });
+
+  // Afficher les infos du preset
+  displayPresetInfo(preset);
+  
+  // Afficher les valeurs résolues des quantiles
+  if (preset.dynamicFilters) {
+    displayQuantileValues(preset);
+  }
+}
+
+function displayPresetInfo(preset) {
+  const info = document.getElementById('preset-info');
+  if (!info) return;
+  const r = RISK_LEVELS[preset.riskLevel];
+
+  info.innerHTML = `
+    <div class="preset-active-info">
+      <div class="preset-header">
+        <span class="preset-icon">${preset.icon}</span>
+        <h3>${preset.name}</h3>
+        <span class="risk-badge" style="background-color:${r.color}20;color:${r.color}">
+          ${r.icon} Risque ${r.label}
+        </span>
+      </div>
+      <p class="preset-description">${preset.description}</p>
+      ${(preset.warnings || []).length ? `
+        <div class="preset-warnings">
+          ${preset.warnings.map(w => `<div class="warning-item">${w}</div>`).join('')}
+        </div>` : ''}
+      <button type="button" class="btn-clear-preset" onclick="clearCryptoPreset()">
+        ✕ Désactiver le preset
+      </button>
+    </div>
+  `;
+}
+
+function displayQuantileValues(preset) {
+  const info = document.getElementById('preset-quantile-info');
+  if (!info) return;
+
+  const resolvedFilters = [];
+  Object.entries(preset.filters || {}).forEach(([metric, cfg]) => {
+    const metricInfo = METRICS[metric];
+    if (!metricInfo) return;
+
+    if (cfg.min != null) {
+      const value = typeof cfg.min === 'string' && cfg.min.startsWith('q')
+        ? QUANTILES_CACHE[metric]?.[cfg.min] ?? cfg.min
+        : cfg.min;
+      if (Number.isFinite(value)) {
+        resolvedFilters.push(
+          `${metricInfo.label} ≥ ${value.toFixed(2)}${metricInfo.unit}${typeof cfg.min === 'string' ? ` (${cfg.min})` : ''}`
+        );
+      }
+    }
+    if (cfg.max != null) {
+      const value = typeof cfg.max === 'string' && cfg.max.startsWith('q')
+        ? QUANTILES_CACHE[metric]?.[cfg.max] ?? cfg.max
+        : cfg.max;
+      if (Number.isFinite(value)) {
+        resolvedFilters.push(
+          `${metricInfo.label} ≤ ${value.toFixed(2)}${metricInfo.unit}${typeof cfg.max === 'string' ? ` (${cfg.max})` : ''}`
+        );
+      }
+    }
+  });
+
+  if (resolvedFilters.length) {
     info.innerHTML = `
-      <div class="preset-active-info">
-        <div class="preset-header">
-          <span class="preset-icon">${preset.icon}</span>
-          <h3>${preset.name}</h3>
-          <span class="risk-badge" style="background-color:${r.color}20;color:${r.color}">
-            ${r.icon} Risque ${r.label}
-          </span>
-        </div>
-        <p class="preset-description">${preset.description}</p>
-        ${(preset.warnings || []).length ? `
-          <div class="preset-warnings">
-            ${preset.warnings.map(w => `<div class="warning-item">${w}</div>`).join('')}
-          </div>` : ''}
-        <button type="button" class="btn-clear-preset" onclick="clearCryptoPreset()">
-          ✕ Désactiver le preset
-        </button>
+      <div class="quantile-info">
+        <h4>Seuils dynamiques actuels:</h4>
+        <ul>
+          ${resolvedFilters.map(f => `<li>${f}</li>`).join('')}
+        </ul>
+        <small>Basés sur la distribution actuelle du marché</small>
       </div>
     `;
   }
+}
 
-  function displayQuantileValues(preset) {
-    const info = document.getElementById('preset-quantile-info');
-    if (!info) return;
-
-    const resolvedFilters = [];
-    Object.entries(preset.filters || {}).forEach(([metric, cfg]) => {
-      const metricInfo = METRICS[metric];
-      if (!metricInfo) return;
-
-      if (cfg.min != null) {
-        const value = typeof cfg.min === 'string' && cfg.min.startsWith('q')
-          ? QUANTILES_CACHE[metric]?.[cfg.min] ?? cfg.min
-          : cfg.min;
-        if (Number.isFinite(value)) {
-          resolvedFilters.push(
-            `${metricInfo.label} ≥ ${value.toFixed(2)}${metricInfo.unit}${typeof cfg.min === 'string' ? ` (${cfg.min})` : ''}`
-          );
-        }
-      }
-      if (cfg.max != null) {
-        const value = typeof cfg.max === 'string' && cfg.max.startsWith('q')
-          ? QUANTILES_CACHE[metric]?.[cfg.max] ?? cfg.max
-          : cfg.max;
-        if (Number.isFinite(value)) {
-          resolvedFilters.push(
-            `${metricInfo.label} ≤ ${value.toFixed(2)}${metricInfo.unit}${typeof cfg.max === 'string' ? ` (${cfg.max})` : ''}`
-          );
-        }
-      }
-    });
-
-    if (resolvedFilters.length) {
-      info.innerHTML = `
-        <div class="quantile-info">
-          <h4>Seuils dynamiques actuels:</h4>
-          <ul>
-            ${resolvedFilters.map(f => `<li>${f}</li>`).join('')}
-          </ul>
-          <small>Basés sur la distribution actuelle du marché</small>
-        </div>
-      `;
-    }
+// Helpers "garantis-moi ce noeud"
+function ensureEl(parent, id, html) {
+  let el = document.getElementById(id);
+  if (!el) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html.trim();
+    el = tmp.firstElementChild;
+    parent.appendChild(el);
   }
-
-  // Helpers "garantis-moi ce noeud"
-  function ensureEl(parent, id, html) {
-    let el = document.getElementById(id);
-    if (!el) {
-      const tmp = document.createElement('div');
-      tmp.innerHTML = html.trim();
-      el = tmp.firstElementChild;
-      parent.appendChild(el);
-    }
-    return el;
-  }
+  return el;
+}
 
   // --- MAJ compteur + horodatage + expose global pour d'autres scripts
   function updateHeaderCounters() {
