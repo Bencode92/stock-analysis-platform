@@ -364,7 +364,9 @@ function renderCryptoPresetsUI() {
                   title="${p.description}">
             <div class="preset-card-content">
               <span class="preset-card-icon">${p.icon}</span>
-              <span class="preset-card-name">${p.name.replace(p.icon, '').trim()}</span>
+              <span class="preset-card-name">
+                ${p.name.replace(p.icon, '').trim()}
+              </span>
             </div>
             <div class="preset-risk-indicator"
                  style="background-color:${RISK_LEVELS[p.riskLevel].color}20">
@@ -373,8 +375,6 @@ function renderCryptoPresetsUI() {
           </button>
         `).join('')}
       </div>
-      <div id="preset-info" class="mt-3"></div>
-      <div id="preset-quantile-info" class="mt-2"></div>
     </div>
   `;
 
@@ -628,43 +628,57 @@ function ensureEl(parent, id, html) {
     }
   }
 
-  function ensureMetricCheckboxes(root) {
-    // s'il existe déjà au moins une checkbox métrique, ne rien faire
-    if (Object.keys(METRICS).some(id => document.getElementById('m-' + id))) return;
+function ensureMetricCheckboxes(root) {
+  // s'il existe déjà au moins une checkbox métrique, ne rien faire
+  if (Object.keys(METRICS).some(id => document.getElementById('m-' + id))) return;
 
-    // conteneur dédié (ou créé à la volée)
-    let holder = root.querySelector('#crypto-mc-metrics, fieldset:nth-of-type(2)');
-    if (!holder) {
-      holder = document.createElement('fieldset');
-      holder.className = 'mb-4';
-      holder.innerHTML = '<legend class="text-sm opacity-70 mb-2">Critères sélectionnés = Ordre de priorité</legend><div id="crypto-mc-metrics" class="flex flex-wrap gap-2"></div>';
-      // Après les modes de tri
-      const modes = root.querySelector('fieldset[role="radiogroup"]');
-      if (modes && modes.nextSibling) {
-        root.insertBefore(holder, modes.nextSibling);
-      } else {
-        root.appendChild(holder);
-      }
-      holder = holder.querySelector('#crypto-mc-metrics');
+  // conteneur dédié (ou créé à la volée)
+  let holder = root.querySelector('#crypto-mc-metrics, fieldset:nth-of-type(2)');
+  if (!holder) {
+    holder = document.createElement('fieldset');
+    holder.className = 'mb-4';
+    holder.innerHTML = `
+      <legend class="text-sm opacity-70 mb-2">
+        Critères sélectionnés = Ordre de priorité
+      </legend>
+      <div id="crypto-mc-metrics" class="flex flex-wrap gap-2"></div>
+    `;
+    // Après les modes de tri
+    const modes = root.querySelector('fieldset[role="radiogroup"]');
+    if (modes && modes.nextSibling) {
+      root.insertBefore(holder, modes.nextSibling);
+    } else {
+      root.appendChild(holder);
     }
-
-    // Si c'est un fieldset, cherche le conteneur des pills dedans
-    if (holder.tagName === 'FIELDSET') {
-      const inner = holder.querySelector('.flex.flex-wrap.gap-2, div');
-      if (inner) holder = inner;
-    }
-
-    holder.innerHTML = Object.entries(METRICS).map(([id, m]) => {
-      const checked = state.selected.includes(id) ? 'checked' : '';
-      const dir = m.max ? '↑' : '↓';
-      return `
-        <label class="mc-pill ${checked ? 'is-checked' : ''}">
-          <input type="checkbox" id="m-${id}" ${checked}>
-          ${m.label} ${dir}
-        </label>
-      `;
-    }).join('');
+    holder = holder.querySelector('#crypto-mc-metrics');
   }
+
+  // Si c'est un fieldset, cherche le conteneur des pills dedans
+  if (holder.tagName === 'FIELDSET') {
+    const inner = holder.querySelector('.flex.flex-wrap.gap-2, div');
+    if (inner) holder = inner;
+  }
+
+  // >>> AJOUT : forcer la position sous les presets <<<
+  const presets = root.querySelector('#crypto-presets-container');
+  const fieldsetNode = holder.closest('fieldset') || holder;
+  if (presets && fieldsetNode && presets.nextSibling !== fieldsetNode) {
+    root.insertBefore(fieldsetNode, presets.nextSibling);
+  }
+  // <<< FIN AJOUT >>>
+
+  holder.innerHTML = Object.entries(METRICS).map(([id, m]) => {
+    const checked = state.selected.includes(id) ? 'checked' : '';
+    const dir = m.max ? '↑' : '↓';
+    return `
+      <label class="mc-pill ${checked ? 'is-checked' : ''}">
+        <input type="checkbox" id="m-${id}" ${checked}>
+        ${m.label} ${dir}
+      </label>
+    `;
+  }).join('');
+}
+
 
   function ensureFilterControls(root) {
     // FIX: détecte l'UI existante avec tous les IDs possibles
