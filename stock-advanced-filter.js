@@ -1,5 +1,9 @@
 // stock-advanced-filter.js
-// Version 3.20 - FIX run-rate robuste post-split + blocage override API
+// Version 3.21 - Support sélection de régions via REGIONS env variable
+// Changements v3.21:
+// - Ajout support REGIONS env (all, us, europe, asia, us-europe, us-asia, europe-asia)
+// - Chargement conditionnel des CSV selon régions sélectionnées
+// - tops_overview.json généré uniquement avec les régions traitées
 // Corrections v3.20:
 // - Blocage de l'override API après split récent (évite l'écrasement du calcul correct)
 // - Run-rate robuste même sans dividendes post-split dans le feed
@@ -56,6 +60,23 @@ const csv = require('csv-parse/sync');
 
 const OUT_DIR = process.env.OUT_DIR || 'data';
 const KEEP_ADR = process.env.KEEP_ADR === '1'; // v3.13: toggle pour garder ou non les ADR
+
+// ✅ v3.21: Parsing de la variable REGIONS
+const REGIONS_INPUT = (process.env.REGIONS || 'all').toLowerCase().trim();
+const parseRegions = (input) => {
+    const map = {
+        'all':         { us: true, europe: true, asia: true },
+        'us':          { us: true, europe: false, asia: false },
+        'europe':      { us: false, europe: true, asia: false },
+        'asia':        { us: false, europe: false, asia: true },
+        'us-europe':   { us: true, europe: true, asia: false },
+        'us-asia':     { us: true, europe: false, asia: true },
+        'europe-asia': { us: false, europe: true, asia: true },
+    };
+    return map[input] || map['all'];
+};
+const SELECTED_REGIONS = parseRegions(REGIONS_INPUT);
+
 const CONFIG = {
     API_KEY: process.env.TWELVE_DATA_API_KEY,
     DEBUG: process.env.DEBUG === '1',
@@ -1421,16 +1442,25 @@ function buildOverview(byRegion){
 }
 
 async function main() { 
-    console.log('📊 Enrichissement complet des stocks (v3.20 - FIX run-rate robuste post-split + blocage override API)\n');
+    // ✅ v3.21: Affichage des régions sélectionnées
+    const activeRegions = Object.entries(SELECTED_REGIONS)
+        .filter(([_, v]) => v)
+        .map(([k]) => k.toUpperCase())
+        .join(', ');
+    
+    console.log(`📊 Enrichissement complet des stocks (v3.21 - Support sélection de régions)`);
+    console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
+    
     await fs.mkdir(OUT_DIR, { recursive: true });
     
+    // ✅ v3.21: Chargement conditionnel des CSV
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
-        loadStockCSV('data/filtered/Actions_US_filtered.csv'),
-        loadStockCSV('data/filtered/Actions_Europe_filtered.csv'),
-        loadStockCSV('data/filtered/Actions_Asie_filtered.csv')
+        SELECTED_REGIONS.us     ? loadStockCSV('data/filtered/Actions_US_filtered.csv')     : Promise.resolve([]),
+        SELECTED_REGIONS.europe ? loadStockCSV('data/filtered/Actions_Europe_filtered.csv') : Promise.resolve([]),
+        SELECTED_REGIONS.asia   ? loadStockCSV('data/filtered/Actions_Asie_filtered.csv')   : Promise.resolve([])
     ]);
     
-    console.log(`Stocks: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
+    console.log(`Stocks chargés: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
     
     // Détection et rebasculement des ADR
     const adrFromEurope = [];
@@ -1463,13 +1493,13 @@ async function main() {
         console.log('');
     }
     
-    const regions = [
-        { name: 'us', stocks: usStocksFinal },
-        { name: 'europe', stocks: europeFiltered },
-        { name: 'asia', stocks: asiaFiltered }
-    ];
+    // ✅ v3.21: Ne traiter que les régions sélectionnées
+    const regions = [];
+    if (SELECTED_REGIONS.us)     regions.push({ name: 'us', stocks: usStocksFinal });
+    if (SELECTED_REGIONS.europe) regions.push({ name: 'europe', stocks: europeFiltered });
+    if (SELECTED_REGIONS.asia)   regions.push({ name: 'asia', stocks: asiaFiltered });
     
-    const byRegion = {};
+    const byRegion = { US: [], EUROPE: [], ASIA: [] };
     
     for (const region of regions) {
         console.log(`\n🌍 ${region.name.toUpperCase()}`);
@@ -1500,6 +1530,7 @@ async function main() {
     
     // --------- TOPS OVERVIEW ----------
     const overview = buildOverview(byRegion);
+    overview.regions_processed = activeRegions;  // ✅ v3.21: Ajoute les régions traitées
     const topsPath = path.join(OUT_DIR, 'tops_overview.json');
     await fs.writeFile(topsPath, JSON.stringify(overview, null, 2));
     console.log(`🏁 ${topsPath}`);
