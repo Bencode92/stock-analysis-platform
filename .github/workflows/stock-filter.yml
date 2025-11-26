@@ -2,6 +2,20 @@ name: Stock Advanced Filter
 
 on:
   workflow_dispatch:
+    inputs:
+      regions:
+        description: 'Régions à traiter'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - us
+          - europe
+          - asia
+          - us-europe
+          - us-asia
+          - europe-asia
   schedule:
     - cron: '0 14 * * 1-5'  # 14:00 UTC (15h/16h Paris selon DST), jours ouvrés
 
@@ -40,7 +54,10 @@ jobs:
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
         INCLUDE_OPTIONS: '1'  # Activer les options
-      run: node stock-advanced-filter.js
+        REGIONS: ${{ github.event.inputs.regions || 'all' }}
+      run: |
+        echo "🌍 Régions sélectionnées: $REGIONS"
+        node stock-advanced-filter.js
 
     - name: Debug - Check generated files
       run: |
@@ -66,7 +83,8 @@ jobs:
           exit 0
         fi
 
-        git commit -m "Update stocks data [skip ci]"
+        REGIONS="${{ github.event.inputs.regions || 'all' }}"
+        git commit -m "Update stocks data [$REGIONS] [skip ci]"
 
         # Push robuste: fetch + rebase + 3 tentatives
         BRANCH="${GITHUB_REF_NAME:-main}"
