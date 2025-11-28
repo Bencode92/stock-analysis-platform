@@ -3,7 +3,7 @@
  * Ce module gère toute la logique de simulation fiscale, calcul de dépenses et allocation d'actifs
  * TradePulse Finance Intelligence Platform
  * 
- * Version 2.0 - Ajout des plafonds PER reportables N-1/N-2/N-3
+ * Version 2.1 - Interface V1 "Les Échos" avec tableau comparatif 3 scénarios
  */
 
 // Structure principale du module (Pattern Module pour encapsulation)
@@ -26,6 +26,8 @@ const PatrimoineSimulator = (function() {
     // AMÉLIORATION 2: Charges par type de revenu
     const CHARGES_PAR_TYPE = {
         salarie: 0.22,      // ~22% pour un salarié
+        cadre: 0.25,        // ~25% pour un cadre (charges légèrement plus élevées)
+        fonctionnaire: 0.17, // ~17% pour un fonctionnaire
         independant: 0.45,  // ~45% pour un TNS
         dividendes: 0.172,  // 17.2% prélèvements sociaux sur revenus du capital
         microEntrepreneur: {
@@ -181,11 +183,12 @@ const PatrimoineSimulator = (function() {
      * Récupère le taux marginal d'imposition (TMI) pour un revenu donné
      * Prend en compte le quotient familial
      * @param {number} revenuImposable - Revenu imposable
+     * @param {number} nbParts - Nombre de parts (optionnel, utilise state.nbParts par défaut)
      * @returns {number} Taux marginal d'imposition en pourcentage
      */
-    function getTauxMarginal(revenuImposable) {
-        const nbParts = state.nbParts || 1;
-        const revenuParPart = revenuImposable / nbParts;
+    function getTauxMarginal(revenuImposable, nbParts = null) {
+        const parts = nbParts || state.nbParts || 1;
+        const revenuParPart = revenuImposable / parts;
         
         for (let i = TRANCHES_IMPOT.length - 1; i >= 0; i--) {
             if (revenuParPart > TRANCHES_IMPOT[i].min) {
@@ -264,12 +267,13 @@ const PatrimoineSimulator = (function() {
      * Calcule un versement PER optimal pour sortir de la tranche marginale actuelle
      * @param {number} revenuImposable - Revenu net imposable avant PER
      * @param {Object} plafondsReportables - Plafonds N-1 / N-2 / N-3
+     * @param {number} nbParts - Nombre de parts fiscales (optionnel)
      * @returns {Object} { versementOptimal, nouvelleTMI, allocationParAnnee, economieImpot }
      */
-    function calculerVersementOptimalPourChangerTranche(revenuImposable, plafondsReportables = null) {
+    function calculerVersementOptimalPourChangerTranche(revenuImposable, plafondsReportables = null, nbParts = null) {
         const reportables = plafondsReportables || state.perPlafondsReportables;
-        const nbParts = state.nbParts || 1;
-        const revenuParPart = revenuImposable / nbParts;
+        const parts = nbParts || state.nbParts || 1;
+        const revenuParPart = revenuImposable / parts;
         
         const { plafondsParAnnee, totalDisponible } = calculerPlafondsPER(revenuImposable, reportables);
         
@@ -281,16 +285,19 @@ const PatrimoineSimulator = (function() {
             }
         }
         
-        // Déjà dans la tranche à 0% => pas d'optimisation
-        if (trancheIndex === 0) {
+        // Déjà dans la tranche à 0% ou 11% => pas d'optimisation intéressante
+        if (trancheIndex <= 1) {
             return {
                 versementOptimal: 0,
-                nouvelleTMI: 0,
-                ancienneTMI: 0,
+                nouvelleTMI: trancheIndex === 0 ? 0 : 11,
+                ancienneTMI: trancheIndex === 0 ? 0 : 11,
                 allocationParAnnee: { n3: 0, n2: 0, n1: 0, n: 0 },
                 totalPlafondDisponible: totalDisponible,
                 economieImpot: 0,
-                message: "Vous êtes déjà dans la tranche à 0%, pas besoin de versement PER pour optimisation fiscale."
+                peutChangerTranche: false,
+                message: trancheIndex === 0 
+                    ? "Vous êtes déjà dans la tranche à 0%, pas besoin de versement PER pour optimisation fiscale."
+                    : "Vous êtes dans la tranche à 11%, descendre à 0% n'est généralement pas optimal."
             };
         }
         
@@ -300,7 +307,7 @@ const PatrimoineSimulator = (function() {
         // On veut ramener le revenu PAR PART sous le MIN de la tranche courante
         const seuilSortieTranche = trancheCourante.min;
         const montantParPartNecessaire = Math.max(0, revenuParPart - seuilSortieTranche);
-        const montantTotalNecessaire = montantParPartNecessaire * nbParts;
+        const montantTotalNecessaire = montantParPartNecessaire * parts;
         
         // Le versement optimal est le MIN entre ce qu'il faut et ce qui est disponible
         const versementOptimal = Math.min(montantTotalNecessaire, totalDisponible);
@@ -310,12 +317,14 @@ const PatrimoineSimulator = (function() {
         
         // Calcul de la nouvelle TMI
         const nouveauRevenuImposable = revenuImposable - perDeductible;
-        const nouvelleTMI = getTauxMarginal(nouveauRevenuImposable);
+        const nouvelleTMI = getTauxMarginal(nouveauRevenuImposable, parts);
         
         // Calcul de l'économie d'impôt
-        const impotAvant = calculerImpot(revenuImposable);
-        const impotApres = calculerImpot(nouveauRevenuImposable);
+        const impotAvant = calculerImpot(revenuImposable, parts);
+        const impotApres = calculerImpot(nouveauRevenuImposable, parts);
         const economieImpot = impotAvant - impotApres;
+        
+        const peutChangerTranche = versementOptimal >= montantTotalNecessaire;
         
         return {
             versementOptimal: Math.round(versementOptimal),
@@ -324,9 +333,10 @@ const PatrimoineSimulator = (function() {
             allocationParAnnee: utilisation,
             totalPlafondDisponible: totalDisponible,
             economieImpot: Math.round(economieImpot),
-            message: versementOptimal < montantTotalNecessaire 
-                ? `Plafond insuffisant pour sortir complètement de la tranche ${ancienneTMI}%. Versement max: ${Math.round(totalDisponible).toLocaleString('fr-FR')} €`
-                : `En versant ${Math.round(versementOptimal).toLocaleString('fr-FR')} €, vous passez de la TMI ${ancienneTMI}% à ${nouvelleTMI}%.`
+            peutChangerTranche,
+            message: peutChangerTranche 
+                ? `En versant ${Math.round(versementOptimal).toLocaleString('fr-FR')} €, vous passez de la TMI ${ancienneTMI}% à ${nouvelleTMI}%.`
+                : `Plafond insuffisant pour sortir complètement de la tranche ${ancienneTMI}%. Versement max: ${Math.round(totalDisponible).toLocaleString('fr-FR')} €`
         };
     }
 
@@ -340,7 +350,7 @@ const PatrimoineSimulator = (function() {
         state.revenuBrut = params.revenuBrut || state.revenuBrut;
         state.typeRevenu = params.typeRevenu || state.typeRevenu;
         state.tauxCharges = params.tauxCharges || getTauxCharges(state.typeRevenu, params.sousType);
-        state.perPourcentage = params.perPourcentage || state.perPourcentage;
+        state.perPourcentage = params.perPourcentage !== undefined ? params.perPourcentage : state.perPourcentage;
         state.nbParts = params.nbParts || state.nbParts || 1;
         
         // Mise à jour des plafonds reportables si fournis
@@ -632,6 +642,14 @@ const PatrimoineSimulator = (function() {
         };
     }
 
+    /**
+     * Retourne les tranches d'imposition pour usage externe
+     * @returns {Array} Tranches d'imposition
+     */
+    function getTranchesImpot() {
+        return [...TRANCHES_IMPOT];
+    }
+
     // API publique du module
     return {
         calculerSimulationFiscale,
@@ -643,261 +661,414 @@ const PatrimoineSimulator = (function() {
         resetState,
         exporterDataGraphique,
         getTauxMarginal,
+        getTauxCharges,
+        calculerImpot,
         calculerPlafondsPER,
         allouerVersementPER,
         calculerVersementOptimalPourChangerTranche,
         getConstantesPER,
+        getTranchesImpot,
         // Exporter l'état actuel (pour inspection et debugging)
         getState: () => ({...state})
     };
 })();
 
-// Fonction de calcul initiale (pour compatibilité avec l'exemple donné)
-function calculerFiscalite() {
-    // Récupérer les valeurs du formulaire
-    const brut = parseFloat(document.getElementById("brut-annuel").value);
-    const charges = parseFloat(document.getElementById("taux-charges").value) / 100;
-    const perPct = parseFloat(document.getElementById("per-pourcentage").value) / 100;
+// ============================================================================
+// FONCTIONS UI - Interface V1 "Les Échos"
+// ============================================================================
+
+/**
+ * Fonction utilitaire de formatage des nombres
+ */
+function formatMontant(n) {
+    return Math.round(n).toLocaleString('fr-FR');
+}
+
+/**
+ * Fonction utilitaire de formatage des pourcentages
+ */
+function formatPct(n) {
+    return `${n.toFixed(1)} %`;
+}
+
+/**
+ * Lance un scénario de simulation PER indépendant
+ * @param {Object} params - Paramètres du scénario
+ * @returns {Object} Résultats de la simulation
+ */
+function runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement }) {
+    const tauxCharges = PatrimoineSimulator.getTauxCharges(statut);
+    const perPourcentage = revenuBrut > 0 ? (perVersement / revenuBrut) : 0;
     
-    // Récupérer le type de revenu s'il existe dans le formulaire
-    const typeRevenuSelect = document.getElementById("type-revenu");
-    const typeRevenu = typeRevenuSelect ? typeRevenuSelect.value : 'salarie';
+    // On ne reset pas le state global, on fait un calcul isolé
+    const revenuProNet = revenuBrut * (1 - tauxCharges);
+    const { plafondN, plafondsParAnnee, totalDisponible } = 
+        PatrimoineSimulator.calculerPlafondsPER(revenuProNet, plafondsReportables);
     
-    // Récupérer le sous-type de microentrepreneur si applicable
-    const sousTypeSelect = document.getElementById("sous-type-micro");
-    const sousType = (typeRevenu === 'microEntrepreneur' && sousTypeSelect) ? sousTypeSelect.value : null;
+    const { utilisation, perDeductible, perNonDeductible } = 
+        PatrimoineSimulator.allouerVersementPER(perVersement, plafondsParAnnee);
     
-    // Récupérer le nombre de parts si disponible
-    const nbPartsInput = document.getElementById("nb-parts");
-    const nbParts = nbPartsInput ? parseFloat(nbPartsInput.value) || 1 : 1;
+    const netImposableSansPER = revenuProNet;
+    const netImposableAvecPER = revenuProNet - perDeductible;
     
-    // Récupérer les plafonds reportables si disponibles
+    const impotSansPER = PatrimoineSimulator.calculerImpot(netImposableSansPER, nbParts);
+    const impotAvecPER = PatrimoineSimulator.calculerImpot(netImposableAvecPER, nbParts);
+    
+    return {
+        revenuProNet,
+        netImposableSansPER,
+        netImposableAvecPER,
+        impotSansPER,
+        impotAvecPER,
+        gainFiscal: impotSansPER - impotAvecPER,
+        perVersement,
+        perDeductible,
+        perNonDeductible,
+        plafondN,
+        plafondTotal: totalDisponible,
+        utilisation,
+        plafondsParAnnee,
+        tmiAvant: PatrimoineSimulator.getTauxMarginal(netImposableSansPER, nbParts),
+        tmiApres: PatrimoineSimulator.getTauxMarginal(netImposableAvecPER, nbParts)
+    };
+}
+
+/**
+ * Affiche la synthèse PER V2 avec tableau comparatif 3 scénarios
+ * Compatible avec l'interface V1 "Les Échos"
+ */
+function afficherSynthesePER() {
+    // Récupération des éléments du DOM
+    const brutInput = document.getElementById('salaire-brut-simple');
+    const statutSelect = document.getElementById('statut-simple');
+    const situationSelect = document.getElementById('situation-familiale');
+    const n3Input = document.getElementById('plafond-n3-simple');
+    const n2Input = document.getElementById('plafond-n2-simple');
+    const n1Input = document.getElementById('plafond-n1-simple');
+    const resultatElement = document.getElementById('resultat-synthese');
+    const alerteN3 = document.getElementById('alerte-n3');
+
+    if (!brutInput || !resultatElement) return;
+
+    // Parsing des valeurs
+    const brut = parseFloat(brutInput.value.replace(/\s/g, '').replace(',', '.'));
+    
+    if (!brut || brut <= 0) {
+        resultatElement.innerHTML = `
+            <div class="bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-200">
+                <p><i class="fas fa-exclamation-triangle mr-2"></i><strong>Erreur :</strong> veuillez saisir un salaire brut annuel valide.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const statut = statutSelect?.value || 'salarie';
+    const nbParts = parseFloat(situationSelect?.value || '1');
+
     const plafondsReportables = {
-        n1: parseFloat(document.getElementById("plafond-n1")?.value) || 0,
-        n2: parseFloat(document.getElementById("plafond-n2")?.value) || 0,
-        n3: parseFloat(document.getElementById("plafond-n3")?.value) || 0
+        n3: parseFloat(n3Input?.value?.replace(/\s/g, '') || '0') || 0,
+        n2: parseFloat(n2Input?.value?.replace(/\s/g, '') || '0') || 0,
+        n1: parseFloat(n1Input?.value?.replace(/\s/g, '') || '0') || 0
     };
 
-    // Déléguer le calcul au module
-    const resultats = PatrimoineSimulator.calculerSimulationFiscale({
+    // Mise à jour du state global pour les autres fonctions
+    PatrimoineSimulator.calculerSimulationFiscale({
         revenuBrut: brut,
-        typeRevenu: typeRevenu,
-        sousType: sousType,
-        tauxCharges: charges,
-        perPourcentage: perPct,
+        typeRevenu: statut,
         nbParts: nbParts,
+        perPourcentage: 0,
         plafondsReportables: plafondsReportables
     });
 
-    // Affichage des résultats
-    document.getElementById("impot-sans-per").textContent = `${resultats.impotSansPER.toLocaleString('fr-FR')} €`;
-    document.getElementById("impot-avec-per").textContent = `${resultats.impotAvecPER.toLocaleString('fr-FR')} €`;
-    document.getElementById("gain-fiscal").textContent = `${resultats.gainFiscal.toLocaleString('fr-FR')} €`;
-    document.getElementById("net-sans-per").textContent = `${resultats.netDispoSansPER.toLocaleString('fr-FR')} €`;
-    document.getElementById("net-avec-per").textContent = `${resultats.netDispoAvecPER.toLocaleString('fr-FR')} €`;
-    document.getElementById("patrimoine-total").textContent = `${resultats.patrimoineGlobal.toLocaleString('fr-FR')} €`;
-    
-    // Afficher les taux moyens d'imposition si les éléments existent
-    const tauxMoyenSansPER = document.getElementById("taux-moyen-sans-per");
-    const tauxMoyenAvecPER = document.getElementById("taux-moyen-avec-per");
-    
-    if (tauxMoyenSansPER) tauxMoyenSansPER.textContent = `${resultats.tauxMoyenSansPER.toFixed(2)}%`;
-    if (tauxMoyenAvecPER) tauxMoyenAvecPER.textContent = `${resultats.tauxMoyenAvecPER.toFixed(2)}%`;
-    
-    // Afficher le montant PER déductible vs versé si l'élément existe
-    const perDeductibleElement = document.getElementById("per-deductible");
-    if (perDeductibleElement) {
-        const perVersement = resultats.perVersement;
-        const perDeductible = resultats.perDeductible;
-        
-        perDeductibleElement.textContent = `${perDeductible.toLocaleString('fr-FR')} € / ${perVersement.toLocaleString('fr-FR')} €`;
-        
-        // Si le PER est plafonné, afficher un message d'alerte
-        const perAlerte = document.getElementById("per-alerte");
-        if (perAlerte) {
-            if (perDeductible < perVersement) {
-                const constantes = PatrimoineSimulator.getConstantesPER();
-                perAlerte.textContent = `⚠️ Attention: Votre versement PER dépasse le plafond de déductibilité. Part non déductible: ${resultats.perNonDeductible.toLocaleString('fr-FR')} €`;
-                perAlerte.style.display = "block";
-            } else {
-                perAlerte.style.display = "none";
-            }
-        }
+    // Alerte N-3 conditionnelle
+    if (alerteN3) {
+        alerteN3.classList.toggle('hidden', plafondsReportables.n3 <= 0);
     }
-    
-    // Afficher les détails des plafonds si les éléments existent
-    const plafondActuelElement = document.getElementById("plafond-actuel");
-    const plafondTotalElement = document.getElementById("plafond-total");
-    
-    if (plafondActuelElement) plafondActuelElement.textContent = `${resultats.plafondPERActuel.toLocaleString('fr-FR')} €`;
-    if (plafondTotalElement) plafondTotalElement.textContent = `${resultats.plafondPERTotalDispo.toLocaleString('fr-FR')} €`;
 
-    // Mise à jour du tableau récapitulatif des taux si disponible
-    const recapCharges = document.getElementById("recap-charges");
-    const recapMarginal = document.getElementById("recap-marginal");
-    
-    if (recapCharges) recapCharges.textContent = `${(charges * 100).toFixed(1)}%`;
-    if (recapMarginal) recapMarginal.textContent = `${PatrimoineSimulator.getTauxMarginal(resultats.netImposableSansPER).toFixed(1)}%`;
-
-    // Si des visualisations graphiques sont présentes
-    if (document.getElementById('tax-comparison-chart')) {
-        updateTaxComparisonChart(resultats);
-    }
-}
-
-// NOUVELLE FONCTION: Estimation simplifiée pour l'optimisation fiscale
-function estimerNetImposable(salaireBrut, tauxDeduction = 0.281) {
-    return salaireBrut * (1 - tauxDeduction);
-}
-
-// NOUVELLE FONCTION: Taux de déduction par statut
-function getTauxDeductionParStatut(statut) {
-    switch (statut) {
-        case 'fonctionnaire': return 0.24;
-        case 'cadre': return 0.30;
-        case 'salarie':
-        default: return 0.281;
-    }
-}
-
-// NOUVELLE FONCTION: Générer une synthèse simplifiée pour le PER
-function genererSynthesePER(salaireBrut, statut = 'salarie', plafondsReportables = null) {
-    const tauxDeduction = getTauxDeductionParStatut(statut);
-    const netImposable = estimerNetImposable(salaireBrut, tauxDeduction);
-    
-    // Utiliser la nouvelle fonction de calcul des plafonds
-    const reportables = plafondsReportables || { n1: 0, n2: 0, n3: 0 };
+    // Calcul des données de base
+    const tauxCharges = PatrimoineSimulator.getTauxCharges(statut);
+    const revenuProNet = brut * (1 - tauxCharges);
     const { plafondN, plafondsParAnnee, totalDisponible } = 
-        PatrimoineSimulator.calculerPlafondsPER(netImposable, reportables);
+        PatrimoineSimulator.calculerPlafondsPER(revenuProNet, plafondsReportables);
+
+    // ========== SCÉNARIO 1 : SANS PER ==========
+    const scenSansPER = runScenarioPER({
+        revenuBrut: brut,
+        statut,
+        nbParts,
+        plafondsReportables,
+        perVersement: 0
+    });
+
+    const revenuImposable = scenSansPER.netImposableSansPER;
+    const tmiAvant = scenSansPER.tmiAvant;
+    const impotAvant = scenSansPER.impotSansPER;
+
+    // ========== SCÉNARIO 2 : OPTIMAL (changement de tranche) ==========
+    const optimisation = PatrimoineSimulator.calculerVersementOptimalPourChangerTranche(
+        revenuImposable, 
+        plafondsReportables,
+        nbParts
+    );
     
-    const tmi = PatrimoineSimulator.getTauxMarginal(netImposable);
-    const economie = plafondN * (tmi / 100);
+    const versementOptimal = optimisation.versementOptimal;
+    let scenOptimal = scenSansPER;
+    let impotOptimal = impotAvant;
+    let tmiApresOptimal = tmiAvant;
+    let economieOptimal = 0;
+
+    if (versementOptimal > 0) {
+        scenOptimal = runScenarioPER({
+            revenuBrut: brut,
+            statut,
+            nbParts,
+            plafondsReportables,
+            perVersement: versementOptimal
+        });
+        impotOptimal = scenOptimal.impotAvecPER;
+        tmiApresOptimal = scenOptimal.tmiApres;
+        economieOptimal = impotAvant - impotOptimal;
+    }
+
+    // ========== SCÉNARIO 3 : MAXIMUM (tout le plafond) ==========
+    const versementMax = totalDisponible;
+    let scenMax = scenSansPER;
+    let impotMax = impotAvant;
+    let tmiApresMax = tmiAvant;
+    let economieMax = 0;
+
+    if (versementMax > 0) {
+        scenMax = runScenarioPER({
+            revenuBrut: brut,
+            statut,
+            nbParts,
+            plafondsReportables,
+            perVersement: versementMax
+        });
+        impotMax = scenMax.impotAvecPER;
+        tmiApresMax = scenMax.tmiApres;
+        economieMax = impotAvant - impotMax;
+    }
+
+    // Répartition sur les plafonds pour le scénario maximum
+    const repartitionMax = scenMax.utilisation || { n3: 0, n2: 0, n1: 0, n: 0 };
+    
+    // Calcul du total des reports
+    const totalReports = plafondsReportables.n1 + plafondsReportables.n2 + plafondsReportables.n3;
+
+    // Récupération des constantes
     const constantes = PatrimoineSimulator.getConstantesPER();
-    
-    // Calcul du versement optimal pour changer de tranche
-    const optimisation = PatrimoineSimulator.calculerVersementOptimalPourChangerTranche(netImposable, reportables);
 
-    return {
-        tmi: tmi,
-        plafondVersement: plafondN,
-        plafondTotal: totalDisponible,
-        economieImpot: economie,
-        netImposable: netImposable,
-        versementOptimal: optimisation.versementOptimal,
-        economieOptimale: optimisation.economieImpot,
-        nouvelleTMI: optimisation.nouvelleTMI,
-        messageHTML: `
-            <div class="bg-blue-900 bg-opacity-20 p-5 rounded-lg my-4">
-                <h3 class="text-lg font-bold text-green-400 mb-3">Synthèse de votre situation PER</h3>
-                <p>Avec un salaire brut annuel de <span class="font-semibold text-white">${salaireBrut.toLocaleString('fr-FR')} €</span> :</p>
-                
-                <div class="bg-blue-800 bg-opacity-30 p-3 rounded-lg my-3">
-                    <p class="flex justify-between mb-2">
-                        <span>Votre TMI est de</span> 
-                        <span class="font-semibold text-white">${tmi} %</span>
-                    </p>
-                    <p class="flex justify-between">
-                        <span>Le PER est</span> 
-                        <span class="font-semibold ${tmi >= 30 ? 'text-green-400' : 'text-blue-300'}">${tmi >= 30 ? 'très intéressant' : 'potentiellement intéressant'}</span>
-                    </p>
-                </div>
-                
-                <div class="mt-3">
-                    <p class="flex justify-between mb-2">
-                        <span>Plafond PER année N</span>
-                        <span class="font-semibold text-green-400">${plafondN.toLocaleString('fr-FR')} €</span>
-                    </p>
-                    ${totalDisponible > plafondN ? `
-                    <p class="flex justify-between mb-2">
-                        <span>Plafond total (avec reports N-1/N-2/N-3)</span>
-                        <span class="font-semibold text-green-400">${totalDisponible.toLocaleString('fr-FR')} €</span>
-                    </p>
-                    ` : ''}
-                    <p class="flex justify-between mb-2">
-                        <span>Économie d'impôt (versement max)</span>
-                        <span class="font-semibold text-green-400">${economie.toLocaleString('fr-FR')} €</span>
-                    </p>
-                </div>
-                
-                ${optimisation.versementOptimal > 0 && optimisation.versementOptimal < plafondN ? `
-                <div class="bg-purple-900 bg-opacity-30 p-3 rounded-lg my-3 border-l-4 border-purple-400">
-                    <h4 class="font-bold text-purple-300 mb-2"><i class="fas fa-chart-line mr-2"></i>Versement optimal (changement de tranche)</h4>
-                    <p class="flex justify-between mb-1">
-                        <span>Versement pour passer à ${optimisation.nouvelleTMI}%</span>
-                        <span class="font-semibold text-purple-300">${optimisation.versementOptimal.toLocaleString('fr-FR')} €</span>
-                    </p>
-                    <p class="flex justify-between">
-                        <span>Économie d'impôt</span>
-                        <span class="font-semibold text-purple-300">${optimisation.economieImpot.toLocaleString('fr-FR')} €</span>
-                    </p>
-                </div>
-                ` : ''}
-                
-                <div class="bg-gray-800 bg-opacity-50 p-3 rounded-lg my-3 text-sm">
-                    <p class="text-gray-400 mb-1">
-                        <i class="fas fa-info-circle mr-1"></i> 
-                        Plafonds 2024 : min ${constantes.PLAFOND_PER_MIN.toLocaleString('fr-FR')} € / max ${constantes.PLAFOND_PER_MAX.toLocaleString('fr-FR')} €
-                    </p>
-                    <p class="text-gray-400">
-                        <i class="fas fa-history mr-1"></i> 
-                        Les plafonds non utilisés sont reportables sur 3 ans (N-1, N-2, N-3)
-                    </p>
-                </div>
-                
-                <div class="bg-green-900 bg-opacity-20 p-3 rounded border-l-4 border-green-400 mt-4">
-                    <p><i class="fas fa-lightbulb text-green-400 mr-2"></i> <strong>À savoir :</strong> Votre PER reste bloqué jusqu'à la retraite, sauf exceptions dont l'achat de votre résidence principale.</p>
-                </div>
+    // ========== GÉNÉRATION DU HTML ==========
+    const html = `
+      <div class="space-y-6">
+
+        <!-- SYNTHÈSE -->
+        <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5">
+          <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="text-emerald-400">📊</span> Synthèse de votre situation
+          </h3>
+          <div class="grid md:grid-cols-3 gap-4 text-sm">
+            <div class="bg-slate-800/50 rounded-lg p-3">
+              <p class="text-slate-400 mb-1">Revenu imposable estimé</p>
+              <p class="text-xl font-bold text-white">${formatMontant(revenuImposable)} €</p>
             </div>
-        `
-    };
-}
+            <div class="bg-slate-800/50 rounded-lg p-3">
+              <p class="text-slate-400 mb-1">Taux marginal d'imposition</p>
+              <p class="text-xl font-bold ${tmiAvant >= 30 ? 'text-orange-400' : 'text-white'}">${formatPct(tmiAvant)}</p>
+            </div>
+            <div class="bg-slate-800/50 rounded-lg p-3">
+              <p class="text-slate-400 mb-1">Plafond PER total disponible</p>
+              <p class="text-xl font-bold text-emerald-400">${formatMontant(totalDisponible)} €</p>
+              ${totalReports > 0 ? `
+              <p class="text-xs text-slate-400 mt-1">
+                dont ${formatMontant(totalReports)} € de reports
+              </p>
+              ` : ''}
+            </div>
+          </div>
+          
+          ${nbParts > 1 ? `
+          <div class="mt-3 text-xs text-slate-400">
+            <i class="fas fa-users mr-1"></i> Foyer fiscal : ${nbParts} part${nbParts > 1 ? 's' : ''}
+          </div>
+          ` : ''}
+        </div>
 
-// NOUVELLE FONCTION: Afficher la synthèse PER
-function afficherSynthesePER() {
-    const brutInput = document.getElementById('salaire-brut-simple');
-    if (!brutInput) return;
-    
-    const brut = parseFloat(brutInput.value);
-    if (!brut || brut <= 0) {
-        // Afficher un message d'erreur
-        const resultatElement = document.getElementById('resultat-synthese');
-        if (resultatElement) {
-            resultatElement.innerHTML = `
-                <div class="bg-red-900 bg-opacity-20 p-3 rounded border-l-4 border-red-400 mt-4">
-                    <p><i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> Veuillez entrer un salaire brut annuel valide.</p>
-                </div>
-            `;
-        }
-        return;
-    }
-    
-    const statutSelect = document.getElementById('statut-simple');
-    const statut = statutSelect ? statutSelect.value : 'salarie';
-    
-    // Récupérer les plafonds reportables si les champs existent
-    const plafondsReportables = {
-        n1: parseFloat(document.getElementById('plafond-n1-simple')?.value) || 0,
-        n2: parseFloat(document.getElementById('plafond-n2-simple')?.value) || 0,
-        n3: parseFloat(document.getElementById('plafond-n3-simple')?.value) || 0
-    };
-    
-    const synthese = genererSynthesePER(brut, statut, plafondsReportables);
-    
-    // Afficher la synthèse
-    const resultatElement = document.getElementById('resultat-synthese');
-    if (resultatElement) {
-        resultatElement.innerHTML = synthese.messageHTML;
-        
-        // Optionnel: mise à jour du formulaire principal si présent
-        const brutPrincipal = document.getElementById('brut-annuel');
-        const perPourcentage = document.getElementById('per-pourcentage');
-        
-        if (brutPrincipal) brutPrincipal.value = brut;
-        if (perPourcentage) perPourcentage.value = '10'; // 10% par défaut
-        
-        // Scroll jusqu'aux résultats
-        resultatElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+        <!-- COMPARATIF SCÉNARIOS -->
+        <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5">
+          <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="text-emerald-400">📈</span> Comparatif des scénarios
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-slate-200 border-collapse">
+              <thead>
+                <tr class="bg-slate-800/80 text-slate-300">
+                  <th class="px-3 py-3 text-left font-semibold rounded-tl-lg">Scénario</th>
+                  <th class="px-3 py-3 text-right font-semibold">Versement PER</th>
+                  <th class="px-3 py-3 text-right font-semibold">Impôt</th>
+                  <th class="px-3 py-3 text-right font-semibold">Économie</th>
+                  <th class="px-3 py-3 text-right font-semibold rounded-tr-lg">TMI après</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Sans PER -->
+                <tr class="border-t border-slate-700 hover:bg-slate-800/30">
+                  <td class="px-3 py-3">
+                    <span class="text-slate-400">Sans PER</span>
+                  </td>
+                  <td class="px-3 py-3 text-right text-slate-400">0 €</td>
+                  <td class="px-3 py-3 text-right">${formatMontant(impotAvant)} €</td>
+                  <td class="px-3 py-3 text-right text-slate-400">—</td>
+                  <td class="px-3 py-3 text-right">${formatPct(tmiAvant)}</td>
+                </tr>
+
+                <!-- Optimal -->
+                <tr class="border-t border-slate-700 hover:bg-slate-800/30 ${versementOptimal > 0 && optimisation.peutChangerTranche ? 'bg-purple-900/20' : ''}">
+                  <td class="px-3 py-3">
+                    <div class="flex items-center gap-2">
+                      ${optimisation.peutChangerTranche ? '<span class="text-purple-400">★</span>' : ''}
+                      <span class="${optimisation.peutChangerTranche ? 'text-purple-300 font-medium' : 'text-slate-300'}">
+                        Optimal
+                      </span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-0.5">
+                      ${versementOptimal > 0 
+                        ? (optimisation.peutChangerTranche 
+                            ? `Passer de ${formatPct(tmiAvant)} à ${formatPct(tmiApresOptimal)}` 
+                            : 'Plafond insuffisant pour changer de tranche')
+                        : 'Déjà en tranche basse'}
+                    </div>
+                  </td>
+                  <td class="px-3 py-3 text-right ${optimisation.peutChangerTranche ? 'text-purple-300 font-medium' : ''}">${formatMontant(versementOptimal)} €</td>
+                  <td class="px-3 py-3 text-right">${formatMontant(impotOptimal)} €</td>
+                  <td class="px-3 py-3 text-right ${economieOptimal > 0 ? 'text-emerald-400 font-medium' : 'text-slate-400'}">
+                    ${economieOptimal > 0 ? `${formatMontant(economieOptimal)} €` : '—'}
+                  </td>
+                  <td class="px-3 py-3 text-right">${formatPct(tmiApresOptimal)}</td>
+                </tr>
+
+                <!-- Maximum -->
+                <tr class="border-t border-slate-700 hover:bg-slate-800/30 bg-emerald-900/10">
+                  <td class="px-3 py-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-emerald-400">⬆</span>
+                      <span class="text-emerald-300 font-medium">Maximum</span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-0.5">Tout le plafond disponible</div>
+                  </td>
+                  <td class="px-3 py-3 text-right text-emerald-300 font-medium">${formatMontant(versementMax)} €</td>
+                  <td class="px-3 py-3 text-right">${formatMontant(impotMax)} €</td>
+                  <td class="px-3 py-3 text-right text-emerald-400 font-bold">${formatMontant(economieMax)} €</td>
+                  <td class="px-3 py-3 text-right">${formatPct(tmiApresMax)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-4 flex items-center gap-2 text-xs text-slate-400">
+            <i class="fas fa-info-circle"></i>
+            <span>Impôt de référence (sans PER) : <strong class="text-slate-200">${formatMontant(impotAvant)} €</strong></span>
+          </div>
+        </div>
+
+        <!-- RÉPARTITION SUR LES PLAFONDS -->
+        ${versementMax > 0 ? `
+        <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5">
+          <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="text-emerald-400">📋</span> Répartition sur vos plafonds
+            <span class="text-xs font-normal text-slate-400">(scénario maximum)</span>
+          </h3>
+          
+          <p class="text-sm text-slate-300 mb-4">
+            Si vous versez <span class="font-bold text-emerald-400">${formatMontant(versementMax)} €</span> sur votre PER :
+          </p>
+          
+          <div class="space-y-3">
+            ${repartitionMax.n3 > 0 || plafondsReportables.n3 > 0 ? `
+            <div class="flex items-center justify-between p-2 rounded-lg ${repartitionMax.n3 > 0 ? 'bg-amber-900/20 border border-amber-700/50' : 'bg-slate-800/30'}">
+              <div class="flex items-center gap-2">
+                <span class="text-amber-400 text-xs">⚠️</span>
+                <span class="text-slate-300">N-3</span>
+                <span class="text-xs text-amber-400">(périme bientôt)</span>
+              </div>
+              <span class="font-medium ${repartitionMax.n3 > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatMontant(repartitionMax.n3)} € / ${formatMontant(plafondsReportables.n3)} €</span>
+            </div>
+            ` : ''}
+            
+            ${repartitionMax.n2 > 0 || plafondsReportables.n2 > 0 ? `
+            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-800/30">
+              <span class="text-slate-300">N-2</span>
+              <span class="font-medium ${repartitionMax.n2 > 0 ? 'text-slate-200' : 'text-slate-500'}">${formatMontant(repartitionMax.n2)} € / ${formatMontant(plafondsReportables.n2)} €</span>
+            </div>
+            ` : ''}
+            
+            ${repartitionMax.n1 > 0 || plafondsReportables.n1 > 0 ? `
+            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-800/30">
+              <span class="text-slate-300">N-1</span>
+              <span class="font-medium ${repartitionMax.n1 > 0 ? 'text-slate-200' : 'text-slate-500'}">${formatMontant(repartitionMax.n1)} € / ${formatMontant(plafondsReportables.n1)} €</span>
+            </div>
+            ` : ''}
+            
+            <div class="flex items-center justify-between p-2 rounded-lg bg-emerald-900/20 border border-emerald-700/50">
+              <div class="flex items-center gap-2">
+                <span class="text-emerald-400">📅</span>
+                <span class="text-slate-300">Année N (2024)</span>
+              </div>
+              <span class="font-medium text-emerald-300">${formatMontant(repartitionMax.n)} € / ${formatMontant(plafondN)} €</span>
+            </div>
+          </div>
+          
+          <div class="mt-4 p-3 bg-slate-800/50 rounded-lg text-xs text-slate-400">
+            <i class="fas fa-lightbulb text-yellow-400 mr-1"></i>
+            Les plafonds sont consommés du plus ancien au plus récent (N-3 → N-2 → N-1 → N)
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- RECOMMANDATION -->
+        ${plafondsReportables.n3 > 0 ? `
+        <div class="bg-amber-900/20 border border-amber-600/50 rounded-2xl p-5">
+          <h3 class="text-lg font-semibold text-amber-300 mb-2 flex items-center gap-2">
+            <i class="fas fa-exclamation-triangle"></i> Recommandation urgente
+          </h3>
+          <p class="text-sm text-slate-200">
+            Vous avez <strong class="text-amber-300">${formatMontant(plafondsReportables.n3)} €</strong> de plafond N-3 
+            qui <strong>périme fin 2025</strong>. Versez au moins ce montant pour ne pas le perdre !
+          </p>
+        </div>
+        ` : ''}
+
+        <!-- INFOS -->
+        <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5">
+          <h3 class="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
+            <i class="fas fa-info-circle"></i> Informations
+          </h3>
+          <div class="grid md:grid-cols-2 gap-3 text-xs text-slate-400">
+            <div class="flex items-start gap-2">
+              <i class="fas fa-calculator text-slate-500 mt-0.5"></i>
+              <span>Plafonds 2024 : min <strong class="text-slate-300">${formatMontant(constantes.PLAFOND_PER_MIN)} €</strong> / max <strong class="text-slate-300">${formatMontant(constantes.PLAFOND_PER_MAX)} €</strong></span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i class="fas fa-history text-slate-500 mt-0.5"></i>
+              <span>Les plafonds non utilisés sont reportables sur 3 ans</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i class="fas fa-lock text-slate-500 mt-0.5"></i>
+              <span>Épargne bloquée jusqu'à la retraite (sauf exceptions)</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i class="fas fa-home text-slate-500 mt-0.5"></i>
+              <span>Déblocage anticipé possible pour achat résidence principale</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    resultatElement.innerHTML = html;
+    resultatElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /**
@@ -968,17 +1139,95 @@ function updateTaxComparisonChart(resultats) {
     }
 }
 
+// Fonction legacy pour compatibilité
+function calculerFiscalite() {
+    const brut = parseFloat(document.getElementById("brut-annuel")?.value);
+    const charges = parseFloat(document.getElementById("taux-charges")?.value) / 100;
+    const perPct = parseFloat(document.getElementById("per-pourcentage")?.value) / 100;
+    
+    if (!brut) return;
+    
+    const typeRevenuSelect = document.getElementById("type-revenu");
+    const typeRevenu = typeRevenuSelect ? typeRevenuSelect.value : 'salarie';
+    
+    const nbPartsInput = document.getElementById("nb-parts");
+    const nbParts = nbPartsInput ? parseFloat(nbPartsInput.value) || 1 : 1;
+    
+    const plafondsReportables = {
+        n1: parseFloat(document.getElementById("plafond-n1")?.value) || 0,
+        n2: parseFloat(document.getElementById("plafond-n2")?.value) || 0,
+        n3: parseFloat(document.getElementById("plafond-n3")?.value) || 0
+    };
+
+    const resultats = PatrimoineSimulator.calculerSimulationFiscale({
+        revenuBrut: brut,
+        typeRevenu: typeRevenu,
+        tauxCharges: charges,
+        perPourcentage: perPct,
+        nbParts: nbParts,
+        plafondsReportables: plafondsReportables
+    });
+
+    // Mise à jour des éléments DOM si présents
+    const elements = {
+        "impot-sans-per": `${formatMontant(resultats.impotSansPER)} €`,
+        "impot-avec-per": `${formatMontant(resultats.impotAvecPER)} €`,
+        "gain-fiscal": `${formatMontant(resultats.gainFiscal)} €`,
+        "net-sans-per": `${formatMontant(resultats.netDispoSansPER)} €`,
+        "net-avec-per": `${formatMontant(resultats.netDispoAvecPER)} €`,
+        "patrimoine-total": `${formatMontant(resultats.patrimoineGlobal)} €`
+    };
+    
+    Object.entries(elements).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    });
+
+    if (document.getElementById('tax-comparison-chart')) {
+        updateTaxComparisonChart(resultats);
+    }
+}
+
 // Exporter le module pour utilisation externe
 window.PatrimoineSimulator = PatrimoineSimulator;
 
-// Exporter les nouvelles fonctions
-window.genererSynthesePER = genererSynthesePER;
+// Exporter les fonctions UI
 window.afficherSynthesePER = afficherSynthesePER;
+window.runScenarioPER = runScenarioPER;
+window.formatMontant = formatMontant;
+window.formatPct = formatPct;
 
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('btn-analyser-per');
-    if (btn) {
-        btn.addEventListener('click', afficherSynthesePER);
+    // Bouton principal d'analyse
+    const btnAnalyser = document.getElementById('btn-analyser-per');
+    if (btnAnalyser) {
+        btnAnalyser.addEventListener('click', afficherSynthesePER);
     }
+
+    // Toggle pour les paramètres avancés
+    const toggleAvance = document.getElementById('btn-toggle-avance');
+    const blocAvance = document.getElementById('bloc-avance-per');
+    if (toggleAvance && blocAvance) {
+        toggleAvance.addEventListener('click', () => {
+            blocAvance.classList.toggle('hidden');
+            // Rotation du chevron
+            const icon = toggleAvance.querySelector('.icon, .fa-chevron-down, .fa-chevron-up');
+            if (icon) {
+                icon.classList.toggle('rotate-180');
+            }
+        });
+    }
+
+    // Écoute des changements sur les inputs pour mise à jour en temps réel (optionnel)
+    const inputsToWatch = ['salaire-brut-simple', 'situation-familiale', 'statut-simple'];
+    inputsToWatch.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {
+                // Optionnel : recalcul automatique
+                // afficherSynthesePER();
+            });
+        }
+    });
 });
