@@ -2,6 +2,8 @@
  * fiscal-optimizer.js - Module de simulation patrimoniale complète
  * Ce module gère toute la logique de simulation fiscale, calcul de dépenses et allocation d'actifs
  * TradePulse Finance Intelligence Platform
+ * 
+ * Version 2.0 - Ajout des plafonds PER reportables N-1/N-2/N-3
  */
 
 // Structure principale du module (Pattern Module pour encapsulation)
@@ -15,8 +17,11 @@ const PatrimoineSimulator = (function() {
         { min: 177106, max: Infinity, taux: 0.45 }
     ];
 
-    // AMÉLIORATION 1: Plafond PER
-    const PLAFOND_PER_ABSOLU = 32909; // 10% des revenus limités à 8 PASS (2024)
+    // AMÉLIORATION 1: Plafonds PER conformes à la réglementation
+    // Basé sur le PASS 2024 (46 368 €)
+    const PASS_REF = 46368;                       // PASS de référence (2024)
+    const PLAFOND_PER_MIN = Math.round(PASS_REF * 0.10);     // 4 637 € (10% d'un PASS - plancher)
+    const PLAFOND_PER_MAX = Math.round(PASS_REF * 0.10 * 8); // 37 094 € (10% de 8 PASS - plafond)
     
     // AMÉLIORATION 2: Charges par type de revenu
     const CHARGES_PAR_TYPE = {
@@ -35,6 +40,7 @@ const PatrimoineSimulator = (function() {
         typeRevenu: 'salarie',      // Salarié par défaut
         taux_charges: CHARGES_PAR_TYPE.salarie,
         per_pourcentage: 0.10,     // 10% du brut
+        nbParts: 1,                // Quotient familial (1 part par défaut)
         budget: {
             loyer: 0,           // loyer/crédit mensuel
             quotidien: 0,       // dépenses courantes
@@ -47,6 +53,12 @@ const PatrimoineSimulator = (function() {
             scpi: 0.15,            // 15% en SCPI
             crypto: 0.10,          // 10% en crypto
             autres: 0.10           // 10% en autres (cash, etc.)
+        },
+        // Plafonds PER non utilisés des années précédentes
+        perPlafondsReportables: {
+            n1: 0,  // plafond restant de N-1
+            n2: 0,  // plafond restant de N-2
+            n3: 0   // plafond restant de N-3 (dernière année avant péremption)
         }
     };
 
@@ -56,14 +68,17 @@ const PatrimoineSimulator = (function() {
         typeRevenu: CONFIG_DEFAUT.typeRevenu,
         tauxCharges: CONFIG_DEFAUT.taux_charges,
         perPourcentage: CONFIG_DEFAUT.per_pourcentage,
+        nbParts: CONFIG_DEFAUT.nbParts,
         budget: {...CONFIG_DEFAUT.budget},
         allocation: {...CONFIG_DEFAUT.allocation},
+        perPlafondsReportables: {...CONFIG_DEFAUT.perPlafondsReportables},
         resultats: {
             // Section fiscalité
             netImposableSansPER: 0,
             netImposableAvecPER: 0,
             perVersement: 0,
-            perDeductible: 0,      // AJOUT: montant effectivement déductible
+            perDeductible: 0,
+            perNonDeductible: 0,    // Part du versement au-delà des plafonds
             impotSansPER: 0,
             impotAvecPER: 0,
             gainFiscal: 0,
@@ -71,9 +86,25 @@ const PatrimoineSimulator = (function() {
             netDispoAvecPER: 0,
             patrimoineGlobal: 0,
             
-            // AJOUT: taux moyens d'imposition
+            // Taux moyens d'imposition
             tauxMoyenSansPER: 0,
             tauxMoyenAvecPER: 0,
+            
+            // Infos spécifiques PER (plafonds)
+            plafondPERActuel: 0,       // Plafond de l'année N (hors reports)
+            plafondPERTotalDispo: 0,   // N + N-1 + N-2 + N-3
+            perUtilisationParAnnee: {  // Répartition du versement par année
+                n3: 0,
+                n2: 0,
+                n1: 0,
+                n: 0
+            },
+            perPlafondsRestants: {     // Plafonds restants après versement
+                n3: 0,
+                n2: 0,
+                n1: 0,
+                n: 0
+            },
             
             // Section budget
             depensesTotales: 0,
@@ -99,29 +130,37 @@ const PatrimoineSimulator = (function() {
         state.typeRevenu = CONFIG_DEFAUT.typeRevenu;
         state.tauxCharges = CONFIG_DEFAUT.taux_charges;
         state.perPourcentage = CONFIG_DEFAUT.per_pourcentage;
+        state.nbParts = CONFIG_DEFAUT.nbParts;
         state.budget = {...CONFIG_DEFAUT.budget};
         state.allocation = {...CONFIG_DEFAUT.allocation};
+        state.perPlafondsReportables = {...CONFIG_DEFAUT.perPlafondsReportables};
     }
 
     /**
      * Calcule l'impôt sur le revenu selon les tranches progressives
+     * Prend en compte le quotient familial (nombre de parts)
      * @param {number} revenuImposable - Revenu net imposable
+     * @param {number} nbParts - Nombre de parts fiscales (défaut: state.nbParts)
      * @returns {number} Montant de l'impôt
      */
-    function calculerImpot(revenuImposable) {
-        let impot = 0;
+    function calculerImpot(revenuImposable, nbParts = null) {
+        const parts = nbParts || state.nbParts || 1;
+        const revenuParPart = revenuImposable / parts;
+        let impotParPart = 0;
         
         for (let i = 1; i < TRANCHES_IMPOT.length; i++) {
             const tranche = TRANCHES_IMPOT[i];
             const tranchePrecedente = TRANCHES_IMPOT[i-1];
             
-            if (revenuImposable > tranchePrecedente.max) {
-                const montantImposableDansTranche = Math.min(revenuImposable, tranche.max) - tranchePrecedente.max;
-                impot += montantImposableDansTranche * tranche.taux;
+            if (revenuParPart > tranchePrecedente.max) {
+                const montantImposableDansTranche = Math.min(revenuParPart, tranche.max) - tranchePrecedente.max;
+                impotParPart += montantImposableDansTranche * tranche.taux;
             }
         }
         
-        return Math.round(impot * 100) / 100;
+        // L'impôt total = impôt par part × nombre de parts
+        const impotTotal = impotParPart * parts;
+        return Math.round(impotTotal * 100) / 100;
     }
 
     /**
@@ -139,6 +178,159 @@ const PatrimoineSimulator = (function() {
     }
 
     /**
+     * Récupère le taux marginal d'imposition (TMI) pour un revenu donné
+     * Prend en compte le quotient familial
+     * @param {number} revenuImposable - Revenu imposable
+     * @returns {number} Taux marginal d'imposition en pourcentage
+     */
+    function getTauxMarginal(revenuImposable) {
+        const nbParts = state.nbParts || 1;
+        const revenuParPart = revenuImposable / nbParts;
+        
+        for (let i = TRANCHES_IMPOT.length - 1; i >= 0; i--) {
+            if (revenuParPart > TRANCHES_IMPOT[i].min) {
+                return TRANCHES_IMPOT[i].taux * 100; // Retourne en %
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Calcule les plafonds PER disponibles pour l'année N
+     * Inclut le plancher et le plafond légal + les reports N-1/N-2/N-3
+     * @param {number} revenuProNet - Revenus professionnels nets (après charges & frais)
+     * @param {Object} plafondsReportables - Plafonds restants N-1 / N-2 / N-3
+     * @returns {Object} { plafondN, plafondsParAnnee, totalDisponible }
+     */
+    function calculerPlafondsPER(revenuProNet, plafondsReportables = null) {
+        const reportables = plafondsReportables || state.perPlafondsReportables;
+        
+        // Plafond théorique de l'année N : 10% des revenus pro nets
+        const plafondTheorique = revenuProNet * 0.10;
+        
+        // Application du plancher et du plafond légal
+        // Le plafond PER est le MAX entre le plancher et MIN(10% revenus, plafond max)
+        const plafondN = Math.max(
+            PLAFOND_PER_MIN,
+            Math.min(plafondTheorique, PLAFOND_PER_MAX)
+        );
+        
+        // Plafonds par année (avec sécurisation >= 0)
+        const plafondsParAnnee = {
+            n3: Math.max(reportables.n3 || 0, 0),
+            n2: Math.max(reportables.n2 || 0, 0),
+            n1: Math.max(reportables.n1 || 0, 0),
+            n:  plafondN
+        };
+        
+        // Total disponible = somme de tous les plafonds
+        const totalDisponible = Object.values(plafondsParAnnee)
+            .reduce((a, b) => a + b, 0);
+        
+        return { plafondN, plafondsParAnnee, totalDisponible };
+    }
+
+    /**
+     * Répartit un versement PER sur les plafonds disponibles
+     * Consommation FIFO : N-3 d'abord (le plus ancien), puis N-2, N-1, N
+     * @param {number} montant - Versement PER total
+     * @param {Object} plafondsParAnnee - { n3, n2, n1, n }
+     * @returns {Object} { utilisation, perDeductible, perNonDeductible }
+     */
+    function allouerVersementPER(montant, plafondsParAnnee) {
+        const ordre = ['n3', 'n2', 'n1', 'n']; // FIFO : on consomme l'ancien d'abord
+        const utilisation = { n3: 0, n2: 0, n1: 0, n: 0 };
+        
+        let restant = montant;
+        
+        for (const annee of ordre) {
+            if (restant <= 0) break;
+            
+            const dispo = plafondsParAnnee[annee] || 0;
+            if (dispo <= 0) continue; // Ex: N-3 déjà consommé → dispo = 0
+            
+            const utilise = Math.min(restant, dispo);
+            utilisation[annee] = utilise;
+            restant -= utilise;
+        }
+        
+        const perDeductible = montant - restant;  // Part qui rentre dans les plafonds
+        const perNonDeductible = restant;         // Part au-delà des plafonds
+        
+        return { utilisation, perDeductible, perNonDeductible };
+    }
+
+    /**
+     * Calcule un versement PER optimal pour sortir de la tranche marginale actuelle
+     * @param {number} revenuImposable - Revenu net imposable avant PER
+     * @param {Object} plafondsReportables - Plafonds N-1 / N-2 / N-3
+     * @returns {Object} { versementOptimal, nouvelleTMI, allocationParAnnee, economieImpot }
+     */
+    function calculerVersementOptimalPourChangerTranche(revenuImposable, plafondsReportables = null) {
+        const reportables = plafondsReportables || state.perPlafondsReportables;
+        const nbParts = state.nbParts || 1;
+        const revenuParPart = revenuImposable / nbParts;
+        
+        const { plafondsParAnnee, totalDisponible } = calculerPlafondsPER(revenuImposable, reportables);
+        
+        // Trouver la tranche actuelle
+        let trancheIndex = 0;
+        for (let i = 0; i < TRANCHES_IMPOT.length; i++) {
+            if (revenuParPart > TRANCHES_IMPOT[i].min) {
+                trancheIndex = i;
+            }
+        }
+        
+        // Déjà dans la tranche à 0% => pas d'optimisation
+        if (trancheIndex === 0) {
+            return {
+                versementOptimal: 0,
+                nouvelleTMI: 0,
+                ancienneTMI: 0,
+                allocationParAnnee: { n3: 0, n2: 0, n1: 0, n: 0 },
+                totalPlafondDisponible: totalDisponible,
+                economieImpot: 0,
+                message: "Vous êtes déjà dans la tranche à 0%, pas besoin de versement PER pour optimisation fiscale."
+            };
+        }
+        
+        const trancheCourante = TRANCHES_IMPOT[trancheIndex];
+        const ancienneTMI = trancheCourante.taux * 100;
+        
+        // On veut ramener le revenu PAR PART sous le MIN de la tranche courante
+        const seuilSortieTranche = trancheCourante.min;
+        const montantParPartNecessaire = Math.max(0, revenuParPart - seuilSortieTranche);
+        const montantTotalNecessaire = montantParPartNecessaire * nbParts;
+        
+        // Le versement optimal est le MIN entre ce qu'il faut et ce qui est disponible
+        const versementOptimal = Math.min(montantTotalNecessaire, totalDisponible);
+        
+        // Répartition du versement sur les plafonds
+        const { utilisation, perDeductible } = allouerVersementPER(versementOptimal, plafondsParAnnee);
+        
+        // Calcul de la nouvelle TMI
+        const nouveauRevenuImposable = revenuImposable - perDeductible;
+        const nouvelleTMI = getTauxMarginal(nouveauRevenuImposable);
+        
+        // Calcul de l'économie d'impôt
+        const impotAvant = calculerImpot(revenuImposable);
+        const impotApres = calculerImpot(nouveauRevenuImposable);
+        const economieImpot = impotAvant - impotApres;
+        
+        return {
+            versementOptimal: Math.round(versementOptimal),
+            nouvelleTMI,
+            ancienneTMI,
+            allocationParAnnee: utilisation,
+            totalPlafondDisponible: totalDisponible,
+            economieImpot: Math.round(economieImpot),
+            message: versementOptimal < montantTotalNecessaire 
+                ? `Plafond insuffisant pour sortir complètement de la tranche ${ancienneTMI}%. Versement max: ${Math.round(totalDisponible).toLocaleString('fr-FR')} €`
+                : `En versant ${Math.round(versementOptimal).toLocaleString('fr-FR')} €, vous passez de la TMI ${ancienneTMI}% à ${nouvelleTMI}%.`
+        };
+    }
+
+    /**
      * Calcule la simulation fiscale complète
      * @param {Object} params - Paramètres de la simulation
      * @returns {Object} Résultats détaillés de la simulation fiscale
@@ -149,18 +341,46 @@ const PatrimoineSimulator = (function() {
         state.typeRevenu = params.typeRevenu || state.typeRevenu;
         state.tauxCharges = params.tauxCharges || getTauxCharges(state.typeRevenu, params.sousType);
         state.perPourcentage = params.perPourcentage || state.perPourcentage;
+        state.nbParts = params.nbParts || state.nbParts || 1;
         
-        // Calculs fiscaux principaux
-        const netImposableSansPER = state.revenuBrut * (1 - state.tauxCharges);
+        // Mise à jour des plafonds reportables si fournis
+        if (params.plafondsReportables) {
+            state.perPlafondsReportables = {
+                n1: params.plafondsReportables.n1 || 0,
+                n2: params.plafondsReportables.n2 || 0,
+                n3: params.plafondsReportables.n3 || 0
+            };
+        }
         
-        // AMÉLIORATION: Plafonnement du PER
+        // Revenu professionnel net (approximation)
+        const revenuProNet = state.revenuBrut * (1 - state.tauxCharges);
+        
+        // Pour le moment, on assimile revenu imposable global = revenu pro net
+        const netImposableSansPER = revenuProNet;
+        
+        // Plafonds PER N + reports N-1/N-2/N-3
+        const { plafondN, plafondsParAnnee, totalDisponible } = 
+            calculerPlafondsPER(revenuProNet, state.perPlafondsReportables);
+        
+        // Versement PER demandé
         const perVersement = state.revenuBrut * state.perPourcentage;
-        const plafondDeductible = Math.min(state.revenuBrut * 0.1, PLAFOND_PER_ABSOLU);
-        const perDeductible = Math.min(perVersement, plafondDeductible);
         
+        // Répartition du versement sur les plafonds disponibles (FIFO)
+        const { utilisation, perDeductible, perNonDeductible } = 
+            allouerVersementPER(perVersement, plafondsParAnnee);
+        
+        // Revenu imposable après déduction PER
         const netImposableAvecPER = netImposableSansPER - perDeductible;
         
-        // Calculs d'impôts selon les tranches
+        // Calcul des plafonds restants après versement
+        const plafondsRestants = {};
+        Object.keys(plafondsParAnnee).forEach(annee => {
+            plafondsRestants[annee] = Math.max(0, 
+                (plafondsParAnnee[annee] || 0) - (utilisation[annee] || 0)
+            );
+        });
+        
+        // Calculs d'impôts selon les tranches (avec quotient familial)
         const impotSansPER = calculerImpot(netImposableSansPER);
         const impotAvecPER = calculerImpot(netImposableAvecPER);
         const gainFiscal = impotSansPER - impotAvecPER;
@@ -170,7 +390,7 @@ const PatrimoineSimulator = (function() {
         const netDispoAvecPER = netImposableAvecPER - impotAvecPER;
         const patrimoineGlobal = netDispoAvecPER + perVersement;
         
-        // AMÉLIORATION: Taux moyens d'imposition
+        // Taux moyens d'imposition
         const tauxMoyenSansPER = netImposableSansPER > 0 ? (impotSansPER / netImposableSansPER) * 100 : 0;
         const tauxMoyenAvecPER = netImposableAvecPER > 0 ? (impotAvecPER / netImposableAvecPER) * 100 : 0;
         
@@ -180,6 +400,7 @@ const PatrimoineSimulator = (function() {
             netImposableAvecPER,
             perVersement,
             perDeductible,
+            perNonDeductible,
             impotSansPER,
             impotAvecPER,
             gainFiscal,
@@ -187,7 +408,11 @@ const PatrimoineSimulator = (function() {
             netDispoAvecPER,
             patrimoineGlobal,
             tauxMoyenSansPER,
-            tauxMoyenAvecPER
+            tauxMoyenAvecPER,
+            plafondPERActuel: plafondN,
+            plafondPERTotalDispo: totalDisponible,
+            perUtilisationParAnnee: utilisation,
+            perPlafondsRestants: plafondsRestants
         });
         
         return state.resultats;
@@ -293,8 +518,10 @@ const PatrimoineSimulator = (function() {
                     typeRevenu: state.typeRevenu,
                     tauxCharges: state.tauxCharges,
                     perPourcentage: state.perPourcentage,
+                    nbParts: state.nbParts,
                     budget: state.budget,
-                    allocation: state.allocation
+                    allocation: state.allocation,
+                    perPlafondsReportables: state.perPlafondsReportables
                 },
                 resultats: state.resultats,
                 timestamp: Date.now()
@@ -323,8 +550,10 @@ const PatrimoineSimulator = (function() {
             state.typeRevenu = parsed.parametres.typeRevenu || 'salarie';
             state.tauxCharges = parsed.parametres.tauxCharges;
             state.perPourcentage = parsed.parametres.perPourcentage;
+            state.nbParts = parsed.parametres.nbParts || 1;
             state.budget = parsed.parametres.budget;
             state.allocation = parsed.parametres.allocation;
+            state.perPlafondsReportables = parsed.parametres.perPlafondsReportables || {...CONFIG_DEFAUT.perPlafondsReportables};
             state.resultats = parsed.resultats;
             
             return parsed;
@@ -392,17 +621,15 @@ const PatrimoineSimulator = (function() {
     }
 
     /**
-     * Récupère le taux marginal d'imposition (TMI) pour un revenu donné
-     * @param {number} revenuImposable - Revenu imposable
-     * @returns {number} Taux marginal d'imposition en pourcentage
+     * Retourne les constantes PER pour usage externe
+     * @returns {Object} Constantes des plafonds PER
      */
-    function getTauxMarginal(revenuImposable) {
-        for (let i = TRANCHES_IMPOT.length - 1; i >= 0; i--) {
-            if (revenuImposable > TRANCHES_IMPOT[i].min) {
-                return TRANCHES_IMPOT[i].taux * 100;
-            }
-        }
-        return 0;
+    function getConstantesPER() {
+        return {
+            PASS_REF,
+            PLAFOND_PER_MIN,
+            PLAFOND_PER_MAX
+        };
     }
 
     // API publique du module
@@ -415,7 +642,11 @@ const PatrimoineSimulator = (function() {
         chargerResultats,
         resetState,
         exporterDataGraphique,
-        getTauxMarginal, // Exposer la fonction de calcul du taux marginal
+        getTauxMarginal,
+        calculerPlafondsPER,
+        allouerVersementPER,
+        calculerVersementOptimalPourChangerTranche,
+        getConstantesPER,
         // Exporter l'état actuel (pour inspection et debugging)
         getState: () => ({...state})
     };
@@ -435,6 +666,17 @@ function calculerFiscalite() {
     // Récupérer le sous-type de microentrepreneur si applicable
     const sousTypeSelect = document.getElementById("sous-type-micro");
     const sousType = (typeRevenu === 'microEntrepreneur' && sousTypeSelect) ? sousTypeSelect.value : null;
+    
+    // Récupérer le nombre de parts si disponible
+    const nbPartsInput = document.getElementById("nb-parts");
+    const nbParts = nbPartsInput ? parseFloat(nbPartsInput.value) || 1 : 1;
+    
+    // Récupérer les plafonds reportables si disponibles
+    const plafondsReportables = {
+        n1: parseFloat(document.getElementById("plafond-n1")?.value) || 0,
+        n2: parseFloat(document.getElementById("plafond-n2")?.value) || 0,
+        n3: parseFloat(document.getElementById("plafond-n3")?.value) || 0
+    };
 
     // Déléguer le calcul au module
     const resultats = PatrimoineSimulator.calculerSimulationFiscale({
@@ -442,7 +684,9 @@ function calculerFiscalite() {
         typeRevenu: typeRevenu,
         sousType: sousType,
         tauxCharges: charges,
-        perPourcentage: perPct
+        perPourcentage: perPct,
+        nbParts: nbParts,
+        plafondsReportables: plafondsReportables
     });
 
     // Affichage des résultats
@@ -472,13 +716,21 @@ function calculerFiscalite() {
         const perAlerte = document.getElementById("per-alerte");
         if (perAlerte) {
             if (perDeductible < perVersement) {
-                perAlerte.textContent = `⚠️ Attention: Votre versement PER dépasse le plafond de déductibilité (${PLAFOND_PER_ABSOLU.toLocaleString('fr-FR')} € max)`;
+                const constantes = PatrimoineSimulator.getConstantesPER();
+                perAlerte.textContent = `⚠️ Attention: Votre versement PER dépasse le plafond de déductibilité. Part non déductible: ${resultats.perNonDeductible.toLocaleString('fr-FR')} €`;
                 perAlerte.style.display = "block";
             } else {
                 perAlerte.style.display = "none";
             }
         }
     }
+    
+    // Afficher les détails des plafonds si les éléments existent
+    const plafondActuelElement = document.getElementById("plafond-actuel");
+    const plafondTotalElement = document.getElementById("plafond-total");
+    
+    if (plafondActuelElement) plafondActuelElement.textContent = `${resultats.plafondPERActuel.toLocaleString('fr-FR')} €`;
+    if (plafondTotalElement) plafondTotalElement.textContent = `${resultats.plafondPERTotalDispo.toLocaleString('fr-FR')} €`;
 
     // Mise à jour du tableau récapitulatif des taux si disponible
     const recapCharges = document.getElementById("recap-charges");
@@ -509,20 +761,31 @@ function getTauxDeductionParStatut(statut) {
 }
 
 // NOUVELLE FONCTION: Générer une synthèse simplifiée pour le PER
-function genererSynthesePER(salaireBrut, statut = 'salarie') {
-    const PLAFOND_PER_ABSOLU = 32909; // Plafond PER 2024-2025
-    
+function genererSynthesePER(salaireBrut, statut = 'salarie', plafondsReportables = null) {
     const tauxDeduction = getTauxDeductionParStatut(statut);
     const netImposable = estimerNetImposable(salaireBrut, tauxDeduction);
+    
+    // Utiliser la nouvelle fonction de calcul des plafonds
+    const reportables = plafondsReportables || { n1: 0, n2: 0, n3: 0 };
+    const { plafondN, plafondsParAnnee, totalDisponible } = 
+        PatrimoineSimulator.calculerPlafondsPER(netImposable, reportables);
+    
     const tmi = PatrimoineSimulator.getTauxMarginal(netImposable);
-    const plafond = Math.min(netImposable * 0.10, PLAFOND_PER_ABSOLU);
-    const economie = plafond * (tmi / 100);
+    const economie = plafondN * (tmi / 100);
+    const constantes = PatrimoineSimulator.getConstantesPER();
+    
+    // Calcul du versement optimal pour changer de tranche
+    const optimisation = PatrimoineSimulator.calculerVersementOptimalPourChangerTranche(netImposable, reportables);
 
     return {
         tmi: tmi,
-        plafondVersement: plafond,
+        plafondVersement: plafondN,
+        plafondTotal: totalDisponible,
         economieImpot: economie,
         netImposable: netImposable,
+        versementOptimal: optimisation.versementOptimal,
+        economieOptimale: optimisation.economieImpot,
+        nouvelleTMI: optimisation.nouvelleTMI,
         messageHTML: `
             <div class="bg-blue-900 bg-opacity-20 p-5 rounded-lg my-4">
                 <h3 class="text-lg font-bold text-green-400 mb-3">Synthèse de votre situation PER</h3>
@@ -541,12 +804,43 @@ function genererSynthesePER(salaireBrut, statut = 'salarie') {
                 
                 <div class="mt-3">
                     <p class="flex justify-between mb-2">
-                        <span>Versement PER optimal</span>
-                        <span class="font-semibold text-green-400">${plafond.toLocaleString('fr-FR')} €</span>
+                        <span>Plafond PER année N</span>
+                        <span class="font-semibold text-green-400">${plafondN.toLocaleString('fr-FR')} €</span>
                     </p>
+                    ${totalDisponible > plafondN ? `
                     <p class="flex justify-between mb-2">
-                        <span>Économie d'impôt estimée</span>
+                        <span>Plafond total (avec reports N-1/N-2/N-3)</span>
+                        <span class="font-semibold text-green-400">${totalDisponible.toLocaleString('fr-FR')} €</span>
+                    </p>
+                    ` : ''}
+                    <p class="flex justify-between mb-2">
+                        <span>Économie d'impôt (versement max)</span>
                         <span class="font-semibold text-green-400">${economie.toLocaleString('fr-FR')} €</span>
+                    </p>
+                </div>
+                
+                ${optimisation.versementOptimal > 0 && optimisation.versementOptimal < plafondN ? `
+                <div class="bg-purple-900 bg-opacity-30 p-3 rounded-lg my-3 border-l-4 border-purple-400">
+                    <h4 class="font-bold text-purple-300 mb-2"><i class="fas fa-chart-line mr-2"></i>Versement optimal (changement de tranche)</h4>
+                    <p class="flex justify-between mb-1">
+                        <span>Versement pour passer à ${optimisation.nouvelleTMI}%</span>
+                        <span class="font-semibold text-purple-300">${optimisation.versementOptimal.toLocaleString('fr-FR')} €</span>
+                    </p>
+                    <p class="flex justify-between">
+                        <span>Économie d'impôt</span>
+                        <span class="font-semibold text-purple-300">${optimisation.economieImpot.toLocaleString('fr-FR')} €</span>
+                    </p>
+                </div>
+                ` : ''}
+                
+                <div class="bg-gray-800 bg-opacity-50 p-3 rounded-lg my-3 text-sm">
+                    <p class="text-gray-400 mb-1">
+                        <i class="fas fa-info-circle mr-1"></i> 
+                        Plafonds 2024 : min ${constantes.PLAFOND_PER_MIN.toLocaleString('fr-FR')} € / max ${constantes.PLAFOND_PER_MAX.toLocaleString('fr-FR')} €
+                    </p>
+                    <p class="text-gray-400">
+                        <i class="fas fa-history mr-1"></i> 
+                        Les plafonds non utilisés sont reportables sur 3 ans (N-1, N-2, N-3)
                     </p>
                 </div>
                 
@@ -580,7 +874,14 @@ function afficherSynthesePER() {
     const statutSelect = document.getElementById('statut-simple');
     const statut = statutSelect ? statutSelect.value : 'salarie';
     
-    const synthese = genererSynthesePER(brut, statut);
+    // Récupérer les plafonds reportables si les champs existent
+    const plafondsReportables = {
+        n1: parseFloat(document.getElementById('plafond-n1-simple')?.value) || 0,
+        n2: parseFloat(document.getElementById('plafond-n2-simple')?.value) || 0,
+        n3: parseFloat(document.getElementById('plafond-n3-simple')?.value) || 0
+    };
+    
+    const synthese = genererSynthesePER(brut, statut, plafondsReportables);
     
     // Afficher la synthèse
     const resultatElement = document.getElementById('resultat-synthese');
@@ -673,11 +974,11 @@ window.PatrimoineSimulator = PatrimoineSimulator;
 // Exporter les nouvelles fonctions
 window.genererSynthesePER = genererSynthesePER;
 window.afficherSynthesePER = afficherSynthesePER;
-// ------------------------------------------------------------------
-// ⬇️  AJOUTE CE BLOC JUSTE EN-DESSOUS  ⬇️
+
+// Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('btn-analyser-per');
-  if (btn) {
-    btn.addEventListener('click', afficherSynthesePER);
-  }
+    const btn = document.getElementById('btn-analyser-per');
+    if (btn) {
+        btn.addEventListener('click', afficherSynthesePER);
+    }
 });
