@@ -721,226 +721,226 @@
 <!-- Contenu pour l'onglet Optimisation fiscale PER -->
 <div id="tax-optimizer" class="simulation-content" style="display: none;">
 
-    <!-- ===================== SIMULATEUR PER V1 ===================== -->
-    <section class="max-w-4xl mx-auto my-10 px-4">
-      <div class="bg-slate-900/70 border border-slate-700 rounded-2xl shadow-xl p-6 md:p-8">
-        <h2 class="text-2xl md:text-3xl font-bold text-white mb-6 flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-            ⚡
-          </span>
-          Simulateur PER – estimez votre économie d'impôt
-        </h2>
+  <!-- ===================== SIMULATEUR PER V1 ===================== -->
+  <section class="max-w-4xl mx-auto my-10 px-4">
+    <div class="bg-slate-900/70 border border-slate-700 rounded-2xl shadow-xl p-6 md:p-8">
+      <h2 class="text-2xl md:text-3xl font-bold text-white mb-6 flex items-center gap-3">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+          ⚡
+        </span>
+        Simulateur PER – estimez votre économie d'impôt
+      </h2>
 
-        <!-- VOTRE SITUATION -->
-        <div class="space-y-4">
-          <div class="grid md:grid-cols-2 gap-4">
-            <!-- Salaire brut -->
-            <div>
-              <label for="salaire-brut-simple" class="block text-sm font-medium text-slate-300 mb-1">
-                Salaire brut annuel
-              </label>
-              <div class="relative">
+      <!-- VOTRE SITUATION -->
+      <div class="space-y-4">
+        <div class="grid md:grid-cols-2 gap-4">
+          <!-- Salaire brut -->
+          <div>
+            <label for="salaire-brut-simple" class="block text-sm font-medium text-slate-300 mb-1">
+              Salaire brut annuel
+            </label>
+            <div class="relative">
+              <input
+                id="salaire-brut-simple"
+                type="number"
+                min="0"
+                step="100"
+                class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Ex : 50 000"
+              />
+              <span class="absolute inset-y-0 right-3 flex items-center text-slate-400 text-sm">€</span>
+            </div>
+          </div>
+
+          <!-- Situation familiale -->
+          <div>
+            <label for="situation-familiale" class="block text-sm font-medium text-slate-300 mb-1">
+              Situation familiale (parts fiscales)
+            </label>
+            <select
+              id="situation-familiale"
+              class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="1">Célibataire / divorcé (1 part)</option>
+              <option value="1.5">Célibataire avec 1 enfant (1,5 part)</option>
+              <option value="2">Couple marié / pacsé (2 parts)</option>
+              <option value="2.5">Couple + 1 enfant (2,5 parts)</option>
+              <option value="3">Couple + 2 enfants (3 parts)</option>
+              <option value="3.5">Couple + 3 enfants (3,5 parts)</option>
+              <option value="4">Couple + 4 enfants (4 parts)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Statut professionnel -->
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label for="statut-simple" class="block text-sm font-medium text-slate-300 mb-1">
+              Statut professionnel
+            </label>
+            <select
+              id="statut-simple"
+              class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="salarie">Salarié du privé</option>
+              <option value="cadre">Cadre</option>
+              <option value="fonctionnaire">Fonctionnaire</option>
+              <option value="independant">Indépendant / TNS</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Paramètres avancés : plafonds reportables -->
+        <div class="mt-4">
+          <button
+            id="btn-toggle-avance"
+            type="button"
+            class="inline-flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300"
+          >
+            <span class="icon">▼</span>
+            Paramètres avancés (plafonds PER reportables)
+          </button>
+
+          <div
+            id="bloc-avance-per"
+            class="mt-3 rounded-xl bg-slate-900/80 border border-slate-700 px-4 py-3 space-y-3 hidden"
+          >
+            <p class="text-xs text-slate-400">
+              ℹ️ Vous trouverez ces montants sur votre
+              <span class="font-semibold text-slate-200">avis d'impôt 2024</span> (rubrique « Plafond épargne retraite »).
+            </p>
+
+            <div class="grid md:grid-cols-3 gap-3">
+              <div>
+                <label for="plafond-n3-simple" class="block text-xs font-medium text-slate-300 mb-1">
+                  Plafond N-3 restant <span class="text-amber-400">⚠ périme bientôt</span>
+                </label>
                 <input
-                  id="salaire-brut-simple"
+                  id="plafond-n3-simple"
                   type="number"
                   min="0"
                   step="100"
                   class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="Ex : 50 000"
+                  placeholder="Ex : 3 500"
                 />
-                <span class="absolute inset-y-0 right-3 flex items-center text-slate-400 text-sm">€</span>
+              </div>
+
+              <div>
+                <label for="plafond-n2-simple" class="block text-xs font-medium text-slate-300 mb-1">
+                  Plafond N-2 restant
+                </label>
+                <input
+                  id="plafond-n2-simple"
+                  type="number"
+                  min="0"
+                  step="100"
+                  class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Ex : 2 800"
+                />
+              </div>
+
+              <div>
+                <label for="plafond-n1-simple" class="block text-xs font-medium text-slate-300 mb-1">
+                  Plafond N-1 restant
+                </label>
+                <input
+                  id="plafond-n1-simple"
+                  type="number"
+                  min="0"
+                  step="100"
+                  class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Ex : 4 100"
+                />
               </div>
             </div>
 
-            <!-- Situation familiale -->
-            <div>
-              <label for="situation-familiale" class="block text-sm font-medium text-slate-300 mb-1">
-                Situation familiale (parts fiscales)
-              </label>
-              <select
-                id="situation-familiale"
-                class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="1">Célibataire / divorcé (1 part)</option>
-                <option value="1.5">Célibataire avec 1 enfant (1,5 part)</option>
-                <option value="2">Couple marié / pacsé (2 parts)</option>
-                <option value="2.5">Couple + 1 enfant (2,5 parts)</option>
-                <option value="3">Couple + 2 enfants (3 parts)</option>
-                <option value="3.5">Couple + 3 enfants (3,5 parts)</option>
-                <option value="4">Couple + 4 enfants (4 parts)</option>
-              </select>
-            </div>
+            <p id="alerte-n3" class="text-xs text-amber-400 hidden">
+              ⚠ Vous avez encore un plafond N-3 à utiliser en priorité : il périme bientôt.
+            </p>
           </div>
-
-          <!-- Statut professionnel -->
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <label for="statut-simple" class="block text-sm font-medium text-slate-300 mb-1">
-                Statut professionnel
-              </label>
-              <select
-                id="statut-simple"
-                class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="salarie">Salarié du privé</option>
-                <option value="cadre">Cadre</option>
-                <option value="fonctionnaire">Fonctionnaire</option>
-                <option value="independant">Indépendant / TNS</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Paramètres avancés : plafonds reportables -->
-          <div class="mt-4">
-            <button
-              id="btn-toggle-avance"
-              type="button"
-              class="inline-flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300"
-            >
-              <span class="icon">▼</span>
-              Paramètres avancés (plafonds PER reportables)
-            </button>
-
-            <div
-              id="bloc-avance-per"
-              class="mt-3 rounded-xl bg-slate-900/80 border border-slate-700 px-4 py-3 space-y-3 hidden"
-            >
-              <p class="text-xs text-slate-400">
-                ℹ️ Vous trouverez ces montants sur votre
-                <span class="font-semibold text-slate-200">avis d'impôt 2024</span> (rubrique « Plafond épargne
-                retraite »).
-              </p>
-
-              <div class="grid md:grid-cols-3 gap-3">
-                <div>
-                  <label for="plafond-n3-simple" class="block text-xs font-medium text-slate-300 mb-1">
-                    Plafond N-3 restant <span class="text-amber-400">⚠ périme bientôt</span>
-                  </label>
-                  <input
-                    id="plafond-n3-simple"
-                    type="number"
-                    min="0"
-                    step="100"
-                    class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ex : 3 500"
-                  />
-                </div>
-
-                <div>
-                  <label for="plafond-n2-simple" class="block text-xs font-medium text-slate-300 mb-1">
-                    Plafond N-2 restant
-                  </label>
-                  <input
-                    id="plafond-n2-simple"
-                    type="number"
-                    min="0"
-                    step="100"
-                    class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ex : 2 800"
-                  />
-                </div>
-
-                <div>
-                  <label for="plafond-n1-simple" class="block text-xs font-medium text-slate-300 mb-1">
-                    Plafond N-1 restant
-                  </label>
-                  <input
-                    id="plafond-n1-simple"
-                    type="number"
-                    min="0"
-                    step="100"
-                    class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ex : 4 100"
-                  />
-                </div>
-              </div>
-
-              <p id="alerte-n3" class="text-xs text-amber-400 hidden">
-                ⚠ Vous avez encore un plafond N-3 à utiliser en priorité : il périme bientôt.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bouton d'analyse -->
-        <div class="mt-6">
-          <button
-            id="btn-analyser-per"
-            type="button"
-            class="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-900"
-          >
-            🔍 Analyser mon potentiel d'économie
-          </button>
         </div>
       </div>
 
-      <!-- ZONE RÉSULTATS -->
-      <div id="resultat-synthese" class="mt-8">
-        <div class="rounded-2xl border border-dashed border-slate-600 bg-slate-900/50 p-6 text-sm text-slate-300">
-          Renseignez votre situation puis cliquez sur
-          <span class="font-semibold text-emerald-400">« Analyser mon potentiel d'économie »</span>
-          pour voir l'impact du PER sur votre impôt.
-        </div>
+      <!-- Bouton d'analyse -->
+      <div class="mt-6">
+        <button
+          id="btn-analyser-per"
+          type="button"
+          class="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+        >
+          🔍 Analyser mon potentiel d'économie
+        </button>
       </div>
-    </section>
-    <!-- ================== FIN SIMULATEUR PER V1 ================== -->
-
-    <!-- Info sur le double avantage du PER -->
-    <div class="max-w-4xl mx-auto mt-8 mb-10">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                <div class="flex items-center mb-4">
-                    <div class="w-12 h-12 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                        <i class="fas fa-piggy-bank text-2xl text-green-400"></i>
-                    </div>
-                    <h4 class="text-xl font-semibold">Économisez dès maintenant</h4>
-                </div>
-                <p class="text-gray-300 mb-4">
-                    Le PER vous permet de déduire vos versements de votre revenu imposable, ce qui réduit immédiatement votre impôt sur le revenu.
-                </p>
-                <ul class="space-y-2 text-gray-300">
-                    <li class="flex items-start">
-                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                        <span>Déduction jusqu'à 10% de vos revenus professionnels</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                        <span>Plus votre TMI est élevée, plus l'économie est importante</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                        <span>Pour une TMI à 30%, versez 1000€ et économisez 300€ d'impôt</span>
-                    </li>
-                </ul>
-            </div>
-            
-            <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                <div class="flex items-center mb-4">
-                    <div class="w-12 h-12 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                        <i class="fas fa-home text-2xl text-green-400"></i>
-                    </div>
-                    <h4 class="text-xl font-semibold">Financez votre résidence principale</h4>
-                </div>
-                <p class="text-gray-300 mb-4">
-                    Bien que normalement bloqué jusqu'à la retraite, le PER peut être débloqué dans plusieurs cas exceptionnels, notamment pour l'achat de votre résidence principale.
-                </p>
-                <ul class="space-y-2 text-gray-300">
-                    <li class="flex items-start">
-                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                        <span>Déblocage autorisé pour l'achat de votre résidence principale</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                        <span>Permet de constituer un apport tout en réduisant vos impôts</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                        <span>Autres cas de déblocage : invalidité, décès, surendettement, etc.</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
     </div>
+
+    <!-- ZONE RÉSULTATS -->
+    <div id="resultat-synthese" class="mt-8">
+      <div class="rounded-2xl border border-dashed border-slate-600 bg-slate-900/50 p-6 text-sm text-slate-300">
+        Renseignez votre situation puis cliquez sur
+        <span class="font-semibold text-emerald-400">« Analyser mon potentiel d'économie »</span>
+        pour voir l'impact du PER sur votre impôt.
+      </div>
+    </div>
+  </section>
+  <!-- ================== FIN SIMULATEUR PER V1 ================== -->
+
+  <!-- Info sur le double avantage du PER -->
+  <div class="max-w-4xl mx-auto mt-8 mb-10">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+        <div class="flex items-center mb-4">
+          <div class="w-12 h-12 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+            <i class="fas fa-piggy-bank text-2xl text-green-400"></i>
+          </div>
+          <h4 class="text-xl font-semibold">Économisez dès maintenant</h4>
+        </div>
+        <p class="text-gray-300 mb-4">
+          Le PER vous permet de déduire vos versements de votre revenu imposable, ce qui réduit immédiatement votre impôt sur le revenu.
+        </p>
+        <ul class="space-y-2 text-gray-300">
+          <li class="flex items-start">
+            <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+            <span>Déduction jusqu'à 10% de vos revenus professionnels</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+            <span>Plus votre TMI est élevée, plus l'économie est importante</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+            <span>Pour une TMI à 30%, versez 1 000 € et économisez 300 € d'impôt</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+        <div class="flex items-center mb-4">
+          <div class="w-12 h-12 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+            <i class="fas fa-home text-2xl text-green-400"></i>
+          </div>
+          <h4 class="text-xl font-semibold">Financez votre résidence principale</h4>
+        </div>
+        <p class="text-gray-300 mb-4">
+          Bien que normalement bloqué jusqu'à la retraite, le PER peut être débloqué dans plusieurs cas exceptionnels,
+          notamment pour l'achat de votre résidence principale.
+        </p>
+        <ul class="space-y-2 text-gray-300">
+          <li class="flex items-start">
+            <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+            <span>Déblocage autorisé pour l'achat de votre résidence principale</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+            <span>Permet de constituer un apport tout en réduisant vos impôts</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+            <span>Autres cas de déblocage : invalidité, décès, surendettement, etc.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
                 
 <!-- Contenu pour l'onglet Budget & Épargne -->
