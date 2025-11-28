@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartFlow - Simulateur d'Investissement</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <!-- ✅ AJOUTER CES 2 LIGNES -->
@@ -207,6 +207,34 @@
         #frequency-container {
             animation: fadeIn 0.3s ease;
         }
+
+        /* Styles pour le simulateur PER amélioré */
+        .per-mode-btn {
+            transition: all 0.2s ease;
+        }
+        .per-mode-btn.active {
+            background-color: rgba(16, 185, 129, 0.3) !important;
+            color: #34D399 !important;
+            border-color: #34D399 !important;
+        }
+        .per-result-card {
+            transition: all 0.3s ease;
+        }
+        .per-result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .per-highlight {
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+        }
+        .per-comparison-best {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+        }
     </style>
 </head>
 <body class="dark">
@@ -308,7 +336,7 @@
                     <div class="simulation-tab active" data-target="investment-simulator">Simulateur d'investissement</div>
                     <div class="simulation-tab" data-target="envelope-compare">Comparer les enveloppes</div>
                     <div class="simulation-tab" data-target="tax-optimizer">Optimisation fiscale PER</div>
-                    <div class="simulation-tab" data-target="budget-planner">Budget & Épargne</div>
+                    <div class="simulation-tab" data-target="budget-planner">Budget &amp; Épargne</div>
                     <div class="simulation-tab" data-target="loan-simulator">Gestion de dette</div>
                     <div class="simulation-tab" data-target="ptz-simulator">Simulateur PTZ</div>
                 </div>
@@ -517,7 +545,7 @@
                             <!-- OBJECTIFS & PLAN D'ÉPARGNE -->
                             <div class="mt-6 bg-blue-900 bg-opacity-20 p-4 rounded-lg">
                               <h5 class="text-lg font-semibold text-white mb-3 flex items-center">
-                                <i class="fas fa-bullseye text-green-400 mr-2"></i> Objectifs & plan d'épargne
+                                <i class="fas fa-bullseye text-green-400 mr-2"></i> Objectifs &amp; plan d'épargne
                               </h5>
 
                               <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -718,87 +746,221 @@
                   </div>
                 </div>
                 
-                 <!-- Contenu pour l'onglet Optimisation fiscale PER -->
+                <!-- ============================================== -->
+                <!-- CONTENU POUR L'ONGLET OPTIMISATION FISCALE PER -->
+                <!-- ============================================== -->
                 <div id="tax-optimizer" class="simulation-content" style="display: none;">
-                    <!-- Simulateur simplifié en pleine page -->
-                    <div class="max-w-4xl mx-auto mt-8 mb-10">
-                        <div class="bg-gradient-to-r from-green-900 to-blue-900 bg-opacity-30 rounded-xl p-8">
-                            <h3 class="text-2xl font-bold text-green-400 mb-4 flex items-center">
+                    <div class="max-w-6xl mx-auto mt-8 mb-10">
+                        
+                        <!-- En-tête -->
+                        <div class="bg-gradient-to-r from-green-900 to-blue-900 bg-opacity-30 rounded-xl p-6 mb-8">
+                            <h3 class="text-2xl font-bold text-green-400 mb-2 flex items-center">
                                 <i class="fas fa-bolt mr-3"></i>
-                                Simulateur PER - Économisez sur vos impôts
+                                Simulateur PER - Optimisez votre fiscalité
                             </h3>
-                            <p class="text-lg text-gray-300 mb-6">Découvrez combien vous pourriez économiser d'impôts avec un PER et comment financer votre résidence principale.</p>
+                            <p class="text-gray-300">Calculez précisément votre économie d'impôt, gérez vos plafonds reportables et comparez les stratégies de versement.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             
-                            <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl">
-                                <h4 class="text-xl font-semibold mb-6 text-white">Entrez votre salaire brut annuel</h4>
+                            <!-- COLONNE GAUCHE : Paramètres -->
+                            <div class="space-y-6">
                                 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label class="block text-base font-medium mb-3 text-white">
-                                            Salaire brut annuel
-                                            <span class="ml-1 text-green-400 cursor-help" title="Votre salaire annuel brut avant déduction des charges sociales. C'est le montant que vous trouvez sur votre bulletin de salaire annuel.">
+                                <!-- Section 1 : Revenus -->
+                                <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl">
+                                    <h4 class="text-lg font-semibold mb-4 text-white flex items-center">
+                                        <i class="fas fa-euro-sign text-green-400 mr-2"></i>
+                                        Vos revenus
+                                    </h4>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2 text-gray-300">
+                                                Salaire brut annuel
+                                                <span class="ml-1 text-green-400 cursor-help" title="Votre salaire annuel brut (avant charges sociales). Trouvez-le sur votre bulletin de salaire de décembre.">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </span>
+                                            </label>
+                                            <div class="relative">
+                                                <input type="number" id="salaire-brut-simple" placeholder="Ex: 50000" 
+                                                       class="w-full p-3 rounded bg-blue-800 text-white border border-blue-700 focus:border-green-400 focus:ring-1 focus:ring-green-400">
+                                                <span class="absolute inset-y-0 right-3 flex items-center text-gray-400">€</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2 text-gray-300">
+                                                Statut professionnel
+                                            </label>
+                                            <select id="statut-simple" class="w-full p-3 rounded bg-blue-800 text-white border border-blue-700 focus:border-green-400">
+                                                <option value="salarie">Salarié du privé</option>
+                                                <option value="fonctionnaire">Fonctionnaire</option>
+                                                <option value="cadre">Cadre supérieur</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Section 2 : Situation fiscale -->
+                                <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl">
+                                    <h4 class="text-lg font-semibold mb-4 text-white flex items-center">
+                                        <i class="fas fa-users text-green-400 mr-2"></i>
+                                        Votre situation fiscale
+                                    </h4>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2 text-gray-300">
+                                                Nombre de parts fiscales
+                                                <span class="ml-1 text-green-400 cursor-help" title="1 part par adulte, 0.5 par enfant (1 à partir du 3ème). Consultez votre avis d'imposition.">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </span>
+                                            </label>
+                                            <select id="nb-parts-simple" class="w-full p-3 rounded bg-blue-800 text-white border border-blue-700">
+                                                <option value="1">1 part (célibataire)</option>
+                                                <option value="1.5">1,5 parts (parent isolé 1 enfant)</option>
+                                                <option value="2">2 parts (couple sans enfant)</option>
+                                                <option value="2.5">2,5 parts (couple + 1 enfant)</option>
+                                                <option value="3">3 parts (couple + 2 enfants)</option>
+                                                <option value="4">4 parts (couple + 3 enfants)</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2 text-gray-300">
+                                                Mode de versement
+                                            </label>
+                                            <div class="flex bg-blue-800 rounded-lg overflow-hidden">
+                                                <button id="per-mode-custom" class="per-mode-btn flex-1 py-2 px-3 text-sm font-medium text-gray-300 active" data-mode="custom">
+                                                    Personnalisé
+                                                </button>
+                                                <button id="per-mode-optimal" class="per-mode-btn flex-1 py-2 px-3 text-sm font-medium text-gray-300" data-mode="optimal">
+                                                    Optimal
+                                                </button>
+                                                <button id="per-mode-max" class="per-mode-btn flex-1 py-2 px-3 text-sm font-medium text-gray-300" data-mode="max">
+                                                    Maximum
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Versement personnalisé -->
+                                    <div id="per-custom-amount-container" class="mb-4">
+                                        <label class="block text-sm font-medium mb-2 text-gray-300">
+                                            Montant à verser
+                                            <span class="ml-1 text-green-400 cursor-help" title="Le montant que vous souhaitez verser sur votre PER cette année.">
                                                 <i class="fas fa-info-circle"></i>
                                             </span>
                                         </label>
                                         <div class="relative">
-                                            <input type="number" id="salaire-brut-simple" placeholder="Ex: 50000" class="w-full p-4 text-lg rounded bg-blue-800 text-white border border-green-700 focus:border-green-400 focus:ring-1 focus:ring-green-400 focus:outline-none" />
-                                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                <span class="text-gray-400">€</span>
-                                            </div>
+                                            <input type="number" id="per-versement-custom" placeholder="Ex: 5000" value="5000"
+                                                   class="w-full p-3 rounded bg-blue-800 text-white border border-blue-700 focus:border-green-400">
+                                            <span class="absolute inset-y-0 right-3 flex items-center text-gray-400">€</span>
                                         </div>
                                     </div>
+                                </div>
+
+                                <!-- Section 3 : Plafonds reportables -->
+                                <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h4 class="text-lg font-semibold text-white flex items-center">
+                                            <i class="fas fa-history text-green-400 mr-2"></i>
+                                            Plafonds PER reportables
+                                        </h4>
+                                        <button id="toggle-plafonds" class="text-sm text-blue-300 hover:text-green-400">
+                                            <i class="fas fa-chevron-down mr-1"></i> Afficher
+                                        </button>
+                                    </div>
                                     
-                                    <div>
-                                        <label class="block text-base font-medium mb-3 text-white">
-                                            Statut professionnel
-                                            <span class="ml-1 text-green-400 cursor-help" title="Votre statut professionnel influence le taux de charges sociales appliqué à votre salaire.">
-                                                <i class="fas fa-info-circle"></i>
-                                            </span>
-                                        </label>
-                                        <select id="statut-simple" class="w-full p-4 text-lg rounded bg-blue-800 text-white border border-green-700 focus:border-green-400 focus:outline-none">
-                                            <option value="salarie">Salarié du privé</option>
-                                            <option value="fonctionnaire">Fonctionnaire</option>
-                                            <option value="cadre">Cadre</option>
-                                        </select>
+                                    <p class="text-sm text-gray-400 mb-4">
+                                        <i class="fas fa-lightbulb text-yellow-400 mr-1"></i>
+                                        Retrouvez ces montants sur votre avis d'imposition (rubrique "Plafond épargne retraite").
+                                    </p>
+                                    
+                                    <div id="plafonds-details" class="space-y-3">
+                                        <div class="grid grid-cols-3 gap-3">
+                                            <div>
+                                                <label class="block text-xs text-gray-400 mb-1">
+                                                    Plafond N-1
+                                                    <span class="text-amber-400">(2023)</span>
+                                                </label>
+                                                <input type="number" id="plafond-n1-simple" value="0" min="0"
+                                                       class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-400 mb-1">
+                                                    Plafond N-2
+                                                    <span class="text-amber-400">(2022)</span>
+                                                </label>
+                                                <input type="number" id="plafond-n2-simple" value="0" min="0"
+                                                       class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-400 mb-1">
+                                                    Plafond N-3
+                                                    <span class="text-red-400">(2021 - expire!)</span>
+                                                </label>
+                                                <input type="number" id="plafond-n3-simple" value="0" min="0"
+                                                       class="w-full p-2 rounded bg-blue-800 text-white border border-red-500 text-sm">
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="plafond-n3-alert" class="hidden bg-red-900 bg-opacity-30 border-l-4 border-red-500 p-3 rounded">
+                                            <p class="text-sm text-red-300">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                <strong>Attention :</strong> Votre plafond N-3 expire fin 2024 ! Utilisez-le en priorité.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Bouton Analyser -->
+                                <button id="btn-analyser-per" class="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 text-lg font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
+                                    <i class="fas fa-calculator mr-3"></i> 
+                                    Calculer mon économie d'impôt
+                                </button>
+                            </div>
+
+                            <!-- COLONNE DROITE : Résultats -->
+                            <div class="space-y-6">
+                                
+                                <!-- Zone de résultats -->
+                                <div id="resultat-synthese">
+                                    <!-- Placeholder avant calcul -->
+                                    <div class="bg-blue-900 bg-opacity-30 p-8 rounded-xl text-center">
+                                        <i class="fas fa-hand-point-left text-4xl text-gray-500 mb-4"></i>
+                                        <p class="text-gray-400 text-lg">Renseignez vos informations et cliquez sur "Calculer" pour voir votre simulation détaillée.</p>
                                     </div>
                                 </div>
                                 
-                                <button id="btn-analyser-per" class="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 text-xl font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
-                                    <i class="fas fa-calculator mr-3"></i> 
-                                    Analyser mon potentiel d'économie
-                                </button>
-                            </div>
-                            
-                            <!-- Zone de résultat pour le simulateur simplifié -->
-                            <div id="resultat-synthese" class="mt-8">
-                                <!-- Le résultat sera ajouté ici par JavaScript -->
-                            </div>
-                            
-                            <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl mt-8 border-l-4 border-green-400">
-                                <h4 class="text-lg font-semibold mb-3 text-green-400">Le saviez-vous ?</h4>
-                                <p class="text-base text-gray-300 mb-3">
-                                    Le PER est l'un des rares placements qui offre à la fois :
-                                </p>
-                                <ul class="space-y-2 ml-6 text-base">
-                                    <li class="flex items-start">
-                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                                        <span>Une déduction immédiate de votre revenu imposable (économie d'impôt)</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                                        <span>La possibilité de débloquer les fonds pour l'achat de votre résidence principale</span>
-                                    </li>
-                                </ul>
-                                <p class="text-base text-gray-300 mt-3">
-                                    Idéal pour les personnes ayant une tranche marginale d'imposition (TMI) de 30% ou plus.
-                                </p>
+                                <!-- Tableau comparatif (visible après calcul) -->
+                                <div id="per-comparison-table" class="hidden bg-blue-900 bg-opacity-30 p-6 rounded-xl">
+                                    <h4 class="text-lg font-semibold mb-4 text-white flex items-center">
+                                        <i class="fas fa-table text-green-400 mr-2"></i>
+                                        Comparatif des stratégies
+                                    </h4>
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full text-sm">
+                                            <thead class="bg-blue-800 bg-opacity-50">
+                                                <tr>
+                                                    <th class="px-4 py-3 text-left">Stratégie</th>
+                                                    <th class="px-4 py-3 text-right">Versement</th>
+                                                    <th class="px-4 py-3 text-right">TMI après</th>
+                                                    <th class="px-4 py-3 text-right">Économie</th>
+                                                    <th class="px-4 py-3 text-right">Rendement fiscal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="per-comparison-tbody">
+                                                <!-- Rempli par JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Info sur le double avantage du PER -->
-                    <div class="max-w-4xl mx-auto mt-8 mb-10">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                        <!-- Section informative en bas -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
                             <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
                                 <div class="flex items-center mb-4">
                                     <div class="w-12 h-12 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
@@ -807,7 +969,7 @@
                                     <h4 class="text-xl font-semibold">Économisez dès maintenant</h4>
                                 </div>
                                 <p class="text-gray-300 mb-4">
-                                    Le PER vous permet de déduire vos versements de votre revenu imposable, ce qui réduit immédiatement votre impôt sur le revenu.
+                                    Le PER vous permet de déduire vos versements de votre revenu imposable, réduisant immédiatement votre impôt.
                                 </p>
                                 <ul class="space-y-2 text-gray-300">
                                     <li class="flex items-start">
@@ -820,7 +982,7 @@
                                     </li>
                                     <li class="flex items-start">
                                         <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                                        <span>Pour une TMI à 30%, versez 1000€ et économisez 300€ d'impôt</span>
+                                        <span>Plafonds non utilisés reportables sur 3 ans</span>
                                     </li>
                                 </ul>
                             </div>
@@ -830,23 +992,23 @@
                                     <div class="w-12 h-12 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
                                         <i class="fas fa-home text-2xl text-green-400"></i>
                                     </div>
-                                    <h4 class="text-xl font-semibold">Financez votre résidence principale</h4>
+                                    <h4 class="text-xl font-semibold">Déblocage anticipé possible</h4>
                                 </div>
                                 <p class="text-gray-300 mb-4">
-                                    Bien que normalement bloqué jusqu'à la retraite, le PER peut être débloqué dans plusieurs cas exceptionnels, notamment pour l'achat de votre résidence principale.
+                                    Bien que bloqué jusqu'à la retraite, le PER peut être débloqué dans plusieurs cas exceptionnels.
                                 </p>
                                 <ul class="space-y-2 text-gray-300">
                                     <li class="flex items-start">
-                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                                        <span>Déblocage autorisé pour l'achat de votre résidence principale</span>
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span><strong>Achat résidence principale</strong> (cas le plus courant)</span>
                                     </li>
                                     <li class="flex items-start">
-                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                                        <span>Permet de constituer un apport tout en réduisant vos impôts</span>
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span>Invalidité, décès du conjoint</span>
                                     </li>
                                     <li class="flex items-start">
-                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
-                                        <span>Autres cas de déblocage : invalidité, décès, surendettement, etc.</span>
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span>Surendettement, fin de droits chômage</span>
                                     </li>
                                 </ul>
                             </div>
@@ -1282,671 +1444,4 @@
                                         </div>
                                     </div>
                                     
-                                    <div class="text-center mt-4">
-                                        <button id="add-repayment-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition">
-                                            <i class="fas fa-plus mr-2"></i>Ajouter ce remboursement
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Alerte pour seuil minimum non respecté -->
-                                    <div id="min-threshold-alert" class="hidden mt-3 bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-3 rounded">
-                                        <div class="flex items-start">
-                                            <i class="fas fa-exclamation-triangle text-red-500 mr-2 mt-1"></i>
-                                            <p class="text-sm">Le remboursement anticipé doit être positif.</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Message d'information sur les seuils minimums -->
-                                    <div class="mt-3 text-xs text-gray-400 italic">
-                                        <i class="fas fa-info-circle mr-1"></i> Vous pouvez effectuer des remboursements anticipés de tout montant.
-                                    </div>
-                                </div>
-                                
-                                <!-- Notification pour le remboursement total -->
-                                <div id="total-repayment-notice" class="loan-total-repayment-notice hidden">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div>
-                                        <h6 class="font-semibold text-green-400">Remboursement total</h6>
-                                        <p id="ptz-warning" class="text-xs text-amber-400 hidden">ℹ️ Le remboursement total solde uniquement le prêt principal. Le PTZ continue.</p>
-                                        <p class="text-sm text-gray-300">Ce montant permettra de solder intégralement votre prêt.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Bouton de simulation -->
-                            <button id="calculate-loan-button" class="loan-action-button w-full mt-6">
-                                <i class="fas fa-play-circle mr-2"></i> 
-                                Calculer le plan d'amortissement
-                            </button>
-                        </div>
-                        
-                        <!-- Résultats -->
-                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                            <h4 class="text-xl font-semibold mb-4 flex items-center">
-                                <i class="fas fa-chart-line text-green-400 mr-2"></i>
-                                Résultats de la simulation
-                            </h4>
-                            
-<div class="grid grid-cols-2 gap-4 mb-6">
-    <!-- Mensualité crédit seul (avant PTZ) -->
-    <div id="monthly-payment-main" class="result-card">
-        <p id="monthly-payment" class="result-value">-- €</p>
-        <p class="result-label">Mensualité crédit (hors PTZ)</p>
-    </div>
-    
-    <!-- Mensualité totale quand le PTZ démarre -->
-    <div id="monthly-payment-combined" class="result-card hidden">
-        <p class="result-value text-amber-300">-- €</p>
-        <p class="result-label">Mensualité totale après démarrage PTZ</p>
-        <p id="ptz-start-badge" class="text-xs text-amber-400"></p>
-    </div>
-    
-    <div class="result-card">
-        <p id="total-interest" class="result-value">0 €</p>
-        <p class="result-label">Total des intérêts</p>
-    </div>
-    
-    <div class="result-card">
-        <p id="early-repayment-penalty" class="result-value">0 €</p>
-        <p class="result-label">Indemnités de remb. anticipé</p>
-    </div>
-    
-    <div class="result-card">
-        <p id="total-cost" class="result-value">0 €</p>
-        <p class="result-label">Coût total du crédit</p>
-    </div>
-    
-    <div id="ptz-resume" class="result-card hidden">
-        <p class="text-sm">
-            <span class="font-semibold">Différé&nbsp;:</span> <span id="ptz-differe-display">--</span>&nbsp;mois<br>
-            <span class="font-semibold">Mensualité PTZ&nbsp;:</span> <span id="ptz-mensualite-display">--</span>&nbsp;€/mois<br>
-            <span class="font-semibold">Fin PTZ&nbsp;:</span> année&nbsp;<span id="ptz-fin-display">--</span>
-        </p>
-    </div>
-</div>
-                            
-                            <!-- Nouvelles cellules pour frais et coût global -->
-                            <div class="col-span-2 grid grid-cols-2 gap-4 mt-2 mb-6">
-                                <div class="result-card">
-                                    <p id="total-fees" class="result-value">0 €</p>
-                                    <p class="result-label">Frais annexes</p>
-                                </div>
-                                <div class="result-card">
-                                    <p id="taeg" class="result-value">0%</p>
-                                    <p class="result-label">TAEG exact</p>
-                                </div>
-                                <div class="result-card col-span-2">
-                                    <p id="cout-global" class="result-value">0 €</p>
-                                    <p class="result-label">Coût global (tout compris)</p>
-                                </div>
-                                <div class="result-card col-span-2">
-                                    <p id="ratio-cout" class="result-value">0</p>
-                                    <p class="result-label">Coût par euro emprunté</p>
-                                </div>
-                            </div>
-                            
-                            <!-- Espace pour le tableau de comparaison des simulations -->
-                            <div id="comparison-table" class="mb-6 hidden">
-                                <h5 class="text-lg font-semibold mb-3">Comparaison des scénarios</h5>
-                                <div class="overflow-auto max-h-60 bg-blue-800 bg-opacity-20 rounded-lg">
-                                    <table class="min-w-full text-sm">
-                                        <thead class="bg-blue-900 bg-opacity-50 sticky top-0">
-                                            <tr>
-                                                <th class="px-3 py-2 text-left">Paramètre</th>
-                                                <th class="px-3 py-2 text-right">Sans remb. anticipé</th>
-                                                <th class="px-3 py-2 text-right">Avec remb. anticipé</th>
-                                                <th class="px-3 py-2 text-right">Différence</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="comparison-table-body">
-                                            <!-- Le tableau sera rempli dynamiquement par JavaScript -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <div class="chart-container mb-6">
-                                <canvas id="loan-chart"></canvas>
-                            </div>
-                            
-<div class="flex justify-between mb-4">
-    <h5 class="text-lg font-semibold">Tableau d'amortissement</h5>
-    <div class="flex">
-        <button id="save-simulation-btn" class="loan-secondary-button ml-2 text-green-400 hover:bg-green-700">
-            <i class="fas fa-save"></i>Sauvegarder simulation
-        </button>
-    </div>
-</div>
-                            
-                            <div class="amortization-table-container">
-                                <table class="min-w-full text-sm">
-                                    <thead class="bg-blue-900 bg-opacity-50 sticky top-0">
-                                        <tr>
-                                            <th class="px-3 py-2 text-left">Période</th>
-                                            <th class="px-3 py-2 text-right">Mensualité</th>
-                                            <th class="px-3 py-2 text-right">Capital</th>
-                                            <th class="px-3 py-2 text-right">Intérêts</th>
-                                            <th class="px-3 py-2 text-right">Assurance</th>
-                                            <th class="px-3 py-2 text-right">Capital restant</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="amortization-table">
-                                        <!-- Le tableau sera rempli dynamiquement par JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Contenu pour l'onglet Simulateur PTZ -->
-                <div id="ptz-simulator" class="simulation-content" style="display: none;">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                        <!-- Paramètres du PTZ -->
-                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                            <h4 class="text-xl font-semibold mb-4 flex items-center">
-                                <i class="fas fa-home text-green-400 mr-2"></i>
-                                Paramètres du Prêt à Taux Zéro
-                            </h4>
-                            
-                            <!-- Type de projet -->
-                            <div class="mb-4">
-                                <label class="loan-option-label">
-                                    Type de projet
-                                    <span class="loan-option-info cursor-help" title="Sélectionnez le type de projet immobilier concerné par votre demande de PTZ.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <select id="ptz-project-type" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                    <option value="neuf">Logement neuf</option>
-                                    <option value="ancien">Logement ancien avec travaux (zones B2/C)</option>
-                                    <option value="social">Achat du logement social occupé</option>
-                                </select>
-                            </div>
-                            
-                            <!-- Zone géographique -->
-                            <div class="mb-4">
-                                <label class="loan-option-label">
-                                    Zone géographique
-                                    <span class="loan-option-info cursor-help" title="La zone géographique détermine les plafonds de revenus et le montant maximum du PTZ.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <select id="ptz-zone" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                    <option value="A">Zone A ou A bis</option>
-                                    <option value="B1">Zone B1</option>
-                                    <option value="B2">Zone B2</option>
-                                    <option value="C">Zone C</option>
-                                </select>
-                            </div>
-                            
-                            <!-- Recherche de ville -->
-                            <div class="mb-4 relative">
-                                <label class="loan-option-label">
-                                    Recherche par ville
-                                    <span class="loan-option-info cursor-help" title="Recherchez votre ville pour déterminer automatiquement sa zone.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <input type="text" id="ptz-city-search" placeholder="Saisissez le nom de votre ville" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                <p id="ptz-zone-info" class="text-sm text-green-400 mt-1 hidden"></p>
-                                <!-- Conteneur pour les suggestions de villes (ajouté) -->
-                                <div id="city-suggestions-container" class="hidden"></div>
-                            </div>
-                            
-                            <!-- Revenu fiscal de référence -->
-                            <div class="mb-4">
-                                <label class="loan-option-label">
-                                    Revenu fiscal de référence
-                                    <span class="loan-option-info cursor-help" title="Indiquez le revenu fiscal de référence de l'ensemble des personnes qui occuperont le logement (année N-2).">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <input type="number" id="ptz-income" placeholder="Ex: 35000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                            </div>
-                            
-                            <!-- Nombre de personnes dans le foyer -->
-                            <div class="mb-4">
-                                <label class="loan-option-label">
-                                    Nombre de personnes dans le foyer
-                                    <span class="loan-option-info cursor-help" title="Indiquez le nombre de personnes qui occuperont le logement, vous y compris.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <input type="number" id="ptz-household-size" min="1" value="1" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                            </div>
-                            
-                            <!-- Coût total de l'opération -->
-                            <div class="mb-4">
-                                <label class="loan-option-label">
-                                    Coût total de l'opération (TTC)
-                                    <span class="loan-option-info cursor-help" title="Indiquez le coût total de votre acquisition, incluant le prix d'achat et les travaux éventuels.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <input type="number" id="ptz-total-cost" placeholder="Ex: 200000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                            </div>
-                            
-                            <!-- Bouton de simulation -->
-                            <button id="calculate-ptz-button" class="loan-action-button w-full mt-6">
-                                <i class="fas fa-play-circle mr-2"></i> 
-                                Simuler le PTZ
-                            </button>
-                        </div>
-                        
-                        <!-- Résultats du PTZ -->
-                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                            <h4 class="text-xl font-semibold mb-4 flex items-center">
-                                <i class="fas fa-chart-line text-green-400 mr-2"></i>
-                                Résultats de la simulation PTZ
-                            </h4>
-                            
-                            <div id="ptz-results-container">
-                                <div class="text-center py-8">
-                                    <i class="fas fa-hand-point-left text-3xl text-gray-500 mb-4"></i>
-                                    <p class="text-gray-400">Veuillez renseigner les paramètres et cliquer sur "Simuler le PTZ" pour obtenir une estimation de votre prêt à taux zéro.</p>
-                                </div>
-                            </div>
-                            
-                            <button id="integrate-ptz-to-loan" class="loan-action-button w-full mt-6 hidden">
-                                <i class="fas fa-link mr-2"></i> 
-                                Intégrer ce PTZ à mon prêt principal
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Résultats combinés prêt principal + PTZ -->
-                    <div id="combined-loan-ptz-results" class="hidden"></div>
-                    
-                    <!-- Tableau comparatif -->
-                    <div class="mt-8 bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h4 class="text-xl font-semibold mb-4 flex items-center">
-                            <i class="fas fa-table text-green-400 mr-2"></i>
-                            Comparatif des différents types de PTZ
-                        </h4>
-                        
-                        <div class="overflow-x-auto">
-                            <table id="ptz-comparison-table" class="min-w-full text-sm">
-                                <thead class="bg-blue-900 bg-opacity-50">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left">Critère</th>
-                                        <th class="px-4 py-2 text-center">Logement neuf</th>
-                                        <th class="px-4 py-2 text-center">Logement ancien avec travaux</th>
-                                        <th class="px-4 py-2 text-center">Logement social occupé</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Le contenu sera généré par JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <!-- Section informative -->
-                    <div class="mt-8 bg-green-900 bg-opacity-20 p-6 rounded-lg">
-                        <h4 class="text-xl font-semibold mb-4 flex items-center">
-                            <i class="fas fa-info-circle text-green-400 mr-2"></i>
-                            Informations importantes sur le PTZ
-                        </h4>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h5 class="text-lg font-semibold text-green-400 mb-2">Avantages du PTZ</h5>
-                                <ul class="space-y-2 ml-4">
-                                    <li class="flex items-start">
-                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                                        <span>Prêt sans intérêts ni frais de dossier</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                                        <span>Possibilité de différé de remboursement jusqu'à 15 ans selon les revenus</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                                        <span>Peut représenter jusqu'à 50% du coût de l'opération</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                                        <span>Compatible avec d'autres aides (PAS, prêt Action Logement, etc.)</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            
-                            <div>
-                                <h5 class="text-lg font-semibold text-green-400 mb-2">Conditions principales</h5>
-                                <ul class="space-y-2 ml-4">
-                                    <li class="flex items-start">
-                                        <i class="fas fa-exclamation-circle text-amber-400 mr-2 mt-1"></i>
-                                        <span>Ne pas avoir été propriétaire de sa résidence principale au cours des 2 dernières années</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-exclamation-circle text-amber-400 mr-2 mt-1"></i>
-                                        <span>Respect des plafonds de ressources selon la zone</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-exclamation-circle text-amber-400 mr-2 mt-1"></i>
-                                        <span>Le logement doit être votre résidence principale (occupation min. 8 mois/an)</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-exclamation-circle text-amber-400 mr-2 mt-1"></i>
-                                        <span>Ne peut être accordé qu'un seul PTZ par opération immobilière</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6 text-center">
-                            <p class="text-sm text-gray-400">
-                                Les simulations réalisées sont données à titre indicatif et n'engagent pas les établissements financiers.
-                                Consultez votre banque pour une offre de prêt personnalisée.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bannière de guide des placements -->
-            <div class="bg-gradient-to-r from-blue-900 to-green-900 bg-opacity-30 rounded-xl p-6 mt-10 mb-10">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div class="flex-1 text-left">
-                        <h3 class="text-xl font-bold text-green-400 mb-2 flex items-center">
-                            <i class="fas fa-book mr-2"></i>
-                            Guide complet des placements financiers
-                        </h3>
-                        <p class="text-gray-300">Découvrez notre comparatif interactif de tous les types de placements (PEA, Assurance-vie, SCPI, etc.) et apprenez comment optimiser votre stratégie d'investissement selon votre profil.</p>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <a href="guide-placements.html" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition-all hover:-translate-y-1 duration-300 flex items-center whitespace-nowrap shadow-lg hover:shadow-green-400/30">
-                            <i class="fas fa-external-link-alt mr-2"></i> Consulter le guide
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Scénarios & Formations -->
-            <div class="mt-12">
-                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
-                    <i class="fas fa-lightbulb mr-3"></i>
-                    Scénarios et formations
-                </h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Analyses de scénarios -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-flask mr-2"></i>
-                            Analyse de scénarios
-                        </h3>
-                        
-                        <div class="scenario-block">
-                            <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
-                            <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-krach">
-                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
-                        
-                        <div class="scenario-block">
-                            <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
-                            <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-progressif">
-                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Formations recommandées -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-graduation-cap mr-2"></i>
-                            Formations recommandées
-                        </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-chart-line text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">L'effet des intérêts composés</h4>
-                                    <p class="text-xs text-gray-400">12 min de lecture</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-file-invoice-dollar text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">Choisir le bon véhicule fiscal</h4>
-                                    <p class="text-xs text-gray-400">15 min de lecture</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-balance-scale text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">Répartition d'actifs: principes</h4>
-                                    <p class="text-xs text-gray-400">18 min de lecture</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Questions fréquentes -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-question-circle mr-2"></i>
-                            Questions fréquentes
-                        </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Comment estimer le rendement ?</h4>
-                                <p class="text-sm text-gray-300">Le rendement dépend de l'actif. Pour les indices boursiers, 7-10% est une estimation historique raisonnable sur le long terme.</p>
-                            </div>
-                            
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Quelle durée d'investissement privilégier ?</h4>
-                                <p class="text-sm text-gray-300">Plus la durée est longue, plus l'effet des intérêts composés est puissant. Pour les actions, un horizon de 8-10 ans minimum est recommandé.</p>
-                            </div>
-                            
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Quelle enveloppe choisir pour quel objectif ?</h4>
-                                <p class="text-sm text-gray-300">PEA pour les investissements en actions sur le long terme, Assurance-vie pour la flexibilité, PER pour la retraite.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Theme toggle -->
-    <div class="theme-toggle">
-        <button class="theme-toggle-btn">
-            <i class="fas fa-moon"></i>
-        </button>
-    </div>
-
-    <!-- Scripts essentiels -->
-    <script type="module" src="js/simulation.js"></script>
-    <script type="module" src="js/fiscal-optimizer.js"></script>
-    <script type="module" src="js/budget-epargne.js"></script>
-    <script type="module" src="js/loan-simulator.js"></script>
-    <script type="module" src="js/ptz-simulator.js"></script>
-    <!-- Scripts avancés -->
-    <script src="js/simulation-enhancements.js"></script>
-    <script src="js/simulation-fixes.js"></script>
-    <!-- Script de gestion des thèmes -->
-    <script>
-        // Mise à jour de l'heure
-        function updateTime() {
-            const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            
-            const timeElement = document.getElementById('marketTime');
-            if (timeElement) {
-                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-        }
-
-        // Mettre à jour l'heure toutes les secondes
-        setInterval(updateTime, 1000);
-        updateTime(); // Initialiser immédiatement
-
-        // Toggle theme (placeholder)
-        document.querySelector('.theme-toggle-btn')?.addEventListener('click', function() {
-            console.log('Theme toggle clicked');
-        });
-    </script>
-</body>
-</html>
-
-            <!-- Scénarios & Formations -->
-            <div class="mt-12">
-                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
-                    <i class="fas fa-lightbulb mr-3"></i>
-                    Scénarios et formations
-                </h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Analyses de scénarios -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-flask mr-2"></i>
-                            Analyse de scénarios
-                        </h3>
-                        
-                        <div class="scenario-block">
-                            <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
-                            <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-krach">
-                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
-                        
-                        <div class="scenario-block">
-                            <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
-                            <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
-                            <button class="text-green-400 text-sm font-medium flex items-center btn-scenario-progressif">
-                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Formations recommandées -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-graduation-cap mr-2"></i>
-                            Formations recommandées
-                        </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-chart-line text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">L'effet des intérêts composés</h4>
-                                    <p class="text-xs text-gray-400">12 min de lecture</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-file-invoice-dollar text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">Choisir le bon véhicule fiscal</h4>
-                                    <p class="text-xs text-gray-400">15 min de lecture</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-balance-scale text-green-400"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">Répartition d'actifs: principes</h4>
-                                    <p class="text-xs text-gray-400">18 min de lecture</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Questions fréquentes -->
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
-                            <i class="fas fa-question-circle mr-2"></i>
-                            Questions fréquentes
-                        </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Comment estimer le rendement ?</h4>
-                                <p class="text-sm text-gray-300">Le rendement dépend de l'actif. Pour les indices boursiers, 7-10% est une estimation historique raisonnable sur le long terme.</p>
-                            </div>
-                            
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Quelle durée d'investissement privilégier ?</h4>
-                                <p class="text-sm text-gray-300">Plus la durée est longue, plus l'effet des intérêts composés est puissant. Pour les actions, un horizon de 8-10 ans minimum est recommandé.</p>
-                            </div>
-                            
-                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
-                                <h4 class="font-medium mb-1">Quelle enveloppe choisir pour quel objectif ?</h4>
-                                <p class="text-sm text-gray-300">PEA pour les investissements en actions sur le long terme, Assurance-vie pour la flexibilité, PER pour la retraite.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Theme toggle -->
-    <div class="theme-toggle">
-        <button class="theme-toggle-btn">
-            <i class="fas fa-moon"></i>
-        </button>
-    </div>
-
-    <!-- Scripts essentiels -->
-    <script type="module" src="js/simulation.js"></script>
-    <script type="module" src="js/fiscal-optimizer.js"></script>
-    <script type="module" src="js/budget-epargne.js"></script>
-    <script type="module" src="js/loan-simulator.js"></script>
-    <script type="module" src="js/ptz-simulator.js"></script>
-    <!-- Scripts avancés -->
-    <script src="js/simulation-enhancements.js"></script>
-    <script src="js/simulation-fixes.js"></script>
-    <!-- Script de gestion des thèmes -->
-    <script>
-        // Mise à jour de l'heure
-        function updateTime() {
-            const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            
-            const timeElement = document.getElementById('marketTime');
-            if (timeElement) {
-                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-        }
-
-        // Mettre à jour l'heure toutes les secondes
-        setInterval(updateTime, 1000);
-        updateTime(); // Initialiser immédiatement
-
-        // Toggle theme (placeholder)
-        document.querySelector('.theme-toggle-btn')?.addEventListener('click', function() {
-            console.log('Theme toggle clicked');
-        });
-    </script>
-</body>
-</html>
+                                    <div class="text-
