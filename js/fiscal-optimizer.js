@@ -3,7 +3,7 @@
  * Ce module gère toute la logique de simulation fiscale, calcul de dépenses et allocation d'actifs
  * TradePulse Finance Intelligence Platform
  * 
- * Version 2.1 - Interface V1 "Les Échos" avec tableau comparatif 3 scénarios
+ * Version 2.2 - Ajout projection plafonds année suivante + affichage plafond N explicite
  */
 
 // Structure principale du module (Pattern Module pour encapsulation)
@@ -203,7 +203,7 @@ const PatrimoineSimulator = (function() {
      * Inclut le plancher et le plafond légal + les reports N-1/N-2/N-3
      * @param {number} revenuProNet - Revenus professionnels nets (après charges & frais)
      * @param {Object} plafondsReportables - Plafonds restants N-1 / N-2 / N-3
-     * @returns {Object} { plafondN, plafondsParAnnee, totalDisponible }
+     * @returns {Object} { plafondN, plafondsParAnnee, totalDisponible, totalReports }
      */
     function calculerPlafondsPER(revenuProNet, plafondsReportables = null) {
         const reportables = plafondsReportables || state.perPlafondsReportables;
@@ -226,11 +226,13 @@ const PatrimoineSimulator = (function() {
             n:  plafondN
         };
         
-        // Total disponible = somme de tous les plafonds
-        const totalDisponible = Object.values(plafondsParAnnee)
-            .reduce((a, b) => a + b, 0);
+        // Total des reports (hors année N)
+        const totalReports = plafondsParAnnee.n3 + plafondsParAnnee.n2 + plafondsParAnnee.n1;
         
-        return { plafondN, plafondsParAnnee, totalDisponible };
+        // Total disponible = somme de tous les plafonds
+        const totalDisponible = totalReports + plafondN;
+        
+        return { plafondN, plafondsParAnnee, totalDisponible, totalReports };
     }
 
     /**
@@ -238,11 +240,12 @@ const PatrimoineSimulator = (function() {
      * Consommation FIFO : N-3 d'abord (le plus ancien), puis N-2, N-1, N
      * @param {number} montant - Versement PER total
      * @param {Object} plafondsParAnnee - { n3, n2, n1, n }
-     * @returns {Object} { utilisation, perDeductible, perNonDeductible }
+     * @returns {Object} { utilisation, perDeductible, perNonDeductible, plafondsRestants }
      */
     function allouerVersementPER(montant, plafondsParAnnee) {
         const ordre = ['n3', 'n2', 'n1', 'n']; // FIFO : on consomme l'ancien d'abord
         const utilisation = { n3: 0, n2: 0, n1: 0, n: 0 };
+        const plafondsRestants = { n3: 0, n2: 0, n1: 0, n: 0 };
         
         let restant = montant;
         
@@ -257,10 +260,31 @@ const PatrimoineSimulator = (function() {
             restant -= utilise;
         }
         
+        // Calculer les plafonds restants après versement
+        for (const annee of ordre) {
+            plafondsRestants[annee] = Math.max(0, (plafondsParAnnee[annee] || 0) - (utilisation[annee] || 0));
+        }
+        
         const perDeductible = montant - restant;  // Part qui rentre dans les plafonds
         const perNonDeductible = restant;         // Part au-delà des plafonds
         
-        return { utilisation, perDeductible, perNonDeductible };
+        return { utilisation, perDeductible, perNonDeductible, plafondsRestants };
+    }
+
+    /**
+     * Calcule les plafonds reportables pour l'année suivante
+     * N-3 de l'an prochain = N-2 restant de cette année
+     * N-2 de l'an prochain = N-1 restant de cette année
+     * N-1 de l'an prochain = N restant de cette année
+     * @param {Object} plafondsRestants - Plafonds restants après versement { n3, n2, n1, n }
+     * @returns {Object} { n3, n2, n1 } pour l'année suivante
+     */
+    function calculerPlafondsAnneeProchaine(plafondsRestants) {
+        return {
+            n3: plafondsRestants.n2 || 0,  // L'actuel N-2 devient le futur N-3
+            n2: plafondsRestants.n1 || 0,  // L'actuel N-1 devient le futur N-2
+            n1: plafondsRestants.n || 0    // L'actuel N devient le futur N-1
+        };
     }
 
     /**
@@ -268,7 +292,7 @@ const PatrimoineSimulator = (function() {
      * @param {number} revenuImposable - Revenu net imposable avant PER
      * @param {Object} plafondsReportables - Plafonds N-1 / N-2 / N-3
      * @param {number} nbParts - Nombre de parts fiscales (optionnel)
-     * @returns {Object} { versementOptimal, nouvelleTMI, allocationParAnnee, economieImpot }
+     * @returns {Object} { versementOptimal, nouvelleTMI, allocationParAnnee, economieImpot, plafondsRestants, plafondsAnneeProchaine }
      */
     function calculerVersementOptimalPourChangerTranche(revenuImposable, plafondsReportables = null, nbParts = null) {
         const reportables = plafondsReportables || state.perPlafondsReportables;
@@ -287,6 +311,7 @@ const PatrimoineSimulator = (function() {
         
         // Déjà dans la tranche à 0% ou 11% => pas d'optimisation intéressante
         if (trancheIndex <= 1) {
+            const plafondsRestants = { ...plafondsParAnnee };
             return {
                 versementOptimal: 0,
                 nouvelleTMI: trancheIndex === 0 ? 0 : 11,
@@ -295,6 +320,8 @@ const PatrimoineSimulator = (function() {
                 totalPlafondDisponible: totalDisponible,
                 economieImpot: 0,
                 peutChangerTranche: false,
+                plafondsRestants,
+                plafondsAnneeProchaine: calculerPlafondsAnneeProchaine(plafondsRestants),
                 message: trancheIndex === 0 
                     ? "Vous êtes déjà dans la tranche à 0%, pas besoin de versement PER pour optimisation fiscale."
                     : "Vous êtes dans la tranche à 11%, descendre à 0% n'est généralement pas optimal."
@@ -313,7 +340,7 @@ const PatrimoineSimulator = (function() {
         const versementOptimal = Math.min(montantTotalNecessaire, totalDisponible);
         
         // Répartition du versement sur les plafonds
-        const { utilisation, perDeductible } = allouerVersementPER(versementOptimal, plafondsParAnnee);
+        const { utilisation, perDeductible, plafondsRestants } = allouerVersementPER(versementOptimal, plafondsParAnnee);
         
         // Calcul de la nouvelle TMI
         const nouveauRevenuImposable = revenuImposable - perDeductible;
@@ -326,6 +353,9 @@ const PatrimoineSimulator = (function() {
         
         const peutChangerTranche = versementOptimal >= montantTotalNecessaire;
         
+        // Projection des plafonds pour l'année suivante
+        const plafondsAnneeProchaine = calculerPlafondsAnneeProchaine(plafondsRestants);
+        
         return {
             versementOptimal: Math.round(versementOptimal),
             nouvelleTMI,
@@ -334,6 +364,8 @@ const PatrimoineSimulator = (function() {
             totalPlafondDisponible: totalDisponible,
             economieImpot: Math.round(economieImpot),
             peutChangerTranche,
+            plafondsRestants,
+            plafondsAnneeProchaine,
             message: peutChangerTranche 
                 ? `En versant ${Math.round(versementOptimal).toLocaleString('fr-FR')} €, vous passez de la TMI ${ancienneTMI}% à ${nouvelleTMI}%.`
                 : `Plafond insuffisant pour sortir complètement de la tranche ${ancienneTMI}%. Versement max: ${Math.round(totalDisponible).toLocaleString('fr-FR')} €`
@@ -376,19 +408,11 @@ const PatrimoineSimulator = (function() {
         const perVersement = state.revenuBrut * state.perPourcentage;
         
         // Répartition du versement sur les plafonds disponibles (FIFO)
-        const { utilisation, perDeductible, perNonDeductible } = 
+        const { utilisation, perDeductible, perNonDeductible, plafondsRestants } = 
             allouerVersementPER(perVersement, plafondsParAnnee);
         
         // Revenu imposable après déduction PER
         const netImposableAvecPER = netImposableSansPER - perDeductible;
-        
-        // Calcul des plafonds restants après versement
-        const plafondsRestants = {};
-        Object.keys(plafondsParAnnee).forEach(annee => {
-            plafondsRestants[annee] = Math.max(0, 
-                (plafondsParAnnee[annee] || 0) - (utilisation[annee] || 0)
-            );
-        });
         
         // Calculs d'impôts selon les tranches (avec quotient familial)
         const impotSansPER = calculerImpot(netImposableSansPER);
@@ -666,6 +690,7 @@ const PatrimoineSimulator = (function() {
         calculerPlafondsPER,
         allouerVersementPER,
         calculerVersementOptimalPourChangerTranche,
+        calculerPlafondsAnneeProchaine,
         getConstantesPER,
         getTranchesImpot,
         // Exporter l'état actuel (pour inspection et debugging)
@@ -685,10 +710,10 @@ function formatMontant(n) {
 }
 
 /**
- * Fonction utilitaire de formatage des pourcentages
+ * Fonction utilitaire de formatage des pourcentages (sans décimale)
  */
 function formatPct(n) {
-    return `${n.toFixed(1)} %`;
+    return `${Math.round(n)} %`;
 }
 
 /**
@@ -702,10 +727,10 @@ function runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perV
     
     // On ne reset pas le state global, on fait un calcul isolé
     const revenuProNet = revenuBrut * (1 - tauxCharges);
-    const { plafondN, plafondsParAnnee, totalDisponible } = 
+    const { plafondN, plafondsParAnnee, totalDisponible, totalReports } = 
         PatrimoineSimulator.calculerPlafondsPER(revenuProNet, plafondsReportables);
     
-    const { utilisation, perDeductible, perNonDeductible } = 
+    const { utilisation, perDeductible, perNonDeductible, plafondsRestants } = 
         PatrimoineSimulator.allouerVersementPER(perVersement, plafondsParAnnee);
     
     const netImposableSansPER = revenuProNet;
@@ -713,6 +738,9 @@ function runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perV
     
     const impotSansPER = PatrimoineSimulator.calculerImpot(netImposableSansPER, nbParts);
     const impotAvecPER = PatrimoineSimulator.calculerImpot(netImposableAvecPER, nbParts);
+    
+    // Projection année prochaine
+    const plafondsAnneeProchaine = PatrimoineSimulator.calculerPlafondsAnneeProchaine(plafondsRestants);
     
     return {
         revenuProNet,
@@ -726,8 +754,11 @@ function runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perV
         perNonDeductible,
         plafondN,
         plafondTotal: totalDisponible,
+        totalReports,
         utilisation,
         plafondsParAnnee,
+        plafondsRestants,
+        plafondsAnneeProchaine,
         tmiAvant: PatrimoineSimulator.getTauxMarginal(netImposableSansPER, nbParts),
         tmiApres: PatrimoineSimulator.getTauxMarginal(netImposableAvecPER, nbParts)
     };
@@ -764,6 +795,9 @@ function afficherSynthesePER() {
 
     const statut = statutSelect?.value || 'salarie';
     const nbParts = parseFloat(situationSelect?.value || '1');
+    
+    // Récupérer le label de situation familiale pour l'affichage
+    const situationLabel = situationSelect?.options[situationSelect.selectedIndex]?.text || '';
 
     const plafondsReportables = {
         n3: parseFloat(n3Input?.value?.replace(/\s/g, '') || '0') || 0,
@@ -788,7 +822,7 @@ function afficherSynthesePER() {
     // Calcul des données de base
     const tauxCharges = PatrimoineSimulator.getTauxCharges(statut);
     const revenuProNet = brut * (1 - tauxCharges);
-    const { plafondN, plafondsParAnnee, totalDisponible } = 
+    const { plafondN, plafondsParAnnee, totalDisponible, totalReports } = 
         PatrimoineSimulator.calculerPlafondsPER(revenuProNet, plafondsReportables);
 
     // ========== SCÉNARIO 1 : SANS PER ==========
@@ -816,6 +850,9 @@ function afficherSynthesePER() {
     let impotOptimal = impotAvant;
     let tmiApresOptimal = tmiAvant;
     let economieOptimal = 0;
+    let repartitionOptimal = { n3: 0, n2: 0, n1: 0, n: 0 };
+    let restOptimal = { n3: 0, n2: 0, n1: 0, n: 0 };
+    let nextYearOptimal = { n3: 0, n2: 0, n1: 0 };
 
     if (versementOptimal > 0) {
         scenOptimal = runScenarioPER({
@@ -828,6 +865,9 @@ function afficherSynthesePER() {
         impotOptimal = scenOptimal.impotAvecPER;
         tmiApresOptimal = scenOptimal.tmiApres;
         economieOptimal = impotAvant - impotOptimal;
+        repartitionOptimal = scenOptimal.utilisation;
+        restOptimal = scenOptimal.plafondsRestants;
+        nextYearOptimal = scenOptimal.plafondsAnneeProchaine;
     }
 
     // ========== SCÉNARIO 3 : MAXIMUM (tout le plafond) ==========
@@ -852,9 +892,6 @@ function afficherSynthesePER() {
 
     // Répartition sur les plafonds pour le scénario maximum
     const repartitionMax = scenMax.utilisation || { n3: 0, n2: 0, n1: 0, n: 0 };
-    
-    // Calcul du total des reports
-    const totalReports = plafondsReportables.n1 + plafondsReportables.n2 + plafondsReportables.n3;
 
     // Récupération des constantes
     const constantes = PatrimoineSimulator.getConstantesPER();
@@ -865,9 +902,12 @@ function afficherSynthesePER() {
 
         <!-- SYNTHÈSE -->
         <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5">
-          <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="text-lg font-semibold text-white mb-1 flex items-center gap-2">
             <span class="text-emerald-400">📊</span> Synthèse de votre situation
           </h3>
+          <p class="text-xs text-slate-400 mb-4">
+            ${situationLabel ? `${situationLabel} – ` : ''}Salaire brut : ${formatMontant(brut)} €
+          </p>
           <div class="grid md:grid-cols-3 gap-4 text-sm">
             <div class="bg-slate-800/50 rounded-lg p-3">
               <p class="text-slate-400 mb-1">Revenu imposable estimé</p>
@@ -878,13 +918,15 @@ function afficherSynthesePER() {
               <p class="text-xl font-bold ${tmiAvant >= 30 ? 'text-orange-400' : 'text-white'}">${formatPct(tmiAvant)}</p>
             </div>
             <div class="bg-slate-800/50 rounded-lg p-3">
-              <p class="text-slate-400 mb-1">Plafond PER total disponible</p>
+              <p class="text-slate-400 mb-1">Plafonds PER</p>
               <p class="text-xl font-bold text-emerald-400">${formatMontant(totalDisponible)} €</p>
-              ${totalReports > 0 ? `
               <p class="text-xs text-slate-400 mt-1">
-                dont ${formatMontant(totalReports)} € de reports
+                ${formatMontant(plafondN)} € pour l'année en cours
+                ${totalReports > 0 
+                  ? ` + ${formatMontant(totalReports)} € de reports` 
+                  : ''
+                }
               </p>
-              ` : ''}
             </div>
           </div>
           
@@ -972,7 +1014,7 @@ function afficherSynthesePER() {
           </div>
         </div>
 
-        <!-- RÉPARTITION SUR LES PLAFONDS -->
+        <!-- RÉPARTITION SUR LES PLAFONDS (scénario max) -->
         ${versementMax > 0 ? `
         <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5">
           <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -1013,7 +1055,7 @@ function afficherSynthesePER() {
             <div class="flex items-center justify-between p-2 rounded-lg bg-emerald-900/20 border border-emerald-700/50">
               <div class="flex items-center gap-2">
                 <span class="text-emerald-400">📅</span>
-                <span class="text-slate-300">Année N (2024)</span>
+                <span class="text-slate-300">Année N (année en cours)</span>
               </div>
               <span class="font-medium text-emerald-300">${formatMontant(repartitionMax.n)} € / ${formatMontant(plafondN)} €</span>
             </div>
@@ -1023,10 +1065,54 @@ function afficherSynthesePER() {
             <i class="fas fa-lightbulb text-yellow-400 mr-1"></i>
             Les plafonds sont consommés du plus ancien au plus récent (N-3 → N-2 → N-1 → N)
           </div>
+          
+          ${plafondsReportables.n3 > 0 ? `
+          <p class="mt-2 text-xs text-amber-400">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            À utiliser en priorité avant fin 2025 (plafond N-3)
+          </p>
+          ` : ''}
+          
+          <!-- PROJECTION ANNÉE PROCHAINE (après versement optimal) -->
+          ${versementOptimal > 0 ? `
+          <div class="mt-5 border-t border-slate-700 pt-4">
+            <h4 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2">
+              <span>📅</span> Vos plafonds reportables l'an prochain
+              <span class="text-xs font-normal text-slate-400">(après versement optimal)</span>
+            </h4>
+            <p class="text-xs text-slate-400 mb-3">
+              Hypothèse : règles de report inchangées et revenus similaires.
+            </p>
+            <div class="grid md:grid-cols-3 gap-3 text-sm">
+              <div class="bg-slate-800/70 rounded-lg px-3 py-2">
+                <p class="text-slate-400 text-xs">N-3 (année prochaine)</p>
+                <p class="text-slate-200 font-semibold">${formatMontant(nextYearOptimal.n3)} €</p>
+                <p class="text-xs text-slate-500">← votre N-2 actuel restant</p>
+              </div>
+              <div class="bg-slate-800/70 rounded-lg px-3 py-2">
+                <p class="text-slate-400 text-xs">N-2 (année prochaine)</p>
+                <p class="text-slate-200 font-semibold">${formatMontant(nextYearOptimal.n2)} €</p>
+                <p class="text-xs text-slate-500">← votre N-1 actuel restant</p>
+              </div>
+              <div class="bg-slate-800/70 rounded-lg px-3 py-2">
+                <p class="text-slate-400 text-xs">N-1 (année prochaine)</p>
+                <p class="text-slate-200 font-semibold">${formatMontant(nextYearOptimal.n1)} €</p>
+                <p class="text-xs text-slate-500">← votre N actuel restant</p>
+              </div>
+            </div>
+            
+            ${nextYearOptimal.n3 > 0 ? `
+            <div class="mt-3 p-2 bg-amber-900/20 border border-amber-700/50 rounded-lg text-xs text-amber-300">
+              <i class="fas fa-exclamation-triangle mr-1"></i>
+              Attention : l'an prochain, vous aurez ${formatMontant(nextYearOptimal.n3)} € de plafond N-3 qui périmeront fin de l'année suivante.
+            </div>
+            ` : ''}
+          </div>
+          ` : ''}
         </div>
         ` : ''}
 
-        <!-- RECOMMANDATION -->
+        <!-- RECOMMANDATION N-3 -->
         ${plafondsReportables.n3 > 0 ? `
         <div class="bg-amber-900/20 border border-amber-600/50 rounded-2xl p-5">
           <h3 class="text-lg font-semibold text-amber-300 mb-2 flex items-center gap-2">
