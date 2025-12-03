@@ -10,12 +10,16 @@ portfolio_engine/
 ├── universe.py           # Construction univers d'actifs scorés
 ├── factors.py            # Scoring multi-facteur configurable
 ├── optimizer.py          # Optimisation mean-variance sous contraintes
-└── llm_commentary.py     # Génération commentaires LLM (prompt compact)
+├── llm_commentary.py     # Génération commentaires LLM (prompt compact)
+└── README.md             # Ce fichier
 
 compliance/
 ├── __init__.py           # Exports compliance
 ├── amf.py                # Blocs disclaimers AMF
 └── sanitizer.py          # Nettoyage langage marketing
+
+generate_portfolios_v4.py # Orchestrateur simplifié (~300 lignes)
+generate_portfolios.py    # Ancien fichier (4000+ lignes, conservé pour compatibilité)
 ```
 
 ## Philosophie
@@ -25,9 +29,41 @@ compliance/
 
 Le moteur produit des portefeuilles reproductibles : mêmes données → mêmes poids.
 
+## Migration v3 → v4
+
+### Avant (generate_portfolios.py - 4000 lignes)
+```
+LLM décide tout → Allocations variables → Risque hallucination
+```
+
+### Après (generate_portfolios_v4.py - 300 lignes)
+```
+Python optimise → LLM commente → Reproductible
+```
+
+### Commandes de migration
+
+```bash
+# 1. Tester le nouveau moteur
+python generate_portfolios_v4.py
+
+# 2. Comparer les outputs
+diff data/portfolios.json data/portfolios_old.json
+
+# 3. Si OK, remplacer l'ancien
+mv generate_portfolios.py generate_portfolios_legacy.py
+mv generate_portfolios_v4.py generate_portfolios.py
+```
+
 ## Utilisation
 
-### Pipeline complet
+### Option 1 : Script direct (recommandé)
+
+```bash
+python generate_portfolios_v4.py
+```
+
+### Option 2 : Import modulaire
 
 ```python
 from portfolio_engine import (
@@ -36,9 +72,6 @@ from portfolio_engine import (
     PortfolioOptimizer,
     convert_universe_to_assets,
     PROFILES,
-    build_commentary_prompt,
-    generate_fallback_commentary,
-    merge_commentary_into_portfolios,
 )
 from compliance import sanitize_portfolio_output, generate_compliance_block
 
@@ -49,7 +82,7 @@ universe = load_and_build_universe(
     crypto_csv="data/filtered/Crypto_filtered_volatility.csv"
 )
 
-# 2. Optimiser pour chaque profil (SANS LLM)
+# 2. Optimiser pour chaque profil
 optimizer = PortfolioOptimizer()
 portfolios = {}
 
@@ -59,28 +92,17 @@ for profile in ["Agressif", "Modéré", "Stable"]:
     allocation, diagnostics = optimizer.build_portfolio(assets, profile)
     portfolios[profile] = {"allocation": allocation, "diagnostics": diagnostics}
 
-# 3. Générer commentaires (avec LLM ou fallback)
-commentary = generate_fallback_commentary(portfolios, assets)
-portfolios = merge_commentary_into_portfolios(portfolios, commentary)
-
-# 4. Sanitiser et ajouter compliance
+# 3. Appliquer compliance
 for profile in portfolios:
     portfolios[profile] = sanitize_portfolio_output(portfolios[profile])
-    portfolios[profile]["compliance"] = generate_compliance_block(
-        profile=profile,
-        vol_estimate=portfolios[profile]["diagnostics"]["portfolio_vol"],
-        crypto_exposure=sum(
-            w for aid, w in portfolios[profile]["allocation"].items() 
-            if "CRYPTO" in aid or "BTC" in aid or "ETH" in aid
-        )
-    )
+    portfolios[profile]["compliance"] = generate_compliance_block(profile=profile)
 ```
 
-### Avec LLM (OpenAI)
+### Option 3 : Avec commentaires LLM
 
 ```python
 from openai import OpenAI
-from portfolio_engine import generate_commentary_sync
+from portfolio_engine import generate_commentary_sync, merge_commentary_into_portfolios
 
 client = OpenAI()
 commentary = generate_commentary_sync(
@@ -90,9 +112,10 @@ commentary = generate_commentary_sync(
     openai_client=client,
     model="gpt-4o-mini"
 )
+portfolios = merge_commentary_into_portfolios(portfolios, commentary)
 ```
 
-## Modules
+## Modules détaillés
 
 ### `universe.py`
 
@@ -169,29 +192,73 @@ Nettoyage du langage marketing.
 ## Tests
 
 ```bash
-# Exécuter les tests
+# Tests unitaires
 python tests/test_portfolio_engine.py
 
 # Ou avec pytest
 python -m pytest tests/test_portfolio_engine.py -v
+
+# Test du pipeline complet
+python generate_portfolios_v4.py
 ```
 
 ## Comparaison avant/après
 
-| Aspect | Avant (v1) | Après (v2) |
-|--------|------------|------------|
+| Aspect | v3 (ancien) | v4 (nouveau) |
+|--------|-------------|--------------|
 | Décision poids | LLM | Python (déterministe) |
 | Prompt LLM | ~8000 tokens | ~1500 tokens |
 | Reproductibilité | ❌ Variable | ✅ Identique |
 | Contraintes | Post-validation | Par construction |
 | Fichier principal | 4000+ lignes | ~300 lignes |
+| Coût API | ~$0.08/call | ~$0.015/call |
+| Risque hallucination | Élevé | Zéro (poids) |
 
-## Prochaines étapes
+## Configuration
 
-- [x] `universe.py` - Construction univers
-- [x] `factors.py` - Scoring multi-facteur
-- [x] `optimizer.py` - Optimisation contraintes
-- [x] `llm_commentary.py` - Prompt compact
-- [x] `compliance/` - AMF + sanitizer
-- [ ] Refactorer `generate_portfolios.py` (Phase 5)
-- [ ] Backtest 90j pour validation (Phase 6)
+Variables d'environnement :
+
+```bash
+# Clé API OpenAI (optionnel - fallback sans LLM si absent)
+export API_CHAT="sk-..."
+# ou
+export OPENAI_API_KEY="sk-..."
+```
+
+## Structure des fichiers de sortie
+
+### `data/portfolios.json` (format v1 pour le front)
+
+```json
+{
+  "Agressif": {
+    "Commentaire": "...",
+    "Actions": {"Microsoft": "12%", "Apple": "10%"},
+    "ETF": {"Vanguard S&P 500": "20%"},
+    "Obligations": {"iShares Euro Govt": "15%"},
+    "Crypto": {"Bitcoin": "5%"}
+  },
+  "Modéré": {...},
+  "Stable": {...},
+  "_meta": {
+    "generated_at": "2025-12-03T14:00:00",
+    "version": "v4_deterministic_engine"
+  }
+}
+```
+
+### `data/portfolio_history/portfolios_v4_YYYYMMDD_HHMMSS.json`
+
+Archive complète avec diagnostics, allocations détaillées, compliance.
+
+## Roadmap
+
+- [x] `universe.py` - Construction univers (Phase 1)
+- [x] `factors.py` - Scoring multi-facteur (Phase 2)
+- [x] `optimizer.py` - Optimisation contraintes (Phase 3)
+- [x] `llm_commentary.py` - Prompt compact (Phase 4)
+- [x] `compliance/` - AMF + sanitizer (Phase 4)
+- [x] `generate_portfolios_v4.py` - Orchestrateur (Phase 5)
+- [ ] Backtest 90j pour validation (Phase 6 - optionnel)
+- [ ] Tests sur données réelles de production
+- [ ] Merge vers main après validation
