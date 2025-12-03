@@ -5,11 +5,12 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: 'Risk profile'
+        description: 'Risk profile (all = les 3)'
         required: true
-        default: 'Modéré'
+        default: 'all'
         type: choice
         options:
+          - all
           - Agressif
           - Modéré
           - Stable
@@ -50,16 +51,23 @@ jobs:
         env:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
         run: |
-          python run_backtest.py \
-            --profile "${{ github.event.inputs.profile }}" \
-            --freq "${{ github.event.inputs.frequency }}" \
-            --days ${{ github.event.inputs.days }} \
-            --output backtest_results.json
+          if [ "${{ github.event.inputs.profile }}" = "all" ]; then
+            python run_backtest.py \
+              --freq "${{ github.event.inputs.frequency }}" \
+              --days ${{ github.event.inputs.days }} \
+              --output backtest_results.json
+          else
+            python run_backtest.py \
+              --profile "${{ github.event.inputs.profile }}" \
+              --freq "${{ github.event.inputs.frequency }}" \
+              --days ${{ github.event.inputs.days }} \
+              --output backtest_results.json
+          fi
 
       - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: backtest-results-${{ github.event.inputs.profile }}-${{ github.run_number }}
+          name: backtest-${{ github.event.inputs.profile }}-${{ github.event.inputs.frequency }}-${{ github.event.inputs.days }}d
           path: backtest_results.json
           retention-days: 30
 
@@ -71,6 +79,35 @@ jobs:
           echo "**Frequency:** ${{ github.event.inputs.frequency }}" >> $GITHUB_STEP_SUMMARY
           echo "**Period:** ${{ github.event.inputs.days }} days" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
-          cat backtest_results.json | python -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d['stats'], indent=2))" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event.inputs.profile }}" = "all" ]; then
+            echo "### Comparison Table" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Agressif | Modéré | Stable |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+            
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("backtest_results.json") as f:
+              data = json.load(f)
+          
+          comp = data.get("comparison", {})
+          metrics = [
+              ("Total Return %", "total_return_pct"),
+              ("Volatility %", "volatility_pct"),
+              ("Sharpe Ratio", "sharpe_ratio"),
+              ("Max Drawdown %", "max_drawdown_pct"),
+          ]
+          
+          for label, key in metrics:
+              agg = comp.get("Agressif", {}).get(key, "N/A")
+              mod = comp.get("Modéré", {}).get(key, "N/A")
+              stb = comp.get("Stable", {}).get(key, "N/A")
+              print(f"| {label} | {agg} | {mod} | {stb} |")
+          EOF
+          else
+            echo "### Stats" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat backtest_results.json | python -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d.get('results',[{}])[0].get('stats', d.get('stats',{})), indent=2))" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
