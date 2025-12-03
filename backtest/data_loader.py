@@ -3,7 +3,9 @@
 Chargement des données de prix historiques via Twelve Data API.
 
 Documentation API: https://twelvedata.com/docs
-Rate limit free tier: 8 requests/minute, 800/day
+Plans:
+- Free: 8 requests/minute, 800/day
+- Ultra: pas de rate limit significatif
 """
 
 import os
@@ -25,10 +27,19 @@ class TwelveDataLoader:
     
     BASE_URL = "https://api.twelvedata.com"
     
-    def __init__(self, api_key: Optional[str] = None):
+    # Plans et leurs rate limits (requests/minute)
+    PLAN_LIMITS = {
+        "free": 8,
+        "basic": 30,
+        "pro": 120,
+        "ultra": 500,  # Pratiquement pas de limite
+    }
+    
+    def __init__(self, api_key: Optional[str] = None, plan: str = "ultra"):
         """
         Args:
             api_key: Clé API Twelve Data (ou variable env TWELVE_DATA_API)
+            plan: "free", "basic", "pro", "ultra" - détermine le rate limiting
         """
         self.api_key = api_key or os.environ.get("TWELVE_DATA_API")
         if not self.api_key:
@@ -37,13 +48,25 @@ class TwelveDataLoader:
                 "Set TWELVE_DATA_API environment variable or pass api_key."
             )
         
+        self.plan = plan.lower()
         self.session = requests.Session()
         self.last_request_time = 0
-        self.min_request_interval = 7.5  # 8 requests/minute = 1 every 7.5s
+        
+        # Calculer l'intervalle minimum entre requêtes
+        requests_per_minute = self.PLAN_LIMITS.get(self.plan, 8)
+        self.min_request_interval = 60.0 / requests_per_minute
+        
+        logger.info(f"TwelveData initialized with plan '{plan}' ({requests_per_minute} req/min)")
+        
         self._cache: Dict[str, pd.DataFrame] = {}
     
     def _rate_limit(self):
         """Respecter le rate limit de l'API."""
+        if self.plan == "ultra":
+            # Plan ultra: juste un petit délai pour éviter les erreurs
+            time.sleep(0.1)
+            return
+        
         elapsed = time.time() - self.last_request_time
         if elapsed < self.min_request_interval:
             sleep_time = self.min_request_interval - elapsed
@@ -166,7 +189,8 @@ def load_prices_for_backtest(
     config: dict,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None,
+    plan: str = "ultra"
 ) -> pd.DataFrame:
     """
     Charge les prix pour le backtest depuis la config.
@@ -176,6 +200,7 @@ def load_prices_for_backtest(
         start_date: Override date début (défaut: 90j avant aujourd'hui)
         end_date: Override date fin (défaut: aujourd'hui)
         api_key: Override clé API
+        plan: Plan Twelve Data ("free", "basic", "pro", "ultra")
     
     Returns:
         DataFrame des prix (colonnes = symboles, index = dates)
@@ -200,7 +225,7 @@ def load_prices_for_backtest(
     
     logger.info(f"Loading {len(symbols)} symbols from {start_date} to {end_date}")
     
-    loader = TwelveDataLoader(api_key=api_key)
+    loader = TwelveDataLoader(api_key=api_key, plan=plan)
     prices = loader.get_multiple_time_series(
         symbols=symbols,
         start_date=start_date,

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-generate_portfolios_v4.py - Orchestrateur simplifié
+generate_portfolios_v4.py - Orchestrateur complet
 
 Architecture v4 :
 - Python décide les poids (déterministe via portfolio_engine)
 - LLM génère uniquement les justifications (prompt compact)
 - Compliance AMF appliquée systématiquement
+- Backtest 90j intégré avec comparaison des 3 profils
 
-Fichier réduit de 4000 → ~300 lignes.
 """
 
 import os
@@ -15,7 +15,9 @@ import json
 import logging
 import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from datetime import timedelta
+import yaml
 
 # === Nouveaux modules ===
 from portfolio_engine import (
@@ -62,8 +64,13 @@ CONFIG = {
     "brief_paths": ["brief_ia.json", "./brief_ia.json", "data/brief_ia.json"],
     "output_path": "data/portfolios.json",
     "history_dir": "data/portfolio_history",
-    "use_llm": True,  # False = fallback commentaires sans LLM
+    "backtest_output": "data/backtest_results.json",
+    "config_path": "config/portfolio_config.yaml",
+    "use_llm": True,
     "llm_model": "gpt-4o-mini",
+    "run_backtest": True,  # Activer le backtest
+    "backtest_days": 90,
+    "backtest_freq": "M",  # Monthly
 }
 
 
@@ -76,6 +83,16 @@ def load_json_safe(path: str) -> Dict:
             return json.load(f)
     except Exception as e:
         logger.warning(f"Impossible de charger {path}: {e}")
+        return {}
+
+
+def load_yaml_config(path: str) -> Dict:
+    """Charge la configuration YAML."""
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        logger.warning(f"Impossible de charger config {path}: {e}")
         return {}
 
 
@@ -130,7 +147,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # 3. Optimiser pour chaque profil
     optimizer = PortfolioOptimizer()
     portfolios = {}
-    all_assets = []  # Pour le LLM
+    all_assets = []
     
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation profil {profile}...")
@@ -141,7 +158,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         # Convertir en objets Asset
         assets = convert_universe_to_assets(scored_universe)
         if not all_assets:
-            all_assets = assets  # Garder pour le LLM
+            all_assets = assets
         
         # Optimiser
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
@@ -171,7 +188,6 @@ def add_commentary(
     """
     logger.info("💬 Génération des commentaires...")
     
-    # Préparer les données pour le prompt
     portfolios_for_prompt = {
         profile: {
             "allocation": data["allocation"],
@@ -180,7 +196,6 @@ def add_commentary(
         for profile, data in portfolios.items()
     }
     
-    # Essayer le LLM
     if CONFIG["use_llm"]:
         try:
             api_key = os.environ.get("API_CHAT") or os.environ.get("OPENAI_API_KEY")
@@ -205,7 +220,6 @@ def add_commentary(
     else:
         commentary = generate_fallback_commentary(portfolios_for_prompt, assets)
     
-    # Fusionner
     return merge_commentary_into_portfolios(portfolios_for_prompt, commentary)
 
 
@@ -216,13 +230,9 @@ def apply_compliance(portfolios: Dict[str, Dict]) -> Dict[str, Dict]:
     logger.info("🛡️  Application compliance AMF...")
     
     for profile in portfolios:
-        # Sanitiser les textes
         portfolios[profile] = sanitize_portfolio_output(portfolios[profile])
         
-        # Générer le bloc compliance adapté
         diag = portfolios[profile].get("diagnostics", {})
-        
-        # Calculer l'exposition crypto
         allocation = portfolios[profile].get("allocation", {})
         crypto_exposure = sum(
             w for aid, w in allocation.items()
@@ -238,22 +248,174 @@ def apply_compliance(portfolios: Dict[str, Dict]) -> Dict[str, Dict]:
     return portfolios
 
 
+# ============= BACKTEST =============
+
+def run_backtest_all_profiles(config: Dict) -> Dict:
+    """
+    Exécute le backtest pour les 3 profils.
+    """
+    logger.info("\n" + "="*60)
+    logger.info("📈 BACKTEST - Validation historique")
+    logger.info("="*60)
+    
+    # Vérifier la clé API Twelve Data
+    api_key = os.environ.get("TWELVE_DATA_API")
+    if not api_key:
+        logger.warning("⚠️ TWELVE_DATA_API non définie, backtest ignoré")
+        return {"error": "TWELVE_DATA_API not set", "skipped": True}
+    
+    try:
+        from backtest import BacktestConfig, run_backtest, load_prices_for_backtest
+        from backtest.engine import print_backtest_report, compute_backtest_stats
+    except ImportError as e:
+        logger.error(f"❌ Import backtest failed: {e}")
+        return {"error": str(e), "skipped": True}
+    
+    # Charger la config YAML
+    yaml_config = load_yaml_config(CONFIG["config_path"])
+    if not yaml_config:
+        logger.warning("⚠️ Config YAML non trouvée, utilisation des défauts")
+        yaml_config = {"backtest": {"test_universe": {"stocks": ["AAPL", "MSFT", "GOOGL"]}}}
+    
+    # Dates
+    end_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.datetime.now() - timedelta(days=CONFIG["backtest_days"] + 30)).strftime("%Y-%m-%d")
+    backtest_start = (datetime.datetime.now() - timedelta(days=CONFIG["backtest_days"])).strftime("%Y-%m-%d")
+    
+    # Charger les prix UNE SEULE FOIS
+    logger.info(f"📥 Chargement des prix ({CONFIG['backtest_days']}j)...")
+    try:
+        prices = load_prices_for_backtest(
+            yaml_config,
+            start_date=start_date,
+            end_date=end_date,
+            api_key=api_key,
+            plan="ultra"  # Plan ultra = pas de rate limit
+        )
+        logger.info(f"✅ {len(prices.columns)} symboles, {len(prices)} jours")
+    except Exception as e:
+        logger.error(f"❌ Échec chargement prix: {e}")
+        return {"error": str(e), "skipped": True}
+    
+    # Exécuter les 3 profils
+    results = []
+    profiles = ["Agressif", "Modéré", "Stable"]
+    
+    for profile in profiles:
+        logger.info(f"\n⚙️  Backtest {profile}...")
+        
+        backtest_config = BacktestConfig(
+            profile=profile,
+            start_date=backtest_start,
+            end_date=end_date,
+            rebalance_freq=CONFIG["backtest_freq"],
+            transaction_cost_bp=yaml_config.get("backtest", {}).get("transaction_cost_bp", 10),
+            turnover_penalty=yaml_config.get("backtest", {}).get("turnover_penalty", 0.001),
+        )
+        
+        profile_config = yaml_config.get("profiles", {}).get(profile, {})
+        
+        try:
+            result = run_backtest(prices, backtest_config, profile_config)
+            print_backtest_report(result)
+            
+            results.append({
+                "profile": profile,
+                "success": True,
+                "stats": result.stats,
+                "equity_curve": {
+                    str(k.date()): round(v, 2)
+                    for k, v in result.equity_curve.items()
+                },
+            })
+        except Exception as e:
+            logger.error(f"❌ Backtest {profile} failed: {e}")
+            results.append({
+                "profile": profile,
+                "success": False,
+                "error": str(e),
+            })
+    
+    # Tableau comparatif
+    print_comparison_table(results)
+    
+    return {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "period_days": CONFIG["backtest_days"],
+        "frequency": CONFIG["backtest_freq"],
+        "symbols_count": len(prices.columns),
+        "results": results,
+        "comparison": {
+            r["profile"]: r.get("stats", {})
+            for r in results if r.get("success")
+        }
+    }
+
+
+def print_comparison_table(results: List[dict]):
+    """Affiche un tableau comparatif des 3 profils."""
+    print("\n" + "="*80)
+    print("📊 COMPARAISON DES 3 PROFILS")
+    print("="*80)
+    
+    print(f"\n{'Métrique':<25} | {'Agressif':>15} | {'Modéré':>15} | {'Stable':>15}")
+    print("-"*80)
+    
+    metrics = [
+        ("Total Return", "total_return_pct", "%"),
+        ("CAGR", "cagr_pct", "%"),
+        ("Volatility", "volatility_pct", "%"),
+        ("Sharpe Ratio", "sharpe_ratio", ""),
+        ("Max Drawdown", "max_drawdown_pct", "%"),
+        ("Turnover (annuel)", "turnover_annualized_pct", "%"),
+        ("Win Rate", "win_rate_pct", "%"),
+    ]
+    
+    by_profile = {r["profile"]: r.get("stats", {}) for r in results if r.get("success")}
+    
+    for label, key, suffix in metrics:
+        agg = by_profile.get("Agressif", {}).get(key, "N/A")
+        mod = by_profile.get("Modéré", {}).get(key, "N/A")
+        stb = by_profile.get("Stable", {}).get(key, "N/A")
+        
+        agg_str = f"{agg}{suffix}" if isinstance(agg, (int, float)) else str(agg)
+        mod_str = f"{mod}{suffix}" if isinstance(mod, (int, float)) else str(mod)
+        stb_str = f"{stb}{suffix}" if isinstance(stb, (int, float)) else str(stb)
+        
+        print(f"{label:<25} | {agg_str:>15} | {mod_str:>15} | {stb_str:>15}")
+    
+    print("="*80)
+    
+    # Verdict
+    print("\n🏆 VERDICT:")
+    
+    sharpes = [(r["profile"], r["stats"].get("sharpe_ratio", -999)) 
+               for r in results if r.get("success")]
+    if sharpes:
+        best = max(sharpes, key=lambda x: x[1])
+        print(f"   Meilleur Sharpe: {best[0]} ({best[1]:.2f})")
+    
+    returns = [(r["profile"], r["stats"].get("total_return_pct", -999)) 
+               for r in results if r.get("success")]
+    if returns:
+        best = max(returns, key=lambda x: x[1])
+        print(f"   Meilleur Return: {best[0]} ({best[1]:.2f}%)")
+    
+    dds = [(r["profile"], r["stats"].get("max_drawdown_pct", -999)) 
+           for r in results if r.get("success")]
+    if dds:
+        best = max(dds, key=lambda x: x[1])
+        print(f"   Meilleur Drawdown: {best[0]} ({best[1]:.2f}%)")
+    
+    print()
+
+
 # ============= NORMALISATION POUR LE FRONT =============
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
     Convertit le format interne vers le format v1 attendu par le front.
-    {
-        "Agressif": {
-            "Commentaire": "...",
-            "Actions": {"Nom": "X%"},
-            "ETF": {...},
-            "Obligations": {...},
-            "Crypto": {...}
-        }
-    }
     """
-    # Lookup asset_id -> infos
     asset_lookup = {}
     for a in assets:
         aid = a.id if hasattr(a, 'id') else a.get('id')
@@ -262,7 +424,6 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         asset_lookup[aid] = {"name": name, "category": category}
     
     def _category_v1(cat: str) -> str:
-        """Normalise la catégorie pour le front."""
         cat = (cat or "").lower()
         if "action" in cat or "equity" in cat or "stock" in cat:
             return "Actions"
@@ -292,7 +453,6 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             cat_v1 = _category_v1(info["category"])
             result[profile][cat_v1][name] = f"{int(round(weight))}%"
     
-    # Ajouter métadonnées
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
         "version": "v4_deterministic_engine",
@@ -304,11 +464,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
 # ============= SAUVEGARDE =============
 
 def save_portfolios(portfolios: Dict, assets: list):
-    """
-    Sauvegarde les portefeuilles :
-    - portfolios.json (format v1 pour le front)
-    - Archive v4 dans l'historique
-    """
+    """Sauvegarde les portefeuilles."""
     os.makedirs("data", exist_ok=True)
     os.makedirs(CONFIG["history_dir"], exist_ok=True)
     
@@ -335,10 +491,19 @@ def save_portfolios(portfolios: Dict, assets: list):
         json.dump(archive_data, f, ensure_ascii=False, indent=2)
     logger.info(f"✅ Archive: {archive_path}")
     
-    # 3. Récap
     for profile in ["Agressif", "Modéré", "Stable"]:
         n_assets = len(portfolios.get(profile, {}).get("allocation", {}))
         logger.info(f"   {profile}: {n_assets} lignes")
+
+
+def save_backtest_results(backtest_data: Dict):
+    """Sauvegarde les résultats du backtest."""
+    os.makedirs("data", exist_ok=True)
+    
+    output_path = CONFIG["backtest_output"]
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(backtest_data, f, ensure_ascii=False, indent=2, default=str)
+    logger.info(f"✅ Backtest sauvegardé: {output_path}")
 
 
 # ============= MAIN =============
@@ -346,7 +511,7 @@ def save_portfolios(portfolios: Dict, assets: list):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4 - Génération déterministe")
+    logger.info("🚀 Portfolio Engine v4 - Génération + Backtest")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -361,16 +526,32 @@ def main():
     # 4. Appliquer compliance AMF
     portfolios = apply_compliance(portfolios)
     
-    # 5. Sauvegarder
+    # 5. Sauvegarder les portfolios
     save_portfolios(portfolios, assets)
     
-    logger.info("=" * 60)
+    # 6. Backtest (si activé)
+    backtest_results = None
+    if CONFIG["run_backtest"]:
+        yaml_config = load_yaml_config(CONFIG["config_path"])
+        backtest_results = run_backtest_all_profiles(yaml_config)
+        
+        if not backtest_results.get("skipped"):
+            save_backtest_results(backtest_results)
+    
+    # 7. Résumé final
+    logger.info("\n" + "=" * 60)
     logger.info("✨ Génération terminée avec succès!")
     logger.info("=" * 60)
+    logger.info("Fichiers générés:")
+    logger.info(f"   • {CONFIG['output_path']} (portfolios)")
+    if backtest_results and not backtest_results.get("skipped"):
+        logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
+    logger.info("")
     logger.info("Fonctionnalités v4:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
-    logger.info("   • Prompt LLM réduit ~1500 tokens (vs ~8000)")
+    logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
+    logger.info("   • Backtest 90j intégré")
     logger.info("   • Reproductibilité garantie")
 
 
