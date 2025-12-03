@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles
+name: Génération des Portefeuilles v4
 
 on:
   push:
@@ -28,24 +28,22 @@ jobs:
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.11"
           cache: "pip"
 
       - name: 📦 Installer les dépendances
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy requests beautifulsoup4 lxml
+          pip install pandas numpy scipy requests beautifulsoup4 lxml openai
 
-      - name: 🚀 Exécuter le script
-        run: python generate_portfolios.py
+      - name: 🚀 Exécuter le moteur v4
+        run: python generate_portfolios_v4.py
 
-      - name: 🧾 Check outputs (optionnel)
+      - name: 🧾 Check outputs
         if: always()
         run: |
           echo "== data =="
           ls -lah data || true
-          echo "----"
-          [ -f data/portfolio_explanations.json ] && head -n 30 data/portfolio_explanations.json || true
           echo "----"
           if [ -f data/portfolios.json ]; then
             echo "SHA1 portfolios.json:"
@@ -54,44 +52,35 @@ jobs:
             stat data/portfolios.json || true
             echo "----"
             echo "CONTENU (premières lignes) :"
-            sed -n '1,200p' data/portfolios.json || true
+            sed -n '1,100p' data/portfolios.json || true
           else
             echo "portfolios.json ABSENT"
           fi
           echo "----"
+          echo "== portfolio_history =="
           ls -lah data/portfolio_history || true
-          echo "== debug/prompts =="
-          ls -lah debug/prompts || true
+          echo "----"
+          echo "Dernier fichier v4 :"
+          ls -t data/portfolio_history/portfolios_v4_*.json 2>/dev/null | head -1 | xargs cat 2>/dev/null | head -50 || true
 
       - name: 💾 Commit & push
         if: always()
         run: |
-          # Ajouter précisément les artefacts générés
+          # Ajouter les artefacts générés
           git add data/portfolios.json \
-                  data/portfolio_explanations.json \
-                  data/portfolio_explanations.md \
-                  data/portfolio_history/* \
-                  data/portfolio_history/index.json \
-                  debug/prompts/* || true
+                  data/portfolio_history/* || true
 
-          # Si .gitignore les filtre, forcer l’ajout
+          # Si .gitignore les filtre, forcer l'ajout
           if git check-ignore -q data/portfolios.json; then
             git add -f data/portfolios.json
           fi
-          if git check-ignore -q data/portfolio_explanations.json; then
-            git add -f data/portfolio_explanations.json data/portfolio_explanations.md
-          fi
           if git check-ignore -q data/portfolio_history; then
-            git add -f data/portfolio_history/*.json data/portfolio_history/index.json || true
-          fi
-          if git check-ignore -q debug/prompts; then
-            git add -f debug/prompts/* || true
+            git add -f data/portfolio_history/*.json || true
           fi
 
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -m "📄 Explications + portefeuilles" || echo "rien à committer"
+              commit -m "📊 Portefeuilles v4 (déterministe)" || echo "rien à committer"
 
           # Push simple; si ça échoue pour divergence, tenter un rebase rapide
           git push || (git pull --rebase && git push)
-
