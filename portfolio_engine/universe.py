@@ -11,7 +11,7 @@ import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from collections import defaultdict
 
 logger = logging.getLogger("portfolio_engine.universe")
@@ -209,7 +209,7 @@ def compute_scores(
     mom = zscore(mom_raw)
     
     # --- Risque (vol_3y + drawdown) ---
-    vol = [fnum(r.get("vol_3y") or r.get("vol30") or r.get("volatility_3y")) for r in rows]
+    vol = [fnum(r.get("vol_3y") or r.get("vol30") or r.get("volatility_3y") or r.get("vol")) for r in rows]
     
     # Enrichir avec vol empirique si disponible
     if returns_series:
@@ -221,7 +221,7 @@ def compute_scores(
     
     risk_vol = zscore(vol)
     
-    dd = [abs(fnum(r.get("maxdd90") or r.get("max_drawdown_ytd"))) for r in rows]
+    dd = [abs(fnum(r.get("maxdd90") or r.get("max_drawdown_ytd") or r.get("max_dd"))) for r in rows]
     risk_dd = zscore(dd) if any(dd) else np.zeros(n)
     
     # --- Sur-extension (flag) ---
@@ -252,11 +252,15 @@ def compute_scores(
         v = vol[i] if vol[i] > 0 else 20
         
         if asset_type == "etf":
-            r["risk_class"] = "low" if 8 <= v <= 20 else ("mid" if 20 < v <= 40 else "high")
+            r["risk_class"] = "low" if 5 <= v <= 20 else ("mid" if 20 < v <= 40 else "high")
         elif asset_type == "equity":
-            r["risk_class"] = "low" if 12 <= v <= 25 else ("mid" if 25 < v <= 45 else "high")
+            r["risk_class"] = "low" if 10 <= v <= 25 else ("mid" if 25 < v <= 45 else "high")
         else:  # crypto
             r["risk_class"] = "low" if 40 <= v <= 70 else ("mid" if 70 < v <= 120 else "high")
+        
+        # Ajouter category si manquante
+        if "category" not in r:
+            r["category"] = asset_type
     
     return rows
 
@@ -266,10 +270,11 @@ def compute_scores(
 def filter_equities(rows: List[dict]) -> List[dict]:
     """Filtre les actions selon critères de risque."""
     def is_valid(r):
-        v = fnum(r.get("vol_3y"))
-        dd = abs(fnum(r.get("max_drawdown_ytd") or r.get("maxdd90")))
+        v = fnum(r.get("vol_3y") or r.get("vol"))
+        dd = abs(fnum(r.get("max_drawdown_ytd") or r.get("maxdd90") or r.get("max_dd")))
         overext = r.get("flags", {}).get("overextended", False)
-        return 12 <= v <= 60 and dd <= 30 and not overext
+        # Critères assouplis pour permettre plus d'actifs
+        return 8 <= v <= 70 and dd <= 40 and not overext
     
     filtered = [r for r in rows if is_valid(r)]
     logger.info(f"Actions filtrées: {len(filtered)}/{len(rows)}")
@@ -279,9 +284,9 @@ def filter_equities(rows: List[dict]) -> List[dict]:
 def filter_etfs(rows: List[dict]) -> List[dict]:
     """Filtre les ETF selon critères."""
     def is_valid(r):
-        v = fnum(r.get("vol_3y") or r.get("vol30"))
+        v = fnum(r.get("vol_3y") or r.get("vol30") or r.get("vol"))
         overext = r.get("flags", {}).get("overextended", False)
-        return 5 <= v <= 45 and not overext
+        return 3 <= v <= 50 and not overext
     
     filtered = [r for r in rows if is_valid(r)]
     logger.info(f"ETF filtrés: {len(filtered)}/{len(rows)}")
@@ -293,19 +298,19 @@ def filter_crypto(rows: List[dict]) -> List[dict]:
     def is_valid(r):
         p7d = fnum(r.get("perf_7d"))
         p24h = fnum(r.get("perf_24h"))
-        v = fnum(r.get("vol30"))
+        v = fnum(r.get("vol30") or r.get("vol"))
         dd = abs(fnum(r.get("maxdd90") or r.get("drawdown_90d_pct")))
         
         ok_trend = p7d > p24h > 0 and p24h <= 0.5 * p7d
-        ok_vol = 30 <= v <= 150
-        ok_dd = dd <= 50
+        ok_vol = 20 <= v <= 180
+        ok_dd = dd <= 60
         
         return ok_trend and ok_vol and ok_dd
     
     filtered = [r for r in rows if is_valid(r)]
     
     # Fallback si trop peu
-    if len(filtered) < 3:
+    if len(filtered) < 2:
         relaxed = [r for r in rows if fnum(r.get("perf_7d")) > 0]
         filtered = sorted(relaxed, key=lambda x: x.get("score", 0), reverse=True)[:5]
         logger.warning(f"Crypto: fallback appliqué → {len(filtered)} actifs")
@@ -356,16 +361,134 @@ def sector_balanced_selection(
     return out[:n]
 
 
-# ============= CONSTRUCTION UNIVERS =============
+# ============= CONSTRUCTION UNIVERS (DEPUIS DONNÉES) =============
 
 def build_scored_universe(
+    stocks_data: Union[List[dict], None] = None,
+    etf_data: Union[List[dict], None] = None,
+    crypto_data: Union[List[dict], None] = None,
+    returns_series: Optional[Dict[str, np.ndarray]] = None
+) -> List[dict]:
+    """
+    Construction de l'univers fermé avec scoring quantitatif.
+    Accepte les données directement (pas les chemins).
+    
+    Args:
+        stocks_data: Liste des dicts stocks ou [{"stocks": [...]}]
+        etf_data: Liste des dicts ETF
+        crypto_data: Liste des dicts crypto
+        returns_series: Dict optionnel des séries de rendements
+    
+    Returns:
+        Liste plate de tous les actifs avec id, name, score, category, etc.
+    """
+    logger.info("🧮 Construction de l'univers quantitatif...")
+    
+    all_assets = []
+    
+    # ====== ACTIONS ======
+    eq_rows = []
+    if stocks_data:
+        for data in stocks_data:
+            # Support format [{"stocks": [...]}] ou juste liste
+            stocks_list = data.get("stocks", []) if isinstance(data, dict) else data
+            for it in stocks_list:
+                eq_rows.append({
+                    "id": f"EQ_{len(eq_rows)+1}",
+                    "name": it.get("name") or it.get("ticker"),
+                    "perf_1m": it.get("perf_1m"),
+                    "perf_3m": it.get("perf_3m"),
+                    "ytd": it.get("perf_ytd") or it.get("ytd"),
+                    "perf_24h": it.get("perf_1d"),
+                    "vol_3y": it.get("volatility_3y") or it.get("vol"),
+                    "vol": it.get("volatility_3y") or it.get("vol"),
+                    "max_dd": it.get("max_drawdown_ytd"),
+                    "liquidity": it.get("market_cap"),
+                    "sector": it.get("sector", "Unknown"),
+                    "country": it.get("country", "Global"),
+                    "category": "equity",
+                })
+    
+    if eq_rows:
+        eq_rows = compute_scores(eq_rows, "equity", returns_series)
+        eq_filtered = filter_equities(eq_rows)
+        equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
+        all_assets.extend(equities)
+    
+    # ====== ETF ======
+    etf_rows = []
+    bond_rows = []
+    if etf_data:
+        for i, it in enumerate(etf_data):
+            is_bond = "bond" in str(it.get("fund_type", "")).lower()
+            row = {
+                "id": f"ETF_{'b' if is_bond else 's'}{len(etf_rows if not is_bond else bond_rows)+1}",
+                "name": it.get("name"),
+                "perf_24h": it.get("daily_change_pct"),
+                "ytd": it.get("ytd_return_pct") or it.get("ytd"),
+                "vol_3y": it.get("vol_3y_pct") or it.get("vol_pct") or it.get("vol"),
+                "vol30": it.get("vol_pct"),
+                "vol": it.get("vol_pct") or it.get("vol"),
+                "liquidity": it.get("aum_usd"),
+                "sector": "Bonds" if is_bond else it.get("sector", "Diversified"),
+                "country": it.get("domicile", "Global"),
+                "category": "bond" if is_bond else "etf",
+            }
+            if is_bond:
+                bond_rows.append(row)
+            else:
+                etf_rows.append(row)
+    
+    if etf_rows:
+        etf_rows = compute_scores(etf_rows, "etf", returns_series)
+        etf_filtered = filter_etfs(etf_rows)
+        etfs = sorted(etf_filtered, key=lambda x: x["score"], reverse=True)[:15]
+        all_assets.extend(etfs)
+    
+    if bond_rows:
+        bond_rows = compute_scores(bond_rows, "etf", returns_series)
+        bonds = sorted(bond_rows, key=lambda x: x["score"], reverse=True)[:10]
+        all_assets.extend(bonds)
+    
+    # ====== CRYPTO ======
+    cr_rows = []
+    if crypto_data:
+        for i, it in enumerate(crypto_data):
+            cr_rows.append({
+                "id": f"CR_{i+1}",
+                "name": it.get("symbol") or it.get("name"),
+                "perf_24h": it.get("ret_1d_pct") or it.get("perf_24h"),
+                "perf_7d": it.get("ret_7d_pct") or it.get("perf_7d"),
+                "ytd": it.get("ret_ytd_pct") or it.get("ytd"),
+                "vol30": it.get("vol_30d_annual_pct") or it.get("vol"),
+                "vol": it.get("vol_30d_annual_pct") or it.get("vol"),
+                "maxdd90": it.get("drawdown_90d_pct"),
+                "sector": "Crypto",
+                "country": "Global",
+                "category": "crypto",
+            })
+    
+    if cr_rows:
+        cr_rows = compute_scores(cr_rows, "crypto", returns_series)
+        crypto = filter_crypto(cr_rows)[:5]
+        all_assets.extend(crypto)
+    
+    logger.info(f"✅ Univers construit: {len(all_assets)} actifs")
+    
+    return all_assets
+
+
+# ============= CONSTRUCTION UNIVERS (DEPUIS FICHIERS) =============
+
+def build_scored_universe_from_files(
     stocks_jsons: List[dict],
     etf_csv_path: str,
     crypto_csv_path: str,
     returns_series: Optional[Dict[str, np.ndarray]] = None
 ) -> Dict[str, List[dict]]:
     """
-    Construction de l'univers fermé avec scoring quantitatif.
+    Construction de l'univers fermé depuis les fichiers.
+    Retourne un dict organisé par catégorie.
     
     Args:
         stocks_jsons: Liste des données stocks (depuis stocks_*.json)
@@ -381,7 +504,7 @@ def build_scored_universe(
             "crypto": [...]
         }
     """
-    logger.info("🧮 Construction de l'univers quantitatif...")
+    logger.info("🧮 Construction de l'univers quantitatif (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -479,10 +602,10 @@ def build_scored_universe(
 
 def load_and_build_universe(
     stocks_paths: List[str],
-    etf_csv: str,
-    crypto_csv: str,
-    load_returns: bool = True
-) -> Dict[str, List[dict]]:
+    etf_csv: Optional[str] = None,
+    crypto_csv: Optional[str] = None,
+    load_returns: bool = False
+) -> List[dict]:
     """
     Interface haut niveau pour charger et construire l'univers.
     
@@ -493,20 +616,38 @@ def load_and_build_universe(
         load_returns: Charger les séries de rendements si disponibles
     
     Returns:
-        Univers scoré {equities, etfs, bonds, crypto}
+        Liste plate de tous les actifs scorés
     """
     # Charger les JSON stocks
-    stocks_jsons = []
+    stocks_data = []
     for path in stocks_paths:
         try:
             with open(path, 'r', encoding='utf-8') as f:
-                stocks_jsons.append(json.load(f))
+                stocks_data.append(json.load(f))
         except Exception as e:
             logger.warning(f"Impossible de charger {path}: {e}")
     
+    # Charger ETF
+    etf_data = []
+    if etf_csv and Path(etf_csv).exists():
+        try:
+            df = pd.read_csv(etf_csv)
+            etf_data = df.to_dict('records')
+        except Exception as e:
+            logger.warning(f"Impossible de charger ETF: {e}")
+    
+    # Charger crypto
+    crypto_data = []
+    if crypto_csv and Path(crypto_csv).exists():
+        try:
+            df = pd.read_csv(crypto_csv)
+            crypto_data = df.to_dict('records')
+        except Exception as e:
+            logger.warning(f"Impossible de charger crypto: {e}")
+    
     # Charger séries de rendements (optionnel)
     returns_series = None
-    if load_returns:
-        returns_series = load_returns_series(stocks_paths, etf_csv, crypto_csv)
+    if load_returns and stocks_paths:
+        returns_series = load_returns_series(stocks_paths, etf_csv or "", crypto_csv or "")
     
-    return build_scored_universe(stocks_jsons, etf_csv, crypto_csv, returns_series)
+    return build_scored_universe(stocks_data, etf_data, crypto_data, returns_series)
