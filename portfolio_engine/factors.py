@@ -5,7 +5,7 @@ Les poids varient selon le profil (Agressif/Modéré/Stable).
 """
 
 import numpy as np
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from dataclasses import dataclass
 import logging
 import math
@@ -125,14 +125,14 @@ class FactorScorer:
         """
         Facteur low volatility : inverse de la vol (vol basse = score haut).
         """
-        vol = [fnum(a.get("vol_3y") or a.get("vol30") or a.get("vol_annual") or 20) for a in assets]
+        vol = [fnum(a.get("vol_3y") or a.get("vol30") or a.get("vol_annual") or a.get("vol") or 20) for a in assets]
         return -self._zscore(vol)
     
     def compute_factor_quality(self, assets: List[dict]) -> np.ndarray:
         """
         Facteur quality : proxy via drawdown (faible DD = haute qualité).
         """
-        dd = [abs(fnum(a.get("max_drawdown_ytd") or a.get("maxdd90") or 0)) for a in assets]
+        dd = [abs(fnum(a.get("max_drawdown_ytd") or a.get("maxdd90") or a.get("max_dd") or 0)) for a in assets]
         return -self._zscore(dd)
     
     def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
@@ -204,6 +204,7 @@ class FactorScorer:
                 for name, values in factors.items()
             }
             asset["composite_score"] = round(float(composite[i]), 3)
+            asset["adjusted_score"] = asset["composite_score"]
             asset["score"] = asset["composite_score"]
         
         logger.info(
@@ -229,27 +230,32 @@ class FactorScorer:
 # ============= UTILITAIRES =============
 
 def rescore_universe_by_profile(
-    universe: Dict[str, List[dict]],
+    universe: Union[List[dict], Dict[str, List[dict]]],
     profile: str
-) -> Dict[str, List[dict]]:
+) -> List[dict]:
     """
     Recalcule les scores de tout l'univers pour un profil donné.
     
     Args:
-        universe: Dict avec 'equities', 'etfs', 'bonds', 'crypto'
+        universe: Liste plate d'actifs OU dict avec 'equities', 'etfs', 'bonds', 'crypto'
         profile: 'Agressif' | 'Modéré' | 'Stable'
     
     Returns:
-        Univers avec scores recalculés
+        Liste plate d'actifs avec scores recalculés
     """
     scorer = FactorScorer(profile)
     
-    return {
-        "equities": scorer.compute_scores(list(universe.get("equities", []))),
-        "etfs": scorer.compute_scores(list(universe.get("etfs", []))),
-        "bonds": scorer.compute_scores(list(universe.get("bonds", []))),
-        "crypto": scorer.compute_scores(list(universe.get("crypto", []))),
-    }
+    # Si c'est une liste plate, scorer directement
+    if isinstance(universe, list):
+        return scorer.compute_scores(list(universe))
+    
+    # Si c'est un dict, combiner toutes les catégories
+    all_assets = []
+    for category in ["equities", "etfs", "bonds", "crypto"]:
+        assets = universe.get(category, [])
+        all_assets.extend(list(assets))
+    
+    return scorer.compute_scores(all_assets)
 
 
 def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
