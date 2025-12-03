@@ -13,12 +13,17 @@ Le LLM n'intervient PAS sur les poids - uniquement sur les justifications.
 
 from .universe import (
     build_scored_universe,
+    build_scored_universe_from_files,
     load_and_build_universe,
     load_etf_csv,
     compute_scores,
     filter_equities,
     filter_etfs,
     filter_crypto,
+    fnum,
+    zscore,
+    winsorize,
+    sector_balanced_selection,
 )
 
 from .factors import (
@@ -48,17 +53,22 @@ from .llm_commentary import (
     SYSTEM_PROMPT,
 )
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 __all__ = [
     # Universe
     "build_scored_universe",
+    "build_scored_universe_from_files",
     "load_and_build_universe",
     "load_etf_csv",
     "compute_scores",
     "filter_equities",
     "filter_etfs",
     "filter_crypto",
+    "fnum",
+    "zscore",
+    "winsorize",
+    "sector_balanced_selection",
     # Factors
     "FactorScorer",
     "FactorWeights",
