@@ -14,7 +14,7 @@ Corrections appliquées:
 import numpy as np
 from scipy.optimize import minimize
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from collections import defaultdict
 import warnings
 import logging
@@ -390,13 +390,64 @@ class PortfolioOptimizer:
 
 # ============= CONVERSION UNIVERS =============
 
-def convert_universe_to_assets(universe: dict) -> List[Asset]:
+def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]]) -> List[Asset]:
     """
     Convertit l'univers scoré en List[Asset].
     Préserve les IDs originaux.
+    
+    Args:
+        universe: Liste plate d'actifs OU dict avec 'equities', 'etfs', 'bonds', 'crypto'
+    
+    Returns:
+        Liste d'objets Asset
     """
     assets = []
     
+    # Si c'est une liste plate, convertir directement
+    if isinstance(universe, list):
+        for item in universe:
+            category = item.get("category", "").lower()
+            
+            # Déterminer la catégorie normalisée
+            if category in ["equity", "equities", "action", "actions", "stock"]:
+                cat_normalized = "Actions"
+                default_vol = 20
+            elif category in ["bond", "bonds", "obligation", "obligations"]:
+                cat_normalized = "Obligations"
+                default_vol = 5
+            elif category in ["crypto", "cryptocurrency"]:
+                cat_normalized = "Crypto"
+                default_vol = 80
+            elif category in ["etf", "etfs"]:
+                cat_normalized = "ETF"
+                default_vol = 15
+            else:
+                cat_normalized = "ETF"  # Default
+                default_vol = 15
+            
+            original_id = (
+                item.get("id") or 
+                item.get("ticker") or 
+                item.get("symbol") or 
+                item.get("isin") or 
+                item.get("name", f"ASSET_{len(assets)+1}")
+            )
+            
+            assets.append(Asset(
+                id=original_id,
+                name=item.get("name", original_id),
+                category=cat_normalized,
+                sector=item.get("sector", "Unknown"),
+                region=item.get("country", item.get("region", "Global")),
+                score=float(item.get("score") or item.get("composite_score") or item.get("adjusted_score") or 0),
+                vol_annual=float(item.get("vol_3y") or item.get("vol30") or item.get("vol_annual") or item.get("vol") or default_vol),
+                source_data=item,
+            ))
+        
+        logger.info(f"Univers converti (liste plate): {len(assets)} actifs")
+        return assets
+    
+    # Si c'est un dict, traiter chaque catégorie
     for eq in universe.get("equities", []):
         original_id = eq.get("id") or eq.get("ticker") or eq.get("symbol") or eq.get("name", "")
         if not original_id:
