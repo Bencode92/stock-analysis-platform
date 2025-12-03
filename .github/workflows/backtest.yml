@@ -1,0 +1,76 @@
+name: Backtest Portfolio Engine
+
+on:
+  # Manuel uniquement pour éviter de consommer les API credits
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Risk profile'
+        required: true
+        default: 'Modéré'
+        type: choice
+        options:
+          - Agressif
+          - Modéré
+          - Stable
+      frequency:
+        description: 'Rebalance frequency'
+        required: true
+        default: 'M'
+        type: choice
+        options:
+          - D
+          - W
+          - M
+      days:
+        description: 'Backtest period (days)'
+        required: true
+        default: '90'
+        type: string
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pandas numpy scipy requests pyyaml
+
+      - name: Run Backtest
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+        run: |
+          python run_backtest.py \
+            --profile "${{ github.event.inputs.profile }}" \
+            --freq "${{ github.event.inputs.frequency }}" \
+            --days ${{ github.event.inputs.days }} \
+            --output backtest_results.json
+
+      - name: Upload Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-results-${{ github.event.inputs.profile }}-${{ github.run_number }}
+          path: backtest_results.json
+          retention-days: 30
+
+      - name: Display Summary
+        run: |
+          echo "## 📊 Backtest Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Profile:** ${{ github.event.inputs.profile }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Frequency:** ${{ github.event.inputs.frequency }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Period:** ${{ github.event.inputs.days }} days" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          cat backtest_results.json | python -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d['stats'], indent=2))" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
