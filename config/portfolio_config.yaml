@@ -1,0 +1,147 @@
+# Portfolio Engine v4 - Configuration
+# Tous les paramètres externalisés pour faciliter le tuning
+
+# =============================================================================
+# PROFILS DE RISQUE
+# =============================================================================
+profiles:
+  Agressif:
+    target_vol: 0.18          # Volatilité cible annualisée
+    vol_tolerance: 0.03       # Tolérance ±3%
+    min_bonds_weight: 0.05    # Minimum obligations
+    max_crypto_weight: 0.10   # Maximum crypto
+    max_position_weight: 0.15 # Maximum par ligne
+    max_sector_weight: 0.30   # Maximum par secteur
+    min_assets: 10
+    max_assets: 18
+    factor_weights:
+      momentum: 0.40
+      low_vol: 0.15
+      quality: 0.15
+      liquidity: 0.15
+      mean_reversion: 0.15
+
+  Modéré:
+    target_vol: 0.12
+    vol_tolerance: 0.03
+    min_bonds_weight: 0.15
+    max_crypto_weight: 0.05
+    max_position_weight: 0.15
+    max_sector_weight: 0.30
+    min_assets: 10
+    max_assets: 18
+    factor_weights:
+      momentum: 0.30
+      low_vol: 0.25
+      quality: 0.20
+      liquidity: 0.15
+      mean_reversion: 0.10
+
+  Stable:
+    target_vol: 0.08
+    vol_tolerance: 0.02
+    min_bonds_weight: 0.40
+    max_crypto_weight: 0.00
+    max_position_weight: 0.15
+    max_sector_weight: 0.30
+    min_assets: 10
+    max_assets: 18
+    factor_weights:
+      momentum: 0.20
+      low_vol: 0.35
+      quality: 0.25
+      liquidity: 0.10
+      mean_reversion: 0.10
+
+# =============================================================================
+# MODÈLE DE RISQUE (Matrice de covariance stylisée)
+# =============================================================================
+risk_model:
+  lambda_vol: 5.0             # Pénalité écart à vol cible
+  
+  # Corrélations par défaut (à améliorer avec données historiques)
+  correlations:
+    same_sector: 0.45         # Même secteur
+    same_category: 0.60       # Même catégorie (actions/ETF/etc)
+    equity_bond: -0.20        # Actions ↔ Obligations
+    crypto_other: 0.25        # Crypto ↔ Autres
+    default: 0.15             # Défaut
+
+# =============================================================================
+# FILTRES UNIVERS
+# =============================================================================
+universe_filters:
+  stocks:
+    max_volatility: 0.80      # Exclure si vol > 80%
+    max_drawdown: 0.50        # Exclure si DD > 50%
+    min_market_cap: 100000000 # Min $100M
+  
+  etfs:
+    max_volatility: 0.60
+    min_aum: 50000000         # Min $50M AUM
+  
+  crypto:
+    max_volatility: 1.50      # Exclure si vol > 150%
+    min_market_cap: 1000000000 # Min $1B
+
+# =============================================================================
+# BACKTEST
+# =============================================================================
+backtest:
+  default_lookback_days: 90   # Période de backtest par défaut
+  rebalance_frequency: "M"    # "D"=daily, "W"=weekly, "M"=monthly
+  transaction_cost_bp: 10     # Coût de transaction en basis points (10 = 0.10%)
+  turnover_penalty: 0.001     # Pénalité turnover dans l'objectif
+  
+  # Univers de backtest (subset pour limiter les appels API)
+  test_universe:
+    stocks:
+      - AAPL
+      - MSFT
+      - GOOGL
+      - AMZN
+      - NVDA
+      - META
+      - TSLA
+      - JPM
+      - V
+      - JNJ
+      - UNH
+      - XOM
+      - PG
+      - MA
+      - HD
+      - CVX
+      - MRK
+      - ABBV
+      - PEP
+      - KO
+    etfs:
+      - SPY
+      - QQQ
+      - IWM
+      - EFA
+      - EEM
+      - TLT
+      - IEF
+      - LQD
+      - HYG
+      - GLD
+      - VNQ
+      - XLF
+      - XLE
+      - XLK
+      - XLV
+    crypto:
+      - BTC/USD
+      - ETH/USD
+      - SOL/USD
+
+# =============================================================================
+# API
+# =============================================================================
+api:
+  twelve_data:
+    base_url: "https://api.twelvedata.com"
+    rate_limit_per_minute: 8  # Free tier
+    max_retries: 3
