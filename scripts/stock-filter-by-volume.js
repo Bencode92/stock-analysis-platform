@@ -1,6 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.3 - FIXED: nested JSON structure for balance_sheet
+// Version 2.4 - Traite TOUTES les actions par défaut
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
@@ -24,7 +24,8 @@ const INPUTS = [
 const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
 const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '2500', 10);
-const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '50', 10);
+// Par défaut: traite TOUTES les actions (99999 = illimité en pratique)
+const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '99999', 10);
 const RATE_LIMIT_PAUSE_MS = 70000;
 
 // Seuils par région
@@ -164,45 +165,18 @@ async function saveFundamentalsCache(cache) {
   await fs.writeFile(FUNDAMENTALS_CACHE_FILE, JSON.stringify(cache, null, 2), 'utf8');
 }
 
-/**
- * Parse un float de manière sécurisée
- * Utilise ?? pour ne pas écraser un vrai 0
- */
 function parseFloatSafe(value) {
   if (value === null || value === undefined || value === '' || value === 'null') return null;
   const parsed = parseFloat(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-/**
- * Vérifie si l'API a retourné une erreur de rate limit
- */
 function isRateLimitError(data) {
   if (!data) return false;
   const msg = data.message || '';
   return /run out of API credits/i.test(msg) || /rate limit/i.test(msg);
 }
 
-/**
- * Récupère le bilan - STRUCTURE IMBRIQUÉE Twelve Data
- * 
- * Structure réelle de l'API:
- * {
- *   "balance_sheet": [{
- *     "fiscal_date": "2024-01-28",
- *     "assets": { "total_assets": "..." },
- *     "liabilities": {
- *       "current_liabilities": { "short_term_debt": "..." },
- *       "non_current_liabilities": { "long_term_debt": "..." },
- *       "total_liabilities": "..."
- *     },
- *     "shareholders_equity": {
- *       "total_shareholders_equity": "...",
- *       "total_stockholders_equity": "..."
- *     }
- *   }]
- * }
- */
 async function fetchBalanceSheet(symbol) {
   try {
     const { data, headers } = await axios.get('https://api.twelvedata.com/balance_sheet', {
@@ -224,7 +198,6 @@ async function fetchBalanceSheet(symbol) {
       return null;
     }
     
-    // Extraire le premier élément du tableau balance_sheet
     let sheet = data.balance_sheet || data;
     if (Array.isArray(sheet)) {
       sheet = sheet[0];
@@ -239,10 +212,6 @@ async function fetchBalanceSheet(symbol) {
       console.log(`  [DEBUG] ${symbol} sheet keys:`, Object.keys(sheet));
     }
     
-    // ═══════════════════════════════════════════════════════════════════
-    // EXTRACTION DES OBJETS IMBRIQUÉS (comme dans le Python)
-    // ═══════════════════════════════════════════════════════════════════
-    
     const assets = sheet.assets || {};
     const liabilities = sheet.liabilities || {};
     const equityBlock = sheet.shareholders_equity || {};
@@ -254,49 +223,34 @@ async function fetchBalanceSheet(symbol) {
       console.log(`  [DEBUG] ${symbol} liabilities keys:`, Object.keys(liabilities));
     }
     
-    // ═══════════════════════════════════════════════════════════════════
-    // TOTAL ASSETS
-    // ═══════════════════════════════════════════════════════════════════
     const totalAssets = 
       parseFloatSafe(assets.total_assets) ??
       parseFloatSafe(sheet.total_assets) ?? 
       null;
     
-    // ═══════════════════════════════════════════════════════════════════
-    // TOTAL LIABILITIES
-    // ═══════════════════════════════════════════════════════════════════
     const totalLiabilities = 
       parseFloatSafe(liabilities.total_liabilities) ??
       parseFloatSafe(sheet.total_liabilities) ?? 
       null;
     
-    // ═══════════════════════════════════════════════════════════════════
-    // TOTAL DEBT = short_term_debt + long_term_debt (comme Python)
-    // ═══════════════════════════════════════════════════════════════════
     const shortTermDebt = parseFloatSafe(currentLiab.short_term_debt) ?? 
                           parseFloatSafe(currentLiab.current_debt) ?? 0;
     const longTermDebt = parseFloatSafe(nonCurrentLiab.long_term_debt) ?? 
                          parseFloatSafe(nonCurrentLiab.long_term_debt_and_capital_lease_obligation) ?? 0;
     const totalDebt = shortTermDebt + longTermDebt;
     
-    // ═══════════════════════════════════════════════════════════════════
-    // TOTAL EQUITY - chercher dans l'objet imbriqué shareholders_equity
-    // ═══════════════════════════════════════════════════════════════════
     let totalEquity = 
-      // D'abord dans l'objet imbriqué (structure la plus courante)
       parseFloatSafe(equityBlock.total_shareholders_equity) ??
       parseFloatSafe(equityBlock.total_stockholders_equity) ??
       parseFloatSafe(equityBlock.stockholders_equity) ??
       parseFloatSafe(equityBlock.total_equity) ??
       parseFloatSafe(equityBlock.common_stock_equity) ??
-      // Fallback: directement sur sheet (structure plate parfois)
       parseFloatSafe(sheet.total_shareholders_equity) ??
       parseFloatSafe(sheet.total_stockholders_equity) ??
       parseFloatSafe(sheet.stockholders_equity) ??
       parseFloatSafe(sheet.total_equity) ??
       null;
     
-    // Dernier fallback: Equity = Assets - Liabilities
     if (totalEquity === null && totalAssets !== null && totalLiabilities !== null) {
       totalEquity = totalAssets - totalLiabilities;
       if (DEBUG) {
@@ -321,9 +275,6 @@ async function fetchBalanceSheet(symbol) {
   }
 }
 
-/**
- * Récupère le compte de résultat - STRUCTURE IMBRIQUÉE
- */
 async function fetchIncomeStatement(symbol) {
   try {
     const { data, headers } = await axios.get('https://api.twelvedata.com/income_statement', {
@@ -358,7 +309,6 @@ async function fetchIncomeStatement(symbol) {
       console.log(`  [DEBUG] ${symbol} income keys:`, Object.keys(statement));
     }
     
-    // Net income peut être dans un sous-objet ou à la racine
     const netIncomeBlock = statement.net_income || {};
     
     const netIncome = 
@@ -390,9 +340,6 @@ async function fetchIncomeStatement(symbol) {
   }
 }
 
-/**
- * Calcule ROE et D/E
- */
 function computeFundamentalRatios(balanceSheet, incomeStatement) {
   if (!balanceSheet) {
     return { roe: null, de_ratio: null, error: 'no_balance_sheet' };
@@ -405,12 +352,10 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
   let roe = null;
   let de_ratio = null;
 
-  // ROE = Net Income / Equity * 100
   if (equity != null && equity !== 0 && net_income != null) {
     roe = Math.round((net_income / equity) * 10000) / 100;
   }
 
-  // D/E = Debt / Equity
   if (equity != null && equity !== 0 && debt != null) {
     de_ratio = Math.round((debt / equity) * 100) / 100;
   }
@@ -426,9 +371,6 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
   };
 }
 
-/**
- * Récupère les fondamentaux pour un symbole
- */
 async function fetchFundamentalsForSymbol(symbol) {
   const balanceSheet = await fetchBalanceSheet(symbol);
   
@@ -461,15 +403,12 @@ async function fetchFundamentalsForSymbol(symbol) {
   };
 }
 
-/**
- * Enrichit les stocks avec les fondamentaux
- */
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.3');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.4');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
-  console.log(`📦 Max fetches: ${maxNewFetches} par run`);
+  console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
   if (DEBUG) console.log('🐛 DEBUG mode activé');
   
   const cache = await loadFundamentalsCache();
@@ -496,6 +435,12 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   
   console.log(`📁 ${fromCache.length} stocks avec cache valide`);
   console.log(`🔄 ${needsUpdate.length} stocks nécessitent mise à jour`);
+  
+  // Estimation du temps
+  if (needsUpdate.length > 0) {
+    const estimatedMinutes = Math.ceil(needsUpdate.length / 12); // ~12 stocks/min avec Ultra plan
+    console.log(`⏱️ Temps estimé: ~${estimatedMinutes} minutes pour ${needsUpdate.length} stocks`);
+  }
   
   const toProcess = needsUpdate.slice(0, maxNewFetches);
   let processed = 0;
@@ -539,11 +484,14 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     
     processed++;
     
+    // Sauvegarde intermédiaire tous les 10 stocks
     if (processed % 10 === 0) {
       await saveFundamentalsCache(cache);
       const elapsed = (Date.now() - startTime) / 1000;
       const rate = processed / elapsed * 60;
-      console.log(`  💾 Cache sauvegardé (${processed}/${toProcess.length}) - ${rate.toFixed(0)} stocks/min`);
+      const remaining = toProcess.length - processed;
+      const etaMinutes = Math.ceil(remaining / rate);
+      console.log(`  💾 Cache sauvegardé (${processed}/${toProcess.length}) - ${rate.toFixed(0)} stocks/min - ETA: ${etaMinutes}min`);
     }
   }
   
@@ -566,7 +514,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   console.log(`    - Avec ROE/D/E: ${succeeded}`);
   console.log(`    - Sans données: ${failed}`);
   console.log(`  ⏳ En attente: ${notProcessed.length}`);
-  console.log(`  ⏱️ Temps: ${totalTime.toFixed(1)}s (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
+  console.log(`  ⏱️ Temps: ${(totalTime/60).toFixed(1)}min (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
   console.log('─'.repeat(50));
   
   return stocks;
@@ -657,9 +605,9 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.3\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.4\n');
   console.log(`📊 Config:`);
-  console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN}`);
+  console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
   console.log(`   DEBUG=${DEBUG}`);
   
@@ -725,7 +673,7 @@ async function throttle() {
     console.log(`✅ ${region}: ${filtered.length}/${rows.length} retenus`);
   }
 
-  // Enrichissement fondamentaux
+  // Enrichissement fondamentaux - TOUTES les actions
   let combined = allOutputs.flatMap(o => o.rows);
   combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
   
