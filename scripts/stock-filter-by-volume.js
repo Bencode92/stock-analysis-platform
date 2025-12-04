@@ -1,6 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.1 - Avec enrichissement fondamentaux Buffett (ROE, D/E) - FIXED
+// Version 2.2 - FIXED: parsing equity + auto-pause on rate limit
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
@@ -22,33 +22,31 @@ const INPUTS = [
 // CONFIGURATION FONDAMENTAUX BUFFETT
 // ═══════════════════════════════════════════════════════════════════════════
 const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours (données trimestrielles)
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
 
-// Rate limit: avec plan Ultra (2584 credits/min), on peut faire ~12 stocks/min
-// car chaque stock = 200 credits (100 balance_sheet + 100 income_statement)
-// Délai entre requêtes = 250ms (permet burst, l'API nous throttle si besoin)
-const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '250', 10);
-const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '200', 10);
+// Rate limit: Ultra plan = 2584 credits/min
+// Chaque stock = 200 credits (balance_sheet + income_statement)
+// → Max ~12 stocks/min sans throttle
+// Délai entre requêtes pour éviter burst
+const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '2500', 10);
+const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '50', 10);
+const RATE_LIMIT_PAUSE_MS = 70000; // 70s pause quand quota épuisé
 
 // Seuils par région
 const VOL_MIN = { US: 500_000, EUROPE: 50_000, ASIA: 100_000 };
 
-// Seuils plus fins par MIC (prioritaires sur la région)
+// Seuils plus fins par MIC
 const VOL_MIN_BY_MIC = {
-  // US
   XNAS: 500_000, XNYS: 350_000, BATS: 500_000,
-  // Europe
   XETR: 100_000, XPAR: 40_000, XLON: 120_000, XMIL: 80_000, XMAD: 80_000,
   XAMS: 50_000, XSTO: 60_000, XCSE: 40_000, XHEL: 40_000, XBRU: 30_000,
   XLIS: 20_000, XSWX: 20_000, XWBO: 20_000, XDUB: 20_000, XOSL: 30_000,
-  // Asie
   XHKG: 100_000, XKRX: 100_000, XNSE: 50_000, XBOM: 50_000, XTAI: 60_000,
   XKOS: 100_000, XBKK: 50_000, XPHS: 20_000, XKLS: 30_000, XSHE: 100_000, ROCO: 20_000
 };
 
-// ───────── Exchange → MIC (multi-synonymes) + fallback par pays ─────────
+// ───────── Exchange → MIC ─────────
 const EX2MIC_PATTERNS = [
-  // Asie
   ['taiwan stock exchange',           'XTAI'],
   ['gretai securities market',        'ROCO'],
   ['hong kong exchanges and clearing','XHKG'],
@@ -59,7 +57,6 @@ const EX2MIC_PATTERNS = [
   ['stock exchange of thailand',      'XBKK'],
   ['bursa malaysia',                  'XKLS'],
   ['philippine stock exchange',       'XPHS'],
-  // Europe
   ['euronext amsterdam',              'XAMS'],
   ['nyse euronext - euronext paris',  'XPAR'],
   ['nyse euronext - euronext brussels','XBRU'],
@@ -73,7 +70,6 @@ const EX2MIC_PATTERNS = [
   ['wiener boerse ag',                'XWBO'],
   ['irish stock exchange - all market','XDUB'],
   ['oslo bors asa',                   'XOSL'],
-  // USA
   ['nasdaq',                          'XNAS'],
   ['new york stock exchange inc.',    'XNYS'],
   ['cboe bzx',                        'BATS'],
@@ -100,8 +96,7 @@ function toMIC(exchange, country=''){
       if (ex.includes(pat)) return mic;
     }
   }
-  const c = normalize(country);
-  return COUNTRY2MIC[c] || null;
+  return COUNTRY2MIC[normalize(country)] || null;
 }
 
 // ───────── Helpers de désambiguïsation ─────────
@@ -124,8 +119,7 @@ async function tdStocksLookup({ symbol, country, exchange }) {
     const { data } = await axios.get('https://api.twelvedata.com/stocks', {
       params: { symbol, country, exchange, apikey: API_KEY }, timeout: 15000
     });
-    const arr = Array.isArray(data?.data) ? data.data : (Array.isArray(data)?data:[]);
-    return arr;
+    return Array.isArray(data?.data) ? data.data : (Array.isArray(data)?data:[]);
   } catch { return []; }
 }
 
@@ -157,14 +151,14 @@ async function tryQuote(sym, mic){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FONDAMENTAUX BUFFETT - CACHE & FETCH (FIXED)
+// FONDAMENTAUX BUFFETT - PARSING ROBUSTE
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function loadFundamentalsCache() {
   try {
     const txt = await fs.readFile(FUNDAMENTALS_CACHE_FILE, 'utf8');
     return JSON.parse(txt);
-  } catch (e) {
+  } catch {
     console.log('📁 Cache fondamentaux non trouvé, création nouveau cache');
     return { updated: null, data: {} };
   }
@@ -183,8 +177,41 @@ function parseFloatSafe(value) {
 }
 
 /**
- * Récupère le bilan (Total Debt, Total Equity) - 100 credits
- * Structure Twelve Data: { balance_sheet: [ { fiscal_date, total_debt, ... } ] }
+ * Cherche une valeur numérique dans un objet en essayant plusieurs clés
+ * puis un fallback regex sur toutes les clés
+ */
+function pickNumber(obj, keys, fallbackRegex) {
+  // 1) Essaye une liste de clés candidates
+  for (const key of keys) {
+    if (key in obj) {
+      const v = parseFloatSafe(obj[key]);
+      if (v !== null) return v;
+    }
+  }
+  // 2) Fallback : cherche dans toutes les clés un match via regex
+  if (fallbackRegex) {
+    for (const [k, v] of Object.entries(obj)) {
+      if (fallbackRegex.test(k)) {
+        const parsed = parseFloatSafe(v);
+        if (parsed !== null) return parsed;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Vérifie si l'API a retourné une erreur de rate limit
+ */
+function isRateLimitError(data) {
+  if (!data) return false;
+  const msg = data.message || '';
+  return /run out of API credits/i.test(msg) || /rate limit/i.test(msg);
+}
+
+/**
+ * Récupère le bilan - 100 credits
+ * Parsing robuste avec fallback sur Assets - Liabilities
  */
 async function fetchBalanceSheet(symbol) {
   try {
@@ -194,25 +221,27 @@ async function fetchBalanceSheet(symbol) {
     });
     
     if (DEBUG) {
-      console.log(`  [DEBUG] balance_sheet ${symbol}:`, JSON.stringify(data).slice(0, 500));
-      console.log(`  [DEBUG] credits used: ${headers['api-credits-used']}, left: ${headers['api-credits-left']}`);
+      console.log(`  [DEBUG] balance_sheet ${symbol} keys:`, data ? Object.keys(data) : 'null');
+      console.log(`  [DEBUG] credits: used=${headers['api-credits-used']}, left=${headers['api-credits-left']}`);
     }
     
-    // Gestion erreurs Twelve Data (code ou status)
+    // Erreur rate limit → retourne objet spécial pour pause
+    if (isRateLimitError(data)) {
+      return { _rateLimited: true };
+    }
+    
     if (!data || data.status === 'error' || data.code) {
-      console.warn(`  ⚠️ Balance sheet erreur pour ${symbol}: ${data?.message || data?.code || 'unknown'}`);
+      console.warn(`  ⚠️ Balance sheet erreur ${symbol}: ${data?.message || data?.code || 'unknown'}`);
       return null;
     }
     
-    // Twelve Data retourne: { balance_sheet: [...] } ou directement un array
     let balanceSheet = data.balance_sheet || data;
     if (!Array.isArray(balanceSheet)) {
-      // Peut-être un objet avec les données directement
-      if (data.total_debt !== undefined || data.total_shareholder_equity !== undefined) {
-        balanceSheet = [data];
+      if (typeof balanceSheet === 'object' && Object.keys(balanceSheet).length > 0) {
+        balanceSheet = [balanceSheet];
       } else {
-        console.warn(`  ⚠️ Format inattendu balance_sheet pour ${symbol}`);
-        if (DEBUG) console.log(`  [DEBUG] data keys:`, Object.keys(data));
+        console.warn(`  ⚠️ Format inattendu balance_sheet ${symbol}`);
+        if (DEBUG) console.log(`  [DEBUG] data:`, JSON.stringify(data).slice(0, 300));
         return null;
       }
     }
@@ -224,36 +253,77 @@ async function fetchBalanceSheet(symbol) {
     
     const latest = balanceSheet[0];
     
-    // Essayer plusieurs noms de champs possibles
-    const totalDebt = parseFloatSafe(latest.total_debt) 
-      || parseFloatSafe(latest.long_term_debt) 
-      || parseFloatSafe(latest.total_liabilities)
-      || 0;
-      
-    const totalEquity = parseFloatSafe(latest.total_shareholder_equity) 
-      || parseFloatSafe(latest.stockholders_equity)
-      || parseFloatSafe(latest.total_equity)
-      || parseFloatSafe(latest.shareholders_equity)
-      || 0;
+    if (DEBUG) {
+      console.log(`  [DEBUG] ${symbol} balance_sheet[0] keys:`, Object.keys(latest));
+    }
+    
+    // Assets
+    const totalAssets = pickNumber(latest, 
+      ['total_assets', 'assets'], 
+      /total.*assets?/i
+    );
+    
+    // Liabilities
+    const totalLiabilities = pickNumber(latest,
+      ['total_liabilities', 'liabilities', 'total_liabilities_net_minority_interest'],
+      /total.*liabilit/i
+    );
+    
+    // Equity - essayer TOUTES les variantes possibles
+    let totalEquity = pickNumber(latest,
+      [
+        'total_shareholder_equity',
+        'total_shareholders_equity', 
+        'total_stockholder_equity',
+        'total_stockholders_equity',
+        'stockholders_equity',
+        'shareholders_equity',
+        'total_equity',
+        'total_common_equity',
+        'common_stock_equity',
+        'total_equity_gross_minority_interest',
+        'stockholder_equity',
+        'shareholder_equity'
+      ],
+      /(equity|stockholder|shareholder)/i
+    );
+    
+    // Fallback: Equity = Assets - Liabilities
+    if ((totalEquity === null || totalEquity === 0) && totalAssets !== null && totalLiabilities !== null) {
+      const derived = totalAssets - totalLiabilities;
+      if (Math.abs(derived) > 1e-6) {
+        totalEquity = derived;
+        if (DEBUG) {
+          console.log(`  [DEBUG] ${symbol} equity dérivée = assets(${totalAssets}) - liabilities(${totalLiabilities}) = ${totalEquity}`);
+        }
+      }
+    }
+    
+    // Debt
+    const totalDebt = pickNumber(latest,
+      ['total_debt', 'long_term_debt', 'total_long_term_debt', 'long_term_debt_and_capital_lease_obligation'],
+      /(total_)?(debt|borrowings)/i
+    );
     
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} parsed: debt=${totalDebt}, equity=${totalEquity}`);
+      console.log(`  [DEBUG] ${symbol} PARSED: debt=${totalDebt}, equity=${totalEquity}, assets=${totalAssets}, liab=${totalLiabilities}`);
     }
     
     return {
       total_debt: totalDebt,
       total_equity: totalEquity,
-      total_assets: parseFloatSafe(latest.total_assets) || 0,
+      total_assets: totalAssets,
+      total_liabilities: totalLiabilities,
       fiscal_date: latest.fiscal_date || latest.date || null
     };
   } catch (error) {
-    console.error(`  ❌ Erreur balance_sheet pour ${symbol}:`, error.message);
+    console.error(`  ❌ Erreur balance_sheet ${symbol}:`, error.message);
     return null;
   }
 }
 
 /**
- * Récupère le compte de résultat (Net Income) - 100 credits
+ * Récupère le compte de résultat - 100 credits
  */
 async function fetchIncomeStatement(symbol) {
   try {
@@ -263,22 +333,25 @@ async function fetchIncomeStatement(symbol) {
     });
     
     if (DEBUG) {
-      console.log(`  [DEBUG] income_statement ${symbol}:`, JSON.stringify(data).slice(0, 500));
-      console.log(`  [DEBUG] credits used: ${headers['api-credits-used']}, left: ${headers['api-credits-left']}`);
+      console.log(`  [DEBUG] income_statement ${symbol} keys:`, data ? Object.keys(data) : 'null');
+      console.log(`  [DEBUG] credits: used=${headers['api-credits-used']}, left=${headers['api-credits-left']}`);
+    }
+    
+    if (isRateLimitError(data)) {
+      return { _rateLimited: true };
     }
     
     if (!data || data.status === 'error' || data.code) {
-      console.warn(`  ⚠️ Income statement erreur pour ${symbol}: ${data?.message || data?.code || 'unknown'}`);
+      console.warn(`  ⚠️ Income statement erreur ${symbol}: ${data?.message || data?.code || 'unknown'}`);
       return null;
     }
     
     let incomeStatement = data.income_statement || data;
     if (!Array.isArray(incomeStatement)) {
-      if (data.net_income !== undefined || data.revenue !== undefined) {
-        incomeStatement = [data];
+      if (typeof incomeStatement === 'object' && Object.keys(incomeStatement).length > 0) {
+        incomeStatement = [incomeStatement];
       } else {
-        console.warn(`  ⚠️ Format inattendu income_statement pour ${symbol}`);
-        if (DEBUG) console.log(`  [DEBUG] data keys:`, Object.keys(data));
+        console.warn(`  ⚠️ Format inattendu income_statement ${symbol}`);
         return null;
       }
     }
@@ -290,71 +363,108 @@ async function fetchIncomeStatement(symbol) {
     
     const latest = incomeStatement[0];
     
-    const netIncome = parseFloatSafe(latest.net_income) 
-      || parseFloatSafe(latest.net_income_from_continuing_operations)
-      || parseFloatSafe(latest.net_income_common_stockholders)
-      || 0;
+    if (DEBUG) {
+      console.log(`  [DEBUG] ${symbol} income_statement[0] keys:`, Object.keys(latest));
+    }
+    
+    const netIncome = pickNumber(latest,
+      [
+        'net_income',
+        'net_income_common_stockholders',
+        'net_income_from_continuing_operations',
+        'net_income_including_noncontrolling_interests',
+        'normalized_income'
+      ],
+      /net.*income/i
+    );
+    
+    const revenue = pickNumber(latest,
+      ['revenue', 'total_revenue', 'operating_revenue'],
+      /revenue/i
+    );
     
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} parsed: net_income=${netIncome}`);
+      console.log(`  [DEBUG] ${symbol} PARSED: net_income=${netIncome}, revenue=${revenue}`);
     }
     
     return {
       net_income: netIncome,
-      revenue: parseFloatSafe(latest.revenue || latest.total_revenue) || 0,
-      ebitda: parseFloatSafe(latest.ebitda) || 0,
+      revenue: revenue,
+      ebitda: pickNumber(latest, ['ebitda', 'normalized_ebitda'], /ebitda/i),
       fiscal_date: latest.fiscal_date || latest.date || null
     };
   } catch (error) {
-    console.error(`  ❌ Erreur income_statement pour ${symbol}:`, error.message);
+    console.error(`  ❌ Erreur income_statement ${symbol}:`, error.message);
     return null;
   }
 }
 
 /**
- * Calcule ROE et D/E
+ * Calcule ROE et D/E - ne considère plus 0 comme valide
  */
 function computeFundamentalRatios(balanceSheet, incomeStatement) {
   if (!balanceSheet) {
     return { roe: null, de_ratio: null, error: 'no_balance_sheet' };
   }
   
-  const { total_debt, total_equity } = balanceSheet;
-  const net_income = incomeStatement?.net_income || 0;
-  
+  const equity = balanceSheet.total_equity;
+  const debt = balanceSheet.total_debt ?? null;
+  const net_income = incomeStatement?.net_income ?? null;
+
   let roe = null;
-  if (total_equity > 0 && incomeStatement) {
-    roe = (net_income / total_equity) * 100;
+  let de_ratio = null;
+
+  // ROE = Net Income / Equity * 100
+  if (equity !== null && equity > 0 && net_income !== null) {
+    roe = (net_income / equity) * 100;
     roe = Math.round(roe * 100) / 100;
   }
-  
-  let de_ratio = null;
-  if (total_equity > 0) {
-    de_ratio = total_debt / total_equity;
+
+  // D/E = Debt / Equity
+  if (equity !== null && equity > 0 && debt !== null) {
+    de_ratio = debt / equity;
     de_ratio = Math.round(de_ratio * 100) / 100;
   }
-  
+
   return {
     roe,
     de_ratio,
     net_income,
-    total_debt,
-    total_equity,
+    total_debt: debt,
+    total_equity: equity,
     balance_sheet_date: balanceSheet.fiscal_date,
     income_statement_date: incomeStatement?.fiscal_date
   };
 }
 
 /**
- * Récupère les fondamentaux pour un symbole
+ * Récupère les fondamentaux pour un symbole avec gestion rate limit
  */
 async function fetchFundamentalsForSymbol(symbol) {
   // Balance sheet (100 credits)
   const balanceSheet = await fetchBalanceSheet(symbol);
+  
+  // Rate limit hit → pause et retry
+  if (balanceSheet?._rateLimited) {
+    console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
+    await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
+    return fetchFundamentalsForSymbol(symbol); // Retry
+  }
+  
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
   
   // Income statement (100 credits)
   const incomeStatement = await fetchIncomeStatement(symbol);
+  
+  if (incomeStatement?._rateLimited) {
+    console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
+    await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
+    // On a déjà le balance sheet, on retry juste l'income
+    const incomeRetry = await fetchIncomeStatement(symbol);
+    const ratios = computeFundamentalRatios(balanceSheet, incomeRetry?._rateLimited ? null : incomeRetry);
+    return { symbol, ...ratios, fetched_at: new Date().toISOString() };
+  }
+  
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
   
   const ratios = computeFundamentalRatios(balanceSheet, incomeStatement);
@@ -367,14 +477,15 @@ async function fetchFundamentalsForSymbol(symbol) {
 }
 
 /**
- * Enrichit les stocks avec les fondamentaux (cache intelligent)
+ * Enrichit les stocks avec les fondamentaux
  */
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.2');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches} par run`);
+  console.log(`⏱️ Pause auto si quota épuisé: ${RATE_LIMIT_PAUSE_MS/1000}s`);
   if (DEBUG) console.log('🐛 DEBUG mode activé');
   
   const cache = await loadFundamentalsCache();
@@ -421,7 +532,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       stock.de_ratio = fundamentals.de_ratio;
       
       if (fundamentals.roe !== null || fundamentals.de_ratio !== null) {
-        console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}%, D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'}`);
+        console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}%, D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'} (equity=${fundamentals.total_equity?.toLocaleString()})`);
         succeeded++;
       } else {
         console.log(`  ⚠️ ${ticker}: Données incomplètes (equity=${fundamentals.total_equity}, income=${fundamentals.net_income})`);
@@ -444,16 +555,16 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     
     processed++;
     
-    // Sauvegarde intermédiaire tous les 20 stocks
-    if (processed % 20 === 0) {
+    // Sauvegarde intermédiaire tous les 10 stocks
+    if (processed % 10 === 0) {
       await saveFundamentalsCache(cache);
       const elapsed = (Date.now() - startTime) / 1000;
-      const rate = processed / elapsed;
-      console.log(`  💾 Cache sauvegardé (${processed}/${toProcess.length}) - ${rate.toFixed(1)} stocks/s`);
+      const rate = processed / elapsed * 60;
+      console.log(`  💾 Cache sauvegardé (${processed}/${toProcess.length}) - ${rate.toFixed(0)} stocks/min`);
     }
   }
   
-  // Stocks non traités (limite atteinte)
+  // Stocks non traités
   const notProcessed = needsUpdate.slice(maxNewFetches);
   for (const stock of notProcessed) {
     const ticker = stock['Ticker'];
@@ -470,17 +581,17 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   console.log('📊 RÉSUMÉ ENRICHISSEMENT:');
   console.log(`  ✅ Depuis cache: ${fromCache.length}`);
   console.log(`  🔄 Nouveaux appels: ${processed}`);
-  console.log(`    - Réussis: ${succeeded}`);
-  console.log(`    - Échoués/Incomplets: ${failed}`);
+  console.log(`    - Avec ROE/D/E: ${succeeded}`);
+  console.log(`    - Sans données: ${failed}`);
   console.log(`  ⏳ En attente (prochain run): ${notProcessed.length}`);
-  console.log(`  ⏱️ Temps total: ${totalTime.toFixed(1)}s (${(processed/totalTime).toFixed(1)} stocks/s)`);
+  console.log(`  ⏱️ Temps: ${totalTime.toFixed(1)}s (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
   console.log('─'.repeat(50));
   
   return stocks;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CSV HEADERS & HELPERS
+// CSV HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
 const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','roe','de_ratio'];
@@ -543,8 +654,7 @@ async function resolveSymbol(ticker, exchange, expectedName = '', country = '') 
 async function fetchVolume(symbol) {
   try {
     const { data } = await axios.get('https://api.twelvedata.com/quote', { params:{ symbol, apikey:API_KEY }});
-    const v = Number(data?.volume) || Number(data?.average_volume) || 0;
-    return v;
+    return Number(data?.volume) || Number(data?.average_volume) || 0;
   } catch { return 0; }
 }
 
@@ -565,7 +675,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.1\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.2\n');
   console.log(`📊 Config:`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
@@ -590,12 +700,7 @@ async function throttle() {
       const ticker = (r['Ticker']||'').trim();
       const exch   = r['Bourse de valeurs'] || '';
       const mic    = toMIC(exch, r['Pays'] || '');
-      const { sym, quote } = await resolveSymbol(
-        ticker,
-        exch,
-        r['Stock'] || '',
-        r['Pays']  || ''
-      );
+      const { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
       const vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
 
       const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
@@ -619,44 +724,30 @@ async function throttle() {
         stats.failed++;
         console.log(`  ❌ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()} (${source})`);
         rejected.push({
-          'Ticker': ticker,
-          'Stock': r['Stock']||'',
-          'Secteur': r['Secteur']||'',
-          'Pays': r['Pays']||'',
-          'Bourse de valeurs': r['Bourse de valeurs']||'',
-          'Devise de marché': r['Devise de marché']||'',
-          'Volume': vol,
-          'Seuil': thr,
-          'MIC': mic || '',
-          'Symbole': sym,
-          'Source': source,
+          'Ticker': ticker, 'Stock': r['Stock']||'', 'Secteur': r['Secteur']||'',
+          'Pays': r['Pays']||'', 'Bourse de valeurs': r['Bourse de valeurs']||'',
+          'Devise de marché': r['Devise de marché']||'', 'Volume': vol, 'Seuil': thr,
+          'MIC': mic || '', 'Symbole': sym, 'Source': source,
           'Raison': `Volume ${vol} < Seuil ${thr}`
         });
       }
       
       processed++;
-      if (processed % 10 === 0) {
-        console.log(`  Progression: ${processed}/${rows.length}`);
-      }
+      if (processed % 10 === 0) console.log(`  Progression: ${processed}/${rows.length}`);
     }
 
-    allOutputs.push({ title: `${region}`, file: path.join(OUT_DIR, file.replace('.csv','_filtered.csv')), rows: filtered });
+    allOutputs.push({ title: region, file: path.join(OUT_DIR, file.replace('.csv','_filtered.csv')), rows: filtered });
     allRejected.push(...rejected);
 
-    const rejFile = path.join(OUT_DIR, file.replace('.csv','_rejected.csv'));
-    await writeCSVGeneric(rejFile, rejected, REJ_HEADER);
-
-    console.log(`✅ ${region}: ${filtered.length}/${rows.length} stocks retenus`);
-    console.log(`❌ ${region}: ${rejected.length} stocks rejetés → ${rejFile}`);
+    await writeCSVGeneric(path.join(OUT_DIR, file.replace('.csv','_rejected.csv')), rejected, REJ_HEADER);
+    console.log(`✅ ${region}: ${filtered.length}/${rows.length} retenus`);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ENRICHISSEMENT FONDAMENTAUX BUFFETT
-  // ═══════════════════════════════════════════════════════════════════════════
-  
+  // Enrichissement fondamentaux
   let combined = allOutputs.flatMap(o => o.rows);
   combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
   
+  // Sauvegarde par région
   for (const output of allOutputs) {
     const regionTickers = new Set(output.rows.map(r => r['Ticker']));
     const enrichedRows = combined.filter(r => regionTickers.has(r['Ticker']));
@@ -667,87 +758,35 @@ async function throttle() {
   await writeCSV(path.join(OUT_DIR,'Actions_filtrees_par_volume.csv'), combined);
   await writeCSVGeneric(path.join(OUT_DIR,'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
   
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RÉSUMÉ FINAL
-  // ═══════════════════════════════════════════════════════════════════════════
-  
+  // Résumé final
   console.log('\n' + '='.repeat(50));
   console.log('📊 RÉSUMÉ FINAL');
   console.log('='.repeat(50));
-  console.log(`Total analysés: ${stats.total}`);
-  console.log(`✅ Retenus: ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%)`);
-  console.log(`❌ Rejetés: ${stats.failed} (${(stats.failed/stats.total*100).toFixed(1)}%)`);
+  console.log(`Total: ${stats.total} | ✅ ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%) | ❌ ${stats.failed}`);
   
   const withROE = combined.filter(s => s.roe !== null).length;
   const withDE = combined.filter(s => s.de_ratio !== null).length;
   console.log(`\n📈 Fondamentaux Buffett:`);
-  console.log(`  ROE disponible: ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
-  console.log(`  D/E disponible: ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
-  
-  console.log('='.repeat(50));
-  
-  // Stats par bourse
-  console.log('\n📈 ANALYSE DES REJETS PAR BOURSE:');
-  const byMic = {};
-  const bySource = { MIC: 0, REGION: 0 };
-  
-  allRejected.forEach(r => {
-    const micKey = r.MIC || 'N/A';
-    byMic[micKey] = (byMic[micKey] || 0) + 1;
-    if (r.Source && r.Source.startsWith('MIC:')) {
-      bySource.MIC++;
-    } else {
-      bySource.REGION++;
-    }
-  });
-  
-  const sortedMics = Object.entries(byMic).sort((a, b) => b[1] - a[1]);
-  console.log('\nPar code MIC:');
-  sortedMics.forEach(([mic, count]) => {
-    const pct = ((count / stats.failed) * 100).toFixed(1);
-    console.log(`  ${mic.padEnd(8)} : ${count.toString().padStart(4)} rejets (${pct}%)`);
-  });
-  
-  console.log('\nPar source de seuil:');
-  console.log(`  Seuil MIC    : ${bySource.MIC} rejets (${(bySource.MIC/stats.failed*100).toFixed(1)}%)`);
-  console.log(`  Seuil REGION : ${bySource.REGION} rejets (${(bySource.REGION/stats.failed*100).toFixed(1)}%)`);
-  
-  console.log('\n📊 ANALYSE DES ACCEPTÉS PAR BOURSE:');
-  const acceptedByExchange = {};
-  combined.forEach(s => {
-    const exchange = s['Bourse de valeurs'] || 'N/A';
-    acceptedByExchange[exchange] = (acceptedByExchange[exchange] || 0) + 1;
-  });
-  
-  const sortedExchanges = Object.entries(acceptedByExchange).sort((a, b) => b[1] - a[1]);
-  sortedExchanges.slice(0, 10).forEach(([exchange, count]) => {
-    const pct = ((count / stats.passed) * 100).toFixed(1);
-    console.log(`  ${exchange.padEnd(40)} : ${count.toString().padStart(4)} acceptés (${pct}%)`);
-  });
+  console.log(`  ROE: ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
+  console.log(`  D/E: ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
   
   // Top ROE
-  console.log('\n🏆 TOP 10 STOCKS PAR ROE:');
-  const sortedByROE = combined
-    .filter(s => s.roe !== null && s.roe > 0)
-    .sort((a, b) => b.roe - a.roe)
-    .slice(0, 10);
-  
-  sortedByROE.forEach((s, i) => {
-    console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROE=${s.roe.toFixed(1)}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'} (${s['Secteur'] || 'N/A'})`);
-  });
+  if (withROE > 0) {
+    console.log('\n🏆 TOP 10 ROE:');
+    combined.filter(s => s.roe !== null && s.roe > 0)
+      .sort((a, b) => b.roe - a.roe)
+      .slice(0, 10)
+      .forEach((s, i) => {
+        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROE=${s.roe.toFixed(1)}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'}`);
+      });
+  }
   
   console.log('\n' + '='.repeat(50));
-  console.log(`Fichiers acceptés dans: ${OUT_DIR}/`);
-  console.log(`Fichiers rejetés dans: ${OUT_DIR}/`);
-  console.log(`Cache fondamentaux: ${FUNDAMENTALS_CACHE_FILE}`);
   
+  // GitHub Actions outputs
   if (process.env.GITHUB_OUTPUT) {
     const fsSync = require('fs');
-    allOutputs.forEach(o => {
-      fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `stocks_${o.title.toLowerCase()}=${o.rows.length}\n`);
-    });
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_filtered=${combined.length}\n`);
-    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_rejected=${allRejected.length}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_roe=${withROE}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_de=${withDE}\n`);
   }
