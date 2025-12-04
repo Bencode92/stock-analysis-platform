@@ -10,6 +10,10 @@ on:
         required: false
         default: '0'
 
+concurrency:
+  group: filter-stocks
+  cancel-in-progress: false
+
 jobs:
   filter-stocks:
     runs-on: ubuntu-latest
@@ -19,6 +23,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -47,14 +53,42 @@ jobs:
         path: data/filtered/**
         retention-days: 30
     
-    - name: Commit filtered data
+    - name: Commit and push filtered data
       if: success()
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
-        git add data/filtered/*.csv || true
-        git diff --staged --quiet || git commit -m "Update filtered stocks data [skip ci]"
-        git push
+        
+        # Add changes
+        git add data/filtered/*.csv data/fundamentals_cache.json || true
+        
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+        
+        git commit -m "Update filtered stocks data [skip ci]"
+        
+        # Pull with rebase to handle concurrent changes, retry up to 3 times
+        MAX_RETRIES=3
+        RETRY=0
+        while [ $RETRY -lt $MAX_RETRIES ]; do
+          git pull --rebase origin main && break
+          RETRY=$((RETRY + 1))
+          echo "Retry $RETRY/$MAX_RETRIES..."
+          sleep 5
+        done
+        
+        # Push with retry
+        RETRY=0
+        while [ $RETRY -lt $MAX_RETRIES ]; do
+          git push origin main && break
+          RETRY=$((RETRY + 1))
+          echo "Push retry $RETRY/$MAX_RETRIES..."
+          git pull --rebase origin main
+          sleep 5
+        done
     
     - name: Summary
       if: always()
@@ -65,7 +99,7 @@ jobs:
         # Statistiques par région
         if [ -f data/filtered/Actions_US_filtered.csv ]; then
           US_COUNT=$(tail -n +2 data/filtered/Actions_US_filtered.csv | wc -l)
-          US_REJ=$(tail -n +2 data/filtered/Actions_US_rejected.csv | wc -l || echo 0)
+          US_REJ=$(tail -n +2 data/filtered/Actions_US_rejected.csv 2>/dev/null | wc -l || echo 0)
           echo "### 🇺🇸 États-Unis" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Acceptés: **$US_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
           echo "- ❌ Rejetés: **$US_REJ** stocks" >> $GITHUB_STEP_SUMMARY
@@ -74,7 +108,7 @@ jobs:
         
         if [ -f data/filtered/Actions_Europe_filtered.csv ]; then
           EU_COUNT=$(tail -n +2 data/filtered/Actions_Europe_filtered.csv | wc -l)
-          EU_REJ=$(tail -n +2 data/filtered/Actions_Europe_rejected.csv | wc -l || echo 0)
+          EU_REJ=$(tail -n +2 data/filtered/Actions_Europe_rejected.csv 2>/dev/null | wc -l || echo 0)
           echo "### 🇪🇺 Europe" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Acceptés: **$EU_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
           echo "- ❌ Rejetés: **$EU_REJ** stocks" >> $GITHUB_STEP_SUMMARY
@@ -83,10 +117,18 @@ jobs:
         
         if [ -f data/filtered/Actions_Asie_filtered.csv ]; then
           ASIA_COUNT=$(tail -n +2 data/filtered/Actions_Asie_filtered.csv | wc -l)
-          ASIA_REJ=$(tail -n +2 data/filtered/Actions_Asie_rejected.csv | wc -l || echo 0)
+          ASIA_REJ=$(tail -n +2 data/filtered/Actions_Asie_rejected.csv 2>/dev/null | wc -l || echo 0)
           echo "### 🌏 Asie" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Acceptés: **$ASIA_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
           echo "- ❌ Rejetés: **$ASIA_REJ** stocks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Fondamentaux Buffett
+        if [ -f data/fundamentals_cache.json ]; then
+          FUND_COUNT=$(grep -o '"roe":' data/fundamentals_cache.json | wc -l || echo 0)
+          echo "### 📈 Fondamentaux Buffett" >> $GITHUB_STEP_SUMMARY
+          echo "- Stocks enrichis: **$FUND_COUNT**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
         fi
         
