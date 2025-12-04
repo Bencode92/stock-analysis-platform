@@ -1,6 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.2 - FIXED: parsing equity + auto-pause on rate limit
+// Version 2.3 - FIXED: nested JSON structure for balance_sheet
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
@@ -23,19 +23,13 @@ const INPUTS = [
 // ═══════════════════════════════════════════════════════════════════════════
 const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
-
-// Rate limit: Ultra plan = 2584 credits/min
-// Chaque stock = 200 credits (balance_sheet + income_statement)
-// → Max ~12 stocks/min sans throttle
-// Délai entre requêtes pour éviter burst
 const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '2500', 10);
 const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '50', 10);
-const RATE_LIMIT_PAUSE_MS = 70000; // 70s pause quand quota épuisé
+const RATE_LIMIT_PAUSE_MS = 70000;
 
 // Seuils par région
 const VOL_MIN = { US: 500_000, EUROPE: 50_000, ASIA: 100_000 };
 
-// Seuils plus fins par MIC
 const VOL_MIN_BY_MIC = {
   XNAS: 500_000, XNYS: 350_000, BATS: 500_000,
   XETR: 100_000, XPAR: 40_000, XLON: 120_000, XMIL: 80_000, XMAD: 80_000,
@@ -151,7 +145,7 @@ async function tryQuote(sym, mic){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FONDAMENTAUX BUFFETT - PARSING ROBUSTE
+// FONDAMENTAUX BUFFETT - PARSING STRUCTURE IMBRIQUÉE
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function loadFundamentalsCache() {
@@ -170,34 +164,14 @@ async function saveFundamentalsCache(cache) {
   await fs.writeFile(FUNDAMENTALS_CACHE_FILE, JSON.stringify(cache, null, 2), 'utf8');
 }
 
+/**
+ * Parse un float de manière sécurisée
+ * Utilise ?? pour ne pas écraser un vrai 0
+ */
 function parseFloatSafe(value) {
   if (value === null || value === undefined || value === '' || value === 'null') return null;
   const parsed = parseFloat(value);
-  return Number.isNaN(parsed) || !Number.isFinite(parsed) ? null : parsed;
-}
-
-/**
- * Cherche une valeur numérique dans un objet en essayant plusieurs clés
- * puis un fallback regex sur toutes les clés
- */
-function pickNumber(obj, keys, fallbackRegex) {
-  // 1) Essaye une liste de clés candidates
-  for (const key of keys) {
-    if (key in obj) {
-      const v = parseFloatSafe(obj[key]);
-      if (v !== null) return v;
-    }
-  }
-  // 2) Fallback : cherche dans toutes les clés un match via regex
-  if (fallbackRegex) {
-    for (const [k, v] of Object.entries(obj)) {
-      if (fallbackRegex.test(k)) {
-        const parsed = parseFloatSafe(v);
-        if (parsed !== null) return parsed;
-      }
-    }
-  }
-  return null;
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**
@@ -210,22 +184,37 @@ function isRateLimitError(data) {
 }
 
 /**
- * Récupère le bilan - 100 credits
- * Parsing robuste avec fallback sur Assets - Liabilities
+ * Récupère le bilan - STRUCTURE IMBRIQUÉE Twelve Data
+ * 
+ * Structure réelle de l'API:
+ * {
+ *   "balance_sheet": [{
+ *     "fiscal_date": "2024-01-28",
+ *     "assets": { "total_assets": "..." },
+ *     "liabilities": {
+ *       "current_liabilities": { "short_term_debt": "..." },
+ *       "non_current_liabilities": { "long_term_debt": "..." },
+ *       "total_liabilities": "..."
+ *     },
+ *     "shareholders_equity": {
+ *       "total_shareholders_equity": "...",
+ *       "total_stockholders_equity": "..."
+ *     }
+ *   }]
+ * }
  */
 async function fetchBalanceSheet(symbol) {
   try {
     const { data, headers } = await axios.get('https://api.twelvedata.com/balance_sheet', {
-      params: { symbol, apikey: API_KEY },
+      params: { symbol, period: 'annual', apikey: API_KEY },
       timeout: 30000
     });
     
     if (DEBUG) {
-      console.log(`  [DEBUG] balance_sheet ${symbol} keys:`, data ? Object.keys(data) : 'null');
+      console.log(`  [DEBUG] balance_sheet ${symbol} response keys:`, data ? Object.keys(data) : 'null');
       console.log(`  [DEBUG] credits: used=${headers['api-credits-used']}, left=${headers['api-credits-left']}`);
     }
     
-    // Erreur rate limit → retourne objet spécial pour pause
     if (isRateLimitError(data)) {
       return { _rateLimited: true };
     }
@@ -235,78 +224,88 @@ async function fetchBalanceSheet(symbol) {
       return null;
     }
     
-    let balanceSheet = data.balance_sheet || data;
-    if (!Array.isArray(balanceSheet)) {
-      if (typeof balanceSheet === 'object' && Object.keys(balanceSheet).length > 0) {
-        balanceSheet = [balanceSheet];
-      } else {
-        console.warn(`  ⚠️ Format inattendu balance_sheet ${symbol}`);
-        if (DEBUG) console.log(`  [DEBUG] data:`, JSON.stringify(data).slice(0, 300));
-        return null;
-      }
+    // Extraire le premier élément du tableau balance_sheet
+    let sheet = data.balance_sheet || data;
+    if (Array.isArray(sheet)) {
+      sheet = sheet[0];
     }
     
-    if (balanceSheet.length === 0) {
-      console.warn(`  ⚠️ Pas de données balance_sheet pour ${symbol}`);
+    if (!sheet || typeof sheet !== 'object') {
+      console.warn(`  ⚠️ Format inattendu balance_sheet ${symbol}`);
       return null;
     }
     
-    const latest = balanceSheet[0];
-    
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} balance_sheet[0] keys:`, Object.keys(latest));
+      console.log(`  [DEBUG] ${symbol} sheet keys:`, Object.keys(sheet));
     }
     
-    // Assets
-    const totalAssets = pickNumber(latest, 
-      ['total_assets', 'assets'], 
-      /total.*assets?/i
-    );
+    // ═══════════════════════════════════════════════════════════════════
+    // EXTRACTION DES OBJETS IMBRIQUÉS (comme dans le Python)
+    // ═══════════════════════════════════════════════════════════════════
     
-    // Liabilities
-    const totalLiabilities = pickNumber(latest,
-      ['total_liabilities', 'liabilities', 'total_liabilities_net_minority_interest'],
-      /total.*liabilit/i
-    );
+    const assets = sheet.assets || {};
+    const liabilities = sheet.liabilities || {};
+    const equityBlock = sheet.shareholders_equity || {};
+    const currentLiab = liabilities.current_liabilities || {};
+    const nonCurrentLiab = liabilities.non_current_liabilities || {};
     
-    // Equity - essayer TOUTES les variantes possibles
-    let totalEquity = pickNumber(latest,
-      [
-        'total_shareholder_equity',
-        'total_shareholders_equity', 
-        'total_stockholder_equity',
-        'total_stockholders_equity',
-        'stockholders_equity',
-        'shareholders_equity',
-        'total_equity',
-        'total_common_equity',
-        'common_stock_equity',
-        'total_equity_gross_minority_interest',
-        'stockholder_equity',
-        'shareholder_equity'
-      ],
-      /(equity|stockholder|shareholder)/i
-    );
+    if (DEBUG) {
+      console.log(`  [DEBUG] ${symbol} equityBlock keys:`, Object.keys(equityBlock));
+      console.log(`  [DEBUG] ${symbol} liabilities keys:`, Object.keys(liabilities));
+    }
     
-    // Fallback: Equity = Assets - Liabilities
-    if ((totalEquity === null || totalEquity === 0) && totalAssets !== null && totalLiabilities !== null) {
-      const derived = totalAssets - totalLiabilities;
-      if (Math.abs(derived) > 1e-6) {
-        totalEquity = derived;
-        if (DEBUG) {
-          console.log(`  [DEBUG] ${symbol} equity dérivée = assets(${totalAssets}) - liabilities(${totalLiabilities}) = ${totalEquity}`);
-        }
+    // ═══════════════════════════════════════════════════════════════════
+    // TOTAL ASSETS
+    // ═══════════════════════════════════════════════════════════════════
+    const totalAssets = 
+      parseFloatSafe(assets.total_assets) ??
+      parseFloatSafe(sheet.total_assets) ?? 
+      null;
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // TOTAL LIABILITIES
+    // ═══════════════════════════════════════════════════════════════════
+    const totalLiabilities = 
+      parseFloatSafe(liabilities.total_liabilities) ??
+      parseFloatSafe(sheet.total_liabilities) ?? 
+      null;
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // TOTAL DEBT = short_term_debt + long_term_debt (comme Python)
+    // ═══════════════════════════════════════════════════════════════════
+    const shortTermDebt = parseFloatSafe(currentLiab.short_term_debt) ?? 
+                          parseFloatSafe(currentLiab.current_debt) ?? 0;
+    const longTermDebt = parseFloatSafe(nonCurrentLiab.long_term_debt) ?? 
+                         parseFloatSafe(nonCurrentLiab.long_term_debt_and_capital_lease_obligation) ?? 0;
+    const totalDebt = shortTermDebt + longTermDebt;
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // TOTAL EQUITY - chercher dans l'objet imbriqué shareholders_equity
+    // ═══════════════════════════════════════════════════════════════════
+    let totalEquity = 
+      // D'abord dans l'objet imbriqué (structure la plus courante)
+      parseFloatSafe(equityBlock.total_shareholders_equity) ??
+      parseFloatSafe(equityBlock.total_stockholders_equity) ??
+      parseFloatSafe(equityBlock.stockholders_equity) ??
+      parseFloatSafe(equityBlock.total_equity) ??
+      parseFloatSafe(equityBlock.common_stock_equity) ??
+      // Fallback: directement sur sheet (structure plate parfois)
+      parseFloatSafe(sheet.total_shareholders_equity) ??
+      parseFloatSafe(sheet.total_stockholders_equity) ??
+      parseFloatSafe(sheet.stockholders_equity) ??
+      parseFloatSafe(sheet.total_equity) ??
+      null;
+    
+    // Dernier fallback: Equity = Assets - Liabilities
+    if (totalEquity === null && totalAssets !== null && totalLiabilities !== null) {
+      totalEquity = totalAssets - totalLiabilities;
+      if (DEBUG) {
+        console.log(`  [DEBUG] ${symbol} equity dérivée = ${totalAssets} - ${totalLiabilities} = ${totalEquity}`);
       }
     }
     
-    // Debt
-    const totalDebt = pickNumber(latest,
-      ['total_debt', 'long_term_debt', 'total_long_term_debt', 'long_term_debt_and_capital_lease_obligation'],
-      /(total_)?(debt|borrowings)/i
-    );
-    
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} PARSED: debt=${totalDebt}, equity=${totalEquity}, assets=${totalAssets}, liab=${totalLiabilities}`);
+      console.log(`  [DEBUG] ${symbol} FINAL: debt=${totalDebt}, equity=${totalEquity}, assets=${totalAssets}`);
     }
     
     return {
@@ -314,7 +313,7 @@ async function fetchBalanceSheet(symbol) {
       total_equity: totalEquity,
       total_assets: totalAssets,
       total_liabilities: totalLiabilities,
-      fiscal_date: latest.fiscal_date || latest.date || null
+      fiscal_date: sheet.fiscal_date || sheet.date || null
     };
   } catch (error) {
     console.error(`  ❌ Erreur balance_sheet ${symbol}:`, error.message);
@@ -323,18 +322,17 @@ async function fetchBalanceSheet(symbol) {
 }
 
 /**
- * Récupère le compte de résultat - 100 credits
+ * Récupère le compte de résultat - STRUCTURE IMBRIQUÉE
  */
 async function fetchIncomeStatement(symbol) {
   try {
     const { data, headers } = await axios.get('https://api.twelvedata.com/income_statement', {
-      params: { symbol, apikey: API_KEY },
+      params: { symbol, period: 'annual', apikey: API_KEY },
       timeout: 30000
     });
     
     if (DEBUG) {
-      console.log(`  [DEBUG] income_statement ${symbol} keys:`, data ? Object.keys(data) : 'null');
-      console.log(`  [DEBUG] credits: used=${headers['api-credits-used']}, left=${headers['api-credits-left']}`);
+      console.log(`  [DEBUG] income_statement ${symbol} response keys:`, data ? Object.keys(data) : 'null');
     }
     
     if (isRateLimitError(data)) {
@@ -346,52 +344,45 @@ async function fetchIncomeStatement(symbol) {
       return null;
     }
     
-    let incomeStatement = data.income_statement || data;
-    if (!Array.isArray(incomeStatement)) {
-      if (typeof incomeStatement === 'object' && Object.keys(incomeStatement).length > 0) {
-        incomeStatement = [incomeStatement];
-      } else {
-        console.warn(`  ⚠️ Format inattendu income_statement ${symbol}`);
-        return null;
-      }
+    let statement = data.income_statement || data;
+    if (Array.isArray(statement)) {
+      statement = statement[0];
     }
     
-    if (incomeStatement.length === 0) {
-      console.warn(`  ⚠️ Pas de données income_statement pour ${symbol}`);
+    if (!statement || typeof statement !== 'object') {
+      console.warn(`  ⚠️ Format inattendu income_statement ${symbol}`);
       return null;
     }
     
-    const latest = incomeStatement[0];
-    
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} income_statement[0] keys:`, Object.keys(latest));
+      console.log(`  [DEBUG] ${symbol} income keys:`, Object.keys(statement));
     }
     
-    const netIncome = pickNumber(latest,
-      [
-        'net_income',
-        'net_income_common_stockholders',
-        'net_income_from_continuing_operations',
-        'net_income_including_noncontrolling_interests',
-        'normalized_income'
-      ],
-      /net.*income/i
-    );
+    // Net income peut être dans un sous-objet ou à la racine
+    const netIncomeBlock = statement.net_income || {};
     
-    const revenue = pickNumber(latest,
-      ['revenue', 'total_revenue', 'operating_revenue'],
-      /revenue/i
-    );
+    const netIncome = 
+      parseFloatSafe(typeof netIncomeBlock === 'object' ? netIncomeBlock.net_income : netIncomeBlock) ??
+      parseFloatSafe(statement.net_income) ??
+      parseFloatSafe(statement.net_income_common_stockholders) ??
+      parseFloatSafe(statement.net_income_from_continuing_operations) ??
+      null;
+    
+    const revenue = 
+      parseFloatSafe(statement.revenue) ??
+      parseFloatSafe(statement.total_revenue) ??
+      parseFloatSafe(statement.operating_revenue) ??
+      null;
     
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} PARSED: net_income=${netIncome}, revenue=${revenue}`);
+      console.log(`  [DEBUG] ${symbol} FINAL: net_income=${netIncome}, revenue=${revenue}`);
     }
     
     return {
       net_income: netIncome,
       revenue: revenue,
-      ebitda: pickNumber(latest, ['ebitda', 'normalized_ebitda'], /ebitda/i),
-      fiscal_date: latest.fiscal_date || latest.date || null
+      ebitda: parseFloatSafe(statement.ebitda) ?? parseFloatSafe(statement.normalized_ebitda) ?? null,
+      fiscal_date: statement.fiscal_date || statement.date || null
     };
   } catch (error) {
     console.error(`  ❌ Erreur income_statement ${symbol}:`, error.message);
@@ -400,7 +391,7 @@ async function fetchIncomeStatement(symbol) {
 }
 
 /**
- * Calcule ROE et D/E - ne considère plus 0 comme valide
+ * Calcule ROE et D/E
  */
 function computeFundamentalRatios(balanceSheet, incomeStatement) {
   if (!balanceSheet) {
@@ -415,15 +406,13 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
   let de_ratio = null;
 
   // ROE = Net Income / Equity * 100
-  if (equity !== null && equity > 0 && net_income !== null) {
-    roe = (net_income / equity) * 100;
-    roe = Math.round(roe * 100) / 100;
+  if (equity != null && equity !== 0 && net_income != null) {
+    roe = Math.round((net_income / equity) * 10000) / 100;
   }
 
   // D/E = Debt / Equity
-  if (equity !== null && equity > 0 && debt !== null) {
-    de_ratio = debt / equity;
-    de_ratio = Math.round(de_ratio * 100) / 100;
+  if (equity != null && equity !== 0 && debt != null) {
+    de_ratio = Math.round((debt / equity) * 100) / 100;
   }
 
   return {
@@ -438,28 +427,24 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
 }
 
 /**
- * Récupère les fondamentaux pour un symbole avec gestion rate limit
+ * Récupère les fondamentaux pour un symbole
  */
 async function fetchFundamentalsForSymbol(symbol) {
-  // Balance sheet (100 credits)
   const balanceSheet = await fetchBalanceSheet(symbol);
   
-  // Rate limit hit → pause et retry
   if (balanceSheet?._rateLimited) {
     console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
     await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
-    return fetchFundamentalsForSymbol(symbol); // Retry
+    return fetchFundamentalsForSymbol(symbol);
   }
   
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
   
-  // Income statement (100 credits)
   const incomeStatement = await fetchIncomeStatement(symbol);
   
   if (incomeStatement?._rateLimited) {
     console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
     await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
-    // On a déjà le balance sheet, on retry juste l'income
     const incomeRetry = await fetchIncomeStatement(symbol);
     const ratios = computeFundamentalRatios(balanceSheet, incomeRetry?._rateLimited ? null : incomeRetry);
     return { symbol, ...ratios, fetched_at: new Date().toISOString() };
@@ -481,11 +466,10 @@ async function fetchFundamentalsForSymbol(symbol) {
  */
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.2');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.3');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches} par run`);
-  console.log(`⏱️ Pause auto si quota épuisé: ${RATE_LIMIT_PAUSE_MS/1000}s`);
   if (DEBUG) console.log('🐛 DEBUG mode activé');
   
   const cache = await loadFundamentalsCache();
@@ -555,7 +539,6 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     
     processed++;
     
-    // Sauvegarde intermédiaire tous les 10 stocks
     if (processed % 10 === 0) {
       await saveFundamentalsCache(cache);
       const elapsed = (Date.now() - startTime) / 1000;
@@ -564,7 +547,6 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     }
   }
   
-  // Stocks non traités
   const notProcessed = needsUpdate.slice(maxNewFetches);
   for (const stock of notProcessed) {
     const ticker = stock['Ticker'];
@@ -583,7 +565,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   console.log(`  🔄 Nouveaux appels: ${processed}`);
   console.log(`    - Avec ROE/D/E: ${succeeded}`);
   console.log(`    - Sans données: ${failed}`);
-  console.log(`  ⏳ En attente (prochain run): ${notProcessed.length}`);
+  console.log(`  ⏳ En attente: ${notProcessed.length}`);
   console.log(`  ⏱️ Temps: ${totalTime.toFixed(1)}s (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
   console.log('─'.repeat(50));
   
@@ -675,7 +657,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.2\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.3\n');
   console.log(`📊 Config:`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
@@ -783,7 +765,6 @@ async function throttle() {
   
   console.log('\n' + '='.repeat(50));
   
-  // GitHub Actions outputs
   if (process.env.GITHUB_OUTPUT) {
     const fsSync = require('fs');
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_filtered=${combined.length}\n`);
