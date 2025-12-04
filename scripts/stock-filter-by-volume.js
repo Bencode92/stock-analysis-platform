@@ -1,6 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.0 - Avec enrichissement fondamentaux Buffett (ROE, D/E)
+// Version 2.1 - Avec enrichissement fondamentaux Buffett (ROE, D/E) - FIXED
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
@@ -11,6 +11,7 @@ if (!API_KEY) { console.error('❌ TWELVE_DATA_API_KEY manquante'); process.exit
 
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_DIR = process.env.OUTPUT_DIR || 'data/filtered';
+const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 const INPUTS = [
   { file: 'Actions_US.csv',     region: 'US' },
   { file: 'Actions_Europe.csv', region: 'EUROPE' },
@@ -22,8 +23,12 @@ const INPUTS = [
 // ═══════════════════════════════════════════════════════════════════════════
 const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours (données trimestrielles)
-const FUNDAMENTALS_RATE_LIMIT_MS = 8000; // 8 req/min pour plan gratuit Twelve Data
-const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '30', 10);
+
+// Rate limit: avec plan Ultra (2584 credits/min), on peut faire ~12 stocks/min
+// car chaque stock = 200 credits (100 balance_sheet + 100 income_statement)
+// Délai entre requêtes = 250ms (permet burst, l'API nous throttle si besoin)
+const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '250', 10);
+const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '200', 10);
 
 // Seuils par région
 const VOL_MIN = { US: 500_000, EUROPE: 50_000, ASIA: 100_000 };
@@ -45,7 +50,7 @@ const VOL_MIN_BY_MIC = {
 const EX2MIC_PATTERNS = [
   // Asie
   ['taiwan stock exchange',           'XTAI'],
-  ['gretai securities market',        'ROCO'],   // Taipei Exchange (ex-GTSM)
+  ['gretai securities market',        'ROCO'],
   ['hong kong exchanges and clearing','XHKG'],
   ['shenzhen stock exchange',         'XSHE'],
   ['korea exchange (stock market)',   'XKRX'],
@@ -54,7 +59,6 @@ const EX2MIC_PATTERNS = [
   ['stock exchange of thailand',      'XBKK'],
   ['bursa malaysia',                  'XKLS'],
   ['philippine stock exchange',       'XPHS'],
-
   // Europe
   ['euronext amsterdam',              'XAMS'],
   ['nyse euronext - euronext paris',  'XPAR'],
@@ -69,7 +73,6 @@ const EX2MIC_PATTERNS = [
   ['wiener boerse ag',                'XWBO'],
   ['irish stock exchange - all market','XDUB'],
   ['oslo bors asa',                   'XOSL'],
-
   // USA
   ['nasdaq',                          'XNAS'],
   ['new york stock exchange inc.',    'XNYS'],
@@ -85,7 +88,7 @@ const COUNTRY2MIC = {
   'japan':'XTKS', 'hong kong':'XHKG', 'singapore':'XSES',
   'taiwan':'XTAI', 'south korea':'XKRX', 'india':'XNSE',
   'thailand':'XBKK', 'philippines':'XPHS', 'malaysia':'XKLS',
-  'china':'XSHG' // si "Shenzhen", ton exchange texte donnera XSHE via le pattern ci-dessus
+  'china':'XSHG'
 };
 
 const normalize = s => (s||'').toLowerCase().trim();
@@ -103,9 +106,8 @@ function toMIC(exchange, country=''){
 
 // ───────── Helpers de désambiguïsation ─────────
 const US_EXCH = /nasdaq|nyse|arca|amex|bats/i;
-const LSE_IOB = /^[0][A-Z0-9]{3}$/; // codes LSE "0XXX" (IOB)
+const LSE_IOB = /^[0][A-Z0-9]{3}$/;
 
-// Valide que le nom ressemble (≥1 mot de ≥3 lettres en commun)
 function tokens(s){
   return normalize(s).normalize("NFKD").replace(/[^a-z0-9\s]/g," ")
     .split(/\s+/).filter(w => w.length>=3);
@@ -117,7 +119,6 @@ function nameLooksRight(metaName, expected){
   return b.some(t => a.has(t));
 }
 
-// Annuaire Twelve Data
 async function tdStocksLookup({ symbol, country, exchange }) {
   try {
     const { data } = await axios.get('https://api.twelvedata.com/stocks', {
@@ -128,7 +129,6 @@ async function tdStocksLookup({ symbol, country, exchange }) {
   } catch { return []; }
 }
 
-// Score des candidats /stocks
 function rankCandidate(c, wanted){
   let s = 0;
   const micWanted = toMIC(wanted.exchange, wanted.country);
@@ -139,7 +139,6 @@ function rankCandidate(c, wanted){
   return s;
 }
 
-// Quote robuste (essaye SYM:MIC, puis mic_code, puis SYM brut)
 async function tryQuote(sym, mic){
   const attempt = async (params) => {
     try {
@@ -158,12 +157,9 @@ async function tryQuote(sym, mic){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FONDAMENTAUX BUFFETT - CACHE & FETCH
+// FONDAMENTAUX BUFFETT - CACHE & FETCH (FIXED)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Charge le cache des fondamentaux depuis le fichier JSON
- */
 async function loadFundamentalsCache() {
   try {
     const txt = await fs.readFile(FUNDAMENTALS_CACHE_FILE, 'utf8');
@@ -174,52 +170,81 @@ async function loadFundamentalsCache() {
   }
 }
 
-/**
- * Sauvegarde le cache des fondamentaux
- */
 async function saveFundamentalsCache(cache) {
   cache.updated = new Date().toISOString();
   await fs.mkdir(path.dirname(FUNDAMENTALS_CACHE_FILE), { recursive: true });
   await fs.writeFile(FUNDAMENTALS_CACHE_FILE, JSON.stringify(cache, null, 2), 'utf8');
 }
 
-/**
- * Helper pour parser les floats proprement
- */
 function parseFloatSafe(value) {
-  if (value === null || value === undefined || value === '') return null;
+  if (value === null || value === undefined || value === '' || value === 'null') return null;
   const parsed = parseFloat(value);
   return Number.isNaN(parsed) || !Number.isFinite(parsed) ? null : parsed;
 }
 
 /**
- * Récupère le bilan (Total Debt, Total Equity) - COÛTEUX: 100 credits
+ * Récupère le bilan (Total Debt, Total Equity) - 100 credits
+ * Structure Twelve Data: { balance_sheet: [ { fiscal_date, total_debt, ... } ] }
  */
 async function fetchBalanceSheet(symbol) {
   try {
-    const { data } = await axios.get('https://api.twelvedata.com/balance_sheet', {
+    const { data, headers } = await axios.get('https://api.twelvedata.com/balance_sheet', {
       params: { symbol, apikey: API_KEY },
       timeout: 30000
     });
     
-    // Gestion erreurs Twelve Data
+    if (DEBUG) {
+      console.log(`  [DEBUG] balance_sheet ${symbol}:`, JSON.stringify(data).slice(0, 500));
+      console.log(`  [DEBUG] credits used: ${headers['api-credits-used']}, left: ${headers['api-credits-left']}`);
+    }
+    
+    // Gestion erreurs Twelve Data (code ou status)
     if (!data || data.status === 'error' || data.code) {
-      console.warn(`  ⚠️ Balance sheet indisponible pour ${symbol}: ${data?.message || data?.code || 'unknown'}`);
+      console.warn(`  ⚠️ Balance sheet erreur pour ${symbol}: ${data?.message || data?.code || 'unknown'}`);
       return null;
     }
     
-    const balanceSheet = data.balance_sheet;
-    if (!balanceSheet || !Array.isArray(balanceSheet) || balanceSheet.length === 0) {
+    // Twelve Data retourne: { balance_sheet: [...] } ou directement un array
+    let balanceSheet = data.balance_sheet || data;
+    if (!Array.isArray(balanceSheet)) {
+      // Peut-être un objet avec les données directement
+      if (data.total_debt !== undefined || data.total_shareholder_equity !== undefined) {
+        balanceSheet = [data];
+      } else {
+        console.warn(`  ⚠️ Format inattendu balance_sheet pour ${symbol}`);
+        if (DEBUG) console.log(`  [DEBUG] data keys:`, Object.keys(data));
+        return null;
+      }
+    }
+    
+    if (balanceSheet.length === 0) {
       console.warn(`  ⚠️ Pas de données balance_sheet pour ${symbol}`);
       return null;
     }
     
-    const latest = balanceSheet[0]; // Plus récent
+    const latest = balanceSheet[0];
+    
+    // Essayer plusieurs noms de champs possibles
+    const totalDebt = parseFloatSafe(latest.total_debt) 
+      || parseFloatSafe(latest.long_term_debt) 
+      || parseFloatSafe(latest.total_liabilities)
+      || 0;
+      
+    const totalEquity = parseFloatSafe(latest.total_shareholder_equity) 
+      || parseFloatSafe(latest.stockholders_equity)
+      || parseFloatSafe(latest.total_equity)
+      || parseFloatSafe(latest.shareholders_equity)
+      || 0;
+    
+    if (DEBUG) {
+      console.log(`  [DEBUG] ${symbol} parsed: debt=${totalDebt}, equity=${totalEquity}`);
+    }
+    
     return {
-      total_debt: parseFloatSafe(latest.total_debt) || 0,
-      total_equity: parseFloatSafe(latest.total_shareholder_equity || latest.stockholders_equity) || 0,
+      total_debt: totalDebt,
+      total_equity: totalEquity,
       total_assets: parseFloatSafe(latest.total_assets) || 0,
-      fiscal_date: latest.fiscal_date || null
+      fiscal_date: latest.fiscal_date || latest.date || null
     };
   } catch (error) {
     console.error(`  ❌ Erreur balance_sheet pour ${symbol}:`, error.message);
@@ -228,33 +253,57 @@ async function fetchBalanceSheet(symbol) {
 }
 
 /**
- * Récupère le compte de résultat (Net Income) - COÛTEUX: 100 credits
+ * Récupère le compte de résultat (Net Income) - 100 credits
  */
 async function fetchIncomeStatement(symbol) {
   try {
-    const { data } = await axios.get('https://api.twelvedata.com/income_statement', {
+    const { data, headers } = await axios.get('https://api.twelvedata.com/income_statement', {
       params: { symbol, apikey: API_KEY },
       timeout: 30000
     });
     
-    // Gestion erreurs Twelve Data
+    if (DEBUG) {
+      console.log(`  [DEBUG] income_statement ${symbol}:`, JSON.stringify(data).slice(0, 500));
+      console.log(`  [DEBUG] credits used: ${headers['api-credits-used']}, left: ${headers['api-credits-left']}`);
+    }
+    
     if (!data || data.status === 'error' || data.code) {
-      console.warn(`  ⚠️ Income statement indisponible pour ${symbol}: ${data?.message || data?.code || 'unknown'}`);
+      console.warn(`  ⚠️ Income statement erreur pour ${symbol}: ${data?.message || data?.code || 'unknown'}`);
       return null;
     }
     
-    const incomeStatement = data.income_statement;
-    if (!incomeStatement || !Array.isArray(incomeStatement) || incomeStatement.length === 0) {
+    let incomeStatement = data.income_statement || data;
+    if (!Array.isArray(incomeStatement)) {
+      if (data.net_income !== undefined || data.revenue !== undefined) {
+        incomeStatement = [data];
+      } else {
+        console.warn(`  ⚠️ Format inattendu income_statement pour ${symbol}`);
+        if (DEBUG) console.log(`  [DEBUG] data keys:`, Object.keys(data));
+        return null;
+      }
+    }
+    
+    if (incomeStatement.length === 0) {
       console.warn(`  ⚠️ Pas de données income_statement pour ${symbol}`);
       return null;
     }
     
     const latest = incomeStatement[0];
+    
+    const netIncome = parseFloatSafe(latest.net_income) 
+      || parseFloatSafe(latest.net_income_from_continuing_operations)
+      || parseFloatSafe(latest.net_income_common_stockholders)
+      || 0;
+    
+    if (DEBUG) {
+      console.log(`  [DEBUG] ${symbol} parsed: net_income=${netIncome}`);
+    }
+    
     return {
-      net_income: parseFloatSafe(latest.net_income) || 0,
+      net_income: netIncome,
       revenue: parseFloatSafe(latest.revenue || latest.total_revenue) || 0,
       ebitda: parseFloatSafe(latest.ebitda) || 0,
-      fiscal_date: latest.fiscal_date || null
+      fiscal_date: latest.fiscal_date || latest.date || null
     };
   } catch (error) {
     console.error(`  ❌ Erreur income_statement pour ${symbol}:`, error.message);
@@ -263,9 +312,7 @@ async function fetchIncomeStatement(symbol) {
 }
 
 /**
- * Calcule ROE et D/E à partir des données financières
- * ROE = Net Income / Total Equity (en %)
- * D/E = Total Debt / Total Equity (ratio)
+ * Calcule ROE et D/E
  */
 function computeFundamentalRatios(balanceSheet, incomeStatement) {
   if (!balanceSheet) {
@@ -275,22 +322,16 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
   const { total_debt, total_equity } = balanceSheet;
   const net_income = incomeStatement?.net_income || 0;
   
-  // ROE = Net Income / Total Shareholder Equity * 100 (en pourcentage)
   let roe = null;
   if (total_equity > 0 && incomeStatement) {
     roe = (net_income / total_equity) * 100;
-    roe = Math.round(roe * 100) / 100; // 2 décimales
-  } else if (total_equity < 0) {
-    roe = null; // Equity négative = entreprise en difficulté
+    roe = Math.round(roe * 100) / 100;
   }
   
-  // D/E = Total Debt / Total Equity (ratio)
   let de_ratio = null;
   if (total_equity > 0) {
     de_ratio = total_debt / total_equity;
-    de_ratio = Math.round(de_ratio * 100) / 100; // 2 décimales
-  } else if (total_equity < 0) {
-    de_ratio = null; // Equity négative
+    de_ratio = Math.round(de_ratio * 100) / 100;
   }
   
   return {
@@ -305,11 +346,9 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
 }
 
 /**
- * Récupère les fondamentaux complets pour un symbole (avec rate limiting)
+ * Récupère les fondamentaux pour un symbole
  */
 async function fetchFundamentalsForSymbol(symbol) {
-  console.log(`  📊 Fetching fondamentaux pour ${symbol}...`);
-  
   // Balance sheet (100 credits)
   const balanceSheet = await fetchBalanceSheet(symbol);
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
@@ -318,7 +357,6 @@ async function fetchFundamentalsForSymbol(symbol) {
   const incomeStatement = await fetchIncomeStatement(symbol);
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
   
-  // Calcul des ratios
   const ratios = computeFundamentalRatios(balanceSheet, incomeStatement);
   
   return {
@@ -329,19 +367,19 @@ async function fetchFundamentalsForSymbol(symbol) {
 }
 
 /**
- * Enrichit une liste de stocks avec les fondamentaux (cache intelligent)
- * @param {Array} stocks - Liste des stocks filtrés
- * @param {number} maxNewFetches - Nombre max de nouveaux appels API par run
+ * Enrichit les stocks avec les fondamentaux (cache intelligent)
  */
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
   console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT');
   console.log('═'.repeat(50));
+  console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
+  console.log(`📦 Max fetches: ${maxNewFetches} par run`);
+  if (DEBUG) console.log('🐛 DEBUG mode activé');
   
   const cache = await loadFundamentalsCache();
   const now = Date.now();
   
-  // Identifier les stocks qui ont besoin d'update
   const needsUpdate = [];
   const fromCache = [];
   
@@ -352,46 +390,41 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     if (cached && cached.fetched_at) {
       const cachedTime = new Date(cached.fetched_at).getTime();
       if (now - cachedTime < CACHE_TTL_MS) {
-        // Cache valide, utiliser les données existantes
         stock.roe = cached.roe;
         stock.de_ratio = cached.de_ratio;
         fromCache.push(ticker);
         continue;
       }
     }
-    
-    // Besoin de mise à jour
     needsUpdate.push(stock);
   }
   
   console.log(`📁 ${fromCache.length} stocks avec cache valide`);
   console.log(`🔄 ${needsUpdate.length} stocks nécessitent mise à jour`);
-  console.log(`⏱️ Max ${maxNewFetches} nouveaux appels API par run`);
   
-  // Limiter le nombre d'appels API par run
   const toProcess = needsUpdate.slice(0, maxNewFetches);
   let processed = 0;
   let succeeded = 0;
   let failed = 0;
   
+  const startTime = Date.now();
+  
   for (const stock of toProcess) {
     const ticker = stock['Ticker'];
     
     try {
+      console.log(`  📊 [${processed + 1}/${toProcess.length}] ${ticker}...`);
       const fundamentals = await fetchFundamentalsForSymbol(ticker);
       
-      // Mettre à jour le cache
       cache.data[ticker] = fundamentals;
-      
-      // Enrichir le stock
       stock.roe = fundamentals.roe;
       stock.de_ratio = fundamentals.de_ratio;
       
       if (fundamentals.roe !== null || fundamentals.de_ratio !== null) {
-        console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe}%, D/E=${fundamentals.de_ratio}`);
+        console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}%, D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'}`);
         succeeded++;
       } else {
-        console.log(`  ⚠️ ${ticker}: Données incomplètes`);
+        console.log(`  ⚠️ ${ticker}: Données incomplètes (equity=${fundamentals.total_equity}, income=${fundamentals.net_income})`);
         failed++;
       }
       
@@ -411,26 +444,28 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     
     processed++;
     
-    // Progress log
-    if (processed % 5 === 0) {
-      console.log(`  Progression: ${processed}/${toProcess.length}`);
+    // Sauvegarde intermédiaire tous les 20 stocks
+    if (processed % 20 === 0) {
+      await saveFundamentalsCache(cache);
+      const elapsed = (Date.now() - startTime) / 1000;
+      const rate = processed / elapsed;
+      console.log(`  💾 Cache sauvegardé (${processed}/${toProcess.length}) - ${rate.toFixed(1)} stocks/s`);
     }
   }
   
-  // Marquer les stocks non traités (limite atteinte)
+  // Stocks non traités (limite atteinte)
   const notProcessed = needsUpdate.slice(maxNewFetches);
   for (const stock of notProcessed) {
     const ticker = stock['Ticker'];
     const cached = cache.data[ticker];
-    // Utiliser le cache même expiré plutôt que null
     stock.roe = cached?.roe ?? null;
     stock.de_ratio = cached?.de_ratio ?? null;
   }
   
-  // Sauvegarder le cache
   await saveFundamentalsCache(cache);
   
-  // Résumé
+  const totalTime = (Date.now() - startTime) / 1000;
+  
   console.log('\n' + '─'.repeat(50));
   console.log('📊 RÉSUMÉ ENRICHISSEMENT:');
   console.log(`  ✅ Depuis cache: ${fromCache.length}`);
@@ -438,6 +473,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   console.log(`    - Réussis: ${succeeded}`);
   console.log(`    - Échoués/Incomplets: ${failed}`);
   console.log(`  ⏳ En attente (prochain run): ${notProcessed.length}`);
+  console.log(`  ⏱️ Temps total: ${totalTime.toFixed(1)}s (${(processed/totalTime).toFixed(1)} stocks/s)`);
   console.log('─'.repeat(50));
   
   return stocks;
@@ -447,13 +483,11 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 // CSV HEADERS & HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Header élargi avec fondamentaux Buffett
 const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','roe','de_ratio'];
 const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Source','Raison'];
 
 const csvLine = obj => HEADER.map(h => {
   const val = obj[h];
-  // Formater les nombres avec 2 décimales pour roe et de_ratio
   if ((h === 'roe' || h === 'de_ratio') && val !== null && val !== undefined) {
     return `"${parseFloat(val).toFixed(2)}"`;
   }
@@ -478,11 +512,8 @@ async function writeCSVGeneric(file, rows, header) {
   await fs.writeFile(file, out, 'utf8');
 }
 
-// ───────── Fonction resolveSymbol améliorée ─────────
 async function resolveSymbol(ticker, exchange, expectedName = '', country = '') {
   const mic = toMIC(exchange, country);
-
-  // 1) Essai direct
   let quote = await tryQuote(ticker, mic);
   const looksUS   = quote?.exchange && US_EXCH.test(quote.exchange);
   const okMarket  = !(looksUS && normalize(country) !== 'united states');
@@ -492,12 +523,10 @@ async function resolveSymbol(ticker, exchange, expectedName = '', country = '') 
     return { sym: ticker, quote, reason: 'direct_ok' };
   }
 
-  // 2) Désambiguïsation via /stocks
   const cand = await tdStocksLookup({ symbol: ticker, country, exchange });
   if (cand.length) {
     cand.sort((a,b)=>rankCandidate(b,{country,exchange}) - rankCandidate(a,{country,exchange}));
-    const best = cand[0]; // ex. 0QOK (Roche), 0H70 (Bankinter), etc.
-
+    const best = cand[0];
     const qBest = await tryQuote(best.symbol, best.mic_code);
     if (qBest) {
       const okM = !(US_EXCH.test(qBest.exchange||"") && normalize(country) !== 'united states');
@@ -508,7 +537,6 @@ async function resolveSymbol(ticker, exchange, expectedName = '', country = '') 
     }
   }
 
-  // 3) Fallback : renvoie SYM brut (volume sera 0 si pas de quote)
   return { sym: ticker, quote: null, reason: 'fallback' };
 }
 
@@ -520,9 +548,8 @@ async function fetchVolume(symbol) {
   } catch { return 0; }
 }
 
-// Gestion des crédits API (simple rate limiting)
 let lastRequest = 0;
-const MIN_DELAY = 25; // ms entre requêtes
+const MIN_DELAY = 25;
 
 async function throttle() {
   const now = Date.now();
@@ -538,8 +565,11 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux\n');
-  console.log(`📊 Config: MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN}`);
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.1\n');
+  console.log(`📊 Config:`);
+  console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN}`);
+  console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
+  console.log(`   DEBUG=${DEBUG}`);
   
   const allOutputs = [];
   const allRejected = [];
@@ -555,17 +585,16 @@ async function throttle() {
     let processed = 0;
     
     for (const r of rows) {
-      await throttle(); // Rate limiting simple
+      await throttle();
       
       const ticker = (r['Ticker']||'').trim();
       const exch   = r['Bourse de valeurs'] || '';
       const mic    = toMIC(exch, r['Pays'] || '');
-      // Modification: passer le nom et le pays pour validation
       const { sym, quote } = await resolveSymbol(
         ticker,
         exch,
-        r['Stock'] || '',   // nom attendu (validation)
-        r['Pays']  || ''    // pays (évite ADR US & fallback MIC)
+        r['Stock'] || '',
+        r['Pays']  || ''
       );
       const vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
 
@@ -581,8 +610,8 @@ async function throttle() {
           'Pays': r['Pays']||'',
           'Bourse de valeurs': r['Bourse de valeurs']||'',
           'Devise de marché': r['Devise de marché']||'',
-          'roe': null,      // Sera enrichi plus tard
-          'de_ratio': null  // Sera enrichi plus tard
+          'roe': null,
+          'de_ratio': null
         });
         stats.passed++;
         console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()} (${source})`);
@@ -614,7 +643,6 @@ async function throttle() {
     allOutputs.push({ title: `${region}`, file: path.join(OUT_DIR, file.replace('.csv','_filtered.csv')), rows: filtered });
     allRejected.push(...rejected);
 
-    // Sauvegarder les stocks rejetés (sans enrichissement)
     const rejFile = path.join(OUT_DIR, file.replace('.csv','_rejected.csv'));
     await writeCSVGeneric(rejFile, rejected, REJ_HEADER);
 
@@ -626,25 +654,17 @@ async function throttle() {
   // ENRICHISSEMENT FONDAMENTAUX BUFFETT
   // ═══════════════════════════════════════════════════════════════════════════
   
-  // Combiner tous les stocks filtrés
   let combined = allOutputs.flatMap(o => o.rows);
-  
-  // Enrichir avec ROE et D/E (cache intelligent)
   combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
   
-  // Sauvegarder les fichiers par région (avec fondamentaux)
   for (const output of allOutputs) {
-    // Récupérer les stocks enrichis pour cette région
     const regionTickers = new Set(output.rows.map(r => r['Ticker']));
     const enrichedRows = combined.filter(r => regionTickers.has(r['Ticker']));
     await writeCSV(output.file, enrichedRows);
     console.log(`📁 ${output.title}: ${enrichedRows.length} stocks → ${output.file}`);
   }
 
-  // CSV combiné des acceptés (avec fondamentaux)
   await writeCSV(path.join(OUT_DIR,'Actions_filtrees_par_volume.csv'), combined);
-  
-  // CSV combiné des rejetés
   await writeCSVGeneric(path.join(OUT_DIR,'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
   
   // ═══════════════════════════════════════════════════════════════════════════
@@ -658,7 +678,6 @@ async function throttle() {
   console.log(`✅ Retenus: ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%)`);
   console.log(`❌ Rejetés: ${stats.failed} (${(stats.failed/stats.total*100).toFixed(1)}%)`);
   
-  // Stats fondamentaux
   const withROE = combined.filter(s => s.roe !== null).length;
   const withDE = combined.filter(s => s.de_ratio !== null).length;
   console.log(`\n📈 Fondamentaux Buffett:`);
@@ -667,7 +686,7 @@ async function throttle() {
   
   console.log('='.repeat(50));
   
-  // Résumé par bourse (MIC) pour les rejets
+  // Stats par bourse
   console.log('\n📈 ANALYSE DES REJETS PAR BOURSE:');
   const byMic = {};
   const bySource = { MIC: 0, REGION: 0 };
@@ -675,7 +694,6 @@ async function throttle() {
   allRejected.forEach(r => {
     const micKey = r.MIC || 'N/A';
     byMic[micKey] = (byMic[micKey] || 0) + 1;
-    
     if (r.Source && r.Source.startsWith('MIC:')) {
       bySource.MIC++;
     } else {
@@ -683,9 +701,7 @@ async function throttle() {
     }
   });
   
-  // Trier par nombre de rejets décroissant
   const sortedMics = Object.entries(byMic).sort((a, b) => b[1] - a[1]);
-  
   console.log('\nPar code MIC:');
   sortedMics.forEach(([mic, count]) => {
     const pct = ((count / stats.failed) * 100).toFixed(1);
@@ -696,7 +712,6 @@ async function throttle() {
   console.log(`  Seuil MIC    : ${bySource.MIC} rejets (${(bySource.MIC/stats.failed*100).toFixed(1)}%)`);
   console.log(`  Seuil REGION : ${bySource.REGION} rejets (${(bySource.REGION/stats.failed*100).toFixed(1)}%)`);
   
-  // Statistiques acceptés par bourse
   console.log('\n📊 ANALYSE DES ACCEPTÉS PAR BOURSE:');
   const acceptedByExchange = {};
   combined.forEach(s => {
@@ -710,7 +725,7 @@ async function throttle() {
     console.log(`  ${exchange.padEnd(40)} : ${count.toString().padStart(4)} acceptés (${pct}%)`);
   });
   
-  // Top stocks par ROE
+  // Top ROE
   console.log('\n🏆 TOP 10 STOCKS PAR ROE:');
   const sortedByROE = combined
     .filter(s => s.roe !== null && s.roe > 0)
@@ -726,7 +741,6 @@ async function throttle() {
   console.log(`Fichiers rejetés dans: ${OUT_DIR}/`);
   console.log(`Cache fondamentaux: ${FUNDAMENTALS_CACHE_FILE}`);
   
-  // Pour GitHub Actions
   if (process.env.GITHUB_OUTPUT) {
     const fsSync = require('fs');
     allOutputs.forEach(o => {
