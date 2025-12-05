@@ -1,6 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.4 - Traite TOUTES les actions par défaut
+// Version 2.5 - Ajout ROIC (Return on Invested Capital)
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
@@ -177,6 +177,7 @@ function isRateLimitError(data) {
   return /run out of API credits/i.test(msg) || /rate limit/i.test(msg);
 }
 
+// ✅ v2.5: Mise à jour pour extraire le cash (pour calcul ROIC)
 async function fetchBalanceSheet(symbol) {
   try {
     const { data, headers } = await axios.get('https://api.twelvedata.com/balance_sheet', {
@@ -217,6 +218,31 @@ async function fetchBalanceSheet(symbol) {
     const equityBlock = sheet.shareholders_equity || {};
     const currentLiab = liabilities.current_liabilities || {};
     const nonCurrentLiab = liabilities.non_current_liabilities || {};
+    
+    // ✅ v2.5: NOUVEAU - Extraction du cash pour ROIC
+    const currentAssets = assets.current_assets || {};
+    
+    const cashCandidates = [
+      currentAssets.cash_and_cash_equivalents,
+      currentAssets.cash,
+      currentAssets.cash_equivalents,
+      currentAssets.other_short_term_investments,
+      assets.cash_and_cash_equivalents,
+      sheet.cash_and_cash_equivalents,
+      sheet.cash,
+    ];
+    
+    const cash_and_st_investments = cashCandidates
+      .map(parseFloatSafe)
+      .filter(v => v != null)
+      .reduce((sum, v) => sum + v, 0);
+    
+    const hasCash = cashCandidates.some(v => parseFloatSafe(v) != null);
+    const cash_total = hasCash ? cash_and_st_investments : null;
+    
+    if (DEBUG && cash_total !== null) {
+      console.log(`  [DEBUG] ${symbol} cash_and_st_investments: ${cash_total?.toLocaleString()}`);
+    }
     
     if (DEBUG) {
       console.log(`  [DEBUG] ${symbol} equityBlock keys:`, Object.keys(equityBlock));
@@ -259,7 +285,7 @@ async function fetchBalanceSheet(symbol) {
     }
     
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} FINAL: debt=${totalDebt}, equity=${totalEquity}, assets=${totalAssets}`);
+      console.log(`  [DEBUG] ${symbol} FINAL: debt=${totalDebt}, equity=${totalEquity}, assets=${totalAssets}, cash=${cash_total}`);
     }
     
     return {
@@ -267,6 +293,7 @@ async function fetchBalanceSheet(symbol) {
       total_equity: totalEquity,
       total_assets: totalAssets,
       total_liabilities: totalLiabilities,
+      cash_and_st_investments: cash_total,  // ✅ v2.5: NOUVEAU
       fiscal_date: sheet.fiscal_date || sheet.date || null
     };
   } catch (error) {
@@ -340,32 +367,56 @@ async function fetchIncomeStatement(symbol) {
   }
 }
 
+// ✅ v2.5: Mise à jour pour calculer ROIC
 function computeFundamentalRatios(balanceSheet, incomeStatement) {
   if (!balanceSheet) {
-    return { roe: null, de_ratio: null, error: 'no_balance_sheet' };
+    return { roe: null, de_ratio: null, roic: null, error: 'no_balance_sheet' };
   }
   
-  const equity = balanceSheet.total_equity;
-  const debt = balanceSheet.total_debt ?? null;
+  const equity     = balanceSheet.total_equity;
+  const debt       = balanceSheet.total_debt ?? null;
+  const cash       = balanceSheet.cash_and_st_investments ?? 0;  // ✅ v2.5: NOUVEAU
   const net_income = incomeStatement?.net_income ?? null;
 
   let roe = null;
   let de_ratio = null;
+  let roic = null;
 
+  // ROE = Net Income / Equity (en %)
   if (equity != null && equity !== 0 && net_income != null) {
     roe = Math.round((net_income / equity) * 10000) / 100;
   }
 
+  // D/E = Debt / Equity (ratio)
   if (equity != null && equity !== 0 && debt != null) {
     de_ratio = Math.round((debt / equity) * 100) / 100;
+  }
+
+  // ✅ v2.5: ROIC simplifié = Net Income / Invested Capital (en %)
+  // Invested Capital = Equity + Debt - Cash
+  const invested_capital = 
+    (equity != null ? equity : 0) + 
+    (debt   != null ? debt   : 0) - 
+    (cash   != null ? cash   : 0);
+
+  // Protection contre les entreprises "cash-rich" (IC trop faible ou négatif)
+  if (net_income != null && invested_capital > 1000) {
+    roic = Math.round((net_income / invested_capital) * 10000) / 100;
+  }
+
+  if (DEBUG && roic !== null) {
+    console.log(`  [DEBUG] ROIC: NI=${net_income?.toLocaleString()}, IC=${invested_capital?.toLocaleString()} (E=${equity?.toLocaleString()}+D=${debt?.toLocaleString()}-C=${cash?.toLocaleString()}) => ROIC=${roic}%`);
   }
 
   return {
     roe,
     de_ratio,
+    roic,                                    // ✅ v2.5: NOUVEAU
     net_income,
     total_debt: debt,
     total_equity: equity,
+    invested_capital,                        // ✅ v2.5: NOUVEAU
+    cash_and_st_investments: cash,           // ✅ v2.5: NOUVEAU
     balance_sheet_date: balanceSheet.fiscal_date,
     income_statement_date: incomeStatement?.fiscal_date
   };
@@ -405,7 +456,7 @@ async function fetchFundamentalsForSymbol(symbol) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.4');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.5 (+ROIC)');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
@@ -426,6 +477,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       if (now - cachedTime < CACHE_TTL_MS) {
         stock.roe = cached.roe;
         stock.de_ratio = cached.de_ratio;
+        stock.roic = cached.roic ?? null;  // ✅ v2.5: NOUVEAU
         fromCache.push(ticker);
         continue;
       }
@@ -459,9 +511,11 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       cache.data[ticker] = fundamentals;
       stock.roe = fundamentals.roe;
       stock.de_ratio = fundamentals.de_ratio;
+      stock.roic = fundamentals.roic;  // ✅ v2.5: NOUVEAU
       
-      if (fundamentals.roe !== null || fundamentals.de_ratio !== null) {
-        console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}%, D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'} (equity=${fundamentals.total_equity?.toLocaleString()})`);
+      if (fundamentals.roe !== null || fundamentals.de_ratio !== null || fundamentals.roic !== null) {
+        // ✅ v2.5: Log amélioré avec ROIC
+        console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}%, D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'}, ROIC=${fundamentals.roic?.toFixed(1) ?? 'N/A'}%`);
         succeeded++;
       } else {
         console.log(`  ⚠️ ${ticker}: Données incomplètes (equity=${fundamentals.total_equity}, income=${fundamentals.net_income})`);
@@ -474,11 +528,13 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         symbol: ticker,
         roe: null,
         de_ratio: null,
+        roic: null,  // ✅ v2.5: NOUVEAU
         error: error.message,
         fetched_at: new Date().toISOString()
       };
       stock.roe = null;
       stock.de_ratio = null;
+      stock.roic = null;  // ✅ v2.5: NOUVEAU
       failed++;
     }
     
@@ -501,6 +557,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     const cached = cache.data[ticker];
     stock.roe = cached?.roe ?? null;
     stock.de_ratio = cached?.de_ratio ?? null;
+    stock.roic = cached?.roic ?? null;  // ✅ v2.5: NOUVEAU
   }
   
   await saveFundamentalsCache(cache);
@@ -511,7 +568,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   console.log('📊 RÉSUMÉ ENRICHISSEMENT:');
   console.log(`  ✅ Depuis cache: ${fromCache.length}`);
   console.log(`  🔄 Nouveaux appels: ${processed}`);
-  console.log(`    - Avec ROE/D/E: ${succeeded}`);
+  console.log(`    - Avec ROE/D/E/ROIC: ${succeeded}`);
   console.log(`    - Sans données: ${failed}`);
   console.log(`  ⏳ En attente: ${notProcessed.length}`);
   console.log(`  ⏱️ Temps: ${(totalTime/60).toFixed(1)}min (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
@@ -524,12 +581,13 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 // CSV HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','roe','de_ratio'];
+// ✅ v2.5: Ajout de 'roic' dans le header
+const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','roe','de_ratio','roic'];
 const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Source','Raison'];
 
 const csvLine = obj => HEADER.map(h => {
   const val = obj[h];
-  if ((h === 'roe' || h === 'de_ratio') && val !== null && val !== undefined) {
+  if ((h === 'roe' || h === 'de_ratio' || h === 'roic') && val !== null && val !== undefined) {
     return `"${parseFloat(val).toFixed(2)}"`;
   }
   return `"${String(val ?? '').replace(/"/g,'""')}"`;
@@ -605,7 +663,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.4\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.5 (+ROIC)\n');
   console.log(`📊 Config:`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
@@ -646,7 +704,8 @@ async function throttle() {
           'Bourse de valeurs': r['Bourse de valeurs']||'',
           'Devise de marché': r['Devise de marché']||'',
           'roe': null,
-          'de_ratio': null
+          'de_ratio': null,
+          'roic': null  // ✅ v2.5: NOUVEAU
         });
         stats.passed++;
         console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()} (${source})`);
@@ -694,9 +753,12 @@ await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allR
   
   const withROE = combined.filter(s => s.roe !== null).length;
   const withDE = combined.filter(s => s.de_ratio !== null).length;
+  const withROIC = combined.filter(s => s.roic !== null).length;  // ✅ v2.5: NOUVEAU
+  
   console.log(`\n📈 Fondamentaux Buffett:`);
-  console.log(`  ROE: ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
-  console.log(`  D/E: ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
+  console.log(`  ROE:  ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
+  console.log(`  D/E:  ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
+  console.log(`  ROIC: ${withROIC}/${combined.length} (${(withROIC/combined.length*100).toFixed(1)}%)`);  // ✅ v2.5: NOUVEAU
   
   // Top ROE
   if (withROE > 0) {
@@ -705,7 +767,18 @@ await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allR
       .sort((a, b) => b.roe - a.roe)
       .slice(0, 10)
       .forEach((s, i) => {
-        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROE=${s.roe.toFixed(1)}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'}`);
+        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROE=${s.roe.toFixed(1)}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'} ROIC=${s.roic?.toFixed(1) ?? 'N/A'}%`);
+      });
+  }
+  
+  // ✅ v2.5: Top ROIC
+  if (withROIC > 0) {
+    console.log('\n🏆 TOP 10 ROIC:');
+    combined.filter(s => s.roic !== null && s.roic > 0 && s.roic < 200)  // Exclure outliers
+      .sort((a, b) => b.roic - a.roic)
+      .slice(0, 10)
+      .forEach((s, i) => {
+        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROIC=${s.roic.toFixed(1)}% ROE=${s.roe?.toFixed(1) ?? 'N/A'}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'}`);
       });
   }
   
@@ -716,5 +789,6 @@ await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allR
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_filtered=${combined.length}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_roe=${withROE}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_de=${withDE}\n`);
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_roic=${withROIC}\n`);  // ✅ v2.5: NOUVEAU
   }
 })();
