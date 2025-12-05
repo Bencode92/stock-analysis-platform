@@ -1,6 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.5 - Ajout ROIC (Return on Invested Capital)
+// Version 2.6 - Migration automatique ROIC
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
@@ -456,7 +456,7 @@ async function fetchFundamentalsForSymbol(symbol) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.5 (+ROIC)');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.6 (+ROIC)');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
@@ -467,26 +467,41 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   
   const needsUpdate = [];
   const fromCache = [];
+  let needsRoicMigration = 0;
   
+  // ✅ v2.6: Migration automatique - re-fetch si cache valide MAIS roic manquant
   for (const stock of stocks) {
     const ticker = stock['Ticker'];
     const cached = cache.data[ticker];
     
     if (cached && cached.fetched_at) {
       const cachedTime = new Date(cached.fetched_at).getTime();
-      if (now - cachedTime < CACHE_TTL_MS) {
+      const cacheNotExpired = now - cachedTime < CACHE_TTL_MS;
+      
+      // Vérifier si ROIC est présent dans le cache (migration v2.4 → v2.6)
+      const hasRoic = cached.roic !== undefined;
+      
+      if (cacheNotExpired && hasRoic) {
+        // Cache complet et valide → utiliser
         stock.roe = cached.roe;
         stock.de_ratio = cached.de_ratio;
-        stock.roic = cached.roic ?? null;  // ✅ v2.5: NOUVEAU
+        stock.roic = cached.roic;
         fromCache.push(ticker);
         continue;
+      } else if (cacheNotExpired && !hasRoic) {
+        // Cache valide mais sans ROIC → migration nécessaire
+        needsRoicMigration++;
       }
+      // Si cache expiré ou sans ROIC → needsUpdate
     }
     needsUpdate.push(stock);
   }
   
-  console.log(`📁 ${fromCache.length} stocks avec cache valide`);
+  console.log(`📁 ${fromCache.length} stocks avec cache valide (incluant ROIC)`);
   console.log(`🔄 ${needsUpdate.length} stocks nécessitent mise à jour`);
+  if (needsRoicMigration > 0) {
+    console.log(`🔄 Dont ${needsRoicMigration} stocks en migration ROIC (cache v2.4 → v2.6)`);
+  }
   
   // Estimation du temps
   if (needsUpdate.length > 0) {
@@ -511,10 +526,9 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       cache.data[ticker] = fundamentals;
       stock.roe = fundamentals.roe;
       stock.de_ratio = fundamentals.de_ratio;
-      stock.roic = fundamentals.roic;  // ✅ v2.5: NOUVEAU
+      stock.roic = fundamentals.roic;
       
       if (fundamentals.roe !== null || fundamentals.de_ratio !== null || fundamentals.roic !== null) {
-        // ✅ v2.5: Log amélioré avec ROIC
         console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}%, D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'}, ROIC=${fundamentals.roic?.toFixed(1) ?? 'N/A'}%`);
         succeeded++;
       } else {
@@ -528,13 +542,13 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         symbol: ticker,
         roe: null,
         de_ratio: null,
-        roic: null,  // ✅ v2.5: NOUVEAU
+        roic: null,
         error: error.message,
         fetched_at: new Date().toISOString()
       };
       stock.roe = null;
       stock.de_ratio = null;
-      stock.roic = null;  // ✅ v2.5: NOUVEAU
+      stock.roic = null;
       failed++;
     }
     
@@ -557,7 +571,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     const cached = cache.data[ticker];
     stock.roe = cached?.roe ?? null;
     stock.de_ratio = cached?.de_ratio ?? null;
-    stock.roic = cached?.roic ?? null;  // ✅ v2.5: NOUVEAU
+    stock.roic = cached?.roic ?? null;
   }
   
   await saveFundamentalsCache(cache);
@@ -571,7 +585,9 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   console.log(`    - Avec ROE/D/E/ROIC: ${succeeded}`);
   console.log(`    - Sans données: ${failed}`);
   console.log(`  ⏳ En attente: ${notProcessed.length}`);
-  console.log(`  ⏱️ Temps: ${(totalTime/60).toFixed(1)}min (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
+  if (totalTime > 0) {
+    console.log(`  ⏱️ Temps: ${(totalTime/60).toFixed(1)}min (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
+  }
   console.log('─'.repeat(50));
   
   return stocks;
@@ -663,7 +679,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.5 (+ROIC)\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.6 (+ROIC)\n');
   console.log(`📊 Config:`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
@@ -705,7 +721,7 @@ async function throttle() {
           'Devise de marché': r['Devise de marché']||'',
           'roe': null,
           'de_ratio': null,
-          'roic': null  // ✅ v2.5: NOUVEAU
+          'roic': null
         });
         stats.passed++;
         console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()} (${source})`);
@@ -736,7 +752,7 @@ async function throttle() {
 let combined = allOutputs.flatMap(o => o.rows);
 combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
 
-// ✅ FIX v2.5 - Sauvegarde par région (objets déjà enrichis par référence)
+// Sauvegarde par région (objets déjà enrichis par référence)
 for (const output of allOutputs) {
   await writeCSV(output.file, output.rows);
   console.log(`📁 ${output.title}: ${output.rows.length} stocks → ${output.file}`);
@@ -753,12 +769,12 @@ await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allR
   
   const withROE = combined.filter(s => s.roe !== null).length;
   const withDE = combined.filter(s => s.de_ratio !== null).length;
-  const withROIC = combined.filter(s => s.roic !== null).length;  // ✅ v2.5: NOUVEAU
+  const withROIC = combined.filter(s => s.roic !== null).length;
   
   console.log(`\n📈 Fondamentaux Buffett:`);
   console.log(`  ROE:  ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
   console.log(`  D/E:  ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
-  console.log(`  ROIC: ${withROIC}/${combined.length} (${(withROIC/combined.length*100).toFixed(1)}%)`);  // ✅ v2.5: NOUVEAU
+  console.log(`  ROIC: ${withROIC}/${combined.length} (${(withROIC/combined.length*100).toFixed(1)}%)`);
   
   // Top ROE
   if (withROE > 0) {
@@ -771,7 +787,7 @@ await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allR
       });
   }
   
-  // ✅ v2.5: Top ROIC
+  // Top ROIC
   if (withROIC > 0) {
     console.log('\n🏆 TOP 10 ROIC:');
     combined.filter(s => s.roic !== null && s.roic > 0 && s.roic < 200)  // Exclure outliers
@@ -789,6 +805,6 @@ await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allR
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_filtered=${combined.length}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_roe=${withROE}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_de=${withDE}\n`);
-    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_roic=${withROIC}\n`);  // ✅ v2.5: NOUVEAU
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_roic=${withROIC}\n`);
   }
 })();
