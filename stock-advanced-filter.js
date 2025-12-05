@@ -1,5 +1,11 @@
 // stock-advanced-filter.js
-// Version 3.21 - Support sélection de régions via REGIONS env variable
+// Version 3.22 - Intégration ROE/D/E depuis CSV + Score Buffett
+// Changements v3.22:
+// - loadStockCSV() lit maintenant les colonnes roe et de_ratio du CSV
+// - Ajout calculateBuffettScore() : scoring simplifié (ROE 25pts + D/E 20pts)
+// - Ajout getBuffettGrade() : grades A/B/C/D selon score
+// - enrichStock() retourne roe, de_ratio, buffett_score, buffett_grade
+// - buildOverview() inclut les métriques Buffett dans les tops
 // Changements v3.21:
 // - Ajout support REGIONS env (all, us, europe, asia, us-europe, us-asia, europe-asia)
 // - Chargement conditionnel des CSV selon régions sélectionnées
@@ -496,6 +502,7 @@ function parseCSV(csvText) {
     });
 }
 
+// ✅ v3.22: Ajout lecture des colonnes roe et de_ratio
 async function loadStockCSV(filepath) {
     try {
         const csvText = await fs.readFile(filepath, 'utf8');
@@ -505,7 +512,10 @@ async function loadStockCSV(filepath) {
             name: row['Stock'] || row['Name'] || '',
             sector: row['Secteur'] || row['Sector'] || '',
             country: row['Pays'] || row['Country'] || '',
-            exchange: row['Bourse de valeurs'] || row['Exchange'] || ''
+            exchange: row['Bourse de valeurs'] || row['Exchange'] || '',
+            // ✅ v3.22: Lecture ROE et D/E depuis le CSV
+            roe: parseNumberLoose(row['roe']) ?? null,
+            de_ratio: parseNumberLoose(row['de_ratio']) ?? null
         })).filter(s => s.symbol);
     } catch (error) {
         console.error(`Erreur ${filepath}: ${error.message}`);
@@ -941,6 +951,45 @@ function clampRegToTTM(reg, ttm, hasSpecial){
   return (ratio < 0.5 || ratio > 2.0) ? ttm : reg;
 }
 
+// ✅ v3.22: Score Buffett simplifié (ROE + D/E)
+function calculateBuffettScore(roe, de_ratio) {
+    let score = 0;
+    let maxScore = 0;
+    
+    // ROE: max 25 points
+    if (roe !== null && roe !== undefined && Number.isFinite(roe)) {
+        maxScore += 25;
+        if (roe >= 20) score += 25;           // Excellent
+        else if (roe >= 15) score += 20;      // Bon
+        else if (roe >= 10) score += 12;      // Acceptable
+        else if (roe > 0) score += 5;         // Faible
+        // roe <= 0 : 0 points
+    }
+    
+    // D/E: max 20 points
+    if (de_ratio !== null && de_ratio !== undefined && Number.isFinite(de_ratio)) {
+        maxScore += 20;
+        if (de_ratio < 0.5) score += 20;      // Faible endettement
+        else if (de_ratio < 1.0) score += 15; // Modéré
+        else if (de_ratio < 2.0) score += 8;  // Élevé
+        else if (de_ratio < 3.0) score += 3;  // Très élevé
+        // de_ratio >= 3.0 : 0 points (dangereux)
+    }
+    
+    // Normaliser sur 100
+    if (maxScore === 0) return null;
+    return Math.round((score / maxScore) * 100);
+}
+
+// ✅ v3.22: Grade Buffett (A/B/C/D)
+function getBuffettGrade(score) {
+    if (score === null || score === undefined) return null;
+    if (score >= 80) return 'A';
+    if (score >= 60) return 'B';
+    if (score >= 40) return 'C';
+    return 'D';
+}
+
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
     
@@ -1273,6 +1322,14 @@ async function enrichStock(stock) {
         console.log(`[DATA CTX] ${stock.symbol} -> ${symUsed} | ${usedEx} (${usedMic}) | ${usedCur} | ${usedTz || 'tz?'}`);
     }
     
+    // ✅ v3.22: Calcul du score Buffett depuis les données CSV
+    const buffett_score = calculateBuffettScore(stock.roe, stock.de_ratio);
+    const buffett_grade = getBuffettGrade(buffett_score);
+    
+    if (CONFIG.DEBUG && (stock.roe !== null || stock.de_ratio !== null)) {
+        console.log(`[BUFFETT] ${stock.symbol}: ROE=${stock.roe}%, D/E=${stock.de_ratio} → Score=${buffett_score}, Grade=${buffett_grade}`);
+    }
+    
     return {
         ticker: stock.symbol,
         name: stock.name,
@@ -1302,6 +1359,12 @@ async function enrichStock(stock) {
         perf_ytd: perf.performances?.ytd || null,
         perf_1y: perf.performances?.year_1 || null,
         perf_3y: perf.performances?.year_3 || null,
+        
+        // ✅ v3.22: Fondamentaux Buffett depuis CSV
+        roe: stock.roe,
+        de_ratio: stock.de_ratio,
+        buffett_score,
+        buffett_grade,
         
         // Métriques de dividendes enrichies v3.20
         dividend_yield: dividendYield,
@@ -1389,6 +1452,7 @@ function getTopN(stocks, { field, direction='desc', n=10, excludeADR=false }={})
     .slice(0, n);
 }
 
+// ✅ v3.22: Mise à jour de pick() pour inclure les métriques Buffett
 function buildOverview(byRegion){
   const pick = s => ({
     ticker: s.ticker, name: s.name, sector: s.sector, country: s.country,
@@ -1400,7 +1464,12 @@ function buildOverview(byRegion){
     payout_status: s.payout_status || null,
     pe_ratio: s.pe_ratio == null ? null : Number(s.pe_ratio),
     eps_ttm: s.eps_ttm == null ? null : Number(s.eps_ttm),
-    is_adr: s.is_adr || false // inclure flag ADR
+    is_adr: s.is_adr || false,
+    // ✅ v3.22: Ajout métriques Buffett
+    roe: s.roe == null ? null : Number(s.roe),
+    de_ratio: s.de_ratio == null ? null : Number(s.de_ratio),
+    buffett_score: s.buffett_score == null ? null : Number(s.buffett_score),
+    buffett_grade: s.buffett_grade || null
   });
 
   const sets = {
@@ -1435,6 +1504,15 @@ function buildOverview(byRegion){
                        .sort((a,b) => (b.dividend_yield || 0) - (a.dividend_yield || 0))
                        .slice(0, 10)
                        .map(pick)
+      },
+      // ✅ v3.22: Nouveau top Buffett Quality
+      buffett: {
+        best_quality: getTopN(arr, { field: 'buffett_score', direction: 'desc', n: 10, excludeADR }).map(pick),
+        highest_roe: getTopN(arr, { field: 'roe', direction: 'desc', n: 10, excludeADR }).map(pick),
+        lowest_debt: arr.filter(s => s.de_ratio != null && s.de_ratio >= 0 && (!excludeADR || !s.is_adr))
+                       .sort((a,b) => (a.de_ratio || 999) - (b.de_ratio || 999))
+                       .slice(0, 10)
+                       .map(pick)
       }
     };
   }
@@ -1448,7 +1526,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.21 - Support sélection de régions)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.22 - Intégration ROE/D/E + Score Buffett)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
@@ -1461,6 +1539,12 @@ async function main() {
     ]);
     
     console.log(`Stocks chargés: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
+    
+    // ✅ v3.22: Stats ROE/D/E chargées depuis CSV
+    const allLoaded = [...usStocks, ...europeStocks, ...asiaStocks];
+    const withROE = allLoaded.filter(s => s.roe !== null).length;
+    const withDE = allLoaded.filter(s => s.de_ratio !== null).length;
+    console.log(`📈 Fondamentaux CSV: ${withROE}/${allLoaded.length} avec ROE, ${withDE}/${allLoaded.length} avec D/E\n`);
     
     // Détection et rebasculement des ADR
     const adrFromEurope = [];
@@ -1545,6 +1629,13 @@ async function main() {
     const withSplits = allStocks.filter(s => s.debug_dividends?.recent_split).length;
     const withRunRate = allStocks.filter(s => s.debug_dividends?.used_run_rate).length;
     
+    // ✅ v3.22: Stats Buffett
+    const withBuffettScore = allStocks.filter(s => s.buffett_score !== null);
+    const gradeA = allStocks.filter(s => s.buffett_grade === 'A').length;
+    const gradeB = allStocks.filter(s => s.buffett_grade === 'B').length;
+    const gradeC = allStocks.filter(s => s.buffett_grade === 'C').length;
+    const gradeD = allStocks.filter(s => s.buffett_grade === 'D').length;
+    
     console.log('\n📊 Statistiques des métriques:');
     console.log(`  - Actions avec P/E ratio: ${withPE.length}/${allStocks.length}`);
     console.log(`  - Actions avec EPS TTM: ${withEPS.length}/${allStocks.length}`);
@@ -1553,6 +1644,18 @@ async function main() {
     console.log(`  - Actions avec run-rate post-split: ${withRunRate}/${allStocks.length}`);
     console.log(`  - Actions avec conflits de rendements: ${withConflict}/${allStocks.length}`);
     if (KEEP_ADR) console.log(`  - ADR dans US: ${adrCount}`);
+    
+    // ✅ v3.22: Affichage stats Buffett
+    console.log('\n📈 Statistiques Buffett:');
+    console.log(`  - Actions avec ROE: ${allStocks.filter(s => s.roe !== null).length}/${allStocks.length}`);
+    console.log(`  - Actions avec D/E: ${allStocks.filter(s => s.de_ratio !== null).length}/${allStocks.length}`);
+    console.log(`  - Actions avec score Buffett: ${withBuffettScore.length}/${allStocks.length}`);
+    
+    console.log('\n🏆 Distribution Grades Buffett:');
+    console.log(`  - Grade A (≥80): ${gradeA} actions`);
+    console.log(`  - Grade B (≥60): ${gradeB} actions`);
+    console.log(`  - Grade C (≥40): ${gradeC} actions`);
+    console.log(`  - Grade D (<40): ${gradeD} actions`);
     
     if (withPayout.length > 0) {
         console.log('\n📊 Distribution Payout Ratio:');
