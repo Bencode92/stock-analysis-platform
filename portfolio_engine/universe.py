@@ -1,7 +1,12 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs scorés.
+Construction de l'univers d'actifs scorés v2.0.
 Extrait de generate_portfolios.py — logique préservée et améliorée.
+
+v2.0: Intègre les nouvelles métriques:
+- ROIC (depuis stock-filter-by-volume.js)
+- FCF Yield (depuis stock-advanced-filter.js)
+- EPS Growth 5Y (depuis stock-advanced-filter.js)
 """
 
 import re
@@ -14,8 +19,12 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
 from collections import defaultdict
 
-# Import du filtre Buffett
-from .sector_quality import apply_buffett_filter, get_sector_summary
+# Import du filtre Buffett v2.0
+from .sector_quality import (
+    apply_buffett_filter, 
+    get_sector_summary,
+    get_fundamentals_coverage,
+)
 
 logger = logging.getLogger("portfolio_engine.universe")
 
@@ -378,6 +387,8 @@ def build_scored_universe(
     Construction de l'univers fermé avec scoring quantitatif.
     Accepte les données directement (pas les chemins).
     
+    v2.0: Intègre ROIC, FCF Yield, EPS Growth dans le scoring Buffett.
+    
     Args:
         stocks_data: Liste des dicts stocks ou [{"stocks": [...]}]
         etf_data: Liste des dicts ETF
@@ -389,7 +400,7 @@ def build_scored_universe(
     Returns:
         Liste plate de tous les actifs avec id, name, score, category, etc.
     """
-    logger.info("🧮 Construction de l'univers quantitatif...")
+    logger.info("🧮 Construction de l'univers quantitatif v2.0...")
     
     all_assets = []
     
@@ -417,7 +428,7 @@ def build_scored_universe(
                     "sector": it.get("sector", "Unknown"),
                     "country": it.get("country", "Global"),
                     "category": "equity",
-                    # Métriques fondamentales pour Buffett filter
+                    # === Métriques fondamentales Buffett v1.0 ===
                     "roe": it.get("roe"),
                     "de_ratio": it.get("de_ratio"),
                     "payout_ratio_ttm": it.get("payout_ratio_ttm"),
@@ -425,23 +436,42 @@ def build_scored_universe(
                     "dividend_coverage": it.get("dividend_coverage"),
                     "pe_ratio": it.get("pe_ratio"),
                     "eps_ttm": it.get("eps_ttm"),
+                    # === Métriques Buffett v2.0 (nouvelles) ===
+                    "roic": it.get("roic"),  # Depuis stock-filter-by-volume.js
+                    "fcf_yield": it.get("fcf_yield"),  # Depuis stock-advanced-filter.js
+                    "eps_growth_5y": it.get("eps_growth_5y"),  # Depuis stock-advanced-filter.js
+                    "eps_growth_forecast_5y": it.get("eps_growth_forecast_5y"),
+                    "peg_ratio": it.get("peg_ratio"),
+                    "fcf_ttm": it.get("fcf_ttm"),
                 })
     
     if eq_rows:
         eq_rows = compute_scores(eq_rows, "equity", returns_series)
         
-        # === BUFFETT FILTER ===
+        # === BUFFETT FILTER v2.0 ===
         if buffett_mode != "none":
+            logger.info(f"🎯 Application du filtre Buffett v2.0 (mode={buffett_mode})")
             eq_rows = apply_buffett_filter(
                 eq_rows,
                 mode=buffett_mode,
                 strict=False,
                 min_score=buffett_min_score
             )
-            # Log summary
+            
+            # Log coverage des métriques v2.0
+            coverage = get_fundamentals_coverage(eq_rows)
+            logger.info(f"📊 Couverture métriques: ROE={coverage.get('roe', 0):.1f}% | "
+                       f"ROIC={coverage.get('roic', 0):.1f}% | "
+                       f"FCF Yield={coverage.get('fcf_yield', 0):.1f}% | "
+                       f"EPS Growth={coverage.get('eps_growth_5y', 0):.1f}%")
+            
+            # Log summary par secteur
             summary = get_sector_summary(eq_rows)
             for sector, stats in summary.items():
-                logger.debug(f"  {sector}: {stats['count']} actifs, score moyen={stats['avg_buffett_score']}")
+                if stats['count'] >= 3:
+                    logger.debug(f"  {sector}: {stats['count']} actifs, "
+                               f"score={stats['avg_buffett_score']}, "
+                               f"ROIC={stats.get('avg_roic', 'N/A')}")
         
         eq_filtered = filter_equities(eq_rows)
         equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
@@ -524,6 +554,8 @@ def build_scored_universe_from_files(
     Construction de l'univers fermé depuis les fichiers.
     Retourne un dict organisé par catégorie.
     
+    v2.0: Intègre ROIC, FCF Yield, EPS Growth.
+    
     Args:
         stocks_jsons: Liste des données stocks (depuis stocks_*.json)
         etf_csv_path: Chemin vers combined_etfs.csv
@@ -540,7 +572,7 @@ def build_scored_universe_from_files(
             "crypto": [...]
         }
     """
-    logger.info("🧮 Construction de l'univers quantitatif (fichiers)...")
+    logger.info("🧮 Construction de l'univers quantitatif v2.0 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -561,7 +593,7 @@ def build_scored_universe_from_files(
                 "market_cap": it.get("market_cap"),
                 "sector": it.get("sector", "Unknown"),
                 "country": it.get("country", "Global"),
-                # Métriques fondamentales pour Buffett filter
+                # === Métriques fondamentales Buffett v1.0 ===
                 "roe": it.get("roe"),
                 "de_ratio": it.get("de_ratio"),
                 "payout_ratio_ttm": it.get("payout_ratio_ttm"),
@@ -569,18 +601,33 @@ def build_scored_universe_from_files(
                 "dividend_coverage": it.get("dividend_coverage"),
                 "pe_ratio": it.get("pe_ratio"),
                 "eps_ttm": it.get("eps_ttm"),
+                # === Métriques Buffett v2.0 (nouvelles) ===
+                "roic": it.get("roic"),
+                "fcf_yield": it.get("fcf_yield"),
+                "eps_growth_5y": it.get("eps_growth_5y"),
+                "eps_growth_forecast_5y": it.get("eps_growth_forecast_5y"),
+                "peg_ratio": it.get("peg_ratio"),
+                "fcf_ttm": it.get("fcf_ttm"),
             })
     
     eq_rows = compute_scores(eq_rows, "equity", returns_series)
     
-    # === BUFFETT FILTER ===
+    # === BUFFETT FILTER v2.0 ===
     if buffett_mode != "none":
+        logger.info(f"🎯 Application du filtre Buffett v2.0 (mode={buffett_mode})")
         eq_rows = apply_buffett_filter(
             eq_rows,
             mode=buffett_mode,
             strict=False,
             min_score=buffett_min_score
         )
+        
+        # Log coverage
+        coverage = get_fundamentals_coverage(eq_rows)
+        logger.info(f"📊 Couverture: ROE={coverage.get('roe', 0):.1f}% | "
+                   f"ROIC={coverage.get('roic', 0):.1f}% | "
+                   f"FCF={coverage.get('fcf_yield', 0):.1f}% | "
+                   f"EPS Growth={coverage.get('eps_growth_5y', 0):.1f}%")
     
     eq_filtered = filter_equities(eq_rows)
     equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
@@ -667,6 +714,8 @@ def load_and_build_universe(
 ) -> List[dict]:
     """
     Interface haut niveau pour charger et construire l'univers.
+    
+    v2.0: Supporte les nouvelles métriques ROIC, FCF Yield, EPS Growth.
     
     Args:
         stocks_paths: Liste des chemins vers les fichiers stocks_*.json
