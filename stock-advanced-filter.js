@@ -1,5 +1,11 @@
 // stock-advanced-filter.js
-// Version 3.22 - Intégration ROE/D/E depuis CSV + Score Buffett
+// Version 3.23 - Ajout FCF Yield + EPS Growth 5Y
+// Changements v3.23:
+// - Ajout fcf_ttm dans getStatisticsData() depuis financials.cash_flow
+// - Nouvelle fonction getGrowthEstimates() pour EPS Growth 5Y via /growth_estimates
+// - Calcul fcf_yield = (fcf_ttm / market_cap) * 100 dans enrichStock()
+// - Ajout eps_growth_5y dans l'objet retourné
+// - Mise à jour buildOverview() pour inclure fcf_yield et eps_growth_5y
 // Changements v3.22:
 // - loadStockCSV() lit maintenant les colonnes roe et de_ratio du CSV
 // - Ajout calculateBuffettScore() : scoring simplifié (ROE 25pts + D/E 20pts)
@@ -93,7 +99,8 @@ const CONFIG = {
         TIME_SERIES: 5,
         STATISTICS: 25,
         DIVIDENDS: 10,
-        MARKET_CAP: 1
+        MARKET_CAP: 1,
+        GROWTH_ESTIMATES: 10  // ✅ v3.23: Nouveau endpoint
     }
 };
 
@@ -714,6 +721,7 @@ async function getDividendData(symbol, stock) {
     }
 }
 
+// ✅ v3.23: Mise à jour pour extraire fcf_ttm
 async function getStatisticsData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.STATISTICS);
@@ -769,6 +777,17 @@ async function getStatisticsData(symbol, stock) {
         const last_split_factor = root?.dividends_and_splits?.last_split_factor ?? null;
         const last_split_date   = root?.dividends_and_splits?.last_split_date   ?? null;
 
+        // ✅ v3.23: NOUVEAU - Extraction FCF TTM
+        const fcf_ttm = pickNumDeep(root, [
+            'financials.cash_flow.levered_free_cash_flow_ttm',
+            'financials.cash_flow.free_cash_flow_ttm',
+            'financials.cash_flow.levered_free_cash_flow',
+            'financials.cash_flow.free_cash_flow',
+            'cash_flow.free_cash_flow_ttm',
+            'free_cash_flow_ttm',
+            'fcf_ttm'
+        ]);
+
         return {
             market_cap: Number.isFinite(market_cap) ? market_cap : null,
             pe_ratio: Number.isFinite(pe_ratio) ? pe_ratio : null,
@@ -779,10 +798,62 @@ async function getStatisticsData(symbol, stock) {
             beta: Number.isFinite(beta) ? beta : null,
             shares_outstanding: Number.isFinite(shares_outstanding) ? shares_outstanding : null,
             last_split_factor,
-            last_split_date
+            last_split_date,
+            // ✅ v3.23: NOUVEAU
+            fcf_ttm: Number.isFinite(fcf_ttm) ? fcf_ttm : null
         };
     } catch (error) {
         if (CONFIG.DEBUG) console.error('[STATISTICS EXCEPTION]', symbol, error.message);
+        return {};
+    }
+}
+
+// ✅ v3.23: NOUVELLE FONCTION - Récupère EPS Growth 5Y via /growth_estimates
+async function getGrowthEstimates(symbol, stock) {
+    try {
+        await pay(CONFIG.CREDITS.GROWTH_ESTIMATES);
+        const resolved = resolveSymbol(symbol, stock);
+        const trials = tdParamTrials(symbol, stock, resolved);
+        
+        const data = await fetchTD('growth_estimates', trials);
+        if (!data || data.status === 'error') {
+            if (CONFIG.DEBUG) console.log(`[GROWTH_ESTIMATES] ${symbol}: no data`);
+            return {};
+        }
+
+        // Structure attendue: { growth_estimates: { past_5_years_pa: 0.15, ... } }
+        const g = data.growth_estimates || data || {};
+        
+        // past_5_years_pa = croissance annualisée sur 5 ans (en décimal, ex: 0.15 = 15%)
+        const past5y = pickNumDeep(g, [
+            'past_5_years_pa',
+            'earnings_growth_5y',
+            'eps_growth_5y',
+            'growth_5y'
+        ]);
+        
+        // next_5_years_pa = prévision analystes sur 5 ans
+        const next5y = pickNumDeep(g, [
+            'next_5_years_pa',
+            'earnings_growth_next_5y',
+            'eps_growth_forecast_5y'
+        ]);
+        
+        // PEG ratio si disponible
+        const peg = pickNumDeep(g, ['peg_ratio', 'peg']);
+
+        if (CONFIG.DEBUG && (past5y || next5y)) {
+            console.log(`[GROWTH] ${symbol}: past5y=${past5y ? (past5y*100).toFixed(1)+'%' : 'N/A'}, next5y=${next5y ? (next5y*100).toFixed(1)+'%' : 'N/A'}`);
+        }
+
+        return {
+            // Convertir en pourcentage (décimal → %)
+            eps_growth_5y: Number.isFinite(past5y) ? +(past5y * 100).toFixed(2) : null,
+            eps_growth_forecast_5y: Number.isFinite(next5y) ? +(next5y * 100).toFixed(2) : null,
+            peg_ratio: Number.isFinite(peg) ? +peg.toFixed(2) : null
+        };
+    } catch (e) {
+        if (CONFIG.DEBUG) console.error('[GROWTH_ESTIMATES EXC]', symbol, e.message);
         return {};
     }
 }
@@ -990,6 +1061,7 @@ function getBuffettGrade(score) {
     return 'D';
 }
 
+// ✅ v3.23: Mise à jour enrichStock pour inclure FCF Yield et EPS Growth 5Y
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
     
@@ -1014,15 +1086,16 @@ async function enrichStock(stock) {
         // On continue avec le symbole brut pour récupérer les données US
     }
     
-    // ✅ v3.16: On calcule tout en parallèle avec contexte complet
+    // ✅ v3.23: Ajout de getGrowthEstimates dans le Promise.all
     const sym = resolved || stock.symbol;  // symbole final (évent. suffixé :MIC)
     const ctx = stock;                     // garde exchange + country d'origine
-    const [perf, quote, dividends, stats, mcDirect] = await Promise.all([
+    const [perf, quote, dividends, stats, mcDirect, growth] = await Promise.all([
         getPerformanceData(sym, ctx),
         getQuoteData(sym, ctx),
         getDividendData(sym, ctx),
         getStatisticsData(sym, ctx),
-        getMarketCapDirect(sym, ctx)
+        getMarketCapDirect(sym, ctx),
+        getGrowthEstimates(sym, ctx)  // ✅ v3.23: NOUVEAU
     ]);
     
     // Fallback prix & range depuis la série si quote indisponible
@@ -1072,6 +1145,15 @@ async function enrichStock(stock) {
         ((typeof stats.shares_outstanding === 'number' && typeof price === 'number')
             ? stats.shares_outstanding * price
             : null);
+    
+    // ✅ v3.23: NOUVEAU - Calcul FCF Yield
+    let fcf_yield = null;
+    if (Number.isFinite(stats?.fcf_ttm) && Number.isFinite(market_cap) && market_cap > 0) {
+        fcf_yield = +((stats.fcf_ttm / market_cap) * 100).toFixed(2);
+        if (CONFIG.DEBUG) {
+            console.log(`[FCF YIELD] ${stock.symbol}: FCF=${(stats.fcf_ttm/1e9).toFixed(2)}B, MC=${(market_cap/1e9).toFixed(2)}B => Yield=${fcf_yield}%`);
+        }
+    }
     
     // ---- Dividend yields (split-aware + specials) v3.20 ----
     const splitF = parseSplitFactor(stats?.last_split_factor);
@@ -1366,6 +1448,13 @@ async function enrichStock(stock) {
         buffett_score,
         buffett_grade,
         
+        // ✅ v3.23: NOUVELLES MÉTRIQUES
+        fcf_yield,                                        // FCF Yield en %
+        fcf_ttm: stats?.fcf_ttm ?? null,                 // FCF TTM brut
+        eps_growth_5y: growth?.eps_growth_5y ?? null,    // Croissance EPS 5 ans historique (%)
+        eps_growth_forecast_5y: growth?.eps_growth_forecast_5y ?? null,  // Prévision EPS 5 ans (%)
+        peg_ratio: growth?.peg_ratio ?? null,            // PEG Ratio
+        
         // Métriques de dividendes enrichies v3.20
         dividend_yield: dividendYield,
         dividend_yield_src,
@@ -1452,7 +1541,7 @@ function getTopN(stocks, { field, direction='desc', n=10, excludeADR=false }={})
     .slice(0, n);
 }
 
-// ✅ v3.22: Mise à jour de pick() pour inclure les métriques Buffett
+// ✅ v3.23: Mise à jour de pick() pour inclure les nouvelles métriques
 function buildOverview(byRegion){
   const pick = s => ({
     ticker: s.ticker, name: s.name, sector: s.sector, country: s.country,
@@ -1465,11 +1554,15 @@ function buildOverview(byRegion){
     pe_ratio: s.pe_ratio == null ? null : Number(s.pe_ratio),
     eps_ttm: s.eps_ttm == null ? null : Number(s.eps_ttm),
     is_adr: s.is_adr || false,
-    // ✅ v3.22: Ajout métriques Buffett
+    // ✅ v3.22: Métriques Buffett
     roe: s.roe == null ? null : Number(s.roe),
     de_ratio: s.de_ratio == null ? null : Number(s.de_ratio),
     buffett_score: s.buffett_score == null ? null : Number(s.buffett_score),
-    buffett_grade: s.buffett_grade || null
+    buffett_grade: s.buffett_grade || null,
+    // ✅ v3.23: NOUVELLES MÉTRIQUES
+    fcf_yield: s.fcf_yield == null ? null : Number(s.fcf_yield),
+    eps_growth_5y: s.eps_growth_5y == null ? null : Number(s.eps_growth_5y),
+    peg_ratio: s.peg_ratio == null ? null : Number(s.peg_ratio)
   });
 
   const sets = {
@@ -1505,7 +1598,7 @@ function buildOverview(byRegion){
                        .slice(0, 10)
                        .map(pick)
       },
-      // ✅ v3.22: Nouveau top Buffett Quality
+      // ✅ v3.22: Top Buffett Quality
       buffett: {
         best_quality: getTopN(arr, { field: 'buffett_score', direction: 'desc', n: 10, excludeADR }).map(pick),
         highest_roe: getTopN(arr, { field: 'roe', direction: 'desc', n: 10, excludeADR }).map(pick),
@@ -1513,6 +1606,18 @@ function buildOverview(byRegion){
                        .sort((a,b) => (a.de_ratio || 999) - (b.de_ratio || 999))
                        .slice(0, 10)
                        .map(pick)
+      },
+      // ✅ v3.23: NOUVEAU - Top FCF Yield et Growth
+      value: {
+        highest_fcf_yield: getTopN(arr, { field: 'fcf_yield', direction: 'desc', n: 10, excludeADR }).map(pick),
+        best_growth: arr.filter(s => s.eps_growth_5y != null && s.eps_growth_5y > 0 && (!excludeADR || !s.is_adr))
+                       .sort((a,b) => (b.eps_growth_5y || 0) - (a.eps_growth_5y || 0))
+                       .slice(0, 10)
+                       .map(pick),
+        lowest_peg: arr.filter(s => s.peg_ratio != null && s.peg_ratio > 0 && s.peg_ratio < 3 && (!excludeADR || !s.is_adr))
+                      .sort((a,b) => (a.peg_ratio || 999) - (b.peg_ratio || 999))
+                      .slice(0, 10)
+                      .map(pick)
       }
     };
   }
@@ -1526,7 +1631,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.22 - Intégration ROE/D/E + Score Buffett)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.23 - FCF Yield + EPS Growth 5Y)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
@@ -1636,6 +1741,11 @@ async function main() {
     const gradeC = allStocks.filter(s => s.buffett_grade === 'C').length;
     const gradeD = allStocks.filter(s => s.buffett_grade === 'D').length;
     
+    // ✅ v3.23: Stats nouvelles métriques
+    const withFCFYield = allStocks.filter(s => s.fcf_yield !== null).length;
+    const withEPSGrowth = allStocks.filter(s => s.eps_growth_5y !== null).length;
+    const withPEG = allStocks.filter(s => s.peg_ratio !== null).length;
+    
     console.log('\n📊 Statistiques des métriques:');
     console.log(`  - Actions avec P/E ratio: ${withPE.length}/${allStocks.length}`);
     console.log(`  - Actions avec EPS TTM: ${withEPS.length}/${allStocks.length}`);
@@ -1656,6 +1766,12 @@ async function main() {
     console.log(`  - Grade B (≥60): ${gradeB} actions`);
     console.log(`  - Grade C (≥40): ${gradeC} actions`);
     console.log(`  - Grade D (<40): ${gradeD} actions`);
+    
+    // ✅ v3.23: Affichage nouvelles métriques
+    console.log('\n💰 Statistiques Value/Growth (v3.23):');
+    console.log(`  - Actions avec FCF Yield: ${withFCFYield}/${allStocks.length}`);
+    console.log(`  - Actions avec EPS Growth 5Y: ${withEPSGrowth}/${allStocks.length}`);
+    console.log(`  - Actions avec PEG Ratio: ${withPEG}/${allStocks.length}`);
     
     if (withPayout.length > 0) {
         console.log('\n📊 Distribution Payout Ratio:');
