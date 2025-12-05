@@ -1,14 +1,23 @@
 # portfolio_engine/sector_quality.py
 """
-Buffett-style Sector Quality Filter
-====================================
+Buffett-style Sector Quality Filter v2.0
+=========================================
 
 Filtre fondamental inspiré des critères Buffett avec seuils ajustés par secteur.
 Les REIT, banques et utilities ont des profils de dette/payout différents des techs.
 
-Métriques utilisées (depuis stocks JSON):
+Métriques utilisées (depuis JSON et CSV enrichis):
+
+DEPUIS stock-filter-by-volume.js (CSV):
 - roe : Return on Equity (%)
 - de_ratio : Debt-to-Equity ratio
+- roic : Return on Invested Capital (%) ← v2.0 NOUVEAU
+
+DEPUIS stock-advanced-filter.js (JSON):
+- fcf_yield : Free Cash Flow Yield (%) ← v2.0 NOUVEAU
+- eps_growth_5y : EPS Growth 5 ans historique (%) ← v2.0 NOUVEAU
+- eps_growth_forecast_5y : EPS Growth 5 ans prévision (%)
+- peg_ratio : P/E / EPS Growth
 - payout_ratio_ttm : Payout ratio TTM (%)
 - volatility_3y : Volatilité 3 ans (%)
 - max_drawdown_ytd : Drawdown max YTD (%)
@@ -19,6 +28,7 @@ Logique:
 2. Calcul stats sectorielles (médianes)
 3. Hard filter optionnel (rejette si hors limites absolues)
 4. Soft penalty scoring (pénalise sans rejeter)
+5. Score Value (FCF Yield, EPS Growth, PEG)
 """
 
 import logging
@@ -95,15 +105,23 @@ SECTOR_MAPPING = {
 }
 
 
-# ============= PROFILS SECTORIELS =============
+# ============= PROFILS SECTORIELS v2.0 =============
 
 SECTOR_PROFILES = {
-    # Tech : ROE élevé attendu, dette faible, payout faible (réinvestissement)
+    # Tech : ROE/ROIC élevés, dette faible, croissance forte, FCF yield modéré
     "tech": {
         "roe_soft": 12,      # Pénalité si ROE < 12%
         "roe_hard": 5,       # Rejet si ROE < 5%
+        "roic_soft": 12,     # v2.0: Pénalité si ROIC < 12%
+        "roic_hard": 5,      # v2.0: Rejet si ROIC < 5%
         "de_soft": 80,       # Pénalité si D/E > 80%
         "de_hard": 200,      # Rejet si D/E > 200%
+        "fcf_yield_soft": 2, # v2.0: Pénalité si FCF Yield < 2%
+        "fcf_yield_hard": 0, # v2.0: Rejet si FCF Yield < 0%
+        "eps_growth_soft": 8,  # v2.0: Pénalité si EPS Growth < 8%
+        "eps_growth_hard": -5, # v2.0: Rejet si EPS Growth < -5%
+        "peg_soft": 2.5,     # v2.0: Pénalité si PEG > 2.5
+        "peg_hard": 5.0,     # v2.0: Rejet si PEG > 5
         "payout_soft": 50,   # Pénalité si payout > 50%
         "payout_hard": 80,   # Rejet si payout > 80%
         "vol_soft": 35,      # Pénalité si vol > 35%
@@ -112,12 +130,20 @@ SECTOR_PROFILES = {
         "dd_hard": 50,       # Rejet si DD > 50%
     },
     
-    # Finance : ROE modéré acceptable, D/E élevé normal (levier bancaire)
+    # Finance : ROE modéré, ROIC difficile à calculer (levier), FCF moins pertinent
     "finance": {
         "roe_soft": 8,
         "roe_hard": 4,
+        "roic_soft": None,   # v2.0: ROIC non pertinent pour banques
+        "roic_hard": None,
         "de_soft": None,     # Pas de limite D/E pour banques
         "de_hard": None,
+        "fcf_yield_soft": None,  # v2.0: FCF moins pertinent
+        "fcf_yield_hard": None,
+        "eps_growth_soft": 5,
+        "eps_growth_hard": -10,
+        "peg_soft": 2.0,
+        "peg_hard": 4.0,
         "payout_soft": 60,
         "payout_hard": 90,
         "vol_soft": 30,
@@ -126,12 +152,20 @@ SECTOR_PROFILES = {
         "dd_hard": 55,
     },
     
-    # Real Estate : ROE faible acceptable, D/E élevé normal, payout très élevé (REIT)
+    # Real Estate : ROE/ROIC faibles OK, FCF très important, payout très élevé (REIT)
     "real_estate": {
         "roe_soft": 5,
         "roe_hard": 2,
+        "roic_soft": 4,      # v2.0: ROIC faible acceptable
+        "roic_hard": 1,
         "de_soft": 150,
         "de_hard": 350,
+        "fcf_yield_soft": 4, # v2.0: REITs doivent générer du FCF
+        "fcf_yield_hard": 1,
+        "eps_growth_soft": 3,
+        "eps_growth_hard": -5,
+        "peg_soft": 3.0,
+        "peg_hard": 6.0,
         "payout_soft": 85,   # REITs distribuent 90%+
         "payout_hard": 120,  # Peut dépasser 100% temporairement
         "vol_soft": 25,
@@ -140,12 +174,20 @@ SECTOR_PROFILES = {
         "dd_hard": 50,
     },
     
-    # Healthcare : ROE variable (biotech vs pharma), dette modérée
+    # Healthcare : ROE/ROIC variables (biotech vs pharma), croissance importante
     "healthcare": {
         "roe_soft": 10,
         "roe_hard": 3,
+        "roic_soft": 8,
+        "roic_hard": 2,
         "de_soft": 100,
         "de_hard": 250,
+        "fcf_yield_soft": 3,
+        "fcf_yield_hard": 0,
+        "eps_growth_soft": 6,
+        "eps_growth_hard": -10,
+        "peg_soft": 2.5,
+        "peg_hard": 5.0,
         "payout_soft": 55,
         "payout_hard": 85,
         "vol_soft": 30,
@@ -154,12 +196,20 @@ SECTOR_PROFILES = {
         "dd_hard": 50,
     },
     
-    # Consumer Discretionary : Cyclique, ROE variable
+    # Consumer Discretionary : Cyclique, ROE variable, croissance modérée
     "consumer_discretionary": {
         "roe_soft": 10,
         "roe_hard": 3,
+        "roic_soft": 8,
+        "roic_hard": 3,
         "de_soft": 120,
         "de_hard": 250,
+        "fcf_yield_soft": 3,
+        "fcf_yield_hard": 0,
+        "eps_growth_soft": 5,
+        "eps_growth_hard": -10,
+        "peg_soft": 2.5,
+        "peg_hard": 4.5,
         "payout_soft": 50,
         "payout_hard": 80,
         "vol_soft": 30,
@@ -168,12 +218,20 @@ SECTOR_PROFILES = {
         "dd_hard": 55,
     },
     
-    # Consumer Staples : Stable, ROE correct attendu
+    # Consumer Staples : Stable, ROE correct, croissance faible mais régulière, FCF élevé
     "consumer_staples": {
         "roe_soft": 12,
         "roe_hard": 6,
+        "roic_soft": 10,
+        "roic_hard": 5,
         "de_soft": 100,
         "de_hard": 200,
+        "fcf_yield_soft": 4,  # v2.0: Staples doivent être cash cows
+        "fcf_yield_hard": 1,
+        "eps_growth_soft": 4,
+        "eps_growth_hard": -3,
+        "peg_soft": 2.5,
+        "peg_hard": 4.0,
         "payout_soft": 65,
         "payout_hard": 90,
         "vol_soft": 20,
@@ -182,12 +240,20 @@ SECTOR_PROFILES = {
         "dd_hard": 40,
     },
     
-    # Industrial : Cyclique, capital-intensive
+    # Industrial : Cyclique, capital-intensive, ROIC important
     "industrial": {
         "roe_soft": 10,
         "roe_hard": 4,
+        "roic_soft": 8,
+        "roic_hard": 3,
         "de_soft": 120,
         "de_hard": 280,
+        "fcf_yield_soft": 3,
+        "fcf_yield_hard": 0,
+        "eps_growth_soft": 5,
+        "eps_growth_hard": -8,
+        "peg_soft": 2.5,
+        "peg_hard": 4.5,
         "payout_soft": 50,
         "payout_hard": 80,
         "vol_soft": 28,
@@ -196,12 +262,20 @@ SECTOR_PROFILES = {
         "dd_hard": 50,
     },
     
-    # Energy : Très cyclique, dette variable
+    # Energy : Très cyclique, FCF très variable, croissance volatile
     "energy": {
         "roe_soft": 8,
         "roe_hard": 2,
+        "roic_soft": 6,
+        "roic_hard": 1,
         "de_soft": 80,
         "de_hard": 200,
+        "fcf_yield_soft": 5,  # v2.0: Energy doit générer du cash
+        "fcf_yield_hard": -2, # Peut être négatif en investissement
+        "eps_growth_soft": 0, # Croissance volatile, pas d'attente
+        "eps_growth_hard": -20,
+        "peg_soft": None,     # PEG non pertinent (cyclique)
+        "peg_hard": None,
         "payout_soft": 50,
         "payout_hard": 85,
         "vol_soft": 35,
@@ -210,12 +284,20 @@ SECTOR_PROFILES = {
         "dd_hard": 60,
     },
     
-    # Utilities : Stable, dette élevée normale, payout élevé
+    # Utilities : Stable, dette élevée normale, FCF régulier, croissance faible
     "utilities": {
         "roe_soft": 8,
         "roe_hard": 4,
+        "roic_soft": 5,
+        "roic_hard": 2,
         "de_soft": 150,
         "de_hard": 300,
+        "fcf_yield_soft": 4,  # v2.0: Utilities = cash cows
+        "fcf_yield_hard": 1,
+        "eps_growth_soft": 3,
+        "eps_growth_hard": -2,
+        "peg_soft": 3.0,
+        "peg_hard": 5.0,
         "payout_soft": 75,
         "payout_hard": 100,
         "vol_soft": 18,
@@ -224,12 +306,20 @@ SECTOR_PROFILES = {
         "dd_hard": 40,
     },
     
-    # Communication : Mix tech/media
+    # Communication : Mix tech/media, croissance modérée
     "communication": {
         "roe_soft": 10,
         "roe_hard": 4,
+        "roic_soft": 8,
+        "roic_hard": 3,
         "de_soft": 100,
         "de_hard": 220,
+        "fcf_yield_soft": 4,
+        "fcf_yield_hard": 0,
+        "eps_growth_soft": 5,
+        "eps_growth_hard": -5,
+        "peg_soft": 2.5,
+        "peg_hard": 4.5,
         "payout_soft": 55,
         "payout_hard": 85,
         "vol_soft": 28,
@@ -242,8 +332,16 @@ SECTOR_PROFILES = {
     "_default": {
         "roe_soft": 10,
         "roe_hard": 4,
+        "roic_soft": 8,
+        "roic_hard": 3,
         "de_soft": 100,
         "de_hard": 220,
+        "fcf_yield_soft": 3,
+        "fcf_yield_hard": 0,
+        "eps_growth_soft": 5,
+        "eps_growth_hard": -5,
+        "peg_soft": 2.5,
+        "peg_hard": 4.5,
         "payout_soft": 60,
         "payout_hard": 90,
         "vol_soft": 30,
@@ -251,6 +349,18 @@ SECTOR_PROFILES = {
         "dd_soft": 30,
         "dd_hard": 50,
     },
+}
+
+
+# ============= PONDÉRATIONS SCORING v2.0 =============
+
+METRIC_WEIGHTS = {
+    "roe": 0.20,        # Return on Equity
+    "roic": 0.25,       # Return on Invested Capital (plus important que ROE)
+    "fcf_yield": 0.20,  # Free Cash Flow Yield
+    "eps_growth": 0.15, # EPS Growth
+    "de_ratio": 0.10,   # Debt-to-Equity
+    "payout": 0.10,     # Payout Ratio
 }
 
 
@@ -305,14 +415,17 @@ def enrich_with_sector_stats(assets: List[dict]) -> List[dict]:
     """
     Calcule les médianes sectorielles et ajoute les ratios relatifs.
     
+    v2.0: Ajoute ROIC, FCF Yield, EPS Growth aux stats.
+    
     Ajoute à chaque asset:
     - _sector_key: Clé normalisée du secteur
     - _sector_median_roe: Médiane ROE du secteur
+    - _sector_median_roic: Médiane ROIC du secteur
     - _sector_median_de: Médiane D/E du secteur
-    - _sector_median_vol: Médiane vol du secteur
+    - _sector_median_fcf_yield: Médiane FCF Yield du secteur
+    - _sector_median_eps_growth: Médiane EPS Growth du secteur
     - _roe_vs_sector: ROE / médiane secteur
-    - _de_vs_sector: D/E / médiane secteur
-    - _vol_vs_sector: Vol / médiane secteur
+    - _roic_vs_sector: ROIC / médiane secteur
     """
     if not assets:
         return assets
@@ -327,26 +440,38 @@ def enrich_with_sector_stats(assets: List[dict]) -> List[dict]:
     sector_medians = {}
     for key, group in by_sector.items():
         roes = [safe_float(a.get("roe")) for a in group if safe_float(a.get("roe")) > 0]
+        roics = [safe_float(a.get("roic")) for a in group if safe_float(a.get("roic")) > 0]
         des = [safe_float(a.get("de_ratio")) for a in group if safe_float(a.get("de_ratio")) >= 0]
+        fcf_yields = [safe_float(a.get("fcf_yield")) for a in group if safe_float(a.get("fcf_yield")) != 0]
+        eps_growths = [safe_float(a.get("eps_growth_5y")) for a in group if a.get("eps_growth_5y") is not None]
         vols = [safe_float(a.get("volatility_3y") or a.get("vol_3y") or a.get("vol")) for a in group]
         vols = [v for v in vols if v > 0]
         
         sector_medians[key] = {
             "roe": np.median(roes) if len(roes) >= 3 else None,
+            "roic": np.median(roics) if len(roics) >= 3 else None,
             "de": np.median(des) if len(des) >= 3 else None,
+            "fcf_yield": np.median(fcf_yields) if len(fcf_yields) >= 3 else None,
+            "eps_growth": np.median(eps_growths) if len(eps_growths) >= 3 else None,
             "vol": np.median(vols) if len(vols) >= 3 else None,
             "count": len(group),
         }
     
     # Médianes globales (fallback)
     all_roes = [safe_float(a.get("roe")) for a in assets if safe_float(a.get("roe")) > 0]
+    all_roics = [safe_float(a.get("roic")) for a in assets if safe_float(a.get("roic")) > 0]
     all_des = [safe_float(a.get("de_ratio")) for a in assets if safe_float(a.get("de_ratio")) >= 0]
+    all_fcf = [safe_float(a.get("fcf_yield")) for a in assets if safe_float(a.get("fcf_yield")) != 0]
+    all_eps = [safe_float(a.get("eps_growth_5y")) for a in assets if a.get("eps_growth_5y") is not None]
     all_vols = [safe_float(a.get("volatility_3y") or a.get("vol_3y") or a.get("vol")) for a in assets]
     all_vols = [v for v in all_vols if v > 0]
     
     global_medians = {
         "roe": np.median(all_roes) if all_roes else 12.0,
+        "roic": np.median(all_roics) if all_roics else 10.0,
         "de": np.median(all_des) if all_des else 80.0,
+        "fcf_yield": np.median(all_fcf) if all_fcf else 4.0,
+        "eps_growth": np.median(all_eps) if all_eps else 8.0,
         "vol": np.median(all_vols) if all_vols else 25.0,
     }
     
@@ -359,20 +484,32 @@ def enrich_with_sector_stats(assets: List[dict]) -> List[dict]:
         
         # Médianes (avec fallback global)
         med_roe = med.get("roe") or global_medians["roe"]
+        med_roic = med.get("roic") or global_medians["roic"]
         med_de = med.get("de") or global_medians["de"]
+        med_fcf = med.get("fcf_yield") or global_medians["fcf_yield"]
+        med_eps = med.get("eps_growth") or global_medians["eps_growth"]
         med_vol = med.get("vol") or global_medians["vol"]
         
         a["_sector_median_roe"] = med_roe
+        a["_sector_median_roic"] = med_roic
         a["_sector_median_de"] = med_de
+        a["_sector_median_fcf_yield"] = med_fcf
+        a["_sector_median_eps_growth"] = med_eps
         a["_sector_median_vol"] = med_vol
         
         # Ratios vs secteur
         roe = safe_float(a.get("roe"))
+        roic = safe_float(a.get("roic"))
         de = safe_float(a.get("de_ratio"))
+        fcf = safe_float(a.get("fcf_yield"))
+        eps = safe_float(a.get("eps_growth_5y"))
         vol = safe_float(a.get("volatility_3y") or a.get("vol_3y") or a.get("vol"))
         
         a["_roe_vs_sector"] = roe / med_roe if med_roe > 0 else 1.0
+        a["_roic_vs_sector"] = roic / med_roic if med_roic > 0 else 1.0
         a["_de_vs_sector"] = de / med_de if med_de > 0 else 1.0
+        a["_fcf_yield_vs_sector"] = fcf / med_fcf if med_fcf != 0 else 1.0
+        a["_eps_growth_vs_sector"] = eps / med_eps if med_eps != 0 else 1.0
         a["_vol_vs_sector"] = vol / med_vol if med_vol > 0 else 1.0
     
     logger.info(f"Stats sectorielles calculées pour {len(assets)} actifs ({len(by_sector)} secteurs)")
@@ -389,6 +526,8 @@ def buffett_hard_filter(
     """
     Filtre binaire : passe ou ne passe pas.
     
+    v2.0: Ajoute vérifications ROIC, FCF Yield, EPS Growth, PEG.
+    
     Args:
         asset: Dict avec métriques
         profile: Profil sectoriel (auto-détecté si None)
@@ -403,7 +542,11 @@ def buffett_hard_filter(
     
     # Extraction métriques
     roe = safe_float(asset.get("roe"))
+    roic = safe_float(asset.get("roic"))
     de = safe_float(asset.get("de_ratio"))
+    fcf_yield = safe_float(asset.get("fcf_yield"))
+    eps_growth = safe_float(asset.get("eps_growth_5y"))
+    peg = safe_float(asset.get("peg_ratio"))
     payout = safe_float(asset.get("payout_ratio_ttm"))
     vol = safe_float(asset.get("volatility_3y") or asset.get("vol_3y") or asset.get("vol"))
     dd = abs(safe_float(asset.get("max_drawdown_ytd") or asset.get("max_dd")))
@@ -415,23 +558,47 @@ def buffett_hard_filter(
         if de == 0 and profile.get("de_hard") is not None:
             return False, "missing_de"
     
-    # Vérifications hard limits
+    # Vérifications hard limits - ROE
     roe_hard = profile.get("roe_hard")
     if roe_hard is not None and roe > 0 and roe < roe_hard:
         return False, f"roe_below_{roe_hard}%"
     
+    # v2.0: ROIC
+    roic_hard = profile.get("roic_hard")
+    if roic_hard is not None and roic > 0 and roic < roic_hard:
+        return False, f"roic_below_{roic_hard}%"
+    
+    # D/E
     de_hard = profile.get("de_hard")
     if de_hard is not None and de > de_hard:
         return False, f"de_above_{de_hard}%"
     
+    # v2.0: FCF Yield
+    fcf_hard = profile.get("fcf_yield_hard")
+    if fcf_hard is not None and fcf_yield != 0 and fcf_yield < fcf_hard:
+        return False, f"fcf_yield_below_{fcf_hard}%"
+    
+    # v2.0: EPS Growth
+    eps_hard = profile.get("eps_growth_hard")
+    if eps_hard is not None and eps_growth != 0 and eps_growth < eps_hard:
+        return False, f"eps_growth_below_{eps_hard}%"
+    
+    # v2.0: PEG Ratio
+    peg_hard = profile.get("peg_hard")
+    if peg_hard is not None and peg > 0 and peg > peg_hard:
+        return False, f"peg_above_{peg_hard}"
+    
+    # Payout
     payout_hard = profile.get("payout_hard")
     if payout_hard is not None and payout > payout_hard:
         return False, f"payout_above_{payout_hard}%"
     
+    # Volatilité
     vol_hard = profile.get("vol_hard")
     if vol_hard is not None and vol > vol_hard:
         return False, f"vol_above_{vol_hard}%"
     
+    # Drawdown
     dd_hard = profile.get("dd_hard")
     if dd_hard is not None and dd > dd_hard:
         return False, f"dd_above_{dd_hard}%"
@@ -447,6 +614,8 @@ def compute_buffett_penalty(
     Calcule une pénalité normalisée [0, 1] basée sur les soft limits.
     0 = parfait, 1 = très mauvais
     
+    v2.0: Intègre ROIC, FCF Yield, EPS Growth avec pondérations.
+    
     Args:
         asset: Dict avec métriques
         profile: Profil sectoriel (auto-détecté si None)
@@ -457,18 +626,30 @@ def compute_buffett_penalty(
     if profile is None:
         profile = get_profile(asset.get("sector"))
     
-    penalties = []
+    weighted_penalties = []
+    total_weight = 0
     
     # ROE : Pénalité si inférieur au soft
     roe = safe_float(asset.get("roe"))
     roe_soft = profile.get("roe_soft", 10)
-    if roe > 0 and roe < roe_soft:
-        # Plus le ROE est bas vs soft, plus la pénalité est haute
-        pen = min(1.0, (roe_soft - roe) / roe_soft)
-        penalties.append(pen)
-    elif roe > 0:
-        penalties.append(0.0)  # ROE OK
-    # Si roe == 0, on ne pénalise pas (donnée manquante)
+    if roe > 0:
+        if roe < roe_soft:
+            pen = min(1.0, (roe_soft - roe) / roe_soft)
+        else:
+            pen = 0.0
+        weighted_penalties.append(pen * METRIC_WEIGHTS["roe"])
+        total_weight += METRIC_WEIGHTS["roe"]
+    
+    # v2.0: ROIC - Plus important que ROE
+    roic = safe_float(asset.get("roic"))
+    roic_soft = profile.get("roic_soft")
+    if roic_soft is not None and roic > 0:
+        if roic < roic_soft:
+            pen = min(1.0, (roic_soft - roic) / roic_soft)
+        else:
+            pen = 0.0
+        weighted_penalties.append(pen * METRIC_WEIGHTS["roic"])
+        total_weight += METRIC_WEIGHTS["roic"]
     
     # D/E : Pénalité si supérieur au soft
     de = safe_float(asset.get("de_ratio"))
@@ -476,9 +657,32 @@ def compute_buffett_penalty(
     if de_soft is not None and de > 0:
         if de > de_soft:
             pen = min(1.0, (de - de_soft) / de_soft)
-            penalties.append(pen)
         else:
-            penalties.append(0.0)
+            pen = 0.0
+        weighted_penalties.append(pen * METRIC_WEIGHTS["de_ratio"])
+        total_weight += METRIC_WEIGHTS["de_ratio"]
+    
+    # v2.0: FCF Yield - Pénalité si inférieur au soft
+    fcf = safe_float(asset.get("fcf_yield"))
+    fcf_soft = profile.get("fcf_yield_soft")
+    if fcf_soft is not None and fcf != 0:
+        if fcf < fcf_soft:
+            pen = min(1.0, max(0, (fcf_soft - fcf) / fcf_soft))
+        else:
+            pen = 0.0
+        weighted_penalties.append(pen * METRIC_WEIGHTS["fcf_yield"])
+        total_weight += METRIC_WEIGHTS["fcf_yield"]
+    
+    # v2.0: EPS Growth - Pénalité si inférieur au soft
+    eps = safe_float(asset.get("eps_growth_5y"))
+    eps_soft = profile.get("eps_growth_soft")
+    if eps_soft is not None and asset.get("eps_growth_5y") is not None:
+        if eps < eps_soft:
+            pen = min(1.0, max(0, (eps_soft - eps) / max(1, abs(eps_soft))))
+        else:
+            pen = 0.0
+        weighted_penalties.append(pen * METRIC_WEIGHTS["eps_growth"])
+        total_weight += METRIC_WEIGHTS["eps_growth"]
     
     # Payout : Pénalité si supérieur au soft
     payout = safe_float(asset.get("payout_ratio_ttm"))
@@ -486,41 +690,69 @@ def compute_buffett_penalty(
     if payout > 0:
         if payout > payout_soft:
             pen = min(1.0, (payout - payout_soft) / payout_soft)
-            penalties.append(pen)
         else:
-            penalties.append(0.0)
+            pen = 0.0
+        weighted_penalties.append(pen * METRIC_WEIGHTS["payout"])
+        total_weight += METRIC_WEIGHTS["payout"]
     
-    # Volatilité : Pénalité si supérieure au soft
-    vol = safe_float(asset.get("volatility_3y") or asset.get("vol_3y") or asset.get("vol"))
-    vol_soft = profile.get("vol_soft", 30)
-    if vol > 0:
-        if vol > vol_soft:
-            pen = min(1.0, (vol - vol_soft) / vol_soft)
-            penalties.append(pen)
-        else:
-            penalties.append(0.0)
-    
-    # Drawdown : Pénalité si supérieur au soft
-    dd = abs(safe_float(asset.get("max_drawdown_ytd") or asset.get("max_dd")))
-    dd_soft = profile.get("dd_soft", 30)
-    if dd > 0:
-        if dd > dd_soft:
-            pen = min(1.0, (dd - dd_soft) / dd_soft)
-            penalties.append(pen)
-        else:
-            penalties.append(0.0)
-    
-    # Moyenne des pénalités (si aucune, 0)
-    if not penalties:
+    # Moyenne pondérée
+    if not weighted_penalties or total_weight == 0:
         return 0.0
     
-    return float(np.mean(penalties))
+    return float(sum(weighted_penalties) / total_weight)
+
+
+def compute_value_score(asset: dict, profile: Optional[Dict] = None) -> float:
+    """
+    v2.0: Score Value Investing [0, 100] basé sur FCF Yield, EPS Growth, PEG.
+    
+    Un score élevé indique une action potentiellement sous-évaluée avec croissance.
+    
+    Args:
+        asset: Dict avec métriques
+        profile: Profil sectoriel
+    
+    Returns:
+        Float entre 0 et 100
+    """
+    if profile is None:
+        profile = get_profile(asset.get("sector"))
+    
+    scores = []
+    
+    # FCF Yield : Plus c'est élevé, mieux c'est (score 0-100)
+    fcf = safe_float(asset.get("fcf_yield"))
+    if fcf != 0:
+        # FCF Yield de 8%+ = 100, 0% = 0
+        fcf_score = min(100, max(0, fcf * 12.5))
+        scores.append(fcf_score)
+    
+    # EPS Growth : Plus c'est élevé, mieux c'est
+    eps = safe_float(asset.get("eps_growth_5y"))
+    if asset.get("eps_growth_5y") is not None:
+        # 20%+ = 100, 0% = 50, -10% = 0
+        eps_score = min(100, max(0, 50 + eps * 2.5))
+        scores.append(eps_score)
+    
+    # PEG Ratio : Plus c'est bas, mieux c'est (inversé)
+    peg = safe_float(asset.get("peg_ratio"))
+    if peg > 0:
+        # PEG 0.5 = 100, PEG 2.0 = 50, PEG 4.0 = 0
+        peg_score = min(100, max(0, 100 - (peg - 0.5) * 28.5))
+        scores.append(peg_score)
+    
+    if not scores:
+        return 50.0  # Neutre si pas de données
+    
+    return round(np.mean(scores), 1)
 
 
 def compute_buffett_score(asset: dict, profile: Optional[Dict] = None) -> float:
     """
-    Calcule un score Buffett [0, 100].
-    100 = parfait selon critères Buffett, 0 = très mauvais
+    Calcule un score Buffett combiné [0, 100].
+    
+    v2.0: Combine quality score (penalty-based) et value score.
+    100 = parfait selon critères Buffett + Value, 0 = très mauvais
     
     Args:
         asset: Dict avec métriques
@@ -530,7 +762,14 @@ def compute_buffett_score(asset: dict, profile: Optional[Dict] = None) -> float:
         Float entre 0 et 100
     """
     penalty = compute_buffett_penalty(asset, profile)
-    return round((1.0 - penalty) * 100, 1)
+    quality_score = (1.0 - penalty) * 100
+    
+    value_score = compute_value_score(asset, profile)
+    
+    # Combinaison : 60% Quality, 40% Value
+    combined = quality_score * 0.6 + value_score * 0.4
+    
+    return round(combined, 1)
 
 
 # ============= PIPELINE COMPLET =============
@@ -543,6 +782,8 @@ def apply_buffett_filter(
 ) -> List[dict]:
     """
     Pipeline complet de filtrage Buffett.
+    
+    v2.0: Utilise ROIC, FCF Yield, EPS Growth dans le scoring.
     
     Args:
         assets: Liste des actifs
@@ -558,20 +799,22 @@ def apply_buffett_filter(
         - _sector_key
         - _buffett_penalty
         - _buffett_score
+        - _value_score (v2.0)
         - _buffett_reject_reason (si rejeté)
     """
     if not assets:
         return assets
     
-    logger.info(f"🎯 Filtrage Buffett: {len(assets)} actifs, mode={mode}, strict={strict}")
+    logger.info(f"🎯 Filtrage Buffett v2.0: {len(assets)} actifs, mode={mode}, strict={strict}")
     
     # Étape 1: Enrichir avec stats sectorielles
     assets = enrich_with_sector_stats(assets)
     
-    # Étape 2: Calculer penalty et score pour chaque actif
+    # Étape 2: Calculer penalty, value score et score combiné pour chaque actif
     for a in assets:
         profile = get_profile(a.get("sector"))
         a["_buffett_penalty"] = compute_buffett_penalty(a, profile)
+        a["_value_score"] = compute_value_score(a, profile)
         a["_buffett_score"] = compute_buffett_score(a, profile)
         a["_buffett_reject_reason"] = None
     
@@ -598,11 +841,7 @@ def apply_buffett_filter(
         assets = [a for a in assets if a.get("_buffett_score", 0) >= min_score]
         logger.info(f"Score minimum {min_score}: {before - len(assets)} rejetés, {len(assets)} restants")
     
-    # Étape 5: Trier par score Buffett (secondaire) puis score quantitatif (primaire)
-    # Le tri principal par score quantitatif reste dans universe.py
-    # On ajoute juste le score Buffett comme signal supplémentaire
-    
-    logger.info(f"✅ Filtrage Buffett terminé: {len(assets)} actifs retenus")
+    logger.info(f"✅ Filtrage Buffett v2.0 terminé: {len(assets)} actifs retenus")
     
     return assets
 
@@ -613,20 +852,30 @@ def get_sector_summary(assets: List[dict]) -> Dict[str, Dict]:
     """
     Résumé des stats par secteur pour diagnostic.
     
+    v2.0: Ajoute ROIC, FCF Yield, EPS Growth aux stats.
+    
     Returns:
         Dict[sector_key] = {
             "count": int,
             "avg_roe": float,
+            "avg_roic": float,
             "avg_de": float,
+            "avg_fcf_yield": float,
+            "avg_eps_growth": float,
             "avg_buffett_score": float,
+            "avg_value_score": float,
             "rejected_count": int,
         }
     """
     summary = defaultdict(lambda: {
         "count": 0,
         "roes": [],
+        "roics": [],
         "des": [],
+        "fcf_yields": [],
+        "eps_growths": [],
         "scores": [],
+        "value_scores": [],
         "rejected": 0,
     })
     
@@ -638,12 +887,27 @@ def get_sector_summary(assets: List[dict]) -> Dict[str, Dict]:
         if roe > 0:
             summary[key]["roes"].append(roe)
         
+        roic = safe_float(a.get("roic"))
+        if roic > 0:
+            summary[key]["roics"].append(roic)
+        
         de = safe_float(a.get("de_ratio"))
         if de > 0:
             summary[key]["des"].append(de)
         
+        fcf = safe_float(a.get("fcf_yield"))
+        if fcf != 0:
+            summary[key]["fcf_yields"].append(fcf)
+        
+        eps = safe_float(a.get("eps_growth_5y"))
+        if a.get("eps_growth_5y") is not None:
+            summary[key]["eps_growths"].append(eps)
+        
         score = a.get("_buffett_score", 0)
         summary[key]["scores"].append(score)
+        
+        value_score = a.get("_value_score", 0)
+        summary[key]["value_scores"].append(value_score)
         
         if a.get("_buffett_reject_reason"):
             summary[key]["rejected"] += 1
@@ -654,9 +918,36 @@ def get_sector_summary(assets: List[dict]) -> Dict[str, Dict]:
         result[key] = {
             "count": data["count"],
             "avg_roe": round(np.mean(data["roes"]), 1) if data["roes"] else None,
+            "avg_roic": round(np.mean(data["roics"]), 1) if data["roics"] else None,
             "avg_de": round(np.mean(data["des"]), 1) if data["des"] else None,
+            "avg_fcf_yield": round(np.mean(data["fcf_yields"]), 2) if data["fcf_yields"] else None,
+            "avg_eps_growth": round(np.mean(data["eps_growths"]), 1) if data["eps_growths"] else None,
             "avg_buffett_score": round(np.mean(data["scores"]), 1) if data["scores"] else None,
+            "avg_value_score": round(np.mean(data["value_scores"]), 1) if data["value_scores"] else None,
             "rejected_count": data["rejected"],
         }
     
     return dict(result)
+
+
+def get_fundamentals_coverage(assets: List[dict]) -> Dict[str, float]:
+    """
+    v2.0: Calcule le taux de couverture de chaque métrique fondamentale.
+    
+    Returns:
+        Dict avec le pourcentage d'actifs ayant chaque métrique.
+    """
+    if not assets:
+        return {}
+    
+    total = len(assets)
+    
+    return {
+        "roe": round(sum(1 for a in assets if safe_float(a.get("roe")) > 0) / total * 100, 1),
+        "roic": round(sum(1 for a in assets if safe_float(a.get("roic")) > 0) / total * 100, 1),
+        "de_ratio": round(sum(1 for a in assets if safe_float(a.get("de_ratio")) >= 0) / total * 100, 1),
+        "fcf_yield": round(sum(1 for a in assets if a.get("fcf_yield") is not None) / total * 100, 1),
+        "eps_growth_5y": round(sum(1 for a in assets if a.get("eps_growth_5y") is not None) / total * 100, 1),
+        "peg_ratio": round(sum(1 for a in assets if safe_float(a.get("peg_ratio")) > 0) / total * 100, 1),
+        "payout_ratio": round(sum(1 for a in assets if safe_float(a.get("payout_ratio_ttm")) > 0) / total * 100, 1),
+    }
