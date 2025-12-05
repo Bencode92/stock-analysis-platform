@@ -7,6 +7,7 @@ Architecture v4 :
 - LLM génère uniquement les justifications (prompt compact)
 - Compliance AMF appliquée systématiquement
 - Backtest 90j intégré avec comparaison des 3 profils
+- Filtre Buffett sectoriel intégré
 
 """
 
@@ -30,6 +31,9 @@ from portfolio_engine import (
     generate_commentary_sync,
     generate_fallback_commentary,
     merge_commentary_into_portfolios,
+    # Buffett filter
+    get_sector_summary,
+    SECTOR_PROFILES,
 )
 
 from compliance import (
@@ -71,6 +75,9 @@ CONFIG = {
     "run_backtest": True,  # Activer le backtest
     "backtest_days": 90,
     "backtest_freq": "M",  # Monthly
+    # === Buffett Filter Config ===
+    "buffett_mode": "soft",      # "soft" (pénalise), "hard" (rejette), "both", "none" (désactivé)
+    "buffett_min_score": 40,     # Score minimum Buffett (0-100), 0 = pas de filtre
 }
 
 
@@ -120,6 +127,87 @@ def load_stocks_data() -> list:
     return stocks
 
 
+# ============= BUFFETT DIAGNOSTIC =============
+
+def print_buffett_diagnostic(universe: List[dict]):
+    """
+    Affiche un diagnostic du filtre Buffett sur l'univers.
+    """
+    print("\n" + "=" * 70)
+    print("🎯 DIAGNOSTIC FILTRE BUFFETT - QUALITÉ SECTORIELLE")
+    print("=" * 70)
+    
+    # Récupérer les stats sectorielles
+    summary = get_sector_summary(universe)
+    
+    if not summary:
+        print("⚠️  Pas de données sectorielles disponibles")
+        return
+    
+    # Afficher le tableau
+    print(f"\n{'Secteur':<22} | {'Count':>6} | {'ROE moy':>8} | {'D/E moy':>8} | {'Score':>8} | {'Rejetés':>8}")
+    print("-" * 70)
+    
+    total_count = 0
+    total_rejected = 0
+    scores = []
+    
+    # Trier par score décroissant
+    sorted_sectors = sorted(
+        summary.items(),
+        key=lambda x: x[1].get("avg_buffett_score") or 0,
+        reverse=True
+    )
+    
+    for sector, stats in sorted_sectors:
+        count = stats.get("count", 0)
+        avg_roe = stats.get("avg_roe")
+        avg_de = stats.get("avg_de")
+        avg_score = stats.get("avg_buffett_score")
+        rejected = stats.get("rejected_count", 0)
+        
+        total_count += count
+        total_rejected += rejected
+        if avg_score:
+            scores.append(avg_score)
+        
+        # Formatage
+        roe_str = f"{avg_roe:.1f}%" if avg_roe else "N/A"
+        de_str = f"{avg_de:.0f}%" if avg_de else "N/A"
+        score_str = f"{avg_score:.0f}" if avg_score else "N/A"
+        
+        # Emoji indicateur
+        if avg_score and avg_score >= 70:
+            indicator = "🟢"
+        elif avg_score and avg_score >= 50:
+            indicator = "🟡"
+        else:
+            indicator = "🔴"
+        
+        print(f"{indicator} {sector:<20} | {count:>6} | {roe_str:>8} | {de_str:>8} | {score_str:>8} | {rejected:>8}")
+    
+    print("-" * 70)
+    
+    # Totaux
+    avg_global_score = sum(scores) / len(scores) if scores else 0
+    print(f"{'TOTAL':<22} | {total_count:>6} | {'':>8} | {'':>8} | {avg_global_score:>7.0f} | {total_rejected:>8}")
+    
+    print("\n📊 Légende:")
+    print("   🟢 Score ≥ 70 : Qualité Buffett excellente")
+    print("   🟡 Score 50-69 : Qualité acceptable")
+    print("   🔴 Score < 50 : Qualité insuffisante")
+    
+    # Profils sectoriels actifs
+    print("\n📋 Profils sectoriels appliqués:")
+    sectors_in_universe = set(s for s in summary.keys() if s != "_default")
+    for sector in sorted(sectors_in_universe):
+        if sector in SECTOR_PROFILES:
+            profile = SECTOR_PROFILES[sector]
+            print(f"   • {sector}: ROE>{profile['roe_hard']}%, D/E<{profile.get('de_hard') or 'N/A'}%, Vol<{profile['vol_hard']}%")
+    
+    print("=" * 70 + "\n")
+
+
 # ============= PIPELINE PRINCIPAL =============
 
 def build_portfolios_deterministic() -> Dict[str, Dict]:
@@ -134,17 +222,28 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     etf_csv = CONFIG["etf_csv"]
     crypto_csv = CONFIG["crypto_csv"]
     
-    # 2. Construire l'univers scoré
+    # 2. Construire l'univers scoré (avec filtre Buffett)
     logger.info("📊 Construction de l'univers...")
+    logger.info(f"   Mode Buffett: {CONFIG['buffett_mode']}, Score min: {CONFIG['buffett_min_score']}")
+    
     universe = load_and_build_universe(
         stocks_paths=[p for p in CONFIG["stocks_paths"] if Path(p).exists()],
         etf_csv=etf_csv if Path(etf_csv).exists() else None,
         crypto_csv=crypto_csv if Path(crypto_csv).exists() else None,
+        buffett_mode=CONFIG["buffett_mode"],
+        buffett_min_score=CONFIG["buffett_min_score"],
     )
     
     logger.info(f"   Univers: {len(universe)} actifs total")
     
-    # 3. Optimiser pour chaque profil
+    # 3. Afficher diagnostic Buffett
+    if CONFIG["buffett_mode"] != "none":
+        # Filtrer pour ne garder que les equities (qui ont les métriques Buffett)
+        equities = [a for a in universe if a.get("category") == "equity"]
+        if equities:
+            print_buffett_diagnostic(equities)
+    
+    # 4. Optimiser pour chaque profil
     optimizer = PortfolioOptimizer()
     portfolios = {}
     all_assets = []
@@ -456,6 +555,8 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
         "version": "v4_deterministic_engine",
+        "buffett_mode": CONFIG["buffett_mode"],
+        "buffett_min_score": CONFIG["buffett_min_score"],
     }
     
     return result
@@ -484,6 +585,10 @@ def save_portfolios(portfolios: Dict, assets: list):
         "version": "v4_deterministic_engine",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
+        "buffett_config": {
+            "mode": CONFIG["buffett_mode"],
+            "min_score": CONFIG["buffett_min_score"],
+        },
         "portfolios": portfolios,
     }
     
@@ -517,7 +622,7 @@ def main():
     # 1. Charger le brief (optionnel)
     brief_data = load_brief_data()
     
-    # 2. Construire les portefeuilles (déterministe)
+    # 2. Construire les portefeuilles (déterministe + Buffett)
     portfolios, assets = build_portfolios_deterministic()
     
     # 3. Ajouter les commentaires (LLM ou fallback)
@@ -553,6 +658,7 @@ def main():
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j intégré")
     logger.info("   • Reproductibilité garantie")
+    logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
 
 
 if __name__ == "__main__":
