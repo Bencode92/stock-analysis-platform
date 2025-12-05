@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import timedelta
 import yaml
+import pandas as pd
 
 # === Nouveaux modules ===
 from portfolio_engine import (
@@ -35,6 +36,9 @@ from portfolio_engine import (
     apply_buffett_filter,
     get_sector_summary,
     SECTOR_PROFILES,
+    compute_scores,
+    filter_equities,
+    sector_balanced_selection,
 )
 
 from compliance import (
@@ -138,6 +142,10 @@ def print_buffett_diagnostic(assets: List[dict], title: str = "DIAGNOSTIC FILTRE
         assets: Liste des actifs avec métriques Buffett (_buffett_score, etc.)
         title: Titre du diagnostic
     """
+    if not assets:
+        print("⚠️  Pas d'actifs à analyser")
+        return
+        
     print("\n" + "=" * 80)
     print(f"🎯 {title}")
     print("=" * 80)
@@ -150,11 +158,11 @@ def print_buffett_diagnostic(assets: List[dict], title: str = "DIAGNOSTIC FILTRE
         return
     
     # Compter les actifs avec données
-    total_with_roe = sum(1 for a in assets if a.get("roe") and float(a.get("roe", 0)) > 0)
+    total_with_roe = sum(1 for a in assets if a.get("roe") and float(a.get("roe", 0) or 0) > 0)
     total_with_de = sum(1 for a in assets if a.get("de_ratio") is not None)
     
-    print(f"\n📈 Couverture données: ROE={total_with_roe}/{len(assets)} ({100*total_with_roe//len(assets)}%), "
-          f"D/E={total_with_de}/{len(assets)} ({100*total_with_de//len(assets)}%)")
+    print(f"\n📈 Couverture données: ROE={total_with_roe}/{len(assets)} ({100*total_with_roe//max(1,len(assets))}%), "
+          f"D/E={total_with_de}/{len(assets)} ({100*total_with_de//max(1,len(assets))}%)")
     
     # Afficher le tableau
     print(f"\n{'Secteur':<22} | {'Count':>6} | {'ROE moy':>10} | {'D/E moy':>10} | {'Score':>8} | {'Rejetés':>8}")
@@ -219,27 +227,27 @@ def print_buffett_diagnostic(assets: List[dict], title: str = "DIAGNOSTIC FILTRE
     print("   🟡 Score 50-69 : Qualité acceptable")
     print("   🔴 Score < 50 : Qualité insuffisante (filtré si score_min > 50)")
     
-    # Top 5 et Bottom 5
-    scored_assets = [a for a in assets if a.get("_buffett_score")]
-    if len(scored_assets) >= 10:
-        sorted_by_score = sorted(scored_assets, key=lambda x: x.get("_buffett_score", 0), reverse=True)
+    # Top 5 et Bottom 5 - avec protection contre None
+    scored_assets = [a for a in assets if a.get("_buffett_score") is not None]
+    if len(scored_assets) >= 5:
+        sorted_by_score = sorted(scored_assets, key=lambda x: x.get("_buffett_score", 0) or 0, reverse=True)
         
         print("\n🏆 TOP 5 Buffett:")
         for a in sorted_by_score[:5]:
-            name = a.get("name") or a.get("ticker") or "?"
-            score = a.get("_buffett_score", 0)
-            roe = a.get("roe", "N/A")
+            name = (a.get("name") or a.get("ticker") or "?")[:25]
+            score = a.get("_buffett_score") or 0
+            roe = a.get("roe")
             sector = a.get("_sector_key") or a.get("sector") or "?"
-            roe_str = f"{roe:.1f}%" if isinstance(roe, (int, float)) else roe
-            print(f"   • {name[:25]:<25} | Score: {score:>5.0f} | ROE: {roe_str:>8} | {sector}")
+            roe_str = f"{float(roe):.1f}%" if roe and roe != "N/A" else "N/A"
+            print(f"   • {name:<25} | Score: {score:>5.0f} | ROE: {roe_str:>8} | {sector}")
         
         print("\n⚠️  BOTTOM 5 Buffett:")
         for a in sorted_by_score[-5:]:
-            name = a.get("name") or a.get("ticker") or "?"
-            score = a.get("_buffett_score", 0)
+            name = (a.get("name") or a.get("ticker") or "?")[:25]
+            score = a.get("_buffett_score") or 0
             reason = a.get("_buffett_reject_reason") or "score faible"
             sector = a.get("_sector_key") or a.get("sector") or "?"
-            print(f"   • {name[:25]:<25} | Score: {score:>5.0f} | Raison: {reason} | {sector}")
+            print(f"   • {name:<25} | Score: {score:>5.0f} | Raison: {reason} | {sector}")
     
     print("=" * 80 + "\n")
 
@@ -255,76 +263,107 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     # 1. Charger les données brutes
     stocks_data = load_stocks_data()
-    etf_csv = CONFIG["etf_csv"]
-    crypto_csv = CONFIG["crypto_csv"]
     
     # 2. Charger ETF et Crypto
-    import pandas as pd
     etf_data = []
-    if Path(etf_csv).exists():
+    if Path(CONFIG["etf_csv"]).exists():
         try:
-            df = pd.read_csv(etf_csv)
+            df = pd.read_csv(CONFIG["etf_csv"])
             etf_data = df.to_dict('records')
         except Exception as e:
             logger.warning(f"Impossible de charger ETF: {e}")
     
     crypto_data = []
-    crypto_csv_path = CONFIG["crypto_csv"]
-    if Path(crypto_csv_path).exists():
+    if Path(CONFIG["crypto_csv"]).exists():
         try:
-            df = pd.read_csv(crypto_csv_path)
+            df = pd.read_csv(CONFIG["crypto_csv"])
             crypto_data = df.to_dict('records')
         except Exception as e:
             logger.warning(f"Impossible de charger crypto: {e}")
     
-    # 3. Construire l'univers SANS filtre Buffett d'abord (pour diagnostic)
+    # 3. Extraire les stocks bruts pour le filtre Buffett
     logger.info("📊 Construction de l'univers...")
     logger.info(f"   Mode Buffett: {CONFIG['buffett_mode']}, Score min: {CONFIG['buffett_min_score']}")
     
-    # Construire avec mode="none" pour avoir l'univers complet
-    from portfolio_engine.universe import build_scored_universe as _build_universe
+    # Construire la liste d'equities brutes
+    eq_rows = []
+    for data in stocks_data:
+        stocks_list = data.get("stocks", []) if isinstance(data, dict) else data
+        for it in stocks_list:
+            eq_rows.append({
+                "id": f"EQ_{len(eq_rows)+1}",
+                "name": it.get("name") or it.get("ticker"),
+                "ticker": it.get("ticker"),
+                "perf_1m": it.get("perf_1m"),
+                "perf_3m": it.get("perf_3m"),
+                "ytd": it.get("perf_ytd") or it.get("ytd"),
+                "perf_24h": it.get("perf_1d"),
+                "vol_3y": it.get("volatility_3y") or it.get("vol"),
+                "vol": it.get("volatility_3y") or it.get("vol"),
+                "volatility_3y": it.get("volatility_3y"),
+                "max_dd": it.get("max_drawdown_ytd"),
+                "max_drawdown_ytd": it.get("max_drawdown_ytd"),
+                "liquidity": it.get("market_cap"),
+                "market_cap": it.get("market_cap"),
+                "sector": it.get("sector", "Unknown"),
+                "country": it.get("country", "Global"),
+                "category": "equity",
+                # Métriques fondamentales pour Buffett filter
+                "roe": it.get("roe"),
+                "de_ratio": it.get("de_ratio"),
+                "payout_ratio_ttm": it.get("payout_ratio_ttm"),
+                "dividend_yield": it.get("dividend_yield"),
+                "dividend_coverage": it.get("dividend_coverage"),
+                "pe_ratio": it.get("pe_ratio"),
+                "eps_ttm": it.get("eps_ttm"),
+            })
     
-    universe_raw = _build_universe(
-        stocks_data=stocks_data,
-        etf_data=etf_data,
-        crypto_data=crypto_data,
-        returns_series=None,
-        buffett_mode="none",  # Pas de filtre pour diagnostic
-        buffett_min_score=0,
-    )
+    logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
     
-    # 4. Appliquer filtre Buffett et afficher diagnostic AVANT optimisation
-    if CONFIG["buffett_mode"] != "none":
-        # Filtrer uniquement les equities
-        equities_raw = [a for a in universe_raw if a.get("category") == "equity"]
-        others = [a for a in universe_raw if a.get("category") != "equity"]
+    # 4. Appliquer le filtre Buffett sur TOUS les stocks bruts AVANT le scoring
+    if CONFIG["buffett_mode"] != "none" and eq_rows:
+        logger.info(f"   Application filtre Buffett sur {len(eq_rows)} actions...")
         
-        logger.info(f"   Equities avant filtre: {len(equities_raw)}")
-        
-        # Appliquer le filtre Buffett
-        equities_filtered = apply_buffett_filter(
-            equities_raw,
+        eq_rows_filtered = apply_buffett_filter(
+            eq_rows,
             mode=CONFIG["buffett_mode"],
             strict=False,
             min_score=CONFIG["buffett_min_score"],
         )
         
-        # === DIAGNOSTIC ICI (AVANT OPTIMISATION) ===
+        # === DIAGNOSTIC BUFFETT ===
         print_buffett_diagnostic(
-            equities_filtered, 
-            f"QUALITÉ SECTORIELLE - {len(equities_filtered)} actions après filtre Buffett"
+            eq_rows_filtered, 
+            f"QUALITÉ SECTORIELLE - {len(eq_rows_filtered)}/{len(eq_rows)} actions après filtre Buffett"
         )
         
-        logger.info(f"   Equities après filtre: {len(equities_filtered)}")
-        
-        # Reconstruire l'univers avec equities filtrées
-        universe = equities_filtered + others
-    else:
-        universe = universe_raw
+        logger.info(f"   Equities après filtre Buffett: {len(eq_rows_filtered)}")
+        eq_rows = eq_rows_filtered
+    
+    # 5. Appliquer scoring quantitatif et filtres standards
+    eq_rows = compute_scores(eq_rows, "equity", None)
+    eq_filtered = filter_equities(eq_rows)
+    equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
+    
+    logger.info(f"   Equities finales sélectionnées: {len(equities)}")
+    
+    # 6. Construire le reste de l'univers (ETF, bonds, crypto) via build_scored_universe
+    # mais sans les stocks (on les a déjà traités)
+    universe_others = build_scored_universe(
+        stocks_data=None,  # Pas de stocks, on les a déjà
+        etf_data=etf_data,
+        crypto_data=crypto_data,
+        returns_series=None,
+        buffett_mode="none",  # Pas de Buffett pour ETF/crypto
+        buffett_min_score=0,
+    )
+    
+    # Combiner equities + autres
+    universe = equities + universe_others
     
     logger.info(f"   Univers final: {len(universe)} actifs total")
     
-    # 5. Optimiser pour chaque profil
+    # 7. Optimiser pour chaque profil
     optimizer = PortfolioOptimizer()
     portfolios = {}
     all_assets = []
