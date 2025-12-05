@@ -22,7 +22,7 @@ import yaml
 
 # === Nouveaux modules ===
 from portfolio_engine import (
-    load_and_build_universe,
+    build_scored_universe,
     rescore_universe_by_profile,
     PortfolioOptimizer,
     convert_universe_to_assets,
@@ -32,6 +32,7 @@ from portfolio_engine import (
     generate_fallback_commentary,
     merge_commentary_into_portfolios,
     # Buffett filter
+    apply_buffett_filter,
     get_sector_summary,
     SECTOR_PROFILES,
 )
@@ -129,24 +130,35 @@ def load_stocks_data() -> list:
 
 # ============= BUFFETT DIAGNOSTIC =============
 
-def print_buffett_diagnostic(universe: List[dict]):
+def print_buffett_diagnostic(assets: List[dict], title: str = "DIAGNOSTIC FILTRE BUFFETT"):
     """
     Affiche un diagnostic du filtre Buffett sur l'univers.
+    
+    Args:
+        assets: Liste des actifs avec métriques Buffett (_buffett_score, etc.)
+        title: Titre du diagnostic
     """
-    print("\n" + "=" * 70)
-    print("🎯 DIAGNOSTIC FILTRE BUFFETT - QUALITÉ SECTORIELLE")
-    print("=" * 70)
+    print("\n" + "=" * 80)
+    print(f"🎯 {title}")
+    print("=" * 80)
     
     # Récupérer les stats sectorielles
-    summary = get_sector_summary(universe)
+    summary = get_sector_summary(assets)
     
     if not summary:
         print("⚠️  Pas de données sectorielles disponibles")
         return
     
+    # Compter les actifs avec données
+    total_with_roe = sum(1 for a in assets if a.get("roe") and float(a.get("roe", 0)) > 0)
+    total_with_de = sum(1 for a in assets if a.get("de_ratio") is not None)
+    
+    print(f"\n📈 Couverture données: ROE={total_with_roe}/{len(assets)} ({100*total_with_roe//len(assets)}%), "
+          f"D/E={total_with_de}/{len(assets)} ({100*total_with_de//len(assets)}%)")
+    
     # Afficher le tableau
-    print(f"\n{'Secteur':<22} | {'Count':>6} | {'ROE moy':>8} | {'D/E moy':>8} | {'Score':>8} | {'Rejetés':>8}")
-    print("-" * 70)
+    print(f"\n{'Secteur':<22} | {'Count':>6} | {'ROE moy':>10} | {'D/E moy':>10} | {'Score':>8} | {'Rejetés':>8}")
+    print("-" * 80)
     
     total_count = 0
     total_rejected = 0
@@ -171,9 +183,19 @@ def print_buffett_diagnostic(universe: List[dict]):
         if avg_score:
             scores.append(avg_score)
         
-        # Formatage
+        # Formatage - D/E peut être en décimal (0.25) ou en % (25)
         roe_str = f"{avg_roe:.1f}%" if avg_roe else "N/A"
-        de_str = f"{avg_de:.0f}%" if avg_de else "N/A"
+        
+        # Si D/E < 10, c'est probablement en décimal, convertir en %
+        if avg_de is not None:
+            if avg_de < 10:
+                de_display = avg_de * 100
+            else:
+                de_display = avg_de
+            de_str = f"{de_display:.0f}%"
+        else:
+            de_str = "N/A"
+        
         score_str = f"{avg_score:.0f}" if avg_score else "N/A"
         
         # Emoji indicateur
@@ -184,28 +206,42 @@ def print_buffett_diagnostic(universe: List[dict]):
         else:
             indicator = "🔴"
         
-        print(f"{indicator} {sector:<20} | {count:>6} | {roe_str:>8} | {de_str:>8} | {score_str:>8} | {rejected:>8}")
+        print(f"{indicator} {sector:<20} | {count:>6} | {roe_str:>10} | {de_str:>10} | {score_str:>8} | {rejected:>8}")
     
-    print("-" * 70)
+    print("-" * 80)
     
     # Totaux
     avg_global_score = sum(scores) / len(scores) if scores else 0
-    print(f"{'TOTAL':<22} | {total_count:>6} | {'':>8} | {'':>8} | {avg_global_score:>7.0f} | {total_rejected:>8}")
+    print(f"{'TOTAL':<24} | {total_count:>6} | {'':<10} | {'':<10} | {avg_global_score:>7.0f} | {total_rejected:>8}")
     
     print("\n📊 Légende:")
     print("   🟢 Score ≥ 70 : Qualité Buffett excellente")
     print("   🟡 Score 50-69 : Qualité acceptable")
-    print("   🔴 Score < 50 : Qualité insuffisante")
+    print("   🔴 Score < 50 : Qualité insuffisante (filtré si score_min > 50)")
     
-    # Profils sectoriels actifs
-    print("\n📋 Profils sectoriels appliqués:")
-    sectors_in_universe = set(s for s in summary.keys() if s != "_default")
-    for sector in sorted(sectors_in_universe):
-        if sector in SECTOR_PROFILES:
-            profile = SECTOR_PROFILES[sector]
-            print(f"   • {sector}: ROE>{profile['roe_hard']}%, D/E<{profile.get('de_hard') or 'N/A'}%, Vol<{profile['vol_hard']}%")
+    # Top 5 et Bottom 5
+    scored_assets = [a for a in assets if a.get("_buffett_score")]
+    if len(scored_assets) >= 10:
+        sorted_by_score = sorted(scored_assets, key=lambda x: x.get("_buffett_score", 0), reverse=True)
+        
+        print("\n🏆 TOP 5 Buffett:")
+        for a in sorted_by_score[:5]:
+            name = a.get("name") or a.get("ticker") or "?"
+            score = a.get("_buffett_score", 0)
+            roe = a.get("roe", "N/A")
+            sector = a.get("_sector_key") or a.get("sector") or "?"
+            roe_str = f"{roe:.1f}%" if isinstance(roe, (int, float)) else roe
+            print(f"   • {name[:25]:<25} | Score: {score:>5.0f} | ROE: {roe_str:>8} | {sector}")
+        
+        print("\n⚠️  BOTTOM 5 Buffett:")
+        for a in sorted_by_score[-5:]:
+            name = a.get("name") or a.get("ticker") or "?"
+            score = a.get("_buffett_score", 0)
+            reason = a.get("_buffett_reject_reason") or "score faible"
+            sector = a.get("_sector_key") or a.get("sector") or "?"
+            print(f"   • {name[:25]:<25} | Score: {score:>5.0f} | Raison: {reason} | {sector}")
     
-    print("=" * 70 + "\n")
+    print("=" * 80 + "\n")
 
 
 # ============= PIPELINE PRINCIPAL =============
@@ -217,33 +253,78 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     """
     logger.info("🧮 Construction des portefeuilles (déterministe)...")
     
-    # 1. Charger les données
+    # 1. Charger les données brutes
     stocks_data = load_stocks_data()
     etf_csv = CONFIG["etf_csv"]
     crypto_csv = CONFIG["crypto_csv"]
     
-    # 2. Construire l'univers scoré (avec filtre Buffett)
+    # 2. Charger ETF et Crypto
+    import pandas as pd
+    etf_data = []
+    if Path(etf_csv).exists():
+        try:
+            df = pd.read_csv(etf_csv)
+            etf_data = df.to_dict('records')
+        except Exception as e:
+            logger.warning(f"Impossible de charger ETF: {e}")
+    
+    crypto_data = []
+    crypto_csv_path = CONFIG["crypto_csv"]
+    if Path(crypto_csv_path).exists():
+        try:
+            df = pd.read_csv(crypto_csv_path)
+            crypto_data = df.to_dict('records')
+        except Exception as e:
+            logger.warning(f"Impossible de charger crypto: {e}")
+    
+    # 3. Construire l'univers SANS filtre Buffett d'abord (pour diagnostic)
     logger.info("📊 Construction de l'univers...")
     logger.info(f"   Mode Buffett: {CONFIG['buffett_mode']}, Score min: {CONFIG['buffett_min_score']}")
     
-    universe = load_and_build_universe(
-        stocks_paths=[p for p in CONFIG["stocks_paths"] if Path(p).exists()],
-        etf_csv=etf_csv if Path(etf_csv).exists() else None,
-        crypto_csv=crypto_csv if Path(crypto_csv).exists() else None,
-        buffett_mode=CONFIG["buffett_mode"],
-        buffett_min_score=CONFIG["buffett_min_score"],
+    # Construire avec mode="none" pour avoir l'univers complet
+    from portfolio_engine.universe import build_scored_universe as _build_universe
+    
+    universe_raw = _build_universe(
+        stocks_data=stocks_data,
+        etf_data=etf_data,
+        crypto_data=crypto_data,
+        returns_series=None,
+        buffett_mode="none",  # Pas de filtre pour diagnostic
+        buffett_min_score=0,
     )
     
-    logger.info(f"   Univers: {len(universe)} actifs total")
-    
-    # 3. Afficher diagnostic Buffett
+    # 4. Appliquer filtre Buffett et afficher diagnostic AVANT optimisation
     if CONFIG["buffett_mode"] != "none":
-        # Filtrer pour ne garder que les equities (qui ont les métriques Buffett)
-        equities = [a for a in universe if a.get("category") == "equity"]
-        if equities:
-            print_buffett_diagnostic(equities)
+        # Filtrer uniquement les equities
+        equities_raw = [a for a in universe_raw if a.get("category") == "equity"]
+        others = [a for a in universe_raw if a.get("category") != "equity"]
+        
+        logger.info(f"   Equities avant filtre: {len(equities_raw)}")
+        
+        # Appliquer le filtre Buffett
+        equities_filtered = apply_buffett_filter(
+            equities_raw,
+            mode=CONFIG["buffett_mode"],
+            strict=False,
+            min_score=CONFIG["buffett_min_score"],
+        )
+        
+        # === DIAGNOSTIC ICI (AVANT OPTIMISATION) ===
+        print_buffett_diagnostic(
+            equities_filtered, 
+            f"QUALITÉ SECTORIELLE - {len(equities_filtered)} actions après filtre Buffett"
+        )
+        
+        logger.info(f"   Equities après filtre: {len(equities_filtered)}")
+        
+        # Reconstruire l'univers avec equities filtrées
+        universe = equities_filtered + others
+    else:
+        universe = universe_raw
     
-    # 4. Optimiser pour chaque profil
+    logger.info(f"   Univers final: {len(universe)} actifs total")
+    
+    # 5. Optimiser pour chaque profil
     optimizer = PortfolioOptimizer()
     portfolios = {}
     all_assets = []
@@ -623,6 +704,7 @@ def main():
     brief_data = load_brief_data()
     
     # 2. Construire les portefeuilles (déterministe + Buffett)
+    #    Le diagnostic Buffett s'affiche ICI, avant l'optimisation
     portfolios, assets = build_portfolios_deterministic()
     
     # 3. Ajouter les commentaires (LLM ou fallback)
