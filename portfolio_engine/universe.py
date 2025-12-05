@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
 from collections import defaultdict
 
+# Import du filtre Buffett
+from .sector_quality import apply_buffett_filter, get_sector_summary
+
 logger = logging.getLogger("portfolio_engine.universe")
 
 
@@ -367,7 +370,9 @@ def build_scored_universe(
     stocks_data: Union[List[dict], None] = None,
     etf_data: Union[List[dict], None] = None,
     crypto_data: Union[List[dict], None] = None,
-    returns_series: Optional[Dict[str, np.ndarray]] = None
+    returns_series: Optional[Dict[str, np.ndarray]] = None,
+    buffett_mode: str = "soft",
+    buffett_min_score: float = 0.0
 ) -> List[dict]:
     """
     Construction de l'univers fermé avec scoring quantitatif.
@@ -378,6 +383,8 @@ def build_scored_universe(
         etf_data: Liste des dicts ETF
         crypto_data: Liste des dicts crypto
         returns_series: Dict optionnel des séries de rendements
+        buffett_mode: "soft" (pénalité), "hard" (rejet), "both", "none" (désactivé)
+        buffett_min_score: Score Buffett minimum (0-100)
     
     Returns:
         Liste plate de tous les actifs avec id, name, score, category, etc.
@@ -396,6 +403,7 @@ def build_scored_universe(
                 eq_rows.append({
                     "id": f"EQ_{len(eq_rows)+1}",
                     "name": it.get("name") or it.get("ticker"),
+                    "ticker": it.get("ticker"),
                     "perf_1m": it.get("perf_1m"),
                     "perf_3m": it.get("perf_3m"),
                     "ytd": it.get("perf_ytd") or it.get("ytd"),
@@ -403,14 +411,38 @@ def build_scored_universe(
                     "vol_3y": it.get("volatility_3y") or it.get("vol"),
                     "vol": it.get("volatility_3y") or it.get("vol"),
                     "max_dd": it.get("max_drawdown_ytd"),
+                    "max_drawdown_ytd": it.get("max_drawdown_ytd"),
                     "liquidity": it.get("market_cap"),
+                    "market_cap": it.get("market_cap"),
                     "sector": it.get("sector", "Unknown"),
                     "country": it.get("country", "Global"),
                     "category": "equity",
+                    # Métriques fondamentales pour Buffett filter
+                    "roe": it.get("roe"),
+                    "de_ratio": it.get("de_ratio"),
+                    "payout_ratio_ttm": it.get("payout_ratio_ttm"),
+                    "dividend_yield": it.get("dividend_yield"),
+                    "dividend_coverage": it.get("dividend_coverage"),
+                    "pe_ratio": it.get("pe_ratio"),
+                    "eps_ttm": it.get("eps_ttm"),
                 })
     
     if eq_rows:
         eq_rows = compute_scores(eq_rows, "equity", returns_series)
+        
+        # === BUFFETT FILTER ===
+        if buffett_mode != "none":
+            eq_rows = apply_buffett_filter(
+                eq_rows,
+                mode=buffett_mode,
+                strict=False,
+                min_score=buffett_min_score
+            )
+            # Log summary
+            summary = get_sector_summary(eq_rows)
+            for sector, stats in summary.items():
+                logger.debug(f"  {sector}: {stats['count']} actifs, score moyen={stats['avg_buffett_score']}")
+        
         eq_filtered = filter_equities(eq_rows)
         equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
         all_assets.extend(equities)
@@ -484,7 +516,9 @@ def build_scored_universe_from_files(
     stocks_jsons: List[dict],
     etf_csv_path: str,
     crypto_csv_path: str,
-    returns_series: Optional[Dict[str, np.ndarray]] = None
+    returns_series: Optional[Dict[str, np.ndarray]] = None,
+    buffett_mode: str = "soft",
+    buffett_min_score: float = 0.0
 ) -> Dict[str, List[dict]]:
     """
     Construction de l'univers fermé depuis les fichiers.
@@ -495,6 +529,8 @@ def build_scored_universe_from_files(
         etf_csv_path: Chemin vers combined_etfs.csv
         crypto_csv_path: Chemin vers Crypto_filtered_volatility.csv
         returns_series: Dict optionnel des séries de rendements
+        buffett_mode: "soft" (pénalité), "hard" (rejet), "both", "none" (désactivé)
+        buffett_min_score: Score Buffett minimum (0-100)
     
     Returns:
         {
@@ -513,18 +549,39 @@ def build_scored_universe_from_files(
             eq_rows.append({
                 "id": it.get("ticker") or it.get("symbol") or it.get("name"),
                 "name": it.get("name") or it.get("ticker"),
+                "ticker": it.get("ticker"),
                 "perf_1m": it.get("perf_1m"),
                 "perf_3m": it.get("perf_3m"),
                 "ytd": it.get("perf_ytd"),
                 "perf_24h": it.get("perf_1d"),
                 "vol_3y": it.get("volatility_3y"),
+                "volatility_3y": it.get("volatility_3y"),
                 "max_drawdown_ytd": it.get("max_drawdown_ytd"),
                 "liquidity": it.get("market_cap"),
+                "market_cap": it.get("market_cap"),
                 "sector": it.get("sector", "Unknown"),
                 "country": it.get("country", "Global"),
+                # Métriques fondamentales pour Buffett filter
+                "roe": it.get("roe"),
+                "de_ratio": it.get("de_ratio"),
+                "payout_ratio_ttm": it.get("payout_ratio_ttm"),
+                "dividend_yield": it.get("dividend_yield"),
+                "dividend_coverage": it.get("dividend_coverage"),
+                "pe_ratio": it.get("pe_ratio"),
+                "eps_ttm": it.get("eps_ttm"),
             })
     
     eq_rows = compute_scores(eq_rows, "equity", returns_series)
+    
+    # === BUFFETT FILTER ===
+    if buffett_mode != "none":
+        eq_rows = apply_buffett_filter(
+            eq_rows,
+            mode=buffett_mode,
+            strict=False,
+            min_score=buffett_min_score
+        )
+    
     eq_filtered = filter_equities(eq_rows)
     equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
     
@@ -604,7 +661,9 @@ def load_and_build_universe(
     stocks_paths: List[str],
     etf_csv: Optional[str] = None,
     crypto_csv: Optional[str] = None,
-    load_returns: bool = False
+    load_returns: bool = False,
+    buffett_mode: str = "soft",
+    buffett_min_score: float = 0.0
 ) -> List[dict]:
     """
     Interface haut niveau pour charger et construire l'univers.
@@ -614,6 +673,8 @@ def load_and_build_universe(
         etf_csv: Chemin vers combined_etfs.csv
         crypto_csv: Chemin vers Crypto_filtered_volatility.csv
         load_returns: Charger les séries de rendements si disponibles
+        buffett_mode: "soft" (pénalité), "hard" (rejet), "both", "none" (désactivé)
+        buffett_min_score: Score Buffett minimum (0-100)
     
     Returns:
         Liste plate de tous les actifs scorés
@@ -650,4 +711,11 @@ def load_and_build_universe(
     if load_returns and stocks_paths:
         returns_series = load_returns_series(stocks_paths, etf_csv or "", crypto_csv or "")
     
-    return build_scored_universe(stocks_data, etf_data, crypto_data, returns_series)
+    return build_scored_universe(
+        stocks_data, 
+        etf_data, 
+        crypto_data, 
+        returns_series,
+        buffett_mode=buffett_mode,
+        buffett_min_score=buffett_min_score
+    )

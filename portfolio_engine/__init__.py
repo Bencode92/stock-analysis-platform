@@ -7,6 +7,7 @@ Architecture:
 - factors.py        : Scoring multi-facteur configurable
 - optimizer.py      : Optimisation mean-variance sous contraintes
 - llm_commentary.py : Génération des commentaires via LLM (prompt compact)
+- sector_quality.py : Filtre Buffett avec seuils ajustés par secteur
 
 Le LLM n'intervient PAS sur les poids - uniquement sur les justifications.
 """
@@ -53,7 +54,20 @@ from .llm_commentary import (
     SYSTEM_PROMPT,
 )
 
-__version__ = "2.1.0"
+from .sector_quality import (
+    SECTOR_PROFILES,
+    SECTOR_MAPPING,
+    apply_buffett_filter,
+    compute_buffett_penalty,
+    compute_buffett_score,
+    buffett_hard_filter,
+    enrich_with_sector_stats,
+    get_sector_summary,
+    get_profile,
+    get_sector_key,
+)
+
+__version__ = "2.2.0"
 
 __all__ = [
     # Universe
@@ -90,4 +104,15 @@ __all__ = [
     "merge_commentary_into_portfolios",
     "Commentary",
     "SYSTEM_PROMPT",
+    # Sector Quality (Buffett Filter)
+    "SECTOR_PROFILES",
+    "SECTOR_MAPPING",
+    "apply_buffett_filter",
+    "compute_buffett_penalty",
+    "compute_buffett_score",
+    "buffett_hard_filter",
+    "enrich_with_sector_stats",
+    "get_sector_summary",
+    "get_profile",
+    "get_sector_key",
 ]
