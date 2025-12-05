@@ -1,6 +1,7 @@
 // stock-data-enricher.js
 // Enrichissement des stocks multi-régions avec Twelve Data API
 // Basé sur la logique etf-advanced-filter.js
+// v2.0 - Intégration ROE/D/E depuis fundamentals_cache.json
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -23,8 +24,84 @@ const CONFIG = {
         QUOTE: 1,
         PROFILE: 15,
         STATISTICS: 25
-    }
+    },
+    
+    // Cache fondamentaux
+    FUNDAMENTALS_CACHE_FILE: 'data/fundamentals_cache.json'
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CACHE FONDAMENTAUX (ROE, D/E)
+// ═══════════════════════════════════════════════════════════════════════════
+
+let fundamentalsCache = { data: {} };
+
+async function loadFundamentalsCache() {
+    try {
+        const txt = await fs.readFile(CONFIG.FUNDAMENTALS_CACHE_FILE, 'utf8');
+        fundamentalsCache = JSON.parse(txt);
+        const count = Object.keys(fundamentalsCache.data || {}).length;
+        console.log(`📦 Cache fondamentaux chargé: ${count} stocks avec ROE/D/E`);
+        return fundamentalsCache;
+    } catch (error) {
+        console.warn(`⚠️ Cache fondamentaux non trouvé: ${error.message}`);
+        fundamentalsCache = { data: {} };
+        return fundamentalsCache;
+    }
+}
+
+/**
+ * Calcul simplifié du score Buffett (0-45 points sur ROE + D/E)
+ * Score normalisé ensuite sur 100
+ */
+function calculateBuffettScore(roe, de_ratio) {
+    if (roe == null && de_ratio == null) return null;
+    
+    let score = 0;
+    let maxPossible = 0;
+    
+    // ROE (max 25 pts)
+    if (roe !== null) {
+        maxPossible += 25;
+        if (roe >= 20) score += 25;
+        else if (roe >= 15) score += 20;
+        else if (roe >= 10) score += 12;
+        else if (roe > 0) score += 5;
+        // ROE négatif = 0 points
+    }
+    
+    // D/E (max 20 pts)
+    if (de_ratio !== null) {
+        maxPossible += 20;
+        if (de_ratio < 0) {
+            // Equity négative = problème
+            score += 0;
+        } else if (de_ratio <= 0.5) {
+            score += 20;
+        } else if (de_ratio <= 1.0) {
+            score += 15;
+        } else if (de_ratio <= 2.0) {
+            score += 8;
+        } else if (de_ratio <= 3.0) {
+            score += 3;
+        }
+        // D/E > 3 = 0 points
+    }
+    
+    // Normaliser sur 100
+    if (maxPossible === 0) return null;
+    return Math.round((score / maxPossible) * 100);
+}
+
+function getBuffettGrade(score) {
+    if (score == null) return null;
+    if (score >= 80) return 'A';
+    if (score >= 60) return 'B';
+    if (score >= 40) return 'C';
+    return 'D';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 
 // Mapping régions
 const REGION_MAPPING = {
@@ -32,6 +109,7 @@ const REGION_MAPPING = {
     'United States': 'us',
     'USA': 'us',
     'États-Unis': 'us',
+    'Etats-Unis': 'us',
     
     // Europe
     'Germany': 'europe',
@@ -167,7 +245,10 @@ async function loadCSV(filepath) {
             sector: row['Secteur'] || row['Sector'],
             country: row['Pays'] || row['Country'],
             exchange: row['Bourse de valeurs'] || row['Exchange'],
-            currency: row['Devise de marché'] || row['Currency'] || 'USD'
+            currency: row['Devise de marché'] || row['Currency'] || 'USD',
+            // Récupérer ROE/D/E si déjà dans le CSV
+            roe_csv: parseFloat(row['roe']) || null,
+            de_ratio_csv: parseFloat(row['de_ratio']) || null
         }));
     } catch (error) {
         console.error(`Erreur lecture ${filepath}:`, error);
@@ -221,7 +302,7 @@ async function calculate30DayADV(symbol) {
     }
 }
 
-// Enrichir un stock avec données Twelve Data
+// Enrichir un stock avec données Twelve Data + fondamentaux cache
 async function enrichStock(stock) {
     try {
         // 1. Quote pour prix actuel
@@ -263,6 +344,15 @@ async function enrichStock(stock) {
             adv_median_usd = avgVolume * price * fx;
         }
         
+        // 4. Récupérer ROE/D/E depuis le cache fondamentaux
+        const cached = fundamentalsCache.data[stock.ticker] || {};
+        const roe = cached.roe ?? stock.roe_csv ?? null;
+        const de_ratio = cached.de_ratio ?? stock.de_ratio_csv ?? null;
+        
+        // 5. Calculer score Buffett
+        const buffett_score = calculateBuffettScore(roe, de_ratio);
+        const buffett_grade = getBuffettGrade(buffett_score);
+        
         // Compiler les données enrichies
         return {
             ...stock,
@@ -273,11 +363,19 @@ async function enrichStock(stock) {
             volume: Number(quote.volume) || 0,
             averageVolume: Number(quote.average_volume) || 0,
             
-            // Métriques
+            // Métriques valuation
             marketCap: Number(quote.market_capitalization) || 0,
             pe_ratio: Number(stats?.statistics?.valuations_metrics?.pe_ratio) || null,
             peg_ratio: Number(stats?.statistics?.valuations_metrics?.peg_ratio) || null,
             dividend_yield: Number(stats?.statistics?.stock_dividends?.dividend_yield) || null,
+            
+            // ═══════════════════════════════════════════════════════════════
+            // FONDAMENTAUX BUFFETT (depuis cache)
+            // ═══════════════════════════════════════════════════════════════
+            roe: roe,
+            de_ratio: de_ratio,
+            buffett_score: buffett_score,
+            buffett_grade: buffett_grade,
             
             // ADV
             adv_median_usd: adv_median_usd,
@@ -293,8 +391,18 @@ async function enrichStock(stock) {
         
     } catch (error) {
         console.error(`❌ Erreur enrichissement ${stock.ticker}: ${error.message}`);
+        
+        // Même en cas d'erreur, essayer de récupérer ROE/D/E du cache
+        const cached = fundamentalsCache.data[stock.ticker] || {};
+        const roe = cached.roe ?? stock.roe_csv ?? null;
+        const de_ratio = cached.de_ratio ?? stock.de_ratio_csv ?? null;
+        
         return {
             ...stock,
+            roe: roe,
+            de_ratio: de_ratio,
+            buffett_score: calculateBuffettScore(roe, de_ratio),
+            buffett_grade: getBuffettGrade(calculateBuffettScore(roe, de_ratio)),
             error: error.message,
             enriched_at: new Date().toISOString()
         };
@@ -311,8 +419,13 @@ async function enrichStocks() {
     // S'assurer que le dossier existe
     await fs.mkdir(OUT_DIR, { recursive: true });
     
+    // ═══════════════════════════════════════════════════════════════════════
+    // CHARGER LE CACHE FONDAMENTAUX
+    // ═══════════════════════════════════════════════════════════════════════
+    await loadFundamentalsCache();
+    
     // Charger les 3 fichiers CSV
-    console.log('📁 Chargement des fichiers CSV...');
+    console.log('\n📁 Chargement des fichiers CSV...');
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
         loadCSV('data/Actions_US.csv'),
         loadCSV('data/Actions_Europe.csv'),
@@ -361,7 +474,10 @@ async function enrichStocks() {
                 // Filtrer par ADV
                 if (stock.adv_median_usd >= CONFIG.MIN_ADV_USD) {
                     results[region].filtered.push(stock);
-                    console.log(`  ✅ ${stock.ticker}: ADV ${(stock.adv_median_usd/1e6).toFixed(2)}M$`);
+                    const roeStr = stock.roe !== null ? `ROE=${stock.roe.toFixed(1)}%` : 'ROE=N/A';
+                    const deStr = stock.de_ratio !== null ? `D/E=${stock.de_ratio.toFixed(2)}` : 'D/E=N/A';
+                    const gradeStr = stock.buffett_grade || '-';
+                    console.log(`  ✅ ${stock.ticker}: ADV ${(stock.adv_median_usd/1e6).toFixed(2)}M$ | ${roeStr} | ${deStr} | Grade ${gradeStr}`);
                 } else {
                     results[region].rejected.push({...stock, reason: 'LOW_LIQUIDITY'});
                     console.log(`  ❌ ${stock.ticker}: ADV ${(stock.adv_median_usd/1e6).toFixed(2)}M$ < seuil`);
@@ -389,12 +505,13 @@ async function enrichStocks() {
         }, null, 2));
         console.log(`  📝 ${jsonPath}: ${results[region].filtered.length} stocks`);
         
-        // CSV filtré par région
+        // CSV filtré par région (avec ROE/D/E)
         const csvPath = path.join(OUT_DIR, `stocks_${region}_filtered.csv`);
         const csvHeader = [
             'Ticker', 'Name', 'Sector', 'Country', 'Exchange',
             'Price', 'Change%', 'Volume', 'MarketCap', 'ADV_USD',
-            'PE_Ratio', 'Dividend_Yield'
+            'PE_Ratio', 'Dividend_Yield',
+            'ROE', 'DE_Ratio', 'Buffett_Score', 'Buffett_Grade'
         ].join('\t') + '\n';
         
         const csvRows = results[region].filtered.map(s => [
@@ -409,7 +526,11 @@ async function enrichStocks() {
             s.marketCap,
             Math.round(s.adv_median_usd),
             s.pe_ratio || '',
-            s.dividend_yield ? s.dividend_yield.toFixed(2) : ''
+            s.dividend_yield ? s.dividend_yield.toFixed(2) : '',
+            s.roe !== null ? s.roe.toFixed(2) : '',
+            s.de_ratio !== null ? s.de_ratio.toFixed(2) : '',
+            s.buffett_score !== null ? s.buffett_score : '',
+            s.buffett_grade || ''
         ].join('\t')).join('\n');
         
         await fs.writeFile(csvPath, csvHeader + csvRows);
@@ -423,17 +544,23 @@ async function enrichStocks() {
             us: {
                 total: results.us.stocks.length,
                 filtered: results.us.filtered.length,
-                rejected: results.us.rejected.length
+                rejected: results.us.rejected.length,
+                with_roe: results.us.filtered.filter(s => s.roe !== null).length,
+                with_de: results.us.filtered.filter(s => s.de_ratio !== null).length
             },
             europe: {
                 total: results.europe.stocks.length,
                 filtered: results.europe.filtered.length,
-                rejected: results.europe.rejected.length
+                rejected: results.europe.rejected.length,
+                with_roe: results.europe.filtered.filter(s => s.roe !== null).length,
+                with_de: results.europe.filtered.filter(s => s.de_ratio !== null).length
             },
             asia: {
                 total: results.asia.stocks.length,
                 filtered: results.asia.filtered.length,
-                rejected: results.asia.rejected.length
+                rejected: results.asia.rejected.length,
+                with_roe: results.asia.filtered.filter(s => s.roe !== null).length,
+                with_de: results.asia.filtered.filter(s => s.de_ratio !== null).length
             }
         },
         top_performers: {
@@ -445,7 +572,10 @@ async function enrichStocks() {
                     ticker: s.ticker,
                     name: s.name,
                     region: s.sourceRegion,
-                    change: s.changePercent
+                    change: s.changePercent,
+                    roe: s.roe,
+                    de_ratio: s.de_ratio,
+                    buffett_grade: s.buffett_grade
                 })),
             losers: [...results.us.filtered, ...results.europe.filtered, ...results.asia.filtered]
                 .filter(s => s.changePercent < 0)
@@ -455,7 +585,24 @@ async function enrichStocks() {
                     ticker: s.ticker,
                     name: s.name,
                     region: s.sourceRegion,
-                    change: s.changePercent
+                    change: s.changePercent,
+                    roe: s.roe,
+                    de_ratio: s.de_ratio,
+                    buffett_grade: s.buffett_grade
+                })),
+            // TOP 10 par score Buffett
+            buffett_quality: [...results.us.filtered, ...results.europe.filtered, ...results.asia.filtered]
+                .filter(s => s.buffett_score !== null)
+                .sort((a, b) => b.buffett_score - a.buffett_score)
+                .slice(0, 10)
+                .map(s => ({
+                    ticker: s.ticker,
+                    name: s.name,
+                    region: s.sourceRegion,
+                    buffett_score: s.buffett_score,
+                    buffett_grade: s.buffett_grade,
+                    roe: s.roe,
+                    de_ratio: s.de_ratio
                 }))
         }
     };
@@ -470,6 +617,29 @@ async function enrichStocks() {
     console.log(`  Europe: ${results.europe.filtered.length}/${results.europe.stocks.length} retenus`);
     console.log(`  Asie: ${results.asia.filtered.length}/${results.asia.stocks.length} retenus`);
     
+    // Stats Buffett
+    const allFiltered = [...results.us.filtered, ...results.europe.filtered, ...results.asia.filtered];
+    const withROE = allFiltered.filter(s => s.roe !== null).length;
+    const withDE = allFiltered.filter(s => s.de_ratio !== null).length;
+    const withScore = allFiltered.filter(s => s.buffett_score !== null).length;
+    
+    console.log('\n📈 FONDAMENTAUX BUFFETT:');
+    console.log(`  Avec ROE: ${withROE}/${allFiltered.length} (${(100*withROE/allFiltered.length).toFixed(1)}%)`);
+    console.log(`  Avec D/E: ${withDE}/${allFiltered.length} (${(100*withDE/allFiltered.length).toFixed(1)}%)`);
+    console.log(`  Avec Score: ${withScore}/${allFiltered.length} (${(100*withScore/allFiltered.length).toFixed(1)}%)`);
+    
+    // Distribution des grades
+    const gradeA = allFiltered.filter(s => s.buffett_grade === 'A').length;
+    const gradeB = allFiltered.filter(s => s.buffett_grade === 'B').length;
+    const gradeC = allFiltered.filter(s => s.buffett_grade === 'C').length;
+    const gradeD = allFiltered.filter(s => s.buffett_grade === 'D').length;
+    
+    console.log('\n🏆 DISTRIBUTION GRADES BUFFETT:');
+    console.log(`  Grade A (≥80): ${gradeA} stocks`);
+    console.log(`  Grade B (≥60): ${gradeB} stocks`);
+    console.log(`  Grade C (≥40): ${gradeC} stocks`);
+    console.log(`  Grade D (<40): ${gradeD} stocks`);
+    
     const totalFiltered = results.us.filtered.length + results.europe.filtered.length + results.asia.filtered.length;
     const totalStocks = allStocks.length;
     console.log(`\n  Total: ${totalFiltered}/${totalStocks} stocks retenus`);
@@ -479,6 +649,7 @@ async function enrichStocks() {
         console.log(`::set-output name=stocks_us::${results.us.filtered.length}`);
         console.log(`::set-output name=stocks_europe::${results.europe.filtered.length}`);
         console.log(`::set-output name=stocks_asia::${results.asia.filtered.length}`);
+        console.log(`::set-output name=buffett_with_score::${withScore}`);
     }
     
     console.log('\n✅ Enrichissement terminé avec succès!');
