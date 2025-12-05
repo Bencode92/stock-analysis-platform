@@ -673,20 +673,18 @@ async function throttle() {
     console.log(`✅ ${region}: ${filtered.length}/${rows.length} retenus`);
   }
 
-  // Enrichissement fondamentaux - TOUTES les actions
-  let combined = allOutputs.flatMap(o => o.rows);
-  combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
-  
-  // Sauvegarde par région
-  for (const output of allOutputs) {
-    const regionTickers = new Set(output.rows.map(r => r['Ticker']));
-    const enrichedRows = combined.filter(r => regionTickers.has(r['Ticker']));
-    await writeCSV(output.file, enrichedRows);
-    console.log(`📁 ${output.title}: ${enrichedRows.length} stocks → ${output.file}`);
-  }
+// Enrichissement fondamentaux - TOUTES les actions
+let combined = allOutputs.flatMap(o => o.rows);
+combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
 
-  await writeCSV(path.join(OUT_DIR,'Actions_filtrees_par_volume.csv'), combined);
-  await writeCSVGeneric(path.join(OUT_DIR,'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
+// ✅ FIX v2.5 - Sauvegarde par région (objets déjà enrichis par référence)
+for (const output of allOutputs) {
+  await writeCSV(output.file, output.rows);
+  console.log(`📁 ${output.title}: ${output.rows.length} stocks → ${output.file}`);
+}
+
+await writeCSV(path.join(OUT_DIR, 'Actions_filtrees_par_volume.csv'), combined);
+await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
   
   // Résumé final
   console.log('\n' + '='.repeat(50));
