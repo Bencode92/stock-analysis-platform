@@ -509,7 +509,7 @@ function parseCSV(csvText) {
     });
 }
 
-// ✅ v3.22: Ajout lecture des colonnes roe et de_ratio
+// ✅ v3.24: Ajout lecture des colonnes roe, de_ratio et roic
 async function loadStockCSV(filepath) {
     try {
         const csvText = await fs.readFile(filepath, 'utf8');
@@ -522,7 +522,9 @@ async function loadStockCSV(filepath) {
             exchange: row['Bourse de valeurs'] || row['Exchange'] || '',
             // ✅ v3.22: Lecture ROE et D/E depuis le CSV
             roe: parseNumberLoose(row['roe']) ?? null,
-            de_ratio: parseNumberLoose(row['de_ratio']) ?? null
+            de_ratio: parseNumberLoose(row['de_ratio']) ?? null,
+            // ✅ v3.24: Lecture ROIC depuis le CSV
+            roic: parseNumberLoose(row['roic']) ?? null
         })).filter(s => s.symbol);
     } catch (error) {
         console.error(`Erreur ${filepath}: ${error.message}`);
@@ -1022,8 +1024,8 @@ function clampRegToTTM(reg, ttm, hasSpecial){
   return (ratio < 0.5 || ratio > 2.0) ? ttm : reg;
 }
 
-// ✅ v3.22: Score Buffett simplifié (ROE + D/E)
-function calculateBuffettScore(roe, de_ratio) {
+// ✅ v3.24: Score Buffett enrichi (ROE + D/E + ROIC)
+function calculateBuffettScore(roe, de_ratio, roic) {
     let score = 0;
     let maxScore = 0;
     
@@ -1045,6 +1047,17 @@ function calculateBuffettScore(roe, de_ratio) {
         else if (de_ratio < 2.0) score += 8;  // Élevé
         else if (de_ratio < 3.0) score += 3;  // Très élevé
         // de_ratio >= 3.0 : 0 points (dangereux)
+    }
+    
+    // ✅ v3.24: ROIC - max 25 points (Return on Invested Capital)
+    if (roic !== null && roic !== undefined && Number.isFinite(roic)) {
+        maxScore += 25;
+        if (roic >= 20) score += 25;          // Excellent (très efficace)
+        else if (roic >= 15) score += 20;     // Bon
+        else if (roic >= 10) score += 12;     // Acceptable
+        else if (roic >= 5) score += 5;       // Faible
+        else if (roic > 0) score += 2;        // Très faible
+        // roic <= 0 : 0 points (destruction de valeur)
     }
     
     // Normaliser sur 100
@@ -1404,13 +1417,14 @@ async function enrichStock(stock) {
         console.log(`[DATA CTX] ${stock.symbol} -> ${symUsed} | ${usedEx} (${usedMic}) | ${usedCur} | ${usedTz || 'tz?'}`);
     }
     
-    // ✅ v3.22: Calcul du score Buffett depuis les données CSV
-    const buffett_score = calculateBuffettScore(stock.roe, stock.de_ratio);
+    // ✅ v3.24: Calcul du score Buffett depuis les données CSV (avec ROIC)
+    const buffett_score = calculateBuffettScore(stock.roe, stock.de_ratio, stock.roic);
     const buffett_grade = getBuffettGrade(buffett_score);
     
-    if (CONFIG.DEBUG && (stock.roe !== null || stock.de_ratio !== null)) {
-        console.log(`[BUFFETT] ${stock.symbol}: ROE=${stock.roe}%, D/E=${stock.de_ratio} → Score=${buffett_score}, Grade=${buffett_grade}`);
+    if (CONFIG.DEBUG && (stock.roe !== null || stock.de_ratio !== null || stock.roic !== null)) {
+        console.log(`[BUFFETT] ${stock.symbol}: ROE=${stock.roe}%, D/E=${stock.de_ratio}, ROIC=${stock.roic}% → Score=${buffett_score}, Grade=${buffett_grade}`);
     }
+
     
     return {
         ticker: stock.symbol,
@@ -1443,10 +1457,11 @@ async function enrichStock(stock) {
         perf_3y: perf.performances?.year_3 || null,
         
         // ✅ v3.22: Fondamentaux Buffett depuis CSV
-        roe: stock.roe,
-        de_ratio: stock.de_ratio,
-        buffett_score,
-        buffett_grade,
+   roe: stock.roe,
+    de_ratio: stock.de_ratio,
+    roic: stock.roic,
+    buffett_score,
+    buffett_grade,
         
         // ✅ v3.23: NOUVELLES MÉTRIQUES
         fcf_yield,                                        // FCF Yield en %
@@ -1554,15 +1569,12 @@ function buildOverview(byRegion){
     pe_ratio: s.pe_ratio == null ? null : Number(s.pe_ratio),
     eps_ttm: s.eps_ttm == null ? null : Number(s.eps_ttm),
     is_adr: s.is_adr || false,
-    // ✅ v3.22: Métriques Buffett
+    // ✅ v3.24: Ajout métriques Buffett + ROIC
     roe: s.roe == null ? null : Number(s.roe),
     de_ratio: s.de_ratio == null ? null : Number(s.de_ratio),
+    roic: s.roic == null ? null : Number(s.roic),
     buffett_score: s.buffett_score == null ? null : Number(s.buffett_score),
-    buffett_grade: s.buffett_grade || null,
-    // ✅ v3.23: NOUVELLES MÉTRIQUES
-    fcf_yield: s.fcf_yield == null ? null : Number(s.fcf_yield),
-    eps_growth_5y: s.eps_growth_5y == null ? null : Number(s.eps_growth_5y),
-    peg_ratio: s.peg_ratio == null ? null : Number(s.peg_ratio)
+    buffett_grade: s.buffett_grade || null
   });
 
   const sets = {
@@ -1631,7 +1643,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.23 - FCF Yield + EPS Growth 5Y)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.24 - Intégration ROE/D/E/ROIC + Score Buffett)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
@@ -1645,11 +1657,12 @@ async function main() {
     
     console.log(`Stocks chargés: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
     
-    // ✅ v3.22: Stats ROE/D/E chargées depuis CSV
+    // ✅ v3.24: Stats ROE/D/E/ROIC chargées depuis CSV
     const allLoaded = [...usStocks, ...europeStocks, ...asiaStocks];
     const withROE = allLoaded.filter(s => s.roe !== null).length;
     const withDE = allLoaded.filter(s => s.de_ratio !== null).length;
-    console.log(`📈 Fondamentaux CSV: ${withROE}/${allLoaded.length} avec ROE, ${withDE}/${allLoaded.length} avec D/E\n`);
+    const withROIC = allLoaded.filter(s => s.roic !== null).length;
+    console.log(`📈 Fondamentaux CSV: ${withROE}/${allLoaded.length} ROE | ${withDE}/${allLoaded.length} D/E | ${withROIC}/${allLoaded.length} ROIC\n`);
     
     // Détection et rebasculement des ADR
     const adrFromEurope = [];
@@ -1759,6 +1772,7 @@ async function main() {
     console.log('\n📈 Statistiques Buffett:');
     console.log(`  - Actions avec ROE: ${allStocks.filter(s => s.roe !== null).length}/${allStocks.length}`);
     console.log(`  - Actions avec D/E: ${allStocks.filter(s => s.de_ratio !== null).length}/${allStocks.length}`);
+    console.log(`  - Actions avec ROIC: ${allStocks.filter(s => s.roic !== null).length}/${allStocks.length}`);
     console.log(`  - Actions avec score Buffett: ${withBuffettScore.length}/${allStocks.length}`);
     
     console.log('\n🏆 Distribution Grades Buffett:');
