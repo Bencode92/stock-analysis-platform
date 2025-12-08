@@ -1,0 +1,162 @@
+{
+  "inception_date": "2025-12-08",
+  "inception_nav": 100000,
+  "currency": "EUR",
+  "description": "Portefeuilles de référence créés le 8 décembre 2025 pour tracking de performance",
+  
+  "portfolios": {
+    "Agressif": {
+      "target_volatility": 18,
+      "allocation": {
+        "actions": {
+          "SSE.L": {"name": "SSE PLC", "weight": 14},
+          "066570.KS": {"name": "LG Electronics", "weight": 14},
+          "AMGN": {"name": "Amgen Inc", "weight": 14},
+          "EXPD": {"name": "Expeditors International", "weight": 14},
+          "ITX.MC": {"name": "Inditex", "weight": 14},
+          "STLD": {"name": "Steel Dynamics", "weight": 12},
+          "ASIANPAINT.NS": {"name": "Asian Paints", "weight": 8},
+          "EN.PA": {"name": "Bouygues", "weight": 2},
+          "IBM": {"name": "IBM", "weight": 2}
+        },
+        "etf": {},
+        "obligations": {
+          "BOXX": {"name": "Alpha Architect 1-3 Month Boxx Fund", "weight": 5}
+        },
+        "crypto": {}
+      },
+      "summary": {
+        "actions_pct": 94,
+        "etf_pct": 0,
+        "obligations_pct": 5,
+        "crypto_pct": 0,
+        "cash_pct": 1
+      },
+      "backtest_90d": {
+        "total_return_pct": 2.9,
+        "cagr_pct": 8.25,
+        "volatility_pct": 11.98,
+        "sharpe_ratio": 0.78,
+        "max_drawdown_pct": -5.54
+      }
+    },
+    
+    "Modéré": {
+      "target_volatility": 12,
+      "allocation": {
+        "actions": {
+          "SSE.L": {"name": "SSE PLC", "weight": 14},
+          "ASIANPAINT.NS": {"name": "Asian Paints", "weight": 14},
+          "066570.KS": {"name": "LG Electronics", "weight": 14},
+          "ITX.MC": {"name": "Inditex", "weight": 10}
+        },
+        "etf": {
+          "GLD": {"name": "SPDR Gold Shares", "weight": 15},
+          "IAU": {"name": "iShares Gold Trust", "weight": 14},
+          "GLDM": {"name": "SPDR Gold MiniShares Trust", "weight": 2},
+          "GLTR": {"name": "abrdn Physical Precious Metals Basket", "weight": 2},
+          "EWP": {"name": "iShares MSCI Spain ETF", "weight": 2}
+        },
+        "obligations": {
+          "BOXX": {"name": "Alpha Architect 1-3 Month Boxx Fund", "weight": 14}
+        },
+        "crypto": {}
+      },
+      "summary": {
+        "actions_pct": 52,
+        "etf_pct": 35,
+        "obligations_pct": 14,
+        "crypto_pct": 0,
+        "cash_pct": -1
+      },
+      "backtest_90d": {
+        "total_return_pct": 3.96,
+        "cagr_pct": 11.37,
+        "volatility_pct": 8.68,
+        "sharpe_ratio": 1.36,
+        "max_drawdown_pct": -3.52
+      }
+    },
+    
+    "Stable": {
+      "target_volatility": 8,
+      "allocation": {
+        "actions": {
+          "ASIANPAINT.NS": {"name": "Asian Paints", "weight": 4},
+          "SSE.L": {"name": "SSE PLC", "weight": 4},
+          "ITX.MC": {"name": "Inditex", "weight": 4},
+          "ENGI.PA": {"name": "Engie", "weight": 4},
+          "AMGN": {"name": "Amgen", "weight": 4},
+          "JNJ": {"name": "Johnson & Johnson", "weight": 4},
+          "IMB.L": {"name": "Imperial Brands", "weight": 4}
+        },
+        "etf": {
+          "GLD": {"name": "SPDR Gold Shares", "weight": 4},
+          "IAU": {"name": "iShares Gold Trust", "weight": 4},
+          "GLDM": {"name": "SPDR Gold MiniShares", "weight": 4},
+          "SGOL": {"name": "abrdn Physical Gold", "weight": 4},
+          "IAUM": {"name": "iShares Gold Trust Micro", "weight": 4},
+          "GLTR": {"name": "abrdn Physical Precious Metals Basket", "weight": 4},
+          "EWP": {"name": "iShares MSCI Spain ETF", "weight": 4},
+          "AAAU": {"name": "Goldman Sachs Physical Gold ETF", "weight": 2}
+        },
+        "obligations": {
+          "BOXX": {"name": "Alpha Architect 1-3 Month Boxx Fund", "weight": 15},
+          "ETV": {"name": "Eaton Vance Total Return Fund", "weight": 15},
+          "JPLD": {"name": "JPMorgan Limited Duration ETF", "weight": 10}
+        },
+        "crypto": {}
+      },
+      "summary": {
+        "actions_pct": 28,
+        "etf_pct": 30,
+        "obligations_pct": 40,
+        "crypto_pct": 0,
+        "cash_pct": 2
+      },
+      "backtest_90d": {
+        "total_return_pct": 3.25,
+        "cagr_pct": 9.26,
+        "volatility_pct": 6.48,
+        "sharpe_ratio": 1.49,
+        "max_drawdown_pct": -2.57
+      }
+    }
+  },
+  
+  "benchmark": {
+    "symbol": "URTH",
+    "name": "iShares MSCI World ETF"
+  },
+  
+  "tracking_history": [
+    {
+      "date": "2025-12-08",
+      "event": "inception",
+      "nav_reference": 100000,
+      "portfolios_value": {
+        "Agressif": 100000,
+        "Modéré": 100000,
+        "Stable": 100000
+      },
+      "notes": "Création des 3 portefeuilles de référence"
+    }
+  ],
+  
+  "rebalancing_rules": {
+    "frequency": "monthly",
+    "threshold_pct": 5,
+    "max_turnover_pct": 25,
+    "notes": "Rebalancement mensuel si drift > 5% sur une position"
+  },
+  
+  "_instructions": {
+    "how_to_track": [
+      "1. Chaque mois, ajouter une entrée dans tracking_history",
+      "2. Calculer la valeur de chaque portefeuille",
+      "3. Comparer vs benchmark URTH",
+      "4. Décider si rebalancement nécessaire"
+    ],
+    "nav_calculation": "Somme (weight * price_actuel / price_inception)"
+  }
+}
