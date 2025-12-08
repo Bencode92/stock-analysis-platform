@@ -8,6 +8,7 @@ Plans:
 - Ultra: pas de rate limit significatif
 
 V2: Support pour charger les symboles depuis les portefeuilles générés
+V3: Conversion automatique Yahoo → TwelveData format pour symboles internationaux
 """
 
 import os
@@ -21,6 +22,114 @@ import requests
 import pandas as pd
 
 logger = logging.getLogger("backtest.data_loader")
+
+
+# ============ YAHOO → TWELVEDATA SYMBOL CONVERSION ============
+
+# Mapping Yahoo Finance suffix → TwelveData MIC code
+YAHOO_TO_TWELVEDATA_MIC = {
+    # Europe
+    ".PA": "XPAR",   # Paris (Euronext)
+    ".MC": "XMAD",   # Madrid
+    ".L": "XLON",    # London
+    ".DE": "XETR",   # Frankfurt (Xetra)
+    ".MI": "XMIL",   # Milan
+    ".AS": "XAMS",   # Amsterdam
+    ".BR": "XBRU",   # Brussels
+    ".LS": "XLIS",   # Lisbon
+    ".SW": "XSWX",   # Swiss
+    ".VI": "XWBO",   # Vienna
+    ".OL": "XOSL",   # Oslo
+    ".CO": "XCSE",   # Copenhagen
+    ".HE": "XHEL",   # Helsinki
+    ".ST": "XSTO",   # Stockholm
+    ".IR": "XDUB",   # Dublin
+    
+    # Asia
+    ".HK": "XHKG",   # Hong Kong
+    ".KS": "XKRX",   # Korea (KOSPI)
+    ".KQ": "XKOS",   # Korea (KOSDAQ)
+    ".NS": "XNSE",   # India (NSE)
+    ".BO": "XBOM",   # India (BSE/Bombay)
+    ".TW": "XTAI",   # Taiwan
+    ".TWO": "ROCO", # Taiwan OTC
+    ".T": "XTKS",    # Tokyo
+    ".SS": "XSHG",   # Shanghai
+    ".SZ": "XSHE",   # Shenzhen
+    ".SI": "XSES",   # Singapore
+    ".BK": "XBKK",   # Thailand
+    ".KL": "XKLS",   # Malaysia
+    ".JK": "XIDX",   # Indonesia
+    
+    # Australia
+    ".AX": "XASX",   # Sydney
+}
+
+
+def yahoo_to_twelvedata(symbol: str) -> str:
+    """
+    Convertit un symbole Yahoo Finance vers le format TwelveData.
+    
+    Yahoo utilise des suffixes (.PA, .L, .MC) tandis que TwelveData
+    utilise le format symbol:MIC (ENGI:XPAR).
+    
+    Args:
+        symbol: Symbole au format Yahoo (ex: "ENGI.PA", "SSE.L")
+    
+    Returns:
+        Symbole au format TwelveData (ex: "ENGI:XPAR", "SSE:XLON")
+        ou le symbole original si pas de conversion nécessaire
+    
+    Examples:
+        >>> yahoo_to_twelvedata("ENGI.PA")
+        'ENGI:XPAR'
+        >>> yahoo_to_twelvedata("AAPL")
+        'AAPL'
+        >>> yahoo_to_twelvedata("BTC/USD")
+        'BTC/USD'
+    """
+    if not symbol or "/" in symbol:
+        # Crypto (BTC/USD) ou symbole vide: pas de conversion
+        return symbol
+    
+    # Trouver le suffixe Yahoo le plus long qui match
+    # (important pour .TWO vs .TW)
+    best_match = None
+    best_suffix = ""
+    
+    for suffix, mic in YAHOO_TO_TWELVEDATA_MIC.items():
+        if symbol.endswith(suffix) and len(suffix) > len(best_suffix):
+            best_match = mic
+            best_suffix = suffix
+    
+    if best_match:
+        # Extraire le ticker de base et ajouter le MIC
+        base_ticker = symbol[:-len(best_suffix)]
+        converted = f"{base_ticker}:{best_match}"
+        logger.debug(f"Converted {symbol} → {converted}")
+        return converted
+    
+    # Pas de conversion nécessaire (symbole US ou déjà au bon format)
+    return symbol
+
+
+def convert_symbols_for_twelvedata(symbols: List[str]) -> List[str]:
+    """
+    Convertit une liste de symboles Yahoo vers le format TwelveData.
+    
+    Args:
+        symbols: Liste de symboles au format Yahoo
+    
+    Returns:
+        Liste de symboles au format TwelveData
+    """
+    converted = []
+    for sym in symbols:
+        converted_sym = yahoo_to_twelvedata(sym)
+        if converted_sym != sym:
+            logger.info(f"Symbol conversion: {sym} → {converted_sym}")
+        converted.append(converted_sym)
+    return converted
 
 
 class TwelveDataLoader:
@@ -89,7 +198,8 @@ class TwelveDataLoader:
         Récupère les prix historiques pour un symbole.
         
         Args:
-            symbol: Ticker (ex: "AAPL", "BTC/USD")
+            symbol: Ticker (ex: "AAPL", "BTC/USD", "ENGI.PA")
+                    Les symboles Yahoo sont automatiquement convertis.
             start_date: Date début "YYYY-MM-DD"
             end_date: Date fin "YYYY-MM-DD"
             interval: "1day", "1week", etc.
@@ -98,7 +208,10 @@ class TwelveDataLoader:
             DataFrame avec colonnes [open, high, low, close, volume]
             Index = datetime
         """
-        cache_key = f"{symbol}_{start_date}_{end_date}_{interval}"
+        # Convertir le symbole Yahoo → TwelveData si nécessaire
+        td_symbol = yahoo_to_twelvedata(symbol)
+        
+        cache_key = f"{td_symbol}_{start_date}_{end_date}_{interval}"
         if cache_key in self._cache:
             logger.debug(f"Cache hit: {symbol}")
             return self._cache[cache_key]
@@ -106,7 +219,7 @@ class TwelveDataLoader:
         self._rate_limit()
         
         params = {
-            "symbol": symbol,
+            "symbol": td_symbol,
             "interval": interval,
             "start_date": start_date,
             "end_date": end_date,
@@ -125,11 +238,11 @@ class TwelveDataLoader:
             data = response.json()
             
             if "code" in data and data["code"] != 200:
-                logger.warning(f"API error for {symbol}: {data.get('message', 'Unknown')}")
+                logger.warning(f"API error for {symbol} ({td_symbol}): {data.get('message', 'Unknown')}")
                 return None
             
             if "values" not in data:
-                logger.warning(f"No data for {symbol}")
+                logger.warning(f"No data for {symbol} ({td_symbol})")
                 return None
             
             df = pd.DataFrame(data["values"])
@@ -146,10 +259,10 @@ class TwelveDataLoader:
             return df
             
         except requests.RequestException as e:
-            logger.error(f"Request error for {symbol}: {e}")
+            logger.error(f"Request error for {symbol} ({td_symbol}): {e}")
             return None
         except Exception as e:
-            logger.error(f"Unexpected error for {symbol}: {e}")
+            logger.error(f"Unexpected error for {symbol} ({td_symbol}): {e}")
             return None
     
     def get_multiple_time_series(
@@ -236,44 +349,60 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
 
 # Mapping des noms courants vers leurs tickers
 NAME_TO_TICKER_MAP = {
-    # Actions
+    # Actions Européennes
     "SSE PLC": "SSE.L",
+    "INDUSTRIA DE DISENO TEXTIL SA": "ITX.MC",
+    "BOUYGUES SA": "EN.PA",
+    "ENGIE SA": "ENGI.PA",
+    "IMPERIAL BRANDS PLC": "IMB.L",
+    "HERMES INTERNATIONAL": "RMS.PA",
+    "LVMH MOET HENNESSY LOUIS VUITTON": "MC.PA",
+    "TOTALENERGIES SE": "TTE.PA",
+    "SANOFI SA": "SAN.PA",
+    "SAP SE": "SAP.DE",
+    "SIEMENS AG": "SIE.DE",
+    "ALLIANZ SE": "ALV.DE",
+    "BASF SE": "BAS.DE",
+    "ASML HOLDING NV": "ASML.AS",
+    "NESTLE SA": "NESN.SW",
+    "ROCHE HOLDING AG": "ROG.SW",
+    "NOVARTIS AG": "NOVN.SW",
+    "SHELL PLC": "SHEL.L",
+    "ASTRAZENECA PLC": "AZN.L",
+    "HSBC HOLDINGS PLC": "HSBA.L",
+    "UNILEVER PLC": "ULVR.L",
+    "BP PLC": "BP.L",
+    "RIO TINTO PLC": "RIO.L",
+    "GLAXOSMITHKLINE PLC": "GSK.L",
+    "DIAGEO PLC": "DGE.L",
+    "BRITISH AMERICAN TOBACCO PLC": "BATS.L",
+    
+    # Actions Asie
     "LG ELECTRONICS INC": "066570.KS",
+    "ASIAN PAINTS LTD": "ASIANPAINT.NS",
+    "TATA CONSULTANCY SERVICES LTD": "TCS.NS",
+    "INFOSYS LTD": "INFY.NS",
+    "RELIANCE INDUSTRIES LTD": "RELIANCE.NS",
+    "HDFC BANK LTD": "HDFCBANK.NS",
+    "TAIWAN SEMICONDUCTOR MFG CO LTD": "2330.TW",
+    "SAMSUNG ELECTRONICS CO LTD": "005930.KS",
+    "ALIBABA GROUP HOLDING LTD": "9988.HK",
+    "TENCENT HOLDINGS LTD": "0700.HK",
+    "MEITUAN": "3690.HK",
+    "JD COM INC": "9618.HK",
+    
+    # Actions US
     "AMGEN INC": "AMGN",
     "STEEL DYNAMICS INC": "STLD",
     "EXPEDITORS INTERNATIONAL OF WASHIN": "EXPD",
-    "INDUSTRIA DE DISENO TEXTIL SA": "ITX.MC",
-    "ASIAN PAINTS LTD": "ASIANPAINT.NS",
-    "BOUYGUES SA": "EN.PA",
     "INTERNATIONAL BUSINESS MACHINES CO": "IBM",
-    "ENGIE SA": "ENGI.PA",
     "JOHNSON & JOHNSON": "JNJ",
-    "IMPERIAL BRANDS PLC": "IMB.L",
-    
-    # ETF Gold
-    "SPDR Gold Shares": "GLD",
-    "iShares Gold Trust": "IAU",
-    "SPDR Gold MiniShares Trust": "GLDM",
-    "abrdn Physical Gold Shares ETF": "SGOL",
-    "iShares Gold Trust Micro": "IAUM",
-    "abrdn Physical Precious Metals Basket Shares ETF": "GLTR",
-    "Goldman Sachs Physical Gold ETF": "AAAU",
-    
-    # ETF Country/Region
-    "iShares MSCI Spain ETF": "EWP",
-    "iShares MSCI World ETF": "URTH",
-    
-    # Bonds
-    "Alpha Architect 1-3 Month Boxx Fund": "BOXX",
-    "Eaton Vance Total Return Fund": "ETV",
-    "JPMorgan Limited Duration ETF": "JPLD",
-    
-    # US Stocks
     "APPLE INC": "AAPL",
     "MICROSOFT CORP": "MSFT",
     "NVIDIA CORP": "NVDA",
     "AMAZON COM INC": "AMZN",
     "ALPHABET INC CLASS A": "GOOGL",
+    "ALPHABET INC CLASS C": "GOOG",
     "META PLATFORMS INC": "META",
     "TESLA INC": "TSLA",
     "BERKSHIRE HATHAWAY INC CLASS B": "BRK.B",
@@ -289,11 +418,90 @@ NAME_TO_TICKER_MAP = {
     "ABBVIE INC": "ABBV",
     "EXXON MOBIL CORP": "XOM",
     "CHEVRON CORP": "CVX",
+    "BROADCOM INC": "AVGO",
+    "COSTCO WHOLESALE CORP": "COST",
+    "WALMART INC": "WMT",
+    "ADOBE INC": "ADBE",
+    "NETFLIX INC": "NFLX",
+    "SALESFORCE INC": "CRM",
+    "CISCO SYSTEMS INC": "CSCO",
+    "INTEL CORP": "INTC",
+    "AMD INC": "AMD",
+    "QUALCOMM INC": "QCOM",
+    
+    # ETF Gold
+    "SPDR Gold Shares": "GLD",
+    "iShares Gold Trust": "IAU",
+    "SPDR Gold MiniShares Trust": "GLDM",
+    "abrdn Physical Gold Shares ETF": "SGOL",
+    "iShares Gold Trust Micro": "IAUM",
+    "abrdn Physical Precious Metals Basket Shares ETF": "GLTR",
+    "Goldman Sachs Physical Gold ETF": "AAAU",
+    
+    # ETF Country/Region
+    "iShares MSCI Spain ETF": "EWP",
+    "iShares MSCI World ETF": "URTH",
+    "iShares MSCI EAFE ETF": "EFA",
+    "iShares MSCI Emerging Markets ETF": "EEM",
+    "Vanguard FTSE Europe ETF": "VGK",
+    "iShares MSCI Germany ETF": "EWG",
+    "iShares MSCI France ETF": "EWQ",
+    "iShares MSCI United Kingdom ETF": "EWU",
+    "iShares MSCI Japan ETF": "EWJ",
+    "iShares MSCI China ETF": "MCHI",
+    "iShares MSCI India ETF": "INDA",
+    "iShares MSCI Brazil ETF": "EWZ",
+    
+    # ETF Sectoriels
+    "Technology Select Sector SPDR Fund": "XLK",
+    "Financial Select Sector SPDR Fund": "XLF",
+    "Health Care Select Sector SPDR Fund": "XLV",
+    "Energy Select Sector SPDR Fund": "XLE",
+    "Consumer Discretionary Select Sector SPDR Fund": "XLY",
+    "Consumer Staples Select Sector SPDR Fund": "XLP",
+    "Utilities Select Sector SPDR Fund": "XLU",
+    "Industrial Select Sector SPDR Fund": "XLI",
+    "Materials Select Sector SPDR Fund": "XLB",
+    "Real Estate Select Sector SPDR Fund": "XLRE",
+    
+    # ETF Bonds/Fixed Income
+    "Alpha Architect 1-3 Month Boxx Fund": "BOXX",
+    "Eaton Vance Total Return Fund": "ETV",
+    "JPMorgan Limited Duration ETF": "JPLD",
+    "iShares 20+ Year Treasury Bond ETF": "TLT",
+    "iShares 7-10 Year Treasury Bond ETF": "IEF",
+    "iShares iBoxx $ Investment Grade Corporate Bond ETF": "LQD",
+    "iShares iBoxx $ High Yield Corporate Bond ETF": "HYG",
+    "Vanguard Total Bond Market ETF": "BND",
+    "iShares TIPS Bond ETF": "TIP",
+    "iShares Flexible Income Active ETF": "BINC",
+    
+    # ETF Dividendes
+    "Vanguard Dividend Appreciation ETF": "VIG",
+    "Schwab U.S. Dividend Equity ETF": "SCHD",
+    "iShares Select Dividend ETF": "DVY",
+    "SPDR S&P Dividend ETF": "SDY",
+    
+    # ETF Large-cap
+    "SPDR S&P 500 ETF Trust": "SPY",
+    "iShares Core S&P 500 ETF": "IVV",
+    "Vanguard S&P 500 ETF": "VOO",
+    "Invesco QQQ Trust": "QQQ",
+    "Vanguard Total Stock Market ETF": "VTI",
     
     # Crypto (format TwelveData)
     "Bitcoin": "BTC/USD",
     "Ethereum": "ETH/USD",
     "Solana": "SOL/USD",
+    "Cardano": "ADA/USD",
+    "Polkadot": "DOT/USD",
+    "Avalanche": "AVAX/USD",
+    "Chainlink": "LINK/USD",
+    "Polygon": "MATIC/USD",
+    "Uniswap": "UNI/USD",
+    "Litecoin": "LTC/USD",
+    "XRP": "XRP/USD",
+    "Dogecoin": "DOGE/USD",
 }
 
 
@@ -404,7 +612,7 @@ def load_prices_for_backtest(
     symbols_list = sorted(list(symbols))
     
     logger.info(f"Loading {len(symbols_list)} symbols from {start_date} to {end_date}")
-    logger.info(f"Symbols: {symbols_list[:10]}{'...' if len(symbols_list) > 10 else ''}")
+    logger.info(f"Symbols: {symbols_list}")
     
     loader = TwelveDataLoader(api_key=api_key, plan=plan)
     prices = loader.get_multiple_time_series(
@@ -466,3 +674,8 @@ def add_ticker_mapping(name: str, ticker: str):
 def get_all_mappings() -> Dict[str, str]:
     """Retourne tous les mappings nom → ticker."""
     return NAME_TO_TICKER_MAP.copy()
+
+
+def get_supported_exchanges() -> Dict[str, str]:
+    """Retourne les bourses supportées avec leur code MIC."""
+    return YAHOO_TO_TWELVEDATA_MIC.copy()
