@@ -8,6 +8,7 @@ Phase 2:
 3. Contraintes min/max par bucket selon le profil
 4. Diagnostics enrichis par bucket
 5. Déduplication ETF par exposition (Phase 1)
+6. Déduplication actions par groupe corporate (Phase 2.1)
 """
 
 import numpy as np
@@ -33,11 +34,20 @@ try:
         AssetClass,
         get_preset_config,
         get_bucket_targets,
+        # Corporate group deduplication
+        CORPORATE_GROUPS,
+        MAX_CORPORATE_GROUP_WEIGHT,
+        MAX_STOCKS_PER_GROUP,
+        get_corporate_group,
+        deduplicate_by_corporate_group,
     )
     HAS_PRESET_META = True
 except ImportError:
     HAS_PRESET_META = False
     ETF_EXPOSURE_EQUIVALENTS = {}
+    CORPORATE_GROUPS = {}
+    MAX_CORPORATE_GROUP_WEIGHT = 0.20
+    MAX_STOCKS_PER_GROUP = 1
     # Fallback Role enum
     from enum import Enum
     class Role(Enum):
@@ -52,6 +62,12 @@ except ImportError:
         "Modéré": {Role.CORE: (0.45, 0.55), Role.DEFENSIVE: (0.20, 0.30), Role.SATELLITE: (0.15, 0.25), Role.LOTTERY: (0.00, 0.02)},
         "Agressif": {Role.CORE: (0.35, 0.45), Role.DEFENSIVE: (0.05, 0.15), Role.SATELLITE: (0.35, 0.50), Role.LOTTERY: (0.00, 0.05)},
     }
+    
+    def get_corporate_group(name: str) -> Optional[str]:
+        return None
+    
+    def deduplicate_by_corporate_group(stocks, scores=None, max_per_group=1):
+        return stocks, {}
 
 logger = logging.getLogger("portfolio_engine.optimizer")
 
@@ -134,6 +150,7 @@ class Asset:
     exposure: Optional[str] = None  # Pour ETF: "gold", "world", "em", etc.
     preset: Optional[str] = None    # Preset assigné (quality_premium, defensif, etc.)
     role: Optional[Role] = None     # Bucket: CORE, SATELLITE, DEFENSIVE, LOTTERY
+    corporate_group: Optional[str] = None  # Groupe corporate (hyundai, samsung, etc.)
 
 
 def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: float = 200.0) -> float:
@@ -291,6 +308,10 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
             preset, role = assign_preset_to_asset(asset)
             asset.preset = preset
             asset.role = role
+        
+        # Assigner groupe corporate pour les actions
+        if asset.category == "Actions" and asset.corporate_group is None:
+            asset.corporate_group = get_corporate_group(asset.name)
     
     # Log distribution
     role_counts = defaultdict(int)
@@ -300,6 +321,75 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
     
     logger.info(f"Bucket distribution: {dict(role_counts)}")
     return assets
+
+
+# ============= CORPORATE GROUP DEDUPLICATION =============
+
+def deduplicate_stocks_by_corporate_group(
+    assets: List[Asset],
+    max_per_group: int = MAX_STOCKS_PER_GROUP
+) -> Tuple[List[Asset], Dict[str, List[str]]]:
+    """
+    Déduplique les actions par groupe corporate.
+    
+    Garde la meilleure action de chaque groupe (basé sur score).
+    
+    Args:
+        assets: Liste d'actifs
+        max_per_group: Nombre max d'actions par groupe (default=1)
+    
+    Returns:
+        (liste_dedupliquée, dict des suppressions par groupe)
+    """
+    stocks = []
+    non_stocks = []
+    
+    for asset in assets:
+        if asset.category == "Actions":
+            # Assigner groupe corporate si pas déjà fait
+            if asset.corporate_group is None:
+                asset.corporate_group = get_corporate_group(asset.name)
+            stocks.append(asset)
+        else:
+            non_stocks.append(asset)
+    
+    # Grouper par corporate group
+    groups: Dict[Optional[str], List[Asset]] = defaultdict(list)
+    for stock in stocks:
+        groups[stock.corporate_group].append(stock)
+    
+    # Sélectionner les meilleurs de chaque groupe
+    deduplicated_stocks = []
+    removed_by_group: Dict[str, List[str]] = {}
+    
+    for group_id, group_stocks in groups.items():
+        if group_id is None:
+            # Pas de groupe = garder toutes
+            deduplicated_stocks.extend(group_stocks)
+        else:
+            # Trier par score décroissant
+            group_stocks.sort(key=lambda a: a.score, reverse=True)
+            
+            # Garder max_per_group
+            kept = group_stocks[:max_per_group]
+            removed = group_stocks[max_per_group:]
+            
+            deduplicated_stocks.extend(kept)
+            
+            if removed:
+                removed_names = [a.name for a in removed]
+                kept_names = [a.name for a in kept]
+                removed_by_group[group_id] = removed_names
+                logger.info(
+                    f"Corporate dedup [{group_id}]: kept {kept_names[0][:30]}, "
+                    f"removed {len(removed)} ({', '.join(n[:20] for n in removed_names[:2])}...)"
+                )
+    
+    total_removed = sum(len(v) for v in removed_by_group.values())
+    if total_removed > 0:
+        logger.info(f"Corporate deduplication: removed {total_removed} duplicate stocks")
+    
+    return non_stocks + deduplicated_stocks, removed_by_group
 
 
 # ============= ETF EXPOSURE DETECTION =============
@@ -396,23 +486,26 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance avec buckets et déduplication ETF.
+    Optimiseur mean-variance avec buckets et déduplication ETF + Corporate.
     """
     
     def __init__(
         self, 
         score_scale: float = 1.0, 
         deduplicate_etfs: bool = True,
+        deduplicate_corporate: bool = True,
         use_bucket_constraints: bool = True
     ):
         """
         Args:
             score_scale: Facteur d'échelle pour les scores
             deduplicate_etfs: Activer la déduplication ETF par exposition
+            deduplicate_corporate: Activer la déduplication actions par groupe corporate
             use_bucket_constraints: Activer les contraintes min/max par bucket
         """
         self.score_scale = score_scale
         self.deduplicate_etfs_enabled = deduplicate_etfs
+        self.deduplicate_corporate_enabled = deduplicate_corporate
         self.use_bucket_constraints = use_bucket_constraints
     
     def select_candidates(
@@ -421,25 +514,34 @@ class PortfolioOptimizer:
         profile: ProfileConstraints
     ) -> List[Asset]:
         """
-        Pré-sélection avec déduplication ETF et enrichissement buckets.
+        Pré-sélection avec déduplication ETF, Corporate et enrichissement buckets.
         """
         # === ÉTAPE 1: Déduplication ETF ===
         if self.deduplicate_etfs_enabled:
             universe = deduplicate_etfs(universe, prefer_by="score")
-            logger.info(f"Post-dedup universe: {len(universe)} actifs")
+            logger.info(f"Post-ETF-dedup universe: {len(universe)} actifs")
         
-        # === ÉTAPE 2: Enrichir avec buckets ===
+        # === ÉTAPE 2: Déduplication Corporate ===
+        if self.deduplicate_corporate_enabled:
+            universe, removed_groups = deduplicate_stocks_by_corporate_group(
+                universe, 
+                max_per_group=MAX_STOCKS_PER_GROUP
+            )
+            logger.info(f"Post-corporate-dedup universe: {len(universe)} actifs")
+        
+        # === ÉTAPE 3: Enrichir avec buckets ===
         universe = enrich_assets_with_buckets(universe)
         
-        # === ÉTAPE 3: Tri par score ===
+        # === ÉTAPE 4: Tri par score ===
         sorted_assets = sorted(universe, key=lambda x: x.score, reverse=True)
         
-        # === ÉTAPE 4: Sélection diversifiée par bucket ===
+        # === ÉTAPE 5: Sélection diversifiée par bucket ===
         selected = []
         sector_count = defaultdict(int)
         category_count = defaultdict(int)
         exposure_count = defaultdict(int)
         bucket_count = defaultdict(int)
+        corporate_group_count = defaultdict(int)
         
         target_pool = profile.max_assets * 3
         
@@ -469,6 +571,10 @@ class PortfolioOptimizer:
             if asset.role == Role.LOTTERY and bucket_count["lottery"] >= 2:
                 continue
             
+            # Contrainte corporate group (max 1 par groupe, déjà appliqué en amont mais double check)
+            if asset.corporate_group and corporate_group_count[asset.corporate_group] >= MAX_STOCKS_PER_GROUP:
+                continue
+            
             selected.append(asset)
             sector_count[asset.sector] += 1
             category_count[asset.category] += 1
@@ -476,9 +582,13 @@ class PortfolioOptimizer:
                 exposure_count[asset.exposure] += 1
             if asset.role:
                 bucket_count[asset.role.value] += 1
+            if asset.corporate_group:
+                corporate_group_count[asset.corporate_group] += 1
         
         logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
         logger.info(f"Buckets pool: {dict(bucket_count)}")
+        if corporate_group_count:
+            logger.info(f"Corporate groups in pool: {dict(corporate_group_count)}")
         
         return selected
     
@@ -498,6 +608,7 @@ class PortfolioOptimizer:
         CORR_SAME_CATEGORY = 0.60
         CORR_SAME_SECTOR = 0.45
         CORR_SAME_EXPOSURE = 0.85
+        CORR_SAME_CORPORATE_GROUP = 0.90  # Very high correlation within same group
         CORR_SAME_BUCKET = 0.50  # Assets in same bucket are somewhat correlated
         CORR_EQUITY_BOND = -0.20
         CORR_CRYPTO_OTHER = 0.25
@@ -516,7 +627,10 @@ class PortfolioOptimizer:
                 if i == j:
                     cov[i, j] = vol_i ** 2
                 else:
-                    if ai.exposure and aj.exposure and ai.exposure == aj.exposure:
+                    # Check corporate group first (highest correlation)
+                    if ai.corporate_group and aj.corporate_group and ai.corporate_group == aj.corporate_group:
+                        corr = CORR_SAME_CORPORATE_GROUP
+                    elif ai.exposure and aj.exposure and ai.exposure == aj.exposure:
                         corr = CORR_SAME_EXPOSURE
                     elif ai.category == aj.category:
                         corr = CORR_SAME_SECTOR if ai.sector == aj.sector else CORR_SAME_CATEGORY
@@ -574,7 +688,7 @@ class PortfolioOptimizer:
         profile: ProfileConstraints,
         cov: np.ndarray
     ) -> List[dict]:
-        """Construit les contraintes incluant les buckets."""
+        """Construit les contraintes incluant les buckets et corporate groups."""
         n = len(candidates)
         constraints = []
         
@@ -625,7 +739,17 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": exposure_constraint})
         
-        # === 7. NEW: Contraintes par BUCKET (Phase 2) ===
+        # === 7. Contraintes par CORPORATE GROUP ===
+        corporate_groups = set(a.corporate_group for a in candidates if a.corporate_group)
+        for group in corporate_groups:
+            group_idx = [i for i, a in enumerate(candidates) if a.corporate_group == group]
+            if len(group_idx) > 1:
+                def group_constraint(w, idx=group_idx, max_val=MAX_CORPORATE_GROUP_WEIGHT):
+                    return max_val - np.sum(w[idx])
+                constraints.append({"type": "ineq", "fun": group_constraint})
+                logger.debug(f"Corporate group constraint [{group}]: max {MAX_CORPORATE_GROUP_WEIGHT*100:.0f}%")
+        
+        # === 8. Contraintes par BUCKET (Phase 2) ===
         if self.use_bucket_constraints:
             bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
             
@@ -681,6 +805,7 @@ class PortfolioOptimizer:
         sector_weights = defaultdict(float)
         exposure_weights = defaultdict(float)
         bucket_weights = defaultdict(float)
+        corporate_group_weights = defaultdict(float)
         
         # Get bucket targets
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
@@ -742,6 +867,14 @@ class PortfolioOptimizer:
                     continue
                 max_exposure_allowed = 20 - exposure_weights.get(asset.exposure, 0) if asset.exposure else profile.max_single_position
                 
+                # Corporate group constraint
+                if asset.corporate_group:
+                    if corporate_group_weights[asset.corporate_group] >= MAX_CORPORATE_GROUP_WEIGHT * 100:
+                        continue
+                    max_group_allowed = MAX_CORPORATE_GROUP_WEIGHT * 100 - corporate_group_weights[asset.corporate_group]
+                else:
+                    max_group_allowed = profile.max_single_position
+                
                 # Bucket-aware weight
                 remaining_for_bucket = max_pct * 100 - current_bucket_weight
                 target_per_asset = remaining_for_bucket / max(len(bucket_assets) - len([a for a in bucket_assets if a.id in allocation]), 1)
@@ -751,6 +884,7 @@ class PortfolioOptimizer:
                     max_allowed,
                     max_sector_allowed,
                     max_exposure_allowed,
+                    max_group_allowed,
                     100 - total_weight
                 )
                 
@@ -763,6 +897,8 @@ class PortfolioOptimizer:
                         exposure_weights[asset.exposure] += weight
                     bucket_weights[role.value] += weight
                     current_bucket_weight += weight
+                    if asset.corporate_group:
+                        corporate_group_weights[asset.corporate_group] += weight
         
         # Normaliser à 100%
         if total_weight > 0:
@@ -776,7 +912,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec contraintes de bucket."""
+        """Optimisation mean-variance avec contraintes de bucket et corporate."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
@@ -834,6 +970,7 @@ class PortfolioOptimizer:
         sector_exposure = defaultdict(float)
         etf_exposure = defaultdict(float)
         bucket_exposure = defaultdict(float)
+        corporate_group_exposure = defaultdict(float)
         
         for asset_id, weight in allocation.items():
             asset = next((a for a in candidates if a.id == asset_id), None)
@@ -843,6 +980,8 @@ class PortfolioOptimizer:
                     etf_exposure[asset.exposure] += weight
                 if asset.role:
                     bucket_exposure[asset.role.value] += weight
+                if asset.corporate_group:
+                    corporate_group_exposure[asset.corporate_group] += weight
         
         # Bucket targets vs actual - convert to native Python types
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
@@ -859,6 +998,16 @@ class PortfolioOptimizer:
                     "in_range": in_range,
                 }
         
+        # Corporate group compliance
+        corporate_group_compliance = {}
+        for group, weight in corporate_group_exposure.items():
+            in_range = weight <= MAX_CORPORATE_GROUP_WEIGHT * 100
+            corporate_group_compliance[group] = {
+                "actual": round(weight, 1),
+                "max": round(MAX_CORPORATE_GROUP_WEIGHT * 100, 0),
+                "in_range": in_range,
+            }
+        
         # Build diagnostics with native Python types
         diagnostics = {
             "converged": bool(optimizer_converged),
@@ -871,7 +1020,10 @@ class PortfolioOptimizer:
             "etf_exposures": {k: round(float(v), 2) for k, v in etf_exposure.items()},
             "bucket_exposure": {k: round(float(v), 2) for k, v in bucket_exposure.items()},
             "bucket_compliance": bucket_compliance,
+            "corporate_group_exposure": {k: round(float(v), 2) for k, v in corporate_group_exposure.items()},
+            "corporate_group_compliance": corporate_group_compliance,
             "deduplication_enabled": bool(self.deduplicate_etfs_enabled),
+            "corporate_dedup_enabled": bool(self.deduplicate_corporate_enabled),
             "bucket_constraints_enabled": bool(self.use_bucket_constraints),
         }
         
@@ -885,6 +1037,8 @@ class PortfolioOptimizer:
             f"converged={optimizer_converged}"
         )
         logger.info(f"  Buckets: {dict(bucket_exposure)}")
+        if corporate_group_exposure:
+            logger.info(f"  Corporate groups: {dict(corporate_group_exposure)}")
         
         # Warn if bucket out of range
         for role_name, compliance in bucket_compliance.items():
@@ -892,6 +1046,13 @@ class PortfolioOptimizer:
                 logger.warning(
                     f"  ⚠️ Bucket {role_name}: {compliance['actual']:.1f}% "
                     f"(target: {compliance['target_min']:.0f}%-{compliance['target_max']:.0f}%)"
+                )
+        
+        # Warn if corporate group over limit
+        for group, compliance in corporate_group_compliance.items():
+            if not compliance["in_range"]:
+                logger.warning(
+                    f"  ⚠️ Corporate group {group}: {compliance['actual']:.1f}% > max {compliance['max']:.0f}%"
                 )
         
         return allocation, diagnostics
@@ -1028,7 +1189,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             raw_score = item.get("score") or item.get("composite_score") or item.get("adjusted_score")
             score = _clean_float(raw_score, 0.0, -100, 100)
             
-            assets.append(Asset(
+            asset = Asset(
                 id=original_id,
                 name=item.get("name", original_id),
                 category=cat_normalized,
@@ -1037,7 +1198,13 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 score=score,
                 vol_annual=vol_annual,
                 source_data=item,
-            ))
+            )
+            
+            # Assign corporate group for stocks
+            if cat_normalized == "Actions":
+                asset.corporate_group = get_corporate_group(asset.name)
+            
+            assets.append(asset)
         
         logger.info(f"Univers converti (liste plate): {len(assets)} actifs")
         return assets
@@ -1051,7 +1218,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
         raw_vol = eq.get("vol_3y") or eq.get("vol_annual")
         vol_annual = _clean_float(raw_vol, 25.0, 1.0, 150.0)
         
-        assets.append(Asset(
+        asset = Asset(
             id=original_id,
             name=eq.get("name", original_id),
             category="Actions",
@@ -1060,7 +1227,9 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             score=_clean_float(eq.get("score") or eq.get("composite_score"), 0.0, -100, 100),
             vol_annual=vol_annual,
             source_data=eq,
-        ))
+        )
+        asset.corporate_group = get_corporate_group(asset.name)
+        assets.append(asset)
     
     for etf in universe.get("etfs", []):
         original_id = etf.get("id") or etf.get("ticker") or etf.get("isin") or etf.get("name", "")
@@ -1130,7 +1299,7 @@ def validate_portfolio(
     assets: List[Asset],
     profile: ProfileConstraints
 ) -> Tuple[bool, List[str]]:
-    """Validation post-optimisation avec buckets."""
+    """Validation post-optimisation avec buckets et corporate groups."""
     errors = []
     warnings_list = []
     
@@ -1153,6 +1322,7 @@ def validate_portfolio(
     sector_weights = defaultdict(float)
     exposure_weights = defaultdict(float)
     bucket_weights = defaultdict(float)
+    corporate_group_weights = defaultdict(float)
     
     for asset_id, weight in allocation.items():
         asset = asset_lookup.get(asset_id)
@@ -1163,6 +1333,8 @@ def validate_portfolio(
                 exposure_weights[asset.exposure] += weight
             if asset.role:
                 bucket_weights[asset.role.value] += weight
+            if asset.corporate_group:
+                corporate_group_weights[asset.corporate_group] += weight
     
     if category_weights["Crypto"] > profile.crypto_max + 0.1:
         errors.append(f"Crypto = {category_weights['Crypto']:.2f}% > max {profile.crypto_max}%")
@@ -1178,6 +1350,11 @@ def validate_portfolio(
     for exposure, weight in exposure_weights.items():
         if weight > 25:
             warnings_list.append(f"ETF exposure '{exposure}' = {weight:.1f}% (élevé)")
+    
+    # Check corporate group exposure
+    for group, weight in corporate_group_weights.items():
+        if weight > MAX_CORPORATE_GROUP_WEIGHT * 100 + 0.1:
+            errors.append(f"Corporate group '{group}' = {weight:.1f}% > max {MAX_CORPORATE_GROUP_WEIGHT*100:.0f}%")
     
     # Check bucket compliance
     bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
