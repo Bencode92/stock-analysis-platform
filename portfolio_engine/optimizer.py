@@ -1,22 +1,36 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v3 — Avec fallback robuste.
+Optimiseur de portefeuille v4 — Avec déduplication ETF et preset_meta.
 
-Corrections v3:
-1. Fallback score-based si SLSQP échoue
-2. Matrice covariance régularisée (positive semi-définie)
-3. Calcul vol robuste (jamais NaN)
-4. Contraintes relaxées progressivement si incompatibles
-5. Nettoyage des NaN/Inf dans les volatilités
+Corrections v4:
+1. Déduplication ETF par exposition (gold, world, EM, etc.)
+2. Intégration preset_meta pour contraintes par bucket
+3. Fallback score-based si SLSQP échoue
+4. Matrice covariance régularisée (positive semi-définie)
+5. Calcul vol robuste (jamais NaN)
+6. Contraintes relaxées progressivement si incompatibles
 """
 
 import numpy as np
 from scipy.optimize import minimize
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Set
 from collections import defaultdict
 import warnings
 import logging
+
+# Import preset_meta pour déduplication et contraintes
+try:
+    from portfolio_engine.preset_meta import (
+        ETF_EXPOSURE_EQUIVALENTS,
+        deduplicate_etf_by_exposure,
+        PRESET_META,
+        get_preset_config,
+    )
+    HAS_PRESET_META = True
+except ImportError:
+    HAS_PRESET_META = False
+    ETF_EXPOSURE_EQUIVALENTS = {}
 
 logger = logging.getLogger("portfolio_engine.optimizer")
 
@@ -61,6 +75,7 @@ class Asset:
     vol_annual: float
     returns_series: Optional[np.ndarray] = None
     source_data: Optional[dict] = field(default=None, repr=False)
+    exposure: Optional[str] = None  # Pour ETF: "gold", "world", "em", etc.
 
 
 def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: float = 200.0) -> float:
@@ -74,27 +89,214 @@ def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: fl
         return default
 
 
+# ============= ETF EXPOSURE DETECTION =============
+
+# Mapping des noms/tickers vers expositions
+ETF_NAME_TO_EXPOSURE = {
+    # Gold
+    "gold": "gold",
+    "or": "gold",
+    "gld": "gold",
+    "iau": "gold",
+    "gldm": "gold",
+    "sgol": "gold",
+    "iaum": "gold",
+    "aaau": "gold",
+    "gltr": "precious_metals",
+    
+    # World / Developed
+    "world": "world",
+    "msci world": "world",
+    "urth": "world",
+    "vt": "world",
+    "acwi": "world",
+    "iwda": "world",
+    "vwrl": "world",
+    "developed": "world",
+    
+    # S&P 500
+    "s&p 500": "sp500",
+    "s&p500": "sp500",
+    "spy": "sp500",
+    "ivv": "sp500",
+    "voo": "sp500",
+    
+    # Nasdaq / Tech
+    "nasdaq": "nasdaq",
+    "qqq": "nasdaq",
+    "tech": "tech",
+    "technology": "tech",
+    
+    # Emerging Markets
+    "emerging": "emerging_markets",
+    "em": "emerging_markets",
+    "eem": "emerging_markets",
+    "vwo": "emerging_markets",
+    "iemg": "emerging_markets",
+    
+    # Bonds
+    "treasury": "bonds_treasury",
+    "tlt": "bonds_treasury",
+    "ief": "bonds_treasury",
+    "shy": "bonds_treasury",
+    "investment grade": "bonds_ig",
+    "corporate bond": "bonds_ig",
+    "lqd": "bonds_ig",
+    "agg": "bonds_ig",
+    "bnd": "bonds_ig",
+    
+    # Cash / Ultra-short
+    "money market": "cash",
+    "ultra short": "cash",
+    "boxx": "cash",
+    "bil": "cash",
+    "shv": "cash",
+    
+    # Min Vol
+    "min vol": "min_vol",
+    "minimum volatility": "min_vol",
+    "low vol": "min_vol",
+    
+    # Dividend
+    "dividend": "dividend",
+    "high yield": "dividend",
+    "income": "dividend",
+    
+    # Commodities
+    "commodity": "commodities",
+    "commodities": "commodities",
+    "inflation": "inflation",
+    "tips": "inflation",
+}
+
+
+def detect_etf_exposure(asset: Asset) -> Optional[str]:
+    """
+    Détecte l'exposition d'un ETF basé sur son nom/ticker.
+    
+    Returns:
+        Exposure type (gold, world, sp500, etc.) ou None
+    """
+    if asset.category not in ["ETF", "Obligations"]:
+        return None
+    
+    # Combiner nom et id pour la recherche
+    search_text = f"{asset.name} {asset.id}".lower()
+    
+    # Chercher dans le mapping
+    for keyword, exposure in ETF_NAME_TO_EXPOSURE.items():
+        if keyword in search_text:
+            return exposure
+    
+    # Chercher dans ETF_EXPOSURE_EQUIVALENTS (reverse lookup)
+    asset_id_upper = asset.id.upper()
+    for exposure, tickers in ETF_EXPOSURE_EQUIVALENTS.items():
+        if asset_id_upper in [t.upper() for t in tickers]:
+            return exposure
+    
+    return None
+
+
+def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asset]:
+    """
+    Déduplique les ETF par exposition.
+    
+    Garde un seul ETF par type d'exposition (gold, world, EM, etc.)
+    Préfère celui avec le meilleur score (ou le plus bas TER si disponible).
+    
+    Args:
+        assets: Liste d'actifs
+        prefer_by: "score" (défaut) ou "ter"
+    
+    Returns:
+        Liste dédupliquée
+    """
+    # Séparer ETF et non-ETF
+    etfs = []
+    non_etfs = []
+    
+    for asset in assets:
+        if asset.category in ["ETF", "Obligations"]:
+            # Détecter l'exposition
+            exposure = detect_etf_exposure(asset)
+            asset.exposure = exposure
+            etfs.append(asset)
+        else:
+            non_etfs.append(asset)
+    
+    # Grouper les ETF par exposition
+    exposure_groups: Dict[Optional[str], List[Asset]] = defaultdict(list)
+    for etf in etfs:
+        exposure_groups[etf.exposure].append(etf)
+    
+    # Sélectionner le meilleur de chaque groupe
+    deduplicated_etfs = []
+    removed_count = 0
+    
+    for exposure, group in exposure_groups.items():
+        if exposure is None:
+            # Pas d'exposition détectée, garder tous
+            deduplicated_etfs.extend(group)
+        else:
+            # Trier par score décroissant et garder le meilleur
+            sorted_group = sorted(group, key=lambda a: a.score, reverse=True)
+            best = sorted_group[0]
+            deduplicated_etfs.append(best)
+            
+            if len(sorted_group) > 1:
+                removed = [a.name for a in sorted_group[1:]]
+                removed_count += len(removed)
+                logger.info(
+                    f"ETF dedup [{exposure}]: kept '{best.name}' (score={best.score:.1f}), "
+                    f"removed {len(removed)}: {removed[:3]}{'...' if len(removed) > 3 else ''}"
+                )
+    
+    if removed_count > 0:
+        logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs")
+    
+    # Recombiner
+    result = non_etfs + deduplicated_etfs
+    return result
+
+
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance avec fallback robuste.
+    Optimiseur mean-variance avec fallback robuste et déduplication ETF.
     
     Le LLM n'intervient PAS — les poids sont déterministes.
     """
     
-    def __init__(self, score_scale: float = 1.0):
+    def __init__(self, score_scale: float = 1.0, deduplicate_etfs: bool = True):
+        """
+        Args:
+            score_scale: Facteur d'échelle pour les scores
+            deduplicate_etfs: Activer la déduplication ETF par exposition
+        """
         self.score_scale = score_scale
+        self.deduplicate_etfs_enabled = deduplicate_etfs
     
     def select_candidates(
         self, 
         universe: List[Asset], 
         profile: ProfileConstraints
     ) -> List[Asset]:
-        """Pré-sélection élargie pour l'optimiseur."""
+        """
+        Pré-sélection élargie pour l'optimiseur.
+        Inclut la déduplication ETF.
+        """
+        # === ÉTAPE 1: Déduplication ETF ===
+        if self.deduplicate_etfs_enabled:
+            universe = deduplicate_etfs(universe, prefer_by="score")
+            logger.info(f"Post-dedup universe: {len(universe)} actifs")
+        
+        # === ÉTAPE 2: Tri par score ===
         sorted_assets = sorted(universe, key=lambda x: x.score, reverse=True)
         
+        # === ÉTAPE 3: Sélection diversifiée ===
         selected = []
         sector_count = defaultdict(int)
         category_count = defaultdict(int)
+        exposure_count = defaultdict(int)  # Track ETF exposures
         
         target_pool = profile.max_assets * 3
         
@@ -102,20 +304,34 @@ class PortfolioOptimizer:
             if len(selected) >= target_pool:
                 break
             
+            # Contrainte Crypto
             if asset.category == "Crypto":
                 if profile.crypto_max == 0:
                     continue
                 if category_count["Crypto"] >= 3:
                     continue
             
+            # Contrainte secteur
             if sector_count[asset.sector] >= 8:
+                continue
+            
+            # Contrainte exposition ETF (max 2 par exposition)
+            if asset.exposure and exposure_count[asset.exposure] >= 2:
                 continue
             
             selected.append(asset)
             sector_count[asset.sector] += 1
             category_count[asset.category] += 1
+            if asset.exposure:
+                exposure_count[asset.exposure] += 1
         
         logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
+        
+        # Log des expositions sélectionnées
+        if exposure_count:
+            exp_summary = ", ".join(f"{k}:{v}" for k, v in sorted(exposure_count.items()))
+            logger.debug(f"ETF expositions: {exp_summary}")
+        
         return selected
     
     def compute_covariance(self, assets: List[Asset]) -> np.ndarray:
@@ -136,6 +352,7 @@ class PortfolioOptimizer:
         
         CORR_SAME_CATEGORY = 0.60
         CORR_SAME_SECTOR = 0.45
+        CORR_SAME_EXPOSURE = 0.85  # ETF avec même exposition = très corrélés
         CORR_EQUITY_BOND = -0.20
         CORR_CRYPTO_OTHER = 0.25
         CORR_DEFAULT = 0.15
@@ -160,7 +377,11 @@ class PortfolioOptimizer:
                 if i == j:
                     cov[i, j] = vol_i ** 2
                 else:
-                    if ai.category == aj.category:
+                    # Déterminer la corrélation
+                    if ai.exposure and aj.exposure and ai.exposure == aj.exposure:
+                        # Même exposition ETF = très corrélés
+                        corr = CORR_SAME_EXPOSURE
+                    elif ai.category == aj.category:
                         corr = CORR_SAME_SECTOR if ai.sector == aj.sector else CORR_SAME_CATEGORY
                     elif (ai.category == "Obligations" and aj.category == "Actions") or \
                          (ai.category == "Actions" and aj.category == "Obligations"):
@@ -275,6 +496,15 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": region_constraint})
         
+        # 6. NEW: Contraintes par EXPOSITION ETF (max 20% par exposition)
+        exposures = set(a.exposure for a in candidates if a.exposure)
+        for exposure in exposures:
+            exposure_idx = [i for i, a in enumerate(candidates) if a.exposure == exposure]
+            if len(exposure_idx) > 1:
+                def exposure_constraint(w, idx=exposure_idx, max_val=0.20):
+                    return max_val - np.sum(w[idx])
+                constraints.append({"type": "ineq", "fun": exposure_constraint})
+        
         return constraints
     
     def _normalize_scores(self, scores: np.ndarray) -> np.ndarray:
@@ -304,6 +534,7 @@ class PortfolioOptimizer:
         # Catégories tracking
         category_weights = defaultdict(float)
         sector_weights = defaultdict(float)
+        exposure_weights = defaultdict(float)  # Track ETF exposures
         
         # D'abord, assurer bonds minimum
         bonds = [a for a in sorted_candidates if a.category == "Obligations"]
@@ -345,13 +576,29 @@ class PortfolioOptimizer:
                 continue
             max_sector_allowed = profile.max_sector - sector_weights[asset.sector]
             
-            weight = min(target_per_asset, max_allowed, max_sector_allowed, 100 - total_weight)
+            # Vérifier exposition ETF (max 20% par exposition)
+            if asset.exposure:
+                if exposure_weights[asset.exposure] >= 20:
+                    continue
+                max_exposure_allowed = 20 - exposure_weights[asset.exposure]
+            else:
+                max_exposure_allowed = profile.max_single_position
+            
+            weight = min(
+                target_per_asset, 
+                max_allowed, 
+                max_sector_allowed,
+                max_exposure_allowed,
+                100 - total_weight
+            )
             
             if weight > 0.5:
                 allocation[asset.id] = round(weight, 2)
                 total_weight += weight
                 category_weights[asset.category] += weight
                 sector_weights[asset.sector] += weight
+                if asset.exposure:
+                    exposure_weights[asset.exposure] += weight
         
         # Normaliser à 100%
         if total_weight > 0:
@@ -426,10 +673,13 @@ class PortfolioOptimizer:
         port_score = np.dot(final_weights, raw_scores)
         
         sector_exposure = defaultdict(float)
+        etf_exposure = defaultdict(float)
         for asset_id, weight in allocation.items():
             asset = next((a for a in candidates if a.id == asset_id), None)
             if asset:
                 sector_exposure[asset.sector] += weight
+                if asset.exposure:
+                    etf_exposure[asset.exposure] += weight
         
         diagnostics = {
             "converged": optimizer_converged,
@@ -439,6 +689,8 @@ class PortfolioOptimizer:
             "portfolio_score": round(float(port_score), 3),
             "n_assets": len(allocation),
             "sectors": dict(sector_exposure),
+            "etf_exposures": dict(etf_exposure),  # NEW: ETF exposure breakdown
+            "deduplication_enabled": self.deduplicate_etfs_enabled,
         }
         
         logger.info(
@@ -447,6 +699,9 @@ class PortfolioOptimizer:
             f"score={port_score:.2f}, "
             f"converged={optimizer_converged}"
         )
+        
+        if etf_exposure:
+            logger.info(f"  ETF exposures: {dict(etf_exposure)}")
         
         return allocation, diagnostics
     
@@ -529,7 +784,7 @@ class PortfolioOptimizer:
         universe: List[Asset], 
         profile_name: str
     ) -> Tuple[Dict[str, float], dict]:
-        """Pipeline complet: sélection + optimisation."""
+        """Pipeline complet: déduplication + sélection + optimisation."""
         profile = PROFILES[profile_name]
         candidates = self.select_candidates(universe, profile)
         
@@ -710,12 +965,15 @@ def validate_portfolio(
     asset_lookup = {a.id: a for a in assets}
     category_weights = defaultdict(float)
     sector_weights = defaultdict(float)
+    exposure_weights = defaultdict(float)
     
     for asset_id, weight in allocation.items():
         asset = asset_lookup.get(asset_id)
         if asset:
             category_weights[asset.category] += weight
             sector_weights[asset.sector] += weight
+            if asset.exposure:
+                exposure_weights[asset.exposure] += weight
     
     if category_weights["Crypto"] > profile.crypto_max + 0.1:
         errors.append(f"Crypto = {category_weights['Crypto']:.2f}% > max {profile.crypto_max}%")
@@ -726,6 +984,11 @@ def validate_portfolio(
     for sector, weight in sector_weights.items():
         if weight > profile.max_sector + 0.1:
             errors.append(f"Secteur {sector} = {weight:.2f}% > max {profile.max_sector}%")
+    
+    # Check ETF exposure concentration
+    for exposure, weight in exposure_weights.items():
+        if weight > 25:  # Warn if > 25% in same exposure
+            warnings_list.append(f"ETF exposure '{exposure}' = {weight:.1f}% (élevé)")
     
     is_valid = len(errors) == 0
     all_issues = errors + [f"⚠️ {w}" for w in warnings_list]
