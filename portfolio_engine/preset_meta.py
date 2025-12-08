@@ -20,6 +20,9 @@ Usage:
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Set
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ============ ENUMS ============
@@ -64,6 +67,153 @@ class PresetConfig:
     
     # Expositions pour déduplication ETF
     exposures: List[str] = field(default_factory=list)
+
+
+# ============ CORPORATE GROUPS (pour déduplication actions) ============
+
+# Mapping : group_id → liste de patterns de noms d'entreprises
+# Si plusieurs actions du même groupe sont sélectionnées, on garde la meilleure
+CORPORATE_GROUPS: Dict[str, List[str]] = {
+    # Corée du Sud
+    "hyundai": [
+        "HYUNDAI MOTOR",
+        "HYUNDAI MOBIS",
+        "KIA CORP",
+        "KIA MOTORS",
+    ],
+    "samsung": [
+        "SAMSUNG ELECTRONICS",
+        "SAMSUNG SDI",
+        "SAMSUNG BIOLOGICS",
+        "SAMSUNG LIFE",
+        "SAMSUNG FIRE",
+        "SAMSUNG C&T",
+    ],
+    "sk_group": [
+        "SK HYNIX",
+        "SK TELECOM",
+        "SK INNOVATION",
+        "SK SQUARE",
+    ],
+    "lg_group": [
+        "LG ELECTRONICS",
+        "LG CHEM",
+        "LG ENERGY",
+        "LG DISPLAY",
+    ],
+    
+    # Inde
+    "tata": [
+        "TATA CONSULTANCY",
+        "TATA MOTORS",
+        "TATA STEEL",
+        "TATA POWER",
+        "TATA CONSUMER",
+        "TITAN COMPANY",  # Tata Group
+    ],
+    "reliance": [
+        "RELIANCE INDUSTRIES",
+        "RELIANCE RETAIL",
+        "JIO PLATFORMS",
+    ],
+    "adani": [
+        "ADANI ENTERPRISES",
+        "ADANI PORTS",
+        "ADANI GREEN",
+        "ADANI POWER",
+        "ADANI TOTAL",
+    ],
+    "hdfc": [
+        "HDFC BANK",
+        "HDFC LIFE",
+        "HDFC AMC",
+    ],
+    "icici": [
+        "ICICI BANK",
+        "ICICI PRUDENTIAL",
+        "ICICI LOMBARD",
+    ],
+    
+    # USA - Tech
+    "alphabet": [
+        "ALPHABET INC CLASS A",
+        "ALPHABET INC CLASS C",
+        "ALPHABET INC",
+        "GOOGLE",
+    ],
+    "berkshire": [
+        "BERKSHIRE HATHAWAY INC CLASS A",
+        "BERKSHIRE HATHAWAY INC CLASS B",
+        "BERKSHIRE HATHAWAY",
+    ],
+    "meta": [
+        "META PLATFORMS",
+        "FACEBOOK",
+    ],
+    
+    # Europe - Luxe
+    "lvmh": [
+        "LVMH MOET HENNESSY",
+        "CHRISTIAN DIOR",
+        "HENNESSY",
+        "LOUIS VUITTON",
+    ],
+    "kering": [
+        "KERING",
+        "GUCCI",
+    ],
+    "richemont": [
+        "RICHEMONT",
+        "CARTIER",
+    ],
+    
+    # Europe - Autres
+    "volkswagen": [
+        "VOLKSWAGEN",
+        "PORSCHE",
+        "AUDI",
+        "VW",
+    ],
+    "stellantis": [
+        "STELLANTIS",
+        "FIAT",
+        "PEUGEOT",
+        "CHRYSLER",
+    ],
+    
+    # Japon
+    "toyota": [
+        "TOYOTA MOTOR",
+        "TOYOTA INDUSTRIES",
+        "DENSO",
+    ],
+    "softbank": [
+        "SOFTBANK GROUP",
+        "SOFTBANK CORP",
+        "ARM HOLDINGS",  # SoftBank majority
+    ],
+    "sony": [
+        "SONY GROUP",
+        "SONY",
+    ],
+    
+    # Chine
+    "alibaba": [
+        "ALIBABA GROUP",
+        "ALIBABA",
+        "ANT GROUP",
+    ],
+    "tencent": [
+        "TENCENT HOLDINGS",
+        "TENCENT",
+    ],
+}
+
+# Poids max par groupe corporate (20% = 2 actions max à 10% chacune)
+MAX_CORPORATE_GROUP_WEIGHT = 0.20
+
+# Nombre max d'actions par groupe (1 = déduplication totale)
+MAX_STOCKS_PER_GROUP = 1
 
 
 # ============ PRESET META - ACTIONS ============
@@ -521,6 +671,7 @@ ETF_EXPOSURE_EQUIVALENTS: Dict[str, List[str]] = {
     "bonds_ig": ["LQD", "AGG", "BND"],
     "bonds_treasury": ["TLT", "IEF", "SHY"],
     "cash": ["BOXX", "BIL", "SHV"],
+    "dividend": ["VIG", "SCHD", "DVY", "SDY", "BINC"],
 }
 
 
@@ -566,6 +717,88 @@ def get_max_weight_for_preset(preset_name: str, profile: str) -> float:
     
     # Le min des deux
     return min(max_weight, bucket_max)
+
+
+def get_corporate_group(stock_name: str) -> Optional[str]:
+    """
+    Identifie le groupe corporate d'une action.
+    
+    Args:
+        stock_name: Nom de l'action (ex: "HYUNDAI MOTOR S1 PREF")
+    
+    Returns:
+        group_id ou None si pas de groupe identifié
+    """
+    name_upper = stock_name.upper()
+    
+    for group_id, patterns in CORPORATE_GROUPS.items():
+        for pattern in patterns:
+            if pattern.upper() in name_upper:
+                return group_id
+    
+    return None
+
+
+def deduplicate_by_corporate_group(
+    stocks: List[Dict],
+    scores: Optional[Dict[str, float]] = None,
+    max_per_group: int = MAX_STOCKS_PER_GROUP
+) -> Tuple[List[Dict], Dict[str, List[str]]]:
+    """
+    Déduplique les actions par groupe corporate.
+    
+    Garde les meilleures actions de chaque groupe (basé sur score ou ordre).
+    
+    Args:
+        stocks: Liste de dicts avec au moins 'name'
+        scores: Dict {name: score} pour ranking (optionnel)
+        max_per_group: Nombre max d'actions par groupe (default=1)
+    
+    Returns:
+        (liste_dedupliquée, dict des suppressions par groupe)
+    """
+    # Index par groupe
+    groups_found: Dict[str, List[Dict]] = {}
+    no_group: List[Dict] = []
+    
+    for stock in stocks:
+        name = stock.get("name", "")
+        group = get_corporate_group(name)
+        
+        if group:
+            if group not in groups_found:
+                groups_found[group] = []
+            groups_found[group].append(stock)
+        else:
+            no_group.append(stock)
+    
+    # Sélectionner les meilleurs de chaque groupe
+    selected = []
+    removed_by_group: Dict[str, List[str]] = {}
+    
+    for group_id, group_stocks in groups_found.items():
+        # Trier par score si disponible
+        if scores:
+            group_stocks.sort(
+                key=lambda s: scores.get(s.get("name", ""), 0),
+                reverse=True
+            )
+        
+        # Garder max_per_group
+        kept = group_stocks[:max_per_group]
+        removed = group_stocks[max_per_group:]
+        
+        selected.extend(kept)
+        
+        if removed:
+            removed_by_group[group_id] = [s.get("name", "") for s in removed]
+            kept_names = [s.get("name", "") for s in kept]
+            logger.info(f"Corporate dedup [{group_id}]: kept {kept_names}, removed {len(removed)}")
+    
+    # Ajouter les actions sans groupe
+    selected.extend(no_group)
+    
+    return selected, removed_by_group
 
 
 def deduplicate_etf_by_exposure(
@@ -722,6 +955,41 @@ def validate_portfolio_buckets(
     }
 
 
+def validate_corporate_concentration(
+    weights: Dict[str, float],
+    max_group_weight: float = MAX_CORPORATE_GROUP_WEIGHT
+) -> Dict[str, any]:
+    """
+    Valide que le portefeuille ne dépasse pas le max par groupe corporate.
+    
+    Args:
+        weights: {name: weight}
+        max_group_weight: Poids max par groupe (default=20%)
+    
+    Returns:
+        Dict avec validation status et détails
+    """
+    group_weights: Dict[str, float] = {}
+    
+    for name, weight in weights.items():
+        group = get_corporate_group(name)
+        if group:
+            group_weights[group] = group_weights.get(group, 0) + weight
+    
+    violations = []
+    for group_id, total_weight in group_weights.items():
+        if total_weight > max_group_weight:
+            violations.append(
+                f"{group_id}: {total_weight*100:.1f}% > max {max_group_weight*100:.1f}%"
+            )
+    
+    return {
+        "valid": len(violations) == 0,
+        "group_weights": group_weights,
+        "violations": violations,
+    }
+
+
 if __name__ == "__main__":
     # Test
     print("=" * 60)
@@ -743,6 +1011,24 @@ if __name__ == "__main__":
         print(f"\n  {profile}:")
         for role, (min_pct, max_pct) in targets.items():
             print(f"    {role.value}: {min_pct*100:.0f}%-{max_pct*100:.0f}%")
+    
+    print("\n--- Corporate Groups ---")
+    print(f"  Total groups: {len(CORPORATE_GROUPS)}")
+    for group_id, patterns in list(CORPORATE_GROUPS.items())[:5]:
+        print(f"  {group_id}: {patterns[:2]}...")
+    
+    print("\n--- Corporate Group Detection Test ---")
+    test_names = [
+        "HYUNDAI MOTOR S1 PREF",
+        "HYUNDAI MOBIS LTD",
+        "SAMSUNG ELECTRONICS CO LTD",
+        "TATA CONSULTANCY SERVICES",
+        "ALPHABET INC CLASS A",
+        "APPLE INC",  # No group
+    ]
+    for name in test_names:
+        group = get_corporate_group(name)
+        print(f"  {name[:30]:30} → {group or 'NO GROUP'}")
     
     print("\n--- ETF Deduplication Test ---")
     test_etfs = ["GLD", "IAU", "GLDM", "SGOL", "SPY", "QQQ", "EEM"]
