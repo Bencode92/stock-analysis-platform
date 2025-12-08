@@ -9,13 +9,14 @@ Plans:
 
 V2: Support pour charger les symboles depuis les portefeuilles générés
 V3: Conversion automatique Yahoo → TwelveData format pour symboles internationaux
+V4: Logique de fallback avec /stocks lookup (comme stock-filter-by-volume.js)
 """
 
 import os
 import time
 import json
 import logging
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 import requests
@@ -65,95 +66,62 @@ YAHOO_TO_TWELVEDATA_MIC = {
     ".AX": "XASX",   # Sydney
 }
 
+# Mapping MIC → country pour lookup
+MIC_TO_COUNTRY = {
+    "XPAR": "France", "XAMS": "Netherlands", "XBRU": "Belgium", "XLIS": "Portugal",
+    "XMAD": "Spain", "XMIL": "Italy", "XETR": "Germany", "XLON": "United Kingdom",
+    "XSWX": "Switzerland", "XWBO": "Austria", "XOSL": "Norway", "XDUB": "Ireland",
+    "XCSE": "Denmark", "XHEL": "Finland", "XSTO": "Sweden",
+    "XHKG": "Hong Kong", "XKRX": "South Korea", "XKOS": "South Korea",
+    "XNSE": "India", "XBOM": "India", "XTAI": "Taiwan", "ROCO": "Taiwan",
+    "XTKS": "Japan", "XSHG": "China", "XSHE": "China", "XSES": "Singapore",
+    "XBKK": "Thailand", "XKLS": "Malaysia", "XIDX": "Indonesia", "XASX": "Australia",
+}
 
-def yahoo_to_twelvedata(symbol: str) -> str:
+
+def parse_yahoo_symbol(symbol: str) -> Tuple[str, Optional[str], Optional[str]]:
     """
-    Convertit un symbole Yahoo Finance vers le format TwelveData.
-    
-    Yahoo utilise des suffixes (.PA, .L, .MC) tandis que TwelveData
-    utilise le format symbol:MIC (ENGI:XPAR).
-    
-    Args:
-        symbol: Symbole au format Yahoo (ex: "ENGI.PA", "SSE.L")
+    Parse un symbole Yahoo pour extraire le ticker de base, le MIC et le pays.
     
     Returns:
-        Symbole au format TwelveData (ex: "ENGI:XPAR", "SSE:XLON")
-        ou le symbole original si pas de conversion nécessaire
-    
-    Examples:
-        >>> yahoo_to_twelvedata("ENGI.PA")
-        'ENGI:XPAR'
-        >>> yahoo_to_twelvedata("AAPL")
-        'AAPL'
-        >>> yahoo_to_twelvedata("BTC/USD")
-        'BTC/USD'
+        (base_ticker, mic_code, country)
     """
     if not symbol or "/" in symbol:
-        # Crypto (BTC/USD) ou symbole vide: pas de conversion
-        return symbol
+        return symbol, None, None
     
     # Trouver le suffixe Yahoo le plus long qui match
-    # (important pour .TWO vs .TW)
-    best_match = None
     best_suffix = ""
+    best_mic = None
     
     for suffix, mic in YAHOO_TO_TWELVEDATA_MIC.items():
         if symbol.endswith(suffix) and len(suffix) > len(best_suffix):
-            best_match = mic
             best_suffix = suffix
+            best_mic = mic
     
-    if best_match:
-        # Extraire le ticker de base et ajouter le MIC
+    if best_mic:
         base_ticker = symbol[:-len(best_suffix)]
-        converted = f"{base_ticker}:{best_match}"
-        logger.debug(f"Converted {symbol} → {converted}")
-        return converted
+        country = MIC_TO_COUNTRY.get(best_mic)
+        return base_ticker, best_mic, country
     
-    # Pas de conversion nécessaire (symbole US ou déjà au bon format)
-    return symbol
-
-
-def convert_symbols_for_twelvedata(symbols: List[str]) -> List[str]:
-    """
-    Convertit une liste de symboles Yahoo vers le format TwelveData.
-    
-    Args:
-        symbols: Liste de symboles au format Yahoo
-    
-    Returns:
-        Liste de symboles au format TwelveData
-    """
-    converted = []
-    for sym in symbols:
-        converted_sym = yahoo_to_twelvedata(sym)
-        if converted_sym != sym:
-            logger.info(f"Symbol conversion: {sym} → {converted_sym}")
-        converted.append(converted_sym)
-    return converted
+    return symbol, None, None
 
 
 class TwelveDataLoader:
     """
     Client pour l'API Twelve Data.
-    Gère le rate limiting et le caching.
+    Gère le rate limiting, le caching et la résolution de symboles.
     """
     
     BASE_URL = "https://api.twelvedata.com"
     
-    # Plans et leurs rate limits (requests/minute)
     PLAN_LIMITS = {
         "free": 8,
         "basic": 30,
         "pro": 120,
-        "ultra": 500,  # Pratiquement pas de limite
+        "ultra": 500,
     }
     
     def __init__(self, api_key: Optional[str] = None, plan: str = "ultra"):
-        """
-        Args:
-            api_key: Clé API Twelve Data (ou variable env TWELVE_DATA_API)
-            plan: "free", "basic", "pro", "ultra" - détermine le rate limiting
-        """
         self.api_key = api_key or os.environ.get("TWELVE_DATA_API")
         if not self.api_key:
             raise ValueError(
@@ -165,27 +133,179 @@ class TwelveDataLoader:
         self.session = requests.Session()
         self.last_request_time = 0
         
-        # Calculer l'intervalle minimum entre requêtes
         requests_per_minute = self.PLAN_LIMITS.get(self.plan, 8)
         self.min_request_interval = 60.0 / requests_per_minute
         
         logger.info(f"TwelveData initialized with plan '{plan}' ({requests_per_minute} req/min)")
         
         self._cache: Dict[str, pd.DataFrame] = {}
+        self._symbol_cache: Dict[str, str] = {}  # yahoo_symbol -> resolved_td_symbol
     
     def _rate_limit(self):
         """Respecter le rate limit de l'API."""
         if self.plan == "ultra":
-            # Plan ultra: juste un petit délai pour éviter les erreurs
             time.sleep(0.1)
             return
         
         elapsed = time.time() - self.last_request_time
         if elapsed < self.min_request_interval:
             sleep_time = self.min_request_interval - elapsed
-            logger.debug(f"Rate limit: sleeping {sleep_time:.1f}s")
             time.sleep(sleep_time)
         self.last_request_time = time.time()
+    
+    def _try_quote(self, symbol: str, mic: Optional[str] = None) -> Optional[dict]:
+        """
+        Essaie d'obtenir une quote pour un symbole.
+        Teste plusieurs formats si MIC fourni.
+        """
+        formats_to_try = []
+        
+        if mic:
+            # Format 1: symbol:MIC
+            formats_to_try.append({"symbol": f"{symbol}:{mic}"})
+            # Format 2: symbol avec mic_code séparé
+            formats_to_try.append({"symbol": symbol, "mic_code": mic})
+        
+        # Format 3: symbole seul
+        formats_to_try.append({"symbol": symbol})
+        
+        for params in formats_to_try:
+            params["apikey"] = self.api_key
+            try:
+                self._rate_limit()
+                response = self.session.get(
+                    f"{self.BASE_URL}/quote",
+                    params=params,
+                    timeout=15
+                )
+                data = response.json()
+                
+                if data and data.get("status") != "error" and "symbol" in data:
+                    logger.debug(f"Quote success with params: {params}")
+                    return data
+            except Exception as e:
+                logger.debug(f"Quote failed for {params}: {e}")
+                continue
+        
+        return None
+    
+    def _stocks_lookup(self, symbol: str, country: Optional[str] = None) -> List[dict]:
+        """
+        Recherche des symboles via l'endpoint /stocks.
+        Similaire à tdStocksLookup dans stock-filter-by-volume.js
+        """
+        params = {
+            "symbol": symbol,
+            "apikey": self.api_key,
+        }
+        if country:
+            params["country"] = country
+        
+        try:
+            self._rate_limit()
+            response = self.session.get(
+                f"{self.BASE_URL}/stocks",
+                params=params,
+                timeout=15
+            )
+            data = response.json()
+            
+            if isinstance(data, dict) and "data" in data:
+                return data["data"] if isinstance(data["data"], list) else []
+            elif isinstance(data, list):
+                return data
+            return []
+        except Exception as e:
+            logger.debug(f"Stocks lookup failed for {symbol}: {e}")
+            return []
+    
+    def _resolve_symbol(self, yahoo_symbol: str) -> Optional[str]:
+        """
+        Résout un symbole Yahoo en symbole TwelveData valide.
+        Utilise la même logique que stock-filter-by-volume.js:
+        1. Essaie le format direct (symbol:MIC)
+        2. Si échec, recherche via /stocks et prend le meilleur match
+        """
+        # Check cache
+        if yahoo_symbol in self._symbol_cache:
+            return self._symbol_cache[yahoo_symbol]
+        
+        base_ticker, mic, country = parse_yahoo_symbol(yahoo_symbol)
+        
+        # Essai 1: Quote directe avec différents formats
+        quote = self._try_quote(base_ticker, mic)
+        if quote:
+            resolved = quote.get("symbol", yahoo_symbol)
+            self._symbol_cache[yahoo_symbol] = resolved
+            logger.info(f"Resolved {yahoo_symbol} → {resolved} (direct quote)")
+            return resolved
+        
+        # Essai 2: Lookup via /stocks
+        if mic or country:
+            candidates = self._stocks_lookup(base_ticker, country)
+            
+            if candidates:
+                # Filtrer et trier les candidats
+                # Préférer ceux qui matchent le MIC attendu
+                best = None
+                best_score = -1
+                
+                for c in candidates:
+                    score = 0
+                    c_mic = c.get("mic_code", "")
+                    c_exchange = c.get("exchange", "").lower()
+                    
+                    # Bonus si MIC correspond
+                    if mic and c_mic == mic:
+                        score += 10
+                    
+                    # Bonus si exchange contient des mots-clés attendus
+                    if mic == "XPAR" and "euronext" in c_exchange and "paris" in c_exchange:
+                        score += 5
+                    if mic == "XLON" and "london" in c_exchange:
+                        score += 5
+                    if mic == "XMAD" and "madrid" in c_exchange:
+                        score += 5
+                    if mic == "XNSE" and "national" in c_exchange and "india" in c_exchange:
+                        score += 5
+                    
+                    # Malus si c'est une bourse US pour un symbole non-US
+                    if any(x in c_exchange for x in ["nasdaq", "nyse", "nyse arca"]):
+                        if country and country.lower() not in ["united states", "usa"]:
+                            score -= 20
+                    
+                    if score > best_score:
+                        best_score = score
+                        best = c
+                
+                if best:
+                    # Construire le symbole TwelveData
+                    resolved_sym = best.get("symbol", base_ticker)
+                    resolved_mic = best.get("mic_code")
+                    
+                    if resolved_mic:
+                        resolved = f"{resolved_sym}:{resolved_mic}"
+                    else:
+                        resolved = resolved_sym
+                    
+                    # Vérifier que ça fonctionne
+                    verify_quote = self._try_quote(resolved_sym, resolved_mic)
+                    if verify_quote:
+                        self._symbol_cache[yahoo_symbol] = resolved
+                        logger.info(f"Resolved {yahoo_symbol} → {resolved} (stocks lookup)")
+                        return resolved
+        
+        # Essai 3: Symbole brut sans conversion
+        quote = self._try_quote(yahoo_symbol, None)
+        if quote:
+            self._symbol_cache[yahoo_symbol] = yahoo_symbol
+            logger.info(f"Resolved {yahoo_symbol} → {yahoo_symbol} (raw)")
+            return yahoo_symbol
+        
+        # Échec
+        logger.warning(f"Could not resolve symbol: {yahoo_symbol}")
+        self._symbol_cache[yahoo_symbol] = None
+        return None
     
     def get_time_series(
         self,
@@ -196,22 +316,15 @@ class TwelveDataLoader:
     ) -> Optional[pd.DataFrame]:
         """
         Récupère les prix historiques pour un symbole.
-        
-        Args:
-            symbol: Ticker (ex: "AAPL", "BTC/USD", "ENGI.PA")
-                    Les symboles Yahoo sont automatiquement convertis.
-            start_date: Date début "YYYY-MM-DD"
-            end_date: Date fin "YYYY-MM-DD"
-            interval: "1day", "1week", etc.
-        
-        Returns:
-            DataFrame avec colonnes [open, high, low, close, volume]
-            Index = datetime
+        Résout automatiquement les symboles Yahoo en format TwelveData.
         """
-        # Convertir le symbole Yahoo → TwelveData si nécessaire
-        td_symbol = yahoo_to_twelvedata(symbol)
+        # Résoudre le symbole
+        resolved = self._resolve_symbol(symbol)
+        if not resolved:
+            logger.warning(f"Skipping {symbol} - could not resolve")
+            return None
         
-        cache_key = f"{td_symbol}_{start_date}_{end_date}_{interval}"
+        cache_key = f"{resolved}_{start_date}_{end_date}_{interval}"
         if cache_key in self._cache:
             logger.debug(f"Cache hit: {symbol}")
             return self._cache[cache_key]
@@ -219,7 +332,7 @@ class TwelveDataLoader:
         self._rate_limit()
         
         params = {
-            "symbol": td_symbol,
+            "symbol": resolved,
             "interval": interval,
             "start_date": start_date,
             "end_date": end_date,
@@ -238,18 +351,17 @@ class TwelveDataLoader:
             data = response.json()
             
             if "code" in data and data["code"] != 200:
-                logger.warning(f"API error for {symbol} ({td_symbol}): {data.get('message', 'Unknown')}")
+                logger.warning(f"API error for {symbol} ({resolved}): {data.get('message', 'Unknown')}")
                 return None
             
             if "values" not in data:
-                logger.warning(f"No data for {symbol} ({td_symbol})")
+                logger.warning(f"No data for {symbol} ({resolved})")
                 return None
             
             df = pd.DataFrame(data["values"])
             df["datetime"] = pd.to_datetime(df["datetime"])
             df = df.set_index("datetime").sort_index()
             
-            # Convertir en float
             for col in ["open", "high", "low", "close", "volume"]:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -259,10 +371,10 @@ class TwelveDataLoader:
             return df
             
         except requests.RequestException as e:
-            logger.error(f"Request error for {symbol} ({td_symbol}): {e}")
+            logger.error(f"Request error for {symbol} ({resolved}): {e}")
             return None
         except Exception as e:
-            logger.error(f"Unexpected error for {symbol} ({td_symbol}): {e}")
+            logger.error(f"Unexpected error for {symbol} ({resolved}): {e}")
             return None
     
     def get_multiple_time_series(
@@ -274,9 +386,6 @@ class TwelveDataLoader:
     ) -> pd.DataFrame:
         """
         Récupère les prix pour plusieurs symboles.
-        
-        Returns:
-            DataFrame pivot avec colonnes = symboles, index = dates, valeurs = close
         """
         all_data = {}
         
@@ -294,8 +403,6 @@ class TwelveDataLoader:
         
         prices_df = pd.DataFrame(all_data)
         prices_df = prices_df.sort_index()
-        
-        # Forward fill pour les jours manquants (weekends, holidays)
         prices_df = prices_df.ffill()
         
         logger.info(f"Loaded {len(prices_df.columns)} symbols, {len(prices_df)} days")
@@ -307,12 +414,6 @@ class TwelveDataLoader:
 def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> Set[str]:
     """
     Extrait tous les symboles uniques des portefeuilles générés.
-    
-    Args:
-        portfolios_path: Chemin vers portfolios.json
-    
-    Returns:
-        Set de symboles (tickers)
     """
     symbols = set()
     
@@ -323,20 +424,17 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
         logger.warning(f"Could not load portfolios from {portfolios_path}: {e}")
         return symbols
     
-    # Parcourir les 3 profils
     for profile in ["Agressif", "Modéré", "Stable"]:
         if profile not in data:
             continue
         
         profile_data = data[profile]
         
-        # Parcourir les catégories
         for category in ["Actions", "ETF", "Obligations", "Crypto"]:
             if category not in profile_data:
                 continue
             
             for name, weight in profile_data[category].items():
-                # Convertir le nom en ticker (si possible)
                 ticker = name_to_ticker(name)
                 if ticker:
                     symbols.add(ticker)
@@ -347,7 +445,6 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
 
 # ============ NAME TO TICKER MAPPING ============
 
-# Mapping des noms courants vers leurs tickers
 NAME_TO_TICKER_MAP = {
     # Actions Européennes
     "SSE PLC": "SSE.L",
@@ -489,7 +586,7 @@ NAME_TO_TICKER_MAP = {
     "Invesco QQQ Trust": "QQQ",
     "Vanguard Total Stock Market ETF": "VTI",
     
-    # Crypto (format TwelveData)
+    # Crypto
     "Bitcoin": "BTC/USD",
     "Ethereum": "ETH/USD",
     "Solana": "SOL/USD",
@@ -506,29 +603,17 @@ NAME_TO_TICKER_MAP = {
 
 
 def name_to_ticker(name: str) -> Optional[str]:
-    """
-    Convertit un nom d'actif en ticker.
-    
-    Args:
-        name: Nom de l'actif (ex: "SPDR Gold Shares")
-    
-    Returns:
-        Ticker correspondant (ex: "GLD") ou None
-    """
-    # Nettoyage
+    """Convertit un nom d'actif en ticker."""
     name_clean = name.strip().upper()
     
-    # Recherche exacte (case insensitive)
     for map_name, ticker in NAME_TO_TICKER_MAP.items():
         if map_name.upper() == name_clean:
             return ticker
     
-    # Recherche partielle
     for map_name, ticker in NAME_TO_TICKER_MAP.items():
         if map_name.upper() in name_clean or name_clean in map_name.upper():
             return ticker
     
-    # Si le nom ressemble déjà à un ticker (alphanumérique court)
     if len(name) <= 10 and name.replace(".", "").replace("-", "").replace("/", "").isalnum():
         return name
     
@@ -548,36 +633,14 @@ def load_prices_for_backtest(
     include_benchmark: bool = True,
     benchmark_symbols: List[str] = None,
 ) -> pd.DataFrame:
-    """
-    Charge les prix pour le backtest.
-    
-    PRIORITÉ DES SYMBOLES:
-    1. Symboles extraits des portefeuilles (portfolios_path)
-    2. + Benchmark (URTH par défaut)
-    3. Fallback: config.backtest.test_universe si rien d'autre
-    
-    Args:
-        config: Configuration chargée depuis portfolio_config.yaml
-        start_date: Override date début (défaut: 90j avant aujourd'hui)
-        end_date: Override date fin (défaut: aujourd'hui)
-        api_key: Override clé API
-        plan: Plan Twelve Data ("free", "basic", "pro", "ultra")
-        portfolios_path: Chemin vers portfolios.json pour extraire les symboles
-        include_benchmark: Ajouter URTH automatiquement
-        benchmark_symbols: Liste de benchmarks à ajouter (défaut: ["URTH"])
-    
-    Returns:
-        DataFrame des prix (colonnes = symboles, index = dates)
-    """
-    # Dates par défaut
+    """Charge les prix pour le backtest."""
     if end_date is None:
         end_date = datetime.now().strftime("%Y-%m-%d")
     if start_date is None:
         lookback = config.get("backtest", {}).get("default_lookback_days", 90)
-        start_dt = datetime.now() - timedelta(days=lookback + 30)  # +30 pour marge
+        start_dt = datetime.now() - timedelta(days=lookback + 30)
         start_date = start_dt.strftime("%Y-%m-%d")
     
-    # === PRIORITÉ 1: Extraire les symboles des portefeuilles ===
     symbols = set()
     
     if portfolios_path and Path(portfolios_path).exists():
@@ -585,16 +648,13 @@ def load_prices_for_backtest(
         symbols.update(portfolio_symbols)
         logger.info(f"Loaded {len(portfolio_symbols)} symbols from portfolios")
     
-    # === PRIORITÉ 2: Ajouter les benchmarks ===
     if include_benchmark:
         if benchmark_symbols is None:
-            benchmark_symbols = ["URTH"]  # MSCI World par défaut
-        
+            benchmark_symbols = ["URTH"]
         for bench in benchmark_symbols:
             symbols.add(bench)
             logger.info(f"Added benchmark: {bench}")
     
-    # === PRIORITÉ 3: Fallback vers config si aucun symbole ===
     if not symbols:
         logger.warning("No portfolio symbols found, falling back to config.test_universe")
         test_universe = config.get("backtest", {}).get("test_universe", {})
@@ -603,12 +663,8 @@ def load_prices_for_backtest(
         symbols.update(test_universe.get("crypto", []))
     
     if not symbols:
-        raise ValueError(
-            "No symbols to load. Either provide portfolios.json or "
-            "define config.backtest.test_universe"
-        )
+        raise ValueError("No symbols to load.")
     
-    # Convertir en liste triée pour reproductibilité
     symbols_list = sorted(list(symbols))
     
     logger.info(f"Loading {len(symbols_list)} symbols from {start_date} to {end_date}")
@@ -633,25 +689,15 @@ def compute_rolling_metrics(
     prices: pd.DataFrame,
     window: int = 20
 ) -> Dict[str, pd.DataFrame]:
-    """
-    Calcule les métriques roulantes pour le scoring.
-    
-    Returns:
-        Dict avec:
-        - 'returns_1m': rendements 20j
-        - 'returns_3m': rendements 60j
-        - 'volatility': vol annualisée 20j
-        - 'max_drawdown': DD max sur window
-    """
+    """Calcule les métriques roulantes pour le scoring."""
     returns = prices.pct_change()
     
     metrics = {
-        "returns_1m": prices.pct_change(20) * 100,  # En %
+        "returns_1m": prices.pct_change(20) * 100,
         "returns_3m": prices.pct_change(60) * 100,
-        "volatility": returns.rolling(window).std() * (252 ** 0.5) * 100,  # Annualisée en %
+        "volatility": returns.rolling(window).std() * (252 ** 0.5) * 100,
     }
     
-    # Max drawdown (simplifié)
     rolling_max = prices.rolling(window, min_periods=1).max()
     drawdown = (prices - rolling_max) / rolling_max * 100
     metrics["max_drawdown"] = drawdown.rolling(window).min()
@@ -659,14 +705,8 @@ def compute_rolling_metrics(
     return metrics
 
 
-# ============ UTILITY ============
-
 def add_ticker_mapping(name: str, ticker: str):
-    """
-    Ajoute un mapping nom → ticker dynamiquement.
-    
-    Utile pour les nouveaux actifs non encore mappés.
-    """
+    """Ajoute un mapping nom → ticker dynamiquement."""
     NAME_TO_TICKER_MAP[name] = ticker
     logger.info(f"Added mapping: {name} → {ticker}")
 
