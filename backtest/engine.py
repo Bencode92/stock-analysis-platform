@@ -7,6 +7,7 @@ Backtest sur 90 jours glissants avec:
 - Coûts de transaction
 - Pénalité de turnover
 - Métriques de performance
+- Comparaison benchmark (URTH = MSCI World)
 """
 
 import numpy as np
@@ -29,6 +30,7 @@ class BacktestConfig:
     transaction_cost_bp: float = 10.0     # Coût en basis points
     turnover_penalty: float = 0.001       # Pénalité turnover dans objectif
     initial_capital: float = 100000.0     # Capital initial
+    benchmark_symbol: str = "URTH"        # Benchmark (MSCI World ETF)
 
 
 @dataclass
@@ -40,6 +42,7 @@ class BacktestResult:
     trades: pd.DataFrame                  # Détail des rebalancements
     stats: Dict[str, float] = field(default_factory=dict)
     config: Optional[BacktestConfig] = None
+    benchmark_curve: Optional[pd.Series] = None  # Courbe benchmark
 
 
 def compute_backtest_stats(
@@ -109,6 +112,110 @@ def compute_backtest_stats(
     positive_days = (daily_returns > 0).sum()
     negative_days = (daily_returns < 0).sum()
     stats["win_rate_pct"] = round(positive_days / n_days * 100, 2) if n_days > 0 else 0
+    
+    return stats
+
+
+def compute_benchmark_stats(
+    equity_curve: pd.Series,
+    daily_returns: pd.Series,
+    benchmark_prices: pd.Series,
+    benchmark_symbol: str = "URTH"
+) -> Dict[str, float]:
+    """
+    Calcule les statistiques relatives au benchmark.
+    
+    Args:
+        equity_curve: Courbe de valeur du portefeuille
+        daily_returns: Rendements journaliers du portefeuille
+        benchmark_prices: Prix du benchmark sur la même période
+        benchmark_symbol: Symbole du benchmark
+    
+    Returns:
+        Dict avec benchmark return, excess return, information ratio, etc.
+    """
+    stats = {}
+    
+    if benchmark_prices is None or len(benchmark_prices) < 2:
+        return stats
+    
+    # Aligner sur les mêmes dates
+    common_dates = equity_curve.index.intersection(benchmark_prices.index)
+    if len(common_dates) < 10:
+        logger.warning(f"Not enough common dates with benchmark: {len(common_dates)}")
+        return stats
+    
+    bench_aligned = benchmark_prices.loc[common_dates]
+    equity_aligned = equity_curve.loc[common_dates]
+    
+    # Performance benchmark
+    bench_return = (bench_aligned.iloc[-1] / bench_aligned.iloc[0] - 1) * 100
+    stats["benchmark_symbol"] = benchmark_symbol
+    stats["benchmark_return_pct"] = round(bench_return, 2)
+    
+    # Volatilité benchmark
+    bench_returns = bench_aligned.pct_change().dropna()
+    bench_vol = bench_returns.std() * np.sqrt(252) * 100
+    stats["benchmark_volatility_pct"] = round(bench_vol, 2)
+    
+    # Excess return (alpha brut)
+    portfolio_return = (equity_aligned.iloc[-1] / equity_aligned.iloc[0] - 1) * 100
+    excess_return = portfolio_return - bench_return
+    stats["excess_return_pct"] = round(excess_return, 2)
+    
+    # Tracking Error et Information Ratio
+    port_returns = equity_aligned.pct_change().dropna()
+    bench_returns_aligned = bench_aligned.pct_change().dropna()
+    
+    # Aligner les rendements
+    common_ret_dates = port_returns.index.intersection(bench_returns_aligned.index)
+    if len(common_ret_dates) > 10:
+        port_ret = port_returns.loc[common_ret_dates]
+        bench_ret = bench_returns_aligned.loc[common_ret_dates]
+        
+        # Tracking error (volatilité de la différence de rendements)
+        tracking_diff = port_ret - bench_ret
+        tracking_error = tracking_diff.std() * np.sqrt(252)
+        stats["tracking_error_pct"] = round(tracking_error * 100, 2)
+        
+        # Information Ratio = Excess Return annualisé / Tracking Error
+        if tracking_error > 0.001:
+            # Annualiser l'excess return
+            n_years = len(common_ret_dates) / 252
+            if n_years > 0:
+                excess_annual = excess_return / 100 / n_years  # Convertir en décimal annualisé
+                info_ratio = excess_annual / tracking_error
+                stats["information_ratio"] = round(info_ratio, 2)
+        
+        # Beta vs benchmark
+        if bench_ret.var() > 0:
+            covariance = port_ret.cov(bench_ret)
+            beta = covariance / bench_ret.var()
+            stats["beta"] = round(beta, 2)
+            
+            # Alpha de Jensen (rendement ajusté du risque)
+            # Alpha = Rp - (Rf + Beta * (Rm - Rf))
+            # Simplifié avec Rf = 0
+            risk_free = 0
+            expected_return = risk_free + beta * (bench_return / 100)
+            alpha = (portfolio_return / 100) - expected_return
+            stats["alpha_pct"] = round(alpha * 100, 2)
+    
+    # Capture ratio (up/down)
+    up_days = bench_returns_aligned > 0
+    down_days = bench_returns_aligned < 0
+    
+    if up_days.sum() > 5:
+        port_up = port_returns.loc[common_ret_dates][up_days].mean()
+        bench_up = bench_returns_aligned[up_days].mean()
+        if bench_up != 0:
+            stats["upside_capture_pct"] = round((port_up / bench_up) * 100, 1)
+    
+    if down_days.sum() > 5:
+        port_down = port_returns.loc[common_ret_dates][down_days].mean()
+        bench_down = bench_returns_aligned[down_days].mean()
+        if bench_down != 0:
+            stats["downside_capture_pct"] = round((port_down / bench_down) * 100, 1)
     
     return stats
 
@@ -286,7 +393,7 @@ def run_backtest(
     profile_config: dict
 ) -> BacktestResult:
     """
-    Exécute le backtest complet.
+    Exécute le backtest complet avec comparaison benchmark.
     
     Args:
         prices: DataFrame des prix (colonnes = symboles, index = dates)
@@ -294,7 +401,7 @@ def run_backtest(
         profile_config: Configuration du profil (depuis portfolio_config.yaml)
     
     Returns:
-        BacktestResult avec equity curve, stats, trades
+        BacktestResult avec equity curve, stats, trades, benchmark comparison
     """
     logger.info(f"Starting backtest: {config.profile}, freq={config.rebalance_freq}")
     
@@ -392,8 +499,39 @@ def run_backtest(
     trades_df = pd.DataFrame(trades)
     weights_df = pd.DataFrame(weights_history)
     
-    # Stats
+    # Stats de base
     stats = compute_backtest_stats(equity_series, returns_series, trades_df)
+    
+    # ===== BENCHMARK COMPARISON =====
+    benchmark_curve = None
+    benchmark_symbol = config.benchmark_symbol
+    
+    if benchmark_symbol and benchmark_symbol in prices.columns:
+        logger.info(f"Computing benchmark comparison vs {benchmark_symbol}")
+        
+        # Extraire les prix du benchmark sur la période
+        bench_prices = prices.loc[equity_series.index, benchmark_symbol].dropna()
+        
+        if len(bench_prices) > 10:
+            # Calculer la courbe benchmark (normalisée au capital initial)
+            benchmark_curve = (bench_prices / bench_prices.iloc[0]) * config.initial_capital
+            
+            # Statistiques benchmark
+            bench_stats = compute_benchmark_stats(
+                equity_series,
+                returns_series,
+                bench_prices,
+                benchmark_symbol
+            )
+            stats.update(bench_stats)
+            
+            logger.info(f"Benchmark return: {stats.get('benchmark_return_pct', 'N/A')}%")
+            logger.info(f"Excess return: {stats.get('excess_return_pct', 'N/A')}%")
+            logger.info(f"Information Ratio: {stats.get('information_ratio', 'N/A')}")
+    else:
+        if benchmark_symbol:
+            logger.warning(f"Benchmark {benchmark_symbol} not found in prices data")
+    # ================================
     
     logger.info(f"Backtest complete: {stats['total_return_pct']}% return, {stats['sharpe_ratio']} Sharpe")
     
@@ -404,6 +542,7 @@ def run_backtest(
         trades=trades_df,
         stats=stats,
         config=config,
+        benchmark_curve=benchmark_curve,
     )
 
 
@@ -424,6 +563,20 @@ def print_backtest_report(result: BacktestResult):
     print(f"Volatility:       {result.stats.get('volatility_pct', 0):>8.2f}%")
     print(f"Sharpe Ratio:     {result.stats.get('sharpe_ratio', 0):>8.2f}")
     print(f"Max Drawdown:     {result.stats.get('max_drawdown_pct', 0):>8.2f}%")
+    
+    # Section Benchmark (si disponible)
+    if "benchmark_symbol" in result.stats:
+        print("\n--- vs Benchmark ---")
+        print(f"Benchmark:        {result.stats.get('benchmark_symbol', 'N/A'):>8}")
+        print(f"Bench Return:     {result.stats.get('benchmark_return_pct', 0):>8.2f}%")
+        print(f"Excess Return:    {result.stats.get('excess_return_pct', 0):>8.2f}%")
+        print(f"Tracking Error:   {result.stats.get('tracking_error_pct', 0):>8.2f}%")
+        print(f"Info Ratio:       {result.stats.get('information_ratio', 0):>8.2f}")
+        print(f"Beta:             {result.stats.get('beta', 1.0):>8.2f}")
+        print(f"Alpha:            {result.stats.get('alpha_pct', 0):>8.2f}%")
+        if "upside_capture_pct" in result.stats:
+            print(f"Upside Capture:   {result.stats.get('upside_capture_pct', 0):>8.1f}%")
+            print(f"Downside Capture: {result.stats.get('downside_capture_pct', 0):>8.1f}%")
     
     print("\n--- Trading ---")
     print(f"Rebalances:       {result.stats.get('n_rebalances', 0):>8}")
