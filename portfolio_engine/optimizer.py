@@ -13,7 +13,7 @@ Phase 2:
 import numpy as np
 from scipy.optimize import minimize
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Union, Set
+from typing import Dict, List, Optional, Tuple, Union, Set, Any
 from collections import defaultdict
 import warnings
 import logging
@@ -54,6 +54,41 @@ except ImportError:
     }
 
 logger = logging.getLogger("portfolio_engine.optimizer")
+
+
+# ============= JSON SERIALIZATION HELPER =============
+
+def to_python_native(obj: Any) -> Any:
+    """
+    Convertit récursivement les types numpy en types Python natifs pour JSON.
+    
+    Handles: np.float64, np.int64, np.bool_, np.ndarray, dict, list
+    """
+    if obj is None:
+        return None
+    
+    # Numpy scalar types
+    if isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    if isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    if isinstance(obj, (np.bool_, np.bool)):
+        return bool(obj)
+    
+    # Numpy array
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    
+    # Dict - recurse
+    if isinstance(obj, dict):
+        return {k: to_python_native(v) for k, v in obj.items()}
+    
+    # List/tuple - recurse
+    if isinstance(obj, (list, tuple)):
+        return [to_python_native(item) for item in obj]
+    
+    # Already native Python type
+    return obj
 
 
 @dataclass
@@ -640,7 +675,7 @@ class PortfolioOptimizer:
         sorted_candidates = sorted(candidates, key=lambda a: a.score, reverse=True)
         
         allocation = {}
-        total_weight = 0
+        total_weight = 0.0
         
         category_weights = defaultdict(float)
         sector_weights = defaultdict(float)
@@ -652,14 +687,14 @@ class PortfolioOptimizer:
         
         # D'abord, assurer bonds minimum
         bonds = [a for a in sorted_candidates if a.category == "Obligations"]
-        bonds_needed = profile.bonds_min
+        bonds_needed = float(profile.bonds_min)
         
         for bond in bonds[:8]:
             if bonds_needed <= 0:
                 break
             weight = min(profile.max_single_position, bonds_needed, 100 - total_weight)
             if weight > 0.5:
-                allocation[bond.id] = weight
+                allocation[bond.id] = float(weight)
                 total_weight += weight
                 bonds_needed -= weight
                 category_weights["Obligations"] += weight
@@ -720,7 +755,7 @@ class PortfolioOptimizer:
                 )
                 
                 if weight > 0.5:
-                    allocation[asset.id] = round(weight, 2)
+                    allocation[asset.id] = round(float(weight), 2)
                     total_weight += weight
                     category_weights[asset.category] += weight
                     sector_weights[asset.sector] += weight
@@ -732,7 +767,7 @@ class PortfolioOptimizer:
         # Normaliser à 100%
         if total_weight > 0:
             factor = 100 / total_weight
-            allocation = {k: round(v * factor, 2) for k, v in allocation.items()}
+            allocation = {k: round(float(v * factor), 2) for k, v in allocation.items()}
         
         return allocation
     
@@ -782,7 +817,7 @@ class PortfolioOptimizer:
             allocation = {}
             for i, w in enumerate(weights):
                 if w > 0.005:
-                    allocation[candidates[i].id] = round(w * 100, 2)
+                    allocation[candidates[i].id] = round(float(w * 100), 2)
             
             allocation = self._adjust_to_100(allocation, profile)
             optimizer_converged = True
@@ -794,7 +829,7 @@ class PortfolioOptimizer:
         # === DIAGNOSTICS ===
         final_weights = np.array([allocation.get(c.id, 0)/100 for c in candidates])
         port_vol = self._compute_portfolio_vol(final_weights, cov)
-        port_score = np.dot(final_weights, raw_scores)
+        port_score = float(np.dot(final_weights, raw_scores))
         
         sector_exposure = defaultdict(float)
         etf_exposure = defaultdict(float)
@@ -809,35 +844,39 @@ class PortfolioOptimizer:
                 if asset.role:
                     bucket_exposure[asset.role.value] += weight
         
-        # Bucket targets vs actual
+        # Bucket targets vs actual - convert to native Python types
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         bucket_compliance = {}
         for role in Role:
-            actual = bucket_exposure.get(role.value, 0)
+            actual = float(bucket_exposure.get(role.value, 0))
             if role in bucket_targets:
                 min_pct, max_pct = bucket_targets[role]
-                in_range = min_pct * 100 <= actual <= max_pct * 100
+                in_range = bool(min_pct * 100 <= actual <= max_pct * 100)
                 bucket_compliance[role.value] = {
                     "actual": round(actual, 1),
-                    "target_min": round(min_pct * 100, 0),
-                    "target_max": round(max_pct * 100, 0),
+                    "target_min": round(float(min_pct * 100), 0),
+                    "target_max": round(float(max_pct * 100), 0),
                     "in_range": in_range,
                 }
         
+        # Build diagnostics with native Python types
         diagnostics = {
-            "converged": optimizer_converged,
-            "message": result.message if result.success else "Fallback score-based",
-            "portfolio_vol": round(port_vol, 2),
-            "vol_target": profile.vol_target,
+            "converged": bool(optimizer_converged),
+            "message": str(result.message) if result.success else "Fallback score-based",
+            "portfolio_vol": round(float(port_vol), 2),
+            "vol_target": float(profile.vol_target),
             "portfolio_score": round(float(port_score), 3),
-            "n_assets": len(allocation),
-            "sectors": dict(sector_exposure),
-            "etf_exposures": dict(etf_exposure),
-            "bucket_exposure": dict(bucket_exposure),
+            "n_assets": int(len(allocation)),
+            "sectors": {k: round(float(v), 2) for k, v in sector_exposure.items()},
+            "etf_exposures": {k: round(float(v), 2) for k, v in etf_exposure.items()},
+            "bucket_exposure": {k: round(float(v), 2) for k, v in bucket_exposure.items()},
             "bucket_compliance": bucket_compliance,
-            "deduplication_enabled": self.deduplicate_etfs_enabled,
-            "bucket_constraints_enabled": self.use_bucket_constraints,
+            "deduplication_enabled": bool(self.deduplicate_etfs_enabled),
+            "bucket_constraints_enabled": bool(self.use_bucket_constraints),
         }
+        
+        # Apply final conversion to ensure all types are JSON-serializable
+        diagnostics = to_python_native(diagnostics)
         
         # Logging
         logger.info(
@@ -923,11 +962,11 @@ class PortfolioOptimizer:
         
         if candidates_for_adjust:
             target_id = max(candidates_for_adjust, key=lambda x: x[1])[0]
-            allocation[target_id] = round(allocation[target_id] + diff, 2)
+            allocation[target_id] = round(float(allocation[target_id] + diff), 2)
         else:
             if total > 0:
                 for k in allocation:
-                    allocation[k] = round(allocation[k] * 100 / total, 2)
+                    allocation[k] = round(float(allocation[k] * 100 / total), 2)
         
         return allocation
     
