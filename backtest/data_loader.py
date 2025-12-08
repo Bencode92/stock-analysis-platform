@@ -6,13 +6,17 @@ Documentation API: https://twelvedata.com/docs
 Plans:
 - Free: 8 requests/minute, 800/day
 - Ultra: pas de rate limit significatif
+
+V2: Support pour charger les symboles depuis les portefeuilles générés
 """
 
 import os
 import time
+import json
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 from datetime import datetime, timedelta
+from pathlib import Path
 import requests
 import pandas as pd
 
@@ -185,15 +189,164 @@ class TwelveDataLoader:
         return prices_df
 
 
+# ============ PORTFOLIO SYMBOL EXTRACTION ============
+
+def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> Set[str]:
+    """
+    Extrait tous les symboles uniques des portefeuilles générés.
+    
+    Args:
+        portfolios_path: Chemin vers portfolios.json
+    
+    Returns:
+        Set de symboles (tickers)
+    """
+    symbols = set()
+    
+    try:
+        with open(portfolios_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load portfolios from {portfolios_path}: {e}")
+        return symbols
+    
+    # Parcourir les 3 profils
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        if profile not in data:
+            continue
+        
+        profile_data = data[profile]
+        
+        # Parcourir les catégories
+        for category in ["Actions", "ETF", "Obligations", "Crypto"]:
+            if category not in profile_data:
+                continue
+            
+            for name, weight in profile_data[category].items():
+                # Convertir le nom en ticker (si possible)
+                ticker = name_to_ticker(name)
+                if ticker:
+                    symbols.add(ticker)
+    
+    logger.info(f"Extracted {len(symbols)} unique symbols from portfolios")
+    return symbols
+
+
+# ============ NAME TO TICKER MAPPING ============
+
+# Mapping des noms courants vers leurs tickers
+NAME_TO_TICKER_MAP = {
+    # Actions
+    "SSE PLC": "SSE.L",
+    "LG ELECTRONICS INC": "066570.KS",
+    "AMGEN INC": "AMGN",
+    "STEEL DYNAMICS INC": "STLD",
+    "EXPEDITORS INTERNATIONAL OF WASHIN": "EXPD",
+    "INDUSTRIA DE DISENO TEXTIL SA": "ITX.MC",
+    "ASIAN PAINTS LTD": "ASIANPAINT.NS",
+    "BOUYGUES SA": "EN.PA",
+    "INTERNATIONAL BUSINESS MACHINES CO": "IBM",
+    "ENGIE SA": "ENGI.PA",
+    "JOHNSON & JOHNSON": "JNJ",
+    "IMPERIAL BRANDS PLC": "IMB.L",
+    
+    # ETF Gold
+    "SPDR Gold Shares": "GLD",
+    "iShares Gold Trust": "IAU",
+    "SPDR Gold MiniShares Trust": "GLDM",
+    "abrdn Physical Gold Shares ETF": "SGOL",
+    "iShares Gold Trust Micro": "IAUM",
+    "abrdn Physical Precious Metals Basket Shares ETF": "GLTR",
+    "Goldman Sachs Physical Gold ETF": "AAAU",
+    
+    # ETF Country/Region
+    "iShares MSCI Spain ETF": "EWP",
+    "iShares MSCI World ETF": "URTH",
+    
+    # Bonds
+    "Alpha Architect 1-3 Month Boxx Fund": "BOXX",
+    "Eaton Vance Total Return Fund": "ETV",
+    "JPMorgan Limited Duration ETF": "JPLD",
+    
+    # US Stocks
+    "APPLE INC": "AAPL",
+    "MICROSOFT CORP": "MSFT",
+    "NVIDIA CORP": "NVDA",
+    "AMAZON COM INC": "AMZN",
+    "ALPHABET INC CLASS A": "GOOGL",
+    "META PLATFORMS INC": "META",
+    "TESLA INC": "TSLA",
+    "BERKSHIRE HATHAWAY INC CLASS B": "BRK.B",
+    "VISA INC": "V",
+    "UNITEDHEALTH GROUP INC": "UNH",
+    "JPMORGAN CHASE & CO": "JPM",
+    "PROCTER & GAMBLE CO": "PG",
+    "MASTERCARD INC": "MA",
+    "HOME DEPOT INC": "HD",
+    "COCA COLA CO": "KO",
+    "PEPSICO INC": "PEP",
+    "MERCK & CO INC": "MRK",
+    "ABBVIE INC": "ABBV",
+    "EXXON MOBIL CORP": "XOM",
+    "CHEVRON CORP": "CVX",
+    
+    # Crypto (format TwelveData)
+    "Bitcoin": "BTC/USD",
+    "Ethereum": "ETH/USD",
+    "Solana": "SOL/USD",
+}
+
+
+def name_to_ticker(name: str) -> Optional[str]:
+    """
+    Convertit un nom d'actif en ticker.
+    
+    Args:
+        name: Nom de l'actif (ex: "SPDR Gold Shares")
+    
+    Returns:
+        Ticker correspondant (ex: "GLD") ou None
+    """
+    # Nettoyage
+    name_clean = name.strip().upper()
+    
+    # Recherche exacte (case insensitive)
+    for map_name, ticker in NAME_TO_TICKER_MAP.items():
+        if map_name.upper() == name_clean:
+            return ticker
+    
+    # Recherche partielle
+    for map_name, ticker in NAME_TO_TICKER_MAP.items():
+        if map_name.upper() in name_clean or name_clean in map_name.upper():
+            return ticker
+    
+    # Si le nom ressemble déjà à un ticker (alphanumérique court)
+    if len(name) <= 10 and name.replace(".", "").replace("-", "").replace("/", "").isalnum():
+        return name
+    
+    logger.debug(f"No ticker mapping found for: {name}")
+    return None
+
+
+# ============ LOAD PRICES FOR BACKTEST ============
+
 def load_prices_for_backtest(
     config: dict,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     api_key: Optional[str] = None,
-    plan: str = "ultra"
+    plan: str = "ultra",
+    portfolios_path: Optional[str] = "data/portfolios.json",
+    include_benchmark: bool = True,
+    benchmark_symbols: List[str] = None,
 ) -> pd.DataFrame:
     """
-    Charge les prix pour le backtest depuis la config.
+    Charge les prix pour le backtest.
+    
+    PRIORITÉ DES SYMBOLES:
+    1. Symboles extraits des portefeuilles (portfolios_path)
+    2. + Benchmark (URTH par défaut)
+    3. Fallback: config.backtest.test_universe si rien d'autre
     
     Args:
         config: Configuration chargée depuis portfolio_config.yaml
@@ -201,6 +354,9 @@ def load_prices_for_backtest(
         end_date: Override date fin (défaut: aujourd'hui)
         api_key: Override clé API
         plan: Plan Twelve Data ("free", "basic", "pro", "ultra")
+        portfolios_path: Chemin vers portfolios.json pour extraire les symboles
+        include_benchmark: Ajouter URTH automatiquement
+        benchmark_symbols: Liste de benchmarks à ajouter (défaut: ["URTH"])
     
     Returns:
         DataFrame des prix (colonnes = symboles, index = dates)
@@ -213,21 +369,46 @@ def load_prices_for_backtest(
         start_dt = datetime.now() - timedelta(days=lookback + 30)  # +30 pour marge
         start_date = start_dt.strftime("%Y-%m-%d")
     
-    # Récupérer l'univers de test
-    test_universe = config.get("backtest", {}).get("test_universe", {})
-    symbols = []
-    symbols.extend(test_universe.get("stocks", []))
-    symbols.extend(test_universe.get("etfs", []))
-    symbols.extend(test_universe.get("crypto", []))
+    # === PRIORITÉ 1: Extraire les symboles des portefeuilles ===
+    symbols = set()
+    
+    if portfolios_path and Path(portfolios_path).exists():
+        portfolio_symbols = extract_portfolio_symbols(portfolios_path)
+        symbols.update(portfolio_symbols)
+        logger.info(f"Loaded {len(portfolio_symbols)} symbols from portfolios")
+    
+    # === PRIORITÉ 2: Ajouter les benchmarks ===
+    if include_benchmark:
+        if benchmark_symbols is None:
+            benchmark_symbols = ["URTH"]  # MSCI World par défaut
+        
+        for bench in benchmark_symbols:
+            symbols.add(bench)
+            logger.info(f"Added benchmark: {bench}")
+    
+    # === PRIORITÉ 3: Fallback vers config si aucun symbole ===
+    if not symbols:
+        logger.warning("No portfolio symbols found, falling back to config.test_universe")
+        test_universe = config.get("backtest", {}).get("test_universe", {})
+        symbols.update(test_universe.get("stocks", []))
+        symbols.update(test_universe.get("etfs", []))
+        symbols.update(test_universe.get("crypto", []))
     
     if not symbols:
-        raise ValueError("No symbols defined in config.backtest.test_universe")
+        raise ValueError(
+            "No symbols to load. Either provide portfolios.json or "
+            "define config.backtest.test_universe"
+        )
     
-    logger.info(f"Loading {len(symbols)} symbols from {start_date} to {end_date}")
+    # Convertir en liste triée pour reproductibilité
+    symbols_list = sorted(list(symbols))
+    
+    logger.info(f"Loading {len(symbols_list)} symbols from {start_date} to {end_date}")
+    logger.info(f"Symbols: {symbols_list[:10]}{'...' if len(symbols_list) > 10 else ''}")
     
     loader = TwelveDataLoader(api_key=api_key, plan=plan)
     prices = loader.get_multiple_time_series(
-        symbols=symbols,
+        symbols=symbols_list,
         start_date=start_date,
         end_date=end_date
     )
@@ -268,3 +449,20 @@ def compute_rolling_metrics(
     metrics["max_drawdown"] = drawdown.rolling(window).min()
     
     return metrics
+
+
+# ============ UTILITY ============
+
+def add_ticker_mapping(name: str, ticker: str):
+    """
+    Ajoute un mapping nom → ticker dynamiquement.
+    
+    Utile pour les nouveaux actifs non encore mappés.
+    """
+    NAME_TO_TICKER_MAP[name] = ticker
+    logger.info(f"Added mapping: {name} → {ticker}")
+
+
+def get_all_mappings() -> Dict[str, str]:
+    """Retourne tous les mappings nom → ticker."""
+    return NAME_TO_TICKER_MAP.copy()
