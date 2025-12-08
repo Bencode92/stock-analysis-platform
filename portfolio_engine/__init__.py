@@ -5,9 +5,10 @@ Portfolio Engine - Moteur quantitatif de construction de portefeuilles.
 Architecture:
 - universe.py       : Construction de l'univers d'actifs scorés
 - factors.py        : Scoring multi-facteur configurable
-- optimizer.py      : Optimisation mean-variance sous contraintes
+- optimizer.py      : Optimisation mean-variance sous contraintes + buckets
 - llm_commentary.py : Génération des commentaires via LLM (prompt compact)
 - sector_quality.py : Filtre Buffett avec seuils ajustés par secteur
+- preset_meta.py    : Presets, buckets, contraintes par profil (NEW)
 
 Le LLM n'intervient PAS sur les poids - uniquement sur les justifications.
 """
@@ -42,6 +43,11 @@ from .optimizer import (
     PROFILES,
     convert_universe_to_assets,
     validate_portfolio,
+    # New Phase 2 exports
+    assign_preset_to_asset,
+    enrich_assets_with_buckets,
+    deduplicate_etfs,
+    detect_etf_exposure,
 )
 
 from .llm_commentary import (
@@ -67,7 +73,42 @@ from .sector_quality import (
     get_sector_key,
 )
 
-__version__ = "2.2.0"
+# NEW: Preset Meta exports
+from .preset_meta import (
+    # Enums
+    AssetClass,
+    Role,
+    RiskLevel,
+    # Config
+    PresetConfig,
+    PRESET_META,
+    EQUITY_PRESETS,
+    ETF_PRESETS,
+    CRYPTO_PRESETS,
+    # Targets
+    PROFILE_BUCKET_TARGETS,
+    PROFILE_BENCHMARKS,
+    # Priority
+    EQUITY_PRESET_PRIORITY,
+    ETF_PRESET_PRIORITY,
+    CRYPTO_PRESET_PRIORITY,
+    # ETF dedup
+    ETF_EXPOSURE_EQUIVALENTS,
+    deduplicate_etf_by_exposure,
+    # Correlation
+    CORRELATION_BY_GROUP,
+    get_correlation,
+    # Helpers
+    get_preset_config,
+    get_presets_by_role,
+    get_presets_by_asset_class,
+    get_bucket_targets,
+    get_max_weight_for_preset,
+    get_correlation_groups,
+    validate_portfolio_buckets,
+)
+
+__version__ = "3.0.0"
 
 __all__ = [
     # Universe
@@ -96,6 +137,10 @@ __all__ = [
     "PROFILES",
     "convert_universe_to_assets",
     "validate_portfolio",
+    "assign_preset_to_asset",
+    "enrich_assets_with_buckets",
+    "deduplicate_etfs",
+    "detect_etf_exposure",
     # LLM Commentary
     "build_commentary_prompt",
     "parse_llm_response",
@@ -115,4 +160,29 @@ __all__ = [
     "get_sector_summary",
     "get_profile",
     "get_sector_key",
+    # Preset Meta (NEW)
+    "AssetClass",
+    "Role",
+    "RiskLevel",
+    "PresetConfig",
+    "PRESET_META",
+    "EQUITY_PRESETS",
+    "ETF_PRESETS",
+    "CRYPTO_PRESETS",
+    "PROFILE_BUCKET_TARGETS",
+    "PROFILE_BENCHMARKS",
+    "EQUITY_PRESET_PRIORITY",
+    "ETF_PRESET_PRIORITY",
+    "CRYPTO_PRESET_PRIORITY",
+    "ETF_EXPOSURE_EQUIVALENTS",
+    "deduplicate_etf_by_exposure",
+    "CORRELATION_BY_GROUP",
+    "get_correlation",
+    "get_preset_config",
+    "get_presets_by_role",
+    "get_presets_by_asset_class",
+    "get_bucket_targets",
+    "get_max_weight_for_preset",
+    "get_correlation_groups",
+    "validate_portfolio_buckets",
 ]
