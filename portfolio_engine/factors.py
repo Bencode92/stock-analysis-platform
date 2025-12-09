@@ -1,6 +1,6 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.0 — SEUL MOTEUR D'ALPHA
+FactorScorer v2.1 — SEUL MOTEUR D'ALPHA
 =======================================
 
 Phase 2.5 Refactoring:
@@ -8,12 +8,18 @@ Phase 2.5 Refactoring:
 - Intégration du score Buffett comme facteur "quality_fundamental"
 - Pari central explicite: QUALITY + MOMENTUM
 
+v2.1 Changes (P0 Quick Wins):
+- Nouveau facteur cost_efficiency (TER + yield_ttm) pour ETF/Bonds
+- Bonus Sharpe ratio pour crypto dans momentum
+- Meilleure utilisation des données existantes
+
 Facteurs:
 - momentum: 45% (Agressif) → 20% (Stable) — Driver principal
 - quality_fundamental: 25-30% — Score Buffett intégré (ROIC, FCF, ROE)
 - low_vol: 15-35% — Contrôle du risque
-- liquidity: 10-15% — Filtre technique
-- mean_reversion: 5-10% — Évite sur-extension
+- cost_efficiency: 5-10% — TER + Yield (ETF/Bonds) [v2.1]
+- liquidity: 5-10% — Filtre technique
+- mean_reversion: 5% — Évite sur-extension
 
 Le pari central:
 "Des entreprises de qualité fondamentale (ROIC > 10%, FCF positif, dette maîtrisée)
@@ -29,19 +35,21 @@ import math
 logger = logging.getLogger("portfolio_engine.factors")
 
 
-# ============= FACTOR WEIGHTS v2.0 =============
+# ============= FACTOR WEIGHTS v2.1 =============
 
 @dataclass
 class FactorWeights:
     """
     Poids des facteurs pour un profil donné.
     
+    v2.1: Ajout cost_efficiency (TER + Yield) pour ETF/Bonds.
     v2.0: quality_fundamental remplace quality (proxy DD) et intègre Buffett.
     """
     momentum: float = 0.30           # Driver principal d'alpha
     quality_fundamental: float = 0.25  # Score Buffett (ROIC, FCF, ROE, D/E)
     low_vol: float = 0.25            # Contrôle risque
-    liquidity: float = 0.15          # Filtre technique
+    cost_efficiency: float = 0.05    # v2.1: TER + Yield (ETF/Bonds)
+    liquidity: float = 0.10          # Filtre technique
     mean_reversion: float = 0.05     # Évite sur-extension
 
 
@@ -51,20 +59,23 @@ PROFILE_WEIGHTS = {
         momentum=0.45,              # Driver principal fort
         quality_fundamental=0.25,   # Buffett toujours important
         low_vol=0.10,               # Accepte plus de vol
+        cost_efficiency=0.05,       # v2.1: Coûts moins prioritaires
         liquidity=0.10,
-        mean_reversion=0.10
+        mean_reversion=0.05
     ),
     "Modéré": FactorWeights(
         momentum=0.35,              # Équilibré
-        quality_fundamental=0.30,   # Qualité renforcée
+        quality_fundamental=0.25,   # Qualité renforcée
         low_vol=0.20,               # Contrôle risque
-        liquidity=0.10,
+        cost_efficiency=0.08,       # v2.1: Coûts importants
+        liquidity=0.07,
         mean_reversion=0.05
     ),
     "Stable": FactorWeights(
         momentum=0.20,              # Momentum réduit
-        quality_fundamental=0.30,   # Qualité maximale
-        low_vol=0.35,               # Risque minimal prioritaire
+        quality_fundamental=0.25,   # Qualité maximale
+        low_vol=0.30,               # Risque minimal prioritaire
+        cost_efficiency=0.10,       # v2.1: Coûts très importants (long terme)
         liquidity=0.10,
         mean_reversion=0.05
     ),
@@ -205,16 +216,17 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.0 =============
+# ============= FACTOR SCORER v2.1 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
     
-    v2.0 — SEUL MOTEUR D'ALPHA:
-    - momentum: Performance récente (1m/3m/YTD)
+    v2.1 — Ajout cost_efficiency:
+    - momentum: Performance récente (1m/3m/YTD) + Sharpe bonus (crypto)
     - quality_fundamental: Score Buffett intégré (ROIC, FCF, ROE, D/E)
     - low_vol: Inverse de la volatilité
+    - cost_efficiency: TER (coûts) + yield_ttm (rendement bonds) [NOUVEAU]
     - liquidity: Log(market_cap ou AUM)
     - mean_reversion: Pénalise les sur-extensions
     
@@ -245,7 +257,8 @@ class FactorScorer:
     def compute_factor_momentum(self, assets: List[dict]) -> np.ndarray:
         """
         Facteur momentum: combinaison perf 1m/3m/YTD.
-        Pondération adaptée selon données disponibles.
+        
+        v2.1: Ajout bonus Sharpe ratio pour crypto.
         
         Horizon implicite: 6-12 mois.
         """
@@ -270,6 +283,15 @@ class FactorScorer:
             p7d = [fnum(a.get("perf_7d")) for a in assets]
             p24h = [fnum(a.get("perf_24h")) for a in assets]
             raw = [0.7 * p7d[i] + 0.3 * p24h[i] for i in range(n)]
+        
+        # v2.1: Bonus Sharpe ratio pour crypto
+        for i, a in enumerate(assets):
+            category = a.get("category", "").lower()
+            if category == "crypto":
+                sharpe = fnum(a.get("sharpe_ratio", 0))
+                # Bonus/malus: Sharpe 2 → +20%, Sharpe -2 → -20%
+                sharpe_bonus = max(-20, min(20, sharpe * 10))
+                raw[i] += sharpe_bonus
         
         return self._zscore(raw)
     
@@ -302,6 +324,57 @@ class FactorScorer:
         """
         vol = [fnum(a.get("vol_3y") or a.get("vol30") or a.get("vol_annual") or a.get("vol") or 20) for a in assets]
         return -self._zscore(vol)
+    
+    def compute_factor_cost_efficiency(self, assets: List[dict]) -> np.ndarray:
+        """
+        v2.1 NOUVEAU: Facteur coût/rendement pour ETF et Bonds.
+        
+        - Pénalise TER élevé (Total Expense Ratio)
+        - Bonifie yield_ttm pour bonds ETF
+        - Neutre pour actions et crypto (pas de TER)
+        
+        Score: TER bas + Yield élevé = meilleur score
+        """
+        scores = []
+        
+        for a in assets:
+            category = a.get("category", "").lower()
+            fund_type = str(a.get("fund_type", "")).lower()
+            
+            if category in ["etf", "bond", "bonds"]:
+                # === TER Score ===
+                # TER est en décimal (0.003 = 0.3%) ou en pourcentage selon source
+                ter_raw = fnum(a.get("total_expense_ratio", 0))
+                
+                # Normaliser: si > 1, c'est déjà en %, sinon convertir
+                ter_pct = ter_raw * 100 if ter_raw < 1 else ter_raw
+                
+                # Score TER: 0% → 100, 0.5% → 50, 1%+ → 0
+                if ter_pct <= 0:
+                    ter_score = 75.0  # Neutre si pas de données
+                else:
+                    ter_score = max(0, 100 - ter_pct * 100)
+                
+                # === Yield Score (surtout pour bonds) ===
+                yield_ttm = fnum(a.get("yield_ttm", 0))
+                
+                if "bond" in fund_type or "bond" in category:
+                    # Bonds: yield important
+                    # 0% → 0, 4% → 50, 8%+ → 100
+                    yield_score = min(100, yield_ttm * 12.5)
+                    # Mix: 50% TER + 50% Yield pour bonds
+                    final_score = 0.5 * ter_score + 0.5 * yield_score
+                else:
+                    # ETF actions: principalement TER, yield bonus léger
+                    yield_bonus = min(20, yield_ttm * 5)  # Max 20 points bonus
+                    final_score = 0.8 * ter_score + 0.2 * yield_bonus
+                
+                scores.append(final_score)
+            else:
+                # Actions et Crypto: neutre (pas de TER)
+                scores.append(50.0)
+        
+        return self._zscore(scores)
     
     def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
         """
@@ -345,6 +418,7 @@ class FactorScorer:
         """
         Calcule le score composite pour chaque actif.
         
+        v2.1: Ajout facteur cost_efficiency.
         v2.0: SEUL moteur d'alpha — utilisé directement par l'optimizer.
         
         Args:
@@ -363,6 +437,7 @@ class FactorScorer:
             "momentum": self.compute_factor_momentum(assets),
             "quality_fundamental": self.compute_factor_quality_fundamental(assets),
             "low_vol": self.compute_factor_low_vol(assets),
+            "cost_efficiency": self.compute_factor_cost_efficiency(assets),  # v2.1
             "liquidity": self.compute_factor_liquidity(assets),
             "mean_reversion": self.compute_factor_mean_reversion(assets),
         }
@@ -422,6 +497,7 @@ def rescore_universe_by_profile(
     """
     Recalcule les scores de tout l'univers pour un profil donné.
     
+    v2.1: Utilise FactorScorer avec cost_efficiency.
     v2.0: Utilise FactorScorer comme SEUL moteur d'alpha.
     
     Args:
@@ -453,6 +529,7 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
             "momentum": w.momentum,
             "quality_fundamental": w.quality_fundamental,
             "low_vol": w.low_vol,
+            "cost_efficiency": w.cost_efficiency,  # v2.1
             "liquidity": w.liquidity,
             "mean_reversion": w.mean_reversion,
         }
@@ -463,13 +540,13 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.0):",
+        "Comparaison des poids factoriels par profil (v2.1):",
         "",
         "PARI CENTRAL: Quality + Momentum surperforment à horizon 1-3 ans.",
         ""
     ]
     
-    factors = ["momentum", "quality_fundamental", "low_vol", "liquidity", "mean_reversion"]
+    factors = ["momentum", "quality_fundamental", "low_vol", "cost_efficiency", "liquidity", "mean_reversion"]
     header = f"{'Facteur':<20} | {'Agressif':>10} | {'Modéré':>10} | {'Stable':>10}"
     lines.append(header)
     lines.append("-" * len(header))
@@ -488,6 +565,8 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
     """
     Calcule le taux de couverture des métriques de qualité.
     
+    v2.1: Ajout couverture TER et yield_ttm.
+    
     Returns:
         Dict avec % d'actifs ayant chaque métrique.
     """
@@ -496,14 +575,22 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
     
     total = len(assets)
     equities = [a for a in assets if a.get("category", "").lower() in ["equity", "equities", "action", "actions", "stock"]]
+    etf_bonds = [a for a in assets if a.get("category", "").lower() in ["etf", "bond", "bonds"]]
     n_eq = len(equities) or 1
+    n_etf = len(etf_bonds) or 1
     
     return {
+        # Métriques actions
         "roe": round(sum(1 for a in equities if fnum(a.get("roe")) > 0) / n_eq * 100, 1),
         "roic": round(sum(1 for a in equities if fnum(a.get("roic")) > 0) / n_eq * 100, 1),
         "fcf_yield": round(sum(1 for a in equities if a.get("fcf_yield") is not None) / n_eq * 100, 1),
         "de_ratio": round(sum(1 for a in equities if fnum(a.get("de_ratio")) >= 0) / n_eq * 100, 1),
         "eps_growth_5y": round(sum(1 for a in equities if a.get("eps_growth_5y") is not None) / n_eq * 100, 1),
+        # v2.1: Métriques ETF/Bonds
+        "total_expense_ratio": round(sum(1 for a in etf_bonds if fnum(a.get("total_expense_ratio")) > 0) / n_etf * 100, 1),
+        "yield_ttm": round(sum(1 for a in etf_bonds if fnum(a.get("yield_ttm")) > 0) / n_etf * 100, 1),
+        # Compteurs
         "equities_count": len(equities),
+        "etf_bonds_count": len(etf_bonds),
         "total_count": total,
     }
