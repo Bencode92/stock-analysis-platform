@@ -10,6 +10,7 @@ Plans:
 V2: Support pour charger les symboles depuis les portefeuilles générés
 V3: Conversion automatique Yahoo → TwelveData format pour symboles internationaux
 V4: Logique de fallback avec /stocks lookup (comme stock-filter-by-volume.js)
+V5: Enrichissement massif du NAME_TO_TICKER_MAP pour couverture backtest complète
 """
 
 import os
@@ -444,9 +445,10 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
 
 
 # ============ NAME TO TICKER MAPPING ============
+# V5: Enrichissement massif pour couverture backtest complète
 
 NAME_TO_TICKER_MAP = {
-    # Actions Européennes
+    # ========== Actions Européennes ==========
     "SSE PLC": "SSE.L",
     "INDUSTRIA DE DISENO TEXTIL SA": "ITX.MC",
     "BOUYGUES SA": "EN.PA",
@@ -459,6 +461,7 @@ NAME_TO_TICKER_MAP = {
     "SAP SE": "SAP.DE",
     "SIEMENS AG": "SIE.DE",
     "ALLIANZ SE": "ALV.DE",
+    "ALLIANZ": "ALV.DE",  # Alias court
     "BASF SE": "BAS.DE",
     "ASML HOLDING NV": "ASML.AS",
     "NESTLE SA": "NESN.SW",
@@ -473,8 +476,39 @@ NAME_TO_TICKER_MAP = {
     "GLAXOSMITHKLINE PLC": "GSK.L",
     "DIAGEO PLC": "DGE.L",
     "BRITISH AMERICAN TOBACCO PLC": "BATS.L",
+    # Espagne
+    "CAIXABANK SA": "CABK.MC",
+    "CAIXABANK": "CABK.MC",
+    "BANCO SANTANDER SA": "SAN.MC",
+    "IBERDROLA SA": "IBE.MC",
+    "INDITEX": "ITX.MC",
+    # Italie
+    "ENEL": "ENEL.MI",
+    "ENEL SPA": "ENEL.MI",
+    "ENI SPA": "ENI.MI",
+    "INTESA SANPAOLO SPA": "ISP.MI",
+    "UNICREDIT SPA": "UCG.MI",
+    "FERRARI NV": "RACE.MI",
+    # Allemagne
+    "DEUTSCHE TELEKOM AG": "DTE.DE",
+    "BMW AG": "BMW.DE",
+    "MERCEDES BENZ GROUP AG": "MBG.DE",
+    "VOLKSWAGEN AG": "VOW3.DE",
+    "BAYER AG": "BAYN.DE",
+    "ADIDAS AG": "ADS.DE",
+    "DEUTSCHE BANK AG": "DBK.DE",
+    "MUNICH RE": "MUV2.DE",
+    # France
+    "BNP PARIBAS SA": "BNP.PA",
+    "AIR LIQUIDE SA": "AI.PA",
+    "LOREAL SA": "OR.PA",
+    "SCHNEIDER ELECTRIC SE": "SU.PA",
+    "DANONE SA": "BN.PA",
+    "VINCI SA": "DG.PA",
+    "AIRBUS SE": "AIR.PA",
+    "KERING SA": "KER.PA",
     
-    # Actions Asie
+    # ========== Actions Asie ==========
     "LG ELECTRONICS INC": "066570.KS",
     "ASIAN PAINTS LTD": "ASIANPAINT.NS",
     "TATA CONSULTANCY SERVICES LTD": "TCS.NS",
@@ -487,8 +521,31 @@ NAME_TO_TICKER_MAP = {
     "TENCENT HOLDINGS LTD": "0700.HK",
     "MEITUAN": "3690.HK",
     "JD COM INC": "9618.HK",
+    # Inde - Ajouts V5
+    "MUTHOOT FINANCE LTD": "MUTHOOTFIN.NS",
+    "MUTHOOT FINANCE": "MUTHOOTFIN.NS",
+    "BAJAJ FINANCE LTD": "BAJFINANCE.NS",
+    "ICICI BANK LTD": "ICICIBANK.NS",
+    "STATE BANK OF INDIA": "SBIN.NS",
+    "HINDUSTAN UNILEVER LTD": "HINDUNILVR.NS",
+    "ITC LTD": "ITC.NS",
+    "BHARTI AIRTEL LTD": "BHARTIARTL.NS",
+    "WIPRO LTD": "WIPRO.NS",
+    "HCL TECHNOLOGIES LTD": "HCLTECH.NS",
+    "MARUTI SUZUKI INDIA LTD": "MARUTI.NS",
+    "TITAN COMPANY LTD": "TITAN.NS",
+    "SUN PHARMACEUTICAL INDUSTRIES LTD": "SUNPHARMA.NS",
+    "KOTAK MAHINDRA BANK LTD": "KOTAKBANK.NS",
+    "AXIS BANK LTD": "AXISBANK.NS",
+    "LARSEN & TOUBRO LTD": "LT.NS",
+    # Japon
+    "TOYOTA MOTOR CORP": "7203.T",
+    "SONY GROUP CORP": "6758.T",
+    "KEYENCE CORP": "6861.T",
+    "SOFTBANK GROUP CORP": "9984.T",
+    "MITSUBISHI UFJ FINANCIAL GROUP": "8306.T",
     
-    # Actions US
+    # ========== Actions US ==========
     "AMGEN INC": "AMGN",
     "STEEL DYNAMICS INC": "STLD",
     "EXPEDITORS INTERNATIONAL OF WASHIN": "EXPD",
@@ -525,8 +582,101 @@ NAME_TO_TICKER_MAP = {
     "INTEL CORP": "INTC",
     "AMD INC": "AMD",
     "QUALCOMM INC": "QCOM",
+    # Ajouts V5 - US
+    "ELI LILLY": "LLY",
+    "ELI LILLY AND CO": "LLY",
+    "ELI LILLY & CO": "LLY",
+    "CUMMINS INC": "CMI",
+    "CUMMINS": "CMI",
+    "TJX INC": "TJX",
+    "TJX COMPANIES INC": "TJX",
+    "THE TJX COMPANIES INC": "TJX",
+    "CATERPILLAR INC": "CAT",
+    "DEERE & CO": "DE",
+    "3M CO": "MMM",
+    "HONEYWELL INTERNATIONAL INC": "HON",
+    "LOCKHEED MARTIN CORP": "LMT",
+    "RAYTHEON TECHNOLOGIES CORP": "RTX",
+    "BOEING CO": "BA",
+    "GENERAL ELECTRIC CO": "GE",
+    "UNION PACIFIC CORP": "UNP",
+    "UNITED PARCEL SERVICE INC": "UPS",
+    "FEDEX CORP": "FDX",
+    "PAYPAL HOLDINGS INC": "PYPL",
+    "BLOCK INC": "SQ",
+    "INTUIT INC": "INTU",
+    "SERVICENOW INC": "NOW",
+    "SNOWFLAKE INC": "SNOW",
+    "PALANTIR TECHNOLOGIES INC": "PLTR",
+    "COINBASE GLOBAL INC": "COIN",
+    "MODERNA INC": "MRNA",
+    "PFIZER INC": "PFE",
+    "BRISTOL MYERS SQUIBB CO": "BMY",
+    "GILEAD SCIENCES INC": "GILD",
+    "REGENERON PHARMACEUTICALS INC": "REGN",
+    "VERTEX PHARMACEUTICALS INC": "VRTX",
+    "DANAHER CORP": "DHR",
+    "THERMO FISHER SCIENTIFIC INC": "TMO",
+    "ABBOTT LABORATORIES": "ABT",
+    "MEDTRONIC PLC": "MDT",
+    "STRYKER CORP": "SYK",
+    "INTUITIVE SURGICAL INC": "ISRG",
+    "MCDONALDS CORP": "MCD",
+    "STARBUCKS CORP": "SBUX",
+    "NIKE INC": "NKE",
+    "LULULEMON ATHLETICA INC": "LULU",
+    "TARGET CORP": "TGT",
+    "LOWES COMPANIES INC": "LOW",
+    "DOLLAR GENERAL CORP": "DG",
+    "ROSS STORES INC": "ROST",
+    "AUTOZONE INC": "AZO",
+    "OREILLY AUTOMOTIVE INC": "ORLY",
+    "BOOKING HOLDINGS INC": "BKNG",
+    "AIRBNB INC": "ABNB",
+    "UBER TECHNOLOGIES INC": "UBER",
+    "DOORDASH INC": "DASH",
+    "RIVIAN AUTOMOTIVE INC": "RIVN",
+    "LUCID GROUP INC": "LCID",
+    "BANK OF AMERICA CORP": "BAC",
+    "WELLS FARGO & CO": "WFC",
+    "CITIGROUP INC": "C",
+    "GOLDMAN SACHS GROUP INC": "GS",
+    "MORGAN STANLEY": "MS",
+    "CHARLES SCHWAB CORP": "SCHW",
+    "BLACKROCK INC": "BLK",
+    "S&P GLOBAL INC": "SPGI",
+    "MOODYS CORP": "MCO",
+    "CME GROUP INC": "CME",
+    "INTERCONTINENTAL EXCHANGE INC": "ICE",
+    "AMERICAN EXPRESS CO": "AXP",
+    "CAPITAL ONE FINANCIAL CORP": "COF",
+    "PROGRESSIVE CORP": "PGR",
+    "MARSH & MCLENNAN COMPANIES INC": "MMC",
+    "AON PLC": "AON",
+    "TRAVELERS COMPANIES INC": "TRV",
+    "CHUBB LTD": "CB",
+    "METLIFE INC": "MET",
+    "PRUDENTIAL FINANCIAL INC": "PRU",
+    "AFLAC INC": "AFL",
+    "AMERICAN TOWER CORP": "AMT",
+    "CROWN CASTLE INC": "CCI",
+    "EQUINIX INC": "EQIX",
+    "DIGITAL REALTY TRUST INC": "DLR",
+    "PROLOGIS INC": "PLD",
+    "PUBLIC STORAGE": "PSA",
+    "SIMON PROPERTY GROUP INC": "SPG",
+    "REALTY INCOME CORP": "O",
+    "WELLTOWER INC": "WELL",
+    "DUKE ENERGY CORP": "DUK",
+    "SOUTHERN CO": "SO",
+    "DOMINION ENERGY INC": "D",
+    "NEXTERA ENERGY INC": "NEE",
+    "AMERICAN ELECTRIC POWER CO INC": "AEP",
+    "XCEL ENERGY INC": "XEL",
+    "SEMPRA": "SRE",
+    "CONSOLIDATED EDISON INC": "ED",
     
-    # ETF Gold
+    # ========== ETF Gold ==========
     "SPDR Gold Shares": "GLD",
     "iShares Gold Trust": "IAU",
     "SPDR Gold MiniShares Trust": "GLDM",
@@ -535,7 +685,7 @@ NAME_TO_TICKER_MAP = {
     "abrdn Physical Precious Metals Basket Shares ETF": "GLTR",
     "Goldman Sachs Physical Gold ETF": "AAAU",
     
-    # ETF Country/Region
+    # ========== ETF Country/Region ==========
     "iShares MSCI Spain ETF": "EWP",
     "iShares MSCI World ETF": "URTH",
     "iShares MSCI EAFE ETF": "EFA",
@@ -549,7 +699,7 @@ NAME_TO_TICKER_MAP = {
     "iShares MSCI India ETF": "INDA",
     "iShares MSCI Brazil ETF": "EWZ",
     
-    # ETF Sectoriels
+    # ========== ETF Sectoriels ==========
     "Technology Select Sector SPDR Fund": "XLK",
     "Financial Select Sector SPDR Fund": "XLF",
     "Health Care Select Sector SPDR Fund": "XLV",
@@ -560,8 +710,9 @@ NAME_TO_TICKER_MAP = {
     "Industrial Select Sector SPDR Fund": "XLI",
     "Materials Select Sector SPDR Fund": "XLB",
     "Real Estate Select Sector SPDR Fund": "XLRE",
+    "Communication Services Select Sector SPDR Fund": "XLC",
     
-    # ETF Bonds/Fixed Income
+    # ========== ETF Bonds/Fixed Income ==========
     "Alpha Architect 1-3 Month Boxx Fund": "BOXX",
     "Eaton Vance Total Return Fund": "ETV",
     "JPMorgan Limited Duration ETF": "JPLD",
@@ -572,21 +723,45 @@ NAME_TO_TICKER_MAP = {
     "Vanguard Total Bond Market ETF": "BND",
     "iShares TIPS Bond ETF": "TIP",
     "iShares Flexible Income Active ETF": "BINC",
+    # Ajouts V5 - Bonds ETF
+    "SPDR DoubleLine Total Return Tactical ETF": "TOTL",
+    "SPDR DoubleLine": "TOTL",
+    "iShares 1-3 Year Treasury Bond ETF": "SHY",
+    "iShares Short Treasury Bond ETF": "SHV",
+    "Vanguard Short-Term Bond ETF": "BSV",
+    "Vanguard Intermediate-Term Bond ETF": "BIV",
+    "Vanguard Long-Term Bond ETF": "BLV",
+    "iShares Core U.S. Aggregate Bond ETF": "AGG",
+    "SPDR Bloomberg Barclays High Yield Bond ETF": "JNK",
+    "iShares J.P. Morgan USD Emerging Markets Bond ETF": "EMB",
+    "Vanguard Total International Bond ETF": "BNDX",
+    "iShares National Muni Bond ETF": "MUB",
+    "PIMCO Enhanced Short Maturity Active ETF": "MINT",
+    "iShares 0-3 Month Treasury Bond ETF": "SGOV",
+    "SPDR Bloomberg 1-3 Month T-Bill ETF": "BIL",
     
-    # ETF Dividendes
+    # ========== ETF Dividendes ==========
     "Vanguard Dividend Appreciation ETF": "VIG",
     "Schwab U.S. Dividend Equity ETF": "SCHD",
     "iShares Select Dividend ETF": "DVY",
     "SPDR S&P Dividend ETF": "SDY",
+    "Vanguard High Dividend Yield ETF": "VYM",
+    "iShares Core Dividend Growth ETF": "DGRO",
+    "ProShares S&P 500 Dividend Aristocrats ETF": "NOBL",
     
-    # ETF Large-cap
+    # ========== ETF Large-cap ==========
     "SPDR S&P 500 ETF Trust": "SPY",
     "iShares Core S&P 500 ETF": "IVV",
     "Vanguard S&P 500 ETF": "VOO",
     "Invesco QQQ Trust": "QQQ",
     "Vanguard Total Stock Market ETF": "VTI",
+    "iShares Russell 2000 ETF": "IWM",
+    "Vanguard Growth ETF": "VUG",
+    "Vanguard Value ETF": "VTV",
+    "iShares Russell 1000 Growth ETF": "IWF",
+    "iShares Russell 1000 Value ETF": "IWD",
     
-    # Crypto
+    # ========== Crypto ==========
     "Bitcoin": "BTC/USD",
     "Ethereum": "ETH/USD",
     "Solana": "SOL/USD",
@@ -599,6 +774,9 @@ NAME_TO_TICKER_MAP = {
     "Litecoin": "LTC/USD",
     "XRP": "XRP/USD",
     "Dogecoin": "DOGE/USD",
+    "Binance Coin": "BNB/USD",
+    "Tron": "TRX/USD",
+    "Shiba Inu": "SHIB/USD",
 }
 
 
@@ -606,14 +784,17 @@ def name_to_ticker(name: str) -> Optional[str]:
     """Convertit un nom d'actif en ticker."""
     name_clean = name.strip().upper()
     
+    # Recherche exacte
     for map_name, ticker in NAME_TO_TICKER_MAP.items():
         if map_name.upper() == name_clean:
             return ticker
     
+    # Recherche partielle
     for map_name, ticker in NAME_TO_TICKER_MAP.items():
         if map_name.upper() in name_clean or name_clean in map_name.upper():
             return ticker
     
+    # Si c'est déjà un ticker court valide
     if len(name) <= 10 and name.replace(".", "").replace("-", "").replace("/", "").isalnum():
         return name
     
