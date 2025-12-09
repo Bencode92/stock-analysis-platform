@@ -1,41 +1,60 @@
 # portfolio_engine/__init__.py
 """
-Portfolio Engine - Moteur quantitatif de construction de portefeuilles.
+Portfolio Engine v4.0 - Phase 2.5 Refactoring
 
 Architecture:
-- universe.py       : Construction de l'univers d'actifs scorés
-- factors.py        : Scoring multi-facteur configurable
-- optimizer.py      : Optimisation mean-variance sous contraintes + buckets
-- llm_commentary.py : Génération des commentaires via LLM (prompt compact)
-- sector_quality.py : Filtre Buffett avec seuils ajustés par secteur
-- preset_meta.py    : Presets, buckets, contraintes par profil (NEW)
+- universe.py       : Chargement et préparation des données (PAS de scoring)
+- factors.py        : SEUL moteur d'alpha - scoring multi-facteur + Buffett
+- optimizer.py      : Optimisation mean-variance + covariance hybride + hard filter Buffett
+- llm_commentary.py : Génération des commentaires via LLM
+- sector_quality.py : Métriques Buffett par secteur (utilisé par factors.py)
+- preset_meta.py    : Presets, buckets, contraintes par profil
+
+PARI CENTRAL:
+"Des entreprises de qualité fondamentale (ROIC > 10%, FCF positif)
+avec un momentum positif sur 3-12 mois surperforment à horizon 1-3 ans."
 
 Le LLM n'intervient PAS sur les poids - uniquement sur les justifications.
 """
 
+# Universe (chargement données - PAS de scoring)
 from .universe import (
-    build_scored_universe,
-    build_scored_universe_from_files,
-    load_and_build_universe,
+    # Fonctions principales v3.0
+    build_raw_universe,
+    build_raw_universe_from_files,
+    load_and_prepare_universe,
     load_etf_csv,
-    compute_scores,
+    filter_by_risk_bounds,
+    # Filtres par catégorie
     filter_equities,
     filter_etfs,
     filter_crypto,
+    # Helpers
     fnum,
     zscore,
     winsorize,
     sector_balanced_selection,
+    # DEPRECATED (compatibilité)
+    build_scored_universe,
+    build_scored_universe_from_files,
+    load_and_build_universe,
+    compute_scores,
 )
 
+# Factors (SEUL moteur d'alpha)
 from .factors import (
     FactorScorer,
     FactorWeights,
     PROFILE_WEIGHTS,
     rescore_universe_by_profile,
     get_factor_weights_summary,
+    compute_buffett_quality_score,
+    get_quality_coverage,
+    compare_factor_profiles,
+    SECTOR_QUALITY_THRESHOLDS,
 )
 
+# Optimizer (mean-variance + covariance hybride)
 from .optimizer import (
     PortfolioOptimizer,
     ProfileConstraints,
@@ -43,13 +62,22 @@ from .optimizer import (
     PROFILES,
     convert_universe_to_assets,
     validate_portfolio,
-    # New Phase 2 exports
+    # Bucket/Preset
     assign_preset_to_asset,
     enrich_assets_with_buckets,
+    # Deduplication
     deduplicate_etfs,
     detect_etf_exposure,
+    deduplicate_stocks_by_corporate_group,
+    # Hard filter
+    apply_buffett_hard_filter,
+    BUFFETT_HARD_FILTER_MIN,
+    # Covariance hybride
+    HybridCovarianceEstimator,
+    COVARIANCE_EMPIRICAL_WEIGHT,
 )
 
+# LLM Commentary
 from .llm_commentary import (
     build_commentary_prompt,
     parse_llm_response,
@@ -60,6 +88,7 @@ from .llm_commentary import (
     SYSTEM_PROMPT,
 )
 
+# Sector Quality (Buffett Filter)
 from .sector_quality import (
     SECTOR_PROFILES,
     SECTOR_MAPPING,
@@ -73,7 +102,7 @@ from .sector_quality import (
     get_sector_key,
 )
 
-# NEW: Preset Meta exports
+# Preset Meta
 from .preset_meta import (
     # Enums
     AssetClass,
@@ -108,15 +137,15 @@ from .preset_meta import (
     validate_portfolio_buckets,
 )
 
-__version__ = "3.0.0"
+__version__ = "4.0.0"
 
 __all__ = [
-    # Universe
-    "build_scored_universe",
-    "build_scored_universe_from_files",
-    "load_and_build_universe",
+    # Universe (v3.0)
+    "build_raw_universe",
+    "build_raw_universe_from_files",
+    "load_and_prepare_universe",
     "load_etf_csv",
-    "compute_scores",
+    "filter_by_risk_bounds",
     "filter_equities",
     "filter_etfs",
     "filter_crypto",
@@ -124,13 +153,22 @@ __all__ = [
     "zscore",
     "winsorize",
     "sector_balanced_selection",
-    # Factors
+    # Universe (DEPRECATED)
+    "build_scored_universe",
+    "build_scored_universe_from_files",
+    "load_and_build_universe",
+    "compute_scores",
+    # Factors (v2.0 - SEUL moteur d'alpha)
     "FactorScorer",
     "FactorWeights",
     "PROFILE_WEIGHTS",
     "rescore_universe_by_profile",
     "get_factor_weights_summary",
-    # Optimizer
+    "compute_buffett_quality_score",
+    "get_quality_coverage",
+    "compare_factor_profiles",
+    "SECTOR_QUALITY_THRESHOLDS",
+    # Optimizer (v6)
     "PortfolioOptimizer",
     "ProfileConstraints",
     "Asset",
@@ -141,6 +179,11 @@ __all__ = [
     "enrich_assets_with_buckets",
     "deduplicate_etfs",
     "detect_etf_exposure",
+    "deduplicate_stocks_by_corporate_group",
+    "apply_buffett_hard_filter",
+    "BUFFETT_HARD_FILTER_MIN",
+    "HybridCovarianceEstimator",
+    "COVARIANCE_EMPIRICAL_WEIGHT",
     # LLM Commentary
     "build_commentary_prompt",
     "parse_llm_response",
@@ -160,7 +203,7 @@ __all__ = [
     "get_sector_summary",
     "get_profile",
     "get_sector_key",
-    # Preset Meta (NEW)
+    # Preset Meta
     "AssetClass",
     "Role",
     "RiskLevel",

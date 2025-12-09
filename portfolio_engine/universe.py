@@ -41,6 +41,27 @@ def fnum(x) -> float:
         return 0.0
 
 
+def zscore(values: List[float], winsor_pct: float = 0.02) -> np.ndarray:
+    """Z-score winsorisé (compatibilité)."""
+    arr = np.array(values, dtype=float)
+    arr = np.nan_to_num(arr, nan=0.0)
+    
+    if len(arr) == 0 or arr.std() < 1e-8:
+        return np.zeros_like(arr)
+    
+    lo, hi = np.percentile(arr, [winsor_pct * 100, 100 - winsor_pct * 100])
+    arr = np.clip(arr, lo, hi)
+    
+    return (arr - arr.mean()) / arr.std()
+
+
+def winsorize(arr: np.ndarray, pct: float = 0.02) -> np.ndarray:
+    """Winsorisation des outliers (compatibilité)."""
+    arr = np.array(arr, dtype=float)
+    lo, hi = np.percentile(arr, [pct * 100, 100 - pct * 100])
+    return np.clip(arr, lo, hi)
+
+
 # ============= DÉTECTION ETF LEVIER =============
 
 LEVERAGED_PATTERN = re.compile(
@@ -165,6 +186,45 @@ def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
     return filtered
 
 
+# ============= FILTRES PAR CATÉGORIE (COMPATIBILITÉ) =============
+
+def filter_equities(rows: List[dict]) -> List[dict]:
+    """Filtre les actions par bornes de risque (compatibilité)."""
+    return filter_by_risk_bounds(rows, "equity")
+
+
+def filter_etfs(rows: List[dict]) -> List[dict]:
+    """Filtre les ETF par bornes de risque (compatibilité)."""
+    return filter_by_risk_bounds(rows, "etf")
+
+
+def filter_crypto(rows: List[dict]) -> List[dict]:
+    """Filtre les crypto par bornes de risque (compatibilité)."""
+    return filter_by_risk_bounds(rows, "crypto")
+
+
+def sector_balanced_selection(assets: List[dict], max_per_sector: int = 5, top_n: int = 50) -> List[dict]:
+    """
+    Sélection équilibrée par secteur (compatibilité).
+    
+    v3.0: Simplifié - tri par score puis limite par secteur.
+    """
+    sorted_assets = sorted(assets, key=lambda x: fnum(x.get("score", 0)), reverse=True)
+    
+    selected = []
+    sector_count = defaultdict(int)
+    
+    for asset in sorted_assets:
+        if len(selected) >= top_n:
+            break
+        sector = asset.get("sector", "Unknown")
+        if sector_count[sector] < max_per_sector:
+            selected.append(asset)
+            sector_count[sector] += 1
+    
+    return selected
+
+
 # ============= CONSTRUCTION UNIVERS v3.0 =============
 
 def build_raw_universe(
@@ -181,7 +241,7 @@ def build_raw_universe(
     Ce module se concentre sur le chargement et la préparation.
     
     Args:
-        stocks_data: Liste des dicts stocks ou [{\"stocks\": [...]}]
+        stocks_data: Liste des dicts stocks ou [{"stocks": [...]}]
         etf_data: Liste des dicts ETF
         crypto_data: Liste des dicts crypto
         returns_series: Dict optionnel des séries de rendements
@@ -513,6 +573,22 @@ def load_and_prepare_universe(
 
 # ============= COMPATIBILITÉ LEGACY =============
 
+def compute_scores(assets: List[dict], profile: str = "Modéré") -> List[dict]:
+    """
+    DEPRECATED: Utilisez FactorScorer.compute_scores() directement.
+    
+    Cette fonction est conservée pour compatibilité.
+    """
+    logger.warning(
+        "⚠️ compute_scores dans universe.py est DEPRECATED. "
+        "Utilisez FactorScorer.compute_scores() pour éviter le double comptage."
+    )
+    
+    from .factors import FactorScorer
+    scorer = FactorScorer(profile=profile)
+    return scorer.compute_scores(assets)
+
+
 def build_scored_universe(*args, **kwargs):
     """
     DEPRECATED: Utilisez build_raw_universe + FactorScorer.
@@ -525,18 +601,49 @@ def build_scored_universe(*args, **kwargs):
         "Utilisez build_raw_universe + FactorScorer pour éviter le double comptage."
     )
     
-    # Import ici pour éviter import circulaire
     from .factors import FactorScorer
     
-    # Récupérer le profil si spécifié
     profile = kwargs.pop("profile", "Modéré")
-    
-    # Construire l'univers brut
     raw = build_raw_universe(*args, **kwargs)
-    
-    # Scorer avec FactorScorer
     scorer = FactorScorer(profile=profile)
     return scorer.compute_scores(raw)
+
+
+def build_scored_universe_from_files(
+    stocks_jsons: List[dict],
+    etf_csv_path: str,
+    crypto_csv_path: str,
+    profile: str = "Modéré",
+    **kwargs
+) -> Dict[str, List[dict]]:
+    """
+    DEPRECATED: Utilisez build_raw_universe_from_files + FactorScorer.
+    
+    Conservé pour compatibilité avec generate_portfolios_v4.py.
+    """
+    logger.warning(
+        "⚠️ build_scored_universe_from_files est DEPRECATED. "
+        "Utilisez build_raw_universe_from_files + FactorScorer."
+    )
+    
+    from .factors import FactorScorer
+    
+    # Construire l'univers brut
+    raw_universe = build_raw_universe_from_files(
+        stocks_jsons, etf_csv_path, crypto_csv_path, **kwargs
+    )
+    
+    # Scorer chaque catégorie
+    scorer = FactorScorer(profile=profile)
+    
+    scored_universe = {}
+    for category, assets in raw_universe.items():
+        if assets:
+            scored_universe[category] = scorer.compute_scores(list(assets))
+        else:
+            scored_universe[category] = []
+    
+    return scored_universe
 
 
 def load_and_build_universe(*args, **kwargs):
@@ -551,7 +658,6 @@ def load_and_build_universe(*args, **kwargs):
     from .factors import FactorScorer
     
     profile = kwargs.pop("profile", "Modéré")
-    # Ignorer buffett_mode car c'est maintenant un hard filter dans optimizer
     kwargs.pop("buffett_mode", None)
     kwargs.pop("buffett_min_score", None)
     
