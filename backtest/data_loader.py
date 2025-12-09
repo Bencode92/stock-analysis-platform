@@ -2,6 +2,11 @@
 """
 Chargement des données de prix historiques via Twelve Data API.
 
+V7: FIX FORMAT TICKER:MIC
+- Sépare TICKER:MIC en symbol + mic_code params séparés
+- CABK:XMAD → symbol=CABK, mic_code=XMAD
+- Corrige l'erreur "symbol is missing or invalid"
+
 V6: REFACTORING MAJEUR
 - Utilise stocks_*.json (déjà validés par stock-advanced-filter.js) comme source de mapping
 - Plus besoin de NAME_TO_TICKER_MAP statique - tout vient des fichiers générés
@@ -48,6 +53,28 @@ MIC_TO_COUNTRY = {
     "XTKS": "Japan", "XSHG": "China", "XSHE": "China", "XSES": "Singapore",
     "XBKK": "Thailand", "XKLS": "Malaysia", "XIDX": "Indonesia", "XASX": "Australia",
 }
+
+
+def parse_symbol_with_mic(symbol: str) -> Tuple[str, Optional[str]]:
+    """
+    Parse un symbole qui peut être au format TICKER:MIC.
+    
+    Args:
+        symbol: "CABK:XMAD" ou "AAPL" ou "SSE.L"
+    
+    Returns:
+        Tuple (base_ticker, mic_code ou None)
+    """
+    if not symbol:
+        return symbol, None
+    
+    # Format TICKER:MIC (ex: CABK:XMAD)
+    if ":" in symbol:
+        parts = symbol.split(":")
+        if len(parts) == 2:
+            return parts[0], parts[1]
+    
+    return symbol, None
 
 
 def parse_yahoo_symbol(symbol: str) -> Tuple[str, Optional[str], Optional[str]]:
@@ -108,7 +135,14 @@ class TwelveDataLoader:
         end_date: str,
         interval: str = "1day"
     ) -> Optional[pd.DataFrame]:
-        """Récupère les prix historiques pour un symbole."""
+        """
+        Récupère les prix historiques pour un symbole.
+        
+        Gère automatiquement le format TICKER:MIC en séparant les paramètres.
+        """
+        # ✅ V7 FIX: Séparer TICKER:MIC en params distincts
+        base_symbol, mic_code = parse_symbol_with_mic(symbol)
+        
         cache_key = f"{symbol}_{start_date}_{end_date}_{interval}"
         if cache_key in self._cache:
             return self._cache[cache_key]
@@ -116,7 +150,7 @@ class TwelveDataLoader:
         self._rate_limit()
         
         params = {
-            "symbol": symbol,
+            "symbol": base_symbol,  # Juste le ticker, sans :MIC
             "interval": interval,
             "start_date": start_date,
             "end_date": end_date,
@@ -124,6 +158,10 @@ class TwelveDataLoader:
             "format": "JSON",
             "timezone": "America/New_York",
         }
+        
+        # Ajouter mic_code si présent
+        if mic_code:
+            params["mic_code"] = mic_code
         
         try:
             response = self.session.get(f"{self.BASE_URL}/time_series", params=params, timeout=30)
@@ -171,6 +209,7 @@ class TwelveDataLoader:
             df = self.get_time_series(symbol, start_date, end_date, interval)
             
             if df is not None and "close" in df.columns:
+                # Utiliser le symbole original comme clé (pour le mapping des poids)
                 all_data[symbol] = df["close"]
                 loaded += 1
             else:
@@ -358,6 +397,53 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
     
     logger.info(f"Extracted {len(symbols)} unique symbols from portfolios ({total_resolved}/{total_requested} resolved)")
     return symbols, total_requested, total_resolved
+
+
+def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> Dict[str, Dict[str, float]]:
+    """
+    Extrait les poids de chaque profil depuis portfolios.json.
+    
+    Returns:
+        Dict[profile_name, Dict[ticker, weight_decimal]]
+        Ex: {"Agressif": {"AAPL": 0.14, "MSFT": 0.12, ...}, ...}
+    """
+    weights_by_profile = {}
+    
+    try:
+        with open(portfolios_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load portfolios from {portfolios_path}: {e}")
+        return weights_by_profile
+    
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        if profile not in data:
+            continue
+        
+        profile_data = data[profile]
+        profile_weights = {}
+        
+        for category in ["Actions", "ETF", "Obligations", "Crypto"]:
+            if category not in profile_data:
+                continue
+            
+            for name, weight in profile_data[category].items():
+                ticker = name_to_ticker(name)
+                if ticker:
+                    # Convertir le poids en décimal (14 → 0.14)
+                    weight_decimal = weight / 100.0 if weight > 1 else weight
+                    profile_weights[ticker] = weight_decimal
+        
+        # Normaliser pour s'assurer que la somme = 1
+        total = sum(profile_weights.values())
+        if total > 0 and abs(total - 1.0) > 0.01:
+            logger.warning(f"Profile {profile}: weights sum to {total:.2%}, normalizing...")
+            profile_weights = {k: v/total for k, v in profile_weights.items()}
+        
+        weights_by_profile[profile] = profile_weights
+        logger.info(f"Extracted {len(profile_weights)} weights for {profile}: sum={sum(profile_weights.values()):.2%}")
+    
+    return weights_by_profile
 
 
 # ============ LOAD PRICES FOR BACKTEST ============
