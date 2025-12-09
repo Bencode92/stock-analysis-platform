@@ -9,6 +9,8 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.1: FIX BACKTEST - Utilise poids FIXES du portfolio (pas recalcul dynamique)
+
 """
 
 import os
@@ -473,10 +475,13 @@ def apply_compliance(portfolios: Dict[str, Dict]) -> Dict[str, Dict]:
 
 def run_backtest_all_profiles(config: Dict) -> Dict:
     """
-    Exécute le backtest pour les 3 profils.
+    Exécute le backtest pour les 3 profils avec POIDS FIXES du portfolio.
+    
+    V4.1: Utilise run_backtest_fixed_weights() au lieu de run_backtest()
+    pour refléter vraiment la performance du portfolio généré.
     """
     logger.info("\n" + "="*60)
-    logger.info("📈 BACKTEST - Validation historique")
+    logger.info("📈 BACKTEST - Validation historique (POIDS FIXES)")
     logger.info("="*60)
     
     # Vérifier la clé API Twelve Data
@@ -486,8 +491,13 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
         return {"error": "TWELVE_DATA_API not set", "skipped": True}
     
     try:
-        from backtest import BacktestConfig, run_backtest, load_prices_for_backtest
-        from backtest.engine import print_backtest_report, compute_backtest_stats
+        from backtest import BacktestConfig, load_prices_for_backtest
+        from backtest.engine import (
+            run_backtest_fixed_weights,  # ✅ NOUVELLE FONCTION
+            print_backtest_report, 
+            compute_backtest_stats
+        )
+        from backtest.data_loader import extract_portfolio_weights  # ✅ NOUVEAU
     except ImportError as e:
         logger.error(f"❌ Import backtest failed: {e}")
         return {"error": str(e), "skipped": True}
@@ -502,6 +512,17 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
     end_date = datetime.datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.datetime.now() - timedelta(days=CONFIG["backtest_days"] + 30)).strftime("%Y-%m-%d")
     backtest_start = (datetime.datetime.now() - timedelta(days=CONFIG["backtest_days"])).strftime("%Y-%m-%d")
+    
+    # ✅ NOUVEAU: Charger les poids FIXES depuis portfolios.json
+    logger.info("📥 Chargement des poids depuis portfolios.json...")
+    portfolio_weights = extract_portfolio_weights(CONFIG["output_path"])
+    
+    if not portfolio_weights:
+        logger.error("❌ Impossible de charger les poids du portfolio")
+        return {"error": "No portfolio weights found", "skipped": True}
+    
+    for profile, weights in portfolio_weights.items():
+        logger.info(f"   {profile}: {len(weights)} actifs, total={sum(weights.values()):.1%}")
     
     # Charger les prix UNE SEULE FOIS
     logger.info(f"📥 Chargement des prix ({CONFIG['backtest_days']}j)...")
@@ -518,12 +539,24 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
         logger.error(f"❌ Échec chargement prix: {e}")
         return {"error": str(e), "skipped": True}
     
-    # Exécuter les 3 profils
+    # Exécuter les 3 profils avec POIDS FIXES
     results = []
     profiles = ["Agressif", "Modéré", "Stable"]
     
     for profile in profiles:
-        logger.info(f"\n⚙️  Backtest {profile}...")
+        logger.info(f"\n⚙️  Backtest {profile} (poids fixes)...")
+        
+        # Récupérer les poids fixes pour ce profil
+        fixed_weights = portfolio_weights.get(profile, {})
+        
+        if not fixed_weights:
+            logger.warning(f"⚠️ Pas de poids pour {profile}, skip")
+            results.append({
+                "profile": profile,
+                "success": False,
+                "error": "No weights found",
+            })
+            continue
         
         backtest_config = BacktestConfig(
             profile=profile,
@@ -531,13 +564,16 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
             end_date=end_date,
             rebalance_freq=CONFIG["backtest_freq"],
             transaction_cost_bp=yaml_config.get("backtest", {}).get("transaction_cost_bp", 10),
-            turnover_penalty=yaml_config.get("backtest", {}).get("turnover_penalty", 0.001),
+            turnover_penalty=0,  # Pas de pénalité, poids fixes
         )
         
-        profile_config = yaml_config.get("profiles", {}).get(profile, {})
-        
         try:
-            result = run_backtest(prices, backtest_config, profile_config)
+            # ✅ UTILISE LA NOUVELLE FONCTION AVEC POIDS FIXES
+            result = run_backtest_fixed_weights(
+                prices=prices,
+                fixed_weights=fixed_weights,
+                config=backtest_config,
+            )
             print_backtest_report(result)
             
             results.append({
@@ -551,6 +587,8 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
             })
         except Exception as e:
             logger.error(f"❌ Backtest {profile} failed: {e}")
+            import traceback
+            traceback.print_exc()
             results.append({
                 "profile": profile,
                 "success": False,
@@ -565,6 +603,7 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
         "period_days": CONFIG["backtest_days"],
         "frequency": CONFIG["backtest_freq"],
         "symbols_count": len(prices.columns),
+        "backtest_mode": "fixed_weights",  # ✅ NOUVEAU
         "results": results,
         "comparison": {
             r["profile"]: r.get("stats", {})
@@ -576,7 +615,7 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
 def print_comparison_table(results: List[dict]):
     """Affiche un tableau comparatif des 3 profils."""
     print("\n" + "="*80)
-    print("📊 COMPARAISON DES 3 PROFILS")
+    print("📊 COMPARAISON DES 3 PROFILS (POIDS FIXES)")
     print("="*80)
     
     print(f"\n{'Métrique':<25} | {'Agressif':>15} | {'Modéré':>15} | {'Stable':>15}")
@@ -588,8 +627,10 @@ def print_comparison_table(results: List[dict]):
         ("Volatility", "volatility_pct", "%"),
         ("Sharpe Ratio", "sharpe_ratio", ""),
         ("Max Drawdown", "max_drawdown_pct", "%"),
-        ("Turnover (annuel)", "turnover_annualized_pct", "%"),
         ("Win Rate", "win_rate_pct", "%"),
+        ("Weight Coverage", "weight_coverage_pct", "%"),  # ✅ NOUVEAU
+        ("Benchmark Return", "benchmark_return_pct", "%"),
+        ("Excess Return", "excess_return_pct", "%"),
     ]
     
     by_profile = {r["profile"]: r.get("stats", {}) for r in results if r.get("success")}
@@ -627,6 +668,18 @@ def print_comparison_table(results: List[dict]):
     if dds:
         best = max(dds, key=lambda x: x[1])
         print(f"   Meilleur Drawdown: {best[0]} ({best[1]:.2f}%)")
+    
+    # Vérifier l'ordre attendu
+    print("\n📋 VALIDATION ORDRE DES RETURNS:")
+    sorted_returns = sorted(returns, key=lambda x: x[1], reverse=True)
+    expected_order = ["Agressif", "Modéré", "Stable"]
+    actual_order = [r[0] for r in sorted_returns]
+    
+    if actual_order == expected_order:
+        print("   ✅ Ordre correct: Agressif > Modéré > Stable")
+    else:
+        print(f"   ⚠️ Ordre inattendu: {' > '.join(actual_order)}")
+        print(f"      Attendu: {' > '.join(expected_order)}")
     
     print()
 
@@ -677,7 +730,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4_deterministic_engine",
+        "version": "v4.1_fixed_weights_backtest",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
     }
@@ -705,7 +758,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4_deterministic_engine",
+        "version": "v4.1_fixed_weights_backtest",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -739,7 +792,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4 - Génération + Backtest")
+    logger.info("🚀 Portfolio Engine v4.1 - Génération + Backtest (POIDS FIXES)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -758,7 +811,7 @@ def main():
     # 5. Sauvegarder les portfolios
     save_portfolios(portfolios, assets)
     
-    # 6. Backtest (si activé)
+    # 6. Backtest (si activé) - AVEC POIDS FIXES
     backtest_results = None
     if CONFIG["run_backtest"]:
         yaml_config = load_yaml_config(CONFIG["config_path"])
@@ -776,11 +829,11 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4:")
+    logger.info("Fonctionnalités v4.1:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
-    logger.info("   • Backtest 90j intégré")
+    logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
 
