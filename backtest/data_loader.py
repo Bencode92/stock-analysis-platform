@@ -2,6 +2,11 @@
 """
 Chargement des données de prix historiques via Twelve Data API.
 
+V9: FIX - Lire _tickers en priorité (Solution C)
+- extract_portfolio_weights() lit d'abord le bloc _tickers
+- Fallback sur mapping nom→ticker si _tickers absent (rétrocompat)
+- Log le % de poids effectivement chargé et les tickers introuvables
+
 V8: FIX PARSE WEIGHT STRING
 - Parse les poids au format "14%" (string) depuis portfolios.json
 - Fonction parse_weight_value() pour gérer tous les formats
@@ -361,6 +366,8 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
     """
     Extrait tous les symboles uniques des portefeuilles générés.
     
+    V9: Utilise _tickers en priorité si disponible.
+    
     Returns:
         Tuple (symbols_set, total_requested, total_resolved)
     """
@@ -382,18 +389,29 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
         
         profile_data = data[profile]
         
-        for category in ["Actions", "ETF", "Obligations", "Crypto"]:
-            if category not in profile_data:
-                continue
-            
-            for name, weight in profile_data[category].items():
+        # ✅ V9: Priorité au bloc _tickers
+        if "_tickers" in profile_data and profile_data["_tickers"]:
+            tickers_block = profile_data["_tickers"]
+            for ticker in tickers_block.keys():
                 total_requested += 1
-                ticker = name_to_ticker(name)
-                if ticker:
-                    symbols.add(ticker)
-                    total_resolved += 1
-                else:
-                    unresolved.append(name)
+                symbols.add(ticker)
+                total_resolved += 1
+            logger.info(f"✅ {profile}: Using _tickers block ({len(tickers_block)} tickers)")
+        else:
+            # Fallback: mapping nom→ticker
+            for category in ["Actions", "ETF", "Obligations", "Crypto"]:
+                if category not in profile_data:
+                    continue
+                
+                for name, weight in profile_data[category].items():
+                    total_requested += 1
+                    ticker = name_to_ticker(name)
+                    if ticker:
+                        symbols.add(ticker)
+                        total_resolved += 1
+                    else:
+                        unresolved.append(name)
+            logger.warning(f"⚠️ {profile}: Fallback to name→ticker mapping")
     
     if unresolved:
         logger.warning(f"Unresolved names ({len(unresolved)}): {unresolved[:5]}...")
@@ -440,10 +458,8 @@ def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> 
     """
     Extrait les poids de chaque profil depuis portfolios.json.
     
-    Gère les formats:
-    - "14%" (string avec %)
-    - 14 (entier)
-    - 0.14 (décimal)
+    V9: Lit en PRIORITÉ le bloc _tickers (Solution C).
+    Fallback sur mapping nom→ticker si _tickers absent (rétrocompat).
     
     Returns:
         Dict[profile_name, Dict[ticker, weight_decimal]]
@@ -464,27 +480,61 @@ def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> 
         
         profile_data = data[profile]
         profile_weights = {}
+        source = "unknown"
+        unresolved_names = []
         
-        for category in ["Actions", "ETF", "Obligations", "Crypto"]:
-            if category not in profile_data:
-                continue
+        # ============ V9: PRIORITÉ AU BLOC _tickers ============
+        if "_tickers" in profile_data and profile_data["_tickers"]:
+            tickers_block = profile_data["_tickers"]
+            source = "_tickers"
             
-            for name, weight in profile_data[category].items():
-                ticker = name_to_ticker(name)
-                if ticker:
-                    # ✅ V8 FIX: Parser le poids correctement (string "14%" ou int 14)
-                    weight_decimal = parse_weight_value(weight)
-                    if weight_decimal > 0:
-                        profile_weights[ticker] = weight_decimal
+            for ticker, weight in tickers_block.items():
+                # Les poids dans _tickers sont déjà en décimal (0.14)
+                weight_decimal = float(weight)
+                if weight_decimal > 0:
+                    profile_weights[ticker] = weight_decimal
+            
+            logger.info(f"✅ {profile}: Loaded {len(profile_weights)} weights from _tickers block")
         
-        # Normaliser pour s'assurer que la somme = 1
+        else:
+            # ============ FALLBACK: MAPPING NOM→TICKER ============
+            source = "name_mapping"
+            logger.warning(f"⚠️ {profile}: _tickers block not found, falling back to name→ticker mapping")
+            
+            for category in ["Actions", "ETF", "Obligations", "Crypto"]:
+                if category not in profile_data:
+                    continue
+                
+                for name, weight in profile_data[category].items():
+                    ticker = name_to_ticker(name)
+                    if ticker:
+                        # V8 FIX: Parser le poids correctement (string "14%" ou int 14)
+                        weight_decimal = parse_weight_value(weight)
+                        if weight_decimal > 0:
+                            profile_weights[ticker] = weight_decimal
+                    else:
+                        unresolved_names.append(name)
+            
+            if unresolved_names:
+                logger.warning(f"   ❌ Unresolved ({len(unresolved_names)}): {unresolved_names[:5]}...")
+        
+        # ============ NORMALISATION ET VALIDATION ============
         total = sum(profile_weights.values())
+        
         if total > 0 and abs(total - 1.0) > 0.01:
-            logger.warning(f"Profile {profile}: weights sum to {total:.2%}, normalizing...")
+            logger.warning(f"   ⚠️ {profile}: weights sum to {total:.2%}, normalizing...")
             profile_weights = {k: v/total for k, v in profile_weights.items()}
         
         weights_by_profile[profile] = profile_weights
-        logger.info(f"Extracted {len(profile_weights)} weights for {profile}: sum={sum(profile_weights.values()):.2%}")
+        
+        # ============ LOG RÉCAPITULATIF ============
+        final_total = sum(profile_weights.values())
+        print(f"\n📋 {profile} weights loaded:")
+        print(f"   Source:           {source}")
+        print(f"   Tickers:          {len(profile_weights)}")
+        print(f"   Total weight:     {final_total:.2%}")
+        if unresolved_names:
+            print(f"   Unresolved:       {len(unresolved_names)}")
     
     return weights_by_profile
 
