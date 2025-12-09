@@ -1,6 +1,9 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.0 — Phase 2.5 Refactoring.
+Construction de l'univers d'actifs v3.1 — Phase 2.5 Refactoring.
+
+CHANGEMENTS v3.1:
+- FIX: Ajout des champs ticker/symbol pour ETF et bonds (V4.2.4 fix)
 
 CHANGEMENTS MAJEURS v3.0:
 1. SUPPRESSION du scoring interne (double comptage éliminé)
@@ -225,7 +228,7 @@ def sector_balanced_selection(assets: List[dict], max_per_sector: int = 5, top_n
     return selected
 
 
-# ============= CONSTRUCTION UNIVERS v3.0 =============
+# ============= CONSTRUCTION UNIVERS v3.1 =============
 
 def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
@@ -237,6 +240,7 @@ def build_raw_universe(
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Le scoring est fait par FactorScorer, pas ici.
     Ce module se concentre sur le chargement et la préparation.
     
@@ -250,7 +254,7 @@ def build_raw_universe(
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.0...")
+    logger.info("🧮 Construction de l'univers brut v3.1...")
     
     all_assets = []
     
@@ -304,17 +308,25 @@ def build_raw_universe(
         for it in etf_data:
             is_bond = "bond" in str(it.get("fund_type", "")).lower()
             row = {
-                "id": it.get("isin") or it.get("ticker") or it.get("name") or f"ETF_{len(etf_rows)+1}",
+                "id": it.get("isin") or it.get("ticker") or it.get("symbol") or it.get("name") or f"ETF_{len(etf_rows)+1}",
                 "name": it.get("name"),
+                # === V3.1 FIX: Ajout ticker/symbol pour résolution API ===
+                "ticker": it.get("ticker") or it.get("symbol"),
+                "symbol": it.get("symbol") or it.get("ticker"),
+                # Performance
                 "perf_24h": it.get("daily_change_pct"),
                 "ytd": it.get("ytd_return_pct") or it.get("ytd"),
+                # Risque
                 "vol_3y": it.get("vol_3y_pct") or it.get("vol_pct") or it.get("vol"),
                 "vol30": it.get("vol_pct"),
                 "vol": it.get("vol_pct") or it.get("vol"),
+                # Méta
                 "liquidity": it.get("aum_usd"),
                 "sector": "Bonds" if is_bond else it.get("sector", "Diversified"),
                 "country": it.get("domicile", "Global"),
                 "category": "bond" if is_bond else "etf",
+                # ISIN pour référence
+                "isin": it.get("isin"),
             }
             if is_bond:
                 bond_rows.append(row)
@@ -338,6 +350,8 @@ def build_raw_universe(
             cr_rows.append({
                 "id": it.get("symbol") or it.get("pair") or f"CR_{len(cr_rows)+1}",
                 "name": it.get("symbol") or it.get("name"),
+                "ticker": it.get("symbol"),  # Crypto: symbol = ticker
+                "symbol": it.get("symbol"),
                 "perf_24h": it.get("ret_1d_pct") or it.get("perf_24h"),
                 "perf_7d": it.get("ret_7d_pct") or it.get("perf_7d"),
                 "ytd": it.get("ret_ytd_pct") or it.get("ytd"),
@@ -379,9 +393,10 @@ def build_raw_universe_from_files(
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.0 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.1 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -427,19 +442,28 @@ def build_raw_universe_from_files(
         etf_bonds = pd.DataFrame()
     
     def df_to_rows(df, is_bond=False):
+        """Convertit un DataFrame en liste de dicts avec ticker/symbol (V3.1 fix)."""
         rows = []
         for _, r in df.iterrows():
             rows.append({
-                "id": r.get("isin") or r.get("ticker") or r.get("name"),
+                "id": r.get("isin") or r.get("ticker") or r.get("symbol") or r.get("name"),
                 "name": str(r.get("name", "")),
+                # === V3.1 FIX: Ajout ticker/symbol pour résolution API ===
+                "ticker": r.get("ticker") or r.get("symbol"),
+                "symbol": r.get("symbol") or r.get("ticker"),
+                # Performance
                 "perf_24h": r.get("daily_change_pct"),
                 "ytd": r.get("ytd_return_pct"),
+                # Risque
                 "vol_3y": r.get("vol_3y_pct") or r.get("vol_pct"),
                 "vol30": r.get("vol_pct"),
+                # Méta
                 "liquidity": r.get("aum_usd"),
                 "sector": "Bonds" if is_bond else r.get("sector", "Diversified"),
                 "country": r.get("domicile", "Global"),
                 "category": "bond" if is_bond else "etf",
+                # ISIN pour référence
+                "isin": r.get("isin"),
             })
         return rows
     
@@ -458,6 +482,8 @@ def build_raw_universe_from_files(
             cr_rows.append({
                 "id": r.get("symbol") or r.get("pair"),
                 "name": str(r.get("symbol", "")),
+                "ticker": r.get("symbol"),  # Crypto: symbol = ticker
+                "symbol": r.get("symbol"),
                 "perf_24h": r.get("ret_1d_pct"),
                 "perf_7d": r.get("ret_7d_pct"),
                 "ytd": r.get("ret_ytd_pct"),
@@ -499,6 +525,7 @@ def load_and_prepare_universe(
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring. Le scoring est fait par FactorScorer.
     
     Workflow recommandé:
