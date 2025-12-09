@@ -1,0 +1,298 @@
+{
+  "version": "v4_deterministic_engine",
+  "timestamp": "20251209_081520",
+  "date": "2025-12-09T08:15:20.874050",
+  "buffett_config": {
+    "mode": "soft",
+    "min_score": 40
+  },
+  "portfolios": {
+    "Agressif": {
+      "allocation": {
+        "EQ_590": 14.6,
+        "EQ_981": 14.6,
+        "EQ_563": 10.0,
+        "EQ_292": 14.6,
+        "EQ_416": 2.0,
+        "ETF_s495": 10.0,
+        "ETF_s330": 5.0,
+        "ETF_s873": 14.6,
+        "EQ_946": 9.6,
+        "ETF_b2": 5.0
+      },
+      "diagnostics": {
+        "converged": true,
+        "message": "Optimization terminated successfully",
+        "portfolio_vol": 15.28,
+        "vol_target": 18.0,
+        "portfolio_score": 0.343,
+        "n_assets": 10,
+        "sectors": {
+          "Services publics": 14.6,
+          "Biens de consommation cycliques": 24.6,
+          "Energie": 14.6,
+          "Industries": 2.0,
+          "Diversified": 29.6,
+          "Finance": 9.6,
+          "Bonds": 5.0
+        },
+        "etf_exposures": {
+          "gold": 10.0,
+          "cash": 5.0
+        },
+        "bucket_exposure": {
+          "satellite": 55.8,
+          "defensive": 15.0,
+          "core": 29.2
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 29.2,
+            "target_min": 35.0,
+            "target_max": 45.0,
+            "in_range": false
+          },
+          "satellite": {
+            "actual": 55.8,
+            "target_min": 35.0,
+            "target_max": 50.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 15.0,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 5.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {
+          "hyundai": 14.6
+        },
+        "corporate_group_compliance": {
+          "hyundai": {
+            "actual": 14.6,
+            "max": 20.0,
+            "in_range": true
+          }
+        },
+        "deduplication_enabled": true,
+        "corporate_dedup_enabled": true,
+        "bucket_constraints_enabled": true
+      },
+      "justifications": {
+        "EQ_590": "SSE PLC est bien positionnée dans le secteur des services publics, offrant une stabilité dans un environnement volatil [SEC].",
+        "EQ_981": "HYUNDAI MOTOR S1 PREF bénéficie d'une forte demande dans le secteur des biens de consommation cycliques [SEC].",
+        "EQ_292": "EXPAND ENERGY CORP est exposée à la croissance du secteur énergétique, soutenue par la transition énergétique [TH].",
+        "ETF_s873": "L'ETF sur l'argent physique diversifie le portefeuille avec des actifs tangibles [TH].",
+        "EQ_563": "INDUSTRIA DE DISENO TEXTIL SA montre une résilience dans le secteur des biens de consommation [SEC].",
+        "ETF_s495": "SPDR Gold Shares offre une couverture contre l'inflation et l'incertitude économique [TH].",
+        "EQ_946": "KASIKORNBANK PUBLIC NON-VOTING DR est bien positionnée dans le secteur financier en Thaïlande [SEC].",
+        "ETF_s330": "iShares MSCI Spain ETF permet une exposition diversifiée au marché espagnol [MC].",
+        "ETF_b2": "Alpha Architect 1-3 Month Boxx Fund offre une stabilité dans un environnement de taux d'intérêt bas [MC].",
+        "EQ_416": "EXPEDITORS INTERNATIONAL OF WASHIN est un acteur clé dans la logistique, soutenu par la reprise économique [MC]."
+      },
+      "comment": "Le portefeuille agressif présente une bonne diversification avec une exposition significative aux secteurs cycliques et énergétiques, ce qui est pertinent dans un environnement de marché mixte. Les actifs choisis offrent un potentiel de croissance tout en maintenant une possiblee résilience face aux fluctuations du marché. L'inclusion d'ETF et d'actions solides renforce la stratégie d'investissement.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🔴 PROFIL AGRESSIF : Ce portefeuille présente un niveau de risque élevé. Il est destiné aux investisseurs ayant une tolérance au risque importante et un horizon d'investissement long terme (>5 ans).\n\n📊 Volatilité estimée : 15.3% (modérée)."
+    },
+    "Modéré": {
+      "allocation": {
+        "EQ_590": 14.6,
+        "ETF_s495": 10.0,
+        "EQ_563": 14.6,
+        "ETF_s330": 14.6,
+        "ETF_s499": 5.0,
+        "ETF_b2": 14.6,
+        "ETF_b8": 5.0,
+        "EQ_292": 2.0,
+        "EQ_946": 14.6,
+        "EQ_698": 5.0
+      },
+      "diagnostics": {
+        "converged": true,
+        "message": "Optimization terminated successfully",
+        "portfolio_vol": 10.73,
+        "vol_target": 12.0,
+        "portfolio_score": 0.28,
+        "n_assets": 10,
+        "sectors": {
+          "Services publics": 14.6,
+          "Diversified": 29.6,
+          "Biens de consommation cycliques": 14.6,
+          "Bonds": 19.6,
+          "Energie": 2.0,
+          "Finance": 14.6,
+          "Immobilier": 5.0
+        },
+        "etf_exposures": {
+          "gold": 10.0,
+          "cash": 14.6
+        },
+        "bucket_exposure": {
+          "satellite": 31.2,
+          "defensive": 29.6,
+          "core": 39.2
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 39.2,
+            "target_min": 45.0,
+            "target_max": 55.0,
+            "in_range": false
+          },
+          "satellite": {
+            "actual": 31.2,
+            "target_min": 15.0,
+            "target_max": 25.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 29.6,
+            "target_min": 20.0,
+            "target_max": 30.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 2.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "corporate_group_compliance": {},
+        "deduplication_enabled": true,
+        "corporate_dedup_enabled": true,
+        "bucket_constraints_enabled": true
+      },
+      "justifications": {
+        "EQ_590": "SSE PLC continue de montrer une stabilité dans le secteur des services publics, essentiel en période d'incertitude [SEC].",
+        "EQ_563": "INDUSTRIA DE DISENO TEXTIL SA bénéficie d'une demande constante dans le secteur des biens de consommation [SEC].",
+        "ETF_s330": "iShares MSCI Spain ETF offre une exposition diversifiée au marché espagnol, ce qui est stratégique en période de volatilité [MC].",
+        "ETF_b2": "Alpha Architect 1-3 Month Boxx Fund est un choix prudent dans un environnement de taux d'intérêt bas [MC].",
+        "EQ_946": "KASIKORNBANK PUBLIC NON-VOTING DR est bien positionnée pour profiter de la croissance économique en Asie [SEC].",
+        "ETF_s495": "SPDR Gold Shares sert de couverture contre l'inflation et l'incertitude économique [TH].",
+        "ETF_s499": "L'ETF sur les métaux précieux diversifie le portefeuille avec des actifs tangibles [TH].",
+        "ETF_b8": "Eaton Vance Total Return Fund offre une stabilité dans un environnement de taux d'intérêt bas [MC].",
+        "EQ_698": "SWISS PRIME SITE AG est un acteur clé dans l'immobilier, offrant une stabilité dans le portefeuille [SEC].",
+        "EQ_292": "EXPAND ENERGY CORP reste un choix stratégique dans le secteur énergétique en croissance [TH]."
+      },
+      "comment": "Le portefeuille modéré est bien équilibré, combinant des actions solides et des ETF, ce qui permet de gérer le risque tout en visant une croissance modérée. Les actifs choisis sont adaptés à un environnement de marché mixte, offrant une exposition à des secteurs résilients tout en intégrant des actifs de protection contre l'inflation. Cette stratégie devrait bien fonctionner dans les conditions actuelles.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟡 PROFIL MODÉRÉ : Ce portefeuille présente un niveau de risque modéré. Il convient aux investisseurs acceptant une certaine volatilité avec un horizon moyen terme (3-5 ans)."
+    },
+    "Stable": {
+      "allocation": {
+        "ETF_b2": 18.12,
+        "ETF_b8": 18.12,
+        "ETF_b16": 12.08,
+        "ETF_s330": 5.36,
+        "ETF_s499": 5.36,
+        "ETF_s316": 5.36,
+        "ETF_s510": 5.36,
+        "ETF_s873": 5.36,
+        "EQ_946": 5.36,
+        "ETF_s866": 5.36,
+        "EQ_698": 5.36,
+        "ETF_s1149": 4.02,
+        "EQ_563": 0.79,
+        "EQ_590": 0.79,
+        "EQ_518": 0.79,
+        "EQ_579": 0.79,
+        "EQ_789": 0.79,
+        "EQ_16": 0.79
+      },
+      "diagnostics": {
+        "converged": false,
+        "message": "Fallback score-based",
+        "portfolio_vol": 8.01,
+        "vol_target": 8.0,
+        "portfolio_score": 0.367,
+        "n_assets": 18,
+        "sectors": {
+          "Bonds": 48.32,
+          "Diversified": 36.18,
+          "Finance": 5.36,
+          "Immobilier": 5.36,
+          "Biens de consommation cycliques": 0.79,
+          "Services publics": 1.58,
+          "Santé": 0.79,
+          "Energie": 0.79,
+          "Biens de consommation de base": 0.79
+        },
+        "etf_exposures": {
+          "cash": 18.12,
+          "gold": 12.08
+        },
+        "bucket_exposure": {
+          "defensive": 48.32,
+          "core": 46.9,
+          "satellite": 4.74
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 46.9,
+            "target_min": 30.0,
+            "target_max": 40.0,
+            "in_range": false
+          },
+          "satellite": {
+            "actual": 4.7,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 48.3,
+            "target_min": 45.0,
+            "target_max": 60.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 0.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {
+          "reliance": 0.79
+        },
+        "corporate_group_compliance": {
+          "reliance": {
+            "actual": 0.8,
+            "max": 20.0,
+            "in_range": true
+          }
+        },
+        "deduplication_enabled": true,
+        "corporate_dedup_enabled": true,
+        "bucket_constraints_enabled": true
+      },
+      "justifications": {
+        "ETF_b2": "Alpha Architect 1-3 Month Boxx Fund est un choix prudent dans un environnement de taux d'intérêt bas, offrant une stabilité [MC].",
+        "ETF_b8": "Eaton Vance Total Return Fund vise à générer des revenus stables, adapté à un profil conservateur [MC].",
+        "ETF_b16": "JPMorgan Limited Duration ETF réduit l'exposition à la volatilité des taux d'intérêt [MC].",
+        "ETF_s330": "iShares MSCI Spain ETF diversifie le portefeuille avec une exposition au marché espagnol [MC].",
+        "ETF_s499": "L'ETF sur les métaux précieux diversifie le portefeuille avec des actifs tangibles [TH].",
+        "ETF_s316": "iShares MSCI Europe Financials ETF offre une exposition aux institutions financières européennes [SEC].",
+        "ETF_s510": "Global X MSCI Greece ETF permet d'accéder à un marché émergent avec un potentiel de croissance [TH].",
+        "ETF_s873": "abrdn Physical Platinum Shares ETF ajoute une exposition aux métaux précieux [TH].",
+        "EQ_946": "KASIKORNBANK PUBLIC NON-VOTING DR est bien positionnée dans le secteur financier en Asie [SEC].",
+        "EQ_698": "SWISS PRIME SITE AG offre une stabilité dans le secteur immobilier, essentiel pour un portefeuille conservateur [SEC].",
+        "EQ_563": "INDUSTRIA DE DISENO TEXTIL SA montre une résilience dans le secteur des biens de consommation [SEC].",
+        "EQ_590": "SSE PLC est un choix solide dans le secteur des services publics, garantissant une certaine sécurité [SEC].",
+        "EQ_518": "ROCHE HOLDING PAR AG est un leader dans le secteur de la santé, offrant une stabilité [SEC].",
+        "EQ_579": "ENGIE SA est bien positionnée dans le secteur énergétique, ajoutant de la résilience au portefeuille [SEC].",
+        "EQ_789": "RELIANCE INDUSTRIES LTD est un acteur clé dans l'énergie, offrant une exposition à un secteur en croissance [TH].",
+        "EQ_16": "WALMART INC est un leader dans le secteur de la consommation de base, garantissant une certaine sécurité [SEC]."
+      },
+      "comment": "Le portefeuille stable est conçu pour minimiser le risque tout en offrant des rendements modérés. Avec une forte concentration sur les obligations et les ETF, il est bien adapté à un environnement de marché inpossible. Les actifs choisis sont principalement dans des secteurs défensifs, ce qui devrait offrir une protection contre la volatilité du marché. Ce portefeuille est approprié pour les investisseurs cherchant à préserver leur capital tout en générant des revenus.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟢 PROFIL STABLE : Ce portefeuille vise une volatilité réduite. Il convient aux investisseurs prudents avec un horizon court à moyen terme."
+    }
+  }
+}
