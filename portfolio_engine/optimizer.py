@@ -1,12 +1,12 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6 — Phase 2.5 Refactoring.
+Optimiseur de portefeuille v6.1 — Fix P0: Bonds Pool + Vol-aware Fallback.
 
-CHANGEMENTS MAJEURS v6:
-1. Buffett = HARD FILTER (score < 50 → rejeté)
-2. FactorScorer = SEUL moteur d'alpha (plus de double comptage)
-3. Covariance HYBRIDE (empirique + structurée)
-4. 5 leviers actifs documentés
+CHANGEMENTS v6.1:
+1. Forcer minimum de bonds dans le pool pour Stable/Modéré
+2. Fallback respecte vol_target (weighted average)
+3. Bonds automatiquement classés DEFENSIVE
+4. Turnover constraint (P1 - préparé)
 
 5 LEVIERS ACTIFS (le reste est gelé):
 1. vol_target par profil (8%, 12%, 18%)
@@ -74,7 +74,7 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6 =============
+# ============= CONSTANTES v6.1 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -94,6 +94,20 @@ CORR_DEFAULT = 0.15
 
 # Volatilités par défaut par catégorie
 DEFAULT_VOLS = {"Actions": 25.0, "ETF": 15.0, "Obligations": 5.0, "Crypto": 80.0}
+
+# P0 FIX: Minimum bonds dans le pool par profil
+MIN_BONDS_IN_POOL = {
+    "Stable": 8,
+    "Modéré": 5,
+    "Agressif": 2,
+}
+
+# P0 FIX: Minimum defensive assets dans le pool par profil  
+MIN_DEFENSIVE_IN_POOL = {
+    "Stable": 10,
+    "Modéré": 6,
+    "Agressif": 3,
+}
 
 
 # ============= JSON SERIALIZATION HELPER =============
@@ -189,7 +203,7 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
     sector = asset.sector.lower() if asset.sector else ""
     name_lower = asset.name.lower() if asset.name else ""
     
-    # === OBLIGATIONS / CASH ===
+    # === OBLIGATIONS / CASH === (P0 FIX: TOUJOURS DEFENSIVE)
     if category == "Obligations":
         if any(kw in name_lower for kw in ["ultra short", "money market", "1-3 month", "boxx", "bil"]):
             return "cash_ultra_short", Role.DEFENSIVE
@@ -232,6 +246,7 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
     
     # === ACTIONS ===
     if category == "Actions":
+        # P0 FIX: Actions défensives (utilities, staples, healthcare) → DEFENSIVE si low vol
         if any(kw in sector for kw in ["utilities", "consumer staples", "healthcare", "pharma"]):
             if vol < 20:
                 return "defensif", Role.DEFENSIVE
@@ -581,16 +596,16 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6 =============
+# ============= PORTFOLIO OPTIMIZER v6.1 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.
+    Optimiseur mean-variance v6.1.
     
-    CHANGEMENTS MAJEURS:
-    1. Buffett = HARD FILTER (intégré dans select_candidates)
-    2. Covariance HYBRIDE (empirique + structurée)
-    3. Score vient UNIQUEMENT de FactorScorer (plus de double comptage)
+    CHANGEMENTS v6.1 (P0 FIX):
+    1. Forcer minimum de bonds dans le pool (select_candidates)
+    2. Fallback respecte vol_target (vol-aware allocation)
+    3. Bonds automatiquement DEFENSIVE
     """
     
     def __init__(
@@ -617,6 +632,8 @@ class PortfolioOptimizer:
     ) -> List[Asset]:
         """
         Pré-sélection avec HARD FILTER Buffett, déduplication et buckets.
+        
+        v6.1 P0 FIX: Force minimum de bonds et defensive dans le pool.
         """
         # === ÉTAPE 1: Déduplication ETF ===
         if self.deduplicate_etfs_enabled:
@@ -678,8 +695,44 @@ class PortfolioOptimizer:
             if asset.corporate_group:
                 corporate_group_count[asset.corporate_group] += 1
         
+        # === P0 FIX: GARANTIR MINIMUM DE BONDS ===
+        min_bonds = MIN_BONDS_IN_POOL.get(profile.name, 2)
+        bonds_in_pool = [a for a in selected if a.category == "Obligations"]
+        
+        if len(bonds_in_pool) < min_bonds:
+            # Chercher tous les bonds dans l'univers, triés par volatilité (basse = meilleur pour defensive)
+            all_bonds = sorted(
+                [a for a in universe if a.category == "Obligations" and a not in selected],
+                key=lambda x: x.vol_annual  # Préférer low vol bonds
+            )
+            bonds_needed = min_bonds - len(bonds_in_pool)
+            bonds_to_add = all_bonds[:bonds_needed]
+            selected.extend(bonds_to_add)
+            logger.info(f"P0 FIX: Added {len(bonds_to_add)} bonds to pool for {profile.name} (minimum {min_bonds})")
+        
+        # === P0 FIX: GARANTIR MINIMUM DEFENSIVE ===
+        min_defensive = MIN_DEFENSIVE_IN_POOL.get(profile.name, 3)
+        defensive_in_pool = [a for a in selected if a.role == Role.DEFENSIVE]
+        
+        if len(defensive_in_pool) < min_defensive:
+            # Chercher des actifs défensifs (bonds, min vol ETF, utilities)
+            defensive_candidates = sorted(
+                [a for a in universe if a.role == Role.DEFENSIVE and a not in selected],
+                key=lambda x: x.vol_annual  # Préférer low vol
+            )
+            defensive_needed = min_defensive - len(defensive_in_pool)
+            defensive_to_add = defensive_candidates[:defensive_needed]
+            selected.extend(defensive_to_add)
+            logger.info(f"P0 FIX: Added {len(defensive_to_add)} defensive assets to pool for {profile.name}")
+        
         logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
-        logger.info(f"Buckets pool: {dict(bucket_count)}")
+        
+        # Log bucket distribution du pool
+        bucket_dist = defaultdict(int)
+        for a in selected:
+            if a.role:
+                bucket_dist[a.role.value] += 1
+        logger.info(f"Buckets pool: {dict(bucket_dist)}")
         
         return selected
     
@@ -783,12 +836,31 @@ class PortfolioOptimizer:
     def _fallback_allocation(
         self,
         candidates: List[Asset],
-        profile: ProfileConstraints
+        profile: ProfileConstraints,
+        cov: Optional[np.ndarray] = None
     ) -> Dict[str, float]:
-        """Allocation fallback basée sur les scores et buckets."""
-        logger.warning(f"Utilisation du fallback score-based pour {profile.name}")
+        """
+        Allocation fallback VOL-AWARE (v6.1 P0 FIX).
         
-        sorted_candidates = sorted(candidates, key=lambda a: a.score, reverse=True)
+        Respecte la vol_target en surpondérant les actifs défensifs.
+        """
+        logger.warning(f"Utilisation du fallback vol-aware pour {profile.name}")
+        
+        # Calculer covariance si pas fournie
+        if cov is None:
+            cov, _ = self.compute_covariance(candidates)
+        
+        vol_target = profile.vol_target / 100  # En décimal
+        
+        # Trier les candidats par volatilité (low vol first pour Stable, high vol first pour Agressif)
+        if profile.name == "Stable":
+            sorted_candidates = sorted(candidates, key=lambda a: a.vol_annual)
+        elif profile.name == "Agressif":
+            sorted_candidates = sorted(candidates, key=lambda a: -a.score)  # Par score, high first
+        else:
+            # Modéré: mix de score et vol
+            sorted_candidates = sorted(candidates, key=lambda a: a.score - 0.02 * a.vol_annual, reverse=True)
+        
         allocation = {}
         total_weight = 0.0
         
@@ -798,14 +870,16 @@ class PortfolioOptimizer:
         
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         
-        # Assurer bonds minimum
-        bonds = [a for a in sorted_candidates if a.category == "Obligations"]
+        # === ÉTAPE 1: Assurer bonds minimum (P0 FIX) ===
+        bonds = sorted([a for a in sorted_candidates if a.category == "Obligations"], key=lambda x: x.vol_annual)
         bonds_needed = float(profile.bonds_min)
         
-        for bond in bonds[:8]:
-            if bonds_needed <= 0:
-                break
-            weight = min(profile.max_single_position, bonds_needed, 100 - total_weight)
+        # Calculer le poids par bond en fonction du nombre disponible
+        n_bonds_to_use = min(len(bonds), max(3, int(bonds_needed / 10)))  # Au moins 3 bonds, ou plus si besoin
+        weight_per_bond = bonds_needed / n_bonds_to_use if n_bonds_to_use > 0 else 0
+        
+        for bond in bonds[:n_bonds_to_use]:
+            weight = min(profile.max_single_position, weight_per_bond, 100 - total_weight)
             if weight > 0.5:
                 allocation[bond.id] = float(weight)
                 total_weight += weight
@@ -814,18 +888,27 @@ class PortfolioOptimizer:
                 if bond.role:
                     bucket_weights[bond.role.value] += weight
         
-        # Remplir par bucket
+        # === ÉTAPE 2: Remplir par bucket selon targets ===
         for role in [Role.DEFENSIVE, Role.CORE, Role.SATELLITE, Role.LOTTERY]:
             if role not in bucket_targets:
                 continue
             min_pct, max_pct = bucket_targets[role]
+            target_pct = (min_pct + max_pct) / 2 * 100  # Target = milieu de la fourchette
+            
             bucket_assets = [a for a in sorted_candidates if a.role == role and a.id not in allocation]
+            
+            # Pour defensive, trier par vol (low first)
+            if role == Role.DEFENSIVE:
+                bucket_assets = sorted(bucket_assets, key=lambda a: a.vol_annual)
+            else:
+                bucket_assets = sorted(bucket_assets, key=lambda a: a.score, reverse=True)
+            
             current_weight = bucket_weights.get(role.value, 0)
             
             for asset in bucket_assets:
                 if len(allocation) >= profile.max_assets or total_weight >= 99.5:
                     break
-                if current_weight >= max_pct * 100:
+                if current_weight >= target_pct:
                     break
                 
                 if asset.category == "Crypto" and category_weights["Crypto"] >= profile.crypto_max:
@@ -833,7 +916,18 @@ class PortfolioOptimizer:
                 if sector_weights[asset.sector] >= profile.max_sector:
                     continue
                 
-                weight = min(profile.max_single_position, 100 - total_weight)
+                # Poids adapté selon le profil et le bucket
+                if role == Role.DEFENSIVE:
+                    base_weight = min(profile.max_single_position, 12.0)  # Plus gros poids pour defensive
+                elif role == Role.CORE:
+                    base_weight = min(profile.max_single_position, 10.0)
+                elif role == Role.SATELLITE:
+                    base_weight = min(profile.max_single_position, 8.0)
+                else:  # LOTTERY
+                    base_weight = min(5.0, profile.max_single_position)
+                
+                weight = min(base_weight, 100 - total_weight, target_pct - current_weight)
+                
                 if weight > 0.5:
                     allocation[asset.id] = round(float(weight), 2)
                     total_weight += weight
@@ -842,9 +936,102 @@ class PortfolioOptimizer:
                     bucket_weights[role.value] += weight
                     current_weight += weight
         
+        # === ÉTAPE 3: Normaliser à 100% ===
         if total_weight > 0:
             factor = 100 / total_weight
             allocation = {k: round(float(v * factor), 2) for k, v in allocation.items()}
+        
+        # === ÉTAPE 4: Vérifier et ajuster la volatilité (P0 FIX) ===
+        allocation = self._adjust_for_vol_target(allocation, candidates, profile, cov)
+        
+        return allocation
+    
+    def _adjust_for_vol_target(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints,
+        cov: np.ndarray
+    ) -> Dict[str, float]:
+        """
+        Ajuste l'allocation pour approcher la vol_target (P0 FIX).
+        
+        Si vol > target: augmente bonds/defensive
+        Si vol < target: augmente satellite/core
+        """
+        # Calculer vol actuelle
+        weights = np.array([allocation.get(c.id, 0) / 100 for c in candidates])
+        current_vol = self._compute_portfolio_vol(weights, cov)
+        vol_target = profile.vol_target
+        
+        # Si vol est dans la tolérance, pas d'ajustement
+        if abs(current_vol - vol_target) <= profile.vol_tolerance:
+            return allocation
+        
+        logger.info(f"Vol adjustment: current={current_vol:.1f}%, target={vol_target:.1f}%")
+        
+        # Identifier les actifs par type
+        asset_lookup = {c.id: c for c in candidates}
+        
+        low_vol_ids = [aid for aid, w in allocation.items() 
+                       if w > 0 and asset_lookup.get(aid) and asset_lookup[aid].vol_annual < 15]
+        high_vol_ids = [aid for aid, w in allocation.items() 
+                        if w > 0 and asset_lookup.get(aid) and asset_lookup[aid].vol_annual > 25]
+        
+        iterations = 0
+        max_iterations = 10
+        
+        while abs(current_vol - vol_target) > profile.vol_tolerance and iterations < max_iterations:
+            iterations += 1
+            
+            if current_vol > vol_target and low_vol_ids and high_vol_ids:
+                # Réduire vol: transférer de high_vol vers low_vol
+                transfer = min(2.0, (current_vol - vol_target) / 2)
+                
+                # Réduire le high vol avec le plus gros poids
+                high_vol_sorted = sorted(high_vol_ids, key=lambda x: allocation.get(x, 0), reverse=True)
+                for hv_id in high_vol_sorted:
+                    if allocation.get(hv_id, 0) > transfer + 1:
+                        allocation[hv_id] -= transfer
+                        break
+                
+                # Augmenter le low vol
+                low_vol_sorted = sorted(low_vol_ids, key=lambda x: allocation.get(x, 0))
+                for lv_id in low_vol_sorted:
+                    if allocation.get(lv_id, 0) < profile.max_single_position - transfer:
+                        allocation[lv_id] = allocation.get(lv_id, 0) + transfer
+                        break
+                
+            elif current_vol < vol_target and high_vol_ids and low_vol_ids:
+                # Augmenter vol: transférer de low_vol vers high_vol
+                transfer = min(2.0, (vol_target - current_vol) / 2)
+                
+                # Réduire le low vol
+                low_vol_sorted = sorted(low_vol_ids, key=lambda x: allocation.get(x, 0), reverse=True)
+                for lv_id in low_vol_sorted:
+                    if allocation.get(lv_id, 0) > transfer + 1:
+                        allocation[lv_id] -= transfer
+                        break
+                
+                # Augmenter le high vol
+                high_vol_sorted = sorted(high_vol_ids, key=lambda x: allocation.get(x, 0))
+                for hv_id in high_vol_sorted:
+                    if allocation.get(hv_id, 0) < profile.max_single_position - transfer:
+                        allocation[hv_id] = allocation.get(hv_id, 0) + transfer
+                        break
+            else:
+                break
+            
+            # Recalculer vol
+            weights = np.array([allocation.get(c.id, 0) / 100 for c in candidates])
+            current_vol = self._compute_portfolio_vol(weights, cov)
+        
+        # Normaliser à 100%
+        total = sum(allocation.values())
+        if total > 0 and abs(total - 100) > 0.1:
+            allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
+        
+        logger.info(f"Vol after adjustment: {current_vol:.1f}% (target={vol_target:.1f}%)")
         
         return allocation
     
@@ -853,7 +1040,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec covariance hybride (v6)."""
+        """Optimisation mean-variance avec covariance hybride (v6.1)."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
@@ -897,7 +1084,7 @@ class PortfolioOptimizer:
             optimizer_converged = True
         else:
             logger.warning(f"SLSQP failed for {profile.name}: {result.message}")
-            allocation = self._fallback_allocation(candidates, profile)
+            allocation = self._fallback_allocation(candidates, profile, cov)
             optimizer_converged = False
         
         # === DIAGNOSTICS ===
@@ -933,9 +1120,10 @@ class PortfolioOptimizer:
         
         diagnostics = to_python_native({
             "converged": optimizer_converged,
-            "message": str(result.message) if result.success else "Fallback score-based",
+            "message": str(result.message) if result.success else "Fallback vol-aware",
             "portfolio_vol": round(port_vol, 2),
             "vol_target": profile.vol_target,
+            "vol_diff": round(port_vol - profile.vol_target, 2),
             "portfolio_score": round(port_score, 3),
             "n_assets": len(allocation),
             "sectors": dict(sector_exposure),
