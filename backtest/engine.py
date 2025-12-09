@@ -2,10 +2,15 @@
 """
 Moteur de backtest pour le Portfolio Engine v4.
 
+V2: FIX CRITIQUE - UTILISER POIDS FIXES DU PORTFOLIO
+- Nouvelle fonction run_backtest_fixed_weights() qui utilise les poids de portfolios.json
+- L'ancienne version recalculait les poids dynamiquement → biais énorme
+- Maintenant le backtest reflète vraiment la performance du portfolio généré
+
 Backtest sur 90 jours glissants avec:
+- Poids fixes (pas de recalcul dynamique)
 - Rebalancing configurable (daily/weekly/monthly)
 - Coûts de transaction
-- Pénalité de turnover
 - Métriques de performance
 - Comparaison benchmark (URTH = MSCI World)
 """
@@ -247,6 +252,175 @@ def get_rebalance_dates(
         raise ValueError(f"Unknown frequency: {freq}")
 
 
+# ============================================================================
+# V2: NOUVELLE FONCTION - BACKTEST AVEC POIDS FIXES
+# ============================================================================
+
+def run_backtest_fixed_weights(
+    prices: pd.DataFrame,
+    fixed_weights: Dict[str, float],
+    config: BacktestConfig,
+) -> BacktestResult:
+    """
+    Exécute le backtest avec des poids FIXES (pas de recalcul dynamique).
+    
+    C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
+    Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
+    
+    Args:
+        prices: DataFrame des prix (colonnes = symboles, index = dates)
+        fixed_weights: Dict {ticker: poids_decimal} ex: {"AAPL": 0.14, "MSFT": 0.12}
+        config: Configuration du backtest
+    
+    Returns:
+        BacktestResult avec equity curve, stats, etc.
+    """
+    logger.info(f"Starting FIXED WEIGHTS backtest: {config.profile}")
+    logger.info(f"Fixed weights: {len(fixed_weights)} assets, sum={sum(fixed_weights.values()):.2%}")
+    
+    # Filtrer les dates
+    dates = prices.index.sort_values()
+    if config.start_date:
+        dates = dates[dates >= config.start_date]
+    if config.end_date:
+        dates = dates[dates <= config.end_date]
+    
+    if len(dates) < 10:
+        raise ValueError(f"Not enough dates for backtest: {len(dates)}")
+    
+    # Vérifier quels symboles sont disponibles dans les prix
+    available_symbols = set(prices.columns)
+    portfolio_symbols = set(fixed_weights.keys())
+    missing_symbols = portfolio_symbols - available_symbols
+    
+    if missing_symbols:
+        logger.warning(f"Missing price data for: {missing_symbols}")
+    
+    # Filtrer et renormaliser les poids pour les symboles disponibles
+    effective_weights = {
+        sym: w for sym, w in fixed_weights.items() 
+        if sym in available_symbols
+    }
+    
+    if not effective_weights:
+        raise ValueError("No symbols with both weights and price data!")
+    
+    # Renormaliser si nécessaire
+    total_weight = sum(effective_weights.values())
+    if total_weight < 0.5:
+        logger.error(f"Only {total_weight:.1%} of portfolio has price data - results will be biased!")
+    
+    effective_weights = {k: v/total_weight for k, v in effective_weights.items()}
+    
+    logger.info(f"Effective weights: {len(effective_weights)} assets (coverage: {total_weight:.1%})")
+    for sym, w in sorted(effective_weights.items(), key=lambda x: -x[1])[:5]:
+        logger.info(f"  {sym}: {w:.1%}")
+    
+    # Convertir en Series pour faciliter les calculs
+    weights_series = pd.Series(effective_weights)
+    
+    # Initialisation
+    equity = config.initial_capital
+    equity_curve = {}
+    daily_returns_list = []
+    
+    # Dates de rebalancement (pour le turnover - ici turnover = 0 car poids fixes)
+    rebal_dates = get_rebalance_dates(dates, config.rebalance_freq)
+    
+    # Coût initial d'achat
+    initial_cost = config.transaction_cost_bp / 10000
+    equity *= (1 - initial_cost)
+    
+    trades = [{
+        "date": dates[0],
+        "n_assets": len(effective_weights),
+        "turnover": 1.0,  # Achat initial = 100% turnover
+        "tx_cost": initial_cost,
+    }]
+    
+    # Boucle sur les jours
+    prev_date = None
+    for i, date in enumerate(dates):
+        if prev_date is not None:
+            # Calculer le rendement du jour = somme pondérée des rendements des actifs
+            daily_ret = 0.0
+            for symbol, weight in effective_weights.items():
+                if symbol in prices.columns:
+                    price_today = prices.loc[date, symbol]
+                    price_prev = prices.loc[prev_date, symbol]
+                    if price_today > 0 and price_prev > 0:
+                        asset_ret = (price_today / price_prev) - 1
+                        daily_ret += weight * asset_ret
+            
+            equity *= (1 + daily_ret)
+            daily_returns_list.append({"date": date, "return": daily_ret})
+        
+        equity_curve[date] = equity
+        prev_date = date
+    
+    # Construire les résultats
+    equity_series = pd.Series(equity_curve).sort_index()
+    returns_series = pd.DataFrame(daily_returns_list).set_index("date")["return"] if daily_returns_list else pd.Series()
+    trades_df = pd.DataFrame(trades)
+    
+    # Historique des poids (constant)
+    weights_history = pd.DataFrame([{
+        "date": dates[0],
+        **effective_weights
+    }])
+    
+    # Stats de base
+    stats = compute_backtest_stats(equity_series, returns_series, trades_df)
+    
+    # Ajouter info sur la couverture
+    stats["weight_coverage_pct"] = round(total_weight * 100, 1)
+    stats["n_assets_with_data"] = len(effective_weights)
+    stats["n_assets_total"] = len(fixed_weights)
+    
+    # ===== BENCHMARK COMPARISON =====
+    benchmark_curve = None
+    benchmark_symbol = config.benchmark_symbol
+    
+    if benchmark_symbol and benchmark_symbol in prices.columns:
+        logger.info(f"Computing benchmark comparison vs {benchmark_symbol}")
+        
+        bench_prices = prices.loc[equity_series.index, benchmark_symbol].dropna()
+        
+        if len(bench_prices) > 10:
+            benchmark_curve = (bench_prices / bench_prices.iloc[0]) * config.initial_capital
+            
+            bench_stats = compute_benchmark_stats(
+                equity_series,
+                returns_series,
+                bench_prices,
+                benchmark_symbol
+            )
+            stats.update(bench_stats)
+            
+            logger.info(f"Benchmark return: {stats.get('benchmark_return_pct', 'N/A')}%")
+            logger.info(f"Portfolio return: {stats.get('total_return_pct', 'N/A')}%")
+            logger.info(f"Excess return: {stats.get('excess_return_pct', 'N/A')}%")
+    else:
+        if benchmark_symbol:
+            logger.warning(f"Benchmark {benchmark_symbol} not found in prices data")
+    
+    logger.info(f"Backtest complete: {stats['total_return_pct']}% return, {stats['sharpe_ratio']} Sharpe, {stats['volatility_pct']}% vol")
+    
+    return BacktestResult(
+        equity_curve=equity_series,
+        daily_returns=returns_series,
+        weights_history=weights_history,
+        trades=trades_df,
+        stats=stats,
+        config=config,
+        benchmark_curve=benchmark_curve,
+    )
+
+
+# ============================================================================
+# ANCIENNE FONCTION (pour référence, utilise compute_portfolio_weights dynamique)
+# ============================================================================
+
 def compute_factors_from_prices(
     prices: pd.DataFrame,
     as_of_date: pd.Timestamp,
@@ -334,7 +508,7 @@ def compute_portfolio_weights(
     """
     Calcule les poids optimaux (version simplifiée pour backtest).
     
-    Utilise une approche score-weighted avec contraintes simples.
+    ⚠️ DEPRECATED: Utiliser run_backtest_fixed_weights() avec les poids de portfolios.json
     """
     factor_weights = profile_config.get("factor_weights", {
         "momentum": 0.30,
@@ -352,9 +526,6 @@ def compute_portfolio_weights(
         factor_weights.get("quality", 0.2) * factors_df["quality"] +
         factor_weights.get("liquidity", 0.15) * factors_df["liquidity"]
     )
-    
-    # Pénalité mean reversion (si YTD > 80% et momentum récent faible)
-    # Simplifié ici car on n'a pas YTD complet
     
     # Sélectionner top N actifs
     max_assets = profile_config.get("max_assets", 18)
@@ -375,12 +546,10 @@ def compute_portfolio_weights(
     
     # Pénalité turnover si prev_weights fourni
     if prev_weights is not None and turnover_penalty > 0:
-        # Ajustement simple: réduire les changements
         for i, symbol in enumerate(top_assets["symbol"].values):
             if symbol in prev_weights.index:
                 diff = abs(weights[i] - prev_weights[symbol])
-                if diff > 0.05:  # Seuil 5%
-                    # Réduire le changement de moitié
+                if diff > 0.05:
                     weights[i] = (weights[i] + prev_weights[symbol]) / 2
         weights = weights / weights.sum()
     
@@ -393,16 +562,12 @@ def run_backtest(
     profile_config: dict
 ) -> BacktestResult:
     """
-    Exécute le backtest complet avec comparaison benchmark.
+    Exécute le backtest avec recalcul dynamique des poids.
     
-    Args:
-        prices: DataFrame des prix (colonnes = symboles, index = dates)
-        config: Configuration du backtest
-        profile_config: Configuration du profil (depuis portfolio_config.yaml)
-    
-    Returns:
-        BacktestResult avec equity curve, stats, trades, benchmark comparison
+    ⚠️ DEPRECATED: Cette fonction recalcule les poids à chaque rebalancement,
+    ce qui ne reflète pas le vrai portfolio. Utiliser run_backtest_fixed_weights().
     """
+    logger.warning("⚠️ run_backtest() is DEPRECATED - use run_backtest_fixed_weights() instead")
     logger.info(f"Starting backtest: {config.profile}, freq={config.rebalance_freq}")
     
     # Filtrer les dates
@@ -445,17 +610,15 @@ def run_backtest(
                 
                 # Calculer turnover
                 if prev_weights is not None:
-                    # Aligner les index
                     all_symbols = set(new_weights.index) | set(prev_weights.index)
                     w_new = new_weights.reindex(all_symbols, fill_value=0)
                     w_old = prev_weights.reindex(all_symbols, fill_value=0)
                     turnover = (w_new - w_old).abs().sum() / 2
                     
-                    # Coût de transaction
                     tx_cost = turnover * (config.transaction_cost_bp / 10000)
                     equity *= (1 - tx_cost)
                 else:
-                    turnover = 1.0  # Premier achat
+                    turnover = 1.0
                     tx_cost = config.transaction_cost_bp / 10000
                     equity *= (1 - tx_cost)
                 
@@ -476,7 +639,6 @@ def run_backtest(
                 
             except Exception as e:
                 logger.warning(f"Rebalance error at {date}: {e}")
-                # Garder les poids précédents
         
         # Calculer le rendement du jour
         if current_weights is not None and i > 0:
@@ -509,14 +671,11 @@ def run_backtest(
     if benchmark_symbol and benchmark_symbol in prices.columns:
         logger.info(f"Computing benchmark comparison vs {benchmark_symbol}")
         
-        # Extraire les prix du benchmark sur la période
         bench_prices = prices.loc[equity_series.index, benchmark_symbol].dropna()
         
         if len(bench_prices) > 10:
-            # Calculer la courbe benchmark (normalisée au capital initial)
             benchmark_curve = (bench_prices / bench_prices.iloc[0]) * config.initial_capital
             
-            # Statistiques benchmark
             bench_stats = compute_benchmark_stats(
                 equity_series,
                 returns_series,
@@ -531,7 +690,6 @@ def run_backtest(
     else:
         if benchmark_symbol:
             logger.warning(f"Benchmark {benchmark_symbol} not found in prices data")
-    # ================================
     
     logger.info(f"Backtest complete: {stats['total_return_pct']}% return, {stats['sharpe_ratio']} Sharpe")
     
@@ -556,6 +714,13 @@ def print_backtest_report(result: BacktestResult):
         print(f"\nProfile: {result.config.profile}")
         print(f"Rebalance: {result.config.rebalance_freq}")
         print(f"Period: {result.equity_curve.index[0].date()} → {result.equity_curve.index[-1].date()}")
+    
+    # Afficher couverture si disponible
+    if "weight_coverage_pct" in result.stats:
+        coverage = result.stats["weight_coverage_pct"]
+        n_with_data = result.stats.get("n_assets_with_data", "?")
+        n_total = result.stats.get("n_assets_total", "?")
+        print(f"Coverage: {n_with_data}/{n_total} assets ({coverage}%)")
     
     print("\n--- Performance ---")
     print(f"Total Return:     {result.stats.get('total_return_pct', 0):>8.2f}%")
