@@ -1,14 +1,19 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v5 — Avec buckets Core/Satellite/Défensif/Lottery.
+Optimiseur de portefeuille v6 — Phase 2.5 Refactoring.
 
-Phase 2:
-1. Intégration PROFILE_BUCKET_TARGETS depuis preset_meta
-2. Assignment automatique des actifs aux buckets/rôles
-3. Contraintes min/max par bucket selon le profil
-4. Diagnostics enrichis par bucket
-5. Déduplication ETF par exposition (Phase 1)
-6. Déduplication actions par groupe corporate (Phase 2.1)
+CHANGEMENTS MAJEURS v6:
+1. Buffett = HARD FILTER (score < 50 → rejeté)
+2. FactorScorer = SEUL moteur d'alpha (plus de double comptage)
+3. Covariance HYBRIDE (empirique + structurée)
+4. 5 leviers actifs documentés
+
+5 LEVIERS ACTIFS (le reste est gelé):
+1. vol_target par profil (8%, 12%, 18%)
+2. Buckets CORE/DEFENSIVE/SATELLITE ranges
+3. Poids momentum vs quality_fundamental dans FactorScorer
+4. Crypto max / Bonds min
+5. Seuil Buffett minimum (hard filter = 50)
 """
 
 import numpy as np
@@ -34,7 +39,6 @@ try:
         AssetClass,
         get_preset_config,
         get_bucket_targets,
-        # Corporate group deduplication
         CORPORATE_GROUPS,
         MAX_CORPORATE_GROUP_WEIGHT,
         MAX_STOCKS_PER_GROUP,
@@ -48,7 +52,6 @@ except ImportError:
     CORPORATE_GROUPS = {}
     MAX_CORPORATE_GROUP_WEIGHT = 0.20
     MAX_STOCKS_PER_GROUP = 1
-    # Fallback Role enum
     from enum import Enum
     class Role(Enum):
         CORE = "core"
@@ -56,7 +59,6 @@ except ImportError:
         DEFENSIVE = "defensive"
         LOTTERY = "lottery"
     
-    # Fallback bucket targets
     PROFILE_BUCKET_TARGETS = {
         "Stable": {Role.CORE: (0.30, 0.40), Role.DEFENSIVE: (0.45, 0.60), Role.SATELLITE: (0.05, 0.15), Role.LOTTERY: (0.00, 0.00)},
         "Modéré": {Role.CORE: (0.45, 0.55), Role.DEFENSIVE: (0.20, 0.30), Role.SATELLITE: (0.15, 0.25), Role.LOTTERY: (0.00, 0.02)},
@@ -72,54 +74,64 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
+# ============= CONSTANTES v6 =============
+
+# HARD FILTER: Score Buffett minimum pour les actions
+BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
+
+# Covariance hybride: poids empirique vs structurée
+COVARIANCE_EMPIRICAL_WEIGHT = 0.60  # 60% empirique, 40% structurée
+
+# Corrélations structurées (utilisées quand pas de données empiriques)
+CORR_SAME_CORPORATE_GROUP = 0.90
+CORR_SAME_EXPOSURE = 0.85
+CORR_SAME_SECTOR = 0.45
+CORR_SAME_CATEGORY = 0.60
+CORR_SAME_BUCKET = 0.50
+CORR_EQUITY_BOND = -0.20
+CORR_CRYPTO_OTHER = 0.25
+CORR_DEFAULT = 0.15
+
+# Volatilités par défaut par catégorie
+DEFAULT_VOLS = {"Actions": 25.0, "ETF": 15.0, "Obligations": 5.0, "Crypto": 80.0}
+
+
 # ============= JSON SERIALIZATION HELPER =============
 
 def to_python_native(obj: Any) -> Any:
-    """
-    Convertit récursivement les types numpy en types Python natifs pour JSON.
-    
-    Handles: np.float64, np.int64, np.bool_, np.ndarray, dict, list
-    """
+    """Convertit récursivement les types numpy en types Python natifs pour JSON."""
     if obj is None:
         return None
-    
-    # Numpy scalar types
     if isinstance(obj, (np.floating, np.float64, np.float32)):
         return float(obj)
     if isinstance(obj, (np.integer, np.int64, np.int32)):
         return int(obj)
     if isinstance(obj, (np.bool_, np.bool)):
         return bool(obj)
-    
-    # Numpy array
     if isinstance(obj, np.ndarray):
         return obj.tolist()
-    
-    # Dict - recurse
     if isinstance(obj, dict):
         return {k: to_python_native(v) for k, v in obj.items()}
-    
-    # List/tuple - recurse
     if isinstance(obj, (list, tuple)):
         return [to_python_native(item) for item in obj]
-    
-    # Already native Python type
     return obj
 
+
+# ============= PROFILE CONSTRAINTS =============
 
 @dataclass
 class ProfileConstraints:
     """Contraintes par profil — vol_target est indicatif (pénalité douce)."""
     name: str
-    vol_target: float           # Volatilité cible (%) — pénalité douce
-    vol_tolerance: float = 3.0  # Tolérance autour de vol_target (±%)
-    crypto_max: float = 10.0
-    bonds_min: float = 5.0
+    vol_target: float           # LEVIER 1: Volatilité cible (%)
+    vol_tolerance: float = 3.0
+    crypto_max: float = 10.0    # LEVIER 4: Crypto maximum
+    bonds_min: float = 5.0      # LEVIER 4: Bonds minimum
     max_single_position: float = 15.0
-    max_sector: float = 30.0    # Contrainte appliquée
-    max_region: float = 50.0    # Contrainte appliquée
-    min_assets: int = 10        # Souple: 10-18
-    max_assets: int = 18        # Souple: 10-18
+    max_sector: float = 30.0
+    max_region: float = 50.0
+    min_assets: int = 10
+    max_assets: int = 18
 
 
 PROFILES = {
@@ -135,10 +147,12 @@ PROFILES = {
 }
 
 
+# ============= ASSET DATACLASS =============
+
 @dataclass
 class Asset:
     """Actif avec ID ORIGINAL préservé et bucket assignment."""
-    id: str                     # ID original (ticker, ISIN, etc.)
+    id: str
     name: str
     category: str
     sector: str
@@ -147,10 +161,11 @@ class Asset:
     vol_annual: float
     returns_series: Optional[np.ndarray] = None
     source_data: Optional[dict] = field(default=None, repr=False)
-    exposure: Optional[str] = None  # Pour ETF: "gold", "world", "em", etc.
-    preset: Optional[str] = None    # Preset assigné (quality_premium, defensif, etc.)
-    role: Optional[Role] = None     # Bucket: CORE, SATELLITE, DEFENSIVE, LOTTERY
-    corporate_group: Optional[str] = None  # Groupe corporate (hyundai, samsung, etc.)
+    exposure: Optional[str] = None
+    preset: Optional[str] = None
+    role: Optional[Role] = None
+    corporate_group: Optional[str] = None
+    buffett_score: Optional[float] = None  # Score Buffett pour hard filter
 
 
 def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: float = 200.0) -> float:
@@ -166,14 +181,8 @@ def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: fl
 
 # ============= BUCKET/PRESET ASSIGNMENT =============
 
-# Mapping catégorie + caractéristiques → preset
 def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]:
-    """
-    Assigne un preset et un rôle (bucket) à un actif basé sur ses caractéristiques.
-    
-    Returns:
-        (preset_name, Role) ou (None, None) si non assignable
-    """
+    """Assigne un preset et un rôle (bucket) à un actif."""
     category = asset.category
     vol = asset.vol_annual
     score = asset.score
@@ -182,21 +191,16 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
     
     # === OBLIGATIONS / CASH ===
     if category == "Obligations":
-        # Ultra-short / Money market
         if any(kw in name_lower for kw in ["ultra short", "money market", "1-3 month", "boxx", "bil"]):
             return "cash_ultra_short", Role.DEFENSIVE
-        # Investment grade
         return "defensif_oblig", Role.DEFENSIVE
     
     # === CRYPTO ===
     if category == "Crypto":
-        # BTC/ETH = quality_risk
         if any(kw in name_lower for kw in ["bitcoin", "btc", "ethereum", "eth"]):
             return "quality_risk", Role.CORE
-        # High vol = lottery
         if vol > 100:
             return "highvol_lottery", Role.LOTTERY
-        # Momentum/swing
         if vol > 60:
             return "momentum24h", Role.LOTTERY
         return "trend3_12m", Role.SATELLITE
@@ -204,116 +208,69 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
     # === ETF ===
     if category == "ETF":
         exposure = asset.exposure
-        
-        # Gold / Precious metals
         if exposure in ["gold", "precious_metals"]:
             return "or_physique", Role.DEFENSIVE
-        
-        # World / Developed core
         if exposure in ["world", "sp500"]:
             if vol < 15:
                 return "min_vol_global", Role.DEFENSIVE
             return "coeur_global", Role.CORE
-        
-        # Emerging markets
         if exposure == "emerging_markets":
             return "emergents", Role.SATELLITE
-        
-        # Tech / Growth
         if exposure in ["nasdaq", "tech"]:
             return "croissance_tech", Role.SATELLITE
-        
-        # Bonds
         if exposure in ["bonds_ig", "bonds_treasury"]:
             return "defensif_oblig", Role.DEFENSIVE
-        
-        # Cash
         if exposure == "cash":
             return "cash_ultra_short", Role.DEFENSIVE
-        
-        # Min vol
         if exposure == "min_vol" or "min vol" in name_lower or "low vol" in name_lower:
             return "min_vol_global", Role.DEFENSIVE
-        
-        # Dividend / Income
         if exposure == "dividend" or "dividend" in name_lower:
             return "rendement_etf", Role.CORE
-        
-        # Inflation
         if exposure in ["inflation", "commodities"]:
             return "inflation_shield", Role.DEFENSIVE
-        
-        # Default ETF
         return "coeur_global", Role.CORE
     
     # === ACTIONS ===
     if category == "Actions":
-        # Analyse basée sur vol et score
-        
-        # Utilities, Consumer Staples = défensif
         if any(kw in sector for kw in ["utilities", "consumer staples", "healthcare", "pharma"]):
             if vol < 20:
                 return "defensif", Role.DEFENSIVE
             return "low_volatility", Role.CORE
-        
-        # Score élevé + vol modérée = Quality
         if score >= 70 and vol < 25:
             return "quality_premium", Role.CORE
-        
-        # Dividend keywords
         if any(kw in name_lower for kw in ["dividend", "yield", "income"]):
             return "value_dividend", Role.CORE
-        
-        # Low vol
         if vol < 18:
             return "low_volatility", Role.CORE
-        
-        # Score modéré + vol modérée = Value
         if score >= 50 and vol < 30:
             return "value_dividend", Role.CORE
-        
-        # Tech, Growth sectors
         if any(kw in sector for kw in ["technology", "tech", "software", "semiconductor"]):
             if vol > 35:
                 return "agressif", Role.SATELLITE
             return "croissance", Role.SATELLITE
-        
-        # Cyclical sectors
         if any(kw in sector for kw in ["materials", "industrials", "energy", "mining"]):
             if vol > 35:
                 return "recovery", Role.SATELLITE
             return "momentum_trend", Role.SATELLITE
-        
-        # High vol + high score = momentum
         if vol > 30 and score > 60:
             return "momentum_trend", Role.SATELLITE
-        
-        # High vol = agressif
         if vol > 35:
             return "agressif", Role.SATELLITE
-        
-        # Default: croissance
         return "croissance", Role.SATELLITE
     
-    # Fallback
     return None, Role.SATELLITE
 
 
 def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
-    """
-    Enrichit tous les actifs avec leur preset et rôle (bucket).
-    """
+    """Enrichit tous les actifs avec leur preset et rôle (bucket)."""
     for asset in assets:
         if asset.preset is None or asset.role is None:
             preset, role = assign_preset_to_asset(asset)
             asset.preset = preset
             asset.role = role
-        
-        # Assigner groupe corporate pour les actions
         if asset.category == "Actions" and asset.corporate_group is None:
             asset.corporate_group = get_corporate_group(asset.name)
     
-    # Log distribution
     role_counts = defaultdict(int)
     for asset in assets:
         if asset.role:
@@ -323,67 +280,77 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
     return assets
 
 
+# ============= HARD FILTER: BUFFETT =============
+
+def apply_buffett_hard_filter(assets: List[Asset], min_score: float = BUFFETT_HARD_FILTER_MIN) -> List[Asset]:
+    """
+    HARD FILTER: Rejette les actions avec score Buffett < min_score.
+    
+    v6: Le filtre Buffett est maintenant un HARD FILTER, pas une pénalité.
+    Les ETF, Bonds et Crypto ne sont pas affectés.
+    
+    Args:
+        assets: Liste d'actifs
+        min_score: Score minimum (défaut: 50)
+    
+    Returns:
+        Liste filtrée (actions low-quality rejetées)
+    """
+    filtered = []
+    rejected_count = 0
+    
+    for asset in assets:
+        # Seules les actions sont filtrées
+        if asset.category == "Actions":
+            buffett_score = asset.buffett_score or 50.0  # Neutre si pas de données
+            if buffett_score < min_score:
+                rejected_count += 1
+                logger.debug(f"Buffett hard filter: rejected {asset.name} (score={buffett_score:.1f} < {min_score})")
+                continue
+        
+        filtered.append(asset)
+    
+    if rejected_count > 0:
+        logger.info(f"Buffett hard filter: rejected {rejected_count} low-quality stocks (score < {min_score})")
+    
+    return filtered
+
+
 # ============= CORPORATE GROUP DEDUPLICATION =============
 
 def deduplicate_stocks_by_corporate_group(
     assets: List[Asset],
     max_per_group: int = MAX_STOCKS_PER_GROUP
 ) -> Tuple[List[Asset], Dict[str, List[str]]]:
-    """
-    Déduplique les actions par groupe corporate.
-    
-    Garde la meilleure action de chaque groupe (basé sur score).
-    
-    Args:
-        assets: Liste d'actifs
-        max_per_group: Nombre max d'actions par groupe (default=1)
-    
-    Returns:
-        (liste_dedupliquée, dict des suppressions par groupe)
-    """
+    """Déduplique les actions par groupe corporate."""
     stocks = []
     non_stocks = []
     
     for asset in assets:
         if asset.category == "Actions":
-            # Assigner groupe corporate si pas déjà fait
             if asset.corporate_group is None:
                 asset.corporate_group = get_corporate_group(asset.name)
             stocks.append(asset)
         else:
             non_stocks.append(asset)
     
-    # Grouper par corporate group
     groups: Dict[Optional[str], List[Asset]] = defaultdict(list)
     for stock in stocks:
         groups[stock.corporate_group].append(stock)
     
-    # Sélectionner les meilleurs de chaque groupe
     deduplicated_stocks = []
     removed_by_group: Dict[str, List[str]] = {}
     
     for group_id, group_stocks in groups.items():
         if group_id is None:
-            # Pas de groupe = garder toutes
             deduplicated_stocks.extend(group_stocks)
         else:
-            # Trier par score décroissant
             group_stocks.sort(key=lambda a: a.score, reverse=True)
-            
-            # Garder max_per_group
             kept = group_stocks[:max_per_group]
             removed = group_stocks[max_per_group:]
-            
             deduplicated_stocks.extend(kept)
-            
             if removed:
-                removed_names = [a.name for a in removed]
-                kept_names = [a.name for a in kept]
-                removed_by_group[group_id] = removed_names
-                logger.info(
-                    f"Corporate dedup [{group_id}]: kept {kept_names[0][:30]}, "
-                    f"removed {len(removed)} ({', '.join(n[:20] for n in removed_names[:2])}...)"
-                )
+                removed_by_group[group_id] = [a.name for a in removed]
     
     total_removed = sum(len(v) for v in removed_by_group.values())
     if total_removed > 0:
@@ -395,35 +362,16 @@ def deduplicate_stocks_by_corporate_group(
 # ============= ETF EXPOSURE DETECTION =============
 
 ETF_NAME_TO_EXPOSURE = {
-    # Gold
     "gold": "gold", "or": "gold", "gld": "gold", "iau": "gold",
-    "gldm": "gold", "sgol": "gold", "iaum": "gold", "aaau": "gold",
-    "gltr": "precious_metals",
-    # World / Developed
     "world": "world", "msci world": "world", "urth": "world",
-    "vt": "world", "acwi": "world", "iwda": "world", "vwrl": "world",
-    # S&P 500
-    "s&p 500": "sp500", "s&p500": "sp500", "spy": "sp500",
-    "ivv": "sp500", "voo": "sp500",
-    # Nasdaq / Tech
-    "nasdaq": "nasdaq", "qqq": "nasdaq", "tech": "tech", "technology": "tech",
-    # Emerging Markets
-    "emerging": "emerging_markets", "em": "emerging_markets",
-    "eem": "emerging_markets", "vwo": "emerging_markets", "iemg": "emerging_markets",
-    # Bonds
+    "s&p 500": "sp500", "spy": "sp500", "voo": "sp500",
+    "nasdaq": "nasdaq", "qqq": "nasdaq", "tech": "tech",
+    "emerging": "emerging_markets", "eem": "emerging_markets",
     "treasury": "bonds_treasury", "tlt": "bonds_treasury", "ief": "bonds_treasury",
-    "shy": "bonds_treasury", "investment grade": "bonds_ig",
-    "corporate bond": "bonds_ig", "lqd": "bonds_ig", "agg": "bonds_ig", "bnd": "bonds_ig",
-    # Cash / Ultra-short
-    "money market": "cash", "ultra short": "cash", "boxx": "cash",
-    "bil": "cash", "shv": "cash",
-    # Min Vol
-    "min vol": "min_vol", "minimum volatility": "min_vol", "low vol": "min_vol",
-    # Dividend
-    "dividend": "dividend", "high yield": "dividend", "income": "dividend",
-    # Commodities
-    "commodity": "commodities", "commodities": "commodities",
-    "inflation": "inflation", "tips": "inflation",
+    "investment grade": "bonds_ig", "lqd": "bonds_ig", "agg": "bonds_ig",
+    "money market": "cash", "ultra short": "cash", "bil": "cash",
+    "min vol": "min_vol", "low vol": "min_vol",
+    "dividend": "dividend", "inflation": "inflation", "tips": "inflation",
 }
 
 
@@ -431,18 +379,10 @@ def detect_etf_exposure(asset: Asset) -> Optional[str]:
     """Détecte l'exposition d'un ETF basé sur son nom/ticker."""
     if asset.category not in ["ETF", "Obligations"]:
         return None
-    
     search_text = f"{asset.name} {asset.id}".lower()
-    
     for keyword, exposure in ETF_NAME_TO_EXPOSURE.items():
         if keyword in search_text:
             return exposure
-    
-    asset_id_upper = asset.id.upper()
-    for exposure, tickers in ETF_EXPOSURE_EQUIVALENTS.items():
-        if asset_id_upper in [t.upper() for t in tickers]:
-            return exposure
-    
     return None
 
 
@@ -453,8 +393,7 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
     
     for asset in assets:
         if asset.category in ["ETF", "Obligations"]:
-            exposure = detect_etf_exposure(asset)
-            asset.exposure = exposure
+            asset.exposure = detect_etf_exposure(asset)
             etfs.append(asset)
         else:
             non_etfs.append(asset)
@@ -471,12 +410,9 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
             deduplicated_etfs.extend(group)
         else:
             sorted_group = sorted(group, key=lambda a: a.score, reverse=True)
-            best = sorted_group[0]
-            deduplicated_etfs.append(best)
-            
+            deduplicated_etfs.append(sorted_group[0])
             if len(sorted_group) > 1:
                 removed_count += len(sorted_group) - 1
-                logger.info(f"ETF dedup [{exposure}]: kept '{best.name}'")
     
     if removed_count > 0:
         logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs")
@@ -484,137 +420,78 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
     return non_etfs + deduplicated_etfs
 
 
-class PortfolioOptimizer:
+# ============= COVARIANCE HYBRIDE v6 =============
+
+class HybridCovarianceEstimator:
     """
-    Optimiseur mean-variance avec buckets et déduplication ETF + Corporate.
+    Estimateur de covariance hybride: empirique + structurée.
+    
+    v6: Combine 60% covariance empirique (si disponible) + 40% structurée.
+    Permet une calibration du risque plus réaliste.
     """
     
     def __init__(
         self, 
-        score_scale: float = 1.0, 
-        deduplicate_etfs: bool = True,
-        deduplicate_corporate: bool = True,
-        use_bucket_constraints: bool = True
+        empirical_weight: float = COVARIANCE_EMPIRICAL_WEIGHT,
+        min_history_days: int = 60
     ):
-        """
-        Args:
-            score_scale: Facteur d'échelle pour les scores
-            deduplicate_etfs: Activer la déduplication ETF par exposition
-            deduplicate_corporate: Activer la déduplication actions par groupe corporate
-            use_bucket_constraints: Activer les contraintes min/max par bucket
-        """
-        self.score_scale = score_scale
-        self.deduplicate_etfs_enabled = deduplicate_etfs
-        self.deduplicate_corporate_enabled = deduplicate_corporate
-        self.use_bucket_constraints = use_bucket_constraints
+        self.empirical_weight = empirical_weight
+        self.min_history_days = min_history_days
     
-    def select_candidates(
-        self, 
-        universe: List[Asset], 
-        profile: ProfileConstraints
-    ) -> List[Asset]:
-        """
-        Pré-sélection avec déduplication ETF, Corporate et enrichissement buckets.
-        """
-        # === ÉTAPE 1: Déduplication ETF ===
-        if self.deduplicate_etfs_enabled:
-            universe = deduplicate_etfs(universe, prefer_by="score")
-            logger.info(f"Post-ETF-dedup universe: {len(universe)} actifs")
-        
-        # === ÉTAPE 2: Déduplication Corporate ===
-        if self.deduplicate_corporate_enabled:
-            universe, removed_groups = deduplicate_stocks_by_corporate_group(
-                universe, 
-                max_per_group=MAX_STOCKS_PER_GROUP
-            )
-            logger.info(f"Post-corporate-dedup universe: {len(universe)} actifs")
-        
-        # === ÉTAPE 3: Enrichir avec buckets ===
-        universe = enrich_assets_with_buckets(universe)
-        
-        # === ÉTAPE 4: Tri par score ===
-        sorted_assets = sorted(universe, key=lambda x: x.score, reverse=True)
-        
-        # === ÉTAPE 5: Sélection diversifiée par bucket ===
-        selected = []
-        sector_count = defaultdict(int)
-        category_count = defaultdict(int)
-        exposure_count = defaultdict(int)
-        bucket_count = defaultdict(int)
-        corporate_group_count = defaultdict(int)
-        
-        target_pool = profile.max_assets * 3
-        
-        # Get bucket targets for this profile
-        bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
-        
-        for asset in sorted_assets:
-            if len(selected) >= target_pool:
-                break
-            
-            # Contrainte Crypto
-            if asset.category == "Crypto":
-                if profile.crypto_max == 0:
-                    continue
-                if category_count["Crypto"] >= 3:
-                    continue
-            
-            # Contrainte secteur
-            if sector_count[asset.sector] >= 8:
-                continue
-            
-            # Contrainte exposition ETF
-            if asset.exposure and exposure_count[asset.exposure] >= 2:
-                continue
-            
-            # Contrainte bucket (éviter trop de lottery)
-            if asset.role == Role.LOTTERY and bucket_count["lottery"] >= 2:
-                continue
-            
-            # Contrainte corporate group (max 1 par groupe, déjà appliqué en amont mais double check)
-            if asset.corporate_group and corporate_group_count[asset.corporate_group] >= MAX_STOCKS_PER_GROUP:
-                continue
-            
-            selected.append(asset)
-            sector_count[asset.sector] += 1
-            category_count[asset.category] += 1
-            if asset.exposure:
-                exposure_count[asset.exposure] += 1
-            if asset.role:
-                bucket_count[asset.role.value] += 1
-            if asset.corporate_group:
-                corporate_group_count[asset.corporate_group] += 1
-        
-        logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
-        logger.info(f"Buckets pool: {dict(bucket_count)}")
-        if corporate_group_count:
-            logger.info(f"Corporate groups in pool: {dict(corporate_group_count)}")
-        
-        return selected
-    
-    def compute_covariance(self, assets: List[Asset]) -> np.ndarray:
-        """Matrice de covariance régularisée."""
+    def compute_empirical_covariance(self, assets: List[Asset]) -> Optional[np.ndarray]:
+        """Calcule la covariance empirique si données suffisantes."""
         n = len(assets)
         
-        if all(a.returns_series is not None and len(a.returns_series) >= 60 for a in assets):
-            returns = np.column_stack([a.returns_series for a in assets])
+        # Vérifier si on a assez de données
+        valid_assets = [a for a in assets if a.returns_series is not None and len(a.returns_series) >= self.min_history_days]
+        
+        if len(valid_assets) < n * 0.5:  # Besoin d'au moins 50% avec données
+            return None
+        
+        # Construire la matrice de rendements
+        returns_matrix = []
+        has_data = []
+        
+        for asset in assets:
+            if asset.returns_series is not None and len(asset.returns_series) >= self.min_history_days:
+                returns_matrix.append(asset.returns_series[-252:])  # Max 1 an
+                has_data.append(True)
+            else:
+                has_data.append(False)
+        
+        if not returns_matrix:
+            return None
+        
+        # Aligner les longueurs
+        min_len = min(len(r) for r in returns_matrix)
+        returns_matrix = [r[-min_len:] for r in returns_matrix]
+        
+        try:
+            returns = np.column_stack(returns_matrix)
             returns = np.nan_to_num(returns, nan=0.0, posinf=0.0, neginf=0.0)
-            cov = np.cov(returns, rowvar=False) * 252
-            cov = self._ensure_positive_definite(cov)
-            return cov
-        
+            cov_emp = np.cov(returns, rowvar=False) * 252  # Annualisée
+            
+            # Reconstruire la matrice complète avec les assets sans données
+            cov_full = np.zeros((n, n))
+            emp_idx = 0
+            for i in range(n):
+                if has_data[i]:
+                    emp_idx_j = 0
+                    for j in range(n):
+                        if has_data[j]:
+                            cov_full[i, j] = cov_emp[emp_idx, emp_idx_j]
+                            emp_idx_j += 1
+                    emp_idx += 1
+            
+            return cov_full
+        except Exception as e:
+            logger.warning(f"Covariance empirique échouée: {e}")
+            return None
+    
+    def compute_structured_covariance(self, assets: List[Asset]) -> np.ndarray:
+        """Calcule la covariance structurée (basée sur catégories/secteurs)."""
+        n = len(assets)
         cov = np.zeros((n, n))
-        
-        CORR_SAME_CATEGORY = 0.60
-        CORR_SAME_SECTOR = 0.45
-        CORR_SAME_EXPOSURE = 0.85
-        CORR_SAME_CORPORATE_GROUP = 0.90  # Very high correlation within same group
-        CORR_SAME_BUCKET = 0.50  # Assets in same bucket are somewhat correlated
-        CORR_EQUITY_BOND = -0.20
-        CORR_CRYPTO_OTHER = 0.25
-        CORR_DEFAULT = 0.15
-        
-        DEFAULT_VOLS = {"Actions": 25.0, "ETF": 15.0, "Obligations": 5.0, "Crypto": 80.0}
         
         for i, ai in enumerate(assets):
             for j, aj in enumerate(assets):
@@ -627,7 +504,7 @@ class PortfolioOptimizer:
                 if i == j:
                     cov[i, j] = vol_i ** 2
                 else:
-                    # Check corporate group first (highest correlation)
+                    # Hiérarchie de corrélations
                     if ai.corporate_group and aj.corporate_group and ai.corporate_group == aj.corporate_group:
                         corr = CORR_SAME_CORPORATE_GROUP
                     elif ai.exposure and aj.exposure and ai.exposure == aj.exposure:
@@ -646,8 +523,47 @@ class PortfolioOptimizer:
                     
                     cov[i, j] = corr * vol_i * vol_j
         
-        cov = self._ensure_positive_definite(cov)
         return cov
+    
+    def compute(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """
+        Calcule la covariance hybride.
+        
+        Returns:
+            (matrice_covariance, diagnostics)
+        """
+        n = len(assets)
+        
+        # Toujours calculer la structurée
+        cov_structured = self.compute_structured_covariance(assets)
+        
+        # Essayer l'empirique
+        cov_empirical = self.compute_empirical_covariance(assets)
+        
+        diagnostics = {
+            "method": "structured",
+            "empirical_available": False,
+            "empirical_weight": 0.0,
+        }
+        
+        if cov_empirical is not None:
+            # Fusion hybride
+            cov_hybrid = (
+                self.empirical_weight * cov_empirical + 
+                (1 - self.empirical_weight) * cov_structured
+            )
+            diagnostics["method"] = "hybrid"
+            diagnostics["empirical_available"] = True
+            diagnostics["empirical_weight"] = self.empirical_weight
+            
+            cov = cov_hybrid
+        else:
+            cov = cov_structured
+        
+        # Assurer positive semi-définite
+        cov = self._ensure_positive_definite(cov)
+        
+        return cov, diagnostics
     
     def _ensure_positive_definite(self, cov: np.ndarray, min_eigenvalue: float = 1e-6) -> np.ndarray:
         """Force la matrice à être positive semi-définie."""
@@ -660,24 +576,123 @@ class PortfolioOptimizer:
             eigenvalues, eigenvectors = np.linalg.eigh(cov)
             eigenvalues = np.maximum(eigenvalues, min_eigenvalue)
             cov_fixed = eigenvectors @ np.diag(eigenvalues) @ eigenvectors.T
-            cov_fixed = (cov_fixed + cov_fixed.T) / 2
-            return cov_fixed
-        except Exception as e:
-            logger.warning(f"Eigenvalue decomposition failed: {e}")
-            diag_vals = np.maximum(np.diag(cov), min_eigenvalue)
-            return np.diag(diag_vals)
+            return (cov_fixed + cov_fixed.T) / 2
+        except Exception:
+            return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
+
+
+# ============= PORTFOLIO OPTIMIZER v6 =============
+
+class PortfolioOptimizer:
+    """
+    Optimiseur mean-variance v6.
+    
+    CHANGEMENTS MAJEURS:
+    1. Buffett = HARD FILTER (intégré dans select_candidates)
+    2. Covariance HYBRIDE (empirique + structurée)
+    3. Score vient UNIQUEMENT de FactorScorer (plus de double comptage)
+    """
+    
+    def __init__(
+        self, 
+        score_scale: float = 1.0, 
+        deduplicate_etfs: bool = True,
+        deduplicate_corporate: bool = True,
+        use_bucket_constraints: bool = True,
+        buffett_hard_filter: bool = True,
+        buffett_min_score: float = BUFFETT_HARD_FILTER_MIN
+    ):
+        self.score_scale = score_scale
+        self.deduplicate_etfs_enabled = deduplicate_etfs
+        self.deduplicate_corporate_enabled = deduplicate_corporate
+        self.use_bucket_constraints = use_bucket_constraints
+        self.buffett_hard_filter_enabled = buffett_hard_filter
+        self.buffett_min_score = buffett_min_score
+        self.covariance_estimator = HybridCovarianceEstimator()
+    
+    def select_candidates(
+        self, 
+        universe: List[Asset], 
+        profile: ProfileConstraints
+    ) -> List[Asset]:
+        """
+        Pré-sélection avec HARD FILTER Buffett, déduplication et buckets.
+        """
+        # === ÉTAPE 1: Déduplication ETF ===
+        if self.deduplicate_etfs_enabled:
+            universe = deduplicate_etfs(universe, prefer_by="score")
+            logger.info(f"Post-ETF-dedup universe: {len(universe)} actifs")
+        
+        # === ÉTAPE 2: Déduplication Corporate ===
+        if self.deduplicate_corporate_enabled:
+            universe, _ = deduplicate_stocks_by_corporate_group(universe, max_per_group=MAX_STOCKS_PER_GROUP)
+            logger.info(f"Post-corporate-dedup universe: {len(universe)} actifs")
+        
+        # === ÉTAPE 3: HARD FILTER BUFFETT (v6) ===
+        if self.buffett_hard_filter_enabled:
+            universe = apply_buffett_hard_filter(universe, min_score=self.buffett_min_score)
+            logger.info(f"Post-Buffett-filter universe: {len(universe)} actifs")
+        
+        # === ÉTAPE 4: Enrichir avec buckets ===
+        universe = enrich_assets_with_buckets(universe)
+        
+        # === ÉTAPE 5: Tri par score (vient de FactorScorer uniquement) ===
+        sorted_assets = sorted(universe, key=lambda x: x.score, reverse=True)
+        
+        # === ÉTAPE 6: Sélection diversifiée ===
+        selected = []
+        sector_count = defaultdict(int)
+        category_count = defaultdict(int)
+        exposure_count = defaultdict(int)
+        bucket_count = defaultdict(int)
+        corporate_group_count = defaultdict(int)
+        
+        target_pool = profile.max_assets * 3
+        
+        for asset in sorted_assets:
+            if len(selected) >= target_pool:
+                break
+            
+            if asset.category == "Crypto":
+                if profile.crypto_max == 0:
+                    continue
+                if category_count["Crypto"] >= 3:
+                    continue
+            
+            if sector_count[asset.sector] >= 8:
+                continue
+            if asset.exposure and exposure_count[asset.exposure] >= 2:
+                continue
+            if asset.role == Role.LOTTERY and bucket_count["lottery"] >= 2:
+                continue
+            if asset.corporate_group and corporate_group_count[asset.corporate_group] >= MAX_STOCKS_PER_GROUP:
+                continue
+            
+            selected.append(asset)
+            sector_count[asset.sector] += 1
+            category_count[asset.category] += 1
+            if asset.exposure:
+                exposure_count[asset.exposure] += 1
+            if asset.role:
+                bucket_count[asset.role.value] += 1
+            if asset.corporate_group:
+                corporate_group_count[asset.corporate_group] += 1
+        
+        logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
+        logger.info(f"Buckets pool: {dict(bucket_count)}")
+        
+        return selected
+    
+    def compute_covariance(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict]:
+        """Calcule la covariance hybride (v6)."""
+        return self.covariance_estimator.compute(assets)
     
     def _compute_portfolio_vol(self, weights: np.ndarray, cov: np.ndarray) -> float:
         """Calcul robuste de la volatilité du portefeuille."""
         try:
-            weights = np.nan_to_num(weights, nan=0.0, posinf=0.0, neginf=0.0)
+            weights = np.nan_to_num(weights, nan=0.0)
             variance = np.dot(weights, np.dot(cov, weights))
-            if variance < 0 or np.isnan(variance) or np.isinf(variance):
-                variance = 0
-            vol = np.sqrt(variance) * 100
-            if np.isnan(vol) or np.isinf(vol):
-                individual_vols = np.sqrt(np.maximum(np.diag(cov), 0)) * 100
-                vol = np.dot(np.abs(weights), individual_vols)
+            vol = np.sqrt(max(variance, 0)) * 100
             return float(vol) if not np.isnan(vol) else 15.0
         except Exception:
             return 15.0
@@ -688,15 +703,12 @@ class PortfolioOptimizer:
         profile: ProfileConstraints,
         cov: np.ndarray
     ) -> List[dict]:
-        """Construit les contraintes incluant les buckets et corporate groups."""
+        """Construit les contraintes SLSQP."""
         n = len(candidates)
         constraints = []
         
         # 1. Somme = 100%
-        constraints.append({
-            "type": "eq",
-            "fun": lambda w: np.sum(w) - 1.0
-        })
+        constraints.append({"type": "eq", "fun": lambda w: np.sum(w) - 1.0})
         
         # 2. Bonds minimum
         bonds_idx = [i for i, a in enumerate(candidates) if a.category == "Obligations"]
@@ -713,8 +725,7 @@ class PortfolioOptimizer:
             constraints.append({"type": "ineq", "fun": crypto_constraint})
         
         # 4. Contraintes par SECTEUR
-        sectors = set(a.sector for a in candidates)
-        for sector in sectors:
+        for sector in set(a.sector for a in candidates):
             sector_idx = [i for i, a in enumerate(candidates) if a.sector == sector]
             if len(sector_idx) > 1:
                 def sector_constraint(w, idx=sector_idx, max_val=profile.max_sector/100):
@@ -722,62 +733,43 @@ class PortfolioOptimizer:
                 constraints.append({"type": "ineq", "fun": sector_constraint})
         
         # 5. Contraintes par RÉGION
-        regions = set(a.region for a in candidates)
-        for region in regions:
+        for region in set(a.region for a in candidates):
             region_idx = [i for i, a in enumerate(candidates) if a.region == region]
             if len(region_idx) > 1:
                 def region_constraint(w, idx=region_idx, max_val=profile.max_region/100):
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": region_constraint})
         
-        # 6. Contraintes par EXPOSITION ETF
-        exposures = set(a.exposure for a in candidates if a.exposure)
-        for exposure in exposures:
-            exposure_idx = [i for i, a in enumerate(candidates) if a.exposure == exposure]
-            if len(exposure_idx) > 1:
-                def exposure_constraint(w, idx=exposure_idx, max_val=0.20):
-                    return max_val - np.sum(w[idx])
-                constraints.append({"type": "ineq", "fun": exposure_constraint})
-        
-        # === 7. Contraintes par CORPORATE GROUP ===
-        corporate_groups = set(a.corporate_group for a in candidates if a.corporate_group)
-        for group in corporate_groups:
+        # 6. Contraintes par CORPORATE GROUP
+        for group in set(a.corporate_group for a in candidates if a.corporate_group):
             group_idx = [i for i, a in enumerate(candidates) if a.corporate_group == group]
             if len(group_idx) > 1:
                 def group_constraint(w, idx=group_idx, max_val=MAX_CORPORATE_GROUP_WEIGHT):
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
-                logger.debug(f"Corporate group constraint [{group}]: max {MAX_CORPORATE_GROUP_WEIGHT*100:.0f}%")
         
-        # === 8. Contraintes par BUCKET (Phase 2) ===
+        # 7. Contraintes par BUCKET (LEVIER 2)
         if self.use_bucket_constraints:
             bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
-            
             for role in Role:
                 if role not in bucket_targets:
                     continue
-                
                 min_pct, max_pct = bucket_targets[role]
                 role_idx = [i for i, a in enumerate(candidates) if a.role == role]
-                
                 if not role_idx:
                     continue
                 
-                # Contrainte minimum (avec tolérance de 5% pour éviter infeasible)
                 if min_pct > 0:
-                    adjusted_min = max(0, min_pct - 0.05)  # Relaxer légèrement
-                    def bucket_min_constraint(w, idx=role_idx, min_val=adjusted_min):
+                    adjusted_min = max(0, min_pct - 0.05)
+                    def bucket_min(w, idx=role_idx, min_val=adjusted_min):
                         return np.sum(w[idx]) - min_val
-                    constraints.append({"type": "ineq", "fun": bucket_min_constraint})
+                    constraints.append({"type": "ineq", "fun": bucket_min})
                 
-                # Contrainte maximum (avec tolérance de 5%)
                 if max_pct < 1.0:
-                    adjusted_max = min(1.0, max_pct + 0.05)  # Relaxer légèrement
-                    def bucket_max_constraint(w, idx=role_idx, max_val=adjusted_max):
+                    adjusted_max = min(1.0, max_pct + 0.05)
+                    def bucket_max(w, idx=role_idx, max_val=adjusted_max):
                         return max_val - np.sum(w[idx])
-                    constraints.append({"type": "ineq", "fun": bucket_max_constraint})
-                
-                logger.debug(f"Bucket constraint {role.value}: {min_pct*100:.0f}%-{max_pct*100:.0f}%")
+                    constraints.append({"type": "ineq", "fun": bucket_max})
         
         return constraints
     
@@ -797,20 +789,16 @@ class PortfolioOptimizer:
         logger.warning(f"Utilisation du fallback score-based pour {profile.name}")
         
         sorted_candidates = sorted(candidates, key=lambda a: a.score, reverse=True)
-        
         allocation = {}
         total_weight = 0.0
         
         category_weights = defaultdict(float)
         sector_weights = defaultdict(float)
-        exposure_weights = defaultdict(float)
         bucket_weights = defaultdict(float)
-        corporate_group_weights = defaultdict(float)
         
-        # Get bucket targets
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         
-        # D'abord, assurer bonds minimum
+        # Assurer bonds minimum
         bonds = [a for a in sorted_candidates if a.category == "Obligations"]
         bonds_needed = float(profile.bonds_min)
         
@@ -823,84 +811,37 @@ class PortfolioOptimizer:
                 total_weight += weight
                 bonds_needed -= weight
                 category_weights["Obligations"] += weight
-                sector_weights[bond.sector] += weight
                 if bond.role:
                     bucket_weights[bond.role.value] += weight
         
-        # Ensuite, remplir par bucket priority: DEFENSIVE -> CORE -> SATELLITE -> LOTTERY
-        bucket_priority = [Role.DEFENSIVE, Role.CORE, Role.SATELLITE, Role.LOTTERY]
-        
-        for role in bucket_priority:
+        # Remplir par bucket
+        for role in [Role.DEFENSIVE, Role.CORE, Role.SATELLITE, Role.LOTTERY]:
             if role not in bucket_targets:
                 continue
-            
             min_pct, max_pct = bucket_targets[role]
-            target_for_bucket = (min_pct + max_pct) / 2 * 100  # Target midpoint
-            
-            # Assets in this bucket, sorted by score
             bucket_assets = [a for a in sorted_candidates if a.role == role and a.id not in allocation]
-            bucket_assets.sort(key=lambda a: a.score, reverse=True)
-            
-            current_bucket_weight = bucket_weights.get(role.value, 0)
+            current_weight = bucket_weights.get(role.value, 0)
             
             for asset in bucket_assets:
-                if len(allocation) >= profile.max_assets:
+                if len(allocation) >= profile.max_assets or total_weight >= 99.5:
                     break
-                if total_weight >= 99.5:
-                    break
-                if current_bucket_weight >= max_pct * 100:
+                if current_weight >= max_pct * 100:
                     break
                 
-                # Standard constraints
-                if asset.category == "Crypto":
-                    if category_weights["Crypto"] >= profile.crypto_max:
-                        continue
-                    max_allowed = profile.crypto_max - category_weights["Crypto"]
-                else:
-                    max_allowed = profile.max_single_position
-                
+                if asset.category == "Crypto" and category_weights["Crypto"] >= profile.crypto_max:
+                    continue
                 if sector_weights[asset.sector] >= profile.max_sector:
                     continue
-                max_sector_allowed = profile.max_sector - sector_weights[asset.sector]
                 
-                if asset.exposure and exposure_weights[asset.exposure] >= 20:
-                    continue
-                max_exposure_allowed = 20 - exposure_weights.get(asset.exposure, 0) if asset.exposure else profile.max_single_position
-                
-                # Corporate group constraint
-                if asset.corporate_group:
-                    if corporate_group_weights[asset.corporate_group] >= MAX_CORPORATE_GROUP_WEIGHT * 100:
-                        continue
-                    max_group_allowed = MAX_CORPORATE_GROUP_WEIGHT * 100 - corporate_group_weights[asset.corporate_group]
-                else:
-                    max_group_allowed = profile.max_single_position
-                
-                # Bucket-aware weight
-                remaining_for_bucket = max_pct * 100 - current_bucket_weight
-                target_per_asset = remaining_for_bucket / max(len(bucket_assets) - len([a for a in bucket_assets if a.id in allocation]), 1)
-                
-                weight = min(
-                    target_per_asset,
-                    max_allowed,
-                    max_sector_allowed,
-                    max_exposure_allowed,
-                    max_group_allowed,
-                    100 - total_weight
-                )
-                
+                weight = min(profile.max_single_position, 100 - total_weight)
                 if weight > 0.5:
                     allocation[asset.id] = round(float(weight), 2)
                     total_weight += weight
                     category_weights[asset.category] += weight
                     sector_weights[asset.sector] += weight
-                    if asset.exposure:
-                        exposure_weights[asset.exposure] += weight
                     bucket_weights[role.value] += weight
-                    current_bucket_weight += weight
-                    if asset.corporate_group:
-                        corporate_group_weights[asset.corporate_group] += weight
+                    current_weight += weight
         
-        # Normaliser à 100%
         if total_weight > 0:
             factor = 100 / total_weight
             allocation = {k: round(float(v * factor), 2) for k, v in allocation.items()}
@@ -912,7 +853,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec contraintes de bucket et corporate."""
+        """Optimisation mean-variance avec covariance hybride (v6)."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
@@ -920,7 +861,8 @@ class PortfolioOptimizer:
         raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
         scores = self._normalize_scores(raw_scores) * self.score_scale
         
-        cov = self.compute_covariance(candidates)
+        # Covariance hybride (v6)
+        cov, cov_diagnostics = self.compute_covariance(candidates)
         vol_target = profile.vol_target / 100
         
         def objective(w):
@@ -932,17 +874,13 @@ class PortfolioOptimizer:
         
         constraints = self._build_constraints(candidates, profile, cov)
         bounds = [(0, profile.max_single_position / 100) for _ in range(n)]
-        
         w0 = np.ones(n) / n
         
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             result = minimize(
-                objective,
-                w0,
-                method="SLSQP",
-                bounds=bounds,
-                constraints=constraints,
+                objective, w0, method="SLSQP",
+                bounds=bounds, constraints=constraints,
                 options={"maxiter": 1000, "ftol": 1e-8}
             )
         
@@ -968,7 +906,6 @@ class PortfolioOptimizer:
         port_score = float(np.dot(final_weights, raw_scores))
         
         sector_exposure = defaultdict(float)
-        etf_exposure = defaultdict(float)
         bucket_exposure = defaultdict(float)
         corporate_group_exposure = defaultdict(float)
         
@@ -976,84 +913,46 @@ class PortfolioOptimizer:
             asset = next((a for a in candidates if a.id == asset_id), None)
             if asset:
                 sector_exposure[asset.sector] += weight
-                if asset.exposure:
-                    etf_exposure[asset.exposure] += weight
                 if asset.role:
                     bucket_exposure[asset.role.value] += weight
                 if asset.corporate_group:
                     corporate_group_exposure[asset.corporate_group] += weight
         
-        # Bucket targets vs actual - convert to native Python types
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         bucket_compliance = {}
         for role in Role:
             actual = float(bucket_exposure.get(role.value, 0))
             if role in bucket_targets:
                 min_pct, max_pct = bucket_targets[role]
-                in_range = bool(min_pct * 100 <= actual <= max_pct * 100)
                 bucket_compliance[role.value] = {
                     "actual": round(actual, 1),
                     "target_min": round(float(min_pct * 100), 0),
                     "target_max": round(float(max_pct * 100), 0),
-                    "in_range": in_range,
+                    "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
                 }
         
-        # Corporate group compliance
-        corporate_group_compliance = {}
-        for group, weight in corporate_group_exposure.items():
-            in_range = weight <= MAX_CORPORATE_GROUP_WEIGHT * 100
-            corporate_group_compliance[group] = {
-                "actual": round(weight, 1),
-                "max": round(MAX_CORPORATE_GROUP_WEIGHT * 100, 0),
-                "in_range": in_range,
-            }
-        
-        # Build diagnostics with native Python types
-        diagnostics = {
-            "converged": bool(optimizer_converged),
+        diagnostics = to_python_native({
+            "converged": optimizer_converged,
             "message": str(result.message) if result.success else "Fallback score-based",
-            "portfolio_vol": round(float(port_vol), 2),
-            "vol_target": float(profile.vol_target),
-            "portfolio_score": round(float(port_score), 3),
-            "n_assets": int(len(allocation)),
-            "sectors": {k: round(float(v), 2) for k, v in sector_exposure.items()},
-            "etf_exposures": {k: round(float(v), 2) for k, v in etf_exposure.items()},
-            "bucket_exposure": {k: round(float(v), 2) for k, v in bucket_exposure.items()},
+            "portfolio_vol": round(port_vol, 2),
+            "vol_target": profile.vol_target,
+            "portfolio_score": round(port_score, 3),
+            "n_assets": len(allocation),
+            "sectors": dict(sector_exposure),
+            "bucket_exposure": dict(bucket_exposure),
             "bucket_compliance": bucket_compliance,
-            "corporate_group_exposure": {k: round(float(v), 2) for k, v in corporate_group_exposure.items()},
-            "corporate_group_compliance": corporate_group_compliance,
-            "deduplication_enabled": bool(self.deduplicate_etfs_enabled),
-            "corporate_dedup_enabled": bool(self.deduplicate_corporate_enabled),
-            "bucket_constraints_enabled": bool(self.use_bucket_constraints),
-        }
+            "corporate_group_exposure": dict(corporate_group_exposure),
+            "covariance_method": cov_diagnostics.get("method", "unknown"),
+            "covariance_empirical_weight": cov_diagnostics.get("empirical_weight", 0),
+            "buffett_hard_filter_enabled": self.buffett_hard_filter_enabled,
+            "buffett_min_score": self.buffett_min_score,
+        })
         
-        # Apply final conversion to ensure all types are JSON-serializable
-        diagnostics = to_python_native(diagnostics)
-        
-        # Logging
         logger.info(
             f"{profile.name}: {len(allocation)} actifs, "
             f"vol={port_vol:.1f}% (cible={profile.vol_target}%), "
-            f"converged={optimizer_converged}"
+            f"cov_method={cov_diagnostics.get('method')}"
         )
-        logger.info(f"  Buckets: {dict(bucket_exposure)}")
-        if corporate_group_exposure:
-            logger.info(f"  Corporate groups: {dict(corporate_group_exposure)}")
-        
-        # Warn if bucket out of range
-        for role_name, compliance in bucket_compliance.items():
-            if not compliance["in_range"]:
-                logger.warning(
-                    f"  ⚠️ Bucket {role_name}: {compliance['actual']:.1f}% "
-                    f"(target: {compliance['target_min']:.0f}%-{compliance['target_max']:.0f}%)"
-                )
-        
-        # Warn if corporate group over limit
-        for group, compliance in corporate_group_compliance.items():
-            if not compliance["in_range"]:
-                logger.warning(
-                    f"  ⚠️ Corporate group {group}: {compliance['actual']:.1f}% > max {compliance['max']:.0f}%"
-                )
         
         return allocation, diagnostics
     
@@ -1070,7 +969,6 @@ class PortfolioOptimizer:
         if active < profile.min_assets:
             sorted_idx = np.argsort(weights)[::-1]
             to_add = profile.min_assets - int(active)
-            
             total_to_redistribute = 0.02 * to_add
             top_positions = sorted_idx[:5]
             reduction_per_top = total_to_redistribute / len(top_positions)
@@ -1089,12 +987,10 @@ class PortfolioOptimizer:
         elif active > profile.max_assets:
             sorted_idx = np.argsort(weights)
             to_remove = int(active) - profile.max_assets
-            
             removed_weight = 0
             for idx in sorted_idx[:to_remove]:
                 removed_weight += weights[idx]
                 weights[idx] = 0
-            
             remaining_idx = np.where(weights > 0.005)[0]
             if len(remaining_idx) > 0:
                 weights[remaining_idx] += removed_weight / len(remaining_idx)
@@ -1104,18 +1000,13 @@ class PortfolioOptimizer:
         
         return weights
     
-    def _adjust_to_100(
-        self, 
-        allocation: Dict[str, float],
-        profile: ProfileConstraints
-    ) -> Dict[str, float]:
+    def _adjust_to_100(self, allocation: Dict[str, float], profile: ProfileConstraints) -> Dict[str, float]:
         """Ajustement à 100%."""
         total = sum(allocation.values())
         if abs(total - 100) < 0.01:
             return allocation
         
         diff = 100 - total
-        
         candidates_for_adjust = [
             (k, v) for k, v in allocation.items()
             if v + diff <= profile.max_single_position and v + diff >= 0.5
@@ -1136,7 +1027,7 @@ class PortfolioOptimizer:
         universe: List[Asset], 
         profile_name: str
     ) -> Tuple[Dict[str, float], dict]:
-        """Pipeline complet: déduplication + buckets + optimisation."""
+        """Pipeline complet: déduplication + Buffett hard filter + buckets + optimisation."""
         profile = PROFILES[profile_name]
         candidates = self.select_candidates(universe, profile)
         
@@ -1198,15 +1089,15 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 score=score,
                 vol_annual=vol_annual,
                 source_data=item,
+                buffett_score=item.get("buffett_score"),  # Score Buffett pour hard filter
             )
             
-            # Assign corporate group for stocks
             if cat_normalized == "Actions":
                 asset.corporate_group = get_corporate_group(asset.name)
             
             assets.append(asset)
         
-        logger.info(f"Univers converti (liste plate): {len(assets)} actifs")
+        logger.info(f"Univers converti: {len(assets)} actifs")
         return assets
     
     # Dict format
@@ -1215,9 +1106,6 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
         if not original_id:
             original_id = f"EQ_{len(assets)+1}"
         
-        raw_vol = eq.get("vol_3y") or eq.get("vol_annual")
-        vol_annual = _clean_float(raw_vol, 25.0, 1.0, 150.0)
-        
         asset = Asset(
             id=original_id,
             name=eq.get("name", original_id),
@@ -1225,8 +1113,9 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             sector=eq.get("sector", "Unknown"),
             region=eq.get("country", "Global"),
             score=_clean_float(eq.get("score") or eq.get("composite_score"), 0.0, -100, 100),
-            vol_annual=vol_annual,
+            vol_annual=_clean_float(eq.get("vol_3y") or eq.get("vol_annual"), 25.0, 1.0, 150.0),
             source_data=eq,
+            buffett_score=eq.get("buffett_score"),
         )
         asset.corporate_group = get_corporate_group(asset.name)
         assets.append(asset)
@@ -1236,9 +1125,6 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
         if not original_id:
             original_id = f"ETF_{len([a for a in assets if 'ETF' in a.id])+1}"
         
-        raw_vol = etf.get("vol_3y") or etf.get("vol30")
-        vol_annual = _clean_float(raw_vol, 15.0, 1.0, 150.0)
-        
         assets.append(Asset(
             id=original_id,
             name=etf.get("name", original_id),
@@ -1246,7 +1132,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             sector=etf.get("sector", "Diversified"),
             region=etf.get("country", "Global"),
             score=_clean_float(etf.get("score") or etf.get("composite_score"), 0.0, -100, 100),
-            vol_annual=vol_annual,
+            vol_annual=_clean_float(etf.get("vol_3y") or etf.get("vol30"), 15.0, 1.0, 150.0),
             source_data=etf,
         ))
     
@@ -1255,9 +1141,6 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
         if not original_id:
             original_id = f"BOND_{len([a for a in assets if 'BOND' in a.id])+1}"
         
-        raw_vol = bond.get("vol_3y") or bond.get("vol30")
-        vol_annual = _clean_float(raw_vol, 5.0, 1.0, 50.0)
-        
         assets.append(Asset(
             id=original_id,
             name=bond.get("name", original_id),
@@ -1265,7 +1148,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             sector="Bonds",
             region=bond.get("country", "Global"),
             score=_clean_float(bond.get("score") or bond.get("composite_score"), 0.0, -100, 100),
-            vol_annual=vol_annual,
+            vol_annual=_clean_float(bond.get("vol_3y") or bond.get("vol30"), 5.0, 1.0, 50.0),
             source_data=bond,
         ))
     
@@ -1274,9 +1157,6 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
         if not original_id:
             original_id = f"CRYPTO_{len([a for a in assets if 'CRYPTO' in a.id])+1}"
         
-        raw_vol = cr.get("vol_3y") or cr.get("vol30")
-        vol_annual = _clean_float(raw_vol, 80.0, 10.0, 200.0)
-        
         assets.append(Asset(
             id=original_id,
             name=cr.get("name", original_id),
@@ -1284,7 +1164,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             sector="Crypto",
             region="Global",
             score=_clean_float(cr.get("score") or cr.get("composite_score"), 0.0, -100, 100),
-            vol_annual=vol_annual,
+            vol_annual=_clean_float(cr.get("vol_3y") or cr.get("vol30"), 80.0, 10.0, 200.0),
             source_data=cr,
         ))
     
@@ -1299,7 +1179,7 @@ def validate_portfolio(
     assets: List[Asset],
     profile: ProfileConstraints
 ) -> Tuple[bool, List[str]]:
-    """Validation post-optimisation avec buckets et corporate groups."""
+    """Validation post-optimisation."""
     errors = []
     warnings_list = []
     
@@ -1320,21 +1200,15 @@ def validate_portfolio(
     asset_lookup = {a.id: a for a in assets}
     category_weights = defaultdict(float)
     sector_weights = defaultdict(float)
-    exposure_weights = defaultdict(float)
     bucket_weights = defaultdict(float)
-    corporate_group_weights = defaultdict(float)
     
     for asset_id, weight in allocation.items():
         asset = asset_lookup.get(asset_id)
         if asset:
             category_weights[asset.category] += weight
             sector_weights[asset.sector] += weight
-            if asset.exposure:
-                exposure_weights[asset.exposure] += weight
             if asset.role:
                 bucket_weights[asset.role.value] += weight
-            if asset.corporate_group:
-                corporate_group_weights[asset.corporate_group] += weight
     
     if category_weights["Crypto"] > profile.crypto_max + 0.1:
         errors.append(f"Crypto = {category_weights['Crypto']:.2f}% > max {profile.crypto_max}%")
@@ -1345,31 +1219,6 @@ def validate_portfolio(
     for sector, weight in sector_weights.items():
         if weight > profile.max_sector + 0.1:
             errors.append(f"Secteur {sector} = {weight:.2f}% > max {profile.max_sector}%")
-    
-    # Check ETF exposure
-    for exposure, weight in exposure_weights.items():
-        if weight > 25:
-            warnings_list.append(f"ETF exposure '{exposure}' = {weight:.1f}% (élevé)")
-    
-    # Check corporate group exposure
-    for group, weight in corporate_group_weights.items():
-        if weight > MAX_CORPORATE_GROUP_WEIGHT * 100 + 0.1:
-            errors.append(f"Corporate group '{group}' = {weight:.1f}% > max {MAX_CORPORATE_GROUP_WEIGHT*100:.0f}%")
-    
-    # Check bucket compliance
-    bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
-    for role in Role:
-        actual = bucket_weights.get(role.value, 0)
-        if role in bucket_targets:
-            min_pct, max_pct = bucket_targets[role]
-            if actual < min_pct * 100 - 5:  # 5% tolerance
-                warnings_list.append(
-                    f"Bucket {role.value}: {actual:.1f}% < min {min_pct*100:.0f}%"
-                )
-            if actual > max_pct * 100 + 5:
-                warnings_list.append(
-                    f"Bucket {role.value}: {actual:.1f}% > max {max_pct*100:.0f}%"
-                )
     
     is_valid = len(errors) == 0
     all_issues = errors + [f"⚠️ {w}" for w in warnings_list]

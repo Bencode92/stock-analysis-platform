@@ -1,12 +1,16 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs scorés v2.0.
-Extrait de generate_portfolios.py — logique préservée et améliorée.
+Construction de l'univers d'actifs v3.0 — Phase 2.5 Refactoring.
 
-v2.0: Intègre les nouvelles métriques:
-- ROIC (depuis stock-filter-by-volume.js)
-- FCF Yield (depuis stock-advanced-filter.js)
-- EPS Growth 5Y (depuis stock-advanced-filter.js)
+CHANGEMENTS MAJEURS v3.0:
+1. SUPPRESSION du scoring interne (double comptage éliminé)
+2. FactorScorer est maintenant le SEUL moteur d'alpha
+3. Ce module se concentre sur le CHARGEMENT et la PRÉPARATION des données
+
+Workflow:
+1. universe.py charge et prépare les données brutes
+2. factors.py calcule les scores (SEUL moteur d'alpha)
+3. optimizer.py applique le hard filter Buffett et optimise
 """
 
 import re
@@ -18,13 +22,6 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
 from collections import defaultdict
-
-# Import du filtre Buffett v2.0
-from .sector_quality import (
-    apply_buffett_filter, 
-    get_sector_summary,
-    get_fundamentals_coverage,
-)
 
 logger = logging.getLogger("portfolio_engine.universe")
 
@@ -44,27 +41,6 @@ def fnum(x) -> float:
         return 0.0
 
 
-def winsorize(arr: np.ndarray, percentile: float = 0.02) -> np.ndarray:
-    """Winsorisation pour éliminer les outliers."""
-    if len(arr) == 0:
-        return np.array([])
-    arr = np.nan_to_num(arr, nan=0.0)
-    lo, hi = np.nanpercentile(arr, [percentile * 100, 100 - percentile * 100])
-    return np.clip(arr, lo, hi)
-
-
-def zscore(arr: List[float]) -> np.ndarray:
-    """Z-score normalisé avec winsorisation."""
-    v = np.array([fnum(a) for a in arr], dtype=float)
-    if len(v) == 0:
-        return v
-    v = winsorize(v)
-    mu, sd = np.nanmean(v), np.nanstd(v)
-    if sd < 1e-8:
-        return np.zeros_like(v)
-    return (v - mu) / sd
-
-
 # ============= DÉTECTION ETF LEVIER =============
 
 LEVERAGED_PATTERN = re.compile(
@@ -78,25 +54,19 @@ def is_leveraged_etf(name: str, etf_type: str = "", leverage_field: str = "") ->
     lev = str(leverage_field).strip().lower()
     if lev not in ("", "0", "none", "nan", "na", "n/a"):
         return True
-    
     if LEVERAGED_PATTERN.search(name or ""):
         return True
     if LEVERAGED_PATTERN.search(etf_type or ""):
         return True
-    
     return False
 
 
 # ============= CHARGEMENT ETF =============
 
 def load_etf_csv(path: str) -> pd.DataFrame:
-    """
-    Charge et prépare les ETF depuis CSV.
-    Ajoute les colonnes is_bond et is_leveraged.
-    """
+    """Charge et prépare les ETF depuis CSV."""
     df = pd.read_csv(path)
     
-    # Colonnes numériques
     num_cols = [
         "daily_change_pct", "ytd_return_pct", "one_year_return_pct",
         "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio"
@@ -105,7 +75,6 @@ def load_etf_csv(path: str) -> pd.DataFrame:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
     
-    # Colonne name (fallback)
     name_col = next(
         (c for c in ["name", "long_name", "etf_name", "symbol", "ticker"] if c in df.columns),
         None
@@ -115,7 +84,6 @@ def load_etf_csv(path: str) -> pd.DataFrame:
     else:
         df["name"] = df[name_col].astype(str)
     
-    # Détection obligations
     def _series(col, default=""):
         return df[col] if col in df.columns else pd.Series(default, index=df.index)
     
@@ -125,7 +93,6 @@ def load_etf_csv(path: str) -> pd.DataFrame:
         | _series("category").str.contains(r"Bond|Fixed Income|Obligation", case=False, na=False)
     )
     
-    # Détection levier
     df["is_leveraged"] = df.apply(
         lambda r: is_leveraged_etf(
             r.get("name", ""),
@@ -135,11 +102,7 @@ def load_etf_csv(path: str) -> pd.DataFrame:
         axis=1
     )
     
-    logger.info(
-        f"ETF chargés: {len(df)} | Bonds: {df['is_bond'].sum()} | "
-        f"Leveraged (exclus): {df['is_leveraged'].sum()}"
-    )
-    
+    logger.info(f"ETF chargés: {len(df)} | Bonds: {df['is_bond'].sum()} | Leveraged (exclus): {df['is_leveraged'].sum()}")
     return df
 
 
@@ -153,7 +116,9 @@ def load_returns_series(
 ) -> Dict[str, np.ndarray]:
     """
     Charge les séries de rendements pour covariance empirique.
-    Retourne: {asset_name: np.array de rendements}
+    
+    Returns:
+        {asset_name: np.array de rendements}
     """
     returns = {}
     
@@ -173,234 +138,59 @@ def load_returns_series(
     return returns
 
 
-# ============= SCORING QUANTITATIF =============
+# ============= FILTRES DE RISQUE SIMPLES =============
 
-def compute_scores(
-    rows: List[dict],
-    asset_type: str,
-    returns_series: Optional[Dict[str, np.ndarray]] = None
-) -> List[dict]:
+def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
     """
-    Calcul du score quantitatif multi-facteur.
+    Filtre simple par bornes de volatilité.
     
-    Facteurs:
-    - Momentum (adapté au type d'actif)
-    - Risque (volatilité + drawdown)
-    - Sur-extension (anti-fin-de-cycle)
-    - Liquidité
-    
-    Args:
-        rows: Liste d'actifs avec métriques
-        asset_type: 'equity' | 'etf' | 'crypto'
-        returns_series: Dict optionnel pour vol empirique
-    
-    Returns:
-        rows enrichis avec 'score', 'risk_class', 'flags'
+    v3.0: Simplifié - pas de scoring, juste des filtres de risque.
     """
-    n = len(rows)
-    if n == 0:
-        return rows
+    risk_bounds = {
+        "equity": {"vol_min": 8, "vol_max": 70, "dd_max": 50},
+        "etf": {"vol_min": 3, "vol_max": 50, "dd_max": 40},
+        "crypto": {"vol_min": 20, "vol_max": 180, "dd_max": 70},
+        "bond": {"vol_min": 1, "vol_max": 20, "dd_max": 20},
+    }
     
-    # --- Momentum adaptatif ---
-    if asset_type == "crypto":
-        mom_raw = [
-            0.5 * fnum(r.get("perf_7d")) + 0.5 * fnum(r.get("perf_24h"))
-            for r in rows
-        ]
-    else:
-        m1 = [fnum(r.get("perf_1m")) for r in rows]
-        m3 = [fnum(r.get("perf_3m")) for r in rows]
-        ytd = [fnum(r.get("ytd")) for r in rows]
-        
-        if any(m3) or any(m1):
-            mom_raw = [0.5 * m3[i] + 0.3 * m1[i] + 0.2 * ytd[i] for i in range(n)]
-        else:
-            d1 = [fnum(r.get("perf_24h") or r.get("perf_1d")) for r in rows]
-            mom_raw = [0.7 * ytd[i] + 0.3 * (d1[i] * 20.0) for i in range(n)]
+    bounds = risk_bounds.get(asset_type, risk_bounds["etf"])
     
-    mom = zscore(mom_raw)
-    
-    # --- Risque (vol_3y + drawdown) ---
-    vol = [fnum(r.get("vol_3y") or r.get("vol30") or r.get("volatility_3y") or r.get("vol")) for r in rows]
-    
-    # Enrichir avec vol empirique si disponible
-    if returns_series:
-        for i, r in enumerate(rows):
-            name = r.get("name")
-            if name in returns_series:
-                emp_vol = np.std(returns_series[name]) * np.sqrt(252) * 100
-                vol[i] = emp_vol
-    
-    risk_vol = zscore(vol)
-    
-    dd = [abs(fnum(r.get("maxdd90") or r.get("max_drawdown_ytd") or r.get("max_dd"))) for r in rows]
-    risk_dd = zscore(dd) if any(dd) else np.zeros(n)
-    
-    # --- Sur-extension (flag) ---
-    ytd_vals = [fnum(r.get("ytd")) for r in rows]
-    p1m = [fnum(r.get("perf_1m")) for r in rows]
-    
-    overext = []
-    for i, r in enumerate(rows):
-        flag = (ytd_vals[i] > 80 and p1m[i] <= 0) or (ytd_vals[i] > 150)
-        overext.append(1.0 if flag else 0.0)
-        r["flags"] = {"overextended": bool(flag)}
-    
-    # --- Liquidité ---
-    liq_raw = [
-        math.log(max(fnum(r.get("liquidity") or r.get("market_cap") or r.get("aum_usd")), 1.0))
-        for r in rows
-    ]
-    liq = zscore(liq_raw) if any(liq_raw) else np.zeros(n)
-    
-    liq_weight = {"etf": 0.30, "equity": 0.15, "crypto": 0.05}.get(asset_type, 0.1)
-    
-    # --- Score final ---
-    score = mom - (0.6 * risk_vol + 0.4 * risk_dd) - np.array(overext) * 0.8 + liq_weight * liq
-    
-    # --- Classification risque ---
-    for i, r in enumerate(rows):
-        r["score"] = float(score[i])
-        v = vol[i] if vol[i] > 0 else 20
-        
-        if asset_type == "etf":
-            r["risk_class"] = "low" if 5 <= v <= 20 else ("mid" if 20 < v <= 40 else "high")
-        elif asset_type == "equity":
-            r["risk_class"] = "low" if 10 <= v <= 25 else ("mid" if 25 < v <= 45 else "high")
-        else:  # crypto
-            r["risk_class"] = "low" if 40 <= v <= 70 else ("mid" if 70 < v <= 120 else "high")
-        
-        # Ajouter category si manquante
-        if "category" not in r:
-            r["category"] = asset_type
-    
-    return rows
-
-
-# ============= FILTRES =============
-
-def filter_equities(rows: List[dict]) -> List[dict]:
-    """Filtre les actions selon critères de risque."""
     def is_valid(r):
-        v = fnum(r.get("vol_3y") or r.get("vol"))
-        dd = abs(fnum(r.get("max_drawdown_ytd") or r.get("maxdd90") or r.get("max_dd")))
-        overext = r.get("flags", {}).get("overextended", False)
-        # Critères assouplis pour permettre plus d'actifs
-        return 8 <= v <= 70 and dd <= 40 and not overext
+        v = fnum(r.get("vol_3y") or r.get("vol30") or r.get("vol") or 20)
+        dd = abs(fnum(r.get("max_drawdown_ytd") or r.get("maxdd90") or r.get("max_dd") or 0))
+        return bounds["vol_min"] <= v <= bounds["vol_max"] and dd <= bounds["dd_max"]
     
     filtered = [r for r in rows if is_valid(r)]
-    logger.info(f"Actions filtrées: {len(filtered)}/{len(rows)}")
+    logger.info(f"{asset_type.capitalize()} filtrés par risque: {len(filtered)}/{len(rows)}")
     return filtered
 
 
-def filter_etfs(rows: List[dict]) -> List[dict]:
-    """Filtre les ETF selon critères."""
-    def is_valid(r):
-        v = fnum(r.get("vol_3y") or r.get("vol30") or r.get("vol"))
-        overext = r.get("flags", {}).get("overextended", False)
-        return 3 <= v <= 50 and not overext
-    
-    filtered = [r for r in rows if is_valid(r)]
-    logger.info(f"ETF filtrés: {len(filtered)}/{len(rows)}")
-    return filtered
+# ============= CONSTRUCTION UNIVERS v3.0 =============
 
-
-def filter_crypto(rows: List[dict]) -> List[dict]:
-    """Filtre les cryptos selon tendance et vol."""
-    def is_valid(r):
-        p7d = fnum(r.get("perf_7d"))
-        p24h = fnum(r.get("perf_24h"))
-        v = fnum(r.get("vol30") or r.get("vol"))
-        dd = abs(fnum(r.get("maxdd90") or r.get("drawdown_90d_pct")))
-        
-        ok_trend = p7d > p24h > 0 and p24h <= 0.5 * p7d
-        ok_vol = 20 <= v <= 180
-        ok_dd = dd <= 60
-        
-        return ok_trend and ok_vol and ok_dd
-    
-    filtered = [r for r in rows if is_valid(r)]
-    
-    # Fallback si trop peu
-    if len(filtered) < 2:
-        relaxed = [r for r in rows if fnum(r.get("perf_7d")) > 0]
-        filtered = sorted(relaxed, key=lambda x: x.get("score", 0), reverse=True)[:5]
-        logger.warning(f"Crypto: fallback appliqué → {len(filtered)} actifs")
-    
-    logger.info(f"Crypto filtrées: {len(filtered)}/{len(rows)}")
-    return filtered
-
-
-# ============= DIVERSIFICATION SECTORIELLE =============
-
-def sector_balanced_selection(
-    rows: List[dict],
-    n: int,
-    sector_cap: float = 0.30
-) -> List[dict]:
-    """Sélection équilibrée par secteur (round-robin)."""
-    if not rows:
-        return []
-    
-    buckets = defaultdict(list)
-    for r in sorted(rows, key=lambda x: x.get("score", 0), reverse=True):
-        buckets[r.get("sector", "Unknown")].append(r)
-    
-    sector_order = sorted(
-        buckets.keys(),
-        key=lambda s: buckets[s][0]["score"] if buckets[s] else -1e9,
-        reverse=True
-    )
-    
-    out = []
-    picked_per_sector = defaultdict(int)
-    max_per_sector = max(1, int(n * sector_cap))
-    
-    while len(out) < n:
-        progressed = False
-        for s in sector_order:
-            if picked_per_sector[s] >= max_per_sector:
-                continue
-            if buckets[s]:
-                out.append(buckets[s].pop(0))
-                picked_per_sector[s] += 1
-                progressed = True
-                if len(out) >= n:
-                    break
-        if not progressed:
-            break
-    
-    return out[:n]
-
-
-# ============= CONSTRUCTION UNIVERS (DEPUIS DONNÉES) =============
-
-def build_scored_universe(
+def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
     etf_data: Union[List[dict], None] = None,
     crypto_data: Union[List[dict], None] = None,
     returns_series: Optional[Dict[str, np.ndarray]] = None,
-    buffett_mode: str = "soft",
-    buffett_min_score: float = 0.0
+    apply_risk_filters: bool = True
 ) -> List[dict]:
     """
-    Construction de l'univers fermé avec scoring quantitatif.
-    Accepte les données directement (pas les chemins).
+    Construction de l'univers BRUT (sans scoring).
     
-    v2.0: Intègre ROIC, FCF Yield, EPS Growth dans le scoring Buffett.
+    v3.0: Le scoring est fait par FactorScorer, pas ici.
+    Ce module se concentre sur le chargement et la préparation.
     
     Args:
-        stocks_data: Liste des dicts stocks ou [{"stocks": [...]}]
+        stocks_data: Liste des dicts stocks ou [{\"stocks\": [...]}]
         etf_data: Liste des dicts ETF
         crypto_data: Liste des dicts crypto
         returns_series: Dict optionnel des séries de rendements
-        buffett_mode: "soft" (pénalité), "hard" (rejet), "both", "none" (désactivé)
-        buffett_min_score: Score Buffett minimum (0-100)
+        apply_risk_filters: Appliquer les filtres de risque basiques
     
     Returns:
-        Liste plate de tous les actifs avec id, name, score, category, etc.
+        Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers quantitatif v2.0...")
+    logger.info("🧮 Construction de l'univers brut v3.0...")
     
     all_assets = []
     
@@ -408,83 +198,53 @@ def build_scored_universe(
     eq_rows = []
     if stocks_data:
         for data in stocks_data:
-            # Support format [{"stocks": [...]}] ou juste liste
             stocks_list = data.get("stocks", []) if isinstance(data, dict) else data
             for it in stocks_list:
                 eq_rows.append({
-                    "id": f"EQ_{len(eq_rows)+1}",
+                    "id": it.get("ticker") or it.get("symbol") or it.get("name") or f"EQ_{len(eq_rows)+1}",
                     "name": it.get("name") or it.get("ticker"),
                     "ticker": it.get("ticker"),
+                    # Performance
                     "perf_1m": it.get("perf_1m"),
                     "perf_3m": it.get("perf_3m"),
                     "ytd": it.get("perf_ytd") or it.get("ytd"),
                     "perf_24h": it.get("perf_1d"),
+                    # Risque
                     "vol_3y": it.get("volatility_3y") or it.get("vol"),
                     "vol": it.get("volatility_3y") or it.get("vol"),
                     "max_dd": it.get("max_drawdown_ytd"),
                     "max_drawdown_ytd": it.get("max_drawdown_ytd"),
+                    # Méta
                     "liquidity": it.get("market_cap"),
                     "market_cap": it.get("market_cap"),
                     "sector": it.get("sector", "Unknown"),
                     "country": it.get("country", "Global"),
                     "category": "equity",
-                    # === Métriques fondamentales Buffett v1.0 ===
+                    # === Métriques fondamentales Buffett ===
                     "roe": it.get("roe"),
+                    "roic": it.get("roic"),
                     "de_ratio": it.get("de_ratio"),
+                    "fcf_yield": it.get("fcf_yield"),
+                    "eps_growth_5y": it.get("eps_growth_5y"),
+                    "peg_ratio": it.get("peg_ratio"),
                     "payout_ratio_ttm": it.get("payout_ratio_ttm"),
                     "dividend_yield": it.get("dividend_yield"),
-                    "dividend_coverage": it.get("dividend_coverage"),
                     "pe_ratio": it.get("pe_ratio"),
-                    "eps_ttm": it.get("eps_ttm"),
-                    # === Métriques Buffett v2.0 (nouvelles) ===
-                    "roic": it.get("roic"),  # Depuis stock-filter-by-volume.js
-                    "fcf_yield": it.get("fcf_yield"),  # Depuis stock-advanced-filter.js
-                    "eps_growth_5y": it.get("eps_growth_5y"),  # Depuis stock-advanced-filter.js
-                    "eps_growth_forecast_5y": it.get("eps_growth_forecast_5y"),
-                    "peg_ratio": it.get("peg_ratio"),
-                    "fcf_ttm": it.get("fcf_ttm"),
                 })
     
     if eq_rows:
-        eq_rows = compute_scores(eq_rows, "equity", returns_series)
-        
-        # === BUFFETT FILTER v2.0 ===
-        if buffett_mode != "none":
-            logger.info(f"🎯 Application du filtre Buffett v2.0 (mode={buffett_mode})")
-            eq_rows = apply_buffett_filter(
-                eq_rows,
-                mode=buffett_mode,
-                strict=False,
-                min_score=buffett_min_score
-            )
-            
-            # Log coverage des métriques v2.0
-            coverage = get_fundamentals_coverage(eq_rows)
-            logger.info(f"📊 Couverture métriques: ROE={coverage.get('roe', 0):.1f}% | "
-                       f"ROIC={coverage.get('roic', 0):.1f}% | "
-                       f"FCF Yield={coverage.get('fcf_yield', 0):.1f}% | "
-                       f"EPS Growth={coverage.get('eps_growth_5y', 0):.1f}%")
-            
-            # Log summary par secteur
-            summary = get_sector_summary(eq_rows)
-            for sector, stats in summary.items():
-                if stats['count'] >= 3:
-                    logger.debug(f"  {sector}: {stats['count']} actifs, "
-                               f"score={stats['avg_buffett_score']}, "
-                               f"ROIC={stats.get('avg_roic', 'N/A')}")
-        
-        eq_filtered = filter_equities(eq_rows)
-        equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
-        all_assets.extend(equities)
+        if apply_risk_filters:
+            eq_rows = filter_by_risk_bounds(eq_rows, "equity")
+        all_assets.extend(eq_rows)
     
     # ====== ETF ======
     etf_rows = []
     bond_rows = []
     if etf_data:
-        for i, it in enumerate(etf_data):
+        for it in etf_data:
             is_bond = "bond" in str(it.get("fund_type", "")).lower()
             row = {
-                "id": f"ETF_{'b' if is_bond else 's'}{len(etf_rows if not is_bond else bond_rows)+1}",
+                "id": it.get("isin") or it.get("ticker") or it.get("name") or f"ETF_{len(etf_rows)+1}",
                 "name": it.get("name"),
                 "perf_24h": it.get("daily_change_pct"),
                 "ytd": it.get("ytd_return_pct") or it.get("ytd"),
@@ -502,22 +262,21 @@ def build_scored_universe(
                 etf_rows.append(row)
     
     if etf_rows:
-        etf_rows = compute_scores(etf_rows, "etf", returns_series)
-        etf_filtered = filter_etfs(etf_rows)
-        etfs = sorted(etf_filtered, key=lambda x: x["score"], reverse=True)[:15]
-        all_assets.extend(etfs)
+        if apply_risk_filters:
+            etf_rows = filter_by_risk_bounds(etf_rows, "etf")
+        all_assets.extend(etf_rows)
     
     if bond_rows:
-        bond_rows = compute_scores(bond_rows, "etf", returns_series)
-        bonds = sorted(bond_rows, key=lambda x: x["score"], reverse=True)[:10]
-        all_assets.extend(bonds)
+        if apply_risk_filters:
+            bond_rows = filter_by_risk_bounds(bond_rows, "bond")
+        all_assets.extend(bond_rows)
     
     # ====== CRYPTO ======
     cr_rows = []
     if crypto_data:
-        for i, it in enumerate(crypto_data):
+        for it in crypto_data:
             cr_rows.append({
-                "id": f"CR_{i+1}",
+                "id": it.get("symbol") or it.get("pair") or f"CR_{len(cr_rows)+1}",
                 "name": it.get("symbol") or it.get("name"),
                 "perf_24h": it.get("ret_1d_pct") or it.get("perf_24h"),
                 "perf_7d": it.get("ret_7d_pct") or it.get("perf_7d"),
@@ -531,48 +290,38 @@ def build_scored_universe(
             })
     
     if cr_rows:
-        cr_rows = compute_scores(cr_rows, "crypto", returns_series)
-        crypto = filter_crypto(cr_rows)[:5]
-        all_assets.extend(crypto)
+        if apply_risk_filters:
+            cr_rows = filter_by_risk_bounds(cr_rows, "crypto")
+        all_assets.extend(cr_rows)
     
-    logger.info(f"✅ Univers construit: {len(all_assets)} actifs")
+    # Ajouter les séries de rendements si disponibles
+    if returns_series:
+        for asset in all_assets:
+            name = asset.get("name")
+            if name and name in returns_series:
+                asset["returns_series"] = returns_series[name]
+    
+    logger.info(f"✅ Univers brut construit: {len(all_assets)} actifs")
     
     return all_assets
 
 
-# ============= CONSTRUCTION UNIVERS (DEPUIS FICHIERS) =============
+# ============= CONSTRUCTION UNIVERS DEPUIS FICHIERS =============
 
-def build_scored_universe_from_files(
+def build_raw_universe_from_files(
     stocks_jsons: List[dict],
     etf_csv_path: str,
     crypto_csv_path: str,
     returns_series: Optional[Dict[str, np.ndarray]] = None,
-    buffett_mode: str = "soft",
-    buffett_min_score: float = 0.0
+    apply_risk_filters: bool = True
 ) -> Dict[str, List[dict]]:
     """
-    Construction de l'univers fermé depuis les fichiers.
+    Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
-    v2.0: Intègre ROIC, FCF Yield, EPS Growth.
-    
-    Args:
-        stocks_jsons: Liste des données stocks (depuis stocks_*.json)
-        etf_csv_path: Chemin vers combined_etfs.csv
-        crypto_csv_path: Chemin vers Crypto_filtered_volatility.csv
-        returns_series: Dict optionnel des séries de rendements
-        buffett_mode: "soft" (pénalité), "hard" (rejet), "both", "none" (désactivé)
-        buffett_min_score: Score Buffett minimum (0-100)
-    
-    Returns:
-        {
-            "equities": [...],
-            "etfs": [...],
-            "bonds": [...],
-            "crypto": [...]
-        }
+    v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers quantitatif v2.0 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.0 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -593,44 +342,19 @@ def build_scored_universe_from_files(
                 "market_cap": it.get("market_cap"),
                 "sector": it.get("sector", "Unknown"),
                 "country": it.get("country", "Global"),
-                # === Métriques fondamentales Buffett v1.0 ===
+                "category": "equity",
+                # Fondamentaux Buffett
                 "roe": it.get("roe"),
-                "de_ratio": it.get("de_ratio"),
-                "payout_ratio_ttm": it.get("payout_ratio_ttm"),
-                "dividend_yield": it.get("dividend_yield"),
-                "dividend_coverage": it.get("dividend_coverage"),
-                "pe_ratio": it.get("pe_ratio"),
-                "eps_ttm": it.get("eps_ttm"),
-                # === Métriques Buffett v2.0 (nouvelles) ===
                 "roic": it.get("roic"),
+                "de_ratio": it.get("de_ratio"),
                 "fcf_yield": it.get("fcf_yield"),
                 "eps_growth_5y": it.get("eps_growth_5y"),
-                "eps_growth_forecast_5y": it.get("eps_growth_forecast_5y"),
                 "peg_ratio": it.get("peg_ratio"),
-                "fcf_ttm": it.get("fcf_ttm"),
+                "payout_ratio_ttm": it.get("payout_ratio_ttm"),
             })
     
-    eq_rows = compute_scores(eq_rows, "equity", returns_series)
-    
-    # === BUFFETT FILTER v2.0 ===
-    if buffett_mode != "none":
-        logger.info(f"🎯 Application du filtre Buffett v2.0 (mode={buffett_mode})")
-        eq_rows = apply_buffett_filter(
-            eq_rows,
-            mode=buffett_mode,
-            strict=False,
-            min_score=buffett_min_score
-        )
-        
-        # Log coverage
-        coverage = get_fundamentals_coverage(eq_rows)
-        logger.info(f"📊 Couverture: ROE={coverage.get('roe', 0):.1f}% | "
-                   f"ROIC={coverage.get('roic', 0):.1f}% | "
-                   f"FCF={coverage.get('fcf_yield', 0):.1f}% | "
-                   f"EPS Growth={coverage.get('eps_growth_5y', 0):.1f}%")
-    
-    eq_filtered = filter_equities(eq_rows)
-    equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
+    if apply_risk_filters:
+        eq_rows = filter_by_risk_bounds(eq_rows, "equity")
     
     # ====== ETF ======
     try:
@@ -655,15 +379,16 @@ def build_scored_universe_from_files(
                 "liquidity": r.get("aum_usd"),
                 "sector": "Bonds" if is_bond else r.get("sector", "Diversified"),
                 "country": r.get("domicile", "Global"),
+                "category": "bond" if is_bond else "etf",
             })
         return rows
     
-    etf_rows = compute_scores(df_to_rows(etf_std), "etf", returns_series)
-    etf_filtered = filter_etfs(etf_rows)
-    etfs = sorted(etf_filtered, key=lambda x: x["score"], reverse=True)[:15]
+    etf_rows = df_to_rows(etf_std)
+    bond_rows = df_to_rows(etf_bonds, is_bond=True)
     
-    bond_rows = compute_scores(df_to_rows(etf_bonds, is_bond=True), "etf", returns_series)
-    bonds = sorted(bond_rows, key=lambda x: x["score"], reverse=True)[:10]
+    if apply_risk_filters:
+        etf_rows = filter_by_risk_bounds(etf_rows, "etf")
+        bond_rows = filter_by_risk_bounds(bond_rows, "bond")
     
     # ====== CRYPTO ======
     try:
@@ -680,53 +405,70 @@ def build_scored_universe_from_files(
                 "maxdd90": r.get("drawdown_90d_pct"),
                 "sector": "Crypto",
                 "country": "Global",
+                "category": "crypto",
             })
-        cr_rows = compute_scores(cr_rows, "crypto", returns_series)
-        crypto = filter_crypto(cr_rows)[:5]
+        if apply_risk_filters:
+            cr_rows = filter_by_risk_bounds(cr_rows, "crypto")
     except Exception as e:
         logger.error(f"Erreur chargement crypto: {e}")
-        crypto = []
+        cr_rows = []
     
-    # ====== RÉSUMÉ ======
     universe = {
-        "equities": equities,
-        "etfs": etfs,
-        "bonds": bonds,
-        "crypto": crypto,
+        "equities": eq_rows,
+        "etfs": etf_rows,
+        "bonds": bond_rows,
+        "crypto": cr_rows,
     }
     
     total = sum(len(v) for v in universe.values())
-    logger.info(f"✅ Univers construit: {total} actifs")
-    logger.info(f"   Actions: {len(equities)} | ETF: {len(etfs)} | Bonds: {len(bonds)} | Crypto: {len(crypto)}")
+    logger.info(f"✅ Univers brut construit: {total} actifs")
+    logger.info(f"   Actions: {len(eq_rows)} | ETF: {len(etf_rows)} | Bonds: {len(bond_rows)} | Crypto: {len(cr_rows)}")
     
     return universe
 
 
 # ============= INTERFACE SIMPLIFIÉE =============
 
-def load_and_build_universe(
+def load_and_prepare_universe(
     stocks_paths: List[str],
     etf_csv: Optional[str] = None,
     crypto_csv: Optional[str] = None,
     load_returns: bool = False,
-    buffett_mode: str = "soft",
-    buffett_min_score: float = 0.0
+    apply_risk_filters: bool = True
 ) -> List[dict]:
     """
-    Interface haut niveau pour charger et construire l'univers.
+    Interface haut niveau pour charger et préparer l'univers.
     
-    v2.0: Supporte les nouvelles métriques ROIC, FCF Yield, EPS Growth.
+    v3.0: Pas de scoring. Le scoring est fait par FactorScorer.
+    
+    Workflow recommandé:
+    ```python
+    from portfolio_engine.universe import load_and_prepare_universe
+    from portfolio_engine.factors import FactorScorer
+    
+    # 1. Charger l'univers brut
+    raw_universe = load_and_prepare_universe(stocks_paths, etf_csv, crypto_csv)
+    
+    # 2. Scorer avec FactorScorer (SEUL moteur d'alpha)
+    scorer = FactorScorer(profile="Modéré")
+    scored_universe = scorer.compute_scores(raw_universe)
+    
+    # 3. Passer à l'optimizer (qui applique le hard filter Buffett)
+    from portfolio_engine.optimizer import PortfolioOptimizer, convert_universe_to_assets
+    assets = convert_universe_to_assets(scored_universe)
+    optimizer = PortfolioOptimizer()
+    allocation, diagnostics = optimizer.build_portfolio(assets, "Modéré")
+    ```
     
     Args:
         stocks_paths: Liste des chemins vers les fichiers stocks_*.json
         etf_csv: Chemin vers combined_etfs.csv
         crypto_csv: Chemin vers Crypto_filtered_volatility.csv
         load_returns: Charger les séries de rendements si disponibles
-        buffett_mode: "soft" (pénalité), "hard" (rejet), "both", "none" (désactivé)
-        buffett_min_score: Score Buffett minimum (0-100)
+        apply_risk_filters: Appliquer les filtres de risque basiques
     
     Returns:
-        Liste plate de tous les actifs scorés
+        Liste plate de tous les actifs (NON scorés)
     """
     # Charger les JSON stocks
     stocks_data = []
@@ -760,11 +502,60 @@ def load_and_build_universe(
     if load_returns and stocks_paths:
         returns_series = load_returns_series(stocks_paths, etf_csv or "", crypto_csv or "")
     
-    return build_scored_universe(
+    return build_raw_universe(
         stocks_data, 
         etf_data, 
         crypto_data, 
         returns_series,
-        buffett_mode=buffett_mode,
-        buffett_min_score=buffett_min_score
+        apply_risk_filters=apply_risk_filters
     )
+
+
+# ============= COMPATIBILITÉ LEGACY =============
+
+def build_scored_universe(*args, **kwargs):
+    """
+    DEPRECATED: Utilisez build_raw_universe + FactorScorer.
+    
+    Cette fonction est conservée pour compatibilité mais affiche un warning.
+    Le scoring doit être fait via FactorScorer (seul moteur d'alpha).
+    """
+    logger.warning(
+        "⚠️ build_scored_universe est DEPRECATED. "
+        "Utilisez build_raw_universe + FactorScorer pour éviter le double comptage."
+    )
+    
+    # Import ici pour éviter import circulaire
+    from .factors import FactorScorer
+    
+    # Récupérer le profil si spécifié
+    profile = kwargs.pop("profile", "Modéré")
+    
+    # Construire l'univers brut
+    raw = build_raw_universe(*args, **kwargs)
+    
+    # Scorer avec FactorScorer
+    scorer = FactorScorer(profile=profile)
+    return scorer.compute_scores(raw)
+
+
+def load_and_build_universe(*args, **kwargs):
+    """
+    DEPRECATED: Utilisez load_and_prepare_universe + FactorScorer.
+    """
+    logger.warning(
+        "⚠️ load_and_build_universe est DEPRECATED. "
+        "Utilisez load_and_prepare_universe + FactorScorer."
+    )
+    
+    from .factors import FactorScorer
+    
+    profile = kwargs.pop("profile", "Modéré")
+    # Ignorer buffett_mode car c'est maintenant un hard filter dans optimizer
+    kwargs.pop("buffett_mode", None)
+    kwargs.pop("buffett_min_score", None)
+    
+    raw = load_and_prepare_universe(*args, **kwargs)
+    
+    scorer = FactorScorer(profile=profile)
+    return scorer.compute_scores(raw)
