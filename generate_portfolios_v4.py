@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.2.2: FIX TICKER - Récupérer ticker depuis source_data, pas Asset.ticker
 V4.2.1: FIX AttributeError - utiliser getattr() pour Asset
 V4.2: FIX EXPORT - Ajoute bloc _tickers pour le backtest (Solution C)
 V4.1: FIX BACKTEST - Utilise poids FIXES du portfolio (pas recalcul dynamique)
@@ -24,6 +25,7 @@ from typing import Dict, Any, Optional, List
 from datetime import timedelta
 import yaml
 import pandas as pd
+import re
 
 # === Nouveaux modules ===
 from portfolio_engine import (
@@ -686,18 +688,106 @@ def print_comparison_table(results: List[dict]):
     print()
 
 
-# ============= HELPER FUNCTION =============
+# ============= HELPER FUNCTIONS =============
+
+# Regex pour détecter les IDs internes
+INTERNAL_ID_PATTERN = re.compile(r'^(EQ_|ETF_|BOND_|CRYPTO_|CR_)\d+$', re.IGNORECASE)
+
+
+def _is_internal_id(value: str) -> bool:
+    """Vérifie si une valeur est un ID interne (EQ_10, ETF_123, etc.)."""
+    if not value or not isinstance(value, str):
+        return False
+    return bool(INTERNAL_ID_PATTERN.match(value))
+
 
 def _safe_get_attr(obj, key, default=None):
     """
     Récupère un attribut d'un objet ou d'un dict de manière sûre.
-    Fonctionne avec les objets Asset et les dictionnaires.
+    
+    V4.2.2: Cherche aussi dans source_data pour les objets Asset.
+    L'objet Asset n'a pas d'attribut 'ticker', mais le ticker est dans source_data.
+    
+    Ordre de recherche:
+    1. Attribut direct sur l'objet
+    2. Dans source_data (si Asset)
+    3. Dans le dict (si dict)
+    4. Valeur par défaut
     """
+    # 1. Essayer l'attribut direct
     if hasattr(obj, key):
-        return getattr(obj, key)
-    elif isinstance(obj, dict):
-        return obj.get(key, default)
+        val = getattr(obj, key)
+        if val is not None:
+            return val
+    
+    # 2. Essayer dans source_data (pour les objets Asset)
+    if hasattr(obj, 'source_data') and obj.source_data:
+        val = obj.source_data.get(key)
+        if val is not None:
+            return val
+    
+    # 3. Essayer comme dict
+    if isinstance(obj, dict):
+        val = obj.get(key)
+        if val is not None:
+            return val
+    
     return default
+
+
+def _extract_ticker_from_asset(asset, fallback_id: str) -> str:
+    """
+    Extrait le ticker d'un actif de manière robuste.
+    
+    V4.2.2: Gère le fait que Asset n'a pas d'attribut ticker,
+    mais le ticker est dans source_data.
+    
+    Args:
+        asset: Objet Asset ou dict
+        fallback_id: ID à utiliser si pas de ticker trouvé
+    
+    Returns:
+        Le ticker valide (jamais un ID interne)
+    """
+    # Essayer plusieurs sources pour le ticker
+    ticker = None
+    
+    # 1. Attribut ticker direct
+    if hasattr(asset, 'ticker'):
+        ticker = getattr(asset, 'ticker')
+    
+    # 2. Dans source_data
+    if not ticker and hasattr(asset, 'source_data') and asset.source_data:
+        ticker = asset.source_data.get('ticker')
+        if not ticker:
+            ticker = asset.source_data.get('symbol')
+    
+    # 3. Si c'est un dict
+    if not ticker and isinstance(asset, dict):
+        ticker = asset.get('ticker') or asset.get('symbol')
+    
+    # 4. Validation: rejeter les IDs internes
+    if ticker and _is_internal_id(ticker):
+        ticker = None
+    
+    # 5. Fallback: utiliser le nom si pas de ticker valide
+    if not ticker:
+        name = _safe_get_attr(asset, 'name')
+        if name and not _is_internal_id(name):
+            # Pour les ETF, le nom peut être le ticker (ex: "SPY", "QQQ")
+            if len(name) <= 5 and name.isupper():
+                ticker = name
+    
+    # 6. Dernier recours: utiliser l'ID seulement si ce n'est pas un ID interne
+    if not ticker:
+        if not _is_internal_id(fallback_id):
+            ticker = fallback_id
+        else:
+            # C'est un ID interne, utiliser le nom comme ticker
+            name = _safe_get_attr(asset, 'name')
+            ticker = name if name else fallback_id
+    
+    return ticker
 
 
 # ============= NORMALISATION POUR LE FRONT =============
@@ -706,8 +796,8 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
     Convertit le format interne vers le format v1 attendu par le front.
     
+    V4.2.2: Extraction robuste du ticker depuis source_data.
     V4.2: Ajoute le bloc `_tickers` pour chaque profil (Solution C).
-    Le backtest peut lire directement _tickers sans mapping nom→ticker.
     
     Structure:
         "Agressif": {
@@ -717,14 +807,29 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "_tickers": { "LLY": 0.14, "TJX": 0.12, ... }   # Pour le backtest
         }
     """
+    # Construire le lookup avec extraction robuste du ticker
     asset_lookup = {}
+    ticker_debug = []  # Pour debug
+    
     for a in assets:
-        # V4.2.1 FIX: Utiliser _safe_get_attr pour gérer objets ET dicts
         aid = _safe_get_attr(a, 'id')
         name = _safe_get_attr(a, 'name') or aid
         category = _safe_get_attr(a, 'category') or 'ETF'
-        ticker = _safe_get_attr(a, 'ticker') or aid
-        asset_lookup[str(aid)] = {"name": name, "category": category, "ticker": ticker}
+        
+        # V4.2.2: Extraction robuste du ticker
+        ticker = _extract_ticker_from_asset(a, aid)
+        
+        asset_lookup[str(aid)] = {
+            "name": name, 
+            "category": category, 
+            "ticker": ticker
+        }
+        
+        # Debug log pour les premiers actifs
+        if len(ticker_debug) < 5:
+            ticker_debug.append(f"{aid} -> {ticker}")
+    
+    logger.info(f"🔍 Sample ticker mapping: {ticker_debug}")
     
     def _category_v1(cat: str) -> str:
         cat = (cat or "").lower()
@@ -761,18 +866,23 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             # Format lisible pour le front (nom -> "14%")
             result[profile][cat_v1][name] = f"{int(round(weight))}%"
             
-            # V4.2: Format brut pour le backtest (ticker -> 0.14)
-            ticker_key = ticker if ticker else name
+            # V4.2.2: Format brut pour le backtest (ticker -> 0.14)
+            # S'assurer que le ticker n'est pas un ID interne
+            ticker_key = ticker if ticker and not _is_internal_id(ticker) else name
             result[profile]["_tickers"][ticker_key] = round(weight / 100.0, 4)
         
         # V4.2: Validation - log si somme != 1
         total_weight = sum(result[profile]["_tickers"].values())
         if abs(total_weight - 1.0) > 0.01:
             logger.warning(f"⚠️ {profile}: _tickers sum = {total_weight:.2%} (expected ~100%)")
+        
+        # V4.2.2: Log les tickers pour debug
+        tickers_list = list(result[profile]["_tickers"].keys())[:5]
+        logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.2.1_tickers_export",
+        "version": "v4.2.2_tickers_fix",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
     }
@@ -800,7 +910,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.2.1_tickers_export",
+        "version": "v4.2.2_tickers_fix",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -834,7 +944,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.2.1 - Génération + Backtest (POIDS FIXES)")
+    logger.info("🚀 Portfolio Engine v4.2.2 - Génération + Backtest (POIDS FIXES)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -871,12 +981,12 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.2.1:")
+    logger.info("Fonctionnalités v4.2.2:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
-    logger.info("   • Export _tickers pour backtest (Solution C) ✅")
+    logger.info("   • Export _tickers (Solution C) - FIX source_data ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
 
