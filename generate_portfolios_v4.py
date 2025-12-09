@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.2.3: FIX NaN float pandas + agrégation poids par ticker (+=)
 V4.2.2: FIX TICKER - Récupérer ticker depuis source_data, pas Asset.ticker
 V4.2.1: FIX AttributeError - utiliser getattr() pour Asset
 V4.2: FIX EXPORT - Ajoute bloc _tickers pour le backtest (Solution C)
@@ -20,12 +21,13 @@ import os
 import json
 import logging
 import datetime
+import math
+import re
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import timedelta
 import yaml
 import pandas as pd
-import re
 
 # === Nouveaux modules ===
 from portfolio_engine import (
@@ -701,12 +703,52 @@ def _is_internal_id(value: str) -> bool:
     return bool(INTERNAL_ID_PATTERN.match(value))
 
 
+def _normalize_ticker_value(raw) -> Optional[str]:
+    """
+    V4.2.3: Normalise une valeur de ticker.
+    
+    Gère les cas problématiques de pandas:
+    - float('nan') → None
+    - "" ou "  " → None
+    - "nan" (string) → None
+    - int/float valides → string
+    
+    Returns:
+        String propre ou None si invalide.
+    """
+    if raw is None:
+        return None
+    
+    # Cas pandas: float NaN
+    if isinstance(raw, float):
+        if math.isnan(raw):
+            return None
+        # Float valide (rare) → string
+        return str(int(raw)) if raw == int(raw) else str(raw)
+    
+    # Cas int
+    if isinstance(raw, int):
+        return str(raw)
+    
+    # Cas string
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return None
+        if s.lower() == "nan":
+            return None
+        return s
+    
+    # Autre type: fallback string
+    s = str(raw).strip()
+    return s if s and s.lower() != "nan" else None
+
+
 def _safe_get_attr(obj, key, default=None):
     """
     Récupère un attribut d'un objet ou d'un dict de manière sûre.
     
-    V4.2.2: Cherche aussi dans source_data pour les objets Asset.
-    L'objet Asset n'a pas d'attribut 'ticker', mais le ticker est dans source_data.
+    V4.2.3: Utilise _normalize_ticker_value pour nettoyer les valeurs.
     
     Ordre de recherche:
     1. Attribut direct sur l'objet
@@ -714,10 +756,13 @@ def _safe_get_attr(obj, key, default=None):
     3. Dans le dict (si dict)
     4. Valeur par défaut
     """
+    val = None
+    
     # 1. Essayer l'attribut direct
     if hasattr(obj, key):
         val = getattr(obj, key)
         if val is not None:
+            # Ne pas normaliser ici, juste retourner
             return val
     
     # 2. Essayer dans source_data (pour les objets Asset)
@@ -737,34 +782,31 @@ def _safe_get_attr(obj, key, default=None):
 
 def _extract_ticker_from_asset(asset, fallback_id: str) -> str:
     """
-    Extrait le ticker d'un actif de manière robuste.
+    V4.2.3: Extrait le ticker d'un actif de manière robuste.
     
-    V4.2.2: Gère le fait que Asset n'a pas d'attribut ticker,
-    mais le ticker est dans source_data.
-    
-    Args:
-        asset: Objet Asset ou dict
-        fallback_id: ID à utiliser si pas de ticker trouvé
+    Gère:
+    - float('nan') de pandas
+    - strings vides ou "nan"
+    - IDs internes (EQ_10, ETF_123)
     
     Returns:
-        Le ticker valide (jamais un ID interne)
+        Ticker valide (jamais None, NaN ou ID interne si évitable)
     """
-    # Essayer plusieurs sources pour le ticker
     ticker = None
     
     # 1. Attribut ticker direct
     if hasattr(asset, 'ticker'):
-        ticker = getattr(asset, 'ticker')
+        ticker = _normalize_ticker_value(getattr(asset, 'ticker'))
     
     # 2. Dans source_data
     if not ticker and hasattr(asset, 'source_data') and asset.source_data:
-        ticker = asset.source_data.get('ticker')
+        ticker = _normalize_ticker_value(asset.source_data.get('ticker'))
         if not ticker:
-            ticker = asset.source_data.get('symbol')
+            ticker = _normalize_ticker_value(asset.source_data.get('symbol'))
     
     # 3. Si c'est un dict
     if not ticker and isinstance(asset, dict):
-        ticker = asset.get('ticker') or asset.get('symbol')
+        ticker = _normalize_ticker_value(asset.get('ticker')) or _normalize_ticker_value(asset.get('symbol'))
     
     # 4. Validation: rejeter les IDs internes
     if ticker and _is_internal_id(ticker):
@@ -773,19 +815,21 @@ def _extract_ticker_from_asset(asset, fallback_id: str) -> str:
     # 5. Fallback: utiliser le nom si pas de ticker valide
     if not ticker:
         name = _safe_get_attr(asset, 'name')
+        name = _normalize_ticker_value(name)
         if name and not _is_internal_id(name):
-            # Pour les ETF, le nom peut être le ticker (ex: "SPY", "QQQ")
+            # Pour les ETF, le nom peut être le ticker (SPY, QQQ, URTH...)
             if len(name) <= 5 and name.isupper():
                 ticker = name
     
     # 6. Dernier recours: utiliser l'ID seulement si ce n'est pas un ID interne
     if not ticker:
-        if not _is_internal_id(fallback_id):
-            ticker = fallback_id
+        fid = _normalize_ticker_value(fallback_id)
+        if fid and not _is_internal_id(fid):
+            ticker = fid
         else:
-            # C'est un ID interne, utiliser le nom comme ticker
+            # ID interne → utiliser le nom brut
             name = _safe_get_attr(asset, 'name')
-            ticker = name if name else fallback_id
+            ticker = _normalize_ticker_value(name) or fid or "UNKNOWN"
     
     return ticker
 
@@ -794,10 +838,11 @@ def _extract_ticker_from_asset(asset, fallback_id: str) -> str:
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    Convertit le format interne vers le format v1 attendu par le front.
+    V4.2.3: Convertit le format interne vers le format v1 attendu par le front.
     
-    V4.2.2: Extraction robuste du ticker depuis source_data.
-    V4.2: Ajoute le bloc `_tickers` pour chaque profil (Solution C).
+    Corrections:
+    - Nettoyage NaN float pandas
+    - Agrégation des poids par ticker (+=) au lieu d'écrasement (=)
     
     Structure:
         "Agressif": {
@@ -816,7 +861,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         name = _safe_get_attr(a, 'name') or aid
         category = _safe_get_attr(a, 'category') or 'ETF'
         
-        # V4.2.2: Extraction robuste du ticker
+        # V4.2.3: Extraction robuste du ticker avec nettoyage NaN
         ticker = _extract_ticker_from_asset(a, aid)
         
         asset_lookup[str(aid)] = {
@@ -856,6 +901,9 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "_tickers": {},  # V4.2: Bloc pour le backtest
         }
         
+        # V4.2.3: Track les collisions pour debug
+        ticker_collisions = {}
+        
         for asset_id, weight in allocation.items():
             asset_id_str = str(asset_id)
             info = asset_lookup.get(asset_id_str, {"name": asset_id_str, "category": "ETF", "ticker": asset_id_str})
@@ -866,23 +914,46 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             # Format lisible pour le front (nom -> "14%")
             result[profile][cat_v1][name] = f"{int(round(weight))}%"
             
-            # V4.2.2: Format brut pour le backtest (ticker -> 0.14)
-            # S'assurer que le ticker n'est pas un ID interne
+            # V4.2.3: Nettoyage final du ticker_key
             ticker_key = ticker if ticker and not _is_internal_id(ticker) else name
-            result[profile]["_tickers"][ticker_key] = round(weight / 100.0, 4)
+            ticker_key = _normalize_ticker_value(ticker_key) or name
+            
+            # V4.2.3: AGRÉGATION avec += au lieu d'écrasement =
+            tickers_dict = result[profile]["_tickers"]
+            prev_weight = tickers_dict.get(ticker_key, 0.0)
+            new_weight = round(prev_weight + weight / 100.0, 4)
+            tickers_dict[ticker_key] = new_weight
+            
+            # Track collision pour debug
+            if prev_weight > 0:
+                if ticker_key not in ticker_collisions:
+                    ticker_collisions[ticker_key] = prev_weight
+                ticker_collisions[ticker_key] = new_weight
         
-        # V4.2: Validation - log si somme != 1
+        # V4.2.3: Log les collisions si présentes
+        if ticker_collisions:
+            logger.info(f"   {profile}: {len(ticker_collisions)} ticker(s) agrégé(s): {ticker_collisions}")
+        
+        # V4.2.3: Validation améliorée - log si somme != 1
         total_weight = sum(result[profile]["_tickers"].values())
-        if abs(total_weight - 1.0) > 0.01:
-            logger.warning(f"⚠️ {profile}: _tickers sum = {total_weight:.2%} (expected ~100%)")
+        n_allocation = len(allocation)
+        n_tickers = len(result[profile]["_tickers"])
         
-        # V4.2.2: Log les tickers pour debug
-        tickers_list = list(result[profile]["_tickers"].keys())[:5]
+        if abs(total_weight - 1.0) > 0.01:
+            logger.warning(
+                f"⚠️ {profile}: _tickers sum = {total_weight:.2%} (expected ~100%) "
+                f"→ {n_allocation} lignes allocation, {n_tickers} tickers uniques"
+            )
+        else:
+            logger.info(f"✅ {profile}: _tickers sum = {total_weight:.2%} ({n_tickers} tickers)")
+        
+        # V4.2.3: Log les tickers pour debug (sans NaN)
+        tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:5] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.2.2_tickers_fix",
+        "version": "v4.2.3_nan_fix_aggregation",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
     }
@@ -910,7 +981,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.2.2_tickers_fix",
+        "version": "v4.2.3_nan_fix_aggregation",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -944,7 +1015,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.2.2 - Génération + Backtest (POIDS FIXES)")
+    logger.info("🚀 Portfolio Engine v4.2.3 - Génération + Backtest (POIDS FIXES)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -981,12 +1052,12 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.2.2:")
+    logger.info("Fonctionnalités v4.2.3:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
-    logger.info("   • Export _tickers (Solution C) - FIX source_data ✅")
+    logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
 
