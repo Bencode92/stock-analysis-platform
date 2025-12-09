@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.2.1: FIX AttributeError - utiliser getattr() pour Asset
 V4.2: FIX EXPORT - Ajoute bloc _tickers pour le backtest (Solution C)
 V4.1: FIX BACKTEST - Utilise poids FIXES du portfolio (pas recalcul dynamique)
 
@@ -685,6 +686,20 @@ def print_comparison_table(results: List[dict]):
     print()
 
 
+# ============= HELPER FUNCTION =============
+
+def _safe_get_attr(obj, key, default=None):
+    """
+    Récupère un attribut d'un objet ou d'un dict de manière sûre.
+    Fonctionne avec les objets Asset et les dictionnaires.
+    """
+    if hasattr(obj, key):
+        return getattr(obj, key)
+    elif isinstance(obj, dict):
+        return obj.get(key, default)
+    return default
+
+
 # ============= NORMALISATION POUR LE FRONT =============
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
@@ -704,11 +719,11 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
     asset_lookup = {}
     for a in assets:
-        aid = a.id if hasattr(a, 'id') else a.get('id')
-        name = a.name if hasattr(a, 'name') else a.get('name', aid)
-        category = a.category if hasattr(a, 'category') else a.get('category', 'ETF')
-        # V4.2: Ajouter le ticker pour _tickers
-        ticker = a.ticker if hasattr(a, 'ticker') else a.get('ticker', aid)
+        # V4.2.1 FIX: Utiliser _safe_get_attr pour gérer objets ET dicts
+        aid = _safe_get_attr(a, 'id')
+        name = _safe_get_attr(a, 'name') or aid
+        category = _safe_get_attr(a, 'category') or 'ETF'
+        ticker = _safe_get_attr(a, 'ticker') or aid
         asset_lookup[str(aid)] = {"name": name, "category": category, "ticker": ticker}
     
     def _category_v1(cat: str) -> str:
@@ -757,7 +772,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.2_tickers_export",
+        "version": "v4.2.1_tickers_export",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
     }
@@ -785,7 +800,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.2_tickers_export",
+        "version": "v4.2.1_tickers_export",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -819,7 +834,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.2 - Génération + Backtest (POIDS FIXES)")
+    logger.info("🚀 Portfolio Engine v4.2.1 - Génération + Backtest (POIDS FIXES)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -856,7 +871,7 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.2:")
+    logger.info("Fonctionnalités v4.2.1:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
