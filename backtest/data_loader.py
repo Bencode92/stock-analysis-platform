@@ -2,10 +2,13 @@
 """
 Chargement des données de prix historiques via Twelve Data API.
 
+V8: FIX PARSE WEIGHT STRING
+- Parse les poids au format "14%" (string) depuis portfolios.json
+- Fonction parse_weight_value() pour gérer tous les formats
+
 V7: FIX FORMAT TICKER:MIC
 - Sépare TICKER:MIC en symbol + mic_code params séparés
 - CABK:XMAD → symbol=CABK, mic_code=XMAD
-- Corrige l'erreur "symbol is missing or invalid"
 
 V6: REFACTORING MAJEUR
 - Utilise stocks_*.json (déjà validés par stock-advanced-filter.js) comme source de mapping
@@ -399,9 +402,48 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
     return symbols, total_requested, total_resolved
 
 
+# ============ V8 FIX: PARSE WEIGHT VALUE ============
+
+def parse_weight_value(weight) -> float:
+    """
+    Parse un poids qui peut être au format:
+    - "14%" (string avec %)
+    - "14" (string sans %)
+    - 14 (int)
+    - 0.14 (float décimal)
+    
+    Returns:
+        float en décimal (0.14 pour 14%)
+    """
+    if weight is None:
+        return 0.0
+    
+    # Si c'est une string, nettoyer
+    if isinstance(weight, str):
+        weight_str = weight.strip().replace("%", "").replace(",", ".")
+        try:
+            weight_num = float(weight_str)
+        except ValueError:
+            logger.warning(f"Cannot parse weight: {weight}")
+            return 0.0
+    else:
+        weight_num = float(weight)
+    
+    # Convertir en décimal si > 1 (14 → 0.14)
+    if weight_num > 1:
+        return weight_num / 100.0
+    else:
+        return weight_num
+
+
 def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> Dict[str, Dict[str, float]]:
     """
     Extrait les poids de chaque profil depuis portfolios.json.
+    
+    Gère les formats:
+    - "14%" (string avec %)
+    - 14 (entier)
+    - 0.14 (décimal)
     
     Returns:
         Dict[profile_name, Dict[ticker, weight_decimal]]
@@ -430,9 +472,10 @@ def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> 
             for name, weight in profile_data[category].items():
                 ticker = name_to_ticker(name)
                 if ticker:
-                    # Convertir le poids en décimal (14 → 0.14)
-                    weight_decimal = weight / 100.0 if weight > 1 else weight
-                    profile_weights[ticker] = weight_decimal
+                    # ✅ V8 FIX: Parser le poids correctement (string "14%" ou int 14)
+                    weight_decimal = parse_weight_value(weight)
+                    if weight_decimal > 0:
+                        profile_weights[ticker] = weight_decimal
         
         # Normaliser pour s'assurer que la somme = 1
         total = sum(profile_weights.values())
