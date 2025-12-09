@@ -453,9 +453,11 @@ def apply_compliance(portfolios: Dict[str, Dict]) -> Dict[str, Dict]:
         
         diag = portfolios[profile].get("diagnostics", {})
         allocation = portfolios[profile].get("allocation", {})
+        
+        # Fix: Convert aid to string before calling .upper()
         crypto_exposure = sum(
             w for aid, w in allocation.items()
-            if any(c in aid.upper() for c in ["CR_", "BTC", "ETH", "CRYPTO"])
+            if any(c in str(aid).upper() for c in ["CR_", "BTC", "ETH", "CRYPTO"])
         )
         
         portfolios[profile]["compliance"] = generate_compliance_block(
@@ -640,7 +642,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         aid = a.id if hasattr(a, 'id') else a.get('id')
         name = a.name if hasattr(a, 'name') else a.get('name', aid)
         category = a.category if hasattr(a, 'category') else a.get('category', 'ETF')
-        asset_lookup[aid] = {"name": name, "category": category}
+        asset_lookup[str(aid)] = {"name": name, "category": category}
     
     def _category_v1(cat: str) -> str:
         cat = (cat or "").lower()
@@ -667,7 +669,8 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         }
         
         for asset_id, weight in allocation.items():
-            info = asset_lookup.get(asset_id, {"name": asset_id, "category": "ETF"})
+            asset_id_str = str(asset_id)
+            info = asset_lookup.get(asset_id_str, {"name": asset_id_str, "category": "ETF"})
             name = info["name"]
             cat_v1 = _category_v1(info["category"])
             result[profile][cat_v1][name] = f"{int(round(weight))}%"
@@ -713,7 +716,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     }
     
     with open(archive_path, "w", encoding="utf-8") as f:
-        json.dump(archive_data, f, ensure_ascii=False, indent=2)
+        json.dump(archive_data, f, ensure_ascii=False, indent=2, default=str)
     logger.info(f"✅ Archive: {archive_path}")
     
     for profile in ["Agressif", "Modéré", "Stable"]:
