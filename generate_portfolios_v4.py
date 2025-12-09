@@ -9,6 +9,8 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.2.5: FIX - Charger combined_bonds.csv (vrais bonds, pas seulement ETF obligataires)
+V4.2.4: FIX TICKER - ticker/symbol dans universe.py pour ETF/bonds
 V4.2.3: FIX NaN float pandas + agrégation poids par ticker (+=)
 V4.2.2: FIX TICKER - Récupérer ticker depuis source_data, pas Asset.ticker
 V4.2.1: FIX AttributeError - utiliser getattr() pour Asset
@@ -77,6 +79,7 @@ CONFIG = {
         "data/stocks_asia.json",
     ],
     "etf_csv": "data/combined_etfs.csv",
+    "bonds_csv": "data/combined_bonds.csv",  # V4.2.5: Ajout vrais bonds
     "crypto_csv": "data/filtered/Crypto_filtered_volatility.csv",
     "brief_paths": ["brief_ia.json", "./brief_ia.json", "data/brief_ia.json"],
     "output_path": "data/portfolios.json",
@@ -272,20 +275,40 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # 1. Charger les données brutes
     stocks_data = load_stocks_data()
     
-    # 2. Charger ETF et Crypto
+    # 2. Charger ETF, Bonds et Crypto (V4.2.5: ajout bonds séparés)
     etf_data = []
+    bonds_data = []
+    crypto_data = []
+    
+    # ETF
     if Path(CONFIG["etf_csv"]).exists():
         try:
             df = pd.read_csv(CONFIG["etf_csv"])
             etf_data = df.to_dict('records')
+            logger.info(f"ETF: {CONFIG['etf_csv']} ({len(etf_data)} entrées)")
         except Exception as e:
             logger.warning(f"Impossible de charger ETF: {e}")
     
-    crypto_data = []
+    # V4.2.5: Charger les vrais bonds depuis combined_bonds.csv
+    if Path(CONFIG["bonds_csv"]).exists():
+        try:
+            df_b = pd.read_csv(CONFIG["bonds_csv"])
+            # Forcer la catégorie pour le classement
+            if "category" not in df_b.columns:
+                df_b["category"] = "bond"
+            if "fund_type" not in df_b.columns:
+                df_b["fund_type"] = "bond"
+            bonds_data = df_b.to_dict("records")
+            logger.info(f"Bonds: {CONFIG['bonds_csv']} ({len(bonds_data)} entrées)")
+        except Exception as e:
+            logger.warning(f"Impossible de charger Bonds: {e}")
+    
+    # Crypto
     if Path(CONFIG["crypto_csv"]).exists():
         try:
             df = pd.read_csv(CONFIG["crypto_csv"])
             crypto_data = df.to_dict('records')
+            logger.info(f"Crypto: {CONFIG['crypto_csv']} ({len(crypto_data)} entrées)")
         except Exception as e:
             logger.warning(f"Impossible de charger crypto: {e}")
     
@@ -355,14 +378,21 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     logger.info(f"   Equities finales sélectionnées: {len(equities)}")
     
-    # 6. Construire le reste de l'univers (ETF, bonds, crypto) via build_scored_universe
-    # mais sans les stocks (on les a déjà traités)
+    # 6. V4.2.5: Fusionner bonds + ETF pour build_scored_universe
+    #    (car build_scored_universe ne supporte pas bonds_data séparément)
+    all_funds_data = []
+    all_funds_data.extend(etf_data)
+    all_funds_data.extend(bonds_data)
+    
+    logger.info(f"   Fonds combinés (ETF + Bonds): {len(all_funds_data)} ({len(etf_data)} ETF + {len(bonds_data)} Bonds)")
+    
+    # 7. Construire le reste de l'univers (ETF, bonds, crypto) via build_scored_universe
     universe_others = build_scored_universe(
         stocks_data=None,  # Pas de stocks, on les a déjà
-        etf_data=etf_data,
+        etf_data=all_funds_data,  # V4.2.5: ETF + Bonds fusionnés
         crypto_data=crypto_data,
         returns_series=None,
-        buffett_mode="none",  # Pas de Buffett pour ETF/crypto
+        buffett_mode="none",  # Pas de Buffett pour ETF/crypto/bonds
         buffett_min_score=0,
     )
     
@@ -371,7 +401,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     logger.info(f"   Univers final: {len(universe)} actifs total")
     
-    # 7. Optimiser pour chaque profil
+    # 8. Optimiser pour chaque profil
     optimizer = PortfolioOptimizer()
     portfolios = {}
     all_assets = []
@@ -953,7 +983,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.2.3_nan_fix_aggregation",
+        "version": "v4.2.5_bonds_csv_support",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
     }
@@ -981,7 +1011,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.2.3_nan_fix_aggregation",
+        "version": "v4.2.5_bonds_csv_support",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1015,7 +1045,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.2.3 - Génération + Backtest (POIDS FIXES)")
+    logger.info("🚀 Portfolio Engine v4.2.5 - Génération + Backtest (POIDS FIXES)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1052,12 +1082,13 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.2.3:")
+    logger.info("Fonctionnalités v4.2.5:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
+    logger.info("   • Chargement combined_bonds.csv ✅ (V4.2.5)")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
 
