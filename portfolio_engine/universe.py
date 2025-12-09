@@ -573,19 +573,35 @@ def load_and_prepare_universe(
 
 # ============= COMPATIBILITÉ LEGACY =============
 
-def compute_scores(assets: List[dict], profile: str = "Modéré") -> List[dict]:
+def compute_scores(assets: List[dict], asset_type_or_profile: Optional[str] = None, profile: Optional[str] = None) -> List[dict]:
     """
     DEPRECATED: Utilisez FactorScorer.compute_scores() directement.
     
-    Cette fonction est conservée pour compatibilité.
+    Cette fonction est conservée pour compatibilité avec l'ancienne signature:
+    - compute_scores(assets, profile)              <- nouvelle signature
+    - compute_scores(assets, asset_type, profile)  <- ancienne signature (3 args)
+    
+    Le paramètre asset_type est ignoré pour compatibilité.
     """
     logger.warning(
         "⚠️ compute_scores dans universe.py est DEPRECATED. "
         "Utilisez FactorScorer.compute_scores() pour éviter le double comptage."
     )
     
+    # Déterminer le profil (compatibilité avec ancienne signature à 3 arguments)
+    actual_profile = "Modéré"
+    if profile is not None:
+        # Ancienne signature: compute_scores(assets, asset_type, profile)
+        actual_profile = profile if profile else "Modéré"
+    elif asset_type_or_profile is not None:
+        # Soit nouvelle signature compute_scores(assets, profile)
+        # Soit ancienne avec asset_type mais sans profile
+        if asset_type_or_profile in ["Agressif", "Modéré", "Stable"]:
+            actual_profile = asset_type_or_profile
+        # Sinon c'est un asset_type (equity, etf, etc.) qu'on ignore
+    
     from .factors import FactorScorer
-    scorer = FactorScorer(profile=profile)
+    scorer = FactorScorer(profile=actual_profile)
     return scorer.compute_scores(assets)
 
 
@@ -604,6 +620,10 @@ def build_scored_universe(*args, **kwargs):
     from .factors import FactorScorer
     
     profile = kwargs.pop("profile", "Modéré")
+    # Ignorer les anciens paramètres Buffett (maintenant dans optimizer)
+    kwargs.pop("buffett_mode", None)
+    kwargs.pop("buffett_min_score", None)
+    
     raw = build_raw_universe(*args, **kwargs)
     scorer = FactorScorer(profile=profile)
     return scorer.compute_scores(raw)
