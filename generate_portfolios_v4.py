@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.2: FIX EXPORT - Ajoute bloc _tickers pour le backtest (Solution C)
 V4.1: FIX BACKTEST - Utilise poids FIXES du portfolio (pas recalcul dynamique)
 
 """
@@ -689,13 +690,26 @@ def print_comparison_table(results: List[dict]):
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
     Convertit le format interne vers le format v1 attendu par le front.
+    
+    V4.2: Ajoute le bloc `_tickers` pour chaque profil (Solution C).
+    Le backtest peut lire directement _tickers sans mapping nom→ticker.
+    
+    Structure:
+        "Agressif": {
+            "Commentaire": "...",
+            "Actions": { "ELI LILLY AND CO": "14%", ... },  # Pour le front
+            "ETF": { ... },
+            "_tickers": { "LLY": 0.14, "TJX": 0.12, ... }   # Pour le backtest
+        }
     """
     asset_lookup = {}
     for a in assets:
         aid = a.id if hasattr(a, 'id') else a.get('id')
         name = a.name if hasattr(a, 'name') else a.get('name', aid)
         category = a.category if hasattr(a, 'category') else a.get('category', 'ETF')
-        asset_lookup[str(aid)] = {"name": name, "category": category}
+        # V4.2: Ajouter le ticker pour _tickers
+        ticker = a.ticker if hasattr(a, 'ticker') else a.get('ticker', aid)
+        asset_lookup[str(aid)] = {"name": name, "category": category, "ticker": ticker}
     
     def _category_v1(cat: str) -> str:
         cat = (cat or "").lower()
@@ -719,18 +733,31 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "ETF": {},
             "Obligations": {},
             "Crypto": {},
+            "_tickers": {},  # V4.2: Bloc pour le backtest
         }
         
         for asset_id, weight in allocation.items():
             asset_id_str = str(asset_id)
-            info = asset_lookup.get(asset_id_str, {"name": asset_id_str, "category": "ETF"})
+            info = asset_lookup.get(asset_id_str, {"name": asset_id_str, "category": "ETF", "ticker": asset_id_str})
             name = info["name"]
+            ticker = info["ticker"]
             cat_v1 = _category_v1(info["category"])
+            
+            # Format lisible pour le front (nom -> "14%")
             result[profile][cat_v1][name] = f"{int(round(weight))}%"
+            
+            # V4.2: Format brut pour le backtest (ticker -> 0.14)
+            ticker_key = ticker if ticker else name
+            result[profile]["_tickers"][ticker_key] = round(weight / 100.0, 4)
+        
+        # V4.2: Validation - log si somme != 1
+        total_weight = sum(result[profile]["_tickers"].values())
+        if abs(total_weight - 1.0) > 0.01:
+            logger.warning(f"⚠️ {profile}: _tickers sum = {total_weight:.2%} (expected ~100%)")
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.1_fixed_weights_backtest",
+        "version": "v4.2_tickers_export",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
     }
@@ -758,7 +785,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.1_fixed_weights_backtest",
+        "version": "v4.2_tickers_export",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -792,7 +819,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.1 - Génération + Backtest (POIDS FIXES)")
+    logger.info("🚀 Portfolio Engine v4.2 - Génération + Backtest (POIDS FIXES)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -829,11 +856,12 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.1:")
+    logger.info("Fonctionnalités v4.2:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
+    logger.info("   • Export _tickers pour backtest (Solution C) ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
 
