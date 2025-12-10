@@ -29,7 +29,8 @@ from twelve_data_utils import (
     determine_region_from_country,
     determine_market_region,
     TZ_BY_REGION,
-    API_KEY
+    API_KEY,
+    RATE_LIMIT_DELAY
 )
 
 # Configuration du logger
@@ -170,6 +171,7 @@ def main():
     # 2. Traiter chaque ETF individuellement
     processed_count = 0
     error_count = 0
+    ytd_fallback_count = 0
     year = dt.date.today().year
     
     for idx, etf in enumerate(etf_mapping):
@@ -194,6 +196,11 @@ def main():
             
             # Baseline YTD (dernier close N-1)
             base_close, base_date = baseline_ytd(sym, api_region)
+            
+            # Tracker les fallbacks YTD
+            if base_date.startswith(str(year)):
+                ytd_fallback_count += 1
+                logger.info(f"ℹ️ {sym}: YTD baseline début {year} (pas de clôture {year-1})")
             
             # Calculer le YTD
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0
@@ -241,6 +248,8 @@ def main():
     logger.info(f"\n📊 Résumé du traitement:")
     logger.info(f"  - ETFs traités avec succès: {processed_count}")
     logger.info(f"  - Erreurs: {error_count}")
+    if ytd_fallback_count > 0:
+        logger.info(f"  - ℹ️ Baselines YTD début {year}: {ytd_fallback_count}")
     
     for region, indices in MARKET_DATA["indices"].items():
         if indices:
@@ -252,17 +261,20 @@ def main():
     else:
         logger.warning("⚠️  Aucune donnée pour calculer les top performers")
     
-    # 5. Mettre à jour les métadonnées
+    # 5. Mettre à jour les métadonnées (aligné avec sectors)
     MARKET_DATA["meta"]["timestamp"] = dt.datetime.utcnow().isoformat() + "Z"
     MARKET_DATA["meta"]["count"] = processed_count
     MARKET_DATA["meta"]["total_etfs"] = len(etf_mapping)
     MARKET_DATA["meta"]["errors_count"] = error_count
     MARKET_DATA["meta"]["ytd_calculation"] = {
-        "method": "price_last_close_prev_year_to_last_close",
+        "method": "price_last_close_prev_year_to_last_close_with_fallback",
         "baseline_year": year - 1,
         "timezone_mapping": TZ_BY_REGION,
-        "note": f"YTD basé sur le dernier close de {year-1} (fallback: 1er jour {year})"
+        "outputsize": 250,
+        "note": f"YTD basé sur le dernier close de {year-1} ou fallback 1er jour {year}"
     }
+    if ytd_fallback_count > 0:
+        MARKET_DATA["meta"]["ytd_fallback_count"] = ytd_fallback_count
     
     # 6. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
