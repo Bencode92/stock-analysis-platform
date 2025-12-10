@@ -2,6 +2,12 @@
 """
 Script de mise à jour des données de marché via Twelve Data API
 Utilise des ETFs pour représenter les indices boursiers
+
+v2 - Aligné avec update_sectors_data_etf.py:
+  - Rate limiting entre appels API
+  - Timezone par région
+  - YTD basé sur dernier close N-1 (cohérent avec secteurs)
+  - Tracking des erreurs dans metadata
 """
 
 import os
@@ -10,7 +16,21 @@ import json
 import datetime as dt
 from typing import Dict, List
 import logging
-from twelvedata import TDClient
+
+# Import du module partagé
+from twelve_data_utils import (
+    get_td_client,
+    quote_one,
+    baseline_ytd,
+    format_value,
+    format_percent,
+    parse_percentage,
+    rate_limit_pause,
+    determine_region_from_country,
+    determine_market_region,
+    TZ_BY_REGION,
+    API_KEY
+)
 
 # Configuration du logger
 logging.basicConfig(
@@ -19,128 +39,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuration
-API_KEY = os.getenv("TWELVE_DATA_API")
+# Configuration chemins
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "indices_etf_mapping.csv")
 OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "markets.json")
 
-# Client Twelve Data
-TD = TDClient(apikey=API_KEY)
 
-# Structure de données de sortie
-MARKET_DATA = {
-    "indices": {
-        "europe": [],
-        "north-america": [],
-        "latin-america": [],
-        "asia": [],
-        "other": []
-    },
-    "top_performers": {
-        "daily": {
-            "best": [],
-            "worst": []
+def create_empty_market_data() -> Dict:
+    """Crée une structure de données vide pour les marchés"""
+    return {
+        "indices": {
+            "europe": [],
+            "north-america": [],
+            "latin-america": [],
+            "asia": [],
+            "other": []
         },
-        "ytd": {
-            "best": [],
-            "worst": []
+        "top_performers": {
+            "daily": {
+                "best": [],
+                "worst": []
+            },
+            "ytd": {
+                "best": [],
+                "worst": []
+            }
+        },
+        "meta": {
+            "source": "Twelve Data",
+            "timestamp": None,
+            "count": 0
         }
-    },
-    "meta": {
-        "source": "Twelve Data",
-        "timestamp": None,
-        "count": 0
     }
-}
 
-# Liste pour stocker tous les indices
-ALL_INDICES = []
-
-def determine_region(country: str) -> str:
-    """Détermine la région en fonction du pays"""
-    europe = ["France", "Allemagne", "Royaume Uni", "Italie", "Espagne", 
-              "Suisse", "Pays-Bas", "Suède", "Zone Euro", "Europe", "Pays-bas"]
-    north_america = ["États-Unis", "Etats-Unis", "Canada", "Mexique"]
-    latin_america = ["Brésil", "Argentine", "Chili", "Colombie", "Pérou"]
-    asia = ["Japon", "Chine", "Hong Kong", "Taiwan", "Corée du Sud", 
-            "Singapour", "Inde", "Asie", "China"]
-    
-    if country in europe:
-        return "europe"
-    elif country in north_america:
-        return "north-america"
-    elif country in latin_america:
-        return "latin-america"
-    elif country in asia:
-        return "asia"
-    else:
-        return "other"
-
-def quote_one(sym: str) -> tuple[float, float]:
-    """Récupère la quote d'un symbole"""
-    try:
-        q_json = TD.quote(symbol=sym).as_json()
-        
-        if isinstance(q_json, tuple):
-            q_json = q_json[0]
-        
-        if "close" in q_json and "percent_change" in q_json:
-            return float(q_json["close"]), float(q_json["percent_change"])
-        
-        raise ValueError(q_json.get("message", "unknown error"))
-    except Exception as e:
-        logger.error(f"Erreur quote pour {sym}: {e}")
-        raise
-
-def ytd_one(sym: str) -> float:
-    """Première clôture de l'année - SANS outputsize=1"""
-    year = dt.date.today().year
-    try:
-        ts_json = TD.time_series(
-            symbol=sym,
-            interval="1day",
-            start_date=f"{year}-01-01",
-            order="ASC"
-            # outputsize=1 SUPPRIMÉ - retournait la bougie la plus récente
-        ).as_json()
-
-        # Déballage du tuple si nécessaire
-        if isinstance(ts_json, tuple):
-            ts_json = ts_json[0]
-
-        # 1) Format standard avec clé "values"
-        if isinstance(ts_json, dict) and ts_json.get("values"):
-            return float(ts_json["values"][0]["close"])
-
-        # 2) Format compact : dict OHLC direct
-        if isinstance(ts_json, dict) and "close" in ts_json:
-            return float(ts_json["close"])
-
-        # 3) Format liste
-        if isinstance(ts_json, list) and ts_json:
-            return float(ts_json[0]["close"])
-
-        # Debug si format inattendu
-        logger.error(f"Format inattendu pour {sym}: {type(ts_json)}")
-        logger.error(f"Contenu: {ts_json}")
-        raise ValueError("Unrecognised time_series format")
-
-    except Exception as e:
-        logger.error(f"Erreur YTD pour {sym}: {e}")
-        raise
-
-def format_value(value: float, currency: str) -> str:
-    """Formate une valeur selon la devise"""
-    if currency in ["EUR", "USD", "GBP", "GBp", "CHF", "CAD", "AUD", "HKD", "SGD", "ILA", "MXN"]:
-        return f"{value:,.2f}"
-    elif currency in ["JPY", "KRW", "TWD", "INR", "TRY"]:
-        return f"{value:,.0f}"
-    else:
-        return f"{value:,.2f}"
-
-def format_percent(value: float) -> str:
-    """Formate un pourcentage avec signe"""
-    return f"{value:+.2f} %"
 
 def load_etf_mapping() -> List[Dict]:
     """Charge le mapping des ETFs depuis le CSV avec nettoyage"""
@@ -164,22 +94,18 @@ def load_etf_mapping() -> List[Dict]:
     
     return rows
 
-def parse_percentage(percent_str: str) -> float:
-    """Convertit une chaîne de pourcentage en nombre flottant"""
-    if not percent_str:
-        return 0.0
-    clean_str = percent_str.replace('%', '').replace(' ', '').replace(',', '.')
-    try:
-        return float(clean_str)
-    except ValueError:
-        return 0.0
 
-def calculate_top_performers():
+def clean_index_data(idx: dict) -> dict:
+    """Nettoie un dictionnaire d'indice en supprimant les propriétés temporaires"""
+    return {k: v for k, v in idx.items() if not k.startswith('_')}
+
+
+def calculate_top_performers(market_data: Dict, all_indices: List):
     """Calcule les indices avec les meilleures et pires performances"""
     logger.info("Calcul des top performers...")
     
-    daily_indices = [idx for idx in ALL_INDICES if idx.get("changePercent")]
-    ytd_indices = [idx for idx in ALL_INDICES if idx.get("ytdChange")]
+    daily_indices = [idx for idx in all_indices if idx.get("changePercent")]
+    ytd_indices = [idx for idx in all_indices if idx.get("ytdChange")]
     
     # Trier par variation quotidienne
     if daily_indices:
@@ -190,13 +116,8 @@ def calculate_top_performers():
         best_daily = sorted_daily[:3]
         worst_daily = sorted(sorted_daily, key=lambda x: x["_change_value"])[:3]
         
-        for idx in best_daily:
-            idx_copy = {k: v for k, v in idx.items() if k != "_change_value"}
-            MARKET_DATA["top_performers"]["daily"]["best"].append(idx_copy)
-        
-        for idx in worst_daily:
-            idx_copy = {k: v for k, v in idx.items() if k != "_change_value"}
-            MARKET_DATA["top_performers"]["daily"]["worst"].append(idx_copy)
+        market_data["top_performers"]["daily"]["best"] = [clean_index_data(idx) for idx in best_daily]
+        market_data["top_performers"]["daily"]["worst"] = [clean_index_data(idx) for idx in worst_daily]
     
     # Trier par variation YTD
     if ytd_indices:
@@ -207,21 +128,40 @@ def calculate_top_performers():
         best_ytd = sorted_ytd[:3]
         worst_ytd = sorted(sorted_ytd, key=lambda x: x["_ytd_value"])[:3]
         
-        for idx in best_ytd:
-            idx_copy = {k: v for k, v in idx.items() if k != "_ytd_value"}
-            MARKET_DATA["top_performers"]["ytd"]["best"].append(idx_copy)
-        
-        for idx in worst_ytd:
-            idx_copy = {k: v for k, v in idx.items() if k != "_ytd_value"}
-            MARKET_DATA["top_performers"]["ytd"]["worst"].append(idx_copy)
+        market_data["top_performers"]["ytd"]["best"] = [clean_index_data(idx) for idx in best_ytd]
+        market_data["top_performers"]["ytd"]["worst"] = [clean_index_data(idx) for idx in worst_ytd]
+
 
 def main():
     logger.info("🚀 Début de la mise à jour des données de marché...")
-    logger.info("API key loaded: %s", bool(API_KEY))
+    logger.info(f"API key loaded: {bool(API_KEY)}")
     
     if not API_KEY:
         logger.error("❌ Clé API Twelve Data manquante")
         return
+    
+    # Vérifier que le client est initialisé
+    TD = get_td_client()
+    if not TD:
+        logger.error("❌ Client Twelve Data non initialisé")
+        return
+    
+    # Test rapide de l'API
+    try:
+        logger.info("🔍 Test de connexion à l'API...")
+        test_response = TD.quote(symbol="SPY").as_json()
+        if isinstance(test_response, dict) and "close" in test_response:
+            logger.info("✅ API fonctionnelle")
+        else:
+            logger.error(f"❌ Réponse API invalide: {test_response}")
+            return
+    except Exception as e:
+        logger.error(f"❌ Erreur de connexion API: {e}")
+        return
+    
+    # Créer structure de données
+    MARKET_DATA = create_empty_market_data()
+    ALL_INDICES = []
     
     # 1. Charger le mapping des ETFs
     etf_mapping = load_etf_mapping()
@@ -229,54 +169,116 @@ def main():
     
     # 2. Traiter chaque ETF individuellement
     processed_count = 0
+    error_count = 0
+    year = dt.date.today().year
     
-    for etf in etf_mapping:
+    for idx, etf in enumerate(etf_mapping):
         sym = etf["symbol"]
+        country = etf.get("Country", "")
         
         try:
-            # Récupérer les données
-            last, day_pct = quote_one(sym)
-            jan_close = ytd_one(sym)
+            # Rate limiting entre les appels
+            if idx > 0:
+                rate_limit_pause()
+            
+            logger.info(f"📡 Traitement {idx+1}/{len(etf_mapping)}: {sym}")
+            
+            # Déterminer la région pour l'API
+            api_region = determine_region_from_country(country)
+            
+            # Récupérer les données avec timezone
+            last, day_pct, last_src = quote_one(sym, api_region)
+            
+            # Pause avant l'appel YTD
+            rate_limit_pause(0.5)
+            
+            # Baseline YTD (dernier close N-1)
+            base_close, base_date = baseline_ytd(sym, api_region)
             
             # Calculer le YTD
-            ytd_pct = 100 * (last - jan_close) / jan_close if jan_close > 0 else 0
+            ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0
             
             # Créer l'objet de données
             market_entry = {
-                "country": etf["Country"],
-                "index_name": etf["name"],
-                "value": format_value(last, etf["currency"]),
+                "country": country,
+                "index_name": etf.get("name", sym),
+                "symbol": sym,
+                "value": format_value(last, etf.get("currency", "USD")),
+                "value_num": float(last),
                 "changePercent": format_percent(day_pct),
+                "change_num": float(day_pct),
                 "ytdChange": format_percent(ytd_pct),
+                "ytd_num": float(ytd_pct),
+                "ytd_ref_date": base_date,
                 "trend": "down" if day_pct < 0 else "up"
             }
             
             # Ajouter à la bonne région
-            region = determine_region(etf["Country"])
-            MARKET_DATA["indices"][region].append(market_entry)
+            market_region = determine_market_region(country)
+            MARKET_DATA["indices"][market_region].append(market_entry)
             ALL_INDICES.append(market_entry)
             processed_count += 1
             
-            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%)")
+            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% (base: {base_date})")
             
         except Exception as e:
+            error_count += 1
             logger.warning(f"⚠️  Pas de données pour {sym} - {e}")
+            
+            # Tracking des erreurs dans metadata
+            if "errors" not in MARKET_DATA["meta"]:
+                MARKET_DATA["meta"]["errors"] = []
+            
+            MARKET_DATA["meta"]["errors"].append({
+                "symbol": sym,
+                "name": etf.get("name", "N/A"),
+                "error": str(e),
+                "timestamp": dt.datetime.utcnow().isoformat()
+            })
             continue
     
-    # 3. Calculer les top performers
-    calculate_top_performers()
+    # 3. Log résumé
+    logger.info(f"\n📊 Résumé du traitement:")
+    logger.info(f"  - ETFs traités avec succès: {processed_count}")
+    logger.info(f"  - Erreurs: {error_count}")
     
-    # 4. Mettre à jour les métadonnées
+    for region, indices in MARKET_DATA["indices"].items():
+        if indices:
+            logger.info(f"  - {region}: {len(indices)} indices")
+    
+    # 4. Calculer les top performers
+    if processed_count > 0:
+        calculate_top_performers(MARKET_DATA, ALL_INDICES)
+    else:
+        logger.warning("⚠️  Aucune donnée pour calculer les top performers")
+    
+    # 5. Mettre à jour les métadonnées
     MARKET_DATA["meta"]["timestamp"] = dt.datetime.utcnow().isoformat() + "Z"
     MARKET_DATA["meta"]["count"] = processed_count
+    MARKET_DATA["meta"]["total_etfs"] = len(etf_mapping)
+    MARKET_DATA["meta"]["errors_count"] = error_count
+    MARKET_DATA["meta"]["ytd_calculation"] = {
+        "method": "price_last_close_prev_year_to_last_close",
+        "baseline_year": year - 1,
+        "timezone_mapping": TZ_BY_REGION,
+        "note": f"YTD basé sur le dernier close de {year-1} (fallback: 1er jour {year})"
+    }
     
-    # 5. Sauvegarder le fichier JSON
+    # 6. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(MARKET_DATA, f, ensure_ascii=False, indent=2)
     
-    logger.info(f"✅ Mise à jour terminée : {processed_count} indices traités")
+    logger.info(f"\n✅ Mise à jour terminée")
     logger.info(f"📄 Fichier sauvegardé : {OUTPUT_FILE}")
+    logger.info(f"📊 {processed_count}/{len(etf_mapping)} indices traités avec succès")
+    
+    # Afficher quelques erreurs si présentes
+    if error_count > 0 and "errors" in MARKET_DATA["meta"]:
+        logger.info(f"\n⚠️  Détail des {min(5, error_count)} premières erreurs:")
+        for err in MARKET_DATA["meta"]["errors"][:5]:
+            logger.info(f"  - {err['symbol']}: {err['error']}")
+
 
 if __name__ == "__main__":
     main()
