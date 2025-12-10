@@ -2,6 +2,8 @@
 """
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
+
+v2 - Fix baseline_ytd pour un vrai YTD calendaire
 """
 
 import os
@@ -111,8 +113,12 @@ def quote_one(sym: str, region: str = "US") -> Tuple[float, float, str]:
 
 def baseline_ytd(sym: str, region: str = "US") -> Tuple[float, str]:
     """
-    Calcule la baseline YTD = dernier jour ouvré de l'année N-1.
-    Fallback: 1er jour ouvré de N si pas de données N-1.
+    Calcule la baseline YTD = DERNIER jour de bourse de l'année N-1.
+    Fallback: 1er jour de bourse de N si pas de données N-1.
+    
+    Pour un vrai YTD calendaire 2025:
+    - Base = close du 31 décembre 2024 (ou dernier jour ouvré avant)
+    - Pas le 2 décembre ou fin novembre !
     
     Returns:
         (baseline_close, baseline_date_iso)
@@ -122,34 +128,41 @@ def baseline_ytd(sym: str, region: str = "US") -> Tuple[float, str]:
         raise ValueError("Client Twelve Data non initialisé")
     
     year = dt.date.today().year
+    baseline_year = year - 1
     tz = TZ_BY_REGION.get(region, "UTC")
     
     try:
+        # Plage élargie : tout novembre + décembre N-1 + janvier N
+        # Cela garantit qu'on capture bien le dernier close de N-1
         ts_json = TD.time_series(
             symbol=sym,
             interval="1day",
-            start_date=f"{year-1}-12-01",
-            end_date=f"{year}-01-15",
-            order="ASC",
+            start_date=f"{baseline_year}-11-01",  # 1er novembre 2024
+            end_date=f"{year}-01-31",              # 31 janvier 2025
+            order="DESC",                          # Plus récent d'abord (optimise la recherche)
             timezone=tz,
-            outputsize=250
+            outputsize=100                         # ~3 mois de données suffisent
         ).as_json()
 
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
             
-        # Parser les valeurs
+        # Parser les valeurs - gestion des différents formats de réponse
         vals = []
-        if isinstance(ts_json, dict) and ts_json.get("values"):
-            vals = ts_json["values"]
+        if isinstance(ts_json, dict):
+            if ts_json.get("values"):
+                vals = ts_json["values"]
+            elif ts_json.get("status") == "error":
+                raise ValueError(f"Erreur API: {ts_json.get('message', 'Unknown')}")
+            elif {"datetime", "close"} <= set(ts_json.keys()):
+                vals = [ts_json]
         elif isinstance(ts_json, list):
             vals = ts_json
-        elif isinstance(ts_json, dict) and {"datetime", "close"} <= set(ts_json):
-            vals = [ts_json]
 
         if not vals:
             raise ValueError(f"Aucune donnée historique pour {sym}")
 
+        # Convertir en liste (date, close)
         rows = []
         for r in vals:
             date_str = str(r.get("datetime", ""))[:10]
@@ -167,26 +180,37 @@ def baseline_ytd(sym: str, region: str = "US") -> Tuple[float, str]:
         if not rows:
             raise ValueError(f"Aucune donnée valide pour {sym}")
         
-        # 1) Chercher dernier jour ouvré de N-1
-        prev_year_rows = [(d, c) for (d, c) in rows if d.year == year-1]
+        logger.debug(f"{sym}: {len(rows)} jours de données récupérés")
+        logger.debug(f"{sym}: Plage = {min(r[0] for r in rows)} à {max(r[0] for r in rows)}")
+        
+        # 1) Chercher le DERNIER jour de bourse de N-1 (max date où year == baseline_year)
+        prev_year_rows = [(d, c) for (d, c) in rows if d.year == baseline_year]
         
         if prev_year_rows:
+            # MAX = dernier jour de l'année N-1
             base_date, base_close = max(prev_year_rows, key=lambda x: x[0])
-            logger.debug(f"✅ {sym}: Baseline YTD au {base_date} (close: {base_close})")
+            
+            # Vérification de cohérence : doit être en décembre pour un vrai YTD
+            if base_date.month == 12 and base_date.day >= 20:
+                logger.info(f"✅ {sym}: Baseline YTD = {base_date} (close: {base_close:.2f})")
+            else:
+                logger.warning(f"⚠️ {sym}: Baseline YTD = {base_date} (attendu: fin décembre {baseline_year})")
+            
             return base_close, base_date.isoformat()
         
-        # 2) Fallback: premier jour ouvré de N
+        # 2) Fallback: premier jour de bourse de N
         current_year_rows = [(d, c) for (d, c) in rows if d.year == year]
         
         if current_year_rows:
+            # MIN = premier jour de l'année N
             first_date, first_close = min(current_year_rows, key=lambda x: x[0])
-            logger.warning(f"⚠️ {sym}: Pas de clôture {year-1}, baseline = 1er jour {year}: {first_date}")
+            logger.warning(f"⚠️ {sym}: Pas de clôture {baseline_year}, fallback = 1er jour {year}: {first_date}")
             return first_close, first_date.isoformat()
         
-        # 3) Dernier recours
-        last_date, last_close = max(rows, key=lambda x: x[0])
-        logger.warning(f"⚠️ {sym}: Fallback ultime = {last_date}")
-        return last_close, last_date.isoformat()
+        # 3) Dernier recours : la donnée la plus ancienne disponible
+        oldest_date, oldest_close = min(rows, key=lambda x: x[0])
+        logger.warning(f"⚠️ {sym}: Fallback ultime = {oldest_date}")
+        return oldest_close, oldest_date.isoformat()
 
     except Exception as e:
         logger.error(f"Erreur baseline YTD pour {sym}: {e}")
