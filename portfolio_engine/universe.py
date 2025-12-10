@@ -1,6 +1,11 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.1 — Phase 2.5 Refactoring.
+Construction de l'univers d'actifs v3.2 — Phase 2.5 Refactoring.
+
+CHANGEMENTS v3.2 (P0 Quick Wins):
+- ETF/Bonds: charge total_expense_ratio, yield_ttm, one_year_return_pct
+- Crypto: charge sharpe_ratio, var_95_pct, tier1_listed, enough_history_90d
+- Crypto: nouveaux filtres hard (VaR > 20%, DD > 80%, tier1, history)
 
 CHANGEMENTS v3.1:
 - FIX: Ajout des champs ticker/symbol pour ETF et bonds (V4.2.4 fix)
@@ -91,9 +96,11 @@ def load_etf_csv(path: str) -> pd.DataFrame:
     """Charge et prépare les ETF depuis CSV."""
     df = pd.read_csv(path)
     
+    # v3.2: Colonnes numériques étendues (TER, yield_ttm)
     num_cols = [
         "daily_change_pct", "ytd_return_pct", "one_year_return_pct",
-        "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio"
+        "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio",
+        "yield_ttm"  # v3.2: Ajout yield
     ]
     for c in num_cols:
         if c in df.columns:
@@ -162,18 +169,19 @@ def load_returns_series(
     return returns
 
 
-# ============= FILTRES DE RISQUE SIMPLES =============
+# ============= FILTRES DE RISQUE v3.2 =============
 
 def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
     """
     Filtre simple par bornes de volatilité.
     
+    v3.2: Filtres crypto améliorés (VaR, tier1, history).
     v3.0: Simplifié - pas de scoring, juste des filtres de risque.
     """
     risk_bounds = {
         "equity": {"vol_min": 8, "vol_max": 70, "dd_max": 50},
         "etf": {"vol_min": 3, "vol_max": 50, "dd_max": 40},
-        "crypto": {"vol_min": 20, "vol_max": 180, "dd_max": 70},
+        "crypto": {"vol_min": 20, "vol_max": 180, "dd_max": 70, "var_max": 20},  # v3.2
         "bond": {"vol_min": 1, "vol_max": 20, "dd_max": 20},
     }
     
@@ -182,10 +190,41 @@ def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
     def is_valid(r):
         v = fnum(r.get("vol_3y") or r.get("vol30") or r.get("vol") or 20)
         dd = abs(fnum(r.get("max_drawdown_ytd") or r.get("maxdd90") or r.get("max_dd") or 0))
-        return bounds["vol_min"] <= v <= bounds["vol_max"] and dd <= bounds["dd_max"]
+        
+        # Filtre vol/DD standard
+        if not (bounds["vol_min"] <= v <= bounds["vol_max"] and dd <= bounds["dd_max"]):
+            return False
+        
+        # v3.2: Filtres spécifiques crypto
+        if asset_type == "crypto":
+            # Filtre VaR 95% (risque extrême)
+            var_95 = abs(fnum(r.get("var_95_pct", 0)))
+            if var_95 > bounds.get("var_max", 20):
+                logger.debug(f"Crypto filtrée VaR: {r.get('name')} (VaR={var_95}%)")
+                return False
+            
+            # Filtre tier1 (qualité listing)
+            tier1 = r.get("tier1_listed")
+            if tier1 is False:  # Explicitement False, pas None
+                logger.debug(f"Crypto filtrée tier1: {r.get('name')}")
+                return False
+            
+            # Filtre historique insuffisant
+            enough_history = r.get("enough_history_90d")
+            if enough_history is False:  # Explicitement False
+                logger.debug(f"Crypto filtrée history: {r.get('name')}")
+                return False
+            
+            # Filtre drawdown extrême (> 80%)
+            if dd > 80:
+                logger.debug(f"Crypto filtrée DD: {r.get('name')} (DD={dd}%)")
+                return False
+        
+        return True
     
     filtered = [r for r in rows if is_valid(r)]
-    logger.info(f"{asset_type.capitalize()} filtrés par risque: {len(filtered)}/{len(rows)}")
+    rejected = len(rows) - len(filtered)
+    logger.info(f"{asset_type.capitalize()} filtrés par risque: {len(filtered)}/{len(rows)} (rejetés: {rejected})")
     return filtered
 
 
@@ -228,7 +267,7 @@ def sector_balanced_selection(assets: List[dict], max_per_sector: int = 5, top_n
     return selected
 
 
-# ============= CONSTRUCTION UNIVERS v3.1 =============
+# ============= CONSTRUCTION UNIVERS v3.2 =============
 
 def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
@@ -240,6 +279,7 @@ def build_raw_universe(
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Le scoring est fait par FactorScorer, pas ici.
     Ce module se concentre sur le chargement et la préparation.
@@ -254,7 +294,7 @@ def build_raw_universe(
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.1...")
+    logger.info("🧮 Construction de l'univers brut v3.2...")
     
     all_assets = []
     
@@ -316,17 +356,23 @@ def build_raw_universe(
                 # Performance
                 "perf_24h": it.get("daily_change_pct"),
                 "ytd": it.get("ytd_return_pct") or it.get("ytd"),
+                "one_year_return_pct": it.get("one_year_return_pct"),  # v3.2
                 # Risque
                 "vol_3y": it.get("vol_3y_pct") or it.get("vol_pct") or it.get("vol"),
                 "vol30": it.get("vol_pct"),
                 "vol": it.get("vol_pct") or it.get("vol"),
                 # Méta
                 "liquidity": it.get("aum_usd"),
+                "aum_usd": it.get("aum_usd"),  # v3.2: Garder aussi le nom original
                 "sector": "Bonds" if is_bond else it.get("sector", "Diversified"),
                 "country": it.get("domicile", "Global"),
                 "category": "bond" if is_bond else "etf",
+                "fund_type": it.get("fund_type"),  # v3.2: Pour distinguer bonds
                 # ISIN pour référence
                 "isin": it.get("isin"),
+                # === v3.2: Nouvelles colonnes coût/rendement ===
+                "total_expense_ratio": it.get("total_expense_ratio"),
+                "yield_ttm": it.get("yield_ttm"),
             }
             if is_bond:
                 bond_rows.append(row)
@@ -361,6 +407,12 @@ def build_raw_universe(
                 "sector": "Crypto",
                 "country": "Global",
                 "category": "crypto",
+                # === v3.2: Nouvelles colonnes risque/qualité ===
+                "sharpe_ratio": it.get("sharpe_ratio"),
+                "var_95_pct": it.get("var_95_pct"),
+                "tier1_listed": it.get("tier1_listed"),
+                "enough_history_90d": it.get("enough_history_90d"),
+                "coverage_ratio": it.get("coverage_ratio"),
             })
     
     if cr_rows:
@@ -393,10 +445,11 @@ def build_raw_universe_from_files(
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.1 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.2 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -442,7 +495,7 @@ def build_raw_universe_from_files(
         etf_bonds = pd.DataFrame()
     
     def df_to_rows(df, is_bond=False):
-        """Convertit un DataFrame en liste de dicts avec ticker/symbol (V3.1 fix)."""
+        """Convertit un DataFrame en liste de dicts avec colonnes étendues (V3.2)."""
         rows = []
         for _, r in df.iterrows():
             rows.append({
@@ -454,16 +507,22 @@ def build_raw_universe_from_files(
                 # Performance
                 "perf_24h": r.get("daily_change_pct"),
                 "ytd": r.get("ytd_return_pct"),
+                "one_year_return_pct": r.get("one_year_return_pct"),  # v3.2
                 # Risque
                 "vol_3y": r.get("vol_3y_pct") or r.get("vol_pct"),
                 "vol30": r.get("vol_pct"),
                 # Méta
                 "liquidity": r.get("aum_usd"),
+                "aum_usd": r.get("aum_usd"),  # v3.2
                 "sector": "Bonds" if is_bond else r.get("sector", "Diversified"),
                 "country": r.get("domicile", "Global"),
                 "category": "bond" if is_bond else "etf",
+                "fund_type": r.get("fund_type"),  # v3.2
                 # ISIN pour référence
                 "isin": r.get("isin"),
+                # === v3.2: Nouvelles colonnes coût/rendement ===
+                "total_expense_ratio": r.get("total_expense_ratio"),
+                "yield_ttm": r.get("yield_ttm"),
             })
         return rows
     
@@ -492,6 +551,12 @@ def build_raw_universe_from_files(
                 "sector": "Crypto",
                 "country": "Global",
                 "category": "crypto",
+                # === v3.2: Nouvelles colonnes risque/qualité ===
+                "sharpe_ratio": r.get("sharpe_ratio"),
+                "var_95_pct": r.get("var_95_pct"),
+                "tier1_listed": r.get("tier1_listed"),
+                "enough_history_90d": r.get("enough_history_90d"),
+                "coverage_ratio": r.get("coverage_ratio"),
             })
         if apply_risk_filters:
             cr_rows = filter_by_risk_bounds(cr_rows, "crypto")
@@ -525,6 +590,7 @@ def load_and_prepare_universe(
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring. Le scoring est fait par FactorScorer.
     
