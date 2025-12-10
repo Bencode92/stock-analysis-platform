@@ -1,14 +1,21 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.2 — SEUL MOTEUR D'ALPHA
+FactorScorer v2.3 — SEUL MOTEUR D'ALPHA
 =======================================
 
+v2.3 Changes (Tactical Context Integration):
+- NOUVEAU: compute_factor_tactical_context() intégrant:
+  - f_sector_trend: momentum du secteur (sectors.json)
+  - f_region_trend: momentum de la région (indices.json)
+  - f_macro_alignment: alignement aux convictions macro (macro_tilts.json)
+- NOUVEAU: FactorWeights.tactical_context (5-10% selon profil)
+- NOUVEAU: load_market_context() pour charger sectors/indices/macro_tilts
+- MISE À JOUR: FactorScorer accepte market_context optionnel
+
 v2.2 Changes (Bond Risk Factors):
-- Nouveau: add_bond_risk_factors() pour enrichir DataFrames bonds
-- Nouveau: f_bond_credit_score, f_bond_duration_score, f_bond_volatility_score
-- Nouveau: f_bond_quality (composite 0-1) et f_bond_quality_0_100
-- Nouveau: bond_risk_bucket (defensive/core/risky/very_risky)
-- Intégration dans FactorScorer.compute_factor_bond_quality()
+- add_bond_risk_factors() pour enrichir DataFrames bonds
+- f_bond_credit_score, f_bond_duration_score, f_bond_volatility_score
+- f_bond_quality (composite 0-1) et bond_risk_bucket
 
 v2.1 Changes (P0 Quick Wins):
 - Facteur cost_efficiency (TER + yield_ttm) pour ETF/Bonds
@@ -19,26 +26,197 @@ Facteurs:
 - quality_fundamental: 25-30% — Score Buffett intégré (ROIC, FCF, ROE)
 - low_vol: 15-35% — Contrôle du risque
 - cost_efficiency: 5-10% — TER + Yield (ETF/Bonds)
-- bond_quality: 0-15% — Qualité obligataire (crédit + duration + vol) [v2.2]
+- bond_quality: 0-15% — Qualité obligataire (crédit + duration + vol)
+- tactical_context: 5-10% — NOUVEAU v2.3: Contexte marché (sector/region/macro)
 - liquidity: 5-10% — Filtre technique
 - mean_reversion: 5% — Évite sur-extension
 
 Le pari central:
 "Des entreprises de qualité fondamentale (ROIC > 10%, FCF positif, dette maîtrisée)
-avec un momentum positif sur 3-12 mois surperforment à horizon 1-3 ans."
+avec un momentum positif sur 3-12 mois, alignées avec le contexte macro,
+surperforment à horizon 1-3 ans."
 """
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 from dataclasses import dataclass
 import logging
 import math
+import json
+from pathlib import Path
 
 logger = logging.getLogger("portfolio_engine.factors")
 
 
-# ============= RATING TO SCORE MAPPING (v2.2) =============
+# ============= v2.3 TACTICAL CONTEXT MAPPINGS =============
+
+SECTOR_KEY_MAPPING = {
+    # ETF sector_top -> clé dans sectors.json
+    "Energy": "energy",
+    "Basic Materials": "materials",
+    "Materials": "materials",
+    "Industrials": "industrials",
+    "Industrial": "industrials",
+    "Consumer Cyclical": "consumer-discretionary",
+    "Consumer Discretionary": "consumer-discretionary",
+    "Consumer Defensive": "consumer-staples",
+    "Consumer Staples": "consumer-staples",
+    "Healthcare": "healthcare",
+    "Health Care": "healthcare",
+    "Financial Services": "financials",
+    "Financials": "financials",
+    "Banks": "financials",
+    "Insurance": "financials",
+    "Technology": "information-technology",
+    "Information Technology": "information-technology",
+    "Communication Services": "communication-services",
+    "Telecommunications": "communication-services",
+    "Internet": "communication-services",
+    "Utilities": "utilities",
+    "Real Estate": "real-estate",
+}
+
+COUNTRY_NORMALIZATION = {
+    # ETF country_top -> country dans indices.json
+    "United States": "Etats-Unis",
+    "USA": "Etats-Unis",
+    "US": "Etats-Unis",
+    "France": "France",
+    "Germany": "Allemagne",
+    "Spain": "Espagne",
+    "Italy": "Italie",
+    "Netherlands": "Pays-Bas",
+    "Sweden": "Suède",
+    "Switzerland": "Suisse",
+    "United Kingdom": "Royaume Uni",
+    "UK": "Royaume Uni",
+    "China": "China",
+    "Chine": "Chine",
+    "Brazil": "Brésil",
+    "Chile": "Chilie",
+    "South Africa": "South Africa",
+    "India": "Inde",
+    "Japan": "Japon",
+    "Mexico": "Mexique",
+    "Canada": "Canada",
+    "Australia": "Australie",
+    "Saudi Arabia": "Saudi Arabia",
+    "Israel": "Israel",
+    "Eurozone": "Zone Euro",
+    "Euro Area": "Zone Euro",
+    "Taiwan": "Taiwan",
+    "South Korea": "Corée du Sud",
+    "Korea": "Corée du Sud",
+    "Hong Kong": "Hong Kong",
+    "Singapore": "Singapour",
+    "Argentina": "Argentine",
+    "Turkey": "Turquie",
+}
+
+DEFAULT_MACRO_TILTS = {
+    "favored_sectors": ["Healthcare", "Consumer Defensive", "Utilities"],
+    "avoided_sectors": ["Real Estate", "Consumer Discretionary", "Consumer Cyclical"],
+    "favored_regions": ["United States", "Switzerland"],
+    "avoided_regions": ["China", "Hong Kong"],
+}
+
+
+# ============= v2.3 MARKET CONTEXT LOADER =============
+
+def load_market_context(data_dir: str = "data") -> Dict[str, Any]:
+    """
+    Charge le contexte marché depuis les fichiers JSON.
+    
+    Args:
+        data_dir: Répertoire contenant sectors.json, indices.json, macro_tilts.json
+    
+    Returns:
+        dict avec keys: 'sectors', 'indices', 'macro_tilts', 'loaded_at'
+    """
+    data_path = Path(data_dir)
+    context = {
+        "sectors": {},
+        "indices": {},
+        "macro_tilts": DEFAULT_MACRO_TILTS,
+        "loaded_at": None,
+    }
+    
+    # Charger sectors.json
+    sectors_path = data_path / "sectors.json"
+    if sectors_path.exists():
+        try:
+            with open(sectors_path, "r", encoding="utf-8") as f:
+                context["sectors"] = json.load(f)
+            logger.info(f"✅ Chargé: {sectors_path}")
+        except Exception as e:
+            logger.warning(f"⚠️ Erreur lecture {sectors_path}: {e}")
+    
+    # Charger indices.json
+    indices_path = data_path / "indices.json"
+    if indices_path.exists():
+        try:
+            with open(indices_path, "r", encoding="utf-8") as f:
+                context["indices"] = json.load(f)
+            logger.info(f"✅ Chargé: {indices_path}")
+        except Exception as e:
+            logger.warning(f"⚠️ Erreur lecture {indices_path}: {e}")
+    
+    # Charger macro_tilts.json
+    tilts_path = data_path / "macro_tilts.json"
+    if tilts_path.exists():
+        try:
+            with open(tilts_path, "r", encoding="utf-8") as f:
+                context["macro_tilts"] = json.load(f)
+            logger.info(f"✅ Chargé: {tilts_path}")
+        except Exception as e:
+            logger.warning(f"⚠️ Erreur lecture {tilts_path}: {e}")
+    
+    from datetime import datetime
+    context["loaded_at"] = datetime.now().isoformat()
+    
+    return context
+
+
+def _build_sector_lookup(sectors_data: Dict, preferred_region: str = "US") -> Dict:
+    """Construit un lookup sector_key -> données de performance."""
+    lookup = {}
+    sectors = sectors_data.get("sectors", {})
+    
+    for key, entries in sectors.items():
+        if not entries:
+            continue
+        
+        # Préférence pour region = preferred_region
+        candidate = None
+        for e in entries:
+            if e.get("region") == preferred_region:
+                candidate = e
+                break
+        
+        if candidate is None:
+            candidate = entries[0]
+        
+        lookup[key] = candidate
+    
+    return lookup
+
+
+def _build_country_lookup(indices_data: Dict) -> Dict:
+    """Construit un lookup country -> données d'indice."""
+    lookup = {}
+    indices = indices_data.get("indices", {})
+    
+    for region, entries in indices.items():
+        for e in entries:
+            country = e.get("country")
+            if country and country not in lookup:
+                lookup[country] = e
+    
+    return lookup
+
+
+# ============= RATING TO SCORE MAPPING =============
 
 RATING_TO_SCORE = {
     # Government / Supranational
@@ -104,34 +282,16 @@ def _rating_to_score(rating: str) -> float:
 
 def add_bond_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Enrichit un DataFrame de bonds (issu de combined_bonds.csv)
-    avec des facteurs de risque/qualité obligataire.
-
-    Colonnes utilisées :
-      - bond_credit_score (0–100, calculé côté JS)
-      - bond_credit_rating (texte AA, BBB+, U.S. Government… fallback)
-      - bond_avg_duration (années)
-      - vol_pct (vol annualisée en %)
-
-    Ajoute les colonnes :
-      - f_bond_credit_score     (0-1)
-      - f_bond_duration_score   (0-1, plus court = mieux)
-      - f_bond_volatility_score (0-1, plus bas = mieux)
-      - f_bond_quality          (0-1, composite pondéré)
-      - f_bond_quality_0_100    (0-100, pour affichage)
-      - bond_risk_bucket        ('defensive' / 'core' / 'risky' / 'very_risky')
+    Enrichit un DataFrame de bonds avec des facteurs de risque/qualité obligataire.
     
-    Usage:
-        bonds = pd.read_csv("data/combined_bonds.csv")
-        bonds = add_bond_risk_factors(bonds)
-        top_bonds = bonds.sort_values("f_bond_quality", ascending=False)
+    Ajoute: f_bond_credit_score, f_bond_duration_score, f_bond_volatility_score,
+            f_bond_quality, f_bond_quality_0_100, bond_risk_bucket
     """
     out = df.copy()
 
-    # --- 1) Score de crédit (0–1) ---
+    # Score de crédit (0–1)
     credit_num = pd.to_numeric(out.get("bond_credit_score"), errors="coerce")
 
-    # Fallback: si score numérique manquant, utiliser bond_credit_rating texte
     if "bond_credit_rating" in out.columns:
         missing = credit_num.isna()
         if missing.any():
@@ -141,36 +301,28 @@ def add_bond_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
 
     out["f_bond_credit_score"] = (credit_num / 100.0).clip(lower=0, upper=1)
 
-    # --- 2) Score de duration (0–1, plus c'est court, mieux c'est) ---
-    D_MAX = 10.0  # 10 ans = "très long" → score ≈ 0
+    # Score de duration (0–1, plus court = mieux)
+    D_MAX = 10.0
     dur = pd.to_numeric(out.get("bond_avg_duration"), errors="coerce")
     dur_clamped = dur.clip(lower=0, upper=D_MAX)
     dur_norm = dur_clamped / D_MAX
-    out["f_bond_duration_score"] = 1.0 - dur_norm  # 1 = très court, 0 = très long
+    out["f_bond_duration_score"] = 1.0 - dur_norm
 
-    # --- 3) Score de volatilité (0–1, plus c'est bas, mieux c'est) ---
-    V_MAX = 12.0  # 12% de vol annualisée = plafond
+    # Score de volatilité (0–1, plus bas = mieux)
+    V_MAX = 12.0
     vol = pd.to_numeric(out.get("vol_pct"), errors="coerce")
     vol_clamped = vol.clip(lower=0, upper=V_MAX)
     vol_norm = vol_clamped / V_MAX
     out["f_bond_volatility_score"] = 1.0 - vol_norm
 
-    # --- 4) Combinaison en score global de "qualité obligataire" ---
+    # Combinaison en score global
     w_credit = 0.50
     w_duration = 0.25
     w_vol = 0.25
 
-    f_credit = out["f_bond_credit_score"].copy()
-    f_dur = out["f_bond_duration_score"].copy()
-    f_vol = out["f_bond_volatility_score"].copy()
-
-    # Pour éviter de perdre des lignes à cause de NaN → remplir par médiane
-    for s in (f_credit, f_dur, f_vol):
-        if s.isna().any():
-            median_val = s.median()
-            if pd.isna(median_val):
-                median_val = 0.5  # Fallback neutre
-            s.fillna(median_val, inplace=True)
+    f_credit = out["f_bond_credit_score"].fillna(0.5)
+    f_dur = out["f_bond_duration_score"].fillna(0.5)
+    f_vol = out["f_bond_volatility_score"].fillna(0.5)
 
     out["f_bond_quality"] = (
         w_credit * f_credit +
@@ -180,7 +332,7 @@ def add_bond_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
 
     out["f_bond_quality_0_100"] = (out["f_bond_quality"] * 100).round(1)
 
-    # --- 5) Bucket de risque lisible pour la UI ---
+    # Bucket de risque
     bins = [-np.inf, 0.3, 0.6, 0.8, np.inf]
     labels = ["very_risky", "risky", "core", "defensive"]
     out["bond_risk_bucket"] = pd.cut(out["f_bond_quality"], bins=bins, labels=labels)
@@ -215,53 +367,56 @@ def get_bond_quality_stats(df: pd.DataFrame) -> Dict[str, any]:
     }
 
 
-# ============= FACTOR WEIGHTS v2.2 =============
+# ============= FACTOR WEIGHTS v2.3 =============
 
 @dataclass
 class FactorWeights:
     """
     Poids des facteurs pour un profil donné.
     
+    v2.3: Ajout tactical_context pour intégrer le contexte marché.
     v2.2: Ajout bond_quality pour les fonds obligataires.
-    v2.1: Ajout cost_efficiency (TER + Yield) pour ETF/Bonds.
-    v2.0: quality_fundamental remplace quality (proxy DD) et intègre Buffett.
     """
-    momentum: float = 0.30           # Driver principal d'alpha
-    quality_fundamental: float = 0.25  # Score Buffett (ROIC, FCF, ROE, D/E)
-    low_vol: float = 0.25            # Contrôle risque
-    cost_efficiency: float = 0.05    # TER + Yield (ETF/Bonds)
-    bond_quality: float = 0.00       # v2.2: Qualité obligataire (bonds only)
-    liquidity: float = 0.10          # Filtre technique
-    mean_reversion: float = 0.05     # Évite sur-extension
+    momentum: float = 0.30
+    quality_fundamental: float = 0.25
+    low_vol: float = 0.25
+    cost_efficiency: float = 0.05
+    bond_quality: float = 0.00
+    tactical_context: float = 0.05       # NOUVEAU v2.3
+    liquidity: float = 0.05
+    mean_reversion: float = 0.05
 
 
-# Configurations par profil — PARI CENTRAL EXPLICITE
+# Configurations par profil
 PROFILE_WEIGHTS = {
     "Agressif": FactorWeights(
-        momentum=0.45,              # Driver principal fort
+        momentum=0.40,              # Driver principal fort
         quality_fundamental=0.25,   # Buffett toujours important
-        low_vol=0.10,               # Accepte plus de vol
+        low_vol=0.08,               # Accepte plus de vol
         cost_efficiency=0.05,       # Coûts moins prioritaires
-        bond_quality=0.00,          # v2.2: Pas pertinent pour profil agressif
-        liquidity=0.10,
-        mean_reversion=0.05
-    ),
-    "Modéré": FactorWeights(
-        momentum=0.30,              # Équilibré
-        quality_fundamental=0.25,   # Qualité renforcée
-        low_vol=0.18,               # Contrôle risque
-        cost_efficiency=0.07,       # Coûts importants
-        bond_quality=0.08,          # v2.2: Qualité bonds compte
+        bond_quality=0.00,          # Pas pertinent pour profil agressif
+        tactical_context=0.10,      # v2.3: Contexte marché important
         liquidity=0.07,
         mean_reversion=0.05
     ),
+    "Modéré": FactorWeights(
+        momentum=0.28,              # Équilibré
+        quality_fundamental=0.25,   # Qualité renforcée
+        low_vol=0.15,               # Contrôle risque
+        cost_efficiency=0.07,       # Coûts importants
+        bond_quality=0.08,          # Qualité bonds compte
+        tactical_context=0.07,      # v2.3: Contexte marché modéré
+        liquidity=0.05,
+        mean_reversion=0.05
+    ),
     "Stable": FactorWeights(
-        momentum=0.15,              # Momentum réduit
+        momentum=0.12,              # Momentum réduit
         quality_fundamental=0.20,   # Qualité importante
         low_vol=0.25,               # Risque minimal prioritaire
         cost_efficiency=0.10,       # Coûts très importants (long terme)
-        bond_quality=0.15,          # v2.2: Qualité bonds très importante
-        liquidity=0.10,
+        bond_quality=0.15,          # Qualité bonds très importante
+        tactical_context=0.05,      # v2.3: Contexte moins crucial
+        liquidity=0.08,
         mean_reversion=0.05
     ),
 }
@@ -285,7 +440,6 @@ def fnum(x) -> float:
 
 # ============= BUFFETT QUALITY INTEGRATION =============
 
-# Seuils par secteur pour le scoring Buffett
 SECTOR_QUALITY_THRESHOLDS = {
     "tech": {"roe_good": 15, "roic_good": 12, "de_max": 80, "fcf_good": 3},
     "finance": {"roe_good": 10, "roic_good": None, "de_max": None, "fcf_good": None},
@@ -297,7 +451,7 @@ SECTOR_QUALITY_THRESHOLDS = {
     "_default": {"roe_good": 12, "roic_good": 10, "de_max": 120, "fcf_good": 3},
 }
 
-SECTOR_MAPPING = {
+SECTOR_MAPPING_QUALITY = {
     "technology": "tech", "tech": "tech", "software": "tech", "semiconductors": "tech",
     "finance": "finance", "financials": "finance", "banking": "finance", "insurance": "finance",
     "real estate": "real_estate", "reit": "real_estate", "immobilier": "real_estate",
@@ -313,71 +467,59 @@ def get_sector_key(sector: Optional[str]) -> str:
     if not sector:
         return "_default"
     sector_lower = sector.lower().strip()
-    for pattern, key in SECTOR_MAPPING.items():
+    for pattern, key in SECTOR_MAPPING_QUALITY.items():
         if pattern in sector_lower or sector_lower in pattern:
             return key
     return "_default"
 
 
 def compute_buffett_quality_score(asset: dict) -> float:
-    """
-    Calcule un score de qualité Buffett [0, 100] pour un actif.
-    
-    Métriques utilisées:
-    - ROE (Return on Equity)
-    - ROIC (Return on Invested Capital) — Plus important que ROE
-    - FCF Yield (Free Cash Flow Yield)
-    - D/E Ratio (Debt-to-Equity)
-    - EPS Growth 5Y
-    
-    Returns:
-        Score entre 0 et 100. 100 = qualité maximale.
-    """
+    """Calcule un score de qualité Buffett [0, 100] pour un actif."""
     sector_key = get_sector_key(asset.get("sector"))
     thresholds = SECTOR_QUALITY_THRESHOLDS.get(sector_key, SECTOR_QUALITY_THRESHOLDS["_default"])
     
     scores = []
     weights = []
     
-    # === ROE ===
+    # ROE
     roe = fnum(asset.get("roe"))
     roe_good = thresholds.get("roe_good", 12)
     if roe > 0:
-        roe_score = min(100, (roe / roe_good) * 70)  # 70 = score if at threshold
+        roe_score = min(100, (roe / roe_good) * 70)
         scores.append(roe_score)
         weights.append(0.20)
     
-    # === ROIC (plus important que ROE) ===
+    # ROIC
     roic = fnum(asset.get("roic"))
     roic_good = thresholds.get("roic_good")
     if roic_good and roic > 0:
         roic_score = min(100, (roic / roic_good) * 70)
         scores.append(roic_score)
-        weights.append(0.30)  # Poids plus élevé
+        weights.append(0.30)
     
-    # === FCF Yield ===
+    # FCF Yield
     fcf = fnum(asset.get("fcf_yield"))
     fcf_good = thresholds.get("fcf_good", 3)
     if fcf != 0:
         if fcf < 0:
-            fcf_score = max(0, 30 + fcf * 5)  # Pénalité pour FCF négatif
+            fcf_score = max(0, 30 + fcf * 5)
         else:
             fcf_score = min(100, 50 + (fcf / fcf_good) * 25)
         scores.append(fcf_score)
         weights.append(0.20)
     
-    # === D/E Ratio (inversé: moins = mieux) ===
+    # D/E Ratio
     de = fnum(asset.get("de_ratio"))
     de_max = thresholds.get("de_max")
     if de_max and de >= 0:
         if de <= de_max:
-            de_score = 80 - (de / de_max) * 30  # 80 si 0, 50 si at max
+            de_score = 80 - (de / de_max) * 30
         else:
             de_score = max(0, 50 - (de - de_max) / de_max * 50)
         scores.append(de_score)
         weights.append(0.15)
     
-    # === EPS Growth 5Y ===
+    # EPS Growth 5Y
     eps_growth = fnum(asset.get("eps_growth_5y"))
     if asset.get("eps_growth_5y") is not None:
         if eps_growth >= 15:
@@ -393,37 +535,57 @@ def compute_buffett_quality_score(asset: dict) -> float:
         scores.append(eps_score)
         weights.append(0.15)
     
-    # Calcul du score pondéré
     if not scores or sum(weights) == 0:
-        return 50.0  # Neutre si pas de données
+        return 50.0
     
     weighted_score = sum(s * w for s, w in zip(scores, weights)) / sum(weights)
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.2 =============
+# ============= FACTOR SCORER v2.3 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
     
-    v2.2 — Ajout bond_quality:
+    v2.3 — Ajout tactical_context:
     - momentum: Performance récente (1m/3m/YTD) + Sharpe bonus (crypto)
-    - quality_fundamental: Score Buffett intégré (ROIC, FCF, ROE, D/E)
+    - quality_fundamental: Score Buffett intégré
     - low_vol: Inverse de la volatilité
-    - cost_efficiency: TER (coûts) + yield_ttm (rendement bonds)
-    - bond_quality: Crédit + Duration + Vol pour bonds [NOUVEAU v2.2]
+    - cost_efficiency: TER + yield_ttm
+    - bond_quality: Crédit + Duration + Vol pour bonds
+    - tactical_context: NOUVEAU - Sector trend + Region trend + Macro alignment
     - liquidity: Log(market_cap ou AUM)
     - mean_reversion: Pénalise les sur-extensions
-    
-    Pari central: Quality + Momentum surperforment à horizon 1-3 ans.
     """
     
-    def __init__(self, profile: str = "Modéré"):
+    def __init__(self, profile: str = "Modéré", market_context: Optional[Dict] = None):
+        """
+        Args:
+            profile: 'Agressif' | 'Modéré' | 'Stable'
+            market_context: Optionnel - résultat de load_market_context()
+        """
         if profile not in PROFILE_WEIGHTS:
             raise ValueError(f"Profil inconnu: {profile}. Valides: {list(PROFILE_WEIGHTS.keys())}")
         self.profile = profile
         self.weights = PROFILE_WEIGHTS[profile]
+        
+        # v2.3: Contexte marché pour tactical_context
+        self.market_context = market_context or {}
+        self._sector_lookup = None
+        self._country_lookup = None
+        self._macro_tilts = None
+        
+        if self.market_context:
+            self._build_lookups()
+    
+    def _build_lookups(self):
+        """Construit les lookups pour le scoring tactique."""
+        if "sectors" in self.market_context:
+            self._sector_lookup = _build_sector_lookup(self.market_context["sectors"])
+        if "indices" in self.market_context:
+            self._country_lookup = _build_country_lookup(self.market_context["indices"])
+        self._macro_tilts = self.market_context.get("macro_tilts", DEFAULT_MACRO_TILTS)
     
     @staticmethod
     def _zscore(values: List[float], winsor_pct: float = 0.02) -> np.ndarray:
@@ -434,20 +596,13 @@ class FactorScorer:
         if len(arr) == 0 or arr.std() < 1e-8:
             return np.zeros_like(arr)
         
-        # Winsorisation
         lo, hi = np.percentile(arr, [winsor_pct * 100, 100 - winsor_pct * 100])
         arr = np.clip(arr, lo, hi)
         
         return (arr - arr.mean()) / arr.std()
     
     def compute_factor_momentum(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur momentum: combinaison perf 1m/3m/YTD.
-        
-        v2.1: Ajout bonus Sharpe ratio pour crypto.
-        
-        Horizon implicite: 6-12 mois.
-        """
+        """Facteur momentum: combinaison perf 1m/3m/YTD."""
         n = len(assets)
         
         p1m = [fnum(a.get("perf_1m")) for a in assets]
@@ -458,69 +613,47 @@ class FactorScorer:
         has_1m = any(p1m)
         
         if has_3m and has_1m:
-            # Pondération standard: 3M > 1M > YTD
             raw = [0.5 * p3m[i] + 0.3 * p1m[i] + 0.2 * ytd[i] for i in range(n)]
         elif has_3m:
             raw = [0.7 * p3m[i] + 0.3 * ytd[i] for i in range(n)]
         elif has_1m:
             raw = [0.6 * p1m[i] + 0.4 * ytd[i] for i in range(n)]
         else:
-            # Fallback crypto: 7d + 24h
             p7d = [fnum(a.get("perf_7d")) for a in assets]
             p24h = [fnum(a.get("perf_24h")) for a in assets]
             raw = [0.7 * p7d[i] + 0.3 * p24h[i] for i in range(n)]
         
-        # v2.1: Bonus Sharpe ratio pour crypto
+        # Bonus Sharpe pour crypto
         for i, a in enumerate(assets):
             category = a.get("category", "").lower()
             if category == "crypto":
                 sharpe = fnum(a.get("sharpe_ratio", 0))
-                # Bonus/malus: Sharpe 2 → +20%, Sharpe -2 → -20%
                 sharpe_bonus = max(-20, min(20, sharpe * 10))
                 raw[i] += sharpe_bonus
         
         return self._zscore(raw)
     
     def compute_factor_quality_fundamental(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur qualité fondamentale: Score Buffett intégré.
-        
-        v2.0: Remplace "quality" (proxy DD) par scoring Buffett complet.
-        """
+        """Facteur qualité fondamentale: Score Buffett intégré."""
         scores = []
         for asset in assets:
             category = asset.get("category", "").lower()
             
             if category in ["equity", "equities", "action", "actions", "stock"]:
-                # Actions: utiliser le score Buffett complet
                 buffett_score = compute_buffett_quality_score(asset)
-                # Normaliser vers z-score compatible (centré sur 50)
                 scores.append(buffett_score)
             else:
-                # ETF, Crypto, Bonds: score neutre (50)
                 scores.append(50.0)
         
         return self._zscore(scores)
     
     def compute_factor_low_vol(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur low volatility: inverse de la vol (vol basse = score haut).
-        
-        Utilisé pour contrôler le risque, pas pour générer de l'alpha.
-        """
+        """Facteur low volatility: inverse de la vol."""
         vol = [fnum(a.get("vol_3y") or a.get("vol30") or a.get("vol_annual") or a.get("vol") or a.get("vol_pct") or 20) for a in assets]
         return -self._zscore(vol)
     
     def compute_factor_cost_efficiency(self, assets: List[dict]) -> np.ndarray:
-        """
-        v2.1: Facteur coût/rendement pour ETF et Bonds.
-        
-        - Pénalise TER élevé (Total Expense Ratio)
-        - Bonifie yield_ttm pour bonds ETF
-        - Neutre pour actions et crypto (pas de TER)
-        
-        Score: TER bas + Yield élevé = meilleur score
-        """
+        """Facteur coût/rendement pour ETF et Bonds."""
         scores = []
         
         for a in assets:
@@ -528,48 +661,31 @@ class FactorScorer:
             fund_type = str(a.get("fund_type", "")).lower()
             
             if category in ["etf", "bond", "bonds"]:
-                # === TER Score ===
                 ter_raw = fnum(a.get("total_expense_ratio", 0))
-                
-                # Normaliser: si > 1, c'est déjà en %, sinon convertir
                 ter_pct = ter_raw * 100 if ter_raw < 1 else ter_raw
                 
-                # Score TER: 0% → 100, 0.5% → 50, 1%+ → 0
                 if ter_pct <= 0:
-                    ter_score = 75.0  # Neutre si pas de données
+                    ter_score = 75.0
                 else:
                     ter_score = max(0, 100 - ter_pct * 100)
                 
-                # === Yield Score (surtout pour bonds) ===
                 yield_ttm = fnum(a.get("yield_ttm", 0))
                 
                 if "bond" in fund_type or "bond" in category:
-                    # Bonds: yield important
                     yield_score = min(100, yield_ttm * 12.5)
                     final_score = 0.5 * ter_score + 0.5 * yield_score
                 else:
-                    # ETF actions: principalement TER, yield bonus léger
                     yield_bonus = min(20, yield_ttm * 5)
                     final_score = 0.8 * ter_score + 0.2 * yield_bonus
                 
                 scores.append(final_score)
             else:
-                # Actions et Crypto: neutre (pas de TER)
                 scores.append(50.0)
         
         return self._zscore(scores)
     
     def compute_factor_bond_quality(self, assets: List[dict]) -> np.ndarray:
-        """
-        v2.2 NOUVEAU: Facteur qualité obligataire spécifique.
-        
-        Combine:
-        - Score crédit (bond_credit_score ou fallback rating)
-        - Score duration (plus court = mieux)
-        - Score volatilité (plus bas = mieux)
-        
-        Neutre pour non-bonds.
-        """
+        """Facteur qualité obligataire spécifique."""
         scores = []
         
         for a in assets:
@@ -579,43 +695,120 @@ class FactorScorer:
             is_bond = "bond" in category or "bond" in fund_type
             
             if is_bond:
-                # === Score crédit (0-1) ===
+                # Score crédit
                 credit_raw = fnum(a.get("bond_credit_score", 0))
                 if credit_raw <= 0:
-                    # Fallback sur rating texte
                     rating = a.get("bond_credit_rating", "")
                     credit_raw = _rating_to_score(rating) if rating else 50.0
                     if pd.isna(credit_raw):
                         credit_raw = 50.0
                 f_credit = min(1.0, max(0.0, credit_raw / 100.0))
                 
-                # === Score duration (0-1, plus court = mieux) ===
+                # Score duration
                 D_MAX = 10.0
-                dur = fnum(a.get("bond_avg_duration", 5))  # Default 5 ans
+                dur = fnum(a.get("bond_avg_duration", 5))
                 f_dur = 1.0 - min(1.0, max(0.0, dur / D_MAX))
                 
-                # === Score volatilité (0-1, plus bas = mieux) ===
+                # Score volatilité
                 V_MAX = 12.0
-                vol = fnum(a.get("vol_pct") or a.get("vol_3y") or 6)  # Default 6%
+                vol = fnum(a.get("vol_pct") or a.get("vol_3y") or 6)
                 f_vol = 1.0 - min(1.0, max(0.0, vol / V_MAX))
                 
-                # Combinaison pondérée
                 bond_quality = 0.50 * f_credit + 0.25 * f_dur + 0.25 * f_vol
-                
-                # Convertir en score centré sur 50 pour z-score
                 scores.append(bond_quality * 100)
             else:
-                # Non-bonds: neutre
                 scores.append(50.0)
         
         return self._zscore(scores)
     
-    def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
+    def compute_factor_tactical_context(self, assets: List[dict]) -> np.ndarray:
         """
-        Facteur liquidité: log(market_cap ou AUM).
+        v2.3 NOUVEAU: Facteur contexte tactique.
         
-        Filtre technique pour éviter les small caps illiquides.
+        Combine:
+        - f_sector_trend: momentum du secteur (YTD + daily)
+        - f_region_trend: momentum de la région
+        - f_macro_alignment: alignement aux convictions macro
+        
+        Retourne un z-score. Score élevé = bien positionné dans le contexte actuel.
         """
+        if not self._sector_lookup and not self._country_lookup:
+            # Pas de données marché → score neutre pour tous
+            return np.zeros(len(assets))
+        
+        scores = []
+        
+        for a in assets:
+            sector_top = a.get("sector_top", "")
+            country_top = a.get("country_top", "")
+            
+            components = []
+            weights = []
+            
+            # === Sector Trend ===
+            if self._sector_lookup and sector_top:
+                sector_key = SECTOR_KEY_MAPPING.get(sector_top.strip())
+                if sector_key and sector_key in self._sector_lookup:
+                    ref = self._sector_lookup[sector_key]
+                    ytd = ref.get("ytd_num", 0) or 0
+                    daily = ref.get("change_num", 0) or 0
+                    
+                    # Normaliser: YTD/25 + daily/2, clamp [-1, 1], puis [0, 1]
+                    raw = 0.7 * (ytd / 25.0) + 0.3 * (daily / 2.0)
+                    raw = max(-1.0, min(1.0, raw))
+                    f_sector = 0.5 * (raw + 1.0)
+                    
+                    components.append(f_sector)
+                    weights.append(0.4)
+            
+            # === Region Trend ===
+            if self._country_lookup and country_top:
+                norm_country = COUNTRY_NORMALIZATION.get(country_top.strip(), country_top.strip())
+                if norm_country in self._country_lookup:
+                    ref = self._country_lookup[norm_country]
+                    ytd = ref.get("_ytd_value", 0) or 0
+                    daily = ref.get("_change_value", 0) or 0
+                    
+                    raw = 0.7 * (ytd / 25.0) + 0.3 * (daily / 2.0)
+                    raw = max(-1.0, min(1.0, raw))
+                    f_region = 0.5 * (raw + 1.0)
+                    
+                    components.append(f_region)
+                    weights.append(0.3)
+            
+            # === Macro Alignment ===
+            if self._macro_tilts:
+                f_macro = 0.5  # base neutre
+                
+                if sector_top:
+                    if sector_top in self._macro_tilts.get("favored_sectors", []):
+                        f_macro += 0.2
+                    elif sector_top in self._macro_tilts.get("avoided_sectors", []):
+                        f_macro -= 0.2
+                
+                if country_top:
+                    if country_top in self._macro_tilts.get("favored_regions", []):
+                        f_macro += 0.15
+                    elif country_top in self._macro_tilts.get("avoided_regions", []):
+                        f_macro -= 0.15
+                
+                f_macro = max(0.0, min(1.0, f_macro))
+                components.append(f_macro)
+                weights.append(0.3)
+            
+            # Combiner
+            if components and sum(weights) > 0:
+                tactical_score = sum(c * w for c, w in zip(components, weights)) / sum(weights)
+            else:
+                tactical_score = 0.5  # neutre
+            
+            # Convertir en score centré sur 50 pour z-score
+            scores.append(tactical_score * 100)
+        
+        return self._zscore(scores)
+    
+    def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
+        """Facteur liquidité: log(market_cap ou AUM)."""
         liq = [
             math.log(max(fnum(a.get("liquidity") or a.get("market_cap") or a.get("aum_usd") or 1), 1))
             for a in assets
@@ -623,28 +816,23 @@ class FactorScorer:
         return self._zscore(liq)
     
     def compute_factor_mean_reversion(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur mean reversion: pénalise les sur-extensions.
-        
-        YTD très élevé + momentum récent faible = risque de retournement.
-        """
+        """Facteur mean reversion: pénalise les sur-extensions."""
         scores = []
         
         for a in assets:
             ytd = fnum(a.get("ytd"))
             p1m = fnum(a.get("perf_1m"))
             
-            # Flag sur-extension forte
             if ytd > 80 and p1m <= 0:
-                scores.append(-1.5)  # Pénalité forte
+                scores.append(-1.5)
             elif ytd > 50 and p1m <= 2:
-                scores.append(-0.5)  # Pénalité modérée
+                scores.append(-0.5)
             elif ytd > 100:
-                scores.append(-1.0)  # Très sur-étendu
+                scores.append(-1.0)
             elif ytd > 150:
-                scores.append(-2.0)  # Extrême
+                scores.append(-2.0)
             else:
-                scores.append(0.0)  # Neutre
+                scores.append(0.0)
         
         return np.array(scores)
     
@@ -652,15 +840,7 @@ class FactorScorer:
         """
         Calcule le score composite pour chaque actif.
         
-        v2.2: Ajout facteur bond_quality.
-        v2.1: Ajout facteur cost_efficiency.
-        v2.0: SEUL moteur d'alpha — utilisé directement par l'optimizer.
-        
-        Args:
-            assets: Liste d'actifs avec leurs métriques
-        
-        Returns:
-            assets enrichis avec 'factor_scores', 'composite_score', 'score'
+        v2.3: Ajout facteur tactical_context.
         """
         if not assets:
             return assets
@@ -673,7 +853,8 @@ class FactorScorer:
             "quality_fundamental": self.compute_factor_quality_fundamental(assets),
             "low_vol": self.compute_factor_low_vol(assets),
             "cost_efficiency": self.compute_factor_cost_efficiency(assets),
-            "bond_quality": self.compute_factor_bond_quality(assets),  # v2.2
+            "bond_quality": self.compute_factor_bond_quality(assets),
+            "tactical_context": self.compute_factor_tactical_context(assets),  # v2.3
             "liquidity": self.compute_factor_liquidity(assets),
             "mean_reversion": self.compute_factor_mean_reversion(assets),
         }
@@ -691,18 +872,17 @@ class FactorScorer:
                 for name, values in factors.items()
             }
             asset["composite_score"] = round(float(composite[i]), 3)
-            asset["score"] = asset["composite_score"]  # Alias pour compatibilité
+            asset["score"] = asset["composite_score"]
             
-            # Ajouter le score Buffett brut pour diagnostics
+            # Score Buffett pour diagnostics
             if asset.get("category", "").lower() in ["equity", "equities", "action", "actions", "stock"]:
                 asset["buffett_score"] = compute_buffett_quality_score(asset)
             
-            # v2.2: Ajouter bond_risk_bucket pour bonds
+            # bond_risk_bucket pour bonds
             category = asset.get("category", "").lower()
             fund_type = str(asset.get("fund_type", "")).lower()
             if "bond" in category or "bond" in fund_type:
                 bq = factors["bond_quality"][i]
-                # Convertir z-score en bucket (approximatif)
                 if bq > 0.8:
                     asset["bond_risk_bucket"] = "defensive"
                 elif bq > 0:
@@ -712,7 +892,7 @@ class FactorScorer:
                 else:
                     asset["bond_risk_bucket"] = "very_risky"
             
-            # Flag sur-extension pour diagnostics
+            # Flag sur-extension
             ytd = fnum(asset.get("ytd"))
             p1m = fnum(asset.get("perf_1m"))
             asset["flags"] = {
@@ -727,9 +907,7 @@ class FactorScorer:
         return assets
     
     def rank_assets(self, assets: List[dict], top_n: Optional[int] = None) -> List[dict]:
-        """
-        Trie les actifs par score décroissant et retourne le top N.
-        """
+        """Trie les actifs par score décroissant et retourne le top N."""
         scored = self.compute_scores(assets)
         ranked = sorted(scored, key=lambda x: x.get("composite_score", 0), reverse=True)
         
@@ -743,29 +921,19 @@ class FactorScorer:
 
 def rescore_universe_by_profile(
     universe: Union[List[dict], Dict[str, List[dict]]],
-    profile: str
+    profile: str,
+    market_context: Optional[Dict] = None
 ) -> List[dict]:
     """
     Recalcule les scores de tout l'univers pour un profil donné.
     
-    v2.2: Utilise FactorScorer avec bond_quality.
-    v2.1: Utilise FactorScorer avec cost_efficiency.
-    v2.0: Utilise FactorScorer comme SEUL moteur d'alpha.
-    
-    Args:
-        universe: Liste plate d'actifs OU dict avec 'equities', 'etfs', 'bonds', 'crypto'
-        profile: 'Agressif' | 'Modéré' | 'Stable'
-    
-    Returns:
-        Liste plate d'actifs avec scores recalculés
+    v2.3: Accepte market_context optionnel pour tactical_context.
     """
-    scorer = FactorScorer(profile)
+    scorer = FactorScorer(profile, market_context=market_context)
     
-    # Si c'est une liste plate, scorer directement
     if isinstance(universe, list):
         return scorer.compute_scores(list(universe))
     
-    # Si c'est un dict, combiner toutes les catégories
     all_assets = []
     for category in ["equities", "etfs", "bonds", "crypto"]:
         assets = universe.get(category, [])
@@ -775,14 +943,15 @@ def rescore_universe_by_profile(
 
 
 def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
-    """Retourne un résumé des poids par profil (pour debug/docs)."""
+    """Retourne un résumé des poids par profil."""
     return {
         profile: {
             "momentum": w.momentum,
             "quality_fundamental": w.quality_fundamental,
             "low_vol": w.low_vol,
             "cost_efficiency": w.cost_efficiency,
-            "bond_quality": w.bond_quality,  # v2.2
+            "bond_quality": w.bond_quality,
+            "tactical_context": w.tactical_context,  # v2.3
             "liquidity": w.liquidity,
             "mean_reversion": w.mean_reversion,
         }
@@ -793,36 +962,30 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.2):",
+        "Comparaison des poids factoriels par profil (v2.3):",
         "",
-        "PARI CENTRAL: Quality + Momentum surperforment à horizon 1-3 ans.",
+        "PARI CENTRAL: Quality + Momentum + Contexte tactique surperforment à horizon 1-3 ans.",
         ""
     ]
     
-    factors = ["momentum", "quality_fundamental", "low_vol", "cost_efficiency", "bond_quality", "liquidity", "mean_reversion"]
-    header = f"{'Facteur':<20} | {'Agressif':>10} | {'Modéré':>10} | {'Stable':>10}"
+    factors = ["momentum", "quality_fundamental", "low_vol", "cost_efficiency", "bond_quality", "tactical_context", "liquidity", "mean_reversion"]
+    header = f"{'Facteur':<22} | {'Agressif':>10} | {'Modéré':>10} | {'Stable':>10}"
     lines.append(header)
     lines.append("-" * len(header))
     
     for factor in factors:
         vals = [getattr(PROFILE_WEIGHTS[p], factor) for p in ["Agressif", "Modéré", "Stable"]]
-        line = f"{factor:<20} | {vals[0]:>10.0%} | {vals[1]:>10.0%} | {vals[2]:>10.0%}"
+        line = f"{factor:<22} | {vals[0]:>10.0%} | {vals[1]:>10.0%} | {vals[2]:>10.0%}"
         lines.append(line)
     
     return "\n".join(lines)
 
 
-# ============= DIAGNOSTIC =============
-
 def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
     """
     Calcule le taux de couverture des métriques de qualité.
     
-    v2.2: Ajout couverture métriques bond.
-    v2.1: Ajout couverture TER et yield_ttm.
-    
-    Returns:
-        Dict avec % d'actifs ayant chaque métrique.
+    v2.3: Ajout couverture tactical_context.
     """
     if not assets:
         return {}
@@ -845,13 +1008,43 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
         # Métriques ETF/Bonds
         "total_expense_ratio": round(sum(1 for a in etf_bonds if fnum(a.get("total_expense_ratio")) > 0) / n_etf * 100, 1),
         "yield_ttm": round(sum(1 for a in etf_bonds if fnum(a.get("yield_ttm")) > 0) / n_etf * 100, 1),
-        # v2.2: Métriques Bonds spécifiques
+        # Métriques Bonds spécifiques
         "bond_credit_score": round(sum(1 for a in bonds_only if fnum(a.get("bond_credit_score")) > 0) / n_bonds * 100, 1),
         "bond_avg_duration": round(sum(1 for a in bonds_only if fnum(a.get("bond_avg_duration")) > 0) / n_bonds * 100, 1),
         "bond_avg_maturity": round(sum(1 for a in bonds_only if fnum(a.get("bond_avg_maturity")) > 0) / n_bonds * 100, 1),
+        # v2.3: Couverture tactical context
+        "sector_top": round(sum(1 for a in assets if a.get("sector_top")) / total * 100, 1),
+        "country_top": round(sum(1 for a in assets if a.get("country_top")) / total * 100, 1),
         # Compteurs
         "equities_count": len(equities),
         "etf_bonds_count": len(etf_bonds),
         "bonds_only_count": len(bonds_only),
         "total_count": total,
     }
+
+
+# ============= MAIN (pour test) =============
+
+if __name__ == "__main__":
+    print(compare_factor_profiles())
+    print("\n" + "=" * 60)
+    print("Test avec données fictives...")
+    
+    # Charger contexte marché (si fichiers présents)
+    market_context = load_market_context("data")
+    
+    # Actifs de test
+    test_assets = [
+        {"symbol": "IYW", "category": "etf", "sector_top": "Technology", "country_top": "United States", "ytd": 26.87, "perf_1m": 2.5, "perf_3m": 8.2, "vol_pct": 18.5, "total_expense_ratio": 0.40, "aum_usd": 15e9},
+        {"symbol": "XLV", "category": "etf", "sector_top": "Healthcare", "country_top": "United States", "ytd": 2.05, "perf_1m": -1.1, "perf_3m": 1.5, "vol_pct": 12.3, "total_expense_ratio": 0.10, "aum_usd": 12e9},
+        {"symbol": "AGG", "category": "bond", "fund_type": "bond", "sector_top": "Financial Services", "country_top": "United States", "ytd": 1.5, "perf_1m": 0.3, "vol_pct": 4.2, "total_expense_ratio": 0.03, "bond_credit_score": 87, "bond_avg_duration": 3.75, "yield_ttm": 4.5, "aum_usd": 90e9},
+        {"symbol": "MCHI", "category": "etf", "sector_top": "Technology", "country_top": "China", "ytd": -5.79, "perf_1m": -1.4, "perf_3m": -3.2, "vol_pct": 22.8, "total_expense_ratio": 0.59, "aum_usd": 8e9},
+    ]
+    
+    # Scorer
+    scorer = FactorScorer("Modéré", market_context=market_context)
+    scored = scorer.compute_scores(test_assets)
+    
+    print("\nRésultats:")
+    for a in sorted(scored, key=lambda x: x["composite_score"], reverse=True):
+        print(f"  {a['symbol']:6} | score: {a['composite_score']:+.3f} | tactical: {a['factor_scores']['tactical_context']:+.3f}")

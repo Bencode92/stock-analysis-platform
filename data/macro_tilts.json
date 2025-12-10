@@ -1,0 +1,130 @@
+{
+  "as_of": "2025-12-10",
+  "source": "Brief Stratégique Comité d'Investissement",
+  
+  "scenarios": {
+    "recession_moderate": {
+      "probability": 0.60,
+      "description": "Récession modérée si Fed maintient taux élevés"
+    },
+    "stabilisation": {
+      "probability": 0.30,
+      "description": "Stabilisation progressive avec croissance modérée"
+    },
+    "rebound": {
+      "probability": 0.10,
+      "description": "Rebond optimiste si détente monétaire anticipée"
+    }
+  },
+  
+  "favored_sectors": [
+    "Healthcare",
+    "Health Care",
+    "Consumer Defensive",
+    "Consumer Staples",
+    "Utilities"
+  ],
+  
+  "avoided_sectors": [
+    "Real Estate",
+    "Consumer Discretionary",
+    "Consumer Cyclical"
+  ],
+  
+  "neutral_sectors": [
+    "Technology",
+    "Information Technology",
+    "Financial Services",
+    "Financials",
+    "Energy",
+    "Industrials",
+    "Materials",
+    "Communication Services"
+  ],
+  
+  "favored_regions": [
+    "United States",
+    "Switzerland",
+    "Israel",
+    "Chile"
+  ],
+  
+  "avoided_regions": [
+    "China",
+    "Hong Kong",
+    "Saudi Arabia"
+  ],
+  
+  "tilts": {
+    "equity_overall": -0.10,
+    "long_duration_bonds": 0.15,
+    "defensive_sectors": 0.10,
+    "value_stocks": 0.05,
+    "commodities_energy": 0.05,
+    "cash_position": 0.15
+  },
+  
+  "bond_preferences": {
+    "favor_long_duration": true,
+    "favor_investment_grade": true,
+    "avoid_high_yield": false,
+    "min_credit_score": 60
+  },
+  
+  "risk_alerts": [
+    {
+      "type": "inflation_persistence",
+      "severity": "high",
+      "description": "Inflation plus élevée que prévu pourrait maintenir taux élevés"
+    },
+    {
+      "type": "geopolitical",
+      "severity": "medium",
+      "description": "Tensions géopolitiques pourraient perturber supply chains"
+    },
+    {
+      "type": "forecast_error",
+      "severity": "medium",
+      "description": "Mauvaise interprétation données éco → volatilité accrue"
+    }
+  ],
+  
+  "key_dates": [
+    {
+      "date": "2026-01",
+      "event": "Réunion Fed janvier",
+      "impact": "Décision taux directeurs"
+    },
+    {
+      "date": "2025-12",
+      "event": "Rapport emploi décembre",
+      "impact": "Indicateur santé économique"
+    },
+    {
+      "date": "2026-03",
+      "event": "Réunion Fed mars",
+      "impact": "Potentielle inflexion politique monétaire"
+    }
+  ],
+  
+  "convictions": [
+    {
+      "horizon": "2026-01 à 2026-03",
+      "asset": "Obligations longues",
+      "direction": "overweight",
+      "rationale": "Couple rendement/risque attractif en anticipation détente monétaire"
+    },
+    {
+      "horizon": "2026-02",
+      "asset": "Secteur technologique",
+      "direction": "opportunistic_buy",
+      "rationale": "Rebond potentiel à valorisations attractives"
+    },
+    {
+      "horizon": "2025-12 à 2026-01",
+      "asset": "Valeurs défensives",
+      "direction": "overweight",
+      "rationale": "Protection contre volatilité accrue"
+    }
+  ]
+}
