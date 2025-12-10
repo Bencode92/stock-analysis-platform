@@ -1,6 +1,12 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.2 — Phase 2.5 Refactoring.
+Construction de l'univers d'actifs v3.3 — Phase 2.5 Refactoring.
+
+CHANGEMENTS v3.3 (Bond Risk Factors Integration):
+- Import et appel automatique de add_bond_risk_factors() sur bonds
+- Nouvelles colonnes bonds: bond_avg_duration, bond_avg_maturity, 
+  bond_credit_score, bond_credit_rating
+- Colonnes f_bond_* et bond_risk_bucket ajoutées automatiquement
 
 CHANGEMENTS v3.2 (P0 Quick Wins):
 - ETF/Bonds: charge total_expense_ratio, yield_ttm, one_year_return_pct
@@ -96,11 +102,13 @@ def load_etf_csv(path: str) -> pd.DataFrame:
     """Charge et prépare les ETF depuis CSV."""
     df = pd.read_csv(path)
     
-    # v3.2: Colonnes numériques étendues (TER, yield_ttm)
+    # v3.3: Colonnes numériques étendues (TER, yield, bond metrics)
     num_cols = [
         "daily_change_pct", "ytd_return_pct", "one_year_return_pct",
         "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio",
-        "yield_ttm"  # v3.2: Ajout yield
+        "yield_ttm",
+        # v3.3: Bond-specific metrics
+        "bond_avg_duration", "bond_avg_maturity", "bond_credit_score"
     ]
     for c in num_cols:
         if c in df.columns:
@@ -188,7 +196,7 @@ def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
     bounds = risk_bounds.get(asset_type, risk_bounds["etf"])
     
     def is_valid(r):
-        v = fnum(r.get("vol_3y") or r.get("vol30") or r.get("vol") or 20)
+        v = fnum(r.get("vol_3y") or r.get("vol30") or r.get("vol") or r.get("vol_pct") or 20)
         dd = abs(fnum(r.get("max_drawdown_ytd") or r.get("maxdd90") or r.get("max_dd") or 0))
         
         # Filtre vol/DD standard
@@ -267,18 +275,97 @@ def sector_balanced_selection(assets: List[dict], max_per_sector: int = 5, top_n
     return selected
 
 
-# ============= CONSTRUCTION UNIVERS v3.2 =============
+# ============= ENRICHISSEMENT BONDS v3.3 =============
+
+def _enrich_bonds_with_risk_factors(bond_rows: List[dict]) -> List[dict]:
+    """
+    Enrichit les bonds avec les facteurs de risque f_bond_*.
+    
+    v3.3: Utilise add_bond_risk_factors de factors.py si disponible.
+    Fallback: calcul inline si import échoue.
+    """
+    if not bond_rows:
+        return bond_rows
+    
+    try:
+        # Import dynamique pour éviter import circulaire
+        from .factors import add_bond_risk_factors
+        
+        # Convertir en DataFrame pour utiliser add_bond_risk_factors
+        df = pd.DataFrame(bond_rows)
+        df = add_bond_risk_factors(df)
+        
+        # Reconvertir en liste de dicts
+        enriched = df.to_dict('records')
+        logger.info(f"🔹 Bonds enrichis avec risk factors: {len(enriched)} bonds")
+        return enriched
+        
+    except ImportError as e:
+        logger.warning(f"Impossible d'importer add_bond_risk_factors: {e}. Fallback inline.")
+        # Fallback: calcul simplifié inline
+        return _enrich_bonds_inline(bond_rows)
+    except Exception as e:
+        logger.error(f"Erreur enrichissement bonds: {e}")
+        return bond_rows
+
+
+def _enrich_bonds_inline(bond_rows: List[dict]) -> List[dict]:
+    """
+    Fallback: calcul inline des facteurs bond si import échoue.
+    Version simplifiée de add_bond_risk_factors.
+    """
+    D_MAX = 10.0
+    V_MAX = 12.0
+    
+    for row in bond_rows:
+        # Score crédit (0-1)
+        credit = fnum(row.get("bond_credit_score", 50)) / 100.0
+        row["f_bond_credit_score"] = min(1.0, max(0.0, credit))
+        
+        # Score duration (0-1, plus court = mieux)
+        dur = fnum(row.get("bond_avg_duration", 5))
+        row["f_bond_duration_score"] = 1.0 - min(1.0, max(0.0, dur / D_MAX))
+        
+        # Score vol (0-1, plus bas = mieux)
+        vol = fnum(row.get("vol_pct") or row.get("vol") or 6)
+        row["f_bond_volatility_score"] = 1.0 - min(1.0, max(0.0, vol / V_MAX))
+        
+        # Score qualité composite
+        f_quality = (
+            0.50 * row["f_bond_credit_score"] +
+            0.25 * row["f_bond_duration_score"] +
+            0.25 * row["f_bond_volatility_score"]
+        )
+        row["f_bond_quality"] = min(1.0, max(0.0, f_quality))
+        row["f_bond_quality_0_100"] = round(f_quality * 100, 1)
+        
+        # Bucket de risque
+        if f_quality >= 0.8:
+            row["bond_risk_bucket"] = "defensive"
+        elif f_quality >= 0.6:
+            row["bond_risk_bucket"] = "core"
+        elif f_quality >= 0.3:
+            row["bond_risk_bucket"] = "risky"
+        else:
+            row["bond_risk_bucket"] = "very_risky"
+    
+    return bond_rows
+
+
+# ============= CONSTRUCTION UNIVERS v3.3 =============
 
 def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
     etf_data: Union[List[dict], None] = None,
     crypto_data: Union[List[dict], None] = None,
     returns_series: Optional[Dict[str, np.ndarray]] = None,
-    apply_risk_filters: bool = True
+    apply_risk_filters: bool = True,
+    enrich_bonds: bool = True  # v3.3: Activer par défaut
 ) -> List[dict]:
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Le scoring est fait par FactorScorer, pas ici.
@@ -290,11 +377,12 @@ def build_raw_universe(
         crypto_data: Liste des dicts crypto
         returns_series: Dict optionnel des séries de rendements
         apply_risk_filters: Appliquer les filtres de risque basiques
+        enrich_bonds: v3.3 - Enrichir bonds avec f_bond_* factors
     
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.2...")
+    logger.info("🧮 Construction de l'univers brut v3.3...")
     
     all_assets = []
     
@@ -361,6 +449,7 @@ def build_raw_universe(
                 "vol_3y": it.get("vol_3y_pct") or it.get("vol_pct") or it.get("vol"),
                 "vol30": it.get("vol_pct"),
                 "vol": it.get("vol_pct") or it.get("vol"),
+                "vol_pct": it.get("vol_pct"),  # v3.3: Garder pour bond enrichment
                 # Méta
                 "liquidity": it.get("aum_usd"),
                 "aum_usd": it.get("aum_usd"),  # v3.2: Garder aussi le nom original
@@ -373,6 +462,11 @@ def build_raw_universe(
                 # === v3.2: Nouvelles colonnes coût/rendement ===
                 "total_expense_ratio": it.get("total_expense_ratio"),
                 "yield_ttm": it.get("yield_ttm"),
+                # === v3.3: Nouvelles colonnes bond-specific ===
+                "bond_avg_duration": it.get("bond_avg_duration"),
+                "bond_avg_maturity": it.get("bond_avg_maturity"),
+                "bond_credit_score": it.get("bond_credit_score"),
+                "bond_credit_rating": it.get("bond_credit_rating"),
             }
             if is_bond:
                 bond_rows.append(row)
@@ -387,6 +481,9 @@ def build_raw_universe(
     if bond_rows:
         if apply_risk_filters:
             bond_rows = filter_by_risk_bounds(bond_rows, "bond")
+        # v3.3: Enrichir avec f_bond_* factors
+        if enrich_bonds:
+            bond_rows = _enrich_bonds_with_risk_factors(bond_rows)
         all_assets.extend(bond_rows)
     
     # ====== CRYPTO ======
@@ -439,17 +536,19 @@ def build_raw_universe_from_files(
     etf_csv_path: str,
     crypto_csv_path: str,
     returns_series: Optional[Dict[str, np.ndarray]] = None,
-    apply_risk_filters: bool = True
+    apply_risk_filters: bool = True,
+    enrich_bonds: bool = True  # v3.3
 ) -> Dict[str, List[dict]]:
     """
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.2 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.3 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -495,7 +594,7 @@ def build_raw_universe_from_files(
         etf_bonds = pd.DataFrame()
     
     def df_to_rows(df, is_bond=False):
-        """Convertit un DataFrame en liste de dicts avec colonnes étendues (V3.2)."""
+        """Convertit un DataFrame en liste de dicts avec colonnes étendues (V3.3)."""
         rows = []
         for _, r in df.iterrows():
             rows.append({
@@ -511,6 +610,7 @@ def build_raw_universe_from_files(
                 # Risque
                 "vol_3y": r.get("vol_3y_pct") or r.get("vol_pct"),
                 "vol30": r.get("vol_pct"),
+                "vol_pct": r.get("vol_pct"),  # v3.3: Pour bond enrichment
                 # Méta
                 "liquidity": r.get("aum_usd"),
                 "aum_usd": r.get("aum_usd"),  # v3.2
@@ -523,6 +623,11 @@ def build_raw_universe_from_files(
                 # === v3.2: Nouvelles colonnes coût/rendement ===
                 "total_expense_ratio": r.get("total_expense_ratio"),
                 "yield_ttm": r.get("yield_ttm"),
+                # === v3.3: Nouvelles colonnes bond-specific ===
+                "bond_avg_duration": r.get("bond_avg_duration"),
+                "bond_avg_maturity": r.get("bond_avg_maturity"),
+                "bond_credit_score": r.get("bond_credit_score"),
+                "bond_credit_rating": r.get("bond_credit_rating"),
             })
         return rows
     
@@ -532,6 +637,10 @@ def build_raw_universe_from_files(
     if apply_risk_filters:
         etf_rows = filter_by_risk_bounds(etf_rows, "etf")
         bond_rows = filter_by_risk_bounds(bond_rows, "bond")
+    
+    # v3.3: Enrichir bonds avec f_bond_* factors
+    if enrich_bonds and bond_rows:
+        bond_rows = _enrich_bonds_with_risk_factors(bond_rows)
     
     # ====== CRYPTO ======
     try:
@@ -585,11 +694,13 @@ def load_and_prepare_universe(
     etf_csv: Optional[str] = None,
     crypto_csv: Optional[str] = None,
     load_returns: bool = False,
-    apply_risk_filters: bool = True
+    apply_risk_filters: bool = True,
+    enrich_bonds: bool = True  # v3.3
 ) -> List[dict]:
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring. Le scoring est fait par FactorScorer.
@@ -599,7 +710,7 @@ def load_and_prepare_universe(
     from portfolio_engine.universe import load_and_prepare_universe
     from portfolio_engine.factors import FactorScorer
     
-    # 1. Charger l'univers brut
+    # 1. Charger l'univers brut (bonds auto-enrichis avec f_bond_*)
     raw_universe = load_and_prepare_universe(stocks_paths, etf_csv, crypto_csv)
     
     # 2. Scorer avec FactorScorer (SEUL moteur d'alpha)
@@ -619,9 +730,10 @@ def load_and_prepare_universe(
         crypto_csv: Chemin vers Crypto_filtered_volatility.csv
         load_returns: Charger les séries de rendements si disponibles
         apply_risk_filters: Appliquer les filtres de risque basiques
+        enrich_bonds: v3.3 - Enrichir bonds avec f_bond_* factors
     
     Returns:
-        Liste plate de tous les actifs (NON scorés)
+        Liste plate de tous les actifs (NON scorés, mais bonds enrichis)
     """
     # Charger les JSON stocks
     stocks_data = []
@@ -660,8 +772,49 @@ def load_and_prepare_universe(
         etf_data, 
         crypto_data, 
         returns_series,
-        apply_risk_filters=apply_risk_filters
+        apply_risk_filters=apply_risk_filters,
+        enrich_bonds=enrich_bonds
     )
+
+
+# ============= FONCTIONS UTILITAIRES v3.3 =============
+
+def get_bonds_summary(universe: Union[List[dict], Dict[str, List[dict]]]) -> Dict[str, Any]:
+    """
+    Retourne un résumé des bonds dans l'univers.
+    
+    v3.3: Nouveau - stats sur les bond risk factors.
+    """
+    # Extraire les bonds
+    if isinstance(universe, dict):
+        bonds = universe.get("bonds", [])
+    else:
+        bonds = [a for a in universe if a.get("category") == "bond"]
+    
+    if not bonds:
+        return {"count": 0, "message": "Aucun bond dans l'univers"}
+    
+    # Stats de base
+    summary = {
+        "count": len(bonds),
+        "with_credit_score": sum(1 for b in bonds if b.get("bond_credit_score")),
+        "with_duration": sum(1 for b in bonds if b.get("bond_avg_duration")),
+        "with_f_bond_quality": sum(1 for b in bonds if b.get("f_bond_quality")),
+    }
+    
+    # Distribution des buckets
+    buckets = {}
+    for b in bonds:
+        bucket = b.get("bond_risk_bucket", "unknown")
+        buckets[bucket] = buckets.get(bucket, 0) + 1
+    summary["buckets"] = buckets
+    
+    # Moyennes si enrichis
+    if summary["with_f_bond_quality"] > 0:
+        qualities = [b.get("f_bond_quality", 0) for b in bonds if b.get("f_bond_quality")]
+        summary["avg_quality"] = round(sum(qualities) / len(qualities), 3) if qualities else None
+    
+    return summary
 
 
 # ============= COMPATIBILITÉ LEGACY =============
