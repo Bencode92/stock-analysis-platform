@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v13.0: Ajout métriques obligataires (duration, maturity, credit_score)
+// v13.1: Ajout LIMIT_ETF/LIMIT_BONDS pour tests rapides
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -13,6 +13,10 @@ const OUT_DIR = process.env.OUT_DIR || 'data';
 const CONFIG = {
     API_KEY: process.env.TWELVE_DATA_API_KEY,
     DEBUG: process.env.DEBUG === '1',
+    
+    // === LIMITES POUR TESTS RAPIDES (0 = pas de limite) ===
+    LIMIT_ETF: Number(process.env.LIMIT_ETF || 0),
+    LIMIT_BONDS: Number(process.env.LIMIT_BONDS || 0),
     
     // Traduction (optionnelle)
     TRANSLATE_OBJECTIVE: process.env.TRANSLATE_OBJECTIVE === '1',
@@ -140,13 +144,12 @@ async function withTranslationSlot(fn) {
 
 // Fonction OpenAI NEW
 async function translateWithOpenAI(text, to = 'fr') {
-  const base = CONFIG.OPENAI_BASE_URL; // ex: https://api.openai.com/v1
+  const base = CONFIG.OPENAI_BASE_URL;
   const headers = {
     'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`,
     'Content-Type': 'application/json'
   };
 
-  // Prompt de traduction : style sobre financier, pas de reformulation inutile.
   const messages = [
     {
       role: 'system',
@@ -158,7 +161,6 @@ async function translateWithOpenAI(text, to = 'fr') {
     { role: 'user', content: String(text) }
   ];
 
-  // On utilise l'API Chat Completions (simple et stable) ; modèle configurable via OPENAI_MODEL.
   const body = {
     model: CONFIG.OPENAI_MODEL,
     temperature: 0.2,
@@ -173,7 +175,6 @@ async function translateWithOpenAI(text, to = 'fr') {
 }
 
 async function translateText(text, to='fr') {
-  // v12.0: Support TRANSLATE_TAXONOMY
   if (!text || (!CONFIG.TRANSLATE_OBJECTIVE && !CONFIG.TRANSLATE_TAXONOMY)) return null;
   const useDeepL = CONFIG.TRANSLATOR === 'deepl' && CONFIG.DEEPL_API_KEY;
   const useAzure = CONFIG.TRANSLATOR === 'azure' && CONFIG.AZURE_TRANSLATOR_KEY;
@@ -224,7 +225,6 @@ async function translateText(text, to='fr') {
   return null;
 }
 
-// Helper générique pour traduction avec dictionnaire prioritaire (v12.0)
 async function translateLabel(label, domain = 'generic', to = 'fr') {
   if (!label) return label;
   if (looksFrench(label)) return label;
@@ -236,17 +236,14 @@ async function translateLabel(label, domain = 'generic', to = 'fr') {
 
   if (fixed) return fixed;
 
-  // Tombe sur le pipeline OpenAI/Azure/DeepL + cache
   const translated = await translateText(label, to);
   
-  // Logger pour future inclusion dans le dict (optionnel)
   if (translated && translated !== label && !fixed && CONFIG.DEBUG) {
     console.log(`💡 Suggestion dict ${domain}: '${label}': '${translated}'`);
   }
   
   return translated || label;
 }
-// -----------------------------------------------
 
 // MIC codes US
 const US_MIC_CODES = ['ARCX', 'BATS', 'XNAS', 'XNYS', 'XASE', 'XNGS', 'XNMS'];
@@ -275,7 +272,6 @@ const SINGLE_STOCK_SECTORS = {
     'PG': { sector: 'Consumer Defensive', country: 'United States' }
 };
 
-// Normalisation des noms de secteurs
 const SECTOR_NORMALIZATION = {
     'realestate': 'Real Estate',
     'real-estate': 'Real Estate',
@@ -295,25 +291,21 @@ const SECTOR_NORMALIZATION = {
     'telecom': 'Communication Services'
 };
 
-// Regex pour détecter les ETF inverse/leveraged
 const LEVERAGE_PATTERNS = {
     inverse: /(-1X|BEAR|SHORT|INVERSE|SH$|PSQ|DOG|DXD|SDS|SQQQ)/i,
     leveraged: /(2X|3X|ULTRA|TQQQ|UPRO|SPXL|QLD|SSO|UDOW|UMDD|URTY|TNA)/i,
     singleStock: new RegExp(`(${Object.keys(SINGLE_STOCK_SECTORS).join('|')})`, 'i')
 };
 
-// Cache pour les symboles et FX
 const symbolCache = new Map();
 const fxCache = new Map();
 
-// Gestion des crédits API
 let creditsUsed = 0;
 let windowStart = Date.now();
 const WINDOW_MS = 60_000;
 
-// Calcul automatique de la concurrence pour l'enrichissement
-const ENRICH_COST = (CONFIG.CREDITS.ETFS_SUMMARY + CONFIG.CREDITS.ETFS_COMPOSITION); // 400
-const ENRICH_CONCURRENCY = Math.max(1, Math.floor(CONFIG.CREDIT_LIMIT / ENRICH_COST)); // 6
+const ENRICH_COST = (CONFIG.CREDITS.ETFS_SUMMARY + CONFIG.CREDITS.ETFS_COMPOSITION);
+const ENRICH_CONCURRENCY = Math.max(1, Math.floor(CONFIG.CREDIT_LIMIT / ENRICH_COST));
 
 async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -343,7 +335,6 @@ async function pay(cost) {
     }
 }
 
-// Helpers pour tri et extraction
 function sortDescBy(arr, key) {
     return [...(arr || [])].sort((a, b) => (Number(b?.[key]) || 0) - (Number(a?.[key]) || 0));
 }
@@ -358,7 +349,6 @@ function sanitizeText(s, max = 240) {
     return t.length > max ? t.slice(0, max - 1) + '…' : t;
 }
 
-// v13.0: Protection anti-valeurs aberrantes
 function clampAbs(v, maxAbs) {
     if (v == null) return null;
     const n = Number(v);
@@ -374,14 +364,12 @@ function cleanSymbol(symbol) {
     return symbol;
 }
 
-// Normaliser un nom de secteur
 function normalizeSector(sector) {
     if (!sector) return sector;
     const lower = sector.toLowerCase().trim();
     return SECTOR_NORMALIZATION[lower] || sector;
 }
 
-// Détecter le type d'ETF spécial
 function detectETFType(symbol, name, objective) {
     const fullText = `${symbol} ${name || ''} ${objective || ''}`;
     
@@ -401,7 +389,6 @@ function detectETFType(symbol, name, objective) {
     return { type: 'standard' };
 }
 
-// NEW: Fonction helper pour lookup du nom via symbol_search
 async function lookupNameViaSearch(sym) {
   try {
     const r = await axios.get('https://api.twelvedata.com/symbol_search', {
@@ -412,7 +399,6 @@ async function lookupNameViaSearch(sym) {
   } catch { return null; }
 }
 
-// Fonction pour filtrer uniquement les champs hebdomadaires
 function pickWeekly(etf) {
     return {
         symbol: etf.symbol,
@@ -428,33 +414,27 @@ function pickWeekly(etf) {
         yield_ttm: etf.yield_ttm ?? null,
         objective: etf.objective || '',
         objective_en: etf.objective_en || '',
-        // v13.0: Métriques obligataires
         bond_avg_duration: etf.bond_avg_duration ?? null,
         bond_avg_maturity: etf.bond_avg_maturity ?? null,
         bond_credit_score: etf.bond_credit_score ?? null,
         bond_credit_quality: etf.bond_credit_quality || [],
-        // Secteurs (avec traductions FR)
         sectors: etf.sectors || [],
         sector_top5: etf.sector_top5 || [],
         sector_top: etf.sector_top || null,
         sector_top5_fr: etf.sector_top5_fr || [],
         sector_top_fr: etf.sector_top_fr || null,
-        // Pays
         countries: (etf.countries && etf.countries.length ? etf.countries : []),
         country_top5: (etf.country_top5 && etf.country_top5.length ? etf.country_top5 : []),
         country_top: (etf.country_top5 && etf.country_top5[0]) ? etf.country_top5[0] : null,
         domicile: etf.domicile || etf.Country || null,
-        // Holdings
         holdings_top10: (etf.holdings_top10 || []).map(h => ({
             symbol: h.symbol || null,
             name: h.name || null,
             weight: (h.weight != null) ? Number(h.weight) : null
         })),
         holding_top: etf.holding_top || null,
-        // Timestamps
         as_of_summary: etf.as_of_summary || null,
         as_of_composition: etf.as_of_composition || null,
-        // Indicateurs de qualité
         is_single_stock: etf.is_single_stock || false,
         auto_detected_composition: etf.auto_detected_composition || false,
         data_quality_score: etf.data_quality_score || 0,
@@ -462,7 +442,6 @@ function pickWeekly(etf) {
     };
 }
 
-// Calculer un score de qualité des données avec détails
 function calculateDataQualityScore(etf) {
     const details = {
         has_aum: etf.aum_usd != null,
@@ -472,7 +451,6 @@ function calculateDataQualityScore(etf) {
         has_sectors: etf.sectors && etf.sectors.length > 0,
         has_countries: etf.countries && etf.countries.length > 0,
         has_holdings_top10: etf.holdings_top10 && etf.holdings_top10.length > 0,
-        // v13.0: bonus pour métriques bond
         has_bond_metrics: etf.bond_avg_duration != null || etf.bond_credit_score != null
     };
     
@@ -484,7 +462,7 @@ function calculateDataQualityScore(etf) {
         has_sectors: 18,
         has_countries: 17,
         has_holdings_top10: 15,
-        has_bond_metrics: 5  // bonus
+        has_bond_metrics: 5
     };
     
     let score = 0;
@@ -496,11 +474,9 @@ function calculateDataQualityScore(etf) {
     return score;
 }
 
-// Conversion FX améliorée avec support GBX
 async function fxToUSD(currency) {
     if (!currency || currency === 'USD') return 1;
     
-    // GBX = pence sterling (GBP/100)
     if (currency === 'GBX') {
         const gbpRate = await fxToUSD('GBP');
         return gbpRate / 100;
@@ -511,7 +487,6 @@ async function fxToUSD(currency) {
         return fxCache.get(cacheKey);
     }
     
-    // Essayer CCY/USD
     try {
         const { data } = await axios.get('https://api.twelvedata.com/price', {
             params: { 
@@ -526,7 +501,6 @@ async function fxToUSD(currency) {
         }
     } catch {}
     
-    // Essayer USD/CCY (puis inverser)
     try {
         const { data } = await axios.get('https://api.twelvedata.com/price', {
             params: { 
@@ -542,18 +516,15 @@ async function fxToUSD(currency) {
         }
     } catch {}
     
-    // Fallback
     console.warn(`⚠️ Taux FX ${currency}/USD non trouvé, utilise 1`);
     fxCache.set(cacheKey, 1);
     return 1;
 }
 
-// Résolution améliorée des symboles
 async function resolveSymbol(item) {
     const { symbol, mic_code, isin } = item;
     const cleaned = cleanSymbol(symbol);
     
-    // 1) Essayer ticker nu
     try {
         const quote = await axios.get('https://api.twelvedata.com/quote', {
             params: { symbol: cleaned, apikey: CONFIG.API_KEY }
@@ -564,7 +535,6 @@ async function resolveSymbol(item) {
         }
     } catch {}
     
-    // 2) Essayer ticker:MIC
     if (mic_code && !US_MIC_CODES.includes(mic_code)) {
         try {
             const symbolWithMic = `${cleaned}:${mic_code}`;
@@ -578,7 +548,6 @@ async function resolveSymbol(item) {
         } catch {}
     }
     
-    // 3) Symbol search par ticker
     try {
         const search = await axios.get('https://api.twelvedata.com/symbol_search', {
             params: { symbol: cleaned, apikey: CONFIG.API_KEY }
@@ -600,7 +569,6 @@ async function resolveSymbol(item) {
         }
     } catch {}
     
-    // 4) Symbol search par ISIN
     if (isin) {
         try {
             const search = await axios.get('https://api.twelvedata.com/symbol_search', {
@@ -627,7 +595,6 @@ async function resolveSymbol(item) {
     return null;
 }
 
-// Calculer ADV médiane sur 30 jours (retourne en monnaie locale)
 async function calculate30DayADV(symbolParam) {
     try {
         await pay(CONFIG.CREDITS.TIME_SERIES);
@@ -645,7 +612,6 @@ async function calculate30DayADV(symbolParam) {
             return null;
         }
         
-        // Extraire les volumes en monnaie locale
         const advValues = data.values.map(day => {
             const volume = Number(day.volume) || 0;
             const close = Number(day.close) || 0;
@@ -654,7 +620,6 @@ async function calculate30DayADV(symbolParam) {
         
         if (advValues.length === 0) return null;
         
-        // Calculer la médiane
         advValues.sort((a, b) => a - b);
         const mid = Math.floor(advValues.length / 2);
         const medianLocal = advValues.length % 2 
@@ -674,14 +639,11 @@ async function calculate30DayADV(symbolParam) {
     }
 }
 
-// Pack hebdo : summary + composition (paye 400 crédits d'un coup)
 async function fetchWeeklyPack(symbolParam, item) {
-    // Réserve 400 crédits d'un coup (respecte 2584/min via pay)
     await pay(ENRICH_COST);
 
     const now = new Date().toISOString();
 
-    // Appels parallèles (pas de pay() à l'intérieur !)
     const [sumRes, compRes] = await Promise.all([
         axios.get('https://api.twelvedata.com/etfs/world/summary', {
             params: { symbol: symbolParam, apikey: CONFIG.API_KEY, dp: 5 }
@@ -694,18 +656,15 @@ async function fetchWeeklyPack(symbolParam, item) {
     const s = sumRes?.data?.etf?.summary || {};
     const c = compRes?.data?.etf?.composition || {};
 
-    // NEW: consolider le nom depuis summary
     const fundName =
       sumRes?.data?.etf?.name ||
       s?.fund_name ||
       s?.name ||
-      item?.name || // fallback au nom vu dans /quote
+      item?.name ||
       null;
 
-    // --------- v13.0: BOND METRICS (duration, maturity, credit quality) ---------
     const bondBreakdown = c.bond_breakdown || {};
 
-    // Protection anti-aberrantes: on coupe à 50 ans de duration, 100 ans de maturité
     const avgDuration = bondBreakdown.average_duration?.fund != null
         ? clampAbs(bondBreakdown.average_duration.fund, 50)
         : null;
@@ -723,7 +682,6 @@ async function fetchWeeklyPack(symbolParam, item) {
         weight: row?.weight != null ? Number(row.weight) : null
     }));
 
-    // Calcul du score crédit pondéré
     let creditScoreNum = null;
     if (creditQuality.length) {
         let creditScoreSum = 0;
@@ -736,7 +694,7 @@ async function fetchWeeklyPack(symbolParam, item) {
             const score =
                 RATING_SCORES[gradeKey] ??
                 RATING_SCORES[gradeKey.toUpperCase()] ??
-                50; // fallback neutre
+                50;
 
             const w = row.weight;
             creditScoreSum += score * w;
@@ -756,9 +714,7 @@ async function fetchWeeklyPack(symbolParam, item) {
           `credit_score=${creditScoreNum ?? 'NA'}`
         );
     }
-    // --------- FIN BOND METRICS ---------
 
-    // summary (+ traduction FR optionnelle)
     const overviewRaw = s.overview || '';
     let objectiveFr = null;
     if (CONFIG.TRANSLATE_OBJECTIVE && !looksFrench(overviewRaw)) {
@@ -776,31 +732,26 @@ async function fetchWeeklyPack(symbolParam, item) {
         domicile: s.domicile || item.Country || null,
         as_of_summary: now,
         as_of_composition: now,
-        // v13.0: métriques obligataires
         bond_avg_duration: avgDuration,
         bond_avg_maturity: avgMaturity,
         bond_credit_quality: creditQuality,
         bond_credit_score: creditScoreNum
     };
 
-    // Détecter le type d'ETF (inverse/leveraged/single-stock)
     const etfTypeInfo = detectETFType(item.symbol, item.name, pack.objective);
     pack.etf_type = etfTypeInfo.type;
     if (etfTypeInfo.leverage) pack.leverage = etfTypeInfo.leverage;
 
-    // --- Traductions fund_type (v12.0) ---
     let fundTypeFr = null;
     if (CONFIG.TRANSLATE_TAXONOMY && pack.fund_type && !looksFrench(pack.fund_type)) {
         fundTypeFr = await translateLabel(pack.fund_type, 'fund_type');
     }
 
-    // composition (secteurs/pays + top5 & top1)
     let sectors = (c.major_market_sectors || []).map(x => ({
         sector: normalizeSector(x.sector), 
         weight: (x.weight != null) ? Number(x.weight) : null
     }));
     
-    // --- Traductions secteurs (v12.0) ---
     if (CONFIG.TRANSLATE_TAXONOMY && sectors.length) {
         sectors = await Promise.all(sectors.map(async (x) => ({
             ...x,
@@ -813,11 +764,8 @@ async function fetchWeeklyPack(symbolParam, item) {
         weight: (x.allocation != null) ? Number(x.allocation) : null
     }));
 
-    // --- HOLDINGS (Top 10) ---
-    // candidats possibles selon la forme renvoyée par l'API
     const holdingsRaw = (c.top_holdings || c.holdings || c.constituents || []).filter(Boolean);
 
-    // mapping robuste -> {symbol,name,weight}
     const holdings = holdingsRaw.map(h => ({
         symbol: cleanSymbol(h.symbol || h.ticker || h.code || ''),
         name: h.name || h.security || h.company || h.title || '',
@@ -827,18 +775,15 @@ async function fetchWeeklyPack(symbolParam, item) {
               : null
     })).filter(h => (h.symbol || h.name));
 
-    // Détection automatique pour ETF single-stock si pas de composition
     let autoDetected = false;
     if (!sectors.length && etfTypeInfo.type === 'single_stock' && etfTypeInfo.ticker) {
         const stockInfo = SINGLE_STOCK_SECTORS[etfTypeInfo.ticker];
         if (stockInfo) {
             sectors = [{ sector: stockInfo.sector, weight: 1.0 }];
-            // v12.0: Ajouter traduction FR pour single-stock auto-détecté
             if (CONFIG.TRANSLATE_TAXONOMY) {
                 sectors[0].sector_fr = await translateLabel(stockInfo.sector, 'sector');
             }
             countries = [{ country: stockInfo.country, weight: 1.0 }];
-            // Ajouter holding si pas déjà présent
             if (!holdings.length) {
                 holdings.push({ symbol: etfTypeInfo.ticker, name: etfTypeInfo.ticker, weight: 1.0 });
             }
@@ -847,8 +792,6 @@ async function fetchWeeklyPack(symbolParam, item) {
         }
     }
 
-    // Fallback géographique : utiliser le domicile si pas de pays
-    // Weight null pour domicile, 1.0 pour single-stock auto-détecté
     if (!countries.length && pack.domicile) {
         countries = [{
             country: pack.domicile,
@@ -862,7 +805,6 @@ async function fetchWeeklyPack(symbolParam, item) {
     const holdings_top10 = topN(holdings, 'weight', 10);
     const holding_top = holdings_top10[0] || null;
 
-    // v12.0: Construire les vues FR pour les secteurs
     const sector_top5_fr = sector_top5.map(x => ({
         s_fr: x.sector_fr || null,
         w: x.weight != null ? Number((x.weight*100).toFixed(2)) : null
@@ -888,10 +830,8 @@ async function fetchWeeklyPack(symbolParam, item) {
     };
 }
 
-// Traiter un ETF/Bond individuellement
 async function processListing(item) {
     try {
-        // Résolution du symbole
         const resolved = await resolveSymbol(item);
         if (!resolved) {
             return { ...item, reason: 'UNSUPPORTED_BY_PROVIDER' };
@@ -899,35 +839,28 @@ async function processListing(item) {
         
         const { symbolParam, quote } = resolved;
         
-        // NEW: récupérer le nom depuis quote
         const nameFromQuote = quote.name || quote.instrument_name || quote.fund_name || null;
         
-        // NEW: fallback via symbol_search si pas de nom
         let finalName = nameFromQuote;
         if (!finalName && CONFIG.DEBUG) {
             finalName = await lookupNameViaSearch(cleanSymbol(item.symbol));
         }
         
-        // Obtenir la devise depuis quote
         const currency = quote.currency || 'USD';
         const fx = await fxToUSD(currency);
         
-        // Calculer ADV médiane 30j
         const advData = await calculate30DayADV(symbolParam);
         
         let adv_median_usd;
         
         if (advData) {
-            // Convertir en USD
             adv_median_usd = advData.adv_median_local * fx;
         } else {
-            // Fallback: utiliser average_volume de quote
             const avgVolume = Number(quote.average_volume) || Number(quote.volume) || 0;
             const price = Number(quote.close) || Number(quote.previous_close) || 0;
             adv_median_usd = avgVolume * price * fx;
         }
         
-        // Retourner toutes les infos sans décider pass/fail
         return {
             ...item,
             name: finalName,
@@ -951,11 +884,19 @@ async function processListing(item) {
 
 // Fonction principale
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS + BOND METRICS v13.0\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement summary/composition + HOLDINGS + BOND METRICS v13.1\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📏  Longueur max objectifs: ${CONFIG.OBJECTIVE_MAXLEN} caractères`);
     console.log(`📂  Dossier de sortie: ${OUT_DIR}\n`);
+    
+    // === AFFICHAGE LIMITES v13.1 ===
+    if (CONFIG.LIMIT_ETF > 0 || CONFIG.LIMIT_BONDS > 0) {
+        console.log('⚠️  MODE LIMITÉ ACTIVÉ:');
+        if (CONFIG.LIMIT_ETF > 0) console.log(`   - ETFs: ${CONFIG.LIMIT_ETF} premiers`);
+        if (CONFIG.LIMIT_BONDS > 0) console.log(`   - Bonds: ${CONFIG.LIMIT_BONDS} premiers`);
+        console.log('');
+    }
     
     if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) {
         let translatorInfo = CONFIG.TRANSLATOR;
@@ -970,38 +911,54 @@ async function filterETFs() {
         console.log(`🌐  Traduction: ACTIVÉE pour ${features.join(' + ')} (${translatorInfo})\n`);
     }
     
-    // Garantir que le dossier de sortie existe
     await fs.mkdir(OUT_DIR, { recursive: true });
     await loadTranslationCache();
     
-    // Lire les CSV
     const etfData = await fs.readFile('data/all_etfs.csv', 'utf8');
     const bondData = await fs.readFile('data/all_bonds.csv', 'utf8');
     
-    const etfs = csv.parse(etfData, { columns: true });
-    const bonds = csv.parse(bondData, { columns: true });
+    let etfs = csv.parse(etfData, { columns: true });
+    let bonds = csv.parse(bondData, { columns: true });
+    
+    // === APPLIQUER LIMITES v13.1 ===
+    const totalEtfsOriginal = etfs.length;
+    const totalBondsOriginal = bonds.length;
+    
+    if (CONFIG.LIMIT_ETF > 0 && CONFIG.LIMIT_ETF < etfs.length) {
+        etfs = etfs.slice(0, CONFIG.LIMIT_ETF);
+        console.log(`🔹 ETFs limités: ${etfs.length}/${totalEtfsOriginal}`);
+    }
+    if (CONFIG.LIMIT_BONDS > 0 && CONFIG.LIMIT_BONDS < bonds.length) {
+        bonds = bonds.slice(0, CONFIG.LIMIT_BONDS);
+        console.log(`🔹 Bonds limités: ${bonds.length}/${totalBondsOriginal}`);
+    }
     
     const results = {
         etfs: [],
         bonds: [],
         rejected: [],
         stats: {
-            total_etfs: etfs.length,
-            total_bonds: bonds.length,
+            total_etfs: totalEtfsOriginal,
+            total_bonds: totalBondsOriginal,
+            processed_etfs: etfs.length,
+            processed_bonds: bonds.length,
+            limited_run: CONFIG.LIMIT_ETF > 0 || CONFIG.LIMIT_BONDS > 0,
             timestamp: new Date().toISOString(),
             start_time: Date.now()
         }
     };
     
-    // Traiter tous les instruments
     const allItems = [
         ...etfs.map(e => ({ ...e, type: 'ETF' })),
         ...bonds.map(b => ({ ...b, type: 'BOND' }))
     ];
     
-    console.log(`🔍 Analyse de ${allItems.length} instruments...\n`);
+    console.log(`\n🔍 Analyse de ${allItems.length} instruments...`);
+    if (CONFIG.LIMIT_ETF > 0 || CONFIG.LIMIT_BONDS > 0) {
+        console.log(`   (originaux: ${totalEtfsOriginal} ETFs + ${totalBondsOriginal} Bonds = ${totalEtfsOriginal + totalBondsOriginal})`);
+    }
+    console.log('');
     
-    // ÉTAPE 1: Calculer ADV pour chaque listing
     const allListings = [];
     
     for (let i = 0; i < allItems.length; i += CONFIG.CHUNK_SIZE) {
@@ -1023,7 +980,6 @@ async function filterETFs() {
         });
     }
     
-    // ÉTAPE 2: Agréger par ISIN
     console.log('\n📊 Agrégation par ISIN...');
     
     const isinGroups = {};
@@ -1035,21 +991,16 @@ async function filterETFs() {
         isinGroups[isin].push(listing);
     });
     
-    // ÉTAPE 3: Décider pass/fail au niveau groupe
     Object.entries(isinGroups).forEach(([isin, listings]) => {
-        // Sommer les ADV de tous les listings
         const totalADV = listings.reduce((sum, l) => sum + (l.adv_median_usd || 0), 0);
         
-        // Prendre le listing principal (plus gros volume)
         const main = listings.reduce((best, current) => 
             (current.adv_median_usd || 0) > (best.adv_median_usd || 0) ? current : best
         );
         
-        // Déterminer le seuil selon le type
         const threshold = main.type === 'BOND' ? CONFIG.MIN_ADV_USD_BOND : CONFIG.MIN_ADV_USD_ETF;
         const passed = totalADV >= threshold;
         
-        // Construire l'objet final
         const finalItem = {
             ...main,
             avg_dollar_volume: totalADV,
@@ -1060,10 +1011,8 @@ async function filterETFs() {
             }))
         };
         
-        // Logger la décision
         console.log(`  ${isin} (${listings.length} listing${listings.length > 1 ? 's' : ''}) | Total ADV: ${(totalADV/1e6).toFixed(2)}M$ | ${passed ? '✅ PASS' : '❌ FAIL'}`);
         
-        // Classer
         if (passed) {
             if (main.type === 'ETF') {
                 results.etfs.push(finalItem);
@@ -1075,10 +1024,8 @@ async function filterETFs() {
         }
     });
     
-    // ÉTAPE 4: Enrichissement hebdo (summary + composition) pour les ETF PASS
     console.log('\n🧩 Enrichissement HEBDO ETFs (summary + composition + HOLDINGS + BOND METRICS) sous budget 2584/min…');
     
-    // Trier par AUM décroissant pour prioriser les plus gros ETFs
     results.etfs.sort((a, b) => (b.net_assets || 0) - (a.net_assets || 0));
     
     for (let i = 0; i < results.etfs.length; i += ENRICH_CONCURRENCY) {
@@ -1094,7 +1041,6 @@ async function filterETFs() {
                 const weekly = await fetchWeeklyPack(symbolForApi, it);
                 Object.assign(it, weekly);
                 
-                // Calculer le score de qualité des données
                 it.data_quality_score = calculateDataQualityScore(it);
                 
                 if (CONFIG.DEBUG) {
@@ -1106,7 +1052,6 @@ async function filterETFs() {
         }));
     }
     
-    // === Enrichissement BONDS (même logique que ETFs) ===
     console.log('\n🧩 Enrichissement HEBDO BONDS (summary + composition + HOLDINGS + BOND METRICS) sous budget 2584/min…');
     results.bonds.sort((a, b) => (b.net_assets || 0) - (a.net_assets || 0));
 
@@ -1131,7 +1076,6 @@ async function filterETFs() {
         }));
     }
     
-    // Statistiques finales
     const elapsedTime = Date.now() - results.stats.start_time;
     results.stats.elapsed_seconds = Math.round(elapsedTime / 1000);
     results.stats.etfs_retained = results.etfs.length;
@@ -1139,23 +1083,18 @@ async function filterETFs() {
     results.stats.total_retained = results.etfs.length + results.bonds.length;
     results.stats.rejected_count = results.rejected.length;
     
-    // Stats pour les holdings
     const etfPositionsCount = results.etfs.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
     const bondsPositionsCount = results.bonds.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
     
-    // Stats traduction
     const translatedCount = results.etfs.filter(e => e.objective !== e.objective_en).length + 
                            results.bonds.filter(e => e.objective !== e.objective_en).length;
     
-    // v12.0: Stats traduction taxonomies
     const taxonomyTranslatedCount = results.etfs.filter(e => e.fund_type_fr || e.sector_top_fr).length +
                                     results.bonds.filter(e => e.fund_type_fr || e.sector_top_fr).length;
     
-    // v13.0: Stats métriques bond
     const bondsWithDuration = results.bonds.filter(e => e.bond_avg_duration != null).length;
     const bondsWithCredit = results.bonds.filter(e => e.bond_credit_score != null).length;
     
-    // Pour compatibilité, ajouter les stats data_quality
     results.stats.data_quality = {
         with_aum: results.etfs.filter(e => e.aum_usd != null).length,
         with_ter: results.etfs.filter(e => e.total_expense_ratio != null).length,
@@ -1165,7 +1104,7 @@ async function filterETFs() {
         with_objective: results.etfs.filter(e => e.objective && e.objective.length > 0).length,
         with_holdings: results.etfs.filter(e => e.holdings_top10 && e.holdings_top10.length > 0).length,
         with_auto_detection: results.etfs.filter(e => e.auto_detected_composition).length,
-        avg_quality_score: Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length),
+        avg_quality_score: results.etfs.length > 0 ? Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length) : 0,
         by_etf_type: {
             standard: results.etfs.filter(e => e.etf_type === 'standard').length,
             inverse: results.etfs.filter(e => e.etf_type === 'inverse').length,
@@ -1174,14 +1113,12 @@ async function filterETFs() {
         }
     };
     
-    // v13.0: Stats bond metrics
     results.stats.bond_metrics = {
         with_duration: bondsWithDuration,
         with_credit_score: bondsWithCredit,
         coverage_pct: results.bonds.length > 0 ? Math.round(bondsWithDuration / results.bonds.length * 100) : 0
     };
     
-    // Stats traduction NEW
     if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) {
         results.stats.translation = {
             objectives_translated: translatedCount,
@@ -1190,7 +1127,6 @@ async function filterETFs() {
         };
     }
     
-    // Analyser les raisons de rejet
     const rejectionReasons = {};
     results.rejected.forEach(item => {
         if (item.reason) {
@@ -1204,13 +1140,12 @@ async function filterETFs() {
     
     results.stats.rejection_reasons = rejectionReasons;
     
-    // Sauvegarder les résultats complets (avec tous les champs)
     const filteredPath = path.join(OUT_DIR, 'filtered_advanced.json');
     await fs.writeFile(filteredPath, JSON.stringify(results, null, 2));
     
-    // Snapshot JSON hebdo (UNIQUEMENT les champs hebdo via pickWeekly)
     const weekly = {
         timestamp: new Date().toISOString(),
+        limited_run: results.stats.limited_run,
         etfs: results.etfs.map(pickWeekly),
         bonds: results.bonds.map(pickWeekly),
         stats: {
@@ -1226,7 +1161,6 @@ async function filterETFs() {
     
     // === CSV EXPORTS ===
 
-    // CSV hebdo ETF avec holdings
     const csvHeaderEtf = [
         'symbol','name','isin','mic_code','currency','fund_type','fund_type_fr','etf_type',
         'aum_usd','total_expense_ratio','yield_ttm',
@@ -1276,7 +1210,6 @@ async function filterETFs() {
     await fs.writeFile(etfCsvPath, csvHeaderEtf + (csvRowsEtf ? csvRowsEtf + '\n' : ''));
     console.log(`📝 CSV ETFs: ${results.etfs.length} ligne(s) → ${etfCsvPath}`);
 
-    // === CSV hebdo BONDS (v13.0: ajout colonnes bond_*) ===
     const csvHeaderBonds = [
         'symbol','name','isin','mic_code','currency','fund_type','fund_type_fr','etf_type',
         'aum_usd','total_expense_ratio','yield_ttm',
@@ -1325,7 +1258,6 @@ async function filterETFs() {
     await fs.writeFile(bondsCsvPath, csvHeaderBonds + (csvRowsBonds ? csvRowsBonds + '\n' : ''));
     console.log(`📝 CSV Bonds (enriched): ${results.bonds.length} ligne(s) → ${bondsCsvPath}`)
     
-    // === CSV Holdings ETFs (Top10 only, narrow) ===
     const narrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
 
     const narrowRows = results.etfs.flatMap(etf => {
@@ -1355,7 +1287,6 @@ async function filterETFs() {
     );
     console.log(`📝 CSV Holdings ETFs (Top10 only): ${narrowRows.length} lignes → ${holdingsCsvPath}`);
     
-    // === Combined BONDS holdings (Top10 only, narrow) ===
     const bondsNarrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
 
     const bondsNarrowRows = results.bonds.flatMap(fund => {
@@ -1388,6 +1319,9 @@ async function filterETFs() {
     
     // Résumé
     console.log('\n📊 RÉSUMÉ:');
+    if (results.stats.limited_run) {
+        console.log(`⚠️  RUN LIMITÉ: ETFs ${etfs.length}/${totalEtfsOriginal} | Bonds ${bonds.length}/${totalBondsOriginal}`);
+    }
     console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`);
     console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`);
     console.log(`Rejetés: ${results.rejected.length}`);
@@ -1400,7 +1334,6 @@ async function filterETFs() {
     }
     console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
     
-    // v13.0: Stats métriques bond
     console.log('\n📈 Métriques obligataires:');
     console.log(`  - Bonds avec duration: ${bondsWithDuration}/${results.bonds.length}`);
     console.log(`  - Bonds avec credit_score: ${bondsWithCredit}/${results.bonds.length}`);
@@ -1432,7 +1365,6 @@ async function filterETFs() {
         console.log(`✅ Cache traductions: ${TRANSLATION_CACHE_PATH}`);
     }
     
-    // Pour GitHub Actions (nouveau mécanisme)
     if (process.env.GITHUB_OUTPUT) {
         const fsSync = require('fs');
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`);
@@ -1442,6 +1374,7 @@ async function filterETFs() {
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_holdings_positions=${etfPositionsCount + bondsPositionsCount}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_duration=${bondsWithDuration}\n`);
         fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_credit=${bondsWithCredit}\n`);
+        fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `limited_run=${results.stats.limited_run}\n`);
         if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) {
             fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `objectives_translated=${translatedCount}\n`);
             fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `taxonomies_translated=${taxonomyTranslatedCount}\n`);
