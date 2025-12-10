@@ -6,10 +6,10 @@ FactorScorer v2.3 — SEUL MOTEUR D'ALPHA
 v2.3 Changes (Tactical Context Integration):
 - NOUVEAU: compute_factor_tactical_context() intégrant:
   - f_sector_trend: momentum du secteur (sectors.json)
-  - f_region_trend: momentum de la région (indices.json)
+  - f_region_trend: momentum de la région (markets.json)
   - f_macro_alignment: alignement aux convictions macro (macro_tilts.json)
 - NOUVEAU: FactorWeights.tactical_context (5-10% selon profil)
-- NOUVEAU: load_market_context() pour charger sectors/indices/macro_tilts
+- NOUVEAU: load_market_context() pour charger sectors/markets/macro_tilts
 - MISE À JOUR: FactorScorer accepte market_context optionnel
 
 v2.2 Changes (Bond Risk Factors):
@@ -78,7 +78,7 @@ SECTOR_KEY_MAPPING = {
 }
 
 COUNTRY_NORMALIZATION = {
-    # ETF country_top -> country dans indices.json
+    # ETF country_top -> country dans markets.json
     "United States": "Etats-Unis",
     "USA": "Etats-Unis",
     "US": "Etats-Unis",
@@ -129,7 +129,7 @@ def load_market_context(data_dir: str = "data") -> Dict[str, Any]:
     Charge le contexte marché depuis les fichiers JSON.
     
     Args:
-        data_dir: Répertoire contenant sectors.json, indices.json, macro_tilts.json
+        data_dir: Répertoire contenant sectors.json, markets.json, macro_tilts.json
     
     Returns:
         dict avec keys: 'sectors', 'indices', 'macro_tilts', 'loaded_at'
@@ -152,15 +152,16 @@ def load_market_context(data_dir: str = "data") -> Dict[str, Any]:
         except Exception as e:
             logger.warning(f"⚠️ Erreur lecture {sectors_path}: {e}")
     
-    # Charger indices.json
-    indices_path = data_path / "indices.json"
-    if indices_path.exists():
+    # Charger markets.json (contient les indices par pays/région)
+    # Note: markets.json a la structure {"indices": {...}, "top_performers": {...}, "meta": {...}}
+    markets_path = data_path / "markets.json"
+    if markets_path.exists():
         try:
-            with open(indices_path, "r", encoding="utf-8") as f:
+            with open(markets_path, "r", encoding="utf-8") as f:
                 context["indices"] = json.load(f)
-            logger.info(f"✅ Chargé: {indices_path}")
+            logger.info(f"✅ Chargé: {markets_path}")
         except Exception as e:
-            logger.warning(f"⚠️ Erreur lecture {indices_path}: {e}")
+            logger.warning(f"⚠️ Erreur lecture {markets_path}: {e}")
     
     # Charger macro_tilts.json
     tilts_path = data_path / "macro_tilts.json"
@@ -766,8 +767,9 @@ class FactorScorer:
                 norm_country = COUNTRY_NORMALIZATION.get(country_top.strip(), country_top.strip())
                 if norm_country in self._country_lookup:
                     ref = self._country_lookup[norm_country]
-                    ytd = ref.get("_ytd_value", 0) or 0
-                    daily = ref.get("_change_value", 0) or 0
+                    # markets.json has both ytd_num and _ytd_value, prefer ytd_num
+                    ytd = ref.get("ytd_num", 0) or ref.get("_ytd_value", 0) or 0
+                    daily = ref.get("change_num", 0) or ref.get("_change_value", 0) or 0
                     
                     raw = 0.7 * (ytd / 25.0) + 0.3 * (daily / 2.0)
                     raw = max(-1.0, min(1.0, raw))
