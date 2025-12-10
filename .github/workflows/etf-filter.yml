@@ -2,6 +2,22 @@ name: ETF Advanced Filter
 
 on:
   workflow_dispatch:
+    inputs:
+      limit_etf:
+        description: 'Nombre max ETF à traiter (0 = tous)'
+        required: false
+        default: '0'
+        type: string
+      limit_bonds:
+        description: 'Nombre max Bonds à traiter (0 = tous)'
+        required: false
+        default: '0'
+        type: string
+      debug:
+        description: 'Mode debug (logs détaillés)'
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: '0 14 * * 1-5'  # 14h UTC = 16h Paris (été) / 15h Paris (hiver)
 
@@ -36,16 +52,26 @@ jobs:
       run: |
         npm ci || npm install csv-parse axios
 
+    - name: Show limits (if any)
+      run: |
+        echo "📊 Configuration:"
+        echo "  - LIMIT_ETF: ${{ inputs.limit_etf || '0 (tous)' }}"
+        echo "  - LIMIT_BONDS: ${{ inputs.limit_bonds || '0 (tous)' }}"
+        echo "  - DEBUG: ${{ inputs.debug || 'false' }}"
+
     - name: Run ETF filter
       id: run_filter
       env:
         TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+        # === LIMITES (0 = pas de limite) ===
+        LIMIT_ETF: ${{ inputs.limit_etf || '0' }}
+        LIMIT_BONDS: ${{ inputs.limit_bonds || '0' }}
         # === TRADUCTION ACTIVÉE ===
         TRANSLATE_OBJECTIVE: '1'
         TRANSLATOR: 'openai'
         API_CHAT: ${{ secrets.API_CHAT }}
         OPENAI_MODEL: 'gpt-4o-mini'
-        DEBUG: '0'
+        DEBUG: ${{ inputs.debug && '1' || '0' }}
       run: node etf-advanced-filter.js
 
     - name: Check holdings files
@@ -83,7 +109,20 @@ jobs:
           exit 0
         fi
 
-        git commit -m "Update filtered ETFs + bonds with holdings (FR objectives) [skip ci]"
+        # Message de commit avec info limite
+        LIMIT_INFO=""
+        if [ "${{ inputs.limit_etf }}" != "0" ] && [ -n "${{ inputs.limit_etf }}" ]; then
+          LIMIT_INFO=" [LIMITED: ETF=${{ inputs.limit_etf }}"
+          if [ "${{ inputs.limit_bonds }}" != "0" ] && [ -n "${{ inputs.limit_bonds }}" ]; then
+            LIMIT_INFO="${LIMIT_INFO}, BONDS=${{ inputs.limit_bonds }}]"
+          else
+            LIMIT_INFO="${LIMIT_INFO}]"
+          fi
+        elif [ "${{ inputs.limit_bonds }}" != "0" ] && [ -n "${{ inputs.limit_bonds }}" ]; then
+          LIMIT_INFO=" [LIMITED: BONDS=${{ inputs.limit_bonds }}]"
+        fi
+
+        git commit -m "Update filtered ETFs + bonds with holdings (FR objectives)${LIMIT_INFO} [skip ci]"
 
         # Push robuste : fetch + rebase + 3 tentatives
         BRANCH="${GITHUB_REF_NAME:-main}"
