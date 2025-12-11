@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.4:   FEAT - Nouveau format market_context.json unifié (GPT génère secteurs/régions favorisés)
 V4.3.1: FIX - Utiliser markets.json au lieu de indices.json pour les données régionales
 V4.3.0: FEAT - Intégration tactical_context (sectors.json + markets.json + macro_tilts.json)
         Le scoring inclut maintenant le contexte marché (momentum secteur/région + convictions macro)
@@ -100,9 +101,9 @@ CONFIG = {
     # === Buffett Filter Config ===
     "buffett_mode": "soft",      # "soft" (pénalise), "hard" (rejette), "both", "none" (désactivé)
     "buffett_min_score": 40,     # Score minimum Buffett (0-100), 0 = pas de filtre
-    # === v4.3.0: Tactical Context Config ===
+    # === v4.4: Tactical Context Config ===
     "use_tactical_context": True,  # Activer le scoring tactique
-    "market_data_dir": "data",     # Répertoire des fichiers sectors.json, markets.json, macro_tilts.json
+    "market_data_dir": "data",     # Répertoire du fichier market_context.json
 }
 
 
@@ -272,56 +273,26 @@ def print_buffett_diagnostic(assets: List[dict], title: str = "DIAGNOSTIC FILTRE
     print("=" * 80 + "\n")
 
 
-# ============= v4.3.0: TACTICAL CONTEXT DIAGNOSTIC =============
+# ============= v4.4: TACTICAL CONTEXT DIAGNOSTIC =============
 
 def print_tactical_context_diagnostic(market_context: Dict):
     """
-    Affiche un diagnostic du contexte marché chargé.
+    Affiche un diagnostic du contexte marché chargé (v4.4 format).
     
     Args:
         market_context: Résultat de load_market_context()
     """
     print("\n" + "=" * 80)
-    print("📊 DIAGNOSTIC CONTEXTE TACTIQUE (v4.3.0)")
+    print("📊 DIAGNOSTIC CONTEXTE TACTIQUE (v4.4)")
     print("=" * 80)
     
-    # Sectors
-    sectors_data = market_context.get("sectors", {})
-    sectors = sectors_data.get("sectors", {})
-    if sectors:
-        print(f"\n✅ sectors.json: {len(sectors)} secteurs chargés")
-        # Top 3 secteurs par YTD
-        top_sectors = []
-        for key, entries in sectors.items():
-            if entries:
-                ytd = entries[0].get("ytd_num", 0) or 0
-                top_sectors.append((key, ytd))
-        top_sectors.sort(key=lambda x: x[1], reverse=True)
-        print("   Top 3 secteurs YTD:")
-        for s, ytd in top_sectors[:3]:
-            print(f"      • {s}: {ytd:+.1f}%")
-    else:
-        print("\n⚠️ sectors.json: Non chargé ou vide")
+    # Régime
+    regime = market_context.get("market_regime", "N/A")
+    confidence = market_context.get("confidence", "N/A")
+    as_of = market_context.get("as_of", "N/A")
     
-    # Indices (from markets.json)
-    indices_data = market_context.get("indices", {})
-    indices = indices_data.get("indices", {})
-    if indices:
-        total_countries = sum(len(entries) for entries in indices.values())
-        print(f"\n✅ markets.json: {len(indices)} régions, {total_countries} pays chargés")
-        # Top 3 pays par YTD
-        top_countries = []
-        for region, entries in indices.items():
-            for e in entries:
-                country = e.get("country", "?")
-                ytd = e.get("ytd_num", 0) or 0
-                top_countries.append((country, ytd))
-        top_countries.sort(key=lambda x: x[1], reverse=True)
-        print("   Top 3 pays YTD:")
-        for c, ytd in top_countries[:3]:
-            print(f"      • {c}: {ytd:+.1f}%")
-    else:
-        print("\n⚠️ markets.json: Non chargé ou vide")
+    print(f"\n📈 Régime marché: {regime} (confidence: {confidence})")
+    print(f"   Date: {as_of}")
     
     # Macro tilts
     macro_tilts = market_context.get("macro_tilts", {})
@@ -330,17 +301,32 @@ def print_tactical_context_diagnostic(market_context: Dict):
         avoided_sectors = macro_tilts.get("avoided_sectors", [])
         favored_regions = macro_tilts.get("favored_regions", [])
         avoided_regions = macro_tilts.get("avoided_regions", [])
+        rationale = macro_tilts.get("rationale", "N/A")
         
-        print(f"\n✅ macro_tilts.json:")
-        print(f"   Secteurs favorisés: {', '.join(favored_sectors[:3])}...")
-        print(f"   Secteurs évités: {', '.join(avoided_sectors[:3])}...")
-        print(f"   Régions favorisées: {', '.join(favored_regions[:3])}...")
-        print(f"   Régions évitées: {', '.join(avoided_regions[:3])}...")
-        
-        as_of = macro_tilts.get("as_of", "N/A")
-        print(f"   Date: {as_of}")
+        print(f"\n✅ Tilts tactiques:")
+        print(f"   Secteurs favorisés (+15%): {', '.join(favored_sectors) if favored_sectors else 'Aucun'}")
+        print(f"   Secteurs évités (-15%): {', '.join(avoided_sectors) if avoided_sectors else 'Aucun'}")
+        print(f"   Régions favorisées (+15%): {', '.join(favored_regions) if favored_regions else 'Aucun'}")
+        print(f"   Régions évitées (-15%): {', '.join(avoided_regions) if avoided_regions else 'Aucun'}")
+        print(f"\n   Rationale: {rationale}")
     else:
-        print("\n⚠️ macro_tilts.json: Non chargé, utilisation des défauts")
+        print("\n⚠️ Pas de tilts tactiques (mode neutre)")
+    
+    # Trends et risques
+    trends = market_context.get("key_trends", [])
+    risks = market_context.get("risks", [])
+    
+    if trends:
+        print(f"\n📈 Tendances clés: {', '.join(trends)}")
+    if risks:
+        print(f"⚠️  Risques: {', '.join(risks)}")
+    
+    # Meta
+    meta = market_context.get("_meta", {})
+    if meta:
+        model = meta.get("model", "N/A")
+        is_fallback = meta.get("is_fallback", False)
+        print(f"\n🔧 Méta: model={model}, fallback={is_fallback}")
     
     print("\n" + "=" * 80 + "\n")
 
@@ -352,22 +338,36 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     Pipeline déterministe : mêmes données → mêmes poids.
     Utilise les modules portfolio_engine.
     
-    v4.3.0: Intègre le contexte marché (tactical_context) dans le scoring.
+    v4.4: Utilise le nouveau format market_context.json unifié.
     """
     logger.info("🧮 Construction des portefeuilles (déterministe)...")
     
-    # v4.3.0: Charger le contexte marché pour le scoring tactique
+    # v4.4: Charger le contexte marché pour le scoring tactique
     market_context = None
     if CONFIG.get("use_tactical_context", True):
         logger.info("📊 Chargement du contexte marché (tactical_context)...")
         market_context = load_market_context(CONFIG.get("market_data_dir", "data"))
         
-        if market_context.get("sectors") or market_context.get("indices"):
+        # v4.4 FIX: Vérifier macro_tilts au lieu de sectors/indices
+        macro_tilts = market_context.get("macro_tilts", {})
+        has_tilts = (
+            macro_tilts.get("favored_sectors") or 
+            macro_tilts.get("avoided_sectors") or
+            macro_tilts.get("favored_regions") or
+            macro_tilts.get("avoided_regions")
+        )
+        
+        if has_tilts:
             print_tactical_context_diagnostic(market_context)
             logger.info("✅ Contexte marché chargé pour scoring tactique")
         else:
-            logger.warning("⚠️ Contexte marché vide - scoring tactique désactivé")
-            market_context = None
+            # Vérifier si c'est un fallback explicite
+            is_fallback = market_context.get("_meta", {}).get("is_fallback", False)
+            if is_fallback:
+                logger.warning("⚠️ Contexte marché en mode FALLBACK - scoring tactique neutre")
+            else:
+                logger.warning("⚠️ Contexte marché sans tilts actifs - scoring tactique désactivé")
+            # On garde market_context pour éviter les erreurs, mais les tilts seront 0
     
     # 1. Charger les données brutes
     stocks_data = load_stocks_data()
@@ -509,11 +509,11 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation profil {profile}...")
         
-        # v4.3.0: Re-scorer selon le profil AVEC le contexte marché
+        # v4.4: Re-scorer selon le profil AVEC le contexte marché
         scored_universe = rescore_universe_by_profile(
             universe, 
             profile, 
-            market_context=market_context  # ← NOUVEAU: Contexte tactique
+            market_context=market_context  # ← Contexte tactique v4.4
         )
         
         # Convertir en objets Asset
@@ -1087,7 +1087,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.3.1_tactical_context",
+        "version": "v4.4_market_context",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", True),
@@ -1116,7 +1116,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.3.1_tactical_context",
+        "version": "v4.4_market_context",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1154,7 +1154,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.3.1 - Génération + Backtest (TACTICAL CONTEXT)")
+    logger.info("🚀 Portfolio Engine v4.4 - Génération + Backtest (MARKET CONTEXT)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1191,14 +1191,14 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.3.1:")
+    logger.info("Fonctionnalités v4.4:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
     logger.info("   • Chargement combined_bonds.csv ✅")
-    logger.info("   • 🆕 TACTICAL CONTEXT: sectors.json + markets.json + macro_tilts.json ✅")
+    logger.info("   • 🆕 MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
     logger.info(f"   • Contexte tactique: {'✅ activé' if CONFIG.get('use_tactical_context') else '❌ désactivé'}")
