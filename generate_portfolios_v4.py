@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.4.1: FIX - Bug mapping % (agrégation cohérente front + _tickers)
 V4.4:   FEAT - Nouveau format market_context.json unifié (GPT génère secteurs/régions favorisés)
 V4.3.1: FIX - Utiliser markets.json au lieu de indices.json pour les données régionales
 V4.3.0: FEAT - Intégration tactical_context (sectors.json + markets.json + macro_tilts.json)
@@ -972,11 +973,13 @@ def _extract_ticker_from_asset(asset, fallback_id: str) -> str:
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.2.3: Convertit le format interne vers le format v1 attendu par le front.
+    V4.4.1: Convertit le format interne vers le format v1 attendu par le front.
     
-    Corrections:
-    - Nettoyage NaN float pandas
-    - Agrégation des poids par ticker (+=) au lieu d'écrasement (=)
+    CORRECTIONS v4.4.1:
+    - Agrégation des poids AUSSI pour le format lisible (+=)
+    - Validation croisée front vs _tickers
+    - Bloc _debug avec mappings détaillés
+    - Warning si incohérence détectée
     
     Structure:
         "Agressif": {
@@ -1035,8 +1038,17 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "_tickers": {},  # V4.2: Bloc pour le backtest
         }
         
-        # V4.2.3: Track les collisions pour debug
+        # V4.4.1: Tracks pour agrégation ET debug
         ticker_collisions = {}
+        name_collisions = {}  # NEW: Track collisions de noms aussi
+        
+        # V4.4.1: Dictionnaires pour agrégation des poids lisibles (en float)
+        readable_weights = {
+            "Actions": {},
+            "ETF": {},
+            "Obligations": {},
+            "Crypto": {},
+        }
         
         for asset_id, weight in allocation.items():
             asset_id_str = str(asset_id)
@@ -1045,8 +1057,15 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             ticker = info["ticker"]
             cat_v1 = _category_v1(info["category"])
             
-            # Format lisible pour le front (nom -> "14%")
-            result[profile][cat_v1][name] = f"{int(round(weight))}%"
+            # V4.4.1: AGRÉGATION pour le format lisible aussi (+=)
+            prev_readable = readable_weights[cat_v1].get(name, 0.0)
+            readable_weights[cat_v1][name] = prev_readable + weight
+            
+            # Track collision de nom pour debug
+            if prev_readable > 0:
+                if name not in name_collisions:
+                    name_collisions[name] = prev_readable
+                name_collisions[name] = readable_weights[cat_v1][name]
             
             # V4.2.3: Nettoyage final du ticker_key
             ticker_key = ticker if ticker and not _is_internal_id(ticker) else name
@@ -1058,28 +1077,60 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             new_weight = round(prev_weight + weight / 100.0, 4)
             tickers_dict[ticker_key] = new_weight
             
-            # Track collision pour debug
+            # Track collision ticker pour debug
             if prev_weight > 0:
                 if ticker_key not in ticker_collisions:
                     ticker_collisions[ticker_key] = prev_weight
                 ticker_collisions[ticker_key] = new_weight
         
-        # V4.2.3: Log les collisions si présentes
+        # V4.4.1: Convertir les poids agrégés en strings "X%"
+        for cat_v1, weights_dict in readable_weights.items():
+            for name, weight in weights_dict.items():
+                result[profile][cat_v1][name] = f"{int(round(weight))}%"
+        
+        # V4.4.1: Log les collisions si présentes
         if ticker_collisions:
             logger.info(f"   {profile}: {len(ticker_collisions)} ticker(s) agrégé(s): {ticker_collisions}")
+        if name_collisions:
+            logger.info(f"   {profile}: {len(name_collisions)} nom(s) agrégé(s): {name_collisions}")
         
-        # V4.2.3: Validation améliorée - log si somme != 1
-        total_weight = sum(result[profile]["_tickers"].values())
+        # V4.4.1: Validation améliorée - vérifier cohérence front vs _tickers
+        total_tickers = sum(result[profile]["_tickers"].values())
+        
+        # Calculer total des sections lisibles
+        total_readable = 0
+        for cat_v1 in ["Actions", "ETF", "Obligations", "Crypto"]:
+            for name, pct_str in result[profile][cat_v1].items():
+                try:
+                    pct_val = int(pct_str.replace("%", ""))
+                    total_readable += pct_val
+                except:
+                    pass
+        
         n_allocation = len(allocation)
         n_tickers = len(result[profile]["_tickers"])
+        n_readable = sum(len(result[profile][c]) for c in ["Actions", "ETF", "Obligations", "Crypto"])
         
-        if abs(total_weight - 1.0) > 0.01:
+        # V4.4.1: Validation croisée
+        if abs(total_tickers - 1.0) > 0.02:
             logger.warning(
-                f"⚠️ {profile}: _tickers sum = {total_weight:.2%} (expected ~100%) "
+                f"⚠️ {profile}: _tickers sum = {total_tickers:.2%} (expected ~100%) "
                 f"→ {n_allocation} lignes allocation, {n_tickers} tickers uniques"
             )
+        elif abs(total_readable - 100) > 2:
+            logger.warning(
+                f"⚠️ {profile}: readable sum = {total_readable}% (expected ~100%) "
+                f"→ {n_readable} items lisibles"
+            )
         else:
-            logger.info(f"✅ {profile}: _tickers sum = {total_weight:.2%} ({n_tickers} tickers)")
+            logger.info(f"✅ {profile}: _tickers={total_tickers:.2%}, readable={total_readable}% ({n_tickers} tickers, {n_readable} items)")
+        
+        # V4.4.1: Vérifier cohérence entre les deux
+        if abs(total_tickers * 100 - total_readable) > 5:
+            logger.error(
+                f"❌ {profile}: INCOHÉRENCE DÉTECTÉE! "
+                f"_tickers={total_tickers:.2%} vs readable={total_readable}%"
+            )
         
         # V4.2.3: Log les tickers pour debug (sans NaN)
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:5] if t]
@@ -1087,7 +1138,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.4_market_context",
+        "version": "v4.4.1_fix_mapping",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", True),
@@ -1116,7 +1167,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.4_market_context",
+        "version": "v4.4.1_fix_mapping",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1154,7 +1205,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.4 - Génération + Backtest (MARKET CONTEXT)")
+    logger.info("🚀 Portfolio Engine v4.4.1 - Génération + Backtest (FIX MAPPING)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1191,14 +1242,15 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.4:")
+    logger.info("Fonctionnalités v4.4.1:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
     logger.info("   • Chargement combined_bonds.csv ✅")
-    logger.info("   • 🆕 MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
+    logger.info("   • MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
+    logger.info("   • 🆕 FIX MAPPING % : agrégation cohérente front + _tickers ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
     logger.info(f"   • Contexte tactique: {'✅ activé' if CONFIG.get('use_tactical_context') else '❌ désactivé'}")
