@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles v4 + Backtest
+name: Génération des Portefeuilles v4.4 + Backtest
 
 on:
   push:
@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       API_CHAT: ${{ secrets.API_CHAT }}
+      OPENAI_API_KEY: ${{ secrets.API_CHAT }}
       TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
 
     steps:
@@ -37,7 +38,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas numpy scipy requests beautifulsoup4 lxml openai pyyaml
 
-      - name: 🚀 Exécuter le moteur v4 + Backtest
+      # ============= v4.4 NEW: Generate Market Context =============
+      - name: 🌍 Générer market_context.json (GPT unifié)
+        run: |
+          echo "🔄 Génération du contexte marché unifié..."
+          python portfolio_engine/market_context.py --data-dir data --output data/market_context.json || echo "⚠️ Fallback neutre utilisé"
+          
+          # Diagnostic
+          if [ -f data/market_context.json ]; then
+            echo "✅ market_context.json généré"
+            python3 << 'EOF'
+          import json
+          with open("data/market_context.json") as f:
+              ctx = json.load(f)
+          print(f"   Régime: {ctx.get('market_regime', 'N/A')}")
+          print(f"   Confidence: {ctx.get('confidence', 'N/A')}")
+          tilts = ctx.get('macro_tilts', {})
+          print(f"   Secteurs favorisés: {tilts.get('favored_sectors', [])}")
+          print(f"   Régions favorisées: {tilts.get('favored_regions', [])}")
+          is_fallback = ctx.get('_meta', {}).get('is_fallback', False)
+          if is_fallback:
+              print("   ⚠️ Mode FALLBACK (pas de tilts appliqués)")
+          EOF
+          else
+            echo "⚠️ market_context.json non généré, tilts neutres"
+          fi
+
+      - name: 🚀 Exécuter le moteur v4.4 + Backtest
         run: python generate_portfolios_v4.py
 
       - name: 🧾 Check outputs
@@ -46,6 +73,13 @@ jobs:
           echo "== data =="
           ls -lah data || true
           echo "----"
+          
+          # Market Context
+          if [ -f data/market_context.json ]; then
+            echo "✅ market_context.json"
+          else
+            echo "⚠️ market_context.json ABSENT (tilts neutres)"
+          fi
           
           # Portfolios
           if [ -f data/portfolios.json ]; then
@@ -83,11 +117,38 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v4 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v4.4 Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
+          # Market Context Summary
+          if [ -f data/market_context.json ]; then
+            echo "### 🌍 Market Context" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("data/market_context.json") as f:
+              ctx = json.load(f)
+          regime = ctx.get('market_regime', 'N/A')
+          conf = ctx.get('confidence', 'N/A')
+          tilts = ctx.get('macro_tilts', {})
+          fav_sec = ', '.join(tilts.get('favored_sectors', [])) or 'None'
+          avoid_sec = ', '.join(tilts.get('avoided_sectors', [])) or 'None'
+          fav_reg = ', '.join(tilts.get('favored_regions', [])) or 'None'
+          avoid_reg = ', '.join(tilts.get('avoided_regions', [])) or 'None'
+          is_fb = '⚠️ FALLBACK' if ctx.get('_meta', {}).get('is_fallback') else '✅'
+          print(f"| Metric | Value |")
+          print(f"|--------|-------|")
+          print(f"| Regime | {regime} {is_fb} |")
+          print(f"| Confidence | {conf} |")
+          print(f"| Favored Sectors | {fav_sec} |")
+          print(f"| Avoided Sectors | {avoid_sec} |")
+          print(f"| Favored Regions | {fav_reg} |")
+          print(f"| Avoided Regions | {avoid_reg} |")
+          EOF
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
           if [ -f data/backtest_results.json ]; then
-            echo "### Backtest Comparison (90 days)" >> $GITHUB_STEP_SUMMARY
+            echo "### 📈 Backtest Comparison (90 days)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Agressif | Modéré | Stable |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|----------|--------|--------|" >> $GITHUB_STEP_SUMMARY
@@ -116,9 +177,10 @@ jobs:
       - name: 💾 Commit & push
         if: always()
         run: |
-          # Ajouter les artefacts générés
+          # Ajouter les artefacts générés (incluant market_context.json)
           git add data/portfolios.json \
                   data/backtest_results.json \
+                  data/market_context.json \
                   data/portfolio_history/* || true
 
           # Si .gitignore les filtre, forcer l'ajout
@@ -128,13 +190,26 @@ jobs:
           if git check-ignore -q data/backtest_results.json; then
             git add -f data/backtest_results.json
           fi
+          if git check-ignore -q data/market_context.json; then
+            git add -f data/market_context.json
+          fi
           if git check-ignore -q data/portfolio_history; then
             git add -f data/portfolio_history/*.json || true
           fi
 
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -m "📊 Portefeuilles v4 + Backtest 90j" || echo "rien à committer"
+              commit -m "📊 Portefeuilles v4.4 + Market Context + Backtest 90j" || echo "rien à committer"
 
           # Push simple; si ça échoue pour divergence, tenter un rebase rapide
           git push || (git pull --rebase && git push)
+
+      # ============= v4.4 NEW: Archive Market Context =============
+      - name: 🗂️ Archive market_context.json
+        if: success()
+        run: |
+          if [ -f data/market_context.json ]; then
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            cp data/market_context.json "data/portfolio_history/market_context_${TIMESTAMP}.json"
+            echo "✅ Archivé: market_context_${TIMESTAMP}.json"
+          fi
