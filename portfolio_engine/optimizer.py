@@ -1,12 +1,12 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.1 — Fix P0: Bonds Pool + Vol-aware Fallback.
+Optimiseur de portefeuille v6.2 — Fix P1: Bond Diversification.
 
-CHANGEMENTS v6.1:
-1. Forcer minimum de bonds dans le pool pour Stable/Modéré
-2. Fallback respecte vol_target (weighted average)
-3. Bonds automatiquement classés DEFENSIVE
-4. Turnover constraint (P1 - préparé)
+CHANGEMENTS v6.2:
+1. Augmenter MIN_BONDS_IN_POOL pour avoir plus de candidats
+2. Ajouter MAX_SINGLE_BOND_WEIGHT pour forcer la diversification
+3. Contrainte SLSQP: limiter le poids max par obligation
+4. Fallback: distribuer sur minimum 3 bonds
 
 5 LEVIERS ACTIFS (le reste est gelé):
 1. vol_target par profil (8%, 12%, 18%)
@@ -74,7 +74,7 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6.1 =============
+# ============= CONSTANTES v6.2 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -95,18 +95,32 @@ CORR_DEFAULT = 0.15
 # Volatilités par défaut par catégorie
 DEFAULT_VOLS = {"Actions": 25.0, "ETF": 15.0, "Obligations": 5.0, "Crypto": 80.0}
 
-# P0 FIX: Minimum bonds dans le pool par profil
+# P1 FIX v6.2: Minimum bonds dans le pool par profil (AUGMENTÉ)
 MIN_BONDS_IN_POOL = {
-    "Stable": 8,
-    "Modéré": 5,
-    "Agressif": 2,
+    "Stable": 15,    # Était 8
+    "Modéré": 10,    # Était 5
+    "Agressif": 5,   # Était 2
 }
 
-# P0 FIX: Minimum defensive assets dans le pool par profil  
+# P1 FIX v6.2: Minimum defensive assets dans le pool par profil (AUGMENTÉ)
 MIN_DEFENSIVE_IN_POOL = {
-    "Stable": 10,
-    "Modéré": 6,
-    "Agressif": 3,
+    "Stable": 12,    # Était 10
+    "Modéré": 8,     # Était 6
+    "Agressif": 5,   # Était 3
+}
+
+# P1 FIX v6.2: Maximum weight par obligation (force diversification)
+MAX_SINGLE_BOND_WEIGHT = {
+    "Stable": 12.0,   # Max 12% par bond → au moins 4 bonds pour 40% total
+    "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
+    "Agressif": 5.0,  # Max 5% par bond → au moins 1 bond pour 5% total
+}
+
+# P1 FIX v6.2: Minimum nombre de bonds distincts dans l'allocation finale
+MIN_DISTINCT_BONDS = {
+    "Stable": 4,
+    "Modéré": 2,
+    "Agressif": 1,
 }
 
 
@@ -596,16 +610,16 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.1 =============
+# ============= PORTFOLIO OPTIMIZER v6.2 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.1.
+    Optimiseur mean-variance v6.2.
     
-    CHANGEMENTS v6.1 (P0 FIX):
-    1. Forcer minimum de bonds dans le pool (select_candidates)
-    2. Fallback respecte vol_target (vol-aware allocation)
-    3. Bonds automatiquement DEFENSIVE
+    CHANGEMENTS v6.2 (P1 FIX - Bond Diversification):
+    1. Augmenter MIN_BONDS_IN_POOL
+    2. Ajouter MAX_SINGLE_BOND_WEIGHT (contrainte SLSQP)
+    3. Fallback distribue sur min 3 bonds
     """
     
     def __init__(
@@ -633,7 +647,7 @@ class PortfolioOptimizer:
         """
         Pré-sélection avec HARD FILTER Buffett, déduplication et buckets.
         
-        v6.1 P0 FIX: Force minimum de bonds et defensive dans le pool.
+        v6.2 P1 FIX: Force plus de bonds et defensive dans le pool.
         """
         # === ÉTAPE 1: Déduplication ETF ===
         if self.deduplicate_etfs_enabled:
@@ -695,8 +709,8 @@ class PortfolioOptimizer:
             if asset.corporate_group:
                 corporate_group_count[asset.corporate_group] += 1
         
-        # === P0 FIX: GARANTIR MINIMUM DE BONDS ===
-        min_bonds = MIN_BONDS_IN_POOL.get(profile.name, 2)
+        # === P1 FIX v6.2: GARANTIR MINIMUM DE BONDS (AUGMENTÉ) ===
+        min_bonds = MIN_BONDS_IN_POOL.get(profile.name, 5)
         bonds_in_pool = [a for a in selected if a.category == "Obligations"]
         
         if len(bonds_in_pool) < min_bonds:
@@ -708,10 +722,10 @@ class PortfolioOptimizer:
             bonds_needed = min_bonds - len(bonds_in_pool)
             bonds_to_add = all_bonds[:bonds_needed]
             selected.extend(bonds_to_add)
-            logger.info(f"P0 FIX: Added {len(bonds_to_add)} bonds to pool for {profile.name} (minimum {min_bonds})")
+            logger.info(f"P1 FIX v6.2: Added {len(bonds_to_add)} bonds to pool for {profile.name} (minimum {min_bonds})")
         
-        # === P0 FIX: GARANTIR MINIMUM DEFENSIVE ===
-        min_defensive = MIN_DEFENSIVE_IN_POOL.get(profile.name, 3)
+        # === P1 FIX v6.2: GARANTIR MINIMUM DEFENSIVE (AUGMENTÉ) ===
+        min_defensive = MIN_DEFENSIVE_IN_POOL.get(profile.name, 5)
         defensive_in_pool = [a for a in selected if a.role == Role.DEFENSIVE]
         
         if len(defensive_in_pool) < min_defensive:
@@ -723,7 +737,7 @@ class PortfolioOptimizer:
             defensive_needed = min_defensive - len(defensive_in_pool)
             defensive_to_add = defensive_candidates[:defensive_needed]
             selected.extend(defensive_to_add)
-            logger.info(f"P0 FIX: Added {len(defensive_to_add)} defensive assets to pool for {profile.name}")
+            logger.info(f"P1 FIX v6.2: Added {len(defensive_to_add)} defensive assets to pool for {profile.name}")
         
         logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
         
@@ -733,6 +747,10 @@ class PortfolioOptimizer:
             if a.role:
                 bucket_dist[a.role.value] += 1
         logger.info(f"Buckets pool: {dict(bucket_dist)}")
+        
+        # Log bonds count
+        bonds_count = sum(1 for a in selected if a.category == "Obligations")
+        logger.info(f"Bonds in pool: {bonds_count}")
         
         return selected
     
@@ -756,7 +774,7 @@ class PortfolioOptimizer:
         profile: ProfileConstraints,
         cov: np.ndarray
     ) -> List[dict]:
-        """Construit les contraintes SLSQP."""
+        """Construit les contraintes SLSQP avec limite par bond (v6.2)."""
         n = len(candidates)
         constraints = []
         
@@ -770,14 +788,21 @@ class PortfolioOptimizer:
                 return np.sum(w[idx]) - min_val
             constraints.append({"type": "ineq", "fun": bonds_constraint})
         
-        # 3. Crypto maximum
+        # 3. P1 FIX v6.2: MAX WEIGHT PAR BOND (force diversification)
+        max_bond_weight = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0) / 100
+        for i in bonds_idx:
+            def single_bond_constraint(w, idx=i, max_val=max_bond_weight):
+                return max_val - w[idx]
+            constraints.append({"type": "ineq", "fun": single_bond_constraint})
+        
+        # 4. Crypto maximum
         crypto_idx = [i for i, a in enumerate(candidates) if a.category == "Crypto"]
         if crypto_idx:
             def crypto_constraint(w, idx=crypto_idx, max_val=profile.crypto_max/100):
                 return max_val - np.sum(w[idx])
             constraints.append({"type": "ineq", "fun": crypto_constraint})
         
-        # 4. Contraintes par SECTEUR
+        # 5. Contraintes par SECTEUR
         for sector in set(a.sector for a in candidates):
             sector_idx = [i for i, a in enumerate(candidates) if a.sector == sector]
             if len(sector_idx) > 1:
@@ -785,7 +810,7 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": sector_constraint})
         
-        # 5. Contraintes par RÉGION
+        # 6. Contraintes par RÉGION
         for region in set(a.region for a in candidates):
             region_idx = [i for i, a in enumerate(candidates) if a.region == region]
             if len(region_idx) > 1:
@@ -793,7 +818,7 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": region_constraint})
         
-        # 6. Contraintes par CORPORATE GROUP
+        # 7. Contraintes par CORPORATE GROUP
         for group in set(a.corporate_group for a in candidates if a.corporate_group):
             group_idx = [i for i, a in enumerate(candidates) if a.corporate_group == group]
             if len(group_idx) > 1:
@@ -801,7 +826,7 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
         
-        # 7. Contraintes par BUCKET (LEVIER 2)
+        # 8. Contraintes par BUCKET (LEVIER 2)
         if self.use_bucket_constraints:
             bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
             for role in Role:
@@ -840,9 +865,9 @@ class PortfolioOptimizer:
         cov: Optional[np.ndarray] = None
     ) -> Dict[str, float]:
         """
-        Allocation fallback VOL-AWARE (v6.1 P0 FIX).
+        Allocation fallback VOL-AWARE avec diversification bonds (v6.2).
         
-        Respecte la vol_target en surpondérant les actifs défensifs.
+        P1 FIX: Distribue sur minimum 3 bonds différents.
         """
         logger.warning(f"Utilisation du fallback vol-aware pour {profile.name}")
         
@@ -870,23 +895,30 @@ class PortfolioOptimizer:
         
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         
-        # === ÉTAPE 1: Assurer bonds minimum (P0 FIX) ===
+        # === P1 FIX v6.2: Assurer bonds minimum AVEC DIVERSIFICATION ===
         bonds = sorted([a for a in sorted_candidates if a.category == "Obligations"], key=lambda x: x.vol_annual)
         bonds_needed = float(profile.bonds_min)
+        max_single_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0)
+        min_distinct = MIN_DISTINCT_BONDS.get(profile.name, 2)
         
-        # Calculer le poids par bond en fonction du nombre disponible
-        n_bonds_to_use = min(len(bonds), max(3, int(bonds_needed / 10)))  # Au moins 3 bonds, ou plus si besoin
-        weight_per_bond = bonds_needed / n_bonds_to_use if n_bonds_to_use > 0 else 0
+        # Calculer le nombre de bonds nécessaires pour respecter max_single_bond
+        n_bonds_required = max(min_distinct, int(np.ceil(bonds_needed / max_single_bond)))
+        n_bonds_to_use = min(len(bonds), max(n_bonds_required, 3))  # Au moins 3 bonds si disponibles
         
-        for bond in bonds[:n_bonds_to_use]:
-            weight = min(profile.max_single_position, weight_per_bond, 100 - total_weight)
-            if weight > 0.5:
-                allocation[bond.id] = float(weight)
-                total_weight += weight
-                bonds_needed -= weight
-                category_weights["Obligations"] += weight
-                if bond.role:
-                    bucket_weights[bond.role.value] += weight
+        if n_bonds_to_use > 0:
+            weight_per_bond = min(max_single_bond, bonds_needed / n_bonds_to_use)
+            
+            for bond in bonds[:n_bonds_to_use]:
+                weight = min(profile.max_single_position, weight_per_bond, 100 - total_weight)
+                if weight > 0.5:
+                    allocation[bond.id] = float(weight)
+                    total_weight += weight
+                    bonds_needed -= weight
+                    category_weights["Obligations"] += weight
+                    if bond.role:
+                        bucket_weights[bond.role.value] += weight
+            
+            logger.info(f"P1 FIX v6.2: Distributed bonds across {len([b for b in bonds[:n_bonds_to_use] if b.id in allocation])} assets")
         
         # === ÉTAPE 2: Remplir par bucket selon targets ===
         for role in [Role.DEFENSIVE, Role.CORE, Role.SATELLITE, Role.LOTTERY]:
@@ -1040,7 +1072,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec covariance hybride (v6.1)."""
+        """Optimisation mean-variance avec covariance hybride (v6.2)."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
@@ -1096,6 +1128,9 @@ class PortfolioOptimizer:
         bucket_exposure = defaultdict(float)
         corporate_group_exposure = defaultdict(float)
         
+        # P1 FIX v6.2: Count distinct bonds
+        bonds_in_allocation = 0
+        
         for asset_id, weight in allocation.items():
             asset = next((a for a in candidates if a.id == asset_id), None)
             if asset:
@@ -1104,6 +1139,8 @@ class PortfolioOptimizer:
                     bucket_exposure[asset.role.value] += weight
                 if asset.corporate_group:
                     corporate_group_exposure[asset.corporate_group] += weight
+                if asset.category == "Obligations":
+                    bonds_in_allocation += 1
         
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         bucket_compliance = {}
@@ -1126,6 +1163,7 @@ class PortfolioOptimizer:
             "vol_diff": round(port_vol - profile.vol_target, 2),
             "portfolio_score": round(port_score, 3),
             "n_assets": len(allocation),
+            "n_bonds": bonds_in_allocation,  # P1 FIX v6.2: Track bond count
             "sectors": dict(sector_exposure),
             "bucket_exposure": dict(bucket_exposure),
             "bucket_compliance": bucket_compliance,
@@ -1137,7 +1175,7 @@ class PortfolioOptimizer:
         })
         
         logger.info(
-            f"{profile.name}: {len(allocation)} actifs, "
+            f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds), "
             f"vol={port_vol:.1f}% (cible={profile.vol_target}%), "
             f"cov_method={cov_diagnostics.get('method')}"
         )
