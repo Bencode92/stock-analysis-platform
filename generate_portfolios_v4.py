@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.5:   FIX - Ne pas agréger les Obligations par nom/ticker (évite KORP monopole)
 V3.4:   FIX - Forcer fund_type="bond" pour TOUS les bonds (pas juste si colonne absente)
 V4.4.1: FIX - Bug mapping % (agrégation cohérente front + _tickers)
 V4.4:   FEAT - Nouveau format market_context.json unifié (GPT génère secteurs/régions favorisés)
@@ -974,7 +975,12 @@ def _extract_ticker_from_asset(asset, fallback_id: str) -> str:
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.4.1: Convertit le format interne vers le format v1 attendu par le front.
+    V4.5: Convertit le format interne vers le format v1 attendu par le front.
+    
+    CORRECTIONS v4.5:
+    - FIX: Ne pas agréger les Obligations par nom/ticker (chaque bond = ligne séparée)
+    - Utilise l'ISIN ou l'ID interne comme discriminant pour les bonds
+    - Évite le problème "KORP monopolise 30-54%"
     
     CORRECTIONS v4.4.1:
     - Agrégation des poids AUSSI pour le format lisible (+=)
@@ -1002,10 +1008,17 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         # V4.2.3: Extraction robuste du ticker avec nettoyage NaN
         ticker = _extract_ticker_from_asset(a, aid)
         
+        # V4.5: Pour les bonds, récupérer aussi l'ISIN pour différenciation
+        isin = None
+        if hasattr(a, 'source_data') and a.source_data:
+            isin = _normalize_ticker_value(a.source_data.get('isin'))
+        
         asset_lookup[str(aid)] = {
             "name": name, 
             "category": category, 
-            "ticker": ticker
+            "ticker": ticker,
+            "isin": isin,  # V4.5: Pour différencier les bonds
+            "id": aid,     # V4.5: Garder l'ID pour fallback
         }
         
         # Debug log pour les premiers actifs
@@ -1051,49 +1064,94 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "Crypto": {},
         }
         
+        # V4.5: Counter pour bonds avec même nom (évite agrégation)
+        bond_name_counter = {}
+        
         for asset_id, weight in allocation.items():
             asset_id_str = str(asset_id)
-            info = asset_lookup.get(asset_id_str, {"name": asset_id_str, "category": "ETF", "ticker": asset_id_str})
+            info = asset_lookup.get(asset_id_str, {"name": asset_id_str, "category": "ETF", "ticker": asset_id_str, "isin": None, "id": asset_id_str})
             name = info["name"]
             ticker = info["ticker"]
+            isin = info.get("isin")
+            original_id = info.get("id", asset_id_str)
             cat_v1 = _category_v1(info["category"])
             
-            # V4.4.1: AGRÉGATION pour le format lisible aussi (+=)
-            prev_readable = readable_weights[cat_v1].get(name, 0.0)
-            readable_weights[cat_v1][name] = prev_readable + weight
+            # V4.5 FIX: Pour les Obligations, NE PAS agréger - chaque bond = ligne séparée
+            if cat_v1 == "Obligations":
+                # Créer une clé unique pour ce bond
+                # Priorité: ISIN > ticker + index > name + index
+                if isin:
+                    display_name = f"{name} ({isin})"
+                    ticker_key = isin
+                else:
+                    # Compter les occurrences de ce nom pour ajouter un index
+                    if name in bond_name_counter:
+                        bond_name_counter[name] += 1
+                        idx = bond_name_counter[name]
+                        display_name = f"{name} #{idx}"
+                        ticker_key = f"{ticker}_{idx}" if ticker else f"{name}_{idx}"
+                    else:
+                        bond_name_counter[name] = 1
+                        display_name = name
+                        ticker_key = ticker if ticker else name
+                
+                # PAS d'agrégation pour les bonds
+                readable_weights[cat_v1][display_name] = weight
+                
+                # Pour _tickers aussi, clé unique
+                tickers_dict = result[profile]["_tickers"]
+                tickers_dict[ticker_key] = round(weight / 100.0, 4)
+                
+                logger.debug(f"V4.5 BOND: {asset_id_str} → display={display_name}, ticker_key={ticker_key}, weight={weight}%")
             
-            # Track collision de nom pour debug
-            if prev_readable > 0:
-                if name not in name_collisions:
-                    name_collisions[name] = prev_readable
-                name_collisions[name] = readable_weights[cat_v1][name]
-            
-            # V4.2.3: Nettoyage final du ticker_key
-            ticker_key = ticker if ticker and not _is_internal_id(ticker) else name
-            ticker_key = _normalize_ticker_value(ticker_key) or name
-            
-            # V4.2.3: AGRÉGATION avec += au lieu d'écrasement =
-            tickers_dict = result[profile]["_tickers"]
-            prev_weight = tickers_dict.get(ticker_key, 0.0)
-            new_weight = round(prev_weight + weight / 100.0, 4)
-            tickers_dict[ticker_key] = new_weight
-            
-            # Track collision ticker pour debug
-            if prev_weight > 0:
-                if ticker_key not in ticker_collisions:
-                    ticker_collisions[ticker_key] = prev_weight
-                ticker_collisions[ticker_key] = new_weight
+            else:
+                # Pour Actions, ETF, Crypto: logique d'agrégation normale
+                # V4.4.1: AGRÉGATION pour le format lisible aussi (+=)
+                prev_readable = readable_weights[cat_v1].get(name, 0.0)
+                readable_weights[cat_v1][name] = prev_readable + weight
+                
+                # Track collision de nom pour debug
+                if prev_readable > 0:
+                    if name not in name_collisions:
+                        name_collisions[name] = prev_readable
+                    name_collisions[name] = readable_weights[cat_v1][name]
+                
+                # V4.2.3: Nettoyage final du ticker_key
+                ticker_key = ticker if ticker and not _is_internal_id(ticker) else name
+                ticker_key = _normalize_ticker_value(ticker_key) or name
+                
+                # V4.2.3: AGRÉGATION avec += au lieu d'écrasement =
+                tickers_dict = result[profile]["_tickers"]
+                prev_weight = tickers_dict.get(ticker_key, 0.0)
+                new_weight = round(prev_weight + weight / 100.0, 4)
+                tickers_dict[ticker_key] = new_weight
+                
+                # Track collision ticker pour debug
+                if prev_weight > 0:
+                    if ticker_key not in ticker_collisions:
+                        ticker_collisions[ticker_key] = prev_weight
+                    ticker_collisions[ticker_key] = new_weight
         
         # V4.4.1: Convertir les poids agrégés en strings "X%"
         for cat_v1, weights_dict in readable_weights.items():
             for name, weight in weights_dict.items():
                 result[profile][cat_v1][name] = f"{int(round(weight))}%"
         
-        # V4.4.1: Log les collisions si présentes
+        # V4.5: Log spécial pour bonds
+        n_bonds_readable = len(result[profile]["Obligations"])
+        bonds_total_pct = sum(
+            int(v.replace("%", "")) 
+            for v in result[profile]["Obligations"].values()
+        ) if result[profile]["Obligations"] else 0
+        
+        if n_bonds_readable > 0:
+            logger.info(f"   {profile}: {n_bonds_readable} bond(s) distincts, total={bonds_total_pct}%")
+        
+        # V4.4.1: Log les collisions si présentes (seulement pour non-bonds)
         if ticker_collisions:
-            logger.info(f"   {profile}: {len(ticker_collisions)} ticker(s) agrégé(s): {ticker_collisions}")
+            logger.info(f"   {profile}: {len(ticker_collisions)} ticker(s) agrégé(s) (non-bonds): {ticker_collisions}")
         if name_collisions:
-            logger.info(f"   {profile}: {len(name_collisions)} nom(s) agrégé(s): {name_collisions}")
+            logger.info(f"   {profile}: {len(name_collisions)} nom(s) agrégé(s) (non-bonds): {name_collisions}")
         
         # V4.4.1: Validation améliorée - vérifier cohérence front vs _tickers
         total_tickers = sum(result[profile]["_tickers"].values())
@@ -1139,7 +1197,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v3.4_fix_bond_detection",
+        "version": "v4.5_no_bond_aggregation",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", True),
@@ -1168,7 +1226,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v3.4_fix_bond_detection",
+        "version": "v4.5_no_bond_aggregation",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1206,7 +1264,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v3.4 - Génération + Backtest (FIX BOND DETECTION)")
+    logger.info("🚀 Portfolio Engine v4.5 - Génération + Backtest (NO BOND AGGREGATION)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1243,13 +1301,13 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v3.4:")
+    logger.info("Fonctionnalités v4.5:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
-    logger.info("   • 🆕 FIX BOND DETECTION: fund_type='bond' forcé pour combined_bonds.csv ✅")
+    logger.info("   • 🆕 NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
     logger.info("   • MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
