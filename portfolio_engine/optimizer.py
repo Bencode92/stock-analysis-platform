@@ -1,6 +1,10 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.5 — Fix P2b: Keep exposure for bonds (covariance), no dedup.
+Optimiseur de portefeuille v6.6 — Add debug log [FINAL] for allocation tracing.
+
+CHANGEMENTS v6.6:
+1. Add [FINAL] debug log showing each asset in allocation (id, category, name, weight)
+2. Helps diagnose if bonds disappear in optimizer or in mapping layer
 
 CHANGEMENTS v6.5:
 1. Bonds gardent leur `exposure` (bonds_ig, bonds_treasury) pour covariance
@@ -661,11 +665,15 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.5 =============
+# ============= PORTFOLIO OPTIMIZER v6.6 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.5.
+    Optimiseur mean-variance v6.6.
+    
+    CHANGEMENTS v6.6 (Debug log):
+    1. Add [FINAL] debug log showing each asset in allocation (id, category, name, weight)
+    2. Helps diagnose if bonds disappear in optimizer or in mapping layer
     
     CHANGEMENTS v6.5 (Covariance exposure pour bonds):
     1. Bonds gardent leur exposure pour meilleure covariance structurée
@@ -1138,7 +1146,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec covariance hybride (v6.5)."""
+        """Optimisation mean-variance avec covariance hybride (v6.6)."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
@@ -1200,6 +1208,27 @@ class PortfolioOptimizer:
             logger.warning(f"SLSQP failed for {profile.name}: {result.message}")
             allocation = self._fallback_allocation(candidates, profile, cov)
             optimizer_converged = False
+        
+        # === v6.6: DEBUG LOG [FINAL] - Show allocation details ===
+        asset_by_id = {a.id: a for a in candidates}
+        logger.info(f"=== [FINAL {profile.name}] Allocation details ===")
+        bonds_final = []
+        for aid, w in sorted(allocation.items(), key=lambda x: -x[1]):
+            a = asset_by_id.get(aid)
+            cat = a.category if a else "??"
+            name = a.name if a else "??"
+            ticker = a.source_data.get("ticker", "??") if a and a.source_data else "??"
+            logger.info(f"[FINAL {profile.name}] {aid} | {cat} | {ticker} | {name[:40]} | {w:.2f}%")
+            if cat == "Obligations":
+                bonds_final.append((aid, name, ticker, w))
+        
+        # Summary of bonds
+        if bonds_final:
+            logger.info(f"[FINAL {profile.name}] === BONDS SUMMARY: {len(bonds_final)} distinct bonds ===")
+            for aid, name, ticker, w in bonds_final:
+                logger.info(f"[FINAL {profile.name}] BOND: {ticker} | {name[:40]} | {w:.2f}%")
+        else:
+            logger.warning(f"[FINAL {profile.name}] === NO BONDS IN ALLOCATION ===")
         
         # === DIAGNOSTICS ===
         final_weights = np.array([allocation.get(c.id, 0)/100 for c in candidates])
