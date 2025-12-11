@@ -1,10 +1,15 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.4 — Fix P2: Exclude bonds from ETF deduplication.
+Optimiseur de portefeuille v6.5 — Fix P2b: Keep exposure for bonds (covariance), no dedup.
+
+CHANGEMENTS v6.5:
+1. Bonds gardent leur `exposure` (bonds_ig, bonds_treasury) pour covariance
+2. Mais ne sont PAS dédupliqués (seuls les ETF le sont)
+3. Meilleure structure de corrélation: bond IG ↔ ETF bond IG = CORR_SAME_EXPOSURE (0.85)
 
 CHANGEMENTS v6.4:
-1. FIX: deduplicate_etfs() n'inclut plus les Obligations
-2. Les bonds ne sont plus dédupliqués par "exposure" (bonds_ig, bonds_treasury)
+1. FIX: deduplicate_etfs() n'inclut plus les Obligations dans la dédup
+2. Les bonds ne sont plus dédupliqués par "exposure"
 3. Permet la vraie diversification obligataire
 
 CHANGEMENTS v6.3:
@@ -83,7 +88,7 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6.4 =============
+# ============= CONSTANTES v6.5 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -414,9 +419,14 @@ ETF_NAME_TO_EXPOSURE = {
 
 
 def detect_etf_exposure(asset: Asset) -> Optional[str]:
-    """Détecte l'exposition d'un ETF basé sur son nom/ticker."""
-    # v6.4: Ne détecte l'exposure que pour les vrais ETF, pas les Obligations
-    if asset.category != "ETF":
+    """
+    Détecte l'exposition d'un ETF ou bond basé sur son nom/ticker.
+    
+    v6.5: Inclut ETF ET Obligations pour avoir une meilleure structure de covariance.
+    Les bonds IG auront exposure="bonds_ig", permettant CORR_SAME_EXPOSURE avec ETF bonds IG.
+    """
+    # v6.5: ETF et Obligations peuvent avoir une exposure (utile pour covariance)
+    if asset.category not in ["ETF", "Obligations"]:
         return None
     search_text = f"{asset.name} {asset.id}".lower()
     for keyword, exposure in ETF_NAME_TO_EXPOSURE.items():
@@ -427,25 +437,35 @@ def detect_etf_exposure(asset: Asset) -> Optional[str]:
 
 def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asset]:
     """
-    Déduplique les ETF par exposition.
+    Déduplique les ETF par exposition, MAIS PAS les Obligations.
     
-    v6.4 FIX: N'inclut plus les Obligations dans la déduplication.
-    Les bonds ont besoin de diversification (duration, credit quality, issuer).
+    v6.5 FIX: 
+    - Tag l'exposure pour ETF ET Obligations (utile pour covariance structurée)
+    - Mais ne déduplique QUE les ETF (pas les bonds)
+    - Permet: bond IG ↔ ETF bond IG = CORR_SAME_EXPOSURE (0.85)
     """
-    etfs = []
-    non_etfs = []
+    etfs_to_dedup = []
+    other_assets = []  # Inclut Obligations, Actions, Crypto
+    
+    # Compter avant pour les logs
+    n_bonds_before = sum(1 for a in assets if a.category == "Obligations")
+    n_etf_before = sum(1 for a in assets if a.category == "ETF")
     
     for asset in assets:
-        # v6.4 FIX: Seulement les ETF, PAS les Obligations
-        if asset.category == "ETF":
+        # v6.5: Tag l'exposure pour ETF ET Obligations (utile pour covariance)
+        if asset.category in ["ETF", "Obligations"] and asset.exposure is None:
             asset.exposure = detect_etf_exposure(asset)
-            etfs.append(asset)
+        
+        # v6.5 FIX: Ne dédupliquer QUE les ETF, pas les Obligations
+        if asset.category == "ETF":
+            etfs_to_dedup.append(asset)
         else:
-            # Les Obligations passent directement sans déduplication
-            non_etfs.append(asset)
+            # Obligations, Actions, Crypto → passent directement sans dédup
+            other_assets.append(asset)
     
+    # Déduplication des ETF uniquement par exposure
     exposure_groups: Dict[Optional[str], List[Asset]] = defaultdict(list)
-    for etf in etfs:
+    for etf in etfs_to_dedup:
         exposure_groups[etf.exposure].append(etf)
     
     deduplicated_etfs = []
@@ -453,17 +473,25 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
     
     for exposure, group in exposure_groups.items():
         if exposure is None:
+            # Pas d'exposure détectée → garder tous
             deduplicated_etfs.extend(group)
         else:
+            # Exposure détectée → garder le meilleur score
             sorted_group = sorted(group, key=lambda a: a.score, reverse=True)
             deduplicated_etfs.append(sorted_group[0])
             if len(sorted_group) > 1:
                 removed_count += len(sorted_group) - 1
     
-    if removed_count > 0:
-        logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs (bonds excluded)")
+    # Compter après pour les logs
+    n_bonds_after = sum(1 for a in other_assets if a.category == "Obligations")
+    n_etf_after = len(deduplicated_etfs)
     
-    return non_etfs + deduplicated_etfs
+    logger.info(f"ETF dedup: ETF {n_etf_before}→{n_etf_after}, Bonds {n_bonds_before}→{n_bonds_after} (unchanged)")
+    
+    if removed_count > 0:
+        logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs")
+    
+    return other_assets + deduplicated_etfs
 
 
 # ============= COVARIANCE HYBRIDE v6 =============
@@ -472,8 +500,8 @@ class HybridCovarianceEstimator:
     """
     Estimateur de covariance hybride: empirique + structurée.
     
-    v6: Combine 60% covariance empirique (si disponible) + 40% structurée.
-    Permet une calibration du risque plus réaliste.
+    v6.5: Utilise l'exposure des bonds pour une meilleure structure de corrélation.
+    Bond IG ↔ ETF bond IG = CORR_SAME_EXPOSURE (0.85) au lieu de CORR_DEFAULT (0.15).
     """
     
     def __init__(
@@ -535,7 +563,12 @@ class HybridCovarianceEstimator:
             return None
     
     def compute_structured_covariance(self, assets: List[Asset]) -> np.ndarray:
-        """Calcule la covariance structurée (basée sur catégories/secteurs)."""
+        """
+        Calcule la covariance structurée (basée sur catégories/secteurs/exposure).
+        
+        v6.5: Les bonds avec exposure (bonds_ig, bonds_treasury) sont corrélés
+        avec les ETF de même exposure via CORR_SAME_EXPOSURE (0.85).
+        """
         n = len(assets)
         cov = np.zeros((n, n))
         
@@ -554,6 +587,7 @@ class HybridCovarianceEstimator:
                     if ai.corporate_group and aj.corporate_group and ai.corporate_group == aj.corporate_group:
                         corr = CORR_SAME_CORPORATE_GROUP
                     elif ai.exposure and aj.exposure and ai.exposure == aj.exposure:
+                        # v6.5: Bond IG ↔ ETF bond IG = haute corrélation
                         corr = CORR_SAME_EXPOSURE
                     elif ai.category == aj.category:
                         corr = CORR_SAME_SECTOR if ai.sector == aj.sector else CORR_SAME_CATEGORY
@@ -627,14 +661,18 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.4 =============
+# ============= PORTFOLIO OPTIMIZER v6.5 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.4.
+    Optimiseur mean-variance v6.5.
+    
+    CHANGEMENTS v6.5 (Covariance exposure pour bonds):
+    1. Bonds gardent leur exposure pour meilleure covariance structurée
+    2. Bond IG ↔ ETF bond IG = CORR_SAME_EXPOSURE (0.85)
     
     CHANGEMENTS v6.4 (P2 FIX - Bond deduplication):
-    1. deduplicate_etfs() n'inclut plus les Obligations
+    1. deduplicate_etfs() n'inclut plus les Obligations dans la dédup
     2. Les 209 bonds passent maintenant sans déduplication
     
     CHANGEMENTS v6.3 (P1 FIX - Force diversification bonds):
@@ -671,10 +709,10 @@ class PortfolioOptimizer:
         """
         Pré-sélection avec HARD FILTER Buffett, déduplication et buckets.
         
-        v6.4: Les bonds ne sont plus dédupliqués (passent tous).
+        v6.5: Les bonds gardent leur exposure mais ne sont pas dédupliqués.
         v6.2 P1 FIX: Force plus de bonds et defensive dans le pool.
         """
-        # === ÉTAPE 1: Déduplication ETF (v6.4: bonds exclus) ===
+        # === ÉTAPE 1: Déduplication ETF (v6.5: bonds gardent exposure, pas dédup) ===
         if self.deduplicate_etfs_enabled:
             universe = deduplicate_etfs(universe, prefer_by="score")
             logger.info(f"Post-ETF-dedup universe: {len(universe)} actifs")
@@ -717,8 +755,11 @@ class PortfolioOptimizer:
             
             if sector_count[asset.sector] >= 8:
                 continue
-            if asset.exposure and exposure_count[asset.exposure] >= 2:
+            
+            # v6.5: Limite d'exposure seulement pour ETF, pas pour bonds
+            if asset.category == "ETF" and asset.exposure and exposure_count[asset.exposure] >= 2:
                 continue
+            
             if asset.role == Role.LOTTERY and bucket_count["lottery"] >= 2:
                 continue
             if asset.corporate_group and corporate_group_count[asset.corporate_group] >= MAX_STOCKS_PER_GROUP:
@@ -780,7 +821,7 @@ class PortfolioOptimizer:
         return selected
     
     def compute_covariance(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict]:
-        """Calcule la covariance hybride (v6)."""
+        """Calcule la covariance hybride (v6.5 avec exposure bonds)."""
         return self.covariance_estimator.compute(assets)
     
     def _compute_portfolio_vol(self, weights: np.ndarray, cov: np.ndarray) -> float:
@@ -1097,7 +1138,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec covariance hybride (v6.4)."""
+        """Optimisation mean-variance avec covariance hybride (v6.5)."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
@@ -1105,7 +1146,7 @@ class PortfolioOptimizer:
         raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
         scores = self._normalize_scores(raw_scores) * self.score_scale
         
-        # Covariance hybride (v6)
+        # Covariance hybride (v6.5 avec exposure bonds)
         cov, cov_diagnostics = self.compute_covariance(candidates)
         vol_target = profile.vol_target / 100
         
