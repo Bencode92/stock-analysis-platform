@@ -1,6 +1,12 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.3 — Phase 2.5 Refactoring.
+Construction de l'univers d'actifs v3.3.1 — Fix filtres trop restrictifs.
+
+CHANGEMENTS v3.3.1 (Fix Diversification):
+- ETF: dd_max 40% → 55% (permet QQQ, VTI, etc.)
+- Bond: dd_max 20% → 35%, vol_max 20% → 25% (permet TLT, LQD, HYG)
+- Crypto: dd_max 70% → 85%, var_max 20% → 30%
+- Crypto: tier1_listed filter désactivé (trop restrictif)
 
 CHANGEMENTS v3.3 (Bond Risk Factors Integration):
 - Import et appel automatique de add_bond_risk_factors() sur bonds
@@ -177,20 +183,26 @@ def load_returns_series(
     return returns
 
 
-# ============= FILTRES DE RISQUE v3.2 =============
+# ============= FILTRES DE RISQUE v3.3.1 =============
 
 def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
     """
     Filtre simple par bornes de volatilité.
     
+    v3.3.1: Seuils relaxés pour permettre la diversification:
+    - ETF: dd_max 40% → 55% (permet QQQ, VTI, etc.)
+    - Bond: dd_max 20% → 35%, vol_max 20% → 25%
+    - Crypto: dd_max 70% → 85%, var_max 20% → 30%, tier1 désactivé
+    
     v3.2: Filtres crypto améliorés (VaR, tier1, history).
     v3.0: Simplifié - pas de scoring, juste des filtres de risque.
     """
+    # v3.3.1: Seuils RELAXÉS pour permettre la diversification
     risk_bounds = {
         "equity": {"vol_min": 8, "vol_max": 70, "dd_max": 50},
-        "etf": {"vol_min": 3, "vol_max": 50, "dd_max": 40},
-        "crypto": {"vol_min": 20, "vol_max": 180, "dd_max": 70, "var_max": 20},  # v3.2
-        "bond": {"vol_min": 1, "vol_max": 20, "dd_max": 20},
+        "etf": {"vol_min": 3, "vol_max": 50, "dd_max": 55},      # v3.3.1: 40→55%
+        "crypto": {"vol_min": 20, "vol_max": 180, "dd_max": 85, "var_max": 30},  # v3.3.1: dd:70→85, var:20→30
+        "bond": {"vol_min": 1, "vol_max": 25, "dd_max": 35},     # v3.3.1: vol:20→25, dd:20→35
     }
     
     bounds = risk_bounds.get(asset_type, risk_bounds["etf"])
@@ -203,19 +215,19 @@ def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
         if not (bounds["vol_min"] <= v <= bounds["vol_max"] and dd <= bounds["dd_max"]):
             return False
         
-        # v3.2: Filtres spécifiques crypto
+        # v3.3.1: Filtres spécifiques crypto (RELAXÉS)
         if asset_type == "crypto":
-            # Filtre VaR 95% (risque extrême)
+            # Filtre VaR 95% (risque extrême) - v3.3.1: 20% → 30%
             var_95 = abs(fnum(r.get("var_95_pct", 0)))
-            if var_95 > bounds.get("var_max", 20):
+            if var_95 > bounds.get("var_max", 30):
                 logger.debug(f"Crypto filtrée VaR: {r.get('name')} (VaR={var_95}%)")
                 return False
             
-            # Filtre tier1 (qualité listing)
-            tier1 = r.get("tier1_listed")
-            if tier1 is False:  # Explicitement False, pas None
-                logger.debug(f"Crypto filtrée tier1: {r.get('name')}")
-                return False
+            # v3.3.1: tier1_listed DÉSACTIVÉ - trop restrictif pour l'univers crypto
+            # tier1 = r.get("tier1_listed")
+            # if tier1 is False:  # Explicitement False, pas None
+            #     logger.debug(f"Crypto filtrée tier1: {r.get('name')}")
+            #     return False
             
             # Filtre historique insuffisant
             enough_history = r.get("enough_history_90d")
@@ -223,8 +235,8 @@ def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
                 logger.debug(f"Crypto filtrée history: {r.get('name')}")
                 return False
             
-            # Filtre drawdown extrême (> 80%)
-            if dd > 80:
+            # Filtre drawdown extrême - v3.3.1: 80% → 85%
+            if dd > 85:
                 logger.debug(f"Crypto filtrée DD: {r.get('name')} (DD={dd}%)")
                 return False
         
@@ -365,6 +377,7 @@ def build_raw_universe(
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
@@ -382,7 +395,7 @@ def build_raw_universe(
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.3...")
+    logger.info("🧮 Construction de l'univers brut v3.3.1...")
     
     all_assets = []
     
@@ -543,12 +556,13 @@ def build_raw_universe_from_files(
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.3 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.3.1 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -700,6 +714,7 @@ def load_and_prepare_universe(
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
