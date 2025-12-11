@@ -1,0 +1,248 @@
+{
+  "version": "v4.4.1_fix_mapping",
+  "timestamp": "20251211_132640",
+  "date": "2025-12-11T13:26:40.447287",
+  "buffett_config": {
+    "mode": "soft",
+    "min_score": 40
+  },
+  "tactical_config": {
+    "enabled": true,
+    "data_dir": "data"
+  },
+  "portfolios": {
+    "Agressif": {
+      "allocation": {
+        "EQ_590": 14.2,
+        "EQ_911": 14.2,
+        "EQ_146": 14.2,
+        "EQ_582": 2.0,
+        "EQ_10": 10.0,
+        "EQ_516": 2.0,
+        "EQ_58": 14.2,
+        "EQ_552": 14.2,
+        "NaN": 10.0,
+        "NaN": 5.0
+      },
+      "diagnostics": {
+        "converged": true,
+        "message": "Optimization terminated successfully",
+        "portfolio_vol": 16.91,
+        "vol_target": 18.0,
+        "vol_diff": -1.09,
+        "portfolio_score": 1.454,
+        "n_assets": 10,
+        "n_bonds": 0,
+        "sectors": {
+          "Services publics": 28.4,
+          "Finance": 16.2,
+          "Industries": 14.2,
+          "Santé": 10.0,
+          "Technologie de l'information": 2.0,
+          "Biens de consommation cycliques": 14.2
+        },
+        "bucket_exposure": {
+          "satellite": 56.599999999999994,
+          "core": 28.4
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 28.4,
+            "target_min": 35.0,
+            "target_max": 45.0,
+            "in_range": false
+          },
+          "satellite": {
+            "actual": 56.6,
+            "target_min": 35.0,
+            "target_max": 50.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 0.0,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 5.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0
+      },
+      "justifications": {
+        "EQ_590": "SSE PLC bénéficie d'une demande stable dans les services publics, offrant une résilience face aux fluctuations économiques [SEC].",
+        "EQ_911": "MUTHOOT FINANCE LTD est bien positionnée dans le secteur financier indien, avec une forte croissance prévue [TH].",
+        "EQ_146": "CUMMINS INC est un leader dans les solutions énergétiques, avec une forte demande pour ses produits [SEC].",
+        "EQ_58": "TJX INC continue de performer dans le secteur des biens de consommation, soutenue par une consommation robuste [MC].",
+        "EQ_552": "ENEL, acteur majeur dans les énergies renouvelables, est bien placé pour bénéficier de la transition énergétique [TH].",
+        "EQ_10": "ELI LILLY a un pipeline solide de médicaments, renforçant sa position dans le secteur de la santé [SEC].",
+        "NaN": "SPDR Bloomberg 1-3 Month T-Bill ETF est un placement sûr dans un environnement de taux d'intérêt incertains [MC].",
+        "EQ_582": "CAIXABANK SA est bien positionnée pour bénéficier de la reprise économique en Europe [TH].",
+        "EQ_516": "ASML HOLDING NV est un leader technologique avec une forte demande pour ses équipements de semi-conducteurs [SEC]."
+      },
+      "comment": "Le portefeuille agressif présente une forte exposition à des actions de croissance dans des secteurs dynamiques tels que la technologie et la finance. Les actifs choisis montrent des perspectives de croissance robustes, bien que la volatilité soit supérieure à la cible. La diversification dans les obligations et l'or offre une possiblee protection contre les risques de marché.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🔴 PROFIL AGRESSIF : Ce portefeuille présente un niveau de risque élevé. Il est destiné aux investisseurs ayant une tolérance au risque importante et un horizon d'investissement long terme (>5 ans).\n\n📊 Volatilité estimée : 16.9% (modérée)."
+    },
+    "Modéré": {
+      "allocation": {
+        "EQ_590": 14.6,
+        "EQ_911": 14.6,
+        "EQ_146": 2.0,
+        "EQ_58": 14.6,
+        "EQ_552": 14.6,
+        "NaN": 8.0,
+        "NaN": 8.0,
+        "NaN": 8.0,
+        "NaN": 6.0,
+        "NaN": 9.6
+      },
+      "diagnostics": {
+        "converged": true,
+        "message": "Optimization terminated successfully",
+        "portfolio_vol": 11.01,
+        "vol_target": 12.0,
+        "vol_diff": -0.99,
+        "portfolio_score": 1.043,
+        "n_assets": 10,
+        "n_bonds": 0,
+        "sectors": {
+          "Services publics": 29.2,
+          "Finance": 14.6,
+          "Industries": 2.0,
+          "Biens de consommation cycliques": 14.6
+        },
+        "bucket_exposure": {
+          "satellite": 31.2,
+          "core": 29.2
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 29.2,
+            "target_min": 45.0,
+            "target_max": 55.0,
+            "in_range": false
+          },
+          "satellite": {
+            "actual": 31.2,
+            "target_min": 15.0,
+            "target_max": 25.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 0.0,
+            "target_min": 20.0,
+            "target_max": 30.0,
+            "in_range": false
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 2.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0
+      },
+      "justifications": {
+        "EQ_590": "SSE PLC continue de montrer une résilience dans le secteur des services publics, offrant une stabilité [SEC].",
+        "EQ_911": "MUTHOOT FINANCE LTD est bien positionnée pour croître dans le secteur financier en Inde [TH].",
+        "EQ_58": "TJX INC bénéficie d'une forte demande dans le secteur des biens de consommation, soutenue par des tendances de consommation positives [MC].",
+        "EQ_552": "ENEL est un acteur clé dans la transition énergétique, avec des perspectives de croissance à long terme [TH].",
+        "NaN": "Global X 1-3 Month T-Bill ETF est un actif sûr dans un environnement de taux d'intérêt incertains [MC].",
+        "EQ_146": "CUMMINS INC est un leader dans les solutions énergétiques, avec une forte demande pour ses produits [SEC]."
+      },
+      "comment": "Le portefeuille modéré est bien équilibré entre actions et obligations, offrant une exposition à des entreprises solides tout en minimisant le risque. Les investissements dans des ETF obligataires diversifient le portefeuille et apportent une stabilité dans un environnement de marché inpossible. Les actifs choisis sont alignés avec une stratégie de croissance prudente.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟡 PROFIL MODÉRÉ : Ce portefeuille présente un niveau de risque modéré. Il convient aux investisseurs acceptant une certaine volatilité avec un horizon moyen terme (3-5 ans)."
+    },
+    "Stable": {
+      "allocation": {
+        "NaN": 10.31,
+        "NaN": 10.31,
+        "NaN": 10.31,
+        "NaN": 10.31,
+        "NaN": 12.37,
+        "EQ_58": 10.31,
+        "EQ_552": 10.31,
+        "EQ_526": 10.31,
+        "EQ_790": 5.15,
+        "EQ_590": 8.25,
+        "EQ_911": 2.06
+      },
+      "diagnostics": {
+        "converged": false,
+        "message": "Fallback vol-aware",
+        "portfolio_vol": 6.89,
+        "vol_target": 8.0,
+        "vol_diff": -1.11,
+        "portfolio_score": 0.886,
+        "n_assets": 11,
+        "n_bonds": 0,
+        "sectors": {
+          "Biens de consommation cycliques": 10.31,
+          "Services publics": 18.560000000000002,
+          "Finance": 17.52
+        },
+        "bucket_exposure": {
+          "core": 36.08,
+          "satellite": 10.31
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 36.1,
+            "target_min": 30.0,
+            "target_max": 40.0,
+            "in_range": true
+          },
+          "satellite": {
+            "actual": 10.3,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "defensive": {
+            "actual": 0.0,
+            "target_min": 45.0,
+            "target_max": 60.0,
+            "in_range": false
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 0.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {
+          "icici": 5.15
+        },
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0
+      },
+      "justifications": {
+        "NaN": "Janus Henderson AAA CLO ETF est un investissement de qualité, offrant une sécurité dans un environnement incertain [MC].",
+        "EQ_58": "TJX INC continue de performer dans le secteur des biens de consommation, soutenue par une consommation robuste [MC].",
+        "EQ_552": "ENEL, acteur majeur dans les énergies renouvelables, est bien placé pour bénéficier de la transition énergétique [TH].",
+        "EQ_526": "ALLIANZ est un leader dans le secteur financier, offrant une stabilité dans un portefeuille [SEC].",
+        "EQ_590": "SSE PLC bénéficie d'une demande stable dans les services publics, offrant une résilience face aux fluctuations économiques [SEC].",
+        "EQ_790": "ICICI BANK LTD est bien positionnée pour bénéficier de la reprise économique en Inde [TH].",
+        "EQ_911": "MUTHOOT FINANCE LTD est bien positionnée dans le secteur financier indien, avec une forte croissance prévue [TH]."
+      },
+      "comment": "Le portefeuille stable est conçu pour minimiser le risque tout en maintenant une exposition à des actifs de croissance. L'accent mis sur les obligations et les ETF de qualité assure une protection contre la volatilité du marché. Les actions sélectionnées apportent une possiblee croissance tout en restant dans des secteurs moins cycliques, ce qui est approprié dans un environnement économique inpossible.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟢 PROFIL STABLE : Ce portefeuille vise une volatilité réduite. Il convient aux investisseurs prudents avec un horizon court à moyen terme."
+    }
+  }
+}
