@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V3.4:   FIX - Forcer fund_type="bond" pour TOUS les bonds (pas juste si colonne absente)
 V4.4.1: FIX - Bug mapping % (agrégation cohérente front + _tickers)
 V4.4:   FEAT - Nouveau format market_context.json unifié (GPT génère secteurs/régions favorisés)
 V4.3.1: FIX - Utiliser markets.json au lieu de indices.json pour les données régionales
@@ -387,17 +388,17 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         except Exception as e:
             logger.warning(f"Impossible de charger ETF: {e}")
     
-    # V4.2.5: Charger les vrais bonds depuis combined_bonds.csv
+    # V3.4 FIX: Charger les vrais bonds depuis combined_bonds.csv
+    # TOUJOURS forcer fund_type="bond" car TOUT le fichier = bonds
     if Path(CONFIG["bonds_csv"]).exists():
         try:
             df_b = pd.read_csv(CONFIG["bonds_csv"])
-            # Forcer la catégorie pour le classement
-            if "category" not in df_b.columns:
-                df_b["category"] = "bond"
-            if "fund_type" not in df_b.columns:
-                df_b["fund_type"] = "bond"
+            # V3.4: Forcer TOUJOURS (pas juste si colonne absente)
+            # Tous les assets de combined_bonds.csv sont des bonds par définition
+            df_b["category"] = "bond"
+            df_b["fund_type"] = "bond"
             bonds_data = df_b.to_dict("records")
-            logger.info(f"Bonds: {CONFIG['bonds_csv']} ({len(bonds_data)} entrées)")
+            logger.info(f"Bonds: {CONFIG['bonds_csv']} ({len(bonds_data)} entrées) - fund_type forcé à 'bond'")
         except Exception as e:
             logger.warning(f"Impossible de charger Bonds: {e}")
     
@@ -1138,7 +1139,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.4.1_fix_mapping",
+        "version": "v3.4_fix_bond_detection",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", True),
@@ -1167,7 +1168,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.4.1_fix_mapping",
+        "version": "v3.4_fix_bond_detection",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1205,7 +1206,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.4.1 - Génération + Backtest (FIX MAPPING)")
+    logger.info("🚀 Portfolio Engine v3.4 - Génération + Backtest (FIX BOND DETECTION)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1242,15 +1243,14 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.4.1:")
+    logger.info("Fonctionnalités v3.4:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
-    logger.info("   • Chargement combined_bonds.csv ✅")
+    logger.info("   • 🆕 FIX BOND DETECTION: fund_type='bond' forcé pour combined_bonds.csv ✅")
     logger.info("   • MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
-    logger.info("   • 🆕 FIX MAPPING % : agrégation cohérente front + _tickers ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
     logger.info(f"   • Contexte tactique: {'✅ activé' if CONFIG.get('use_tactical_context') else '❌ désactivé'}")
