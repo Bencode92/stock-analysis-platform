@@ -177,6 +177,10 @@ jobs:
       - name: 💾 Commit & push
         if: always()
         run: |
+          # FIX: Configurer l'identité git GLOBALEMENT (pour commit ET rebase)
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
           # Ajouter les artefacts générés (incluant market_context.json)
           git add data/portfolios.json \
                   data/backtest_results.json \
@@ -197,12 +201,10 @@ jobs:
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git -c user.name="github-actions[bot]" \
-              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -m "📊 Portefeuilles v4.4 + Market Context + Backtest 90j" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v4.4 + Market Context + Backtest 90j" || echo "rien à committer"
 
-          # Push simple; si ça échoue pour divergence, tenter un rebase rapide
-          git push || (git pull --rebase && git push)
+          # Push avec retry robuste en cas de divergence
+          git push || (git pull --rebase origin main && git push)
 
       # ============= v4.4 NEW: Archive Market Context =============
       - name: 🗂️ Archive market_context.json
