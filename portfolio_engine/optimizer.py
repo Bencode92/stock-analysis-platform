@@ -1,6 +1,10 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.2 — Fix P1: Bond Diversification.
+Optimiseur de portefeuille v6.3 — Fix P1: Force diversification bonds POST-SLSQP.
+
+CHANGEMENTS v6.3:
+1. Vérification POST-SLSQP: si bonds distincts < MIN_DISTINCT_BONDS → fallback
+2. Fix: SLSQP peut converger avec 1 bond, maintenant on force le fallback
 
 CHANGEMENTS v6.2:
 1. Augmenter MIN_BONDS_IN_POOL pour avoir plus de candidats
@@ -74,7 +78,7 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6.2 =============
+# ============= CONSTANTES v6.3 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -610,11 +614,14 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.2 =============
+# ============= PORTFOLIO OPTIMIZER v6.3 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.2.
+    Optimiseur mean-variance v6.3.
+    
+    CHANGEMENTS v6.3 (P1 FIX - Force diversification bonds):
+    1. Vérification POST-SLSQP: si bonds distincts < MIN_DISTINCT_BONDS → fallback
     
     CHANGEMENTS v6.2 (P1 FIX - Bond Diversification):
     1. Augmenter MIN_BONDS_IN_POOL
@@ -1072,7 +1079,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec covariance hybride (v6.2)."""
+        """Optimisation mean-variance avec covariance hybride (v6.3)."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
@@ -1113,7 +1120,23 @@ class PortfolioOptimizer:
                     allocation[candidates[i].id] = round(float(w * 100), 2)
             
             allocation = self._adjust_to_100(allocation, profile)
-            optimizer_converged = True
+            
+            # === P1 FIX v6.3: Vérifier diversification bonds POST-SLSQP ===
+            bonds_in_solution = sum(
+                1 for aid in allocation 
+                if any(c.id == aid and c.category == "Obligations" for c in candidates)
+            )
+            min_bonds_required = MIN_DISTINCT_BONDS.get(profile.name, 1)
+            
+            if bonds_in_solution < min_bonds_required:
+                logger.warning(
+                    f"P1 FIX v6.3: SLSQP gave only {bonds_in_solution} bonds, "
+                    f"min required = {min_bonds_required} → forcing fallback"
+                )
+                allocation = self._fallback_allocation(candidates, profile, cov)
+                optimizer_converged = False  # Mark as fallback
+            else:
+                optimizer_converged = True
         else:
             logger.warning(f"SLSQP failed for {profile.name}: {result.message}")
             allocation = self._fallback_allocation(candidates, profile, cov)
