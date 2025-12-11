@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.6:   FIX - Utiliser SYMBOL (BIV,BSV,BND) au lieu de TICKER (KORP) pour les bonds dans _tickers
 V4.5:   FIX - Ne pas agréger les Obligations par nom/ticker (évite KORP monopole)
 V3.4:   FIX - Forcer fund_type="bond" pour TOUS les bonds (pas juste si colonne absente)
 V4.4.1: FIX - Bug mapping % (agrégation cohérente front + _tickers)
@@ -971,11 +972,48 @@ def _extract_ticker_from_asset(asset, fallback_id: str) -> str:
     return ticker
 
 
+def _extract_symbol_from_asset(asset) -> Optional[str]:
+    """
+    V4.6: Extrait le SYMBOL (vrai ticker marché) d'un actif.
+    
+    Pour les bonds ETF:
+    - symbol = BIV, BSV, BND, AGG (vrai ticker marché)
+    - ticker = KORP (proxy interne, à NE PAS utiliser)
+    
+    Returns:
+        Symbol valide ou None
+    """
+    symbol = None
+    
+    # 1. Dans source_data (prioritaire)
+    if hasattr(asset, 'source_data') and asset.source_data:
+        symbol = _normalize_ticker_value(asset.source_data.get('symbol'))
+    
+    # 2. Attribut symbol direct
+    if not symbol and hasattr(asset, 'symbol'):
+        symbol = _normalize_ticker_value(getattr(asset, 'symbol'))
+    
+    # 3. Si c'est un dict
+    if not symbol and isinstance(asset, dict):
+        symbol = _normalize_ticker_value(asset.get('symbol'))
+    
+    # 4. Validation: rejeter les IDs internes
+    if symbol and _is_internal_id(symbol):
+        symbol = None
+    
+    return symbol
+
+
 # ============= NORMALISATION POUR LE FRONT =============
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.5: Convertit le format interne vers le format v1 attendu par le front.
+    V4.6: Convertit le format interne vers le format v1 attendu par le front.
+    
+    CORRECTIONS v4.6:
+    - FIX CRITIQUE: Utiliser SYMBOL (BIV, BSV, BND, AGG) au lieu de TICKER (KORP) pour les bonds
+    - Le champ 'symbol' contient le vrai ticker marché pour TwelveData
+    - Le champ 'ticker' contient le proxy interne (KORP) - NE PAS utiliser pour _tickers
     
     CORRECTIONS v4.5:
     - FIX: Ne pas agréger les Obligations par nom/ticker (chaque bond = ligne séparée)
@@ -993,12 +1031,13 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "Commentaire": "...",
             "Actions": { "ELI LILLY AND CO": "14%", ... },  # Pour le front
             "ETF": { ... },
-            "_tickers": { "LLY": 0.14, "TJX": 0.12, ... }   # Pour le backtest
+            "_tickers": { "LLY": 0.14, "BIV": 0.05, ... }   # Pour le backtest (vrais symbols)
         }
     """
-    # Construire le lookup avec extraction robuste du ticker
+    # Construire le lookup avec extraction robuste du ticker ET symbol
     asset_lookup = {}
     ticker_debug = []  # Pour debug
+    bond_symbol_debug = []  # V4.6: Debug spécifique bonds
     
     for a in assets:
         aid = _safe_get_attr(a, 'id')
@@ -1007,6 +1046,9 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         
         # V4.2.3: Extraction robuste du ticker avec nettoyage NaN
         ticker = _extract_ticker_from_asset(a, aid)
+        
+        # V4.6: Extraire aussi le SYMBOL (vrai ticker marché)
+        symbol = _extract_symbol_from_asset(a)
         
         # V4.5: Pour les bonds, récupérer aussi l'ISIN pour différenciation
         isin = None
@@ -1017,15 +1059,23 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "name": name, 
             "category": category, 
             "ticker": ticker,
-            "isin": isin,  # V4.5: Pour différencier les bonds
-            "id": aid,     # V4.5: Garder l'ID pour fallback
+            "symbol": symbol,  # V4.6: Vrai ticker marché (BIV, BSV, BND, AGG)
+            "isin": isin,      # V4.5: Pour différencier les bonds
+            "id": aid,         # V4.5: Garder l'ID pour fallback
         }
         
         # Debug log pour les premiers actifs
         if len(ticker_debug) < 5:
-            ticker_debug.append(f"{aid} -> {ticker}")
+            ticker_debug.append(f"{aid} -> ticker={ticker}, symbol={symbol}")
+        
+        # V4.6: Debug spécifique pour les bonds
+        if category and 'bond' in category.lower() or 'oblig' in category.lower():
+            if len(bond_symbol_debug) < 10:
+                bond_symbol_debug.append(f"{name[:30]} -> symbol={symbol}, ticker={ticker}")
     
     logger.info(f"🔍 Sample ticker mapping: {ticker_debug}")
+    if bond_symbol_debug:
+        logger.info(f"🔍 V4.6 Bond symbols: {bond_symbol_debug[:5]}")
     
     def _category_v1(cat: str) -> str:
         cat = (cat or "").lower()
@@ -1064,45 +1114,66 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "Crypto": {},
         }
         
-        # V4.5: Counter pour bonds avec même nom (évite agrégation)
+        # V4.5: Counter pour bonds avec même nom (évite agrégation display)
         bond_name_counter = {}
+        
+        # V4.6: Tracking des vrais symbols utilisés pour _tickers
+        bond_symbols_used = []
         
         for asset_id, weight in allocation.items():
             asset_id_str = str(asset_id)
-            info = asset_lookup.get(asset_id_str, {"name": asset_id_str, "category": "ETF", "ticker": asset_id_str, "isin": None, "id": asset_id_str})
+            info = asset_lookup.get(asset_id_str, {
+                "name": asset_id_str, 
+                "category": "ETF", 
+                "ticker": asset_id_str, 
+                "symbol": None,
+                "isin": None, 
+                "id": asset_id_str
+            })
             name = info["name"]
             ticker = info["ticker"]
+            symbol = info.get("symbol")  # V4.6: Vrai ticker marché
             isin = info.get("isin")
             original_id = info.get("id", asset_id_str)
             cat_v1 = _category_v1(info["category"])
             
-            # V4.5 FIX: Pour les Obligations, NE PAS agréger - chaque bond = ligne séparée
+            # V4.6 FIX: Pour les Obligations, utiliser SYMBOL (pas TICKER) pour _tickers
             if cat_v1 == "Obligations":
-                # Créer une clé unique pour ce bond
-                # Priorité: ISIN > ticker + index > name + index
-                if isin:
-                    display_name = f"{name} ({isin})"
-                    ticker_key = isin
+                # === DISPLAY NAME (pour le front) ===
+                # Compter les occurrences de ce nom pour ajouter un index si collision
+                if name in bond_name_counter:
+                    bond_name_counter[name] += 1
+                    idx = bond_name_counter[name]
+                    display_name = f"{name} #{idx}"
                 else:
-                    # Compter les occurrences de ce nom pour ajouter un index
-                    if name in bond_name_counter:
-                        bond_name_counter[name] += 1
-                        idx = bond_name_counter[name]
-                        display_name = f"{name} #{idx}"
-                        ticker_key = f"{ticker}_{idx}" if ticker else f"{name}_{idx}"
-                    else:
-                        bond_name_counter[name] = 1
-                        display_name = name
-                        ticker_key = ticker if ticker else name
+                    bond_name_counter[name] = 1
+                    display_name = name
                 
-                # PAS d'agrégation pour les bonds
+                # PAS d'agrégation pour les bonds (affichage)
                 readable_weights[cat_v1][display_name] = weight
                 
-                # Pour _tickers aussi, clé unique
-                tickers_dict = result[profile]["_tickers"]
-                tickers_dict[ticker_key] = round(weight / 100.0, 4)
+                # === TICKER KEY pour _tickers (backtest) ===
+                # V4.6 FIX CRITIQUE: Utiliser SYMBOL (BIV, BSV, BND, AGG) PAS ticker (KORP)
+                # Priorité: symbol > isin > ticker > name
+                if symbol and not _is_internal_id(symbol):
+                    pricing_ticker = symbol  # ✅ Vrai ticker marché (BIV, BSV, etc.)
+                elif isin:
+                    pricing_ticker = isin
+                elif ticker and not _is_internal_id(ticker):
+                    pricing_ticker = ticker  # Fallback sur ticker si pas de symbol
+                else:
+                    pricing_ticker = name  # Dernier recours
                 
-                logger.debug(f"V4.5 BOND: {asset_id_str} → display={display_name}, ticker_key={ticker_key}, weight={weight}%")
+                # Pour _tickers: agréger par pricing_ticker (si même ETF apparaît 2x)
+                tickers_dict = result[profile]["_tickers"]
+                prev_weight = tickers_dict.get(pricing_ticker, 0.0)
+                new_weight = round(prev_weight + weight / 100.0, 4)
+                tickers_dict[pricing_ticker] = new_weight
+                
+                # V4.6: Track pour debug
+                bond_symbols_used.append(f"{pricing_ticker}={weight}%")
+                
+                logger.debug(f"V4.6 BOND: {asset_id_str} → display={display_name}, pricing_ticker={pricing_ticker}, weight={weight}%")
             
             else:
                 # Pour Actions, ETF, Crypto: logique d'agrégation normale
@@ -1117,7 +1188,13 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                     name_collisions[name] = readable_weights[cat_v1][name]
                 
                 # V4.2.3: Nettoyage final du ticker_key
-                ticker_key = ticker if ticker and not _is_internal_id(ticker) else name
+                # Pour non-bonds: symbol > ticker > name
+                if symbol and not _is_internal_id(symbol):
+                    ticker_key = symbol
+                elif ticker and not _is_internal_id(ticker):
+                    ticker_key = ticker
+                else:
+                    ticker_key = name
                 ticker_key = _normalize_ticker_value(ticker_key) or name
                 
                 # V4.2.3: AGRÉGATION avec += au lieu d'écrasement =
@@ -1137,7 +1214,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             for name, weight in weights_dict.items():
                 result[profile][cat_v1][name] = f"{int(round(weight))}%"
         
-        # V4.5: Log spécial pour bonds
+        # V4.6: Log spécial pour bonds avec vrais symbols
         n_bonds_readable = len(result[profile]["Obligations"])
         bonds_total_pct = sum(
             int(v.replace("%", "")) 
@@ -1146,6 +1223,9 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         
         if n_bonds_readable > 0:
             logger.info(f"   {profile}: {n_bonds_readable} bond(s) distincts, total={bonds_total_pct}%")
+            # V4.6: Afficher les vrais symbols utilisés
+            if bond_symbols_used:
+                logger.info(f"   {profile} bond symbols: {bond_symbols_used[:6]}{'...' if len(bond_symbols_used) > 6 else ''}")
         
         # V4.4.1: Log les collisions si présentes (seulement pour non-bonds)
         if ticker_collisions:
@@ -1191,13 +1271,13 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 f"_tickers={total_tickers:.2%} vs readable={total_readable}%"
             )
         
-        # V4.2.3: Log les tickers pour debug (sans NaN)
-        tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:5] if t]
+        # V4.6: Log les tickers pour debug (montrer vrais symbols)
+        tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.5_no_bond_aggregation",
+        "version": "v4.6_use_symbol_for_bonds",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", True),
@@ -1226,7 +1306,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.5_no_bond_aggregation",
+        "version": "v4.6_use_symbol_for_bonds",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1264,7 +1344,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.5 - Génération + Backtest (NO BOND AGGREGATION)")
+    logger.info("🚀 Portfolio Engine v4.6 - Génération + Backtest (USE SYMBOL FOR BONDS)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1301,13 +1381,14 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.5:")
+    logger.info("Fonctionnalités v4.6:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
-    logger.info("   • 🆕 NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
+    logger.info("   • 🆕 USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
+    logger.info("   • NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
     logger.info("   • MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
