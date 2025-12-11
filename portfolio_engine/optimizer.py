@@ -1,6 +1,11 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.3 — Fix P1: Force diversification bonds POST-SLSQP.
+Optimiseur de portefeuille v6.4 — Fix P2: Exclude bonds from ETF deduplication.
+
+CHANGEMENTS v6.4:
+1. FIX: deduplicate_etfs() n'inclut plus les Obligations
+2. Les bonds ne sont plus dédupliqués par "exposure" (bonds_ig, bonds_treasury)
+3. Permet la vraie diversification obligataire
 
 CHANGEMENTS v6.3:
 1. Vérification POST-SLSQP: si bonds distincts < MIN_DISTINCT_BONDS → fallback
@@ -78,7 +83,7 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6.3 =============
+# ============= CONSTANTES v6.4 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -410,7 +415,8 @@ ETF_NAME_TO_EXPOSURE = {
 
 def detect_etf_exposure(asset: Asset) -> Optional[str]:
     """Détecte l'exposition d'un ETF basé sur son nom/ticker."""
-    if asset.category not in ["ETF", "Obligations"]:
+    # v6.4: Ne détecte l'exposure que pour les vrais ETF, pas les Obligations
+    if asset.category != "ETF":
         return None
     search_text = f"{asset.name} {asset.id}".lower()
     for keyword, exposure in ETF_NAME_TO_EXPOSURE.items():
@@ -420,15 +426,22 @@ def detect_etf_exposure(asset: Asset) -> Optional[str]:
 
 
 def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asset]:
-    """Déduplique les ETF par exposition."""
+    """
+    Déduplique les ETF par exposition.
+    
+    v6.4 FIX: N'inclut plus les Obligations dans la déduplication.
+    Les bonds ont besoin de diversification (duration, credit quality, issuer).
+    """
     etfs = []
     non_etfs = []
     
     for asset in assets:
-        if asset.category in ["ETF", "Obligations"]:
+        # v6.4 FIX: Seulement les ETF, PAS les Obligations
+        if asset.category == "ETF":
             asset.exposure = detect_etf_exposure(asset)
             etfs.append(asset)
         else:
+            # Les Obligations passent directement sans déduplication
             non_etfs.append(asset)
     
     exposure_groups: Dict[Optional[str], List[Asset]] = defaultdict(list)
@@ -448,7 +461,7 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
                 removed_count += len(sorted_group) - 1
     
     if removed_count > 0:
-        logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs")
+        logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs (bonds excluded)")
     
     return non_etfs + deduplicated_etfs
 
@@ -614,11 +627,15 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.3 =============
+# ============= PORTFOLIO OPTIMIZER v6.4 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.3.
+    Optimiseur mean-variance v6.4.
+    
+    CHANGEMENTS v6.4 (P2 FIX - Bond deduplication):
+    1. deduplicate_etfs() n'inclut plus les Obligations
+    2. Les 209 bonds passent maintenant sans déduplication
     
     CHANGEMENTS v6.3 (P1 FIX - Force diversification bonds):
     1. Vérification POST-SLSQP: si bonds distincts < MIN_DISTINCT_BONDS → fallback
@@ -654,9 +671,10 @@ class PortfolioOptimizer:
         """
         Pré-sélection avec HARD FILTER Buffett, déduplication et buckets.
         
+        v6.4: Les bonds ne sont plus dédupliqués (passent tous).
         v6.2 P1 FIX: Force plus de bonds et defensive dans le pool.
         """
-        # === ÉTAPE 1: Déduplication ETF ===
+        # === ÉTAPE 1: Déduplication ETF (v6.4: bonds exclus) ===
         if self.deduplicate_etfs_enabled:
             universe = deduplicate_etfs(universe, prefer_by="score")
             logger.info(f"Post-ETF-dedup universe: {len(universe)} actifs")
@@ -1079,7 +1097,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec covariance hybride (v6.3)."""
+        """Optimisation mean-variance avec covariance hybride (v6.4)."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
