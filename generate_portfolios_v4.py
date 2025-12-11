@@ -54,8 +54,8 @@ from portfolio_engine import (
     sector_balanced_selection,
 )
 
-# v4.3.0: Import du chargeur de contexte marché
-from portfolio_engine.factors import load_market_context
+# 4.4: Import du chargeur de contexte marché
+from portfolio_engine.market_context import load_market_context
 
 from compliance import (
     generate_compliance_block,
