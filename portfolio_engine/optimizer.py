@@ -1,6 +1,11 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.6 — Add debug log [FINAL] for allocation tracing.
+Optimiseur de portefeuille v6.7 — FIX: Bonds use SYMBOL as ID (not "nan").
+
+CHANGEMENTS v6.7:
+1. FIX CRITIQUE: Bonds utilisent SYMBOL comme ID (AGG, BND, VTIP) au lieu de "nan"
+2. Ajout de _is_valid_id() pour valider les IDs (gère None, NaN, "", "nan")
+3. Empêche la collision dans asset_lookup qui causait la perte de tous les bonds sauf le dernier
 
 CHANGEMENTS v6.6:
 1. Add [FINAL] debug log showing each asset in allocation (id, category, name, weight)
@@ -41,6 +46,7 @@ from typing import Dict, List, Optional, Tuple, Union, Set, Any
 from collections import defaultdict
 import warnings
 import logging
+import math
 
 # Import preset_meta pour buckets et déduplication
 try:
@@ -161,6 +167,32 @@ def to_python_native(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [to_python_native(item) for item in obj]
     return obj
+
+
+# ============= v6.7 FIX: VALID ID HELPER =============
+
+def _is_valid_id(val) -> bool:
+    """
+    v6.7: Vérifie si une valeur est un ID valide (pas None, NaN, vide, "nan").
+    
+    Résout le bug où les bonds avaient tous id="nan" causant une collision
+    dans asset_lookup et la perte de tous les bonds sauf le dernier.
+    
+    Args:
+        val: Valeur à vérifier (peut être None, str, float, int)
+    
+    Returns:
+        True si la valeur est un ID valide, False sinon
+    """
+    if val is None:
+        return False
+    if isinstance(val, float):
+        if math.isnan(val):
+            return False
+    if isinstance(val, str):
+        s = val.strip().lower()
+        return s not in ["", "nan", "none", "null"]
+    return bool(val)
 
 
 # ============= PROFILE CONSTRAINTS =============
@@ -665,11 +697,15 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.6 =============
+# ============= PORTFOLIO OPTIMIZER v6.7 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.6.
+    Optimiseur mean-variance v6.7.
+    
+    CHANGEMENTS v6.7 (FIX CRITIQUE - Bond ID):
+    1. Bonds utilisent SYMBOL comme ID (AGG, BND, VTIP) au lieu de "nan"
+    2. Empêche la collision dans asset_lookup qui causait la perte de tous les bonds
     
     CHANGEMENTS v6.6 (Debug log):
     1. Add [FINAL] debug log showing each asset in allocation (id, category, name, weight)
@@ -1146,7 +1182,7 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec covariance hybride (v6.6)."""
+        """Optimisation mean-variance avec covariance hybride (v6.7)."""
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
@@ -1377,10 +1413,16 @@ class PortfolioOptimizer:
         return self.optimize(candidates, profile)
 
 
-# ============= CONVERSION UNIVERS =============
+# ============= CONVERSION UNIVERS v6.7 =============
 
 def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]]) -> List[Asset]:
-    """Convertit l'univers scoré en List[Asset]."""
+    """
+    Convertit l'univers scoré en List[Asset].
+    
+    v6.7 FIX: Génération robuste des IDs avec _is_valid_id().
+    - Obligations: SYMBOL prioritaire (AGG, BND, VTIP = ticker marché réel)
+    - Évite les IDs "nan" qui causaient une collision dans asset_lookup
+    """
     assets = []
     
     if isinstance(universe, list):
@@ -1403,13 +1445,53 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 cat_normalized = "ETF"
                 default_vol = 15
             
-            original_id = (
-                item.get("id") or 
-                item.get("ticker") or 
-                item.get("symbol") or 
-                item.get("isin") or 
-                item.get("name", f"ASSET_{len(assets)+1}")
-            )
+            # === v6.7 FIX: Génération robuste des IDs ===
+            raw_id = item.get("id")
+            raw_ticker = item.get("ticker")
+            raw_symbol = item.get("symbol")
+            raw_isin = item.get("isin")
+            raw_name = item.get("name", "")
+            
+            if cat_normalized == "Obligations":
+                # Obligations: SYMBOL prioritaire (ticker marché réel: AGG, BIV, BND)
+                # Pas TICKER qui peut être un proxy interne (KORP)
+                if _is_valid_id(raw_symbol):
+                    original_id = str(raw_symbol).strip()
+                elif _is_valid_id(raw_isin):
+                    original_id = str(raw_isin).strip()
+                elif _is_valid_id(raw_ticker):
+                    original_id = str(raw_ticker).strip()
+                elif _is_valid_id(raw_name):
+                    safe_name = str(raw_name)[:25].replace(" ", "_")
+                    original_id = f"BOND_{safe_name}_{len(assets)+1}"
+                else:
+                    original_id = f"BOND_{len(assets)+1}"
+            
+            elif cat_normalized == "Crypto":
+                # Crypto: symbol prioritaire (BTC/EUR, ETH/USD)
+                if _is_valid_id(raw_symbol):
+                    original_id = str(raw_symbol).strip()
+                elif _is_valid_id(raw_id):
+                    original_id = str(raw_id).strip()
+                elif _is_valid_id(raw_name):
+                    original_id = str(raw_name).strip()
+                else:
+                    original_id = f"CRYPTO_{len(assets)+1}"
+            
+            else:
+                # ETF et Actions: logique existante (ID > TICKER > SYMBOL)
+                if _is_valid_id(raw_id):
+                    original_id = str(raw_id).strip()
+                elif _is_valid_id(raw_ticker):
+                    original_id = str(raw_ticker).strip()
+                elif _is_valid_id(raw_symbol):
+                    original_id = str(raw_symbol).strip()
+                elif _is_valid_id(raw_isin):
+                    original_id = str(raw_isin).strip()
+                elif _is_valid_id(raw_name):
+                    original_id = str(raw_name).strip()
+                else:
+                    original_id = f"ASSET_{len(assets)+1}"
             
             raw_vol = item.get("vol_3y") or item.get("vol30") or item.get("vol_annual") or item.get("vol")
             vol_annual = _clean_float(raw_vol, default_vol, 1.0, 150.0)
@@ -1474,8 +1556,22 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
         ))
     
     for bond in universe.get("bonds", []):
-        original_id = bond.get("id") or bond.get("isin") or bond.get("name", "")
-        if not original_id:
+        # v6.7 FIX: Utiliser symbol prioritairement pour les bonds
+        raw_symbol = bond.get("symbol")
+        raw_isin = bond.get("isin")
+        raw_id = bond.get("id")
+        raw_name = bond.get("name", "")
+        
+        if _is_valid_id(raw_symbol):
+            original_id = str(raw_symbol).strip()
+        elif _is_valid_id(raw_isin):
+            original_id = str(raw_isin).strip()
+        elif _is_valid_id(raw_id):
+            original_id = str(raw_id).strip()
+        elif _is_valid_id(raw_name):
+            safe_name = str(raw_name)[:25].replace(" ", "_")
+            original_id = f"BOND_{safe_name}_{len(assets)+1}"
+        else:
             original_id = f"BOND_{len([a for a in assets if 'BOND' in a.id])+1}"
         
         assets.append(Asset(
