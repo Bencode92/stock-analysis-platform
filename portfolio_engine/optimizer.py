@@ -1,6 +1,12 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.8 — Robustesse SLSQP + Diagnostic Crypto
+Optimiseur de portefeuille v6.9 — Relax Stable constraints for SLSQP convergence
+
+CHANGEMENTS v6.9:
+1. P1 FIX: Stable bonds_min réduit 40% → 35% (facilite SLSQP)
+2. P1 FIX: Stable vol_tolerance augmenté 4% → 5% (plus de marge)
+3. P1 FIX: Bucket constraint relaxation augmentée pour Stable (±8%)
+4. Meilleure convergence SLSQP sans sacrifier la qualité
 
 CHANGEMENTS v6.8:
 1. P1 FIX: vol_tolerance Stable augmenté 3% → 4% (évite échec SLSQP)
@@ -133,6 +139,13 @@ MIN_DISTINCT_BONDS = {
     "Agressif": 1,
 }
 
+# v6.9: Bucket constraint relaxation par profil (pour SLSQP)
+BUCKET_CONSTRAINT_RELAXATION = {
+    "Stable": 0.08,    # ±8% pour Stable (était ±5%)
+    "Modéré": 0.05,    # ±5% standard
+    "Agressif": 0.05,  # ±5% standard
+}
+
 
 # ============= JSON SERIALIZATION HELPER =============
 
@@ -172,13 +185,14 @@ def _is_valid_id(val) -> bool:
     return bool(val)
 
 
-# ============= PROFILE CONSTRAINTS v6.8 =============
+# ============= PROFILE CONSTRAINTS v6.9 =============
 
 @dataclass
 class ProfileConstraints:
     """
     Contraintes par profil — vol_target est indicatif (pénalité douce).
     
+    v6.9: Stable bonds_min réduit (35%), vol_tolerance augmenté (5%)
     v6.8: Ajout vol_tolerance spécifique par profil (Stable = 4% au lieu de 3%)
     """
     name: str
@@ -193,7 +207,7 @@ class ProfileConstraints:
     max_assets: int = 18
 
 
-# v6.8 FIX: vol_tolerance augmenté pour Stable (4% au lieu de 3%)
+# v6.9 FIX: Contraintes relâchées pour Stable (bonds_min 35%, vol_tolerance 5%)
 # Permet à SLSQP de converger plus facilement avec les contraintes serrées
 PROFILES = {
     "Agressif": ProfileConstraints(
@@ -213,9 +227,9 @@ PROFILES = {
     "Stable": ProfileConstraints(
         name="Stable", 
         vol_target=8.0, 
-        vol_tolerance=4.0,  # v6.8 FIX: Augmenté pour éviter échec SLSQP
+        vol_tolerance=5.0,  # v6.9 FIX: Augmenté 4% → 5% pour convergence SLSQP
         crypto_max=0.0, 
-        bonds_min=40.0
+        bonds_min=35.0      # v6.9 FIX: Réduit 40% → 35% pour convergence SLSQP
     ),
 }
 
@@ -626,16 +640,17 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.8 =============
+# ============= PORTFOLIO OPTIMIZER v6.9 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.8.
+    Optimiseur mean-variance v6.9.
     
-    CHANGEMENTS v6.8:
-    1. P1 FIX: vol_tolerance Stable augmenté (4% au lieu de 3%)
-    2. P3 FIX: Diagnostic crypto dans les logs
-    3. Meilleure initialisation des poids pour SLSQP (bonds-heavy pour Stable)
+    CHANGEMENTS v6.9:
+    1. P1 FIX: Stable bonds_min réduit 40% → 35%
+    2. P1 FIX: Stable vol_tolerance augmenté 4% → 5%
+    3. P1 FIX: Bucket constraint relaxation par profil (±8% pour Stable)
+    4. Meilleure convergence SLSQP sans sacrifier la qualité
     """
     
     def __init__(
@@ -855,9 +870,12 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
         
-        # 8. Contraintes par BUCKET
+        # 8. Contraintes par BUCKET (v6.9: relaxation par profil)
         if self.use_bucket_constraints:
             bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
+            # v6.9: Relaxation variable par profil
+            relaxation = BUCKET_CONSTRAINT_RELAXATION.get(profile.name, 0.05)
+            
             for role in Role:
                 if role not in bucket_targets:
                     continue
@@ -867,13 +885,13 @@ class PortfolioOptimizer:
                     continue
                 
                 if min_pct > 0:
-                    adjusted_min = max(0, min_pct - 0.05)
+                    adjusted_min = max(0, min_pct - relaxation)
                     def bucket_min(w, idx=role_idx, min_val=adjusted_min):
                         return np.sum(w[idx]) - min_val
                     constraints.append({"type": "ineq", "fun": bucket_min})
                 
                 if max_pct < 1.0:
-                    adjusted_max = min(1.0, max_pct + 0.05)
+                    adjusted_max = min(1.0, max_pct + relaxation)
                     def bucket_max(w, idx=role_idx, max_val=adjusted_max):
                         return max_val - np.sum(w[idx])
                     constraints.append({"type": "ineq", "fun": bucket_max})
@@ -905,15 +923,18 @@ class PortfolioOptimizer:
             bonds_idx = [i for i, a in enumerate(candidates) if a.category == "Obligations"]
             other_idx = [i for i in range(n) if i not in bonds_idx]
             
-            # Bonds: 50% répartis également
+            # v6.9: Ajusté pour bonds_min=35% (pas 50%)
+            bonds_init_weight = 0.45  # Un peu plus que bonds_min pour faciliter convergence
+            
+            # Bonds: 45% répartis également
             if bonds_idx:
-                bond_weight = 0.50 / len(bonds_idx)
+                bond_weight = bonds_init_weight / len(bonds_idx)
                 for i in bonds_idx:
                     weights[i] = bond_weight
             
-            # Autres: 50% répartis également
+            # Autres: 55% répartis également
             if other_idx:
-                other_weight = 0.50 / len(other_idx)
+                other_weight = (1.0 - bonds_init_weight) / len(other_idx)
                 for i in other_idx:
                     weights[i] = other_weight
             
