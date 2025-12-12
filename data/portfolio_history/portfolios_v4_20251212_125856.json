@@ -1,0 +1,279 @@
+{
+  "version": "v4.7_rounding_100_disclaimer",
+  "timestamp": "20251212_125856",
+  "date": "2025-12-12T12:58:56.156173",
+  "buffett_config": {
+    "mode": "soft",
+    "min_score": 40
+  },
+  "tactical_config": {
+    "enabled": true,
+    "data_dir": "data"
+  },
+  "backtest_config": {
+    "days": 90,
+    "freq": "M"
+  },
+  "portfolios": {
+    "Agressif": {
+      "allocation": {
+        "EQ_908": 14.6,
+        "EQ_146": 14.6,
+        "EQ_590": 14.6,
+        "EQ_459": 5.0,
+        "EQ_636": 2.0,
+        "EQ_523": 5.0,
+        "EQ_13": 14.6,
+        "EQ_58": 14.6,
+        "AAAU": 10.0,
+        "VTIP": 5.0
+      },
+      "diagnostics": {
+        "converged": true,
+        "message": "Optimization terminated successfully",
+        "portfolio_vol": 16.91,
+        "vol_target": 18.0,
+        "vol_tolerance": 3.0,
+        "vol_diff": -1.09,
+        "portfolio_score": 1.642,
+        "n_assets": 10,
+        "n_bonds": 1,
+        "n_crypto": 0,
+        "crypto_max_allowed": 10.0,
+        "sectors": {
+          "Finance": 31.2,
+          "Industries": 14.6,
+          "La communication": 5.0,
+          "Technologie de l'information": 5.0,
+          "Santé": 14.6,
+          "Biens de consommation cycliques": 14.6,
+          "Diversified": 10.0,
+          "Bonds": 5.0
+        },
+        "bucket_exposure": {
+          "satellite": 55.8,
+          "core": 29.2,
+          "defensive": 15.0
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 29.2,
+            "target_min": 35.0,
+            "target_max": 45.0,
+            "in_range": false
+          },
+          "satellite": {
+            "actual": 55.8,
+            "target_min": 35.0,
+            "target_max": 50.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 15.0,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 5.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0
+      },
+      "justifications": {
+        "EQ_908": "Muthoot Finance a montré une résilience dans le secteur financier, soutenue par une demande croissante de services financiers en Inde. [SEC]",
+        "EQ_146": "Cummins Inc. bénéficie d'une demande accrue pour des solutions énergétiques durables, renforçant sa position dans l'industrie. [SEC]",
+        "EQ_590": "CaixaBank SA est bien positionnée pour profiter de la reprise économique en Espagne, avec une solide base de clients. [SEC]",
+        "EQ_13": "Johnson & Johnson continue d'innover dans le secteur de la santé, offrant des produits essentiels en période de volatilité. [SEC]",
+        "EQ_58": "TJX Inc. se distingue par sa capacité à attirer les consommateurs en quête de bonnes affaires, même en période d'incertitude économique. [MC]",
+        "AAAU": "L'ETF Goldman Sachs sur l'or sert de couverture contre l'inflation et l'incertitude économique croissante. [TH]",
+        "EQ_459": "Fox Corp Class A est bien positionnée pour capitaliser sur la croissance des médias numériques. [SEC]",
+        "EQ_523": "ASML Holding NV est un leader dans la fabrication de semi-conducteurs, un secteur en forte demande. [SEC]",
+        "VTIP": "Vanguard Short-Term Inflation-Protected Securities offre une protection contre l'inflation dans un environnement incertain. [TH]",
+        "EQ_636": "AIB Group PLC est en phase de redressement, soutenue par des réformes économiques en Irlande. [BR]"
+      },
+      "comment": "Le portefeuille agressif présente une exposition équilibrée à des actions de croissance dans des secteurs clés comme la finance, la santé et la technologie. Les investissements dans des actifs comme l'or et les obligations protégées contre l'inflation ajoutent une couche de sécurité. Cependant, la volatilité du marché pourrait affecter la performance à court terme.\n\n⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🔴 PROFIL AGRESSIF : Ce portefeuille présente un niveau de risque élevé. Il est destiné aux investisseurs ayant une tolérance au risque importante et un horizon d'investissement long terme (>5 ans).\n\n📊 Volatilité estimée : 16.9% (modérée)."
+    },
+    "Modéré": {
+      "allocation": {
+        "EQ_459": 14.6,
+        "EQ_908": 14.6,
+        "EQ_146": 2.0,
+        "EQ_13": 14.6,
+        "EQ_58": 14.6,
+        "VTIP": 8.0,
+        "BSV": 8.0,
+        "VGSH": 8.0,
+        "STIP": 6.0,
+        "DFIV": 9.6
+      },
+      "diagnostics": {
+        "converged": true,
+        "message": "Optimization terminated successfully",
+        "portfolio_vol": 11.49,
+        "vol_target": 12.0,
+        "vol_tolerance": 3.0,
+        "vol_diff": -0.51,
+        "portfolio_score": 1.163,
+        "n_assets": 10,
+        "n_bonds": 4,
+        "n_crypto": 0,
+        "crypto_max_allowed": 5.0,
+        "sectors": {
+          "La communication": 14.6,
+          "Finance": 14.6,
+          "Industries": 2.0,
+          "Santé": 14.6,
+          "Biens de consommation cycliques": 14.6,
+          "Bonds": 30.0,
+          "Diversified": 9.6
+        },
+        "bucket_exposure": {
+          "satellite": 31.2,
+          "core": 38.8,
+          "defensive": 30.0
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 38.8,
+            "target_min": 45.0,
+            "target_max": 55.0,
+            "in_range": false
+          },
+          "satellite": {
+            "actual": 31.2,
+            "target_min": 15.0,
+            "target_max": 25.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 30.0,
+            "target_min": 20.0,
+            "target_max": 30.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 2.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0
+      },
+      "justifications": {
+        "EQ_459": "Fox Corp Class A continue de croître grâce à l'augmentation de la consommation de contenu numérique. [SEC]",
+        "EQ_908": "Muthoot Finance est bien positionnée pour profiter de la demande croissante de services financiers en Inde. [SEC]",
+        "EQ_13": "Johnson & Johnson reste un pilier dans le secteur de la santé, offrant des produits essentiels. [SEC]",
+        "EQ_58": "TJX Inc. attire les consommateurs grâce à ses prix compétitifs, même en période d'incertitude. [MC]",
+        "DFIV": "L'ETF Dimensional International Value offre une exposition à des actions sous-évaluées à l'international. [TH]",
+        "VTIP": "Vanguard Short-Term Inflation-Protected Securities Index Fund protège contre l'inflation dans un contexte incertain. [TH]",
+        "BSV": "Vanguard Short-Term Bond ETF fournit une stabilité dans un environnement de taux d'intérêt fluctuants. [MC]",
+        "VGSH": "Vanguard Short-Term Treasury Fund est une option sûre dans un portefeuille modéré. [TH]",
+        "STIP": "iShares 0-5 Year TIPS Bond ETF offre une protection contre l'inflation à court terme. [TH]",
+        "EQ_146": "Cummins Inc. est bien positionnée pour bénéficier de la transition vers des solutions énergétiques durables. [SEC]"
+      },
+      "comment": "Le portefeuille modéré est bien diversifié, avec une combinaison d'actions et d'obligations qui vise à équilibrer la croissance et la protection. Les investissements dans des ETFs et des obligations à court terme ajoutent une sécurité supplémentaire, ce qui est essentiel dans un environnement de marché mixte.\n\n⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟡 PROFIL MODÉRÉ : Ce portefeuille présente un niveau de risque modéré. Il convient aux investisseurs acceptant une certaine volatilité avec un horizon moyen terme (3-5 ans)."
+    },
+    "Stable": {
+      "allocation": {
+        "JMST": 10.31,
+        "XHLF": 10.31,
+        "SHV": 10.31,
+        "SGOV": 10.31,
+        "TBIL": 12.37,
+        "EQ_13": 10.31,
+        "EQ_58": 10.31,
+        "EQ_533": 10.31,
+        "EQ_606": 5.15,
+        "EQ_27": 8.25,
+        "EQ_586": 2.06
+      },
+      "diagnostics": {
+        "converged": false,
+        "message": "Fallback vol-aware",
+        "portfolio_vol": 6.93,
+        "vol_target": 8.0,
+        "vol_tolerance": 4.0,
+        "vol_diff": -1.07,
+        "portfolio_score": 0.933,
+        "n_assets": 11,
+        "n_bonds": 5,
+        "n_crypto": 0,
+        "crypto_max_allowed": 0.0,
+        "sectors": {
+          "Bonds": 53.61,
+          "Santé": 10.31,
+          "Biens de consommation cycliques": 10.31,
+          "Finance": 15.46,
+          "Technologie de l'information": 8.25,
+          "Services publics": 2.06
+        },
+        "bucket_exposure": {
+          "defensive": 53.61,
+          "core": 36.08,
+          "satellite": 10.31
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 36.1,
+            "target_min": 30.0,
+            "target_max": 40.0,
+            "in_range": true
+          },
+          "satellite": {
+            "actual": 10.3,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "defensive": {
+            "actual": 53.6,
+            "target_min": 45.0,
+            "target_max": 60.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 0.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0
+      },
+      "justifications": {
+        "TBIL": "L'ETF US Treasury 3 Month Bill offre une sécurité dans un environnement de taux d'intérêt bas. [TH]",
+        "JMST": "JPMorgan Ultra-Short Municipal Income Fund est une option stable pour les investisseurs cherchant à minimiser le risque. [TH]",
+        "XHLF": "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF est conçu pour réduire la volatilité. [TH]",
+        "SHV": "iShares Short Treasury Bond ETF offre une protection contre les fluctuations du marché. [TH]",
+        "SGOV": "iShares 0-3 Month Treasury Bond ETF est une option sûre pour les investisseurs conservateurs. [TH]",
+        "EQ_13": "Johnson & Johnson continue d'être un choix solide dans le secteur de la santé. [SEC]",
+        "EQ_58": "TJX Inc. offre une stabilité grâce à sa position dans le secteur des biens de consommation. [SEC]",
+        "EQ_533": "Allianz est bien positionnée pour bénéficier de la croissance dans le secteur financier. [SEC]",
+        "EQ_27": "Cisco Systems Inc. reste un leader dans le secteur technologique, offrant des produits essentiels. [SEC]",
+        "EQ_606": "Assicurazioni Generali est un acteur clé dans le secteur des assurances, offrant une stabilité. [SEC]",
+        "EQ_586": "Engie SA est bien positionnée pour profiter de la transition énergétique. [SEC]"
+      },
+      "comment": "Le portefeuille stable est conçu pour minimiser le risque tout en offrant une exposition à des actifs de qualité. Avec une forte concentration sur les obligations et des actions défensives, il est adapté aux investisseurs cherchant à préserver leur capital dans un environnement de marché inpossible. Les choix d'actifs reflètent une approche prudente face aux fluctuations économiques.\n\n⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟢 PROFIL STABLE : Ce portefeuille vise une volatilité réduite. Il convient aux investisseurs prudents avec un horizon court à moyen terme."
+    }
+  }
+}
