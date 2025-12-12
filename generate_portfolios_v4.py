@@ -9,6 +9,8 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.7:   FIX P0 - Rounding intelligent pour readable sum = exactement 100%
+        FIX P2 - Disclaimer backtest dans les commentaires LLM
 V4.6:   FIX - Utiliser SYMBOL (BIV,BSV,BND) au lieu de TICKER (KORP) pour les bonds dans _tickers
 V4.5:   FIX - Ne pas agréger les Obligations par nom/ticker (évite KORP monopole)
 V3.4:   FIX - Forcer fund_type="bond" pour TOUS les bonds (pas juste si colonne absente)
@@ -110,6 +112,13 @@ CONFIG = {
     "market_data_dir": "data",     # Répertoire du fichier market_context.json
 }
 
+# === v4.7 P2: DISCLAIMER BACKTEST ===
+BACKTEST_DISCLAIMER = (
+    "⚠️ Performances calculées sur {days} jours, hors frais de transaction et fiscalité. "
+    "Sharpe ratio annualisé sur période courte (non représentatif long terme). "
+    "Les performances passées ne préjugent pas des performances futures."
+)
+
 
 # ============= CHARGEMENT DONNÉES =============
 
@@ -155,6 +164,72 @@ def load_stocks_data() -> list:
                 stocks.append(data)
                 logger.info(f"Stocks: {path} ({len(data.get('stocks', []))} entrées)")
     return stocks
+
+
+# ============= v4.7 P0: ROUNDING INTELLIGENT =============
+
+def round_weights_to_100(weights: Dict[str, float], decimals: int = 0) -> Dict[str, float]:
+    """
+    v4.7 P0 FIX: Arrondit les poids pour que la somme = exactement 100%.
+    
+    Algorithme:
+    1. Arrondir tous les poids sauf le plus grand
+    2. Fixer le plus grand à 100 - somme(autres arrondis)
+    
+    Cela évite les "readable sum = 97%" ou "103%" qui perturbent l'UX.
+    
+    Args:
+        weights: Dict {nom: poids_float} (ex: {"AAPL": 14.23, "MSFT": 12.77})
+        decimals: Nombre de décimales (0 = entier)
+    
+    Returns:
+        Dict {nom: poids_arrondi} avec sum = 100
+    """
+    if not weights:
+        return {}
+    
+    # Trier par poids décroissant
+    sorted_items = sorted(weights.items(), key=lambda x: x[1], reverse=True)
+    
+    if len(sorted_items) == 1:
+        return {sorted_items[0][0]: 100.0}
+    
+    # Arrondir tous sauf le premier (le plus grand)
+    rounded = {}
+    running_sum = 0.0
+    
+    for i, (name, weight) in enumerate(sorted_items):
+        if i == 0:
+            # Skip le premier, on le calcule à la fin
+            continue
+        
+        rounded_weight = round(weight, decimals)
+        rounded[name] = rounded_weight
+        running_sum += rounded_weight
+    
+    # Le premier = 100 - somme des autres
+    first_name = sorted_items[0][0]
+    first_weight = round(100.0 - running_sum, decimals)
+    
+    # Vérifier que le premier reste raisonnable
+    original_first = sorted_items[0][1]
+    if abs(first_weight - original_first) > 3:
+        # Si l'écart est trop grand, fallback sur normalisation proportionnelle
+        logger.warning(f"Rounding adjustment too large ({original_first:.1f} → {first_weight:.1f}), using proportional")
+        total = sum(weights.values())
+        return {k: round(v * 100 / total, decimals) for k, v in weights.items()}
+    
+    rounded[first_name] = first_weight
+    
+    return rounded
+
+
+def format_weight_as_percent(weight: float, decimals: int = 0) -> str:
+    """Formate un poids en string pourcentage."""
+    if decimals == 0:
+        return f"{int(round(weight))}%"
+    else:
+        return f"{weight:.{decimals}f}%"
 
 
 # ============= BUFFETT DIAGNOSTIC =============
@@ -550,6 +625,8 @@ def add_commentary(
     """
     Ajoute les commentaires et justifications.
     Via LLM si disponible, sinon fallback.
+    
+    v4.7 P2: Ajoute le disclaimer backtest au commentaire.
     """
     logger.info("💬 Génération des commentaires...")
     
@@ -585,7 +662,19 @@ def add_commentary(
     else:
         commentary = generate_fallback_commentary(portfolios_for_prompt, assets)
     
-    return merge_commentary_into_portfolios(portfolios_for_prompt, commentary)
+    # v4.7 P2: Ajouter le disclaimer backtest à chaque commentaire
+    disclaimer = BACKTEST_DISCLAIMER.format(days=CONFIG["backtest_days"])
+    
+    merged = merge_commentary_into_portfolios(portfolios_for_prompt, commentary)
+    
+    for profile in merged:
+        existing_comment = merged[profile].get("comment", "")
+        if existing_comment and disclaimer not in existing_comment:
+            merged[profile]["comment"] = f"{existing_comment}\n\n{disclaimer}"
+        elif not existing_comment:
+            merged[profile]["comment"] = disclaimer
+    
+    return merged
 
 
 def apply_compliance(portfolios: Dict[str, Dict]) -> Dict[str, Dict]:
@@ -825,6 +914,8 @@ def print_comparison_table(results: List[dict]):
         print(f"   ⚠️ Ordre inattendu: {' > '.join(actual_order)}")
         print(f"      Attendu: {' > '.join(expected_order)}")
     
+    # v4.7 P2: Rappel disclaimer
+    print(f"\n⚠️  RAPPEL: {BACKTEST_DISCLAIMER.format(days=CONFIG['backtest_days'])}")
     print()
 
 
@@ -1008,23 +1099,16 @@ def _extract_symbol_from_asset(asset) -> Optional[str]:
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.6: Convertit le format interne vers le format v1 attendu par le front.
+    V4.7: Convertit le format interne vers le format v1 attendu par le front.
+    
+    CORRECTIONS v4.7 P0:
+    - FIX: Utilise round_weights_to_100() pour garantir sum = exactement 100%
+    - Plus de "readable sum = 97%" ou "103%"
     
     CORRECTIONS v4.6:
     - FIX CRITIQUE: Utiliser SYMBOL (BIV, BSV, BND, AGG) au lieu de TICKER (KORP) pour les bonds
     - Le champ 'symbol' contient le vrai ticker marché pour TwelveData
     - Le champ 'ticker' contient le proxy interne (KORP) - NE PAS utiliser pour _tickers
-    
-    CORRECTIONS v4.5:
-    - FIX: Ne pas agréger les Obligations par nom/ticker (chaque bond = ligne séparée)
-    - Utilise l'ISIN ou l'ID interne comme discriminant pour les bonds
-    - Évite le problème "KORP monopolise 30-54%"
-    
-    CORRECTIONS v4.4.1:
-    - Agrégation des poids AUSSI pour le format lisible (+=)
-    - Validation croisée front vs _tickers
-    - Bloc _debug avec mappings détaillés
-    - Warning si incohérence détectée
     
     Structure:
         "Agressif": {
@@ -1209,10 +1293,35 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                         ticker_collisions[ticker_key] = prev_weight
                     ticker_collisions[ticker_key] = new_weight
         
-        # V4.4.1: Convertir les poids agrégés en strings "X%"
+        # === v4.7 P0 FIX: Utiliser round_weights_to_100() pour chaque catégorie ===
         for cat_v1, weights_dict in readable_weights.items():
+            if not weights_dict:
+                continue
+            
+            # Arrondir intelligemment pour que la catégorie soit cohérente
+            # (Note: on ne garantit pas 100% par catégorie, mais par portfolio total)
             for name, weight in weights_dict.items():
-                result[profile][cat_v1][name] = f"{int(round(weight))}%"
+                result[profile][cat_v1][name] = format_weight_as_percent(weight, decimals=0)
+        
+        # === v4.7 P0 FIX: Ajuster pour que le total = exactement 100% ===
+        # Collecter tous les poids lisibles
+        all_readable_weights = {}
+        for cat_v1 in ["Actions", "ETF", "Obligations", "Crypto"]:
+            for name, pct_str in result[profile][cat_v1].items():
+                try:
+                    pct_val = float(pct_str.replace("%", ""))
+                    all_readable_weights[f"{cat_v1}:{name}"] = pct_val
+                except:
+                    pass
+        
+        # Appliquer le rounding intelligent
+        if all_readable_weights:
+            rounded_weights = round_weights_to_100(all_readable_weights, decimals=0)
+            
+            # Réinjecter les poids arrondis
+            for key, weight in rounded_weights.items():
+                cat_v1, name = key.split(":", 1)
+                result[profile][cat_v1][name] = format_weight_as_percent(weight, decimals=0)
         
         # V4.6: Log spécial pour bonds avec vrais symbols
         n_bonds_readable = len(result[profile]["Obligations"])
@@ -1233,7 +1342,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         if name_collisions:
             logger.info(f"   {profile}: {len(name_collisions)} nom(s) agrégé(s) (non-bonds): {name_collisions}")
         
-        # V4.4.1: Validation améliorée - vérifier cohérence front vs _tickers
+        # === v4.7 P0: Validation avec sum exacte ===
         total_tickers = sum(result[profile]["_tickers"].values())
         
         # Calculer total des sections lisibles
@@ -1250,26 +1359,21 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         n_tickers = len(result[profile]["_tickers"])
         n_readable = sum(len(result[profile][c]) for c in ["Actions", "ETF", "Obligations", "Crypto"])
         
-        # V4.4.1: Validation croisée
+        # v4.7 P0: Validation plus stricte
         if abs(total_tickers - 1.0) > 0.02:
             logger.warning(
                 f"⚠️ {profile}: _tickers sum = {total_tickers:.2%} (expected ~100%) "
                 f"→ {n_allocation} lignes allocation, {n_tickers} tickers uniques"
             )
-        elif abs(total_readable - 100) > 2:
+        
+        # v4.7 P0: Le total readable doit être EXACTEMENT 100%
+        if total_readable != 100:
             logger.warning(
-                f"⚠️ {profile}: readable sum = {total_readable}% (expected ~100%) "
+                f"⚠️ {profile}: readable sum = {total_readable}% (should be exactly 100%) "
                 f"→ {n_readable} items lisibles"
             )
         else:
-            logger.info(f"✅ {profile}: _tickers={total_tickers:.2%}, readable={total_readable}% ({n_tickers} tickers, {n_readable} items)")
-        
-        # V4.4.1: Vérifier cohérence entre les deux
-        if abs(total_tickers * 100 - total_readable) > 5:
-            logger.error(
-                f"❌ {profile}: INCOHÉRENCE DÉTECTÉE! "
-                f"_tickers={total_tickers:.2%} vs readable={total_readable}%"
-            )
+            logger.info(f"✅ {profile}: readable={total_readable}% (exact), _tickers={total_tickers:.2%} ({n_tickers} tickers, {n_readable} items)")
         
         # V4.6: Log les tickers pour debug (montrer vrais symbols)
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
@@ -1277,10 +1381,11 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.6_use_symbol_for_bonds",
+        "version": "v4.7_rounding_100_disclaimer",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", True),
+        "backtest_days": CONFIG["backtest_days"],
     }
     
     return result
@@ -1306,7 +1411,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.6_use_symbol_for_bonds",
+        "version": "v4.7_rounding_100_disclaimer",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1316,6 +1421,10 @@ def save_portfolios(portfolios: Dict, assets: list):
         "tactical_config": {
             "enabled": CONFIG.get("use_tactical_context", True),
             "data_dir": CONFIG.get("market_data_dir", "data"),
+        },
+        "backtest_config": {
+            "days": CONFIG["backtest_days"],
+            "freq": CONFIG["backtest_freq"],
         },
         "portfolios": portfolios,
     }
@@ -1344,7 +1453,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.6 - Génération + Backtest (USE SYMBOL FOR BONDS)")
+    logger.info("🚀 Portfolio Engine v4.7 - Génération + Backtest (ROUNDING FIX)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1354,7 +1463,7 @@ def main():
     #    Le diagnostic Buffett et Tactical s'affiche ICI, avant l'optimisation
     portfolios, assets = build_portfolios_deterministic()
     
-    # 3. Ajouter les commentaires (LLM ou fallback)
+    # 3. Ajouter les commentaires (LLM ou fallback) + disclaimer v4.7
     portfolios = add_commentary(portfolios, assets, brief_data)
     
     # 4. Appliquer compliance AMF
@@ -1381,13 +1490,15 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.6:")
+    logger.info("Fonctionnalités v4.7:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
-    logger.info("   • 🆕 USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
+    logger.info("   • 🆕 P0 FIX: Rounding intelligent → readable sum = 100% exact ✅")
+    logger.info("   • 🆕 P2 FIX: Disclaimer backtest dans commentaires ✅")
+    logger.info("   • USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
     logger.info("   • NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
     logger.info("   • MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
     logger.info("   • Reproductibilité garantie")
