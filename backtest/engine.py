@@ -2,6 +2,11 @@
 """
 Moteur de backtest pour le Portfolio Engine v4.
 
+V4 (IC Review 2024-12-15 - ChatGPT challenge):
+- ACTION 2: Masquer Sharpe annualisé si période < 252j
+- Ajout sharpe_display pour le front
+- Sharpe = None si période insuffisante (évite "7.3" affiché)
+
 V3 (IC Review 2024-12-15):
 - CRITICAL: risk_free_rate 0.0 → 0.045 (Fed Funds rate)
 - CRITICAL: Ajout disclaimer AMF obligatoire
@@ -79,6 +84,11 @@ def compute_backtest_stats(
     """
     Calcule les statistiques de performance.
     
+    v4 IC FIX (ChatGPT challenge):
+    - ACTION 2: Masquer Sharpe annualisé si période < 252j
+    - sharpe_ratio = None si période insuffisante
+    - sharpe_display pour affichage front
+    
     v3 IC FIX:
     - risk_free_rate par défaut = 4.5% (Fed Funds)
     - Ajout warning si période < 1 an
@@ -109,16 +119,33 @@ def compute_backtest_stats(
     vol = daily_returns.std() * np.sqrt(252)
     stats["volatility_pct"] = round(vol * 100, 2)
     
-    # v3 FIX: Sharpe Ratio avec risk_free_rate réaliste
-    excess_return = daily_returns.mean() - (risk_free_rate / 252)
-    if daily_returns.std() > 0:
-        sharpe = (excess_return / daily_returns.std()) * np.sqrt(252)
-        stats["sharpe_ratio"] = round(sharpe, 2)
-    else:
-        stats["sharpe_ratio"] = 0.0
-    
     # v3 FIX: Stocker le taux sans risque utilisé
     stats["risk_free_rate_pct"] = round(risk_free_rate * 100, 2)
+    
+    # Calcul Sharpe (toujours calculé en interne)
+    excess_return = daily_returns.mean() - (risk_free_rate / 252)
+    if daily_returns.std() > 0:
+        sharpe_computed = (excess_return / daily_returns.std()) * np.sqrt(252)
+    else:
+        sharpe_computed = 0.0
+    
+    # ===== v4 ACTION 2: MASQUER SHARPE SI PÉRIODE < 252j =====
+    if n_days < MIN_DAYS_FOR_STATS:
+        # Période insuffisante → ne pas afficher Sharpe annualisé
+        stats["sharpe_ratio"] = None  # v4 FIX: masqué pour le front
+        stats["sharpe_computed"] = round(sharpe_computed, 2)  # Conservé pour debug
+        stats["sharpe_display"] = "Non calculable (période < 1 an)"
+        stats["sharpe_significant"] = False
+        
+        # Sharpe quotidien (non annualisé) comme alternative
+        sharpe_daily = excess_return / daily_returns.std() if daily_returns.std() > 0 else 0
+        stats["sharpe_daily"] = round(sharpe_daily, 4)
+    else:
+        # Période suffisante → Sharpe OK
+        stats["sharpe_ratio"] = round(sharpe_computed, 2)
+        stats["sharpe_display"] = f"{sharpe_computed:.2f}"
+        stats["sharpe_significant"] = True
+        stats["sharpe_daily"] = None
     
     # Max Drawdown
     rolling_max = equity_curve.expanding().max()
@@ -321,6 +348,11 @@ def run_backtest_fixed_weights(
     C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
     Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
     
+    v4 IC FIX (ChatGPT challenge):
+    - ACTION 2: Sharpe masqué si période < 252j
+    - sharpe_ratio = None dans ce cas
+    - sharpe_display pour affichage conditionnel
+    
     v3 IC FIX:
     - risk_free_rate = 4.5% (Fed Funds)
     - Disclaimer AMF inclus dans stats
@@ -428,7 +460,7 @@ def run_backtest_fixed_weights(
         **effective_weights
     }])
     
-    # v3 FIX: Stats avec risk_free_rate = 4.5%
+    # v4 FIX: Stats avec Sharpe masqué si période < 252j
     stats = compute_backtest_stats(
         equity_series, 
         returns_series, 
@@ -468,7 +500,9 @@ def run_backtest_fixed_weights(
         if benchmark_symbol:
             logger.warning(f"Benchmark {benchmark_symbol} not found in prices data")
     
-    logger.info(f"Backtest complete: {stats['total_return_pct']}% return, {stats['sharpe_ratio']} Sharpe (Rf={DEFAULT_RISK_FREE_RATE*100}%), {stats['volatility_pct']}% vol")
+    # v4: Log avec sharpe_display
+    sharpe_display = stats.get("sharpe_display", "N/A")
+    logger.info(f"Backtest complete: {stats['total_return_pct']}% return, Sharpe={sharpe_display} (Rf={DEFAULT_RISK_FREE_RATE*100}%), {stats['volatility_pct']}% vol")
     
     return BacktestResult(
         equity_curve=equity_series,
@@ -725,7 +759,7 @@ def run_backtest(
     trades_df = pd.DataFrame(trades)
     weights_df = pd.DataFrame(weights_history)
     
-    # v3 FIX: Stats avec risk_free_rate = 4.5%
+    # v4 FIX: Stats avec Sharpe masqué si période < 252j
     stats = compute_backtest_stats(
         equity_series, 
         returns_series, 
@@ -760,7 +794,9 @@ def run_backtest(
         if benchmark_symbol:
             logger.warning(f"Benchmark {benchmark_symbol} not found in prices data")
     
-    logger.info(f"Backtest complete: {stats['total_return_pct']}% return, {stats['sharpe_ratio']} Sharpe")
+    # v4: Log avec sharpe_display
+    sharpe_display = stats.get("sharpe_display", "N/A")
+    logger.info(f"Backtest complete: {stats['total_return_pct']}% return, Sharpe={sharpe_display}")
     
     return BacktestResult(
         equity_curve=equity_series,
@@ -795,7 +831,16 @@ def print_backtest_report(result: BacktestResult):
     print(f"Total Return:     {result.stats.get('total_return_pct', 0):>8.2f}%")
     print(f"CAGR:             {result.stats.get('cagr_pct', 0):>8.2f}%")
     print(f"Volatility:       {result.stats.get('volatility_pct', 0):>8.2f}%")
-    print(f"Sharpe Ratio:     {result.stats.get('sharpe_ratio', 0):>8.2f}")
+    
+    # v4: Affichage conditionnel du Sharpe
+    sharpe_display = result.stats.get("sharpe_display", "N/A")
+    sharpe_significant = result.stats.get("sharpe_significant", False)
+    
+    if sharpe_significant:
+        print(f"Sharpe Ratio:     {sharpe_display:>8}")
+    else:
+        print(f"Sharpe Ratio:     {sharpe_display}")  # "Non calculable (période < 1 an)"
+    
     print(f"  (Rf={result.stats.get('risk_free_rate_pct', 0):.1f}%)")
     print(f"Max Drawdown:     {result.stats.get('max_drawdown_pct', 0):>8.2f}%")
     
