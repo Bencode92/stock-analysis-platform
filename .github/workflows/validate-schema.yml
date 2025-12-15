@@ -1,19 +1,13 @@
-name: Validate Portfolio Schema
+name: Validate Portfolio Schema (PR Only)
+
+# Ce workflow valide le schéma sur les PRs AVANT merge
+# La validation principale est intégrée dans generate_portfolios.yml
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'data/portfolios*.json'
-      - 'data/portfolio_*.json'
-      - 'schemas/**'
-      - 'scripts/validate_schema.py'
-      - '.github/workflows/validate-schema.yml'
   pull_request:
     branches: [main]
     paths:
       - 'data/portfolios*.json'
-      - 'data/portfolio_*.json'
       - 'schemas/**'
       - 'scripts/validate_schema.py'
   workflow_dispatch:
@@ -46,25 +40,25 @@ jobs:
       - name: Validate schema syntax
         run: |
           python -c "
-import json
-import sys
-from pathlib import Path
+          import json
+          import sys
+          from pathlib import Path
 
-schema_path = Path('schemas/portfolio_output.json')
-if not schema_path.exists():
-    print('ERROR: Schema file not found')
-    sys.exit(1)
+          schema_path = Path('schemas/portfolio_output.json')
+          if not schema_path.exists():
+              print('ERROR: Schema file not found')
+              sys.exit(1)
 
-try:
-    with open(schema_path) as f:
-        schema = json.load(f)
-    print(f'✓ Schema syntax valid: {schema_path}')
-    print(f'  Title: {schema.get(\"title\", \"N/A\")}')
-    print(f'  Definitions: {len(schema.get(\"definitions\", {}))}')
-except json.JSONDecodeError as e:
-    print(f'ERROR: Invalid JSON in schema: {e}')
-    sys.exit(1)
-"
+          try:
+              with open(schema_path) as f:
+                  schema = json.load(f)
+              print(f'✓ Schema syntax valid: {schema_path}')
+              print(f'  Title: {schema.get(\"title\", \"N/A\")}')
+              print(f'  Definitions: {len(schema.get(\"definitions\", {}))}')
+          except json.JSONDecodeError as e:
+              print(f'ERROR: Invalid JSON in schema: {e}')
+              sys.exit(1)
+          "
       
       - name: Validate portfolio files
         run: |
@@ -73,30 +67,6 @@ except json.JSONDecodeError as e:
           else
             python scripts/validate_schema.py --all --verbose
           fi
-      
-      - name: Check for _manifest presence (warning only)
-        run: |
-          python -c "
-import json
-import sys
-from pathlib import Path
-
-warnings = []
-for f in Path('data').glob('portfolios*.json'):
-    with open(f) as fp:
-        data = json.load(fp)
-    if '_manifest' not in data:
-        warnings.append(f'{f.name}: missing _manifest (recommended for reproducibility)')
-    if '_limitations' not in data:
-        warnings.append(f'{f.name}: missing _limitations (recommended for transparency)')
-
-if warnings:
-    print('⚠️  Warnings (non-blocking):')
-    for w in warnings:
-        print(f'  - {w}')
-else:
-    print('✓ All recommended fields present')
-"
       
       - name: Generate validation report
         if: always()
