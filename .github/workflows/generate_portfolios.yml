@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles v4.4 + Backtest
+name: Génération des Portefeuilles v4.5 + Backtest + Validation
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
       - name: 📦 Installer les dépendances
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy scipy requests beautifulsoup4 lxml openai pyyaml
+          pip install pandas numpy scipy requests beautifulsoup4 lxml openai pyyaml jsonschema
 
       # ============= v4.4 NEW: Generate Market Context =============
       - name: 🌍 Générer market_context.json (GPT unifié)
@@ -66,6 +66,28 @@ jobs:
 
       - name: 🚀 Exécuter le moteur v4.4 + Backtest
         run: python generate_portfolios_v4.py
+
+      # ============= v4.5 NEW: Schema Validation =============
+      - name: ✅ Valider le schéma JSON
+        run: |
+          echo "🔍 Validation du schéma portfolios.json..."
+          
+          if [ ! -f data/portfolios.json ]; then
+            echo "❌ ERREUR: portfolios.json non généré!"
+            exit 1
+          fi
+          
+          # Validation avec le script dédié
+          python scripts/validate_schema.py data/portfolios.json --verbose
+          
+          VALIDATION_EXIT=$?
+          if [ $VALIDATION_EXIT -ne 0 ]; then
+            echo "❌ ERREUR: Validation du schéma échouée!"
+            echo "   Le fichier portfolios.json ne respecte pas le contrat de sortie."
+            exit 1
+          fi
+          
+          echo "✅ Validation du schéma réussie"
 
       - name: 🧾 Check outputs
         if: always()
@@ -117,7 +139,20 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v4.4 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v4.5 Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Schema Validation Status
+          echo "### ✅ Schema Validation" >> $GITHUB_STEP_SUMMARY
+          if [ -f data/portfolios.json ]; then
+            if python scripts/validate_schema.py data/portfolios.json 2>/dev/null; then
+              echo "| Status | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Status | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "| Status | ⚠️ No file |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Market Context Summary
@@ -201,7 +236,7 @@ jobs:
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v4.4 + Market Context + Backtest 90j" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v4.5 + Market Context + Backtest 90j + Schema ✓" || echo "rien à committer"
 
           # Push avec retry robuste en cas de divergence
           git push || (git pull --rebase origin main && git push)
