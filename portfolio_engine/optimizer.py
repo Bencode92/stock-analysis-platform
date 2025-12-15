@@ -1,10 +1,15 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.12 — Stable Fallback Certified
+Optimiseur de portefeuille v6.13 — Stable Fallback Heuristic
+
+CHANGEMENTS v6.13 (Conformité AMF - P0-9):
+1. FIX WORDING: "Certified" → "Heuristic" partout (évite terme trompeur)
+2. FIX WORDING: "fallback_certified" → "fallback_heuristic"
+3. Documentation mise à jour pour transparence
 
 CHANGEMENTS v6.12 (IC Review - ChatGPT validation finale):
 1. STABLE FALLBACK OFFICIEL: Skip SLSQP pour Stable (contraintes mathématiquement incompatibles)
-2. Nouveau mode "fallback_certified" avec documentation claire
+2. Nouveau mode "fallback_heuristic" avec documentation claire
 3. Justification: Markowitz infeasible sous contraintes strictes Stable
 
 CHANGEMENTS v6.11 (IC Review - ChatGPT challenge):
@@ -104,7 +109,7 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6.12 =============
+# ============= CONSTANTES v6.13 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -162,7 +167,8 @@ BUCKET_CONSTRAINT_RELAXATION = {
     "Agressif": 0.05,  # ±5% standard
 }
 
-# v6.12 NEW: Profils qui utilisent le fallback certifié (skip SLSQP)
+# v6.13 FIX: Renommage "Certified" → "Heuristic" (conformité AMF P0-9)
+# v6.12 NEW: Profils qui utilisent le fallback heuristique (skip SLSQP)
 # Justification: contraintes mathématiquement incompatibles avec Markowitz
 FORCE_FALLBACK_PROFILES = {"Stable"}
 
@@ -661,18 +667,24 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.12 =============
+# ============= PORTFOLIO OPTIMIZER v6.13 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.12.
+    Optimiseur mean-variance v6.13.
+    
+    CHANGEMENTS v6.13 (Conformité AMF - P0-9):
+    1. FIX WORDING: "Certified" → "Heuristic" (terme non-trompeur)
+       - Le profil Stable utilise une allocation heuristique (constraint-first)
+       - PAS une optimisation Markowitz (contraintes incompatibles)
+       - Transparence = conformité AMF
     
     CHANGEMENTS v6.12 (IC Review - ChatGPT validation finale):
     1. STABLE FALLBACK OFFICIEL: Skip SLSQP pour Stable
        - Contraintes (vol 6%±3%, bonds_min 35%, buckets 45-60% DEFENSIVE)
        - Espace mathématiquement incompatible avec optimisation Markowitz
        - Fallback vol-aware = solution robuste et déterministe
-    2. Nouveau mode "fallback_certified" avec documentation claire
+    2. Nouveau mode "fallback_heuristic" avec documentation claire
     
     CHANGEMENTS v6.11 (IC Review - ChatGPT challenge):
     1. ACTION 1: max_single_bond Stable 12% → 18% (réduit géométrie contraintes)
@@ -1177,7 +1189,7 @@ class PortfolioOptimizer:
         """
         Optimisation mean-variance avec covariance hybride.
         
-        v6.12: STABLE utilise le fallback certifié (skip SLSQP).
+        v6.13: STABLE utilise le fallback heuristique (skip SLSQP).
         Justification: Les contraintes Stable (vol 6%±3%, bonds_min 35%, 
         buckets DEFENSIVE 45-60%) créent un espace mathématiquement 
         incompatible avec l'optimisation Markowitz.
@@ -1192,7 +1204,8 @@ class PortfolioOptimizer:
         cov, cov_diagnostics = self.compute_covariance(candidates)
         
         # ============================================================
-        # v6.12 NEW: STABLE FALLBACK CERTIFIED
+        # v6.13 FIX: Renommage "Certified" → "Heuristic"
+        # v6.12 NEW: STABLE FALLBACK HEURISTIC
         # ============================================================
         # Stable profile: contraintes trop strictes pour Markowitz
         # - vol_target 6% ± 3% (fenêtre 3%-9%)
@@ -1205,7 +1218,7 @@ class PortfolioOptimizer:
         
         if profile.name in FORCE_FALLBACK_PROFILES:
             logger.info(
-                f"🔧 {profile.name}: Utilisation du FALLBACK CERTIFIÉ "
+                f"🔧 {profile.name}: Utilisation du FALLBACK HEURISTIC "
                 f"(contraintes incompatibles avec Markowitz)"
             )
             allocation = self._fallback_allocation(candidates, profile, cov)
@@ -1214,7 +1227,8 @@ class PortfolioOptimizer:
                 "Stable profile: strict constraints (vol 6%±3%, bonds_min 35%, "
                 "DEFENSIVE 45-60%) mathematically incompatible with Markowitz optimization"
             )
-            optimization_mode = "fallback_certified"
+            # v6.13 FIX: "certified" → "heuristic"
+            optimization_mode = "fallback_heuristic"
             
         else:
             # === SLSQP pour Agressif et Modéré ===
@@ -1350,13 +1364,13 @@ class PortfolioOptimizer:
                     "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
                 }
         
-        # v6.12: Diagnostics enrichis avec mode certifié
+        # v6.13 FIX: Diagnostics avec mode heuristique (pas "certified")
         diagnostics = to_python_native({
             "converged": optimizer_converged,
-            "optimization_mode": optimization_mode,  # v6.12: slsqp | fallback_certified | fallback_*
+            "optimization_mode": optimization_mode,  # v6.13: slsqp | fallback_heuristic | fallback_*
             "fallback_reason": fallback_reason,
-            "fallback_certified": profile.name in FORCE_FALLBACK_PROFILES,  # v6.12 NEW
-            "message": "Fallback certifié (contraintes strictes)" if profile.name in FORCE_FALLBACK_PROFILES else (
+            "fallback_heuristic": profile.name in FORCE_FALLBACK_PROFILES,  # v6.13 FIX: renamed
+            "message": "Fallback heuristique (contraintes strictes)" if profile.name in FORCE_FALLBACK_PROFILES else (
                 "SLSQP converged" if optimizer_converged else f"Fallback: {fallback_reason}"
             ),
             "portfolio_vol": round(port_vol, 2),
@@ -1378,7 +1392,7 @@ class PortfolioOptimizer:
             "buffett_min_score": self.buffett_min_score,
         })
         
-        # v6.12: Log avec mode d'optimisation
+        # v6.13: Log avec mode d'optimisation
         opt_mode_display = optimization_mode.upper().replace("_", " ")
         logger.info(
             f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds, {crypto_in_allocation} crypto), "
@@ -1496,216 +1510,3 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 cat_normalized = "Crypto"
                 default_vol = 80
             elif category in ["etf", "etfs"]:
-                cat_normalized = "ETF"
-                default_vol = 15
-            else:
-                cat_normalized = "ETF"
-                default_vol = 15
-            
-            # === v6.7 FIX: Génération robuste des IDs ===
-            raw_id = item.get("id")
-            raw_ticker = item.get("ticker")
-            raw_symbol = item.get("symbol")
-            raw_isin = item.get("isin")
-            raw_name = item.get("name", "")
-            
-            if cat_normalized == "Obligations":
-                if _is_valid_id(raw_symbol):
-                    original_id = str(raw_symbol).strip()
-                elif _is_valid_id(raw_isin):
-                    original_id = str(raw_isin).strip()
-                elif _is_valid_id(raw_ticker):
-                    original_id = str(raw_ticker).strip()
-                elif _is_valid_id(raw_name):
-                    safe_name = str(raw_name)[:25].replace(" ", "_")
-                    original_id = f"BOND_{safe_name}_{len(assets)+1}"
-                else:
-                    original_id = f"BOND_{len(assets)+1}"
-            
-            elif cat_normalized == "Crypto":
-                if _is_valid_id(raw_symbol):
-                    original_id = str(raw_symbol).strip()
-                elif _is_valid_id(raw_id):
-                    original_id = str(raw_id).strip()
-                elif _is_valid_id(raw_name):
-                    original_id = str(raw_name).strip()
-                else:
-                    original_id = f"CRYPTO_{len(assets)+1}"
-            
-            else:
-                if _is_valid_id(raw_id):
-                    original_id = str(raw_id).strip()
-                elif _is_valid_id(raw_ticker):
-                    original_id = str(raw_ticker).strip()
-                elif _is_valid_id(raw_symbol):
-                    original_id = str(raw_symbol).strip()
-                elif _is_valid_id(raw_isin):
-                    original_id = str(raw_isin).strip()
-                elif _is_valid_id(raw_name):
-                    original_id = str(raw_name).strip()
-                else:
-                    original_id = f"ASSET_{len(assets)+1}"
-            
-            raw_vol = item.get("vol_3y") or item.get("vol30") or item.get("vol_annual") or item.get("vol")
-            vol_annual = _clean_float(raw_vol, default_vol, 1.0, 150.0)
-            
-            raw_score = item.get("score") or item.get("composite_score") or item.get("adjusted_score")
-            score = _clean_float(raw_score, 0.0, -100, 100)
-            
-            asset = Asset(
-                id=original_id,
-                name=item.get("name", original_id),
-                category=cat_normalized,
-                sector=item.get("sector", "Unknown"),
-                region=item.get("country", item.get("region", "Global")),
-                score=score,
-                vol_annual=vol_annual,
-                source_data=item,
-                buffett_score=item.get("buffett_score"),
-            )
-            
-            if cat_normalized == "Actions":
-                asset.corporate_group = get_corporate_group(asset.name)
-            
-            assets.append(asset)
-        
-        logger.info(f"Univers converti: {len(assets)} actifs")
-        return assets
-    
-    # Dict format
-    for eq in universe.get("equities", []):
-        original_id = eq.get("id") or eq.get("ticker") or eq.get("symbol") or eq.get("name", "")
-        if not original_id:
-            original_id = f"EQ_{len(assets)+1}"
-        
-        asset = Asset(
-            id=original_id,
-            name=eq.get("name", original_id),
-            category="Actions",
-            sector=eq.get("sector", "Unknown"),
-            region=eq.get("country", "Global"),
-            score=_clean_float(eq.get("score") or eq.get("composite_score"), 0.0, -100, 100),
-            vol_annual=_clean_float(eq.get("vol_3y") or eq.get("vol_annual"), 25.0, 1.0, 150.0),
-            source_data=eq,
-            buffett_score=eq.get("buffett_score"),
-        )
-        asset.corporate_group = get_corporate_group(asset.name)
-        assets.append(asset)
-    
-    for etf in universe.get("etfs", []):
-        original_id = etf.get("id") or etf.get("ticker") or etf.get("isin") or etf.get("name", "")
-        if not original_id:
-            original_id = f"ETF_{len([a for a in assets if 'ETF' in a.id])+1}"
-        
-        assets.append(Asset(
-            id=original_id,
-            name=etf.get("name", original_id),
-            category="ETF",
-            sector=etf.get("sector", "Diversified"),
-            region=etf.get("country", "Global"),
-            score=_clean_float(etf.get("score") or etf.get("composite_score"), 0.0, -100, 100),
-            vol_annual=_clean_float(etf.get("vol_3y") or etf.get("vol30"), 15.0, 1.0, 150.0),
-            source_data=etf,
-        ))
-    
-    for bond in universe.get("bonds", []):
-        raw_symbol = bond.get("symbol")
-        raw_isin = bond.get("isin")
-        raw_id = bond.get("id")
-        raw_name = bond.get("name", "")
-        
-        if _is_valid_id(raw_symbol):
-            original_id = str(raw_symbol).strip()
-        elif _is_valid_id(raw_isin):
-            original_id = str(raw_isin).strip()
-        elif _is_valid_id(raw_id):
-            original_id = str(raw_id).strip()
-        elif _is_valid_id(raw_name):
-            safe_name = str(raw_name)[:25].replace(" ", "_")
-            original_id = f"BOND_{safe_name}_{len(assets)+1}"
-        else:
-            original_id = f"BOND_{len([a for a in assets if 'BOND' in a.id])+1}"
-        
-        assets.append(Asset(
-            id=original_id,
-            name=bond.get("name", original_id),
-            category="Obligations",
-            sector="Bonds",
-            region=bond.get("country", "Global"),
-            score=_clean_float(bond.get("score") or bond.get("composite_score"), 0.0, -100, 100),
-            vol_annual=_clean_float(bond.get("vol_3y") or bond.get("vol30"), 5.0, 1.0, 50.0),
-            source_data=bond,
-        ))
-    
-    for cr in universe.get("crypto", []):
-        original_id = cr.get("id") or cr.get("symbol") or cr.get("name", "")
-        if not original_id:
-            original_id = f"CRYPTO_{len([a for a in assets if 'CRYPTO' in a.id])+1}"
-        
-        assets.append(Asset(
-            id=original_id,
-            name=cr.get("name", original_id),
-            category="Crypto",
-            sector="Crypto",
-            region="Global",
-            score=_clean_float(cr.get("score") or cr.get("composite_score"), 0.0, -100, 100),
-            vol_annual=_clean_float(cr.get("vol_3y") or cr.get("vol30"), 80.0, 10.0, 200.0),
-            source_data=cr,
-        ))
-    
-    logger.info(f"Univers converti: {len(assets)} actifs")
-    return assets
-
-
-# ============= VALIDATION =============
-
-def validate_portfolio(
-    allocation: Dict[str, float],
-    assets: List[Asset],
-    profile: ProfileConstraints
-) -> Tuple[bool, List[str]]:
-    """Validation post-optimisation."""
-    errors = []
-    warnings_list = []
-    
-    total = sum(allocation.values())
-    if abs(total - 100) > 0.1:
-        errors.append(f"Somme = {total:.2f}% (≠ 100%)")
-    
-    n_assets = len(allocation)
-    if n_assets < profile.min_assets:
-        warnings_list.append(f"Seulement {n_assets} lignes (< {profile.min_assets})")
-    if n_assets > profile.max_assets:
-        warnings_list.append(f"{n_assets} lignes (> {profile.max_assets})")
-    
-    for asset_id, weight in allocation.items():
-        if weight > profile.max_single_position + 0.1:
-            errors.append(f"{asset_id}: {weight:.2f}% > max {profile.max_single_position}%")
-    
-    asset_lookup = {a.id: a for a in assets}
-    category_weights = defaultdict(float)
-    sector_weights = defaultdict(float)
-    bucket_weights = defaultdict(float)
-    
-    for asset_id, weight in allocation.items():
-        asset = asset_lookup.get(asset_id)
-        if asset:
-            category_weights[asset.category] += weight
-            sector_weights[asset.sector] += weight
-            if asset.role:
-                bucket_weights[asset.role.value] += weight
-    
-    if category_weights["Crypto"] > profile.crypto_max + 0.1:
-        errors.append(f"Crypto = {category_weights['Crypto']:.2f}% > max {profile.crypto_max}%")
-    
-    if category_weights["Obligations"] < profile.bonds_min - 0.1:
-        errors.append(f"Bonds = {category_weights['Obligations']:.2f}% < min {profile.bonds_min}%")
-    
-    for sector, weight in sector_weights.items():
-        if weight > profile.max_sector + 0.1:
-            errors.append(f"Secteur {sector} = {weight:.2f}% > max {profile.max_sector}%")
-    
-    is_valid = len(errors) == 0
-    all_issues = errors + [f"⚠️ {w}" for w in warnings_list]
-    
-    return is_valid, all_issues

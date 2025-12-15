@@ -2,6 +2,11 @@
 """
 Génération des commentaires et justifications via LLM.
 
+v2.0 - Intégration sanitizer AMF:
+- Filtrage strict des outputs LLM
+- Logging des hits pour traçabilité
+- Rapport sanitizer dans diagnostics
+
 Le LLM ne décide PAS des poids — il génère uniquement :
 - Justifications par ligne (≤50 mots)
 - Commentaire global par portefeuille (≤200 mots)
@@ -16,6 +21,19 @@ import re
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 
+# v2.0: Import du sanitizer AMF
+try:
+    from compliance.sanitizer import (
+        sanitize_llm_output,
+        sanitize_portfolio_commentary,
+        sanitize_all_justifications,
+        SanitizeReport,
+    )
+    HAS_SANITIZER = True
+except ImportError:
+    HAS_SANITIZER = False
+    SanitizeReport = None
+
 logger = logging.getLogger("portfolio_engine.llm_commentary")
 
 
@@ -23,6 +41,14 @@ logger = logging.getLogger("portfolio_engine.llm_commentary")
 
 SYSTEM_PROMPT = """Tu es un analyste financier senior. Tu reçois des portefeuilles DÉJÀ OPTIMISÉS.
 Tu génères UNIQUEMENT des justifications et commentaires. Tu ne modifies JAMAIS les poids.
+
+RÈGLES STRICTES (conformité AMF):
+- NE JAMAIS utiliser: "recommandé", "idéal", "parfait", "garanti", "certifié", "sans risque"
+- NE JAMAIS utiliser: "adapté à vous", "pour vous", "selon votre profil"
+- NE JAMAIS utiliser: "vous devriez", "vous devez", "il faut que vous"
+- TOUJOURS utiliser des formulations neutres: "ce portefeuille modèle", "à titre informatif"
+- TOUJOURS mentionner les risques
+
 Réponds UNIQUEMENT en JSON valide, sans markdown."""
 
 COMMENTARY_PROMPT_TEMPLATE = """# PORTEFEUILLES À COMMENTER
@@ -80,6 +106,7 @@ class Commentary:
     justifications: Dict[str, str]
     comment: str
     compliance: str
+    sanitizer_report: Optional[Dict] = None  # v2.0: Rapport de sanitization
 
 
 # ============= PROMPT BUILDER =============
@@ -291,6 +318,70 @@ def _default_compliance() -> str:
     )
 
 
+# ============= v2.0: SANITIZATION POST-LLM =============
+
+def _sanitize_commentary(commentary: Dict[str, Commentary]) -> Dict[str, Commentary]:
+    """
+    v2.0: Applique le sanitizer AMF sur les outputs LLM.
+    
+    Stratégie:
+    1. Sanitize chaque justification
+    2. Sanitize chaque commentaire global
+    3. Log les hits pour audit
+    4. Stocker le rapport dans Commentary
+    """
+    if not HAS_SANITIZER:
+        logger.warning("[SANITIZER] Module compliance.sanitizer non disponible")
+        return commentary
+    
+    sanitized = {}
+    total_hits = 0
+    total_warnings = 0
+    
+    for profile, c in commentary.items():
+        # Sanitize justifications
+        cleaned_justifications, just_reports = sanitize_all_justifications(c.justifications)
+        
+        # Sanitize comment
+        cleaned_comment = sanitize_portfolio_commentary(c.comment)
+        
+        # Collecter les stats
+        profile_hits = sum(len(r.hits) for r in just_reports.values())
+        profile_warnings = sum(len(r.warnings) for r in just_reports.values())
+        
+        # Créer le rapport agrégé
+        sanitizer_report = {
+            "profile": profile,
+            "justifications_cleaned": len([r for r in just_reports.values() if r.sanitized]),
+            "total_hits": profile_hits,
+            "total_warnings": profile_warnings,
+            "hit_labels": list(set(h[0] for r in just_reports.values() for h in r.hits)),
+        }
+        
+        sanitized[profile] = Commentary(
+            justifications=cleaned_justifications,
+            comment=cleaned_comment,
+            compliance=c.compliance,
+            sanitizer_report=sanitizer_report,
+        )
+        
+        total_hits += profile_hits
+        total_warnings += profile_warnings
+        
+        if profile_hits > 0:
+            logger.info(
+                f"[SANITIZER] {profile}: {profile_hits} hits removed, "
+                f"{profile_warnings} warnings"
+            )
+    
+    if total_hits > 0:
+        logger.warning(
+            f"[SANITIZER] TOTAL: {total_hits} forbidden patterns removed from LLM output"
+        )
+    
+    return sanitized
+
+
 # ============= LLM CLIENT =============
 
 async def generate_commentary_async(
@@ -302,6 +393,8 @@ async def generate_commentary_async(
 ) -> Dict[str, Commentary]:
     """
     Génère les commentaires via l'API OpenAI (async).
+    
+    v2.0: Applique le sanitizer AMF sur les outputs.
     
     Args:
         portfolios: {profile: {"allocation": {...}, "diagnostics": {...}}}
@@ -331,7 +424,12 @@ async def generate_commentary_async(
     )
     
     response_text = response.choices[0].message.content
-    return parse_llm_response(response_text)
+    commentary = parse_llm_response(response_text)
+    
+    # v2.0: Sanitization AMF
+    commentary = _sanitize_commentary(commentary)
+    
+    return commentary
 
 
 def generate_commentary_sync(
@@ -343,6 +441,8 @@ def generate_commentary_sync(
 ) -> Dict[str, Commentary]:
     """
     Génère les commentaires via l'API OpenAI (sync).
+    
+    v2.0: Applique le sanitizer AMF sur les outputs.
     """
     if openai_client is None:
         raise ValueError("openai_client requis")
@@ -362,7 +462,12 @@ def generate_commentary_sync(
     )
     
     response_text = response.choices[0].message.content
-    return parse_llm_response(response_text)
+    commentary = parse_llm_response(response_text)
+    
+    # v2.0: Sanitization AMF
+    commentary = _sanitize_commentary(commentary)
+    
+    return commentary
 
 
 # ============= MERGE RESULTS =============
@@ -373,6 +478,8 @@ def merge_commentary_into_portfolios(
 ) -> Dict[str, Dict]:
     """
     Fusionne les commentaires LLM dans les portefeuilles.
+    
+    v2.0: Inclut le rapport sanitizer dans les diagnostics.
     
     Returns:
         Portefeuilles enrichis avec justifications, comment, compliance
@@ -392,6 +499,12 @@ def merge_commentary_into_portfolios(
             result[profile]["justifications"] = c.justifications
             result[profile]["comment"] = c.comment
             result[profile]["compliance"] = c.compliance
+            
+            # v2.0: Ajouter le rapport sanitizer aux diagnostics
+            if c.sanitizer_report:
+                if "diagnostics" not in result[profile]:
+                    result[profile]["diagnostics"] = {}
+                result[profile]["diagnostics"]["llm_sanitizer"] = c.sanitizer_report
     
     return result
 
@@ -428,16 +541,16 @@ def generate_fallback_commentary(
             justifications[asset_id] = (
                 f"{name} ({weight:.1f}%) : {category} "
                 f"{'du secteur ' + sector if sector else ''} "
-                f"sélectionné pour son profil risque/rendement adapté au profil {profile}."
+                f"sélectionné pour son profil risque/rendement dans ce portefeuille modèle {profile}."
             )
         
         # Commentaire générique
         n_assets = len(allocation)
         vol = diag.get("portfolio_vol", "N/A")
         comment = (
-            f"Portefeuille {profile} composé de {n_assets} lignes avec une volatilité "
+            f"Portefeuille modèle {profile} composé de {n_assets} lignes avec une volatilité "
             f"estimée de {vol}%. L'allocation vise un équilibre entre performance et "
-            f"gestion du risque adapté au profil d'investisseur {profile.lower()}."
+            f"gestion du risque. Ce portefeuille est présenté à titre informatif uniquement."
         )
         
         result[profile] = Commentary(
