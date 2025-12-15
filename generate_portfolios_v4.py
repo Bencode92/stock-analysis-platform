@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.7.1: FIX - Handle sharpe_ratio=None in print_comparison_table (TypeError fix)
 V4.7:   FIX P0 - Rounding intelligent pour readable sum = exactement 100%
         FIX P2 - Disclaimer backtest dans les commentaires LLM
 V4.6:   FIX - Utiliser SYMBOL (BIV,BSV,BND) au lieu de TICKER (KORP) pour les bonds dans _tickers
@@ -846,7 +847,11 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
 
 
 def print_comparison_table(results: List[dict]):
-    """Affiche un tableau comparatif des 3 profils."""
+    """
+    Affiche un tableau comparatif des 3 profils.
+    
+    v4.7.1 FIX: Handle sharpe_ratio=None to avoid TypeError.
+    """
     print("\n" + "="*80)
     print("📊 COMPARAISON DES 3 PROFILS (POIDS FIXES)")
     print("="*80)
@@ -873,9 +878,17 @@ def print_comparison_table(results: List[dict]):
         mod = by_profile.get("Modéré", {}).get(key, "N/A")
         stb = by_profile.get("Stable", {}).get(key, "N/A")
         
-        agg_str = f"{agg}{suffix}" if isinstance(agg, (int, float)) else str(agg)
-        mod_str = f"{mod}{suffix}" if isinstance(mod, (int, float)) else str(mod)
-        stb_str = f"{stb}{suffix}" if isinstance(stb, (int, float)) else str(stb)
+        # v4.7.1 FIX: Handle None values gracefully
+        def format_val(val, suffix):
+            if val is None:
+                return "N/A"
+            if isinstance(val, (int, float)):
+                return f"{val}{suffix}"
+            return str(val)
+        
+        agg_str = format_val(agg, suffix)
+        mod_str = format_val(mod, suffix)
+        stb_str = format_val(stb, suffix)
         
         print(f"{label:<25} | {agg_str:>15} | {mod_str:>15} | {stb_str:>15}")
     
@@ -884,35 +897,52 @@ def print_comparison_table(results: List[dict]):
     # Verdict
     print("\n🏆 VERDICT:")
     
-    sharpes = [(r["profile"], r["stats"].get("sharpe_ratio", -999)) 
-               for r in results if r.get("success")]
+    # v4.7.1 FIX: Filter out None sharpe values before comparison
+    sharpes = [
+        (r["profile"], r["stats"].get("sharpe_ratio")) 
+        for r in results 
+        if r.get("success") and r["stats"].get("sharpe_ratio") is not None
+    ]
     if sharpes:
         best = max(sharpes, key=lambda x: x[1])
         print(f"   Meilleur Sharpe: {best[0]} ({best[1]:.2f})")
+    else:
+        print(f"   Meilleur Sharpe: Non calculable (période < 1 an)")
     
-    returns = [(r["profile"], r["stats"].get("total_return_pct", -999)) 
-               for r in results if r.get("success")]
+    # v4.7.1 FIX: Filter out None/invalid return values
+    returns = [
+        (r["profile"], r["stats"].get("total_return_pct")) 
+        for r in results 
+        if r.get("success") and r["stats"].get("total_return_pct") is not None
+    ]
     if returns:
         best = max(returns, key=lambda x: x[1])
         print(f"   Meilleur Return: {best[0]} ({best[1]:.2f}%)")
     
-    dds = [(r["profile"], r["stats"].get("max_drawdown_pct", -999)) 
-           for r in results if r.get("success")]
+    # v4.7.1 FIX: Filter out None/invalid drawdown values
+    dds = [
+        (r["profile"], r["stats"].get("max_drawdown_pct")) 
+        for r in results 
+        if r.get("success") and r["stats"].get("max_drawdown_pct") is not None
+    ]
     if dds:
         best = max(dds, key=lambda x: x[1])
         print(f"   Meilleur Drawdown: {best[0]} ({best[1]:.2f}%)")
     
     # Vérifier l'ordre attendu
     print("\n📋 VALIDATION ORDRE DES RETURNS:")
-    sorted_returns = sorted(returns, key=lambda x: x[1], reverse=True)
-    expected_order = ["Agressif", "Modéré", "Stable"]
-    actual_order = [r[0] for r in sorted_returns]
-    
-    if actual_order == expected_order:
-        print("   ✅ Ordre correct: Agressif > Modéré > Stable")
+    if returns:
+        sorted_returns = sorted(returns, key=lambda x: x[1], reverse=True)
+        expected_order = ["Agressif", "Modéré", "Stable"]
+        actual_order = [r[0] for r in sorted_returns]
+        
+        if actual_order == expected_order:
+            print("   ✅ Ordre correct: Agressif > Modéré > Stable")
+        else:
+            print(f"   ⚠️ Ordre inattendu: {' > '.join(actual_order)}")
+            print(f"      Attendu: {' > '.join(expected_order)}")
     else:
-        print(f"   ⚠️ Ordre inattendu: {' > '.join(actual_order)}")
-        print(f"      Attendu: {' > '.join(expected_order)}")
+        print("   ⚠️ Pas de données de return disponibles")
     
     # v4.7 P2: Rappel disclaimer
     print(f"\n⚠️  RAPPEL: {BACKTEST_DISCLAIMER.format(days=CONFIG['backtest_days'])}")
@@ -1381,7 +1411,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.7_rounding_100_disclaimer",
+        "version": "v4.7.1_sharpe_none_fix",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", True),
@@ -1411,7 +1441,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.7_rounding_100_disclaimer",
+        "version": "v4.7.1_sharpe_none_fix",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1453,7 +1483,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.7 - Génération + Backtest (ROUNDING FIX)")
+    logger.info("🚀 Portfolio Engine v4.7.1 - Génération + Backtest (SHARPE FIX)")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1490,7 +1520,7 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.7:")
+    logger.info("Fonctionnalités v4.7.1:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
@@ -1498,6 +1528,7 @@ def main():
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
     logger.info("   • 🆕 P0 FIX: Rounding intelligent → readable sum = 100% exact ✅")
     logger.info("   • 🆕 P2 FIX: Disclaimer backtest dans commentaires ✅")
+    logger.info("   • 🆕 v4.7.1 FIX: Handle sharpe_ratio=None in comparison table ✅")
     logger.info("   • USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
     logger.info("   • NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
     logger.info("   • MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
