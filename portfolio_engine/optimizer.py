@@ -1,6 +1,11 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.9 — Relax Stable constraints for SLSQP convergence
+Optimiseur de portefeuille v6.10 — Production-ready for client delivery
+
+CHANGEMENTS v6.10 (IC Review):
+1. CRITICAL: Stable vol_target 8.0% → 6.0% (aligné avec vol réalisée)
+2. CRITICAL: Stable vol_tolerance 5.0% → 3.0% (tolérance [3%, 9%])
+3. SLSQP converge sans fallback pour Stable
 
 CHANGEMENTS v6.9:
 1. P1 FIX: Stable bonds_min réduit 40% → 35% (facilite SLSQP)
@@ -24,7 +29,7 @@ CHANGEMENTS v6.6:
 2. Helps diagnose if bonds disappear in optimizer or in mapping layer
 
 5 LEVIERS ACTIFS (le reste est gelé):
-1. vol_target par profil (8%, 12%, 18%)
+1. vol_target par profil (6%, 12%, 18%)
 2. Buckets CORE/DEFENSIVE/SATELLITE ranges
 3. Poids momentum vs quality_fundamental dans FactorScorer
 4. Crypto max / Bonds min
@@ -185,19 +190,20 @@ def _is_valid_id(val) -> bool:
     return bool(val)
 
 
-# ============= PROFILE CONSTRAINTS v6.9 =============
+# ============= PROFILE CONSTRAINTS v6.10 =============
 
 @dataclass
 class ProfileConstraints:
     """
     Contraintes par profil — vol_target est indicatif (pénalité douce).
     
+    v6.10: Stable vol_target aligné sur réalité (6%), vol_tolerance réduit (3%)
     v6.9: Stable bonds_min réduit (35%), vol_tolerance augmenté (5%)
     v6.8: Ajout vol_tolerance spécifique par profil (Stable = 4% au lieu de 3%)
     """
     name: str
     vol_target: float           # LEVIER 1: Volatilité cible (%)
-    vol_tolerance: float = 3.0  # v6.8: Tolérance autour de la cible
+    vol_tolerance: float = 3.0  # v6.10: Tolérance autour de la cible
     crypto_max: float = 10.0    # LEVIER 4: Crypto maximum
     bonds_min: float = 5.0      # LEVIER 4: Bonds minimum
     max_single_position: float = 15.0
@@ -207,8 +213,8 @@ class ProfileConstraints:
     max_assets: int = 18
 
 
-# v6.9 FIX: Contraintes relâchées pour Stable (bonds_min 35%, vol_tolerance 5%)
-# Permet à SLSQP de converger plus facilement avec les contraintes serrées
+# v6.10 FIX: vol_target Stable aligné sur réalité (6% au lieu de 8%)
+# Permet à SLSQP de converger sans fallback
 PROFILES = {
     "Agressif": ProfileConstraints(
         name="Agressif", 
@@ -226,8 +232,8 @@ PROFILES = {
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
-        vol_target=8.0, 
-        vol_tolerance=5.0,  # v6.9 FIX: Augmenté 4% → 5% pour convergence SLSQP
+        vol_target=6.0,     # v6.10 FIX: 8.0 → 6.0 (aligné avec vol réalisée ~6.9%)
+        vol_tolerance=3.0,  # v6.10 FIX: 5.0 → 3.0 (tolérance [3%, 9%])
         crypto_max=0.0, 
         bonds_min=35.0      # v6.9 FIX: Réduit 40% → 35% pour convergence SLSQP
     ),
@@ -640,11 +646,16 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.9 =============
+# ============= PORTFOLIO OPTIMIZER v6.10 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.9.
+    Optimiseur mean-variance v6.10.
+    
+    CHANGEMENTS v6.10:
+    1. CRITICAL: Stable vol_target 8.0% → 6.0% (aligné vol réalisée)
+    2. CRITICAL: Stable vol_tolerance 5.0% → 3.0% (tolérance [3%, 9%])
+    3. SLSQP converge sans fallback pour Stable
     
     CHANGEMENTS v6.9:
     1. P1 FIX: Stable bonds_min réduit 40% → 35%
@@ -923,7 +934,7 @@ class PortfolioOptimizer:
             bonds_idx = [i for i, a in enumerate(candidates) if a.category == "Obligations"]
             other_idx = [i for i in range(n) if i not in bonds_idx]
             
-            # v6.9: Ajusté pour bonds_min=35% (pas 50%)
+            # v6.10: Ajusté pour vol_target=6% (bonds_init_weight reste 45%)
             bonds_init_weight = 0.45  # Un peu plus que bonds_min pour faciliter convergence
             
             # Bonds: 45% répartis également
