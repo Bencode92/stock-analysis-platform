@@ -137,7 +137,7 @@ MIN_DEFENSIVE_IN_POOL = {
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
 # FIX: Stable 12% → 18% pour élargir l'espace faisable SLSQP
 MAX_SINGLE_BOND_WEIGHT = {
-    "Stable": 18.0,   # v6.11 FIX: 12% → 18% (permet 2 bonds pour 35% au lieu de 4)
+    "Stable": 25.0,   # v6.11 FIX: 12% → 18% (permet 2 bonds pour 35% au lieu de 4)
     "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
     "Agressif": 5.0,  # Max 5% par bond → au moins 1 bond pour 5% total
 }
