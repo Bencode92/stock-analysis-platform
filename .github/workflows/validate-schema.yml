@@ -1,0 +1,120 @@
+name: Validate Portfolio Schema
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/portfolios*.json'
+      - 'data/portfolio_*.json'
+      - 'schemas/**'
+      - 'scripts/validate_schema.py'
+      - '.github/workflows/validate-schema.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'data/portfolios*.json'
+      - 'data/portfolio_*.json'
+      - 'schemas/**'
+      - 'scripts/validate_schema.py'
+  workflow_dispatch:
+    inputs:
+      file:
+        description: 'Specific file to validate (leave empty for all)'
+        required: false
+        default: ''
+
+jobs:
+  validate-schema:
+    name: Validate Portfolio JSON Schema
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema>=4.0.0
+      
+      - name: Validate schema syntax
+        run: |
+          python -c "
+import json
+import sys
+from pathlib import Path
+
+schema_path = Path('schemas/portfolio_output.json')
+if not schema_path.exists():
+    print('ERROR: Schema file not found')
+    sys.exit(1)
+
+try:
+    with open(schema_path) as f:
+        schema = json.load(f)
+    print(f'✓ Schema syntax valid: {schema_path}')
+    print(f'  Title: {schema.get(\"title\", \"N/A\")}')
+    print(f'  Definitions: {len(schema.get(\"definitions\", {}))}')
+except json.JSONDecodeError as e:
+    print(f'ERROR: Invalid JSON in schema: {e}')
+    sys.exit(1)
+"
+      
+      - name: Validate portfolio files
+        run: |
+          if [ -n "${{ github.event.inputs.file }}" ]; then
+            python scripts/validate_schema.py "${{ github.event.inputs.file }}" --verbose
+          else
+            python scripts/validate_schema.py --all --verbose
+          fi
+      
+      - name: Check for _manifest presence (warning only)
+        run: |
+          python -c "
+import json
+import sys
+from pathlib import Path
+
+warnings = []
+for f in Path('data').glob('portfolios*.json'):
+    with open(f) as fp:
+        data = json.load(fp)
+    if '_manifest' not in data:
+        warnings.append(f'{f.name}: missing _manifest (recommended for reproducibility)')
+    if '_limitations' not in data:
+        warnings.append(f'{f.name}: missing _limitations (recommended for transparency)')
+
+if warnings:
+    print('⚠️  Warnings (non-blocking):')
+    for w in warnings:
+        print(f'  - {w}')
+else:
+    print('✓ All recommended fields present')
+"
+      
+      - name: Generate validation report
+        if: always()
+        run: |
+          echo "## Portfolio Schema Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          for f in data/portfolios*.json data/portfolio_*.json; do
+            if [ -f "$f" ]; then
+              if python scripts/validate_schema.py "$f" 2>/dev/null; then
+                echo "| $(basename $f) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "| $(basename $f) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Schema: \`schemas/portfolio_output.json\`" >> $GITHUB_STEP_SUMMARY

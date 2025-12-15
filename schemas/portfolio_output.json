@@ -1,0 +1,268 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tradepulse.io/schemas/portfolio_output.json",
+  "title": "TradePulse Portfolio Output Schema",
+  "description": "Schema for validating generated portfolio JSON files (v2.0.0)",
+  "type": "object",
+  "required": ["Agressif", "Modéré", "Stable", "_meta"],
+  "additionalProperties": false,
+  "properties": {
+    "Agressif": {
+      "$ref": "#/definitions/ProfilePortfolio",
+      "description": "Aggressive risk profile portfolio"
+    },
+    "Modéré": {
+      "$ref": "#/definitions/ProfilePortfolio",
+      "description": "Moderate risk profile portfolio"
+    },
+    "Stable": {
+      "$ref": "#/definitions/ProfilePortfolio",
+      "description": "Stable/Conservative risk profile portfolio"
+    },
+    "_meta": {
+      "$ref": "#/definitions/MetaInfo",
+      "description": "Generation metadata"
+    },
+    "_manifest": {
+      "$ref": "#/definitions/Manifest",
+      "description": "Run manifest for reproducibility (optional but recommended)"
+    },
+    "_limitations": {
+      "$ref": "#/definitions/Limitations",
+      "description": "Data and methodology limitations (optional but recommended)"
+    },
+    "_schema": {
+      "$ref": "#/definitions/SchemaInfo",
+      "description": "Schema version info (optional)"
+    }
+  },
+  "definitions": {
+    "ProfilePortfolio": {
+      "type": "object",
+      "required": ["Commentaire", "Actions", "ETF", "Obligations", "Crypto", "_tickers"],
+      "additionalProperties": false,
+      "properties": {
+        "Commentaire": {
+          "type": "string",
+          "minLength": 50,
+          "maxLength": 5000,
+          "description": "LLM-generated commentary with disclaimers"
+        },
+        "Actions": {
+          "$ref": "#/definitions/AllocationMap",
+          "description": "Stock allocations by name"
+        },
+        "ETF": {
+          "$ref": "#/definitions/AllocationMap",
+          "description": "ETF allocations by name"
+        },
+        "Obligations": {
+          "$ref": "#/definitions/AllocationMap",
+          "description": "Bond allocations by name"
+        },
+        "Crypto": {
+          "$ref": "#/definitions/AllocationMap",
+          "description": "Crypto allocations by name"
+        },
+        "_tickers": {
+          "$ref": "#/definitions/TickerWeights",
+          "description": "Ticker symbols with decimal weights"
+        },
+        "_backtest": {
+          "$ref": "#/definitions/BacktestResults",
+          "description": "Backtest metrics (optional)"
+        },
+        "_constraints_report": {
+          "$ref": "#/definitions/ConstraintsReport",
+          "description": "Constraint verification report (optional)"
+        }
+      }
+    },
+    "AllocationMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9]{1,3}%$",
+        "description": "Percentage allocation (e.g., '15%')"
+      },
+      "description": "Map of asset names to percentage allocations"
+    },
+    "TickerWeights": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "Decimal weight (0.0 to 1.0)"
+      },
+      "description": "Map of ticker symbols to decimal weights"
+    },
+    "MetaInfo": {
+      "type": "object",
+      "required": ["generated_at", "version"],
+      "additionalProperties": true,
+      "properties": {
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of generation"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+.*$",
+          "description": "Generator version (e.g., 'v4.7.1_sharpe_none_fix')"
+        },
+        "buffett_mode": {
+          "type": "string",
+          "enum": ["strict", "soft", "off"],
+          "description": "Buffett score filtering mode"
+        },
+        "buffett_min_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Minimum Buffett score threshold"
+        },
+        "tactical_context_enabled": {
+          "type": "boolean",
+          "description": "Whether market context was used"
+        },
+        "backtest_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3650,
+          "description": "Number of days for backtest"
+        }
+      }
+    },
+    "Manifest": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "git_sha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Full git commit SHA"
+        },
+        "git_branch": {
+          "type": "string",
+          "description": "Git branch name"
+        },
+        "module_versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Python module versions used"
+        },
+        "data_sources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "source": { "type": "string" },
+              "hash": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          },
+          "description": "Data sources with hashes"
+        }
+      }
+    },
+    "Limitations": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "survivorship_bias": {
+          "type": "object",
+          "properties": {
+            "present": { "type": "boolean" },
+            "description": { "type": "string" }
+          }
+        },
+        "point_in_time": {
+          "type": "object",
+          "properties": {
+            "compliant": { "type": "boolean" },
+            "description": { "type": "string" }
+          }
+        },
+        "fx_handling": {
+          "type": "object",
+          "properties": {
+            "method": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        },
+        "backtest_methodology": {
+          "type": "string",
+          "description": "Backtest methodology used"
+        }
+      }
+    },
+    "SchemaInfo": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Schema version (semver)"
+        },
+        "min_compatible_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Minimum compatible schema version"
+        }
+      }
+    },
+    "BacktestResults": {
+      "type": "object",
+      "properties": {
+        "return_pct": { "type": "number" },
+        "return_gross_pct": { "type": "number" },
+        "return_net_pct": { "type": "number" },
+        "volatility_pct": { "type": "number" },
+        "sharpe_ratio": { "type": ["number", "null"] },
+        "max_drawdown_pct": { "type": "number" },
+        "benchmark_return_pct": { "type": "number" },
+        "benchmark_symbol": { "type": "string" },
+        "transaction_cost_bp": { "type": "number" },
+        "turnover": { "type": "number" },
+        "days": { "type": "integer" },
+        "start_date": { "type": "string", "format": "date" },
+        "end_date": { "type": "string", "format": "date" }
+      }
+    },
+    "ConstraintsReport": {
+      "type": "object",
+      "properties": {
+        "all_satisfied": { "type": "boolean" },
+        "all_hard_satisfied": { "type": "boolean" },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "constraint": { "type": "string" },
+              "priority": { "type": "string", "enum": ["hard", "soft", "relaxable"] },
+              "actual": { "type": "number" },
+              "limit": { "type": "number" }
+            }
+          }
+        },
+        "relaxations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "constraint": { "type": "string" },
+              "original": { "type": "number" },
+              "relaxed_to": { "type": "number" },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
