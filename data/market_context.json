@@ -1,54 +1,27 @@
 {
-  "market_regime": "risk-off",
+  "market_regime": "neutral",
   "macro_tilts": {
-    "favored_sectors": [
-      "utilities",
-      "healthcare",
-      "financials"
-    ],
-    "avoided_sectors": [
-      "consumer-staples",
-      "real-estate",
-      "information-technology"
-    ],
-    "favored_regions": [
-      "south korea",
-      "spain",
-      "south africa",
-      "chili"
-    ],
-    "avoided_regions": [
-      "united states",
-      "turquie",
-      "saudi arabia"
-    ],
-    "rationale": "Le régime de marché est risk-off, avec des performances sectorielles variées. Les secteurs des utilities et healthcare montrent une résilience, tandis que les régions comme la Corée du Sud et l'Espagne affichent une forte croissance."
+    "favored_sectors": [],
+    "avoided_sectors": [],
+    "favored_regions": [],
+    "avoided_regions": [],
+    "rationale": "Fallback neutre - pas de tilts tactiques appliqués"
   },
-  "key_trends": [
-    "croissance des utilities",
-    "stabilité des healthcare",
-    "volatilité des marchés développés"
-  ],
+  "key_trends": [],
   "risks": [
-    "instabilité géopolitique",
-    "inflation persistante"
+    "Contexte marché non disponible"
   ],
-  "opportunities": [
-    "investissements dans les infrastructures",
-    "croissance des technologies de santé"
-  ],
-  "confidence": 0.9,
+  "opportunities": [],
+  "confidence": 0.0,
   "as_of": "2025-12-15",
   "_meta": {
-    "generated_at": "2025-12-15T10:03:31.901725",
-    "model": "gpt-4o-mini",
+    "generated_at": "2025-12-15T15:57:31.538792",
+    "model": "fallback",
     "tilt_config": {
       "favored": 0.15,
       "avoided": -0.15,
       "max_tactical": 0.3
     },
-    "input_tokens": 882,
-    "output_tokens": 250,
-    "is_fallback": false
+    "is_fallback": true
   }
 }
