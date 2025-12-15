@@ -55,13 +55,13 @@ from .factors import (
 )
 
 # Optimizer (mean-variance + covariance hybride)
+# NOTE: validate_portfolio removed - function does not exist in optimizer.py
 from .optimizer import (
     PortfolioOptimizer,
     ProfileConstraints,
     Asset,
     PROFILES,
     convert_universe_to_assets,
-    validate_portfolio,
     # Bucket/Preset
     assign_preset_to_asset,
     enrich_assets_with_buckets,
@@ -137,7 +137,7 @@ from .preset_meta import (
     validate_portfolio_buckets,
 )
 
-__version__ = "4.0.0"
+__version__ = "4.0.1"
 
 __all__ = [
     # Universe (v3.0)
@@ -174,7 +174,6 @@ __all__ = [
     "Asset",
     "PROFILES",
     "convert_universe_to_assets",
-    "validate_portfolio",
     "assign_preset_to_asset",
     "enrich_assets_with_buckets",
     "deduplicate_etfs",
