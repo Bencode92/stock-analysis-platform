@@ -9,6 +9,10 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.8.0: P0 COMPLIANCE - Double barrière LLM + audit trail + fallback
+        P0-7: sanitize_llm_output() appliqué dans add_commentary() avec audit
+        P0-8: use_tactical_context = False (GPT-generated = zone grise AMF)
+        P0-9: Exposition du mode d'optimisation (_optimization) pour le front
 V4.7.1: FIX - Handle sharpe_ratio=None in print_comparison_table (TypeError fix)
 V4.7:   FIX P0 - Rounding intelligent pour readable sum = exactement 100%
         FIX P2 - Disclaimer backtest dans les commentaires LLM
@@ -71,6 +75,9 @@ from compliance import (
     AMF_DISCLAIMER,
 )
 
+# v4.8 P0-7: Import du sanitizer LLM
+from compliance.sanitizer import sanitize_llm_output
+
 # === Modules existants (compatibilité) ===
 try:
     from brief_formatter import format_brief_data
@@ -108,8 +115,8 @@ CONFIG = {
     # === Buffett Filter Config ===
     "buffett_mode": "soft",      # "soft" (pénalise), "hard" (rejette), "both", "none" (désactivé)
     "buffett_min_score": 40,     # Score minimum Buffett (0-100), 0 = pas de filtre
-    # === v4.4: Tactical Context Config ===
-    "use_tactical_context": True,  # Activer le scoring tactique
+    # === v4.8 P0-8: Tactical Context DÉSACTIVÉ (GPT-generated = zone grise AMF) ===
+    "use_tactical_context": False,  # P0-8: Désactivé tant que non sourcé
     "market_data_dir": "data",     # Répertoire du fichier market_context.json
 }
 
@@ -118,6 +125,12 @@ BACKTEST_DISCLAIMER = (
     "⚠️ Performances calculées sur {days} jours, hors frais de transaction et fiscalité. "
     "Sharpe ratio annualisé sur période courte (non représentatif long terme). "
     "Les performances passées ne préjugent pas des performances futures."
+)
+
+# === v4.8 P0-7: FALLBACK COMMENT SI LLM TROP FILTRÉ ===
+FALLBACK_COMPLIANCE_COMMENT = (
+    "Commentaire indisponible (filtrage conformité). "
+    "Ce contenu est informatif et éducatif ; il ne constitue pas un conseil en investissement."
 )
 
 
@@ -418,13 +431,14 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     Pipeline déterministe : mêmes données → mêmes poids.
     Utilise les modules portfolio_engine.
     
+    v4.8 P0-8: Tactical context désactivé par défaut (GPT-generated = zone grise AMF)
     v4.4: Utilise le nouveau format market_context.json unifié.
     """
     logger.info("🧮 Construction des portefeuilles (déterministe)...")
     
-    # v4.4: Charger le contexte marché pour le scoring tactique
+    # v4.8 P0-8: Charger le contexte marché SEULEMENT si explicitement activé
     market_context = None
-    if CONFIG.get("use_tactical_context", True):
+    if CONFIG.get("use_tactical_context", False):
         logger.info("📊 Chargement du contexte marché (tactical_context)...")
         market_context = load_market_context(CONFIG.get("market_data_dir", "data"))
         
@@ -448,6 +462,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             else:
                 logger.warning("⚠️ Contexte marché sans tilts actifs - scoring tactique désactivé")
             # On garde market_context pour éviter les erreurs, mais les tilts seront 0
+    else:
+        # v4.8 P0-8: Log explicite que les tilts sont désactivés
+        logger.info("⚠️ P0-8: Tilts tactiques DÉSACTIVÉS (use_tactical_context=False)")
+        logger.info("   Raison: GPT-generated = zone grise AMF, non sourcé")
     
     # 1. Charger les données brutes
     stocks_data = load_stocks_data()
@@ -589,11 +607,11 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation profil {profile}...")
         
-        # v4.4: Re-scorer selon le profil AVEC le contexte marché
+        # v4.8 P0-8: Re-scorer selon le profil SANS le contexte marché si désactivé
         scored_universe = rescore_universe_by_profile(
             universe, 
             profile, 
-            market_context=market_context  # ← Contexte tactique v4.4
+            market_context=market_context  # None si use_tactical_context=False
         )
         
         # Convertir en objets Asset
@@ -626,6 +644,11 @@ def add_commentary(
     """
     Ajoute les commentaires et justifications.
     Via LLM si disponible, sinon fallback.
+    
+    v4.8 P0-7: DOUBLE BARRIÈRE LLM
+    - sanitize_llm_output() appliqué APRÈS génération LLM
+    - Audit trail dans _compliance_audit
+    - Fallback si >50% du contenu supprimé
     
     v4.7 P2: Ajoute le disclaimer backtest au commentaire.
     """
@@ -663,17 +686,55 @@ def add_commentary(
     else:
         commentary = generate_fallback_commentary(portfolios_for_prompt, assets)
     
-    # v4.7 P2: Ajouter le disclaimer backtest à chaque commentaire
+    # v4.7 P2: Disclaimer backtest
     disclaimer = BACKTEST_DISCLAIMER.format(days=CONFIG["backtest_days"])
     
     merged = merge_commentary_into_portfolios(portfolios_for_prompt, commentary)
     
+    # === v4.8 P0-7: DOUBLE BARRIÈRE LLM + AUDIT TRAIL ===
     for profile in merged:
-        existing_comment = merged[profile].get("comment", "")
-        if existing_comment and disclaimer not in existing_comment:
-            merged[profile]["comment"] = f"{existing_comment}\n\n{disclaimer}"
-        elif not existing_comment:
-            merged[profile]["comment"] = disclaimer
+        # 1. Récupérer le commentaire brut
+        raw_comment = merged[profile].get("comment", "") or ""
+        
+        # 2. Appliquer le filtre LLM STRICT
+        cleaned, report = sanitize_llm_output(
+            raw_comment,
+            replacement="",
+            strict=True,
+            log_hits=True
+        )
+        
+        # 3. Audit trail (pour traçabilité AMF)
+        merged[profile].setdefault("_compliance_audit", {})
+        merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
+        merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
+        merged[profile]["_compliance_audit"]["version"] = "v4.8.0_p0_compliance"
+        
+        # 4. Fallback si trop de contenu supprimé (>50%)
+        if report.removal_ratio > 0.5:
+            logger.error(
+                f"[P0-7] LLM text too unsafe for {profile}: "
+                f"{report.removal_ratio:.0%} removed, using fallback"
+            )
+            cleaned = FALLBACK_COMPLIANCE_COMMENT
+            merged[profile]["_compliance_audit"]["fallback_used"] = True
+        else:
+            merged[profile]["_compliance_audit"]["fallback_used"] = False
+        
+        # 5. Ajouter le disclaimer backtest
+        if cleaned and disclaimer not in cleaned:
+            cleaned = f"{cleaned}\n\n{disclaimer}"
+        elif not cleaned:
+            cleaned = f"{FALLBACK_COMPLIANCE_COMMENT}\n\n{disclaimer}"
+        
+        merged[profile]["comment"] = cleaned
+        
+        # 6. Log résumé
+        if report.sanitized:
+            logger.info(
+                f"[P0-7] {profile}: {report.removed_sentences} phrases supprimées, "
+                f"{len(report.hits)} hits, ratio={report.removal_ratio:.0%}"
+            )
     
     return merged
 
@@ -1129,7 +1190,11 @@ def _extract_symbol_from_asset(asset) -> Optional[str]:
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.7: Convertit le format interne vers le format v1 attendu par le front.
+    V4.8: Convertit le format interne vers le format v1 attendu par le front.
+    
+    AJOUTS v4.8 P0-9:
+    - Exposition du mode d'optimisation dans _optimization
+    - Disclaimer si fallback heuristique (profil Stable)
     
     CORRECTIONS v4.7 P0:
     - FIX: Utilise round_weights_to_100() pour garantir sum = exactement 100%
@@ -1145,7 +1210,8 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "Commentaire": "...",
             "Actions": { "ELI LILLY AND CO": "14%", ... },  # Pour le front
             "ETF": { ... },
-            "_tickers": { "LLY": 0.14, "BIV": 0.05, ... }   # Pour le backtest (vrais symbols)
+            "_tickers": { "LLY": 0.14, "BIV": 0.05, ... },   # Pour le backtest (vrais symbols)
+            "_optimization": { "mode": "slsqp", ... }        # v4.8 P0-9
         }
     """
     # Construire le lookup avec extraction robuste du ticker ET symbol
@@ -1206,6 +1272,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     for profile, data in portfolios.items():
         allocation = data.get("allocation", {})
         comment = data.get("comment", "")
+        diagnostics = data.get("diagnostics", {})
         
         result[profile] = {
             "Commentaire": comment,
@@ -1215,6 +1282,24 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "Crypto": {},
             "_tickers": {},  # V4.2: Bloc pour le backtest
         }
+        
+        # === v4.8 P0-9: Exposer le mode d'optimisation ===
+        optimization_mode = diagnostics.get("optimization_mode", "slsqp")
+        result[profile]["_optimization"] = {
+            "mode": optimization_mode,
+            "is_heuristic": optimization_mode.startswith("fallback"),
+            "vol_realized": diagnostics.get("portfolio_vol"),
+            "vol_target": diagnostics.get("vol_target"),
+        }
+        
+        # P0-9: Disclaimer si fallback heuristique
+        if optimization_mode.startswith("fallback"):
+            result[profile]["_optimization"]["disclaimer"] = (
+                "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) "
+                "et non une optimisation mathématique Markowitz. Les contraintes du profil "
+                f"({profile}) sont incompatibles avec l'optimisation classique. "
+                "Cette approche privilégie la robustesse à l'optimalité théorique."
+            )
         
         # V4.4.1: Tracks pour agrégation ET debug
         ticker_collisions = {}
@@ -1409,13 +1494,19 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
+    # === v4.8 P0-9: Ajouter les modes d'optimisation dans _meta ===
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.7.1_sharpe_none_fix",
+        "version": "v4.8.0_p0_compliance",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
-        "tactical_context_enabled": CONFIG.get("use_tactical_context", True),
+        "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
         "backtest_days": CONFIG["backtest_days"],
+        "optimization_modes": {
+            profile: portfolios[profile].get("diagnostics", {}).get("optimization_mode", "unknown")
+            for profile in ["Agressif", "Modéré", "Stable"]
+            if profile in portfolios
+        },
     }
     
     return result
@@ -1441,7 +1532,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.7.1_sharpe_none_fix",
+        "version": "v4.8.0_p0_compliance",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1449,7 +1540,7 @@ def save_portfolios(portfolios: Dict, assets: list):
             "min_score": CONFIG["buffett_min_score"],
         },
         "tactical_config": {
-            "enabled": CONFIG.get("use_tactical_context", True),
+            "enabled": CONFIG.get("use_tactical_context", False),
             "data_dir": CONFIG.get("market_data_dir", "data"),
         },
         "backtest_config": {
@@ -1483,17 +1574,18 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.7.1 - Génération + Backtest (SHARPE FIX)")
+    logger.info("🚀 Portfolio Engine v4.8.0 - P0 COMPLIANCE")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
     brief_data = load_brief_data()
     
-    # 2. Construire les portefeuilles (déterministe + Buffett + Tactical)
-    #    Le diagnostic Buffett et Tactical s'affiche ICI, avant l'optimisation
+    # 2. Construire les portefeuilles (déterministe + Buffett + Tactical OFF)
+    #    Le diagnostic Buffett s'affiche ICI, avant l'optimisation
     portfolios, assets = build_portfolios_deterministic()
     
     # 3. Ajouter les commentaires (LLM ou fallback) + disclaimer v4.7
+    #    v4.8 P0-7: Double barrière LLM + audit trail
     portfolios = add_commentary(portfolios, assets, brief_data)
     
     # 4. Appliquer compliance AMF
@@ -1520,21 +1612,20 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.7.1:")
+    logger.info("Fonctionnalités v4.8.0 P0 COMPLIANCE:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
-    logger.info("   • 🆕 P0 FIX: Rounding intelligent → readable sum = 100% exact ✅")
-    logger.info("   • 🆕 P2 FIX: Disclaimer backtest dans commentaires ✅")
-    logger.info("   • 🆕 v4.7.1 FIX: Handle sharpe_ratio=None in comparison table ✅")
+    logger.info("   • 🆕 P0-7: Double barrière LLM + audit trail + fallback ✅")
+    logger.info("   • 🆕 P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé) ✅")
+    logger.info("   • 🆕 P0-9: Mode optimisation exposé (_optimization) ✅")
     logger.info("   • USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
     logger.info("   • NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
-    logger.info("   • MARKET CONTEXT UNIFIÉ: market_context.json (GPT) ✅")
     logger.info("   • Reproductibilité garantie")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
-    logger.info(f"   • Contexte tactique: {'✅ activé' if CONFIG.get('use_tactical_context') else '❌ désactivé'}")
+    logger.info(f"   • Contexte tactique: {'✅ activé' if CONFIG.get('use_tactical_context') else '❌ DÉSACTIVÉ (P0-8)'}")
 
 
 if __name__ == "__main__":
