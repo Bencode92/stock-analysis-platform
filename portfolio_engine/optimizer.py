@@ -1,6 +1,10 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.10 — Production-ready for client delivery
+Optimiseur de portefeuille v6.11 — IC Review fixes
+
+CHANGEMENTS v6.11 (IC Review - ChatGPT challenge):
+1. ACTION 1: max_single_bond Stable 12% → 18% (réduit géométrie contraintes)
+2. ACTION 3: Ajout optimization_mode dans diagnostics (transparence fallback)
 
 CHANGEMENTS v6.10 (IC Review):
 1. CRITICAL: Stable vol_target 8.0% → 6.0% (aligné avec vol réalisée)
@@ -95,7 +99,7 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6.5 =============
+# ============= CONSTANTES v6.11 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -130,16 +134,18 @@ MIN_DEFENSIVE_IN_POOL = {
     "Agressif": 5,   # Était 3
 }
 
-# P1 FIX v6.2: Maximum weight par obligation (force diversification)
+# v6.11 ACTION 1: Maximum weight par obligation (force diversification)
+# FIX: Stable 12% → 18% pour élargir l'espace faisable SLSQP
 MAX_SINGLE_BOND_WEIGHT = {
-    "Stable": 12.0,   # Max 12% par bond → au moins 4 bonds pour 40% total
+    "Stable": 18.0,   # v6.11 FIX: 12% → 18% (permet 2 bonds pour 35% au lieu de 4)
     "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
     "Agressif": 5.0,  # Max 5% par bond → au moins 1 bond pour 5% total
 }
 
 # P1 FIX v6.2: Minimum nombre de bonds distincts dans l'allocation finale
+# v6.11: Ajusté pour cohérence avec max_single_bond
 MIN_DISTINCT_BONDS = {
-    "Stable": 4,
+    "Stable": 2,      # v6.11 FIX: 4 → 2 (cohérent avec max 18%)
     "Modéré": 2,
     "Agressif": 1,
 }
@@ -443,7 +449,7 @@ def deduplicate_stocks_by_corporate_group(
 ETF_NAME_TO_EXPOSURE = {
     "gold": "gold", "or": "gold", "gld": "gold", "iau": "gold",
     "world": "world", "msci world": "world", "urth": "world",
-    "s&p 500": "sp500", "spy": "sp500", "voo": "sp500",
+    "s&amp;p 500": "sp500", "spy": "sp500", "voo": "sp500",
     "nasdaq": "nasdaq", "qqq": "nasdaq", "tech": "tech",
     "emerging": "emerging_markets", "eem": "emerging_markets",
     "treasury": "bonds_treasury", "tlt": "bonds_treasury", "ief": "bonds_treasury",
@@ -646,11 +652,15 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.10 =============
+# ============= PORTFOLIO OPTIMIZER v6.11 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.10.
+    Optimiseur mean-variance v6.11.
+    
+    CHANGEMENTS v6.11 (IC Review - ChatGPT challenge):
+    1. ACTION 1: max_single_bond Stable 12% → 18% (réduit géométrie contraintes)
+    2. ACTION 3: Ajout optimization_mode dans diagnostics (transparence fallback)
     
     CHANGEMENTS v6.10:
     1. CRITICAL: Stable vol_target 8.0% → 6.0% (aligné vol réalisée)
@@ -843,7 +853,7 @@ class PortfolioOptimizer:
                 return np.sum(w[idx]) - min_val
             constraints.append({"type": "ineq", "fun": bonds_constraint})
         
-        # 3. MAX WEIGHT PAR BOND
+        # 3. MAX WEIGHT PAR BOND (v6.11: Stable 18% au lieu de 12%)
         max_bond_weight = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0) / 100
         for i in bonds_idx:
             def single_bond_constraint(w, idx=i, max_val=max_bond_weight):
@@ -1180,6 +1190,9 @@ class PortfolioOptimizer:
                 options={"maxiter": 1000, "ftol": 1e-8}
             )
         
+        # v6.11 ACTION 3: Track optimization mode et fallback reason
+        fallback_reason = None
+        
         if result.success:
             weights = result.x.copy()
             weights = self._enforce_asset_count(weights, candidates, profile)
@@ -1203,12 +1216,14 @@ class PortfolioOptimizer:
                     f"P1 FIX v6.3: SLSQP gave only {bonds_in_solution} bonds, "
                     f"min required = {min_bonds_required} → forcing fallback"
                 )
+                fallback_reason = f"SLSQP gave only {bonds_in_solution} bonds < {min_bonds_required} required"
                 allocation = self._fallback_allocation(candidates, profile, cov)
                 optimizer_converged = False
             else:
                 optimizer_converged = True
         else:
             logger.warning(f"SLSQP failed for {profile.name}: {result.message}")
+            fallback_reason = str(result.message)
             allocation = self._fallback_allocation(candidates, profile, cov)
             optimizer_converged = False
         
@@ -1282,8 +1297,11 @@ class PortfolioOptimizer:
                     "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
                 }
         
+        # v6.11 ACTION 3: Ajout optimization_mode et fallback_reason dans diagnostics
         diagnostics = to_python_native({
             "converged": optimizer_converged,
+            "optimization_mode": "slsqp" if optimizer_converged else "fallback_vol_aware",  # v6.11 NEW
+            "fallback_reason": fallback_reason,  # v6.11 NEW
             "message": str(result.message) if result.success else "Fallback vol-aware",
             "portfolio_vol": round(port_vol, 2),
             "vol_target": profile.vol_target,
@@ -1304,10 +1322,12 @@ class PortfolioOptimizer:
             "buffett_min_score": self.buffett_min_score,
         })
         
+        # v6.11: Log optimization mode
+        opt_mode = "SLSQP" if optimizer_converged else "FALLBACK"
         logger.info(
             f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds, {crypto_in_allocation} crypto), "
             f"vol={port_vol:.1f}% (cible={profile.vol_target}%, tol=±{profile.vol_tolerance}%), "
-            f"cov_method={cov_diagnostics.get('method')}"
+            f"mode={opt_mode}, cov={cov_diagnostics.get('method')}"
         )
         
         return allocation, diagnostics
