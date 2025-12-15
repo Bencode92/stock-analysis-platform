@@ -1,77 +1,79 @@
 # portfolio_engine/calendar.py
 """
-COMPATIBILITY SHIM - Re-exports Python stdlib calendar.
+STDLIB RE-EXPORT SHIM
 
-This file exists to prevent shadowing Python's standard library 'calendar' module.
-All functionality has been moved to trading_calendar.py.
-
-For portfolio calendar functions, use:
-    from portfolio_engine.trading_calendar import align_to_reference_calendar
-
-This shim re-exports stdlib calendar to prevent import errors in dependencies
-like OpenAI SDK that expect the standard library module.
+This file must re-export Python's stdlib calendar to prevent shadowing.
+All portfolio calendar logic has been moved to trading_calendar.py.
 """
-import sys as _sys
-import importlib as _importlib
 
-# Remove this module from cache to allow stdlib import
-_current_module = _sys.modules.pop(__name__, None)
+# Use __future__ absolute_import to ensure we get stdlib, not ourselves
+from __future__ import absolute_import
 
-# Import the real stdlib calendar
-import calendar as _stdlib_calendar
+# Get stdlib calendar via importlib to avoid any path confusion
+import importlib.util
+import sys
 
-# Restore this module
-if _current_module is not None:
-    _sys.modules[__name__] = _current_module
+def _get_stdlib_calendar():
+    """Load stdlib calendar directly, bypassing normal import."""
+    # Find stdlib calendar (not this file)
+    for path in sys.path:
+        if 'site-packages' in path or path.endswith('/lib'):
+            continue
+        spec = importlib.util.find_spec('calendar')
+        if spec and spec.origin and 'portfolio_engine' not in spec.origin:
+            return importlib.util.module_from_spec(spec)
+    
+    # Fallback: temporarily remove ourselves from modules
+    saved = sys.modules.pop('calendar', None)
+    saved_pe = sys.modules.pop('portfolio_engine.calendar', None)
+    
+    try:
+        import calendar as stdlib_cal
+        return stdlib_cal
+    finally:
+        if saved is not None:
+            sys.modules['calendar'] = saved
+        if saved_pe is not None:
+            sys.modules['portfolio_engine.calendar'] = saved_pe
 
-# Re-export everything from stdlib calendar
-from calendar import (
-    Calendar,
-    TextCalendar,
-    HTMLCalendar,
-    LocaleTextCalendar,
-    LocaleHTMLCalendar,
-    setfirstweekday,
-    firstweekday,
-    isleap,
-    leapdays,
-    weekday,
-    monthrange,
-    monthcalendar,
-    prmonth,
-    month,
-    prcal,
-    calendar,
-    timegm,
-    month_name,
-    month_abbr,
-    day_name,
-    day_abbr,
-    MONDAY,
-    TUESDAY,
-    WEDNESDAY,
-    THURSDAY,
-    FRIDAY,
-    SATURDAY,
-    SUNDAY,
-)
+_stdlib = _get_stdlib_calendar()
 
-# Deprecation warning for direct use
-import warnings as _warnings
-_warnings.warn(
-    "portfolio_engine.calendar is deprecated. "
-    "Use portfolio_engine.trading_calendar for portfolio functions, "
-    "or import calendar directly for stdlib calendar.",
-    DeprecationWarning,
-    stacklevel=2
-)
+# Re-export all public symbols
+day_abbr = _stdlib.day_abbr
+day_name = _stdlib.day_name
+month_abbr = _stdlib.month_abbr
+month_name = _stdlib.month_name
+Calendar = _stdlib.Calendar
+TextCalendar = _stdlib.TextCalendar
+HTMLCalendar = _stdlib.HTMLCalendar
+LocaleTextCalendar = _stdlib.LocaleTextCalendar
+LocaleHTMLCalendar = _stdlib.LocaleHTMLCalendar
+setfirstweekday = _stdlib.setfirstweekday
+firstweekday = _stdlib.firstweekday
+isleap = _stdlib.isleap
+leapdays = _stdlib.leapdays
+weekday = _stdlib.weekday
+monthrange = _stdlib.monthrange
+monthcalendar = _stdlib.monthcalendar
+prmonth = _stdlib.prmonth
+month = _stdlib.month
+prcal = _stdlib.prcal
+calendar = _stdlib.calendar
+timegm = _stdlib.timegm
+MONDAY = _stdlib.MONDAY
+TUESDAY = _stdlib.TUESDAY
+WEDNESDAY = _stdlib.WEDNESDAY
+THURSDAY = _stdlib.THURSDAY
+FRIDAY = _stdlib.FRIDAY
+SATURDAY = _stdlib.SATURDAY
+SUNDAY = _stdlib.SUNDAY
 
 __all__ = [
-    'Calendar', 'TextCalendar', 'HTMLCalendar', 
+    'day_abbr', 'day_name', 'month_abbr', 'month_name',
+    'Calendar', 'TextCalendar', 'HTMLCalendar',
     'LocaleTextCalendar', 'LocaleHTMLCalendar',
     'setfirstweekday', 'firstweekday', 'isleap', 'leapdays',
     'weekday', 'monthrange', 'monthcalendar', 'prmonth', 'month',
     'prcal', 'calendar', 'timegm',
-    'month_name', 'month_abbr', 'day_name', 'day_abbr',
     'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
 ]
