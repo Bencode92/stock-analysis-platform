@@ -2,6 +2,11 @@
 """
 Sanitisation du langage marketing et filtrage LLM pour conformité AMF.
 
+v2.1 - Ajout patterns P0 compliance (ChatGPT + Claude review):
+1. Patterns additionnels FR: "vous convient", "conseillé pour", "personnalisé pour"
+2. Patterns additionnels EN: "tailored for you", "designed for you"
+3. Amélioration détection "suitability" implicite
+
 v2.0 - Refonte complète pour gates P0 conformité:
 1. Filtrage LLM STRICT (suppression phrase entière)
 2. Patterns FR + EN pour sites bilingues
@@ -23,7 +28,7 @@ import logging
 logger = logging.getLogger("compliance.sanitizer")
 
 
-# ============= v2.0: PATTERNS LLM STRICTS (AMF/MiFID) =============
+# ============= v2.1: PATTERNS LLM STRICTS (AMF/MiFID) =============
 
 # Patterns INTERDITS - déclenchent suppression de la phrase entière
 # Stratégie: supprimer la phrase > remplacer un mot (le sens "conseil" reste sinon)
@@ -36,6 +41,14 @@ LLM_FORBIDDEN_PATTERNS: List[Tuple[str, str]] = [
     (r"\b(pour\s+vous|fait\s+pour\s+vous|correspond\s+à\s+votre)\b", "personnalisation_implicite"),
     (r"\b(selon\s+votre\s+profil|vu\s+votre\s+situation)\b", "personnalisation_profil"),
     
+    # === v2.1 FR: Patterns additionnels (review ChatGPT + Claude) ===
+    (r"\b(vous\s+convient|te\s+convient|convient\s+à\s+votre)\b", "suitability_direct"),
+    (r"\b(conseill[ée]\s+(pour|à)\s+(vous|toi|votre))\b", "conseil_direct"),
+    (r"\b(personnalis[ée]\s+(pour|à)\s+(vous|toi))\b", "personnalisation_directe"),
+    (r"\b(sur\s+mesure\s+pour\s+(vous|votre))\b", "sur_mesure"),
+    (r"\b(en\s+fonction\s+de\s+(vos|votre|tes|ton)\s+(besoins|objectifs|attentes))\b", "fonction_besoins"),
+    (r"\b(correspond(ant)?\s+à\s+(vos|votre|tes|ton)\s+(attentes|besoins|objectifs|profil))\b", "correspondance_profil"),
+    
     # === FR: Superlatifs et promesses ===
     (r"\b(idéal|parfait|excellent|formidable)\b", "superlatif"),
     (r"\b(meilleur(e|s|es)?|optim(al|ale|aux|ales)?)\b", "promesse_meilleur"),
@@ -47,11 +60,13 @@ LLM_FORBIDDEN_PATTERNS: List[Tuple[str, str]] = [
     (r"\b(opportunit(é|e)\s+unique|chance\s+unique)\b", "urgence"),
     (r"\b(derni(è|e)re\s+chance|maintenant\s+ou\s+jamais)\b", "urgence_forte"),
     (r"\b(ne\s+(ratez|manquez)\s+pas|profitez\s+vite)\b", "urgence_action"),
+    (r"\b(offre\s+limit[ée]e|temps\s+limit[ée])\b", "urgence_offre"),
     
     # === FR: Promesses de rendement ===
     (r"\b(rendement\s+(assuré|garanti)|gains?\s+garanti)\b", "promesse_rendement"),
     (r"\b(vous\s+allez\s+gagner|fortune\s+assurée)\b", "promesse_gains"),
     (r"\b(doubler|tripler)\s+(votre|vos|son|ses)\b", "promesse_multiplication"),
+    (r"\b(enrichi(r|ssement)\s+(rapide|facile|assuré))\b", "promesse_enrichissement"),
     
     # === EN: Personal recommendations ===
     (r"\b(I\s+recommend|we\s+recommend|recommended\s+for\s+you)\b", "recommendation_en"),
@@ -59,10 +74,19 @@ LLM_FORBIDDEN_PATTERNS: List[Tuple[str, str]] = [
     (r"\b(ideal\s+for\s+you|perfect\s+for\s+you|suited\s+to\s+you)\b", "personalization_en"),
     (r"\b(based\s+on\s+your\s+profile|given\s+your\s+situation)\b", "personalization_profile_en"),
     
+    # === v2.1 EN: Patterns additionnels ===
+    (r"\b(tailored\s+(for|to)\s+you)\b", "tailored_en"),
+    (r"\b(designed\s+(for|with)\s+you)\b", "designed_en"),
+    (r"\b(fits\s+your\s+(needs|profile|goals))\b", "fits_profile_en"),
+    (r"\b(matches\s+your\s+(profile|situation|needs))\b", "matches_profile_en"),
+    (r"\b(personalized\s+for\s+you)\b", "personalized_en"),
+    (r"\b(customized\s+(for|to)\s+your)\b", "customized_en"),
+    
     # === EN: Promises and guarantees ===
     (r"\b(guaranteed|risk[\s-]?free|no\s+risk)\b", "promise_en"),
     (r"\b(best|optimal|perfect|ideal)\s+(choice|option|investment)\b", "superlative_en"),
     (r"\b(certified|assured|secure\s+investment)\b", "guarantee_en"),
+    (r"\b(can't\s+lose|cannot\s+fail|sure\s+thing)\b", "promise_sure_en"),
 ]
 
 # Patterns WARNING - loggés mais pas supprimés (zone grise)
@@ -72,6 +96,10 @@ LLM_WARNING_PATTERNS: List[Tuple[str, str]] = [
     (r"\b(profil\s+(prudent|dynamique|agressif|modéré|stable))\b", "profile_mention"),
     (r"\b(investisseur(s)?\s+(prudent|dynamique|agressif))\b", "investor_profile"),
     (r"\b(suitable|appropriate|fits)\b", "suitability_hint_en"),
+    # v2.1: Warnings additionnels
+    (r"\b(croissance\s+(forte|rapide|exceptionnelle))\b", "growth_claim"),
+    (r"\b(potentiel\s+(énorme|exceptionnel|important))\b", "potential_claim"),
+    (r"\b(outperform|beat\s+the\s+market)\b", "outperform_claim_en"),
 ]
 
 
