@@ -2,8 +2,9 @@
 """
 Chargement des données de prix historiques via Twelve Data API.
 
+V11: FIX - Rename calendar → trading_calendar (avoid stdlib shadowing)
 V10: FIX CRITIQUE - Suppression ffill() + calendar alignment
-- Import calendar.align_to_reference_calendar() pour alignement propre
+- Import trading_calendar.align_to_reference_calendar() pour alignement propre
 - Plus de ffill() implicite (cassait la covariance)
 - Ajout DataQualityChecker pour validation
 
@@ -35,9 +36,10 @@ except ImportError:
     def get_data_source_string():
         return "Twelve Data API (adjusted_close)"
 
-# Import calendar pour alignement sans ffill
+# Import trading_calendar pour alignement sans ffill
+# NOTE: Renamed from 'calendar' to 'trading_calendar' to avoid shadowing Python stdlib
 try:
-    from portfolio_engine.calendar import (
+    from portfolio_engine.trading_calendar import (
         align_to_reference_calendar,
         CalendarAlignmentReport,
         validate_no_ffill_contamination,
@@ -218,7 +220,7 @@ class TwelveDataLoader:
         Récupère les prix pour plusieurs symboles.
         
         v10 FIX:
-        - align_calendar=True: utilise calendar.align_to_reference_calendar()
+        - align_calendar=True: utilise trading_calendar.align_to_reference_calendar()
         - validate_quality=True: utilise DataQualityChecker
         - Plus de ffill() implicite
         
@@ -295,7 +297,7 @@ class TwelveDataLoader:
             except Exception as e:
                 logger.warning(f"Calendar alignment failed: {e}, using raw data")
         elif not HAS_CALENDAR:
-            logger.warning("⚠️ calendar module not available, using dropna() fallback (NOT ffill)")
+            logger.warning("⚠️ trading_calendar module not available, using dropna() fallback (NOT ffill)")
             # FALLBACK SAFE: dropna au lieu de ffill
             prices_df = prices_df.dropna(how='any')
         
