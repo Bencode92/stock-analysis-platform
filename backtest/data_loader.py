@@ -2,23 +2,15 @@
 """
 Chargement des données de prix historiques via Twelve Data API.
 
+V10: FIX CRITIQUE - Suppression ffill() + calendar alignment
+- Import calendar.align_to_reference_calendar() pour alignement propre
+- Plus de ffill() implicite (cassait la covariance)
+- Ajout DataQualityChecker pour validation
+
 V9: FIX - Lire _tickers en priorité (Solution C)
 - extract_portfolio_weights() lit d'abord le bloc _tickers
 - Fallback sur mapping nom→ticker si _tickers absent (rétrocompat)
 - Log le % de poids effectivement chargé et les tickers introuvables
-
-V8: FIX PARSE WEIGHT STRING
-- Parse les poids au format "14%" (string) depuis portfolios.json
-- Fonction parse_weight_value() pour gérer tous les formats
-
-V7: FIX FORMAT TICKER:MIC
-- Sépare TICKER:MIC en symbol + mic_code params séparés
-- CABK:XMAD → symbol=CABK, mic_code=XMAD
-
-V6: REFACTORING MAJEUR
-- Utilise stocks_*.json (déjà validés par stock-advanced-filter.js) comme source de mapping
-- Plus besoin de NAME_TO_TICKER_MAP statique - tout vient des fichiers générés
-- Affiche le % de couverture des données
 
 Documentation API: https://twelvedata.com/docs
 """
@@ -32,6 +24,34 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import requests
 import pandas as pd
+
+# Import data lineage pour source unique de vérité
+try:
+    from portfolio_engine.data_lineage import METHODOLOGY, get_data_source_string
+    HAS_DATA_LINEAGE = True
+except ImportError:
+    HAS_DATA_LINEAGE = False
+    METHODOLOGY = {"prices": {"source": "Twelve Data API", "type": "adjusted_close"}}
+    def get_data_source_string():
+        return "Twelve Data API (adjusted_close)"
+
+# Import calendar pour alignement sans ffill
+try:
+    from portfolio_engine.calendar import (
+        align_to_reference_calendar,
+        CalendarAlignmentReport,
+        validate_no_ffill_contamination,
+    )
+    HAS_CALENDAR = True
+except ImportError:
+    HAS_CALENDAR = False
+
+# Import data quality pour validation
+try:
+    from portfolio_engine.data_quality import DataQualityChecker, DataQualityReport
+    HAS_DATA_QUALITY = True
+except ImportError:
+    HAS_DATA_QUALITY = False
 
 logger = logging.getLogger("backtest.data_loader")
 
@@ -64,24 +84,13 @@ MIC_TO_COUNTRY = {
 
 
 def parse_symbol_with_mic(symbol: str) -> Tuple[str, Optional[str]]:
-    """
-    Parse un symbole qui peut être au format TICKER:MIC.
-    
-    Args:
-        symbol: "CABK:XMAD" ou "AAPL" ou "SSE.L"
-    
-    Returns:
-        Tuple (base_ticker, mic_code ou None)
-    """
+    """Parse un symbole qui peut être au format TICKER:MIC."""
     if not symbol:
         return symbol, None
-    
-    # Format TICKER:MIC (ex: CABK:XMAD)
     if ":" in symbol:
         parts = symbol.split(":")
         if len(parts) == 2:
             return parts[0], parts[1]
-    
     return symbol, None
 
 
@@ -124,7 +133,9 @@ class TwelveDataLoader:
         requests_per_minute = self.PLAN_LIMITS.get(self.plan, 8)
         self.min_request_interval = 60.0 / requests_per_minute
         
-        logger.info(f"TwelveData initialized with plan '{plan}' ({requests_per_minute} req/min)")
+        # Log data source from METHODOLOGY
+        data_source = get_data_source_string()
+        logger.info(f"TwelveDataLoader initialized: {data_source}, plan '{plan}' ({requests_per_minute} req/min)")
         self._cache: Dict[str, pd.DataFrame] = {}
     
     def _rate_limit(self):
@@ -143,12 +154,7 @@ class TwelveDataLoader:
         end_date: str,
         interval: str = "1day"
     ) -> Optional[pd.DataFrame]:
-        """
-        Récupère les prix historiques pour un symbole.
-        
-        Gère automatiquement le format TICKER:MIC en séparant les paramètres.
-        """
-        # ✅ V7 FIX: Séparer TICKER:MIC en params distincts
+        """Récupère les prix historiques pour un symbole."""
         base_symbol, mic_code = parse_symbol_with_mic(symbol)
         
         cache_key = f"{symbol}_{start_date}_{end_date}_{interval}"
@@ -158,7 +164,7 @@ class TwelveDataLoader:
         self._rate_limit()
         
         params = {
-            "symbol": base_symbol,  # Juste le ticker, sans :MIC
+            "symbol": base_symbol,
             "interval": interval,
             "start_date": start_date,
             "end_date": end_date,
@@ -167,7 +173,6 @@ class TwelveDataLoader:
             "timezone": "America/New_York",
         }
         
-        # Ajouter mic_code si présent
         if mic_code:
             params["mic_code"] = mic_code
         
@@ -205,9 +210,21 @@ class TwelveDataLoader:
         symbols: List[str],
         start_date: str,
         end_date: str,
-        interval: str = "1day"
-    ) -> pd.DataFrame:
-        """Récupère les prix pour plusieurs symboles avec affichage de couverture."""
+        interval: str = "1day",
+        align_calendar: bool = True,  # v10: NEW
+        validate_quality: bool = True,  # v10: NEW
+    ) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Récupère les prix pour plusieurs symboles.
+        
+        v10 FIX:
+        - align_calendar=True: utilise calendar.align_to_reference_calendar()
+        - validate_quality=True: utilise DataQualityChecker
+        - Plus de ffill() implicite
+        
+        Returns:
+            Tuple (prices_df, diagnostics)
+        """
         all_data = {}
         loaded = 0
         failed = []
@@ -217,19 +234,19 @@ class TwelveDataLoader:
             df = self.get_time_series(symbol, start_date, end_date, interval)
             
             if df is not None and "close" in df.columns:
-                # Utiliser le symbole original comme clé (pour le mapping des poids)
                 all_data[symbol] = df["close"]
                 loaded += 1
             else:
                 failed.append(symbol)
         
-        # ============ AFFICHAGE COUVERTURE ============
+        # Coverage report
         total = len(symbols)
         coverage_pct = (loaded / total * 100) if total > 0 else 0
         
         print("\n" + "="*60)
         print("📊 DATA COVERAGE REPORT")
         print("="*60)
+        print(f"   Data source:        {get_data_source_string()}")
         print(f"   Symbols requested:  {total}")
         print(f"   Symbols loaded:     {loaded}")
         print(f"   Symbols failed:     {len(failed)}")
@@ -249,20 +266,71 @@ class TwelveDataLoader:
             raise ValueError("No data loaded for any symbol")
         
         prices_df = pd.DataFrame(all_data)
-        prices_df = prices_df.sort_index().ffill()
+        prices_df = prices_df.sort_index()
         
-        logger.info(f"Loaded {len(prices_df.columns)}/{total} symbols ({coverage_pct:.1f}%), {len(prices_df)} days")
-        return prices_df
+        diagnostics = {
+            "data_source": get_data_source_string(),
+            "n_symbols_requested": total,
+            "n_symbols_loaded": loaded,
+            "n_symbols_failed": len(failed),
+            "coverage_pct": round(coverage_pct, 1),
+            "failed_symbols": failed,
+            "calendar_aligned": False,
+            "quality_validated": False,
+        }
+        
+        # ============ v10 FIX: CALENDAR ALIGNMENT (NO FFILL) ============
+        if align_calendar and HAS_CALENDAR:
+            logger.info("Aligning to NYSE calendar (no ffill)...")
+            try:
+                prices_df, cal_report = align_to_reference_calendar(
+                    prices_df,
+                    reference_calendar="NYSE",
+                    max_nan_pct=0.05,
+                    interpolation_method=None,  # NO interpolation
+                )
+                diagnostics["calendar_aligned"] = True
+                diagnostics["calendar_report"] = cal_report.to_dict()
+                logger.info(f"Calendar aligned: {cal_report.original_dates} → {cal_report.aligned_dates} dates")
+            except Exception as e:
+                logger.warning(f"Calendar alignment failed: {e}, using raw data")
+        elif not HAS_CALENDAR:
+            logger.warning("⚠️ calendar module not available, using dropna() fallback (NOT ffill)")
+            # FALLBACK SAFE: dropna au lieu de ffill
+            prices_df = prices_df.dropna(how='any')
+        
+        # ============ v10 FIX: DATA QUALITY VALIDATION ============
+        if validate_quality and HAS_DATA_QUALITY:
+            logger.info("Validating data quality...")
+            checker = DataQualityChecker()
+            quality_report = checker.check(prices_df)
+            diagnostics["quality_validated"] = True
+            diagnostics["quality_report"] = quality_report.to_dict()
+            
+            if not quality_report.passed:
+                logger.warning(f"⚠️ Data quality issues: {quality_report.n_symbols_rejected} symbols rejected")
+                # Exclure les symboles problématiques
+                for symbol in quality_report.rejected_symbols:
+                    if symbol in prices_df.columns:
+                        prices_df = prices_df.drop(columns=[symbol])
+                        logger.info(f"Excluded {symbol}: {quality_report.rejection_reasons.get(symbol)}")
+        
+        # ============ v10 FIX: VALIDATE NO FFILL CONTAMINATION ============
+        if HAS_CALENDAR:
+            suspects = validate_no_ffill_contamination(prices_df)
+            if suspects:
+                diagnostics["ffill_suspects"] = suspects
+                logger.warning(f"⚠️ Possible ffill contamination in: {suspects}")
+        
+        logger.info(f"Final dataset: {len(prices_df.columns)} symbols, {len(prices_df)} days")
+        
+        return prices_df, diagnostics
 
 
-# ============ DYNAMIC NAME → TICKER MAPPING FROM stocks_*.json ============
+# ============ DYNAMIC NAME → TICKER MAPPING ============
 
 def build_name_to_ticker_map(data_dir: str = "data") -> Dict[str, str]:
-    """
-    Construit dynamiquement le mapping nom → ticker depuis les fichiers stocks_*.json.
-    Ces fichiers sont générés par stock-advanced-filter.js et contiennent les tickers
-    déjà validés par TwelveData.
-    """
+    """Construit dynamiquement le mapping nom → ticker depuis les fichiers stocks_*.json."""
     mapping = {}
     stocks_files = [
         Path(data_dir) / "stocks_us.json",
@@ -282,12 +350,10 @@ def build_name_to_ticker_map(data_dir: str = "data") -> Dict[str, str]:
             stocks = data.get("stocks", [])
             for stock in stocks:
                 name = stock.get("name", "").strip().upper()
-                # Priorité: resolved_symbol > ticker
                 ticker = stock.get("resolved_symbol") or stock.get("ticker")
                 
                 if name and ticker:
                     mapping[name] = ticker
-                    # Aussi mapper le ticker lui-même (pour les cas où le nom = ticker)
                     ticker_upper = ticker.upper()
                     if ticker_upper != name:
                         mapping[ticker_upper] = ticker
@@ -297,21 +363,15 @@ def build_name_to_ticker_map(data_dir: str = "data") -> Dict[str, str]:
         except Exception as e:
             logger.warning(f"Error loading {filepath}: {e}")
     
-    # Ajouter les ETF et benchmarks courants (ne changent pas)
+    # ETF et benchmarks standards
     etf_mapping = {
-        # Benchmarks
         "URTH": "URTH", "IEF": "IEF", "SPY": "SPY", "QQQ": "QQQ",
         "ISHARES MSCI WORLD ETF": "URTH",
         "ISHARES 7-10 YEAR TREASURY BOND ETF": "IEF",
-        # Bonds ETF
         "SPDR DOUBLELINE TOTAL RETURN TACTICAL ETF": "TOTL",
-        "SPDR DOUBLELINE": "TOTL",
         "ISHARES 20+ YEAR TREASURY BOND ETF": "TLT",
         "VANGUARD TOTAL BOND MARKET ETF": "BND",
         "ISHARES CORE U.S. AGGREGATE BOND ETF": "AGG",
-        "ISHARES IBOXX $ HIGH YIELD CORPORATE BOND ETF": "HYG",
-        "ISHARES IBOXX $ INVESTMENT GRADE CORPORATE BOND ETF": "LQD",
-        # Gold
         "SPDR GOLD SHARES": "GLD",
         "ISHARES GOLD TRUST": "IAU",
     }
@@ -343,16 +403,13 @@ def name_to_ticker(name: str) -> Optional[str]:
     name_clean = name.strip().upper()
     mapping = get_name_to_ticker_map()
     
-    # Recherche exacte
     if name_clean in mapping:
         return mapping[name_clean]
     
-    # Recherche partielle (pour gérer les variations de nom)
     for map_name, ticker in mapping.items():
         if map_name in name_clean or name_clean in map_name:
             return ticker
     
-    # Si c'est déjà un ticker court valide (ex: "AAPL", "ALV.DE")
     if len(name) <= 12 and name.replace(".", "").replace("-", "").replace("/", "").replace(":", "").isalnum():
         return name
     
@@ -363,14 +420,7 @@ def name_to_ticker(name: str) -> Optional[str]:
 # ============ PORTFOLIO SYMBOL EXTRACTION ============
 
 def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> Tuple[Set[str], int, int]:
-    """
-    Extrait tous les symboles uniques des portefeuilles générés.
-    
-    V9: Utilise _tickers en priorité si disponible.
-    
-    Returns:
-        Tuple (symbols_set, total_requested, total_resolved)
-    """
+    """Extrait tous les symboles uniques des portefeuilles générés."""
     symbols = set()
     total_requested = 0
     total_resolved = 0
@@ -389,7 +439,6 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
         
         profile_data = data[profile]
         
-        # ✅ V9: Priorité au bloc _tickers
         if "_tickers" in profile_data and profile_data["_tickers"]:
             tickers_block = profile_data["_tickers"]
             for ticker in tickers_block.keys():
@@ -398,7 +447,6 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
                 total_resolved += 1
             logger.info(f"✅ {profile}: Using _tickers block ({len(tickers_block)} tickers)")
         else:
-            # Fallback: mapping nom→ticker
             for category in ["Actions", "ETF", "Obligations", "Crypto"]:
                 if category not in profile_data:
                     continue
@@ -416,27 +464,15 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
     if unresolved:
         logger.warning(f"Unresolved names ({len(unresolved)}): {unresolved[:5]}...")
     
-    logger.info(f"Extracted {len(symbols)} unique symbols from portfolios ({total_resolved}/{total_requested} resolved)")
+    logger.info(f"Extracted {len(symbols)} unique symbols ({total_resolved}/{total_requested} resolved)")
     return symbols, total_requested, total_resolved
 
 
-# ============ V8 FIX: PARSE WEIGHT VALUE ============
-
 def parse_weight_value(weight) -> float:
-    """
-    Parse un poids qui peut être au format:
-    - "14%" (string avec %)
-    - "14" (string sans %)
-    - 14 (int)
-    - 0.14 (float décimal)
-    
-    Returns:
-        float en décimal (0.14 pour 14%)
-    """
+    """Parse un poids (string "14%" ou int 14 → float 0.14)."""
     if weight is None:
         return 0.0
     
-    # Si c'est une string, nettoyer
     if isinstance(weight, str):
         weight_str = weight.strip().replace("%", "").replace(",", ".")
         try:
@@ -447,7 +483,6 @@ def parse_weight_value(weight) -> float:
     else:
         weight_num = float(weight)
     
-    # Convertir en décimal si > 1 (14 → 0.14)
     if weight_num > 1:
         return weight_num / 100.0
     else:
@@ -455,16 +490,7 @@ def parse_weight_value(weight) -> float:
 
 
 def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> Dict[str, Dict[str, float]]:
-    """
-    Extrait les poids de chaque profil depuis portfolios.json.
-    
-    V9: Lit en PRIORITÉ le bloc _tickers (Solution C).
-    Fallback sur mapping nom→ticker si _tickers absent (rétrocompat).
-    
-    Returns:
-        Dict[profile_name, Dict[ticker, weight_decimal]]
-        Ex: {"Agressif": {"AAPL": 0.14, "MSFT": 0.12, ...}, ...}
-    """
+    """Extrait les poids de chaque profil depuis portfolios.json."""
     weights_by_profile = {}
     
     try:
@@ -483,13 +509,11 @@ def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> 
         source = "unknown"
         unresolved_names = []
         
-        # ============ V9: PRIORITÉ AU BLOC _tickers ============
         if "_tickers" in profile_data and profile_data["_tickers"]:
             tickers_block = profile_data["_tickers"]
             source = "_tickers"
             
             for ticker, weight in tickers_block.items():
-                # Les poids dans _tickers sont déjà en décimal (0.14)
                 weight_decimal = float(weight)
                 if weight_decimal > 0:
                     profile_weights[ticker] = weight_decimal
@@ -497,7 +521,6 @@ def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> 
             logger.info(f"✅ {profile}: Loaded {len(profile_weights)} weights from _tickers block")
         
         else:
-            # ============ FALLBACK: MAPPING NOM→TICKER ============
             source = "name_mapping"
             logger.warning(f"⚠️ {profile}: _tickers block not found, falling back to name→ticker mapping")
             
@@ -508,7 +531,6 @@ def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> 
                 for name, weight in profile_data[category].items():
                     ticker = name_to_ticker(name)
                     if ticker:
-                        # V8 FIX: Parser le poids correctement (string "14%" ou int 14)
                         weight_decimal = parse_weight_value(weight)
                         if weight_decimal > 0:
                             profile_weights[ticker] = weight_decimal
@@ -518,16 +540,14 @@ def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> 
             if unresolved_names:
                 logger.warning(f"   ❌ Unresolved ({len(unresolved_names)}): {unresolved_names[:5]}...")
         
-        # ============ NORMALISATION ET VALIDATION ============
+        # Normalisation
         total = sum(profile_weights.values())
-        
         if total > 0 and abs(total - 1.0) > 0.01:
             logger.warning(f"   ⚠️ {profile}: weights sum to {total:.2%}, normalizing...")
             profile_weights = {k: v/total for k, v in profile_weights.items()}
         
         weights_by_profile[profile] = profile_weights
         
-        # ============ LOG RÉCAPITULATIF ============
         final_total = sum(profile_weights.values())
         print(f"\n📋 {profile} weights loaded:")
         print(f"   Source:           {source}")
@@ -550,12 +570,11 @@ def load_prices_for_backtest(
     portfolios_path: Optional[str] = "data/portfolios.json",
     include_benchmark: bool = True,
     benchmark_symbols: List[str] = None,
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, Dict]:
     """
-    Charge les prix pour le backtest avec affichage de couverture.
+    Charge les prix pour le backtest.
     
-    Returns:
-        DataFrame des prix (colonnes = symboles, index = dates)
+    v10: Retourne maintenant (prices_df, diagnostics) au lieu de juste prices_df.
     """
     if end_date is None:
         end_date = datetime.now().strftime("%Y-%m-%d")
@@ -566,9 +585,8 @@ def load_prices_for_backtest(
     
     symbols = set()
     
-    # Forcer le rechargement du mapping depuis les fichiers stocks_*.json
     global _NAME_TO_TICKER_CACHE
-    _NAME_TO_TICKER_CACHE = None  # Reset cache
+    _NAME_TO_TICKER_CACHE = None
     
     if portfolios_path and Path(portfolios_path).exists():
         portfolio_symbols, requested, resolved = extract_portfolio_symbols(portfolios_path)
@@ -581,7 +599,7 @@ def load_prices_for_backtest(
     
     if include_benchmark:
         if benchmark_symbols is None:
-            benchmark_symbols = ["URTH", "IEF"]  # World + Bonds
+            benchmark_symbols = ["URTH", "IEF"]
         for bench in benchmark_symbols:
             symbols.add(bench)
             logger.info(f"Added benchmark: {bench}")
@@ -603,18 +621,22 @@ def load_prices_for_backtest(
     print(f"   Symbols: {', '.join(symbols_list[:10])}{'...' if len(symbols_list) > 10 else ''}")
     
     loader = TwelveDataLoader(api_key=api_key, plan=plan)
-    prices = loader.get_multiple_time_series(
+    prices, diagnostics = loader.get_multiple_time_series(
         symbols=symbols_list,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        align_calendar=True,
+        validate_quality=True,
     )
     
-    return prices
+    return prices, diagnostics
 
 
 def compute_returns(prices: pd.DataFrame) -> pd.DataFrame:
-    """Calcule les rendements journaliers."""
-    return prices.pct_change().fillna(0)
+    """Calcule les rendements journaliers (APRÈS alignement, sans fillna(0))."""
+    returns = prices.pct_change()
+    # v10 FIX: dropna() au lieu de fillna(0)
+    return returns.dropna()
 
 
 def compute_rolling_metrics(prices: pd.DataFrame, window: int = 20) -> Dict[str, pd.DataFrame]:
