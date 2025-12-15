@@ -9,6 +9,8 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.8.1: P0-2 - verify_constraints_post_arrondi() appelée après arrondi
+        + _constraint_report dans chaque profil pour audit trail
 V4.8.0: P0 COMPLIANCE - Double barrière LLM + audit trail + fallback
         P0-7: sanitize_llm_output() appliqué dans add_commentary() avec audit
         P0-8: use_tactical_context = False (GPT-generated = zone grise AMF)
@@ -31,6 +33,7 @@ V4.2.2: FIX TICKER - Récupérer ticker depuis source_data, pas Asset.ticker
 V4.2.1: FIX AttributeError - utiliser getattr() pour Asset
 V4.2: FIX EXPORT - Ajoute bloc _tickers pour le backtest (Solution C)
 V4.1: FIX BACKTEST - Utilise poids FIXES du portfolio (pas recalcul dynamique)
+
 
 """
 
@@ -68,6 +71,9 @@ from portfolio_engine import (
 
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
+
+# v4.8.1 P0-2: Import vérification contraintes post-arrondi
+from portfolio_engine.constraints import verify_constraints_post_arrondi, ConstraintReport
 
 from compliance import (
     generate_compliance_block,
@@ -708,7 +714,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.8.0_p0_compliance"
+        merged[profile]["_compliance_audit"]["version"] = "v4.8.1_p0_constraints"
         
         # 4. Fallback si trop de contenu supprimé (>50%)
         if report.removal_ratio > 0.5:
@@ -1190,7 +1196,12 @@ def _extract_symbol_from_asset(asset) -> Optional[str]:
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.8: Convertit le format interne vers le format v1 attendu par le front.
+    V4.8.1: Convertit le format interne vers le format v1 attendu par le front.
+    
+    AJOUTS v4.8.1 P0-2:
+    - Appel verify_constraints_post_arrondi() APRÈS round_weights_to_100()
+    - Stockage du _constraint_report dans chaque profil
+    - Logging des violations HARD (erreurs), warnings, succès
     
     AJOUTS v4.8 P0-9:
     - Exposition du mode d'optimisation dans _optimization
@@ -1212,6 +1223,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "ETF": { ... },
             "_tickers": { "LLY": 0.14, "BIV": 0.05, ... },   # Pour le backtest (vrais symbols)
             "_optimization": { "mode": "slsqp", ... }        # v4.8 P0-9
+            "_constraint_report": { ... }                     # v4.8.1 P0-2
         }
     """
     # Construire le lookup avec extraction robuste du ticker ET symbol
@@ -1319,6 +1331,9 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         # V4.6: Tracking des vrais symbols utilisés pour _tickers
         bond_symbols_used = []
         
+        # v4.8.1 P0-2: Construire assets_metadata pour la vérification des contraintes
+        assets_metadata_for_check = {}
+        
         for asset_id, weight in allocation.items():
             asset_id_str = str(asset_id)
             info = asset_lookup.get(asset_id_str, {
@@ -1335,6 +1350,13 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             isin = info.get("isin")
             original_id = info.get("id", asset_id_str)
             cat_v1 = _category_v1(info["category"])
+            
+            # v4.8.1 P0-2: Stocker les métadonnées pour vérification contraintes
+            assets_metadata_for_check[asset_id_str] = {
+                "category": cat_v1,
+                "name": name,
+                "ticker": ticker,
+            }
             
             # V4.6 FIX: Pour les Obligations, utiliser SYMBOL (pas TICKER) pour _tickers
             if cat_v1 == "Obligations":
@@ -1438,6 +1460,66 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 cat_v1, name = key.split(":", 1)
                 result[profile][cat_v1][name] = format_weight_as_percent(weight, decimals=0)
         
+        # === v4.8.1 P0-2: VÉRIFICATION CONTRAINTES POST-ARRONDI ===
+        # Reconstruire l'allocation avec poids arrondis pour vérification
+        allocation_rounded = {}
+        for cat_v1 in ["Actions", "ETF", "Obligations", "Crypto"]:
+            for name, pct_str in result[profile][cat_v1].items():
+                try:
+                    pct_val = float(pct_str.replace("%", ""))
+                    # Trouver l'asset_id correspondant
+                    for aid, meta in assets_metadata_for_check.items():
+                        if meta["name"] == name or name.startswith(meta["name"]):
+                            allocation_rounded[aid] = pct_val
+                            break
+                    else:
+                        # Fallback: utiliser le nom comme clé
+                        allocation_rounded[name] = pct_val
+                except:
+                    pass
+        
+        # Extraire les contraintes du profil depuis PROFILES
+        profile_config = PROFILES.get(profile, {})
+        profile_constraints = {
+            "bonds_min": profile_config.get("bonds_min", 0) * 100,  # Convertir en %
+            "crypto_max": profile_config.get("crypto_max", 0) * 100,
+            "max_single_position": profile_config.get("max_single_position", 0.15) * 100,
+            "max_single_bond": profile_config.get("max_single_bond", 0.25) * 100,
+            "min_assets": profile_config.get("min_assets", 10),
+            "max_assets": profile_config.get("max_assets", 18),
+            "vol_target": profile_config.get("vol_target", 12),
+            "bucket_targets": profile_config.get("bucket_targets", {}),
+        }
+        
+        # Appeler la vérification
+        constraint_report = verify_constraints_post_arrondi(
+            allocation=allocation_rounded,
+            assets_metadata=assets_metadata_for_check,
+            profile_constraints=profile_constraints,
+            profile_name=profile,
+        )
+        
+        # Stocker le rapport dans le résultat
+        result[profile]["_constraint_report"] = constraint_report.to_dict()
+        
+        # Logging selon le résultat
+        if not constraint_report.all_hard_satisfied:
+            hard_violations = [
+                v for v in constraint_report.violations 
+                if v.priority.value == "hard"
+            ]
+            for v in hard_violations:
+                logger.error(
+                    f"🚨 [P0-2] {profile} HARD VIOLATION: {v.constraint_name} - "
+                    f"expected {v.expected}, got {v.actual:.1f}% "
+                    f"(context: {v.context})"
+                )
+        elif constraint_report.warnings:
+            for w in constraint_report.warnings:
+                logger.warning(f"⚠️ [P0-2] {profile} WARNING: {w}")
+        else:
+            logger.info(f"✅ [P0-2] {profile}: Toutes contraintes satisfaites (margins: {constraint_report.margins})")
+        
         # V4.6: Log spécial pour bonds avec vrais symbols
         n_bonds_readable = len(result[profile]["Obligations"])
         bonds_total_pct = sum(
@@ -1494,10 +1576,10 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
-    # === v4.8 P0-9: Ajouter les modes d'optimisation dans _meta ===
+    # === v4.8.1 P0-2: Ajouter les modes d'optimisation dans _meta ===
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.8.0_p0_compliance",
+        "version": "v4.8.1_p0_constraints",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -1532,7 +1614,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.8.0_p0_compliance",
+        "version": "v4.8.1_p0_constraints",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1574,7 +1656,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.8.0 - P0 COMPLIANCE")
+    logger.info("🚀 Portfolio Engine v4.8.1 - P0 CONSTRAINTS")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1612,15 +1694,16 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.8.0 P0 COMPLIANCE:")
+    logger.info("Fonctionnalités v4.8.1 P0 CONSTRAINTS:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
-    logger.info("   • 🆕 P0-7: Double barrière LLM + audit trail + fallback ✅")
-    logger.info("   • 🆕 P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé) ✅")
-    logger.info("   • 🆕 P0-9: Mode optimisation exposé (_optimization) ✅")
+    logger.info("   • 🆕 P0-2: verify_constraints_post_arrondi() + _constraint_report ✅")
+    logger.info("   • P0-7: Double barrière LLM + audit trail + fallback ✅")
+    logger.info("   • P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé) ✅")
+    logger.info("   • P0-9: Mode optimisation exposé (_optimization) ✅")
     logger.info("   • USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
     logger.info("   • NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
     logger.info("   • Reproductibilité garantie")
