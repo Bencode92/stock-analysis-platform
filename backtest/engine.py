@@ -1,6 +1,10 @@
 # backtest/engine.py
 """
-Moteur de backtest pour le Portfolio Engine v4.
+Moteur de backtest pour le Portfolio Engine v5.
+
+V5 (P0 Technical Fix 2024-12-15):
+- P0-1 FIX: Use get_data_source_string() instead of hardcoded "Yahoo Finance"
+- Import from portfolio_engine.data_lineage for consistent data lineage
 
 V4 (IC Review 2024-12-15 - ChatGPT challenge):
 - ACTION 2: Masquer Sharpe annualisé si période < 252j
@@ -34,6 +38,15 @@ from datetime import datetime
 import logging
 
 logger = logging.getLogger("backtest.engine")
+
+# ============= P0-1 FIX: Import data lineage =============
+try:
+    from portfolio_engine.data_lineage import get_data_source_string
+    HAS_DATA_LINEAGE = True
+except ImportError:
+    HAS_DATA_LINEAGE = False
+    def get_data_source_string() -> str:
+        return "Twelve Data API (adjusted_close)"  # Fallback
 
 
 # ============= v3: CONSTANTES COMPLIANCE =============
@@ -83,6 +96,9 @@ def compute_backtest_stats(
 ) -> Dict[str, float]:
     """
     Calcule les statistiques de performance.
+    
+    v5 P0-1 FIX:
+    - Use get_data_source_string() instead of hardcoded "Yahoo Finance"
     
     v4 IC FIX (ChatGPT challenge):
     - ACTION 2: Masquer Sharpe annualisé si période < 252j
@@ -179,14 +195,14 @@ def compute_backtest_stats(
     # Disclaimer obligatoire
     stats["disclaimer_amf"] = DISCLAIMER_AMF
     
-    # Méthodologie
+    # ===== v5 P0-1 FIX: Use get_data_source_string() =====
     stats["methodology"] = {
         "type": "backtest_fixed_weights",
         "period_days": n_days,
         "rebalancing": "none (buy-and-hold)",
         "transaction_cost_bp": 10,
         "benchmark": "URTH (MSCI World)",
-        "data_source": "Yahoo Finance (adjusted close)",
+        "data_source": get_data_source_string(),  # P0-1 FIX: was "Yahoo Finance (adjusted close)"
         "risk_free_rate_pct": round(risk_free_rate * 100, 2),
     }
     
@@ -347,6 +363,9 @@ def run_backtest_fixed_weights(
     
     C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
     Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
+    
+    v5 P0-1 FIX:
+    - Use get_data_source_string() in methodology
     
     v4 IC FIX (ChatGPT challenge):
     - ACTION 2: Sharpe masqué si période < 252j

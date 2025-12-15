@@ -1,6 +1,11 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.13 — Stable Fallback Heuristic
+Optimiseur de portefeuille v6.14 — P0 Technical Fixes
+
+CHANGEMENTS v6.14 (P0 Technical Fixes - ChatGPT v2.0 Audit):
+1. P0-2 FIX: Tie-breaker (score, id) pour tri déterministe
+   - sorted(..., key=lambda x: (x.score, x.id)) au lieu de key=lambda x: x.score
+   - Garantit un ordre stable même en cas d'égalité de score
 
 CHANGEMENTS v6.13 (Conformité AMF - P0-9):
 1. FIX WORDING: "Certified" → "Heuristic" partout (évite terme trompeur)
@@ -20,27 +25,6 @@ CHANGEMENTS v6.10 (IC Review):
 1. CRITICAL: Stable vol_target 8.0% → 6.0% (aligné avec vol réalisée)
 2. CRITICAL: Stable vol_tolerance 5.0% → 3.0% (tolérance [3%, 9%])
 3. SLSQP converge sans fallback pour Stable
-
-CHANGEMENTS v6.9:
-1. P1 FIX: Stable bonds_min réduit 40% → 35% (facilite SLSQP)
-2. P1 FIX: Stable vol_tolerance augmenté 4% → 5% (plus de marge)
-3. P1 FIX: Bucket constraint relaxation augmentée pour Stable (±8%)
-4. Meilleure convergence SLSQP sans sacrifier la qualité
-
-CHANGEMENTS v6.8:
-1. P1 FIX: vol_tolerance Stable augmenté 3% → 4% (évite échec SLSQP)
-2. P1 FIX: vol_target Stable en intervalle [7%, 9%] (vol_target_min/max)
-3. P3 FIX: Diagnostic crypto dans logs (max_allowed, pool, selected)
-4. Meilleur init poids pour SLSQP Stable (bonds-heavy)
-
-CHANGEMENTS v6.7:
-1. FIX CRITIQUE: Bonds utilisent SYMBOL comme ID (AGG, BND, VTIP) au lieu de "nan"
-2. Ajout de _is_valid_id() pour valider les IDs (gère None, NaN, "", "nan")
-3. Empêche la collision dans asset_lookup qui causait la perte de tous les bonds sauf le dernier
-
-CHANGEMENTS v6.6:
-1. Add [FINAL] debug log showing each asset in allocation (id, category, name, weight)
-2. Helps diagnose if bonds disappear in optimizer or in mapping layer
 
 5 LEVIERS ACTIFS (le reste est gelé):
 1. vol_target par profil (6%, 12%, 18%)
@@ -109,7 +93,7 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6.13 =============
+# ============= CONSTANTES v6.14 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -145,7 +129,6 @@ MIN_DEFENSIVE_IN_POOL = {
 }
 
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
-# FIX: Stable 12% → 18% pour élargir l'espace faisable SLSQP
 MAX_SINGLE_BOND_WEIGHT = {
     "Stable": 25.0,   # v6.11 FIX: 12% → 18% (permet 2 bonds pour 35% au lieu de 4)
     "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
@@ -153,7 +136,6 @@ MAX_SINGLE_BOND_WEIGHT = {
 }
 
 # P1 FIX v6.2: Minimum nombre de bonds distincts dans l'allocation finale
-# v6.11: Ajusté pour cohérence avec max_single_bond
 MIN_DISTINCT_BONDS = {
     "Stable": 2,      # v6.11 FIX: 4 → 2 (cohérent avec max 18%)
     "Modéré": 2,
@@ -168,8 +150,6 @@ BUCKET_CONSTRAINT_RELAXATION = {
 }
 
 # v6.13 FIX: Renommage "Certified" → "Heuristic" (conformité AMF P0-9)
-# v6.12 NEW: Profils qui utilisent le fallback heuristique (skip SLSQP)
-# Justification: contraintes mathématiquement incompatibles avec Markowitz
 FORCE_FALLBACK_PROFILES = {"Stable"}
 
 
@@ -235,28 +215,27 @@ class ProfileConstraints:
 
 
 # v6.10 FIX: vol_target Stable aligné sur réalité (6% au lieu de 8%)
-# Permet à SLSQP de converger sans fallback
 PROFILES = {
     "Agressif": ProfileConstraints(
         name="Agressif", 
         vol_target=18.0, 
-        vol_tolerance=3.0,  # Standard
+        vol_tolerance=3.0,
         crypto_max=10.0, 
         bonds_min=5.0
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
         vol_target=12.0, 
-        vol_tolerance=3.0,  # Standard
+        vol_tolerance=3.0,
         crypto_max=5.0, 
         bonds_min=15.0
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
-        vol_target=6.0,     # v6.10 FIX: 8.0 → 6.0 (aligné avec vol réalisée ~6.9%)
-        vol_tolerance=3.0,  # v6.10 FIX: 5.0 → 3.0 (tolérance [3%, 9%])
+        vol_target=6.0,
+        vol_tolerance=3.0,
         crypto_max=0.0, 
-        bonds_min=35.0      # v6.9 FIX: Réduit 40% → 35% pour convergence SLSQP
+        bonds_min=35.0
     ),
 }
 
@@ -279,7 +258,7 @@ class Asset:
     preset: Optional[str] = None
     role: Optional[Role] = None
     corporate_group: Optional[str] = None
-    buffett_score: Optional[float] = None  # Score Buffett pour hard filter
+    buffett_score: Optional[float] = None
 
 
 def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: float = 200.0) -> float:
@@ -445,7 +424,8 @@ def deduplicate_stocks_by_corporate_group(
         if group_id is None:
             deduplicated_stocks.extend(group_stocks)
         else:
-            group_stocks.sort(key=lambda a: a.score, reverse=True)
+            # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri stable
+            group_stocks.sort(key=lambda a: (a.score, a.id), reverse=True)
             kept = group_stocks[:max_per_group]
             removed = group_stocks[max_per_group:]
             deduplicated_stocks.extend(kept)
@@ -514,7 +494,8 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
         if exposure is None:
             deduplicated_etfs.extend(group)
         else:
-            sorted_group = sorted(group, key=lambda a: a.score, reverse=True)
+            # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri stable
+            sorted_group = sorted(group, key=lambda a: (a.score, a.id), reverse=True)
             deduplicated_etfs.append(sorted_group[0])
             if len(sorted_group) > 1:
                 removed_count += len(sorted_group) - 1
@@ -667,39 +648,19 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
 
 
-# ============= PORTFOLIO OPTIMIZER v6.13 =============
+# ============= PORTFOLIO OPTIMIZER v6.14 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.13.
+    Optimiseur mean-variance v6.14.
+    
+    CHANGEMENTS v6.14 (P0 Technical Fixes - ChatGPT v2.0 Audit):
+    1. P0-2 FIX: Tie-breaker (score, id) pour tri déterministe
+       - sorted(..., key=lambda x: (x.score, x.id)) au lieu de key=lambda x: x.score
+       - Garantit un ordre stable même en cas d'égalité de score
     
     CHANGEMENTS v6.13 (Conformité AMF - P0-9):
     1. FIX WORDING: "Certified" → "Heuristic" (terme non-trompeur)
-       - Le profil Stable utilise une allocation heuristique (constraint-first)
-       - PAS une optimisation Markowitz (contraintes incompatibles)
-       - Transparence = conformité AMF
-    
-    CHANGEMENTS v6.12 (IC Review - ChatGPT validation finale):
-    1. STABLE FALLBACK OFFICIEL: Skip SLSQP pour Stable
-       - Contraintes (vol 6%±3%, bonds_min 35%, buckets 45-60% DEFENSIVE)
-       - Espace mathématiquement incompatible avec optimisation Markowitz
-       - Fallback vol-aware = solution robuste et déterministe
-    2. Nouveau mode "fallback_heuristic" avec documentation claire
-    
-    CHANGEMENTS v6.11 (IC Review - ChatGPT challenge):
-    1. ACTION 1: max_single_bond Stable 12% → 18% (réduit géométrie contraintes)
-    2. ACTION 3: Ajout optimization_mode dans diagnostics (transparence fallback)
-    
-    CHANGEMENTS v6.10:
-    1. CRITICAL: Stable vol_target 8.0% → 6.0% (aligné vol réalisée)
-    2. CRITICAL: Stable vol_tolerance 5.0% → 3.0% (tolérance [3%, 9%])
-    3. SLSQP converge sans fallback pour Stable
-    
-    CHANGEMENTS v6.9:
-    1. P1 FIX: Stable bonds_min réduit 40% → 35%
-    2. P1 FIX: Stable vol_tolerance augmenté 4% → 5%
-    3. P1 FIX: Bucket constraint relaxation par profil (±8% pour Stable)
-    4. Meilleure convergence SLSQP sans sacrifier la qualité
     """
     
     def __init__(
@@ -743,8 +704,9 @@ class PortfolioOptimizer:
         # === ÉTAPE 4: Enrichir avec buckets ===
         universe = enrich_assets_with_buckets(universe)
         
-        # === ÉTAPE 5: Tri par score ===
-        sorted_assets = sorted(universe, key=lambda x: x.score, reverse=True)
+        # === ÉTAPE 5: Tri par score avec tie-breaker par ID ===
+        # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
+        sorted_assets = sorted(universe, key=lambda x: (x.score, x.id), reverse=True)
         
         # === ÉTAPE 6: Sélection diversifiée ===
         selected = []
@@ -756,7 +718,6 @@ class PortfolioOptimizer:
         
         target_pool = profile.max_assets * 3
         
-        # v6.8 P3: Compteur crypto pour diagnostic
         crypto_pool_count = 0
         crypto_scores = []
         
@@ -800,7 +761,7 @@ class PortfolioOptimizer:
         if len(bonds_in_pool) < min_bonds:
             all_bonds = sorted(
                 [a for a in universe if a.category == "Obligations" and a not in selected],
-                key=lambda x: x.vol_annual
+                key=lambda x: (x.vol_annual, x.id)  # v6.14 P0-2: tie-breaker
             )
             bonds_needed = min_bonds - len(bonds_in_pool)
             bonds_to_add = all_bonds[:bonds_needed]
@@ -814,7 +775,7 @@ class PortfolioOptimizer:
         if len(defensive_in_pool) < min_defensive:
             defensive_candidates = sorted(
                 [a for a in universe if a.role == Role.DEFENSIVE and a not in selected],
-                key=lambda x: x.vol_annual
+                key=lambda x: (x.vol_annual, x.id)  # v6.14 P0-2: tie-breaker
             )
             defensive_needed = min_defensive - len(defensive_in_pool)
             defensive_to_add = defensive_candidates[:defensive_needed]
@@ -881,7 +842,7 @@ class PortfolioOptimizer:
                 return np.sum(w[idx]) - min_val
             constraints.append({"type": "ineq", "fun": bonds_constraint})
         
-        # 3. MAX WEIGHT PAR BOND (v6.11: Stable 18% au lieu de 12%)
+        # 3. MAX WEIGHT PAR BOND
         max_bond_weight = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0) / 100
         for i in bonds_idx:
             def single_bond_constraint(w, idx=i, max_val=max_bond_weight):
@@ -919,10 +880,9 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
         
-        # 8. Contraintes par BUCKET (v6.9: relaxation par profil)
+        # 8. Contraintes par BUCKET
         if self.use_bucket_constraints:
             bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
-            # v6.9: Relaxation variable par profil
             relaxation = BUCKET_CONSTRAINT_RELAXATION.get(profile.name, 0.05)
             
             for role in Role:
@@ -959,35 +919,26 @@ class PortfolioOptimizer:
         candidates: List[Asset],
         profile: ProfileConstraints
     ) -> np.ndarray:
-        """
-        v6.8 P1 FIX: Initialisation intelligente des poids pour SLSQP.
-        
-        Pour Stable: commence avec une allocation bonds-heavy pour aider SLSQP.
-        """
+        """Initialisation intelligente des poids pour SLSQP."""
         n = len(candidates)
         
         if profile.name == "Stable":
-            # Pour Stable: init bonds-heavy
             weights = np.zeros(n)
             bonds_idx = [i for i, a in enumerate(candidates) if a.category == "Obligations"]
             other_idx = [i for i in range(n) if i not in bonds_idx]
             
-            # v6.10: Ajusté pour vol_target=6% (bonds_init_weight reste 45%)
-            bonds_init_weight = 0.45  # Un peu plus que bonds_min pour faciliter convergence
+            bonds_init_weight = 0.45
             
-            # Bonds: 45% répartis également
             if bonds_idx:
                 bond_weight = bonds_init_weight / len(bonds_idx)
                 for i in bonds_idx:
                     weights[i] = bond_weight
             
-            # Autres: 55% répartis également
             if other_idx:
                 other_weight = (1.0 - bonds_init_weight) / len(other_idx)
                 for i in other_idx:
                     weights[i] = other_weight
             
-            # Normaliser à 1
             if weights.sum() > 0:
                 weights = weights / weights.sum()
             else:
@@ -995,7 +946,6 @@ class PortfolioOptimizer:
             
             return weights
         else:
-            # Pour autres profils: répartition égale
             return np.ones(n) / n
     
     def _fallback_allocation(
@@ -1013,11 +963,13 @@ class PortfolioOptimizer:
         vol_target = profile.vol_target / 100
         
         if profile.name == "Stable":
-            sorted_candidates = sorted(candidates, key=lambda a: a.vol_annual)
+            # v6.14 P0-2: Tie-breaker (vol, id) pour tri stable
+            sorted_candidates = sorted(candidates, key=lambda a: (a.vol_annual, a.id))
         elif profile.name == "Agressif":
-            sorted_candidates = sorted(candidates, key=lambda a: -a.score)
+            # v6.14 P0-2: Tie-breaker (-score, id) pour tri stable
+            sorted_candidates = sorted(candidates, key=lambda a: (-a.score, a.id))
         else:
-            sorted_candidates = sorted(candidates, key=lambda a: a.score - 0.02 * a.vol_annual, reverse=True)
+            sorted_candidates = sorted(candidates, key=lambda a: (-(a.score - 0.02 * a.vol_annual), a.id))
         
         allocation = {}
         total_weight = 0.0
@@ -1029,7 +981,7 @@ class PortfolioOptimizer:
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         
         # === Assurer bonds minimum AVEC DIVERSIFICATION ===
-        bonds = sorted([a for a in sorted_candidates if a.category == "Obligations"], key=lambda x: x.vol_annual)
+        bonds = sorted([a for a in sorted_candidates if a.category == "Obligations"], key=lambda x: (x.vol_annual, x.id))
         bonds_needed = float(profile.bonds_min)
         max_single_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0)
         min_distinct = MIN_DISTINCT_BONDS.get(profile.name, 2)
@@ -1062,9 +1014,9 @@ class PortfolioOptimizer:
             bucket_assets = [a for a in sorted_candidates if a.role == role and a.id not in allocation]
             
             if role == Role.DEFENSIVE:
-                bucket_assets = sorted(bucket_assets, key=lambda a: a.vol_annual)
+                bucket_assets = sorted(bucket_assets, key=lambda a: (a.vol_annual, a.id))
             else:
-                bucket_assets = sorted(bucket_assets, key=lambda a: a.score, reverse=True)
+                bucket_assets = sorted(bucket_assets, key=lambda a: (-a.score, a.id))
             
             current_weight = bucket_weights.get(role.value, 0)
             
@@ -1141,13 +1093,13 @@ class PortfolioOptimizer:
             if current_vol > vol_target and low_vol_ids and high_vol_ids:
                 transfer = min(2.0, (current_vol - vol_target) / 2)
                 
-                high_vol_sorted = sorted(high_vol_ids, key=lambda x: allocation.get(x, 0), reverse=True)
+                high_vol_sorted = sorted(high_vol_ids, key=lambda x: (-allocation.get(x, 0), x))
                 for hv_id in high_vol_sorted:
                     if allocation.get(hv_id, 0) > transfer + 1:
                         allocation[hv_id] -= transfer
                         break
                 
-                low_vol_sorted = sorted(low_vol_ids, key=lambda x: allocation.get(x, 0))
+                low_vol_sorted = sorted(low_vol_ids, key=lambda x: (allocation.get(x, 0), x))
                 for lv_id in low_vol_sorted:
                     if allocation.get(lv_id, 0) < profile.max_single_position - transfer:
                         allocation[lv_id] = allocation.get(lv_id, 0) + transfer
@@ -1156,13 +1108,13 @@ class PortfolioOptimizer:
             elif current_vol < vol_target and high_vol_ids and low_vol_ids:
                 transfer = min(2.0, (vol_target - current_vol) / 2)
                 
-                low_vol_sorted = sorted(low_vol_ids, key=lambda x: allocation.get(x, 0), reverse=True)
+                low_vol_sorted = sorted(low_vol_ids, key=lambda x: (-allocation.get(x, 0), x))
                 for lv_id in low_vol_sorted:
                     if allocation.get(lv_id, 0) > transfer + 1:
                         allocation[lv_id] -= transfer
                         break
                 
-                high_vol_sorted = sorted(high_vol_ids, key=lambda x: allocation.get(x, 0))
+                high_vol_sorted = sorted(high_vol_ids, key=lambda x: (allocation.get(x, 0), x))
                 for hv_id in high_vol_sorted:
                     if allocation.get(hv_id, 0) < profile.max_single_position - transfer:
                         allocation[hv_id] = allocation.get(hv_id, 0) + transfer
@@ -1189,10 +1141,8 @@ class PortfolioOptimizer:
         """
         Optimisation mean-variance avec covariance hybride.
         
+        v6.14 P0-2: Tie-breaker (score, id) pour tri déterministe partout.
         v6.13: STABLE utilise le fallback heuristique (skip SLSQP).
-        Justification: Les contraintes Stable (vol 6%±3%, bonds_min 35%, 
-        buckets DEFENSIVE 45-60%) créent un espace mathématiquement 
-        incompatible avec l'optimisation Markowitz.
         """
         n = len(candidates)
         if n < profile.min_assets:
@@ -1204,16 +1154,7 @@ class PortfolioOptimizer:
         cov, cov_diagnostics = self.compute_covariance(candidates)
         
         # ============================================================
-        # v6.13 FIX: Renommage "Certified" → "Heuristic"
-        # v6.12 NEW: STABLE FALLBACK HEURISTIC
-        # ============================================================
-        # Stable profile: contraintes trop strictes pour Markowitz
-        # - vol_target 6% ± 3% (fenêtre 3%-9%)
-        # - bonds_min 35% (ultra-short, vol ~3%)
-        # - DEFENSIVE bucket 45-60%
-        # - 11 actifs max avec corrélations élevées
-        # → SLSQP ne peut pas converger mathématiquement
-        # → Fallback vol-aware = solution robuste, déterministe, auditée
+        # v6.13 FIX: STABLE FALLBACK HEURISTIC
         # ============================================================
         
         if profile.name in FORCE_FALLBACK_PROFILES:
@@ -1227,7 +1168,6 @@ class PortfolioOptimizer:
                 "Stable profile: strict constraints (vol 6%±3%, bonds_min 35%, "
                 "DEFENSIVE 45-60%) mathematically incompatible with Markowitz optimization"
             )
-            # v6.13 FIX: "certified" → "heuristic"
             optimization_mode = "fallback_heuristic"
             
         else:
@@ -1244,7 +1184,6 @@ class PortfolioOptimizer:
             constraints = self._build_constraints(candidates, profile, cov)
             bounds = [(0, profile.max_single_position / 100) for _ in range(n)]
             
-            # v6.8: Initialisation intelligente
             w0 = self._get_smart_initial_weights(candidates, profile)
             
             with warnings.catch_warnings():
@@ -1300,7 +1239,7 @@ class PortfolioOptimizer:
         bonds_final = []
         crypto_final = []
         
-        for aid, w in sorted(allocation.items(), key=lambda x: -x[1]):
+        for aid, w in sorted(allocation.items(), key=lambda x: (-x[1], x[0])):
             a = asset_by_id.get(aid)
             cat = a.category if a else "??"
             name = a.name if a else "??"
@@ -1319,7 +1258,7 @@ class PortfolioOptimizer:
         else:
             logger.warning(f"[FINAL {profile.name}] === NO BONDS IN ALLOCATION ===")
         
-        # v6.8 P3: Summary crypto
+        # Summary crypto
         crypto_total = sum(w for _, _, _, w in crypto_final)
         logger.info(
             f"[DIAG CRYPTO {profile.name}] selected={len(crypto_final)}, "
@@ -1364,12 +1303,11 @@ class PortfolioOptimizer:
                     "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
                 }
         
-        # v6.13 FIX: Diagnostics avec mode heuristique (pas "certified")
         diagnostics = to_python_native({
             "converged": optimizer_converged,
-            "optimization_mode": optimization_mode,  # v6.13: slsqp | fallback_heuristic | fallback_*
+            "optimization_mode": optimization_mode,
             "fallback_reason": fallback_reason,
-            "fallback_heuristic": profile.name in FORCE_FALLBACK_PROFILES,  # v6.13 FIX: renamed
+            "fallback_heuristic": profile.name in FORCE_FALLBACK_PROFILES,
             "message": "Fallback heuristique (contraintes strictes)" if profile.name in FORCE_FALLBACK_PROFILES else (
                 "SLSQP converged" if optimizer_converged else f"Fallback: {fallback_reason}"
             ),
@@ -1392,7 +1330,6 @@ class PortfolioOptimizer:
             "buffett_min_score": self.buffett_min_score,
         })
         
-        # v6.13: Log avec mode d'optimisation
         opt_mode_display = optimization_mode.upper().replace("_", " ")
         logger.info(
             f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds, {crypto_in_allocation} crypto), "
@@ -1459,7 +1396,8 @@ class PortfolioOptimizer:
         ]
         
         if candidates_for_adjust:
-            target_id = max(candidates_for_adjust, key=lambda x: x[1])[0]
+            # v6.14 P0-2: Tri stable avec tie-breaker
+            target_id = max(candidates_for_adjust, key=lambda x: (x[1], x[0]))[0]
             allocation[target_id] = round(float(allocation[target_id] + diff), 2)
         else:
             if total > 0:
@@ -1510,3 +1448,40 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 cat_normalized = "Crypto"
                 default_vol = 80
             elif category in ["etf", "etfs"]:
+                cat_normalized = "ETF"
+                default_vol = 15
+            else:
+                cat_normalized = "ETF"
+                default_vol = 15
+            
+            # ID generation with v6.7 validation
+            raw_id = item.get("id") or item.get("ticker") or item.get("symbol")
+            if not _is_valid_id(raw_id):
+                raw_id = item.get("name") or f"{cat_normalized}_{len(assets)+1}"
+            
+            asset = Asset(
+                id=str(raw_id),
+                name=item.get("name") or str(raw_id),
+                category=cat_normalized,
+                sector=item.get("sector") or item.get("sector_top") or "Unknown",
+                region=item.get("country") or item.get("country_top") or item.get("region") or "Global",
+                score=_clean_float(item.get("score") or item.get("_score"), 50.0, 0, 100),
+                vol_annual=_clean_float(
+                    item.get("vol") or item.get("volatility_3y") or item.get("vol_3y"),
+                    default_vol, 1.0, 150.0
+                ),
+                returns_series=item.get("returns_series"),
+                source_data=item,
+                exposure=item.get("exposure"),
+                preset=item.get("preset"),
+                buffett_score=item.get("_buffett_score"),
+            )
+            assets.append(asset)
+    
+    elif isinstance(universe, dict):
+        for cat_key, items in universe.items():
+            for item in items:
+                item["category"] = cat_key
+                assets.extend(convert_universe_to_assets([item]))
+    
+    return assets
