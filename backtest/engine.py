@@ -2,6 +2,12 @@
 """
 Moteur de backtest pour le Portfolio Engine v4.
 
+V3 (IC Review 2024-12-15):
+- CRITICAL: risk_free_rate 0.0 → 0.045 (Fed Funds rate)
+- CRITICAL: Ajout disclaimer AMF obligatoire
+- CRITICAL: Ajout warning si période < 252j
+- Sharpe ratio réaliste (÷3 environ)
+
 V2: FIX CRITIQUE - UTILISER POIDS FIXES DU PORTFOLIO
 - Nouvelle fonction run_backtest_fixed_weights() qui utilise les poids de portfolios.json
 - L'ancienne version recalculait les poids dynamiquement → biais énorme
@@ -23,6 +29,20 @@ from datetime import datetime
 import logging
 
 logger = logging.getLogger("backtest.engine")
+
+
+# ============= v3: CONSTANTES COMPLIANCE =============
+
+# v3 IC FIX: Taux sans risque réaliste (Fed Funds Dec 2024)
+DEFAULT_RISK_FREE_RATE = 0.045  # 4.5% annuel
+
+# v3 IC FIX: Disclaimer AMF obligatoire (Position DOC-2011-24)
+DISCLAIMER_AMF = """⚠️ SIMULATION - Les performances passées ne préjugent pas des performances futures. 
+Les données présentées sont issues d'une simulation sur données historiques. 
+Frais réels non inclus. Capital non garanti."""
+
+# Période minimum recommandée pour significativité statistique
+MIN_DAYS_FOR_STATS = 252  # 1 an
 
 
 @dataclass
@@ -54,10 +74,16 @@ def compute_backtest_stats(
     equity_curve: pd.Series,
     daily_returns: pd.Series,
     trades_df: pd.DataFrame,
-    risk_free_rate: float = 0.0
+    risk_free_rate: float = DEFAULT_RISK_FREE_RATE  # v3 FIX: 0.0 → 0.045
 ) -> Dict[str, float]:
     """
     Calcule les statistiques de performance.
+    
+    v3 IC FIX:
+    - risk_free_rate par défaut = 4.5% (Fed Funds)
+    - Ajout warning si période < 1 an
+    - Ajout disclaimer AMF
+    - Ajout méthodologie
     
     Returns:
         Dict avec CAGR, volatilité, Sharpe, max drawdown, turnover, etc.
@@ -83,13 +109,16 @@ def compute_backtest_stats(
     vol = daily_returns.std() * np.sqrt(252)
     stats["volatility_pct"] = round(vol * 100, 2)
     
-    # Sharpe Ratio
+    # v3 FIX: Sharpe Ratio avec risk_free_rate réaliste
     excess_return = daily_returns.mean() - (risk_free_rate / 252)
     if daily_returns.std() > 0:
         sharpe = (excess_return / daily_returns.std()) * np.sqrt(252)
         stats["sharpe_ratio"] = round(sharpe, 2)
     else:
         stats["sharpe_ratio"] = 0.0
+    
+    # v3 FIX: Stocker le taux sans risque utilisé
+    stats["risk_free_rate_pct"] = round(risk_free_rate * 100, 2)
     
     # Max Drawdown
     rolling_max = equity_curve.expanding().max()
@@ -117,6 +146,31 @@ def compute_backtest_stats(
     positive_days = (daily_returns > 0).sum()
     negative_days = (daily_returns < 0).sum()
     stats["win_rate_pct"] = round(positive_days / n_days * 100, 2) if n_days > 0 else 0
+    
+    # ===== v3 IC FIX: COMPLIANCE AMF =====
+    
+    # Disclaimer obligatoire
+    stats["disclaimer_amf"] = DISCLAIMER_AMF
+    
+    # Méthodologie
+    stats["methodology"] = {
+        "type": "backtest_fixed_weights",
+        "period_days": n_days,
+        "rebalancing": "none (buy-and-hold)",
+        "transaction_cost_bp": 10,
+        "benchmark": "URTH (MSCI World)",
+        "data_source": "Yahoo Finance (adjusted close)",
+        "risk_free_rate_pct": round(risk_free_rate * 100, 2),
+    }
+    
+    # Warning si période insuffisante
+    if n_days < MIN_DAYS_FOR_STATS:
+        stats["amf_warning"] = (
+            f"⚠️ Période de {n_days} jours insuffisante pour analyse statistique significative. "
+            f"AMF recommande minimum 5 ans pour performances publiées. "
+            f"Sharpe ratio sur période < 1 an non significatif."
+        )
+        stats["sharpe_warning"] = f"Sharpe calculé sur {n_days}j < 252j : non significatif statistiquement"
     
     return stats
 
@@ -267,6 +321,11 @@ def run_backtest_fixed_weights(
     C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
     Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
     
+    v3 IC FIX:
+    - risk_free_rate = 4.5% (Fed Funds)
+    - Disclaimer AMF inclus dans stats
+    - Warning si période < 252j
+    
     Args:
         prices: DataFrame des prix (colonnes = symboles, index = dates)
         fixed_weights: Dict {ticker: poids_decimal} ex: {"AAPL": 0.14, "MSFT": 0.12}
@@ -369,8 +428,13 @@ def run_backtest_fixed_weights(
         **effective_weights
     }])
     
-    # Stats de base
-    stats = compute_backtest_stats(equity_series, returns_series, trades_df)
+    # v3 FIX: Stats avec risk_free_rate = 4.5%
+    stats = compute_backtest_stats(
+        equity_series, 
+        returns_series, 
+        trades_df,
+        risk_free_rate=DEFAULT_RISK_FREE_RATE  # 4.5%
+    )
     
     # Ajouter info sur la couverture
     stats["weight_coverage_pct"] = round(total_weight * 100, 1)
@@ -404,7 +468,7 @@ def run_backtest_fixed_weights(
         if benchmark_symbol:
             logger.warning(f"Benchmark {benchmark_symbol} not found in prices data")
     
-    logger.info(f"Backtest complete: {stats['total_return_pct']}% return, {stats['sharpe_ratio']} Sharpe, {stats['volatility_pct']}% vol")
+    logger.info(f"Backtest complete: {stats['total_return_pct']}% return, {stats['sharpe_ratio']} Sharpe (Rf={DEFAULT_RISK_FREE_RATE*100}%), {stats['volatility_pct']}% vol")
     
     return BacktestResult(
         equity_curve=equity_series,
@@ -661,8 +725,13 @@ def run_backtest(
     trades_df = pd.DataFrame(trades)
     weights_df = pd.DataFrame(weights_history)
     
-    # Stats de base
-    stats = compute_backtest_stats(equity_series, returns_series, trades_df)
+    # v3 FIX: Stats avec risk_free_rate = 4.5%
+    stats = compute_backtest_stats(
+        equity_series, 
+        returns_series, 
+        trades_df,
+        risk_free_rate=DEFAULT_RISK_FREE_RATE
+    )
     
     # ===== BENCHMARK COMPARISON =====
     benchmark_curve = None
@@ -727,7 +796,12 @@ def print_backtest_report(result: BacktestResult):
     print(f"CAGR:             {result.stats.get('cagr_pct', 0):>8.2f}%")
     print(f"Volatility:       {result.stats.get('volatility_pct', 0):>8.2f}%")
     print(f"Sharpe Ratio:     {result.stats.get('sharpe_ratio', 0):>8.2f}")
+    print(f"  (Rf={result.stats.get('risk_free_rate_pct', 0):.1f}%)")
     print(f"Max Drawdown:     {result.stats.get('max_drawdown_pct', 0):>8.2f}%")
+    
+    # v3: Afficher warning AMF si présent
+    if "amf_warning" in result.stats:
+        print(f"\n⚠️  {result.stats['amf_warning']}")
     
     # Section Benchmark (si disponible)
     if "benchmark_symbol" in result.stats:
@@ -749,4 +823,7 @@ def print_backtest_report(result: BacktestResult):
     print(f"Annual Turnover:  {result.stats.get('turnover_annualized_pct', 0):>8.2f}%")
     print(f"Win Rate:         {result.stats.get('win_rate_pct', 0):>8.2f}%")
     
-    print("\n" + "="*60)
+    # v3: Afficher disclaimer AMF
+    print("\n" + "-"*60)
+    print(result.stats.get("disclaimer_amf", ""))
+    print("="*60)
