@@ -1,0 +1,394 @@
+{
+  "version": "v4.8.3_p0_fix",
+  "timestamp": "20251216_084357",
+  "date": "2025-12-16T08:43:57.422240",
+  "buffett_config": {
+    "mode": "soft",
+    "min_score": 40
+  },
+  "tactical_config": {
+    "enabled": false,
+    "data_dir": "data"
+  },
+  "backtest_config": {
+    "days": 90,
+    "freq": "M"
+  },
+  "portfolios": {
+    "Agressif": {
+      "allocation": {
+        "Anfield Universal Fixed Income Fund": 5.0,
+        "EQ_908": 14.6,
+        "EQ_146": 14.6,
+        "EQ_590": 14.6,
+        "EQ_459": 3.77,
+        "EQ_419": 2.0,
+        "EQ_523": 6.23,
+        "EQ_13": 14.6,
+        "EQ_58": 14.6,
+        "abrdn Physical Silver Shares ETF": 10.0
+      },
+      "diagnostics": {
+        "converged": true,
+        "optimization_mode": "slsqp",
+        "fallback_reason": null,
+        "fallback_heuristic": false,
+        "message": "SLSQP converged",
+        "portfolio_vol": 17.6,
+        "vol_target": 18.0,
+        "vol_tolerance": 3.0,
+        "vol_diff": -0.4,
+        "portfolio_score": 4.423,
+        "n_assets": 10,
+        "n_bonds": 1,
+        "n_crypto": 0,
+        "crypto_max_allowed": 10.0,
+        "sectors": {
+          "Bonds": 5.0,
+          "Finance": 29.2,
+          "Industries": 16.6,
+          "La communication": 3.77,
+          "Technologie de l'information": 6.23,
+          "Santé": 14.6,
+          "Biens de consommation cycliques": 14.6,
+          "Diversified": 10.0
+        },
+        "bucket_exposure": {
+          "defensive": 5.0,
+          "satellite": 55.8,
+          "core": 39.2
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 39.2,
+            "target_min": 35.0,
+            "target_max": 45.0,
+            "in_range": true
+          },
+          "satellite": {
+            "actual": 55.8,
+            "target_min": 35.0,
+            "target_max": 50.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 5.0,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 5.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0,
+        "_feasibility": {
+          "feasible": true,
+          "reason": null,
+          "capacity": {
+            "bonds": 9050.0,
+            "n_candidates": 1719,
+            "vol_range": "1%-150%"
+          },
+          "requirements": {
+            "bonds_min": 5.0,
+            "min_assets": 10,
+            "vol_target": "18.0% ±3.0%"
+          }
+        },
+        "llm_sanitizer": {
+          "profile": "Agressif",
+          "justifications_cleaned": 0,
+          "total_hits": 0,
+          "total_warnings": 0,
+          "hit_labels": []
+        }
+      },
+      "justifications": {
+        "EQ_908": "Muthoot Finance Ltd bénéficie d'une forte demande dans le secteur financier indien, soutenue par une croissance économique robuste [BR].",
+        "EQ_146": "Cummins Inc est bien positionnée dans le secteur industriel, avec des innovations technologiques qui renforcent sa compétitivité [SEC].",
+        "EQ_590": "CaixaBank SA montre une résilience dans le secteur bancaire espagnol, malgré un environnement de taux d'intérêt bas [MC].",
+        "EQ_13": "Johnson & Johnson continue d'innover dans le secteur de la santé, ce qui lui permet de maintenir une position de leader [TH].",
+        "EQ_58": "TJX Inc profite de la tendance vers le commerce de détail à prix réduit, attirant les consommateurs en période d'incertitude économique [MC].",
+        "abrdn Physical Silver Shares ETF": "L'ETF sur l'argent physique est soutenu par une demande croissante pour les métaux précieux en période d'inflation [TH].",
+        "EQ_523": "ASML Holding NV est un acteur clé dans le secteur technologique, avec une forte demande pour ses équipements de fabrication de semi-conducteurs [SEC].",
+        "Anfield Universal Fixed Income Fund": "Ce fonds obligataire diversifié offre une protection contre la volatilité du marché [MC].",
+        "EQ_459": "Fox Corp Class A est exposée à la croissance des médias numériques, ce qui peut compenser les défis traditionnels [SEC].",
+        "EQ_419": "Expeditors International est bien positionnée pour bénéficier de la reprise des chaînes d'approvisionnement mondiales [MC]."
+      },
+      "comment": "Ce portefeuille agressif présente une forte exposition aux actions, avec une concentration notable dans les secteurs de la finance et de la santé. Les actifs choisis reflètent des entreprises bien établies et innovantes, ce qui peut offrir un potentiel de croissance élevé. Toutefois, la volatilité des marchés et les risques sectoriels doivent être pris en compte. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🔴 PROFIL AGRESSIF : Ce portefeuille présente un niveau de risque élevé. Il est destiné aux investisseurs ayant une tolérance au risque importante et un horizon d'investissement long terme (>5 ans).\n\n📊 Volatilité estimée : 17.6% (modérée).",
+      "_compliance_audit": {
+        "llm_sanitizer": {
+          "sanitized": false,
+          "removed_sentences": 0,
+          "hits": [],
+          "warnings": [],
+          "removal_ratio": 0.0,
+          "original_length": 365,
+          "sanitized_length": 365
+        },
+        "timestamp": "2025-12-16T08:43:57.390662",
+        "version": "v4.8.3_p0_fix",
+        "fallback_used": false
+      }
+    },
+    "Modéré": {
+      "allocation": {
+        "EQ_13": 15.0,
+        "EQ_419": 15.0,
+        "EQ_459": 5.0,
+        "EQ_908": 10.0,
+        "EQ_58": 15.0,
+        "Vanguard Short-Term Inflation-Protected Securities Index Fund": 8.0,
+        "Vanguard Short-Term Bond ETF": 8.0,
+        "Vanguard Short-Term Treasury Fund": 8.0,
+        "iShares 0-5 Year TIPS Bond ETF": 6.0,
+        "abrdn Physical Silver Shares ETF": 10.0
+      },
+      "diagnostics": {
+        "converged": true,
+        "optimization_mode": "slsqp",
+        "fallback_reason": null,
+        "fallback_heuristic": false,
+        "message": "SLSQP converged",
+        "portfolio_vol": 11.83,
+        "vol_target": 12.0,
+        "vol_tolerance": 3.0,
+        "vol_diff": -0.17,
+        "portfolio_score": 1.361,
+        "n_assets": 10,
+        "n_bonds": 4,
+        "n_crypto": 0,
+        "crypto_max_allowed": 5.0,
+        "sectors": {
+          "Santé": 15.0,
+          "Industries": 15.0,
+          "La communication": 5.0,
+          "Finance": 10.0,
+          "Biens de consommation cycliques": 15.0,
+          "Bonds": 30.0,
+          "Diversified": 10.0
+        },
+        "bucket_exposure": {
+          "core": 40.0,
+          "satellite": 30.0,
+          "defensive": 30.0
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 40.0,
+            "target_min": 45.0,
+            "target_max": 55.0,
+            "in_range": true
+          },
+          "satellite": {
+            "actual": 30.0,
+            "target_min": 15.0,
+            "target_max": 25.0,
+            "in_range": true
+          },
+          "defensive": {
+            "actual": 30.0,
+            "target_min": 20.0,
+            "target_max": 30.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 2.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0,
+        "_feasibility": {
+          "feasible": true,
+          "reason": null,
+          "capacity": {
+            "bonds": 9050.0,
+            "n_candidates": 1719,
+            "vol_range": "1%-150%"
+          },
+          "requirements": {
+            "bonds_min": 15.0,
+            "min_assets": 10,
+            "vol_target": "12.0% ±3.0%"
+          }
+        },
+        "llm_sanitizer": {
+          "profile": "Modéré",
+          "justifications_cleaned": 0,
+          "total_hits": 0,
+          "total_warnings": 0,
+          "hit_labels": []
+        }
+      },
+      "justifications": {
+        "EQ_13": "Johnson & Johnson continue d'innover dans le secteur de la santé, ce qui lui permet de maintenir une position de leader [TH].",
+        "EQ_419": "Expeditors International est bien positionnée pour bénéficier de la reprise des chaînes d'approvisionnement mondiales [MC].",
+        "EQ_58": "TJX Inc profite de la tendance vers le commerce de détail à prix réduit, attirant les consommateurs en période d'incertitude économique [MC].",
+        "EQ_908": "Muthoot Finance Ltd bénéficie d'une forte demande dans le secteur financier indien, soutenue par une croissance économique robuste [BR].",
+        "abrdn Physical Silver Shares ETF": "L'ETF sur l'argent physique est soutenu par une demande croissante pour les métaux précieux en période d'inflation [TH].",
+        "Vanguard Short-Term Inflation-Protected Securities Index Fund": "Ce fonds offre une protection contre l'inflation, ce qui est pertinent dans le contexte économique actuel [MC].",
+        "Vanguard Short-Term Bond ETF": "Ce fonds obligataire à court terme peut offrir une stabilité dans un environnement de taux d'intérêt incertains [MC].",
+        "Vanguard Short-Term Treasury Fund": "Investir dans des obligations d'État à court terme peut réduire le risque global du portefeuille [MC].",
+        "iShares 0-5 Year TIPS Bond ETF": "Les TIPS sont conçus pour protéger contre l'inflation, ce qui est crucial dans le climat économique actuel [TH].",
+        "EQ_459": "Fox Corp Class A est exposée à la croissance des médias numériques, ce qui peut compenser les défis traditionnels [SEC]."
+      },
+      "comment": "Ce portefeuille modéré présente un équilibre entre actions et obligations, offrant une diversification qui peut réduire le risque tout en permettant une possiblee croissance. Les choix d'actifs reflètent des entreprises solides et des fonds obligataires qui peuvent offrir une protection contre l'inflation et la volatilité du marché. Les investisseurs doivent néanmoins être conscients des risques associés aux fluctuations économiques. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟡 PROFIL MODÉRÉ : Ce portefeuille présente un niveau de risque modéré. Il convient aux investisseurs acceptant une certaine volatilité avec un horizon moyen terme (3-5 ans).",
+      "_compliance_audit": {
+        "llm_sanitizer": {
+          "sanitized": false,
+          "removed_sentences": 0,
+          "hits": [],
+          "warnings": [],
+          "removal_ratio": 0.0,
+          "original_length": 437,
+          "sanitized_length": 437
+        },
+        "timestamp": "2025-12-16T08:43:57.391139",
+        "version": "v4.8.3_p0_fix",
+        "fallback_used": false
+      }
+    },
+    "Stable": {
+      "allocation": {
+        "JPMorgan Ultra-Short Municipal Income Fund": 11.97,
+        "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF": 11.97,
+        "iShares Short Treasury Bond ETF": 11.97,
+        "US Treasury 3 Month Bill ETF": 12.31,
+        "iShares 0-3 Month Treasury Bond ETF": 5.64,
+        "iShares U.S. Home Construction ETF": 10.26,
+        "EQ_13": 10.26,
+        "EQ_58": 10.26,
+        "EQ_533": 5.13,
+        "EQ_27": 8.21,
+        "EQ_586": 2.05
+      },
+      "diagnostics": {
+        "converged": false,
+        "optimization_mode": "fallback_heuristic",
+        "fallback_reason": "Stable profile: strict constraints (vol 6%±3%, bonds_min 35%, DEFENSIVE 45-60%) mathematically incompatible with Markowitz optimization",
+        "fallback_heuristic": true,
+        "message": "Fallback heuristique (contraintes strictes)",
+        "portfolio_vol": 7.15,
+        "vol_target": 6.0,
+        "vol_tolerance": 3.0,
+        "vol_diff": 1.15,
+        "portfolio_score": 6.067,
+        "n_assets": 11,
+        "n_bonds": 5,
+        "n_crypto": 0,
+        "crypto_max_allowed": 0.0,
+        "sectors": {
+          "Bonds": 53.86000000000001,
+          "Diversified": 10.26,
+          "Santé": 10.26,
+          "Biens de consommation cycliques": 10.26,
+          "Finance": 5.13,
+          "Technologie de l'information": 8.21,
+          "Services publics": 2.05
+        },
+        "bucket_exposure": {
+          "defensive": 53.86000000000001,
+          "core": 35.910000000000004,
+          "satellite": 10.260000000000002
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 35.9,
+            "target_min": 30.0,
+            "target_max": 40.0,
+            "in_range": true
+          },
+          "satellite": {
+            "actual": 10.3,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "defensive": {
+            "actual": 53.9,
+            "target_min": 45.0,
+            "target_max": 60.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 0.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0,
+        "_feasibility": {
+          "feasible": true,
+          "reason": null,
+          "capacity": {
+            "bonds": 9050.0,
+            "n_candidates": 1719,
+            "vol_range": "1%-150%"
+          },
+          "requirements": {
+            "bonds_min": 35.0,
+            "min_assets": 10,
+            "vol_target": "6.0% ±3.0%"
+          }
+        },
+        "llm_sanitizer": {
+          "profile": "Stable",
+          "justifications_cleaned": 0,
+          "total_hits": 0,
+          "total_warnings": 0,
+          "hit_labels": []
+        }
+      },
+      "justifications": {
+        "US Treasury 3 Month Bill ETF": "Cet ETF offre une sécurité élevée grâce à son exposition aux bons du Trésor américain, considérés comme des actifs refuges [MC].",
+        "JPMorgan Ultra-Short Municipal Income Fund": "Ce fonds obligataire municipal à court terme vise à minimiser le risque tout en offrant des rendements stables [MC].",
+        "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF": "Cet ETF cible une durée courte, réduisant l'impact des variations de taux d'intérêt [MC].",
+        "iShares Short Treasury Bond ETF": "Investir dans des obligations d'État à court terme peut réduire le risque global du portefeuille [MC].",
+        "iShares U.S. Home Construction ETF": "Cet ETF est exposé à la reprise du secteur de la construction, soutenue par la demande de logements [SEC].",
+        "EQ_13": "Johnson & Johnson continue d'innover dans le secteur de la santé, ce qui lui permet de maintenir une position de leader [TH].",
+        "EQ_58": "TJX Inc profite de la tendance vers le commerce de détail à prix réduit, attirant les consommateurs en période d'incertitude économique [MC].",
+        "EQ_27": "Cisco Systems Inc est bien positionnée dans le secteur technologique, avec une demande croissante pour ses solutions [SEC].",
+        "iShares 0-3 Month Treasury Bond ETF": "Cet ETF offre une sécurité élevée grâce à son exposition aux bons du Trésor américain à court terme [MC].",
+        "EQ_533": "Allianz est un acteur majeur dans le secteur des assurances, offrant une certaine stabilité dans un environnement volatile [SEC].",
+        "EQ_586": "Engie SA est bien positionnée pour bénéficier de la transition énergétique, ce qui peut soutenir sa croissance à long terme [TH]."
+      },
+      "comment": "Ce portefeuille stable est principalement composé d'obligations et d'actifs refuges, ce qui vise à minimiser la volatilité et à protéger le capital. La présence d'actions de sociétés solides dans des secteurs résilients contribue à un potentiel de croissance modéré. Les investisseurs doivent rester conscients des risques associés aux fluctuations des taux d'intérêt et des conditions économiques. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟢 PROFIL STABLE : Ce portefeuille vise une volatilité réduite. Il convient aux investisseurs prudents avec un horizon court à moyen terme.",
+      "_compliance_audit": {
+        "llm_sanitizer": {
+          "sanitized": false,
+          "removed_sentences": 0,
+          "hits": [],
+          "warnings": [],
+          "removal_ratio": 0.0,
+          "original_length": 398,
+          "sanitized_length": 398
+        },
+        "timestamp": "2025-12-16T08:43:57.391612",
+        "version": "v4.8.3_p0_fix",
+        "fallback_used": false
+      }
+    }
+  }
+}

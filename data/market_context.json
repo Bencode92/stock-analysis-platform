@@ -1,27 +1,56 @@
 {
-  "market_regime": "neutral",
+  "market_regime": "risk-on",
   "macro_tilts": {
-    "favored_sectors": [],
-    "avoided_sectors": [],
-    "favored_regions": [],
-    "avoided_regions": [],
-    "rationale": "Fallback neutre - pas de tilts tactiques appliqués"
+    "favored_sectors": [
+      "utilities",
+      "healthcare",
+      "industrials",
+      "financials",
+      "consumer-discretionary"
+    ],
+    "avoided_sectors": [
+      "information-technology",
+      "communication-services",
+      "energy"
+    ],
+    "favored_regions": [
+      "south korea",
+      "spain",
+      "south africa",
+      "chili"
+    ],
+    "avoided_regions": [
+      "united states",
+      "turquie",
+      "saudi arabia"
+    ],
+    "rationale": "Le régime de marché est risk-on avec une forte performance des secteurs défensifs et cycliques. Les régions avec des rendements élevés et une stabilité politique sont à privilégier, tandis que les régions avec des performances négatives et des risques géopolitiques doivent être évitées."
   },
-  "key_trends": [],
-  "risks": [
-    "Contexte marché non disponible"
+  "key_trends": [
+    "croissance des secteurs défensifs",
+    "forte performance des marchés émergents",
+    "retrait des investissements des marchés développés"
   ],
-  "opportunities": [],
-  "confidence": 0.0,
+  "risks": [
+    "instabilité géopolitique",
+    "inflation persistante"
+  ],
+  "opportunities": [
+    "investissements dans les infrastructures",
+    "croissance des technologies de santé"
+  ],
+  "confidence": 0.9,
   "as_of": "2025-12-16",
   "_meta": {
-    "generated_at": "2025-12-16T08:39:35.942513",
-    "model": "fallback",
+    "generated_at": "2025-12-16T08:43:14.630194",
+    "model": "gpt-4o-mini",
     "tilt_config": {
       "favored": 0.15,
       "avoided": -0.15,
       "max_tactical": 0.3
     },
-    "is_fallback": true
+    "input_tokens": 882,
+    "output_tokens": 273,
+    "is_fallback": false
   }
 }
