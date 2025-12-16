@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v4 - FIX: baseline_ytd fenêtre correcte + GBp handling
+v5 - FIX: baseline_ytd debug logs + correct year boundary logic
 """
 
 import os
@@ -186,8 +186,8 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     Calcule la baseline YTD = DERNIER jour de bourse de l'année N-1.
     Fallback: 1er jour de bourse de N si pas de données N-1.
     
-    IMPORTANT: Requête une fenêtre CIBLÉE autour du changement d'année
-    (15 déc N-1 → 15 jan N) pour garantir la capture du dernier close N-1.
+    IMPORTANT: Le 31 décembre n'est PAS toujours un jour de bourse!
+    On cherche le MAX des dates en année N-1 (souvent 30/12 en Europe).
     
     Args:
         sym: Symbole de l'instrument
@@ -207,18 +207,15 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     
     year = dt.date.today().year
     baseline_year = year - 1
-    tz = TZ_BY_REGION.get(region, "UTC")
     
     try:
-        # ===== FIX v4: Fenêtre CIBLÉE autour du changement d'année =====
-        # Avant: 1er nov N-1 → 31 jan N (trop large, outputsize insuffisant)
-        # Après: 15 déc N-1 → 15 jan N (précis, ~20 jours de bourse)
+        # ===== FIX v5: Fenêtre LARGE autour du changement d'année =====
         params = {
             "symbol": sym,
             "interval": "1day",
-            "start_date": f"{baseline_year}-12-15",  # 15 décembre N-1
-            "end_date": f"{year}-01-15",              # 15 janvier N
-            "outputsize": 50,                          # Large marge (~20 jours réels)
+            "start_date": f"{baseline_year}-12-10",  # 10 décembre N-1
+            "end_date": f"{year}-01-20",              # 20 janvier N
+            "outputsize": 300,                         # Large marge
         }
         
         # PRIORITÉ au mic_code/exchange du CSV
@@ -227,80 +224,62 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
         elif exchange:
             params["exchange"] = exchange
         
-        logger.debug(f"📡 baseline_ytd({sym}) params: {params}")
+        logger.info(f"📡 baseline_ytd({sym}) params: {params}")
         
         ts_json = TD.time_series(**params).as_json()
 
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
             
-        # Parser les valeurs
-        vals = []
+        # Parser les valeurs - gérer les différents formats de réponse
+        values = []
         if isinstance(ts_json, dict):
             if ts_json.get("values"):
-                vals = ts_json["values"]
+                values = ts_json["values"]
             elif ts_json.get("status") == "error":
                 raise ValueError(f"Erreur API: {ts_json.get('message', 'Unknown')}")
             elif {"datetime", "close"} <= set(ts_json.keys()):
-                vals = [ts_json]
+                values = [ts_json]
         elif isinstance(ts_json, list):
-            vals = ts_json
+            values = ts_json
 
-        if not vals:
-            raise ValueError(f"Aucune donnée historique pour {sym}")
+        if not values:
+            raise ValueError(f"Aucune donnée historique pour {sym} (params={params})")
 
-        # Convertir et TRIER par date (important!)
-        rows = []
-        for r in vals:
-            date_str = str(r.get("datetime", ""))[:10]
-            close_val = r.get("close")
+        # ===== DEBUG: Afficher les dates reçues =====
+        all_dates = [v.get("datetime", "")[:10] for v in values if v.get("datetime")]
+        if all_dates:
+            logger.info(f"  📅 {sym}: {len(values)} valeurs, min={min(all_dates)}, max={max(all_dates)}")
+        
+        # Trier par date (les valeurs arrivent souvent en ordre DESC)
+        values_sorted = sorted(values, key=lambda v: v.get("datetime", ""))
+        
+        # Séparer année précédente vs année courante
+        prev_year_values = [v for v in values_sorted if v.get("datetime", "").startswith(str(baseline_year))]
+        curr_year_values = [v for v in values_sorted if v.get("datetime", "").startswith(str(year))]
+        
+        logger.info(f"  📊 {sym}: {len(prev_year_values)} jours en {baseline_year}, {len(curr_year_values)} jours en {year}")
+        
+        # 1) DERNIER jour de bourse de N-1 (max date)
+        if prev_year_values:
+            last_prev = prev_year_values[-1]  # Dernier après tri = plus récent
+            base_date = last_prev.get("datetime", "")[:10]
+            base_close = float(last_prev.get("close", 0))
             
-            if not date_str or close_val in (None, "None", ""):
-                continue
-                
-            try:
-                date_obj = dt.date.fromisoformat(date_str)
-                rows.append((date_obj, float(close_val)))
-            except Exception:
-                continue
+            logger.info(f"  ✅ {sym}: Baseline = {base_date} (close: {base_close:.2f})")
+            return base_close, base_date
         
-        if not rows:
-            raise ValueError(f"Aucune donnée valide pour {sym}")
-        
-        # Trier par date croissante
-        rows.sort(key=lambda x: x[0])
-        
-        logger.debug(f"{sym}: {len(rows)} jours de données récupérés")
-        logger.debug(f"{sym}: Plage = {rows[0][0]} à {rows[-1][0]}")
-        
-        # 1) Chercher le DERNIER jour de bourse de N-1
-        prev_year_rows = [(d, c) for (d, c) in rows if d.year == baseline_year]
-        
-        if prev_year_rows:
-            # Dernier élément = dernier jour coté de N-1 (ex: 30/12/2024)
-            base_date, base_close = prev_year_rows[-1]
+        # 2) Fallback: PREMIER jour de bourse de N (min date)
+        if curr_year_values:
+            first_curr = curr_year_values[0]  # Premier après tri = plus ancien
+            base_date = first_curr.get("datetime", "")[:10]
+            base_close = float(first_curr.get("close", 0))
             
-            # Vérification de cohérence
-            if base_date.month == 12 and base_date.day >= 27:
-                logger.info(f"✅ {sym}: Baseline YTD = {base_date} (close: {base_close:.2f})")
-            else:
-                logger.warning(f"⚠️ {sym}: Baseline YTD = {base_date} (attendu: ~30 déc {baseline_year})")
-            
-            return base_close, base_date.isoformat()
+            logger.warning(f"  ⚠️ {sym}: Pas de {baseline_year}, fallback = {base_date} (close: {base_close:.2f})")
+            return base_close, base_date
         
-        # 2) Fallback: premier jour de bourse de N
-        current_year_rows = [(d, c) for (d, c) in rows if d.year == year]
-        
-        if current_year_rows:
-            # Premier élément = premier jour coté de N (ex: 02/01/2025)
-            first_date, first_close = current_year_rows[0]
-            logger.warning(f"⚠️ {sym}: Pas de clôture {baseline_year}, fallback = 1er jour {year}: {first_date}")
-            return first_close, first_date.isoformat()
-        
-        # 3) Dernier recours
-        oldest_date, oldest_close = rows[0]
-        logger.warning(f"⚠️ {sym}: Fallback ultime = {oldest_date}")
-        return oldest_close, oldest_date.isoformat()
+        # 3) Aucune donnée utilisable
+        raise ValueError(f"Aucune donnée autour du changement d'année pour {sym}")
 
     except Exception as e:
         logger.error(f"Erreur baseline YTD pour {sym}: {e}")
