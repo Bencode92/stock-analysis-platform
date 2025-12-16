@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.8.3: P0-4 FIX - getattr() for ProfileConstraints (dataclass not dict)
 V4.8.2: P0-3 + P0-4 - _limitations field + check_feasibility() ex-ante
         P0-3: Champ _limitations exposant compromis/limites de chaque profil
         P0-4: check_feasibility() appelée AVANT optimisation
@@ -36,6 +37,7 @@ V4.2.2: FIX TICKER - Récupérer ticker depuis source_data, pas Asset.ticker
 V4.2.1: FIX AttributeError - utiliser getattr() pour Asset
 V4.2: FIX EXPORT - Ajoute bloc _tickers pour le backtest (Solution C)
 V4.1: FIX BACKTEST - Utilise poids FIXES du portfolio (pas recalcul dynamique)
+
 
 
 """
@@ -446,6 +448,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     Pipeline déterministe : mêmes données → mêmes poids.
     Utilise les modules portfolio_engine.
     
+    v4.8.3 P0-4 FIX: Utilise getattr() pour ProfileConstraints (dataclass)
     v4.8.2 P0-4: Appel check_feasibility() AVANT optimisation
     v4.8 P0-8: Tactical context désactivé par défaut (GPT-generated = zone grise AMF)
     v4.4: Utilise le nouveau format market_context.json unifié.
@@ -638,17 +641,18 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         if not all_assets:
             all_assets = assets
         
-        # === v4.8.2 P0-4: CHECK FEASIBILITY EX-ANTE ===
-        profile_config = PROFILES.get(profile, {})
+        # === v4.8.3 P0-4 FIX: CHECK FEASIBILITY EX-ANTE ===
+        # Note: PROFILES[profile] retourne un ProfileConstraints (dataclass), pas un dict
+        profile_config = PROFILES.get(profile)
         profile_constraints = {
-            "bonds_min": profile_config.get("bonds_min", 0) * 100,
-            "crypto_max": profile_config.get("crypto_max", 0) * 100,
-            "max_single_position": profile_config.get("max_single_position", 0.15) * 100,
-            "max_single_bond": profile_config.get("max_single_bond", 0.25) * 100,
-            "min_assets": profile_config.get("min_assets", 10),
-            "max_assets": profile_config.get("max_assets", 18),
-            "vol_target": profile_config.get("vol_target", 12),
-            "vol_tolerance": profile_config.get("vol_tolerance", 3),
+            "bonds_min": getattr(profile_config, "bonds_min", 5.0),  # Déjà en %
+            "crypto_max": getattr(profile_config, "crypto_max", 10.0),  # Déjà en %
+            "max_single_position": getattr(profile_config, "max_single_position", 15.0),  # Déjà en %
+            "max_single_bond": 25.0,  # Constante, pas dans ProfileConstraints
+            "min_assets": getattr(profile_config, "min_assets", 10),
+            "max_assets": getattr(profile_config, "max_assets", 18),
+            "vol_target": getattr(profile_config, "vol_target", 12.0),
+            "vol_tolerance": getattr(profile_config, "vol_tolerance", 3.0),
         }
         
         # Préparer les candidats pour check_feasibility
@@ -767,7 +771,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.8.2_p0_feasibility"
+        merged[profile]["_compliance_audit"]["version"] = "v4.8.3_p0_fix"
         
         # 4. Fallback si trop de contenu supprimé (>50%)
         if report.removal_ratio > 0.5:
@@ -1337,7 +1341,10 @@ def build_limitations(
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.8.2: Convertit le format interne vers le format v1 attendu par le front.
+    V4.8.3: Convertit le format interne vers le format v1 attendu par le front.
+    
+    AJOUTS v4.8.3 P0-4 FIX:
+    - Utilise getattr() pour ProfileConstraints (dataclass pas dict)
     
     AJOUTS v4.8.2 P0-3:
     - Champ _limitations exposant les compromis/limites de chaque profil
@@ -1623,17 +1630,18 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 except:
                     pass
         
-        # Extraire les contraintes du profil depuis PROFILES
-        profile_config = PROFILES.get(profile, {})
+        # === v4.8.3 P0-4 FIX: Extraire les contraintes du profil avec getattr() ===
+        # Note: PROFILES[profile] retourne un ProfileConstraints (dataclass), pas un dict
+        profile_config = PROFILES.get(profile)
         profile_constraints = {
-            "bonds_min": profile_config.get("bonds_min", 0) * 100,  # Convertir en %
-            "crypto_max": profile_config.get("crypto_max", 0) * 100,
-            "max_single_position": profile_config.get("max_single_position", 0.15) * 100,
-            "max_single_bond": profile_config.get("max_single_bond", 0.25) * 100,
-            "min_assets": profile_config.get("min_assets", 10),
-            "max_assets": profile_config.get("max_assets", 18),
-            "vol_target": profile_config.get("vol_target", 12),
-            "bucket_targets": profile_config.get("bucket_targets", {}),
+            "bonds_min": getattr(profile_config, "bonds_min", 5.0),  # Déjà en %
+            "crypto_max": getattr(profile_config, "crypto_max", 10.0),  # Déjà en %
+            "max_single_position": getattr(profile_config, "max_single_position", 15.0),  # Déjà en %
+            "max_single_bond": 25.0,  # Constante, pas dans ProfileConstraints
+            "min_assets": getattr(profile_config, "min_assets", 10),
+            "max_assets": getattr(profile_config, "max_assets", 18),
+            "vol_target": getattr(profile_config, "vol_target", 12.0),
+            "bucket_targets": {},  # Non disponible dans ProfileConstraints
         }
         
         # Appeler la vérification
@@ -1736,10 +1744,10 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
-    # === v4.8.2: Ajouter les modes d'optimisation dans _meta ===
+    # === v4.8.3: Ajouter les modes d'optimisation dans _meta ===
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.8.2_p0_feasibility",
+        "version": "v4.8.3_p0_fix",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -1774,7 +1782,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.8.2_p0_feasibility",
+        "version": "v4.8.3_p0_fix",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1816,7 +1824,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.8.2 - P0 FEASIBILITY")
+    logger.info("🚀 Portfolio Engine v4.8.3 - P0 FIX")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1855,15 +1863,15 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.8.2 P0 FEASIBILITY:")
+    logger.info("Fonctionnalités v4.8.3 P0 FIX:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
     logger.info("   • P0-2: verify_constraints_post_arrondi() + _constraint_report ✅")
-    logger.info("   • 🆕 P0-3: _limitations field exposant compromis/limites ✅")
-    logger.info("   • 🆕 P0-4: check_feasibility() ex-ante + _feasibility ✅")
+    logger.info("   • P0-3: _limitations field exposant compromis/limites ✅")
+    logger.info("   • 🆕 P0-4 FIX: getattr() pour ProfileConstraints (dataclass) ✅")
     logger.info("   • P0-7: Double barrière LLM + audit trail + fallback ✅")
     logger.info("   • P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé) ✅")
     logger.info("   • P0-9: Mode optimisation exposé (_optimization) ✅")
