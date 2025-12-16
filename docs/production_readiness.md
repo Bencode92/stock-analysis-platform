@@ -1,26 +1,76 @@
-# 🔍 Production Readiness Audit v4.2 - Stock Analysis Platform
+# 🔍 Production Readiness Audit v4.3 - Stock Analysis Platform
 
-**Version:** 4.2.0  
+**Version:** 4.3.0  
 **Date:** 2025-12-16  
 **Reviewer:** Claude (audit 28 questions exigeantes - Questionnaire v3)  
-**Statut global:** ✅ **P0 COMPLETS + P1-7** (22/28 critères = 79%)  
+**Statut global:** ✅ **P0 COMPLETS + P1-6, P1-7** (23/28 critères = 82%)  
 **Prochaine revue:** Après P1 complet
 
 ---
 
-## 📊 Tableau de Synthèse v4.2
+## 📊 Tableau de Synthèse v4.3
 
 | Gate | Pass | Partiel | Absent | Score |
 |------|------|---------|--------|-------|
-| A) Reproductibilité & Auditabilité | 2 | 2 | 1 | 60% |
+| A) Reproductibilité &amp; Auditabilité | 2 | 2 | 1 | 60% |
 | B) Contrat de sortie (Schema) | 2 | 1 | 0 | 83% |
-| C) Data Pipeline & Qualité | 3 | 1 | 1 | 60% |
-| D) Modèle de Risque | 0 | 1 | 2 | 17% |
-| E) Optimisation & Contraintes | 4 | 0 | 0 | 100% |
-| F) Backtest & Métriques | 1 | 3 | 1 | 50% |
+| C) Data Pipeline &amp; Qualité | 3 | 1 | 1 | 60% |
+| D) Modèle de Risque | 1 | 1 | 1 | 50% |
+| E) Optimisation &amp; Contraintes | 4 | 0 | 0 | 100% |
+| F) Backtest &amp; Métriques | 1 | 3 | 1 | 50% |
 | G) LLM Compliance | 2 | 0 | 0 | 100% |
-| H) Observabilité & Ops | 1 | 0 | 3 | 25% |
-| **TOTAL** | **15** | **8** | **8** | **79%** |
+| H) Observabilité &amp; Ops | 1 | 0 | 3 | 25% |
+| **TOTAL** | **16** | **8** | **7** | **82%** |
+
+---
+
+## ✅ CHANGEMENTS v4.2 → v4.3 (2025-12-16)
+
+| Item | Description | Commit | Statut |
+|------|-------------|--------|--------|
+| P1-6 | Covariance KPIs (condition_number, eigen_clipped) | a820f049 | ✅ FAIT |
+
+### P1-6 Implementation Details
+
+**Fichier modifié:**
+- `portfolio_engine/optimizer.py` (v6.15)
+
+**Nouveaux KPIs dans `diagnostics.covariance_kpis`:**
+
+| KPI | Description | Seuil d'alerte |
+|-----|-------------|----------------|
+| `condition_number` | max(λ)/min(λ) | > 1000 = matrice instable |
+| `eigen_clipped` | Nb eigenvalues forcées au minimum | - |
+| `eigen_clipped_pct` | % eigenvalues clippées | > 20% = données insuffisantes |
+| `eigenvalue_min` | Plus petite eigenvalue (après clipping) | - |
+| `eigenvalue_max` | Plus grande eigenvalue | - |
+| `eigenvalue_min_raw` | Plus petite eigenvalue AVANT clipping | - |
+| `matrix_size` | Dimension n×n de la matrice | - |
+| `is_well_conditioned` | Flag booléen | `False` = alerte |
+
+**Exemple d'output:**
+```python
+diagnostics["covariance_kpis"] = {
+    "condition_number": 245.67,
+    "eigen_clipped": 2,
+    "eigen_clipped_pct": 4.0,
+    "eigenvalue_min": 1e-6,
+    "eigenvalue_max": 0.0245,
+    "eigenvalue_min_raw": -0.0001,
+    "matrix_size": 50,
+    "is_well_conditioned": True,
+    "thresholds": {
+        "condition_number_warning": 1000.0,
+        "eigen_clipped_pct_warning": 20.0,
+    },
+}
+```
+
+**Warnings automatiques:**
+```
+⚠️ COVARIANCE WARNING: condition_number=1523.4 > 1000 (matrice instable, optimisation fragile)
+⚠️ COVARIANCE WARNING: eigen_clipped_pct=25.0% > 20% (données insuffisantes)
+```
 
 ---
 
@@ -60,13 +110,13 @@
 | 1 | OFFLINE deterministic + fixtures | ❌ ABSENT | P1-5: 3h |
 | 2 | Validation schéma CI | ✅ FAIT | `scripts/validate_schema.py` |
 | 3 | Post-arrondi exécuté + testé | ✅ FAIT | `_constraint_report` dans output |
-| 4 | KPIs covariance + stress pack | ❌ ABSENT | P1-6 + P2-12: 6h |
+| 4 | KPIs covariance + stress pack | ⚠️ Partiel | **P1-6 ✅** + P2-12 (stress): 4h |
 | 5 | Backtest modes + net/gross | ⚠️ Partiel | P1-8 + P2-13: 3h |
 | 6 | Observabilité (logs, SLO, drift) | ❌ ABSENT | P2-10,11: 8h |
 
 ---
 
-## 🚦 VERDICT v4.2
+## 🚦 VERDICT v4.3
 
 | Critère | Statut | Blockers |
 |---------|--------|----------|
@@ -81,7 +131,7 @@
 
 ---
 
-## A) REPRODUCTIBILITÉ & AUDITABILITÉ (GATE 1)
+## A) REPRODUCTIBILITÉ &amp; AUDITABILITÉ (GATE 1)
 
 ### Q1. Mode OFFLINE complet?
 
@@ -165,7 +215,7 @@
 
 ---
 
-## C) DATA PIPELINE & QUALITÉ (GATE 3)
+## C) DATA PIPELINE &amp; QUALITÉ (GATE 3)
 
 ### Q9-Q13: Inchangés depuis v4.0
 
@@ -173,63 +223,38 @@
 
 ## D) MODÈLE DE RISQUE (GATE 4)
 
-### Q14-Q16: Inchangés depuis v4.0 (P1-6 requis)
+### Q14. KPIs de qualité de la matrice de covariance?
+
+| Statut | ✅ PASS (NEW v4.3) |
+|--------|-------------------|
+| **Critère PASS** | `condition_number` et `eigen_clipped` exposés dans diagnostics |
+| **Preuve** | `portfolio_engine/optimizer.py` v6.15 |
+
+**Implémentation P1-6:**
+- `condition_number`: max(λ)/min(λ) avec seuil d'alerte > 1000
+- `eigen_clipped`: nombre d'eigenvalues forcées au minimum
+- `eigen_clipped_pct`: pourcentage avec seuil d'alerte > 20%
+- `is_well_conditioned`: flag booléen pour check rapide
+- Warnings automatiques dans les logs si matrice mal conditionnée
+
+### Q15-Q16: Inchangés depuis v4.0 (P2-12 requis pour stress pack)
 
 ---
 
-## E) OPTIMISATION & CONTRAINTES (GATE 5)
+## E) OPTIMISATION &amp; CONTRAINTES (GATE 5)
 
 ### Q17-Q20: ✅ PASS (détails dans v4.1)
 
 ---
 
-## F) BACKTEST & MÉTRIQUES (GATE 6)
+## F) BACKTEST &amp; MÉTRIQUES (GATE 6)
 
 ### Q21. Benchmarks cohérents par profil?
 
-| Statut | ✅ PASS (NEW v4.2) |
-|--------|-------------------|
+| Statut | ✅ PASS (v4.2) |
+|--------|----------------|
 | **Critère PASS** | Agressif ↔ NASDAQ, Stable ↔ Bond ETF |
 | **Preuve** | `portfolio_engine/benchmarks.py` + `tests/test_benchmarks.py` |
-
-**Implémentation P1-7:**
-
-```python
-# portfolio_engine/benchmarks.py
-PROFILE_BENCHMARKS = {
-    "Agressif": BenchmarkConfig(
-        symbol="QQQ",
-        name="Invesco QQQ Trust (Nasdaq-100)",
-        asset_class="equity",
-        rationale="Growth/tech heavy matches aggressive equity exposure"
-    ),
-    "Modéré": BenchmarkConfig(
-        symbol="URTH",
-        name="iShares MSCI World ETF",
-        asset_class="equity",
-        rationale="Global diversified equities benchmark"
-    ),
-    "Stable": BenchmarkConfig(
-        symbol="AGG",
-        name="iShares Core U.S. Aggregate Bond ETF",
-        asset_class="fixed_income",
-        rationale="Investment-grade bond benchmark for conservative profile"
-    ),
-}
-```
-
-**BacktestConfig auto-selection:**
-```python
-# backtest/engine.py
-@dataclass
-class BacktestConfig:
-    profile: str = "Modéré"
-    benchmark_symbol: Optional[str] = None  # Auto-select if None
-    
-    def __post_init__(self):
-        if self.benchmark_symbol is None:
-            self.benchmark_symbol = get_benchmark_symbol(self.profile)
-```
 
 ---
 
@@ -263,7 +288,7 @@ class BacktestConfig:
 
 ---
 
-## H) OBSERVABILITÉ & OPS (GATE 8)
+## H) OBSERVABILITÉ &amp; OPS (GATE 8)
 
 ### Q27-Q29: Inchangés depuis v4.0 (P2 requis)
 
@@ -275,7 +300,7 @@ class BacktestConfig:
 
 ---
 
-# 📆 PLAN D'ACTION PRIORISÉ (Mis à jour v4.2)
+# 📆 PLAN D'ACTION PRIORISÉ (Mis à jour v4.3)
 
 ## P0 — Bloquants ✅ COMPLETS
 
@@ -289,12 +314,12 @@ class BacktestConfig:
 | P0-8 | Tilts tactiques désactivés | - | ✅ DESIGN |
 | P0-9 | Mode optimisation exposé | - | ✅ |
 
-## P1 — Améliorations critiques (8h restant)
+## P1 — Améliorations critiques (6h restant)
 
 | # | Action | Effort | Statut |
 |---|--------|--------|--------|
 | P1-5 | Mode DETERMINISTIC + fixtures | 3h | ⏳ |
-| P1-6 | Covariance KPIs (condition_number, eigen_clipped) | 2h | ⏳ |
+| P1-6 | Covariance KPIs (condition_number, eigen_clipped) | 2h | ✅ FAIT |
 | P1-7 | Benchmarks cohérents par profil | 1h | ✅ FAIT |
 | P1-8 | Net/gross returns séparés | 1h | ⏳ |
 | P1-9 | Test split TSLA fixture | 1h | ⏳ |
@@ -307,7 +332,7 @@ class BacktestConfig:
 | P2-10 | Logs structurés JSON + correlation_id | 4h | ⏳ |
 | P2-11 | SLO + alertes (data, fallback, drift) | 4h | ⏳ |
 | P2-12 | Stress pack (3 scénarios corr/vol) | 4h | ⏳ |
-| P2-13 | Backtest modes R&D vs illustratif | 2h | ⏳ |
+| P2-13 | Backtest modes R&amp;D vs illustratif | 2h | ⏳ |
 | P2-14 | Tests property-based constraints | 2h | ⏳ |
 
 ---
@@ -321,27 +346,29 @@ class BacktestConfig:
 | v3.1 | 2025-12-15 | 64% | +4% | Sanitizer découvert |
 | v4.0 | 2025-12-15 | 61% | -3% | 28 questions vs 25 |
 | v4.1 | 2025-12-16 | 75% | +14% | P0 complets |
-| **v4.2** | **2025-12-16** | **79%** | **+4%** | **P1-7 benchmark par profil** |
+| v4.2 | 2025-12-16 | 79% | +4% | P1-7 benchmark par profil |
+| **v4.3** | **2025-12-16** | **82%** | **+3%** | **P1-6 covariance KPIs** |
 
 **Avec P1 restants:** 90%  
 **Avec tous fixes:** 100%
 
 ---
 
-# 📁 MODULES CLÉS (Mis à jour v4.2)
+# 📁 MODULES CLÉS (Mis à jour v4.3)
 
 | Module | Version | Répond à |
 |--------|---------|----------|
 | `generate_portfolios_v4.py` | v4.8.3 | P0-2, P0-3, P0-4, P0-7, P0-9 |
 | `schemas/portfolio_output.json` | v2.2.0 | P0-1, Q6 |
-| `portfolio_engine/benchmarks.py` | v1.0 | **P1-7 (NEW)** |
+| `portfolio_engine/optimizer.py` | v6.15 | **P1-6 (NEW)**, Q14 |
+| `portfolio_engine/benchmarks.py` | v1.0 | P1-7 |
 | `backtest/engine.py` | v6 | P1-7, Q21 |
 | `backtest/data_loader.py` | v12 | P1-7 |
-| `tests/test_benchmarks.py` | v1.0 | **P1-7 tests (NEW)** |
+| `tests/test_benchmarks.py` | v1.0 | P1-7 tests |
 | `scripts/validate_schema.py` | - | Q6 |
 | `portfolio_engine/calendar.py` | - | Fix stdlib shadowing |
 | `compliance/sanitizer.py` | - | Q25, Q26 |
 
 ---
 
-*Document auto-généré par audit Claude v4.2. Dernière mise à jour: 2025-12-16T09:30:00Z*
+*Document auto-généré par audit Claude v4.3. Dernière mise à jour: 2025-12-16T10:47:00Z*
