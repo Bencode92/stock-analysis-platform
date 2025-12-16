@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://tradepulse.io/schemas/portfolio_output.json",
   "title": "TradePulse Portfolio Output Schema",
-  "description": "Schema for validating generated portfolio JSON files (v2.1.0)",
+  "description": "Schema for validating generated portfolio JSON files (v2.2.0)",
   "type": "object",
   "required": ["Agressif", "Modéré", "Stable", "_meta"],
   "additionalProperties": false,
@@ -28,7 +28,7 @@
       "description": "Run manifest for reproducibility (optional but recommended)"
     },
     "_limitations": {
-      "$ref": "#/definitions/Limitations",
+      "$ref": "#/definitions/GlobalLimitations",
       "description": "Data and methodology limitations (optional but recommended)"
     },
     "_schema": {
@@ -72,13 +72,21 @@
           "$ref": "#/definitions/BacktestResults",
           "description": "Backtest metrics (optional)"
         },
-        "_constraints_report": {
-          "$ref": "#/definitions/ConstraintsReport",
-          "description": "Constraint verification report (optional)"
+        "_constraint_report": {
+          "$ref": "#/definitions/ConstraintReport",
+          "description": "P0-2: Constraint verification report post-rounding"
+        },
+        "_limitations": {
+          "$ref": "#/definitions/ProfileLimitations",
+          "description": "P0-3: Profile-specific limitations and trade-offs"
         },
         "_optimization": {
           "$ref": "#/definitions/OptimizationInfo",
-          "description": "Optimization mode and diagnostics (P0-9 compliance)"
+          "description": "P0-9: Optimization mode and diagnostics"
+        },
+        "_compliance_audit": {
+          "$ref": "#/definitions/ComplianceAudit",
+          "description": "P0-7: LLM sanitization audit trail"
         }
       }
     },
@@ -114,7 +122,7 @@
         "version": {
           "type": "string",
           "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+.*$",
-          "description": "Generator version (e.g., 'v4.7.1_sharpe_none_fix')"
+          "description": "Generator version (e.g., 'v4.8.3_p0_fix')"
         },
         "buffett_mode": {
           "type": "string",
@@ -136,6 +144,13 @@
           "minimum": 1,
           "maximum": 3650,
           "description": "Number of days for backtest"
+        },
+        "optimization_modes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Optimization mode per profile"
         }
       }
     },
@@ -173,9 +188,10 @@
         }
       }
     },
-    "Limitations": {
+    "GlobalLimitations": {
       "type": "object",
       "additionalProperties": true,
+      "description": "Global data and methodology limitations",
       "properties": {
         "survivorship_bias": {
           "type": "object",
@@ -202,6 +218,15 @@
           "type": "string",
           "description": "Backtest methodology used"
         }
+      }
+    },
+    "ProfileLimitations": {
+      "type": "array",
+      "description": "P0-3: List of limitations and trade-offs for this profile",
+      "items": {
+        "type": "string",
+        "minLength": 10,
+        "maxLength": 500
       }
     },
     "SchemaInfo": {
@@ -237,57 +262,69 @@
         "end_date": { "type": "string", "format": "date" }
       }
     },
-    "ConstraintsReport": {
+    "ConstraintReport": {
       "type": "object",
+      "description": "P0-2: Post-rounding constraint verification report",
       "properties": {
         "all_satisfied": { "type": "boolean" },
         "all_hard_satisfied": { "type": "boolean" },
+        "profile": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
         "violations": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "constraint": { "type": "string" },
+              "constraint_name": { "type": "string" },
               "priority": { "type": "string", "enum": ["hard", "soft", "relaxable"] },
               "actual": { "type": "number" },
-              "limit": { "type": "number" }
+              "expected": { "type": "string" },
+              "context": { "type": "string" }
             }
           }
         },
-        "relaxations": {
+        "warnings": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "constraint": { "type": "string" },
-              "original": { "type": "number" },
-              "relaxed_to": { "type": "number" },
-              "reason": { "type": "string" }
-            }
-          }
+          "items": { "type": "string" }
+        },
+        "margins": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "relaxed_constraints": {
+          "type": "array",
+          "items": { "type": "string" }
         }
       }
     },
     "OptimizationInfo": {
       "type": "object",
-      "description": "P0-9 compliance: expose optimization mode and diagnostics",
+      "description": "P0-9: Optimization mode and diagnostics",
       "properties": {
         "mode": {
           "type": "string",
           "enum": ["slsqp", "fallback_heuristic", "fallback_slsqp_failed", "fallback_bonds_diversification"],
           "description": "Optimization method used"
         },
-        "converged": {
+        "is_heuristic": {
           "type": "boolean",
-          "description": "Whether SLSQP converged successfully"
+          "description": "Whether heuristic fallback was used"
         },
-        "portfolio_vol": {
-          "type": "number",
+        "vol_realized": {
+          "type": ["number", "null"],
           "description": "Realized portfolio volatility (%)"
         },
         "vol_target": {
-          "type": "number",
+          "type": ["number", "null"],
           "description": "Target volatility (%)"
+        },
+        "disclaimer": {
+          "type": "string",
+          "description": "Disclaimer if heuristic mode used"
+        },
+        "converged": {
+          "type": "boolean",
+          "description": "Whether SLSQP converged successfully"
         },
         "vol_tolerance": {
           "type": "number",
@@ -314,6 +351,36 @@
           "type": "integer",
           "description": "Number of crypto assets in allocation"
         }
+      }
+    },
+    "ComplianceAudit": {
+      "type": "object",
+      "description": "P0-7: LLM sanitization audit trail",
+      "properties": {
+        "llm_sanitizer": {
+          "type": "object",
+          "properties": {
+            "sanitized": { "type": "boolean" },
+            "removed_sentences": { "type": "integer" },
+            "original_length": { "type": "integer" },
+            "cleaned_length": { "type": "integer" },
+            "removal_ratio": { "type": "number" },
+            "hits": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pattern": { "type": "string" },
+                  "matched": { "type": "string" },
+                  "category": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "version": { "type": "string" },
+        "fallback_used": { "type": "boolean" }
       }
     }
   }
