@@ -4,7 +4,7 @@ Script de mise à jour des données sectorielles via Twelve Data API
 Utilise des ETFs sectoriels pour représenter les performances des secteurs
 Génère des libellés normalisés bilingues pour l'affichage
 
-v2 - Refactorisé avec twelve_data_utils.py
+v3 - FIX: Passage exchange/mic_code aux fonctions API
 """
 
 import os
@@ -398,13 +398,33 @@ def main():
             norm = make_display_payload(etf)
             region_display = norm["region_display"]
             
-            # Récupérer les données avec timezone
-            last, day_pct, last_src = quote_one(sym, region_display)
+            # ===== FIX v3: Récupérer et normaliser exchange/mic_code =====
+            exchange = (etf.get("exchange") or "").strip().upper() or None
+            mic_code = (etf.get("mic_code") or "").strip().upper() or None
+            
+            if mic_code:
+                logger.info(f"  → MIC: {mic_code}")
+            elif exchange:
+                logger.info(f"  → Exchange: {exchange}")
+            # ==============================================================
+            
+            # Récupérer les données avec timezone ET exchange/mic_code
+            last, day_pct, last_src = quote_one(
+                sym, 
+                region_display,
+                exchange=exchange,
+                mic_code=mic_code
+            )
             
             rate_limit_pause(0.5)
             
-            # Baseline YTD (dernier close N-1)
-            base_close, base_date = baseline_ytd(sym, region_display)
+            # Baseline YTD (dernier close N-1) - AUSSI avec exchange/mic_code
+            base_close, base_date = baseline_ytd(
+                sym, 
+                region_display,
+                exchange=exchange,
+                mic_code=mic_code
+            )
             
             if base_date.startswith(str(year)):
                 ytd_warnings += 1
@@ -430,7 +450,9 @@ def main():
                 "ytd_ref_date": base_date,
                 "ytd_method": "price_last_close_prev_year_to_last_close",
                 "trend": "down" if day_pct < 0 else "up",
-                "region": region_display
+                "region": region_display,
+                "exchange": exchange,
+                "mic_code": mic_code
             }
             
             SECTORS_DATA["sectors"][category].append(sector_entry)
@@ -449,6 +471,8 @@ def main():
             SECTORS_DATA["meta"]["errors"].append({
                 "symbol": sym,
                 "name": etf.get("name", "N/A"),
+                "exchange": etf.get("exchange", "N/A"),
+                "mic_code": etf.get("mic_code", "N/A"),
                 "error": str(e),
                 "timestamp": dt.datetime.utcnow().isoformat()
             })

@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v2 - Fix baseline_ytd pour un vrai YTD calendaire
+v3 - FIX: Ajout exchange/mic_code + fallback VSE->XETR
 """
 
 import os
@@ -35,6 +35,24 @@ RATE_LIMIT_DELAY = 0.8  # secondes entre chaque appel API
 # Client Twelve Data (singleton)
 _TD_CLIENT: Optional[TDClient] = None
 
+# ============================================================
+# FALLBACK VSE -> XETR (Vienna Stock Exchange -> Xetra)
+# Les tickers VSE ne sont plus supportés par Twelve Data
+# ============================================================
+VSE_TO_XETR = {
+    "EX37": "EXV5",   # Automobiles & Parts
+    "EX28": "EXV1",   # Banks
+    "EX38": "EXV6",   # Basic Resources
+    "EX42": "EXV8",   # Construction & Materials
+    "EX30": "EXH3",   # Food & Beverage
+    "EX31": "EXV4",   # Health Care
+    "EX33": "EXH1",   # Oil & Gas
+    "EX43": "EXH7",   # Personal & Household Goods
+    "EX34": "EXI5",   # Real Estate
+    "EX41": "EXV9",   # Travel & Leisure
+    "EX36": "EXH9",   # Utilities
+}
+
 
 def get_td_client() -> Optional[TDClient]:
     """Retourne le client Twelve Data (singleton)"""
@@ -49,14 +67,43 @@ def rate_limit_pause(delay: float = RATE_LIMIT_DELAY):
     time.sleep(delay)
 
 
+def _apply_vse_fallback(sym: str, exchange: str, mic_code: str) -> Tuple[str, str, str]:
+    """
+    Applique le fallback VSE -> XETR si nécessaire.
+    
+    Returns:
+        (symbol, exchange, mic_code) - potentiellement modifiés
+    """
+    exchange_upper = (exchange or "").upper()
+    mic_upper = (mic_code or "").upper()
+    
+    # Détecter si c'est un ticker VSE/Vienna
+    if exchange_upper == "VSE" or mic_upper == "XWBO":
+        if sym in VSE_TO_XETR:
+            new_sym = VSE_TO_XETR[sym]
+            logger.warning(f"🔄 Fallback VSE→XETR: {sym} → {new_sym}")
+            return new_sym, "XETR", "XETR"
+        else:
+            logger.warning(f"⚠️ Ticker VSE inconnu: {sym} - tentative avec XETR quand même")
+            return sym, "XETR", "XETR"
+    
+    return sym, exchange, mic_code
+
+
 # ============================================================
 # FONCTIONS API TWELVE DATA
 # ============================================================
 
-def quote_one(sym: str, region: str = "US") -> Tuple[float, float, str]:
+def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str = None) -> Tuple[float, float, str]:
     """
     Récupère le dernier close propre + variation jour.
     Privilégie previous_close si le marché est ouvert.
+    
+    Args:
+        sym: Symbole de l'instrument (ex: "EXV5", "AAPL")
+        region: Région pour le timezone ("US", "Europe", "Asia", "Other")
+        exchange: Code exchange (ex: "XETR", "NYSE") - REQUIS pour ETFs européens
+        mic_code: MIC code ISO 10383 (ex: "XETR", "XWBO") - alternative à exchange
     
     Returns:
         (last_close, day_percent_change, source)
@@ -66,12 +113,36 @@ def quote_one(sym: str, region: str = "US") -> Tuple[float, float, str]:
     if not TD:
         raise ValueError("Client Twelve Data non initialisé (API_KEY manquante?)")
     
+    # Appliquer le fallback VSE -> XETR
+    sym, exchange, mic_code = _apply_vse_fallback(sym, exchange, mic_code)
+    
     try:
         timezone = TZ_BY_REGION.get(region, "UTC")
-        q_json = TD.quote(symbol=sym, timezone=timezone).as_json()
+        
+        # Construire les paramètres de la requête
+        params = {
+            "symbol": sym,
+            "timezone": timezone
+        }
+        
+        # Ajouter exchange ou mic_code si fourni (CRITIQUE pour ETFs européens)
+        # Priorité: mic_code > exchange (MIC est plus précis)
+        if mic_code:
+            params["mic_code"] = mic_code
+        elif exchange:
+            params["exchange"] = exchange
+        
+        # Log de la requête pour debug
+        logger.debug(f"📡 quote_one({sym}) params: {params}")
+        
+        q_json = TD.quote(**params).as_json()
         
         if isinstance(q_json, tuple):
             q_json = q_json[0]
+        
+        # Vérifier les erreurs API
+        if isinstance(q_json, dict) and q_json.get("status") == "error":
+            raise ValueError(f"API Error: {q_json.get('message', 'Unknown error')}")
         
         # Extraire close et previous_close
         close = None
@@ -111,7 +182,7 @@ def quote_one(sym: str, region: str = "US") -> Tuple[float, float, str]:
         raise
 
 
-def baseline_ytd(sym: str, region: str = "US") -> Tuple[float, str]:
+def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: str = None) -> Tuple[float, str]:
     """
     Calcule la baseline YTD = DERNIER jour de bourse de l'année N-1.
     Fallback: 1er jour de bourse de N si pas de données N-1.
@@ -120,6 +191,12 @@ def baseline_ytd(sym: str, region: str = "US") -> Tuple[float, str]:
     - Base = close du 31 décembre 2024 (ou dernier jour ouvré avant)
     - Pas le 2 décembre ou fin novembre !
     
+    Args:
+        sym: Symbole de l'instrument
+        region: Région pour le timezone
+        exchange: Code exchange (REQUIS pour ETFs européens)
+        mic_code: MIC code ISO 10383 (alternative à exchange)
+    
     Returns:
         (baseline_close, baseline_date_iso)
     """
@@ -127,22 +204,34 @@ def baseline_ytd(sym: str, region: str = "US") -> Tuple[float, str]:
     if not TD:
         raise ValueError("Client Twelve Data non initialisé")
     
+    # Appliquer le fallback VSE -> XETR
+    sym, exchange, mic_code = _apply_vse_fallback(sym, exchange, mic_code)
+    
     year = dt.date.today().year
     baseline_year = year - 1
     tz = TZ_BY_REGION.get(region, "UTC")
     
     try:
-        # Plage élargie : tout novembre + décembre N-1 + janvier N
-        # Cela garantit qu'on capture bien le dernier close de N-1
-        ts_json = TD.time_series(
-            symbol=sym,
-            interval="1day",
-            start_date=f"{baseline_year}-11-01",  # 1er novembre 2024
-            end_date=f"{year}-01-31",              # 31 janvier 2025
-            order="DESC",                          # Plus récent d'abord (optimise la recherche)
-            timezone=tz,
-            outputsize=100                         # ~3 mois de données suffisent
-        ).as_json()
+        # Construire les paramètres
+        params = {
+            "symbol": sym,
+            "interval": "1day",
+            "start_date": f"{baseline_year}-11-01",  # 1er novembre N-1
+            "end_date": f"{year}-01-31",              # 31 janvier N
+            "order": "DESC",
+            "timezone": tz,
+            "outputsize": 100
+        }
+        
+        # Ajouter exchange ou mic_code si fourni
+        if mic_code:
+            params["mic_code"] = mic_code
+        elif exchange:
+            params["exchange"] = exchange
+        
+        logger.debug(f"📡 baseline_ytd({sym}) params: {params}")
+        
+        ts_json = TD.time_series(**params).as_json()
 
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
