@@ -1,6 +1,8 @@
 /**
  * marches-script.js - Version compatible Twelve Data avec corrections majeures
  * Les données sont mises à jour régulièrement par GitHub Actions
+ * 
+ * v2 - FIX: Correction des sélecteurs CSS pour l'aperçu des marchés
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -22,37 +24,43 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // Mapping des aliases pour l'aperçu des marchés (ETF → Indices)
+    // Utilisé pour trouver les indices dans les données JSON
     const OVERVIEW_ALIASES = {
         'europe': {
-            'CAC 40':       [/CAC\s*40/i, /France ETF/i],
-            'DAX':          [/DAX/i, /Germany ETF/i],
-            'FTSE 100':     [/FTSE\s*100/i, /United Kingdom ETF/i],
-            'EURO STOXX 50':[/EURO\s*STOXX\s*50/i, /Europe 50/i, /SPDR EURO STOXX 50/i],
+            'germany':     [/Germany/i, /Allemagne/i, /DAX/i, /EWG/i],
+            'france':      [/France/i, /CAC/i, /EWQ/i],
+            'uk':          [/United Kingdom/i, /Royaume/i, /FTSE/i, /EWU/i],
+            'switzerland': [/Switzerland/i, /Suisse/i, /EWL/i],
+            'europe':      [/Europe ETF/i, /VGK/i, /Vanguard FTSE Europe/i],
+            'spain':       [/Spain/i, /Espagne/i, /EWP/i],
+            'italy':       [/Italy/i, /Italie/i, /EWI/i],
         },
         'north-america': {
-            'S&P 500':         [/S&P\s*500/i, /SPDR S&P 500/i, /\bSPY\b/i],
-            'DOW JONES':       [/Dow\s*Jones/i, /SPDR Dow Jones/i],
-            'NASDAQ Composite':[/NASDAQ\s*(Composite|100)?/i, /\bQQQ\b/i, /Invesco QQQ/i],
-            'VIX':             [/\bVIX\b/i, /Volatility/i, /iPath.*VIX/i],
+            'sp500':    [/S&P\s*500/i, /SPY/i, /SPDR S&P/i],
+            'dowjones': [/Dow\s*Jones/i, /DIA/i, /SPDR Dow/i],
+            'nasdaq':   [/NASDAQ/i, /QQQ/i, /Invesco QQQ/i],
+            'canada':   [/Canada/i, /EWC/i],
+            'vix':      [/VIX/i, /Volatility/i, /VXX/i],
         },
         'latin-america': {
-            'BRAZIL': [/Brazil/i, /Brésil/i],
-            'MEXICO': [/Mexico/i, /Mexique/i],
-            'CHILE':  [/Chile/i, /Chili/i],
-            'MERVAL': [/MERVAL/i, /Argentina/i, /Argentine/i, /Global X MSCI Argentina/i],
+            'brazil':    [/Brazil/i, /Brésil/i, /EWZ/i],
+            'mexico':    [/Mexico/i, /Mexique/i, /EWW/i],
+            'chile':     [/Chile/i, /Chili/i, /ECH/i],
+            'argentina': [/Argentina/i, /Argentine/i, /ARGT/i, /MERVAL/i],
         },
         'asia': {
-            'NIKKEI 225':       [/NIKKEI\s*225/i, /Japan ETF/i, /Japon/i],
-            'HANG SENG':        [/HANG\s*SENG/i, /Hong Kong/i],
-            'SHANGHAI':         [/SHANGHAI/i],
-            'BSE SENSEX':       [/SENSEX/i, /India ETF/i, /Inde/i],
-            'CSI (China)':      [/CSI\s*(100|300|500)/i, /China A-?Shares?/i, /Harvest CSI/i]
+            'china':     [/China/i, /Chine/i, /FXI/i, /MCHI/i],
+            'japan':     [/Japan/i, /Japon/i, /EWJ/i, /NIKKEI/i],
+            'india':     [/India/i, /Inde/i, /INDA/i, /SENSEX/i],
+            'taiwan':    [/Taiwan/i, /Taïwan/i, /EWT/i],
+            'hongkong':  [/Hong Kong/i, /EWH/i, /HANG SENG/i],
+            'korea':     [/Korea/i, /Corée/i, /EWY/i],
         },
         'other': {
-            'South Africa': [/South\s*Africa/i, /Afrique du Sud/i],
-            'Australia':    [/Australia/i, /Australie/i],
-            'Israel':       [/Israel/i, /Israël/i],
-            'Turkey':       [/Turkey/i, /Turquie/i, /Morocco/i, /Maroc/i]
+            'southafrica': [/South\s*Africa/i, /Afrique du Sud/i, /EZA/i],
+            'australia':   [/Australia/i, /Australie/i, /EWA/i],
+            'israel':      [/Israel/i, /Israël/i, /EIS/i],
+            'turkey':      [/Turkey/i, /Turquie/i, /TUR/i],
         }
     };
     
@@ -93,6 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'United Kingdom': 'Royaume-Uni',
         'Royaume-Uni': 'Royaume-Uni',
         'Zone Euro': 'Zone Euro',
+        'Europe': 'Europe',
         
         // Asie
         'Japan': 'Japon',
@@ -221,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'Suède': 'europe',
             'Royaume-Uni': 'europe',
             'Zone Euro': 'europe',
+            'Europe': 'europe',
             
             // Asie
             'Japon': 'asia',
@@ -266,16 +276,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Trouve un indice par alias avec regex
+     * Trouve un indice par alias avec regex - VERSION CORRIGÉE
+     * Cherche dans toutes les régions si nécessaire
      */
-    function findIndexByAlias(region, label) {
-        const patterns = OVERVIEW_ALIASES[region]?.[label] || [];
-        return (indicesData.indices[region] || []).find(idx =>
+    function findIndexByAlias(region, dataIndexKey) {
+        const patterns = OVERVIEW_ALIASES[region]?.[dataIndexKey] || [];
+        
+        // Chercher d'abord dans la région spécifiée
+        let found = (indicesData.indices[region] || []).find(idx =>
             patterns.some(rx => 
                 rx.test(idx.index_name || '') || 
-                rx.test(idx.country || '')
+                rx.test(idx.country || '') ||
+                rx.test(idx.symbol || '')
             )
         );
+        
+        // Si pas trouvé, chercher dans toutes les régions
+        if (!found) {
+            const allRegions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
+            for (const r of allRegions) {
+                found = (indicesData.indices[r] || []).find(idx =>
+                    patterns.some(rx => 
+                        rx.test(idx.index_name || '') || 
+                        rx.test(idx.country || '') ||
+                        rx.test(idx.symbol || '')
+                    )
+                );
+                if (found) break;
+            }
+        }
+        
+        return found;
     }
     
     /**
@@ -488,50 +519,52 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Met à jour l'aperçu des marchés mondiaux
+     * Met à jour l'aperçu des marchés mondiaux - VERSION CORRIGÉE
+     * Les sélecteurs correspondent maintenant aux attributs data-index du HTML
      */
     function updateMarketOverview() {
         try {
             console.log('Mise à jour de l\'aperçu des marchés mondiaux...');
             
-            // Europe
+            // Europe - sélecteurs corrigés pour correspondre au HTML
             updateMarketOverviewRegion('europe', [
-                { label: 'CAC 40', selector: '.market-index-col[data-index="cac40"]' },
-                { label: 'DAX', selector: '.market-index-col[data-index="dax"]' },
-                { label: 'FTSE 100', selector: '.market-index-col[data-index="ftse100"]' },
-                { label: 'EURO STOXX 50', selector: '.market-index-col[data-index="eurostoxx50"]' }
+                { key: 'germany',     display: 'Allemagne',   selector: '[data-index="germany"]' },
+                { key: 'france',      display: 'France',      selector: '[data-index="france"]' },
+                { key: 'uk',          display: 'Royaume-Uni', selector: '[data-index="uk"]' },
+                { key: 'switzerland', display: 'Suisse',      selector: '[data-index="switzerland"]' },
+                { key: 'europe',      display: 'Europe',      selector: '[data-index="europe"]' },
             ]);
             
             // Amérique du Nord
             updateMarketOverviewRegion('north-america', [
-                { label: 'S&P 500', selector: '.market-index-col[data-index="sp500"]' },
-                { label: 'DOW JONES', selector: '.market-index-col[data-index="dowjones"]' },
-                { label: 'NASDAQ Composite', selector: '.market-index-col[data-index="nasdaq"]' },
-                { label: 'VIX', selector: '.market-index-col[data-index="vix"]' }
+                { key: 'sp500',    display: 'S&P 500',    selector: '[data-index="sp500"]' },
+                { key: 'dowjones', display: 'DOW JONES',  selector: '[data-index="dowjones"]' },
+                { key: 'canada',   display: 'Canada',     selector: '[data-index="canada"]' },
+                { key: 'vix',      display: 'VIX',        selector: '[data-index="vix"]' },
             ]);
             
-            // Amérique Latine - avec libellés français
+            // Amérique Latine
             updateMarketOverviewRegion('latin-america', [
-                { label: 'BRAZIL',  display: 'Brésil',    selector: '.market-index-col[data-index="brazil"]' },
-                { label: 'MEXICO',  display: 'Mexique',   selector: '.market-index-col[data-index="mexico"]' },
-                { label: 'CHILE',   display: 'Chili',     selector: '.market-index-col[data-index="chile"]'  },
-                { label: 'MERVAL',  display: 'Argentine', selector: '.market-index-col[data-index="argentina"]' }
+                { key: 'brazil',    display: 'Brésil',    selector: '[data-index="brazil"]' },
+                { key: 'mexico',    display: 'Mexique',   selector: '[data-index="mexico"]' },
+                { key: 'chile',     display: 'Chili',     selector: '[data-index="chile"]' },
+                { key: 'argentina', display: 'Argentine', selector: '[data-index="argentina"]' },
             ]);
             
             // Asie
             updateMarketOverviewRegion('asia', [
-                { label: 'NIKKEI 225', selector: '.market-index-col[data-index="nikkei"]' },
-                { label: 'HANG SENG', selector: '.market-index-col[data-index="hangseng"]' },
-                { label: 'SHANGHAI', selector: '.market-index-col[data-index="shanghai"]' },
-                { label: 'BSE SENSEX', selector: '.market-index-col[data-index="sensex"]' }
+                { key: 'china',  display: 'Chine',   selector: '[data-index="china"]' },
+                { key: 'japan',  display: 'Japon',   selector: '[data-index="japan"]' },
+                { key: 'india',  display: 'Inde',    selector: '[data-index="india"]' },
+                { key: 'taiwan', display: 'Taïwan',  selector: '[data-index="taiwan"]' },
             ]);
             
-            // Autres régions - avec libellés français
+            // Autres régions
             updateMarketOverviewRegion('other', [
-                { label: 'South Africa', display: 'Afrique du Sud', selector: '.market-index-col[data-index="southafrica"]' },
-                { label: 'Australia',    display: 'Australie',      selector: '.market-index-col[data-index="australia"]'   },
-                { label: 'Israel',       display: 'Israël',         selector: '.market-index-col[data-index="israel"]'      },
-                { label: 'Turkey',       display: 'Turquie',        selector: '.market-index-col[data-index="morocco"]'     }
+                { key: 'southafrica', display: 'Afrique du Sud', selector: '[data-index="southafrica"]' },
+                { key: 'australia',   display: 'Australie',      selector: '[data-index="australia"]' },
+                { key: 'israel',      display: 'Israël',         selector: '[data-index="israel"]' },
+                { key: 'turkey',      display: 'Turquie',        selector: '[data-index="turkey"]' },
             ]);
             
             console.log('Mise à jour de l\'aperçu des marchés terminée');
@@ -541,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Met à jour une région spécifique de l'aperçu des marchés
+     * Met à jour une région spécifique de l'aperçu des marchés - VERSION CORRIGÉE
      */
     function updateMarketOverviewRegion(region, indicesInfo) {
         indicesInfo.forEach(indexInfo => {
@@ -552,19 +585,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                const index = findIndexByAlias(region, indexInfo.label);
+                // Utilise la clé pour chercher dans les aliases
+                const index = findIndexByAlias(region, indexInfo.key);
                 if (!index) {
-                    console.warn(`Indice non trouvé: ${indexInfo.label} dans ${region}`);
+                    console.warn(`Indice non trouvé pour clé: ${indexInfo.key} dans ${region}`);
                     return;
                 }
+                
+                console.log(`✅ Trouvé ${indexInfo.key}: ${index.index_name} (${index.change_num}%, YTD ${index.ytd_num}%)`);
                 
                 const nameElement = container.querySelector('.market-index-name');
                 const valueElement = container.querySelector('.market-value');
                 const ytdElement = container.querySelector('.market-ytd');
                 
                 if (nameElement) {
-                    // Utilise le libellé FR si présent, sinon la clé technique
-                    nameElement.textContent = indexInfo.display || indexInfo.label;
+                    nameElement.textContent = indexInfo.display || index.country || indexInfo.key;
                 }
                 
                 if (valueElement) {
@@ -581,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
                          index.ytd_num > 0.01 ? 'positive' : 'neutral');
                 }
             } catch (error) {
-                console.error(`Erreur lors de la mise à jour de ${indexInfo.label}:`, error);
+                console.error(`Erreur lors de la mise à jour de ${indexInfo.key}:`, error);
             }
         });
     }
@@ -599,21 +634,9 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Sélectionner les indices importants avec les aliases
-        const labels = Object.keys(OVERVIEW_ALIASES[region] || {});
-        const importantIndices = labels.map(label => findIndexByAlias(region, label)).filter(Boolean);
-        
-        // Si pas assez d'indices importants, prendre les premiers
-        while (importantIndices.length < 4 && indices.length > importantIndices.length) {
-            const remainingIndices = indices.filter(idx => !importantIndices.includes(idx));
-            if (remainingIndices.length > 0) {
-                importantIndices.push(remainingIndices[0]);
-            }
-        }
-        
         // Calculer la moyenne des variations pour déterminer la tendance
-        const avgChange = importantIndices.reduce((sum, idx) => 
-            sum + (idx.change_num || 0), 0) / Math.max(1, importantIndices.length);
+        const avgChange = indices.reduce((sum, idx) => 
+            sum + (idx.change_num || 0), 0) / Math.max(1, indices.length);
         
         let trendClass = Math.abs(avgChange) <= 0.01 ? 'neutral' : 
                         (avgChange > 0 ? 'positive' : 'negative');
