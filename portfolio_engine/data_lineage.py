@@ -7,6 +7,10 @@ référence aux sources de données est nécessaire (optimizer, backtest, fronte
 
 ChatGPT v2.0 Audit - Q5: "As-tu un contrôle data_source unique importé partout?"
 Réponse: OUI, ce fichier.
+
+v1.1.0 (2025-12-16):
+- FIX: TwelveData prices are split-adjusted only, NOT dividend-adjusted
+- Reference: https://support.twelvedata.com/en/articles/5179064-are-the-prices-adjusted
 """
 
 from dataclasses import dataclass, field
@@ -15,7 +19,7 @@ from datetime import datetime
 import hashlib
 import json
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 
 # =============================================================================
@@ -23,19 +27,23 @@ __version__ = "1.0.0"
 # =============================================================================
 
 METHODOLOGY = {
-    "version": "1.0.0",
-    "last_updated": "2025-12-15",
+    "version": "1.1.0",
+    "last_updated": "2025-12-16",
     
     # Sources de prix
+    # FIX v1.1.0: TwelveData n'inclut PAS les dividendes dans les prix
+    # Ref: https://support.twelvedata.com/en/articles/5179064-are-the-prices-adjusted
     "prices": {
         "source": "Twelve Data API",
         "source_url": "https://twelvedata.com",
-        "type": "adjusted_close",
-        "adjustments": ["splits", "dividends"],
+        "type": "split_adjusted_close",  # FIX: était "adjusted_close" (trop fort)
+        "adjustments": ["splits"],  # FIX: était ["splits", "dividends"] (FAUX)
+        "dividends_included": False,  # EXPLICITE: dividendes NON inclus
         "currency": "USD",
         "frequency": "daily",
         "timezone": "America/New_York",
         "lag_days": 0,  # T+0 (fin de journée)
+        "note": "TwelveData daily prices are split-adjusted only. Dividends are NOT included. Use /dividends endpoint for dividend data.",
     },
     
     # Sources de fondamentaux
@@ -134,6 +142,14 @@ LIMITATIONS = {
         "excluded": ["slippage", "market_impact", "custody_fees", "taxes"],
         "description": "Seuls les coûts de transaction sont modélisés (10 bp).",
     },
+    # FIX v1.1.0: Nouvelle limitation explicite
+    "dividends_not_adjusted": {
+        "present": True,
+        "description": "Les prix TwelveData sont ajustés pour les splits UNIQUEMENT. Les dividendes ne sont PAS réinvestis dans les séries de prix.",
+        "impact": "Le rendement total (total return) est sous-estimé pour les actifs à dividendes élevés.",
+        "mitigation": "Pour une analyse total return, récupérer les dividendes via /dividends endpoint et les réinvestir manuellement.",
+        "reference": "https://support.twelvedata.com/en/articles/5179064-are-the-prices-adjusted",
+    },
 }
 
 
@@ -186,12 +202,45 @@ def get_limitations_for_output() -> Dict[str, Any]:
     return {
         "survivorship_free": not LIMITATIONS["survivorship_bias"]["present"],
         "pit_fundamentals": LIMITATIONS["point_in_time"]["compliant"],
-        "adjusted_prices": True,
+        "split_adjusted_prices": True,  # Splits: OUI
+        "dividend_adjusted_prices": False,  # FIX v1.1.0: Dividendes: NON
+        "total_return": False,  # FIX v1.1.0: Ce n'est PAS du total return
         "costs_included": METHODOLOGY["backtest"]["costs_included"],
         "base_currency": METHODOLOGY["risk_metrics"]["base_currency"],
         "risk_free_rate_source": METHODOLOGY["risk_metrics"]["risk_free_rate_source"],
         "risk_free_rate_pct": METHODOLOGY["risk_metrics"]["risk_free_rate_value"] * 100,
     }
+
+
+def validate_price_source_claim() -> bool:
+    """
+    Garde-fou: vérifie la cohérence entre les claims et la réalité.
+    
+    Lève un warning si on prétend avoir des dividendes alors qu'on ne les a pas.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    prices_config = METHODOLOGY.get("prices", {})
+    adjustments = prices_config.get("adjustments", [])
+    dividends_included = prices_config.get("dividends_included", False)
+    
+    # Guard: si on prétend avoir des dividendes mais dividends_included=False
+    if "dividends" in adjustments and not dividends_included:
+        logger.error(
+            "INCONSISTENCY: 'dividends' in adjustments but dividends_included=False. "
+            "Fix METHODOLOGY to be consistent."
+        )
+        return False
+    
+    # Guard: si dividends_included=True mais pas de traitement explicite
+    if dividends_included and "dividends" not in adjustments:
+        logger.warning(
+            "dividends_included=True but 'dividends' not in adjustments. "
+            "Verify dividend reinvestment is actually implemented."
+        )
+    
+    return True
 
 
 # =============================================================================
