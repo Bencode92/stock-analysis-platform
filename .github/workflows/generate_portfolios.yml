@@ -39,10 +39,11 @@ jobs:
           pip install pandas numpy scipy requests beautifulsoup4 lxml openai pyyaml jsonschema
 
       # ============= v4.4 NEW: Generate Market Context =============
+      # FIX: Use -m to avoid sys.path issues with portfolio_engine/calendar.py
       - name: 🌍 Générer market_context.json (GPT unifié)
         run: |
           echo "🔄 Génération du contexte marché unifié..."
-          python portfolio_engine/market_context.py --data-dir data --output data/market_context.json || echo "⚠️ Fallback neutre utilisé"
+          python -m portfolio_engine.market_context --data-dir data --output data/market_context.json || echo "⚠️ Fallback neutre utilisé"
           
           # Diagnostic
           if [ -f data/market_context.json ]; then
