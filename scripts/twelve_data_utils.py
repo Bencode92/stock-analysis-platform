@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v11 - FIX: Requête ciblée dec-jan avec start_date/end_date EXPLICITES
+v12 - FIX: Debug parsing + utilise .as_json() correctement
 """
 
 import os
@@ -96,22 +96,53 @@ def _apply_vse_fallback(sym: str, exchange: str, mic_code: str) -> Tuple[str, st
 
 def _extract_ts_values(js: Any) -> List[dict]:
     """
-    Extrait les valeurs time_series de façon robuste.
-    Gère: list, dict{"values":[...]}, dict "single bar", tuple
+    Extrait les valeurs time_series de façon ROBUSTE.
+    Le SDK TwelveData peut retourner plusieurs formats différents.
+    
+    Formats possibles:
+    - tuple: (data, meta) -> on prend data
+    - dict avec "values": [{...}, {...}] -> on prend values
+    - dict "single bar": {"datetime": ..., "close": ...}
+    - list directe: [{...}, {...}]
+    - dict avec clés dates: {"2024-12-30": {...}, "2024-12-29": {...}}
     """
+    # Déballer tuple si nécessaire
     if isinstance(js, tuple):
         js = js[0]
     
     if isinstance(js, dict):
-        # Cas standard: {"values": [...]}
-        if isinstance(js.get("values"), list):
+        # Cas 1: {"values": [...], "meta": {...}, "status": "ok"}
+        if "values" in js and isinstance(js["values"], list):
             return js["values"]
-        # Cas "single bar": {"datetime": ..., "close": ...}
-        if "datetime" in js and ("close" in js or "price" in js):
-            return [js]
-        # Erreur API
+        
+        # Cas 2: Erreur API
         if js.get("status") == "error":
             return []
+        
+        # Cas 3: Dict avec clés dates {"2024-12-30": {...}, ...}
+        # Le SDK peut retourner ce format
+        if js and all(isinstance(k, str) and len(k) >= 10 for k in js.keys() if k not in ["meta", "status"]):
+            result = []
+            for date_key, val in js.items():
+                if date_key in ["meta", "status"]:
+                    continue
+                if isinstance(val, dict):
+                    # Ajouter la date si pas présente
+                    if "datetime" not in val:
+                        val = {**val, "datetime": date_key}
+                    result.append(val)
+            if result:
+                return result
+        
+        # Cas 4: Single bar {"datetime": ..., "close": ...}
+        if "datetime" in js and ("close" in js or "price" in js):
+            return [js]
+        
+        # Cas 5: Dict avec une seule valeur qui est une liste
+        for key, val in js.items():
+            if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
+                return val
+        
         return []
     
     if isinstance(js, list):
@@ -216,8 +247,10 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     1. Dernier close de décembre N-1 (ex: 2024-12-30)
     2. OU premier close de janvier N (ex: 2025-01-02)
     
-    v11: Requête CIBLÉE sur dec-jan avec start_date/end_date EXPLICITES
-    Plusieurs tentatives avec différentes combinaisons de paramètres.
+    v12: Fix parsing + debug amélioré
+    - Affiche le type de réponse reçue
+    - Gère plus de formats de réponse SDK
+    - outputsize=5000 pour forcer plus de données
     
     Args:
         sym: Symbole de l'instrument
@@ -238,68 +271,42 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     year = dt.date.today().year
     prev = year - 1
     
-    # === v11: MULTIPLE STRATEGIES ===
-    # Chaque stratégie est une liste de paramètres à essayer
+    # === v12: MULTIPLE STRATEGIES avec outputsize EXPLICITE ===
     
     strategies = []
     
-    # Stratégie 1: start_date/end_date CIBLÉS sur dec-jan avec mic_code
+    # Stratégie 1: Dates ciblées + mic_code + outputsize=5000
     if mic_code:
         strategies.append({
             "symbol": sym,
             "interval": "1day",
             "start_date": f"{prev}-12-01",
             "end_date": f"{year}-01-31",
+            "outputsize": 5000,  # Force beaucoup de données
             "mic_code": mic_code,
-            "label": f"targeted dec-jan + mic_code={mic_code}"
+            "label": f"targeted + mic_code={mic_code} + outputsize=5000"
         })
     
-    # Stratégie 2: start_date/end_date CIBLÉS avec exchange
+    # Stratégie 2: Dates ciblées + exchange + outputsize=5000
     if exchange:
         strategies.append({
             "symbol": sym,
             "interval": "1day",
             "start_date": f"{prev}-12-01",
             "end_date": f"{year}-01-31",
+            "outputsize": 5000,
             "exchange": exchange,
-            "label": f"targeted dec-jan + exchange={exchange}"
+            "label": f"targeted + exchange={exchange} + outputsize=5000"
         })
     
-    # Stratégie 3: start_date/end_date sans exchange/mic (symbol seul)
+    # Stratégie 3: Dates ciblées sans exchange/mic
     strategies.append({
         "symbol": sym,
         "interval": "1day",
         "start_date": f"{prev}-12-01",
         "end_date": f"{year}-01-31",
-        "label": "targeted dec-jan + symbol only"
-    })
-    
-    # Stratégie 4: outputsize large avec mic_code (fallback)
-    if mic_code:
-        strategies.append({
-            "symbol": sym,
-            "interval": "1day",
-            "outputsize": 400,
-            "mic_code": mic_code,
-            "label": f"outputsize=400 + mic_code={mic_code}"
-        })
-    
-    # Stratégie 5: outputsize large avec exchange (fallback)
-    if exchange:
-        strategies.append({
-            "symbol": sym,
-            "interval": "1day",
-            "outputsize": 400,
-            "exchange": exchange,
-            "label": f"outputsize=400 + exchange={exchange}"
-        })
-    
-    # Stratégie 6: outputsize large sans rien (dernier recours)
-    strategies.append({
-        "symbol": sym,
-        "interval": "1day",
-        "outputsize": 400,
-        "label": "outputsize=400 + symbol only"
+        "outputsize": 5000,
+        "label": "targeted + symbol only + outputsize=5000"
     })
     
     last_error = None
@@ -315,28 +322,32 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
             # Log de l'URL pour debug
             try:
                 url = ts.as_url()
-                # Masquer l'API key
                 safe_url = url.split("apikey=")[0] + "apikey=***" if "apikey=" in url else url
                 logger.info(f"  🔗 {safe_url}")
             except Exception:
                 pass
             
+            # Récupérer le JSON
             js = ts.as_json()
             
+            # DEBUG: Afficher le type et un aperçu
+            logger.info(f"  🔍 Réponse type={type(js).__name__}")
             if isinstance(js, tuple):
-                js = js[0]
-            
-            if isinstance(js, dict) and js.get("status") == "error":
-                logger.warning(f"  ⚠️ API error: {js.get('message', 'Unknown')}")
-                last_error = js.get('message', 'Unknown')
-                continue
+                logger.info(f"  🔍 Tuple len={len(js)}, types={[type(x).__name__ for x in js]}")
+            elif isinstance(js, dict):
+                keys = list(js.keys())[:5]
+                logger.info(f"  🔍 Dict keys={keys}")
+                if "values" in js:
+                    logger.info(f"  🔍 values type={type(js['values']).__name__}, len={len(js['values']) if isinstance(js['values'], list) else 'N/A'}")
+            elif isinstance(js, list):
+                logger.info(f"  🔍 List len={len(js)}")
             
             # Extraire les valeurs
             values = _extract_ts_values(js)
             
             if not values:
-                logger.warning(f"  ⚠️ Aucune valeur retournée")
-                last_error = "Aucune valeur"
+                logger.warning(f"  ⚠️ Aucune valeur extraite")
+                last_error = "Aucune valeur extraite"
                 continue
             
             # Parser les dates et closes
@@ -348,11 +359,11 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
                     rows.append((d, c))
             
             if not rows:
-                logger.warning(f"  ⚠️ Aucune donnée valide")
+                logger.warning(f"  ⚠️ Aucune donnée valide après parsing")
                 last_error = "Aucune donnée valide"
                 continue
             
-            # Trier par date
+            # Trier par date (IMPORTANT!)
             rows.sort(key=lambda x: x[0])
             
             # Log des dates reçues
@@ -374,22 +385,21 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
                 logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f}) [premier jour jan {year}]")
                 return c0, d0
             
-            # 3) Fallback: premier jour de N-1 disponible (dernier recours)
+            # 3) Fallback: dernier jour de N-1 disponible
             prev_rows = [(d, c) for (d, c) in rows if d.startswith(str(prev))]
             if prev_rows:
                 d0, c0 = max(prev_rows, key=lambda x: x[0])
-                logger.warning(f"  ⚠️ Baseline approximative = {d0} (close: {c0:.2f}) [dernier jour {prev}]")
+                logger.warning(f"  ⚠️ Baseline approximative = {d0} (close: {c0:.2f})")
                 return c0, d0
             
-            # 4) Fallback: premier jour de N disponible (très dernier recours)
+            # 4) Fallback: premier jour de N disponible
             curr_rows = [(d, c) for (d, c) in rows if d.startswith(str(year))]
             if curr_rows:
                 d0, c0 = min(curr_rows, key=lambda x: x[0])
-                logger.warning(f"  ⚠️ Baseline approximative = {d0} (close: {c0:.2f}) [premier jour {year}]")
+                logger.warning(f"  ⚠️ Baseline approximative = {d0} (close: {c0:.2f})")
                 return c0, d0
             
-            # Pas de données exploitables
-            logger.warning(f"  ⚠️ Pas de données {prev} ou {year} dans cette réponse")
+            logger.warning(f"  ⚠️ Pas de données {prev} ou {year}")
             last_error = f"Pas de données {prev} ou {year}"
             
         except Exception as e:
