@@ -1,13 +1,13 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille agressif présente une concentration significative dans le secteur financier et industriel, avec des actifs diversifiés en actions et en ETF. Les performances passées des actions peuvent ne pas se reproduire, et la volatilité est à prévoir, notamment dans les secteurs sensibles aux cycles économiques. Une attention particulière doit être portée aux risques associés aux actifs, en particulier dans un environnement de marché mixte. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille agressif présente une exposition significative aux actions, notamment dans les secteurs de la finance, de la santé et des technologies. Les actifs choisis reflètent des entreprises avec des perspectives de croissance solides. Toutefois, il est important de noter que ce portefeuille est soumis à une volatilité élevée, ce qui peut entraîner des fluctuations importantes de la valeur [MC]. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "MUTHOOT FINANCE LTD": "13%",
       "CUMMINS INC": "15%",
       "CAIXABANK SA": "15%",
-      "FOX CORP CLASS A": "5%",
+      "FOX CORP CLASS A": "4%",
       "EXPEDITORS INTERNATIONAL OF WASHIN": "2%",
-      "ASML HOLDING NV": "5%",
+      "ASML HOLDING NV": "6%",
       "JOHNSON & JOHNSON": "15%",
       "TJX INC": "15%"
     },
@@ -15,34 +15,54 @@
       "abrdn Physical Silver Shares ETF": "10%"
     },
     "Obligations": {
-      "iShares Convertible Bond ETF": "5%"
+      "Anfield Universal Fixed Income Fund": "5%"
     },
     "Crypto": {},
     "_tickers": {
+      "AFIF": 0.05,
       "MUTHOOTFIN": 0.146,
       "CMI": 0.146,
       "CABK": 0.146,
-      "FOXA": 0.05,
+      "FOXA": 0.0377,
       "EXPD": 0.02,
-      "ASML": 0.05,
+      "ASML": 0.0623,
       "JNJ": 0.146,
       "TJX": 0.146,
-      "SIVR": 0.1,
-      "ICVT": 0.05
+      "SIVR": 0.1
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 17.43,
+      "vol_realized": 17.6,
       "vol_target": 18.0
-    }
+    },
+    "_constraint_report": {
+      "profile": "Agressif",
+      "timestamp": "2025-12-16T08:15:29.580117",
+      "all_hard_satisfied": true,
+      "all_soft_satisfied": true,
+      "n_violations": 0,
+      "violations": [],
+      "warnings": [],
+      "margins": {
+        "sum_100": 0.0,
+        "max_single_position": 0.0,
+        "bonds_min": 0.0,
+        "crypto_max": 10.0,
+        "n_assets": 10
+      },
+      "relaxed_constraints": []
+    },
+    "_limitations": [
+      "Tilts tactiques désactivés (P0-8): les surpondérations sectorielles/régionales basées sur le contexte marché ne sont pas appliquées."
+    ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modéré présente une diversification équilibrée entre actions et obligations, avec une exposition significative aux secteurs de la santé et des biens de consommation. Les actifs choisis reflètent une approche prudente face aux incertitudes économiques actuelles. Les investisseurs doivent être conscients des risques associés, notamment ceux liés aux fluctuations des taux d'intérêt et à la consommation, dans un environnement de marché mixte. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modéré combine des actions et des obligations, offrant un équilibre entre croissance et sécurité. Les choix d'actifs reflètent une approche prudente, avec une attention particulière à la protection contre l'inflation et à la stabilité des revenus. Cependant, il est essentiel de garder à l'esprit que même un portefeuille modéré comporte des risques, notamment en période de volatilité du marché [MC]. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "15%",
-      "FOX CORP CLASS A": "15%",
-      "EXPEDITORS INTERNATIONAL OF WASHIN": "5%",
+      "EXPEDITORS INTERNATIONAL OF WASHIN": "15%",
+      "FOX CORP CLASS A": "5%",
       "MUTHOOT FINANCE LTD": "10%",
       "TJX INC": "15%"
     },
@@ -58,8 +78,8 @@
     "Crypto": {},
     "_tickers": {
       "JNJ": 0.15,
-      "FOXA": 0.15,
-      "EXPD": 0.05,
+      "EXPD": 0.15,
+      "FOXA": 0.05,
       "MUTHOOTFIN": 0.1,
       "TJX": 0.15,
       "VTIP": 0.08,
@@ -71,12 +91,32 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 11.9,
+      "vol_realized": 11.83,
       "vol_target": 12.0
-    }
+    },
+    "_constraint_report": {
+      "profile": "Modéré",
+      "timestamp": "2025-12-16T08:15:29.580690",
+      "all_hard_satisfied": true,
+      "all_soft_satisfied": true,
+      "n_violations": 0,
+      "violations": [],
+      "warnings": [],
+      "margins": {
+        "sum_100": 0.0,
+        "max_single_position": 0.0,
+        "bonds_min": 15.0,
+        "crypto_max": 5.0,
+        "n_assets": 10
+      },
+      "relaxed_constraints": []
+    },
+    "_limitations": [
+      "Tilts tactiques désactivés (P0-8): les surpondérations sectorielles/régionales basées sur le contexte marché ne sont pas appliquées."
+    ]
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille stable est conçu pour minimiser la volatilité tout en offrant une exposition à des actifs de qualité. La majorité des investissements sont concentrés dans des obligations et des fonds de trésorerie, ce qui limite les risques de perte en capital. Toutefois, les rendements peuvent être inférieurs à ceux des portefeuilles plus agressifs. Les investisseurs doivent garder à l'esprit que même les investissements considérés comme stables comportent des risques, notamment en période d'incertitude économique. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille stable privilégie la sécurité et la préservation du capital, avec une forte exposition aux obligations et des actions sélectionnées pour leur stabilité. Les actifs choisis reflètent une approche prudente, visant à minimiser les risques tout en offrant des rendements modérés. Cependant, il est important de noter que même les investissements considérés comme stables comportent des risques, notamment en période de fluctuations économiques [MC]. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "TJX INC": "10%",
@@ -85,7 +125,7 @@
       "ENGIE SA": "2%"
     },
     "ETF": {
-      "iShares MSCI UAE ETF": "10%"
+      "iShares U.S. Home Construction ETF": "10%"
     },
     "Obligations": {
       "JPMorgan Ultra-Short Municipal Income Fund": "13%",
@@ -101,7 +141,7 @@
       "SHV": 0.1197,
       "TBIL": 0.1231,
       "SGOV": 0.0564,
-      "UAE": 0.1026,
+      "ITB": 0.1026,
       "JNJ": 0.1026,
       "TJX": 0.1026,
       "ALV": 0.0513,
@@ -111,14 +151,35 @@
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 6.39,
+      "vol_realized": 7.15,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
-    }
+    },
+    "_constraint_report": {
+      "profile": "Stable",
+      "timestamp": "2025-12-16T08:15:29.581161",
+      "all_hard_satisfied": true,
+      "all_soft_satisfied": true,
+      "n_violations": 0,
+      "violations": [],
+      "warnings": [],
+      "margins": {
+        "sum_100": 0.0,
+        "max_single_position": 2.0,
+        "bonds_min": 20.0,
+        "crypto_max": 0.0,
+        "n_assets": 11
+      },
+      "relaxed_constraints": []
+    },
+    "_limitations": [
+      "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique.",
+      "Tilts tactiques désactivés (P0-8): les surpondérations sectorielles/régionales basées sur le contexte marché ne sont pas appliquées."
+    ]
   },
   "_meta": {
-    "generated_at": "2025-12-15T16:24:26.902563",
-    "version": "v4.8.0_p0_compliance",
+    "generated_at": "2025-12-16T08:15:29.581525",
+    "version": "v4.8.3_p0_fix",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
     "tactical_context_enabled": false,
