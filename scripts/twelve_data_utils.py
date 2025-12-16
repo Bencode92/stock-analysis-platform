@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v6 - FIX: baseline_ytd utilise EXCHANGE (pas mic_code) pour time_series
+v7 - FIX: baseline_ytd avec fallback mic_code -> exchange -> rien
 """
 
 import os
@@ -99,13 +99,11 @@ def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str 
     Récupère le dernier close propre + variation jour.
     Privilégie previous_close si le marché est ouvert.
     
-    Note: Pour quote(), mic_code fonctionne bien.
-    
     Args:
         sym: Symbole de l'instrument (ex: "EXV5", "AAPL")
         region: Région pour le timezone ("US", "Europe", "Asia", "Other")
         exchange: Code exchange (ex: "XETR", "NYSE")
-        mic_code: MIC code ISO 10383 (ex: "XETR", "XWBO")
+        mic_code: MIC code ISO 10383 (ex: "XETR", "ARCX") - PLUS PRÉCIS
     
     Returns:
         (last_close, day_percent_change, source)
@@ -127,7 +125,7 @@ def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str 
             "timezone": timezone
         }
         
-        # Pour quote(), mic_code fonctionne bien
+        # Priorité: mic_code > exchange (MIC est plus précis)
         if mic_code:
             params["mic_code"] = mic_code
         elif exchange:
@@ -187,14 +185,18 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     Calcule la baseline YTD = DERNIER jour de bourse de l'année N-1.
     Fallback: 1er jour de bourse de N si pas de données N-1.
     
-    IMPORTANT v6: Pour time_series(), on utilise EXCHANGE (pas mic_code)
-    car mic_code ne fonctionne pas correctement pour les historiques.
+    v7: Stratégie robuste avec fallback:
+    1. Essaie avec mic_code (le plus précis)
+    2. Essaie avec exchange
+    3. Essaie sans rien (symbole seul)
+    
+    Utilise une fenêtre start_date/end_date EXPLICITE (pas juste un seul bord).
     
     Args:
         sym: Symbole de l'instrument
         region: Région pour le timezone
-        exchange: Code exchange (ex: "XETR", "NYSE", "LSE")
-        mic_code: MIC code - sera utilisé comme exchange si exchange est vide
+        exchange: Code exchange (ex: "NYSE", "LSE")
+        mic_code: MIC code ISO 10383 (ex: "ARCX", "XLON") - PRIORITAIRE
     
     Returns:
         (baseline_close, baseline_date_iso)
@@ -209,81 +211,101 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     year = dt.date.today().year
     prev = year - 1
     
-    # ===== FIX v6: Pour time_series(), utiliser EXCHANGE (pas mic_code) =====
-    # mic_code ne fonctionne pas correctement pour les historiques
-    ex = exchange or mic_code  # Fallback: utiliser mic_code comme exchange
-    if not ex:
-        raise ValueError(f"exchange/mic_code manquant pour {sym}")
+    # Fenêtre LARGE et EXPLICITE autour du changement d'année
+    base_params = {
+        "symbol": sym,
+        "interval": "1day",
+        "start_date": f"{prev}-12-10",   # 10 décembre N-1
+        "end_date": f"{year}-01-20",      # 20 janvier N
+        "outputsize": 300,
+    }
     
-    logger.info(f"📡 baseline_ytd({sym}) exchange={ex}")
+    # Stratégie de fallback: mic_code -> exchange -> rien
+    candidates = []
+    if mic_code:
+        candidates.append({**base_params, "mic_code": mic_code})
+    if exchange:
+        candidates.append({**base_params, "exchange": exchange})
+    candidates.append(base_params)  # Sans rien (dernier recours)
     
-    def _get_values(**kwargs):
-        """Helper pour récupérer les valeurs time_series"""
-        params = {
-            "symbol": sym,
-            "interval": "1day",
-            "exchange": ex,      # ✅ TOUJOURS exchange, JAMAIS mic_code
-            "outputsize": 60,    # Suffisant pour couvrir fin déc + début jan
-            **kwargs
-        }
-        logger.debug(f"  time_series params: {params}")
-        
-        js = TD.time_series(**params).as_json()
-        
-        if isinstance(js, tuple):
-            js = js[0]
-        if isinstance(js, dict) and js.get("status") == "error":
-            raise ValueError(f"Erreur API: {js.get('message', 'Unknown')}")
-        
-        values = js.get("values") if isinstance(js, dict) else js
-        if not values:
-            return []
-        return values
+    last_debug = None
     
-    try:
-        # 1) Dernier jour de bourse de N-1 (pas forcément le 31/12)
-        vals_prev = _get_values(end_date=f"{prev}-12-31")
-        
-        # Filtrer uniquement les valeurs de l'année précédente avec close valide
-        prev_year = [
-            v for v in vals_prev 
-            if v.get("datetime", "").startswith(str(prev)) and v.get("close")
-        ]
-        
-        if prev_year:
-            # Prendre le MAX des dates = dernier jour coté de N-1
-            last_prev = max(prev_year, key=lambda v: v["datetime"])
-            base_date = last_prev["datetime"][:10]
-            base_close = float(last_prev["close"])
+    for idx, params in enumerate(candidates):
+        try:
+            attempt_type = "mic_code" if "mic_code" in params else ("exchange" if "exchange" in params else "symbol_only")
+            logger.info(f"📡 baseline_ytd({sym}) tentative {idx+1}/{len(candidates)}: {attempt_type}")
+            logger.debug(f"  params: {params}")
             
-            logger.info(f"  ✅ {sym}: Baseline = {base_date} (close: {base_close:.2f})")
-            return base_close, base_date
-        
-        logger.warning(f"  ⚠️ {sym}: Pas de données {prev}, tentative fallback {year}...")
-        
-        # 2) Fallback: premier jour de bourse de N (le 01/01 est férié → souvent 02/01)
-        vals_curr = _get_values(start_date=f"{year}-01-01")
-        
-        # Filtrer uniquement les valeurs de l'année courante avec close valide
-        curr_year = [
-            v for v in vals_curr 
-            if v.get("datetime", "").startswith(str(year)) and v.get("close")
-        ]
-        
-        if curr_year:
-            # Prendre le MIN des dates = premier jour coté de N
-            first_curr = min(curr_year, key=lambda v: v["datetime"])
-            base_date = first_curr["datetime"][:10]
-            base_close = float(first_curr["close"])
+            js = TD.time_series(**params).as_json()
             
-            logger.warning(f"  ⚠️ {sym}: Fallback = {base_date} (close: {base_close:.2f})")
-            return base_close, base_date
-        
-        raise ValueError(f"Aucune donnée exploitable autour du changement d'année pour {sym} (exchange={ex})")
-        
-    except Exception as e:
-        logger.error(f"Erreur baseline YTD pour {sym}: {e}")
-        raise
+            if isinstance(js, tuple):
+                js = js[0]
+            
+            # Erreurs API explicites
+            if isinstance(js, dict) and js.get("status") == "error":
+                logger.warning(f"  ⚠️ API error: {js.get('message', 'Unknown')}")
+                last_debug = js
+                continue
+            
+            # Extraire les valeurs
+            values = []
+            if isinstance(js, dict) and js.get("values"):
+                values = js["values"]
+            elif isinstance(js, list):
+                values = js
+            
+            if not values:
+                logger.warning(f"  ⚠️ Aucune valeur retournée")
+                last_debug = js
+                continue
+            
+            # Trier par date (les valeurs arrivent souvent en ordre DESC)
+            values_sorted = sorted(values, key=lambda v: v.get("datetime", ""))
+            
+            # Log debug des dates reçues
+            all_dates = [v.get("datetime", "")[:10] for v in values_sorted if v.get("datetime")]
+            if all_dates:
+                logger.info(f"  📅 {len(values)} valeurs, min={all_dates[0]}, max={all_dates[-1]}")
+            
+            # Séparer année précédente vs année courante
+            prev_year = [v for v in values_sorted if v.get("datetime", "").startswith(str(prev)) and v.get("close")]
+            curr_year = [v for v in values_sorted if v.get("datetime", "").startswith(str(year)) and v.get("close")]
+            
+            logger.info(f"  📊 {len(prev_year)} jours en {prev}, {len(curr_year)} jours en {year}")
+            
+            # 1) DERNIER jour de bourse de N-1
+            if prev_year:
+                last_prev = prev_year[-1]  # Dernier après tri = plus récent
+                base_date = last_prev["datetime"][:10]
+                base_close = float(last_prev["close"])
+                
+                logger.info(f"  ✅ Baseline = {base_date} (close: {base_close:.2f})")
+                return base_close, base_date
+            
+            # 2) Fallback: PREMIER jour de bourse de N
+            if curr_year:
+                first_curr = curr_year[0]  # Premier après tri = plus ancien
+                base_date = first_curr["datetime"][:10]
+                base_close = float(first_curr["close"])
+                
+                logger.warning(f"  ⚠️ Fallback = {base_date} (close: {base_close:.2f})")
+                return base_close, base_date
+            
+            # Pas de données exploitables avec ces params, essayer le suivant
+            last_debug = {
+                "params": params, 
+                "sample_min": all_dates[0] if all_dates else None,
+                "sample_max": all_dates[-1] if all_dates else None
+            }
+            logger.warning(f"  ⚠️ Pas de données {prev}/{year} dans la réponse")
+            
+        except Exception as e:
+            logger.warning(f"  ⚠️ Exception: {e}")
+            last_debug = {"params": params, "error": str(e)}
+            continue
+    
+    # Toutes les tentatives ont échoué
+    raise ValueError(f"Aucune donnée exploitable autour du changement d'année pour {sym}. Last={last_debug}")
 
 
 # ============================================================
