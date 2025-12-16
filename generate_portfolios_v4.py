@@ -9,6 +9,9 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.8.2: P0-3 + P0-4 - _limitations field + check_feasibility() ex-ante
+        P0-3: Champ _limitations exposant compromis/limites de chaque profil
+        P0-4: check_feasibility() appelée AVANT optimisation
 V4.8.1: P0-2 - verify_constraints_post_arrondi() appelée après arrondi
         + _constraint_report dans chaque profil pour audit trail
 V4.8.0: P0 COMPLIANCE - Double barrière LLM + audit trail + fallback
@@ -73,7 +76,13 @@ from portfolio_engine import (
 from portfolio_engine.market_context import load_market_context
 
 # v4.8.1 P0-2: Import vérification contraintes post-arrondi
-from portfolio_engine.constraints import verify_constraints_post_arrondi, ConstraintReport
+# v4.8.2 P0-4: Import check_feasibility pour test ex-ante
+from portfolio_engine.constraints import (
+    verify_constraints_post_arrondi, 
+    ConstraintReport,
+    check_feasibility,
+    FeasibilityReport,
+)
 
 from compliance import (
     generate_compliance_block,
@@ -437,6 +446,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     Pipeline déterministe : mêmes données → mêmes poids.
     Utilise les modules portfolio_engine.
     
+    v4.8.2 P0-4: Appel check_feasibility() AVANT optimisation
     v4.8 P0-8: Tactical context désactivé par défaut (GPT-generated = zone grise AMF)
     v4.4: Utilise le nouveau format market_context.json unifié.
     """
@@ -610,6 +620,9 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     portfolios = {}
     all_assets = []
     
+    # v4.8.2 P0-4: Stocker les rapports de faisabilité
+    feasibility_reports = {}
+    
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation profil {profile}...")
         
@@ -625,8 +638,48 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         if not all_assets:
             all_assets = assets
         
+        # === v4.8.2 P0-4: CHECK FEASIBILITY EX-ANTE ===
+        profile_config = PROFILES.get(profile, {})
+        profile_constraints = {
+            "bonds_min": profile_config.get("bonds_min", 0) * 100,
+            "crypto_max": profile_config.get("crypto_max", 0) * 100,
+            "max_single_position": profile_config.get("max_single_position", 0.15) * 100,
+            "max_single_bond": profile_config.get("max_single_bond", 0.25) * 100,
+            "min_assets": profile_config.get("min_assets", 10),
+            "max_assets": profile_config.get("max_assets", 18),
+            "vol_target": profile_config.get("vol_target", 12),
+            "vol_tolerance": profile_config.get("vol_tolerance", 3),
+        }
+        
+        # Préparer les candidats pour check_feasibility
+        candidates_for_feasibility = []
+        for a in assets:
+            cat = getattr(a, 'category', None) or 'ETF'
+            cat_normalized = "Obligations" if "bond" in cat.lower() else cat
+            vol = getattr(a, 'vol_annual', None) or getattr(a, 'vol', None) or 20.0
+            candidates_for_feasibility.append({
+                "category": cat_normalized,
+                "vol_annual": vol,
+                "name": getattr(a, 'name', 'Unknown'),
+            })
+        
+        feasibility = check_feasibility(
+            candidates=candidates_for_feasibility,
+            profile_constraints=profile_constraints,
+            profile_name=profile,
+        )
+        feasibility_reports[profile] = feasibility
+        
+        if feasibility.feasible:
+            logger.info(f"   ✅ [P0-4] {profile}: Faisabilité OK (capacity: {feasibility.capacity})")
+        else:
+            logger.warning(f"   ⚠️ [P0-4] {profile}: Faisabilité LIMITÉE - {feasibility.reason}")
+        
         # Optimiser
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
+        
+        # Stocker le rapport de faisabilité dans diagnostics
+        diagnostics["_feasibility"] = feasibility.to_dict()
         
         portfolios[profile] = {
             "allocation": allocation,
@@ -714,7 +767,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.8.1_p0_constraints"
+        merged[profile]["_compliance_audit"]["version"] = "v4.8.2_p0_feasibility"
         
         # 4. Fallback si trop de contenu supprimé (>50%)
         if report.removal_ratio > 0.5:
@@ -1192,11 +1245,102 @@ def _extract_symbol_from_asset(asset) -> Optional[str]:
     return symbol
 
 
+# ============= v4.8.2 P0-3: BUILD LIMITATIONS =============
+
+def build_limitations(
+    profile: str,
+    diagnostics: Dict,
+    constraint_report: Optional[Dict],
+    feasibility: Optional[Dict],
+) -> List[str]:
+    """
+    v4.8.2 P0-3: Construit la liste des limitations/compromis pour un profil.
+    
+    Args:
+        profile: Nom du profil
+        diagnostics: Diagnostics de l'optimisation
+        constraint_report: Rapport de contraintes post-arrondi
+        feasibility: Rapport de faisabilité ex-ante
+    
+    Returns:
+        Liste de strings décrivant les limitations
+    """
+    limitations = []
+    
+    # 1. Mode d'optimisation
+    opt_mode = diagnostics.get("optimization_mode", "slsqp")
+    if opt_mode.startswith("fallback"):
+        limitations.append(
+            f"Allocation heuristique ({opt_mode}): les contraintes du profil {profile} "
+            "sont incompatibles avec l'optimisation Markowitz classique."
+        )
+    
+    # 2. Volatilité réalisée vs cible
+    vol_realized = diagnostics.get("portfolio_vol")
+    vol_target = diagnostics.get("vol_target")
+    if vol_realized and vol_target:
+        vol_diff = abs(vol_realized - vol_target)
+        if vol_diff > 3:
+            limitations.append(
+                f"Volatilité réalisée ({vol_realized:.1f}%) éloignée de la cible "
+                f"({vol_target:.1f}%) - écart de {vol_diff:.1f}%."
+            )
+    
+    # 3. Contraintes post-arrondi
+    if constraint_report:
+        # Violations HARD
+        violations = constraint_report.get("violations", [])
+        hard_violations = [v for v in violations if v.get("priority") == "hard"]
+        if hard_violations:
+            for v in hard_violations:
+                limitations.append(
+                    f"Contrainte '{v['name']}' violée: attendu {v['expected']}, "
+                    f"obtenu {v['actual']:.1f}%."
+                )
+        
+        # Contraintes relâchées
+        relaxed = constraint_report.get("relaxed_constraints", [])
+        if relaxed:
+            limitations.append(
+                f"Contraintes relâchées pour ce profil: {', '.join(relaxed)}."
+            )
+        
+        # Warnings
+        warnings = constraint_report.get("warnings", [])
+        if warnings:
+            for w in warnings:
+                limitations.append(f"Avertissement: {w}")
+    
+    # 4. Faisabilité ex-ante
+    if feasibility and not feasibility.get("feasible", True):
+        reason = feasibility.get("reason", "Raison inconnue")
+        limitations.append(f"Faisabilité limitée: {reason}")
+    
+    # 5. Tilts tactiques désactivés
+    if not CONFIG.get("use_tactical_context", False):
+        limitations.append(
+            "Tilts tactiques désactivés (P0-8): les surpondérations sectorielles/régionales "
+            "basées sur le contexte marché ne sont pas appliquées."
+        )
+    
+    # 6. Pas de données de corrélation
+    if diagnostics.get("cov_matrix_fallback"):
+        limitations.append(
+            "Matrice de corrélation estimée (fallback): pas de données historiques "
+            "disponibles pour tous les actifs."
+        )
+    
+    return limitations
+
+
 # ============= NORMALISATION POUR LE FRONT =============
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.8.1: Convertit le format interne vers le format v1 attendu par le front.
+    V4.8.2: Convertit le format interne vers le format v1 attendu par le front.
+    
+    AJOUTS v4.8.2 P0-3:
+    - Champ _limitations exposant les compromis/limites de chaque profil
     
     AJOUTS v4.8.1 P0-2:
     - Appel verify_constraints_post_arrondi() APRÈS round_weights_to_100()
@@ -1224,6 +1368,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "_tickers": { "LLY": 0.14, "BIV": 0.05, ... },   # Pour le backtest (vrais symbols)
             "_optimization": { "mode": "slsqp", ... }        # v4.8 P0-9
             "_constraint_report": { ... }                     # v4.8.1 P0-2
+            "_limitations": [ ... ]                           # v4.8.2 P0-3
         }
     """
     # Construire le lookup avec extraction robuste du ticker ET symbol
@@ -1520,6 +1665,21 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         else:
             logger.info(f"✅ [P0-2] {profile}: Toutes contraintes satisfaites (margins: {constraint_report.margins})")
         
+        # === v4.8.2 P0-3: BUILD LIMITATIONS ===
+        feasibility_dict = diagnostics.get("_feasibility")
+        limitations = build_limitations(
+            profile=profile,
+            diagnostics=diagnostics,
+            constraint_report=result[profile]["_constraint_report"],
+            feasibility=feasibility_dict,
+        )
+        result[profile]["_limitations"] = limitations
+        
+        if limitations:
+            logger.info(f"📋 [P0-3] {profile}: {len(limitations)} limitation(s) documentée(s)")
+            for i, lim in enumerate(limitations[:3], 1):
+                logger.info(f"   {i}. {lim[:80]}{'...' if len(lim) > 80 else ''}")
+        
         # V4.6: Log spécial pour bonds avec vrais symbols
         n_bonds_readable = len(result[profile]["Obligations"])
         bonds_total_pct = sum(
@@ -1576,10 +1736,10 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
-    # === v4.8.1 P0-2: Ajouter les modes d'optimisation dans _meta ===
+    # === v4.8.2: Ajouter les modes d'optimisation dans _meta ===
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.8.1_p0_constraints",
+        "version": "v4.8.2_p0_feasibility",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -1614,7 +1774,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.8.1_p0_constraints",
+        "version": "v4.8.2_p0_feasibility",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1656,7 +1816,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.8.1 - P0 CONSTRAINTS")
+    logger.info("🚀 Portfolio Engine v4.8.2 - P0 FEASIBILITY")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1664,6 +1824,7 @@ def main():
     
     # 2. Construire les portefeuilles (déterministe + Buffett + Tactical OFF)
     #    Le diagnostic Buffett s'affiche ICI, avant l'optimisation
+    #    v4.8.2 P0-4: check_feasibility() appelée avant optimisation
     portfolios, assets = build_portfolios_deterministic()
     
     # 3. Ajouter les commentaires (LLM ou fallback) + disclaimer v4.7
@@ -1694,13 +1855,15 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.8.1 P0 CONSTRAINTS:")
+    logger.info("Fonctionnalités v4.8.2 P0 FEASIBILITY:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
     logger.info("   • Backtest 90j avec POIDS FIXES ✅")
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
-    logger.info("   • 🆕 P0-2: verify_constraints_post_arrondi() + _constraint_report ✅")
+    logger.info("   • P0-2: verify_constraints_post_arrondi() + _constraint_report ✅")
+    logger.info("   • 🆕 P0-3: _limitations field exposant compromis/limites ✅")
+    logger.info("   • 🆕 P0-4: check_feasibility() ex-ante + _feasibility ✅")
     logger.info("   • P0-7: Double barrière LLM + audit trail + fallback ✅")
     logger.info("   • P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé) ✅")
     logger.info("   • P0-9: Mode optimisation exposé (_optimization) ✅")
