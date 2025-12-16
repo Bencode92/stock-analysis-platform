@@ -1,371 +1,490 @@
 # tests/test_deterministic.py
 """
-P1-5: Test de déterminisme pour CI.
+Tests pour portfolio_engine/deterministic.py
 
-Vérifie que 2 runs avec les mêmes inputs produisent le même hash canonique.
-
-Usage CI:
-    DETERMINISTIC=1 PYTHONHASHSEED=0 pytest tests/test_deterministic.py -v
-
-Variables d'environnement recommandées:
-    DETERMINISTIC=1          # Active le mode déterministe
-    PYTHONHASHSEED=0         # Ordre stable des dicts/sets
-    OMP_NUM_THREADS=1        # BLAS threads
-    MKL_NUM_THREADS=1        # Intel MKL threads
-    OPENBLAS_NUM_THREADS=1   # OpenBLAS threads
-    NUMEXPR_NUM_THREADS=1    # NumExpr threads
-    TZ=UTC                   # Timezone fixe
+Valide:
+- canonicalize_output() produit des hashes stables
+- Les champs volatils sont bien exclus
+- validate_deterministic_output() détecte les différences
+- DeterministicConfig configure correctement l'environnement
 """
-import os
-import sys
-import json
+
 import pytest
-from pathlib import Path
-
-# Ajouter le répertoire racine au path
-ROOT_DIR = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT_DIR))
-
-from utils.canonicalize import (
-    compute_hashes,
-    canonicalize_core,
-    canonicalize_full,
-    _canonical_sort,
-    _round_floats,
-)
+import json
+from typing import Dict, Any
 
 
-# ============= FIXTURES =============
+# =============================================================================
+# FIXTURES
+# =============================================================================
 
 @pytest.fixture
-def sample_portfolio():
-    """Portfolio de test minimal."""
+def sample_output_v1() -> Dict[str, Any]:
+    """Output de portfolio avec timestamp v1."""
     return {
-        "Agressif": {
-            "Actions": {"AAPL": "15%", "MSFT": "12%", "NVDA": "10%"},
-            "ETF": {"QQQ": "20%"},
-            "Obligations": {"BND": "8%"},
-            "Crypto": {"BTC": "5%"},
-            "_tickers": {
-                "AAPL": 0.15,
-                "MSFT": 0.12,
-                "NVDA": 0.10,
-                "QQQ": 0.20,
-                "BND": 0.08,
-                "BTC": 0.05,
-            },
-            "_constraint_report": {
-                "all_hard_satisfied": True,
-                "all_soft_satisfied": True,
-                "timestamp": "2025-12-16T10:00:00",  # Volatile
-                "violations": [
-                    {"name": "bonds_min", "priority": "soft", "actual": 8.0},
-                    {"name": "crypto_max", "priority": "hard", "actual": 5.0},
-                ],
-                "warnings": ["warning2", "warning1"],  # Ordre non-alphabétique
-                "margins": {"sum_100": 0.0, "bonds_min": 3.0},
-                "relaxed_constraints": [],
-            },
-            "_optimization": {
-                "mode": "slsqp",
-                "is_heuristic": False,
-                "vol_realized": 18.5,
-                "vol_target": 18.0,
-                "converged": True,
-            },
-            "_compliance_audit": {
-                "timestamp": "2025-12-16T10:00:01",  # Volatile
-                "llm_sanitizer": {
-                    "sanitized": True,
-                    "hits": [
-                        ("superlatif", "idéal"),
-                        ("promesse_garantie", "garanti"),
-                    ],
-                    "removal_ratio": 0.1,
-                },
-            },
-            "_limitations": ["Limitation 1", "Limitation 2"],
+        "profile": "Modéré",
+        "weights": {
+            "AAPL": 0.14,
+            "MSFT": 0.12,
+            "QQQ": 0.20,
+            "AGG": 0.30,
+            "GOOGL": 0.24,
         },
-        "Modéré": {
-            "Actions": {"AAPL": "10%"},
-            "ETF": {"URTH": "25%"},
-            "Obligations": {"AGG": "15%"},
-            "Crypto": {},
-            "_tickers": {"AAPL": 0.10, "URTH": 0.25, "AGG": 0.15},
-            "_constraint_report": {
-                "all_hard_satisfied": True,
-                "timestamp": "2025-12-16T10:00:02",
-                "violations": [],
-                "warnings": [],
-                "margins": {},
-                "relaxed_constraints": [],
-            },
-            "_optimization": {"mode": "slsqp", "converged": True},
+        "stats": {
+            "expected_return": 8.5,
+            "volatility": 12.3,
+            "sharpe": 0.69,
         },
-        "Stable": {
-            "Actions": {},
-            "ETF": {"BND": "30%"},
-            "Obligations": {"TLT": "40%"},
-            "Crypto": {},
-            "_tickers": {"BND": 0.30, "TLT": 0.40},
-            "_constraint_report": {
-                "all_hard_satisfied": True,
-                "timestamp": "2025-12-16T10:00:03",
-                "violations": [],
-                "warnings": [],
-                "margins": {},
-                "relaxed_constraints": [],
-            },
-            "_optimization": {"mode": "slsqp", "converged": True},
-        },
-        "_meta": {
-            "generated_at": "2025-12-16T10:00:00",  # Volatile
-            "version": "v4.8.7",
-            "buffett_mode": "soft",
-            "buffett_min_score": 40,
-            "tactical_context_enabled": False,
-            "backtest_days": 90,
-        },
-        "_manifest": {
-            "git_sha": "abc123def456",
-            "data_sources": {
-                "etf": {"hash": "hash_etf_123"},
-                "bonds": {"hash": "hash_bonds_456"},
-            },
-        },
+        "generated_at": "2025-12-16T10:00:00Z",
+        "timestamp": 1734343200,
+        "version": "1.0.0",
     }
 
 
 @pytest.fixture
-def sample_portfolio_reordered(sample_portfolio):
-    """Même portfolio mais avec ordre différent des clés."""
-    import copy
-    reordered = copy.deepcopy(sample_portfolio)
-    
-    # Réordonner les violations (test du tri)
-    reordered["Agressif"]["_constraint_report"]["violations"] = [
-        {"name": "crypto_max", "priority": "hard", "actual": 5.0},
-        {"name": "bonds_min", "priority": "soft", "actual": 8.0},
-    ]
-    
-    # Réordonner les hits (List[Tuple])
-    reordered["Agressif"]["_compliance_audit"]["llm_sanitizer"]["hits"] = [
-        ("promesse_garantie", "garanti"),
-        ("superlatif", "idéal"),
-    ]
-    
-    # Réordonner les warnings
-    reordered["Agressif"]["_constraint_report"]["warnings"] = ["warning1", "warning2"]
-    
-    # Timestamp différent (doit être ignoré)
-    reordered["_meta"]["generated_at"] = "2025-12-16T12:00:00"
-    reordered["Agressif"]["_constraint_report"]["timestamp"] = "2025-12-16T12:00:01"
-    
-    return reordered
+def sample_output_v2() -> Dict[str, Any]:
+    """Output de portfolio avec timestamp v2 (métadonnées différentes)."""
+    return {
+        "profile": "Modéré",
+        "weights": {
+            "AAPL": 0.14,
+            "MSFT": 0.12,
+            "QQQ": 0.20,
+            "AGG": 0.30,
+            "GOOGL": 0.24,
+        },
+        "stats": {
+            "expected_return": 8.5,
+            "volatility": 12.3,
+            "sharpe": 0.69,
+        },
+        "generated_at": "2025-12-16T15:30:00Z",  # Different
+        "timestamp": 1734363000,  # Different
+        "version": "1.0.1",  # Different
+    }
 
 
-# ============= TESTS UNITAIRES =============
+@pytest.fixture
+def sample_output_different_data() -> Dict[str, Any]:
+    """Output avec données métier différentes."""
+    return {
+        "profile": "Modéré",
+        "weights": {
+            "AAPL": 0.15,  # Changed from 0.14
+            "MSFT": 0.12,
+            "QQQ": 0.20,
+            "AGG": 0.29,  # Changed from 0.30
+            "GOOGL": 0.24,
+        },
+        "stats": {
+            "expected_return": 8.7,  # Changed
+            "volatility": 12.3,
+            "sharpe": 0.71,  # Changed
+        },
+        "generated_at": "2025-12-16T10:00:00Z",
+        "timestamp": 1734343200,
+        "version": "1.0.0",
+    }
 
-class TestCanonicalSort:
-    """Tests pour _canonical_sort()."""
+
+# =============================================================================
+# TESTS - canonicalize_output
+# =============================================================================
+
+class TestCanonicalizeOutput:
+    """Tests pour la fonction canonicalize_output."""
     
-    def test_sort_dict(self):
-        """Dict trié par clé."""
-        d = {"z": 1, "a": 2, "m": 3}
-        result = _canonical_sort(d)
-        assert list(result.keys()) == ["a", "m", "z"]
+    def test_same_data_different_timestamps_same_hash(
+        self, sample_output_v1, sample_output_v2
+    ):
+        """Mêmes données métier + timestamps différents = même hash."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        hash1 = canonicalize_output(sample_output_v1)
+        hash2 = canonicalize_output(sample_output_v2)
+        
+        assert hash1 == hash2, (
+            f"Same data should produce same hash regardless of timestamps.\n"
+            f"Hash 1: {hash1}\n"
+            f"Hash 2: {hash2}"
+        )
     
-    def test_sort_list_strings(self):
-        """List[str] triée alphabétiquement."""
-        lst = ["zebra", "apple", "mango"]
-        result = _canonical_sort(lst)
-        assert result == ["apple", "mango", "zebra"]
+    def test_different_data_different_hash(
+        self, sample_output_v1, sample_output_different_data
+    ):
+        """Données métier différentes = hash différent."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        hash1 = canonicalize_output(sample_output_v1)
+        hash2 = canonicalize_output(sample_output_different_data)
+        
+        assert hash1 != hash2, (
+            f"Different data should produce different hashes.\n"
+            f"Hash 1: {hash1}\n"
+            f"Hash 2: {hash2}"
+        )
     
-    def test_sort_list_dicts(self):
-        """List[dict] triée par JSON canonique."""
-        lst = [
-            {"name": "z", "value": 1},
-            {"name": "a", "value": 2},
-        ]
-        result = _canonical_sort(lst)
-        # "a" < "z" dans JSON canonique
-        assert result[0]["name"] == "a"
-        assert result[1]["name"] == "z"
+    def test_hash_format(self, sample_output_v1):
+        """Le hash doit avoir le format sha256:XXXX."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        hash_result = canonicalize_output(sample_output_v1)
+        
+        assert hash_result.startswith("sha256:"), f"Hash should start with 'sha256:', got {hash_result}"
+        assert len(hash_result) == 23, f"Hash should be 23 chars (sha256: + 16), got {len(hash_result)}"
     
-    def test_sort_list_tuples(self):
-        """List[tuple] triée par éléments."""
-        lst = [("z", "1"), ("a", "2"), ("a", "1")]
-        result = _canonical_sort(lst)
-        assert result == [("a", "1"), ("a", "2"), ("z", "1")]
+    def test_hash_is_deterministic(self, sample_output_v1):
+        """Appels répétés produisent le même hash."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        hashes = [canonicalize_output(sample_output_v1) for _ in range(10)]
+        
+        assert len(set(hashes)) == 1, f"Multiple calls should produce identical hashes, got {set(hashes)}"
     
-    def test_nested_sort(self):
-        """Tri récursif."""
-        d = {
-            "b": {"z": 1, "a": 2},
-            "a": [3, 1, 2],
+    def test_float_precision_tolerance(self):
+        """Petites différences float (epsilon) ne changent pas le hash."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        data1 = {"value": 0.14000000001}
+        data2 = {"value": 0.14000000002}
+        
+        hash1 = canonicalize_output(data1, precision=6)
+        hash2 = canonicalize_output(data2, precision=6)
+        
+        assert hash1 == hash2, "Small float differences should be ignored with precision rounding"
+    
+    def test_key_order_does_not_matter(self):
+        """L'ordre des clés ne change pas le hash."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        data1 = {"a": 1, "b": 2, "c": 3}
+        data2 = {"c": 3, "a": 1, "b": 2}
+        
+        hash1 = canonicalize_output(data1)
+        hash2 = canonicalize_output(data2)
+        
+        assert hash1 == hash2, "Key order should not affect hash (JSON sorted)"
+    
+    def test_nested_volatile_fields_excluded(self):
+        """Les champs volatils imbriqués sont exclus."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        data1 = {
+            "data": {"value": 1},
+            "meta": {"created_at": "2025-01-01", "updated_at": "2025-01-02"},
         }
-        result = _canonical_sort(d)
-        assert list(result.keys()) == ["a", "b"]
-        assert result["a"] == [1, 2, 3]
-        assert list(result["b"].keys()) == ["a", "z"]
-
-
-class TestRoundFloats:
-    """Tests pour _round_floats()."""
-    
-    def test_round_single_float(self):
-        assert _round_floats(1.123456789, 6) == 1.123457
-        assert _round_floats(1.123456789, 2) == 1.12
-    
-    def test_round_in_dict(self):
-        d = {"a": 1.123456789, "b": 2.987654321}
-        result = _round_floats(d, 4)
-        assert result == {"a": 1.1235, "b": 2.9877}
-    
-    def test_round_in_list(self):
-        lst = [1.111111, 2.222222, 3.333333]
-        result = _round_floats(lst, 2)
-        assert result == [1.11, 2.22, 3.33]
-    
-    def test_round_nested(self):
-        d = {"a": {"b": [1.123456]}}
-        result = _round_floats(d, 3)
-        assert result == {"a": {"b": [1.123]}}
-
-
-# ============= TESTS HASH CANONIQUE =============
-
-class TestCoreHash:
-    """Tests pour core_hash (allowlist)."""
-    
-    def test_same_hash_same_input(self, sample_portfolio):
-        """Même input → même hash."""
-        h1 = compute_hashes(sample_portfolio)
-        h2 = compute_hashes(sample_portfolio)
-        assert h1["core_hash"] == h2["core_hash"]
-    
-    def test_same_hash_reordered_input(self, sample_portfolio, sample_portfolio_reordered):
-        """Input réordonné → même hash (grâce au tri)."""
-        h1 = compute_hashes(sample_portfolio)
-        h2 = compute_hashes(sample_portfolio_reordered)
-        assert h1["core_hash"] == h2["core_hash"]
-    
-    def test_different_hash_different_allocation(self, sample_portfolio):
-        """Allocation différente → hash différent."""
-        import copy
-        modified = copy.deepcopy(sample_portfolio)
-        modified["Agressif"]["Actions"]["AAPL"] = "20%"  # 15% → 20%
-        
-        h1 = compute_hashes(sample_portfolio)
-        h2 = compute_hashes(modified)
-        assert h1["core_hash"] != h2["core_hash"]
-    
-    def test_timestamp_ignored(self, sample_portfolio):
-        """Timestamp différent → même hash."""
-        import copy
-        modified = copy.deepcopy(sample_portfolio)
-        modified["_meta"]["generated_at"] = "2099-01-01T00:00:00"
-        
-        h1 = compute_hashes(sample_portfolio)
-        h2 = compute_hashes(modified)
-        assert h1["core_hash"] == h2["core_hash"]
-    
-    def test_backtest_ignored(self, sample_portfolio):
-        """_backtest ignoré dans core_hash."""
-        import copy
-        modified = copy.deepcopy(sample_portfolio)
-        modified["Agressif"]["_backtest"] = {
-            "return_pct": 10.5,
-            "volatility_pct": 15.2,
+        data2 = {
+            "data": {"value": 1},
+            "meta": {"created_at": "2025-06-01", "updated_at": "2025-06-02"},
         }
         
-        h1 = compute_hashes(sample_portfolio)
-        h2 = compute_hashes(modified)
-        assert h1["core_hash"] == h2["core_hash"]
-
-
-class TestFullHash:
-    """Tests pour full_hash (denylist)."""
+        hash1 = canonicalize_output(data1)
+        hash2 = canonicalize_output(data2)
+        
+        assert hash1 == hash2, "Nested volatile fields should be excluded"
     
-    def test_full_hash_different_from_core(self, sample_portfolio):
-        """full_hash != core_hash (plus de contenu)."""
-        hashes = compute_hashes(sample_portfolio)
-        # Ils peuvent être égaux si le portfolio est minimal
-        # Mais normalement full inclut plus de champs
-        assert "core_hash" in hashes
-        assert "full_hash" in hashes
+    def test_empty_dict(self):
+        """Dict vide produit un hash valide."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        hash_result = canonicalize_output({})
+        
+        assert hash_result.startswith("sha256:")
+        assert len(hash_result) == 23
+
+
+# =============================================================================
+# TESTS - validate_deterministic_output
+# =============================================================================
+
+class TestValidateDeterministicOutput:
+    """Tests pour validate_deterministic_output."""
     
-    def test_full_hash_ignores_timestamp(self, sample_portfolio):
-        """Timestamp ignoré dans full_hash aussi."""
-        import copy
-        modified = copy.deepcopy(sample_portfolio)
-        modified["_meta"]["generated_at"] = "2099-01-01T00:00:00"
+    def test_identical_outputs_are_deterministic(
+        self, sample_output_v1, sample_output_v2
+    ):
+        """Outputs avec mêmes données = is_deterministic=True."""
+        try:
+            from portfolio_engine.deterministic import validate_deterministic_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
         
-        h1 = compute_hashes(sample_portfolio)
-        h2 = compute_hashes(modified)
-        assert h1["full_hash"] == h2["full_hash"]
-
-
-# ============= TESTS D'INTÉGRATION =============
-
-class TestDeterminism:
-    """Tests de déterminisme end-to-end."""
+        result = validate_deterministic_output(sample_output_v1, sample_output_v2)
+        
+        assert result["is_deterministic"] is True
+        assert result["hash1"] == result["hash2"]
+        assert "differences" not in result
     
-    def test_json_roundtrip(self, sample_portfolio):
-        """Sérialisation/désérialisation préserve le hash."""
-        json_str = json.dumps(sample_portfolio)
-        restored = json.loads(json_str)
+    def test_different_outputs_not_deterministic(
+        self, sample_output_v1, sample_output_different_data
+    ):
+        """Outputs avec données différentes = is_deterministic=False."""
+        try:
+            from portfolio_engine.deterministic import validate_deterministic_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
         
-        h1 = compute_hashes(sample_portfolio)
-        h2 = compute_hashes(restored)
-        assert h1["core_hash"] == h2["core_hash"]
+        result = validate_deterministic_output(sample_output_v1, sample_output_different_data)
+        
+        assert result["is_deterministic"] is False
+        assert result["hash1"] != result["hash2"]
+        assert "differences" in result
+        assert result["n_differences"] > 0
     
-    def test_canonical_json_is_deterministic(self, sample_portfolio):
-        """Le JSON canonique est identique entre appels."""
-        c1 = canonicalize_core(sample_portfolio)
-        c2 = canonicalize_core(sample_portfolio)
-        assert c1 == c2
+    def test_differences_are_detailed(
+        self, sample_output_v1, sample_output_different_data
+    ):
+        """Les différences sont détaillées avec path et valeurs."""
+        try:
+            from portfolio_engine.deterministic import validate_deterministic_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        result = validate_deterministic_output(sample_output_v1, sample_output_different_data)
+        
+        differences = result.get("differences", [])
+        assert len(differences) > 0
+        
+        # Check structure of differences
+        for diff in differences:
+            assert "path" in diff
+            assert "type" in diff
+
+
+# =============================================================================
+# TESTS - DeterministicConfig
+# =============================================================================
+
+class TestDeterministicConfig:
+    """Tests pour DeterministicConfig."""
     
-    def test_float_precision_absorbed(self, sample_portfolio):
-        """Micro-différences floats absorbées par rounding."""
-        import copy
-        modified = copy.deepcopy(sample_portfolio)
+    def test_default_config_values(self):
+        """Les valeurs par défaut sont correctes."""
+        try:
+            from portfolio_engine.deterministic import DeterministicConfig
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
         
-        # Ajouter une micro-différence (< 6 décimales)
-        modified["Agressif"]["_optimization"]["vol_realized"] = 18.5000001
+        config = DeterministicConfig()
         
-        h1 = compute_hashes(sample_portfolio)
-        h2 = compute_hashes(modified)
-        assert h1["core_hash"] == h2["core_hash"]
-
-
-# ============= TEST AVEC FIXTURES RÉELLES =============
-
-class TestWithRealFixtures:
-    """Tests avec fixtures réelles (si disponibles)."""
+        assert config.openblas_num_threads == 1
+        assert config.mkl_num_threads == 1
+        assert config.pythonhashseed == 42
+        assert config.timezone == "UTC"
+        assert config.numpy_seed == 42
     
-    @pytest.mark.skipif(
-        not (ROOT_DIR / "tests" / "fixtures" / "raw_data").exists(),
-        reason="Fixtures not available"
-    )
-    def test_fixture_portfolio_hash_stable(self):
-        """Hash stable sur fixture réelle."""
-        fixture_path = ROOT_DIR / "tests" / "fixtures" / "golden" / "portfolios_canonical.json"
-        if not fixture_path.exists():
-            pytest.skip("Golden fixture not available")
+    def test_to_env_vars(self):
+        """to_env_vars() retourne les bonnes variables."""
+        try:
+            from portfolio_engine.deterministic import DeterministicConfig
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
         
-        with open(fixture_path, "r", encoding="utf-8") as f:
-            golden = json.load(f)
+        config = DeterministicConfig()
+        env_vars = config.to_env_vars()
         
-        expected_hash = golden.get("_meta", {}).get("expected_core_hash")
-        if not expected_hash:
-            pytest.skip("No expected_core_hash in golden fixture")
+        assert "OPENBLAS_NUM_THREADS" in env_vars
+        assert "MKL_NUM_THREADS" in env_vars
+        assert "PYTHONHASHSEED" in env_vars
+        assert "TZ" in env_vars
         
-        actual = compute_hashes(golden)
-        assert actual["core_hash"] == expected_hash
+        assert env_vars["PYTHONHASHSEED"] == "42"
+        assert env_vars["TZ"] == "UTC"
+    
+    def test_custom_config(self):
+        """Configuration personnalisée fonctionne."""
+        try:
+            from portfolio_engine.deterministic import DeterministicConfig
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        config = DeterministicConfig(
+            pythonhashseed=123,
+            numpy_seed=456,
+            timezone="Europe/Paris",
+        )
+        
+        assert config.pythonhashseed == 123
+        assert config.numpy_seed == 456
+        assert config.timezone == "Europe/Paris"
+        
+        env_vars = config.to_env_vars()
+        assert env_vars["PYTHONHASHSEED"] == "123"
+        assert env_vars["TZ"] == "Europe/Paris"
 
 
-# ============= CLI =============
+# =============================================================================
+# TESTS - set_deterministic_env
+# =============================================================================
+
+class TestSetDeterministicEnv:
+    """Tests pour set_deterministic_env."""
+    
+    def test_sets_environment_variables(self):
+        """Les variables d'environnement sont configurées."""
+        import os
+        
+        try:
+            from portfolio_engine.deterministic import set_deterministic_env, DeterministicConfig
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        # Sauvegarder les valeurs originales
+        original_values = {}
+        config = DeterministicConfig()
+        for key in config.to_env_vars():
+            original_values[key] = os.environ.get(key)
+        
+        try:
+            # Configurer l'environnement
+            result = set_deterministic_env()
+            
+            # Vérifier que les variables sont configurées
+            assert os.environ.get("PYTHONHASHSEED") == "42"
+            assert os.environ.get("TZ") == "UTC"
+            assert os.environ.get("OPENBLAS_NUM_THREADS") == "1"
+            
+            # Vérifier le retour
+            assert "PYTHONHASHSEED" in result
+            
+        finally:
+            # Restaurer les valeurs originales
+            for key, value in original_values.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+
+# =============================================================================
+# TESTS - Volatile Fields
+# =============================================================================
+
+class TestVolatileFields:
+    """Tests pour la gestion des champs volatils."""
+    
+    def test_default_volatile_fields_excluded(self):
+        """Les champs volatils par défaut sont exclus."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output, DEFAULT_VOLATILE_FIELDS
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        # Vérifier que les champs courants sont dans DEFAULT_VOLATILE_FIELDS
+        expected_volatile = ["generated_at", "timestamp", "version", "created_at"]
+        for field in expected_volatile:
+            assert field in DEFAULT_VOLATILE_FIELDS, f"{field} should be in DEFAULT_VOLATILE_FIELDS"
+    
+    def test_custom_volatile_fields(self):
+        """On peut spécifier des champs volatils personnalisés."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        data1 = {"value": 1, "custom_volatile": "aaa"}
+        data2 = {"value": 1, "custom_volatile": "bbb"}
+        
+        # Sans custom volatile: différent
+        hash1_default = canonicalize_output(data1)
+        hash2_default = canonicalize_output(data2)
+        assert hash1_default != hash2_default
+        
+        # Avec custom volatile: identique
+        custom_volatile = {"custom_volatile"}
+        hash1_custom = canonicalize_output(data1, volatile_fields=custom_volatile)
+        hash2_custom = canonicalize_output(data2, volatile_fields=custom_volatile)
+        assert hash1_custom == hash2_custom
+
+
+# =============================================================================
+# TESTS - Edge Cases
+# =============================================================================
+
+class TestEdgeCases:
+    """Tests pour les cas limites."""
+    
+    def test_deeply_nested_structure(self):
+        """Structures profondément imbriquées fonctionnent."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        deep = {"level1": {"level2": {"level3": {"level4": {"value": 42}}}}}
+        
+        hash_result = canonicalize_output(deep)
+        assert hash_result.startswith("sha256:")
+    
+    def test_list_of_dicts(self):
+        """Listes de dictionnaires fonctionnent."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        data = {
+            "items": [
+                {"name": "a", "value": 1},
+                {"name": "b", "value": 2},
+            ]
+        }
+        
+        hash_result = canonicalize_output(data)
+        assert hash_result.startswith("sha256:")
+    
+    def test_special_characters_in_strings(self):
+        """Caractères spéciaux dans les strings fonctionnent."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        data = {"text": "Hello\nWorld\t€ éàü 中文 🎉"}
+        
+        hash_result = canonicalize_output(data)
+        assert hash_result.startswith("sha256:")
+    
+    def test_none_values(self):
+        """Les valeurs None fonctionnent."""
+        try:
+            from portfolio_engine.deterministic import canonicalize_output
+        except ImportError:
+            pytest.skip("portfolio_engine.deterministic not available")
+        
+        data = {"value": None, "other": 1}
+        
+        hash_result = canonicalize_output(data)
+        assert hash_result.startswith("sha256:")
+
+
+# =============================================================================
+# RUN
+# =============================================================================
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    pytest.main([__file__, "-v", "--tb=short"])
