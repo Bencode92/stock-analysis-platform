@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.8.4: FIX - Unpack tuple from load_prices_for_backtest (P1-7 compatibility)
 V4.8.3: P0-4 FIX - getattr() for ProfileConstraints (dataclass not dict)
 V4.8.2: P0-3 + P0-4 - _limitations field + check_feasibility() ex-ante
         P0-3: Champ _limitations exposant compromis/limites de chaque profil
@@ -37,6 +38,7 @@ V4.2.2: FIX TICKER - Récupérer ticker depuis source_data, pas Asset.ticker
 V4.2.1: FIX AttributeError - utiliser getattr() pour Asset
 V4.2: FIX EXPORT - Ajoute bloc _tickers pour le backtest (Solution C)
 V4.1: FIX BACKTEST - Utilise poids FIXES du portfolio (pas recalcul dynamique)
+
 
 
 
@@ -771,7 +773,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.8.3_p0_fix"
+        merged[profile]["_compliance_audit"]["version"] = "v4.8.4"
         
         # 4. Fallback si trop de contenu supprimé (>50%)
         if report.removal_ratio > 0.5:
@@ -835,6 +837,7 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
     """
     Exécute le backtest pour les 3 profils avec POIDS FIXES du portfolio.
     
+    V4.8.4: FIX - Unpack tuple from load_prices_for_backtest (P1-7 compatibility)
     V4.1: Utilise run_backtest_fixed_weights() au lieu de run_backtest()
     pour refléter vraiment la performance du portfolio généré.
     """
@@ -885,14 +888,29 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
     # Charger les prix UNE SEULE FOIS
     logger.info(f"📥 Chargement des prix ({CONFIG['backtest_days']}j)...")
     try:
-        prices = load_prices_for_backtest(
+        # V4.8.4 FIX: load_prices_for_backtest now returns (prices_df, diagnostics) tuple
+        result = load_prices_for_backtest(
             yaml_config,
             start_date=start_date,
             end_date=end_date,
             api_key=api_key,
             plan="ultra"  # Plan ultra = pas de rate limit
         )
-        logger.info(f"✅ {len(prices.columns)} symboles, {len(prices)} jours")
+        
+        # Unpack the tuple if it's a tuple, otherwise use directly
+        if isinstance(result, tuple):
+            prices, price_diagnostics = result
+            logger.info(f"✅ {len(prices.columns)} symboles, {len(prices)} jours")
+            # Log benchmark coverage from diagnostics
+            bench_diag = price_diagnostics.get("benchmark_coverage", {})
+            if bench_diag:
+                logger.info(f"   Benchmark coverage: {bench_diag.get('loaded', 0)}/{bench_diag.get('requested', 0)}")
+        else:
+            # Backward compatibility: if it's just a DataFrame
+            prices = result
+            price_diagnostics = {}
+            logger.info(f"✅ {len(prices.columns)} symboles, {len(prices)} jours")
+            
     except Exception as e:
         logger.error(f"❌ Échec chargement prix: {e}")
         return {"error": str(e), "skipped": True}
@@ -962,6 +980,7 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
         "frequency": CONFIG["backtest_freq"],
         "symbols_count": len(prices.columns),
         "backtest_mode": "fixed_weights",  # ✅ NOUVEAU
+        "price_diagnostics": price_diagnostics,  # V4.8.4: Include price loading diagnostics
         "results": results,
         "comparison": {
             r["profile"]: r.get("stats", {})
@@ -1341,7 +1360,7 @@ def build_limitations(
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.8.3: Convertit le format interne vers le format v1 attendu par le front.
+    V4.8.4: Convertit le format interne vers le format v1 attendu par le front.
     
     AJOUTS v4.8.3 P0-4 FIX:
     - Utilise getattr() pour ProfileConstraints (dataclass pas dict)
@@ -1744,10 +1763,10 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
-    # === v4.8.3: Ajouter les modes d'optimisation dans _meta ===
+    # === v4.8.4: Ajouter les modes d'optimisation dans _meta ===
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.8.3_p0_fix",
+        "version": "v4.8.4",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -1782,7 +1801,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.8.3_p0_fix",
+        "version": "v4.8.4",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1824,7 +1843,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.8.3 - P0 FIX")
+    logger.info("🚀 Portfolio Engine v4.8.4 - P1-7 FIX")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1863,7 +1882,7 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.8.3 P0 FIX:")
+    logger.info("Fonctionnalités v4.8.4 P1-7 FIX:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
@@ -1871,10 +1890,11 @@ def main():
     logger.info("   • Export _tickers - FIX NaN + agrégation ✅")
     logger.info("   • P0-2: verify_constraints_post_arrondi() + _constraint_report ✅")
     logger.info("   • P0-3: _limitations field exposant compromis/limites ✅")
-    logger.info("   • 🆕 P0-4 FIX: getattr() pour ProfileConstraints (dataclass) ✅")
+    logger.info("   • P0-4 FIX: getattr() pour ProfileConstraints (dataclass) ✅")
     logger.info("   • P0-7: Double barrière LLM + audit trail + fallback ✅")
     logger.info("   • P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé) ✅")
     logger.info("   • P0-9: Mode optimisation exposé (_optimization) ✅")
+    logger.info("   • 🆕 P1-7: Profile-specific benchmarks (QQQ/URTH/AGG) ✅")
     logger.info("   • USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
     logger.info("   • NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
     logger.info("   • Reproductibilité garantie")
