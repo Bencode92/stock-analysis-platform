@@ -2,6 +2,11 @@
 """
 Chargement des données de prix historiques via Twelve Data API.
 
+V12: P1-7 - Load all profile-specific benchmarks
+- Import get_all_benchmark_symbols() from portfolio_engine.benchmarks
+- Automatically load QQQ, URTH, AGG and alternative benchmarks
+- Enhanced benchmark coverage reporting
+
 V11: FIX - Rename calendar → trading_calendar (avoid stdlib shadowing)
 V10: FIX CRITIQUE - Suppression ffill() + calendar alignment
 - Import trading_calendar.align_to_reference_calendar() pour alignement propre
@@ -35,6 +40,16 @@ except ImportError:
     METHODOLOGY = {"prices": {"source": "Twelve Data API", "type": "adjusted_close"}}
     def get_data_source_string():
         return "Twelve Data API (adjusted_close)"
+
+# V12 P1-7: Import profile-specific benchmarks
+try:
+    from portfolio_engine.benchmarks import get_all_benchmark_symbols
+    HAS_BENCHMARKS = True
+except ImportError:
+    HAS_BENCHMARKS = False
+    def get_all_benchmark_symbols():
+        # Fallback: return default benchmarks
+        return ["URTH", "IEF", "QQQ", "AGG", "SPY"]
 
 # Import trading_calendar pour alignement sans ffill
 # NOTE: Renamed from 'calendar' to 'trading_calendar' to avoid shadowing Python stdlib
@@ -368,6 +383,7 @@ def build_name_to_ticker_map(data_dir: str = "data") -> Dict[str, str]:
     # ETF et benchmarks standards
     etf_mapping = {
         "URTH": "URTH", "IEF": "IEF", "SPY": "SPY", "QQQ": "QQQ",
+        "AGG": "AGG", "BND": "BND", "VT": "VT", "AOR": "AOR", "VGT": "VGT",
         "ISHARES MSCI WORLD ETF": "URTH",
         "ISHARES 7-10 YEAR TREASURY BOND ETF": "IEF",
         "SPDR DOUBLELINE TOTAL RETURN TACTICAL ETF": "TOTL",
@@ -376,6 +392,9 @@ def build_name_to_ticker_map(data_dir: str = "data") -> Dict[str, str]:
         "ISHARES CORE U.S. AGGREGATE BOND ETF": "AGG",
         "SPDR GOLD SHARES": "GLD",
         "ISHARES GOLD TRUST": "IAU",
+        "INVESCO QQQ TRUST": "QQQ",
+        "VANGUARD TOTAL WORLD STOCK ETF": "VT",
+        "VANGUARD INFORMATION TECHNOLOGY ETF": "VGT",
     }
     
     for name, ticker in etf_mapping.items():
@@ -576,6 +595,11 @@ def load_prices_for_backtest(
     """
     Charge les prix pour le backtest.
     
+    V12 P1-7:
+    - Automatically loads all profile-specific benchmarks
+    - Uses get_all_benchmark_symbols() from portfolio_engine.benchmarks
+    - QQQ (Agressif), URTH (Modéré), AGG (Stable) + alternatives
+    
     v10: Retourne maintenant (prices_df, diagnostics) au lieu de juste prices_df.
     """
     if end_date is None:
@@ -599,12 +623,21 @@ def load_prices_for_backtest(
         print(f"   Resolved to ticker:  {resolved}")
         print(f"   Resolution rate:     {resolved/max(1,requested)*100:.1f}%")
     
+    # V12 P1-7: Load ALL profile-specific benchmarks
     if include_benchmark:
         if benchmark_symbols is None:
-            benchmark_symbols = ["URTH", "IEF"]
+            # Get all benchmarks from portfolio_engine.benchmarks
+            benchmark_symbols = get_all_benchmark_symbols()
+            logger.info(f"P1-7: Loading {len(benchmark_symbols)} benchmark symbols: {benchmark_symbols}")
+        
         for bench in benchmark_symbols:
             symbols.add(bench)
-            logger.info(f"Added benchmark: {bench}")
+        
+        # Print benchmark info
+        print(f"\n📊 BENCHMARKS (P1-7)")
+        print(f"   Profile-specific: QQQ (Agressif), URTH (Modéré), AGG (Stable)")
+        print(f"   Total benchmarks: {len(benchmark_symbols)}")
+        print(f"   Symbols: {', '.join(sorted(benchmark_symbols))}")
     
     if not symbols:
         logger.warning("No portfolio symbols found, falling back to config.test_universe")
@@ -630,6 +663,26 @@ def load_prices_for_backtest(
         align_calendar=True,
         validate_quality=True,
     )
+    
+    # V12 P1-7: Add benchmark coverage to diagnostics
+    if include_benchmark and benchmark_symbols:
+        loaded_benchmarks = [b for b in benchmark_symbols if b in prices.columns]
+        missing_benchmarks = [b for b in benchmark_symbols if b not in prices.columns]
+        
+        diagnostics["benchmark_coverage"] = {
+            "requested": benchmark_symbols,
+            "loaded": loaded_benchmarks,
+            "missing": missing_benchmarks,
+            "coverage_pct": round(len(loaded_benchmarks) / len(benchmark_symbols) * 100, 1),
+        }
+        
+        if missing_benchmarks:
+            logger.warning(f"⚠️ Missing benchmarks: {missing_benchmarks}")
+        
+        print(f"\n📊 BENCHMARK COVERAGE")
+        print(f"   Loaded:  {len(loaded_benchmarks)}/{len(benchmark_symbols)} ({diagnostics['benchmark_coverage']['coverage_pct']}%)")
+        if missing_benchmarks:
+            print(f"   Missing: {', '.join(missing_benchmarks)}")
     
     return prices, diagnostics
 
