@@ -1,7 +1,9 @@
 {
-  "timestamp": "2025-12-16T10:05:55.978127",
+  "timestamp": "2025-12-16T10:36:40.664086",
   "period_days": 90,
   "frequency": "M",
+  "platform_fee_annual_bp": 0.0,
+  "ter_handling": "embedded_in_etf_prices",
   "symbols_count": 31,
   "backtest_mode": "fixed_weights",
   "price_diagnostics": {
@@ -29,7 +31,7 @@
       ]
     },
     "quality_report": {
-      "timestamp": "2025-12-16T10:05:55.902401",
+      "timestamp": "2025-12-16T10:36:40.588931",
       "passed": true,
       "n_symbols_checked": 31,
       "n_symbols_passed": 31,
@@ -116,9 +118,17 @@
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
         "cost_breakdown": {
-          "initial_purchase": 100.0,
-          "rebalancing": 0,
-          "total": 100.0
+          "transaction_costs": 100.0,
+          "transaction_costs_pct": 0.1,
+          "platform_fees": 0.0,
+          "platform_fees_pct": 0.0,
+          "platform_fee_annual_bp": 0.0,
+          "total": 100.0,
+          "ter_info": {
+            "weighted_avg_ter_bp": null,
+            "handling": "embedded_in_etf_prices",
+            "note": "TER is already reflected in ETF adjusted close prices - NOT deducted separately"
+          }
         },
         "cagr_pct": 126.08,
         "gross_cagr_pct": 126.08,
@@ -142,9 +152,13 @@
           "period_days": 63,
           "rebalancing": "none (buy-and-hold)",
           "transaction_cost_bp": 10,
+          "platform_fee_annual_bp": 0.0,
           "data_source": "Twelve Data API (adjusted_close)",
           "risk_free_rate_pct": 4.5,
-          "return_type": "net (after transaction costs)",
+          "ter_handling": "embedded_in_etf_prices",
+          "ter_note": "ETF/fund TER is already reflected in adjusted close prices and is NOT deducted separately to avoid double-counting",
+          "weighted_avg_ter_bp": null,
+          "return_type": "net (after transaction costs + platform fees)",
           "gross_return_available": true,
           "benchmark": "QQQ",
           "benchmark_rationale": "Growth/tech heavy allocation matches aggressive equity exposure with tech tilt"
@@ -248,9 +262,17 @@
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
         "cost_breakdown": {
-          "initial_purchase": 100.0,
-          "rebalancing": 0,
-          "total": 100.0
+          "transaction_costs": 100.0,
+          "transaction_costs_pct": 0.1,
+          "platform_fees": 0.0,
+          "platform_fees_pct": 0.0,
+          "platform_fee_annual_bp": 0.0,
+          "total": 100.0,
+          "ter_info": {
+            "weighted_avg_ter_bp": null,
+            "handling": "embedded_in_etf_prices",
+            "note": "TER is already reflected in ETF adjusted close prices - NOT deducted separately"
+          }
         },
         "cagr_pct": 77.34,
         "gross_cagr_pct": 77.34,
@@ -274,9 +296,13 @@
           "period_days": 63,
           "rebalancing": "none (buy-and-hold)",
           "transaction_cost_bp": 10,
+          "platform_fee_annual_bp": 0.0,
           "data_source": "Twelve Data API (adjusted_close)",
           "risk_free_rate_pct": 4.5,
-          "return_type": "net (after transaction costs)",
+          "ter_handling": "embedded_in_etf_prices",
+          "ter_note": "ETF/fund TER is already reflected in adjusted close prices and is NOT deducted separately to avoid double-counting",
+          "weighted_avg_ter_bp": null,
+          "return_type": "net (after transaction costs + platform fees)",
           "gross_return_available": true,
           "benchmark": "URTH",
           "benchmark_rationale": "Global diversified equities benchmark for balanced risk profile"
@@ -380,9 +406,17 @@
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
         "cost_breakdown": {
-          "initial_purchase": 100.0,
-          "rebalancing": 0,
-          "total": 100.0
+          "transaction_costs": 100.0,
+          "transaction_costs_pct": 0.1,
+          "platform_fees": 0.0,
+          "platform_fees_pct": 0.0,
+          "platform_fee_annual_bp": 0.0,
+          "total": 100.0,
+          "ter_info": {
+            "weighted_avg_ter_bp": null,
+            "handling": "embedded_in_etf_prices",
+            "note": "TER is already reflected in ETF adjusted close prices - NOT deducted separately"
+          }
         },
         "cagr_pct": 16.91,
         "gross_cagr_pct": 16.91,
@@ -406,9 +440,13 @@
           "period_days": 63,
           "rebalancing": "none (buy-and-hold)",
           "transaction_cost_bp": 10,
+          "platform_fee_annual_bp": 0.0,
           "data_source": "Twelve Data API (adjusted_close)",
           "risk_free_rate_pct": 4.5,
-          "return_type": "net (after transaction costs)",
+          "ter_handling": "embedded_in_etf_prices",
+          "ter_note": "ETF/fund TER is already reflected in adjusted close prices and is NOT deducted separately to avoid double-counting",
+          "weighted_avg_ter_bp": null,
+          "return_type": "net (after transaction costs + platform fees)",
           "gross_return_available": true,
           "benchmark": "AGG",
           "benchmark_rationale": "Investment-grade bond benchmark for conservative/income-focused profile"
@@ -511,9 +549,17 @@
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
       "cost_breakdown": {
-        "initial_purchase": 100.0,
-        "rebalancing": 0,
-        "total": 100.0
+        "transaction_costs": 100.0,
+        "transaction_costs_pct": 0.1,
+        "platform_fees": 0.0,
+        "platform_fees_pct": 0.0,
+        "platform_fee_annual_bp": 0.0,
+        "total": 100.0,
+        "ter_info": {
+          "weighted_avg_ter_bp": null,
+          "handling": "embedded_in_etf_prices",
+          "note": "TER is already reflected in ETF adjusted close prices - NOT deducted separately"
+        }
       },
       "cagr_pct": 126.08,
       "gross_cagr_pct": 126.08,
@@ -537,9 +583,13 @@
         "period_days": 63,
         "rebalancing": "none (buy-and-hold)",
         "transaction_cost_bp": 10,
+        "platform_fee_annual_bp": 0.0,
         "data_source": "Twelve Data API (adjusted_close)",
         "risk_free_rate_pct": 4.5,
-        "return_type": "net (after transaction costs)",
+        "ter_handling": "embedded_in_etf_prices",
+        "ter_note": "ETF/fund TER is already reflected in adjusted close prices and is NOT deducted separately to avoid double-counting",
+        "weighted_avg_ter_bp": null,
+        "return_type": "net (after transaction costs + platform fees)",
         "gross_return_available": true,
         "benchmark": "QQQ",
         "benchmark_rationale": "Growth/tech heavy allocation matches aggressive equity exposure with tech tilt"
@@ -574,9 +624,17 @@
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
       "cost_breakdown": {
-        "initial_purchase": 100.0,
-        "rebalancing": 0,
-        "total": 100.0
+        "transaction_costs": 100.0,
+        "transaction_costs_pct": 0.1,
+        "platform_fees": 0.0,
+        "platform_fees_pct": 0.0,
+        "platform_fee_annual_bp": 0.0,
+        "total": 100.0,
+        "ter_info": {
+          "weighted_avg_ter_bp": null,
+          "handling": "embedded_in_etf_prices",
+          "note": "TER is already reflected in ETF adjusted close prices - NOT deducted separately"
+        }
       },
       "cagr_pct": 77.34,
       "gross_cagr_pct": 77.34,
@@ -600,9 +658,13 @@
         "period_days": 63,
         "rebalancing": "none (buy-and-hold)",
         "transaction_cost_bp": 10,
+        "platform_fee_annual_bp": 0.0,
         "data_source": "Twelve Data API (adjusted_close)",
         "risk_free_rate_pct": 4.5,
-        "return_type": "net (after transaction costs)",
+        "ter_handling": "embedded_in_etf_prices",
+        "ter_note": "ETF/fund TER is already reflected in adjusted close prices and is NOT deducted separately to avoid double-counting",
+        "weighted_avg_ter_bp": null,
+        "return_type": "net (after transaction costs + platform fees)",
         "gross_return_available": true,
         "benchmark": "URTH",
         "benchmark_rationale": "Global diversified equities benchmark for balanced risk profile"
@@ -637,9 +699,17 @@
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
       "cost_breakdown": {
-        "initial_purchase": 100.0,
-        "rebalancing": 0,
-        "total": 100.0
+        "transaction_costs": 100.0,
+        "transaction_costs_pct": 0.1,
+        "platform_fees": 0.0,
+        "platform_fees_pct": 0.0,
+        "platform_fee_annual_bp": 0.0,
+        "total": 100.0,
+        "ter_info": {
+          "weighted_avg_ter_bp": null,
+          "handling": "embedded_in_etf_prices",
+          "note": "TER is already reflected in ETF adjusted close prices - NOT deducted separately"
+        }
       },
       "cagr_pct": 16.91,
       "gross_cagr_pct": 16.91,
@@ -663,9 +733,13 @@
         "period_days": 63,
         "rebalancing": "none (buy-and-hold)",
         "transaction_cost_bp": 10,
+        "platform_fee_annual_bp": 0.0,
         "data_source": "Twelve Data API (adjusted_close)",
         "risk_free_rate_pct": 4.5,
-        "return_type": "net (after transaction costs)",
+        "ter_handling": "embedded_in_etf_prices",
+        "ter_note": "ETF/fund TER is already reflected in adjusted close prices and is NOT deducted separately to avoid double-counting",
+        "weighted_avg_ter_bp": null,
+        "return_type": "net (after transaction costs + platform fees)",
         "gross_return_available": true,
         "benchmark": "AGG",
         "benchmark_rationale": "Investment-grade bond benchmark for conservative/income-focused profile"
