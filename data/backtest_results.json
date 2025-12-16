@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-16T09:48:34.366688",
+  "timestamp": "2025-12-16T10:05:55.978127",
   "period_days": 90,
   "frequency": "M",
   "symbols_count": 31,
@@ -14,22 +14,22 @@
     "calendar_aligned": true,
     "quality_validated": true,
     "calendar_report": {
-      "original_dates": 86,
+      "original_dates": 87,
       "aligned_dates": 84,
-      "removed_dates": 2,
-      "nan_before_avg_pct": 2.29,
-      "nan_after_avg_pct": 2.18,
+      "removed_dates": 3,
+      "nan_before_avg_pct": 3.38,
+      "nan_after_avg_pct": 3.3,
       "symbols_excluded": [
         "MUTHOOTFIN"
       ],
       "alignment_method": "NYSE_business_days",
       "warnings": [
-        "MUTHOOTFIN: 5.8% NaN > 5% threshold",
-        "Dropped 2 rows with remaining NaN"
+        "MUTHOOTFIN: 5.7% NaN > 5% threshold",
+        "Dropped 3 rows with remaining NaN"
       ]
     },
     "quality_report": {
-      "timestamp": "2025-12-16T09:48:34.296007",
+      "timestamp": "2025-12-16T10:05:55.902401",
       "passed": true,
       "n_symbols_checked": 31,
       "n_symbols_passed": 31,
@@ -109,8 +109,19 @@
       "profile": "Agressif",
       "success": true,
       "stats": {
+        "net_return_pct": 22.62,
         "total_return_pct": 22.62,
+        "gross_return_pct": 22.62,
+        "cost_drag_pct": 0.0,
+        "total_costs_pct": 0.1,
+        "total_costs_value": 100.0,
+        "cost_breakdown": {
+          "initial_purchase": 100.0,
+          "rebalancing": 0,
+          "total": 100.0
+        },
         "cagr_pct": 126.08,
+        "gross_cagr_pct": 126.08,
         "volatility_pct": 11.86,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
@@ -133,6 +144,8 @@
           "transaction_cost_bp": 10,
           "data_source": "Twelve Data API (adjusted_close)",
           "risk_free_rate_pct": 4.5,
+          "return_type": "net (after transaction costs)",
+          "gross_return_available": true,
           "benchmark": "QQQ",
           "benchmark_rationale": "Growth/tech heavy allocation matches aggressive equity exposure with tech tilt"
         },
@@ -228,8 +241,19 @@
       "profile": "Modéré",
       "success": true,
       "stats": {
+        "net_return_pct": 15.4,
         "total_return_pct": 15.4,
+        "gross_return_pct": 15.4,
+        "cost_drag_pct": 0.0,
+        "total_costs_pct": 0.1,
+        "total_costs_value": 100.0,
+        "cost_breakdown": {
+          "initial_purchase": 100.0,
+          "rebalancing": 0,
+          "total": 100.0
+        },
         "cagr_pct": 77.34,
+        "gross_cagr_pct": 77.34,
         "volatility_pct": 8.83,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
@@ -252,6 +276,8 @@
           "transaction_cost_bp": 10,
           "data_source": "Twelve Data API (adjusted_close)",
           "risk_free_rate_pct": 4.5,
+          "return_type": "net (after transaction costs)",
+          "gross_return_available": true,
           "benchmark": "URTH",
           "benchmark_rationale": "Global diversified equities benchmark for balanced risk profile"
         },
@@ -347,8 +373,19 @@
       "profile": "Stable",
       "success": true,
       "stats": {
+        "net_return_pct": 3.98,
         "total_return_pct": 3.98,
+        "gross_return_pct": 3.98,
+        "cost_drag_pct": 0.0,
+        "total_costs_pct": 0.1,
+        "total_costs_value": 100.0,
+        "cost_breakdown": {
+          "initial_purchase": 100.0,
+          "rebalancing": 0,
+          "total": 100.0
+        },
         "cagr_pct": 16.91,
+        "gross_cagr_pct": 16.91,
         "volatility_pct": 5.39,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
@@ -371,6 +408,8 @@
           "transaction_cost_bp": 10,
           "data_source": "Twelve Data API (adjusted_close)",
           "risk_free_rate_pct": 4.5,
+          "return_type": "net (after transaction costs)",
+          "gross_return_available": true,
           "benchmark": "AGG",
           "benchmark_rationale": "Investment-grade bond benchmark for conservative/income-focused profile"
         },
@@ -465,8 +504,19 @@
   ],
   "comparison": {
     "Agressif": {
+      "net_return_pct": 22.62,
       "total_return_pct": 22.62,
+      "gross_return_pct": 22.62,
+      "cost_drag_pct": 0.0,
+      "total_costs_pct": 0.1,
+      "total_costs_value": 100.0,
+      "cost_breakdown": {
+        "initial_purchase": 100.0,
+        "rebalancing": 0,
+        "total": 100.0
+      },
       "cagr_pct": 126.08,
+      "gross_cagr_pct": 126.08,
       "volatility_pct": 11.86,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
@@ -489,6 +539,8 @@
         "transaction_cost_bp": 10,
         "data_source": "Twelve Data API (adjusted_close)",
         "risk_free_rate_pct": 4.5,
+        "return_type": "net (after transaction costs)",
+        "gross_return_available": true,
         "benchmark": "QQQ",
         "benchmark_rationale": "Growth/tech heavy allocation matches aggressive equity exposure with tech tilt"
       },
@@ -515,8 +567,19 @@
       "downside_capture_pct": -7.5
     },
     "Modéré": {
+      "net_return_pct": 15.4,
       "total_return_pct": 15.4,
+      "gross_return_pct": 15.4,
+      "cost_drag_pct": 0.0,
+      "total_costs_pct": 0.1,
+      "total_costs_value": 100.0,
+      "cost_breakdown": {
+        "initial_purchase": 100.0,
+        "rebalancing": 0,
+        "total": 100.0
+      },
       "cagr_pct": 77.34,
+      "gross_cagr_pct": 77.34,
       "volatility_pct": 8.83,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
@@ -539,6 +602,8 @@
         "transaction_cost_bp": 10,
         "data_source": "Twelve Data API (adjusted_close)",
         "risk_free_rate_pct": 4.5,
+        "return_type": "net (after transaction costs)",
+        "gross_return_available": true,
         "benchmark": "URTH",
         "benchmark_rationale": "Global diversified equities benchmark for balanced risk profile"
       },
@@ -565,8 +630,19 @@
       "downside_capture_pct": -2.0
     },
     "Stable": {
+      "net_return_pct": 3.98,
       "total_return_pct": 3.98,
+      "gross_return_pct": 3.98,
+      "cost_drag_pct": 0.0,
+      "total_costs_pct": 0.1,
+      "total_costs_value": 100.0,
+      "cost_breakdown": {
+        "initial_purchase": 100.0,
+        "rebalancing": 0,
+        "total": 100.0
+      },
       "cagr_pct": 16.91,
+      "gross_cagr_pct": 16.91,
       "volatility_pct": 5.39,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
@@ -589,6 +665,8 @@
         "transaction_cost_bp": 10,
         "data_source": "Twelve Data API (adjusted_close)",
         "risk_free_rate_pct": 4.5,
+        "return_type": "net (after transaction costs)",
+        "gross_return_available": true,
         "benchmark": "AGG",
         "benchmark_rationale": "Investment-grade bond benchmark for conservative/income-focused profile"
       },
