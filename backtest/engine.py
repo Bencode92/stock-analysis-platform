@@ -1,6 +1,13 @@
 # backtest/engine.py
 """
-Moteur de backtest pour le Portfolio Engine v7.
+Moteur de backtest pour le Portfolio Engine v8.
+
+V8 (P1-8b TER Implementation 2024-12-16):
+- Add TER (Total Expense Ratio) for realistic cost modeling
+- ter_annual_bp in BacktestConfig (default 20bp = 0.20%/an)
+- TER applied daily to NET equity only (GROSS unchanged)
+- cost_breakdown includes: transaction_costs, ter_costs, total
+- Now Cost Drag is visible: GROSS - NET = TER + Tx costs
 
 V7 (P1-8 Net/Gross Returns 2024-12-16):
 - Separate gross and net returns calculation
@@ -39,7 +46,7 @@ V2: FIX CRITIQUE - UTILISER POIDS FIXES DU PORTFOLIO
 Backtest sur 90 jours glissants avec:
 - Poids fixes (pas de recalcul dynamique)
 - Rebalancing configurable (daily/weekly/monthly)
-- Coûts de transaction (transparents via gross/net)
+- Coûts de transaction + TER (transparents via gross/net)
 - Métriques de performance
 - Comparaison benchmark (par profil)
 """
@@ -88,6 +95,11 @@ except ImportError:
 # v3 IC FIX: Taux sans risque réaliste (Fed Funds Dec 2024)
 DEFAULT_RISK_FREE_RATE = 0.045  # 4.5% annuel
 
+# V8 P1-8b: TER par défaut (moyenne pondérée ETF/actions)
+# ETF actions: ~0.10-0.50%/an, ETF bonds: ~0.05-0.20%/an, Actions: 0%
+# Moyenne portfolio mixte: ~0.20%/an = 20bp
+DEFAULT_TER_ANNUAL_BP = 20.0  # 0.20% annuel
+
 # v3 IC FIX: Disclaimer AMF obligatoire (Position DOC-2011-24)
 DISCLAIMER_AMF = """⚠️ SIMULATION - Les performances passées ne préjugent pas des performances futures. 
 Les données présentées sont issues d'une simulation sur données historiques. 
@@ -102,6 +114,7 @@ class BacktestConfig:
     """
     Configuration du backtest.
     
+    V8 P1-8b: Added ter_annual_bp for TER (Total Expense Ratio)
     V6 P1-7: benchmark_symbol est maintenant auto-sélectionné selon le profil
     si non spécifié explicitement.
     """
@@ -109,7 +122,8 @@ class BacktestConfig:
     start_date: Optional[str] = None      # YYYY-MM-DD (défaut: 90j avant)
     end_date: Optional[str] = None        # YYYY-MM-DD (défaut: aujourd'hui)
     rebalance_freq: str = "M"             # D=daily, W=weekly, M=monthly
-    transaction_cost_bp: float = 10.0     # Coût en basis points
+    transaction_cost_bp: float = 10.0     # Coût en basis points (par trade)
+    ter_annual_bp: float = DEFAULT_TER_ANNUAL_BP  # V8: TER annuel en bp (frais de gestion)
     turnover_penalty: float = 0.001       # Pénalité turnover dans objectif
     initial_capital: float = 100000.0     # Capital initial
     benchmark_symbol: Optional[str] = None  # V6: None = auto-select par profil
@@ -145,10 +159,17 @@ def compute_backtest_stats(
     risk_free_rate: float = DEFAULT_RISK_FREE_RATE,  # v3 FIX: 0.0 → 0.045
     gross_equity_curve: Optional[pd.Series] = None,  # V7 P1-8: Add gross curve
     initial_capital: float = 100000.0,  # V7 P1-8: For cost calculation
-    total_transaction_costs: float = 0.0,  # V7 P1-8: Cumulative costs
+    total_transaction_costs: float = 0.0,  # V7 P1-8: Cumulative tx costs
+    total_ter_costs: float = 0.0,  # V8 P1-8b: Cumulative TER costs
+    ter_annual_bp: float = DEFAULT_TER_ANNUAL_BP,  # V8: TER rate used
 ) -> Dict[str, float]:
     """
     Calcule les statistiques de performance.
+    
+    V8 P1-8b:
+    - Add TER costs tracking
+    - cost_breakdown includes ter_costs
+    - methodology includes TER info
     
     V7 P1-8:
     - Separate gross and net returns
@@ -181,12 +202,12 @@ def compute_backtest_stats(
     n_days = len(equity_curve)
     n_years = n_days / 252
     
-    # ===== V7 P1-8: NET RETURN (after transaction costs) =====
+    # ===== V7 P1-8: NET RETURN (after transaction costs + TER) =====
     net_return = (equity_curve.iloc[-1] / equity_curve.iloc[0]) - 1
     stats["net_return_pct"] = round(net_return * 100, 2)
     stats["total_return_pct"] = stats["net_return_pct"]  # Backward compatibility
     
-    # ===== V7 P1-8: GROSS RETURN (before transaction costs) =====
+    # ===== V7 P1-8: GROSS RETURN (before all costs) =====
     if gross_equity_curve is not None and len(gross_equity_curve) > 0:
         gross_return = (gross_equity_curve.iloc[-1] / gross_equity_curve.iloc[0]) - 1
         stats["gross_return_pct"] = round(gross_return * 100, 2)
@@ -199,27 +220,20 @@ def compute_backtest_stats(
         stats["gross_return_pct"] = stats["net_return_pct"]
         stats["cost_drag_pct"] = 0.0
     
-    # ===== V7 P1-8: TOTAL TRANSACTION COSTS =====
-    if total_transaction_costs > 0:
-        stats["total_costs_pct"] = round((total_transaction_costs / initial_capital) * 100, 2)
-        stats["total_costs_value"] = round(total_transaction_costs, 2)
-    else:
-        # Fallback: sum from trades DataFrame
-        if len(trades_df) > 0 and "tx_cost" in trades_df.columns:
-            # tx_cost is in decimal (e.g., 0.001 for 0.1%)
-            # Multiply by capital at each trade to get approximate cost
-            estimated_cost = trades_df["tx_cost"].sum() * initial_capital
-            stats["total_costs_pct"] = round(trades_df["tx_cost"].sum() * 100, 2)
-            stats["total_costs_value"] = round(estimated_cost, 2)
-        else:
-            stats["total_costs_pct"] = 0.0
-            stats["total_costs_value"] = 0.0
+    # ===== V8 P1-8b: TOTAL COSTS (Transaction + TER) =====
+    total_all_costs = total_transaction_costs + total_ter_costs
     
-    # V7 P1-8: Cost breakdown for transparency
+    stats["total_costs_pct"] = round((total_all_costs / initial_capital) * 100, 2)
+    stats["total_costs_value"] = round(total_all_costs, 2)
+    
+    # V8 P1-8b: Detailed cost breakdown
     stats["cost_breakdown"] = {
-        "initial_purchase": round(total_transaction_costs, 2) if total_transaction_costs > 0 else 0,
-        "rebalancing": 0,  # For fixed weights, no rebalancing costs
-        "total": stats["total_costs_value"],
+        "transaction_costs": round(total_transaction_costs, 2),
+        "transaction_costs_pct": round((total_transaction_costs / initial_capital) * 100, 3),
+        "ter_costs": round(total_ter_costs, 2),
+        "ter_costs_pct": round((total_ter_costs / initial_capital) * 100, 3),
+        "ter_annual_bp": ter_annual_bp,
+        "total": round(total_all_costs, 2),
     }
     
     # CAGR (annualisé) - based on NET return
@@ -306,10 +320,11 @@ def compute_backtest_stats(
         "period_days": n_days,
         "rebalancing": "none (buy-and-hold)",
         "transaction_cost_bp": 10,
+        "ter_annual_bp": ter_annual_bp,  # V8 P1-8b: Add TER to methodology
         "data_source": get_data_source_string(),  # P0-1 FIX: was "Yahoo Finance (adjusted close)"
         "risk_free_rate_pct": round(risk_free_rate * 100, 2),
         # V7 P1-8: Add cost transparency to methodology
-        "return_type": "net (after transaction costs)",
+        "return_type": "net (after transaction costs + TER)",
         "gross_return_available": gross_equity_curve is not None,
     }
     
@@ -474,6 +489,7 @@ def get_rebalance_dates(
 # ============================================================================
 # V2: NOUVELLE FONCTION - BACKTEST AVEC POIDS FIXES
 # V7 P1-8: Added gross/net return separation
+# V8 P1-8b: Added TER (Total Expense Ratio) daily deduction
 # ============================================================================
 
 def run_backtest_fixed_weights(
@@ -486,6 +502,12 @@ def run_backtest_fixed_weights(
     
     C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
     Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
+    
+    V8 P1-8b:
+    - Add TER (Total Expense Ratio) applied daily to NET equity
+    - GROSS equity = pure market performance (no costs)
+    - NET equity = market performance - transaction costs - TER
+    - TER formula: daily_ter = (ter_annual_bp / 10000) / 252
     
     V7 P1-8:
     - Track both GROSS and NET equity curves
@@ -521,6 +543,7 @@ def run_backtest_fixed_weights(
     logger.info(f"Starting FIXED WEIGHTS backtest: {config.profile}")
     logger.info(f"Fixed weights: {len(fixed_weights)} assets, sum={sum(fixed_weights.values()):.2%}")
     logger.info(f"P1-7: Using benchmark {config.benchmark_symbol} for profile {config.profile}")
+    logger.info(f"P1-8b: TER = {config.ter_annual_bp}bp/year ({config.ter_annual_bp/100:.2f}%/year)")
     
     # Filtrer les dates
     dates = prices.index.sort_values()
@@ -563,19 +586,18 @@ def run_backtest_fixed_weights(
     # Convertir en Series pour faciliter les calculs
     weights_series = pd.Series(effective_weights)
     
-    # ===== V7 P1-8: INITIALIZE BOTH GROSS AND NET EQUITY =====
+    # ===== V8 P1-8b: INITIALIZE BOTH GROSS AND NET EQUITY =====
     equity_gross = config.initial_capital  # GROSS: never reduced by costs
-    equity_net = config.initial_capital    # NET: reduced by costs
+    equity_net = config.initial_capital    # NET: reduced by costs (tx + TER)
     
     gross_equity_curve = {}
     net_equity_curve = {}
     daily_returns_list = []  # Based on gross returns (market performance)
-    daily_returns_net_list = []  # Based on net returns (after costs)
     
     # Dates de rebalancement (pour le turnover - ici turnover = 0 car poids fixes)
     rebal_dates = get_rebalance_dates(dates, config.rebalance_freq)
     
-    # ===== V7 P1-8: TRACK TRANSACTION COSTS SEPARATELY =====
+    # ===== V7 P1-8: TRACK TRANSACTION COSTS =====
     initial_cost_rate = config.transaction_cost_bp / 10000
     initial_cost_value = equity_net * initial_cost_rate
     total_transaction_costs = initial_cost_value
@@ -588,10 +610,18 @@ def run_backtest_fixed_weights(
         "n_assets": len(effective_weights),
         "turnover": 1.0,  # Achat initial = 100% turnover
         "tx_cost": initial_cost_rate,
-        "tx_cost_value": initial_cost_value,  # V7 P1-8: Absolute cost value
+        "tx_cost_value": initial_cost_value,
     }]
     
     logger.info(f"P1-8: Initial transaction cost: {initial_cost_value:.2f} ({initial_cost_rate*100:.2f}%)")
+    
+    # ===== V8 P1-8b: TER DAILY RATE =====
+    # TER is an annual rate, we apply it daily
+    # daily_ter_rate = (ter_annual_bp / 10000) / 252
+    daily_ter_rate = (config.ter_annual_bp / 10000) / 252
+    total_ter_costs = 0.0
+    
+    logger.info(f"P1-8b: Daily TER rate: {daily_ter_rate*10000:.4f}bp ({daily_ter_rate*100:.6f}%/day)")
     
     # Boucle sur les jours
     prev_date = None
@@ -607,9 +637,16 @@ def run_backtest_fixed_weights(
                         asset_ret = (price_today / price_prev) - 1
                         daily_ret += weight * asset_ret
             
-            # V7 P1-8: Apply return to BOTH gross and net
+            # V8 P1-8b: Apply return to GROSS (no costs)
             equity_gross *= (1 + daily_ret)
+            
+            # V8 P1-8b: Apply return to NET, then deduct daily TER
             equity_net *= (1 + daily_ret)
+            
+            # Deduct daily TER from NET equity
+            daily_ter_cost = equity_net * daily_ter_rate
+            equity_net -= daily_ter_cost
+            total_ter_costs += daily_ter_cost
             
             daily_returns_list.append({"date": date, "return": daily_ret})
         
@@ -630,7 +667,7 @@ def run_backtest_fixed_weights(
         **effective_weights
     }])
     
-    # V7 P1-8: Stats with BOTH gross and net returns
+    # V8 P1-8b: Stats with BOTH gross and net returns + TER costs
     stats = compute_backtest_stats(
         equity_curve=net_equity_series,  # Primary is NET
         daily_returns=returns_series,
@@ -638,7 +675,9 @@ def run_backtest_fixed_weights(
         risk_free_rate=DEFAULT_RISK_FREE_RATE,  # 4.5%
         gross_equity_curve=gross_equity_series,  # V7 P1-8: Add gross for comparison
         initial_capital=config.initial_capital,
-        total_transaction_costs=total_transaction_costs,
+        total_transaction_costs=total_transaction_costs,  # V7: Tx costs
+        total_ter_costs=total_ter_costs,  # V8: TER costs
+        ter_annual_bp=config.ter_annual_bp,  # V8: TER rate used
     )
     
     # Ajouter info sur la couverture
@@ -646,11 +685,13 @@ def run_backtest_fixed_weights(
     stats["n_assets_with_data"] = len(effective_weights)
     stats["n_assets_total"] = len(fixed_weights)
     
-    # V7 P1-8: Log gross vs net
-    logger.info(f"P1-8: Gross return: {stats.get('gross_return_pct', 'N/A')}%")
-    logger.info(f"P1-8: Net return: {stats.get('net_return_pct', 'N/A')}%")
-    logger.info(f"P1-8: Cost drag: {stats.get('cost_drag_pct', 'N/A')}%")
-    logger.info(f"P1-8: Total costs: {stats.get('total_costs_value', 'N/A')} ({stats.get('total_costs_pct', 'N/A')}%)")
+    # V8 P1-8b: Log gross vs net with TER breakdown
+    logger.info(f"P1-8b: Gross return: {stats.get('gross_return_pct', 'N/A')}%")
+    logger.info(f"P1-8b: Net return: {stats.get('net_return_pct', 'N/A')}%")
+    logger.info(f"P1-8b: Cost drag: {stats.get('cost_drag_pct', 'N/A')}%")
+    cost_breakdown = stats.get('cost_breakdown', {})
+    logger.info(f"P1-8b: Cost breakdown - Tx: {cost_breakdown.get('transaction_costs', 0):.2f}, TER: {cost_breakdown.get('ter_costs', 0):.2f}")
+    logger.info(f"P1-8b: Total costs: {stats.get('total_costs_value', 'N/A')} ({stats.get('total_costs_pct', 'N/A')}%)")
     
     # ===== V6 P1-7: PROFILE-SPECIFIC BENCHMARK COMPARISON =====
     benchmark_curve = None
@@ -1016,6 +1057,7 @@ def print_backtest_report(result: BacktestResult):
     """
     Affiche un rapport formaté du backtest.
     
+    V8 P1-8b: Enhanced cost breakdown with TER.
     V7 P1-8: Added gross vs net section for transparency.
     """
     print("\n" + "="*60)
@@ -1034,18 +1076,27 @@ def print_backtest_report(result: BacktestResult):
         n_total = result.stats.get("n_assets_total", "?")
         print(f"Coverage: {n_with_data}/{n_total} assets ({coverage}%)")
     
-    # ===== V7 P1-8: GROSS vs NET SECTION =====
+    # ===== V8 P1-8b: GROSS vs NET SECTION with TER breakdown =====
     print("\n--- Gross vs Net Performance ---")
     gross_return = result.stats.get('gross_return_pct', 'N/A')
     net_return = result.stats.get('net_return_pct', result.stats.get('total_return_pct', 0))
     cost_drag = result.stats.get('cost_drag_pct', 0)
-    total_costs = result.stats.get('total_costs_value', 0)
-    total_costs_pct = result.stats.get('total_costs_pct', 0)
     
     print(f"Gross Return:     {gross_return:>8}%  (before costs)")
     print(f"Net Return:       {net_return:>8.2f}%  (after costs)")
     print(f"Cost Drag:        {cost_drag:>8.2f}%  (gross - net)")
-    print(f"Total Costs:      {total_costs:>8.2f}  ({total_costs_pct:.2f}%)")
+    
+    # V8 P1-8b: Detailed cost breakdown
+    cost_breakdown = result.stats.get('cost_breakdown', {})
+    tx_costs = cost_breakdown.get('transaction_costs', 0)
+    ter_costs = cost_breakdown.get('ter_costs', 0)
+    ter_bp = cost_breakdown.get('ter_annual_bp', 0)
+    total_costs = cost_breakdown.get('total', 0)
+    
+    print(f"\n--- Cost Breakdown ---")
+    print(f"Transaction costs: {tx_costs:>8.2f}  ({cost_breakdown.get('transaction_costs_pct', 0):.3f}%)")
+    print(f"TER costs:         {ter_costs:>8.2f}  ({cost_breakdown.get('ter_costs_pct', 0):.3f}%) [{ter_bp}bp/year]")
+    print(f"Total costs:       {total_costs:>8.2f}  ({result.stats.get('total_costs_pct', 0):.2f}%)")
     
     print("\n--- Performance (NET) ---")
     print(f"Total Return:     {result.stats.get('net_return_pct', result.stats.get('total_return_pct', 0)):>8.2f}%")
