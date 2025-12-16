@@ -1,6 +1,13 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.14 — P0 Technical Fixes
+Optimiseur de portefeuille v6.15 — P1-6 Covariance KPIs
+
+CHANGEMENTS v6.15 (P1-6 Covariance KPIs):
+1. NEW: condition_number = max(λ)/min(λ) dans diagnostics covariance
+2. NEW: eigen_clipped = nombre d'eigenvalues forcées au minimum
+3. NEW: eigen_clipped_pct = pourcentage d'eigenvalues clippées
+4. NEW: is_well_conditioned = True si condition_number < 1000 et eigen_clipped_pct < 20%
+5. Alertes automatiques si matrice mal conditionnée
 
 CHANGEMENTS v6.14 (P0 Technical Fixes - ChatGPT v2.0 Audit):
 1. P0-2 FIX: Tie-breaker (score, id) pour tri déterministe
@@ -93,13 +100,17 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 
-# ============= CONSTANTES v6.14 =============
+# ============= CONSTANTES v6.15 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
 
 # Covariance hybride: poids empirique vs structurée
 COVARIANCE_EMPIRICAL_WEIGHT = 0.60  # 60% empirique, 40% structurée
+
+# P1-6: Seuils d'alerte pour KPIs covariance
+CONDITION_NUMBER_WARNING_THRESHOLD = 1000.0  # > 1000 = matrice instable
+EIGEN_CLIPPED_PCT_WARNING_THRESHOLD = 20.0   # > 20% = données insuffisantes
 
 # Corrélations structurées (utilisées quand pas de données empiriques)
 CORR_SAME_CORPORATE_GROUP = 0.90
@@ -511,10 +522,18 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
     return other_assets + deduplicated_etfs
 
 
-# ============= COVARIANCE HYBRIDE v6 =============
+# ============= COVARIANCE HYBRIDE v6.15 (P1-6 KPIs) =============
 
 class HybridCovarianceEstimator:
-    """Estimateur de covariance hybride: empirique + structurée."""
+    """
+    Estimateur de covariance hybride: empirique + structurée.
+    
+    v6.15 P1-6: Ajout des KPIs de qualité de la matrice:
+    - condition_number: max(λ)/min(λ) - instable si > 1000
+    - eigen_clipped: nombre d'eigenvalues forcées au minimum
+    - eigen_clipped_pct: pourcentage d'eigenvalues clippées - alerte si > 20%
+    - is_well_conditioned: flag booléen pour check rapide
+    """
     
     def __init__(
         self, 
@@ -606,7 +625,24 @@ class HybridCovarianceEstimator:
         return cov
     
     def compute(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """Calcule la covariance hybride."""
+        """
+        Calcule la covariance hybride avec KPIs de qualité (P1-6).
+        
+        Returns:
+            (matrice_covariance, diagnostics)
+            
+        Diagnostics incluent:
+            - method: "structured", "hybrid", ou "empirical"
+            - empirical_available: bool
+            - empirical_weight: float
+            - condition_number: max(λ)/min(λ) - NOUVEAU P1-6
+            - eigen_clipped: nombre d'eigenvalues forcées - NOUVEAU P1-6
+            - eigen_clipped_pct: pourcentage clippé - NOUVEAU P1-6
+            - eigenvalue_min: plus petite eigenvalue (après clipping)
+            - eigenvalue_max: plus grande eigenvalue
+            - matrix_size: dimension n×n
+            - is_well_conditioned: True si condition_number < 1000 et clipped < 20%
+        """
         n = len(assets)
         cov_structured = self.compute_structured_covariance(assets)
         cov_empirical = self.compute_empirical_covariance(assets)
@@ -615,6 +651,7 @@ class HybridCovarianceEstimator:
             "method": "structured",
             "empirical_available": False,
             "empirical_weight": 0.0,
+            "matrix_size": n,
         }
         
         if cov_empirical is not None:
@@ -629,30 +666,120 @@ class HybridCovarianceEstimator:
         else:
             cov = cov_structured
         
-        cov = self._ensure_positive_definite(cov)
+        # P1-6: Ensure positive definite ET collecter les KPIs
+        cov, eigen_kpis = self._ensure_positive_definite_with_kpis(cov)
+        
+        # Fusionner les KPIs dans diagnostics
+        diagnostics.update(eigen_kpis)
+        
+        # Log warnings si matrice mal conditionnée
+        if not diagnostics.get("is_well_conditioned", True):
+            if diagnostics.get("condition_number", 0) > CONDITION_NUMBER_WARNING_THRESHOLD:
+                logger.warning(
+                    f"⚠️ COVARIANCE WARNING: condition_number={diagnostics['condition_number']:.1f} "
+                    f"> {CONDITION_NUMBER_WARNING_THRESHOLD} (matrice instable, optimisation fragile)"
+                )
+            if diagnostics.get("eigen_clipped_pct", 0) > EIGEN_CLIPPED_PCT_WARNING_THRESHOLD:
+                logger.warning(
+                    f"⚠️ COVARIANCE WARNING: eigen_clipped_pct={diagnostics['eigen_clipped_pct']:.1f}% "
+                    f"> {EIGEN_CLIPPED_PCT_WARNING_THRESHOLD}% (données insuffisantes)"
+                )
+        
         return cov, diagnostics
     
-    def _ensure_positive_definite(self, cov: np.ndarray, min_eigenvalue: float = 1e-6) -> np.ndarray:
-        """Force la matrice à être positive semi-définie."""
+    def _ensure_positive_definite_with_kpis(
+        self, 
+        cov: np.ndarray, 
+        min_eigenvalue: float = 1e-6
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """
+        Force la matrice à être positive semi-définie ET retourne les KPIs.
+        
+        P1-6: Nouveaux KPIs retournés:
+        - condition_number: max(λ)/min(λ)
+        - eigen_clipped: nombre d'eigenvalues forcées au minimum
+        - eigen_clipped_pct: pourcentage d'eigenvalues clippées
+        - eigenvalue_min: plus petite eigenvalue (après clipping)
+        - eigenvalue_max: plus grande eigenvalue
+        - eigenvalue_min_raw: plus petite eigenvalue AVANT clipping
+        - is_well_conditioned: True si condition_number < 1000 et clipped < 20%
+        """
+        kpis = {
+            "condition_number": None,
+            "eigen_clipped": 0,
+            "eigen_clipped_pct": 0.0,
+            "eigenvalue_min": None,
+            "eigenvalue_max": None,
+            "eigenvalue_min_raw": None,
+            "is_well_conditioned": True,
+        }
+        
+        # Nettoyage initial
         cov = np.nan_to_num(cov, nan=0.0, posinf=0.0, neginf=0.0)
         cov = (cov + cov.T) / 2
         n = cov.shape[0]
         cov += np.eye(n) * min_eigenvalue
         
         try:
+            # Décomposition en valeurs propres
             eigenvalues, eigenvectors = np.linalg.eigh(cov)
-            eigenvalues = np.maximum(eigenvalues, min_eigenvalue)
-            cov_fixed = eigenvectors @ np.diag(eigenvalues) @ eigenvectors.T
-            return (cov_fixed + cov_fixed.T) / 2
-        except Exception:
-            return np.diag(np.maximum(np.diag(cov), min_eigenvalue))
+            
+            # KPIs AVANT clipping
+            kpis["eigenvalue_min_raw"] = float(eigenvalues.min())
+            kpis["eigenvalue_max"] = float(eigenvalues.max())
+            
+            # Compter les eigenvalues qui vont être clippées
+            eigen_clipped = int(np.sum(eigenvalues < min_eigenvalue))
+            kpis["eigen_clipped"] = eigen_clipped
+            kpis["eigen_clipped_pct"] = round(100.0 * eigen_clipped / n, 2) if n > 0 else 0.0
+            
+            # Clipping des eigenvalues négatives ou trop petites
+            eigenvalues_clipped = np.maximum(eigenvalues, min_eigenvalue)
+            
+            # KPIs APRÈS clipping
+            kpis["eigenvalue_min"] = float(eigenvalues_clipped.min())
+            
+            # Condition number = max(λ) / min(λ)
+            if eigenvalues_clipped.min() > 0:
+                kpis["condition_number"] = round(
+                    float(eigenvalues_clipped.max() / eigenvalues_clipped.min()), 
+                    2
+                )
+            else:
+                kpis["condition_number"] = float("inf")
+            
+            # Déterminer si la matrice est bien conditionnée
+            cond_ok = (
+                kpis["condition_number"] is not None and 
+                kpis["condition_number"] < CONDITION_NUMBER_WARNING_THRESHOLD
+            )
+            clipped_ok = kpis["eigen_clipped_pct"] < EIGEN_CLIPPED_PCT_WARNING_THRESHOLD
+            kpis["is_well_conditioned"] = cond_ok and clipped_ok
+            
+            # Reconstruire la matrice avec eigenvalues clippées
+            cov_fixed = eigenvectors @ np.diag(eigenvalues_clipped) @ eigenvectors.T
+            cov_fixed = (cov_fixed + cov_fixed.T) / 2
+            
+            return cov_fixed, kpis
+            
+        except Exception as e:
+            logger.warning(f"Eigenvalue decomposition failed: {e}")
+            kpis["is_well_conditioned"] = False
+            kpis["condition_number"] = float("inf")
+            kpis["eigen_clipped"] = n
+            kpis["eigen_clipped_pct"] = 100.0
+            return np.diag(np.maximum(np.diag(cov), min_eigenvalue)), kpis
 
 
-# ============= PORTFOLIO OPTIMIZER v6.14 =============
+# ============= PORTFOLIO OPTIMIZER v6.15 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.14.
+    Optimiseur mean-variance v6.15.
+    
+    CHANGEMENTS v6.15 (P1-6 Covariance KPIs):
+    1. Diagnostics enrichis avec KPIs covariance (condition_number, eigen_clipped)
+    2. Warnings automatiques si matrice mal conditionnée
     
     CHANGEMENTS v6.14 (P0 Technical Fixes - ChatGPT v2.0 Audit):
     1. P0-2 FIX: Tie-breaker (score, id) pour tri déterministe
@@ -1141,6 +1268,7 @@ class PortfolioOptimizer:
         """
         Optimisation mean-variance avec covariance hybride.
         
+        v6.15 P1-6: Diagnostics enrichis avec KPIs covariance.
         v6.14 P0-2: Tie-breaker (score, id) pour tri déterministe partout.
         v6.13: STABLE utilise le fallback heuristique (skip SLSQP).
         """
@@ -1303,6 +1431,7 @@ class PortfolioOptimizer:
                     "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
                 }
         
+        # v6.15 P1-6: Inclure les KPIs covariance dans les diagnostics
         diagnostics = to_python_native({
             "converged": optimizer_converged,
             "optimization_mode": optimization_mode,
@@ -1324,17 +1453,41 @@ class PortfolioOptimizer:
             "bucket_exposure": dict(bucket_exposure),
             "bucket_compliance": bucket_compliance,
             "corporate_group_exposure": dict(corporate_group_exposure),
+            # === P1-6: Covariance KPIs ===
             "covariance_method": cov_diagnostics.get("method", "unknown"),
             "covariance_empirical_weight": cov_diagnostics.get("empirical_weight", 0),
+            "covariance_kpis": {
+                "condition_number": cov_diagnostics.get("condition_number"),
+                "eigen_clipped": cov_diagnostics.get("eigen_clipped", 0),
+                "eigen_clipped_pct": cov_diagnostics.get("eigen_clipped_pct", 0.0),
+                "eigenvalue_min": cov_diagnostics.get("eigenvalue_min"),
+                "eigenvalue_max": cov_diagnostics.get("eigenvalue_max"),
+                "eigenvalue_min_raw": cov_diagnostics.get("eigenvalue_min_raw"),
+                "matrix_size": cov_diagnostics.get("matrix_size", n),
+                "is_well_conditioned": cov_diagnostics.get("is_well_conditioned", True),
+                "thresholds": {
+                    "condition_number_warning": CONDITION_NUMBER_WARNING_THRESHOLD,
+                    "eigen_clipped_pct_warning": EIGEN_CLIPPED_PCT_WARNING_THRESHOLD,
+                },
+            },
             "buffett_hard_filter_enabled": self.buffett_hard_filter_enabled,
             "buffett_min_score": self.buffett_min_score,
         })
         
         opt_mode_display = optimization_mode.upper().replace("_", " ")
+        cov_status = "✅" if cov_diagnostics.get("is_well_conditioned", True) else "⚠️"
         logger.info(
             f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds, {crypto_in_allocation} crypto), "
             f"vol={port_vol:.1f}% (cible={profile.vol_target}%, tol=±{profile.vol_tolerance}%), "
-            f"mode={opt_mode_display}, cov={cov_diagnostics.get('method')}"
+            f"mode={opt_mode_display}, cov={cov_diagnostics.get('method')} {cov_status}"
+        )
+        
+        # P1-6: Log des KPIs covariance
+        logger.info(
+            f"[COV KPIs {profile.name}] condition_number={cov_diagnostics.get('condition_number')}, "
+            f"eigen_clipped={cov_diagnostics.get('eigen_clipped')}/{cov_diagnostics.get('matrix_size')} "
+            f"({cov_diagnostics.get('eigen_clipped_pct', 0):.1f}%), "
+            f"well_conditioned={cov_diagnostics.get('is_well_conditioned')}"
         )
         
         return allocation, diagnostics
