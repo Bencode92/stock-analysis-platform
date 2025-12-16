@@ -2,6 +2,12 @@
 """
 Moteur de backtest pour le Portfolio Engine v5.
 
+V6 (P1-7 Profile Benchmarks 2024-12-16):
+- Profile-specific benchmarks (Agressif→QQQ, Modéré→URTH, Stable→AGG)
+- Import from portfolio_engine.benchmarks
+- get_benchmark_for_profile() auto-selection
+- Benchmark metadata exposed in stats
+
 V5 (P0 Technical Fix 2024-12-15):
 - P0-1 FIX: Use get_data_source_string() instead of hardcoded "Yahoo Finance"
 - Import from portfolio_engine.data_lineage for consistent data lineage
@@ -27,7 +33,7 @@ Backtest sur 90 jours glissants avec:
 - Rebalancing configurable (daily/weekly/monthly)
 - Coûts de transaction
 - Métriques de performance
-- Comparaison benchmark (URTH = MSCI World)
+- Comparaison benchmark (par profil)
 """
 
 import numpy as np
@@ -48,6 +54,26 @@ except ImportError:
     def get_data_source_string() -> str:
         return "Twelve Data API (adjusted_close)"  # Fallback
 
+# ============= P1-7: Import profile benchmarks =============
+try:
+    from portfolio_engine.benchmarks import (
+        get_benchmark_for_profile,
+        get_benchmark_symbol,
+        get_benchmark_metadata,
+        validate_benchmark_availability,
+        DEFAULT_BENCHMARK,
+    )
+    HAS_BENCHMARKS = True
+except ImportError:
+    HAS_BENCHMARKS = False
+    logger.warning("portfolio_engine.benchmarks not available, using default URTH")
+    
+    def get_benchmark_symbol(profile: str) -> str:
+        return "URTH"
+    
+    def get_benchmark_metadata(profile: str) -> dict:
+        return {"symbol": "URTH", "name": "iShares MSCI World ETF"}
+
 
 # ============= v3: CONSTANTES COMPLIANCE =============
 
@@ -65,7 +91,12 @@ MIN_DAYS_FOR_STATS = 252  # 1 an
 
 @dataclass
 class BacktestConfig:
-    """Configuration du backtest."""
+    """
+    Configuration du backtest.
+    
+    V6 P1-7: benchmark_symbol est maintenant auto-sélectionné selon le profil
+    si non spécifié explicitement.
+    """
     profile: str = "Modéré"              # Agressif, Modéré, Stable
     start_date: Optional[str] = None      # YYYY-MM-DD (défaut: 90j avant)
     end_date: Optional[str] = None        # YYYY-MM-DD (défaut: aujourd'hui)
@@ -73,7 +104,13 @@ class BacktestConfig:
     transaction_cost_bp: float = 10.0     # Coût en basis points
     turnover_penalty: float = 0.001       # Pénalité turnover dans objectif
     initial_capital: float = 100000.0     # Capital initial
-    benchmark_symbol: str = "URTH"        # Benchmark (MSCI World ETF)
+    benchmark_symbol: Optional[str] = None  # V6: None = auto-select par profil
+    
+    def __post_init__(self):
+        """Auto-select benchmark based on profile if not specified."""
+        if self.benchmark_symbol is None:
+            self.benchmark_symbol = get_benchmark_symbol(self.profile)
+            logger.info(f"P1-7: Auto-selected benchmark {self.benchmark_symbol} for profile {self.profile}")
 
 
 @dataclass
@@ -96,6 +133,9 @@ def compute_backtest_stats(
 ) -> Dict[str, float]:
     """
     Calcule les statistiques de performance.
+    
+    v6 P1-7:
+    - Benchmark metadata exposed in methodology
     
     v5 P0-1 FIX:
     - Use get_data_source_string() instead of hardcoded "Yahoo Finance"
@@ -201,7 +241,6 @@ def compute_backtest_stats(
         "period_days": n_days,
         "rebalancing": "none (buy-and-hold)",
         "transaction_cost_bp": 10,
-        "benchmark": "URTH (MSCI World)",
         "data_source": get_data_source_string(),  # P0-1 FIX: was "Yahoo Finance (adjusted close)"
         "risk_free_rate_pct": round(risk_free_rate * 100, 2),
     }
@@ -222,16 +261,22 @@ def compute_benchmark_stats(
     equity_curve: pd.Series,
     daily_returns: pd.Series,
     benchmark_prices: pd.Series,
-    benchmark_symbol: str = "URTH"
+    benchmark_symbol: str = "URTH",
+    profile: str = "Modéré"  # V6 P1-7: Add profile for metadata
 ) -> Dict[str, float]:
     """
     Calcule les statistiques relatives au benchmark.
+    
+    V6 P1-7:
+    - Add benchmark_metadata with rationale
+    - Include profile context in stats
     
     Args:
         equity_curve: Courbe de valeur du portefeuille
         daily_returns: Rendements journaliers du portefeuille
         benchmark_prices: Prix du benchmark sur la même période
         benchmark_symbol: Symbole du benchmark
+        profile: Nom du profil pour les métadonnées
     
     Returns:
         Dict avec benchmark return, excess return, information ratio, etc.
@@ -254,6 +299,15 @@ def compute_benchmark_stats(
     bench_return = (bench_aligned.iloc[-1] / bench_aligned.iloc[0] - 1) * 100
     stats["benchmark_symbol"] = benchmark_symbol
     stats["benchmark_return_pct"] = round(bench_return, 2)
+    
+    # V6 P1-7: Add benchmark metadata
+    benchmark_meta = get_benchmark_metadata(profile)
+    stats["benchmark_metadata"] = {
+        "symbol": benchmark_symbol,
+        "name": benchmark_meta.get("name", benchmark_symbol),
+        "rationale": benchmark_meta.get("rationale", "Default benchmark"),
+        "asset_class": benchmark_meta.get("asset_class", "equity"),
+    }
     
     # Volatilité benchmark
     bench_returns = bench_aligned.pct_change().dropna()
@@ -364,6 +418,10 @@ def run_backtest_fixed_weights(
     C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
     Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
     
+    V6 P1-7:
+    - Profile-specific benchmark auto-selection
+    - Benchmark metadata in stats
+    
     v5 P0-1 FIX:
     - Use get_data_source_string() in methodology
     
@@ -387,6 +445,7 @@ def run_backtest_fixed_weights(
     """
     logger.info(f"Starting FIXED WEIGHTS backtest: {config.profile}")
     logger.info(f"Fixed weights: {len(fixed_weights)} assets, sum={sum(fixed_weights.values()):.2%}")
+    logger.info(f"P1-7: Using benchmark {config.benchmark_symbol} for profile {config.profile}")
     
     # Filtrer les dates
     dates = prices.index.sort_values()
@@ -492,25 +551,31 @@ def run_backtest_fixed_weights(
     stats["n_assets_with_data"] = len(effective_weights)
     stats["n_assets_total"] = len(fixed_weights)
     
-    # ===== BENCHMARK COMPARISON =====
+    # ===== V6 P1-7: PROFILE-SPECIFIC BENCHMARK COMPARISON =====
     benchmark_curve = None
     benchmark_symbol = config.benchmark_symbol
     
     if benchmark_symbol and benchmark_symbol in prices.columns:
-        logger.info(f"Computing benchmark comparison vs {benchmark_symbol}")
+        logger.info(f"Computing benchmark comparison vs {benchmark_symbol} (profile: {config.profile})")
         
         bench_prices = prices.loc[equity_series.index, benchmark_symbol].dropna()
         
         if len(bench_prices) > 10:
             benchmark_curve = (bench_prices / bench_prices.iloc[0]) * config.initial_capital
             
+            # V6 P1-7: Pass profile for metadata
             bench_stats = compute_benchmark_stats(
                 equity_series,
                 returns_series,
                 bench_prices,
-                benchmark_symbol
+                benchmark_symbol,
+                profile=config.profile  # NEW
             )
             stats.update(bench_stats)
+            
+            # V6 P1-7: Add benchmark info to methodology
+            stats["methodology"]["benchmark"] = benchmark_symbol
+            stats["methodology"]["benchmark_rationale"] = stats.get("benchmark_metadata", {}).get("rationale", "")
             
             logger.info(f"Benchmark return: {stats.get('benchmark_return_pct', 'N/A')}%")
             logger.info(f"Portfolio return: {stats.get('total_return_pct', 'N/A')}%")
@@ -518,6 +583,22 @@ def run_backtest_fixed_weights(
     else:
         if benchmark_symbol:
             logger.warning(f"Benchmark {benchmark_symbol} not found in prices data")
+            # V6 P1-7: Try to find fallback
+            if HAS_BENCHMARKS:
+                fallback_info = validate_benchmark_availability(list(prices.columns), config.profile)
+                if fallback_info["fallback_symbol"] and fallback_info["fallback_symbol"] in prices.columns:
+                    fallback_sym = fallback_info["fallback_symbol"]
+                    logger.info(f"Using fallback benchmark: {fallback_sym}")
+                    
+                    bench_prices = prices.loc[equity_series.index, fallback_sym].dropna()
+                    if len(bench_prices) > 10:
+                        benchmark_curve = (bench_prices / bench_prices.iloc[0]) * config.initial_capital
+                        bench_stats = compute_benchmark_stats(
+                            equity_series, returns_series, bench_prices, fallback_sym, config.profile
+                        )
+                        stats.update(bench_stats)
+                        stats["benchmark_fallback"] = True
+                        stats["benchmark_primary_missing"] = benchmark_symbol
     
     # v4: Log avec sharpe_display
     sharpe_display = stats.get("sharpe_display", "N/A")
@@ -786,7 +867,7 @@ def run_backtest(
         risk_free_rate=DEFAULT_RISK_FREE_RATE
     )
     
-    # ===== BENCHMARK COMPARISON =====
+    # ===== V6 P1-7: PROFILE-SPECIFIC BENCHMARK =====
     benchmark_curve = None
     benchmark_symbol = config.benchmark_symbol
     
@@ -802,7 +883,8 @@ def run_backtest(
                 equity_series,
                 returns_series,
                 bench_prices,
-                benchmark_symbol
+                benchmark_symbol,
+                profile=config.profile
             )
             stats.update(bench_stats)
             
@@ -867,10 +949,19 @@ def print_backtest_report(result: BacktestResult):
     if "amf_warning" in result.stats:
         print(f"\n⚠️  {result.stats['amf_warning']}")
     
-    # Section Benchmark (si disponible)
+    # Section Benchmark (si disponible) - V6 P1-7: Enhanced
     if "benchmark_symbol" in result.stats:
         print("\n--- vs Benchmark ---")
+        benchmark_meta = result.stats.get("benchmark_metadata", {})
         print(f"Benchmark:        {result.stats.get('benchmark_symbol', 'N/A'):>8}")
+        if benchmark_meta.get("name"):
+            print(f"  ({benchmark_meta['name']})")
+        if benchmark_meta.get("rationale"):
+            print(f"  Rationale: {benchmark_meta['rationale']}")
+        
+        if result.stats.get("benchmark_fallback"):
+            print(f"  ⚠️ Fallback (primary {result.stats.get('benchmark_primary_missing')} unavailable)")
+        
         print(f"Bench Return:     {result.stats.get('benchmark_return_pct', 0):>8.2f}%")
         print(f"Excess Return:    {result.stats.get('excess_return_pct', 0):>8.2f}%")
         print(f"Tracking Error:   {result.stats.get('tracking_error_pct', 0):>8.2f}%")
