@@ -3,13 +3,15 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v14 - FIX: Fenêtre baseline_ytd élargie (01 déc → 31 jan) pour éviter problèmes week-end
+v15 - FIX CRITIQUE: Bypass du wrapper twelvedata bugué → appel HTTP direct
+Le wrapper ne retourne qu'1 point au lieu de 100, l'appel HTTP direct fonctionne.
 """
 
 import os
 import time
 import datetime as dt
 import logging
+import requests
 from typing import Tuple, Optional, List, Any
 from twelvedata import TDClient
 
@@ -151,6 +153,46 @@ def _normalize_and_sort(values: Any) -> List[Tuple[str, float]]:
 
 
 # ============================================================
+# APPEL HTTP DIRECT (bypass du wrapper bugué)
+# ============================================================
+
+def _time_series_http(symbol: str, **params) -> dict:
+    """
+    Appel HTTP direct à l'API Twelve Data.
+    
+    Le wrapper Python twelvedata a un bug qui tronque les résultats
+    (retourne 1 point au lieu de 100). On bypass le wrapper.
+    """
+    if not API_KEY:
+        raise ValueError("API_KEY Twelve Data manquante")
+
+    url = "https://api.twelvedata.com/time_series"
+    q = {
+        "apikey": API_KEY,
+        "symbol": symbol,
+        "interval": "1day",
+        "format": "JSON",
+        "timezone": "Exchange",
+        "dp": 5,
+        "prepost": "false",
+        **params,
+    }
+    
+    # Log URL sans API key
+    safe_params = {k: v for k, v in q.items() if k != "apikey"}
+    logger.info(f"  🔗 HTTP: {url}?{safe_params}")
+    
+    r = requests.get(url, params=q, timeout=30)
+    r.raise_for_status()
+    js = r.json()
+
+    if isinstance(js, dict) and js.get("status") == "error":
+        raise ValueError(f"TwelveData error: {js.get('message', 'unknown')}")
+    
+    return js
+
+
+# ============================================================
 # FONCTIONS API TWELVE DATA
 # ============================================================
 
@@ -206,23 +248,19 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     """
     Baseline YTD = dernier close de déc N-1, sinon premier close de jan N.
     
-    v14 - FIX CRITIQUE:
-    - Suppression de start_date côté API (évite les effets week-end)
-    - Fenêtre de filtrage élargie: 01 déc → 31 jan
-    - outputsize=100 suffisant pour ~2 mois de bourse
+    v15 - FIX CRITIQUE:
+    - Bypass du wrapper twelvedata bugué → appel HTTP direct avec requests
+    - Le wrapper retourne 1 point, l'HTTP direct retourne 100 points
+    - Fenêtre de filtrage: 01 déc → 31 jan
     """
-    TD = get_td_client()
-    if not TD:
-        raise ValueError("Client Twelve Data non initialisé")
-    
     sym, exchange, mic_code = _apply_vse_fallback(sym, exchange, mic_code)
     
     year = dt.date.today().year
     prev = year - 1
     
-    # ✅ FIX: On ne met PAS de start_date côté API
-    # On filtre après avec une fenêtre large (évite les effets week-end)
+    # Fenêtre large pour couvrir déc-jan
     end = f"{year}-01-31"
+    outputsize = 100  # ~2 mois de bourse
     
     # Tentatives: mic_code -> exchange -> symbol seul
     attempts = []
@@ -241,24 +279,14 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
         try:
             rate_limit_pause()
             
-            ts = TD.time_series(
-                symbol=sym,
-                interval="1day",
+            # ✅ FIX: Appel HTTP direct au lieu du wrapper bugué
+            js = _time_series_http(
+                sym,
                 end_date=end,
-                outputsize=100,  # ~2 mois de bourse, suffisant
+                outputsize=outputsize,
                 order="ASC",
-                **kwargs
+                **kwargs,
             )
-            
-            # Log URL (sans API key)
-            try:
-                url = ts.as_url()
-                safe_url = url.split("apikey=")[0] + "apikey=***" if "apikey=" in url else url
-                logger.info(f"  🔗 {safe_url}")
-            except:
-                pass
-            
-            js = ts.as_json()
             
             # === NORMALISER ET TRIER ===
             rows = _normalize_and_sort(js)
@@ -271,8 +299,7 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
             # Log de la couverture
             logger.info(f"  📅 {len(rows)} points, min={rows[0][0]}, max={rows[-1][0]}")
             
-            # ✅ FIX: Fenêtre de filtrage LARGE (01 déc → 31 jan)
-            # Évite les problèmes de week-end avec start_date=15/12
+            # Fenêtre de filtrage LARGE (01 déc → 31 jan)
             start_guard = f"{prev}-12-01"
             end_guard = f"{year}-01-31"
             rows = [(d, c) for (d, c) in rows if start_guard <= d <= end_guard]
