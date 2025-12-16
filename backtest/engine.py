@@ -1,13 +1,16 @@
 # backtest/engine.py
 """
-Moteur de backtest pour le Portfolio Engine v8.
+Moteur de backtest pour le Portfolio Engine v9.
+
+V9 (P1-8c TER FIX 2024-12-16):
+- CRITICAL FIX: TER is ALREADY embedded in ETF/fund prices (adjusted close)
+- Remove TER deduction to avoid double-counting
+- Add platform_fee_annual_bp for B2C platform fees (optional, visible net/gross)
+- Add weighted_avg_ter_bp as INFO ONLY (not deducted)
+- TER handling: "embedded_in_prices" in methodology
 
 V8 (P1-8b TER Implementation 2024-12-16):
-- Add TER (Total Expense Ratio) for realistic cost modeling
-- ter_annual_bp in BacktestConfig (default 20bp = 0.20%/an)
-- TER applied daily to NET equity only (GROSS unchanged)
-- cost_breakdown includes: transaction_costs, ter_costs, total
-- Now Cost Drag is visible: GROSS - NET = TER + Tx costs
+- DEPRECATED: ter_annual_bp deduction was incorrect (double-counting)
 
 V7 (P1-8 Net/Gross Returns 2024-12-16):
 - Separate gross and net returns calculation
@@ -46,7 +49,8 @@ V2: FIX CRITIQUE - UTILISER POIDS FIXES DU PORTFOLIO
 Backtest sur 90 jours glissants avec:
 - Poids fixes (pas de recalcul dynamique)
 - Rebalancing configurable (daily/weekly/monthly)
-- Coûts de transaction + TER (transparents via gross/net)
+- Coûts de transaction + platform fees (transparents via gross/net)
+- TER exposé comme INFO (déjà inclus dans les prix ETF)
 - Métriques de performance
 - Comparaison benchmark (par profil)
 """
@@ -95,10 +99,9 @@ except ImportError:
 # v3 IC FIX: Taux sans risque réaliste (Fed Funds Dec 2024)
 DEFAULT_RISK_FREE_RATE = 0.045  # 4.5% annuel
 
-# V8 P1-8b: TER par défaut (moyenne pondérée ETF/actions)
-# ETF actions: ~0.10-0.50%/an, ETF bonds: ~0.05-0.20%/an, Actions: 0%
-# Moyenne portfolio mixte: ~0.20%/an = 20bp
-DEFAULT_TER_ANNUAL_BP = 20.0  # 0.20% annuel
+# V9 P1-8c: Platform fee (B2C) - optionnel, pour créer un écart gross/net visible
+# Exemple: 50bp = 0.50%/an de frais de plateforme
+DEFAULT_PLATFORM_FEE_ANNUAL_BP = 0.0  # 0 par défaut (pas de frais plateforme)
 
 # v3 IC FIX: Disclaimer AMF obligatoire (Position DOC-2011-24)
 DISCLAIMER_AMF = """⚠️ SIMULATION - Les performances passées ne préjugent pas des performances futures. 
@@ -114,7 +117,11 @@ class BacktestConfig:
     """
     Configuration du backtest.
     
-    V8 P1-8b: Added ter_annual_bp for TER (Total Expense Ratio)
+    V9 P1-8c: 
+    - REMOVED ter_annual_bp (was causing double-counting)
+    - ADDED platform_fee_annual_bp for B2C platform fees
+    - TER is embedded in ETF prices, not deducted separately
+    
     V6 P1-7: benchmark_symbol est maintenant auto-sélectionné selon le profil
     si non spécifié explicitement.
     """
@@ -123,10 +130,12 @@ class BacktestConfig:
     end_date: Optional[str] = None        # YYYY-MM-DD (défaut: aujourd'hui)
     rebalance_freq: str = "M"             # D=daily, W=weekly, M=monthly
     transaction_cost_bp: float = 10.0     # Coût en basis points (par trade)
-    ter_annual_bp: float = DEFAULT_TER_ANNUAL_BP  # V8: TER annuel en bp (frais de gestion)
+    platform_fee_annual_bp: float = DEFAULT_PLATFORM_FEE_ANNUAL_BP  # V9: B2C platform fee
     turnover_penalty: float = 0.001       # Pénalité turnover dans objectif
     initial_capital: float = 100000.0     # Capital initial
     benchmark_symbol: Optional[str] = None  # V6: None = auto-select par profil
+    # V9: TER metadata (for display only, NOT deducted - already in prices)
+    weighted_avg_ter_bp: Optional[float] = None  # Calculated from portfolio holdings
     
     def __post_init__(self):
         """Auto-select benchmark based on profile if not specified."""
@@ -160,38 +169,23 @@ def compute_backtest_stats(
     gross_equity_curve: Optional[pd.Series] = None,  # V7 P1-8: Add gross curve
     initial_capital: float = 100000.0,  # V7 P1-8: For cost calculation
     total_transaction_costs: float = 0.0,  # V7 P1-8: Cumulative tx costs
-    total_ter_costs: float = 0.0,  # V8 P1-8b: Cumulative TER costs
-    ter_annual_bp: float = DEFAULT_TER_ANNUAL_BP,  # V8: TER rate used
+    total_platform_fees: float = 0.0,  # V9 P1-8c: Platform fees (replaces TER)
+    platform_fee_annual_bp: float = 0.0,  # V9: Platform fee rate used
+    weighted_avg_ter_bp: Optional[float] = None,  # V9: TER info (not deducted)
 ) -> Dict[str, float]:
     """
     Calcule les statistiques de performance.
     
-    V8 P1-8b:
-    - Add TER costs tracking
-    - cost_breakdown includes ter_costs
-    - methodology includes TER info
+    V9 P1-8c:
+    - Remove TER deduction (already in ETF prices)
+    - Add platform_fee tracking instead
+    - Expose weighted_avg_ter_bp as INFO ONLY
+    - Clear methodology explaining TER handling
     
     V7 P1-8:
     - Separate gross and net returns
     - Expose total_costs_pct and cost_drag_pct
     - Transparency for AMF compliance
-    
-    v6 P1-7:
-    - Benchmark metadata exposed in methodology
-    
-    v5 P0-1 FIX:
-    - Use get_data_source_string() instead of hardcoded "Yahoo Finance"
-    
-    v4 IC FIX (ChatGPT challenge):
-    - ACTION 2: Masquer Sharpe annualisé si période < 252j
-    - sharpe_ratio = None si période insuffisante
-    - sharpe_display pour affichage front
-    
-    v3 IC FIX:
-    - risk_free_rate par défaut = 4.5% (Fed Funds)
-    - Ajout warning si période < 1 an
-    - Ajout disclaimer AMF
-    - Ajout méthodologie
     
     Returns:
         Dict avec CAGR, volatilité, Sharpe, max drawdown, turnover, gross/net returns, etc.
@@ -202,7 +196,7 @@ def compute_backtest_stats(
     n_days = len(equity_curve)
     n_years = n_days / 252
     
-    # ===== V7 P1-8: NET RETURN (after transaction costs + TER) =====
+    # ===== V7 P1-8: NET RETURN (after transaction costs + platform fees) =====
     net_return = (equity_curve.iloc[-1] / equity_curve.iloc[0]) - 1
     stats["net_return_pct"] = round(net_return * 100, 2)
     stats["total_return_pct"] = stats["net_return_pct"]  # Backward compatibility
@@ -220,20 +214,27 @@ def compute_backtest_stats(
         stats["gross_return_pct"] = stats["net_return_pct"]
         stats["cost_drag_pct"] = 0.0
     
-    # ===== V8 P1-8b: TOTAL COSTS (Transaction + TER) =====
-    total_all_costs = total_transaction_costs + total_ter_costs
+    # ===== V9 P1-8c: TOTAL COSTS (Transaction + Platform fees) =====
+    # NOTE: TER is NOT included here - it's already embedded in ETF prices
+    total_all_costs = total_transaction_costs + total_platform_fees
     
     stats["total_costs_pct"] = round((total_all_costs / initial_capital) * 100, 2)
     stats["total_costs_value"] = round(total_all_costs, 2)
     
-    # V8 P1-8b: Detailed cost breakdown
+    # V9 P1-8c: Detailed cost breakdown
     stats["cost_breakdown"] = {
         "transaction_costs": round(total_transaction_costs, 2),
         "transaction_costs_pct": round((total_transaction_costs / initial_capital) * 100, 3),
-        "ter_costs": round(total_ter_costs, 2),
-        "ter_costs_pct": round((total_ter_costs / initial_capital) * 100, 3),
-        "ter_annual_bp": ter_annual_bp,
+        "platform_fees": round(total_platform_fees, 2),
+        "platform_fees_pct": round((total_platform_fees / initial_capital) * 100, 3),
+        "platform_fee_annual_bp": platform_fee_annual_bp,
         "total": round(total_all_costs, 2),
+        # V9: TER info (NOT deducted, already in prices)
+        "ter_info": {
+            "weighted_avg_ter_bp": weighted_avg_ter_bp,
+            "handling": "embedded_in_etf_prices",
+            "note": "TER is already reflected in ETF adjusted close prices - NOT deducted separately",
+        },
     }
     
     # CAGR (annualisé) - based on NET return
@@ -314,17 +315,21 @@ def compute_backtest_stats(
     # Disclaimer obligatoire
     stats["disclaimer_amf"] = DISCLAIMER_AMF
     
-    # ===== v5 P0-1 FIX: Use get_data_source_string() =====
+    # ===== V9 P1-8c: Updated methodology with TER handling =====
     stats["methodology"] = {
         "type": "backtest_fixed_weights",
         "period_days": n_days,
         "rebalancing": "none (buy-and-hold)",
         "transaction_cost_bp": 10,
-        "ter_annual_bp": ter_annual_bp,  # V8 P1-8b: Add TER to methodology
-        "data_source": get_data_source_string(),  # P0-1 FIX: was "Yahoo Finance (adjusted close)"
+        "platform_fee_annual_bp": platform_fee_annual_bp,
+        "data_source": get_data_source_string(),
         "risk_free_rate_pct": round(risk_free_rate * 100, 2),
+        # V9 P1-8c: Clear TER handling explanation
+        "ter_handling": "embedded_in_etf_prices",
+        "ter_note": "ETF/fund TER is already reflected in adjusted close prices and is NOT deducted separately to avoid double-counting",
+        "weighted_avg_ter_bp": weighted_avg_ter_bp,
         # V7 P1-8: Add cost transparency to methodology
-        "return_type": "net (after transaction costs + TER)",
+        "return_type": "net (after transaction costs + platform fees)",
         "gross_return_available": gross_equity_curve is not None,
     }
     
@@ -489,13 +494,14 @@ def get_rebalance_dates(
 # ============================================================================
 # V2: NOUVELLE FONCTION - BACKTEST AVEC POIDS FIXES
 # V7 P1-8: Added gross/net return separation
-# V8 P1-8b: Added TER (Total Expense Ratio) daily deduction
+# V9 P1-8c: Fixed TER handling (embedded in prices, not deducted)
 # ============================================================================
 
 def run_backtest_fixed_weights(
     prices: pd.DataFrame,
     fixed_weights: Dict[str, float],
     config: BacktestConfig,
+    ter_by_ticker: Optional[Dict[str, float]] = None,  # V9: TER metadata for info
 ) -> BacktestResult:
     """
     Exécute le backtest avec des poids FIXES (pas de recalcul dynamique).
@@ -503,11 +509,11 @@ def run_backtest_fixed_weights(
     C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
     Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
     
-    V8 P1-8b:
-    - Add TER (Total Expense Ratio) applied daily to NET equity
-    - GROSS equity = pure market performance (no costs)
-    - NET equity = market performance - transaction costs - TER
-    - TER formula: daily_ter = (ter_annual_bp / 10000) / 252
+    V9 P1-8c:
+    - CRITICAL FIX: Remove TER deduction (already in ETF adjusted close prices)
+    - Add platform_fee_annual_bp for B2C platform fees (creates visible net/gross gap)
+    - Calculate weighted_avg_ter_bp for INFO ONLY (displayed, not deducted)
+    - Clear methodology explaining TER handling
     
     V7 P1-8:
     - Track both GROSS and NET equity curves
@@ -515,27 +521,11 @@ def run_backtest_fixed_weights(
     - net_return: performance after transaction costs (displayed to user)
     - Transparent cost calculation for AMF compliance
     
-    V6 P1-7:
-    - Profile-specific benchmark auto-selection
-    - Benchmark metadata in stats
-    
-    v5 P0-1 FIX:
-    - Use get_data_source_string() in methodology
-    
-    v4 IC FIX (ChatGPT challenge):
-    - ACTION 2: Sharpe masqué si période < 252j
-    - sharpe_ratio = None dans ce cas
-    - sharpe_display pour affichage conditionnel
-    
-    v3 IC FIX:
-    - risk_free_rate = 4.5% (Fed Funds)
-    - Disclaimer AMF inclus dans stats
-    - Warning si période < 252j
-    
     Args:
         prices: DataFrame des prix (colonnes = symboles, index = dates)
         fixed_weights: Dict {ticker: poids_decimal} ex: {"AAPL": 0.14, "MSFT": 0.12}
         config: Configuration du backtest
+        ter_by_ticker: Optional Dict {ticker: ter_bp} for TER info display
     
     Returns:
         BacktestResult avec equity curve (net), gross_equity_curve, stats, etc.
@@ -543,7 +533,25 @@ def run_backtest_fixed_weights(
     logger.info(f"Starting FIXED WEIGHTS backtest: {config.profile}")
     logger.info(f"Fixed weights: {len(fixed_weights)} assets, sum={sum(fixed_weights.values()):.2%}")
     logger.info(f"P1-7: Using benchmark {config.benchmark_symbol} for profile {config.profile}")
-    logger.info(f"P1-8b: TER = {config.ter_annual_bp}bp/year ({config.ter_annual_bp/100:.2f}%/year)")
+    
+    # V9 P1-8c: Log platform fee (replaces TER deduction)
+    if config.platform_fee_annual_bp > 0:
+        logger.info(f"P1-8c: Platform fee = {config.platform_fee_annual_bp}bp/year ({config.platform_fee_annual_bp/100:.2f}%/year)")
+    else:
+        logger.info(f"P1-8c: No platform fee applied (gross ≈ net except for tx costs)")
+    
+    # V9 P1-8c: Calculate weighted average TER for INFO (not deducted)
+    weighted_avg_ter_bp = None
+    if ter_by_ticker:
+        ter_sum = 0.0
+        weight_with_ter = 0.0
+        for ticker, weight in fixed_weights.items():
+            if ticker in ter_by_ticker and ter_by_ticker[ticker] is not None:
+                ter_sum += weight * ter_by_ticker[ticker]
+                weight_with_ter += weight
+        if weight_with_ter > 0:
+            weighted_avg_ter_bp = round(ter_sum / weight_with_ter, 2)
+            logger.info(f"P1-8c: Weighted avg TER = {weighted_avg_ter_bp}bp (INFO ONLY - already in prices)")
     
     # Filtrer les dates
     dates = prices.index.sort_values()
@@ -586,9 +594,9 @@ def run_backtest_fixed_weights(
     # Convertir en Series pour faciliter les calculs
     weights_series = pd.Series(effective_weights)
     
-    # ===== V8 P1-8b: INITIALIZE BOTH GROSS AND NET EQUITY =====
+    # ===== V9 P1-8c: INITIALIZE BOTH GROSS AND NET EQUITY =====
     equity_gross = config.initial_capital  # GROSS: never reduced by costs
-    equity_net = config.initial_capital    # NET: reduced by costs (tx + TER)
+    equity_net = config.initial_capital    # NET: reduced by tx costs + platform fees
     
     gross_equity_curve = {}
     net_equity_curve = {}
@@ -615,13 +623,13 @@ def run_backtest_fixed_weights(
     
     logger.info(f"P1-8: Initial transaction cost: {initial_cost_value:.2f} ({initial_cost_rate*100:.2f}%)")
     
-    # ===== V8 P1-8b: TER DAILY RATE =====
-    # TER is an annual rate, we apply it daily
-    # daily_ter_rate = (ter_annual_bp / 10000) / 252
-    daily_ter_rate = (config.ter_annual_bp / 10000) / 252
-    total_ter_costs = 0.0
+    # ===== V9 P1-8c: PLATFORM FEE DAILY RATE =====
+    # NOTE: This is for B2C platform fees, NOT TER (TER is already in prices)
+    daily_platform_fee_rate = (config.platform_fee_annual_bp / 10000) / 252
+    total_platform_fees = 0.0
     
-    logger.info(f"P1-8b: Daily TER rate: {daily_ter_rate*10000:.4f}bp ({daily_ter_rate*100:.6f}%/day)")
+    if config.platform_fee_annual_bp > 0:
+        logger.info(f"P1-8c: Daily platform fee rate: {daily_platform_fee_rate*10000:.4f}bp ({daily_platform_fee_rate*100:.6f}%/day)")
     
     # Boucle sur les jours
     prev_date = None
@@ -637,16 +645,17 @@ def run_backtest_fixed_weights(
                         asset_ret = (price_today / price_prev) - 1
                         daily_ret += weight * asset_ret
             
-            # V8 P1-8b: Apply return to GROSS (no costs)
+            # V9 P1-8c: Apply return to GROSS (pure market performance)
             equity_gross *= (1 + daily_ret)
             
-            # V8 P1-8b: Apply return to NET, then deduct daily TER
+            # V9 P1-8c: Apply return to NET, then deduct platform fee (NOT TER)
             equity_net *= (1 + daily_ret)
             
-            # Deduct daily TER from NET equity
-            daily_ter_cost = equity_net * daily_ter_rate
-            equity_net -= daily_ter_cost
-            total_ter_costs += daily_ter_cost
+            # Deduct daily platform fee from NET equity (if configured)
+            if config.platform_fee_annual_bp > 0:
+                daily_fee_cost = equity_net * daily_platform_fee_rate
+                equity_net -= daily_fee_cost
+                total_platform_fees += daily_fee_cost
             
             daily_returns_list.append({"date": date, "return": daily_ret})
         
@@ -667,17 +676,18 @@ def run_backtest_fixed_weights(
         **effective_weights
     }])
     
-    # V8 P1-8b: Stats with BOTH gross and net returns + TER costs
+    # V9 P1-8c: Stats with platform fees (not TER)
     stats = compute_backtest_stats(
         equity_curve=net_equity_series,  # Primary is NET
         daily_returns=returns_series,
         trades_df=trades_df,
         risk_free_rate=DEFAULT_RISK_FREE_RATE,  # 4.5%
-        gross_equity_curve=gross_equity_series,  # V7 P1-8: Add gross for comparison
+        gross_equity_curve=gross_equity_series,
         initial_capital=config.initial_capital,
-        total_transaction_costs=total_transaction_costs,  # V7: Tx costs
-        total_ter_costs=total_ter_costs,  # V8: TER costs
-        ter_annual_bp=config.ter_annual_bp,  # V8: TER rate used
+        total_transaction_costs=total_transaction_costs,
+        total_platform_fees=total_platform_fees,  # V9: Platform fees (not TER)
+        platform_fee_annual_bp=config.platform_fee_annual_bp,
+        weighted_avg_ter_bp=weighted_avg_ter_bp,  # V9: TER info only
     )
     
     # Ajouter info sur la couverture
@@ -685,13 +695,14 @@ def run_backtest_fixed_weights(
     stats["n_assets_with_data"] = len(effective_weights)
     stats["n_assets_total"] = len(fixed_weights)
     
-    # V8 P1-8b: Log gross vs net with TER breakdown
-    logger.info(f"P1-8b: Gross return: {stats.get('gross_return_pct', 'N/A')}%")
-    logger.info(f"P1-8b: Net return: {stats.get('net_return_pct', 'N/A')}%")
-    logger.info(f"P1-8b: Cost drag: {stats.get('cost_drag_pct', 'N/A')}%")
+    # V9 P1-8c: Log gross vs net with clear cost breakdown
+    logger.info(f"P1-8c: Gross return: {stats.get('gross_return_pct', 'N/A')}%")
+    logger.info(f"P1-8c: Net return: {stats.get('net_return_pct', 'N/A')}%")
+    logger.info(f"P1-8c: Cost drag: {stats.get('cost_drag_pct', 'N/A')}%")
     cost_breakdown = stats.get('cost_breakdown', {})
-    logger.info(f"P1-8b: Cost breakdown - Tx: {cost_breakdown.get('transaction_costs', 0):.2f}, TER: {cost_breakdown.get('ter_costs', 0):.2f}")
-    logger.info(f"P1-8b: Total costs: {stats.get('total_costs_value', 'N/A')} ({stats.get('total_costs_pct', 'N/A')}%)")
+    logger.info(f"P1-8c: Costs - Tx: {cost_breakdown.get('transaction_costs', 0):.2f}, Platform: {cost_breakdown.get('platform_fees', 0):.2f}")
+    if weighted_avg_ter_bp:
+        logger.info(f"P1-8c: Weighted avg TER: {weighted_avg_ter_bp}bp (INFO ONLY - already in ETF prices)")
     
     # ===== V6 P1-7: PROFILE-SPECIFIC BENCHMARK COMPARISON =====
     benchmark_curve = None
@@ -1057,7 +1068,7 @@ def print_backtest_report(result: BacktestResult):
     """
     Affiche un rapport formaté du backtest.
     
-    V8 P1-8b: Enhanced cost breakdown with TER.
+    V9 P1-8c: Updated cost breakdown with platform fees and TER info.
     V7 P1-8: Added gross vs net section for transparency.
     """
     print("\n" + "="*60)
@@ -1076,27 +1087,38 @@ def print_backtest_report(result: BacktestResult):
         n_total = result.stats.get("n_assets_total", "?")
         print(f"Coverage: {n_with_data}/{n_total} assets ({coverage}%)")
     
-    # ===== V8 P1-8b: GROSS vs NET SECTION with TER breakdown =====
+    # ===== V9 P1-8c: GROSS vs NET SECTION with clear cost breakdown =====
     print("\n--- Gross vs Net Performance ---")
     gross_return = result.stats.get('gross_return_pct', 'N/A')
     net_return = result.stats.get('net_return_pct', result.stats.get('total_return_pct', 0))
     cost_drag = result.stats.get('cost_drag_pct', 0)
     
-    print(f"Gross Return:     {gross_return:>8}%  (before costs)")
+    print(f"Gross Return:     {gross_return:>8}%  (market performance)")
     print(f"Net Return:       {net_return:>8.2f}%  (after costs)")
     print(f"Cost Drag:        {cost_drag:>8.2f}%  (gross - net)")
     
-    # V8 P1-8b: Detailed cost breakdown
+    # V9 P1-8c: Detailed cost breakdown
     cost_breakdown = result.stats.get('cost_breakdown', {})
     tx_costs = cost_breakdown.get('transaction_costs', 0)
-    ter_costs = cost_breakdown.get('ter_costs', 0)
-    ter_bp = cost_breakdown.get('ter_annual_bp', 0)
+    platform_fees = cost_breakdown.get('platform_fees', 0)
+    platform_fee_bp = cost_breakdown.get('platform_fee_annual_bp', 0)
     total_costs = cost_breakdown.get('total', 0)
     
     print(f"\n--- Cost Breakdown ---")
     print(f"Transaction costs: {tx_costs:>8.2f}  ({cost_breakdown.get('transaction_costs_pct', 0):.3f}%)")
-    print(f"TER costs:         {ter_costs:>8.2f}  ({cost_breakdown.get('ter_costs_pct', 0):.3f}%) [{ter_bp}bp/year]")
+    if platform_fee_bp > 0:
+        print(f"Platform fees:     {platform_fees:>8.2f}  ({cost_breakdown.get('platform_fees_pct', 0):.3f}%) [{platform_fee_bp}bp/year]")
+    else:
+        print(f"Platform fees:     {0:>8.2f}  (not configured)")
     print(f"Total costs:       {total_costs:>8.2f}  ({result.stats.get('total_costs_pct', 0):.2f}%)")
+    
+    # V9 P1-8c: TER info (NOT deducted)
+    ter_info = cost_breakdown.get('ter_info', {})
+    weighted_ter = ter_info.get('weighted_avg_ter_bp')
+    if weighted_ter:
+        print(f"\n--- TER Info (embedded in prices, NOT deducted) ---")
+        print(f"Weighted avg TER: {weighted_ter:>8.1f}bp/year ({weighted_ter/100:.2f}%)")
+        print(f"Note: {ter_info.get('note', 'Already reflected in ETF prices')}")
     
     print("\n--- Performance (NET) ---")
     print(f"Total Return:     {result.stats.get('net_return_pct', result.stats.get('total_return_pct', 0)):>8.2f}%")
