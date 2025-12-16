@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v3 - FIX: Ajout exchange/mic_code + fallback VSE->XETR
+v4 - FIX: baseline_ytd fenêtre correcte + GBp handling
 """
 
 import os
@@ -125,8 +125,7 @@ def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str 
             "timezone": timezone
         }
         
-        # Ajouter exchange ou mic_code si fourni (CRITIQUE pour ETFs européens)
-        # Priorité: mic_code > exchange (MIC est plus précis)
+        # PRIORITÉ au mic_code/exchange du CSV (ne pas recalculer!)
         if mic_code:
             params["mic_code"] = mic_code
         elif exchange:
@@ -187,15 +186,14 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     Calcule la baseline YTD = DERNIER jour de bourse de l'année N-1.
     Fallback: 1er jour de bourse de N si pas de données N-1.
     
-    Pour un vrai YTD calendaire 2025:
-    - Base = close du 31 décembre 2024 (ou dernier jour ouvré avant)
-    - Pas le 2 décembre ou fin novembre !
+    IMPORTANT: Requête une fenêtre CIBLÉE autour du changement d'année
+    (15 déc N-1 → 15 jan N) pour garantir la capture du dernier close N-1.
     
     Args:
         sym: Symbole de l'instrument
         region: Région pour le timezone
-        exchange: Code exchange (REQUIS pour ETFs européens)
-        mic_code: MIC code ISO 10383 (alternative à exchange)
+        exchange: Code exchange (PRIORITÉ au CSV)
+        mic_code: MIC code ISO 10383 (PRIORITÉ au CSV)
     
     Returns:
         (baseline_close, baseline_date_iso)
@@ -212,18 +210,18 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     tz = TZ_BY_REGION.get(region, "UTC")
     
     try:
-        # Construire les paramètres
+        # ===== FIX v4: Fenêtre CIBLÉE autour du changement d'année =====
+        # Avant: 1er nov N-1 → 31 jan N (trop large, outputsize insuffisant)
+        # Après: 15 déc N-1 → 15 jan N (précis, ~20 jours de bourse)
         params = {
             "symbol": sym,
             "interval": "1day",
-            "start_date": f"{baseline_year}-11-01",  # 1er novembre N-1
-            "end_date": f"{year}-01-31",              # 31 janvier N
-            "order": "DESC",
-            "timezone": tz,
-            "outputsize": 100
+            "start_date": f"{baseline_year}-12-15",  # 15 décembre N-1
+            "end_date": f"{year}-01-15",              # 15 janvier N
+            "outputsize": 50,                          # Large marge (~20 jours réels)
         }
         
-        # Ajouter exchange ou mic_code si fourni
+        # PRIORITÉ au mic_code/exchange du CSV
         if mic_code:
             params["mic_code"] = mic_code
         elif exchange:
@@ -236,7 +234,7 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
         if isinstance(ts_json, tuple):
             ts_json = ts_json[0]
             
-        # Parser les valeurs - gestion des différents formats de réponse
+        # Parser les valeurs
         vals = []
         if isinstance(ts_json, dict):
             if ts_json.get("values"):
@@ -251,7 +249,7 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
         if not vals:
             raise ValueError(f"Aucune donnée historique pour {sym}")
 
-        # Convertir en liste (date, close)
+        # Convertir et TRIER par date (important!)
         rows = []
         for r in vals:
             date_str = str(r.get("datetime", ""))[:10]
@@ -269,21 +267,24 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
         if not rows:
             raise ValueError(f"Aucune donnée valide pour {sym}")
         
-        logger.debug(f"{sym}: {len(rows)} jours de données récupérés")
-        logger.debug(f"{sym}: Plage = {min(r[0] for r in rows)} à {max(r[0] for r in rows)}")
+        # Trier par date croissante
+        rows.sort(key=lambda x: x[0])
         
-        # 1) Chercher le DERNIER jour de bourse de N-1 (max date où year == baseline_year)
+        logger.debug(f"{sym}: {len(rows)} jours de données récupérés")
+        logger.debug(f"{sym}: Plage = {rows[0][0]} à {rows[-1][0]}")
+        
+        # 1) Chercher le DERNIER jour de bourse de N-1
         prev_year_rows = [(d, c) for (d, c) in rows if d.year == baseline_year]
         
         if prev_year_rows:
-            # MAX = dernier jour de l'année N-1
-            base_date, base_close = max(prev_year_rows, key=lambda x: x[0])
+            # Dernier élément = dernier jour coté de N-1 (ex: 30/12/2024)
+            base_date, base_close = prev_year_rows[-1]
             
-            # Vérification de cohérence : doit être en décembre pour un vrai YTD
-            if base_date.month == 12 and base_date.day >= 20:
+            # Vérification de cohérence
+            if base_date.month == 12 and base_date.day >= 27:
                 logger.info(f"✅ {sym}: Baseline YTD = {base_date} (close: {base_close:.2f})")
             else:
-                logger.warning(f"⚠️ {sym}: Baseline YTD = {base_date} (attendu: fin décembre {baseline_year})")
+                logger.warning(f"⚠️ {sym}: Baseline YTD = {base_date} (attendu: ~30 déc {baseline_year})")
             
             return base_close, base_date.isoformat()
         
@@ -291,13 +292,13 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
         current_year_rows = [(d, c) for (d, c) in rows if d.year == year]
         
         if current_year_rows:
-            # MIN = premier jour de l'année N
-            first_date, first_close = min(current_year_rows, key=lambda x: x[0])
+            # Premier élément = premier jour coté de N (ex: 02/01/2025)
+            first_date, first_close = current_year_rows[0]
             logger.warning(f"⚠️ {sym}: Pas de clôture {baseline_year}, fallback = 1er jour {year}: {first_date}")
             return first_close, first_date.isoformat()
         
-        # 3) Dernier recours : la donnée la plus ancienne disponible
-        oldest_date, oldest_close = min(rows, key=lambda x: x[0])
+        # 3) Dernier recours
+        oldest_date, oldest_close = rows[0]
         logger.warning(f"⚠️ {sym}: Fallback ultime = {oldest_date}")
         return oldest_close, oldest_date.isoformat()
 
@@ -311,13 +312,49 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
 # ============================================================
 
 def format_value(value: float, currency: str) -> str:
-    """Formate une valeur selon la devise"""
-    if currency in ["EUR", "USD", "GBP", "GBp", "CHF", "CAD", "AUD", "HKD", "SGD", "ILA", "MXN"]:
+    """
+    Formate une valeur selon la devise.
+    
+    Note: GBp = pence britanniques (1 GBP = 100 GBp)
+    On affiche en GBp tel quel pour éviter toute confusion.
+    """
+    # Devises avec 2 décimales
+    if currency in ["EUR", "USD", "GBP", "CHF", "CAD", "AUD", "HKD", "SGD", "MXN"]:
         return f"{value:,.2f}"
+    # GBp (pence) - afficher tel quel avec indication
+    elif currency == "GBp":
+        return f"{value:,.2f}"  # Sera affiché avec "GBp" comme unité
+    # Devises sans décimales
     elif currency in ["JPY", "KRW", "TWD", "INR", "TRY"]:
         return f"{value:,.0f}"
     else:
         return f"{value:,.2f}"
+
+
+def format_value_with_currency(value: float, currency: str) -> str:
+    """
+    Formate une valeur AVEC le symbole de devise.
+    Gère correctement GBp (pence) vs GBP (livres).
+    """
+    CURRENCY_SYMBOLS = {
+        "EUR": "€",
+        "USD": "$",
+        "GBP": "£",
+        "GBp": "p",  # Pence symbol
+        "CHF": "CHF",
+        "JPY": "¥",
+        "CAD": "C$",
+        "AUD": "A$",
+    }
+    
+    formatted = format_value(value, currency)
+    symbol = CURRENCY_SYMBOLS.get(currency, currency)
+    
+    # Pour GBp, le symbole va après (ex: "4004.50p")
+    if currency == "GBp":
+        return f"{formatted}{symbol}"
+    # Pour les autres, symbole avant
+    return f"{symbol}{formatted}"
 
 
 def format_percent(value: float) -> str:
