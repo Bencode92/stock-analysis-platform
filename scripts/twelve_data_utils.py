@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v12 - FIX: Debug parsing + utilise .as_json() correctement
+v13 - FIX: Tri OBLIGATOIRE des données + fenêtre ciblée dec-jan + validation
 """
 
 import os
@@ -70,86 +70,25 @@ def rate_limit_pause(delay: float = RATE_LIMIT_DELAY):
 def _apply_vse_fallback(sym: str, exchange: str, mic_code: str) -> Tuple[str, str, str]:
     """
     Applique le fallback VSE -> XETR si nécessaire.
-    
-    Returns:
-        (symbol, exchange, mic_code) - potentiellement modifiés
     """
     exchange_upper = (exchange or "").upper()
     mic_upper = (mic_code or "").upper()
     
-    # Détecter si c'est un ticker VSE/Vienna
     if exchange_upper == "VSE" or mic_upper == "XWBO":
         if sym in VSE_TO_XETR:
             new_sym = VSE_TO_XETR[sym]
             logger.warning(f"🔄 Fallback VSE→XETR: {sym} → {new_sym}")
             return new_sym, "XETR", "XETR"
         else:
-            logger.warning(f"⚠️ Ticker VSE inconnu: {sym} - tentative avec XETR quand même")
+            logger.warning(f"⚠️ Ticker VSE inconnu: {sym} - tentative avec XETR")
             return sym, "XETR", "XETR"
     
     return sym, exchange, mic_code
 
 
 # ============================================================
-# HELPERS PARSING ROBUSTE
+# HELPERS
 # ============================================================
-
-def _extract_ts_values(js: Any) -> List[dict]:
-    """
-    Extrait les valeurs time_series de façon ROBUSTE.
-    Le SDK TwelveData peut retourner plusieurs formats différents.
-    
-    Formats possibles:
-    - tuple: (data, meta) -> on prend data
-    - dict avec "values": [{...}, {...}] -> on prend values
-    - dict "single bar": {"datetime": ..., "close": ...}
-    - list directe: [{...}, {...}]
-    - dict avec clés dates: {"2024-12-30": {...}, "2024-12-29": {...}}
-    """
-    # Déballer tuple si nécessaire
-    if isinstance(js, tuple):
-        js = js[0]
-    
-    if isinstance(js, dict):
-        # Cas 1: {"values": [...], "meta": {...}, "status": "ok"}
-        if "values" in js and isinstance(js["values"], list):
-            return js["values"]
-        
-        # Cas 2: Erreur API
-        if js.get("status") == "error":
-            return []
-        
-        # Cas 3: Dict avec clés dates {"2024-12-30": {...}, ...}
-        # Le SDK peut retourner ce format
-        if js and all(isinstance(k, str) and len(k) >= 10 for k in js.keys() if k not in ["meta", "status"]):
-            result = []
-            for date_key, val in js.items():
-                if date_key in ["meta", "status"]:
-                    continue
-                if isinstance(val, dict):
-                    # Ajouter la date si pas présente
-                    if "datetime" not in val:
-                        val = {**val, "datetime": date_key}
-                    result.append(val)
-            if result:
-                return result
-        
-        # Cas 4: Single bar {"datetime": ..., "close": ...}
-        if "datetime" in js and ("close" in js or "price" in js):
-            return [js]
-        
-        # Cas 5: Dict avec une seule valeur qui est une liste
-        for key, val in js.items():
-            if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
-                return val
-        
-        return []
-    
-    if isinstance(js, list):
-        return js
-    
-    return []
-
 
 def _safe_float(x: Any) -> Optional[float]:
     """Convertit en float de façon sécurisée"""
@@ -161,6 +100,56 @@ def _safe_float(x: Any) -> Optional[float]:
         return None
 
 
+def _normalize_and_sort(values: Any) -> List[Tuple[str, float]]:
+    """
+    Normalise et TRIE les valeurs par date ASC.
+    
+    IMPORTANT: L'API Twelve Data retourne souvent en ordre DESC (plus récent d'abord).
+    On DOIT trier nous-mêmes pour avoir l'ordre chronologique.
+    
+    Returns:
+        Liste de tuples (date_str, close_float) triés par date ASC
+    """
+    rows = []
+    
+    # Extraire les valeurs selon le format
+    if values is None:
+        return []
+    
+    # Si c'est un tuple, prendre le premier élément
+    if isinstance(values, tuple):
+        values = values[0]
+    
+    # Si c'est un dict avec "values"
+    if isinstance(values, dict):
+        if "values" in values and isinstance(values["values"], list):
+            values = values["values"]
+        elif values.get("status") == "error":
+            return []
+        elif "datetime" in values:  # Single bar
+            values = [values]
+        else:
+            return []
+    
+    # Maintenant values devrait être une liste
+    if not isinstance(values, list):
+        return []
+    
+    # Parser chaque valeur
+    for v in values:
+        if not isinstance(v, dict):
+            continue
+        d = (v.get("datetime") or "")[:10]
+        c = _safe_float(v.get("close"))
+        if d and c is not None:
+            rows.append((d, c))
+    
+    # === TRI OBLIGATOIRE PAR DATE ASC ===
+    rows.sort(key=lambda x: x[0])
+    
+    return rows
+
+
 # ============================================================
 # FONCTIONS API TWELVE DATA
 # ============================================================
@@ -168,69 +157,43 @@ def _safe_float(x: Any) -> Optional[float]:
 def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str = None) -> Tuple[float, float, str]:
     """
     Récupère le dernier close propre + variation jour.
-    Privilégie previous_close si le marché est ouvert.
-    
-    Args:
-        sym: Symbole de l'instrument (ex: "EXV5", "AAPL")
-        region: Région pour le timezone ("US", "Europe", "Asia", "Other")
-        exchange: Code exchange (ex: "XETR", "NYSE")
-        mic_code: MIC code ISO 10383 (ex: "XETR", "ARCX") - PLUS PRÉCIS
-    
-    Returns:
-        (last_close, day_percent_change, source)
-        source = 'close' ou 'previous_close'
     """
     TD = get_td_client()
     if not TD:
         raise ValueError("Client Twelve Data non initialisé (API_KEY manquante?)")
     
-    # Appliquer le fallback VSE -> XETR
     sym, exchange, mic_code = _apply_vse_fallback(sym, exchange, mic_code)
     
     try:
         timezone = TZ_BY_REGION.get(region, "UTC")
+        params = {"symbol": sym, "timezone": timezone}
         
-        # Construire les paramètres de la requête
-        params = {
-            "symbol": sym,
-            "timezone": timezone
-        }
-        
-        # Priorité: mic_code > exchange (MIC est plus précis)
         if mic_code:
             params["mic_code"] = mic_code
         elif exchange:
             params["exchange"] = exchange
-        
-        logger.debug(f"📡 quote_one({sym}) params: {params}")
         
         q_json = TD.quote(**params).as_json()
         
         if isinstance(q_json, tuple):
             q_json = q_json[0]
         
-        # Vérifier les erreurs API
         if isinstance(q_json, dict) and q_json.get("status") == "error":
             raise ValueError(f"API Error: {q_json.get('message', 'Unknown error')}")
         
-        # Extraire close et previous_close
         close = _safe_float(q_json.get("close"))
         pc = _safe_float(q_json.get("previous_close"))
         
-        # Déterminer si le marché est ouvert
         is_open_raw = q_json.get("is_market_open", False)
         is_open = is_open_raw == "true" if isinstance(is_open_raw, str) else bool(is_open_raw)
         
-        # Si marché ouvert et previous_close existe -> on prend previous_close
         last_close = pc if (is_open and pc is not None) else close
         
         if last_close is None:
-            raise ValueError(f"Quote sans close valide pour {sym}: {q_json}")
+            raise ValueError(f"Quote sans close valide pour {sym}")
         
         day_pct = _safe_float(q_json.get("percent_change")) or 0.0
         source = "previous_close" if (is_open and pc is not None) else "close"
-        
-        logger.debug(f"Quote {sym}: {last_close} ({day_pct:+.2f}%), source: {source}")
         
         return last_close, day_pct, source
         
@@ -241,173 +204,118 @@ def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str 
 
 def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: str = None) -> Tuple[float, str]:
     """
-    Baseline YTD = valeur la plus proche du 1er janvier de l'année en cours.
+    Baseline YTD = valeur la plus proche du 1er janvier.
     
     Stratégie:
     1. Dernier close de décembre N-1 (ex: 2024-12-30)
     2. OU premier close de janvier N (ex: 2025-01-02)
     
-    v12: Fix parsing + debug amélioré
-    - Affiche le type de réponse reçue
-    - Gère plus de formats de réponse SDK
-    - outputsize=5000 pour forcer plus de données
-    
-    Args:
-        sym: Symbole de l'instrument
-        region: Région (non utilisé)
-        exchange: Code exchange (ex: "NYSE", "XETR")
-        mic_code: MIC code ISO 10383 (ex: "ARCX", "XETR")
-    
-    Returns:
-        (baseline_close, baseline_date_iso)
+    v13: Fix critique
+    - Fenêtre CIBLÉE: 15 dec → 15 jan (pas tout l'historique)
+    - TRI OBLIGATOIRE après récupération (API retourne en DESC!)
+    - VALIDATION: rejette si pas de dec N-1 ou jan N
+    - order=ASC demandé à l'API (mais on trie quand même)
     """
     TD = get_td_client()
     if not TD:
         raise ValueError("Client Twelve Data non initialisé")
     
-    # Appliquer le fallback VSE -> XETR
     sym, exchange, mic_code = _apply_vse_fallback(sym, exchange, mic_code)
     
     year = dt.date.today().year
     prev = year - 1
     
-    # === v12: MULTIPLE STRATEGIES avec outputsize EXPLICITE ===
+    # === FENÊTRE CIBLÉE autour du changement d'année ===
+    start = f"{prev}-12-15"
+    end = f"{year}-01-15"
     
-    strategies = []
-    
-    # Stratégie 1: Dates ciblées + mic_code + outputsize=5000
-    if mic_code:
-        strategies.append({
-            "symbol": sym,
-            "interval": "1day",
-            "start_date": f"{prev}-12-01",
-            "end_date": f"{year}-01-31",
-            "outputsize": 5000,  # Force beaucoup de données
-            "mic_code": mic_code,
-            "label": f"targeted + mic_code={mic_code} + outputsize=5000"
-        })
-    
-    # Stratégie 2: Dates ciblées + exchange + outputsize=5000
+    # Tentatives: exchange -> mic_code comme exchange -> symbol seul
+    attempts = []
     if exchange:
-        strategies.append({
-            "symbol": sym,
-            "interval": "1day",
-            "start_date": f"{prev}-12-01",
-            "end_date": f"{year}-01-31",
-            "outputsize": 5000,
-            "exchange": exchange,
-            "label": f"targeted + exchange={exchange} + outputsize=5000"
-        })
+        attempts.append(("exchange", {"exchange": exchange}))
+    if mic_code:
+        attempts.append(("mic_code", {"mic_code": mic_code}))
+        # Aussi essayer mic_code comme exchange (parfois ça marche mieux)
+        attempts.append(("mic_as_exchange", {"exchange": mic_code}))
+    attempts.append(("symbol_only", {}))
     
-    # Stratégie 3: Dates ciblées sans exchange/mic
-    strategies.append({
-        "symbol": sym,
-        "interval": "1day",
-        "start_date": f"{prev}-12-01",
-        "end_date": f"{year}-01-31",
-        "outputsize": 5000,
-        "label": "targeted + symbol only + outputsize=5000"
-    })
+    last_diag = None
     
-    last_error = None
-    
-    for i, strategy in enumerate(strategies, 1):
-        label = strategy.pop("label")
-        
-        logger.info(f"📡 baseline_ytd({sym}) tentative {i}/{len(strategies)}: {label}")
+    for label, kwargs in attempts:
+        logger.info(f"📡 baseline_ytd({sym}) tentative: {label}")
         
         try:
-            ts = TD.time_series(**strategy)
+            ts = TD.time_series(
+                symbol=sym,
+                interval="1day",
+                start_date=start,
+                end_date=end,
+                outputsize=200,  # ~1 mois de bourse
+                order="ASC",     # Demander ASC (mais on trie quand même)
+                **kwargs
+            )
             
-            # Log de l'URL pour debug
+            # Log URL (sans API key)
             try:
                 url = ts.as_url()
                 safe_url = url.split("apikey=")[0] + "apikey=***" if "apikey=" in url else url
                 logger.info(f"  🔗 {safe_url}")
-            except Exception:
+            except:
                 pass
             
-            # Récupérer le JSON
             js = ts.as_json()
             
-            # DEBUG: Afficher le type et un aperçu
-            logger.info(f"  🔍 Réponse type={type(js).__name__}")
-            if isinstance(js, tuple):
-                logger.info(f"  🔍 Tuple len={len(js)}, types={[type(x).__name__ for x in js]}")
-            elif isinstance(js, dict):
-                keys = list(js.keys())[:5]
-                logger.info(f"  🔍 Dict keys={keys}")
-                if "values" in js:
-                    logger.info(f"  🔍 values type={type(js['values']).__name__}, len={len(js['values']) if isinstance(js['values'], list) else 'N/A'}")
-            elif isinstance(js, list):
-                logger.info(f"  🔍 List len={len(js)}")
-            
-            # Extraire les valeurs
-            values = _extract_ts_values(js)
-            
-            if not values:
-                logger.warning(f"  ⚠️ Aucune valeur extraite")
-                last_error = "Aucune valeur extraite"
-                continue
-            
-            # Parser les dates et closes
-            rows = []
-            for v in values:
-                d = (v.get("datetime") or "")[:10]
-                c = _safe_float(v.get("close"))
-                if d and c is not None:
-                    rows.append((d, c))
+            # === NORMALISER ET TRIER ===
+            rows = _normalize_and_sort(js)
             
             if not rows:
-                logger.warning(f"  ⚠️ Aucune donnée valide après parsing")
-                last_error = "Aucune donnée valide"
+                last_diag = f"{label}: aucune donnée"
+                logger.warning(f"  ⚠️ {last_diag}")
                 continue
             
-            # Trier par date (IMPORTANT!)
-            rows.sort(key=lambda x: x[0])
-            
-            # Log des dates reçues
+            # Log de la couverture
             logger.info(f"  📅 {len(rows)} points, min={rows[0][0]}, max={rows[-1][0]}")
             
-            # === TROUVER LA BASELINE LA PLUS PROCHE DU 1ER JANVIER ===
+            # Filtrer dans la fenêtre demandée (sécurité)
+            rows = [(d, c) for (d, c) in rows if start <= d <= end]
             
-            # 1) DERNIER jour de décembre N-1 (idéal: 2024-12-30 ou 2024-12-31)
+            if not rows:
+                last_diag = f"{label}: données hors fenêtre"
+                logger.warning(f"  ⚠️ {last_diag}")
+                continue
+            
+            # Séparer dec N-1 et jan N
             dec_rows = [(d, c) for (d, c) in rows if d.startswith(f"{prev}-12")]
-            if dec_rows:
-                d0, c0 = max(dec_rows, key=lambda x: x[0])
-                logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f}) [dernier jour dec {prev}]")
-                return c0, d0
-            
-            # 2) PREMIER jour de janvier N (idéal: 2025-01-02)
             jan_rows = [(d, c) for (d, c) in rows if d.startswith(f"{year}-01")]
+            
+            logger.info(f"  📊 {len(dec_rows)} jours dec-{prev}, {len(jan_rows)} jours jan-{year}")
+            
+            # === VALIDATION: on veut dec N-1 OU jan N ===
+            if not dec_rows and not jan_rows:
+                last_diag = f"{label}: pas de dec-{prev} ni jan-{year}"
+                logger.warning(f"  ⚠️ {last_diag}")
+                continue
+            
+            # === SÉLECTION DE LA BASELINE ===
+            
+            # 1) DERNIER jour de décembre N-1 (idéal)
+            if dec_rows:
+                d0, c0 = max(dec_rows, key=lambda x: x[0])  # max = plus récent
+                logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f}) [dernier dec-{prev}]")
+                return c0, d0
+            
+            # 2) PREMIER jour de janvier N (fallback)
             if jan_rows:
-                d0, c0 = min(jan_rows, key=lambda x: x[0])
-                logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f}) [premier jour jan {year}]")
+                d0, c0 = min(jan_rows, key=lambda x: x[0])  # min = plus ancien
+                logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f}) [premier jan-{year}]")
                 return c0, d0
-            
-            # 3) Fallback: dernier jour de N-1 disponible
-            prev_rows = [(d, c) for (d, c) in rows if d.startswith(str(prev))]
-            if prev_rows:
-                d0, c0 = max(prev_rows, key=lambda x: x[0])
-                logger.warning(f"  ⚠️ Baseline approximative = {d0} (close: {c0:.2f})")
-                return c0, d0
-            
-            # 4) Fallback: premier jour de N disponible
-            curr_rows = [(d, c) for (d, c) in rows if d.startswith(str(year))]
-            if curr_rows:
-                d0, c0 = min(curr_rows, key=lambda x: x[0])
-                logger.warning(f"  ⚠️ Baseline approximative = {d0} (close: {c0:.2f})")
-                return c0, d0
-            
-            logger.warning(f"  ⚠️ Pas de données {prev} ou {year}")
-            last_error = f"Pas de données {prev} ou {year}"
             
         except Exception as e:
-            logger.warning(f"  ⚠️ Exception: {e}")
-            last_error = str(e)
+            last_diag = f"{label}: exception {e}"
+            logger.warning(f"  ⚠️ {last_diag}")
             continue
     
-    raise ValueError(f"Aucune donnée exploitable pour {sym}. Dernière erreur: {last_error}")
+    raise ValueError(f"Aucune baseline exploitable pour {sym}. Last={last_diag}")
 
 
 # ============================================================
@@ -415,19 +323,10 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
 # ============================================================
 
 def format_value(value: float, currency: str) -> str:
-    """
-    Formate une valeur selon la devise.
-    
-    Note: GBp = pence britanniques (1 GBP = 100 GBp)
-    On affiche en GBp tel quel pour éviter toute confusion.
-    """
-    # Devises avec 2 décimales
     if currency in ["EUR", "USD", "GBP", "CHF", "CAD", "AUD", "HKD", "SGD", "MXN"]:
         return f"{value:,.2f}"
-    # GBp (pence) - afficher tel quel avec indication
     elif currency == "GBp":
-        return f"{value:,.2f}"  # Sera affiché avec "GBp" comme unité
-    # Devises sans décimales
+        return f"{value:,.2f}"
     elif currency in ["JPY", "KRW", "TWD", "INR", "TRY"]:
         return f"{value:,.0f}"
     else:
@@ -435,38 +334,22 @@ def format_value(value: float, currency: str) -> str:
 
 
 def format_value_with_currency(value: float, currency: str) -> str:
-    """
-    Formate une valeur AVEC le symbole de devise.
-    Gère correctement GBp (pence) vs GBP (livres).
-    """
     CURRENCY_SYMBOLS = {
-        "EUR": "€",
-        "USD": "$",
-        "GBP": "£",
-        "GBp": "p",  # Pence symbol
-        "CHF": "CHF",
-        "JPY": "¥",
-        "CAD": "C$",
-        "AUD": "A$",
+        "EUR": "€", "USD": "$", "GBP": "£", "GBp": "p",
+        "CHF": "CHF", "JPY": "¥", "CAD": "C$", "AUD": "A$",
     }
-    
     formatted = format_value(value, currency)
     symbol = CURRENCY_SYMBOLS.get(currency, currency)
-    
-    # Pour GBp, le symbole va après (ex: "4004.50p")
     if currency == "GBp":
         return f"{formatted}{symbol}"
-    # Pour les autres, symbole avant
     return f"{symbol}{formatted}"
 
 
 def format_percent(value: float) -> str:
-    """Formate un pourcentage avec signe"""
     return f"{value:+.2f} %"
 
 
 def parse_percentage(percent_str: str) -> float:
-    """Convertit une chaîne de pourcentage en float"""
     if not percent_str:
         return 0.0
     clean_str = percent_str.replace('%', '').replace(' ', '').replace(',', '.')
@@ -481,7 +364,6 @@ def parse_percentage(percent_str: str) -> float:
 # ============================================================
 
 def determine_region_from_country(country: str) -> str:
-    """Détermine la région API (US/Europe/Asia/Other) depuis le pays"""
     europe = ["France", "Allemagne", "Royaume Uni", "Italie", "Espagne", 
               "Suisse", "Pays-Bas", "Suède", "Zone Euro", "Europe", "Pays-bas"]
     north_america = ["États-Unis", "Etats-Unis", "Canada", "Mexique"]
@@ -499,7 +381,6 @@ def determine_region_from_country(country: str) -> str:
 
 
 def determine_market_region(country: str) -> str:
-    """Détermine la région pour le JSON de sortie (europe/north-america/etc)"""
     europe = ["France", "Allemagne", "Royaume Uni", "Italie", "Espagne", 
               "Suisse", "Pays-Bas", "Suède", "Zone Euro", "Europe", "Pays-bas"]
     north_america = ["États-Unis", "Etats-Unis", "Canada", "Mexique"]
