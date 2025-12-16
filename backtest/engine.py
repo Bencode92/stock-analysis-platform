@@ -1,6 +1,14 @@
 # backtest/engine.py
 """
-Moteur de backtest pour le Portfolio Engine v5.
+Moteur de backtest pour le Portfolio Engine v7.
+
+V7 (P1-8 Net/Gross Returns 2024-12-16):
+- Separate gross and net returns calculation
+- gross_return_pct: before transaction costs
+- net_return_pct: after transaction costs (displayed to user)
+- total_costs_pct: cumulative transaction costs as % of initial capital
+- cost_drag_pct: impact of costs on performance (gross - net)
+- Transparency for AMF compliance
 
 V6 (P1-7 Profile Benchmarks 2024-12-16):
 - Profile-specific benchmarks (Agressif→QQQ, Modéré→URTH, Stable→AGG)
@@ -31,7 +39,7 @@ V2: FIX CRITIQUE - UTILISER POIDS FIXES DU PORTFOLIO
 Backtest sur 90 jours glissants avec:
 - Poids fixes (pas de recalcul dynamique)
 - Rebalancing configurable (daily/weekly/monthly)
-- Coûts de transaction
+- Coûts de transaction (transparents via gross/net)
 - Métriques de performance
 - Comparaison benchmark (par profil)
 """
@@ -115,24 +123,37 @@ class BacktestConfig:
 
 @dataclass
 class BacktestResult:
-    """Résultats du backtest."""
-    equity_curve: pd.Series               # Valeur du portefeuille par date
-    daily_returns: pd.Series              # Rendements journaliers
+    """
+    Résultats du backtest.
+    
+    V7 P1-8: Added gross_equity_curve for transparency.
+    """
+    equity_curve: pd.Series               # Valeur du portefeuille par date (NET)
+    daily_returns: pd.Series              # Rendements journaliers (NET)
     weights_history: pd.DataFrame         # Historique des poids
     trades: pd.DataFrame                  # Détail des rebalancements
     stats: Dict[str, float] = field(default_factory=dict)
     config: Optional[BacktestConfig] = None
     benchmark_curve: Optional[pd.Series] = None  # Courbe benchmark
+    gross_equity_curve: Optional[pd.Series] = None  # V7 P1-8: Courbe BRUTE (avant frais)
 
 
 def compute_backtest_stats(
     equity_curve: pd.Series,
     daily_returns: pd.Series,
     trades_df: pd.DataFrame,
-    risk_free_rate: float = DEFAULT_RISK_FREE_RATE  # v3 FIX: 0.0 → 0.045
+    risk_free_rate: float = DEFAULT_RISK_FREE_RATE,  # v3 FIX: 0.0 → 0.045
+    gross_equity_curve: Optional[pd.Series] = None,  # V7 P1-8: Add gross curve
+    initial_capital: float = 100000.0,  # V7 P1-8: For cost calculation
+    total_transaction_costs: float = 0.0,  # V7 P1-8: Cumulative costs
 ) -> Dict[str, float]:
     """
     Calcule les statistiques de performance.
+    
+    V7 P1-8:
+    - Separate gross and net returns
+    - Expose total_costs_pct and cost_drag_pct
+    - Transparency for AMF compliance
     
     v6 P1-7:
     - Benchmark metadata exposed in methodology
@@ -152,7 +173,7 @@ def compute_backtest_stats(
     - Ajout méthodologie
     
     Returns:
-        Dict avec CAGR, volatilité, Sharpe, max drawdown, turnover, etc.
+        Dict avec CAGR, volatilité, Sharpe, max drawdown, turnover, gross/net returns, etc.
     """
     stats = {}
     
@@ -160,25 +181,69 @@ def compute_backtest_stats(
     n_days = len(equity_curve)
     n_years = n_days / 252
     
-    # Performance totale
-    total_return = (equity_curve.iloc[-1] / equity_curve.iloc[0]) - 1
-    stats["total_return_pct"] = round(total_return * 100, 2)
+    # ===== V7 P1-8: NET RETURN (after transaction costs) =====
+    net_return = (equity_curve.iloc[-1] / equity_curve.iloc[0]) - 1
+    stats["net_return_pct"] = round(net_return * 100, 2)
+    stats["total_return_pct"] = stats["net_return_pct"]  # Backward compatibility
     
-    # CAGR (annualisé)
-    if n_years > 0:
-        cagr = (1 + total_return) ** (1 / n_years) - 1
-        stats["cagr_pct"] = round(cagr * 100, 2)
+    # ===== V7 P1-8: GROSS RETURN (before transaction costs) =====
+    if gross_equity_curve is not None and len(gross_equity_curve) > 0:
+        gross_return = (gross_equity_curve.iloc[-1] / gross_equity_curve.iloc[0]) - 1
+        stats["gross_return_pct"] = round(gross_return * 100, 2)
+        
+        # Cost drag = difference between gross and net
+        cost_drag = gross_return - net_return
+        stats["cost_drag_pct"] = round(cost_drag * 100, 2)
     else:
-        stats["cagr_pct"] = stats["total_return_pct"]
+        # Fallback: estimate from trades if gross curve not available
+        stats["gross_return_pct"] = stats["net_return_pct"]
+        stats["cost_drag_pct"] = 0.0
     
-    # Volatilité annualisée
+    # ===== V7 P1-8: TOTAL TRANSACTION COSTS =====
+    if total_transaction_costs > 0:
+        stats["total_costs_pct"] = round((total_transaction_costs / initial_capital) * 100, 2)
+        stats["total_costs_value"] = round(total_transaction_costs, 2)
+    else:
+        # Fallback: sum from trades DataFrame
+        if len(trades_df) > 0 and "tx_cost" in trades_df.columns:
+            # tx_cost is in decimal (e.g., 0.001 for 0.1%)
+            # Multiply by capital at each trade to get approximate cost
+            estimated_cost = trades_df["tx_cost"].sum() * initial_capital
+            stats["total_costs_pct"] = round(trades_df["tx_cost"].sum() * 100, 2)
+            stats["total_costs_value"] = round(estimated_cost, 2)
+        else:
+            stats["total_costs_pct"] = 0.0
+            stats["total_costs_value"] = 0.0
+    
+    # V7 P1-8: Cost breakdown for transparency
+    stats["cost_breakdown"] = {
+        "initial_purchase": round(total_transaction_costs, 2) if total_transaction_costs > 0 else 0,
+        "rebalancing": 0,  # For fixed weights, no rebalancing costs
+        "total": stats["total_costs_value"],
+    }
+    
+    # CAGR (annualisé) - based on NET return
+    if n_years > 0:
+        cagr = (1 + net_return) ** (1 / n_years) - 1
+        stats["cagr_pct"] = round(cagr * 100, 2)
+        
+        # V7 P1-8: Also compute gross CAGR for comparison
+        if gross_equity_curve is not None and len(gross_equity_curve) > 0:
+            gross_return = (gross_equity_curve.iloc[-1] / gross_equity_curve.iloc[0]) - 1
+            gross_cagr = (1 + gross_return) ** (1 / n_years) - 1
+            stats["gross_cagr_pct"] = round(gross_cagr * 100, 2)
+    else:
+        stats["cagr_pct"] = stats["net_return_pct"]
+        stats["gross_cagr_pct"] = stats.get("gross_return_pct", stats["net_return_pct"])
+    
+    # Volatilité annualisée (based on net returns)
     vol = daily_returns.std() * np.sqrt(252)
     stats["volatility_pct"] = round(vol * 100, 2)
     
     # v3 FIX: Stocker le taux sans risque utilisé
     stats["risk_free_rate_pct"] = round(risk_free_rate * 100, 2)
     
-    # Calcul Sharpe (toujours calculé en interne)
+    # Calcul Sharpe (toujours calculé en interne) - based on NET returns
     excess_return = daily_returns.mean() - (risk_free_rate / 252)
     if daily_returns.std() > 0:
         sharpe_computed = (excess_return / daily_returns.std()) * np.sqrt(252)
@@ -203,7 +268,7 @@ def compute_backtest_stats(
         stats["sharpe_significant"] = True
         stats["sharpe_daily"] = None
     
-    # Max Drawdown
+    # Max Drawdown (based on net equity curve)
     rolling_max = equity_curve.expanding().max()
     drawdown = (equity_curve - rolling_max) / rolling_max
     max_dd = drawdown.min()
@@ -243,6 +308,9 @@ def compute_backtest_stats(
         "transaction_cost_bp": 10,
         "data_source": get_data_source_string(),  # P0-1 FIX: was "Yahoo Finance (adjusted close)"
         "risk_free_rate_pct": round(risk_free_rate * 100, 2),
+        # V7 P1-8: Add cost transparency to methodology
+        "return_type": "net (after transaction costs)",
+        "gross_return_available": gross_equity_curve is not None,
     }
     
     # Warning si période insuffisante
@@ -405,6 +473,7 @@ def get_rebalance_dates(
 
 # ============================================================================
 # V2: NOUVELLE FONCTION - BACKTEST AVEC POIDS FIXES
+# V7 P1-8: Added gross/net return separation
 # ============================================================================
 
 def run_backtest_fixed_weights(
@@ -417,6 +486,12 @@ def run_backtest_fixed_weights(
     
     C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
     Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
+    
+    V7 P1-8:
+    - Track both GROSS and NET equity curves
+    - gross_return: performance before transaction costs
+    - net_return: performance after transaction costs (displayed to user)
+    - Transparent cost calculation for AMF compliance
     
     V6 P1-7:
     - Profile-specific benchmark auto-selection
@@ -441,7 +516,7 @@ def run_backtest_fixed_weights(
         config: Configuration du backtest
     
     Returns:
-        BacktestResult avec equity curve, stats, etc.
+        BacktestResult avec equity curve (net), gross_equity_curve, stats, etc.
     """
     logger.info(f"Starting FIXED WEIGHTS backtest: {config.profile}")
     logger.info(f"Fixed weights: {len(fixed_weights)} assets, sum={sum(fixed_weights.values()):.2%}")
@@ -488,24 +563,35 @@ def run_backtest_fixed_weights(
     # Convertir en Series pour faciliter les calculs
     weights_series = pd.Series(effective_weights)
     
-    # Initialisation
-    equity = config.initial_capital
-    equity_curve = {}
-    daily_returns_list = []
+    # ===== V7 P1-8: INITIALIZE BOTH GROSS AND NET EQUITY =====
+    equity_gross = config.initial_capital  # GROSS: never reduced by costs
+    equity_net = config.initial_capital    # NET: reduced by costs
+    
+    gross_equity_curve = {}
+    net_equity_curve = {}
+    daily_returns_list = []  # Based on gross returns (market performance)
+    daily_returns_net_list = []  # Based on net returns (after costs)
     
     # Dates de rebalancement (pour le turnover - ici turnover = 0 car poids fixes)
     rebal_dates = get_rebalance_dates(dates, config.rebalance_freq)
     
-    # Coût initial d'achat
-    initial_cost = config.transaction_cost_bp / 10000
-    equity *= (1 - initial_cost)
+    # ===== V7 P1-8: TRACK TRANSACTION COSTS SEPARATELY =====
+    initial_cost_rate = config.transaction_cost_bp / 10000
+    initial_cost_value = equity_net * initial_cost_rate
+    total_transaction_costs = initial_cost_value
+    
+    # Apply initial cost only to NET equity
+    equity_net *= (1 - initial_cost_rate)
     
     trades = [{
         "date": dates[0],
         "n_assets": len(effective_weights),
         "turnover": 1.0,  # Achat initial = 100% turnover
-        "tx_cost": initial_cost,
+        "tx_cost": initial_cost_rate,
+        "tx_cost_value": initial_cost_value,  # V7 P1-8: Absolute cost value
     }]
+    
+    logger.info(f"P1-8: Initial transaction cost: {initial_cost_value:.2f} ({initial_cost_rate*100:.2f}%)")
     
     # Boucle sur les jours
     prev_date = None
@@ -521,14 +607,20 @@ def run_backtest_fixed_weights(
                         asset_ret = (price_today / price_prev) - 1
                         daily_ret += weight * asset_ret
             
-            equity *= (1 + daily_ret)
+            # V7 P1-8: Apply return to BOTH gross and net
+            equity_gross *= (1 + daily_ret)
+            equity_net *= (1 + daily_ret)
+            
             daily_returns_list.append({"date": date, "return": daily_ret})
         
-        equity_curve[date] = equity
+        # V7 P1-8: Track both curves
+        gross_equity_curve[date] = equity_gross
+        net_equity_curve[date] = equity_net
         prev_date = date
     
     # Construire les résultats
-    equity_series = pd.Series(equity_curve).sort_index()
+    gross_equity_series = pd.Series(gross_equity_curve).sort_index()
+    net_equity_series = pd.Series(net_equity_curve).sort_index()
     returns_series = pd.DataFrame(daily_returns_list).set_index("date")["return"] if daily_returns_list else pd.Series()
     trades_df = pd.DataFrame(trades)
     
@@ -538,18 +630,27 @@ def run_backtest_fixed_weights(
         **effective_weights
     }])
     
-    # v4 FIX: Stats avec Sharpe masqué si période < 252j
+    # V7 P1-8: Stats with BOTH gross and net returns
     stats = compute_backtest_stats(
-        equity_series, 
-        returns_series, 
-        trades_df,
-        risk_free_rate=DEFAULT_RISK_FREE_RATE  # 4.5%
+        equity_curve=net_equity_series,  # Primary is NET
+        daily_returns=returns_series,
+        trades_df=trades_df,
+        risk_free_rate=DEFAULT_RISK_FREE_RATE,  # 4.5%
+        gross_equity_curve=gross_equity_series,  # V7 P1-8: Add gross for comparison
+        initial_capital=config.initial_capital,
+        total_transaction_costs=total_transaction_costs,
     )
     
     # Ajouter info sur la couverture
     stats["weight_coverage_pct"] = round(total_weight * 100, 1)
     stats["n_assets_with_data"] = len(effective_weights)
     stats["n_assets_total"] = len(fixed_weights)
+    
+    # V7 P1-8: Log gross vs net
+    logger.info(f"P1-8: Gross return: {stats.get('gross_return_pct', 'N/A')}%")
+    logger.info(f"P1-8: Net return: {stats.get('net_return_pct', 'N/A')}%")
+    logger.info(f"P1-8: Cost drag: {stats.get('cost_drag_pct', 'N/A')}%")
+    logger.info(f"P1-8: Total costs: {stats.get('total_costs_value', 'N/A')} ({stats.get('total_costs_pct', 'N/A')}%)")
     
     # ===== V6 P1-7: PROFILE-SPECIFIC BENCHMARK COMPARISON =====
     benchmark_curve = None
@@ -558,14 +659,14 @@ def run_backtest_fixed_weights(
     if benchmark_symbol and benchmark_symbol in prices.columns:
         logger.info(f"Computing benchmark comparison vs {benchmark_symbol} (profile: {config.profile})")
         
-        bench_prices = prices.loc[equity_series.index, benchmark_symbol].dropna()
+        bench_prices = prices.loc[net_equity_series.index, benchmark_symbol].dropna()
         
         if len(bench_prices) > 10:
             benchmark_curve = (bench_prices / bench_prices.iloc[0]) * config.initial_capital
             
             # V6 P1-7: Pass profile for metadata
             bench_stats = compute_benchmark_stats(
-                equity_series,
+                net_equity_series,
                 returns_series,
                 bench_prices,
                 benchmark_symbol,
@@ -578,7 +679,7 @@ def run_backtest_fixed_weights(
             stats["methodology"]["benchmark_rationale"] = stats.get("benchmark_metadata", {}).get("rationale", "")
             
             logger.info(f"Benchmark return: {stats.get('benchmark_return_pct', 'N/A')}%")
-            logger.info(f"Portfolio return: {stats.get('total_return_pct', 'N/A')}%")
+            logger.info(f"Portfolio return (NET): {stats.get('net_return_pct', 'N/A')}%")
             logger.info(f"Excess return: {stats.get('excess_return_pct', 'N/A')}%")
     else:
         if benchmark_symbol:
@@ -590,11 +691,11 @@ def run_backtest_fixed_weights(
                     fallback_sym = fallback_info["fallback_symbol"]
                     logger.info(f"Using fallback benchmark: {fallback_sym}")
                     
-                    bench_prices = prices.loc[equity_series.index, fallback_sym].dropna()
+                    bench_prices = prices.loc[net_equity_series.index, fallback_sym].dropna()
                     if len(bench_prices) > 10:
                         benchmark_curve = (bench_prices / bench_prices.iloc[0]) * config.initial_capital
                         bench_stats = compute_benchmark_stats(
-                            equity_series, returns_series, bench_prices, fallback_sym, config.profile
+                            net_equity_series, returns_series, bench_prices, fallback_sym, config.profile
                         )
                         stats.update(bench_stats)
                         stats["benchmark_fallback"] = True
@@ -602,16 +703,17 @@ def run_backtest_fixed_weights(
     
     # v4: Log avec sharpe_display
     sharpe_display = stats.get("sharpe_display", "N/A")
-    logger.info(f"Backtest complete: {stats['total_return_pct']}% return, Sharpe={sharpe_display} (Rf={DEFAULT_RISK_FREE_RATE*100}%), {stats['volatility_pct']}% vol")
+    logger.info(f"Backtest complete: NET={stats['net_return_pct']}%, GROSS={stats.get('gross_return_pct', 'N/A')}%, Sharpe={sharpe_display} (Rf={DEFAULT_RISK_FREE_RATE*100}%), {stats['volatility_pct']}% vol")
     
     return BacktestResult(
-        equity_curve=equity_series,
+        equity_curve=net_equity_series,  # V7 P1-8: Primary curve is NET
         daily_returns=returns_series,
         weights_history=weights_history,
         trades=trades_df,
         stats=stats,
         config=config,
         benchmark_curve=benchmark_curve,
+        gross_equity_curve=gross_equity_series,  # V7 P1-8: Add GROSS curve
     )
 
 
@@ -911,7 +1013,11 @@ def run_backtest(
 
 
 def print_backtest_report(result: BacktestResult):
-    """Affiche un rapport formaté du backtest."""
+    """
+    Affiche un rapport formaté du backtest.
+    
+    V7 P1-8: Added gross vs net section for transparency.
+    """
     print("\n" + "="*60)
     print("📊 BACKTEST REPORT")
     print("="*60)
@@ -928,8 +1034,21 @@ def print_backtest_report(result: BacktestResult):
         n_total = result.stats.get("n_assets_total", "?")
         print(f"Coverage: {n_with_data}/{n_total} assets ({coverage}%)")
     
-    print("\n--- Performance ---")
-    print(f"Total Return:     {result.stats.get('total_return_pct', 0):>8.2f}%")
+    # ===== V7 P1-8: GROSS vs NET SECTION =====
+    print("\n--- Gross vs Net Performance ---")
+    gross_return = result.stats.get('gross_return_pct', 'N/A')
+    net_return = result.stats.get('net_return_pct', result.stats.get('total_return_pct', 0))
+    cost_drag = result.stats.get('cost_drag_pct', 0)
+    total_costs = result.stats.get('total_costs_value', 0)
+    total_costs_pct = result.stats.get('total_costs_pct', 0)
+    
+    print(f"Gross Return:     {gross_return:>8}%  (before costs)")
+    print(f"Net Return:       {net_return:>8.2f}%  (after costs)")
+    print(f"Cost Drag:        {cost_drag:>8.2f}%  (gross - net)")
+    print(f"Total Costs:      {total_costs:>8.2f}  ({total_costs_pct:.2f}%)")
+    
+    print("\n--- Performance (NET) ---")
+    print(f"Total Return:     {result.stats.get('net_return_pct', result.stats.get('total_return_pct', 0)):>8.2f}%")
     print(f"CAGR:             {result.stats.get('cagr_pct', 0):>8.2f}%")
     print(f"Volatility:       {result.stats.get('volatility_pct', 0):>8.2f}%")
     
