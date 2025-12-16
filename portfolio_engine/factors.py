@@ -1,7 +1,12 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.3 — SEUL MOTEUR D'ALPHA
-=======================================
+FactorScorer v2.3.1 — SEUL MOTEUR D'ALPHA
+=========================================
+
+v2.3.1 Changes (P1-10 Stable Sort):
+- CORRECTIF: rank_assets() utilise maintenant stable_sort_assets()
+- Garantit un tri déterministe avec tie-breaker par symbol
+- Requis pour P1-5 DETERMINISTIC mode (core_hash cohérent)
 
 v2.3 Changes (Tactical Context Integration):
 - NOUVEAU: compute_factor_tactical_context() intégrant:
@@ -45,6 +50,29 @@ import logging
 import math
 import json
 from pathlib import Path
+
+# P1-10: Import stable sort for deterministic ordering
+try:
+    from utils.stable_sort import stable_sort_assets
+except ImportError:
+    # Fallback if utils not in path
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    try:
+        from utils.stable_sort import stable_sort_assets
+    except ImportError:
+        # Ultimate fallback: inline implementation
+        def stable_sort_assets(assets, score_key="composite_score", id_key="symbol", **kwargs):
+            """Fallback stable sort with tie-breaker."""
+            def sort_key(a):
+                score = a.get(score_key, 0) or 0
+                try:
+                    score = float(score)
+                except (TypeError, ValueError):
+                    score = 0.0
+                id_val = str(a.get(id_key) or a.get("id") or a.get("ticker") or "").lower()
+                return (-score, id_val)
+            return sorted(assets, key=sort_key)
 
 logger = logging.getLogger("portfolio_engine.factors")
 
@@ -543,12 +571,13 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.3 =============
+# ============= FACTOR SCORER v2.3.1 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
     
+    v2.3.1 — P1-10: rank_assets() utilise stable_sort_assets()
     v2.3 — Ajout tactical_context:
     - momentum: Performance récente (1m/3m/YTD) + Sharpe bonus (crypto)
     - quality_fundamental: Score Buffett intégré
@@ -909,9 +938,23 @@ class FactorScorer:
         return assets
     
     def rank_assets(self, assets: List[dict], top_n: Optional[int] = None) -> List[dict]:
-        """Trie les actifs par score décroissant et retourne le top N."""
+        """
+        Trie les actifs par score décroissant et retourne le top N.
+        
+        v2.3.1 P1-10: Utilise stable_sort_assets() avec tie-breaker par symbol
+        pour garantir un ordre déterministe (requis pour P1-5 DETERMINISTIC mode).
+        """
         scored = self.compute_scores(assets)
-        ranked = sorted(scored, key=lambda x: x.get("composite_score", 0), reverse=True)
+        
+        # P1-10: Tri stable avec tie-breaker par symbol
+        # Avant: sorted(scored, key=lambda x: x.get("composite_score", 0), reverse=True)
+        # Problème: Quand deux assets ont le même score, l'ordre était non-déterministe
+        ranked = stable_sort_assets(
+            scored,
+            score_key="composite_score",
+            id_key="symbol",
+            reverse_score=True
+        )
         
         if top_n:
             ranked = ranked[:top_n]
@@ -964,7 +1007,7 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.3):",
+        "Comparaison des poids factoriels par profil (v2.3.1):",
         "",
         "PARI CENTRAL: Quality + Momentum + Contexte tactique surperforment à horizon 1-3 ans.",
         ""
@@ -1050,3 +1093,25 @@ if __name__ == "__main__":
     print("\nRésultats:")
     for a in sorted(scored, key=lambda x: x["composite_score"], reverse=True):
         print(f"  {a['symbol']:6} | score: {a['composite_score']:+.3f} | tactical: {a['factor_scores']['tactical_context']:+.3f}")
+    
+    # Test P1-10: Vérifier que rank_assets est stable
+    print("\n" + "=" * 60)
+    print("Test P1-10: Stabilité du tri...")
+    
+    # Créer des actifs avec scores identiques
+    tie_test = [
+        {"symbol": "ZZZ", "category": "etf", "composite_score": 0.5},
+        {"symbol": "AAA", "category": "etf", "composite_score": 0.5},
+        {"symbol": "MMM", "category": "etf", "composite_score": 0.5},
+    ]
+    
+    ranked1 = stable_sort_assets(tie_test, score_key="composite_score", id_key="symbol")
+    ranked2 = stable_sort_assets(list(reversed(tie_test)), score_key="composite_score", id_key="symbol")
+    
+    order1 = [a["symbol"] for a in ranked1]
+    order2 = [a["symbol"] for a in ranked2]
+    
+    if order1 == order2 == ["AAA", "MMM", "ZZZ"]:
+        print("  ✅ P1-10 OK: Tri stable avec tie-breaker alphabétique")
+    else:
+        print(f"  ❌ P1-10 FAIL: order1={order1}, order2={order2}")
