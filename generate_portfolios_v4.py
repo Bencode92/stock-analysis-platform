@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.8.5: P1-8 - Net/gross returns separated for AMF transparency
 V4.8.4: FIX - Unpack tuple from load_prices_for_backtest (P1-7 compatibility)
 V4.8.3: P0-4 FIX - getattr() for ProfileConstraints (dataclass not dict)
 V4.8.2: P0-3 + P0-4 - _limitations field + check_feasibility() ex-ante
@@ -773,7 +774,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.8.4"
+        merged[profile]["_compliance_audit"]["version"] = "v4.8.5"
         
         # 4. Fallback si trop de contenu supprimé (>50%)
         if report.removal_ratio > 0.5:
@@ -993,6 +994,7 @@ def print_comparison_table(results: List[dict]):
     """
     Affiche un tableau comparatif des 3 profils.
     
+    V4.8.5 P1-8: Added gross/net/cost metrics for transparency.
     v4.7.1 FIX: Handle sharpe_ratio=None to avoid TypeError.
     """
     print("\n" + "="*80)
@@ -1002,14 +1004,17 @@ def print_comparison_table(results: List[dict]):
     print(f"\n{'Métrique':<25} | {'Agressif':>15} | {'Modéré':>15} | {'Stable':>15}")
     print("-"*80)
     
+    # V4.8.5 P1-8: Added gross/net/cost metrics for AMF transparency
     metrics = [
-        ("Total Return", "total_return_pct", "%"),
+        ("Gross Return", "gross_return_pct", "%"),      # P1-8: Before costs
+        ("Net Return", "net_return_pct", "%"),          # P1-8: After costs
+        ("Cost Drag", "cost_drag_pct", "%"),            # P1-8: Impact of costs
         ("CAGR", "cagr_pct", "%"),
         ("Volatility", "volatility_pct", "%"),
         ("Sharpe Ratio", "sharpe_ratio", ""),
         ("Max Drawdown", "max_drawdown_pct", "%"),
         ("Win Rate", "win_rate_pct", "%"),
-        ("Weight Coverage", "weight_coverage_pct", "%"),  # ✅ NOUVEAU
+        ("Weight Coverage", "weight_coverage_pct", "%"),
         ("Benchmark Return", "benchmark_return_pct", "%"),
         ("Excess Return", "excess_return_pct", "%"),
     ]
@@ -1052,15 +1057,15 @@ def print_comparison_table(results: List[dict]):
     else:
         print(f"   Meilleur Sharpe: Non calculable (période < 1 an)")
     
-    # v4.7.1 FIX: Filter out None/invalid return values
+    # V4.8.5 P1-8: Use net_return for comparison (fallback to total_return)
     returns = [
-        (r["profile"], r["stats"].get("total_return_pct")) 
+        (r["profile"], r["stats"].get("net_return_pct") or r["stats"].get("total_return_pct")) 
         for r in results 
-        if r.get("success") and r["stats"].get("total_return_pct") is not None
+        if r.get("success") and (r["stats"].get("net_return_pct") is not None or r["stats"].get("total_return_pct") is not None)
     ]
     if returns:
         best = max(returns, key=lambda x: x[1])
-        print(f"   Meilleur Return: {best[0]} ({best[1]:.2f}%)")
+        print(f"   Meilleur Return (NET): {best[0]} ({best[1]:.2f}%)")
     
     # v4.7.1 FIX: Filter out None/invalid drawdown values
     dds = [
@@ -1360,7 +1365,7 @@ def build_limitations(
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.8.4: Convertit le format interne vers le format v1 attendu par le front.
+    V4.8.5: Convertit le format interne vers le format v1 attendu par le front.
     
     AJOUTS v4.8.3 P0-4 FIX:
     - Utilise getattr() pour ProfileConstraints (dataclass pas dict)
@@ -1763,10 +1768,10 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
-    # === v4.8.4: Ajouter les modes d'optimisation dans _meta ===
+    # === v4.8.5: Ajouter les modes d'optimisation dans _meta ===
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.8.4",
+        "version": "v4.8.5",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -1801,7 +1806,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.8.4",
+        "version": "v4.8.5",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1843,7 +1848,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.8.4 - P1-7 FIX")
+    logger.info("🚀 Portfolio Engine v4.8.5 - P1-8 Net/Gross")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1882,7 +1887,7 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.8.4 P1-7 FIX:")
+    logger.info("Fonctionnalités v4.8.5 P1-8:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
@@ -1894,7 +1899,8 @@ def main():
     logger.info("   • P0-7: Double barrière LLM + audit trail + fallback ✅")
     logger.info("   • P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé) ✅")
     logger.info("   • P0-9: Mode optimisation exposé (_optimization) ✅")
-    logger.info("   • 🆕 P1-7: Profile-specific benchmarks (QQQ/URTH/AGG) ✅")
+    logger.info("   • P1-7: Profile-specific benchmarks (QQQ/URTH/AGG) ✅")
+    logger.info("   • 🆕 P1-8: Net/gross returns separated for AMF transparency ✅")
     logger.info("   • USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
     logger.info("   • NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
     logger.info("   • Reproductibilité garantie")
