@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.8.6: P1-8b - TER (Total Expense Ratio) for realistic cost modeling
 V4.8.5: P1-8 - Net/gross returns separated for AMF transparency
 V4.8.4: FIX - Unpack tuple from load_prices_for_backtest (P1-7 compatibility)
 V4.8.3: P0-4 FIX - getattr() for ProfileConstraints (dataclass not dict)
@@ -132,6 +133,8 @@ CONFIG = {
     "run_backtest": True,  # Activer le backtest
     "backtest_days": 90,
     "backtest_freq": "M",  # Monthly
+    # === V4.8.6 P1-8b: TER Config ===
+    "ter_annual_bp": 20.0,  # TER annuel en basis points (0.20%/an par défaut)
     # === Buffett Filter Config ===
     "buffett_mode": "soft",      # "soft" (pénalise), "hard" (rejette), "both", "none" (désactivé)
     "buffett_min_score": 40,     # Score minimum Buffett (0-100), 0 = pas de filtre
@@ -774,7 +777,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.8.5"
+        merged[profile]["_compliance_audit"]["version"] = "v4.8.6"
         
         # 4. Fallback si trop de contenu supprimé (>50%)
         if report.removal_ratio > 0.5:
@@ -838,6 +841,7 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
     """
     Exécute le backtest pour les 3 profils avec POIDS FIXES du portfolio.
     
+    V4.8.6: P1-8b - Add TER (Total Expense Ratio) to BacktestConfig
     V4.8.4: FIX - Unpack tuple from load_prices_for_backtest (P1-7 compatibility)
     V4.1: Utilise run_backtest_fixed_weights() au lieu de run_backtest()
     pour refléter vraiment la performance du portfolio généré.
@@ -916,6 +920,10 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
         logger.error(f"❌ Échec chargement prix: {e}")
         return {"error": str(e), "skipped": True}
     
+    # V4.8.6 P1-8b: Log TER config
+    ter_annual_bp = CONFIG.get("ter_annual_bp", 20.0)
+    logger.info(f"💰 TER annuel configuré: {ter_annual_bp}bp ({ter_annual_bp/100:.2f}%/an)")
+    
     # Exécuter les 3 profils avec POIDS FIXES
     results = []
     profiles = ["Agressif", "Modéré", "Stable"]
@@ -935,12 +943,14 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
             })
             continue
         
+        # V4.8.6 P1-8b: Include ter_annual_bp in BacktestConfig
         backtest_config = BacktestConfig(
             profile=profile,
             start_date=backtest_start,
             end_date=end_date,
             rebalance_freq=CONFIG["backtest_freq"],
             transaction_cost_bp=yaml_config.get("backtest", {}).get("transaction_cost_bp", 10),
+            ter_annual_bp=ter_annual_bp,  # V4.8.6 P1-8b: NEW - TER for ETF/bonds
             turnover_penalty=0,  # Pas de pénalité, poids fixes
         )
         
@@ -979,6 +989,7 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
         "timestamp": datetime.datetime.now().isoformat(),
         "period_days": CONFIG["backtest_days"],
         "frequency": CONFIG["backtest_freq"],
+        "ter_annual_bp": ter_annual_bp,  # V4.8.6: Include TER in results
         "symbols_count": len(prices.columns),
         "backtest_mode": "fixed_weights",  # ✅ NOUVEAU
         "price_diagnostics": price_diagnostics,  # V4.8.4: Include price loading diagnostics
@@ -994,6 +1005,7 @@ def print_comparison_table(results: List[dict]):
     """
     Affiche un tableau comparatif des 3 profils.
     
+    V4.8.6 P1-8b: Added TER cost breakdown for transparency.
     V4.8.5 P1-8: Added gross/net/cost metrics for transparency.
     v4.7.1 FIX: Handle sharpe_ratio=None to avoid TypeError.
     """
@@ -1004,7 +1016,7 @@ def print_comparison_table(results: List[dict]):
     print(f"\n{'Métrique':<25} | {'Agressif':>15} | {'Modéré':>15} | {'Stable':>15}")
     print("-"*80)
     
-    # V4.8.5 P1-8: Added gross/net/cost metrics for AMF transparency
+    # V4.8.6 P1-8b: Added TER-specific metrics
     metrics = [
         ("Gross Return", "gross_return_pct", "%"),      # P1-8: Before costs
         ("Net Return", "net_return_pct", "%"),          # P1-8: After costs
@@ -1039,6 +1051,22 @@ def print_comparison_table(results: List[dict]):
         stb_str = format_val(stb, suffix)
         
         print(f"{label:<25} | {agg_str:>15} | {mod_str:>15} | {stb_str:>15}")
+    
+    # V4.8.6 P1-8b: Cost breakdown section
+    print("-"*80)
+    print("💰 DÉTAIL DES COÛTS:")
+    
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        stats = by_profile.get(profile, {})
+        cost_breakdown = stats.get("cost_breakdown", {})
+        
+        if cost_breakdown:
+            tx_pct = cost_breakdown.get("transaction_costs_pct", 0)
+            ter_pct = cost_breakdown.get("ter_costs_pct", 0)
+            ter_bp = cost_breakdown.get("ter_annual_bp", 0)
+            total = cost_breakdown.get("total", 0)
+            
+            print(f"   {profile}: Tx={tx_pct:.3f}% + TER={ter_pct:.3f}% [{ter_bp}bp/an] = {tx_pct+ter_pct:.3f}% total ({total:.2f}€)")
     
     print("="*80)
     
@@ -1365,7 +1393,7 @@ def build_limitations(
 
 def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     """
-    V4.8.5: Convertit le format interne vers le format v1 attendu par le front.
+    V4.8.6: Convertit le format interne vers le format v1 attendu par le front.
     
     AJOUTS v4.8.3 P0-4 FIX:
     - Utilise getattr() pour ProfileConstraints (dataclass pas dict)
@@ -1768,14 +1796,15 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
     
-    # === v4.8.5: Ajouter les modes d'optimisation dans _meta ===
+    # === v4.8.6: Ajouter les modes d'optimisation dans _meta ===
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.8.5",
+        "version": "v4.8.6",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
         "backtest_days": CONFIG["backtest_days"],
+        "ter_annual_bp": CONFIG.get("ter_annual_bp", 20.0),  # V4.8.6: TER config
         "optimization_modes": {
             profile: portfolios[profile].get("diagnostics", {}).get("optimization_mode", "unknown")
             for profile in ["Agressif", "Modéré", "Stable"]
@@ -1806,7 +1835,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.8.5",
+        "version": "v4.8.6",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -1820,6 +1849,7 @@ def save_portfolios(portfolios: Dict, assets: list):
         "backtest_config": {
             "days": CONFIG["backtest_days"],
             "freq": CONFIG["backtest_freq"],
+            "ter_annual_bp": CONFIG.get("ter_annual_bp", 20.0),  # V4.8.6
         },
         "portfolios": portfolios,
     }
@@ -1848,7 +1878,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.8.5 - P1-8 Net/Gross")
+    logger.info("🚀 Portfolio Engine v4.8.6 - P1-8b TER Implementation")
     logger.info("=" * 60)
     
     # 1. Charger le brief (optionnel)
@@ -1887,7 +1917,7 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.8.5 P1-8:")
+    logger.info("Fonctionnalités v4.8.6 P1-8b:")
     logger.info("   • Poids déterministes (Python, pas LLM)")
     logger.info("   • Prompt LLM réduit ~1500 tokens")
     logger.info("   • Compliance AMF automatique")
@@ -1900,7 +1930,8 @@ def main():
     logger.info("   • P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé) ✅")
     logger.info("   • P0-9: Mode optimisation exposé (_optimization) ✅")
     logger.info("   • P1-7: Profile-specific benchmarks (QQQ/URTH/AGG) ✅")
-    logger.info("   • 🆕 P1-8: Net/gross returns separated for AMF transparency ✅")
+    logger.info("   • P1-8: Net/gross returns separated for AMF transparency ✅")
+    logger.info(f"   • 🆕 P1-8b: TER (Total Expense Ratio) = {CONFIG.get('ter_annual_bp', 20.0)}bp/an ✅")
     logger.info("   • USE SYMBOL FOR BONDS: BIV, BSV, BND, AGG (pas KORP) ✅")
     logger.info("   • NO BOND AGGREGATION: chaque bond = ligne séparée ✅")
     logger.info("   • Reproductibilité garantie")
