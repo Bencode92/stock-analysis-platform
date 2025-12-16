@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v13 - FIX: Tri OBLIGATOIRE des données + fenêtre ciblée dec-jan + validation
+v14 - FIX: Fenêtre baseline_ytd élargie (01 déc → 31 jan) pour éviter problèmes week-end
 """
 
 import os
@@ -204,17 +204,12 @@ def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str 
 
 def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: str = None) -> Tuple[float, str]:
     """
-    Baseline YTD = valeur la plus proche du 1er janvier.
+    Baseline YTD = dernier close de déc N-1, sinon premier close de jan N.
     
-    Stratégie:
-    1. Dernier close de décembre N-1 (ex: 2024-12-30)
-    2. OU premier close de janvier N (ex: 2025-01-02)
-    
-    v13: Fix critique
-    - Fenêtre CIBLÉE: 15 dec → 15 jan (pas tout l'historique)
-    - TRI OBLIGATOIRE après récupération (API retourne en DESC!)
-    - VALIDATION: rejette si pas de dec N-1 ou jan N
-    - order=ASC demandé à l'API (mais on trie quand même)
+    v14 - FIX CRITIQUE:
+    - Suppression de start_date côté API (évite les effets week-end)
+    - Fenêtre de filtrage élargie: 01 déc → 31 jan
+    - outputsize=100 suffisant pour ~2 mois de bourse
     """
     TD = get_td_client()
     if not TD:
@@ -225,18 +220,17 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     year = dt.date.today().year
     prev = year - 1
     
-    # === FENÊTRE CIBLÉE autour du changement d'année ===
-    start = f"{prev}-12-15"
-    end = f"{year}-01-15"
+    # ✅ FIX: On ne met PAS de start_date côté API
+    # On filtre après avec une fenêtre large (évite les effets week-end)
+    end = f"{year}-01-31"
     
-    # Tentatives: exchange -> mic_code comme exchange -> symbol seul
+    # Tentatives: mic_code -> exchange -> symbol seul
     attempts = []
-    if exchange:
-        attempts.append(("exchange", {"exchange": exchange}))
     if mic_code:
         attempts.append(("mic_code", {"mic_code": mic_code}))
-        # Aussi essayer mic_code comme exchange (parfois ça marche mieux)
         attempts.append(("mic_as_exchange", {"exchange": mic_code}))
+    if exchange:
+        attempts.append(("exchange", {"exchange": exchange}))
     attempts.append(("symbol_only", {}))
     
     last_diag = None
@@ -245,13 +239,14 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
         logger.info(f"📡 baseline_ytd({sym}) tentative: {label}")
         
         try:
+            rate_limit_pause()
+            
             ts = TD.time_series(
                 symbol=sym,
                 interval="1day",
-                start_date=start,
                 end_date=end,
-                outputsize=200,  # ~1 mois de bourse
-                order="ASC",     # Demander ASC (mais on trie quand même)
+                outputsize=100,  # ~2 mois de bourse, suffisant
+                order="ASC",
                 **kwargs
             )
             
@@ -276,11 +271,14 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
             # Log de la couverture
             logger.info(f"  📅 {len(rows)} points, min={rows[0][0]}, max={rows[-1][0]}")
             
-            # Filtrer dans la fenêtre demandée (sécurité)
-            rows = [(d, c) for (d, c) in rows if start <= d <= end]
+            # ✅ FIX: Fenêtre de filtrage LARGE (01 déc → 31 jan)
+            # Évite les problèmes de week-end avec start_date=15/12
+            start_guard = f"{prev}-12-01"
+            end_guard = f"{year}-01-31"
+            rows = [(d, c) for (d, c) in rows if start_guard <= d <= end_guard]
             
             if not rows:
-                last_diag = f"{label}: données hors fenêtre"
+                last_diag = f"{label}: données hors fenêtre déc-jan"
                 logger.warning(f"  ⚠️ {last_diag}")
                 continue
             
@@ -289,12 +287,6 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
             jan_rows = [(d, c) for (d, c) in rows if d.startswith(f"{year}-01")]
             
             logger.info(f"  📊 {len(dec_rows)} jours dec-{prev}, {len(jan_rows)} jours jan-{year}")
-            
-            # === VALIDATION: on veut dec N-1 OU jan N ===
-            if not dec_rows and not jan_rows:
-                last_diag = f"{label}: pas de dec-{prev} ni jan-{year}"
-                logger.warning(f"  ⚠️ {last_diag}")
-                continue
             
             # === SÉLECTION DE LA BASELINE ===
             
@@ -309,6 +301,9 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
                 d0, c0 = min(jan_rows, key=lambda x: x[0])  # min = plus ancien
                 logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f}) [premier jan-{year}]")
                 return c0, d0
+            
+            last_diag = f"{label}: pas de dec-{prev} ni jan-{year}"
+            logger.warning(f"  ⚠️ {last_diag}")
             
         except Exception as e:
             last_diag = f"{label}: exception {e}"
