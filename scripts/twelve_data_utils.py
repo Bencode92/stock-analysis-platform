@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v10 - FIX: outputsize=400 pour couvrir toute l'année + fallback mic_code pour XETR
+v11 - FIX: Requête ciblée dec-jan avec start_date/end_date EXPLICITES
 """
 
 import os
@@ -210,17 +210,18 @@ def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str 
 
 def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: str = None) -> Tuple[float, str]:
     """
-    Baseline YTD = dernier close de l'année N-1.
-    Fallback = premier close de N si pas de point N-1.
+    Baseline YTD = valeur la plus proche du 1er janvier de l'année en cours.
     
-    v10: Fix critique
-    - outputsize=400 pour couvrir TOUTE l'année (dec 2024 → dec 2025 = ~250 jours)
-    - Stratégie de fallback: mic_code -> exchange -> symbol seul
-    - order=asc pour avoir les plus anciens d'abord (plus facile à debug)
+    Stratégie:
+    1. Dernier close de décembre N-1 (ex: 2024-12-30)
+    2. OU premier close de janvier N (ex: 2025-01-02)
+    
+    v11: Requête CIBLÉE sur dec-jan avec start_date/end_date EXPLICITES
+    Plusieurs tentatives avec différentes combinaisons de paramètres.
     
     Args:
         sym: Symbole de l'instrument
-        region: Région (non utilisé - on force timezone="Exchange")
+        region: Région (non utilisé)
         exchange: Code exchange (ex: "NYSE", "XETR")
         mic_code: MIC code ISO 10383 (ex: "ARCX", "XETR")
     
@@ -237,48 +238,86 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     year = dt.date.today().year
     prev = year - 1
     
-    # === v10: Stratégie de fallback avec plusieurs tentatives ===
-    # Pour les ETFs EU (XETR), mic_code fonctionne mieux
-    # Pour les ETFs US, exchange fonctionne mieux
-    attempts = []
+    # === v11: MULTIPLE STRATEGIES ===
+    # Chaque stratégie est une liste de paramètres à essayer
     
-    # Tentative 1: mic_code (prioritaire pour EU)
+    strategies = []
+    
+    # Stratégie 1: start_date/end_date CIBLÉS sur dec-jan avec mic_code
     if mic_code:
-        attempts.append({"mic_code": mic_code, "label": f"mic_code={mic_code}"})
+        strategies.append({
+            "symbol": sym,
+            "interval": "1day",
+            "start_date": f"{prev}-12-01",
+            "end_date": f"{year}-01-31",
+            "mic_code": mic_code,
+            "label": f"targeted dec-jan + mic_code={mic_code}"
+        })
     
-    # Tentative 2: exchange
+    # Stratégie 2: start_date/end_date CIBLÉS avec exchange
     if exchange:
-        attempts.append({"exchange": exchange, "label": f"exchange={exchange}"})
+        strategies.append({
+            "symbol": sym,
+            "interval": "1day",
+            "start_date": f"{prev}-12-01",
+            "end_date": f"{year}-01-31",
+            "exchange": exchange,
+            "label": f"targeted dec-jan + exchange={exchange}"
+        })
     
-    # Tentative 3: symbol seul (dernier recours)
-    attempts.append({"label": "symbol_only"})
+    # Stratégie 3: start_date/end_date sans exchange/mic (symbol seul)
+    strategies.append({
+        "symbol": sym,
+        "interval": "1day",
+        "start_date": f"{prev}-12-01",
+        "end_date": f"{year}-01-31",
+        "label": "targeted dec-jan + symbol only"
+    })
+    
+    # Stratégie 4: outputsize large avec mic_code (fallback)
+    if mic_code:
+        strategies.append({
+            "symbol": sym,
+            "interval": "1day",
+            "outputsize": 400,
+            "mic_code": mic_code,
+            "label": f"outputsize=400 + mic_code={mic_code}"
+        })
+    
+    # Stratégie 5: outputsize large avec exchange (fallback)
+    if exchange:
+        strategies.append({
+            "symbol": sym,
+            "interval": "1day",
+            "outputsize": 400,
+            "exchange": exchange,
+            "label": f"outputsize=400 + exchange={exchange}"
+        })
+    
+    # Stratégie 6: outputsize large sans rien (dernier recours)
+    strategies.append({
+        "symbol": sym,
+        "interval": "1day",
+        "outputsize": 400,
+        "label": "outputsize=400 + symbol only"
+    })
     
     last_error = None
     
-    for attempt in attempts:
-        label = attempt.pop("label")
+    for i, strategy in enumerate(strategies, 1):
+        label = strategy.pop("label")
         
-        # === OUTPUTSIZE=400 pour couvrir toute l'année ===
-        # Dec 2024 → Dec 2025 = ~250 jours de bourse
-        # On prend 400 pour être large
-        params = {
-            "symbol": sym,
-            "interval": "1day",
-            "outputsize": 400,         # CRITIQUE: couvre toute l'année!
-            "order": "asc",            # Plus ancien d'abord (minuscules!)
-            **attempt,
-        }
-        
-        logger.info(f"📡 baseline_ytd({sym}) tentative: {label}")
+        logger.info(f"📡 baseline_ytd({sym}) tentative {i}/{len(strategies)}: {label}")
         
         try:
-            ts = TD.time_series(**params)
+            ts = TD.time_series(**strategy)
             
-            # Log de l'URL pour debug (sans API key)
+            # Log de l'URL pour debug
             try:
                 url = ts.as_url()
+                # Masquer l'API key
                 safe_url = url.split("apikey=")[0] + "apikey=***" if "apikey=" in url else url
-                logger.debug(f"  🔗 URL: {safe_url}")
+                logger.info(f"  🔗 {safe_url}")
             except Exception:
                 pass
             
@@ -313,34 +352,44 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
                 last_error = "Aucune donnée valide"
                 continue
             
+            # Trier par date
+            rows.sort(key=lambda x: x[0])
+            
             # Log des dates reçues
-            all_dates = sorted([r[0] for r in rows])
-            logger.info(f"  📅 {len(rows)} points, min={all_dates[0]}, max={all_dates[-1]}")
+            logger.info(f"  📅 {len(rows)} points, min={rows[0][0]}, max={rows[-1][0]}")
             
-            # 1) Baseline = DERNIER jour coté de N-1
+            # === TROUVER LA BASELINE LA PLUS PROCHE DU 1ER JANVIER ===
+            
+            # 1) DERNIER jour de décembre N-1 (idéal: 2024-12-30 ou 2024-12-31)
+            dec_rows = [(d, c) for (d, c) in rows if d.startswith(f"{prev}-12")]
+            if dec_rows:
+                d0, c0 = max(dec_rows, key=lambda x: x[0])
+                logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f}) [dernier jour dec {prev}]")
+                return c0, d0
+            
+            # 2) PREMIER jour de janvier N (idéal: 2025-01-02)
+            jan_rows = [(d, c) for (d, c) in rows if d.startswith(f"{year}-01")]
+            if jan_rows:
+                d0, c0 = min(jan_rows, key=lambda x: x[0])
+                logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f}) [premier jour jan {year}]")
+                return c0, d0
+            
+            # 3) Fallback: premier jour de N-1 disponible (dernier recours)
             prev_rows = [(d, c) for (d, c) in rows if d.startswith(str(prev))]
-            
             if prev_rows:
                 d0, c0 = max(prev_rows, key=lambda x: x[0])
-                
-                # Staleness check: baseline doit être fin décembre
-                if d0 < f"{prev}-12-15":
-                    logger.warning(f"  ⚠️ Baseline trop ancienne ({d0}) → données incomplètes?")
-                else:
-                    logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f})")
-                
+                logger.warning(f"  ⚠️ Baseline approximative = {d0} (close: {c0:.2f}) [dernier jour {prev}]")
                 return c0, d0
             
-            # 2) Fallback = PREMIER jour coté de N
+            # 4) Fallback: premier jour de N disponible (très dernier recours)
             curr_rows = [(d, c) for (d, c) in rows if d.startswith(str(year))]
-            
             if curr_rows:
                 d0, c0 = min(curr_rows, key=lambda x: x[0])
-                logger.warning(f"  ⚠️ Pas de {prev}, fallback = {d0} (close: {c0:.2f})")
+                logger.warning(f"  ⚠️ Baseline approximative = {d0} (close: {c0:.2f}) [premier jour {year}]")
                 return c0, d0
             
-            # Pas de données 2024 ou 2025 dans cette tentative
-            logger.warning(f"  ⚠️ Pas de données {prev} ou {year}")
+            # Pas de données exploitables
+            logger.warning(f"  ⚠️ Pas de données {prev} ou {year} dans cette réponse")
             last_error = f"Pas de données {prev} ou {year}"
             
         except Exception as e:
