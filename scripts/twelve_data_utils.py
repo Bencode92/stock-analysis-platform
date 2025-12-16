@@ -3,7 +3,7 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v8 - FIX: parsing robuste + 1 seule fenêtre bornée + pas de conversion MIC
+v9 - FIX: baseline_ytd sans start/end_date + log URL + staleness check
 """
 
 import os
@@ -166,7 +166,6 @@ def quote_one(sym: str, region: str = "US", exchange: str = None, mic_code: str 
         }
         
         # Priorité: mic_code > exchange (MIC est plus précis)
-        # NE PAS CONVERTIR mic_code en exchange name!
         if mic_code:
             params["mic_code"] = mic_code
         elif exchange:
@@ -214,17 +213,18 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     Baseline YTD = dernier close de l'année N-1.
     Fallback = premier close de N si pas de point N-1.
     
-    v8: Fix critique
-    - 1 SEULE fenêtre bornée (start_date ET end_date)
-    - Parsing robuste (gère dict single bar)
-    - NE PAS convertir mic_code en exchange name
-    - order="ASC" + timezone="Exchange" pour éviter les décalages
+    v9: Fix critique - NE PAS utiliser start_date/end_date
+    - Utilise outputsize=120 pour récupérer les 120 derniers jours
+    - order="desc" pour avoir les plus récents d'abord
+    - Pas de filtre date (souvent ignoré par l'API)
+    - Log de l'URL pour debug
+    - Staleness check (baseline trop ancienne = warning)
     
     Args:
         sym: Symbole de l'instrument
         region: Région (non utilisé - on force timezone="Exchange")
-        exchange: Code exchange (ex: "NYSE", "LSE")
-        mic_code: MIC code ISO 10383 (ex: "ARCX", "XLON") - PRIORITAIRE
+        exchange: Code exchange (ex: "NYSE", "XETR")
+        mic_code: MIC code ISO 10383 (ex: "ARCX", "XETR")
     
     Returns:
         (baseline_close, baseline_date_iso)
@@ -239,88 +239,96 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     year = dt.date.today().year
     prev = year - 1
     
-    # === 1 SEULE fenêtre bornée autour du changement d'année ===
-    start = f"{prev}-12-01"
-    end = f"{year}-01-31"
+    # === v9: Requête SIMPLE sans start/end_date ===
+    # Les filtres date ne sont pas fiables avec Twelve Data
+    # On récupère les 120 derniers jours et on filtre côté client
+    params = {
+        "symbol": sym,
+        "interval": "1day",
+        "outputsize": 120,         # ~4-5 mois de données
+        "timezone": "Exchange",    # Évite les décalages
+        "order": "desc",           # Plus récents d'abord (minuscules!)
+    }
     
-    # Stratégie de fallback: mic_code -> exchange -> mic_code as exchange -> rien
-    attempts = []
-    if mic_code:
-        attempts.append({"mic_code": mic_code})
+    # Priorité: exchange > mic_code (inversé par rapport à quote)
+    # Car time_series semble mieux fonctionner avec exchange
     if exchange:
-        attempts.append({"exchange": exchange})
-    # Fallback: utiliser mic_code comme exchange (parfois ça marche)
-    if (not exchange) and mic_code:
-        attempts.append({"exchange": mic_code})
-    attempts.append({})  # symbol_only (dernier recours)
+        params["exchange"] = exchange
+    elif mic_code:
+        params["mic_code"] = mic_code
+    else:
+        raise ValueError(f"exchange/mic_code manquant pour {sym}")
     
-    last_resp = None
+    logger.info(f"📡 baseline_ytd({sym})")
     
-    for i, extra in enumerate(attempts, 1):
-        params = {
-            "symbol": sym,
-            "interval": "1day",
-            "start_date": start,
-            "end_date": end,
-            "outputsize": 400,
-            "order": "ASC",           # Important: ordre chronologique
-            "timezone": "Exchange",   # Évite les décalages de date
-            **extra,
-        }
+    try:
+        ts = TD.time_series(**params)
         
-        attempt_type = list(extra.keys())[0] if extra else "symbol_only"
-        logger.info(f"📡 baseline_ytd({sym}) tentative {i}/{len(attempts)}: {attempt_type}")
-        
+        # Log de l'URL pour debug (sans API key)
         try:
-            ts = TD.time_series(**params)
-            js = ts.as_json()
-            last_resp = js
+            url = ts.as_url()
+            # Masquer l'API key dans les logs
+            safe_url = url.split("apikey=")[0] + "apikey=***" if "apikey=" in url else url
+            logger.info(f"  🔗 URL: {safe_url}")
+        except Exception:
+            pass
+        
+        js = ts.as_json()
+        
+        if isinstance(js, tuple):
+            js = js[0]
+        
+        if isinstance(js, dict) and js.get("status") == "error":
+            raise ValueError(f"Erreur API: {js.get('message', 'Unknown')}")
+        
+        # Extraire les valeurs
+        values = _extract_ts_values(js)
+        
+        if not values:
+            raise ValueError(f"Aucune donnée time_series pour {sym}")
+        
+        # Parser les dates et closes
+        rows = []
+        for v in values:
+            d = (v.get("datetime") or "")[:10]
+            c = _safe_float(v.get("close"))
+            if d and c is not None:
+                rows.append((d, c))
+        
+        if not rows:
+            raise ValueError(f"Aucune donnée valide pour {sym}")
+        
+        # Log des dates reçues
+        all_dates = sorted([r[0] for r in rows])
+        logger.info(f"  📅 {len(rows)} points, min={all_dates[0]}, max={all_dates[-1]}")
+        
+        # 1) Baseline = DERNIER jour coté de N-1
+        prev_rows = [(d, c) for (d, c) in rows if d.startswith(str(prev))]
+        
+        if prev_rows:
+            d0, c0 = max(prev_rows, key=lambda x: x[0])
             
-            # Parsing robuste
-            values = _extract_ts_values(js)
+            # Staleness check: baseline doit être fin décembre
+            if d0 < f"{prev}-12-15":
+                logger.warning(f"  ⚠️ Baseline trop ancienne ({d0}) → données incomplètes?")
+            else:
+                logger.info(f"  ✅ Baseline = {d0} (close: {c0:.2f})")
             
-            if not values:
-                logger.warning(f"  ⚠️ Aucune valeur retournée")
-                continue
-            
-            # Log debug des dates reçues
-            dates = sorted([v.get("datetime", "")[:10] for v in values if v.get("datetime")])
-            logger.info(f"  📅 {len(values)} points, min={dates[0] if dates else None}, max={dates[-1] if dates else None}")
-            
-            # Séparer année N-1 / N
-            prev_year = []
-            curr_year = []
-            
-            for v in values:
-                d = (v.get("datetime") or "")[:10]
-                c = _safe_float(v.get("close"))
-                if not d or c is None:
-                    continue
-                if d.startswith(str(prev)):
-                    prev_year.append((d, c))
-                elif d.startswith(str(year)):
-                    curr_year.append((d, c))
-            
-            logger.info(f"  📊 {len(prev_year)} jours en {prev}, {len(curr_year)} jours en {year}")
-            
-            # 1) DERNIER close de N-1 (baseline pure YTD)
-            if prev_year:
-                d, c = max(prev_year, key=lambda x: x[0])
-                logger.info(f"  ✅ Baseline = {d} (close: {c:.2f})")
-                return c, d
-            
-            # 2) Fallback: PREMIER close de N
-            if curr_year:
-                d, c = min(curr_year, key=lambda x: x[0])
-                logger.warning(f"  ⚠️ Fallback = {d} (close: {c:.2f})")
-                return c, d
-            
-            logger.warning(f"  ⚠️ Pas de points {prev} ou {year} dans la fenêtre {start}→{end}")
-            
-        except Exception as e:
-            logger.warning(f"  ⚠️ Tentative échouée: {e}")
-    
-    raise ValueError(f"Aucune donnée exploitable autour du changement d'année pour {sym}. Last={last_resp}")
+            return c0, d0
+        
+        # 2) Fallback = PREMIER jour coté de N
+        curr_rows = [(d, c) for (d, c) in rows if d.startswith(str(year))]
+        
+        if curr_rows:
+            d0, c0 = min(curr_rows, key=lambda x: x[0])
+            logger.warning(f"  ⚠️ Pas de {prev}, fallback = {d0} (close: {c0:.2f})")
+            return c0, d0
+        
+        raise ValueError(f"Aucune donnée {prev} ou {year} pour {sym}")
+        
+    except Exception as e:
+        logger.error(f"Erreur baseline YTD pour {sym}: {e}")
+        raise
 
 
 # ============================================================
