@@ -1,69 +1,68 @@
 # portfolio_engine/calendar.py
 # ============================================================
-# ⚠️ STDLIB PROXY - LOADS STANDARD LIBRARY CALENDAR DIRECTLY
+# ⚠️ STDLIB SHIM - Fixes path resolution for stdlib calendar
 # ============================================================
-# This file shadows Python's stdlib 'calendar' module.
-# We load the real stdlib version from its physical location
-# to avoid infinite recursion.
+# This file exists in portfolio_engine/ and can shadow Python's
+# stdlib 'calendar' module when running scripts from this directory.
+#
+# SOLUTION: Fix sys.path at import time, before any other imports.
 # ============================================================
 
-import sys
-import importlib.util
-import sysconfig
+# CRITICAL: This block must execute before ANY other imports
+# to prevent recursion when OpenAI/httpx imports stdlib calendar
+import sys as _sys
 
-def _load_stdlib_calendar():
-    """Load the real stdlib calendar module from its file location."""
-    # Get Python's standard library path
-    stdlib_path = sysconfig.get_path('stdlib')
-    calendar_path = f"{stdlib_path}/calendar.py"
-    
-    # Load the module directly from file
-    spec = importlib.util.spec_from_file_location("_stdlib_calendar", calendar_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot find stdlib calendar at {calendar_path}")
-    
-    module = importlib.util.module_from_spec(spec)
-    
-    # Temporarily add to sys.modules to handle any internal imports
-    sys.modules['_stdlib_calendar'] = module
-    spec.loader.exec_module(module)
-    
-    return module
+# Remove current directory and portfolio_engine from path temporarily
+_original_path = _sys.path.copy()
+_paths_to_remove = []
 
-# Load the real stdlib calendar
-_stdlib = _load_stdlib_calendar()
+for _p in _sys.path:
+    if _p.endswith('portfolio_engine') or _p == '':
+        _paths_to_remove.append(_p)
 
-# Re-export all public names
-timegm = _stdlib.timegm
-Calendar = _stdlib.Calendar
-TextCalendar = _stdlib.TextCalendar
-HTMLCalendar = _stdlib.HTMLCalendar
-LocaleTextCalendar = _stdlib.LocaleTextCalendar
-LocaleHTMLCalendar = _stdlib.LocaleHTMLCalendar
-setfirstweekday = _stdlib.setfirstweekday
-firstweekday = _stdlib.firstweekday
-isleap = _stdlib.isleap
-leapdays = _stdlib.leapdays
-weekday = _stdlib.weekday
-monthrange = _stdlib.monthrange
-monthcalendar = _stdlib.monthcalendar
-prmonth = _stdlib.prmonth
-month = _stdlib.month
-prcal = _stdlib.prcal
-calendar = _stdlib.calendar
-month_name = _stdlib.month_name
-month_abbr = _stdlib.month_abbr
-day_name = _stdlib.day_name
-day_abbr = _stdlib.day_abbr
-MONDAY = _stdlib.MONDAY
-TUESDAY = _stdlib.TUESDAY
-WEDNESDAY = _stdlib.WEDNESDAY
-THURSDAY = _stdlib.THURSDAY
-FRIDAY = _stdlib.FRIDAY
-SATURDAY = _stdlib.SATURDAY
-SUNDAY = _stdlib.SUNDAY
+for _p in _paths_to_remove:
+    if _p in _sys.path:
+        _sys.path.remove(_p)
 
-# Support wildcard imports
+# Now we can safely import from stdlib
+try:
+    # Import the real stdlib calendar (it will be found now)
+    import importlib
+    _stdlib_calendar = importlib.import_module('calendar')
+finally:
+    # Restore original path
+    _sys.path = _original_path
+
+# Re-export everything from stdlib calendar
+timegm = _stdlib_calendar.timegm
+Calendar = _stdlib_calendar.Calendar
+TextCalendar = _stdlib_calendar.TextCalendar
+HTMLCalendar = _stdlib_calendar.HTMLCalendar
+LocaleTextCalendar = _stdlib_calendar.LocaleTextCalendar
+LocaleHTMLCalendar = _stdlib_calendar.LocaleHTMLCalendar
+setfirstweekday = _stdlib_calendar.setfirstweekday
+firstweekday = _stdlib_calendar.firstweekday
+isleap = _stdlib_calendar.isleap
+leapdays = _stdlib_calendar.leapdays
+weekday = _stdlib_calendar.weekday
+monthrange = _stdlib_calendar.monthrange
+monthcalendar = _stdlib_calendar.monthcalendar
+prmonth = _stdlib_calendar.prmonth
+month = _stdlib_calendar.month
+prcal = _stdlib_calendar.prcal
+calendar = _stdlib_calendar.calendar
+month_name = _stdlib_calendar.month_name
+month_abbr = _stdlib_calendar.month_abbr
+day_name = _stdlib_calendar.day_name
+day_abbr = _stdlib_calendar.day_abbr
+MONDAY = _stdlib_calendar.MONDAY
+TUESDAY = _stdlib_calendar.TUESDAY
+WEDNESDAY = _stdlib_calendar.WEDNESDAY
+THURSDAY = _stdlib_calendar.THURSDAY
+FRIDAY = _stdlib_calendar.FRIDAY
+SATURDAY = _stdlib_calendar.SATURDAY
+SUNDAY = _stdlib_calendar.SUNDAY
+
 __all__ = [
     'timegm', 'Calendar', 'TextCalendar', 'HTMLCalendar',
     'LocaleTextCalendar', 'LocaleHTMLCalendar', 'setfirstweekday',
