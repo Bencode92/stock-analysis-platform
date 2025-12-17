@@ -2,6 +2,7 @@
  * marches-script.js - Version compatible Twelve Data avec corrections majeures
  * Les données sont mises à jour régulièrement par GitHub Actions
  * 
+ * v3 - AJOUT: Colonne Composition avec modal holdings (comme secteurs)
  * v2 - FIX: Correction des sélecteurs CSS pour l'aperçu des marchés
  */
 
@@ -22,6 +23,10 @@ document.addEventListener('DOMContentLoaded', function() {
             isStale: false
         }
     };
+    
+    // Cache pour les holdings ETF
+    let etfHoldingsData = null;
+    let holdingsLoadPromise = null;
     
     // Mapping des aliases pour l'aperçu des marchés (ETF → Indices)
     // Utilisé pour trouver les indices dans les données JSON
@@ -152,12 +157,368 @@ document.addEventListener('DOMContentLoaded', function() {
     // Premier chargement des données
     loadIndicesData();
     
+    // Charger les holdings en arrière-plan
+    loadETFHoldings();
+    
+    // Ajouter les styles CSS pour la modal holdings
+    injectHoldingsStyles();
+    
     // Ajouter les gestionnaires d'événements
     document.getElementById('retry-button')?.addEventListener('click', function() {
         hideElement('indices-error');
         showElement('indices-loading');
         loadIndicesData(true);
     });
+    
+    /**
+     * Injecte les styles CSS pour la modal holdings
+     */
+    function injectHoldingsStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .holdings-modal-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(4px);
+                z-index: 9998;
+                animation: fadeIn 0.2s ease;
+            }
+            
+            .holdings-modal {
+                position: fixed;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: min(600px, 90vw);
+                max-height: 80vh;
+                background: linear-gradient(180deg, rgba(15, 40, 65, 0.98) 0%, rgba(10, 25, 45, 0.98) 100%);
+                color: #e5e7eb;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+                z-index: 9999;
+                animation: modalSlideIn 0.3s ease;
+                border: 1px solid rgba(34, 197, 94, 0.2);
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            @keyframes modalSlideIn {
+                from {
+                    opacity: 0;
+                    transform: translate(-50%, -40%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translate(-50%, -50%);
+                }
+            }
+            
+            .holdings-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 20px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 12px 12px 0 0;
+            }
+            
+            .holdings-modal-title {
+                font-weight: 600;
+                font-size: 1.1rem;
+            }
+            
+            .holdings-close {
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: transparent;
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 1.2rem;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .holdings-close:hover {
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+            
+            .holdings-modal-body {
+                padding: 20px;
+                max-height: calc(80vh - 80px);
+                overflow-y: auto;
+            }
+            
+            .holdings-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .holding-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 16px;
+                margin-bottom: 8px;
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                transition: all 0.2s;
+            }
+            
+            .holding-item:hover {
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(34, 197, 94, 0.2);
+            }
+            
+            .holding-info {
+                flex: 1;
+            }
+            
+            .holding-name {
+                font-weight: 500;
+                margin-bottom: 2px;
+            }
+            
+            .holding-symbol {
+                font-size: 0.85rem;
+                color: rgba(255, 255, 255, 0.6);
+            }
+            
+            .holding-weight {
+                font-weight: 700;
+                font-size: 1.1rem;
+                color: var(--accent-color);
+                min-width: 60px;
+                text-align: right;
+            }
+            
+            .holdings-meta {
+                margin-top: 16px;
+                padding-top: 16px;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                font-size: 0.85rem;
+                color: rgba(255, 255, 255, 0.5);
+                display: flex;
+                justify-content: space-between;
+            }
+            
+            .btn-holdings {
+                font-size: 0.75rem;
+                padding: 3px 10px;
+                border: 1px solid rgba(34, 197, 94, 0.3);
+                border-radius: 6px;
+                background: rgba(34, 197, 94, 0.08);
+                color: var(--accent-color);
+                cursor: pointer;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }
+            
+            .btn-holdings:hover {
+                background: rgba(34, 197, 94, 0.15);
+                border-color: rgba(34, 197, 94, 0.5);
+                transform: translateY(-1px);
+            }
+            
+            .btn-holdings.disabled {
+                background: rgba(107, 114, 128, 0.08);
+                border-color: rgba(107, 114, 128, 0.35);
+                color: #6b7280;
+                cursor: not-allowed;
+                pointer-events: none;
+                opacity: 0.95;
+            }
+            
+            .btn-holdings.disabled:hover {
+                transform: none;
+            }
+            
+            .holdings-loading {
+                text-align: center;
+                padding: 40px;
+                color: rgba(255, 255, 255, 0.5);
+            }
+            
+            .holdings-error {
+                text-align: center;
+                padding: 40px;
+                color: #ef4444;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    /**
+     * Vérifie si un ETF a des holdings
+     */
+    function hasHoldings(symbol) {
+        return !!(
+            etfHoldingsData &&
+            etfHoldingsData.etfs &&
+            etfHoldingsData.etfs[symbol] &&
+            Array.isArray(etfHoldingsData.etfs[symbol].holdings) &&
+            etfHoldingsData.etfs[symbol].holdings.length > 0
+        );
+    }
+    
+    /**
+     * Applique l'état activé/désactivé à un bouton holdings
+     */
+    function applyHoldingsState(btn, symbol) {
+        if (!etfHoldingsData) {
+            loadETFHoldings().then(() => applyHoldingsState(btn, symbol));
+            return;
+        }
+        
+        if (hasHoldings(symbol)) {
+            btn.classList.remove('disabled');
+            btn.disabled = false;
+            btn.setAttribute('aria-disabled', 'false');
+            btn.textContent = 'Composition';
+            btn.title = `Voir la composition de ${symbol}`;
+        } else {
+            btn.classList.add('disabled');
+            btn.disabled = true;
+            btn.setAttribute('aria-disabled', 'true');
+            btn.textContent = 'Pas de données';
+            btn.title = `Aucune donnée de composition disponible pour ${symbol}`;
+        }
+    }
+    
+    /**
+     * Met à jour tous les boutons holdings de la page
+     */
+    function updateAllHoldingsButtons() {
+        document.querySelectorAll('.btn-holdings[data-symbol]').forEach(btn => {
+            applyHoldingsState(btn, btn.dataset.symbol);
+        });
+    }
+    
+    /**
+     * Charge le fichier consolidé des holdings ETF
+     */
+    async function loadETFHoldings() {
+        if (holdingsLoadPromise) return holdingsLoadPromise;
+        
+        holdingsLoadPromise = fetch('data/etf_holdings.json')
+            .then(response => {
+                if (!response.ok) throw new Error('Holdings file not found');
+                return response.json();
+            })
+            .then(data => {
+                etfHoldingsData = data;
+                console.log(`Holdings chargés: ${Object.keys(data.etfs || {}).length} ETFs`);
+                updateAllHoldingsButtons();
+                return data;
+            })
+            .catch(error => {
+                console.warn('Holdings non disponibles:', error);
+                updateAllHoldingsButtons();
+                return null;
+            });
+        
+        return holdingsLoadPromise;
+    }
+    
+    /**
+     * Affiche la modal avec les holdings d'un ETF
+     */
+    async function showHoldingsModal(index) {
+        await loadETFHoldings();
+        
+        const symbol = index.symbol;
+        const etfData = etfHoldingsData?.etfs?.[symbol];
+        
+        let content = '';
+        
+        if (!etfHoldingsData) {
+            content = '<div class="holdings-error">Holdings non disponibles (fichier manquant)</div>';
+        } else if (!etfData) {
+            content = '<div class="holdings-error">Aucune donnée de composition pour cet ETF</div>';
+        } else if (!etfData.holdings || etfData.holdings.length === 0) {
+            content = '<div class="holdings-error">Liste des holdings vide</div>';
+        } else {
+            const holdingsList = etfData.holdings.map((h, idx) => {
+                const weight = h.weight != null ? (h.weight * 100).toFixed(2) + '%' : '—';
+                const name = h.name || 'N/A';
+                const ticker = h.symbol ? `(${h.symbol})` : '';
+                const country = h.country ? ` • ${h.country}` : '';
+                
+                return `
+                    <li class="holding-item">
+                        <div class="holding-info">
+                            <div class="holding-name">${idx + 1}. ${name}</div>
+                            <div class="holding-symbol">${ticker}${country}</div>
+                        </div>
+                        <div class="holding-weight">${weight}</div>
+                    </li>
+                `;
+            }).join('');
+            
+            const totalWeight = etfData.top_weight || 
+                               (etfData.holdings.reduce((sum, h) => sum + (h.weight || 0), 0) * 100).toFixed(1);
+            
+            content = `
+                <ul class="holdings-list">
+                    ${holdingsList}
+                </ul>
+                <div class="holdings-meta">
+                    <span>Top ${etfData.holdings.length} positions = ${totalWeight}%</span>
+                    <span>${etfData.as_of ? `MAJ: ${etfData.as_of}` : ''}</span>
+                </div>
+            `;
+        }
+        
+        const modalHtml = `
+            <div class="holdings-modal-wrapper">
+                <div class="holdings-modal-backdrop"></div>
+                <div class="holdings-modal">
+                    <div class="holdings-modal-header">
+                        <div class="holdings-modal-title">
+                            ${index.index_name || index.country}
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-top: 2px">
+                                Composition ${symbol}
+                            </div>
+                        </div>
+                        <button class="holdings-close">×</button>
+                    </div>
+                    <div class="holdings-modal-body">
+                        ${content}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = modalHtml;
+        document.body.appendChild(wrapper);
+        
+        const closeModal = () => {
+            wrapper.querySelector('.holdings-modal').style.animation = 'modalSlideIn 0.3s ease reverse';
+            wrapper.querySelector('.holdings-modal-backdrop').style.animation = 'fadeIn 0.2s ease reverse';
+            setTimeout(() => wrapper.remove(), 300);
+        };
+        
+        wrapper.querySelector('.holdings-close').onclick = closeModal;
+        wrapper.querySelector('.holdings-modal-backdrop').onclick = closeModal;
+        
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
     
     /**
      * Convertit un pourcentage string en nombre
@@ -174,7 +535,6 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function toNumber(val) {
         if (val == null) return null;
-        // Gère "55,400.00" ou "55 400,00"
         const s = String(val).replace(/\s/g,'').replace(/,/g,'.');
         const m = s.match(/-?\d+(\.\d+)?/);
         return m ? parseFloat(m[0]) : null;
@@ -210,17 +570,12 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function rebalanceRegionsByCountry() {
         const REGION_BY_COUNTRY = {
-            // Amérique Latine
             'Mexique': 'latin-america',
             'Chili': 'latin-america',
             'Brésil': 'latin-america',
             'Argentine': 'latin-america',
-            
-            // Amérique du Nord
             'Canada': 'north-america',
             'États-Unis': 'north-america',
-            
-            // Europe
             'France': 'europe',
             'Allemagne': 'europe',
             'Italie': 'europe',
@@ -231,8 +586,6 @@ document.addEventListener('DOMContentLoaded', function() {
             'Royaume-Uni': 'europe',
             'Zone Euro': 'europe',
             'Europe': 'europe',
-            
-            // Asie
             'Japon': 'asia',
             'Chine': 'asia',
             'Inde': 'asia',
@@ -241,8 +594,6 @@ document.addEventListener('DOMContentLoaded', function() {
             'Hong Kong': 'asia',
             'Singapour': 'asia',
             'Asie': 'asia',
-            
-            // Autres
             'Turquie': 'other',
             'Arabie Saoudite': 'other',
             'Australie': 'other',
@@ -260,29 +611,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
         
-        // Reconstitue les seaux en fonction du pays normalisé
         for (const region of regions) {
             for (const rec of indicesData.indices[region]) {
-                const country = rec.country; // Déjà normalisé
-                const target = REGION_BY_COUNTRY[country] || region; // défaut = région d'origine
+                const country = rec.country;
+                const target = REGION_BY_COUNTRY[country] || region;
                 buckets[target].push(rec);
             }
         }
         
-        // Remplace les données par les nouveaux seaux
         indicesData.indices = buckets;
-        
         console.log('Réorganisation des indices par pays effectuée');
     }
     
     /**
      * Trouve un indice par alias avec regex - VERSION CORRIGÉE
-     * Cherche dans toutes les régions si nécessaire
      */
     function findIndexByAlias(region, dataIndexKey) {
         const patterns = OVERVIEW_ALIASES[region]?.[dataIndexKey] || [];
         
-        // Chercher d'abord dans la région spécifiée
         let found = (indicesData.indices[region] || []).find(idx =>
             patterns.some(rx => 
                 rx.test(idx.index_name || '') || 
@@ -291,7 +637,6 @@ document.addEventListener('DOMContentLoaded', function() {
             )
         );
         
-        // Si pas trouvé, chercher dans toutes les régions
         if (!found) {
             const allRegions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
             for (const r of allRegions) {
@@ -394,21 +739,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const rawData = await response.json();
             
-            // Normaliser toutes les données
             ['europe', 'north-america', 'latin-america', 'asia', 'other'].forEach(region => {
                 indicesData.indices[region] = (rawData.indices[region] || []).map(normalizeRecord);
             });
             
-            // Réorganiser les indices par pays dans les bonnes régions
             rebalanceRegionsByCountry();
             
             indicesData.meta = rawData.meta;
             
-            // Vérifier la fraîcheur des données
             const dataTimestamp = new Date(indicesData.meta.timestamp);
             const now = new Date();
             const dataAge = now - dataTimestamp;
-            const MAX_DATA_AGE = 60 * 60 * 1000; // 1 heure
+            const MAX_DATA_AGE = 60 * 60 * 1000;
             
             indicesData.meta.isStale = dataAge > MAX_DATA_AGE;
             
@@ -433,7 +775,6 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function renderIndicesData() {
         try {
-            // Mettre à jour l'horodatage avec le bon fuseau horaire
             const timestamp = new Date(indicesData.meta.timestamp);
             const formattedDate = new Intl.DateTimeFormat('fr-FR', {
                 dateStyle: 'long',
@@ -444,13 +785,11 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('last-update-time').textContent = 
                 formattedDate + (indicesData.meta.isStale ? ' (anciennes données)' : '');
             
-            // Mettre à jour la source dynamiquement
             const sourceLink = document.querySelector('a[href*="boursorama"]');
             if (sourceLink && indicesData.meta.source) {
                 sourceLink.textContent = indicesData.meta.source;
             }
             
-            // Générer le HTML pour chaque région
             const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
             
             regions.forEach(region => {
@@ -463,7 +802,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (indices.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="5" class="text-center py-4 text-gray-400">
+                            <td colspan="6" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune donnée disponible pour cette région
                             </td>
@@ -486,7 +825,34 @@ document.addEventListener('DOMContentLoaded', function() {
                                            index.ytd_num > 0.01 ? 'positive' : 'neutral';
                             
                             tr.appendChild(createTableCell(index.country, 'font-medium'));
-                            tr.appendChild(createTableCell(index.index_name));
+                            
+                            // Cellule Libellé avec bouton Composition
+                            const nameTd = document.createElement('td');
+                            const nameContainer = document.createElement('div');
+                            nameContainer.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px;';
+                            
+                            const nameSpan = document.createElement('span');
+                            nameSpan.textContent = index.index_name || '-';
+                            nameSpan.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+                            nameContainer.appendChild(nameSpan);
+                            
+                            // Bouton Composition
+                            if (index.symbol) {
+                                const btnHoldings = document.createElement('button');
+                                btnHoldings.className = 'btn-holdings';
+                                btnHoldings.textContent = 'Composition';
+                                btnHoldings.dataset.symbol = index.symbol;
+                                btnHoldings.onclick = (e) => {
+                                    e.stopPropagation();
+                                    showHoldingsModal(index);
+                                };
+                                applyHoldingsState(btnHoldings, index.symbol);
+                                nameContainer.appendChild(btnHoldings);
+                            }
+                            
+                            nameTd.appendChild(nameContainer);
+                            tr.appendChild(nameTd);
+                            
                             tr.appendChild(createTableCell(index.value));
                             tr.appendChild(createTableCell(formatPercent(index.change_num), changeClass));
                             tr.appendChild(createTableCell(formatPercent(index.ytd_num), ytdClass));
@@ -502,7 +868,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTopPerformers();
             updateMarketOverview();
             
-            // Activer le tri sur toutes les tables après le rendu
             if (window.attachTableSorters) {
                 window.attachTableSorters();
             }
@@ -520,13 +885,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Met à jour l'aperçu des marchés mondiaux - VERSION CORRIGÉE
-     * Les sélecteurs correspondent maintenant aux attributs data-index du HTML
      */
     function updateMarketOverview() {
         try {
             console.log('Mise à jour de l\'aperçu des marchés mondiaux...');
             
-            // Europe - sélecteurs corrigés pour correspondre au HTML
             updateMarketOverviewRegion('europe', [
                 { key: 'germany',     display: 'Allemagne',   selector: '[data-index="germany"]' },
                 { key: 'france',      display: 'France',      selector: '[data-index="france"]' },
@@ -535,7 +898,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 { key: 'europe',      display: 'Europe',      selector: '[data-index="europe"]' },
             ]);
             
-            // Amérique du Nord
             updateMarketOverviewRegion('north-america', [
                 { key: 'sp500',    display: 'S&P 500',    selector: '[data-index="sp500"]' },
                 { key: 'dowjones', display: 'DOW JONES',  selector: '[data-index="dowjones"]' },
@@ -543,7 +905,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 { key: 'vix',      display: 'VIX',        selector: '[data-index="vix"]' },
             ]);
             
-            // Amérique Latine
             updateMarketOverviewRegion('latin-america', [
                 { key: 'brazil',    display: 'Brésil',    selector: '[data-index="brazil"]' },
                 { key: 'mexico',    display: 'Mexique',   selector: '[data-index="mexico"]' },
@@ -551,7 +912,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 { key: 'argentina', display: 'Argentine', selector: '[data-index="argentina"]' },
             ]);
             
-            // Asie
             updateMarketOverviewRegion('asia', [
                 { key: 'china',  display: 'Chine',   selector: '[data-index="china"]' },
                 { key: 'japan',  display: 'Japon',   selector: '[data-index="japan"]' },
@@ -559,7 +919,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 { key: 'taiwan', display: 'Taïwan',  selector: '[data-index="taiwan"]' },
             ]);
             
-            // Autres régions
             updateMarketOverviewRegion('other', [
                 { key: 'southafrica', display: 'Afrique du Sud', selector: '[data-index="southafrica"]' },
                 { key: 'australia',   display: 'Australie',      selector: '[data-index="australia"]' },
@@ -585,7 +944,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Utilise la clé pour chercher dans les aliases
                 const index = findIndexByAlias(region, indexInfo.key);
                 if (!index) {
                     console.warn(`Indice non trouvé pour clé: ${indexInfo.key} dans ${region}`);
@@ -634,7 +992,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Calculer la moyenne des variations pour déterminer la tendance
         const avgChange = indices.reduce((sum, idx) => 
             sum + (idx.change_num || 0), 0) / Math.max(1, indices.length);
         
@@ -656,7 +1013,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (allIndices.length < 3) return;
         
-        // Trier par variation quotidienne et YTD
         const byDaily = [...allIndices].sort((a, b) => 
             b.change_num - a.change_num || b.ytd_num - a.ytd_num
         );
