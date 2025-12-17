@@ -1,6 +1,12 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.15 — P1-6 Covariance KPIs
+Optimiseur de portefeuille v6.16 — P1-2 Ledoit-Wolf Shrinkage
+
+CHANGEMENTS v6.16 (P1-2 Ledoit-Wolf Shrinkage):
+1. NEW: Shrinkage Ledoit-Wolf sur covariance empirique AVANT hybridation
+2. NEW: shrinkage_intensity dans diagnostics (δ optimal calculé)
+3. NEW: condition_number_before/after_shrinkage pour tracking
+4. OBJECTIF: condition_number < 10,000 (était ~2M)
 
 CHANGEMENTS v6.15 (P1-6 Covariance KPIs):
 1. NEW: condition_number = max(λ)/min(λ) dans diagnostics covariance
@@ -49,6 +55,13 @@ from collections import defaultdict
 import warnings
 import logging
 import math
+
+# P1-2: Import Ledoit-Wolf shrinkage
+try:
+    from sklearn.covariance import LedoitWolf
+    HAS_SKLEARN_LW = True
+except ImportError:
+    HAS_SKLEARN_LW = False
 
 # Import preset_meta pour buckets et déduplication
 try:
@@ -99,8 +112,7 @@ except ImportError:
 
 logger = logging.getLogger("portfolio_engine.optimizer")
 
-
-# ============= CONSTANTES v6.15 =============
+# ============= CONSTANTES v6.16 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -111,6 +123,10 @@ COVARIANCE_EMPIRICAL_WEIGHT = 0.60  # 60% empirique, 40% structurée
 # P1-6: Seuils d'alerte pour KPIs covariance
 CONDITION_NUMBER_WARNING_THRESHOLD = 1000.0  # > 1000 = matrice instable
 EIGEN_CLIPPED_PCT_WARNING_THRESHOLD = 20.0   # > 20% = données insuffisantes
+
+# P1-2: Shrinkage Ledoit-Wolf
+SHRINKAGE_ENABLED = True  # Activer/désactiver shrinkage
+CONDITION_NUMBER_TARGET = 10000.0  # Objectif après shrinkage
 
 # Corrélations structurées (utilisées quand pas de données empiriques)
 CORR_SAME_CORPORATE_GROUP = 0.90
@@ -535,21 +551,32 @@ class HybridCovarianceEstimator:
     - is_well_conditioned: flag booléen pour check rapide
     """
     
-    def __init__(
-        self, 
-        empirical_weight: float = COVARIANCE_EMPIRICAL_WEIGHT,
-        min_history_days: int = 60
-    ):
-        self.empirical_weight = empirical_weight
-        self.min_history_days = min_history_days
+def __init__(
+    self, 
+    empirical_weight: float = COVARIANCE_EMPIRICAL_WEIGHT,
+    min_history_days: int = 60,
+    use_shrinkage: bool = SHRINKAGE_ENABLED
+):
+    self.empirical_weight = empirical_weight
+    self.min_history_days = min_history_days
+    self.use_shrinkage = use_shrinkage and HAS_SKLEARN_LW
     
-    def compute_empirical_covariance(self, assets: List[Asset]) -> Optional[np.ndarray]:
-        """Calcule la covariance empirique si données suffisantes."""
+        self, 
+        assets: List[Asset]
+    ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        """
+        Calcule la covariance empirique si données suffisantes.
+        
+        P1-2: Retourne aussi la matrice de returns pour shrinkage Ledoit-Wolf.
+        
+        Returns:
+            (cov_matrix, returns_matrix) - returns_matrix utilisé pour shrinkage
+        """
         n = len(assets)
         valid_assets = [a for a in assets if a.returns_series is not None and len(a.returns_series) >= self.min_history_days]
         
         if len(valid_assets) < n * 0.5:
-            return None
+            return None, None
         
         returns_matrix = []
         has_data = []
@@ -562,7 +589,7 @@ class HybridCovarianceEstimator:
                 has_data.append(False)
         
         if not returns_matrix:
-            return None
+            return None, None
         
         min_len = min(len(r) for r in returns_matrix)
         returns_matrix = [r[-min_len:] for r in returns_matrix]
@@ -583,10 +610,10 @@ class HybridCovarianceEstimator:
                             emp_idx_j += 1
                     emp_idx += 1
             
-            return cov_full
+            return cov_full, returns  # P1-2: Retourner returns pour shrinkage
         except Exception as e:
             logger.warning(f"Covariance empirique échouée: {e}")
-            return None
+            return None, None
     
     def compute_structured_covariance(self, assets: List[Asset]) -> np.ndarray:
         """Calcule la covariance structurée (basée sur catégories/secteurs/exposure)."""
@@ -623,21 +650,48 @@ class HybridCovarianceEstimator:
                     cov[i, j] = corr * vol_i * vol_j
         
         return cov
-    
-    def compute(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict[str, Any]]:
+        def _apply_ledoit_wolf_shrinkage(
+        self, 
+        returns_matrix: np.ndarray
+    ) -> Tuple[np.ndarray, float]:
         """
-        Calcule la covariance hybride avec KPIs de qualité (P1-6).
+        P1-2: Applique le shrinkage Ledoit-Wolf sur les returns.
+        
+        Le shrinkage réduit le condition number en combinant la covariance
+        empirique avec une matrice structurée (identité scalée).
+        
+        Returns:
+            (cov_shrunk, shrinkage_intensity) où shrinkage_intensity ∈ [0,1]
+        """
+        try:
+            lw = LedoitWolf()
+            lw.fit(returns_matrix)
+            cov_shrunk = lw.covariance_ * 252  # Annualiser
+            shrinkage_intensity = lw.shrinkage_
+            return cov_shrunk, float(shrinkage_intensity)
+        except Exception as e:
+            logger.warning(f"Ledoit-Wolf shrinkage failed: {e}")
+            # Fallback: covariance empirique simple
+            cov_emp = np.cov(returns_matrix, rowvar=False) * 252
+            return cov_emp, 0.0
+           
+   def compute(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """
+        Calcule la covariance hybride avec KPIs de qualité (P1-6) et shrinkage (P1-2).
         
         Returns:
             (matrice_covariance, diagnostics)
             
         Diagnostics incluent:
-            - method: "structured", "hybrid", ou "empirical"
+            - method: "structured", "hybrid", "hybrid_shrunk"
             - empirical_available: bool
             - empirical_weight: float
-            - condition_number: max(λ)/min(λ) - NOUVEAU P1-6
-            - eigen_clipped: nombre d'eigenvalues forcées - NOUVEAU P1-6
-            - eigen_clipped_pct: pourcentage clippé - NOUVEAU P1-6
+            - shrinkage_applied: bool - NOUVEAU P1-2
+            - shrinkage_intensity: float [0,1] - NOUVEAU P1-2
+            - condition_number_before_shrinkage: float - NOUVEAU P1-2
+            - condition_number: max(λ)/min(λ) après shrinkage
+            - eigen_clipped: nombre d'eigenvalues forcées
+            - eigen_clipped_pct: pourcentage clippé
             - eigenvalue_min: plus petite eigenvalue (après clipping)
             - eigenvalue_max: plus grande eigenvalue
             - matrix_size: dimension n×n
@@ -645,21 +699,55 @@ class HybridCovarianceEstimator:
         """
         n = len(assets)
         cov_structured = self.compute_structured_covariance(assets)
-        cov_empirical = self.compute_empirical_covariance(assets)
+        cov_empirical, returns_matrix = self.compute_empirical_covariance(assets)
         
         diagnostics = {
             "method": "structured",
             "empirical_available": False,
             "empirical_weight": 0.0,
             "matrix_size": n,
+            # P1-2: Nouveaux champs shrinkage
+            "shrinkage_applied": False,
+            "shrinkage_intensity": 0.0,
+            "condition_number_before_shrinkage": None,
         }
         
         if cov_empirical is not None:
-            cov_hybrid = (
-                self.empirical_weight * cov_empirical + 
-                (1 - self.empirical_weight) * cov_structured
-            )
-            diagnostics["method"] = "hybrid"
+            # P1-2: Calculer condition number AVANT shrinkage
+            try:
+                eigvals_before = np.linalg.eigvalsh(cov_empirical)
+                eigvals_before = np.maximum(eigvals_before, 1e-10)
+                cond_before = float(eigvals_before.max() / eigvals_before.min())
+                diagnostics["condition_number_before_shrinkage"] = round(cond_before, 2)
+            except:
+                cond_before = float("inf")
+                diagnostics["condition_number_before_shrinkage"] = cond_before
+            
+            # P1-2: Appliquer shrinkage si activé ET returns disponibles
+            if self.use_shrinkage and returns_matrix is not None:
+                cov_shrunk, shrinkage_intensity = self._apply_ledoit_wolf_shrinkage(returns_matrix)
+                diagnostics["shrinkage_applied"] = True
+                diagnostics["shrinkage_intensity"] = round(shrinkage_intensity, 4)
+                
+                # Utiliser cov_shrunk au lieu de cov_empirical
+                cov_hybrid = (
+                    self.empirical_weight * cov_shrunk + 
+                    (1 - self.empirical_weight) * cov_structured
+                )
+                diagnostics["method"] = "hybrid_shrunk"
+                
+                logger.info(
+                    f"🔧 Ledoit-Wolf shrinkage: δ={shrinkage_intensity:.3f}, "
+                    f"cond_before={cond_before:.0f}"
+                )
+            else:
+                # Sans shrinkage (comportement original)
+                cov_hybrid = (
+                    self.empirical_weight * cov_empirical + 
+                    (1 - self.empirical_weight) * cov_structured
+                )
+                diagnostics["method"] = "hybrid"
+            
             diagnostics["empirical_available"] = True
             diagnostics["empirical_weight"] = self.empirical_weight
             cov = cov_hybrid
@@ -684,6 +772,15 @@ class HybridCovarianceEstimator:
                     f"⚠️ COVARIANCE WARNING: eigen_clipped_pct={diagnostics['eigen_clipped_pct']:.1f}% "
                     f"> {EIGEN_CLIPPED_PCT_WARNING_THRESHOLD}% (données insuffisantes)"
                 )
+        
+        # P1-2: Log du résultat shrinkage
+        if diagnostics.get("shrinkage_applied"):
+            cond_after = diagnostics.get("condition_number", "N/A")
+            cond_before = diagnostics.get("condition_number_before_shrinkage", "N/A")
+            logger.info(
+                f"📊 Shrinkage result: cond_number {cond_before} → {cond_after} "
+                f"(target < {CONDITION_NUMBER_TARGET})"
+            )
         
         return cov, diagnostics
     
@@ -1458,6 +1555,9 @@ class PortfolioOptimizer:
             "covariance_empirical_weight": cov_diagnostics.get("empirical_weight", 0),
             "covariance_kpis": {
                 "condition_number": cov_diagnostics.get("condition_number"),
+                "condition_number_before_shrinkage": cov_diagnostics.get("condition_number_before_shrinkage"),
+                "shrinkage_applied": cov_diagnostics.get("shrinkage_applied", False),
+                "shrinkage_intensity": cov_diagnostics.get("shrinkage_intensity", 0.0),
                 "eigen_clipped": cov_diagnostics.get("eigen_clipped", 0),
                 "eigen_clipped_pct": cov_diagnostics.get("eigen_clipped_pct", 0.0),
                 "eigenvalue_min": cov_diagnostics.get("eigenvalue_min"),
