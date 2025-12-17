@@ -1444,7 +1444,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // 🆕 v2.3.4: NOUVELLE LOGIQUE - Ajout PTZ conditionnel selon période
             const fraisTenueMensuelCalc = parseFloat(document.getElementById('frais-tenue-compte')?.value || 710) / (loanDurationYears * 12);
-const mensualiteBase = result.mensualiteInitiale + result.assuranceInitiale + fraisTenueMensuelCalc;
+const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensualiteInitiale + result.assuranceInitiale);
             
             let mensualiteRenego = mensualiteBase; // valeur par défaut
             if (applyRenegotiation && renegotiationMonth && result.mensualiteApresRenego) {
