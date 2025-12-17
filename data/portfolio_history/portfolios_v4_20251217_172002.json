@@ -1,0 +1,453 @@
+{
+  "version": "v4.8.7",
+  "timestamp": "20251217_172002",
+  "date": "2025-12-17T17:20:02.680920",
+  "buffett_config": {
+    "mode": "soft",
+    "min_score": 40
+  },
+  "tactical_config": {
+    "enabled": true,
+    "data_dir": "data"
+  },
+  "backtest_config": {
+    "days": 90,
+    "freq": "M",
+    "platform_fee_annual_bp": 0.0,
+    "ter_handling": "embedded_in_etf_prices"
+  },
+  "portfolios": {
+    "Agressif": {
+      "allocation": {
+        "GLOBAL X MSCI ARGENTINA ETF": 14.6,
+        "EQ_908": 14.6,
+        "EQ_146": 14.6,
+        "EQ_590": 14.6,
+        "EQ_459": 8.26,
+        "EQ_419": 2.0,
+        "EQ_523": 1.74,
+        "EQ_13": 14.6,
+        "EQ_58": 10.0,
+        "Vanguard Short-Term Inflation-Protected Securities Index Fund": 5.0
+      },
+      "diagnostics": {
+        "converged": true,
+        "optimization_mode": "slsqp",
+        "fallback_reason": null,
+        "fallback_heuristic": false,
+        "message": "SLSQP converged",
+        "portfolio_vol": 17.46,
+        "vol_target": 18.0,
+        "vol_tolerance": 3.0,
+        "vol_diff": -0.54,
+        "portfolio_score": 9.094,
+        "n_assets": 10,
+        "n_bonds": 1,
+        "n_crypto": 0,
+        "crypto_max_allowed": 10.0,
+        "sectors": {
+          "Diversified": 14.6,
+          "Finance": 29.2,
+          "Industries": 16.6,
+          "La communication": 8.26,
+          "Technologie de l'information": 1.74,
+          "Santé": 14.6,
+          "Biens de consommation cycliques": 10.0,
+          "Bonds": 5.0
+        },
+        "bucket_exposure": {
+          "core": 39.2,
+          "satellite": 55.8,
+          "defensive": 5.0
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 39.2,
+            "target_min": 35.0,
+            "target_max": 45.0,
+            "in_range": true
+          },
+          "satellite": {
+            "actual": 55.8,
+            "target_min": 35.0,
+            "target_max": 50.0,
+            "in_range": false
+          },
+          "defensive": {
+            "actual": 5.0,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 5.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "covariance_kpis": {
+          "condition_number": 2031576.31,
+          "condition_number_before_shrinkage": null,
+          "shrinkage_applied": false,
+          "shrinkage_intensity": 0.0,
+          "eigen_clipped": 5,
+          "eigen_clipped_pct": 9.09,
+          "eigenvalue_min": 1e-06,
+          "eigenvalue_max": 2.0315763140320633,
+          "eigenvalue_min_raw": -0.046728979451071045,
+          "matrix_size": 55,
+          "is_well_conditioned": false,
+          "thresholds": {
+            "condition_number_warning": 1000.0,
+            "eigen_clipped_pct_warning": 20.0
+          }
+        },
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0,
+        "_feasibility": {
+          "feasible": true,
+          "reason": null,
+          "capacity": {
+            "bonds": 9075.0,
+            "n_candidates": 1720,
+            "vol_range": "1%-150%"
+          },
+          "requirements": {
+            "bonds_min": 5.0,
+            "min_assets": 10,
+            "vol_target": "18.0% ±3.0%"
+          }
+        },
+        "llm_sanitizer": {
+          "profile": "Agressif",
+          "justifications_cleaned": 0,
+          "total_hits": 0,
+          "total_warnings": 0,
+          "hit_labels": [],
+          "used_fallback": false
+        },
+        "used_fallback_comment": false
+      },
+      "justifications": {
+        "GLOBAL X MSCI ARGENTINA ETF": "Ce fonds offre une exposition aux actions argentines, mais peut être affecté par la volatilité politique et économique en Argentine. [BR], [MC]",
+        "MUTHOOT FINANCE LTD": "Cette société de finance est exposée aux fluctuations du marché des prêts, ce qui peut affecter sa rentabilité. [SEC], [TH]",
+        "CUMMINS INC": "Cummins est sensible aux cycles économiques, ce qui peut influencer sa performance en période de ralentissement. [SEC], [MC]",
+        "CAIXABANK SA": "Les banques peuvent être affectées par les taux d'intérêt et les conditions économiques en Europe, ce qui représente un risque. [MC], [SEC]",
+        "JOHNSON & JOHNSON": "Bien que stable, J&J est exposé aux litiges et aux réglementations changeantes dans le secteur de la santé. [SEC], [TH]",
+        "TJX INC": "TJX dépend des tendances de consommation, qui peuvent fluctuer en fonction des conditions économiques. [MC], [TH]",
+        "FOX CORP CLASS A": "L'entreprise est exposée aux changements dans le paysage médiatique et aux fluctuations de l'audience. [SEC], [TH]",
+        "Vanguard Short-Term Inflation-Protected Securities Index Fund": "Ce fonds vise à protéger contre l'inflation, mais peut ne pas offrir des rendements élevés en période de faible inflation. [MC], [TH]",
+        "EXPEDITORS INTERNATIONAL OF WASHIN": "Cette société de logistique est sensible aux perturbations de la chaîne d'approvisionnement. [MC], [SEC]",
+        "ASML HOLDING NV": "ASML est exposée aux cycles de l'industrie technologique, ce qui peut entraîner une volatilité de ses actions. [SEC], [TH]"
+      },
+      "comment": "Ce portefeuille modèle présente une approche agressive, visant des rendements élevés grâce à une exposition significative aux actions. Cependant, il est important de noter que cette stratégie comporte des risques liés à la volatilité des marchés et aux fluctuations économiques. Les investissements dans des secteurs comme la finance et la technologie peuvent être particulièrement sensibles aux cycles économiques. En outre, la concentration sur des actifs spécifiques peut augmenter le risque global du portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🔴 PROFIL AGRESSIF : Ce portefeuille présente un niveau de risque élevé. Il est destiné aux investisseurs ayant une tolérance au risque importante et un horizon d'investissement long terme (>5 ans).\n\n📊 Volatilité estimée : 17.5% (modérée).",
+      "_compliance_audit": {
+        "llm_sanitizer": {
+          "sanitized": false,
+          "removed_sentences": 0,
+          "hits": [],
+          "warnings": [],
+          "removal_ratio": 0.0,
+          "original_length": 518,
+          "sanitized_length": 518
+        },
+        "timestamp": "2025-12-17T17:20:02.648856",
+        "version": "v4.8.7",
+        "fallback_used": false
+      }
+    },
+    "Modéré": {
+      "allocation": {
+        "EQ_13": 15.0,
+        "EQ_459": 15.0,
+        "EQ_146": 5.0,
+        "EQ_908": 10.0,
+        "EQ_58": 15.0,
+        "Vanguard Short-Term Inflation-Protected Securities Index Fund": 8.0,
+        "Vanguard Short-Term Bond ETF": 8.0,
+        "Vanguard Short-Term Treasury Fund": 8.0,
+        "iShares 0-5 Year TIPS Bond ETF": 6.0,
+        "abrdn Physical Silver Shares ETF": 10.0
+      },
+      "diagnostics": {
+        "converged": true,
+        "optimization_mode": "slsqp",
+        "fallback_reason": null,
+        "fallback_heuristic": false,
+        "message": "SLSQP converged",
+        "portfolio_vol": 11.97,
+        "vol_target": 12.0,
+        "vol_tolerance": 3.0,
+        "vol_diff": -0.03,
+        "portfolio_score": 1.369,
+        "n_assets": 10,
+        "n_bonds": 4,
+        "n_crypto": 0,
+        "crypto_max_allowed": 5.0,
+        "sectors": {
+          "Santé": 15.0,
+          "La communication": 15.0,
+          "Industries": 5.0,
+          "Finance": 10.0,
+          "Biens de consommation cycliques": 15.0,
+          "Bonds": 30.0,
+          "Diversified": 10.0
+        },
+        "bucket_exposure": {
+          "core": 40.0,
+          "satellite": 30.0,
+          "defensive": 30.0
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 40.0,
+            "target_min": 45.0,
+            "target_max": 55.0,
+            "in_range": true
+          },
+          "satellite": {
+            "actual": 30.0,
+            "target_min": 15.0,
+            "target_max": 25.0,
+            "in_range": true
+          },
+          "defensive": {
+            "actual": 30.0,
+            "target_min": 20.0,
+            "target_max": 30.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 2.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "covariance_kpis": {
+          "condition_number": 1710329.68,
+          "condition_number_before_shrinkage": null,
+          "shrinkage_applied": false,
+          "shrinkage_intensity": 0.0,
+          "eigen_clipped": 4,
+          "eigen_clipped_pct": 7.14,
+          "eigenvalue_min": 1e-06,
+          "eigenvalue_max": 1.7103296832323835,
+          "eigenvalue_min_raw": -0.04406207246741233,
+          "matrix_size": 56,
+          "is_well_conditioned": false,
+          "thresholds": {
+            "condition_number_warning": 1000.0,
+            "eigen_clipped_pct_warning": 20.0
+          }
+        },
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0,
+        "_feasibility": {
+          "feasible": true,
+          "reason": null,
+          "capacity": {
+            "bonds": 9075.0,
+            "n_candidates": 1720,
+            "vol_range": "1%-150%"
+          },
+          "requirements": {
+            "bonds_min": 15.0,
+            "min_assets": 10,
+            "vol_target": "12.0% ±3.0%"
+          }
+        },
+        "llm_sanitizer": {
+          "profile": "Modéré",
+          "justifications_cleaned": 0,
+          "total_hits": 0,
+          "total_warnings": 0,
+          "hit_labels": [],
+          "used_fallback": false
+        },
+        "used_fallback_comment": false
+      },
+      "justifications": {
+        "JOHNSON & JOHNSON": "Bien que J&J soit historiquement stable, elle fait face à des risques juridiques et réglementaires dans le secteur de la santé. [SEC], [TH]",
+        "FOX CORP CLASS A": "L'entreprise est exposée aux fluctuations de l'audience et aux changements dans le paysage médiatique. [SEC], [TH]",
+        "TJX INC": "TJX est sensible aux tendances de consommation, qui peuvent varier en fonction des conditions économiques. [MC], [TH]",
+        "MUTHOOT FINANCE LTD": "Cette société de finance est soumise aux fluctuations du marché des prêts, ce qui peut affecter sa performance. [SEC], [TH]",
+        "abrdn Physical Silver Shares ETF": "L'ETF sur l'argent peut être affecté par la volatilité des prix des matières premières. [MC], [TH]",
+        "Vanguard Short-Term Inflation-Protected Securities Index Fund": "Ce fonds vise à protéger contre l'inflation, mais peut ne pas offrir des rendements élevés en période de faible inflation. [MC], [TH]",
+        "Vanguard Short-Term Bond ETF": "Les obligations à court terme peuvent offrir des rendements limités, surtout dans un environnement de taux d'intérêt bas. [MC], [TH]",
+        "Vanguard Short-Term Treasury Fund": "Les rendements des bons du Trésor à court terme peuvent être affectés par les fluctuations des taux d'intérêt. [MC], [TH]",
+        "iShares 0-5 Year TIPS Bond ETF": "Les TIPS sont sensibles aux variations des taux d'intérêt et à l'inflation. [MC], [TH]",
+        "CUMMINS INC": "Cummins est exposée aux cycles économiques, ce qui peut influencer sa performance en période de ralentissement. [SEC], [MC]"
+      },
+      "comment": "Ce portefeuille modèle présente une approche modérée, équilibrant les actions et les obligations pour viser une croissance stable. Bien qu'il soit conçu pour réduire la volatilité, il reste exposé aux fluctuations économiques et aux risques sectoriels, notamment dans la finance et la consommation. Les investissements dans des obligations à court terme peuvent offrir des rendements limités, surtout dans un contexte de taux d'intérêt bas. Il est essentiel de considérer ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟡 PROFIL MODÉRÉ : Ce portefeuille présente un niveau de risque modéré. Il convient aux investisseurs acceptant une certaine volatilité avec un horizon moyen terme (3-5 ans).",
+      "_compliance_audit": {
+        "llm_sanitizer": {
+          "sanitized": false,
+          "removed_sentences": 0,
+          "hits": [],
+          "warnings": [],
+          "removal_ratio": 0.0,
+          "original_length": 501,
+          "sanitized_length": 501
+        },
+        "timestamp": "2025-12-17T17:20:02.649415",
+        "version": "v4.8.7",
+        "fallback_used": false
+      }
+    },
+    "Stable": {
+      "allocation": {
+        "JPMorgan Ultra-Short Municipal Income Fund": 11.97,
+        "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF": 11.97,
+        "iShares 0-3 Month Treasury Bond ETF": 11.97,
+        "iShares Short Treasury Bond ETF": 12.31,
+        "US Treasury 3 Month Bill ETF": 5.64,
+        "iShares MSCI UAE ETF": 10.26,
+        "EQ_13": 10.26,
+        "EQ_58": 10.26,
+        "EQ_533": 5.13,
+        "EQ_27": 8.21,
+        "EQ_586": 2.05
+      },
+      "diagnostics": {
+        "converged": false,
+        "optimization_mode": "fallback_heuristic",
+        "fallback_reason": "Stable profile: strict constraints (vol 6%±3%, bonds_min 35%, DEFENSIVE 45-60%) mathematically incompatible with Markowitz optimization",
+        "fallback_heuristic": true,
+        "message": "Fallback heuristique (contraintes strictes)",
+        "portfolio_vol": 6.38,
+        "vol_target": 6.0,
+        "vol_tolerance": 3.0,
+        "vol_diff": 0.38,
+        "portfolio_score": 6.07,
+        "n_assets": 11,
+        "n_bonds": 5,
+        "n_crypto": 0,
+        "crypto_max_allowed": 0.0,
+        "sectors": {
+          "Bonds": 53.86000000000001,
+          "Diversified": 10.26,
+          "Santé": 10.26,
+          "Biens de consommation cycliques": 10.26,
+          "Finance": 5.13,
+          "Technologie de l'information": 8.21,
+          "Services publics": 2.05
+        },
+        "bucket_exposure": {
+          "defensive": 53.86000000000001,
+          "core": 35.910000000000004,
+          "satellite": 10.260000000000002
+        },
+        "bucket_compliance": {
+          "core": {
+            "actual": 35.9,
+            "target_min": 30.0,
+            "target_max": 40.0,
+            "in_range": true
+          },
+          "satellite": {
+            "actual": 10.3,
+            "target_min": 5.0,
+            "target_max": 15.0,
+            "in_range": true
+          },
+          "defensive": {
+            "actual": 53.9,
+            "target_min": 45.0,
+            "target_max": 60.0,
+            "in_range": true
+          },
+          "lottery": {
+            "actual": 0.0,
+            "target_min": 0.0,
+            "target_max": 0.0,
+            "in_range": true
+          }
+        },
+        "corporate_group_exposure": {},
+        "covariance_method": "structured",
+        "covariance_empirical_weight": 0.0,
+        "covariance_kpis": {
+          "condition_number": 1597629.55,
+          "condition_number_before_shrinkage": null,
+          "shrinkage_applied": false,
+          "shrinkage_intensity": 0.0,
+          "eigen_clipped": 6,
+          "eigen_clipped_pct": 9.84,
+          "eigenvalue_min": 1e-06,
+          "eigenvalue_max": 1.5976295479640874,
+          "eigenvalue_min_raw": -0.03854894352925567,
+          "matrix_size": 61,
+          "is_well_conditioned": false,
+          "thresholds": {
+            "condition_number_warning": 1000.0,
+            "eigen_clipped_pct_warning": 20.0
+          }
+        },
+        "buffett_hard_filter_enabled": true,
+        "buffett_min_score": 50.0,
+        "_feasibility": {
+          "feasible": true,
+          "reason": null,
+          "capacity": {
+            "bonds": 9075.0,
+            "n_candidates": 1720,
+            "vol_range": "1%-150%"
+          },
+          "requirements": {
+            "bonds_min": 35.0,
+            "min_assets": 10,
+            "vol_target": "6.0% ±3.0%"
+          }
+        },
+        "llm_sanitizer": {
+          "profile": "Stable",
+          "justifications_cleaned": 0,
+          "total_hits": 0,
+          "total_warnings": 0,
+          "hit_labels": [],
+          "used_fallback": false
+        },
+        "used_fallback_comment": false
+      },
+      "justifications": {
+        "iShares Short Treasury Bond ETF": "Ce fonds vise à offrir une exposition aux bons du Trésor à court terme, mais les rendements peuvent être limités dans un environnement de taux d'intérêt bas. [MC], [TH]",
+        "JPMorgan Ultra-Short Municipal Income Fund": "Les fonds municipaux peuvent être affectés par des changements dans la réglementation fiscale et les taux d'intérêt. [MC], [SEC]",
+        "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF": "L'exposition à des obligations à court terme peut limiter les rendements en période de faible inflation. [MC], [TH]",
+        "iShares 0-3 Month Treasury Bond ETF": "Les rendements des bons du Trésor à court terme peuvent être affectés par les fluctuations des taux d'intérêt. [MC], [TH]",
+        "iShares MSCI UAE ETF": "Ce fonds offre une exposition aux marchés émergents, qui peuvent être plus volatils. [MC], [SEC]",
+        "JOHNSON & JOHNSON": "Bien que J&J soit historiquement stable, elle fait face à des risques juridiques et réglementaires dans le secteur de la santé. [SEC], [TH]",
+        "TJX INC": "TJX est sensible aux tendances de consommation, qui peuvent varier en fonction des conditions économiques. [MC], [TH]",
+        "CISCO SYSTEMS INC": "Cisco est exposée aux cycles de l'industrie technologique, ce qui peut entraîner une volatilité de ses actions. [SEC], [TH]",
+        "US Treasury 3 Month Bill ETF": "Les bons du Trésor à court terme peuvent offrir des rendements limités, surtout dans un environnement de taux d'intérêt bas. [MC], [TH]",
+        "ALLIANZ": "Allianz est exposée aux fluctuations des marchés financiers et aux risques réglementaires. [SEC], [TH]",
+        "ENGIE SA": "Engie est sensible aux fluctuations des prix de l'énergie et aux réglementations environnementales. [SEC], [TH]"
+      },
+      "comment": "Ce portefeuille modèle présente une approche stable, privilégiant les obligations pour minimiser la volatilité tout en visant des rendements modérés. Bien qu'il soit conçu pour réduire les risques, il reste exposé aux fluctuations des taux d'intérêt et aux conditions économiques. Les investissements dans des actifs à court terme peuvent offrir des rendements limités, surtout dans un contexte de faible inflation. Il est important de prendre en compte ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+      "compliance": "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement.\n\n🟢 PROFIL STABLE : Ce portefeuille vise une volatilité réduite. Il convient aux investisseurs prudents avec un horizon court à moyen terme.",
+      "_compliance_audit": {
+        "llm_sanitizer": {
+          "sanitized": false,
+          "removed_sentences": 0,
+          "hits": [],
+          "warnings": [],
+          "removal_ratio": 0.0,
+          "original_length": 483,
+          "sanitized_length": 483
+        },
+        "timestamp": "2025-12-17T17:20:02.649950",
+        "version": "v4.8.7",
+        "fallback_used": false
+      }
+    }
+  }
+}
