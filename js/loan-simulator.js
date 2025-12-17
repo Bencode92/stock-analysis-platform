@@ -1443,7 +1443,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("📊 Résultats calculés:", result);
 
             // 🆕 v2.3.4: NOUVELLE LOGIQUE - Ajout PTZ conditionnel selon période
-            const mensualiteBase = result.mensualiteInitiale + result.assuranceInitiale;
+            const fraisTenueMensuelCalc = parseFloat(document.getElementById('frais-tenue-compte')?.value || 710) / (loanDurationYears * 12);
+const mensualiteBase = result.mensualiteInitiale + result.assuranceInitiale + fraisTenueMensuelCalc;
             
             let mensualiteRenego = mensualiteBase; // valeur par défaut
             if (applyRenegotiation && renegotiationMonth && result.mensualiteApresRenego) {
@@ -1561,7 +1562,7 @@ document.addEventListener('DOMContentLoaded', function() {
         monthlyPaymentElement.textContent = formatMontant(mensualiteBase);
         const initialLabel = monthlyPaymentCard.querySelector('.result-label');
         if (initialLabel) {
-            initialLabel.textContent = 'Mensualité initiale (crédit + assurance)';
+            initialLabel.textContent = 'Mensualité initiale (crédit + assurance + tenue)';
         }
         
         // Si renégociation activée et différente, créer une seconde tuile
