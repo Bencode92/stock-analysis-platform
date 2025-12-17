@@ -2,6 +2,11 @@
 """
 Génération des commentaires et justifications via LLM.
 
+v2.1 - Fix P0 sanitizer vide:
+- Prompt renforcé avec liste explicite de mots interdits
+- Exigence minimum 4 phrases + 2 mentions risques
+- Fallback déterministe si sanitizer supprime >50%
+
 v2.0 - Intégration sanitizer AMF:
 - Filtrage strict des outputs LLM
 - Logging des hits pour traçabilité
@@ -11,8 +16,6 @@ Le LLM ne décide PAS des poids — il génère uniquement :
 - Justifications par ligne (≤50 mots)
 - Commentaire global par portefeuille (≤200 mots)
 - Bloc Compliance AMF
-
-Prompt compact : ~1500 tokens (vs ~8000 avant)
 """
 
 import json
@@ -39,15 +42,31 @@ logger = logging.getLogger("portfolio_engine.llm_commentary")
 
 # ============= PROMPT TEMPLATES =============
 
-SYSTEM_PROMPT = """Tu es un analyste financier senior. Tu reçois des portefeuilles DÉJÀ OPTIMISÉS.
+# v2.1: Liste explicite des mots qui déclenchent le sanitizer
+FORBIDDEN_WORDS_BLOCK = """
+MOTS STRICTEMENT INTERDITS (déclenchent suppression automatique de la phrase):
+- "sûr", "sûrs", "sûre", "sûres" → utiliser: "à faible volatilité", "historiquement stable"
+- "sécurisé", "sécurisés" → utiliser: "avec un profil défensif"
+- "protégé", "protégés" → utiliser: "avec une exposition limitée"
+- "garanti", "garantie" → utiliser: "vise à", "a pour objectif"
+- "sans risque" → INTERDIT (tout investissement comporte des risques)
+- "recommandé", "recommander" → utiliser: "ce portefeuille modèle présente"
+- "idéal", "parfait", "optimal" → utiliser: "adapté", "approprié", "cohérent"
+- "vous devriez", "vous devez" → utiliser: formulations impersonnelles
+- "adapté à vous", "pour vous" → utiliser: "ce portefeuille modèle"
+"""
+
+SYSTEM_PROMPT = f"""Tu es un analyste financier senior. Tu reçois des portefeuilles DÉJÀ OPTIMISÉS.
 Tu génères UNIQUEMENT des justifications et commentaires. Tu ne modifies JAMAIS les poids.
 
 RÈGLES STRICTES (conformité AMF):
-- NE JAMAIS utiliser: "recommandé", "idéal", "parfait", "garanti", "certifié", "sans risque"
-- NE JAMAIS utiliser: "adapté à vous", "pour vous", "selon votre profil"
-- NE JAMAIS utiliser: "vous devriez", "vous devez", "il faut que vous"
-- TOUJOURS utiliser des formulations neutres: "ce portefeuille modèle", "à titre informatif"
-- TOUJOURS mentionner les risques
+{FORBIDDEN_WORDS_BLOCK}
+
+RÈGLES DE STRUCTURE OBLIGATOIRES:
+- Chaque commentaire DOIT contenir MINIMUM 4 phrases complètes
+- Chaque commentaire DOIT mentionner AU MOINS 2 risques ou limites
+- Utiliser des formulations neutres: "ce portefeuille modèle", "à titre informatif"
+- Terminer par une mention des risques
 
 Réponds UNIQUEMENT en JSON valide, sans markdown."""
 
@@ -62,7 +81,7 @@ COMMENTARY_PROMPT_TEMPLATE = """# PORTEFEUILLES À COMMENTER
 
 Pour chaque portefeuille, génère :
 1. `justifications` : dict {{asset_id: "justification ≤50 mots avec refs [BR], [MC], [SEC], [TH]"}}
-2. `comment` : commentaire global ≤200 mots
+2. `comment` : commentaire global de 4-6 phrases (≤200 mots), incluant 2 mentions de risques
 3. `compliance` : bloc AMF (voir format ci-dessous)
 
 ## Références à utiliser :
@@ -74,12 +93,19 @@ Pour chaque portefeuille, génère :
 ## Format Compliance AMF :
 "⚠️ AVERTISSEMENT : Ce portefeuille est généré à titre informatif uniquement et ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures. Investir comporte des risques de perte en capital. Consultez un conseiller financier agréé avant toute décision d'investissement."
 
+## RAPPEL CRITIQUE - Ne JAMAIS utiliser ces mots (sinon phrase supprimée):
+- sûr/sûrs/sûre → "à faible volatilité"
+- sécurisé → "avec un profil défensif"
+- garanti → "vise à"
+- sans risque → INTERDIT
+- recommandé → "ce portefeuille présente"
+
 # FORMAT DE SORTIE (JSON strict)
 
 {{
   "Agressif": {{
     "justifications": {{"ASSET_ID": "justification...", ...}},
-    "comment": "Commentaire global...",
+    "comment": "Commentaire global 4-6 phrases incluant risques...",
     "compliance": "⚠️ AVERTISSEMENT : ..."
   }},
   "Modéré": {{ ... }},
@@ -107,6 +133,65 @@ class Commentary:
     comment: str
     compliance: str
     sanitizer_report: Optional[Dict] = None  # v2.0: Rapport de sanitization
+    used_fallback: bool = False  # v2.1: Flag si fallback utilisé
+
+
+# ============= v2.1: FALLBACK TEMPLATES =============
+
+FALLBACK_COMMENTS = {
+    "Agressif": (
+        "Ce portefeuille modèle Agressif présente une allocation orientée croissance "
+        "avec une volatilité cible élevée. La diversification sectorielle et géographique "
+        "vise à capturer le potentiel de hausse des marchés actions. "
+        "Toutefois, ce profil comporte un risque de perte en capital significatif "
+        "en cas de correction des marchés. La volatilité historique peut entraîner "
+        "des variations importantes de la valeur du portefeuille à court terme."
+    ),
+    "Modéré": (
+        "Ce portefeuille modèle Modéré combine des actifs de croissance et des instruments "
+        "à revenu fixe pour un équilibre rendement/risque. L'allocation vise une volatilité "
+        "intermédiaire tout en maintenant un potentiel de performance. "
+        "Le risque de perte en capital existe, notamment en période de stress de marché. "
+        "La corrélation entre classes d'actifs peut augmenter en période de crise, "
+        "réduisant les bénéfices de la diversification."
+    ),
+    "Stable": (
+        "Ce portefeuille modèle Stable privilégie la préservation du capital avec une "
+        "allocation majoritairement obligataire et des actifs à faible volatilité historique. "
+        "L'objectif est de limiter les fluctuations tout en générant un rendement modéré. "
+        "Malgré son profil défensif, ce portefeuille reste exposé au risque de taux "
+        "et au risque de crédit. En période de hausse des taux, la valeur des obligations "
+        "peut diminuer significativement."
+    ),
+}
+
+
+def _generate_fallback_comment(profile: str, diagnostics: Dict[str, Any]) -> str:
+    """
+    v2.1: Génère un commentaire fallback déterministe si le LLM échoue ou
+    si le sanitizer supprime trop de contenu.
+    """
+    base = FALLBACK_COMMENTS.get(profile, FALLBACK_COMMENTS["Modéré"])
+    vol = diagnostics.get("portfolio_vol", "N/A")
+    n_assets = diagnostics.get("n_assets", "plusieurs")
+    
+    return f"{base} Ce portefeuille compte {n_assets} lignes avec une volatilité estimée de {vol}%."
+
+
+def _generate_fallback_justification(asset_id: str, asset_info: Dict, profile: str) -> str:
+    """v2.1: Génère une justification fallback pour un actif."""
+    name = asset_info.get("name", asset_id)
+    category = asset_info.get("category", "Actif")
+    sector = asset_info.get("sector", "")
+    weight = asset_info.get("weight", 0)
+    
+    sector_part = f" du secteur {sector}" if sector and sector != "Unknown" else ""
+    
+    return (
+        f"{name} ({weight:.1f}%) : {category}{sector_part} "
+        f"sélectionné pour son profil risque/rendement dans ce portefeuille modèle {profile}. "
+        f"Exposition soumise aux conditions de marché."
+    )
 
 
 # ============= PROMPT BUILDER =============
@@ -117,10 +202,7 @@ def build_portfolio_summary(
     diagnostics: Dict[str, Any],
     profile: str
 ) -> Dict[str, Any]:
-    """
-    Construit un résumé compact du portefeuille pour le prompt.
-    """
-    # Lookup des assets par ID
+    """Construit un résumé compact du portefeuille pour le prompt."""
     asset_lookup = {a.id if hasattr(a, 'id') else a.get('id'): a for a in assets}
     
     lines = []
@@ -155,19 +237,13 @@ def build_portfolio_summary(
     }
 
 
-def build_market_brief(
-    brief_data: Optional[Dict] = None,
-    max_points: int = 5
-) -> str:
-    """
-    Construit un résumé marché compact pour le contexte.
-    """
+def build_market_brief(brief_data: Optional[Dict] = None, max_points: int = 5) -> str:
+    """Construit un résumé marché compact pour le contexte."""
     if not brief_data:
         return "Contexte : marchés globalement stables, focus sur la diversification."
     
     points = []
     
-    # Extraire les points clés du brief
     if "macro" in brief_data:
         macro = brief_data["macro"]
         if isinstance(macro, list):
@@ -190,7 +266,6 @@ def build_market_brief(
         if isinstance(themes, list):
             points.append(f"Thèmes: {', '.join(themes[:3])}")
     
-    # Limiter et formater
     points = points[:max_points]
     if not points:
         return "Contexte : environnement de marché mixte."
@@ -203,18 +278,7 @@ def build_commentary_prompt(
     assets: List[Any],
     brief_data: Optional[Dict] = None
 ) -> str:
-    """
-    Construit le prompt complet pour le LLM.
-    
-    Args:
-        portfolios: {profile: {"allocation": {...}, "diagnostics": {...}}}
-        assets: Liste des assets (pour lookup)
-        brief_data: Données de contexte marché (optionnel)
-    
-    Returns:
-        Prompt formaté (~1500 tokens)
-    """
-    # Construire les résumés de portefeuilles
+    """Construit le prompt complet pour le LLM."""
     portfolios_summary = {}
     for profile, data in portfolios.items():
         portfolios_summary[profile] = build_portfolio_summary(
@@ -224,10 +288,8 @@ def build_commentary_prompt(
             profile=profile
         )
     
-    # Brief marché
     market_brief = build_market_brief(brief_data)
     
-    # Assembler le prompt
     prompt = COMMENTARY_PROMPT_TEMPLATE.format(
         portfolios_json=json.dumps(portfolios_summary, indent=2, ensure_ascii=False),
         market_brief=market_brief
@@ -239,31 +301,23 @@ def build_commentary_prompt(
 # ============= RESPONSE PARSER =============
 
 def parse_llm_response(response_text: str) -> Dict[str, Commentary]:
-    """
-    Parse la réponse JSON du LLM.
-    Gère les erreurs de format courantes.
-    """
-    # Nettoyer la réponse
+    """Parse la réponse JSON du LLM."""
     text = response_text.strip()
     
-    # Supprimer les blocs markdown si présents
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\n?", "", text)
         text = re.sub(r"\n?```$", "", text)
     
-    # Tenter le parsing JSON
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
         logger.error(f"Erreur parsing JSON LLM: {e}")
         logger.debug(f"Réponse brute: {text[:500]}...")
         
-        # Tentative de réparation basique
         data = _repair_json(text)
         if data is None:
             raise ValueError(f"Impossible de parser la réponse LLM: {e}")
     
-    # Convertir en objets Commentary
     result = {}
     for profile in ["Agressif", "Modéré", "Stable"]:
         if profile in data:
@@ -286,9 +340,6 @@ def parse_llm_response(response_text: str) -> Dict[str, Commentary]:
 
 def _repair_json(text: str) -> Optional[Dict]:
     """Tentative de réparation JSON basique."""
-    import re
-    
-    # Trouver le premier { et le dernier }
     start = text.find('{')
     end = text.rfind('}')
     
@@ -296,9 +347,7 @@ def _repair_json(text: str) -> Optional[Dict]:
         return None
     
     json_str = text[start:end+1]
-    
-    # Corrections courantes
-    json_str = re.sub(r',\s*}', '}', json_str)  # Trailing commas
+    json_str = re.sub(r',\s*}', '}', json_str)
     json_str = re.sub(r',\s*]', ']', json_str)
     
     try:
@@ -318,17 +367,15 @@ def _default_compliance() -> str:
     )
 
 
-# ============= v2.0: SANITIZATION POST-LLM =============
+# ============= v2.0/2.1: SANITIZATION POST-LLM =============
 
-def _sanitize_commentary(commentary: Dict[str, Commentary]) -> Dict[str, Commentary]:
+def _sanitize_commentary(
+    commentary: Dict[str, Commentary],
+    portfolios: Optional[Dict[str, Dict]] = None
+) -> Dict[str, Commentary]:
     """
     v2.0: Applique le sanitizer AMF sur les outputs LLM.
-    
-    Stratégie:
-    1. Sanitize chaque justification
-    2. Sanitize chaque commentaire global
-    3. Log les hits pour audit
-    4. Stocker le rapport dans Commentary
+    v2.1: Utilise fallback si >50% du contenu supprimé.
     """
     if not HAS_SANITIZER:
         logger.warning("[SANITIZER] Module compliance.sanitizer non disponible")
@@ -337,6 +384,7 @@ def _sanitize_commentary(commentary: Dict[str, Commentary]) -> Dict[str, Comment
     sanitized = {}
     total_hits = 0
     total_warnings = 0
+    fallback_used = 0
     
     for profile, c in commentary.items():
         # Sanitize justifications
@@ -345,17 +393,49 @@ def _sanitize_commentary(commentary: Dict[str, Commentary]) -> Dict[str, Comment
         # Sanitize comment
         cleaned_comment = sanitize_portfolio_commentary(c.comment)
         
+        # v2.1: Check if comment was mostly emptied
+        used_fallback = False
+        original_len = len(c.comment) if c.comment else 0
+        cleaned_len = len(cleaned_comment) if cleaned_comment else 0
+        
+        if original_len > 0:
+            removal_ratio = 1 - (cleaned_len / original_len)
+            
+            # Si >50% supprimé OU commentaire trop court → fallback
+            if removal_ratio > 0.5 or cleaned_len < 100:
+                logger.warning(
+                    f"[SANITIZER] {profile}: {removal_ratio:.0%} removed, using fallback comment"
+                )
+                diag = {}
+                if portfolios and profile in portfolios:
+                    diag = portfolios[profile].get("diagnostics", {})
+                    diag["n_assets"] = len(portfolios[profile].get("allocation", {}))
+                
+                cleaned_comment = _generate_fallback_comment(profile, diag)
+                used_fallback = True
+                fallback_used += 1
+        elif original_len == 0:
+            # Pas de commentaire du tout → fallback
+            logger.warning(f"[SANITIZER] {profile}: Empty comment, using fallback")
+            diag = {}
+            if portfolios and profile in portfolios:
+                diag = portfolios[profile].get("diagnostics", {})
+                diag["n_assets"] = len(portfolios[profile].get("allocation", {}))
+            cleaned_comment = _generate_fallback_comment(profile, diag)
+            used_fallback = True
+            fallback_used += 1
+        
         # Collecter les stats
         profile_hits = sum(len(r.hits) for r in just_reports.values())
         profile_warnings = sum(len(r.warnings) for r in just_reports.values())
         
-        # Créer le rapport agrégé
         sanitizer_report = {
             "profile": profile,
             "justifications_cleaned": len([r for r in just_reports.values() if r.sanitized]),
             "total_hits": profile_hits,
             "total_warnings": profile_warnings,
             "hit_labels": list(set(h[0] for r in just_reports.values() for h in r.hits)),
+            "used_fallback": used_fallback,
         }
         
         sanitized[profile] = Commentary(
@@ -363,6 +443,7 @@ def _sanitize_commentary(commentary: Dict[str, Commentary]) -> Dict[str, Comment
             comment=cleaned_comment,
             compliance=c.compliance,
             sanitizer_report=sanitizer_report,
+            used_fallback=used_fallback,
         )
         
         total_hits += profile_hits
@@ -379,6 +460,9 @@ def _sanitize_commentary(commentary: Dict[str, Commentary]) -> Dict[str, Comment
             f"[SANITIZER] TOTAL: {total_hits} forbidden patterns removed from LLM output"
         )
     
+    if fallback_used > 0:
+        logger.info(f"[SANITIZER] Used fallback comments for {fallback_used} profile(s)")
+    
     return sanitized
 
 
@@ -391,21 +475,7 @@ async def generate_commentary_async(
     openai_client: Any = None,
     model: str = "gpt-4o-mini"
 ) -> Dict[str, Commentary]:
-    """
-    Génère les commentaires via l'API OpenAI (async).
-    
-    v2.0: Applique le sanitizer AMF sur les outputs.
-    
-    Args:
-        portfolios: {profile: {"allocation": {...}, "diagnostics": {...}}}
-        assets: Liste des assets
-        brief_data: Contexte marché
-        openai_client: Client OpenAI initialisé
-        model: Modèle à utiliser
-    
-    Returns:
-        {profile: Commentary}
-    """
+    """Génère les commentaires via l'API OpenAI (async)."""
     if openai_client is None:
         raise ValueError("openai_client requis")
     
@@ -426,8 +496,8 @@ async def generate_commentary_async(
     response_text = response.choices[0].message.content
     commentary = parse_llm_response(response_text)
     
-    # v2.0: Sanitization AMF
-    commentary = _sanitize_commentary(commentary)
+    # v2.1: Pass portfolios for fallback generation
+    commentary = _sanitize_commentary(commentary, portfolios)
     
     return commentary
 
@@ -439,11 +509,7 @@ def generate_commentary_sync(
     openai_client: Any = None,
     model: str = "gpt-4o-mini"
 ) -> Dict[str, Commentary]:
-    """
-    Génère les commentaires via l'API OpenAI (sync).
-    
-    v2.0: Applique le sanitizer AMF sur les outputs.
-    """
+    """Génère les commentaires via l'API OpenAI (sync)."""
     if openai_client is None:
         raise ValueError("openai_client requis")
     
@@ -464,8 +530,8 @@ def generate_commentary_sync(
     response_text = response.choices[0].message.content
     commentary = parse_llm_response(response_text)
     
-    # v2.0: Sanitization AMF
-    commentary = _sanitize_commentary(commentary)
+    # v2.1: Pass portfolios for fallback generation
+    commentary = _sanitize_commentary(commentary, portfolios)
     
     return commentary
 
@@ -476,14 +542,7 @@ def merge_commentary_into_portfolios(
     portfolios: Dict[str, Dict],
     commentary: Dict[str, Commentary]
 ) -> Dict[str, Dict]:
-    """
-    Fusionne les commentaires LLM dans les portefeuilles.
-    
-    v2.0: Inclut le rapport sanitizer dans les diagnostics.
-    
-    Returns:
-        Portefeuilles enrichis avec justifications, comment, compliance
-    """
+    """Fusionne les commentaires LLM dans les portefeuilles."""
     result = {}
     
     for profile, data in portfolios.items():
@@ -500,11 +559,12 @@ def merge_commentary_into_portfolios(
             result[profile]["comment"] = c.comment
             result[profile]["compliance"] = c.compliance
             
-            # v2.0: Ajouter le rapport sanitizer aux diagnostics
+            # v2.0/2.1: Ajouter le rapport sanitizer aux diagnostics
             if c.sanitizer_report:
                 if "diagnostics" not in result[profile]:
                     result[profile]["diagnostics"] = {}
                 result[profile]["diagnostics"]["llm_sanitizer"] = c.sanitizer_report
+                result[profile]["diagnostics"]["used_fallback_comment"] = c.used_fallback
     
     return result
 
@@ -515,10 +575,7 @@ def generate_fallback_commentary(
     portfolios: Dict[str, Dict],
     assets: List[Any]
 ) -> Dict[str, Commentary]:
-    """
-    Génère des commentaires basiques sans LLM (fallback).
-    Utile en cas d'erreur API ou pour les tests.
-    """
+    """Génère des commentaires basiques sans LLM (fallback complet)."""
     asset_lookup = {
         (a.id if hasattr(a, 'id') else a.get('id')): a 
         for a in assets
@@ -529,34 +586,36 @@ def generate_fallback_commentary(
     for profile, data in portfolios.items():
         allocation = data.get("allocation", {})
         diag = data.get("diagnostics", {})
+        diag["n_assets"] = len(allocation)
         
         # Justifications génériques
         justifications = {}
         for asset_id, weight in allocation.items():
             asset = asset_lookup.get(asset_id, {})
-            name = asset.name if hasattr(asset, 'name') else asset.get('name', asset_id)
-            category = asset.category if hasattr(asset, 'category') else asset.get('category', 'Actif')
-            sector = asset.sector if hasattr(asset, 'sector') else asset.get('sector', '')
-            
-            justifications[asset_id] = (
-                f"{name} ({weight:.1f}%) : {category} "
-                f"{'du secteur ' + sector if sector else ''} "
-                f"sélectionné pour son profil risque/rendement dans ce portefeuille modèle {profile}."
-            )
+            if hasattr(asset, 'name'):
+                asset_info = {
+                    "name": asset.name,
+                    "category": asset.category,
+                    "sector": asset.sector,
+                    "weight": weight
+                }
+            else:
+                asset_info = {
+                    "name": asset.get('name', asset_id),
+                    "category": asset.get('category', 'Actif'),
+                    "sector": asset.get('sector', ''),
+                    "weight": weight
+                }
+            justifications[asset_id] = _generate_fallback_justification(asset_id, asset_info, profile)
         
-        # Commentaire générique
-        n_assets = len(allocation)
-        vol = diag.get("portfolio_vol", "N/A")
-        comment = (
-            f"Portefeuille modèle {profile} composé de {n_assets} lignes avec une volatilité "
-            f"estimée de {vol}%. L'allocation vise un équilibre entre performance et "
-            f"gestion du risque. Ce portefeuille est présenté à titre informatif uniquement."
-        )
+        # Commentaire fallback
+        comment = _generate_fallback_comment(profile, diag)
         
         result[profile] = Commentary(
             justifications=justifications,
             comment=comment,
-            compliance=_default_compliance()
+            compliance=_default_compliance(),
+            used_fallback=True
         )
     
     return result
@@ -565,7 +624,6 @@ def generate_fallback_commentary(
 # ============= EXEMPLE D'UTILISATION =============
 
 if __name__ == "__main__":
-    # Test du builder de prompt
     test_portfolios = {
         "Agressif": {
             "allocation": {"AAPL": 12.5, "MSFT": 10.0, "BTC": 8.0},
@@ -594,7 +652,6 @@ if __name__ == "__main__":
     print(prompt[:2000])
     print("\n... [tronqué]")
     
-    # Test fallback
     print("\n\nTest fallback (sans LLM):")
     fallback = generate_fallback_commentary(test_portfolios, test_assets)
     for profile, c in fallback.items():
