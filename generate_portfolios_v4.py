@@ -8,7 +8,7 @@ Architecture v4 :
 - Compliance AMF appliquée systématiquement
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
-
+V4.9.0: RADAR tactical integration - deterministic data-driven tilts
 V4.8.7: P1-8c FIX - TER is embedded in ETF prices, use platform_fee instead
 V4.8.6: P1-8b - TER (Total Expense Ratio) - DEPRECATED (double-counting)
 V4.8.5: P1-8 - Net/gross returns separated for AMF transparency
@@ -75,6 +75,19 @@ from compliance import (
 # v4.8 P0-7: Import du sanitizer LLM
 from compliance.sanitizer import sanitize_llm_output
 
+# v4.9.0: Import du module RADAR (data-driven tilts)
+try:
+    from portfolio_engine.market_sector_radar import (
+        generate_market_context_radar,
+        RadarRules,
+        apply_macro_tilts_radar,
+    )
+    RADAR_AVAILABLE = True
+    logger.info("✅ Module RADAR disponible")
+except ImportError:
+    RADAR_AVAILABLE = False
+    logger.warning("⚠️ Module RADAR non disponible, fallback GPT si activé")
+
 # === Modules existants (compatibilité) ===
 try:
     from brief_formatter import format_brief_data
@@ -116,8 +129,20 @@ CONFIG = {
     # === Buffett Filter Config ===
     "buffett_mode": "soft",
     "buffett_min_score": 40,
-    # === v4.8 P0-8: Tactical Context DÉSACTIVÉ ===
-    "use_tactical_context": False,
+    # === v4.9.0: Tactical Context RADAR (data-driven) ===
+    "use_tactical_context": True,
+    "tactical_mode": "radar",  # "radar" (déterministe) ou "gpt" (ancien)
+    "tactical_rules": {
+        "sweet_ytd_min": 10.0,
+        "sweet_ytd_max": 35.0,
+        "sweet_daily_min": -0.5,
+        "overheat_ytd_min": 50.0,
+        "smoothing_alpha": 0.3,
+        "max_favored_sectors": 5,
+        "max_avoided_sectors": 3,
+        "max_favored_regions": 4,
+        "max_avoided_regions": 3,
+    },
     "market_data_dir": "data",
 }
 
@@ -331,10 +356,11 @@ def print_buffett_diagnostic(assets: List[dict], title: str = "DIAGNOSTIC FILTRE
 
 # ============= v4.4: TACTICAL CONTEXT DIAGNOSTIC =============
 
-def print_tactical_context_diagnostic(market_context: Dict):
+def print_tactical_context_diagnostic(market_context: Dict, mode: str = "radar"):
     """Affiche un diagnostic du contexte marché chargé."""
     print("\n" + "=" * 80)
-    print("📊 DIAGNOSTIC CONTEXTE TACTIQUE (v4.4)")
+    mode_label = "RADAR" if mode == "radar" else "GPT"
+    print(f"📊 DIAGNOSTIC CONTEXTE TACTIQUE v4.9 - Mode {mode_label}")
     print("=" * 80)
     
     regime = market_context.get("market_regime", "N/A")
@@ -384,31 +410,66 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     """Pipeline déterministe : mêmes données → mêmes poids."""
     logger.info("🧮 Construction des portefeuilles (déterministe)...")
     
+    # === v4.9.0: Tactical Context - RADAR ou GPT ===
     market_context = None
+    tactical_mode = CONFIG.get("tactical_mode", "radar")
+    
     if CONFIG.get("use_tactical_context", False):
-        logger.info("📊 Chargement du contexte marché (tactical_context)...")
-        market_context = load_market_context(CONFIG.get("market_data_dir", "data"))
+        logger.info(f"📊 Chargement du contexte marché (mode: {tactical_mode})...")
         
-        macro_tilts = market_context.get("macro_tilts", {})
-        has_tilts = (
-            macro_tilts.get("favored_sectors") or 
-            macro_tilts.get("avoided_sectors") or
-            macro_tilts.get("favored_regions") or
-            macro_tilts.get("avoided_regions")
-        )
+        # Branche 1: Mode RADAR (déterministe, data-driven)
+        if tactical_mode == "radar" and RADAR_AVAILABLE:
+            logger.info("🎯 Mode RADAR activé - tilts déterministes")
+            rules_cfg = CONFIG.get("tactical_rules", {})
+            rules = RadarRules(
+                sweet_ytd_min=rules_cfg.get("sweet_ytd_min", 10.0),
+                sweet_ytd_max=rules_cfg.get("sweet_ytd_max", 35.0),
+                sweet_daily_min=rules_cfg.get("sweet_daily_min", -0.5),
+                overheat_ytd_min=rules_cfg.get("overheat_ytd_min", 50.0),
+                smoothing_alpha=rules_cfg.get("smoothing_alpha", 0.3),
+                max_favored_sectors=rules_cfg.get("max_favored_sectors", 5),
+                max_avoided_sectors=rules_cfg.get("max_avoided_sectors", 3),
+                max_favored_regions=rules_cfg.get("max_favored_regions", 4),
+                max_avoided_regions=rules_cfg.get("max_avoided_regions", 3),
+            )
+            market_context = generate_market_context_radar(
+                data_dir=CONFIG.get("market_data_dir", "data"),
+                rules=rules,
+                save_to_file=True,
+            )
+            logger.info(f"✅ RADAR context généré: regime={market_context.get('market_regime')}")
         
-        if has_tilts:
-            print_tactical_context_diagnostic(market_context)
-            logger.info("✅ Contexte marché chargé pour scoring tactique")
-        else:
-            is_fallback = market_context.get("_meta", {}).get("is_fallback", False)
-            if is_fallback:
-                logger.warning("⚠️ Contexte marché en mode FALLBACK - scoring tactique neutre")
+        # Branche 2: Mode GPT (ancien, non déterministe)
+        elif tactical_mode == "gpt":
+            logger.info("🤖 Mode GPT activé - tilts via brief_ia.json")
+            market_context = load_market_context(CONFIG.get("market_data_dir", "data"))
+        
+        # Branche 3: RADAR demandé mais module absent → fallback GPT
+        elif tactical_mode == "radar" and not RADAR_AVAILABLE:
+            logger.warning("⚠️ RADAR demandé mais module absent, fallback GPT")
+            market_context = load_market_context(CONFIG.get("market_data_dir", "data"))
+        
+        # Diagnostic du contexte chargé
+        if market_context:
+            macro_tilts = market_context.get("macro_tilts", {})
+            has_tilts = (
+                macro_tilts.get("favored_sectors") or 
+                macro_tilts.get("avoided_sectors") or
+                macro_tilts.get("favored_regions") or
+                macro_tilts.get("avoided_regions")
+            )
+            
+            if has_tilts:
+                print_tactical_context_diagnostic(market_context, mode=tactical_mode)
+                logger.info("✅ Contexte marché chargé pour scoring tactique")
             else:
-                logger.warning("⚠️ Contexte marché sans tilts actifs - scoring tactique désactivé")
+                is_fallback = market_context.get("_meta", {}).get("is_fallback", False)
+                if is_fallback:
+                    logger.warning("⚠️ Contexte marché en mode FALLBACK - scoring tactique neutre")
+                else:
+                    logger.warning("⚠️ Contexte marché sans tilts actifs - scoring tactique désactivé")
     else:
-        logger.info("⚠️ P0-8: Tilts tactiques DÉSACTIVÉS (use_tactical_context=False)")
-        logger.info("   Raison: GPT-generated = zone grise AMF, non sourcé")
+        logger.info("⚠️ Tilts tactiques DÉSACTIVÉS (use_tactical_context=False)")
     
     # 1. Charger les données brutes
     stocks_data = load_stocks_data()
@@ -1492,13 +1553,15 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.8.7",
+        "version": "v4.9.0",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
+        "tactical_mode": CONFIG.get("tactical_mode", "radar"),
+        "tactical_rules": CONFIG.get("tactical_rules", {}),
         "backtest_days": CONFIG["backtest_days"],
-        "platform_fee_annual_bp": CONFIG.get("platform_fee_annual_bp", 0.0),  # V4.8.7
-        "ter_handling": "embedded_in_etf_prices",  # V4.8.7: Explicit
+        "platform_fee_annual_bp": CONFIG.get("platform_fee_annual_bp", 0.0),
+        "ter_handling": "embedded_in_etf_prices",
         "optimization_modes": {
             profile: portfolios[profile].get("diagnostics", {}).get("optimization_mode", "unknown")
             for profile in ["Agressif", "Modéré", "Stable"]
@@ -1571,7 +1634,7 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.8.7 - P1-8c TER Fix")
+    logger.info("🚀 Portfolio Engine v4.9.0 - RADAR Tactical Integration")
     logger.info("=" * 60)
     
     brief_data = load_brief_data()
@@ -1600,13 +1663,18 @@ def main():
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
     logger.info("")
-    logger.info("Fonctionnalités v4.8.7 P1-8c:")
+    logger.info("Fonctionnalités v4.9.0:")
     logger.info("   • ✅ TER FIX: embedded in ETF prices, NOT deducted separately")
     logger.info("   • ✅ platform_fee_annual_bp replaces ter_annual_bp")
     logger.info("   • ✅ Gross/Net separation via transaction costs + platform fees")
     logger.info("   • ✅ Weighted avg TER exposed as INFO (not deducted)")
     logger.info("   • P1-7: Profile-specific benchmarks (QQQ/URTH/AGG)")
-    logger.info("   • P0-8: Tilts tactiques DÉSACTIVÉS (GPT non sourcé)")
+    tactical_mode = CONFIG.get("tactical_mode", "radar")
+    if CONFIG.get("use_tactical_context", False):
+        smoothing = CONFIG.get("tactical_rules", {}).get("smoothing_alpha", 0.3)
+        logger.info(f"   • v4.9.0: Tilts tactiques ACTIVÉS (mode={tactical_mode}, smoothing={smoothing})")
+    else:
+        logger.info("   • Tilts tactiques DÉSACTIVÉS")
     logger.info(f"   • Platform fee: {CONFIG.get('platform_fee_annual_bp', 0)}bp/an")
     logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
 
