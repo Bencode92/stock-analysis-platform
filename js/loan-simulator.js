@@ -1607,7 +1607,7 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
         if (!cardMain || !valueMain) return;
 
         // 1) Mensualité crédit seul (crédit + assurance)
-        const mensuCredit = result.mensualiteInitiale + result.assuranceInitiale;
+        const mensuCredit = result.tableau?.[0]?.mensualiteGlobale || (result.mensualiteInitiale + result.assuranceInitiale);
         valueMain.textContent = formatMontant(mensuCredit);
 
         // 2) Si le PTZ est activé et a un montant > 0
