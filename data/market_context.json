@@ -1,56 +1,294 @@
 {
   "market_regime": "risk-on",
+  "confidence": 0.9,
+  "as_of": "2025-12-17",
   "macro_tilts": {
     "favored_sectors": [
       "utilities",
       "healthcare",
-      "financials",
       "industrials",
-      "information-technology"
+      "information-technology",
+      "consumer-discretionary"
     ],
     "avoided_sectors": [
       "consumer-staples",
-      "real-estate",
-      "energy"
+      "real-estate"
     ],
     "favored_regions": [
       "south korea",
-      "spain",
-      "south africa",
-      "zone euro"
+      "zone euro",
+      "germany",
+      "europe"
     ],
     "avoided_regions": [
       "united states",
-      "turquie",
-      "saudi arabia"
+      "saudi-arabia",
+      "turkey"
     ],
-    "rationale": "Le régime de marché est risk-on avec une forte performance des secteurs défensifs et cycliques. Les régions comme la Corée du Sud et l'Espagne montrent une croissance solide et stable, tandis que les États-Unis et d'autres pays affichent des performances négatives."
+    "rationale": "9/11 secteurs positifs (82%)"
   },
   "key_trends": [
-    "croissance des secteurs défensifs",
-    "hausse des marchés émergents",
-    "volatilité des marchés développés"
+    "Secteur leader: utilities (+27.4% YTD)",
+    "Région leader: south-korea (+75.9% YTD)"
   ],
   "risks": [
-    "instabilité géopolitique",
-    "inflation persistante"
+    "Secteurs en difficulté: consumer-staples, real-estate",
+    "Régions en difficulté: saudi-arabia, turkey"
   ],
-  "opportunities": [
-    "investissements dans les infrastructures",
-    "croissance des technologies de santé"
-  ],
-  "confidence": 0.9,
-  "as_of": "2025-12-17",
   "_meta": {
-    "generated_at": "2025-12-17T15:41:13.009622",
-    "model": "gpt-4o-mini",
+    "generated_at": "2025-12-17T15:45:41.637602",
+    "model": "radar_deterministic_v1.1",
+    "mode": "DATA_DRIVEN",
+    "amf_compliant": true,
+    "is_fallback": false,
+    "rules": {
+      "sweet_ytd_min": 10.0,
+      "sweet_ytd_max": 35.0,
+      "sweet_daily_min": -0.5,
+      "overheat_ytd_min": 50.0,
+      "underperform_ytd_max": 0.0,
+      "max_favored_sectors": 5,
+      "max_avoided_sectors": 3,
+      "max_favored_regions": 4,
+      "max_avoided_regions": 3,
+      "risk_on_threshold": 0.6,
+      "risk_off_threshold": 0.6,
+      "tilt_favored": 0.15,
+      "tilt_avoided": -0.15,
+      "tilt_max": 0.3,
+      "smoothing_alpha": 0.3
+    },
     "tilt_config": {
       "favored": 0.15,
       "avoided": -0.15,
       "max_tactical": 0.3
     },
-    "input_tokens": 882,
-    "output_tokens": 270,
-    "is_fallback": false
+    "diagnostics": {
+      "sectors_loaded": 11,
+      "markets_loaded": 29,
+      "sector_classifications": [
+        {
+          "key": "energy",
+          "ytd": 2.29,
+          "daily": -3.05,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "materials",
+          "ytd": 6.96,
+          "daily": -0.27,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "industrials",
+          "ytd": 15.15,
+          "daily": 0.55,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "consumer-discretionary",
+          "ytd": 10.93,
+          "daily": 0.0,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "consumer-staples",
+          "ytd": -7.02,
+          "daily": -0.87,
+          "classification": "avoided",
+          "reason": "underperform"
+        },
+        {
+          "key": "healthcare",
+          "ytd": 20.68,
+          "daily": -1.27,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "financials",
+          "ytd": 18.81,
+          "daily": -0.53,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "information-technology",
+          "ytd": 14.2,
+          "daily": -0.08,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "communication-services",
+          "ytd": 10.19,
+          "daily": 0.22,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "utilities",
+          "ytd": 27.39,
+          "daily": -0.4,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "real-estate",
+          "ytd": -0.3,
+          "daily": -0.88,
+          "classification": "avoided",
+          "reason": "underperform"
+        }
+      ],
+      "region_classifications": [
+        {
+          "key": "germany",
+          "ytd": 32.09,
+          "daily": -0.17,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "united-kingdom",
+          "ytd": 26.05,
+          "daily": -2.33,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "switzerland",
+          "ytd": 28.42,
+          "daily": -0.07,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "italy",
+          "ytd": 48.96,
+          "daily": -1.42,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "france",
+          "ytd": 25.25,
+          "daily": -0.53,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "netherlands",
+          "ytd": 26.79,
+          "daily": -4.0,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "spain",
+          "ytd": 70.31,
+          "daily": -2.09,
+          "classification": "neutral",
+          "reason": "overheat"
+        },
+        {
+          "key": "sweden",
+          "ytd": 29.2,
+          "daily": -1.79,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "zone euro",
+          "ytd": 34.04,
+          "daily": -0.29,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "europe",
+          "ytd": 30.85,
+          "daily": -0.22,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "united-states",
+          "ytd": 15.83,
+          "daily": -0.27,
+          "classification": "favored",
+          "reason": "sweet_spot"
+        },
+        {
+          "key": "canada",
+          "ytd": 31.46,
+          "daily": -1.52,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "mexico",
+          "ytd": 45.84,
+          "daily": -3.12,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "brazil",
+          "ytd": 40.38,
+          "daily": -5.9,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "chile",
+          "ytd": 55.11,
+          "daily": -0.41,
+          "classification": "neutral",
+          "reason": "overheat"
+        },
+        {
+          "key": "argentina",
+          "ytd": 7.32,
+          "daily": -1.38,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "china",
+          "ytd": 30.22,
+          "daily": -1.26,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "south-korea",
+          "ytd": 75.91,
+          "daily": -3.46,
+          "classification": "neutral",
+          "reason": "overheat"
+        },
+        {
+          "key": "taiwan",
+          "ytd": 18.08,
+          "daily": -4.66,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        },
+        {
+          "key": "japan",
+          "ytd": 20.49,
+          "daily": -4.74,
+          "classification": "neutral",
+          "reason": "out_of_range"
+        }
+      ]
+    },
+    "smoothing_applied": true,
+    "smoothing_alpha": 0.3
   }
 }

@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille agressif présente une exposition significative aux actions, notamment dans les secteurs financier et industriel. Bien que la volatilité cible soit de 18%, le portefeuille pourrait subir des fluctuations importantes dans un environnement de marché mixte. Les investisseurs doivent être conscients des risques associés aux marchés émergents et aux secteurs cycliques. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille agressif présente une volatilité ciblée de 18%, avec une exposition significative à des actions et des ETF diversifiés. Les actifs choisis reflètent une volonté de capter des opportunités de croissance, bien que cela implique des risques accrus, notamment en raison de l'exposition à des marchés émergents et à des secteurs cycliques. L'environnement de marché mixte pourrait influencer la performance à court terme. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "MUTHOOT FINANCE LTD": "13%",
       "CUMMINS INC": "15%",
@@ -38,7 +38,7 @@
     },
     "_constraint_report": {
       "profile": "Agressif",
-      "timestamp": "2025-12-17T08:16:01.987946",
+      "timestamp": "2025-12-17T15:46:21.506760",
       "all_hard_satisfied": true,
       "all_soft_satisfied": true,
       "n_violations": 0,
@@ -53,12 +53,10 @@
       },
       "relaxed_constraints": []
     },
-    "_limitations": [
-      "Tilts tactiques désactivés (P0-8): les surpondérations sectorielles/régionales basées sur le contexte marché ne sont pas appliquées."
-    ]
+    "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modéré combine des actions et des obligations, offrant un équilibre entre croissance et sécurité. Avec une volatilité cible de 12%, il vise à limiter les fluctuations tout en capturant des opportunités de marché. Les investisseurs doivent garder à l'esprit les risques associés aux secteurs cycliques et aux obligations à faible rendement dans un environnement de taux d'intérêt changeant. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modéré présente une volatilité ciblée de 12%, équilibrant actions et obligations. Les actifs sélectionnés visent à offrir une croissance stable tout en minimisant les risques. L'inclusion d'ETF et d'obligations à court terme contribue à la protection contre l'inflation et la volatilité du marché. Toutefois, les investisseurs doivent rester conscients des risques associés à chaque secteur. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "15%",
       "FOX CORP CLASS A": "15%",
@@ -96,7 +94,7 @@
     },
     "_constraint_report": {
       "profile": "Modéré",
-      "timestamp": "2025-12-17T08:16:01.988473",
+      "timestamp": "2025-12-17T15:46:21.507221",
       "all_hard_satisfied": true,
       "all_soft_satisfied": true,
       "n_violations": 0,
@@ -111,12 +109,10 @@
       },
       "relaxed_constraints": []
     },
-    "_limitations": [
-      "Tilts tactiques désactivés (P0-8): les surpondérations sectorielles/régionales basées sur le contexte marché ne sont pas appliquées."
-    ]
+    "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille stable se concentre sur des obligations et des actions défensives, visant à minimiser la volatilité avec une cible de 6% de volatilité. Bien que la sécurité soit priorisée, les rendements peuvent être limités, surtout dans un environnement de taux d'intérêt bas. Les investisseurs doivent être conscients des risques liés aux obligations et aux fluctuations des marchés émergents. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille stable vise une volatilité de 6%, avec une forte concentration d'obligations et une exposition limitée aux actions. Les actifs choisis reflètent une stratégie de préservation du capital, avec un accent sur la sécurité et la stabilité des revenus. Bien que ce portefeuille soit moins sensible aux fluctuations du marché, il est important de noter que les rendements peuvent être limités, et des risques subsistent, notamment en ce qui concerne les obligations et les marchés émergents. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "TJX INC": "10%",
@@ -157,7 +153,7 @@
     },
     "_constraint_report": {
       "profile": "Stable",
-      "timestamp": "2025-12-17T08:16:01.989001",
+      "timestamp": "2025-12-17T15:46:21.507672",
       "all_hard_satisfied": true,
       "all_soft_satisfied": true,
       "n_violations": 0,
@@ -173,16 +169,27 @@
       "relaxed_constraints": []
     },
     "_limitations": [
-      "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique.",
-      "Tilts tactiques désactivés (P0-8): les surpondérations sectorielles/régionales basées sur le contexte marché ne sont pas appliquées."
+      "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique."
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-17T08:16:01.989343",
-    "version": "v4.8.7",
+    "generated_at": "2025-12-17T15:46:21.507982",
+    "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
-    "tactical_context_enabled": false,
+    "tactical_context_enabled": true,
+    "tactical_mode": "radar",
+    "tactical_rules": {
+      "sweet_ytd_min": 10.0,
+      "sweet_ytd_max": 35.0,
+      "sweet_daily_min": -0.5,
+      "overheat_ytd_min": 50.0,
+      "smoothing_alpha": 0.3,
+      "max_favored_sectors": 5,
+      "max_avoided_sectors": 3,
+      "max_favored_regions": 4,
+      "max_avoided_regions": 3
+    },
     "backtest_days": 90,
     "platform_fee_annual_bp": 0.0,
     "ter_handling": "embedded_in_etf_prices",
