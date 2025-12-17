@@ -540,6 +540,8 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
 
 # ============= COVARIANCE HYBRIDE v6.15 (P1-6 KPIs) =============
 
+# ============= COVARIANCE HYBRIDE v6.16 (P1-2 Ledoit-Wolf Shrinkage) =============
+
 class HybridCovarianceEstimator:
     """
     Estimateur de covariance hybride: empirique + structurée.
@@ -652,7 +654,8 @@ class HybridCovarianceEstimator:
                     cov[i, j] = corr * vol_i * vol_j
         
         return cov
-        def _apply_ledoit_wolf_shrinkage(
+    
+    def _apply_ledoit_wolf_shrinkage(
         self, 
         returns_matrix: np.ndarray
     ) -> Tuple[np.ndarray, float]:
@@ -676,8 +679,8 @@ class HybridCovarianceEstimator:
             # Fallback: covariance empirique simple
             cov_emp = np.cov(returns_matrix, rowvar=False) * 252
             return cov_emp, 0.0
-           
-   def compute(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict[str, Any]]:
+    
+    def compute(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
         Calcule la covariance hybride avec KPIs de qualité (P1-6) et shrinkage (P1-2).
         
