@@ -1,7 +1,7 @@
 # portfolio_engine/market_sector_radar.py
 """
-Market/Sector Radar v1.1 (Deterministic, Anti-overheat)
-=======================================================
+Market/Sector Radar v1.2 (Deterministic, Anti-overheat, Anti-contamination)
+===========================================================================
 
 Objectif:
 - Exploiter sectors.json + markets.json pour produire un market_context.json
@@ -22,6 +22,10 @@ Régime:
 - risk-on  si >=60% des secteurs ont ytd > 0
 - risk-off si >=60% des secteurs ont ytd < 0
 - neutral sinon
+
+Ajustements v1.2 vs v1.1:
+- Anti-contamination: smoothing ignoré si ancien contexte non-RADAR (GPT)
+- Logging amélioré pour audit trail
 
 Ajustements v1.1 vs v1.0:
 - sweet_daily_min: 0 → -0.5 (tolérance bruit quotidien)
@@ -594,6 +598,22 @@ def maybe_smooth_context(
     return smoothed
 
 
+# -------------------- Anti-contamination Guard (v1.2) --------------------
+
+def _is_radar_context(ctx: Optional[Dict[str, Any]]) -> bool:
+    """
+    Vérifie si un contexte a été généré par RADAR (pas GPT).
+    
+    v1.2: Protection anti-contamination - le smoothing ne doit
+    s'appliquer que si l'ancien contexte est aussi RADAR.
+    """
+    if not ctx:
+        return False
+    
+    model = ctx.get("_meta", {}).get("model", "")
+    return str(model).startswith("radar_")
+
+
 # -------------------- Public API --------------------
 
 def generate_market_context_radar(
@@ -653,7 +673,7 @@ def generate_market_context_radar(
         "risks": _extract_risks(sectors, markets, rules),
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "model": "radar_deterministic_v1.1",
+            "model": "radar_deterministic_v1.2",
             "mode": "DATA_DRIVEN",
             "amf_compliant": True,
             "is_fallback": False,
@@ -691,6 +711,21 @@ def generate_market_context_radar(
                 logger.info(f"📊 Ancien contexte chargé pour smoothing: {out_p}")
             except Exception:
                 pass
+
+    # ============= v1.2: Anti-contamination Guard =============
+    # Ne pas appliquer le smoothing si l'ancien contexte n'est pas RADAR
+    # Cela évite la contamination par un ancien contexte GPT
+    if old_ctx and not _is_radar_context(old_ctx):
+        old_model = old_ctx.get("_meta", {}).get("model", "unknown")
+        logger.warning(f"⚠️ Ancien contexte non-RADAR détecté (model={old_model})")
+        logger.warning(f"⚠️ Smoothing désactivé pour éviter contamination GPT")
+        logger.info("📊 Premier run RADAR pur → pas de smoothing appliqué")
+        old_ctx = None  # Force pas de smoothing
+        ctx["_meta"]["smoothing_skipped_reason"] = f"old_context_not_radar (was: {old_model})"
+    elif old_ctx:
+        old_model = old_ctx.get("_meta", {}).get("model", "unknown")
+        logger.info(f"✅ Ancien contexte RADAR détecté (model={old_model})")
+        logger.info(f"✅ Smoothing activé avec α={rules.smoothing_alpha}")
 
     ctx = maybe_smooth_context(old_ctx, ctx, rules)
 
@@ -802,7 +837,7 @@ def _get_fallback_context(rules: RadarRules) -> Dict[str, Any]:
         "risks": ["Contexte marché non disponible"],
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "model": "radar_deterministic_v1.1",
+            "model": "radar_deterministic_v1.2",
             "mode": "FALLBACK",
             "amf_compliant": True,
             "is_fallback": True,
@@ -881,7 +916,7 @@ if __name__ == "__main__":
     args = ap.parse_args()
 
     print("=" * 60)
-    print("🎯 MARKET/SECTOR RADAR v1.1 (Déterministe)")
+    print("🎯 MARKET/SECTOR RADAR v1.2 (Déterministe + Anti-contamination)")
     print("=" * 60)
 
     rules = RadarRules(smoothing_alpha=args.smoothing)
