@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-Script hebdomadaire pour récupérer les holdings des ETFs sectoriels
+Script hebdomadaire pour récupérer les holdings des ETFs
+Traite BOTH secteurs (sectors.json) ET marchés (markets.json)
 Génère un fichier consolidé data/etf_holdings.json
 À exécuter 1x/semaine (dimanche) pour économiser les crédits API
+
+v2 - AJOUT: Support markets.json en plus de sectors.json
 """
 
 import os
@@ -14,7 +17,7 @@ import re
 import logging
 import requests
 import random
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 # Configuration du logger
 logging.basicConfig(
@@ -25,8 +28,10 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 API_KEY = os.getenv("TWELVE_DATA_API")
-SECTORS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sectors.json")
-HOLDINGS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "etf_holdings.json")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SECTORS_FILE = os.path.join(BASE_DIR, "data", "sectors.json")
+MARKETS_FILE = os.path.join(BASE_DIR, "data", "markets.json")
+HOLDINGS_FILE = os.path.join(BASE_DIR, "data", "etf_holdings.json")
 
 # Paramètres holdings
 HOLDINGS_MAX = int(os.getenv("HOLDINGS_MAX", "10"))  # Top 10 holdings par ETF
@@ -254,13 +259,13 @@ def load_existing_holdings() -> Dict:
         "etfs": {}
     }
 
-def extract_etf_symbols() -> List[str]:
+def extract_symbols_from_sectors() -> Tuple[List[str], int]:
     """Extrait la liste des symboles ETF depuis sectors.json"""
     symbols = set()
     
     if not os.path.exists(SECTORS_FILE):
-        logger.error(f"❌ Fichier sectors.json introuvable: {SECTORS_FILE}")
-        return []
+        logger.warning(f"⚠️ Fichier sectors.json introuvable: {SECTORS_FILE}")
+        return [], 0
     
     try:
         with open(SECTORS_FILE, 'r', encoding='utf-8') as f:
@@ -273,15 +278,68 @@ def extract_etf_symbols() -> List[str]:
                     symbols.add(sector["symbol"])
         
         logger.info(f"📋 {len(symbols)} ETFs trouvés dans sectors.json")
-        return sorted(list(symbols))
+        return list(symbols), len(symbols)
         
     except Exception as e:
         logger.error(f"Erreur lecture sectors.json: {e}")
-        return []
+        return [], 0
+
+def extract_symbols_from_markets() -> Tuple[List[str], int]:
+    """Extrait la liste des symboles ETF depuis markets.json"""
+    symbols = set()
+    
+    if not os.path.exists(MARKETS_FILE):
+        logger.warning(f"⚠️ Fichier markets.json introuvable: {MARKETS_FILE}")
+        return [], 0
+    
+    try:
+        with open(MARKETS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        # Parcourir toutes les régions d'indices
+        for region, indices in data.get("indices", {}).items():
+            for index in indices:
+                if index.get("symbol"):
+                    symbols.add(index["symbol"])
+        
+        logger.info(f"📋 {len(symbols)} ETFs trouvés dans markets.json")
+        return list(symbols), len(symbols)
+        
+    except Exception as e:
+        logger.error(f"Erreur lecture markets.json: {e}")
+        return [], 0
+
+def extract_all_etf_symbols() -> Tuple[List[str], Dict[str, int]]:
+    """
+    Extrait et fusionne les symboles ETF depuis BOTH sectors.json ET markets.json
+    Retourne la liste unique des symboles et les stats par source
+    """
+    sectors_symbols, sectors_count = extract_symbols_from_sectors()
+    markets_symbols, markets_count = extract_symbols_from_markets()
+    
+    # Fusionner sans doublons
+    all_symbols = set(sectors_symbols) | set(markets_symbols)
+    
+    # Identifier les symboles communs
+    common = set(sectors_symbols) & set(markets_symbols)
+    if common:
+        logger.info(f"   ↳ {len(common)} symboles communs aux deux sources: {', '.join(sorted(common)[:5])}...")
+    
+    stats = {
+        "sectors_count": sectors_count,
+        "markets_count": markets_count,
+        "common_count": len(common),
+        "total_unique": len(all_symbols)
+    }
+    
+    logger.info(f"📊 Total: {len(all_symbols)} ETFs uniques (secteurs: {sectors_count}, marchés: {markets_count}, communs: {len(common)})")
+    
+    return sorted(list(all_symbols)), stats
 
 def main():
     logger.info("=" * 60)
     logger.info("🚀 Début de la mise à jour hebdomadaire des holdings ETF")
+    logger.info("   Sources: sectors.json + markets.json")
     logger.info("=" * 60)
     
     # VÉRIFICATIONS CRITIQUES - Échouer proprement si prérequis manquants
@@ -290,10 +348,19 @@ def main():
         logger.error("   Définissez la variable d'environnement: export TWELVE_DATA_API=votre_clé")
         sys.exit(2)  # Code d'erreur spécifique pour API key manquante
     
-    if not os.path.exists(SECTORS_FILE):
-        logger.error(f"❌ ERREUR FATALE: Fichier sectors.json introuvable: {SECTORS_FILE}")
-        logger.error("   Lancez d'abord la mise à jour des secteurs: python scripts/update_sectors_data_etf.py")
-        sys.exit(3)  # Code d'erreur spécifique pour sectors.json manquant
+    # Vérifier qu'au moins un fichier source existe
+    sectors_exists = os.path.exists(SECTORS_FILE)
+    markets_exists = os.path.exists(MARKETS_FILE)
+    
+    if not sectors_exists and not markets_exists:
+        logger.error(f"❌ ERREUR FATALE: Aucun fichier source trouvé!")
+        logger.error(f"   - sectors.json: {'✓' if sectors_exists else '✗'}")
+        logger.error(f"   - markets.json: {'✓' if markets_exists else '✗'}")
+        sys.exit(3)
+    
+    logger.info(f"📁 Sources disponibles:")
+    logger.info(f"   - sectors.json: {'✓' if sectors_exists else '✗ (ignoré)'}")
+    logger.info(f"   - markets.json: {'✓' if markets_exists else '✗ (ignoré)'}")
     
     # Vérifier si mise à jour nécessaire (avec respect de FORCE_UPDATE)
     if not FORCE_UPDATE and not is_stale(HOLDINGS_FILE):
@@ -310,15 +377,14 @@ def main():
     # Charger les données existantes (pour mise à jour incrémentale si besoin)
     holdings_data = load_existing_holdings()
     
-    # Extraire les symboles depuis sectors.json
-    symbols = extract_etf_symbols()
+    # Extraire les symboles depuis BOTH sectors.json ET markets.json
+    symbols, source_stats = extract_all_etf_symbols()
     
     if not symbols:
-        logger.error("❌ ERREUR: Aucun symbole ETF trouvé dans sectors.json")
-        logger.error("   Le fichier existe mais semble vide ou mal formaté")
-        sys.exit(4)  # Code d'erreur spécifique pour sectors.json vide
+        logger.error("❌ ERREUR: Aucun symbole ETF trouvé dans aucune source")
+        sys.exit(4)
     
-    logger.info(f"📊 Traitement de {len(symbols)} ETFs...")
+    logger.info(f"📊 Traitement de {len(symbols)} ETFs uniques...")
     logger.info(f"⚙️ Paramètres:")
     logger.info(f"   - Max holdings/ETF: {HOLDINGS_MAX}")
     logger.info(f"   - Limite crédits/min: {RATE_LIMIT - HEADROOM} (avec marge {HEADROOM})")
@@ -385,7 +451,13 @@ def main():
         "force_update": FORCE_UPDATE,
         "credit_limit": RATE_LIMIT,
         "no_coverage_count": no_coverage,
-        "data_source": "Twelve Data ETF Composition API"
+        "data_source": "Twelve Data ETF Composition API",
+        "source_files": {
+            "sectors_json": source_stats["sectors_count"],
+            "markets_json": source_stats["markets_count"],
+            "common": source_stats["common_count"],
+            "total_unique": source_stats["total_unique"]
+        }
     }
     
     # Sauvegarder le fichier
@@ -404,6 +476,10 @@ def main():
     logger.info(f"   - Holdings totaux: {total_holdings}")
     logger.info(f"   - Crédits API utilisés: ~{api_credits}")
     logger.info(f"   - Taille fichier: {os.path.getsize(HOLDINGS_FILE) / 1024:.1f} KB")
+    logger.info(f"   - Sources:")
+    logger.info(f"     · sectors.json: {source_stats['sectors_count']} ETFs")
+    logger.info(f"     · markets.json: {source_stats['markets_count']} ETFs")
+    logger.info(f"     · Communs: {source_stats['common_count']}")
     logger.info(f"   - Force update: {FORCE_UPDATE}")
     logger.info("=" * 60)
 
