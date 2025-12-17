@@ -1530,7 +1530,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.activateLoanExportButton();
                 console.log('✅ Bouton PDF activé');
             }
-            
+                // 📊 Génération du tableau de sensibilité
+    const sensitivityPayload = generateSensitivityTable();
+    renderSensitivityTable(sensitivityPayload);
             console.log('🎉 Calcul terminé avec succès (v2.3.9 - indemnités stockées + slider spécifique)');
             return true;
         } catch (error) {
@@ -2266,6 +2268,201 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialisation
     updateSliderMaxValues();
     renderRepaymentsList();
+// ============================================
+// 📊 TABLEAU DE SENSIBILITÉ TAUX v1.0
+// ============================================
+
+/**
+ * Calcule les IRA conformes à la réglementation
+ * Plafond : min(6 mois d'intérêts sur capital remboursé, 3% du CRD avant remboursement)
+ */
+function computeIRA({ montantRembourse, capitalRestantAvant, tauxAnnuel, indemnitesMois }) {
+    const r = (tauxAnnuel / 100) / 12;
+    const moisInterets = Math.min(Math.max(indemnitesMois || 6, 0), 6);
+    const plafondInterets = montantRembourse * r * moisInterets;
+    const plafond3pcCRD = 0.03 * capitalRestantAvant;
+    return Math.min(plafondInterets, plafond3pcCRD);
+}
+
+/**
+ * Calcule la mensualité crédit seul
+ */
+function mensualiteCreditSensi(capital, tauxAnnuel, dureeMois) {
+    const r = (tauxAnnuel / 100) / 12;
+    if (dureeMois <= 0) return 0;
+    if (Math.abs(r) < 1e-12) return capital / dureeMois;
+    return capital * r / (1 - Math.pow(1 + r, -dureeMois));
+}
+
+/**
+ * Récupère les paramètres pour le tableau de sensibilité
+ */
+function getSensitivityParams() {
+    const mode = document.getElementById('remboursement-mode')?.value || 'duree';
+    const applyReneg = document.getElementById('apply-renegotiation')?.checked || false;
+    const moisRenego = +document.getElementById('renegotiation-month-slider')?.value || 1;
+    const moisRepayment = (mode === 'mensualite')
+        ? +document.getElementById('early-repayment-month-slider-mensualite')?.value
+        : +document.getElementById('early-repayment-month-slider-duree')?.value;
+    const moisRef = applyReneg ? moisRenego : (moisRepayment || 1);
+    const indemnitesMois = (mode === 'mensualite')
+        ? +document.getElementById('penalty-months-slider-mensualite')?.value
+        : +document.getElementById('penalty-months-slider-duree')?.value;
+    const tauxRef = applyReneg
+        ? +document.getElementById('new-interest-rate-slider')?.value
+        : +document.getElementById('interest-rate-slider')?.value;
+    const fraisRenego = +document.getElementById('frais-renego')?.value || 800;
+    return { moisRef, indemnitesMois, fraisRenego, tauxRef };
+}
+
+/**
+ * Calcule le remboursement anticipé équivalent (formule fermée)
+ */
+function equivalentRepaymentClosedForm(crd, tauxRef, dureeRestante, mensualiteCible, params) {
+    const { assuranceMensuelle, assuranceSurCI, capitalInitial, fraisTenueMensuel, ptz, moisRef } = params;
+    const r = (tauxRef / 100) / 12;
+    const A = (Math.abs(r) < 1e-12) ? 1 / dureeRestante : r / (1 - Math.pow(1 + r, -dureeRestante));
+    const assuranceFixe = assuranceSurCI ? capitalInitial * assuranceMensuelle : 0;
+    const moisEffet = moisRef + 1;
+    const ptzMensuel = (ptz?.enabled && ptz.montant > 0 && 
+                        moisEffet >= ptz.differeMois + 1 && 
+                        moisEffet <= ptz.differeMois + ptz.dureeMois)
+        ? ptz.montant / ptz.dureeMois : 0;
+    const constantes = fraisTenueMensuel + assuranceFixe + ptzMensuel;
+    const k = assuranceSurCI ? 0 : assuranceMensuelle;
+    if (mensualiteCible <= constantes) return { R: null, capitalCible: null, reason: 'Non atteignable' };
+    if (Math.abs(A + k) < 1e-12) return { R: null, capitalCible: null, reason: 'Non atteignable' };
+    const capitalCible = (mensualiteCible - constantes) / (A + k);
+    const capitalCibleClamped = Math.max(0, Math.min(capitalCible, crd));
+    const R = Math.max(0, crd - capitalCibleClamped);
+    return { R, capitalCible: capitalCibleClamped, reason: null };
+}
+
+/**
+ * Génère le tableau de sensibilité à partir du dernier résultat
+ */
+function generateSensitivityTable() {
+    const result = window.lastLoanResult;
+    if (!result?.tableau?.length) return null;
+    const { moisRef, indemnitesMois, fraisRenego, tauxRef } = getSensitivityParams();
+    if (!Number.isFinite(moisRef) || moisRef < 1 || moisRef > result.tableau.length) return null;
     
+    const idxAvant = moisRef - 2;
+    const capitalRestantAvant = (idxAvant >= 0) ? result.tableau[idxAvant].capitalRestant : result.capitalInitial;
+    const dureeRestante = result.tableau.length - (moisRef - 1);
+    if (capitalRestantAvant <= 0 || dureeRestante <= 0) return null;
+    
+    const assuranceMensuelle = parseFloat(document.getElementById('insurance-rate-slider')?.value || 0) / 100 / 12;
+    const assuranceSurCI = document.getElementById('assurance-capital-initial')?.checked || false;
+    const capitalInitial = parseFloat(document.getElementById('loan-amount')?.value || 0);
+    const fraisTenueMensuel = parseFloat(document.getElementById('frais-tenue-compte')?.value || 710) / (result.dureeInitiale || result.tableau.length);
+    
+    const enablePTZ = document.getElementById('enable-ptz')?.checked || false;
+    let ptz = null;
+    if (enablePTZ) {
+        const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
+        const ptzDurationYears = parseInt(document.getElementById('ptz-duration-slider')?.value || 20);
+        const ptzDiffereMois = parseInt(document.getElementById('ptz-differe-slider')?.value || 0);
+        if (ptzAmount > 0) {
+            ptz = { enabled: true, montant: ptzAmount, dureeMois: ptzDurationYears * 12, differeMois: ptzDiffereMois };
+        }
+    }
+    
+    const equivParams = { assuranceMensuelle, assuranceSurCI, capitalInitial, fraisTenueMensuel, ptz, moisRef };
+    const rows = [];
+    const start = Math.max(0.10, tauxRef - 1.0);
+    const step = 0.20;
+    const moisEffet = moisRef + 1;
+    const MrefCredit = mensualiteCreditSensi(capitalRestantAvant, tauxRef, dureeRestante);
+    const assuranceRef = assuranceSurCI ? capitalInitial * assuranceMensuelle : capitalRestantAvant * assuranceMensuelle;
+    const ptzMensuelRef = (ptz?.enabled && ptz.montant > 0 && moisEffet >= ptz.differeMois + 1 && moisEffet <= ptz.differeMois + ptz.dureeMois)
+        ? ptz.montant / ptz.dureeMois : 0;
+    const Mref = MrefCredit + assuranceRef + fraisTenueMensuel + ptzMensuelRef;
+    
+    for (let i = 0; i < 11; i++) {
+        const taux = +(start + i * step).toFixed(2);
+        const Mcredit = mensualiteCreditSensi(capitalRestantAvant, taux, dureeRestante);
+        const assurance = assuranceSurCI ? capitalInitial * assuranceMensuelle : capitalRestantAvant * assuranceMensuelle;
+        const M = Mcredit + assurance + fraisTenueMensuel + ptzMensuelRef;
+        const delta = M - Mref;
+        
+        let R = 0, reason = null;
+        if (delta < -0.01) {
+            const equiv = equivalentRepaymentClosedForm(capitalRestantAvant, tauxRef, dureeRestante, M, equivParams);
+            R = equiv.R || 0;
+            reason = equiv.reason;
+        }
+        
+        const ira = (R > 0) ? computeIRA({ montantRembourse: R, capitalRestantAvant, tauxAnnuel: tauxRef, indemnitesMois }) : 0;
+        const coutTotal = (R > 0) ? (R + ira + fraisRenego) : 0;
+        
+        let breakEven = null;
+        if (delta < -0.01 && R > 0) {
+            const economie = -delta;
+            const coutIRAFrais = ira + fraisRenego;
+            breakEven = Math.ceil(coutIRAFrais / economie);
+            if (breakEven > dureeRestante) breakEven = 'Non rentable';
+        }
+        
+        rows.push({ taux, mensualite: M, delta, remboursementEquiv: R, ira, fraisRenego, coutTotal, breakEven, reason, isRef: Math.abs(taux - tauxRef) < 0.01 });
+    }
+    return { rows, meta: { moisRef, capitalRestantAvant, dureeRestante, tauxRef, moisEffet } };
+}
+
+/**
+ * Affiche le tableau de sensibilité
+ */
+function renderSensitivityTable(payload) {
+    const body = document.getElementById('sensitivity-table-body');
+    if (!body) return;
+    if (!payload?.rows?.length) {
+        body.innerHTML = `<tr><td colspan="7" class="px-3 py-4 text-gray-400 italic text-center">Tableau indisponible.</td></tr>`;
+        return;
+    }
+    const { rows } = payload;
+    body.innerHTML = rows.map(r => {
+        const rowClass = r.isRef ? 'font-semibold bg-green-500 bg-opacity-20 border-l-4 border-green-400' : '';
+        const deltaCls = r.delta < -0.01 ? 'text-green-400' : (r.delta > 0.01 ? 'text-red-400' : 'text-gray-300');
+        let breakEvenDisplay = '—';
+        if (r.breakEven !== null) {
+            if (typeof r.breakEven === 'string') {
+                breakEvenDisplay = `<span class="text-red-400">${r.breakEven}</span>`;
+            } else {
+                const annees = Math.floor(r.breakEven / 12);
+                const mois = r.breakEven % 12;
+                breakEvenDisplay = annees > 0 ? `${annees}a ${mois}m` : `${r.breakEven} mois`;
+            }
+        }
+        let rembDisplay = '—';
+        if (r.reason) rembDisplay = `<span class="text-amber-400 text-xs">${r.reason}</span>`;
+        else if (r.remboursementEquiv > 0) rembDisplay = formatMontant(r.remboursementEquiv);
+        return `<tr class="${rowClass}">
+            <td class="px-3 py-2">${r.taux.toFixed(2)}%</td>
+            <td class="px-3 py-2 text-right">${formatMontant(r.mensualite)}</td>
+            <td class="px-3 py-2 text-right ${deltaCls}">${r.isRef ? 'Réf.' : (r.delta > 0 ? '+' : '') + formatMontant(r.delta)}</td>
+            <td class="px-3 py-2 text-right">${rembDisplay}</td>
+            <td class="px-3 py-2 text-right">${r.ira > 0 ? formatMontant(r.ira) : '—'}</td>
+            <td class="px-3 py-2 text-right">${r.coutTotal > 0 ? formatMontant(r.coutTotal) : '—'}</td>
+            <td class="px-3 py-2 text-right">${breakEvenDisplay}</td>
+        </tr>`;
+    }).join('');
+}
+
+// Wire : événement sur le champ frais renégo
+const fraisRenegoInput = document.getElementById('frais-renego');
+if (fraisRenegoInput) {
+    fraisRenegoInput.addEventListener('change', function() {
+        if (window.lastLoanResult) {
+            const payload = generateSensitivityTable();
+            renderSensitivityTable(payload);
+        }
+    });
+}
+
+// Exposer les fonctions au scope global
+window.generateSensitivityTable = generateSensitivityTable;
+window.renderSensitivityTable = renderSensitivityTable;
+
+console.log('✅ Module Sensibilité Taux v1.0 chargé');
     console.log('✅ Simulateur de prêt v2.3.9 initialisé (indemnités stockées + slider spécifique)');
 });
