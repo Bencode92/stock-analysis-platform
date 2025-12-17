@@ -38,34 +38,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas numpy scipy requests beautifulsoup4 lxml openai pyyaml jsonschema
 
-      # ============= v4.4 NEW: Generate Market Context =============
-      # FIX: Use -m to avoid sys.path issues with portfolio_engine/calendar.py
-      - name: 🌍 Générer market_context.json (GPT unifié)
+      # ============= v4.9 RADAR: Deterministic Market Context =============
+      # Le contexte est généré par market_sector_radar.py dans generate_portfolios_v4.py
+      # GPT n'est plus utilisé pour les tilts (déterministe + auditable)
+      # OpenAI est conservé UNIQUEMENT pour les commentaires (UX)
+      - name: 🧹 Clean stale market_context (RADAR v4.9)
         run: |
-          echo "🔄 Génération du contexte marché unifié..."
-          python -m portfolio_engine.market_context --data-dir data --output data/market_context.json || echo "⚠️ Fallback neutre utilisé"
-          
-          # Diagnostic
-          if [ -f data/market_context.json ]; then
-            echo "✅ market_context.json généré"
-            python3 << 'EOF'
-          import json
-          with open("data/market_context.json") as f:
-              ctx = json.load(f)
-          print(f"   Régime: {ctx.get('market_regime', 'N/A')}")
-          print(f"   Confidence: {ctx.get('confidence', 'N/A')}")
-          tilts = ctx.get('macro_tilts', {})
-          print(f"   Secteurs favorisés: {tilts.get('favored_sectors', [])}")
-          print(f"   Régions favorisées: {tilts.get('favored_regions', [])}")
-          is_fallback = ctx.get('_meta', {}).get('is_fallback', False)
-          if is_fallback:
-              print("   ⚠️ Mode FALLBACK (pas de tilts appliqués)")
-          EOF
-          else
-            echo "⚠️ market_context.json non généré, tilts neutres"
-          fi
+          echo "🧹 Nettoyage des anciens fichiers market_context..."
+          rm -f data/market_context.json
+          echo "⏭️ Skip GPT market_context — RADAR déterministe activé"
+          echo "📊 Le contexte sera généré par market_sector_radar.py (data-driven)"
+          echo ""
+          echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
 
-      - name: 🚀 Exécuter le moteur v4.4 + Backtest
+      - name: 🚀 Exécuter le moteur v4.9 + Backtest
         run: python generate_portfolios_v4.py
 
       # ============= v4.5 NEW: Schema Validation =============
@@ -100,6 +86,20 @@ jobs:
           # Market Context
           if [ -f data/market_context.json ]; then
             echo "✅ market_context.json"
+            # Vérifier que c'est bien du RADAR
+            python3 << 'EOF'
+          import json
+          with open("data/market_context.json") as f:
+              ctx = json.load(f)
+          model = ctx.get('_meta', {}).get('model', 'unknown')
+          mode = ctx.get('_meta', {}).get('mode', 'unknown')
+          print(f"   Model: {model}")
+          print(f"   Mode: {mode}")
+          if model.startswith("radar_"):
+              print("   ✅ Contexte RADAR (déterministe)")
+          else:
+              print("   ⚠️ Contexte non-RADAR détecté!")
+          EOF
           else
             echo "⚠️ market_context.json ABSENT (tilts neutres)"
           fi
@@ -140,7 +140,7 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v4.5 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v4.9 Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Schema Validation Status
@@ -156,9 +156,9 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Market Context Summary
+          # Market Context Summary (RADAR v4.9)
           if [ -f data/market_context.json ]; then
-            echo "### 🌍 Market Context" >> $GITHUB_STEP_SUMMARY
+            echo "### 🎯 Market Context (RADAR v4.9)" >> $GITHUB_STEP_SUMMARY
             python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
           import json
           with open("data/market_context.json") as f:
@@ -170,9 +170,12 @@ jobs:
           avoid_sec = ', '.join(tilts.get('avoided_sectors', [])) or 'None'
           fav_reg = ', '.join(tilts.get('favored_regions', [])) or 'None'
           avoid_reg = ', '.join(tilts.get('avoided_regions', [])) or 'None'
-          is_fb = '⚠️ FALLBACK' if ctx.get('_meta', {}).get('is_fallback') else '✅'
+          model = ctx.get('_meta', {}).get('model', 'unknown')
+          is_radar = '✅ RADAR' if model.startswith('radar_') else '⚠️ non-RADAR'
+          is_fb = '⚠️ FALLBACK' if ctx.get('_meta', {}).get('is_fallback') else ''
           print(f"| Metric | Value |")
           print(f"|--------|-------|")
+          print(f"| Model | {model} {is_radar} |")
           print(f"| Regime | {regime} {is_fb} |")
           print(f"| Confidence | {conf} |")
           print(f"| Favored Sectors | {fav_sec} |")
@@ -237,12 +240,12 @@ jobs:
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v4.5 + Market Context + Backtest 90j + Schema ✓" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v4.9 RADAR + Backtest 90j + Schema ✓" || echo "rien à committer"
 
           # Push avec retry robuste en cas de divergence
           git push || (git pull --rebase origin main && git push)
 
-      # ============= v4.4 NEW: Archive Market Context =============
+      # ============= v4.9: Archive RADAR Context =============
       - name: 🗂️ Archive market_context.json
         if: success()
         run: |
