@@ -8,6 +8,7 @@ Architecture v4 :
 - Compliance AMF appliquée systématiquement
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
+
 V4.9.0: RADAR tactical integration - deterministic data-driven tilts
 V4.8.7: P1-8c FIX - TER is embedded in ETF prices, use platform_fee instead
 V4.8.6: P1-8b - TER (Total Expense Ratio) - DEPRECATED (double-counting)
@@ -75,6 +76,18 @@ from compliance import (
 # v4.8 P0-7: Import du sanitizer LLM
 from compliance.sanitizer import sanitize_llm_output
 
+# === Modules existants (compatibilité) ===
+try:
+    from brief_formatter import format_brief_data
+except ImportError:
+    def format_brief_data(data): return str(data) if data else ""
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
+logger = logging.getLogger("portfolio-v4")
+
 # v4.9.0: Import du module RADAR (data-driven tilts)
 try:
     from portfolio_engine.market_sector_radar import (
@@ -87,18 +100,6 @@ try:
 except ImportError:
     RADAR_AVAILABLE = False
     logger.warning("⚠️ Module RADAR non disponible, fallback GPT si activé")
-
-# === Modules existants (compatibilité) ===
-try:
-    from brief_formatter import format_brief_data
-except ImportError:
-    def format_brief_data(data): return str(data) if data else ""
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-)
-logger = logging.getLogger("portfolio-v4")
 
 
 # ============= CONFIGURATION =============
