@@ -544,6 +544,7 @@ class HybridCovarianceEstimator:
     """
     Estimateur de covariance hybride: empirique + structurée.
     
+    v6.16 P1-2: Ajout du shrinkage Ledoit-Wolf pour réduire le condition number
     v6.15 P1-6: Ajout des KPIs de qualité de la matrice:
     - condition_number: max(λ)/min(λ) - instable si > 1000
     - eigen_clipped: nombre d'eigenvalues forcées au minimum
@@ -551,16 +552,17 @@ class HybridCovarianceEstimator:
     - is_well_conditioned: flag booléen pour check rapide
     """
     
-def __init__(
-    self, 
-    empirical_weight: float = COVARIANCE_EMPIRICAL_WEIGHT,
-    min_history_days: int = 60,
-    use_shrinkage: bool = SHRINKAGE_ENABLED
-):
-    self.empirical_weight = empirical_weight
-    self.min_history_days = min_history_days
-    self.use_shrinkage = use_shrinkage and HAS_SKLEARN_LW
+    def __init__(
+        self, 
+        empirical_weight: float = COVARIANCE_EMPIRICAL_WEIGHT,
+        min_history_days: int = 60,
+        use_shrinkage: bool = SHRINKAGE_ENABLED
+    ):
+        self.empirical_weight = empirical_weight
+        self.min_history_days = min_history_days
+        self.use_shrinkage = use_shrinkage and HAS_SKLEARN_LW
     
+    def compute_empirical_covariance(
         self, 
         assets: List[Asset]
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
