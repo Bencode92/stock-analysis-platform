@@ -1,4 +1,5 @@
 # .github/workflows/update-holdings-data-twelve.yml
+# Traite BOTH sectors.json ET markets.json → génère etf_holdings.json
 name: Update Holdings via Twelve Data API
 
 on:
@@ -16,7 +17,7 @@ on:
         default: '10'
         type: string
   schedule:
-    - cron: '0 3 * * 0'   # hebdo
+    - cron: '0 3 * * 0'   # hebdo dimanche 3h UTC
 
 permissions:
   contents: write
@@ -40,11 +41,37 @@ jobs:
 
       - name: Preflight
         run: |
+          echo "🔐 Vérification clé API..."
           test -n "${{ secrets.TWELVE_DATA_API }}" || (echo "::error::Secret TWELVE_DATA_API manquant" && exit 1)
-          test -f data/sectors.json || (echo "::error::data/sectors.json introuvable" && exit 1)
+          
+          echo "📁 Vérification fichiers sources..."
+          SECTORS_EXISTS=false
+          MARKETS_EXISTS=false
+          
+          if [ -f data/sectors.json ]; then
+            echo "✓ data/sectors.json trouvé"
+            SECTORS_EXISTS=true
+          else
+            echo "⚠️ data/sectors.json non trouvé (ignoré)"
+          fi
+          
+          if [ -f data/markets.json ]; then
+            echo "✓ data/markets.json trouvé"
+            MARKETS_EXISTS=true
+          else
+            echo "⚠️ data/markets.json non trouvé (ignoré)"
+          fi
+          
+          # Au moins un fichier doit exister
+          if [ "$SECTORS_EXISTS" = false ] && [ "$MARKETS_EXISTS" = false ]; then
+            echo "::error::Aucun fichier source trouvé (sectors.json ou markets.json)"
+            exit 1
+          fi
+          
+          echo "✅ Preflight OK"
 
       # ⚠️ Manuels: on exécute TOUJOURS (on bypasse l'âge du fichier)
-      - name: Update holdings
+      - name: Update holdings (sectors + markets → etf_holdings.json)
         if: ${{ github.event_name == 'workflow_dispatch' || steps.check_status.outputs.skip_update != 'true' }}
         env:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
@@ -61,4 +88,4 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name  "github-actions[bot]"
           git add data/etf_holdings.json
-          git diff --staged --quiet || { git commit -m "📈 Update ETF holdings"; git push; }
+          git diff --staged --quiet || { git commit -m "📈 Update ETF holdings (sectors + markets)"; git push; }
