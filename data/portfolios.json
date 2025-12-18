@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une exposition significative aux actions, ce qui peut offrir un potentiel de rendement élevé. Toutefois, il est important de noter que la volatilité peut être élevée, ce qui expose les investisseurs à des fluctuations de valeur. De plus, la concentration dans des secteurs spécifiques comme la technologie et la finance peut augmenter les risques liés à des événements sectoriels. Les investisseurs doivent être conscients des risques associés à ce type de portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actifs à forte volatilité, ce qui peut offrir des rendements élevés, mais également des fluctuations importantes. Les investissements dans le secteur technologique et financier sont particulièrement sensibles aux conditions de marché changeantes. De plus, la concentration sur possiblees actions peut augmenter le risque de perte en capital. Il est essentiel de considérer ces éléments avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "MUTHOOT FINANCE LTD": "15%",
       "CUMMINS INC": "14%",
@@ -38,7 +38,7 @@
     },
     "_constraint_report": {
       "profile": "Agressif",
-      "timestamp": "2025-12-18T10:45:13.250326",
+      "timestamp": "2025-12-18T13:25:59.437688",
       "all_hard_satisfied": true,
       "all_soft_satisfied": true,
       "n_violations": 0,
@@ -56,7 +56,7 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée entre actions et obligations, ce qui peut offrir une volatilité modérée. Cependant, la dépendance à des secteurs spécifiques comme la technologie et la consommation peut exposer les investisseurs à des risques sectoriels. De plus, les obligations à court terme peuvent ne pas offrir des rendements élevés dans un environnement de taux d'intérêt croissants. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée, combinant des actions et des obligations pour un profil modéré. Les investissements dans des entreprises à dividendes croissants peuvent offrir une possiblee stabilité, mais la performance peut être affectée par des fluctuations économiques. De plus, la sensibilité aux taux d'intérêt et aux cycles de consommation représente un risque potentiel. Il est important de rester vigilant face à ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "13%",
       "CISCO SYSTEMS INC": "2%",
@@ -94,7 +94,7 @@
     },
     "_constraint_report": {
       "profile": "Modéré",
-      "timestamp": "2025-12-18T10:45:13.250750",
+      "timestamp": "2025-12-18T13:25:59.438153",
       "all_hard_satisfied": true,
       "all_soft_satisfied": true,
       "n_violations": 0,
@@ -112,17 +112,16 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche défensive, avec une forte concentration sur les obligations, ce qui peut réduire la volatilité. Cependant, les rendements peuvent être limités, surtout dans un environnement de taux d'intérêt bas. De plus, la dépendance à des secteurs spécifiques comme la santé et les services publics peut exposer les investisseurs à des risques sectoriels. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie axée sur la stabilité, avec une forte concentration sur des obligations et des actions défensives. Les investissements dans des titres du Trésor et des entreprises établies visent à réduire la volatilité, mais les rendements peuvent être limités. Cependant, la dépendance aux taux d'intérêt et aux fluctuations des marchés financiers représente des risques à considérer. Une vigilance continue est nécessaire pour évaluer ces éléments avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "TJX INC": "10%",
-      "ALLIANZ": "5%",
+      "ALLIANZ": "10%",
+      "ASSICURAZIONI GENERALI": "5%",
       "CISCO SYSTEMS INC": "8%",
       "ENGIE SA": "2%"
     },
-    "ETF": {
-      "Cambria Tail Risk ETF": "10%"
-    },
+    "ETF": {},
     "Obligations": {
       "JPMorgan Ultra-Short Municipal Income Fund": "13%",
       "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF": "12%",
@@ -137,23 +136,23 @@
       "SGOV": 0.1197,
       "SHV": 0.1231,
       "TBIL": 0.0564,
-      "TAIL": 0.1026,
       "JNJ": 0.1026,
       "TJX": 0.1026,
-      "ALV": 0.0513,
+      "ALV": 0.1026,
+      "G": 0.0513,
       "CSCO": 0.0821,
       "ENGI": 0.0205
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 4.79,
+      "vol_realized": 5.18,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
     "_constraint_report": {
       "profile": "Stable",
-      "timestamp": "2025-12-18T10:45:13.251176",
+      "timestamp": "2025-12-18T13:25:59.438621",
       "all_hard_satisfied": true,
       "all_soft_satisfied": true,
       "n_violations": 0,
@@ -173,7 +172,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-18T10:45:13.251571",
+    "generated_at": "2025-12-18T13:25:59.438949",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
