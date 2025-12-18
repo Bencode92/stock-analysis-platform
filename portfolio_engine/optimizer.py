@@ -493,9 +493,9 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
         if asset.category == "Actions" and asset.corporate_group is None:
             asset.corporate_group = get_corporate_group(asset.name)
         
-        # === Phase 1: Ajouter risk_bucket classification ===
+# === Phase 1: Ajouter risk_bucket classification ===
         if HAS_RISK_BUCKETS and not hasattr(asset, '_risk_bucket'):
-            bucket = classify_asset(asset.source_data or {})
+            bucket, _ = classify_asset(asset.source_data or {})  # Tuple unpacking
             asset._risk_bucket = bucket.value  # Stocker comme string
     
     role_counts = defaultdict(int)
