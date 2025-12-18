@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://tradepulse.io/schemas/portfolio_output.json",
   "title": "TradePulse Portfolio Output Schema",
-  "description": "Schema for validating generated portfolio JSON files (v2.2.0)",
+  "description": "Schema for validating generated portfolio JSON files (v2.3.0 - Phase 1)",
   "type": "object",
   "required": ["Agressif", "Modéré", "Stable", "_meta"],
   "additionalProperties": false,
@@ -87,6 +87,14 @@
         "_compliance_audit": {
           "$ref": "#/definitions/ComplianceAudit",
           "description": "P0-7: LLM sanitization audit trail"
+        },
+        "_exposures": {
+          "$ref": "#/definitions/ExposuresReport",
+          "description": "Phase 1: Portfolio exposures breakdown"
+        },
+        "_execution_summary": {
+          "$ref": "#/definitions/ExecutionSummary",
+          "description": "Phase 1: Ticker mapping and execution readiness"
         }
       }
     },
@@ -264,16 +272,20 @@
     },
     "ConstraintReport": {
       "type": "object",
-      "description": "P0-2: Post-rounding constraint verification report",
+      "description": "P0-2: Post-rounding constraint verification report (supports both basic and Phase 1 enriched)",
+      "additionalProperties": true,
       "properties": {
         "all_satisfied": { "type": "boolean" },
         "all_hard_satisfied": { "type": "boolean" },
+        "all_soft_satisfied": { "type": "boolean" },
         "profile": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" },
+        "n_violations": { "type": "integer" },
         "violations": {
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": true,
             "properties": {
               "constraint_name": { "type": "string" },
               "priority": { "type": "string", "enum": ["hard", "soft", "relaxable"] },
@@ -289,11 +301,20 @@
         },
         "margins": {
           "type": "object",
-          "additionalProperties": { "type": "number" }
+          "additionalProperties": true
         },
         "relaxed_constraints": {
           "type": "array",
           "items": { "type": "string" }
+        },
+        "quality_score": { "type": "number" },
+        "bindings": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        },
+        "detailed_margins": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
         }
       }
     },
@@ -381,6 +402,123 @@
         "timestamp": { "type": "string", "format": "date-time" },
         "version": { "type": "string" },
         "fallback_used": { "type": "boolean" }
+      }
+    },
+    "ExposuresReport": {
+      "type": "object",
+      "description": "Phase 1: Portfolio exposures breakdown with concentration metrics",
+      "additionalProperties": true,
+      "properties": {
+        "by_category": {
+          "type": "object",
+          "description": "Exposure by asset category (Actions, ETF, Obligations, Crypto)",
+          "additionalProperties": { "type": "number" }
+        },
+        "by_sector": {
+          "type": "object",
+          "description": "Exposure by sector",
+          "additionalProperties": { "type": "number" }
+        },
+        "by_region": {
+          "type": "object",
+          "description": "Exposure by geographic region",
+          "additionalProperties": { "type": "number" }
+        },
+        "by_risk_bucket": {
+          "type": "object",
+          "description": "Exposure by risk bucket (equity_like, bond_like, leveraged, etc.)",
+          "additionalProperties": { "type": "number" }
+        },
+        "by_role": {
+          "type": "object",
+          "description": "Exposure by portfolio role (core, defensive, satellite, lottery)",
+          "additionalProperties": { "type": "number" }
+        },
+        "concentration": {
+          "type": "object",
+          "description": "Concentration metrics",
+          "properties": {
+            "hhi": {
+              "type": "number",
+              "description": "Herfindahl-Hirschman Index (0-10000)"
+            },
+            "hhi_interpretation": {
+              "type": "string",
+              "enum": ["well_diversified", "diversified", "moderately_concentrated", "highly_concentrated"],
+              "description": "HHI interpretation"
+            },
+            "effective_n": {
+              "type": "number",
+              "description": "Effective number of positions (1/HHI * 10000)"
+            },
+            "top_5_weight": {
+              "type": "number",
+              "description": "Combined weight of top 5 positions (%)"
+            },
+            "top_10_weight": {
+              "type": "number",
+              "description": "Combined weight of top 10 positions (%)"
+            },
+            "largest_position": {
+              "type": "number",
+              "description": "Weight of largest position (%)"
+            },
+            "smallest_position": {
+              "type": "number",
+              "description": "Weight of smallest position (%)"
+            }
+          }
+        }
+      }
+    },
+    "ExecutionSummary": {
+      "type": "object",
+      "description": "Phase 1: Ticker mapping and execution readiness",
+      "additionalProperties": true,
+      "properties": {
+        "n_positions": {
+          "type": "integer",
+          "description": "Total number of positions"
+        },
+        "n_exchanges": {
+          "type": "integer",
+          "description": "Number of distinct exchanges"
+        },
+        "exchanges": {
+          "type": "array",
+          "description": "List of exchanges",
+          "items": { "type": "string" }
+        },
+        "total_weight": {
+          "type": "number",
+          "description": "Total portfolio weight (should be 100)"
+        },
+        "missing_isin": {
+          "type": "integer",
+          "description": "Number of positions missing ISIN"
+        },
+        "missing_ticker": {
+          "type": "integer",
+          "description": "Number of positions missing ticker"
+        },
+        "data_quality": {
+          "type": "object",
+          "description": "Data quality metrics",
+          "properties": {
+            "isin_coverage": {
+              "type": "number",
+              "description": "Percentage of positions with ISIN"
+            },
+            "ticker_coverage": {
+              "type": "number",
+              "description": "Percentage of positions with ticker"
+            }
+          }
+        },
+        "ready_for_execution": {
+          "type": "boolean",
+          "description": "Whether portfolio is ready for execution"
+        }
       }
     }
   }
