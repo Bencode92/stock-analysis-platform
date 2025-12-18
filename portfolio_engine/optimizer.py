@@ -1727,7 +1727,7 @@ class PortfolioOptimizer:
             "buffett_min_score": self.buffett_min_score,
         })
         
-opt_mode_display = optimization_mode.upper().replace("_", " ")
+        opt_mode_display = optimization_mode.upper().replace("_", " ")
         cov_status = "✅" if cov_diagnostics.get("is_well_conditioned", True) else "⚠️"
         logger.info(
             f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds, {crypto_in_allocation} crypto), "
