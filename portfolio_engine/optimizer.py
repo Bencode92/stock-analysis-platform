@@ -1,6 +1,12 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.17 — P1-2 v2 Diagonal Shrinkage
+Optimiseur de portefeuille v6.18 — FIX max_region fallback
+
+CHANGEMENTS v6.18 (FIX max_region/max_sector fallback):
+1. FIX: _fallback_allocation() respecte maintenant max_region (était ignoré)
+2. FIX: region_weights tracké pour bonds ET autres assets
+3. FIX: Vérification max_region AVANT allocation de chaque asset
+4. IMPACT: Stable ne dépassera plus 50% US (était 92.85%)
 
 CHANGEMENTS v6.17 (P1-2 v2 Diagonal Shrinkage - ChatGPT reviewed):
 1. NEW: diag_shrink_to_target() - shrinkage diagonal sans dépendance aux returns
@@ -1302,6 +1308,7 @@ class PortfolioOptimizer:
         
         category_weights = defaultdict(float)
         sector_weights = defaultdict(float)
+        region_weights = defaultdict(float)  # v6.18 FIX: track region weights
         bucket_weights = defaultdict(float)
         
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
@@ -1319,12 +1326,18 @@ class PortfolioOptimizer:
             weight_per_bond = min(max_single_bond, bonds_needed / n_bonds_to_use)
             
             for bond in bonds[:n_bonds_to_use]:
+                # v6.18 FIX: Vérifier max_region AVANT d'allouer le bond
+                if region_weights[bond.region] + weight_per_bond > profile.max_region:
+                    logger.debug(f"Skipping bond {bond.id}: would exceed max_region {profile.max_region}% for {bond.region}")
+                    continue
+                    
                 weight = min(profile.max_single_position, weight_per_bond, 100 - total_weight)
                 if weight > 0.5:
                     allocation[bond.id] = float(weight)
                     total_weight += weight
                     bonds_needed -= weight
                     category_weights["Obligations"] += weight
+                    region_weights[bond.region] += weight  # v6.18 FIX: track region
                     if bond.role:
                         bucket_weights[bond.role.value] += weight
             
@@ -1356,6 +1369,10 @@ class PortfolioOptimizer:
                     continue
                 if sector_weights[asset.sector] >= profile.max_sector:
                     continue
+                # v6.18 FIX: Vérifier max_region
+                if region_weights[asset.region] >= profile.max_region:
+                    logger.debug(f"Skipping {asset.id}: max_region {profile.max_region}% reached for {asset.region}")
+                    continue
                 
                 if role == Role.DEFENSIVE:
                     base_weight = min(profile.max_single_position, 12.0)
@@ -1373,6 +1390,7 @@ class PortfolioOptimizer:
                     total_weight += weight
                     category_weights[asset.category] += weight
                     sector_weights[asset.sector] += weight
+                    region_weights[asset.region] += weight  # v6.18 FIX: track region
                     bucket_weights[role.value] += weight
                     current_weight += weight
         
