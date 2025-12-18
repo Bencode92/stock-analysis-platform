@@ -1,651 +1,442 @@
 # portfolio_engine/structured_logging.py
 """
-Module de logging structuré JSON pour le Portfolio Engine.
+Structured JSON logging with correlation ID tracking.
 
-P2-10: Logs structurés + correlation_id pour monitoring et debug.
+V1.0 - 2025-12-18 (P2-10)
 
-V1.0.0 (2025-12-16):
-- StructuredFormatter: Format JSON pour chaque log
-- correlation_id: ID unique par run pour traçabilité
-- Contexte enrichi: profile, metrics, durations
-- Compatible avec Datadog/Grafana/CloudWatch
+Features:
+- Anti-duplicate handler pattern (no double logging)
+- CorrelationIdFilter (proper logging.Filter, not makeRecord bypass)
+- Separate event vs message fields (SIEM-compatible)
+- Compatible with exc_info, filters, multiple handlers
+- Context manager for automatic correlation ID lifecycle
 
-USAGE:
-    from portfolio_engine.structured_logging import (
-        setup_structured_logging,
-        get_correlation_id,
-        log_with_context,
-    )
-    
-    # Au début du run
-    setup_structured_logging(correlation_id="run_20251216_130332")
-    
-    # Dans le code
-    log_with_context(
-        logger, "INFO", "ETF deduplication completed",
-        profile="Agressif",
-        context={"before": 993, "after": 592}
-    )
+Output schema (Datadog/ELK/Splunk ready):
+{
+    "timestamp": "2025-12-18T10:15:00.123Z",
+    "level": "INFO",
+    "logger": "portfolio_engine.optimizer",
+    "event": "covariance_computed",
+    "message": "Covariance matrix computed",
+    "correlation_id": "a1b2c3d4-...",
+    "data": {...},
+    "context": {"module": "...", "function": "...", "line": 42},
+    "exception": "..."
+}
 """
 
-import os
-import sys
 import json
 import logging
 import uuid
-from datetime import datetime
-from typing import Dict, Any, Optional, Callable
+from datetime import datetime, timezone
 from contextvars import ContextVar
-from dataclasses import dataclass, field, asdict
-from functools import wraps
-import time
+from contextlib import contextmanager
+from typing import Any, Dict, Optional, Set
 
-__version__ = "1.0.0"
+# ============================================================
+# CORRELATION ID (thread-safe via contextvars)
+# ============================================================
+
+_correlation_id: ContextVar[str] = ContextVar("correlation_id", default="")
 
 
-# =============================================================================
-# CONTEXT VARIABLES (Thread-safe)
-# =============================================================================
-
-# Correlation ID pour ce run (thread-safe)
-_correlation_id: ContextVar[str] = ContextVar('correlation_id', default='')
-
-# Profile courant (pour enrichir les logs automatiquement)
-_current_profile: ContextVar[str] = ContextVar('current_profile', default='')
-
-# Run metadata
-_run_metadata: ContextVar[Dict[str, Any]] = ContextVar('run_metadata', default={})
+def set_correlation_id(cid: Optional[str] = None) -> str:
+    """
+    Set correlation ID for current context.
+    
+    Args:
+        cid: Optional correlation ID. If None, generates a new UUID.
+    
+    Returns:
+        The correlation ID that was set.
+    
+    Example:
+        cid = set_correlation_id()  # Auto-generate
+        cid = set_correlation_id("my-custom-id")  # Custom
+    """
+    cid = cid or str(uuid.uuid4())
+    _correlation_id.set(cid)
+    return cid
 
 
 def get_correlation_id() -> str:
-    """Retourne le correlation_id du run courant."""
+    """
+    Get current correlation ID.
+    
+    Returns:
+        Current correlation ID or empty string if not set.
+    """
     return _correlation_id.get()
 
 
-def set_correlation_id(correlation_id: str) -> None:
-    """Définit le correlation_id pour ce run."""
-    _correlation_id.set(correlation_id)
+def clear_correlation_id() -> None:
+    """Clear the current correlation ID."""
+    _correlation_id.set("")
 
 
-def get_current_profile() -> str:
-    """Retourne le profil courant."""
-    return _current_profile.get()
+# ============================================================
+# FILTER: Injects correlation_id into every record
+# ============================================================
 
-
-def set_current_profile(profile: str) -> None:
-    """Définit le profil courant pour enrichir les logs."""
-    _current_profile.set(profile)
-
-
-def get_run_metadata() -> Dict[str, Any]:
-    """Retourne les métadonnées du run."""
-    return _run_metadata.get()
-
-
-def set_run_metadata(metadata: Dict[str, Any]) -> None:
-    """Définit les métadonnées du run."""
-    _run_metadata.set(metadata)
-
-
-def generate_correlation_id() -> str:
-    """Génère un correlation_id unique pour ce run."""
-    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-    unique_suffix = uuid.uuid4().hex[:8]
-    return f"run_{timestamp}_{unique_suffix}"
-
-
-# =============================================================================
-# STRUCTURED LOG ENTRY
-# =============================================================================
-
-@dataclass
-class StructuredLogEntry:
-    """Entrée de log structurée."""
-    
-    timestamp: str
-    level: str
-    logger: str
-    message: str
-    correlation_id: str = ""
-    profile: str = ""
-    context: Dict[str, Any] = field(default_factory=dict)
-    duration_ms: Optional[float] = None
-    error: Optional[Dict[str, Any]] = None
-    
-    # Metadata
-    version: str = __version__
-    environment: str = field(default_factory=lambda: os.environ.get("ENV", "development"))
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convertit en dict, excluant les valeurs None/vides."""
-        data = asdict(self)
-        # Remove empty/None values for cleaner JSON
-        return {k: v for k, v in data.items() if v is not None and v != "" and v != {}}
-    
-    def to_json(self) -> str:
-        """Sérialise en JSON."""
-        return json.dumps(self.to_dict(), ensure_ascii=False, default=str)
-
-
-# =============================================================================
-# STRUCTURED FORMATTER
-# =============================================================================
-
-class StructuredFormatter(logging.Formatter):
+class CorrelationIdFilter(logging.Filter):
     """
-    Formatter qui produit des logs JSON structurés.
+    Filter that adds correlation_id to all log records.
     
-    Chaque ligne de log devient un objet JSON avec:
-    - timestamp ISO8601
-    - level (INFO, WARNING, ERROR, etc.)
-    - logger name
-    - message
-    - correlation_id (pour tracer un run complet)
-    - profile (si défini)
-    - context (données additionnelles)
+    This is the proper way to inject context into logs,
+    rather than bypassing the logging system with makeRecord.
     """
     
-    def __init__(self, include_stack_info: bool = False):
-        super().__init__()
-        self.include_stack_info = include_stack_info
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Add correlation_id to record and allow it through."""
+        record.correlation_id = get_correlation_id()
+        return True
+
+
+# ============================================================
+# FORMATTER: JSON output with event/message separation
+# ============================================================
+
+class StructuredJsonFormatter(logging.Formatter):
+    """
+    JSON formatter for structured logging.
+    
+    Produces SIEM-compatible JSON with:
+    - event: Machine-readable event name
+    - message: Human-readable description
+    - data: Structured payload
+    - context: Source location
+    - exception: Stack trace if present
+    """
+    
+    # Fields to include in context
+    CONTEXT_FIELDS = ("module", "funcName", "lineno", "pathname")
     
     def format(self, record: logging.LogRecord) -> str:
-        """Formate le LogRecord en JSON."""
+        """Format log record as JSON."""
+        # Base structure
+        log_entry: Dict[str, Any] = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "correlation_id": getattr(record, "correlation_id", ""),
+        }
         
-        # Build structured entry
-        entry = StructuredLogEntry(
-            timestamp=datetime.utcnow().isoformat() + "Z",
-            level=record.levelname,
-            logger=record.name,
-            message=record.getMessage(),
-            correlation_id=get_correlation_id(),
-            profile=get_current_profile(),
-        )
-        
-        # Add context if provided via extra
-        if hasattr(record, 'context') and record.context:
-            entry.context = record.context
-        
-        # Add profile override if provided via extra
-        if hasattr(record, 'profile') and record.profile:
-            entry.profile = record.profile
-        
-        # Add duration if provided
-        if hasattr(record, 'duration_ms'):
-            entry.duration_ms = record.duration_ms
-        
-        # Add error info for exceptions
-        if record.exc_info:
-            entry.error = {
-                "type": record.exc_info[0].__name__ if record.exc_info[0] else "Unknown",
-                "message": str(record.exc_info[1]) if record.exc_info[1] else "",
-            }
-            if self.include_stack_info and record.exc_text:
-                entry.error["stack_trace"] = record.exc_text
-        
-        return entry.to_json()
-
-
-class HybridFormatter(logging.Formatter):
-    """
-    Formatter hybride: JSON structuré pour fichiers, human-readable pour console.
-    
-    Détecte automatiquement si la sortie est un TTY (terminal) ou non.
-    """
-    
-    def __init__(
-        self,
-        human_format: str = "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-        force_json: bool = False,
-        force_human: bool = False,
-    ):
-        super().__init__(human_format)
-        self.human_format = human_format
-        self.json_formatter = StructuredFormatter()
-        self.force_json = force_json
-        self.force_human = force_human
-    
-    def format(self, record: logging.LogRecord) -> str:
-        """Formate selon le contexte (TTY vs fichier)."""
-        
-        if self.force_json:
-            return self.json_formatter.format(record)
-        
-        if self.force_human:
-            return super().format(record)
-        
-        # Auto-detect: JSON for non-TTY (files, pipes), human for terminals
-        if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
-            return super().format(record)
+        # Event vs Message separation
+        # Priority: extra['event'] > message as event
+        event = getattr(record, "event", None)
+        if event:
+            log_entry["event"] = event
+            log_entry["message"] = record.getMessage()
         else:
-            return self.json_formatter.format(record)
+            # Fallback: treat message as event (backward compat)
+            log_entry["event"] = record.getMessage()
+            log_entry["message"] = record.getMessage()
+        
+        # Structured data payload
+        data = getattr(record, "data", None)
+        if data:
+            log_entry["data"] = data
+        
+        # Context (module, function, line)
+        log_entry["context"] = {
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
+        }
+        
+        # Exception info if present
+        if record.exc_info:
+            log_entry["exception"] = self.formatException(record.exc_info)
+        
+        # Stack info if present
+        if record.stack_info:
+            log_entry["stack_info"] = record.stack_info
+        
+        return json.dumps(log_entry, default=str, ensure_ascii=False)
 
 
-# =============================================================================
-# SETUP FUNCTIONS
-# =============================================================================
+# ============================================================
+# LOGGER FACTORY: Anti-duplicate handler pattern
+# ============================================================
 
-def setup_structured_logging(
-    correlation_id: Optional[str] = None,
+_configured_loggers: Set[str] = set()
+
+
+def get_structured_logger(
+    name: str,
     level: int = logging.INFO,
-    force_json: bool = False,
-    force_human: bool = False,
-    log_file: Optional[str] = None,
-    run_metadata: Optional[Dict[str, Any]] = None,
-) -> str:
+    stream: Any = None
+) -> logging.Logger:
     """
-    Configure le logging structuré pour le run.
+    Get a logger configured for structured JSON output.
+    
+    Anti-duplicate pattern: only configures handler once per logger name.
+    Safe to call multiple times with same name.
     
     Args:
-        correlation_id: ID unique pour ce run (auto-généré si None)
-        level: Niveau de log (default: INFO)
-        force_json: Force le format JSON même sur terminal
-        force_human: Force le format human-readable même en fichier
-        log_file: Fichier de log optionnel (toujours JSON)
-        run_metadata: Métadonnées du run à inclure
+        name: Logger name (e.g., "portfolio_engine.optimizer")
+        level: Logging level (default: INFO)
+        stream: Output stream (default: stderr via StreamHandler)
     
     Returns:
-        Le correlation_id utilisé
+        Configured logger instance.
+    
+    Example:
+        logger = get_structured_logger("portfolio_engine.optimizer")
+        logger.info("Something happened", extra={"event": "my_event"})
     """
-    # Generate or use provided correlation_id
-    if correlation_id is None:
-        correlation_id = generate_correlation_id()
+    logger = logging.getLogger(name)
     
-    set_correlation_id(correlation_id)
+    # Avoid duplicate configuration
+    if name in _configured_loggers:
+        return logger
     
-    # Store run metadata
-    if run_metadata:
-        set_run_metadata(run_metadata)
+    # Check if already has a StructuredJsonFormatter handler
+    for handler in logger.handlers:
+        if isinstance(handler.formatter, StructuredJsonFormatter):
+            _configured_loggers.add(name)
+            return logger
     
-    # Get root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(level)
+    # Configure new handler
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(StructuredJsonFormatter())
+    handler.addFilter(CorrelationIdFilter())
     
-    # Remove existing handlers
-    root_logger.handlers.clear()
+    logger.addHandler(handler)
+    logger.setLevel(level)
+    logger.propagate = False  # Avoid duplicate logs from parent
     
-    # Console handler (hybrid: human for TTY, JSON otherwise)
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level)
-    console_handler.setFormatter(HybridFormatter(
-        force_json=force_json,
-        force_human=force_human,
-    ))
-    root_logger.addHandler(console_handler)
-    
-    # File handler (always JSON)
-    if log_file:
-        file_handler = logging.FileHandler(log_file, encoding='utf-8')
-        file_handler.setLevel(level)
-        file_handler.setFormatter(StructuredFormatter())
-        root_logger.addHandler(file_handler)
-    
-    return correlation_id
+    _configured_loggers.add(name)
+    return logger
 
 
-def get_logger(name: str) -> logging.Logger:
+def reset_logger_config(name: str) -> None:
     """
-    Retourne un logger configuré avec les méthodes contextuelles.
-    
-    Usage:
-        logger = get_logger(__name__)
-        logger.info("Message", extra={"context": {"key": "value"}})
-    """
-    return logging.getLogger(name)
-
-
-# =============================================================================
-# CONTEXTUAL LOGGING HELPERS
-# =============================================================================
-
-def log_with_context(
-    logger: logging.Logger,
-    level: str,
-    message: str,
-    profile: Optional[str] = None,
-    context: Optional[Dict[str, Any]] = None,
-    duration_ms: Optional[float] = None,
-    **kwargs
-) -> None:
-    """
-    Log un message avec contexte structuré.
+    Reset logger configuration (mainly for testing).
     
     Args:
-        logger: Logger à utiliser
-        level: Niveau (INFO, WARNING, ERROR, DEBUG)
-        message: Message principal
-        profile: Profil de portefeuille (override le contexte global)
-        context: Données contextuelles additionnelles
-        duration_ms: Durée de l'opération en ms
-        **kwargs: Arguments supplémentaires pour le logger
+        name: Logger name to reset.
     """
-    extra = {
-        'context': context or {},
-        'profile': profile or get_current_profile(),
-    }
+    if name in _configured_loggers:
+        _configured_loggers.remove(name)
     
-    if duration_ms is not None:
-        extra['duration_ms'] = duration_ms
-    
-    level_map = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR,
-        'CRITICAL': logging.CRITICAL,
-    }
-    
-    log_level = level_map.get(level.upper(), logging.INFO)
-    logger.log(log_level, message, extra=extra, **kwargs)
+    logger = logging.getLogger(name)
+    logger.handlers.clear()
+    logger.setLevel(logging.NOTSET)
+    logger.propagate = True
 
 
-class LogContext:
-    """
-    Context manager pour logger automatiquement la durée d'une opération.
-    
-    Usage:
-        with LogContext(logger, "Optimisation portfolio", profile="Agressif"):
-            # ... code ...
-        # Log automatique avec duration_ms
-    """
-    
-    def __init__(
-        self,
-        logger: logging.Logger,
-        operation: str,
-        profile: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-        level_start: str = "INFO",
-        level_end: str = "INFO",
-    ):
-        self.logger = logger
-        self.operation = operation
-        self.profile = profile
-        self.context = context or {}
-        self.level_start = level_start
-        self.level_end = level_end
-        self.start_time = None
-    
-    def __enter__(self):
-        self.start_time = time.perf_counter()
-        log_with_context(
-            self.logger,
-            self.level_start,
-            f"Starting: {self.operation}",
-            profile=self.profile,
-            context=self.context,
-        )
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        duration_ms = (time.perf_counter() - self.start_time) * 1000
-        
-        if exc_type:
-            log_with_context(
-                self.logger,
-                "ERROR",
-                f"Failed: {self.operation}",
-                profile=self.profile,
-                context={**self.context, "error": str(exc_val)},
-                duration_ms=duration_ms,
-            )
-        else:
-            log_with_context(
-                self.logger,
-                self.level_end,
-                f"Completed: {self.operation}",
-                profile=self.profile,
-                context=self.context,
-                duration_ms=duration_ms,
-            )
-        
-        return False  # Don't suppress exceptions
+# ============================================================
+# CONVENIENCE: log_event helper
+# ============================================================
 
-
-def timed_operation(
+def log_event(
     logger: logging.Logger,
-    operation: str,
-    profile: Optional[str] = None,
-):
+    event: str,
+    message: Optional[str] = None,
+    level: str = "INFO",
+    exc_info: bool = False,
+    **data
+) -> None:
     """
-    Décorateur pour logger automatiquement la durée d'une fonction.
+    Log a structured event with optional data payload.
     
-    Usage:
-        @timed_operation(logger, "Calcul covariance")
-        def compute_covariance(data):
-            ...
+    This is the recommended way to log events with structured data.
+    
+    Args:
+        logger: Logger instance
+        event: Machine-readable event name (e.g., "covariance_computed")
+        message: Human-readable message (optional, defaults to event name)
+        level: Log level ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+        exc_info: Include exception traceback (default: False)
+        **data: Structured data to include in log
+    
+    Example:
+        log_event(logger, "optimization_complete",
+            message="Portfolio optimization finished",
+            profile="Agressif",
+            n_assets=18,
+            duration_ms=1234
+        )
+    
+    Output:
+        {
+            "event": "optimization_complete",
+            "message": "Portfolio optimization finished",
+            "data": {"profile": "Agressif", "n_assets": 18, "duration_ms": 1234}
+        }
     """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            with LogContext(logger, operation, profile=profile):
-                return func(*args, **kwargs)
-        return wrapper
-    return decorator
+    log_level = getattr(logging, level.upper(), logging.INFO)
+    
+    # Use extra dict for additional fields
+    extra = {
+        "event": event,
+        "data": data if data else None,
+    }
+    
+    # Message: use provided or default to formatted event name
+    msg = message or event.replace("_", " ").capitalize()
+    
+    logger.log(log_level, msg, extra=extra, exc_info=exc_info)
 
 
-# =============================================================================
-# SPECIALIZED LOGGERS
-# =============================================================================
+# ============================================================
+# CONTEXT MANAGER: Auto correlation ID for a run
+# ============================================================
 
-class PortfolioLogger:
+@contextmanager
+def logging_context(correlation_id: Optional[str] = None):
     """
-    Logger spécialisé pour le portfolio engine avec méthodes contextuelles.
+    Context manager that sets correlation ID for the duration.
     
-    Usage:
-        plogger = PortfolioLogger("portfolio_engine.optimizer")
-        plogger.optimization_started("Agressif", n_assets=50)
-        plogger.optimization_completed("Agressif", vol=17.6, n_selected=10, duration_ms=150)
+    All logs within this context will share the same correlation ID,
+    making it easy to trace a complete run through the system.
+    
+    Args:
+        correlation_id: Optional custom ID. If None, generates UUID.
+    
+    Yields:
+        The correlation ID being used.
+    
+    Example:
+        with logging_context() as run_id:
+            log_event(logger, "run_started")
+            # ... all logs in this block share same run_id
+            process_data()
+            log_event(logger, "run_completed")
+        
+        # After context, correlation_id is cleared
     """
-    
-    def __init__(self, name: str):
-        self.logger = logging.getLogger(name)
-    
-    def optimization_started(self, profile: str, **context):
-        """Log le début d'une optimisation."""
-        log_with_context(
-            self.logger, "INFO",
-            f"Starting optimization for {profile}",
-            profile=profile,
-            context={"event": "optimization_started", **context},
-        )
-    
-    def optimization_completed(
-        self,
-        profile: str,
-        vol: float,
-        n_selected: int,
-        duration_ms: float,
-        mode: str = "slsqp",
-        **context
-    ):
-        """Log la fin d'une optimisation."""
-        log_with_context(
-            self.logger, "INFO",
-            f"Optimization completed for {profile}: {n_selected} assets, vol={vol:.1f}%",
-            profile=profile,
-            context={
-                "event": "optimization_completed",
-                "volatility_pct": vol,
-                "n_assets_selected": n_selected,
-                "optimization_mode": mode,
-                **context,
-            },
-            duration_ms=duration_ms,
-        )
-    
-    def covariance_warning(self, profile: str, condition_number: float, threshold: float = 1000.0):
-        """Log un warning de matrice de covariance mal conditionnée."""
-        log_with_context(
-            self.logger, "WARNING",
-            f"Covariance matrix ill-conditioned for {profile}",
-            profile=profile,
-            context={
-                "event": "covariance_warning",
-                "condition_number": condition_number,
-                "threshold": threshold,
-                "action": "using_regularization",
-            },
-        )
-    
-    def fallback_used(self, profile: str, reason: str, fallback_type: str = "heuristic"):
-        """Log l'utilisation d'un fallback."""
-        log_with_context(
-            self.logger, "WARNING",
-            f"Fallback used for {profile}: {fallback_type}",
-            profile=profile,
-            context={
-                "event": "fallback_used",
-                "fallback_type": fallback_type,
-                "reason": reason,
-            },
-        )
-    
-    def constraint_violation(
-        self,
-        profile: str,
-        constraint_name: str,
-        expected: Any,
-        actual: Any,
-        priority: str = "hard",
-    ):
-        """Log une violation de contrainte."""
-        level = "ERROR" if priority == "hard" else "WARNING"
-        log_with_context(
-            self.logger, level,
-            f"Constraint violation for {profile}: {constraint_name}",
-            profile=profile,
-            context={
-                "event": "constraint_violation",
-                "constraint_name": constraint_name,
-                "expected": expected,
-                "actual": actual,
-                "priority": priority,
-            },
-        )
-    
-    def data_loaded(self, source: str, n_items: int, **context):
-        """Log le chargement de données."""
-        log_with_context(
-            self.logger, "INFO",
-            f"Loaded {n_items} items from {source}",
-            context={
-                "event": "data_loaded",
-                "source": source,
-                "n_items": n_items,
-                **context,
-            },
-        )
-    
-    def backtest_completed(
-        self,
-        profile: str,
-        return_pct: float,
-        sharpe: Optional[float],
-        duration_ms: float,
-        **context
-    ):
-        """Log la fin d'un backtest."""
-        log_with_context(
-            self.logger, "INFO",
-            f"Backtest completed for {profile}: return={return_pct:.2f}%",
-            profile=profile,
-            context={
-                "event": "backtest_completed",
-                "return_pct": return_pct,
-                "sharpe_ratio": sharpe,
-                **context,
-            },
-            duration_ms=duration_ms,
-        )
-
-
-# =============================================================================
-# QUERY HELPERS (for log analysis)
-# =============================================================================
-
-def parse_structured_log_line(line: str) -> Optional[Dict[str, Any]]:
-    """
-    Parse une ligne de log structuré JSON.
-    
-    Utile pour analyser les fichiers de log.
-    """
+    cid = set_correlation_id(correlation_id)
     try:
-        return json.loads(line.strip())
-    except json.JSONDecodeError:
-        return None
+        yield cid
+    finally:
+        clear_correlation_id()
 
 
-def filter_logs_by_correlation_id(
-    log_lines: list,
-    correlation_id: str,
-) -> list:
-    """Filtre les logs par correlation_id."""
-    results = []
-    for line in log_lines:
-        parsed = parse_structured_log_line(line)
-        if parsed and parsed.get('correlation_id') == correlation_id:
-            results.append(parsed)
-    return results
+# ============================================================
+# MANIFEST INTEGRATION
+# ============================================================
 
-
-def filter_logs_by_profile(
-    log_lines: list,
-    profile: str,
-) -> list:
-    """Filtre les logs par profile."""
-    results = []
-    for line in log_lines:
-        parsed = parse_structured_log_line(line)
-        if parsed and parsed.get('profile') == profile:
-            results.append(parsed)
-    return results
-
-
-def filter_logs_by_level(
-    log_lines: list,
-    levels: list,
-) -> list:
-    """Filtre les logs par niveau (INFO, WARNING, ERROR, etc.)."""
-    results = []
-    levels_upper = [l.upper() for l in levels]
-    for line in log_lines:
-        parsed = parse_structured_log_line(line)
-        if parsed and parsed.get('level') in levels_upper:
-            results.append(parsed)
-    return results
-
-
-# =============================================================================
-# CLI / TEST
-# =============================================================================
-
-if __name__ == "__main__":
-    # Test du module
-    cid = setup_structured_logging(force_json=True)
+def get_logging_manifest_entry() -> Dict[str, Any]:
+    """
+    Get logging context info for inclusion in output manifest.
     
-    logger = get_logger("test")
-    plogger = PortfolioLogger("portfolio_engine.test")
+    Returns:
+        Dict with correlation_id and timestamp for manifest.
     
-    print(f"\n📋 Testing structured logging (correlation_id={cid})\n")
+    Example:
+        manifest["_logging"] = get_logging_manifest_entry()
+    """
+    return {
+        "correlation_id": get_correlation_id(),
+        "log_timestamp": datetime.now(timezone.utc).isoformat(),
+        "log_version": "1.0",
+    }
+
+
+# ============================================================
+# STANDARD EVENTS (recommended event names)
+# ============================================================
+
+class Events:
+    """
+    Standard event names for consistency across modules.
     
-    # Test basic logging
-    log_with_context(
-        logger, "INFO", "Test message",
-        context={"key": "value", "number": 42}
-    )
+    Usage:
+        log_event(logger, Events.OPTIMIZATION_STARTED, ...)
+    """
+    # Generation lifecycle
+    GENERATION_STARTED = "generation_started"
+    GENERATION_COMPLETED = "generation_completed"
+    GENERATION_FAILED = "generation_failed"
     
-    # Test portfolio logger
-    set_current_profile("Agressif")
-    plogger.optimization_started("Agressif", n_assets=50, universe_size=1000)
-    plogger.covariance_warning("Agressif", condition_number=2042133.2)
-    plogger.optimization_completed(
-        "Agressif", vol=17.6, n_selected=10, duration_ms=150.5, mode="slsqp"
-    )
+    # Data pipeline
+    DATA_FETCH_STARTED = "data_fetch_started"
+    DATA_FETCH_COMPLETED = "data_fetch_completed"
+    DATA_FETCH_FAILED = "data_fetch_failed"
+    DATA_CACHE_HIT = "data_cache_hit"
+    DATA_CACHE_MISS = "data_cache_miss"
     
-    # Test timed context
-    with LogContext(logger, "Test operation", profile="Test"):
-        import time
-        time.sleep(0.1)
+    # Optimization
+    OPTIMIZATION_STARTED = "optimization_started"
+    OPTIMIZATION_COMPLETED = "optimization_completed"
+    OPTIMIZATION_FAILED = "optimization_failed"
+    OPTIMIZATION_FALLBACK = "optimization_fallback"
     
-    print("\n✅ Structured logging test completed")
+    # Covariance
+    COVARIANCE_COMPUTED = "covariance_computed"
+    COVARIANCE_SHRINKAGE_APPLIED = "covariance_shrinkage_applied"
+    COVARIANCE_WARNING = "covariance_warning"
+    
+    # Constraints
+    CONSTRAINTS_VERIFIED = "constraints_verified"
+    CONSTRAINTS_VIOLATION = "constraints_violation"
+    
+    # Backtest
+    BACKTEST_STARTED = "backtest_started"
+    BACKTEST_COMPLETED = "backtest_completed"
+    BACKTEST_FAILED = "backtest_failed"
+    
+    # Quality gates
+    QUALITY_GATE_PASSED = "quality_gate_passed"
+    QUALITY_GATE_FAILED = "quality_gate_failed"
+    
+    # LLM
+    LLM_REQUEST_STARTED = "llm_request_started"
+    LLM_REQUEST_COMPLETED = "llm_request_completed"
+    LLM_SANITIZATION_APPLIED = "llm_sanitization_applied"
+
+
+# ============================================================
+# EXAMPLE USAGE (for documentation)
+# ============================================================
+
+def _example_usage():
+    """
+    Example showing complete usage pattern.
+    
+    This function is for documentation only.
+    """
+    # Get logger (safe to call multiple times)
+    logger = get_structured_logger("portfolio_engine.optimizer")
+    
+    # Start a run with correlation ID
+    with logging_context() as run_id:
+        
+        # Log start
+        log_event(logger, Events.GENERATION_STARTED,
+            message="Starting portfolio generation",
+            profile="Agressif",
+            n_candidates=150
+        )
+        
+        # Log intermediate steps
+        log_event(logger, Events.COVARIANCE_COMPUTED,
+            message="Covariance matrix ready",
+            condition_number=8102.04,
+            shrinkage_lambda=0.02,
+            method="diag_shrink"
+        )
+        
+        # Log with exception
+        try:
+            raise ValueError("Example error")
+        except Exception:
+            log_event(logger, Events.OPTIMIZATION_FAILED,
+                message="Optimization failed",
+                level="ERROR",
+                exc_info=True,
+                profile="Agressif"
+            )
+        
+        # Log completion
+        log_event(logger, Events.GENERATION_COMPLETED,
+            message="Portfolio generation finished",
+            duration_ms=1234,
+            n_assets_selected=18
+        )
+        
+        # Include in manifest
+        manifest_entry = get_logging_manifest_entry()
+        print(f"Manifest entry: {manifest_entry}")
