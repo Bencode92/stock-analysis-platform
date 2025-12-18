@@ -1476,6 +1476,17 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 result[profile]["_exposures"] = diagnostics["exposures"]
             if diagnostics.get("execution_summary"):
                 result[profile]["_execution_summary"] = diagnostics["execution_summary"]
+            
+            # Log depuis le rapport enrichi
+            quality_score = enriched_constraint_report.get("quality_score", "N/A")
+            n_violations = len(enriched_constraint_report.get("violations", []))
+            margins = enriched_constraint_report.get("margins", {})
+            
+            if n_violations > 0:
+                for v in enriched_constraint_report.get("violations", []):
+                    logger.warning(f"⚠️ [P0-2] {profile} VIOLATION: {v}")
+            else:
+                logger.info(f"✅ [P0-2] {profile}: Toutes contraintes satisfaites (quality_score: {quality_score}, margins: {margins})")
         else:
             # Fallback : recalculer un rapport basique
             constraint_report = verify_constraints_post_arrondi(
@@ -1485,23 +1496,23 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 profile_name=profile,
             )
             result[profile]["_constraint_report"] = constraint_report.to_dict()
-        
-        if not constraint_report.all_hard_satisfied:
-            hard_violations = [
-                v for v in constraint_report.violations 
-                if v.priority.value == "hard"
-            ]
-            for v in hard_violations:
-                logger.error(
-                    f"🚨 [P0-2] {profile} HARD VIOLATION: {v.constraint_name} - "
-                    f"expected {v.expected}, got {v.actual:.1f}% "
-                    f"(context: {v.context})"
-                )
-        elif constraint_report.warnings:
-            for w in constraint_report.warnings:
-                logger.warning(f"⚠️ [P0-2] {profile} WARNING: {w}")
-        else:
-            logger.info(f"✅ [P0-2] {profile}: Toutes contraintes satisfaites (margins: {constraint_report.margins})")
+            
+            if not constraint_report.all_hard_satisfied:
+                hard_violations = [
+                    v for v in constraint_report.violations 
+                    if v.priority.value == "hard"
+                ]
+                for v in hard_violations:
+                    logger.error(
+                        f"🚨 [P0-2] {profile} HARD VIOLATION: {v.constraint_name} - "
+                        f"expected {v.expected}, got {v.actual:.1f}% "
+                        f"(context: {v.context})"
+                    )
+            elif constraint_report.warnings:
+                for w in constraint_report.warnings:
+                    logger.warning(f"⚠️ [P0-2] {profile} WARNING: {w}")
+            else:
+                logger.info(f"✅ [P0-2] {profile}: Toutes contraintes satisfaites (margins: {constraint_report.margins})")
         
         feasibility_dict = diagnostics.get("_feasibility")
         limitations = build_limitations(
