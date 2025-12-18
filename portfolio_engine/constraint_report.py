@@ -1,9 +1,14 @@
 # portfolio_engine/constraint_report.py
 """
-Constraint Report Module — v1.0
+Constraint Report Module — v2.0
 
 Génère un rapport structuré des contraintes avec margins explicites.
 Chaque contrainte est documentée avec: {cap, observed, slack, binding, status}
+
+v2.0 ADDITIONS (Phase 1.2-1.3):
+- Exposures détaillées (category, sector, region, risk_bucket, role)
+- Métriques de concentration (HHI, effective_n, top_5)
+- Ticker mapping pour exécution (id → ticker → ISIN)
 
 STRUCTURE MARGIN:
 - cap: Limite configurée (ex: 50% pour max_region)
@@ -20,6 +25,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from collections import defaultdict
 from enum import Enum
 import logging
+import math
 
 # Import risk_buckets si disponible
 try:
@@ -109,9 +115,71 @@ class ConstraintMargin:
 
 
 @dataclass
+class TickerMapping:
+    """
+    Mapping d'un actif pour exécution.
+    
+    Phase 1.3: Structure pour faciliter l'exécution broker.
+    """
+    id: str
+    ticker: str
+    isin: Optional[str]
+    name: str
+    weight_pct: float
+    category: str
+    risk_bucket: str
+    sector: str
+    region: str
+    exchange: Optional[str] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit en dictionnaire pour JSON."""
+        return {
+            "id": self.id,
+            "ticker": self.ticker,
+            "isin": self.isin,
+            "name": self.name,
+            "weight_pct": round(self.weight_pct, 2),
+            "category": self.category,
+            "risk_bucket": self.risk_bucket,
+            "sector": self.sector,
+            "region": self.region,
+            "exchange": self.exchange,
+        }
+
+
+@dataclass
+class ExposureReport:
+    """
+    Rapport des expositions détaillées.
+    
+    Phase 1.2: Breakdown complet pour audit.
+    """
+    by_category: Dict[str, float]
+    by_sector: Dict[str, float]
+    by_region: Dict[str, float]
+    by_risk_bucket: Dict[str, float]
+    by_role: Dict[str, float]
+    concentration: Dict[str, Any]
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit en dictionnaire pour JSON."""
+        return {
+            "by_category": {k: round(v, 2) for k, v in self.by_category.items()},
+            "by_sector": {k: round(v, 2) for k, v in sorted(self.by_sector.items(), key=lambda x: -x[1])},
+            "by_region": {k: round(v, 2) for k, v in sorted(self.by_region.items(), key=lambda x: -x[1])},
+            "by_risk_bucket": {k: round(v, 2) for k, v in self.by_risk_bucket.items()},
+            "by_role": {k: round(v, 2) for k, v in self.by_role.items()},
+            "concentration": self.concentration,
+        }
+
+
+@dataclass
 class ConstraintReport:
     """
     Rapport complet des contraintes.
+    
+    v2.0: Ajout exposures et ticker_mapping.
     
     Attributes:
         profile_name: Nom du profil (Stable, Modéré, Agressif)
@@ -119,22 +187,41 @@ class ConstraintReport:
         summary: Résumé (n_ok, n_binding, n_violated)
         quality_score: Score de qualité 0-100
         recommendations: Actions recommandées
+        exposures: Breakdown des expositions (Phase 1.2)
+        ticker_mapping: Liste des mappings pour exécution (Phase 1.3)
+        execution_summary: Résumé pour exécution
     """
     profile_name: str
     constraints: List[ConstraintMargin]
     summary: Dict[str, int]
     quality_score: float
     recommendations: List[str]
+    exposures: Optional[ExposureReport] = None
+    ticker_mapping: Optional[List[TickerMapping]] = None
+    execution_summary: Optional[Dict[str, Any]] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convertit en dictionnaire pour JSON."""
-        return {
+        result = {
             "profile_name": self.profile_name,
             "constraints": [c.to_dict() for c in self.constraints],
             "summary": self.summary,
             "quality_score": round(self.quality_score, 1),
             "recommendations": self.recommendations,
         }
+        
+        # Phase 1.2: Exposures
+        if self.exposures:
+            result["exposures"] = self.exposures.to_dict()
+        
+        # Phase 1.3: Ticker mapping
+        if self.ticker_mapping:
+            result["ticker_mapping"] = [t.to_dict() for t in self.ticker_mapping]
+        
+        if self.execution_summary:
+            result["execution_summary"] = self.execution_summary
+        
+        return result
     
     def get_violations(self) -> List[ConstraintMargin]:
         """Retourne les contraintes violées."""
@@ -147,6 +234,34 @@ class ConstraintReport:
     def is_feasible(self) -> bool:
         """True si aucune contrainte violée."""
         return len(self.get_violations()) == 0
+
+
+# ============= CONCENTRATION METRICS =============
+
+def compute_hhi(weights: List[float]) -> float:
+    """
+    Calcule l'indice Herfindahl-Hirschman (HHI).
+    
+    HHI = Σ(w_i)² où w_i en pourcentage
+    - 0-1500: Diversifié
+    - 1500-2500: Modérément concentré
+    - >2500: Hautement concentré
+    """
+    # Convertir en fractions si en pourcentage
+    weights_normalized = [w / 100 if w > 1 else w for w in weights if w > 0]
+    return sum(w * w for w in weights_normalized) * 10000
+
+
+def compute_effective_n(weights: List[float]) -> float:
+    """
+    Calcule le nombre effectif de positions (1/HHI).
+    
+    Représente le nombre équivalent de positions si toutes égales.
+    """
+    hhi = compute_hhi(weights)
+    if hhi == 0:
+        return 0
+    return round(10000 / hhi, 1)
 
 
 # ============= MARGIN CALCULATION FUNCTIONS =============
@@ -207,6 +322,8 @@ class ConstraintReportGenerator:
     """
     Générateur de rapports de contraintes.
     
+    v2.0: Ajout génération exposures et ticker_mapping.
+    
     Usage:
         generator = ConstraintReportGenerator()
         report = generator.generate(allocation, candidates, profile)
@@ -221,6 +338,8 @@ class ConstraintReportGenerator:
         candidates: List[Any],  # List[Asset]
         profile: Any,  # ProfileConstraints
         cov_diagnostics: Optional[Dict] = None,
+        include_exposures: bool = True,
+        include_ticker_mapping: bool = True,
     ) -> ConstraintReport:
         """
         Génère le rapport complet des contraintes.
@@ -230,9 +349,11 @@ class ConstraintReportGenerator:
             candidates: Liste des Asset candidats
             profile: ProfileConstraints
             cov_diagnostics: Diagnostics de covariance (optionnel)
+            include_exposures: Inclure le rapport d'expositions (Phase 1.2)
+            include_ticker_mapping: Inclure le mapping tickers (Phase 1.3)
         
         Returns:
-            ConstraintReport avec toutes les margins
+            ConstraintReport avec toutes les margins, exposures et mapping
         """
         constraints = []
         
@@ -287,12 +408,26 @@ class ConstraintReportGenerator:
         # Generate recommendations
         recommendations = self._generate_recommendations(constraints, profile)
         
+        # Phase 1.2: Generate exposures
+        exposures = None
+        if include_exposures:
+            exposures = self._compute_exposures(allocation, asset_by_id)
+        
+        # Phase 1.3: Generate ticker mapping
+        ticker_mapping = None
+        execution_summary = None
+        if include_ticker_mapping:
+            ticker_mapping, execution_summary = self._compute_ticker_mapping(allocation, asset_by_id)
+        
         return ConstraintReport(
             profile_name=profile.name,
             constraints=constraints,
             summary=summary,
             quality_score=quality_score,
             recommendations=recommendations,
+            exposures=exposures,
+            ticker_mapping=ticker_mapping,
+            execution_summary=execution_summary,
         )
     
     def _get_asset_id(self, asset: Any) -> str:
@@ -310,6 +445,236 @@ class ConstraintReportGenerator:
         if isinstance(asset, dict):
             return asset.get(attr, default)
         return default
+    
+    # ============= PHASE 1.2: EXPOSURES =============
+    
+    def _compute_exposures(
+        self,
+        allocation: Dict[str, float],
+        asset_by_id: Dict[str, Any],
+    ) -> ExposureReport:
+        """
+        Phase 1.2: Calcule les expositions détaillées.
+        
+        Returns:
+            ExposureReport avec breakdown complet
+        """
+        by_category = defaultdict(float)
+        by_sector = defaultdict(float)
+        by_region = defaultdict(float)
+        by_risk_bucket = defaultdict(float)
+        by_role = defaultdict(float)
+        
+        weights_list = []
+        
+        for aid, weight in allocation.items():
+            if weight <= 0:
+                continue
+            
+            weights_list.append(weight)
+            asset = asset_by_id.get(aid)
+            
+            if not asset:
+                by_category["Unknown"] += weight
+                by_sector["Unknown"] += weight
+                by_region["Unknown"] += weight
+                by_risk_bucket["unknown"] += weight
+                by_role["unknown"] += weight
+                continue
+            
+            # Category
+            category = self._get_asset_attr(asset, 'category', 'Unknown')
+            by_category[category] += weight
+            
+            # Sector
+            sector = self._get_asset_attr(asset, 'sector', 'Unknown')
+            by_sector[sector] += weight
+            
+            # Region
+            region = self._get_asset_attr(asset, 'region', 'Global')
+            by_region[region] += weight
+            
+            # Risk bucket
+            risk_bucket = self._get_asset_attr(asset, '_risk_bucket', 'unknown')
+            if not risk_bucket:
+                # Fallback basé sur category
+                if category == "Obligations":
+                    risk_bucket = "bond_like"
+                elif category == "Actions":
+                    risk_bucket = "equity_like"
+                elif category == "Crypto":
+                    risk_bucket = "crypto"
+                else:
+                    risk_bucket = "equity_like"
+            by_risk_bucket[risk_bucket] += weight
+            
+            # Role (bucket CORE/DEFENSIVE/etc.)
+            role = self._get_asset_attr(asset, 'role')
+            if role:
+                role_value = role.value if hasattr(role, 'value') else str(role)
+                by_role[role_value] += weight
+            else:
+                by_role["unassigned"] += weight
+        
+        # Concentration metrics
+        sorted_weights = sorted(weights_list, reverse=True)
+        top_5_weight = sum(sorted_weights[:5]) if len(sorted_weights) >= 5 else sum(sorted_weights)
+        top_10_weight = sum(sorted_weights[:10]) if len(sorted_weights) >= 10 else sum(sorted_weights)
+        
+        hhi = compute_hhi(weights_list)
+        effective_n = compute_effective_n(weights_list)
+        
+        # Déterminer le niveau de concentration
+        if hhi < 1000:
+            concentration_level = "well_diversified"
+        elif hhi < 1500:
+            concentration_level = "diversified"
+        elif hhi < 2500:
+            concentration_level = "moderately_concentrated"
+        else:
+            concentration_level = "highly_concentrated"
+        
+        concentration = {
+            "hhi": round(hhi, 0),
+            "hhi_interpretation": concentration_level,
+            "effective_n": effective_n,
+            "n_positions": len(weights_list),
+            "top_5_weight": round(top_5_weight, 2),
+            "top_10_weight": round(top_10_weight, 2),
+            "largest_position": round(sorted_weights[0], 2) if sorted_weights else 0,
+            "smallest_position": round(sorted_weights[-1], 2) if sorted_weights else 0,
+            "thresholds": {
+                "well_diversified": "HHI < 1000",
+                "diversified": "HHI 1000-1500",
+                "moderately_concentrated": "HHI 1500-2500",
+                "highly_concentrated": "HHI > 2500",
+            },
+        }
+        
+        return ExposureReport(
+            by_category=dict(by_category),
+            by_sector=dict(by_sector),
+            by_region=dict(by_region),
+            by_risk_bucket=dict(by_risk_bucket),
+            by_role=dict(by_role),
+            concentration=concentration,
+        )
+    
+    # ============= PHASE 1.3: TICKER MAPPING =============
+    
+    def _compute_ticker_mapping(
+        self,
+        allocation: Dict[str, float],
+        asset_by_id: Dict[str, Any],
+    ) -> Tuple[List[TickerMapping], Dict[str, Any]]:
+        """
+        Phase 1.3: Génère le mapping tickers pour exécution.
+        
+        Returns:
+            (List[TickerMapping], execution_summary)
+        """
+        mappings = []
+        exchanges = set()
+        missing_isin = 0
+        missing_ticker = 0
+        
+        # Trier par poids décroissant
+        sorted_allocation = sorted(allocation.items(), key=lambda x: -x[1])
+        
+        for aid, weight in sorted_allocation:
+            if weight <= 0:
+                continue
+            
+            asset = asset_by_id.get(aid)
+            
+            if not asset:
+                # Asset non trouvé, créer un mapping minimal
+                mappings.append(TickerMapping(
+                    id=aid,
+                    ticker=aid,
+                    isin=None,
+                    name=f"Unknown ({aid})",
+                    weight_pct=weight,
+                    category="Unknown",
+                    risk_bucket="unknown",
+                    sector="Unknown",
+                    region="Unknown",
+                    exchange=None,
+                ))
+                missing_isin += 1
+                continue
+            
+            # Extraire les informations
+            ticker = self._get_asset_attr(asset, 'ticker') or \
+                     self._get_asset_attr(asset, 'symbol') or \
+                     aid
+            
+            # Chercher ISIN dans source_data si disponible
+            source_data = self._get_asset_attr(asset, 'source_data', {})
+            isin = None
+            exchange = None
+            
+            if isinstance(source_data, dict):
+                isin = source_data.get('isin') or source_data.get('ISIN')
+                exchange = source_data.get('exchange') or source_data.get('Exchange') or \
+                           source_data.get('market') or source_data.get('Market')
+            
+            if not isin:
+                isin = self._get_asset_attr(asset, 'isin')
+            
+            if not exchange:
+                exchange = self._get_asset_attr(asset, 'exchange')
+            
+            # Statistiques
+            if not isin:
+                missing_isin += 1
+            if ticker == aid and not self._get_asset_attr(asset, 'ticker'):
+                missing_ticker += 1
+            if exchange:
+                exchanges.add(exchange)
+            
+            # Risk bucket
+            risk_bucket = self._get_asset_attr(asset, '_risk_bucket', '')
+            if not risk_bucket:
+                category = self._get_asset_attr(asset, 'category', '')
+                if category == "Obligations":
+                    risk_bucket = "bond_like"
+                elif category == "Actions":
+                    risk_bucket = "equity_like"
+                elif category == "Crypto":
+                    risk_bucket = "crypto"
+                else:
+                    risk_bucket = "equity_like"
+            
+            mappings.append(TickerMapping(
+                id=aid,
+                ticker=ticker,
+                isin=isin,
+                name=self._get_asset_attr(asset, 'name', aid)[:60],
+                weight_pct=weight,
+                category=self._get_asset_attr(asset, 'category', 'Unknown'),
+                risk_bucket=risk_bucket,
+                sector=self._get_asset_attr(asset, 'sector', 'Unknown'),
+                region=self._get_asset_attr(asset, 'region', 'Unknown'),
+                exchange=exchange,
+            ))
+        
+        # Execution summary
+        execution_summary = {
+            "n_positions": len(mappings),
+            "n_exchanges": len(exchanges),
+            "exchanges": sorted(list(exchanges)) if exchanges else [],
+            "total_weight": round(sum(m.weight_pct for m in mappings), 2),
+            "missing_isin": missing_isin,
+            "missing_ticker": missing_ticker,
+            "data_quality": {
+                "isin_coverage": round((len(mappings) - missing_isin) / max(len(mappings), 1) * 100, 1),
+                "ticker_coverage": round((len(mappings) - missing_ticker) / max(len(mappings), 1) * 100, 1),
+            },
+            "ready_for_execution": missing_ticker == 0,
+        }
+        
+        return mappings, execution_summary
     
     # ============= INDIVIDUAL CONSTRAINT METHODS =============
     
@@ -846,23 +1211,67 @@ class ConstraintReportGenerator:
         return recommendations
 
 
-# ============= CONVENIENCE FUNCTION =============
+# ============= CONVENIENCE FUNCTIONS =============
 
 def generate_constraint_report(
     allocation: Dict[str, float],
     candidates: List[Any],
     profile: Any,
     cov_diagnostics: Optional[Dict] = None,
+    include_exposures: bool = True,
+    include_ticker_mapping: bool = True,
 ) -> Dict[str, Any]:
     """
     Fonction de commodité pour générer un rapport de contraintes.
     
     Returns:
-        Dict prêt pour JSON avec toutes les margins
+        Dict prêt pour JSON avec toutes les margins, exposures et mapping
     """
     generator = ConstraintReportGenerator()
-    report = generator.generate(allocation, candidates, profile, cov_diagnostics)
+    report = generator.generate(
+        allocation, 
+        candidates, 
+        profile, 
+        cov_diagnostics,
+        include_exposures=include_exposures,
+        include_ticker_mapping=include_ticker_mapping,
+    )
     return report.to_dict()
+
+
+def generate_exposures_only(
+    allocation: Dict[str, float],
+    candidates: List[Any],
+) -> Dict[str, Any]:
+    """
+    Phase 1.2: Génère uniquement le rapport d'expositions.
+    
+    Returns:
+        Dict avec exposures détaillées
+    """
+    generator = ConstraintReportGenerator()
+    asset_by_id = {generator._get_asset_id(a): a for a in candidates}
+    exposures = generator._compute_exposures(allocation, asset_by_id)
+    return exposures.to_dict()
+
+
+def generate_ticker_mapping_only(
+    allocation: Dict[str, float],
+    candidates: List[Any],
+) -> Dict[str, Any]:
+    """
+    Phase 1.3: Génère uniquement le mapping tickers.
+    
+    Returns:
+        Dict avec ticker_mapping et execution_summary
+    """
+    generator = ConstraintReportGenerator()
+    asset_by_id = {generator._get_asset_id(a): a for a in candidates}
+    mappings, summary = generator._compute_ticker_mapping(allocation, asset_by_id)
+    return {
+        "ticker_mapping": [m.to_dict() for m in mappings],
+        "execution_summary": summary,
+    }
 
 
 # ============= INTEGRATION HELPERS =============
@@ -876,6 +1285,8 @@ def enrich_diagnostics_with_margins(
     """
     Enrichit les diagnostics existants avec le rapport de contraintes.
     
+    v2.0: Inclut exposures et ticker_mapping.
+    
     Usage dans optimizer.py:
         diagnostics = enrich_diagnostics_with_margins(diagnostics, allocation, candidates, profile)
     """
@@ -884,6 +1295,8 @@ def enrich_diagnostics_with_margins(
         candidates=candidates,
         profile=profile,
         cov_diagnostics=diagnostics,
+        include_exposures=True,
+        include_ticker_mapping=True,
     )
     
     diagnostics["constraint_report"] = report
@@ -897,5 +1310,13 @@ def enrich_diagnostics_with_margins(
         c for c in report["constraints"]
         if c["status"] == "BINDING"
     ]
+    
+    # Phase 1.2: Exposures au top-level
+    if "exposures" in report:
+        diagnostics["exposures"] = report["exposures"]
+    
+    # Phase 1.3: Execution summary au top-level
+    if "execution_summary" in report:
+        diagnostics["execution_summary"] = report["execution_summary"]
     
     return diagnostics
