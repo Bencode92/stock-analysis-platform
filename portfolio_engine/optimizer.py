@@ -127,6 +127,26 @@ except ImportError:
     def deduplicate_by_corporate_group(stocks, scores=None, max_per_group=1):
         return stocks, {}
 
+# Phase 1: Import risk_buckets pour classification 6 buckets
+try:
+    from portfolio_engine.risk_buckets import (
+        RiskBucket,
+        classify_asset,
+        counts_in_max_region,
+        LEVERAGED_CAP,
+        ALTERNATIVE_CAP,
+    )
+    HAS_RISK_BUCKETS = True
+except ImportError:
+    HAS_RISK_BUCKETS = False
+
+# Phase 1: Import constraint_report pour margins et exposures
+try:
+    from portfolio_engine.constraint_report import enrich_diagnostics_with_margins
+    HAS_CONSTRAINT_REPORT = True
+except ImportError:
+    HAS_CONSTRAINT_REPORT = False
+
 logger = logging.getLogger("portfolio_engine.optimizer")
 
 # ============= CONSTANTES v6.17 =============
@@ -464,7 +484,7 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
 
 
 def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
-    """Enrichit tous les actifs avec leur preset et rôle (bucket)."""
+    """Enrichit tous les actifs avec leur preset, rôle (bucket) et risk_bucket."""
     for asset in assets:
         if asset.preset is None or asset.role is None:
             preset, role = assign_preset_to_asset(asset)
@@ -472,13 +492,25 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
             asset.role = role
         if asset.category == "Actions" and asset.corporate_group is None:
             asset.corporate_group = get_corporate_group(asset.name)
+        
+        # === Phase 1: Ajouter risk_bucket classification ===
+        if HAS_RISK_BUCKETS and not hasattr(asset, '_risk_bucket'):
+            bucket = classify_asset(asset)
+            asset._risk_bucket = bucket.value  # Stocker comme string
     
     role_counts = defaultdict(int)
+    bucket_counts = defaultdict(int)  # Phase 1: tracker risk_buckets
+    
     for asset in assets:
         if asset.role:
             role_counts[asset.role.value] += 1
+        if hasattr(asset, '_risk_bucket'):
+            bucket_counts[asset._risk_bucket] += 1
     
     logger.info(f"Bucket distribution: {dict(role_counts)}")
+    if HAS_RISK_BUCKETS:
+        logger.info(f"Risk bucket distribution: {dict(bucket_counts)}")
+    
     return assets
 
 
@@ -1695,7 +1727,7 @@ class PortfolioOptimizer:
             "buffett_min_score": self.buffett_min_score,
         })
         
-        opt_mode_display = optimization_mode.upper().replace("_", " ")
+opt_mode_display = optimization_mode.upper().replace("_", " ")
         cov_status = "✅" if cov_diagnostics.get("is_well_conditioned", True) else "⚠️"
         logger.info(
             f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds, {crypto_in_allocation} crypto), "
@@ -1710,6 +1742,24 @@ class PortfolioOptimizer:
             f"({cov_diagnostics.get('eigen_clipped_pct', 0):.1f}%), "
             f"well_conditioned={cov_diagnostics.get('is_well_conditioned')}"
         )
+        
+        # === Phase 1: Enrichir diagnostics avec margins et exposures ===
+        if HAS_CONSTRAINT_REPORT:
+            try:
+                diagnostics = enrich_diagnostics_with_margins(
+                    diagnostics=diagnostics,
+                    allocation=allocation,
+                    candidates=candidates,
+                    profile=profile,
+                )
+                logger.info(
+                    f"[CONSTRAINT REPORT {profile.name}] "
+                    f"quality_score={diagnostics.get('constraint_quality_score', 'N/A')}, "
+                    f"violations={len(diagnostics.get('constraint_violations', []))}, "
+                    f"bindings={len(diagnostics.get('constraint_bindings', []))}"
+                )
+            except Exception as e:
+                logger.warning(f"Constraint report generation failed: {e}")
         
         return allocation, diagnostics
     
