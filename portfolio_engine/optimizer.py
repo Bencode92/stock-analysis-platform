@@ -495,7 +495,7 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
         
         # === Phase 1: Ajouter risk_bucket classification ===
         if HAS_RISK_BUCKETS and not hasattr(asset, '_risk_bucket'):
-            bucket = classify_asset(asset)
+            bucket = classify_asset(asset.source_data or {})
             asset._risk_bucket = bucket.value  # Stocker comme string
     
     role_counts = defaultdict(int)
