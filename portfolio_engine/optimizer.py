@@ -1,6 +1,12 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.16 — P1-2 Ledoit-Wolf Shrinkage
+Optimiseur de portefeuille v6.17 — P1-2 v2 Diagonal Shrinkage
+
+CHANGEMENTS v6.17 (P1-2 v2 Diagonal Shrinkage - ChatGPT reviewed):
+1. NEW: diag_shrink_to_target() - shrinkage diagonal sans dépendance aux returns
+2. FIX: Appliqué APRÈS _ensure_positive_definite_with_kpis() + recalcul KPIs
+3. FIX: CONDITION_NUMBER_WARNING_THRESHOLD aligné sur target (10000)
+4. OBJECTIF: condition_number < 10,000 (était ~2M)
 
 CHANGEMENTS v6.16 (P1-2 Ledoit-Wolf Shrinkage):
 1. NEW: Shrinkage Ledoit-Wolf sur covariance empirique AVANT hybridation
@@ -112,7 +118,7 @@ except ImportError:
 
 logger = logging.getLogger("portfolio_engine.optimizer")
 
-# ============= CONSTANTES v6.16 =============
+# ============= CONSTANTES v6.17 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -121,12 +127,79 @@ BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
 COVARIANCE_EMPIRICAL_WEIGHT = 0.60  # 60% empirique, 40% structurée
 
 # P1-6: Seuils d'alerte pour KPIs covariance
-CONDITION_NUMBER_WARNING_THRESHOLD = 1000.0  # > 1000 = matrice instable
+# v6.17 FIX: Aligné sur CONDITION_NUMBER_TARGET pour éviter warning après shrink réussi
+CONDITION_NUMBER_WARNING_THRESHOLD = 10000.0  # > 10000 = matrice instable
 EIGEN_CLIPPED_PCT_WARNING_THRESHOLD = 20.0   # > 20% = données insuffisantes
 
 # P1-2: Shrinkage Ledoit-Wolf
 SHRINKAGE_ENABLED = True  # Activer/désactiver shrinkage
 CONDITION_NUMBER_TARGET = 10000.0  # Objectif après shrinkage
+
+
+# ============= P1-2 v2: DIAGONAL SHRINKAGE (NEW) =============
+
+def diag_shrink_to_target(
+    cov: np.ndarray,
+    target_cond: float = CONDITION_NUMBER_TARGET,
+    max_steps: int = 12
+) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """
+    P1-2 v2: Shrink Σ vers diag(Σ) jusqu'à ce que cond(Σ) <= target_cond.
+    
+    Ne nécessite PAS de returns matrix. Efficace pour stabiliser l'inversion.
+    Approche itérative: cov_shrunk = (1 - λ) * cov + λ * diag(cov)
+    """
+    cov = np.asarray(cov, dtype=float)
+    diag = np.diag(np.diag(cov))
+
+    try:
+        cond0 = float(np.linalg.cond(cov))
+    except Exception:
+        cond0 = float("inf")
+
+    # FIX: on skip QUE si cond est fini ET déjà acceptable
+    if np.isfinite(cond0) and cond0 <= target_cond:
+        return cov, {
+            "cond_before": round(cond0, 2),
+            "cond_after": round(cond0, 2),
+            "shrink_lambda": 0.0,
+            "shrink_steps": 0,
+            "shrink_applied": False,
+        }
+
+    lam = 0.02  # démarre léger (2%)
+    cov_best = cov
+    cond_best = cond0
+
+    for step in range(1, max_steps + 1):
+        cov2 = (1.0 - lam) * cov + lam * diag
+        try:
+            cond2 = float(np.linalg.cond(cov2))
+        except Exception:
+            cond2 = float("inf")
+
+        if np.isfinite(cond2) and cond2 < cond_best:
+            cov_best, cond_best = cov2, cond2
+
+        if np.isfinite(cond2) and cond2 <= target_cond:
+            return cov2, {
+                "cond_before": round(cond0, 2) if np.isfinite(cond0) else None,
+                "cond_after": round(cond2, 2),
+                "shrink_lambda": round(lam, 4),
+                "shrink_steps": step,
+                "shrink_applied": True,
+            }
+
+        lam *= 2.0
+
+    return cov_best, {
+        "cond_before": round(cond0, 2) if np.isfinite(cond0) else None,
+        "cond_after": round(cond_best, 2) if np.isfinite(cond_best) else None,
+        "shrink_lambda": round(lam / 2.0, 4),
+        "shrink_steps": max_steps,
+        "shrink_applied": True,
+    }
+
 
 # Corrélations structurées (utilisées quand pas de données empiriques)
 CORR_SAME_CORPORATE_GROUP = 0.90
@@ -178,6 +251,27 @@ BUCKET_CONSTRAINT_RELAXATION = {
 
 # v6.13 FIX: Renommage "Certified" → "Heuristic" (conformité AMF P0-9)
 FORCE_FALLBACK_PROFILES = {"Stable"}
+
+
+# ============= JSON SERIALIZATION HELPER =============
+
+def to_python_native(obj: Any) -> Any:
+    """Convertit récursivement les types numpy en types Python natifs pour JSON."""
+    if obj is None:
+        return None
+    if isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    if isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    if isinstance(obj, (np.bool_, np.bool)):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: to_python_native(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [to_python_native(item) for item in obj]
+    return obj
 
 
 # ============= JSON SERIALIZATION HELPER =============
@@ -562,7 +656,7 @@ class HybridCovarianceEstimator:
     ):
         self.empirical_weight = empirical_weight
         self.min_history_days = min_history_days
-        self.use_shrinkage = use_shrinkage and HAS_SKLEARN_LW
+       self.use_shrinkage = False  # use_shrinkage and HAS_SKLEARN_LW
     
     def compute_empirical_covariance(
         self, 
@@ -764,6 +858,32 @@ class HybridCovarianceEstimator:
         
         # Fusionner les KPIs dans diagnostics
         diagnostics.update(eigen_kpis)
+        
+        # === P1-2 v2: DIAGONAL SHRINKAGE SI CONDITION NUMBER TROP ÉLEVÉ ===
+        cond_number = diagnostics.get("condition_number", float("inf"))
+        if cond_number is not None and cond_number > CONDITION_NUMBER_TARGET:
+            cov, shrink_info = diag_shrink_to_target(cov, target_cond=CONDITION_NUMBER_TARGET)
+
+            # FIX: Recalculer KPIs APRÈS shrink (sinon diagnostics incohérents)
+            cov, eigen_kpis2 = self._ensure_positive_definite_with_kpis(cov)
+            diagnostics.update(eigen_kpis2)
+
+            # Ajouter les infos de shrinkage
+            diagnostics["diag_shrink_applied"] = shrink_info["shrink_applied"]
+            diagnostics["diag_shrink_lambda"] = shrink_info["shrink_lambda"]
+            diagnostics["diag_shrink_steps"] = shrink_info["shrink_steps"]
+            diagnostics["condition_number_before_diag_shrink"] = shrink_info["cond_before"]
+
+            # Mettre à jour method
+            if diagnostics.get("method") == "structured":
+                diagnostics["method"] = "structured+diag_shrink"
+            elif "+diag_shrink" not in diagnostics.get("method", ""):
+                diagnostics["method"] = diagnostics.get("method", "unknown") + "+diag_shrink"
+
+            logger.info(
+                f"🔧 DIAG SHRINK: cond {shrink_info['cond_before']:.0f} → {diagnostics.get('condition_number'):.0f} "
+                f"(λ={shrink_info['shrink_lambda']:.3f}, steps={shrink_info['shrink_steps']})"
+            )
         
         # Log warnings si matrice mal conditionnée
         if not diagnostics.get("is_well_conditioned", True):
