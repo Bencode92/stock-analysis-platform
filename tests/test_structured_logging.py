@@ -1,570 +1,436 @@
 # tests/test_structured_logging.py
 """
-Tests pour portfolio_engine/structured_logging.py (P2-10)
+Tests for structured JSON logging module.
 
-Valide:
-- StructuredFormatter produit du JSON valide
-- correlation_id est propagé correctement
-- LogContext mesure les durées
-- PortfolioLogger produit les bons events
-- Filtrage des logs fonctionne
+P2-10 - 2025-12-18
 """
 
-import pytest
 import json
 import logging
-import time
-from typing import Dict, Any
-from io import StringIO
+import io
+import pytest
+from unittest.mock import patch
 
+from portfolio_engine.structured_logging import (
+    # Correlation ID
+    set_correlation_id,
+    get_correlation_id,
+    clear_correlation_id,
+    # Filter & Formatter
+    CorrelationIdFilter,
+    StructuredJsonFormatter,
+    # Logger factory
+    get_structured_logger,
+    reset_logger_config,
+    # Helpers
+    log_event,
+    logging_context,
+    get_logging_manifest_entry,
+    # Events
+    Events,
+)
 
-# =============================================================================
-# FIXTURES
-# =============================================================================
-
-@pytest.fixture
-def reset_logging():
-    """Reset logging state before each test."""
-    # Clear all handlers from root logger
-    root = logging.getLogger()
-    root.handlers.clear()
-    
-    # Reset context variables
-    try:
-        from portfolio_engine.structured_logging import (
-            set_correlation_id,
-            set_current_profile,
-            set_run_metadata,
-        )
-        set_correlation_id('')
-        set_current_profile('')
-        set_run_metadata({})
-    except ImportError:
-        pass
-    
-    yield
-    
-    # Cleanup after test
-    root.handlers.clear()
-
-
-@pytest.fixture
-def capture_logs(reset_logging):
-    """Capture logs to a StringIO buffer."""
-    try:
-        from portfolio_engine.structured_logging import (
-            setup_structured_logging,
-            StructuredFormatter,
-        )
-    except ImportError:
-        pytest.skip("portfolio_engine.structured_logging not available")
-    
-    # Create string buffer
-    log_buffer = StringIO()
-    
-    # Create handler with JSON formatter
-    handler = logging.StreamHandler(log_buffer)
-    handler.setFormatter(StructuredFormatter())
-    handler.setLevel(logging.DEBUG)
-    
-    # Add to root logger
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-    root.addHandler(handler)
-    
-    yield log_buffer
-    
-    # Cleanup
-    root.removeHandler(handler)
-
-
-# =============================================================================
-# TESTS - StructuredFormatter
-# =============================================================================
-
-class TestStructuredFormatter:
-    """Tests pour StructuredFormatter."""
-    
-    def test_produces_valid_json(self, capture_logs):
-        """Le formatter produit du JSON valide."""
-        logger = logging.getLogger("test.json")
-        logger.info("Test message")
-        
-        output = capture_logs.getvalue()
-        lines = [l for l in output.strip().split('\n') if l]
-        
-        assert len(lines) >= 1, "Should have at least one log line"
-        
-        # Parse JSON
-        for line in lines:
-            parsed = json.loads(line)
-            assert isinstance(parsed, dict)
-    
-    def test_contains_required_fields(self, capture_logs):
-        """Le JSON contient les champs requis."""
-        logger = logging.getLogger("test.fields")
-        logger.info("Test message")
-        
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        required_fields = ["timestamp", "level", "logger", "message"]
-        for field in required_fields:
-            assert field in parsed, f"Missing required field: {field}"
-        
-        assert parsed["level"] == "INFO"
-        assert parsed["logger"] == "test.fields"
-        assert "Test message" in parsed["message"]
-    
-    def test_timestamp_is_iso8601(self, capture_logs):
-        """Le timestamp est au format ISO8601."""
-        logger = logging.getLogger("test.timestamp")
-        logger.info("Test")
-        
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        timestamp = parsed["timestamp"]
-        assert timestamp.endswith("Z"), "Timestamp should end with Z (UTC)"
-        assert "T" in timestamp, "Timestamp should have T separator"
-    
-    def test_level_mapping(self, capture_logs):
-        """Les niveaux de log sont correctement mappés."""
-        logger = logging.getLogger("test.levels")
-        
-        logger.debug("debug")
-        logger.info("info")
-        logger.warning("warning")
-        logger.error("error")
-        
-        output = capture_logs.getvalue()
-        lines = [l for l in output.strip().split('\n') if l]
-        
-        levels_found = []
-        for line in lines:
-            parsed = json.loads(line)
-            levels_found.append(parsed["level"])
-        
-        assert "DEBUG" in levels_found
-        assert "INFO" in levels_found
-        assert "WARNING" in levels_found
-        assert "ERROR" in levels_found
-
-
-# =============================================================================
-# TESTS - correlation_id
-# =============================================================================
 
 class TestCorrelationId:
-    """Tests pour le correlation_id."""
+    """Tests for correlation ID management."""
     
-    def test_correlation_id_is_set(self, reset_logging):
-        """Le correlation_id est défini et propagé."""
-        try:
-            from portfolio_engine.structured_logging import (
-                setup_structured_logging,
-                get_correlation_id,
-            )
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        cid = setup_structured_logging(correlation_id="test_run_123")
-        
-        assert cid == "test_run_123"
-        assert get_correlation_id() == "test_run_123"
+    def setup_method(self):
+        """Clear correlation ID before each test."""
+        clear_correlation_id()
     
-    def test_auto_generated_correlation_id(self, reset_logging):
-        """Un correlation_id est auto-généré si non fourni."""
-        try:
-            from portfolio_engine.structured_logging import (
-                setup_structured_logging,
-                get_correlation_id,
-            )
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        cid = setup_structured_logging()
-        
-        assert cid.startswith("run_")
-        assert len(cid) > 20  # run_YYYYMMDD_HHMMSS_xxxxxxxx
-        assert get_correlation_id() == cid
+    def test_set_auto_generates_uuid(self):
+        """set_correlation_id() generates UUID if none provided."""
+        cid = set_correlation_id()
+        assert cid
+        assert len(cid) == 36  # UUID format
+        assert "-" in cid
     
-    def test_correlation_id_in_logs(self, reset_logging):
-        """Le correlation_id apparaît dans les logs."""
-        try:
-            from portfolio_engine.structured_logging import (
-                setup_structured_logging,
-                StructuredFormatter,
-            )
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        # Setup with known correlation_id
-        setup_structured_logging(correlation_id="test_cid_456", force_json=True)
-        
-        # Capture output
-        log_buffer = StringIO()
-        handler = logging.StreamHandler(log_buffer)
-        handler.setFormatter(StructuredFormatter())
-        
-        logger = logging.getLogger("test.cid")
-        logger.addHandler(handler)
-        logger.info("Test with correlation_id")
-        
-        output = log_buffer.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        assert parsed.get("correlation_id") == "test_cid_456"
+    def test_set_custom_id(self):
+        """set_correlation_id() accepts custom ID."""
+        cid = set_correlation_id("my-custom-id")
+        assert cid == "my-custom-id"
+        assert get_correlation_id() == "my-custom-id"
+    
+    def test_get_returns_current(self):
+        """get_correlation_id() returns current value."""
+        assert get_correlation_id() == ""
+        set_correlation_id("test-123")
+        assert get_correlation_id() == "test-123"
+    
+    def test_clear_resets(self):
+        """clear_correlation_id() resets to empty."""
+        set_correlation_id("test-123")
+        clear_correlation_id()
+        assert get_correlation_id() == ""
 
 
-# =============================================================================
-# TESTS - log_with_context
-# =============================================================================
-
-class TestLogWithContext:
-    """Tests pour log_with_context."""
+class TestCorrelationIdFilter:
+    """Tests for CorrelationIdFilter."""
     
-    def test_context_is_included(self, capture_logs):
-        """Le contexte est inclus dans le log."""
-        try:
-            from portfolio_engine.structured_logging import log_with_context
-        except ImportError:
-            pytest.skip("Module not available")
+    def setup_method(self):
+        clear_correlation_id()
+    
+    def test_filter_adds_correlation_id(self):
+        """Filter adds correlation_id to record."""
+        set_correlation_id("filter-test-123")
         
-        logger = logging.getLogger("test.context")
-        log_with_context(
-            logger, "INFO", "Test with context",
-            context={"key": "value", "number": 42}
+        filter_instance = CorrelationIdFilter()
+        record = logging.LogRecord(
+            name="test", level=logging.INFO, pathname="", lineno=0,
+            msg="test message", args=(), exc_info=None
         )
         
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
+        result = filter_instance.filter(record)
         
-        assert "context" in parsed
-        assert parsed["context"]["key"] == "value"
-        assert parsed["context"]["number"] == 42
+        assert result is True  # Allow record through
+        assert record.correlation_id == "filter-test-123"
     
-    def test_profile_is_included(self, capture_logs):
-        """Le profile est inclus dans le log."""
-        try:
-            from portfolio_engine.structured_logging import log_with_context
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        logger = logging.getLogger("test.profile")
-        log_with_context(
-            logger, "INFO", "Test with profile",
-            profile="Agressif"
+    def test_filter_with_empty_correlation_id(self):
+        """Filter works when no correlation ID set."""
+        filter_instance = CorrelationIdFilter()
+        record = logging.LogRecord(
+            name="test", level=logging.INFO, pathname="", lineno=0,
+            msg="test", args=(), exc_info=None
         )
         
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
+        result = filter_instance.filter(record)
         
-        assert parsed.get("profile") == "Agressif"
+        assert result is True
+        assert record.correlation_id == ""
+
+
+class TestStructuredJsonFormatter:
+    """Tests for StructuredJsonFormatter."""
     
-    def test_duration_is_included(self, capture_logs):
-        """La durée est incluse si fournie."""
-        try:
-            from portfolio_engine.structured_logging import log_with_context
-        except ImportError:
-            pytest.skip("Module not available")
+    def setup_method(self):
+        clear_correlation_id()
+        self.formatter = StructuredJsonFormatter()
+    
+    def test_basic_format(self):
+        """Formatter produces valid JSON."""
+        record = logging.LogRecord(
+            name="test.logger", level=logging.INFO, pathname="/test.py",
+            lineno=42, msg="test message", args=(), exc_info=None
+        )
+        record.correlation_id = "test-cid"
         
-        logger = logging.getLogger("test.duration")
-        log_with_context(
-            logger, "INFO", "Test with duration",
-            duration_ms=150.5
+        output = self.formatter.format(record)
+        data = json.loads(output)
+        
+        assert data["level"] == "INFO"
+        assert data["logger"] == "test.logger"
+        assert data["correlation_id"] == "test-cid"
+        assert data["message"] == "test message"
+        assert data["context"]["line"] == 42
+    
+    def test_event_and_message_separation(self):
+        """Formatter separates event and message."""
+        record = logging.LogRecord(
+            name="test", level=logging.INFO, pathname="", lineno=0,
+            msg="Human readable message", args=(), exc_info=None
+        )
+        record.correlation_id = ""
+        record.event = "machine_readable_event"
+        
+        output = self.formatter.format(record)
+        data = json.loads(output)
+        
+        assert data["event"] == "machine_readable_event"
+        assert data["message"] == "Human readable message"
+    
+    def test_data_payload_included(self):
+        """Formatter includes data payload."""
+        record = logging.LogRecord(
+            name="test", level=logging.INFO, pathname="", lineno=0,
+            msg="test", args=(), exc_info=None
+        )
+        record.correlation_id = ""
+        record.data = {"key": "value", "number": 42}
+        
+        output = self.formatter.format(record)
+        data = json.loads(output)
+        
+        assert data["data"] == {"key": "value", "number": 42}
+    
+    def test_exception_included(self):
+        """Formatter includes exception info."""
+        try:
+            raise ValueError("test error")
+        except ValueError:
+            import sys
+            exc_info = sys.exc_info()
+        
+        record = logging.LogRecord(
+            name="test", level=logging.ERROR, pathname="", lineno=0,
+            msg="error occurred", args=(), exc_info=exc_info
+        )
+        record.correlation_id = ""
+        
+        output = self.formatter.format(record)
+        data = json.loads(output)
+        
+        assert "exception" in data
+        assert "ValueError" in data["exception"]
+        assert "test error" in data["exception"]
+    
+    def test_timestamp_is_iso_format(self):
+        """Timestamp is ISO 8601 format."""
+        record = logging.LogRecord(
+            name="test", level=logging.INFO, pathname="", lineno=0,
+            msg="test", args=(), exc_info=None
+        )
+        record.correlation_id = ""
+        
+        output = self.formatter.format(record)
+        data = json.loads(output)
+        
+        # Should be parseable ISO format
+        from datetime import datetime
+        timestamp = data["timestamp"]
+        assert "T" in timestamp
+        assert "+" in timestamp or "Z" in timestamp
+
+
+class TestGetStructuredLogger:
+    """Tests for get_structured_logger factory."""
+    
+    def setup_method(self):
+        # Reset any existing config
+        reset_logger_config("test.logger.unique")
+        clear_correlation_id()
+    
+    def teardown_method(self):
+        reset_logger_config("test.logger.unique")
+    
+    def test_returns_configured_logger(self):
+        """Factory returns a configured logger."""
+        logger = get_structured_logger("test.logger.unique")
+        
+        assert isinstance(logger, logging.Logger)
+        assert logger.name == "test.logger.unique"
+        assert len(logger.handlers) == 1
+    
+    def test_anti_duplicate_handler(self):
+        """Calling twice doesn't add duplicate handlers."""
+        logger1 = get_structured_logger("test.logger.unique")
+        n_handlers_1 = len(logger1.handlers)
+        
+        logger2 = get_structured_logger("test.logger.unique")
+        n_handlers_2 = len(logger2.handlers)
+        
+        assert logger1 is logger2
+        assert n_handlers_1 == n_handlers_2 == 1
+    
+    def test_logger_outputs_json(self):
+        """Logger outputs valid JSON."""
+        stream = io.StringIO()
+        logger = get_structured_logger("test.json.output", stream=stream)
+        
+        set_correlation_id("json-test-123")
+        logger.info("test message")
+        
+        output = stream.getvalue().strip()
+        data = json.loads(output)
+        
+        assert data["message"] == "test message"
+        assert data["correlation_id"] == "json-test-123"
+
+
+class TestLogEvent:
+    """Tests for log_event helper."""
+    
+    def setup_method(self):
+        clear_correlation_id()
+        reset_logger_config("test.log_event")
+        self.stream = io.StringIO()
+        self.logger = get_structured_logger("test.log_event", stream=self.stream)
+    
+    def teardown_method(self):
+        reset_logger_config("test.log_event")
+    
+    def test_log_event_basic(self):
+        """log_event logs with event name."""
+        log_event(self.logger, "test_event")
+        
+        output = self.stream.getvalue().strip()
+        data = json.loads(output)
+        
+        assert data["event"] == "test_event"
+    
+    def test_log_event_with_message(self):
+        """log_event uses custom message."""
+        log_event(self.logger, "my_event", message="Custom message")
+        
+        output = self.stream.getvalue().strip()
+        data = json.loads(output)
+        
+        assert data["event"] == "my_event"
+        assert data["message"] == "Custom message"
+    
+    def test_log_event_with_data(self):
+        """log_event includes data payload."""
+        log_event(self.logger, "data_event",
+            profile="Agressif",
+            n_assets=18,
+            score=0.95
         )
         
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
+        output = self.stream.getvalue().strip()
+        data = json.loads(output)
         
-        assert parsed.get("duration_ms") == 150.5
-
-
-# =============================================================================
-# TESTS - LogContext
-# =============================================================================
-
-class TestLogContext:
-    """Tests pour LogContext context manager."""
+        assert data["data"]["profile"] == "Agressif"
+        assert data["data"]["n_assets"] == 18
+        assert data["data"]["score"] == 0.95
     
-    def test_logs_start_and_end(self, capture_logs):
-        """LogContext log le début et la fin."""
+    def test_log_event_levels(self):
+        """log_event respects log level."""
+        log_event(self.logger, "debug_event", level="DEBUG")
+        log_event(self.logger, "warning_event", level="WARNING")
+        log_event(self.logger, "error_event", level="ERROR")
+        
+        lines = self.stream.getvalue().strip().split("\n")
+        # DEBUG might not show depending on level, but WARNING and ERROR should
+        
+        levels = [json.loads(line)["level"] for line in lines if line]
+        assert "WARNING" in levels
+        assert "ERROR" in levels
+    
+    def test_log_event_with_exc_info(self):
+        """log_event includes exception when exc_info=True."""
         try:
-            from portfolio_engine.structured_logging import LogContext
-        except ImportError:
-            pytest.skip("Module not available")
+            raise RuntimeError("test exception")
+        except RuntimeError:
+            log_event(self.logger, "error_event", level="ERROR", exc_info=True)
         
-        logger = logging.getLogger("test.logcontext")
+        output = self.stream.getvalue().strip()
+        data = json.loads(output)
         
-        with LogContext(logger, "Test operation"):
+        assert "exception" in data
+        assert "RuntimeError" in data["exception"]
+
+
+class TestLoggingContext:
+    """Tests for logging_context context manager."""
+    
+    def setup_method(self):
+        clear_correlation_id()
+    
+    def test_sets_correlation_id(self):
+        """Context manager sets correlation ID."""
+        with logging_context() as cid:
+            assert cid
+            assert get_correlation_id() == cid
+    
+    def test_clears_on_exit(self):
+        """Context manager clears ID on exit."""
+        with logging_context():
             pass
         
-        output = capture_logs.getvalue()
-        lines = [l for l in output.strip().split('\n') if l]
-        
-        assert len(lines) >= 2, "Should have start and end logs"
-        
-        # Check start
-        start_log = json.loads(lines[-2])
-        assert "Starting" in start_log["message"]
-        
-        # Check end
-        end_log = json.loads(lines[-1])
-        assert "Completed" in end_log["message"]
+        assert get_correlation_id() == ""
     
-    def test_measures_duration(self, capture_logs):
-        """LogContext mesure la durée."""
+    def test_clears_on_exception(self):
+        """Context manager clears ID even on exception."""
         try:
-            from portfolio_engine.structured_logging import LogContext
-        except ImportError:
-            pytest.skip("Module not available")
+            with logging_context():
+                raise ValueError("test")
+        except ValueError:
+            pass
         
-        logger = logging.getLogger("test.duration")
-        
-        with LogContext(logger, "Timed operation"):
-            time.sleep(0.05)  # 50ms
-        
-        output = capture_logs.getvalue()
-        lines = [l for l in output.strip().split('\n') if l]
-        
-        # End log should have duration
-        end_log = json.loads(lines[-1])
-        assert "duration_ms" in end_log
-        assert end_log["duration_ms"] >= 40  # At least 40ms (accounting for timing variance)
+        assert get_correlation_id() == ""
     
-    def test_logs_error_on_exception(self, capture_logs):
-        """LogContext log une erreur si exception."""
-        try:
-            from portfolio_engine.structured_logging import LogContext
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        logger = logging.getLogger("test.error")
-        
-        with pytest.raises(ValueError):
-            with LogContext(logger, "Failing operation"):
-                raise ValueError("Test error")
-        
-        output = capture_logs.getvalue()
-        lines = [l for l in output.strip().split('\n') if l]
-        
-        # Should have error log
-        error_log = json.loads(lines[-1])
-        assert error_log["level"] == "ERROR"
-        assert "Failed" in error_log["message"]
+    def test_custom_correlation_id(self):
+        """Context manager accepts custom ID."""
+        with logging_context("my-custom-id") as cid:
+            assert cid == "my-custom-id"
+            assert get_correlation_id() == "my-custom-id"
 
 
-# =============================================================================
-# TESTS - PortfolioLogger
-# =============================================================================
-
-class TestPortfolioLogger:
-    """Tests pour PortfolioLogger."""
+class TestGetLoggingManifestEntry:
+    """Tests for manifest integration."""
     
-    def test_optimization_started(self, capture_logs):
-        """optimization_started produit le bon event."""
-        try:
-            from portfolio_engine.structured_logging import PortfolioLogger
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        plogger = PortfolioLogger("test.portfolio")
-        plogger.optimization_started("Agressif", n_assets=50)
-        
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        assert parsed["profile"] == "Agressif"
-        assert parsed["context"]["event"] == "optimization_started"
-        assert parsed["context"]["n_assets"] == 50
+    def setup_method(self):
+        clear_correlation_id()
     
-    def test_optimization_completed(self, capture_logs):
-        """optimization_completed inclut toutes les métriques."""
-        try:
-            from portfolio_engine.structured_logging import PortfolioLogger
-        except ImportError:
-            pytest.skip("Module not available")
+    def test_returns_dict(self):
+        """Returns dict with expected fields."""
+        set_correlation_id("manifest-test")
         
-        plogger = PortfolioLogger("test.portfolio")
-        plogger.optimization_completed(
-            "Modéré",
-            vol=11.8,
-            n_selected=10,
-            duration_ms=250.0,
-            mode="slsqp"
-        )
+        entry = get_logging_manifest_entry()
         
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        assert parsed["profile"] == "Modéré"
-        assert parsed["context"]["volatility_pct"] == 11.8
-        assert parsed["context"]["n_assets_selected"] == 10
-        assert parsed["context"]["optimization_mode"] == "slsqp"
-        assert parsed["duration_ms"] == 250.0
+        assert isinstance(entry, dict)
+        assert entry["correlation_id"] == "manifest-test"
+        assert "log_timestamp" in entry
+        assert entry["log_version"] == "1.0"
     
-    def test_covariance_warning(self, capture_logs):
-        """covariance_warning produit un WARNING."""
-        try:
-            from portfolio_engine.structured_logging import PortfolioLogger
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        plogger = PortfolioLogger("test.portfolio")
-        plogger.covariance_warning("Agressif", condition_number=2042133.2)
-        
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        assert parsed["level"] == "WARNING"
-        assert parsed["context"]["condition_number"] == 2042133.2
-    
-    def test_constraint_violation_hard(self, capture_logs):
-        """constraint_violation avec priority=hard produit ERROR."""
-        try:
-            from portfolio_engine.structured_logging import PortfolioLogger
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        plogger = PortfolioLogger("test.portfolio")
-        plogger.constraint_violation(
-            "Stable",
-            constraint_name="bonds_min",
-            expected="≥30%",
-            actual=25.0,
-            priority="hard"
-        )
-        
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        assert parsed["level"] == "ERROR"
-        assert parsed["context"]["constraint_name"] == "bonds_min"
-        assert parsed["context"]["priority"] == "hard"
+    def test_empty_correlation_id(self):
+        """Works with no correlation ID."""
+        entry = get_logging_manifest_entry()
+        assert entry["correlation_id"] == ""
 
 
-# =============================================================================
-# TESTS - Log Filtering
-# =============================================================================
-
-class TestLogFiltering:
-    """Tests pour les fonctions de filtrage des logs."""
+class TestEvents:
+    """Tests for standard event names."""
     
-    def test_filter_by_correlation_id(self):
-        """filter_logs_by_correlation_id fonctionne."""
-        try:
-            from portfolio_engine.structured_logging import filter_logs_by_correlation_id
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        log_lines = [
-            '{"correlation_id": "run_123", "message": "msg1"}',
-            '{"correlation_id": "run_456", "message": "msg2"}',
-            '{"correlation_id": "run_123", "message": "msg3"}',
+    def test_events_are_strings(self):
+        """All events are non-empty strings."""
+        events = [
+            Events.GENERATION_STARTED,
+            Events.GENERATION_COMPLETED,
+            Events.OPTIMIZATION_STARTED,
+            Events.COVARIANCE_COMPUTED,
+            Events.BACKTEST_COMPLETED,
         ]
         
-        filtered = filter_logs_by_correlation_id(log_lines, "run_123")
-        
-        assert len(filtered) == 2
-        assert filtered[0]["message"] == "msg1"
-        assert filtered[1]["message"] == "msg3"
+        for event in events:
+            assert isinstance(event, str)
+            assert len(event) > 0
+            assert "_" in event  # snake_case format
+
+
+class TestIntegration:
+    """Integration tests for complete logging flow."""
     
-    def test_filter_by_profile(self):
-        """filter_logs_by_profile fonctionne."""
-        try:
-            from portfolio_engine.structured_logging import filter_logs_by_profile
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        log_lines = [
-            '{"profile": "Agressif", "message": "msg1"}',
-            '{"profile": "Modéré", "message": "msg2"}',
-            '{"profile": "Agressif", "message": "msg3"}',
-        ]
-        
-        filtered = filter_logs_by_profile(log_lines, "Agressif")
-        
-        assert len(filtered) == 2
+    def setup_method(self):
+        clear_correlation_id()
+        reset_logger_config("test.integration")
+        self.stream = io.StringIO()
+        self.logger = get_structured_logger("test.integration", stream=self.stream)
     
-    def test_filter_by_level(self):
-        """filter_logs_by_level fonctionne."""
-        try:
-            from portfolio_engine.structured_logging import filter_logs_by_level
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        log_lines = [
-            '{"level": "INFO", "message": "info"}',
-            '{"level": "WARNING", "message": "warning"}',
-            '{"level": "ERROR", "message": "error"}',
-            '{"level": "INFO", "message": "info2"}',
-        ]
-        
-        filtered = filter_logs_by_level(log_lines, ["WARNING", "ERROR"])
-        
-        assert len(filtered) == 2
-        assert filtered[0]["level"] == "WARNING"
-        assert filtered[1]["level"] == "ERROR"
-
-
-# =============================================================================
-# TESTS - Edge Cases
-# =============================================================================
-
-class TestEdgeCases:
-    """Tests pour les cas limites."""
+    def teardown_method(self):
+        reset_logger_config("test.integration")
     
-    def test_empty_context(self, capture_logs):
-        """Contexte vide ne casse pas le formatage."""
-        try:
-            from portfolio_engine.structured_logging import log_with_context
-        except ImportError:
-            pytest.skip("Module not available")
+    def test_complete_run_flow(self):
+        """Test complete logging flow with context."""
+        with logging_context() as run_id:
+            log_event(self.logger, Events.GENERATION_STARTED,
+                message="Starting generation",
+                profile="Agressif"
+            )
+            
+            log_event(self.logger, Events.COVARIANCE_COMPUTED,
+                condition_number=8102.04,
+                method="diag_shrink"
+            )
+            
+            log_event(self.logger, Events.GENERATION_COMPLETED,
+                duration_ms=1234
+            )
         
-        logger = logging.getLogger("test.empty")
-        log_with_context(logger, "INFO", "No context")
+        lines = self.stream.getvalue().strip().split("\n")
+        assert len(lines) == 3
         
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
+        # All should have same correlation ID
+        logs = [json.loads(line) for line in lines]
+        cids = [log["correlation_id"] for log in logs]
+        assert all(cid == run_id for cid in cids)
         
-        # Should not have empty context in output (cleaned)
-        assert parsed.get("context", {}) == {} or "context" not in parsed
-    
-    def test_unicode_in_message(self, capture_logs):
-        """Les caractères unicode sont correctement gérés."""
-        logger = logging.getLogger("test.unicode")
-        logger.info("Message avec émojis 🚀 et accents éàü")
+        # Check events
+        events = [log["event"] for log in logs]
+        assert events[0] == Events.GENERATION_STARTED
+        assert events[1] == Events.COVARIANCE_COMPUTED
+        assert events[2] == Events.GENERATION_COMPLETED
         
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        assert "🚀" in parsed["message"]
-        assert "éàü" in parsed["message"]
-    
-    def test_special_characters_in_context(self, capture_logs):
-        """Les caractères spéciaux dans le contexte sont échappés."""
-        try:
-            from portfolio_engine.structured_logging import log_with_context
-        except ImportError:
-            pytest.skip("Module not available")
-        
-        logger = logging.getLogger("test.special")
-        log_with_context(
-            logger, "INFO", "Test",
-            context={"path": "/data/file.json", "query": "a=1&b=2"}
-        )
-        
-        output = capture_logs.getvalue()
-        parsed = json.loads(output.strip().split('\n')[-1])
-        
-        assert parsed["context"]["path"] == "/data/file.json"
-        assert parsed["context"]["query"] == "a=1&b=2"
-
-
-# =============================================================================
-# RUN
-# =============================================================================
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short"])
+        # Check data
+        assert logs[0]["data"]["profile"] == "Agressif"
+        assert logs[1]["data"]["condition_number"] == 8102.04
+        assert logs[2]["data"]["duration_ms"] == 1234
