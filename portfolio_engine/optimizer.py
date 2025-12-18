@@ -1,6 +1,11 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.18 — FIX max_region fallback
+Optimiseur de portefeuille v6.18.1 — FIX max_region (actions only)
+
+CHANGEMENTS v6.18.1:
+1. FIX: max_region s'applique UNIQUEMENT aux Actions (pas aux Bonds/ETF)
+2. FIX: region_weights tracké uniquement pour category=="Actions"
+3. Rationale: Bonds = risque duration/crédit, pas géographique
 
 CHANGEMENTS v6.18 (FIX max_region/max_sector fallback):
 1. FIX: _fallback_allocation() respecte maintenant max_region (était ignoré)
@@ -1326,18 +1331,13 @@ class PortfolioOptimizer:
             weight_per_bond = min(max_single_bond, bonds_needed / n_bonds_to_use)
             
             for bond in bonds[:n_bonds_to_use]:
-                # v6.18 FIX: Vérifier max_region AVANT d'allouer le bond
-                if region_weights[bond.region] + weight_per_bond > profile.max_region:
-                    logger.debug(f"Skipping bond {bond.id}: would exceed max_region {profile.max_region}% for {bond.region}")
-                    continue
-                    
+                # v6.18.1: Bonds exclus de max_region (contrainte = actions only)
                 weight = min(profile.max_single_position, weight_per_bond, 100 - total_weight)
                 if weight > 0.5:
                     allocation[bond.id] = float(weight)
                     total_weight += weight
                     bonds_needed -= weight
                     category_weights["Obligations"] += weight
-                    region_weights[bond.region] += weight  # v6.18 FIX: track region
                     if bond.role:
                         bucket_weights[bond.role.value] += weight
             
@@ -1369,8 +1369,8 @@ class PortfolioOptimizer:
                     continue
                 if sector_weights[asset.sector] >= profile.max_sector:
                     continue
-                # v6.18 FIX: Vérifier max_region
-                if region_weights[asset.region] >= profile.max_region:
+                # v6.18.1 FIX: Vérifier max_region UNIQUEMENT pour Actions
+                if asset.category == "Actions" and region_weights[asset.region] >= profile.max_region:
                     logger.debug(f"Skipping {asset.id}: max_region {profile.max_region}% reached for {asset.region}")
                     continue
                 
@@ -1390,7 +1390,8 @@ class PortfolioOptimizer:
                     total_weight += weight
                     category_weights[asset.category] += weight
                     sector_weights[asset.sector] += weight
-                    region_weights[asset.region] += weight  # v6.18 FIX: track region
+                    if asset.category == "Actions":
+                        region_weights[asset.region] += weight  # v6.18.1: track region (actions only)
                     bucket_weights[role.value] += weight
                     current_weight += weight
         
