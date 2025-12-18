@@ -1464,14 +1464,27 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "bucket_targets": {},
         }
         
-        constraint_report = verify_constraints_post_arrondi(
-            allocation=allocation_rounded,
-            assets_metadata=assets_metadata_for_check,
-            profile_constraints=profile_constraints,
-            profile_name=profile,
-        )
-        
-        result[profile]["_constraint_report"] = constraint_report.to_dict()
+        # === PHASE 1 FIX: Utiliser le constraint_report enrichi de diagnostics ===
+        enriched_constraint_report = diagnostics.get("constraint_report")
+
+        if enriched_constraint_report:
+            # Phase 1 actif : utiliser le rapport enrichi (quality_score, exposures, etc.)
+            result[profile]["_constraint_report"] = enriched_constraint_report
+            
+            # Ajouter exposures et execution_summary au top-level
+            if diagnostics.get("exposures"):
+                result[profile]["_exposures"] = diagnostics["exposures"]
+            if diagnostics.get("execution_summary"):
+                result[profile]["_execution_summary"] = diagnostics["execution_summary"]
+        else:
+            # Fallback : recalculer un rapport basique
+            constraint_report = verify_constraints_post_arrondi(
+                allocation=allocation_rounded,
+                assets_metadata=assets_metadata_for_check,
+                profile_constraints=profile_constraints,
+                profile_name=profile,
+            )
+            result[profile]["_constraint_report"] = constraint_report.to_dict()
         
         if not constraint_report.all_hard_satisfied:
             hard_violations = [
