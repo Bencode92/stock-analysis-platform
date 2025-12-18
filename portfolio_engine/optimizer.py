@@ -272,29 +272,6 @@ def to_python_native(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [to_python_native(item) for item in obj]
     return obj
-
-
-# ============= JSON SERIALIZATION HELPER =============
-
-def to_python_native(obj: Any) -> Any:
-    """Convertit récursivement les types numpy en types Python natifs pour JSON."""
-    if obj is None:
-        return None
-    if isinstance(obj, (np.floating, np.float64, np.float32)):
-        return float(obj)
-    if isinstance(obj, (np.integer, np.int64, np.int32)):
-        return int(obj)
-    if isinstance(obj, (np.bool_, np.bool)):
-        return bool(obj)
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, dict):
-        return {k: to_python_native(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        return [to_python_native(item) for item in obj]
-    return obj
-
-
 # ============= v6.7 FIX: VALID ID HELPER =============
 
 def _is_valid_id(val) -> bool:
@@ -656,7 +633,7 @@ class HybridCovarianceEstimator:
     ):
         self.empirical_weight = empirical_weight
         self.min_history_days = min_history_days
-       self.use_shrinkage = False  # use_shrinkage and HAS_SKLEARN_LW
+        self.use_shrinkage = False  # use_shrinkage and HAS_SKLEARN_LW
     
     def compute_empirical_covariance(
         self, 
