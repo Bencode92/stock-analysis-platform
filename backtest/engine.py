@@ -1,6 +1,13 @@
 # backtest/engine.py
 """
-Moteur de backtest pour le Portfolio Engine v9.
+Moteur de backtest pour le Portfolio Engine v10.
+
+V10 (P1-3 Missing Weights = Cash 2024-12-18):
+- CRITICAL FIX: Missing tickers allocated to CASH instead of renormalization
+- cash_weight = 1.0 - sum(effective_weights) when coverage < 100%
+- Cash earns daily risk-free rate (4.5%/252 per day)
+- Exposed in stats: cash_weight, cash_return_contribution
+- Prevents upward bias when missing assets underperform
 
 V9 (P1-8c TER FIX 2024-12-16):
 - CRITICAL FIX: TER is ALREADY embedded in ETF/fund prices (adjusted close)
@@ -53,6 +60,7 @@ Backtest sur 90 jours glissants avec:
 - TER exposé comme INFO (déjà inclus dans les prix ETF)
 - Métriques de performance
 - Comparaison benchmark (par profil)
+- V10: Cash allocation pour poids manquants
 """
 
 import numpy as np
@@ -99,6 +107,9 @@ except ImportError:
 # v3 IC FIX: Taux sans risque réaliste (Fed Funds Dec 2024)
 DEFAULT_RISK_FREE_RATE = 0.045  # 4.5% annuel
 
+# V10 P1-3: Cash proxy rate (same as risk-free rate)
+CASH_PROXY_RATE = DEFAULT_RISK_FREE_RATE  # 4.5% annuel
+
 # V9 P1-8c: Platform fee (B2C) - optionnel, pour créer un écart gross/net visible
 # Exemple: 50bp = 0.50%/an de frais de plateforme
 DEFAULT_PLATFORM_FEE_ANNUAL_BP = 0.0  # 0 par défaut (pas de frais plateforme)
@@ -116,6 +127,8 @@ MIN_DAYS_FOR_STATS = 252  # 1 an
 class BacktestConfig:
     """
     Configuration du backtest.
+    
+    V10 P1-3: Added cash_for_missing_weights option (default True).
     
     V9 P1-8c: 
     - REMOVED ter_annual_bp (was causing double-counting)
@@ -136,6 +149,8 @@ class BacktestConfig:
     benchmark_symbol: Optional[str] = None  # V6: None = auto-select par profil
     # V9: TER metadata (for display only, NOT deducted - already in prices)
     weighted_avg_ter_bp: Optional[float] = None  # Calculated from portfolio holdings
+    # V10 P1-3: Allocate missing weights to cash instead of renormalizing
+    cash_for_missing_weights: bool = True  # NEW: if True, missing = cash; if False, renormalize
     
     def __post_init__(self):
         """Auto-select benchmark based on profile if not specified."""
@@ -172,9 +187,13 @@ def compute_backtest_stats(
     total_platform_fees: float = 0.0,  # V9 P1-8c: Platform fees (replaces TER)
     platform_fee_annual_bp: float = 0.0,  # V9: Platform fee rate used
     weighted_avg_ter_bp: Optional[float] = None,  # V9: TER info (not deducted)
+    cash_allocation_info: Optional[Dict] = None,  # V10 P1-3: Cash allocation details
 ) -> Dict[str, float]:
     """
     Calcule les statistiques de performance.
+    
+    V10 P1-3:
+    - Add cash_allocation_info to stats for transparency
     
     V9 P1-8c:
     - Remove TER deduction (already in ETF prices)
@@ -236,6 +255,10 @@ def compute_backtest_stats(
             "note": "TER is already reflected in ETF adjusted close prices - NOT deducted separately",
         },
     }
+    
+    # ===== V10 P1-3: Cash allocation info =====
+    if cash_allocation_info:
+        stats["cash_allocation"] = cash_allocation_info
     
     # CAGR (annualisé) - based on NET return
     if n_years > 0:
@@ -315,7 +338,7 @@ def compute_backtest_stats(
     # Disclaimer obligatoire
     stats["disclaimer_amf"] = DISCLAIMER_AMF
     
-    # ===== V9 P1-8c: Updated methodology with TER handling =====
+    # ===== V10 P1-3: Updated methodology with cash handling =====
     stats["methodology"] = {
         "type": "backtest_fixed_weights",
         "period_days": n_days,
@@ -331,6 +354,9 @@ def compute_backtest_stats(
         # V7 P1-8: Add cost transparency to methodology
         "return_type": "net (after transaction costs + platform fees)",
         "gross_return_available": gross_equity_curve is not None,
+        # V10 P1-3: Cash handling for missing weights
+        "missing_weights_handling": "allocated_to_cash" if cash_allocation_info else "renormalized",
+        "cash_rate_annual_pct": round(CASH_PROXY_RATE * 100, 2) if cash_allocation_info else None,
     }
     
     # Warning si période insuffisante
@@ -495,6 +521,7 @@ def get_rebalance_dates(
 # V2: NOUVELLE FONCTION - BACKTEST AVEC POIDS FIXES
 # V7 P1-8: Added gross/net return separation
 # V9 P1-8c: Fixed TER handling (embedded in prices, not deducted)
+# V10 P1-3: Missing weights → cash (no renormalization)
 # ============================================================================
 
 def run_backtest_fixed_weights(
@@ -508,6 +535,12 @@ def run_backtest_fixed_weights(
     
     C'EST LA FONCTION À UTILISER pour backtester les portfolios générés.
     Les poids viennent de portfolios.json et ne changent PAS pendant le backtest.
+    
+    V10 P1-3:
+    - CRITICAL FIX: Missing weights allocated to CASH instead of renormalization
+    - Cash earns daily risk-free rate (CASH_PROXY_RATE / 252)
+    - Prevents upward bias when missing assets underperform
+    - Exposed: cash_weight, cash_return_contribution in stats
     
     V9 P1-8c:
     - CRITICAL FIX: Remove TER deduction (already in ETF adjusted close prices)
@@ -569,9 +602,11 @@ def run_backtest_fixed_weights(
     missing_symbols = portfolio_symbols - available_symbols
     
     if missing_symbols:
-        logger.warning(f"Missing price data for: {missing_symbols}")
+        logger.warning(f"P1-3: Missing price data for {len(missing_symbols)} symbols: {missing_symbols}")
     
-    # Filtrer et renormaliser les poids pour les symboles disponibles
+    # ===== V10 P1-3: CASH ALLOCATION FOR MISSING WEIGHTS =====
+    # Instead of renormalizing, allocate missing weight to cash
+    
     effective_weights = {
         sym: w for sym, w in fixed_weights.items() 
         if sym in available_symbols
@@ -580,16 +615,29 @@ def run_backtest_fixed_weights(
     if not effective_weights:
         raise ValueError("No symbols with both weights and price data!")
     
-    # Renormaliser si nécessaire
-    total_weight = sum(effective_weights.values())
-    if total_weight < 0.5:
-        logger.error(f"Only {total_weight:.1%} of portfolio has price data - results will be biased!")
+    # Calculate coverage and cash weight
+    total_weight_with_data = sum(effective_weights.values())
+    total_weight_requested = sum(fixed_weights.values())
     
-    effective_weights = {k: v/total_weight for k, v in effective_weights.items()}
+    # V10 P1-3: Cash weight = missing portion (instead of renormalizing)
+    if config.cash_for_missing_weights and total_weight_with_data < total_weight_requested - 0.001:
+        cash_weight = total_weight_requested - total_weight_with_data
+        # Keep original weights, DO NOT renormalize
+        logger.info(f"P1-3: Coverage {total_weight_with_data:.1%} < 100% → allocating {cash_weight:.1%} to CASH")
+        logger.info(f"P1-3: Cash earns {CASH_PROXY_RATE*100:.1f}%/year ({CASH_PROXY_RATE/252*10000:.2f}bp/day)")
+    else:
+        # Full coverage or renormalization mode
+        if total_weight_with_data < 0.999:
+            # Renormalize (old behavior, when cash_for_missing_weights=False)
+            logger.warning(f"P1-3: Renormalizing weights (coverage={total_weight_with_data:.1%})")
+            effective_weights = {k: v/total_weight_with_data for k, v in effective_weights.items()}
+        cash_weight = 0.0
     
-    logger.info(f"Effective weights: {len(effective_weights)} assets (coverage: {total_weight:.1%})")
+    logger.info(f"Effective weights: {len(effective_weights)} assets (coverage: {total_weight_with_data:.1%})")
     for sym, w in sorted(effective_weights.items(), key=lambda x: -x[1])[:5]:
         logger.info(f"  {sym}: {w:.1%}")
+    if cash_weight > 0.001:
+        logger.info(f"  [CASH]: {cash_weight:.1%} (risk-free @ {CASH_PROXY_RATE*100:.1f}%/year)")
     
     # Convertir en Series pour faciliter les calculs
     weights_series = pd.Series(effective_weights)
@@ -631,19 +679,30 @@ def run_backtest_fixed_weights(
     if config.platform_fee_annual_bp > 0:
         logger.info(f"P1-8c: Daily platform fee rate: {daily_platform_fee_rate*10000:.4f}bp ({daily_platform_fee_rate*100:.6f}%/day)")
     
+    # ===== V10 P1-3: DAILY CASH RETURN RATE =====
+    daily_cash_return = CASH_PROXY_RATE / 252  # ~0.0179% per day
+    total_cash_return_contribution = 0.0  # Track cumulative cash contribution
+    
     # Boucle sur les jours
     prev_date = None
     for i, date in enumerate(dates):
         if prev_date is not None:
             # Calculer le rendement du jour = somme pondérée des rendements des actifs
-            daily_ret = 0.0
+            daily_ret_assets = 0.0
             for symbol, weight in effective_weights.items():
                 if symbol in prices.columns:
                     price_today = prices.loc[date, symbol]
                     price_prev = prices.loc[prev_date, symbol]
                     if price_today > 0 and price_prev > 0:
                         asset_ret = (price_today / price_prev) - 1
-                        daily_ret += weight * asset_ret
+                        daily_ret_assets += weight * asset_ret
+            
+            # V10 P1-3: Add cash return contribution
+            daily_ret_cash = cash_weight * daily_cash_return
+            total_cash_return_contribution += daily_ret_cash * equity_gross  # Track in $ terms
+            
+            # Total daily return = assets + cash
+            daily_ret = daily_ret_assets + daily_ret_cash
             
             # V9 P1-8c: Apply return to GROSS (pure market performance)
             equity_gross *= (1 + daily_ret)
@@ -670,13 +729,28 @@ def run_backtest_fixed_weights(
     returns_series = pd.DataFrame(daily_returns_list).set_index("date")["return"] if daily_returns_list else pd.Series()
     trades_df = pd.DataFrame(trades)
     
-    # Historique des poids (constant)
-    weights_history = pd.DataFrame([{
-        "date": dates[0],
-        **effective_weights
-    }])
+    # Historique des poids (constant) - V10: include cash
+    weights_record = {"date": dates[0], **effective_weights}
+    if cash_weight > 0.001:
+        weights_record["_CASH"] = cash_weight
+    weights_history = pd.DataFrame([weights_record])
     
-    # V9 P1-8c: Stats with platform fees (not TER)
+    # ===== V10 P1-3: Cash allocation info for stats =====
+    cash_allocation_info = None
+    if cash_weight > 0.001:
+        cash_return_pct = (total_cash_return_contribution / config.initial_capital) * 100
+        cash_allocation_info = {
+            "cash_weight_pct": round(cash_weight * 100, 2),
+            "missing_symbols": list(missing_symbols),
+            "n_missing": len(missing_symbols),
+            "cash_rate_annual_pct": round(CASH_PROXY_RATE * 100, 2),
+            "cash_return_contribution_pct": round(cash_return_pct, 3),
+            "cash_return_contribution_value": round(total_cash_return_contribution, 2),
+            "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights",
+        }
+        logger.info(f"P1-3: Cash contribution over period: {cash_return_pct:.3f}% (${total_cash_return_contribution:.2f})")
+    
+    # V10 P1-3: Stats with cash allocation info
     stats = compute_backtest_stats(
         equity_curve=net_equity_series,  # Primary is NET
         daily_returns=returns_series,
@@ -688,10 +762,11 @@ def run_backtest_fixed_weights(
         total_platform_fees=total_platform_fees,  # V9: Platform fees (not TER)
         platform_fee_annual_bp=config.platform_fee_annual_bp,
         weighted_avg_ter_bp=weighted_avg_ter_bp,  # V9: TER info only
+        cash_allocation_info=cash_allocation_info,  # V10: Cash info
     )
     
     # Ajouter info sur la couverture
-    stats["weight_coverage_pct"] = round(total_weight * 100, 1)
+    stats["weight_coverage_pct"] = round(total_weight_with_data * 100, 1)
     stats["n_assets_with_data"] = len(effective_weights)
     stats["n_assets_total"] = len(fixed_weights)
     
@@ -1068,6 +1143,7 @@ def print_backtest_report(result: BacktestResult):
     """
     Affiche un rapport formaté du backtest.
     
+    V10 P1-3: Added cash allocation section.
     V9 P1-8c: Updated cost breakdown with platform fees and TER info.
     V7 P1-8: Added gross vs net section for transparency.
     """
@@ -1086,6 +1162,16 @@ def print_backtest_report(result: BacktestResult):
         n_with_data = result.stats.get("n_assets_with_data", "?")
         n_total = result.stats.get("n_assets_total", "?")
         print(f"Coverage: {n_with_data}/{n_total} assets ({coverage}%)")
+    
+    # ===== V10 P1-3: CASH ALLOCATION SECTION =====
+    cash_info = result.stats.get("cash_allocation")
+    if cash_info:
+        print(f"\n--- Cash Allocation (P1-3) ---")
+        print(f"Missing symbols:  {cash_info.get('n_missing', 0)} ({', '.join(cash_info.get('missing_symbols', [])[:3])}{'...' if cash_info.get('n_missing', 0) > 3 else ''})")
+        print(f"Cash weight:      {cash_info.get('cash_weight_pct', 0):>8.2f}%")
+        print(f"Cash rate:        {cash_info.get('cash_rate_annual_pct', 0):>8.2f}%/year")
+        print(f"Cash contribution:{cash_info.get('cash_return_contribution_pct', 0):>8.3f}%")
+        print(f"Note: {cash_info.get('note', '')}")
     
     # ===== V9 P1-8c: GROSS vs NET SECTION with clear cost breakdown =====
     print("\n--- Gross vs Net Performance ---")
