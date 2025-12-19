@@ -1,48 +1,32 @@
-name: 📊 ETF Schedule
+name: 🌙 ETF Heavy Filter
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# GÈRE: ETF + Bonds
-# - HEAVY (nuit 01:00)  → etf-advanced-filter.js (tous ETF + traductions)
-# - REFRESH AM (09:25)  → etf-bond-daily-metrics.js (Top 50, rapide)
-# - REFRESH PM (16:00)  → etf-bond-daily-metrics.js (Top 50, rapide)
+# GÈRE: ETF + Bonds - Traitement COMPLET nocturne
+# SCRIPT: etf-advanced-filter.js
+# HORAIRE: 01:00 Paris (nuit, ~5h de traitement)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 on:
   workflow_dispatch:
     inputs:
-      mode:
-        description: 'Mode de traitement'
-        required: true
-        type: choice
-        options: [heavy, refresh]
       limit_etf:
         description: 'Limite ETF (0 = tous)'
         default: '0'
       limit_bonds:
         description: 'Limite Bonds (0 = tous)'
         default: '0'
+      debug:
+        description: 'Mode debug'
+        type: boolean
+        default: false
 
   schedule:
     # ═══════════════════════════════════════════════════════════════════════════
-    # 🌙 NIGHT HEAVY (01:00 Paris) - etf-advanced-filter.js (~5h)
+    # 🌙 NIGHT HEAVY (01:00 Paris) - ~5h de traitement
     # été: 23:00 UTC (J-1) | hiver: 00:00 UTC
     # ═══════════════════════════════════════════════════════════════════════════
     - cron: '0 23 * * 0-4'   # Dim-Jeu soir UTC = Lun-Ven nuit Paris
     - cron: '0 0 * * 1-5'    # Lun-Ven 00:00 UTC
-    
-    # ═══════════════════════════════════════════════════════════════════════════
-    # ☀️ AM REFRESH (09:25 Paris) - etf-bond-daily-metrics.js
-    # été: 07:25 UTC | hiver: 08:25 UTC
-    # ═══════════════════════════════════════════════════════════════════════════
-    - cron: '25 7 * * 1-5'
-    - cron: '25 8 * * 1-5'
-    
-    # ═══════════════════════════════════════════════════════════════════════════
-    # 🌅 PM REFRESH (16:00 Paris) - etf-bond-daily-metrics.js
-    # été: 14:00 UTC | hiver: 15:00 UTC
-    # ═══════════════════════════════════════════════════════════════════════════
-    - cron: '0 14 * * 1-5'
-    - cron: '0 15 * * 1-5'
 
 concurrency:
   group: repo-writes-global
@@ -56,22 +40,20 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 1: Gate - Déterminer le mode (heavy vs refresh)
+  # JOB 1: Gate - Vérifier si c'est bien l'heure du heavy
   # ═══════════════════════════════════════════════════════════════════════════
   gate:
     runs-on: ubuntu-latest
     outputs:
-      mode: ${{ steps.detect.outputs.mode }}
       should_run: ${{ steps.detect.outputs.should_run }}
       
     steps:
-      - name: 🕐 Detect ETF mode based on Paris time
+      - name: 🕐 Detect if Heavy window
         id: detect
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT
             echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "✅ Manual trigger: mode=${{ inputs.mode }}"
+            echo "✅ Manual trigger"
             exit 0
           fi
           
@@ -80,41 +62,21 @@ jobs:
           echo "📍 Paris time: $PARIS"
           echo "══════════════════════════════════════════════════════════════"
           
-          MODE=""
-          
-          # Night heavy: 00:55 - 01:05 Paris
+          # Night heavy window: 00:55 - 01:05 Paris
           if [ "$PARIS" -ge "0055" ] && [ "$PARIS" -le "0105" ]; then
-            MODE="heavy"
-            echo "🌙 Night HEAVY → etf-advanced-filter.js"
-            
-          # AM refresh: 09:20 - 09:30 Paris
-          elif [ "$PARIS" -ge "0920" ] && [ "$PARIS" -le "0930" ]; then
-            MODE="refresh"
-            echo "☀️ AM REFRESH → etf-bond-daily-metrics.js"
-            
-          # PM refresh: 15:55 - 16:05 Paris
-          elif [ "$PARIS" -ge "1555" ] && [ "$PARIS" -le "1605" ]; then
-            MODE="refresh"
-            echo "🌅 PM REFRESH → etf-bond-daily-metrics.js"
-          fi
-          
-          if [ -n "$MODE" ]; then
-            echo "══════════════════════════════════════════════════════════════"
-            echo "✅ Gate passed: mode=$MODE"
-            echo "mode=$MODE" >> $GITHUB_OUTPUT
+            echo "🌙 Night HEAVY window detected"
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
-            echo "══════════════════════════════════════════════════════════════"
-            echo "⏭️ Gate skipped: PARIS=$PARIS not in any window"
+            echo "⏭️ Gate skipped: PARIS=$PARIS not in heavy window (00:55-01:05)"
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 2a: ETF HEAVY (nuit) - etf-advanced-filter.js
+  # JOB 2: ETF HEAVY - etf-advanced-filter.js
   # ═══════════════════════════════════════════════════════════════════════════
   etf-heavy:
     needs: gate
-    if: needs.gate.outputs.should_run == 'true' && needs.gate.outputs.mode == 'heavy'
+    if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360  # 6h max
     
@@ -141,6 +103,7 @@ jobs:
           TRANSLATOR: 'openai'
           API_CHAT: ${{ secrets.API_CHAT }}
           OPENAI_MODEL: 'gpt-4o-mini'
+          DEBUG: ${{ inputs.debug && '1' || '0' }}
         run: |
           echo "══════════════════════════════════════════════════════════════"
           echo "🌙 MODE: HEAVY (etf-advanced-filter.js)"
@@ -156,8 +119,11 @@ jobs:
           ls -lh data/filtered_advanced.json data/weekly_snapshot*.* 2>/dev/null || true
           ls -lh data/combined_*.csv 2>/dev/null || true
           echo ""
-          echo "📋 ETF Holdings (first 3 lines):"
-          head -n 3 data/combined_etfs_holdings.csv 2>/dev/null || echo "Not found"
+          echo "📋 ETF Holdings (first 5 lines):"
+          head -n 5 data/combined_etfs_holdings.csv 2>/dev/null || echo "Not found"
+          echo ""
+          echo "📋 Bonds Holdings (first 5 lines):"
+          head -n 5 data/combined_bonds_holdings.csv 2>/dev/null || echo "Not found"
 
       - name: 💾 Commit and push
         run: |
@@ -179,95 +145,7 @@ jobs:
           fi
           
           TS=$(date -u +'%Y-%m-%d %H:%M UTC')
-          git commit -m "🌙 ETF [heavy] - $TS [skip ci]"
-          
-          BRANCH="${GITHUB_REF_NAME:-main}"
-          for i in 1 2 3; do
-            git fetch origin && git rebase "origin/$BRANCH" || git rebase --abort || true
-            git push origin "HEAD:$BRANCH" && echo "✅ Push OK" && exit 0
-            sleep $((RANDOM%5+2))
-          done
-          exit 1
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 2b: ETF REFRESH (AM/PM) - etf-bond-daily-metrics.js
-  # ═══════════════════════════════════════════════════════════════════════════
-  etf-refresh:
-    needs: gate
-    if: needs.gate.outputs.should_run == 'true' && needs.gate.outputs.mode == 'refresh'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci || npm install csv-parse axios
-
-      - name: ☀️ Run ETF Bond Daily Metrics (REFRESH)
-        env:
-          NODE_ENV: production
-        run: |
-          PARIS=$(TZ=Europe/Paris date +%H%M)
-          if [ "$PARIS" -lt "1200" ]; then
-            SESSION="AM"
-          else
-            SESSION="PM"
-          fi
-          
-          echo "══════════════════════════════════════════════════════════════"
-          echo "☀️ MODE: REFRESH $SESSION (etf-bond-daily-metrics.js)"
-          echo "══════════════════════════════════════════════════════════════"
-          
-          node etf-bond-daily-metrics.js
-
-      - name: 📋 Verify generated files
-        run: |
-          echo "📂 Generated files:"
-          ls -lh data/daily_metrics.json data/combined_snapshot.json 2>/dev/null || true
-          ls -lh data/daily_metrics_*.csv data/combined_*.csv 2>/dev/null || true
-
-      - name: 💾 Commit and push
-        run: |
-          set -e
-          git config user.email "actions@github.com"
-          git config user.name "github-actions[bot]"
-          
-          git add data/daily_metrics.json 2>/dev/null || true
-          git add data/daily_metrics_etfs.csv 2>/dev/null || true
-          git add data/daily_metrics_bonds.csv 2>/dev/null || true
-          git add data/combined_snapshot.json 2>/dev/null || true
-          git add data/combined_etfs.csv 2>/dev/null || true
-          git add data/combined_bonds.csv 2>/dev/null || true
-          git add data/combined_etfs_exposure.csv 2>/dev/null || true
-          git add data/combined_etfs_holdings.csv 2>/dev/null || true
-          git add data/combined_bonds_holdings.csv 2>/dev/null || true
-          
-          if git diff --quiet && git diff --staged --quiet; then
-            echo "ℹ️ Nothing to commit"
-            exit 0
-          fi
-          
-          PARIS=$(TZ=Europe/Paris date +%H%M)
-          if [ "$PARIS" -lt "1200" ]; then
-            EMOJI="☀️"
-            SESSION="AM"
-          else
-            EMOJI="🌅"
-            SESSION="PM"
-          fi
-          
-          TS=$(date -u +'%Y-%m-%d %H:%M UTC')
-          git commit -m "$EMOJI ETF [refresh-$SESSION] - $TS [skip ci]"
+          git commit -m "🌙 ETF Heavy - $TS [skip ci]"
           
           BRANCH="${GITHUB_REF_NAME:-main}"
           for i in 1 2 3; do
