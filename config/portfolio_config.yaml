@@ -1,5 +1,6 @@
 # Portfolio Engine v4 - Configuration
 # Tous les paramètres externalisés pour faciliter le tuning
+# v4.9.2: max_sector_weight Agressif 30%→35% (P0.5 fix)
 
 # =============================================================================
 # PROFILS DE RISQUE
@@ -11,7 +12,7 @@ profiles:
     min_bonds_weight: 0.05    # Minimum obligations
     max_crypto_weight: 0.10   # Maximum crypto
     max_position_weight: 0.15 # Maximum par ligne
-    max_sector_weight: 0.30   # Maximum par secteur
+    max_sector_weight: 0.35   # Maximum par secteur (relaxé de 0.30 pour Finance 31.2%)
     min_assets: 10
     max_assets: 18
     factor_weights:
