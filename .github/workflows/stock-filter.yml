@@ -1,101 +1,250 @@
-name: Stock Advanced Filter
+name: 📈 Stock Markets Schedule
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GÈRE: Asia/Europe/US - OPEN + CLOSE + Consolidation globale
+# SCRIPT: stock-advanced-filter.js
+# GATE: Vérifie l'heure locale du marché pour éviter les runs inutiles (DST-proof)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 on:
   workflow_dispatch:
     inputs:
-      regions:
-        description: 'Régions à traiter'
+      market:
+        description: 'Marché à traiter'
         required: true
-        default: 'all'
         type: choice
-        options:
-          - all
-          - us
-          - europe
-          - asia
-          - us-europe
-          - us-asia
-          - europe-asia
-  schedule:
-    - cron: '0 14 * * 1-5'  # 14:00 UTC (15h/16h Paris selon DST), jours ouvrés
+        options: [asia, europe, us, all]
+      session:
+        description: 'Session'
+        required: true
+        type: choice
+        options: [open, close, both]
+      force:
+        description: 'Forcer (ignorer gate horaire)'
+        type: boolean
+        default: false
 
-# 🔒 Verrou global (même que le workflow Crypto)
-# Ce workflow N'EST PAS prioritaire (il n'annule pas les autres)
+  schedule:
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🌏 ASIE (pas de DST - crons simples)
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Tokyo OPEN 09:00 JST = 00:00 UTC
+    - cron: '0 0 * * 1-5'
+    # Shanghai OPEN 09:30 CST = 01:30 UTC
+    - cron: '30 1 * * 1-5'
+    # Tokyo CLOSE 15:00 JST = 06:00 UTC
+    - cron: '0 6 * * 1-5'
+    # Shanghai CLOSE 15:00 CST = 07:00 UTC
+    - cron: '0 7 * * 1-5'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🇪🇺 EUROPE (DST: double cron pour couvrir été/hiver)
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Paris OPEN 09:00 = 07:00 UTC (été) ou 08:00 UTC (hiver)
+    - cron: '0 7 * * 1-5'
+    - cron: '0 8 * * 1-5'
+    # Paris CLOSE 17:35 = 15:35 UTC (été) ou 16:35 UTC (hiver)
+    - cron: '35 15 * * 1-5'
+    - cron: '35 16 * * 1-5'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🇺🇸 USA (DST: double cron pour couvrir été/hiver)
+    # ═══════════════════════════════════════════════════════════════════════════
+    # NYSE OPEN 09:30 ET = 13:30 UTC (été) ou 14:30 UTC (hiver) → 15:30 Paris
+    - cron: '30 13 * * 1-5'
+    - cron: '30 14 * * 1-5'
+    # NYSE CLOSE 16:00 ET = 20:00 UTC (été) ou 21:00 UTC (hiver) → 22:00 Paris
+    - cron: '0 20 * * 1-5'
+    - cron: '0 21 * * 1-5'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🌍 CONSOLIDATION GLOBALE (23:00 Paris)
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '0 21 * * 1-5'
+    - cron: '0 22 * * 1-5'
+
 concurrency:
   group: repo-writes-global
   cancel-in-progress: false
 
-# ✅ Permissions nécessaires pour push via GITHUB_TOKEN
 permissions:
   contents: write
 
+env:
+  TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+
 jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 1: GATE - Déterminer quel marché/session traiter
+  # ═══════════════════════════════════════════════════════════════════════════
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      market: ${{ steps.detect.outputs.market }}
+      session: ${{ steps.detect.outputs.session }}
+      should_run: ${{ steps.detect.outputs.should_run }}
+      
+    steps:
+      - name: 🕐 Detect market session based on local time
+        id: detect
+        run: |
+          # Si workflow_dispatch, on passe direct
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "market=${{ inputs.market }}" >> $GITHUB_OUTPUT
+            echo "session=${{ inputs.session }}" >> $GITHUB_OUTPUT
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual trigger: market=${{ inputs.market }}, session=${{ inputs.session }}"
+            exit 0
+          fi
+          
+          # Récupérer les heures locales (format HHMM)
+          TOKYO=$(TZ=Asia/Tokyo date +%H%M)
+          SHANGHAI=$(TZ=Asia/Shanghai date +%H%M)
+          PARIS=$(TZ=Europe/Paris date +%H%M)
+          NY=$(TZ=America/New_York date +%H%M)
+          
+          echo "══════════════════════════════════════════════════════════════"
+          echo "📍 Current local times:"
+          echo "   🗼 Tokyo    = $TOKYO"
+          echo "   🏯 Shanghai = $SHANGHAI"
+          echo "   🗼 Paris    = $PARIS"
+          echo "   🗽 New York = $NY"
+          echo "══════════════════════════════════════════════════════════════"
+          
+          MARKET=""
+          SESSION=""
+          
+          # ══════════════════════════════════════════════════════════════════
+          # 🌏 ASIA GATES (±5 min tolerance)
+          # ══════════════════════════════════════════════════════════════════
+          if [ "$TOKYO" -ge "0855" ] && [ "$TOKYO" -le "0905" ]; then
+            MARKET="asia"; SESSION="open"
+            echo "🌏 Tokyo OPEN detected"
+          elif [ "$SHANGHAI" -ge "0925" ] && [ "$SHANGHAI" -le "0935" ]; then
+            MARKET="asia"; SESSION="open"
+            echo "🌏 Shanghai OPEN detected"
+          elif [ "$TOKYO" -ge "1455" ] && [ "$TOKYO" -le "1505" ]; then
+            MARKET="asia"; SESSION="close"
+            echo "🌏 Tokyo CLOSE detected"
+          elif [ "$SHANGHAI" -ge "1455" ] && [ "$SHANGHAI" -le "1505" ]; then
+            MARKET="asia"; SESSION="close"
+            echo "🌏 Shanghai CLOSE detected"
+            
+          # ══════════════════════════════════════════════════════════════════
+          # 🇪🇺 EUROPE GATES
+          # ══════════════════════════════════════════════════════════════════
+          elif [ "$PARIS" -ge "0855" ] && [ "$PARIS" -le "0905" ]; then
+            MARKET="europe"; SESSION="open"
+            echo "🇪🇺 Europe OPEN detected (Paris 09:00)"
+          elif [ "$PARIS" -ge "1730" ] && [ "$PARIS" -le "1740" ]; then
+            MARKET="europe"; SESSION="close"
+            echo "🇪🇺 Europe CLOSE detected (Paris 17:35)"
+            
+          # ══════════════════════════════════════════════════════════════════
+          # 🇺🇸 US GATES
+          # ══════════════════════════════════════════════════════════════════
+          elif [ "$NY" -ge "0925" ] && [ "$NY" -le "0935" ]; then
+            MARKET="us"; SESSION="open"
+            echo "🇺🇸 US OPEN detected (NYSE 09:30)"
+          elif [ "$NY" -ge "1555" ] && [ "$NY" -le "1605" ]; then
+            MARKET="us"; SESSION="close"
+            echo "🇺🇸 US CLOSE detected (NYSE 16:00)"
+            
+          # ══════════════════════════════════════════════════════════════════
+          # 🌍 GLOBAL CONSOLIDATION (23:00 Paris)
+          # ══════════════════════════════════════════════════════════════════
+          elif [ "$PARIS" -ge "2255" ] && [ "$PARIS" -le "2305" ]; then
+            MARKET="all"; SESSION="consolidation"
+            echo "🌍 GLOBAL CONSOLIDATION detected"
+          fi
+          
+          # Output
+          if [ -n "$MARKET" ]; then
+            echo "══════════════════════════════════════════════════════════════"
+            echo "✅ Gate PASSED: market=$MARKET, session=$SESSION"
+            echo "market=$MARKET" >> $GITHUB_OUTPUT
+            echo "session=$SESSION" >> $GITHUB_OUTPUT
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "══════════════════════════════════════════════════════════════"
+            echo "⏭️ Gate SKIPPED: No matching market/session for current time"
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 2: Exécuter le filtrage stocks
+  # ═══════════════════════════════════════════════════════════════════════════
   filter-stocks:
+    needs: gate
+    if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0   # indispensable pour rebase propre
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-    - name: Install dependencies
-      # Si tu n'as pas de package-lock.json, npm ci échouera -> fallback npm install ciblé
-      run: |
-        npm ci || npm install csv-parse axios
+      - name: Install dependencies
+        run: npm ci || npm install csv-parse axios
 
-    - name: Run Stock Advanced Filter
-      env:
-        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
-        INCLUDE_OPTIONS: '1'  # Activer les options
-        REGIONS: ${{ github.event.inputs.regions || 'all' }}
-      run: |
-        echo "🌍 Régions sélectionnées: $REGIONS"
-        node stock-advanced-filter.js
+      - name: 📊 Run Stock Advanced Filter
+        env:
+          MARKET: ${{ needs.gate.outputs.market }}
+          SESSION: ${{ needs.gate.outputs.session }}
+        run: |
+          echo "🎯 Processing: MARKET=$MARKET, SESSION=$SESSION"
+          
+          # Mapper vers REGIONS pour stock-advanced-filter.js
+          case "$MARKET" in
+            asia)   export REGIONS="asia" ;;
+            europe) export REGIONS="europe" ;;
+            us)     export REGIONS="us" ;;
+            all)    export REGIONS="all" ;;
+          esac
+          
+          echo "🌍 REGIONS=$REGIONS"
+          node stock-advanced-filter.js
 
-    - name: Debug - Check generated files
-      run: |
-        echo "📂 Vérification des fichiers générés:"
-        ls -la data/ || true
-        git status --porcelain
+      - name: 📋 Verify generated files
+        run: |
+          echo "📂 Files in data/:"
+          ls -lh data/*.json 2>/dev/null | head -20 || echo "No JSON"
+          git status --porcelain | head -20
 
-    - name: Commit results (rebase + retry safe push)
-      run: |
-        set -e
-        git config user.email "actions@github.com"
-        git config user.name "github-actions[bot]"
-
-        # Ajouter tous les JSON générés
-        git add data/*.json 2>/dev/null || true
-
-        # (Optionnel) si tu veux versionner ces fichiers quand modifiés
-        git add -f package.json package-lock.json 2>/dev/null || true
-
-        # Commit seulement s'il y a des changements
-        if git diff --quiet && git diff --staged --quiet; then
-          echo "ℹ️ Rien à committer"
-          exit 0
-        fi
-
-        REGIONS="${{ github.event.inputs.regions || 'all' }}"
-        git commit -m "Update stocks data [$REGIONS] [skip ci]"
-
-        # Push robuste: fetch + rebase + 3 tentatives
-        BRANCH="${GITHUB_REF_NAME:-main}"
-        for i in 1 2 3; do
-          git fetch origin
-          git rebase "origin/$BRANCH" || { git rebase --abort || true; }
-          if git push origin "HEAD:$BRANCH"; then
-            echo "✅ Push réussi"
+      - name: 💾 Commit and push
+        run: |
+          set -e
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          
+          git add data/*.json 2>/dev/null || true
+          
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "ℹ️ Nothing to commit"
             exit 0
           fi
-          echo "↻ Retry push ($i/3)..." && sleep $((RANDOM%5+2))
-        done
-        echo "❌ Échec du push après 3 tentatives" >&2
-        exit 1
+          
+          MARKET="${{ needs.gate.outputs.market }}"
+          SESSION="${{ needs.gate.outputs.session }}"
+          TS=$(date -u +'%Y-%m-%d %H:%M UTC')
+          
+          case "$MARKET" in
+            asia)   E="🌏" ;; europe) E="🇪🇺" ;; us) E="🇺🇸" ;; *) E="🌍" ;;
+          esac
+          
+          git commit -m "$E Stocks [$MARKET/$SESSION] - $TS [skip ci]"
+          
+          BRANCH="${GITHUB_REF_NAME:-main}"
+          for i in 1 2 3; do
+            git fetch origin && git rebase "origin/$BRANCH" || git rebase --abort || true
+            git push origin "HEAD:$BRANCH" && echo "✅ Push OK" && exit 0
+            sleep $((RANDOM%5+2))
+          done
+          exit 1
