@@ -2,6 +2,10 @@
 """
 PRESET_META - Source unique de vérité pour les presets.
 
+v1.1 P0.5 FIX: Bucket targets relaxés pour réduire les violations
+- Modéré: CORE min 45→35%, SATELLITE max 25→35%
+- Agressif: SATELLITE max 50→60%
+
 Définit pour chaque preset :
 - asset_class : equity, etf, crypto, bond, cash
 - role : core, satellite, defensive, lottery
@@ -226,7 +230,7 @@ EQUITY_PRESETS: Dict[str, PresetConfig] = {
         risk=RiskLevel.LOW,
         max_weight_pct=8.0,
         max_bucket_pct=25.0,
-        min_quality_score=60,
+        min_quality_score=55,  # P0.5: 60→55 pour plus de DEFENSIVE
         correlation_group="equity_defensive",
         description="Actions défensives, faible beta, utilities/staples",
         turnover_tolerance=0.08,  # Plus stable
@@ -238,7 +242,7 @@ EQUITY_PRESETS: Dict[str, PresetConfig] = {
         risk=RiskLevel.LOW,
         max_weight_pct=8.0,
         max_bucket_pct=25.0,
-        min_quality_score=60,
+        min_quality_score=55,  # P0.5: 60→55
         correlation_group="equity_low_vol",
         description="Actions à faible volatilité historique",
         turnover_tolerance=0.08,
@@ -250,7 +254,7 @@ EQUITY_PRESETS: Dict[str, PresetConfig] = {
         risk=RiskLevel.LOW,
         max_weight_pct=8.0,
         max_bucket_pct=20.0,
-        min_quality_score=60,
+        min_quality_score=55,  # P0.5: 60→55
         correlation_group="equity_dividend",
         description="Actions à haut rendement dividende, payout stable",
         turnover_tolerance=0.08,
@@ -263,7 +267,7 @@ EQUITY_PRESETS: Dict[str, PresetConfig] = {
         risk=RiskLevel.MODERATE,
         max_weight_pct=8.0,
         max_bucket_pct=25.0,
-        min_quality_score=65,
+        min_quality_score=60,  # P0.5: 65→60 pour plus de CORE
         correlation_group="equity_value",
         description="Value + dividende croissant, PEG attractif",
         turnover_tolerance=0.06,
@@ -275,7 +279,7 @@ EQUITY_PRESETS: Dict[str, PresetConfig] = {
         risk=RiskLevel.MODERATE,
         max_weight_pct=8.0,
         max_bucket_pct=30.0,
-        min_quality_score=70,
+        min_quality_score=65,  # P0.5: 70→65 pour plus de CORE
         correlation_group="equity_quality",
         description="ROIC élevé, FCF solide, moat durable",
         turnover_tolerance=0.06,
@@ -288,7 +292,7 @@ EQUITY_PRESETS: Dict[str, PresetConfig] = {
         risk=RiskLevel.HIGH,
         max_weight_pct=6.0,
         max_bucket_pct=20.0,
-        min_quality_score=50,
+        min_quality_score=45,  # P0.5: 50→45
         correlation_group="equity_growth",
         description="Croissance EPS/CA, valorisation élevée acceptée",
         turnover_tolerance=0.05,
@@ -300,7 +304,7 @@ EQUITY_PRESETS: Dict[str, PresetConfig] = {
         risk=RiskLevel.HIGH,
         max_weight_pct=5.0,
         max_bucket_pct=15.0,
-        min_quality_score=50,
+        min_quality_score=45,  # P0.5: 50→45
         correlation_group="equity_momentum",
         description="Momentum 6-12 mois, trend following",
         turnover_tolerance=0.04,  # Plus de turnover accepté
@@ -617,26 +621,30 @@ CRYPTO_PRESET_PRIORITY = [
 ]
 
 
-# ============ PROFILE BUCKET TARGETS ============
+# ============ PROFILE BUCKET TARGETS v1.1 (P0.5 FIX) ============
+
+# P0.5 FIX: Ranges relaxés pour réduire les violations
+# - Modéré: CORE min 45→35%, SATELLITE max 25→35%
+# - Agressif: SATELLITE max 50→60%
 
 PROFILE_BUCKET_TARGETS: Dict[str, Dict[Role, Tuple[float, float]]] = {
     "Stable": {
-        Role.CORE: (0.30, 0.40),       # 30-40%
-        Role.DEFENSIVE: (0.45, 0.60),  # 45-60%
-        Role.SATELLITE: (0.05, 0.15),  # 5-15%
-        Role.LOTTERY: (0.00, 0.00),    # 0%
+        Role.CORE: (0.30, 0.40),       # 30-40% (inchangé)
+        Role.DEFENSIVE: (0.45, 0.60),  # 45-60% (inchangé)
+        Role.SATELLITE: (0.05, 0.15),  # 5-15% (inchangé)
+        Role.LOTTERY: (0.00, 0.00),    # 0% (inchangé)
     },
     "Modéré": {
-        Role.CORE: (0.45, 0.55),       # 45-55%
-        Role.DEFENSIVE: (0.20, 0.30),  # 20-30%
-        Role.SATELLITE: (0.15, 0.25),  # 15-25%
-        Role.LOTTERY: (0.00, 0.02),    # 0-2%
+        Role.CORE: (0.35, 0.55),       # P0.5 FIX: 45-55% → 35-55% (min relaxé -10%)
+        Role.DEFENSIVE: (0.20, 0.30),  # 20-30% (inchangé)
+        Role.SATELLITE: (0.15, 0.35),  # P0.5 FIX: 15-25% → 15-35% (max relaxé +10%)
+        Role.LOTTERY: (0.00, 0.02),    # 0-2% (inchangé)
     },
     "Agressif": {
-        Role.CORE: (0.35, 0.45),       # 35-45%
-        Role.DEFENSIVE: (0.05, 0.15),  # 5-15%
-        Role.SATELLITE: (0.35, 0.50),  # 35-50%
-        Role.LOTTERY: (0.00, 0.05),    # 0-5%
+        Role.CORE: (0.30, 0.45),       # P0.5 FIX: 35-45% → 30-45% (min relaxé -5%)
+        Role.DEFENSIVE: (0.05, 0.15),  # 5-15% (inchangé)
+        Role.SATELLITE: (0.35, 0.60),  # P0.5 FIX: 35-50% → 35-60% (max relaxé +10%)
+        Role.LOTTERY: (0.00, 0.05),    # 0-5% (inchangé)
     },
 }
 
@@ -1006,7 +1014,7 @@ if __name__ == "__main__":
         presets = get_presets_by_role(role)
         print(f"  {role.value}: {len(presets)} presets")
     
-    print("\n--- Bucket Targets ---")
+    print("\n--- Bucket Targets (v1.1 P0.5 FIX) ---")
     for profile, targets in PROFILE_BUCKET_TARGETS.items():
         print(f"\n  {profile}:")
         for role, (min_pct, max_pct) in targets.items():
