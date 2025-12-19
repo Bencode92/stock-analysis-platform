@@ -1,62 +1,174 @@
-name: 📊 Update Markets via Twelve Data API
+name: 📊 Update Markets Data
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GÈRE: Données indices de marché
+# SCRIPT: scripts/update_market_data_etf.py
+# HORAIRES: 
+#   - 09:20 Paris (avant Europe open, ~3 min)
+#   - 18:05 Paris (après Europe close)
+#   - 22:30 Paris (après US close)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 on:
   workflow_dispatch:
+
   schedule:
-    - cron: '0 */4 * * *'  # Toutes les 4 heures
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🌅 MATIN (09:20 Paris)
+    # été: 07:20 UTC | hiver: 08:20 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '20 7 * * 1-5'
+    - cron: '20 8 * * 1-5'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🇪🇺 POST-EUROPE (18:05 Paris)
+    # été: 16:05 UTC | hiver: 17:05 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '5 16 * * 1-5'
+    - cron: '5 17 * * 1-5'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🇺🇸 POST-US (22:30 Paris)
+    # été: 20:30 UTC | hiver: 21:30 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '30 20 * * 1-5'
+    - cron: '30 21 * * 1-5'
+
+concurrency:
+  group: repo-writes-global
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
+env:
+  TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+
 jobs:
-  update-markets-twelve-data:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 1: Gate
+  # ═══════════════════════════════════════════════════════════════════════════
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      session: ${{ steps.detect.outputs.session }}
+      should_run: ${{ steps.detect.outputs.should_run }}
+      
+    steps:
+      - name: 🕐 Detect session
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "session=manual" >> $GITHUB_OUTPUT
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual trigger"
+            exit 0
+          fi
+          
+          PARIS=$(TZ=Europe/Paris date +%H%M)
+          echo "══════════════════════════════════════════════════════════════"
+          echo "📍 Paris time: $PARIS"
+          echo "══════════════════════════════════════════════════════════════"
+          
+          SESSION=""
+          
+          # Matin: 09:15 - 09:25 Paris
+          if [ "$PARIS" -ge "0915" ] && [ "$PARIS" -le "0925" ]; then
+            SESSION="morning"
+            echo "🌅 MORNING session"
+            
+          # Post-Europe: 18:00 - 18:10 Paris
+          elif [ "$PARIS" -ge "1800" ] && [ "$PARIS" -le "1810" ]; then
+            SESSION="post-europe"
+            echo "🇪🇺 POST-EUROPE session"
+            
+          # Post-US: 22:25 - 22:35 Paris
+          elif [ "$PARIS" -ge "2225" ] && [ "$PARIS" -le "2235" ]; then
+            SESSION="post-us"
+            echo "🇺🇸 POST-US session"
+          fi
+          
+          if [ -n "$SESSION" ]; then
+            echo "✅ Gate passed: session=$SESSION"
+            echo "session=$SESSION" >> $GITHUB_OUTPUT
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️ Gate skipped: PARIS=$PARIS"
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 2: Update Markets
+  # ═══════════════════════════════════════════════════════════════════════════
+  update-markets:
+    needs: gate
+    if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ github.token }}
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-          
-      - name: Create data directory if needed
+
+      - name: Create data directory
         run: mkdir -p data
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install twelvedata
-        
-      - name: Update market data via Twelve Data API
-        env:
-          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
-        run: python scripts/update_market_data_etf.py
+
+      - name: 📊 Update market data
+        run: |
+          echo "══════════════════════════════════════════════════════════════"
+          echo "📊 Session: ${{ needs.gate.outputs.session }}"
+          echo "══════════════════════════════════════════════════════════════"
+          python scripts/update_market_data_etf.py
         continue-on-error: true
-        
-      - name: Verify data file exists
+
+      - name: Verify data file
         run: |
           if [ ! -f data/markets.json ]; then
-            echo "Fichier de données non trouvé, création d'un fichier vide"
-            echo "{}" > data/markets.json
+            echo '{}' > data/markets.json
           fi
-        
-      - name: Commit and push if changed
+          echo "📋 markets.json size: $(wc -c < data/markets.json) bytes"
+
+      - name: 💾 Commit and push
         run: |
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          set -e
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
           
           git add data/markets.json
           
           if git diff --staged --quiet; then
-            echo "Aucune modification détectée, pas de commit nécessaire"
-          else
-            echo "Modifications détectées, création d'un commit"
-            git commit -m "📊 Update markets.json via Twelve Data API [skip ci]"
-            git push origin HEAD:${GITHUB_REF}
+            echo "ℹ️ No changes"
+            exit 0
           fi
+          
+          SESSION="${{ needs.gate.outputs.session }}"
+          TS=$(date -u +'%Y-%m-%d %H:%M UTC')
+          
+          case "$SESSION" in
+            morning)     EMOJI="🌅" ;;
+            post-europe) EMOJI="🇪🇺" ;;
+            post-us)     EMOJI="🇺🇸" ;;
+            *)           EMOJI="📊" ;;
+          esac
+          
+          git commit -m "$EMOJI Markets [$SESSION] - $TS [skip ci]"
+          
+          BRANCH="${GITHUB_REF_NAME:-main}"
+          for i in 1 2 3; do
+            git fetch origin && git rebase "origin/$BRANCH" || git rebase --abort || true
+            git push origin "HEAD:$BRANCH" && echo "✅ Push OK" && exit 0
+            sleep $((RANDOM%5+2))
+          done
+          exit 1
