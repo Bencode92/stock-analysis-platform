@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actions dans le secteur financier et de la santé, ce qui peut offrir des opportunités de croissance. Cependant, il est important de noter que la volatilité des marchés peut entraîner des fluctuations importantes. De plus, l'exposition à des actifs à haut rendement peut accroître le risque de perte en capital. Ce portefeuille est donc approprié pour des investisseurs cherchant à maximiser les rendements, tout en étant conscients des risques associés. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec une exposition significative aux actions, notamment dans les secteurs de la finance et de la santé. Bien que cela puisse offrir un potentiel de rendement élevé, il est important de noter les risques liés à la volatilité des marchés et aux fluctuations sectorielles. Les investissements dans des entreprises comme Muthoot Finance et Unicredit peuvent être affectés par des conditions économiques changeantes. De plus, la concentration dans possibles secteurs peut accroître l'exposition aux risques spécifiques. Il est donc essentiel d'évaluer ces éléments avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "MUTHOOT FINANCE LTD": "13%",
       "CUMMINS INC": "1%",
@@ -133,6 +133,13 @@
           "status": "VIOLATED",
           "details": {
             "most_concentrated": "Finance",
+            "counts_in_max_sector": {
+              "Finance": 31.2,
+              "Santé": 29.2,
+              "Biens de consommation cycliques": 10.0,
+              "Matériaux": 8.82,
+              "Industries": 1.18
+            },
             "all_sectors": {
               "Finance": 31.2,
               "Santé": 29.2,
@@ -141,7 +148,8 @@
               "Matériaux": 8.82,
               "Bonds": 5.0,
               "Industries": 1.18
-            }
+            },
+            "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
         },
         {
@@ -542,7 +550,7 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée entre actions et obligations, visant à générer des rendements modérés avec une volatilité contrôlée. Les investissements dans des titres préférentiels et des obligations à court terme peuvent offrir une possiblee stabilité, mais ils sont également sensibles aux fluctuations des taux d'intérêt. De plus, l'exposition à des secteurs comme la consommation et la santé peut entraîner des risques liés aux tendances économiques. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant actions et obligations pour réduire la volatilité tout en cherchant à générer des rendements. Les investissements dans des fonds comme l'Innovator Equity Managed Floor ETF visent à limiter les pertes, mais la performance peut être affectée par des conditions de marché défavorables. De plus, la dépendance à des secteurs comme la consommation discrétionnaire expose le portefeuille à des risques économiques. Il est crucial de prendre en compte ces éléments avant de s'engager dans ce type d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "13%",
       "RWE AG": "2%",
@@ -670,12 +678,20 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 29.2,
-          "slack": 0.8,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 24.6,
+          "slack": 5.4,
+          "binding": false,
+          "status": "OK",
           "details": {
-            "most_concentrated": "Diversified",
+            "most_concentrated": "Biens de consommation cycliques",
+            "counts_in_max_sector": {
+              "Biens de consommation cycliques": 24.6,
+              "Diversified": 14.6,
+              "Santé": 14.6,
+              "Matériaux": 9.6,
+              "Finance": 5.0,
+              "Services publics": 2.0
+            },
             "all_sectors": {
               "Diversified": 29.2,
               "Biens de consommation cycliques": 24.6,
@@ -684,7 +700,8 @@
               "Matériaux": 9.6,
               "Finance": 5.0,
               "Services publics": 2.0
-            }
+            },
+            "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
         },
         {
@@ -811,19 +828,18 @@
       ],
       "summary": {
         "total": 13,
-        "ok": 4,
-        "binding": 6,
+        "ok": 5,
+        "binding": 5,
         "violated": 3,
         "critical": 0
       },
-      "quality_score": 67.7,
+      "quality_score": 69.2,
       "recommendations": [
         "🟡 BINDING: max_single_position at 14.6% (cap=15.0%) — monitor closely",
-        "🟡 BINDING: max_sector at 29.2% (cap=30.0%) — monitor closely",
         "🟠 VIOLATED: bucket_core exceeded by 5.8% — reduce exposure",
         "🟠 VIOLATED: bucket_satellite exceeded by 6.2% — reduce exposure",
         "🟠 VIOLATED: alternative_cap exceeded by 4.6% — reduce exposure",
-        "⚠️ 6 constraints are binding — consider relaxing profile or reducing positions"
+        "⚠️ 5 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
@@ -1075,7 +1091,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche conservatrice, principalement axée sur des obligations à court terme et des actions stables. Cela vise à minimiser la volatilité tout en offrant un potentiel de rendement modéré. Cependant, les rendements peuvent être limités en raison de l'exposition à des actifs à faible risque. De plus, l'exposition à des actions, même avec un profil défensif, peut entraîner des risques liés aux fluctuations du marché. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, privilégiant les obligations à court terme pour réduire la volatilité tout en maintenant une exposition aux actions. Les investissements dans des fonds tels que l'iShares Short Treasury Bond ETF visent à minimiser les risques liés aux taux d'intérêt, mais les rendements peuvent être limités. De plus, la présence d'actions comme Johnson & Johnson et Allianz expose le portefeuille à des risques spécifiques liés aux secteurs. Il est donc essentiel de considérer ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "ALLIANZ": "10%",
@@ -1221,12 +1237,19 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 53.86,
-          "slack": -23.86,
+          "observed": 15.39,
+          "slack": 14.61,
           "binding": false,
-          "status": "CRITICAL",
+          "status": "OK",
           "details": {
-            "most_concentrated": "Bonds",
+            "most_concentrated": "Finance",
+            "counts_in_max_sector": {
+              "Finance": 15.39,
+              "Santé": 10.26,
+              "Biens de consommation cycliques": 10.26,
+              "Diversified": 8.21,
+              "Services publics": 2.05
+            },
             "all_sectors": {
               "Bonds": 53.86,
               "Finance": 15.39,
@@ -1234,7 +1257,8 @@
               "Biens de consommation cycliques": 10.26,
               "Diversified": 8.21,
               "Services publics": 2.05
-            }
+            },
+            "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
         },
         {
@@ -1363,15 +1387,13 @@
       ],
       "summary": {
         "total": 12,
-        "ok": 10,
+        "ok": 11,
         "binding": 1,
         "violated": 0,
-        "critical": 1
+        "critical": 0
       },
-      "quality_score": 88.3,
-      "recommendations": [
-        "🔴 CRITICAL: max_sector violated by 23.9% — immediate action required"
-      ],
+      "quality_score": 98.3,
+      "recommendations": [],
       "exposures": {
         "by_category": {
           "Obligations": 53.86,
@@ -1634,7 +1656,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-19T15:45:42.369270",
+    "generated_at": "2025-12-19T16:03:47.048864",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
