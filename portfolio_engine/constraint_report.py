@@ -242,25 +242,55 @@ def compute_hhi(weights: List[float]) -> float:
     """
     Calcule l'indice Herfindahl-Hirschman (HHI).
     
-    HHI = Σ(w_i)² où w_i en pourcentage
-    - 0-1500: Diversifié
-    - 1500-2500: Modérément concentré
-    - >2500: Hautement concentré
+    HHI = Σ(w_i)² * 10000 où w_i en décimal (somme = 1)
+    
+    Échelle:
+    - 0-1000: Well diversified (équivalent 10+ positions égales)
+    - 1000-1500: Diversified
+    - 1500-2500: Moderately concentrated
+    - >2500: Highly concentrated
+    
+    Exemples:
+    - 10 positions à 10% chacune → HHI = 1000
+    - 5 positions à 20% chacune → HHI = 2000
+    - 2 positions à 50% chacune → HHI = 5000
+    - 1 position à 100% → HHI = 10000
     """
-    # Convertir en fractions si en pourcentage
-    weights_normalized = [w / 100 if w > 1 else w for w in weights if w > 0]
-    return sum(w * w for w in weights_normalized) * 10000
+    if not weights:
+        return 0.0
+    
+    # Filtrer les poids nuls
+    w = [x for x in weights if x > 0]
+    if not w:
+        return 0.0
+    
+    # Normaliser pour que la somme = 1 (robuste aux deux formats)
+    total = sum(w)
+    if total <= 0:
+        return 0.0
+    
+    w_normalized = [x / total for x in w]
+    
+    # HHI = sum(w²) * 10000
+    hhi = sum(x * x for x in w_normalized) * 10000
+    
+    return round(hhi, 1)
 
 
 def compute_effective_n(weights: List[float]) -> float:
     """
-    Calcule le nombre effectif de positions (1/HHI).
+    Calcule le nombre effectif de positions (inverse HHI).
     
     Représente le nombre équivalent de positions si toutes égales.
+    
+    Exemples:
+    - HHI = 1000 → effective_n = 10
+    - HHI = 2000 → effective_n = 5
+    - HHI = 5000 → effective_n = 2
     """
     hhi = compute_hhi(weights)
-    if hhi == 0:
-        return 0
+    if hhi <= 0:
+        return 0.0
     return round(10000 / hhi, 1)
 
 
