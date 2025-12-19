@@ -974,7 +974,7 @@ class ConstraintReportGenerator:
         return margins
 
     def _counts_in_max_region(self, asset: Any) -> bool:
-        """
+    """
     Détermine si un actif compte dans la contrainte max_region.
     
     Returns True si l'actif est EQUITY_LIKE ou LEVERAGED.
