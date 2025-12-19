@@ -3,7 +3,7 @@ name: 🪙 Crypto Data Pipeline
 # ═══════════════════════════════════════════════════════════════════════════════
 # GÈRE: Données et analyse crypto (volatilité, momentum)
 # SCRIPTS: scripts/update-crypto-data.py + scripts/crypto-volatility-return.js
-# HORAIRE: 03:30 Paris (nuit, avant volume filter 04:00)
+# HORAIRES: 00:00, 08:40, 14:00, 18:30 Paris
 # DURÉE: ~1 minute
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -33,11 +33,32 @@ on:
 
   schedule:
     # ═══════════════════════════════════════════════════════════════════════════
-    # 🌙 NUIT (03:30 Paris) - avant volume filter (04:00)
-    # été: 01:30 UTC | hiver: 02:30 UTC
+    # 🌙 MINUIT (00:00 Paris)
+    # été: 22:00 UTC (J-1) | hiver: 23:00 UTC (J-1)
     # ═══════════════════════════════════════════════════════════════════════════
-    - cron: '30 1 * * *'
-    - cron: '30 2 * * *'
+    - cron: '0 22 * * *'
+    - cron: '0 23 * * *'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ☀️ MATIN (08:40 Paris) - avant markets/sectors
+    # été: 06:40 UTC | hiver: 07:40 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '40 6 * * *'
+    - cron: '40 7 * * *'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🌅 APRES-MIDI (14:00 Paris) - avant US open
+    # été: 12:00 UTC | hiver: 13:00 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '0 12 * * *'
+    - cron: '0 13 * * *'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🌆 SOIR (18:30 Paris) - après Europe close
+    # été: 16:30 UTC | hiver: 17:30 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '30 16 * * *'
+    - cron: '30 17 * * *'
 
 concurrency:
   group: repo-writes-global
@@ -54,6 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_run: ${{ steps.detect.outputs.should_run }}
+      session: ${{ steps.detect.outputs.session }}
       
     steps:
       - name: 🕐 Detect if we should run
@@ -61,6 +83,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "session=manual" >> $GITHUB_OUTPUT
             echo "✅ Manual trigger"
             exit 0
           fi
@@ -70,12 +93,35 @@ jobs:
           echo "📍 Paris time: $PARIS"
           echo "══════════════════════════════════════════════════════════════"
           
-          # Window: 03:25 - 03:35 Paris
-          if [ "$PARIS" -ge "0325" ] && [ "$PARIS" -le "0335" ]; then
-            echo "🪙 Crypto pipeline window detected"
+          SESSION=""
+          
+          # Minuit: 23:55 - 00:05 Paris
+          if [ "$PARIS" -ge "2355" ] || [ "$PARIS" -le "0005" ]; then
+            SESSION="midnight"
+            echo "🌙 MIDNIGHT window detected"
+            
+          # Matin: 08:35 - 08:45 Paris
+          elif [ "$PARIS" -ge "0835" ] && [ "$PARIS" -le "0845" ]; then
+            SESSION="morning"
+            echo "☀️ MORNING window detected"
+            
+          # Après-midi: 13:55 - 14:05 Paris
+          elif [ "$PARIS" -ge "1355" ] && [ "$PARIS" -le "1405" ]; then
+            SESSION="afternoon"
+            echo "🌅 AFTERNOON window detected"
+            
+          # Soir: 18:25 - 18:35 Paris
+          elif [ "$PARIS" -ge "1825" ] && [ "$PARIS" -le "1835" ]; then
+            SESSION="evening"
+            echo "🌆 EVENING window detected"
+          fi
+          
+          if [ -n "$SESSION" ]; then
+            echo "✅ Gate passed: session=$SESSION"
             echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "session=$SESSION" >> $GITHUB_OUTPUT
           else
-            echo "⏭️ Skipped: PARIS=$PARIS not in window (03:25-03:35)"
+            echo "⏭️ Skipped: PARIS=$PARIS not in any window"
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 
@@ -109,20 +155,24 @@ jobs:
         env:
           TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
           FORCE_UPDATE: ${{ github.event.inputs.force_update || 'false' }}
+          SESSION: ${{ needs.gate.outputs.session }}
         run: |
           echo "══════════════════════════════════════════════════════════════"
-          echo "🪙 Mise à jour des données crypto"
+          echo "🪙 Crypto update - Session: $SESSION"
           echo "══════════════════════════════════════════════════════════════"
           
-          if [ -f "data/Crypto.csv" ]; then
+          # Pour les runs fréquents, on skip le check des 24h
+          # sauf pour minuit qui fait un refresh complet
+          if [ -f "data/Crypto.csv" ] && [ "$SESSION" != "midnight" ]; then
             LAST_MODIFIED=$(date -r data/Crypto.csv +%s)
             NOW=$(date +%s)
             AGE=$((NOW - LAST_MODIFIED))
             HOURS=$((AGE / 3600))
-            echo "📅 Dernière mise à jour il y a $HOURS heures"
+            echo "📅 Last update: $HOURS hours ago"
             
-            if [ "$FORCE_UPDATE" = "false" ] && [ $HOURS -lt 24 ]; then
-              echo "⏭️ Données récentes, pas de mise à jour nécessaire"
+            # Skip si moins de 4h (sauf force ou minuit)
+            if [ "$FORCE_UPDATE" = "false" ] && [ $HOURS -lt 4 ]; then
+              echo "⏭️ Recent data, skipping update"
               echo "updated=false" >> $GITHUB_OUTPUT
               exit 0
             fi
@@ -131,7 +181,7 @@ jobs:
           if [ -f "scripts/update-crypto-data.py" ]; then
             python scripts/update-crypto-data.py
           else
-            echo "⚠️ Script non trouvé, utilisation des données existantes"
+            echo "⚠️ Script not found"
           fi
           
           echo "updated=true" >> $GITHUB_OUTPUT
@@ -151,8 +201,18 @@ jobs:
             exit 0
           fi
           
+          SESSION="${{ needs.gate.outputs.session }}"
           TS=$(date -u +'%Y-%m-%d %H:%M UTC')
-          git commit -m "🪙 Crypto data update - $TS [skip ci]"
+          
+          case "$SESSION" in
+            midnight)  EMOJI="🌙" ;;
+            morning)   EMOJI="☀️" ;;
+            afternoon) EMOJI="🌅" ;;
+            evening)   EMOJI="🌆" ;;
+            *)         EMOJI="🪙" ;;
+          esac
+          
+          git commit -m "$EMOJI Crypto [$SESSION] - $TS [skip ci]"
           
           BRANCH="${GITHUB_REF_NAME:-main}"
           for i in 1 2 3; do
@@ -228,8 +288,18 @@ jobs:
             exit 0
           fi
           
+          SESSION="${{ needs.gate.outputs.session }}"
           TS=$(date -u +'%Y-%m-%d %H:%M UTC')
-          git commit -m "🪙 Crypto analysis - $TS [skip ci]"
+          
+          case "$SESSION" in
+            midnight)  EMOJI="🌙" ;;
+            morning)   EMOJI="☀️" ;;
+            afternoon) EMOJI="🌅" ;;
+            evening)   EMOJI="🌆" ;;
+            *)         EMOJI="🪙" ;;
+          esac
+          
+          git commit -m "$EMOJI Crypto analysis [$SESSION] - $TS [skip ci]"
           
           BRANCH="${GITHUB_REF_NAME:-main}"
           for i in 1 2 3; do
@@ -243,6 +313,7 @@ jobs:
         if: always()
         run: |
           echo "# 🪙 Crypto Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "**Session:** ${{ needs.gate.outputs.session }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ -f "data/filtered/Crypto_filtered_volatility.csv" ]; then
