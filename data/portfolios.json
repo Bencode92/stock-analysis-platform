@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une allocation agressive, avec une exposition significative aux actions, notamment dans les secteurs de la santé et de la technologie. Bien que ces secteurs offrent un potentiel de croissance, ils sont également soumis à des fluctuations de marché importantes. De plus, la concentration dans possibles actifs peut accroître la volatilité du portefeuille. Il est essentiel de considérer les risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une allocation agressive, avec une exposition significative aux actions et aux ETF diversifiés. Bien que cela puisse offrir un potentiel de rendement élevé, il est également soumis à une volatilité accrue. Les investisseurs doivent être conscients des risques liés aux fluctuations du marché et aux performances sectorielles. De plus, la concentration dans possibles secteurs peut augmenter le risque global du portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "MUTHOOT FINANCE LTD": "1%",
       "CUMMINS INC": "2%",
@@ -19,11 +19,11 @@
     },
     "Crypto": {},
     "_tickers": {
-      "CEFS": 0.146,
+      "CEFS": 0.15,
       "BUYW": 0.146,
       "MUTHOOTFIN": 0.0059,
       "CMI": 0.02,
-      "LLY": 0.15,
+      "LLY": 0.146,
       "ASML": 0.146,
       "JNJ": 0.146,
       "STLD": 0.146,
@@ -33,7 +33,7 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 17.33,
+      "vol_realized": 17.24,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -43,15 +43,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 17.33,
-          "slack": 2.33,
+          "observed": 17.24,
+          "slack": 2.24,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -0.67
+            "diff_from_target": -0.76
           }
         },
         {
@@ -95,14 +95,14 @@
           "status": "BINDING",
           "details": {
             "largest_position": {
-              "id": "EQ_10",
-              "name": "ELI LILLY",
+              "id": "Saba Capital Income & Opportunities ETF",
+              "name": "Saba Capital Income & Opportunities ETF",
               "weight": 15.0
             },
             "positions_above_10pct": [
               {
                 "id": "Saba Capital Income & Opportunities ETF",
-                "weight": 14.6
+                "weight": 15.0
               },
               {
                 "id": "Main Buywrite ETF",
@@ -110,7 +110,7 @@
               },
               {
                 "id": "EQ_10",
-                "weight": 15.0
+                "weight": 14.6
               },
               {
                 "id": "EQ_523",
@@ -136,10 +136,10 @@
           "binding": true,
           "status": "BINDING",
           "details": {
-            "most_concentrated": "Santé",
+            "most_concentrated": "Diversified",
             "all_sectors": {
-              "Santé": 29.6,
-              "Diversified": 29.2,
+              "Diversified": 29.6,
+              "Santé": 29.2,
               "Technologie de l'information": 14.6,
               "Matériaux": 14.6,
               "Bonds": 5.0,
@@ -161,8 +161,8 @@
             "most_concentrated": "N/A",
             "counts_in_max_region": {},
             "all_regions": {
-              "Etats-Unis": 50.61,
-              "Global": 34.2,
+              "Etats-Unis": 50.21,
+              "Global": 34.6,
               "Pays-Bas": 14.6,
               "Inde": 0.59
             },
@@ -208,30 +208,30 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 50.0,
-          "observed": 51.2,
-          "slack": -1.2,
+          "observed": 50.8,
+          "slack": -0.8,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 35.0,
             "range_max": 50.0,
-            "slack_from_min": 16.2,
-            "slack_from_max": -1.2
+            "slack_from_min": 15.8,
+            "slack_from_max": -0.8
           }
         },
         {
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 19.6,
-          "slack": -4.6,
+          "observed": 20.0,
+          "slack": -5.0,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 14.6,
-            "slack_from_max": -4.6
+            "slack_from_min": 15.0,
+            "slack_from_max": -5.0
           }
         },
         {
@@ -263,8 +263,8 @@
           "name": "alternative_cap",
           "constraint_type": "max",
           "cap": 20.0,
-          "observed": 29.2,
-          "slack": -9.2,
+          "observed": 29.6,
+          "slack": -9.6,
           "binding": false,
           "status": "CRITICAL",
           "details": {
@@ -288,20 +288,20 @@
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
         "🟡 BINDING: max_sector at 29.6% (cap=30.0%) — monitor closely",
         "🟠 VIOLATED: bucket_core exceeded by 5.8% — reduce exposure",
-        "🟠 VIOLATED: bucket_satellite exceeded by 1.2% — reduce exposure",
-        "🟠 VIOLATED: bucket_defensive exceeded by 4.6% — reduce exposure",
-        "🔴 CRITICAL: alternative_cap violated by 9.2% — immediate action required",
+        "🟠 VIOLATED: bucket_satellite exceeded by 0.8% — reduce exposure",
+        "🟠 VIOLATED: bucket_defensive exceeded by 5.0% — reduce exposure",
+        "🔴 CRITICAL: alternative_cap violated by 9.6% — immediate action required",
         "⚠️ 5 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
-          "ETF": 29.2,
-          "Actions": 65.8,
+          "ETF": 29.6,
+          "Actions": 65.4,
           "Obligations": 5.0
         },
         "by_sector": {
-          "Santé": 29.6,
-          "Diversified": 29.2,
+          "Diversified": 29.6,
+          "Santé": 29.2,
           "Technologie de l'information": 14.6,
           "Matériaux": 14.6,
           "Bonds": 5.0,
@@ -310,20 +310,20 @@
           "Finance": 0.59
         },
         "by_region": {
-          "Etats-Unis": 50.61,
-          "Global": 34.2,
+          "Etats-Unis": 50.21,
+          "Global": 34.6,
           "Pays-Bas": 14.6,
           "Inde": 0.59
         },
         "by_risk_bucket": {
-          "alternative": 29.2,
-          "unknown": 65.8,
+          "alternative": 29.6,
+          "unknown": 65.4,
           "bond_like": 5.0
         },
         "by_role": {
-          "defensive": 19.6,
+          "defensive": 20.0,
           "core": 29.2,
-          "satellite": 51.2
+          "satellite": 50.8
         },
         "concentration": {
           "hhi": 4820.0,
@@ -344,23 +344,11 @@
       },
       "ticker_mapping": [
         {
-          "id": "EQ_10",
-          "ticker": "EQ_10",
-          "isin": null,
-          "name": "ELI LILLY",
-          "weight_pct": 15.0,
-          "category": "Actions",
-          "risk_bucket": "unknown",
-          "sector": "Santé",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
           "id": "Saba Capital Income & Opportunities ETF",
           "ticker": "Saba Capital Income & Opportunities ETF",
           "isin": NaN,
           "name": "Saba Capital Income & Opportunities ETF",
-          "weight_pct": 14.6,
+          "weight_pct": 15.0,
           "category": "ETF",
           "risk_bucket": "alternative",
           "sector": "Diversified",
@@ -377,6 +365,18 @@
           "risk_bucket": "alternative",
           "sector": "Diversified",
           "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "EQ_10",
+          "ticker": "EQ_10",
+          "isin": null,
+          "name": "ELI LILLY",
+          "weight_pct": 14.6,
+          "category": "Actions",
+          "risk_bucket": "unknown",
+          "sector": "Santé",
+          "region": "Etats-Unis",
           "exchange": null
         },
         {
@@ -480,13 +480,13 @@
     },
     "_exposures": {
       "by_category": {
-        "ETF": 29.2,
-        "Actions": 65.8,
+        "ETF": 29.6,
+        "Actions": 65.4,
         "Obligations": 5.0
       },
       "by_sector": {
-        "Santé": 29.6,
-        "Diversified": 29.2,
+        "Diversified": 29.6,
+        "Santé": 29.2,
         "Technologie de l'information": 14.6,
         "Matériaux": 14.6,
         "Bonds": 5.0,
@@ -495,20 +495,20 @@
         "Finance": 0.59
       },
       "by_region": {
-        "Etats-Unis": 50.61,
-        "Global": 34.2,
+        "Etats-Unis": 50.21,
+        "Global": 34.6,
         "Pays-Bas": 14.6,
         "Inde": 0.59
       },
       "by_risk_bucket": {
-        "alternative": 29.2,
-        "unknown": 65.8,
+        "alternative": 29.6,
+        "unknown": 65.4,
         "bond_like": 5.0
       },
       "by_role": {
-        "defensive": 19.6,
+        "defensive": 20.0,
         "core": 29.2,
-        "satellite": 51.2
+        "satellite": 50.8
       },
       "concentration": {
         "hhi": 4820.0,
@@ -543,7 +543,7 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, combinant des actions et des obligations pour équilibrer le risque et le rendement. La présence d'actifs défensifs, tels que les obligations, vise à réduire la volatilité. Cependant, la dépendance à possibles secteurs peut exposer le portefeuille à des risques spécifiques, notamment en cas de ralentissement économique. Il est important de surveiller les fluctuations du marché et les impacts potentiels sur les actifs choisis. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant actions et obligations pour réduire la volatilité. Bien que cette stratégie puisse offrir une possiblee stabilité, elle n'est pas exempte de risques, notamment ceux liés aux fluctuations des taux d'intérêt et aux performances sectorielles. L'exposition à des entreprises spécifiques peut également introduire des risques supplémentaires. Les investisseurs doivent évaluer leur tolérance au risque avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "13%",
       "FOX CORP CLASS A": "2%",
@@ -1080,7 +1080,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie stable, avec une forte allocation en obligations, visant à minimiser la volatilité et à assurer des revenus réguliers. La diversification dans le secteur de la santé et des biens de consommation contribue à la résilience du portefeuille. Cependant, la dépendance aux obligations peut limiter le potentiel de rendement en période de croissance économique. Il est crucial de surveiller les taux d'intérêt et leur impact sur les actifs obligataires. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie stable, avec une forte concentration sur les obligations et des actions à faible volatilité. Cela vise à réduire les fluctuations du capital tout en générant des revenus. Cependant, il est important de noter que même les investissements à faible volatilité comportent des risques, notamment ceux liés aux taux d'intérêt et aux fluctuations du marché. Les investisseurs doivent être conscients des limites potentielles en termes de rendement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "TJX INC": "10%",
@@ -1628,7 +1628,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-19T09:57:06.743701",
+    "generated_at": "2025-12-19T10:06:09.022928",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
