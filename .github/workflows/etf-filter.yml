@@ -1,139 +1,278 @@
-name: ETF Advanced Filter
+name: 📊 ETF Schedule
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GÈRE: ETF + Bonds
+# - HEAVY (nuit 01:00)  → etf-advanced-filter.js (tous ETF + traductions)
+# - REFRESH AM (09:25)  → etf-bond-daily-metrics.js (Top 50, rapide)
+# - REFRESH PM (16:00)  → etf-bond-daily-metrics.js (Top 50, rapide)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Mode de traitement'
+        required: true
+        type: choice
+        options: [heavy, refresh]
       limit_etf:
-        description: 'Nombre max ETF à traiter (0 = tous)'
-        required: false
+        description: 'Limite ETF (0 = tous)'
         default: '0'
-        type: string
       limit_bonds:
-        description: 'Nombre max Bonds à traiter (0 = tous)'
-        required: false
+        description: 'Limite Bonds (0 = tous)'
         default: '0'
-        type: string
-      debug:
-        description: 'Mode debug (logs détaillés)'
-        required: false
-        default: false
-        type: boolean
-  schedule:
-    - cron: '0 14 * * 1-5'  # 14h UTC = 16h Paris (été) / 15h Paris (hiver)
 
-# 🔒 Verrou global (même group que les autres workflows qui poussent)
-# Non prioritaire : attend / se fait annuler si le workflow Crypto (prioritaire) démarre
+  schedule:
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🌙 NIGHT HEAVY (01:00 Paris) - etf-advanced-filter.js (~5h)
+    # été: 23:00 UTC (J-1) | hiver: 00:00 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '0 23 * * 0-4'   # Dim-Jeu soir UTC = Lun-Ven nuit Paris
+    - cron: '0 0 * * 1-5'    # Lun-Ven 00:00 UTC
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ☀️ AM REFRESH (09:25 Paris) - etf-bond-daily-metrics.js
+    # été: 07:25 UTC | hiver: 08:25 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '25 7 * * 1-5'
+    - cron: '25 8 * * 1-5'
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🌅 PM REFRESH (16:00 Paris) - etf-bond-daily-metrics.js
+    # été: 14:00 UTC | hiver: 15:00 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '0 14 * * 1-5'
+    - cron: '0 15 * * 1-5'
+
 concurrency:
   group: repo-writes-global
   cancel-in-progress: false
 
-# ✅ Permissions pour pousser avec GITHUB_TOKEN
 permissions:
   contents: write
 
+env:
+  TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+
 jobs:
-  filter-etfs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 1: Gate - Déterminer le mode (heavy vs refresh)
+  # ═══════════════════════════════════════════════════════════════════════════
+  gate:
     runs-on: ubuntu-latest
-
+    outputs:
+      mode: ${{ steps.detect.outputs.mode }}
+      should_run: ${{ steps.detect.outputs.should_run }}
+      
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0   # nécessaire pour rebase correct
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-
-    - name: Install dependencies
-      # npm ci (si lock présent) ; sinon fallback minimal
-      run: |
-        npm ci || npm install csv-parse axios
-
-    - name: Show limits (if any)
-      run: |
-        echo "📊 Configuration:"
-        echo "  - LIMIT_ETF: ${{ inputs.limit_etf || '0 (tous)' }}"
-        echo "  - LIMIT_BONDS: ${{ inputs.limit_bonds || '0 (tous)' }}"
-        echo "  - DEBUG: ${{ inputs.debug || 'false' }}"
-
-    - name: Run ETF filter
-      id: run_filter
-      env:
-        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
-        # === LIMITES (0 = pas de limite) ===
-        LIMIT_ETF: ${{ inputs.limit_etf || '0' }}
-        LIMIT_BONDS: ${{ inputs.limit_bonds || '0' }}
-        # === TRADUCTION ACTIVÉE ===
-        TRANSLATE_OBJECTIVE: '1'
-        TRANSLATOR: 'openai'
-        API_CHAT: ${{ secrets.API_CHAT }}
-        OPENAI_MODEL: 'gpt-4o-mini'
-        DEBUG: ${{ inputs.debug && '1' || '0' }}
-      run: node etf-advanced-filter.js
-
-    - name: Check holdings files
-      run: |
-        echo "📁 Contenu du dossier data:"
-        ls -lh data/ || true
-        echo ""
-        echo "📋 Holdings ETFs (premières lignes):"
-        head -n 5 data/combined_etfs_holdings.csv || echo "❌ Fichier non trouvé"
-        echo ""
-        echo "📋 Holdings Bonds (premières lignes):"
-        head -n 5 data/combined_bonds_holdings.csv || echo "❌ Fichier non trouvé"
-
-    - name: Commit results (rebase + retry safe push)
-      run: |
-        set -e
-        git config user.email "actions@github.com"
-        git config user.name "github-actions[bot]"
-
-        # Ajouter tous les fichiers générés (silencieux si absents)
-        git add data/filtered_advanced.json 2>/dev/null || true
-        git add data/weekly_snapshot.json 2>/dev/null || true
-        git add data/weekly_snapshot_etfs.csv 2>/dev/null || true
-        git add data/weekly_snapshot_bonds.csv 2>/dev/null || true
-        git add data/combined_etfs_holdings.csv 2>/dev/null || true
-        git add data/combined_bonds_holdings.csv 2>/dev/null || true
-        git add data/objective_translations.cache.json 2>/dev/null || true
-
-        # Versionne package* si modifiés (optionnel)
-        git add -f package.json package-lock.json 2>/dev/null || true
-
-        # Commit seulement s'il y a des changements
-        if git diff --quiet && git diff --staged --quiet; then
-          echo "ℹ️ Rien à committer"
-          exit 0
-        fi
-
-        # Message de commit avec info limite
-        LIMIT_INFO=""
-        if [ "${{ inputs.limit_etf }}" != "0" ] && [ -n "${{ inputs.limit_etf }}" ]; then
-          LIMIT_INFO=" [LIMITED: ETF=${{ inputs.limit_etf }}"
-          if [ "${{ inputs.limit_bonds }}" != "0" ] && [ -n "${{ inputs.limit_bonds }}" ]; then
-            LIMIT_INFO="${LIMIT_INFO}, BONDS=${{ inputs.limit_bonds }}]"
-          else
-            LIMIT_INFO="${LIMIT_INFO}]"
-          fi
-        elif [ "${{ inputs.limit_bonds }}" != "0" ] && [ -n "${{ inputs.limit_bonds }}" ]; then
-          LIMIT_INFO=" [LIMITED: BONDS=${{ inputs.limit_bonds }}]"
-        fi
-
-        git commit -m "Update filtered ETFs + bonds with holdings (FR objectives)${LIMIT_INFO} [skip ci]"
-
-        # Push robuste : fetch + rebase + 3 tentatives
-        BRANCH="${GITHUB_REF_NAME:-main}"
-        for i in 1 2 3; do
-          git fetch origin
-          git rebase "origin/$BRANCH" || { git rebase --abort || true; }
-          if git push origin "HEAD:$BRANCH"; then
-            echo "✅ Push réussi"
+      - name: 🕐 Detect ETF mode based on Paris time
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual trigger: mode=${{ inputs.mode }}"
             exit 0
           fi
-          echo "↻ Retry push ($i/3)..." && sleep $((RANDOM%5+2))
-        done
-        echo "❌ Échec du push après 3 tentatives" >&2
-        exit 1
+          
+          PARIS=$(TZ=Europe/Paris date +%H%M)
+          echo "══════════════════════════════════════════════════════════════"
+          echo "📍 Paris time: $PARIS"
+          echo "══════════════════════════════════════════════════════════════"
+          
+          MODE=""
+          
+          # Night heavy: 00:55 - 01:05 Paris
+          if [ "$PARIS" -ge "0055" ] && [ "$PARIS" -le "0105" ]; then
+            MODE="heavy"
+            echo "🌙 Night HEAVY → etf-advanced-filter.js"
+            
+          # AM refresh: 09:20 - 09:30 Paris
+          elif [ "$PARIS" -ge "0920" ] && [ "$PARIS" -le "0930" ]; then
+            MODE="refresh"
+            echo "☀️ AM REFRESH → etf-bond-daily-metrics.js"
+            
+          # PM refresh: 15:55 - 16:05 Paris
+          elif [ "$PARIS" -ge "1555" ] && [ "$PARIS" -le "1605" ]; then
+            MODE="refresh"
+            echo "🌅 PM REFRESH → etf-bond-daily-metrics.js"
+          fi
+          
+          if [ -n "$MODE" ]; then
+            echo "══════════════════════════════════════════════════════════════"
+            echo "✅ Gate passed: mode=$MODE"
+            echo "mode=$MODE" >> $GITHUB_OUTPUT
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "══════════════════════════════════════════════════════════════"
+            echo "⏭️ Gate skipped: PARIS=$PARIS not in any window"
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 2a: ETF HEAVY (nuit) - etf-advanced-filter.js
+  # ═══════════════════════════════════════════════════════════════════════════
+  etf-heavy:
+    needs: gate
+    if: needs.gate.outputs.should_run == 'true' && needs.gate.outputs.mode == 'heavy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6h max
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install csv-parse axios
+
+      - name: 🌙 Run ETF Advanced Filter (HEAVY)
+        env:
+          LIMIT_ETF: ${{ inputs.limit_etf || '0' }}
+          LIMIT_BONDS: ${{ inputs.limit_bonds || '0' }}
+          TRANSLATE_OBJECTIVE: '1'
+          TRANSLATOR: 'openai'
+          API_CHAT: ${{ secrets.API_CHAT }}
+          OPENAI_MODEL: 'gpt-4o-mini'
+        run: |
+          echo "══════════════════════════════════════════════════════════════"
+          echo "🌙 MODE: HEAVY (etf-advanced-filter.js)"
+          echo "📊 Limits: ETF=$LIMIT_ETF, BONDS=$LIMIT_BONDS"
+          echo "🌐 Translate: $TRANSLATE_OBJECTIVE"
+          echo "══════════════════════════════════════════════════════════════"
+          
+          node etf-advanced-filter.js
+
+      - name: 📋 Verify generated files
+        run: |
+          echo "📂 Generated files:"
+          ls -lh data/filtered_advanced.json data/weekly_snapshot*.* 2>/dev/null || true
+          ls -lh data/combined_*.csv 2>/dev/null || true
+          echo ""
+          echo "📋 ETF Holdings (first 3 lines):"
+          head -n 3 data/combined_etfs_holdings.csv 2>/dev/null || echo "Not found"
+
+      - name: 💾 Commit and push
+        run: |
+          set -e
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          
+          git add data/filtered_advanced.json 2>/dev/null || true
+          git add data/weekly_snapshot.json 2>/dev/null || true
+          git add data/weekly_snapshot_etfs.csv 2>/dev/null || true
+          git add data/weekly_snapshot_bonds.csv 2>/dev/null || true
+          git add data/combined_etfs_holdings.csv 2>/dev/null || true
+          git add data/combined_bonds_holdings.csv 2>/dev/null || true
+          git add data/objective_translations.cache.json 2>/dev/null || true
+          
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "ℹ️ Nothing to commit"
+            exit 0
+          fi
+          
+          TS=$(date -u +'%Y-%m-%d %H:%M UTC')
+          git commit -m "🌙 ETF [heavy] - $TS [skip ci]"
+          
+          BRANCH="${GITHUB_REF_NAME:-main}"
+          for i in 1 2 3; do
+            git fetch origin && git rebase "origin/$BRANCH" || git rebase --abort || true
+            git push origin "HEAD:$BRANCH" && echo "✅ Push OK" && exit 0
+            sleep $((RANDOM%5+2))
+          done
+          exit 1
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 2b: ETF REFRESH (AM/PM) - etf-bond-daily-metrics.js
+  # ═══════════════════════════════════════════════════════════════════════════
+  etf-refresh:
+    needs: gate
+    if: needs.gate.outputs.should_run == 'true' && needs.gate.outputs.mode == 'refresh'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install csv-parse axios
+
+      - name: ☀️ Run ETF Bond Daily Metrics (REFRESH)
+        env:
+          NODE_ENV: production
+        run: |
+          PARIS=$(TZ=Europe/Paris date +%H%M)
+          if [ "$PARIS" -lt "1200" ]; then
+            SESSION="AM"
+          else
+            SESSION="PM"
+          fi
+          
+          echo "══════════════════════════════════════════════════════════════"
+          echo "☀️ MODE: REFRESH $SESSION (etf-bond-daily-metrics.js)"
+          echo "══════════════════════════════════════════════════════════════"
+          
+          node etf-bond-daily-metrics.js
+
+      - name: 📋 Verify generated files
+        run: |
+          echo "📂 Generated files:"
+          ls -lh data/daily_metrics.json data/combined_snapshot.json 2>/dev/null || true
+          ls -lh data/daily_metrics_*.csv data/combined_*.csv 2>/dev/null || true
+
+      - name: 💾 Commit and push
+        run: |
+          set -e
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          
+          git add data/daily_metrics.json 2>/dev/null || true
+          git add data/daily_metrics_etfs.csv 2>/dev/null || true
+          git add data/daily_metrics_bonds.csv 2>/dev/null || true
+          git add data/combined_snapshot.json 2>/dev/null || true
+          git add data/combined_etfs.csv 2>/dev/null || true
+          git add data/combined_bonds.csv 2>/dev/null || true
+          git add data/combined_etfs_exposure.csv 2>/dev/null || true
+          git add data/combined_etfs_holdings.csv 2>/dev/null || true
+          git add data/combined_bonds_holdings.csv 2>/dev/null || true
+          
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "ℹ️ Nothing to commit"
+            exit 0
+          fi
+          
+          PARIS=$(TZ=Europe/Paris date +%H%M)
+          if [ "$PARIS" -lt "1200" ]; then
+            EMOJI="☀️"
+            SESSION="AM"
+          else
+            EMOJI="🌅"
+            SESSION="PM"
+          fi
+          
+          TS=$(date -u +'%Y-%m-%d %H:%M UTC')
+          git commit -m "$EMOJI ETF [refresh-$SESSION] - $TS [skip ci]"
+          
+          BRANCH="${GITHUB_REF_NAME:-main}"
+          for i in 1 2 3; do
+            git fetch origin && git rebase "origin/$BRANCH" || git rebase --abort || true
+            git push origin "HEAD:$BRANCH" && echo "✅ Push OK" && exit 0
+            sleep $((RANDOM%5+2))
+          done
+          exit 1
