@@ -1,8 +1,12 @@
-name: Filter Stocks by Volume
+name: 📊 Filter Stocks by Volume
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GÈRE: Filtrage par volume (tous marchés)
+# SCRIPT: scripts/stock-filter-by-volume.js
+# HORAIRE: 04:00 Paris (nuit, après clôture US)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 on:
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       debug:
@@ -10,141 +14,154 @@ on:
         required: false
         default: '0'
 
+  schedule:
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🌙 NUIT (04:00 Paris) - après clôture US
+    # été: 02:00 UTC | hiver: 03:00 UTC
+    # ═══════════════════════════════════════════════════════════════════════════
+    - cron: '0 2 * * 1-5'
+    - cron: '0 3 * * 1-5'
+
 concurrency:
-  group: filter-stocks
+  group: repo-writes-global
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
+env:
+  TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+
 jobs:
-  filter-stocks:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 1: Gate
+  # ═══════════════════════════════════════════════════════════════════════════
+  gate:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      should_run: ${{ steps.detect.outputs.should_run }}
+      
+    steps:
+      - name: 🕐 Detect if we should run
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual trigger"
+            exit 0
+          fi
+          
+          PARIS=$(TZ=Europe/Paris date +%H%M)
+          echo "══════════════════════════════════════════════════════════════"
+          echo "📍 Paris time: $PARIS"
+          echo "══════════════════════════════════════════════════════════════"
+          
+          # Window: 03:55 - 04:05 Paris
+          if [ "$PARIS" -ge "0355" ] && [ "$PARIS" -le "0405" ]; then
+            echo "🌙 Volume filter window detected"
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️ Skipped: PARIS=$PARIS not in window (03:55-04:05)"
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 2: Filter by Volume
+  # ═══════════════════════════════════════════════════════════════════════════
+  filter-stocks:
+    needs: gate
+    if: needs.gate.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Run stock filtering
-      id: filter
-      env:
-        TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
-        DEBUG: ${{ github.event.inputs.debug || '0' }}
-        DATA_DIR: data
-        OUTPUT_DIR: data/filtered
-      run: |
-        echo "🚀 Démarrage du filtrage des stocks"
-        node scripts/stock-filter-by-volume.js
-    
-    - name: Upload filtered data
-      uses: actions/upload-artifact@v4
-      with:
-        name: filtered-stocks
-        path: data/filtered/**
-        retention-days: 30
-    
-    - name: Commit and push filtered data
-      if: success()
-      run: |
-        git config --local user.email "actions@github.com"
-        git config --local user.name "GitHub Actions"
-        
-        # Add changes
-        git add data/filtered/*.csv data/fundamentals_cache.json || true
-        
-        # Check if there are changes to commit
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-          exit 0
-        fi
-        
-        git commit -m "Update filtered stocks data [skip ci]"
-        
-        # Pull with rebase to handle concurrent changes, retry up to 3 times
-        MAX_RETRIES=3
-        RETRY=0
-        while [ $RETRY -lt $MAX_RETRIES ]; do
-          git pull --rebase origin main && break
-          RETRY=$((RETRY + 1))
-          echo "Retry $RETRY/$MAX_RETRIES..."
-          sleep 5
-        done
-        
-        # Push with retry
-        RETRY=0
-        while [ $RETRY -lt $MAX_RETRIES ]; do
-          git push origin main && break
-          RETRY=$((RETRY + 1))
-          echo "Push retry $RETRY/$MAX_RETRIES..."
-          git pull --rebase origin main
-          sleep 5
-        done
-    
-    - name: Summary
-      if: always()
-      run: |
-        echo "## 📊 Résumé du filtrage" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Statistiques par région
-        if [ -f data/filtered/Actions_US_filtered.csv ]; then
-          US_COUNT=$(tail -n +2 data/filtered/Actions_US_filtered.csv | wc -l)
-          US_REJ=$(tail -n +2 data/filtered/Actions_US_rejected.csv 2>/dev/null | wc -l || echo 0)
-          echo "### 🇺🇸 États-Unis" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Acceptés: **$US_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
-          echo "- ❌ Rejetés: **$US_REJ** stocks" >> $GITHUB_STEP_SUMMARY
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install csv-parse axios
+
+      - name: 📊 Run Stock Filter by Volume
+        env:
+          DEBUG: ${{ inputs.debug || '0' }}
+          DATA_DIR: data
+          OUTPUT_DIR: data/filtered
+        run: |
+          echo "══════════════════════════════════════════════════════════════"
+          echo "📊 Running stock-filter-by-volume.js"
+          echo "══════════════════════════════════════════════════════════════"
+          
+          node scripts/stock-filter-by-volume.js
+
+      - name: Upload filtered data
+        uses: actions/upload-artifact@v4
+        with:
+          name: filtered-stocks-${{ github.run_number }}
+          path: data/filtered/**
+          retention-days: 7
+
+      - name: 📋 Summary
+        run: |
+          echo "📂 Filtered files:"
+          ls -lh data/filtered/*.csv 2>/dev/null || echo "No CSV files"
+          
+          echo ""
+          echo "📈 Counts:"
+          for f in data/filtered/*_filtered.csv; do
+            if [ -f "$f" ]; then
+              COUNT=$(tail -n +2 "$f" | wc -l)
+              echo "  $(basename $f): $COUNT stocks"
+            fi
+          done
+          
+          # GitHub Summary
+          echo "## 📊 Volume Filter Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        if [ -f data/filtered/Actions_Europe_filtered.csv ]; then
-          EU_COUNT=$(tail -n +2 data/filtered/Actions_Europe_filtered.csv | wc -l)
-          EU_REJ=$(tail -n +2 data/filtered/Actions_Europe_rejected.csv 2>/dev/null | wc -l || echo 0)
-          echo "### 🇪🇺 Europe" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Acceptés: **$EU_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
-          echo "- ❌ Rejetés: **$EU_REJ** stocks" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        if [ -f data/filtered/Actions_Asie_filtered.csv ]; then
-          ASIA_COUNT=$(tail -n +2 data/filtered/Actions_Asie_filtered.csv | wc -l)
-          ASIA_REJ=$(tail -n +2 data/filtered/Actions_Asie_rejected.csv 2>/dev/null | wc -l || echo 0)
-          echo "### 🌏 Asie" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Acceptés: **$ASIA_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
-          echo "- ❌ Rejetés: **$ASIA_REJ** stocks" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        # Fondamentaux Buffett
-        if [ -f data/fundamentals_cache.json ]; then
-          FUND_COUNT=$(grep -o '"roe":' data/fundamentals_cache.json | wc -l || echo 0)
-          echo "### 📈 Fondamentaux Buffett" >> $GITHUB_STEP_SUMMARY
-          echo "- Stocks enrichis: **$FUND_COUNT**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        # Aperçu des acceptés
-        if [ -f data/filtered/Actions_filtrees_par_volume.csv ]; then
-          echo "## ✅ Stocks Acceptés (Top 20)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -n 21 data/filtered/Actions_filtrees_par_volume.csv | column -t -s, >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        # Aperçu des rejetés
-        if [ -f data/filtered/Actions_rejetes_par_volume.csv ]; then
-          echo "## ❌ Stocks Rejetés (Top 20)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -n 21 data/filtered/Actions_rejetes_par_volume.csv | column -t -s, >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-        fi
+          
+          if [ -f data/filtered/Actions_US_filtered.csv ]; then
+            US_COUNT=$(tail -n +2 data/filtered/Actions_US_filtered.csv | wc -l)
+            echo "- 🇺🇸 US: **$US_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f data/filtered/Actions_Europe_filtered.csv ]; then
+            EU_COUNT=$(tail -n +2 data/filtered/Actions_Europe_filtered.csv | wc -l)
+            echo "- 🇪🇺 Europe: **$EU_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f data/filtered/Actions_Asie_filtered.csv ]; then
+            ASIA_COUNT=$(tail -n +2 data/filtered/Actions_Asie_filtered.csv | wc -l)
+            echo "- 🌏 Asia: **$ASIA_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 💾 Commit and push
+        run: |
+          set -e
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          
+          git add data/filtered/*.csv 2>/dev/null || true
+          git add data/fundamentals_cache.json 2>/dev/null || true
+          
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "ℹ️ Nothing to commit"
+            exit 0
+          fi
+          
+          TS=$(date -u +'%Y-%m-%d %H:%M UTC')
+          git commit -m "📊 Volume Filter - $TS [skip ci]"
+          
+          BRANCH="${GITHUB_REF_NAME:-main}"
+          for i in 1 2 3; do
+            git fetch origin && git rebase "origin/$BRANCH" || git rebase --abort || true
+            git push origin "HEAD:$BRANCH" && echo "✅ Push OK" && exit 0
+            sleep $((RANDOM%5+2))
+          done
+          exit 1
