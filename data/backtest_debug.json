@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2025-12-19T16:18:08.336376",
+    "generated_at": "2025-12-19T16:42:40.323781",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -20,8 +20,8 @@
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 29,
-    "tickers_with_data": 29,
+    "total_tickers_requested": 30,
+    "tickers_with_data": 30,
     "tickers_missing": []
   },
   "assets_by_type": {
@@ -31,6 +31,7 @@
       "CABK",
       "CMI",
       "ENGI",
+      "FOXA",
       "FPE",
       "G",
       "HYLS",
@@ -244,7 +245,7 @@
       "total_return_pct": 0.78,
       "volatility_annual_pct": 4.37,
       "weights_by_profile": {
-        "Agressif": 14.6
+        "Agressif": 15.0
       },
       "price_samples": [
         {
@@ -358,7 +359,7 @@
       "total_return_pct": 24.44,
       "volatility_annual_pct": 28.18,
       "weights_by_profile": {
-        "Agressif": 1.18
+        "Agressif": 14.2
       },
       "price_samples": [
         {
@@ -415,6 +416,7 @@
       "total_return_pct": 17.21,
       "volatility_annual_pct": 15.33,
       "weights_by_profile": {
+        "Modéré": 2.0,
         "Stable": 2.05
       },
       "price_samples": [
@@ -461,6 +463,63 @@
       ],
       "is_benchmark": false
     },
+    "FOXA": {
+      "ticker": "FOXA",
+      "type": "Action",
+      "n_days_data": 86,
+      "first_date": "2025-08-22",
+      "last_date": "2025-12-19",
+      "first_price": 59.42,
+      "last_price": 71.26,
+      "total_return_pct": 19.93,
+      "volatility_annual_pct": 27.29,
+      "weights_by_profile": {
+        "Agressif": 5.0
+      },
+      "price_samples": [
+        {
+          "date": "2025-08-22",
+          "close": 59.42,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-09-22",
+          "close": 62.42,
+          "prev_date": "2025-09-19",
+          "prev_close": 60.62,
+          "daily_return_pct": 2.9693,
+          "formula": "(62.4200 / 60.6200) - 1"
+        },
+        {
+          "date": "2025-10-22",
+          "close": 58.58,
+          "prev_date": "2025-10-21",
+          "prev_close": 58.73,
+          "daily_return_pct": -0.2554,
+          "formula": "(58.5800 / 58.7300) - 1"
+        },
+        {
+          "date": "2025-11-20",
+          "close": 65.14,
+          "prev_date": "2025-11-19",
+          "prev_close": 64.78,
+          "daily_return_pct": 0.5557,
+          "formula": "(65.1400 / 64.7800) - 1"
+        },
+        {
+          "date": "2025-12-19",
+          "close": 71.26,
+          "prev_date": "2025-12-18",
+          "prev_close": 71.26,
+          "daily_return_pct": 0.0,
+          "formula": "(71.2600 / 71.2600) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
     "FPE": {
       "ticker": "FPE",
       "type": "Action",
@@ -472,7 +531,7 @@
       "total_return_pct": 0.61,
       "volatility_annual_pct": 4.05,
       "weights_by_profile": {
-        "Modéré": 14.6
+        "Modéré": 14.2
       },
       "price_samples": [
         {
@@ -757,8 +816,8 @@
       "total_return_pct": 16.19,
       "volatility_annual_pct": 14.96,
       "weights_by_profile": {
-        "Agressif": 14.6,
-        "Modéré": 14.6,
+        "Agressif": 14.2,
+        "Modéré": 14.2,
         "Stable": 10.26
       },
       "price_samples": [
@@ -816,7 +875,7 @@
       "total_return_pct": 48.5,
       "volatility_annual_pct": 31.21,
       "weights_by_profile": {
-        "Agressif": 14.6
+        "Agressif": 14.2
       },
       "price_samples": [
         {
@@ -873,7 +932,7 @@
       "total_return_pct": 41.24,
       "volatility_annual_pct": 27.49,
       "weights_by_profile": {
-        "Agressif": 14.6
+        "Agressif": 14.2
       },
       "price_samples": [
         {
@@ -985,6 +1044,7 @@
       "total_return_pct": 22.43,
       "volatility_annual_pct": 23.02,
       "weights_by_profile": {
+        "Agressif": 2.0,
         "Modéré": 2.0
       },
       "price_samples": [
@@ -1042,7 +1102,7 @@
       "total_return_pct": 4.0,
       "volatility_annual_pct": 9.04,
       "weights_by_profile": {
-        "Modéré": 14.6
+        "Modéré": 14.2
       },
       "price_samples": [
         {
@@ -1268,8 +1328,7 @@
       "total_return_pct": 31.58,
       "volatility_annual_pct": 30.25,
       "weights_by_profile": {
-        "Agressif": 8.82,
-        "Modéré": 10.0
+        "Modéré": 14.2
       },
       "price_samples": [
         {
@@ -1383,8 +1442,6 @@
       "total_return_pct": 13.43,
       "volatility_annual_pct": 14.75,
       "weights_by_profile": {
-        "Agressif": 10.0,
-        "Modéré": 9.6,
         "Stable": 10.26
       },
       "price_samples": [
@@ -1442,7 +1499,7 @@
       "total_return_pct": 25.83,
       "volatility_annual_pct": 35.29,
       "weights_by_profile": {
-        "Modéré": 14.6
+        "Modéré": 10.0
       },
       "price_samples": [
         {
@@ -1499,8 +1556,8 @@
       "total_return_pct": 2.47,
       "volatility_annual_pct": 24.74,
       "weights_by_profile": {
-        "Agressif": 14.6,
-        "Modéré": 5.0
+        "Agressif": 14.2,
+        "Modéré": 14.2
       },
       "price_samples": [
         {
@@ -1725,7 +1782,7 @@
         {
           "ticker": "BUYW",
           "type": "Action",
-          "weight_pct": 14.6,
+          "weight_pct": 15.0,
           "price_prev": 14.28,
           "price_today": 14.28,
           "return_pct": 0.0,
@@ -1734,16 +1791,25 @@
         {
           "ticker": "MUTHOOTFIN",
           "type": "Action",
-          "weight_pct": 14.6,
+          "weight_pct": 14.2,
           "price_prev": 3747.5,
           "price_today": 3781.55,
           "return_pct": 0.9086,
-          "contribution_pct": 0.1327
+          "contribution_pct": 0.129
+        },
+        {
+          "ticker": "CMI",
+          "type": "Action",
+          "weight_pct": 14.2,
+          "price_prev": 500.61,
+          "price_today": 500.61,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
         },
         {
           "ticker": "UCG",
           "type": "Action",
-          "weight_pct": 14.6,
+          "weight_pct": 14.2,
           "price_prev": 70.9,
           "price_today": 70.9,
           "return_pct": 0.0,
@@ -1752,7 +1818,7 @@
         {
           "ticker": "LLY",
           "type": "Action",
-          "weight_pct": 14.6,
+          "weight_pct": 14.2,
           "price_prev": 1056.88,
           "price_today": 1056.88,
           "return_pct": 0.0,
@@ -1761,27 +1827,9 @@
         {
           "ticker": "JNJ",
           "type": "Action",
-          "weight_pct": 14.6,
+          "weight_pct": 14.2,
           "price_prev": 208.31,
           "price_today": 208.31,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
-        },
-        {
-          "ticker": "TJX",
-          "type": "Action",
-          "weight_pct": 10.0,
-          "price_prev": 154.88,
-          "price_today": 154.88,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
-        },
-        {
-          "ticker": "STLD",
-          "type": "Action",
-          "weight_pct": 8.82,
-          "price_prev": 174.58,
-          "price_today": 174.58,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1795,6 +1843,15 @@
           "contribution_pct": 0.0
         },
         {
+          "ticker": "FOXA",
+          "type": "Action",
+          "weight_pct": 5.0,
+          "price_prev": 71.26,
+          "price_today": 71.26,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
           "ticker": "CABK",
           "type": "Action",
           "weight_pct": 2.0,
@@ -1804,16 +1861,16 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "CMI",
+          "ticker": "RWE",
           "type": "Action",
-          "weight_pct": 1.18,
-          "price_prev": 500.61,
-          "price_today": 500.61,
+          "weight_pct": 2.0,
+          "price_prev": 43.77,
+          "price_today": 43.77,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": 0.1327,
+      "total_portfolio_return_pct": 0.129,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1871,23 +1928,23 @@
       "top_5_holdings": [
         [
           "BUYW",
-          14.6
+          15.0
         ],
         [
           "MUTHOOTFIN",
-          14.6
+          14.2
+        ],
+        [
+          "CMI",
+          14.2
         ],
         [
           "UCG",
-          14.6
+          14.2
         ],
         [
           "LLY",
-          14.6
-        ],
-        [
-          "JNJ",
-          14.6
+          14.2
         ]
       ]
     },
@@ -1903,23 +1960,23 @@
       "top_5_holdings": [
         [
           "SFLR",
-          14.6
+          14.2
         ],
         [
           "FPE",
-          14.6
+          14.2
         ],
         [
           "JNJ",
-          14.6
+          14.2
         ],
         [
-          "TPR",
-          14.6
+          "UCG",
+          14.2
         ],
         [
           "STLD",
-          10.0
+          14.2
         ]
       ]
     },
@@ -1958,22 +2015,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 17.47,
-      "net_return_pct": 17.47,
-      "volatility_pct": 10.21,
-      "max_drawdown_pct": -1.87,
+      "gross_return_pct": 17.27,
+      "net_return_pct": 17.27,
+      "volatility_pct": 10.8,
+      "max_drawdown_pct": -2.16,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 1.15,
-      "excess_return_pct": 16.32
+      "excess_return_pct": 16.12
     },
     "Modéré": {
-      "gross_return_pct": 8.75,
-      "net_return_pct": 8.75,
-      "volatility_pct": 9.58,
-      "max_drawdown_pct": -2.78,
+      "gross_return_pct": 9.41,
+      "net_return_pct": 9.41,
+      "volatility_pct": 9.9,
+      "max_drawdown_pct": -2.32,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 1.08,
-      "excess_return_pct": 7.67
+      "excess_return_pct": 8.33
     },
     "Stable": {
       "gross_return_pct": 4.02,
