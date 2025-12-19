@@ -975,42 +975,45 @@ class ConstraintReportGenerator:
 
     def _counts_in_max_region(self, asset: Any) -> bool:
         """
-        Détermine si un actif compte dans la contrainte max_region.
-        
-        Returns True si l'actif est EQUITY_LIKE ou LEVERAGED.
-        """
-        bucket_str = self._get_asset_attr(asset, '_risk_bucket')
-        if bucket_str:
-            try:
-                bucket = RiskBucket(bucket_str)
-                return bucket in [RiskBucket.EQUITY_LIKE, RiskBucket.LEVERAGED]
-            except ValueError:
-                pass
-        
-        category = self._get_asset_attr(asset, 'category', '')
-        name = self._get_asset_attr(asset, 'name', '')
-        
-        if category == "Actions":
-            return True
-        
-        if category == "Obligations":
-            return False
-        
-        if category == "Crypto":
-            return False
-        
-        if category == "ETF":
-            name_lower = name.lower() if name else ""
-            
-            if any(kw in name_lower for kw in ["leveraged", "2x", "3x", "ultra"]):
-                return True
-            
-            if any(kw in name_lower for kw in ["bond", "treasury", "fixed income", "aggregate"]):
-                return False
-            
-            return True
-        
+    Détermine si un actif compte dans la contrainte max_region.
+    
+    Returns True si l'actif est EQUITY_LIKE ou LEVERAGED.
+    """
+    bucket_str = self._get_asset_attr(asset, '_risk_bucket')
+    
+    # Utiliser risk_bucket SEULEMENT si c'est une classification valide (pas "unknown")
+    if bucket_str and bucket_str != "unknown":  # ← AJOUTER: != "unknown"
+        try:
+            bucket = RiskBucket(bucket_str)
+            return bucket in [RiskBucket.EQUITY_LIKE, RiskBucket.LEVERAGED]
+        except ValueError:
+            pass
+    
+    # Fallback pour unknown OU missing risk_bucket
+    category = self._get_asset_attr(asset, 'category', '')
+    name = self._get_asset_attr(asset, 'name', '')
+    
+    if category == "Actions":
+        return True
+    
+    if category == "Obligations":
         return False
+    
+    if category == "Crypto":
+        return False
+    
+    if category == "ETF":
+        name_lower = name.lower() if name else ""
+        
+        if any(kw in name_lower for kw in ["leveraged", "2x", "3x", "ultra"]):
+            return True
+        
+        if any(kw in name_lower for kw in ["bond", "treasury", "fixed income", "aggregate"]):
+            return False
+        
+        return True
+    
+    return False
 
     def _compute_count_margins(
         self,
