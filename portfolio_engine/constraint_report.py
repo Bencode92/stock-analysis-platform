@@ -886,7 +886,7 @@ class ConstraintReportGenerator:
         
         return margins
     
-def _compute_sector_margins(
+    def _compute_sector_margins(
         self,
         allocation: Dict[str, float],
         asset_by_id: Dict[str, Any],
