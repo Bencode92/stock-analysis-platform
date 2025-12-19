@@ -350,7 +350,8 @@ PROFILES = {
         vol_target=18.0, 
         vol_tolerance=3.0,
         crypto_max=10.0, 
-        bonds_min=5.0
+        bonds_min=5.0,
+        max_sector=35.0,
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
