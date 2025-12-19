@@ -1707,7 +1707,7 @@ def main():
     
     save_portfolios(portfolios, assets)
     
-backtest_results = None
+    backtest_results = None
     if CONFIG["run_backtest"]:
         yaml_config = load_yaml_config(CONFIG["config_path"])
         backtest_results = run_backtest_all_profiles(yaml_config)
@@ -1744,3 +1744,4 @@ backtest_results = None
 
 if __name__ == "__main__":
     main()
+
