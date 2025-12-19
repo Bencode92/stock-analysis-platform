@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actifs à haut risque, notamment dans les secteurs financier et de la santé. Bien que la diversification soit présente, la volatilité des marchés peut entraîner des fluctuations importantes des performances. De plus, les entreprises sélectionnées peuvent être sensibles aux changements réglementaires et aux conditions économiques. Il est essentiel de prendre en compte ces risques avant d'investir dans ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actions dans le secteur financier et de la santé, ce qui peut offrir des opportunités de croissance. Cependant, il est important de noter que la volatilité des marchés peut entraîner des fluctuations importantes. De plus, l'exposition à des actifs à haut rendement peut accroître le risque de perte en capital. Ce portefeuille est donc approprié pour des investisseurs cherchant à maximiser les rendements, tout en étant conscients des risques associés. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "MUTHOOT FINANCE LTD": "13%",
       "CUMMINS INC": "1%",
@@ -148,13 +148,18 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 0,
-          "slack": 50.0,
-          "binding": false,
-          "status": "OK",
+          "observed": 49.2,
+          "slack": 0.8,
+          "binding": true,
+          "status": "BINDING",
           "details": {
-            "most_concentrated": "N/A (no equity-like assets)",
-            "counts_in_max_region": {},
+            "most_concentrated": "Etats-Unis",
+            "counts_in_max_region": {
+              "Etats-Unis": 49.2,
+              "Inde": 14.6,
+              "Italie": 14.6,
+              "Espagne": 2.0
+            },
             "all_regions": {
               "Etats-Unis": 49.2,
               "Global": 19.6,
@@ -274,17 +279,18 @@
       ],
       "summary": {
         "total": 14,
-        "ok": 7,
-        "binding": 5,
+        "ok": 6,
+        "binding": 6,
         "violated": 2,
         "critical": 0
       },
-      "quality_score": 78.6,
+      "quality_score": 77.1,
       "recommendations": [
         "🟡 BINDING: max_single_position at 14.6% (cap=15.0%) — monitor closely",
         "🟠 VIOLATED: max_sector exceeded by 1.2% — reduce exposure",
+        "🟡 BINDING: max_region at 49.2% (cap=50.0%) — monitor closely",
         "🟠 VIOLATED: bucket_satellite exceeded by 5.8% — reduce exposure",
-        "⚠️ 5 constraints are binding — consider relaxing profile or reducing positions"
+        "⚠️ 6 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
@@ -536,7 +542,7 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée, visant à combiner croissance et protection du capital. Les investissements dans des actifs à faible volatilité, tels que les obligations, visent à réduire les risques. Cependant, la sensibilité aux fluctuations économiques et aux tendances de consommation peut affecter les performances. Il est important de considérer ces risques avant d'investir dans ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée entre actions et obligations, visant à générer des rendements modérés avec une volatilité contrôlée. Les investissements dans des titres préférentiels et des obligations à court terme peuvent offrir une possiblee stabilité, mais ils sont également sensibles aux fluctuations des taux d'intérêt. De plus, l'exposition à des secteurs comme la consommation et la santé peut entraîner des risques liés aux tendances économiques. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "13%",
       "RWE AG": "2%",
@@ -685,14 +691,17 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 14.6,
-          "slack": 35.4,
+          "observed": 48.8,
+          "slack": 1.2,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Global",
+            "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Global": 14.6
+              "Etats-Unis": 48.8,
+              "Global": 14.6,
+              "Italie": 5.0,
+              "Allemagne": 2.0
             },
             "all_regions": {
               "Etats-Unis": 48.8,
@@ -1066,7 +1075,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie axée sur la stabilité et la préservation du capital, avec une forte exposition aux obligations à faible volatilité. Les investissements dans des entreprises de secteurs défensifs visent à réduire l'impact des fluctuations du marché. Cependant, la sensibilité aux variations des taux d'intérêt et aux conditions économiques peut affecter les performances. Il est crucial de prendre en compte ces risques avant d'investir dans ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche conservatrice, principalement axée sur des obligations à court terme et des actions stables. Cela vise à minimiser la volatilité tout en offrant un potentiel de rendement modéré. Cependant, les rendements peuvent être limités en raison de l'exposition à des actifs à faible risque. De plus, l'exposition à des actions, même avec un profil défensif, peut entraîner des risques liés aux fluctuations du marché. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "ALLIANZ": "10%",
@@ -1232,14 +1241,18 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 8.21,
-          "slack": 41.79,
+          "observed": 20.52,
+          "slack": 29.48,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Global",
+            "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Global": 8.21
+              "Etats-Unis": 20.52,
+              "Allemagne": 10.26,
+              "Global": 8.21,
+              "Italie": 5.13,
+              "France": 2.05
             },
             "all_regions": {
               "Global": 62.07,
@@ -1621,7 +1634,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-19T15:29:22.050986",
+    "generated_at": "2025-12-19T15:45:42.369270",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
