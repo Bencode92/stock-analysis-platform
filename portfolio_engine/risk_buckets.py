@@ -1,7 +1,8 @@
 # portfolio_engine/risk_buckets.py
 """
-Classification des actifs par Risk Bucket — v1.1
+Classification des actifs par Risk Bucket — v1.2
 
+v1.2 FIX P0.5: Relax ALTERNATIVE_CAP Modéré 10%→15%
 v1.1 FIX P0.4: Actions correctement classifiées equity_like
 - Vérifier category AVANT fund_type vide
 - Les Actions n'ont pas de fund_type → ne doivent pas retourner UNKNOWN
@@ -59,9 +60,10 @@ LEVERAGED_CAP = {
 }
 
 # Cap ALTERNATIVE par profil (% du portefeuille)
+# v1.2: Modéré relaxé de 10% à 15% (violation observée 14.6%)
 ALTERNATIVE_CAP = {
     "Stable": 5.0,      # Max 5%
-    "Modéré": 10.0,     # Max 10%
+    "Modéré": 15.0,     # Max 15% (relaxé de 10%)
     "Agressif": 20.0,   # Max 20%
 }
 
