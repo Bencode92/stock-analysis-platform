@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une exposition significative aux actions, ce qui peut offrir des rendements élevés, mais également une volatilité accrue. Les investissements dans le secteur financier et les matières premières sont particulièrement sensibles aux fluctuations économiques. De plus, la concentration sur quelques actifs peut augmenter le risque de perte en capital. Il est important de considérer ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actifs à haut risque, notamment dans les secteurs financier et de la santé. Bien que la diversification soit présente, la volatilité des marchés peut entraîner des fluctuations importantes des performances. De plus, les entreprises sélectionnées peuvent être sensibles aux changements réglementaires et aux conditions économiques. Il est essentiel de prendre en compte ces risques avant d'investir dans ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "MUTHOOT FINANCE LTD": "13%",
       "CUMMINS INC": "1%",
@@ -153,7 +153,7 @@
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "N/A",
+            "most_concentrated": "N/A (no equity-like assets)",
             "counts_in_max_region": {},
             "all_regions": {
               "Etats-Unis": 49.2,
@@ -536,7 +536,7 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée entre actions et obligations, visant à réduire la volatilité tout en cherchant à générer des rendements. Les investissements dans des titres préférentiels et des obligations à court terme sont appropriés pour un profil modéré, mais ils comportent des risques liés aux taux d'intérêt. De plus, la sensibilité aux tendances de consommation et aux conditions économiques peut affecter la performance globale. Il est essentiel de garder à l'esprit ces risques avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée, visant à combiner croissance et protection du capital. Les investissements dans des actifs à faible volatilité, tels que les obligations, visent à réduire les risques. Cependant, la sensibilité aux fluctuations économiques et aux tendances de consommation peut affecter les performances. Il est important de considérer ces risques avant d'investir dans ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "13%",
       "RWE AG": "2%",
@@ -560,16 +560,16 @@
       "JNJ": 0.146,
       "RWE": 0.02,
       "UCG": 0.05,
-      "STLD": 0.1,
+      "STLD": 0.096,
       "TPR": 0.146,
-      "TJX": 0.096,
+      "TJX": 0.1,
       "BSV": 0.08,
       "VTIP": 0.07
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 10.13,
+      "vol_realized": 10.08,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -579,15 +579,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 10.13,
-          "slack": 1.13,
+          "observed": 10.08,
+          "slack": 1.08,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -1.87
+            "diff_from_target": -1.92
           }
         },
         {
@@ -672,10 +672,10 @@
             "most_concentrated": "Diversified",
             "all_sectors": {
               "Diversified": 29.2,
-              "Biens de consommation cycliques": 24.2,
+              "Biens de consommation cycliques": 24.6,
               "Bonds": 15.0,
               "Santé": 14.6,
-              "Matériaux": 10.0,
+              "Matériaux": 9.6,
               "Finance": 5.0,
               "Services publics": 2.0
             }
@@ -727,30 +727,30 @@
           "name": "bucket_core",
           "constraint_type": "range",
           "cap": 55.0,
-          "observed": 38.8,
-          "slack": -6.2,
+          "observed": 39.2,
+          "slack": -5.8,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 45.0,
             "range_max": 55.0,
-            "slack_from_min": -6.2,
-            "slack_from_max": 16.2
+            "slack_from_min": -5.8,
+            "slack_from_max": 15.8
           }
         },
         {
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 25.0,
-          "observed": 31.6,
-          "slack": -6.6,
+          "observed": 31.2,
+          "slack": -6.2,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 15.0,
             "range_max": 25.0,
-            "slack_from_min": 16.6,
-            "slack_from_max": -6.6
+            "slack_from_min": 16.2,
+            "slack_from_max": -6.2
           }
         },
         {
@@ -811,8 +811,8 @@
       "recommendations": [
         "🟡 BINDING: max_single_position at 14.6% (cap=15.0%) — monitor closely",
         "🟡 BINDING: max_sector at 29.2% (cap=30.0%) — monitor closely",
-        "🟠 VIOLATED: bucket_core exceeded by 6.2% — reduce exposure",
-        "🟠 VIOLATED: bucket_satellite exceeded by 6.6% — reduce exposure",
+        "🟠 VIOLATED: bucket_core exceeded by 5.8% — reduce exposure",
+        "🟠 VIOLATED: bucket_satellite exceeded by 6.2% — reduce exposure",
         "🟠 VIOLATED: alternative_cap exceeded by 4.6% — reduce exposure",
         "⚠️ 6 constraints are binding — consider relaxing profile or reducing positions"
       ],
@@ -824,10 +824,10 @@
         },
         "by_sector": {
           "Diversified": 29.2,
-          "Biens de consommation cycliques": 24.2,
+          "Biens de consommation cycliques": 24.6,
           "Bonds": 15.0,
           "Santé": 14.6,
-          "Matériaux": 10.0,
+          "Matériaux": 9.6,
           "Finance": 5.0,
           "Services publics": 2.0
         },
@@ -845,8 +845,8 @@
         },
         "by_role": {
           "defensive": 29.6,
-          "core": 38.8,
-          "satellite": 31.6
+          "core": 39.2,
+          "satellite": 31.2
         },
         "concentration": {
           "hhi": 1187.0,
@@ -915,26 +915,26 @@
           "exchange": null
         },
         {
-          "id": "EQ_367",
-          "ticker": "EQ_367",
-          "isin": null,
-          "name": "STEEL DYNAMICS INC",
-          "weight_pct": 10.0,
-          "category": "Actions",
-          "risk_bucket": "unknown",
-          "sector": "Matériaux",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
           "id": "EQ_58",
           "ticker": "EQ_58",
           "isin": null,
           "name": "TJX INC",
-          "weight_pct": 9.6,
+          "weight_pct": 10.0,
           "category": "Actions",
           "risk_bucket": "unknown",
           "sector": "Biens de consommation cycliques",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
+          "id": "EQ_367",
+          "ticker": "EQ_367",
+          "isin": null,
+          "name": "STEEL DYNAMICS INC",
+          "weight_pct": 9.6,
+          "category": "Actions",
+          "risk_bucket": "unknown",
+          "sector": "Matériaux",
           "region": "Etats-Unis",
           "exchange": null
         },
@@ -1009,10 +1009,10 @@
       },
       "by_sector": {
         "Diversified": 29.2,
-        "Biens de consommation cycliques": 24.2,
+        "Biens de consommation cycliques": 24.6,
         "Bonds": 15.0,
         "Santé": 14.6,
-        "Matériaux": 10.0,
+        "Matériaux": 9.6,
         "Finance": 5.0,
         "Services publics": 2.0
       },
@@ -1030,8 +1030,8 @@
       },
       "by_role": {
         "defensive": 29.6,
-        "core": 38.8,
-        "satellite": 31.6
+        "core": 39.2,
+        "satellite": 31.2
       },
       "concentration": {
         "hhi": 1187.0,
@@ -1066,7 +1066,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie axée sur la stabilité et la réduction de la volatilité, principalement à travers des obligations à court terme. Bien que cela puisse offrir une protection contre les fluctuations du marché, les rendements peuvent être limités en période de faible taux d'intérêt. De plus, l'exposition à des entreprises dans des secteurs sensibles, comme la santé et l'énergie, peut introduire des risques supplémentaires. Il est important de considérer ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie axée sur la stabilité et la préservation du capital, avec une forte exposition aux obligations à faible volatilité. Les investissements dans des entreprises de secteurs défensifs visent à réduire l'impact des fluctuations du marché. Cependant, la sensibilité aux variations des taux d'intérêt et aux conditions économiques peut affecter les performances. Il est crucial de prendre en compte ces risques avant d'investir dans ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "ALLIANZ": "10%",
@@ -1621,7 +1621,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-19T14:58:37.178498",
+    "generated_at": "2025-12-19T15:29:22.050986",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
