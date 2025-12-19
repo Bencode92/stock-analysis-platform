@@ -885,26 +885,41 @@ class ConstraintReportGenerator:
         margins.append(margin)
         
         return margins
-    def _compute_sector_margins(
+   def _compute_sector_margins(
         self,
         allocation: Dict[str, float],
         asset_by_id: Dict[str, Any],
         profile: Any,
     ) -> List[ConstraintMargin]:
-        """Calcule les margins pour max_sector."""
+        """
+        Calcule les margins pour max_sector.
+        
+        IMPORTANT v7.0: Seuls les actifs EQUITY_LIKE comptent.
+        Les obligations sont exclues car "Bonds" n'est pas un secteur économique.
+        """
         sector_weights = defaultdict(float)
-        sector_assets = defaultdict(list)
+        sector_weights_all = defaultdict(float)
         
         for aid, weight in allocation.items():
             asset = asset_by_id.get(aid)
-            if asset:
-                sector = self._get_asset_attr(asset, 'sector', 'Unknown')
+            if not asset:
+                continue
+            
+            sector = self._get_asset_attr(asset, 'sector', 'Unknown')
+            sector_weights_all[sector] += weight
+            
+            # Ne compter que les equity-like pour max_sector
+            if self._counts_in_max_sector(asset):
                 sector_weights[sector] += weight
-                sector_assets[sector].append({"id": aid, "weight": round(weight, 2)})
         
         margins = []
-        max_sector_weight = max(sector_weights.values()) if sector_weights else 0
-        max_sector = max(sector_weights.items(), key=lambda x: x[1])[0] if sector_weights else "N/A"
+        
+        if sector_weights:
+            max_sector_weight = max(sector_weights.values())
+            max_sector = max(sector_weights.items(), key=lambda x: x[1])[0]
+        else:
+            max_sector_weight = 0
+            max_sector = "N/A (no equity-like assets)"
         
         margin = _compute_margin(
             name="max_sector",
@@ -913,7 +928,9 @@ class ConstraintReportGenerator:
             observed=max_sector_weight,
             details={
                 "most_concentrated": max_sector,
-                "all_sectors": {k: round(v, 2) for k, v in sorted(sector_weights.items(), key=lambda x: -x[1])},
+                "counts_in_max_sector": {k: round(v, 2) for k, v in sorted(sector_weights.items(), key=lambda x: -x[1])},
+                "all_sectors": {k: round(v, 2) for k, v in sorted(sector_weights_all.items(), key=lambda x: -x[1])},
+                "scope": "EQUITY_LIKE only (excludes Bonds)",
             },
         )
         margins.append(margin)
@@ -1015,6 +1032,46 @@ class ConstraintReportGenerator:
             return True
         
         return False
+    def _counts_in_max_sector(self, asset: Any) -> bool:
+        """
+        Détermine si un actif compte dans la contrainte max_sector.
+        
+        Seuls les actifs EQUITY_LIKE comptent (Actions et ETF actions).
+        Les obligations (BOND_LIKE) sont exclues car "Bonds" n'est pas un secteur.
+        """
+        bucket_str = self._get_asset_attr(asset, '_risk_bucket')
+        
+        # Utiliser risk_bucket SEULEMENT si c'est une classification valide (pas "unknown")
+        if bucket_str and bucket_str != "unknown":
+            try:
+                bucket = RiskBucket(bucket_str)
+                return bucket in [RiskBucket.EQUITY_LIKE, RiskBucket.LEVERAGED]
+            except ValueError:
+                pass
+        
+        # Fallback pour unknown OU missing risk_bucket
+        category = self._get_asset_attr(asset, 'category', '')
+        name = self._get_asset_attr(asset, 'name', '')
+        
+        if category == "Actions":
+            return True
+        
+        if category in ["Obligations", "Crypto"]:
+            return False
+        
+        if category == "ETF":
+            name_lower = name.lower() if name else ""
+            
+            if any(kw in name_lower for kw in ["leveraged", "2x", "3x", "ultra"]):
+                return True
+            
+            if any(kw in name_lower for kw in ["bond", "treasury", "fixed income", "aggregate"]):
+                return False
+            
+            return True
+        
+        return False
+        
 
     def _compute_count_margins(
         self,
