@@ -1,6 +1,10 @@
 # portfolio_engine/risk_buckets.py
 """
-Classification des actifs par Risk Bucket — v1.0
+Classification des actifs par Risk Bucket — v1.1
+
+v1.1 FIX P0.4: Actions correctement classifiées equity_like
+- Vérifier category AVANT fund_type vide
+- Les Actions n'ont pas de fund_type → ne doivent pas retourner UNKNOWN
 
 Implémente la classification ETF/Bonds en 6 buckets pour déterminer
 le périmètre des contraintes (notamment max_region).
@@ -254,13 +258,15 @@ def classify_asset(asset_data: Dict[str, Any]) -> Tuple[RiskBucket, Dict[str, An
     Returns:
         (bucket, metadata) où metadata contient des infos de diagnostic
         
-    Règles de priorité:
+    Règles de priorité (v1.1 P0.4 FIX):
     1. Si champs obligataires présents → BOND_LIKE (évite contamination)
     2. Si leveraged/inverse → LEVERAGED
     3. Mapping fund_type explicite
     4. Mots-clés bond dans fund_type → BOND_LIKE
-    5. fund_type vide → UNKNOWN
-    6. Défaut ETF → EQUITY_LIKE
+    5. Catégories connues (equity, bond, crypto) → bucket correspondant  ← DÉPLACÉ ICI
+    6. fund_type vide ET catégorie inconnue → UNKNOWN
+    7. ETF non mappé → EQUITY_LIKE par défaut
+    8. Fallback → UNKNOWN
     """
     metadata = {
         "classification_rule": None,
@@ -298,13 +304,9 @@ def classify_asset(asset_data: Dict[str, Any]) -> Tuple[RiskBucket, Dict[str, An
         metadata["classification_rule"] = f"bond_keyword_match:{fund_type}"
         return RiskBucket.BOND_LIKE, metadata
     
-    # === RÈGLE 5: fund_type vide → UNKNOWN ===
-    if not fund_type:
-        metadata["classification_rule"] = "fund_type_empty"
-        metadata["warnings"].append("fund_type vide → UNKNOWN (quality gate)")
-        return RiskBucket.UNKNOWN, metadata
-    
-    # === RÈGLE 6: Défaut pour catégories ===
+    # === RÈGLE 5: Catégories connues (P0.4 FIX - DÉPLACÉ AVANT fund_type check) ===
+    # Les Actions/Obligations/Crypto n'ont pas de fund_type, donc doivent être
+    # classifiées par category AVANT le check fund_type vide
     if category in ["actions", "equity", "equities", "stock"]:
         metadata["classification_rule"] = "default_equity_category"
         return RiskBucket.EQUITY_LIKE, metadata
@@ -317,6 +319,12 @@ def classify_asset(asset_data: Dict[str, Any]) -> Tuple[RiskBucket, Dict[str, An
         metadata["classification_rule"] = "default_crypto_category"
         return RiskBucket.CRYPTO, metadata
     
+    # === RÈGLE 6: fund_type vide ET catégorie inconnue → UNKNOWN ===
+    if not fund_type:
+        metadata["classification_rule"] = "fund_type_empty_category_unknown"
+        metadata["warnings"].append("fund_type vide et catégorie non reconnue → UNKNOWN (quality gate)")
+        return RiskBucket.UNKNOWN, metadata
+    
     # === RÈGLE 7: ETF non mappé → EQUITY_LIKE par défaut ===
     if category in ["etf", "etfs"]:
         metadata["classification_rule"] = f"default_etf_equity:{fund_type}"
@@ -325,7 +333,7 @@ def classify_asset(asset_data: Dict[str, Any]) -> Tuple[RiskBucket, Dict[str, An
         )
         return RiskBucket.EQUITY_LIKE, metadata
     
-    # === Fallback final → UNKNOWN ===
+    # === RÈGLE 8: Fallback final → UNKNOWN ===
     metadata["classification_rule"] = "fallback_unknown"
     metadata["warnings"].append(f"Impossible de classifier: category={category}, fund_type={fund_type}")
     return RiskBucket.UNKNOWN, metadata
