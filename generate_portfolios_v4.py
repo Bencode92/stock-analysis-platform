@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.9.1: Backtest debug file generation - real prices and calculations export
 V4.9.0: RADAR tactical integration - deterministic data-driven tilts
 V4.8.7: P1-8c FIX - TER is embedded in ETF prices, use platform_fee instead
 V4.8.6: P1-8b - TER (Total Expense Ratio) - DEPRECATED (double-counting)
@@ -88,6 +89,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger("portfolio-v4")
 
+# v4.9.1: Import du générateur de debug backtest
+try:
+    from backtest_debug_generator import generate_backtest_debug, print_debug_summary
+    DEBUG_GENERATOR_AVAILABLE = True
+    logger.info("✅ Module backtest_debug_generator disponible")
+except ImportError:
+    DEBUG_GENERATOR_AVAILABLE = False
+    logger.warning("⚠️ backtest_debug_generator non disponible")
+
 # v4.9.0: Import du module RADAR (data-driven tilts)
 try:
     from portfolio_engine.market_sector_radar import (
@@ -100,7 +110,6 @@ try:
 except ImportError:
     RADAR_AVAILABLE = False
     logger.warning("⚠️ Module RADAR non disponible, fallback GPT si activé")
-
 
 # ============= CONFIGURATION =============
 
@@ -874,7 +883,7 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
             })
             continue
         
-        # V4.8.7 P1-8c: Use platform_fee_annual_bp instead of ter_annual_bp
+# V4.8.7 P1-8c: Use platform_fee_annual_bp instead of ter_annual_bp
         backtest_config = BacktestConfig(
             profile=profile,
             start_date=backtest_start,
@@ -914,6 +923,31 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
     
     print_comparison_table(results)
     
+    # ============= V4.9.1: GÉNÉRER FICHIER DEBUG =============
+    if DEBUG_GENERATOR_AVAILABLE:
+        try:
+            debug_output_path = "data/backtest_debug.json"
+            
+            debug_data = generate_backtest_debug(
+                prices=prices,
+                portfolio_weights=portfolio_weights,
+                backtest_results={
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "period_days": CONFIG["backtest_days"],
+                    "results": results,
+                },
+                output_path=debug_output_path,
+                n_sample_days=5,
+            )
+            
+            print_debug_summary(debug_data)
+            logger.info(f"✅ Fichier debug généré: {debug_output_path}")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Impossible de générer le fichier debug: {e}")
+            import traceback
+            traceback.print_exc()
+    
     return {
         "timestamp": datetime.datetime.now().isoformat(),
         "period_days": CONFIG["backtest_days"],
@@ -923,6 +957,7 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
         "symbols_count": len(prices.columns),
         "backtest_mode": "fixed_weights",
         "price_diagnostics": price_diagnostics,
+        "debug_file": "data/backtest_debug.json" if DEBUG_GENERATOR_AVAILABLE else None,  # V4.9.1
         "results": results,
         "comparison": {
             r["profile"]: r.get("stats", {})
@@ -1672,7 +1707,7 @@ def main():
     
     save_portfolios(portfolios, assets)
     
-    backtest_results = None
+backtest_results = None
     if CONFIG["run_backtest"]:
         yaml_config = load_yaml_config(CONFIG["config_path"])
         backtest_results = run_backtest_all_profiles(yaml_config)
@@ -1687,8 +1722,11 @@ def main():
     logger.info(f"   • {CONFIG['output_path']} (portfolios)")
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
+        if backtest_results.get("debug_file"):
+            logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
     logger.info("")
-    logger.info("Fonctionnalités v4.9.0:")
+    logger.info("Fonctionnalités v4.9.1:")
+    logger.info("   • ✅ NEW: backtest_debug.json avec prix réels et calculs")
     logger.info("   • ✅ TER FIX: embedded in ETF prices, NOT deducted separately")
     logger.info("   • ✅ platform_fee_annual_bp replaces ter_annual_bp")
     logger.info("   • ✅ Gross/Net separation via transaction costs + platform fees")
