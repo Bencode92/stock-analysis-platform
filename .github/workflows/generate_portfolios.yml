@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles v4.5 + Backtest + Validation
+name: Génération des Portefeuilles v4.9.1 + Backtest + Debug + Validation
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
           echo ""
           echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
 
-      - name: 🚀 Exécuter le moteur v4.9 + Backtest
+      - name: 🚀 Exécuter le moteur v4.9.1 + Backtest + Debug
         run: python generate_portfolios_v4.py
 
       # ============= v4.5 NEW: Schema Validation =============
@@ -133,6 +133,22 @@ jobs:
             echo "⚠️ backtest_results.json ABSENT (TWELVE_DATA_API non configurée?)"
           fi
           
+          # v4.9.1: Backtest debug file
+          if [ -f data/backtest_debug.json ]; then
+            echo "✅ backtest_debug.json (v4.9.1)"
+            python3 << 'EOF'
+          import json
+          with open("data/backtest_debug.json") as f:
+              data = json.load(f)
+          n_assets = data.get("data_coverage", {}).get("tickers_with_data", 0)
+          types = data.get("data_coverage", {}).get("assets_by_type", {})
+          print(f"   Actifs documentés: {n_assets}")
+          print(f"   Types: {types}")
+          EOF
+          else
+            echo "⚠️ backtest_debug.json ABSENT"
+          fi
+          
           echo "----"
           echo "== portfolio_history =="
           ls -lah data/portfolio_history || true
@@ -140,7 +156,7 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v4.9 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v4.9.1 Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Schema Validation Status
@@ -212,6 +228,25 @@ jobs:
           else
             echo "⚠️ Backtest skipped (TWELVE_DATA_API not configured)" >> $GITHUB_STEP_SUMMARY
           fi
+          
+          # v4.9.1: Debug file summary
+          if [ -f data/backtest_debug.json ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔍 Backtest Debug (v4.9.1)" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("data/backtest_debug.json") as f:
+              data = json.load(f)
+          cov = data.get("data_coverage", {})
+          n_assets = cov.get("tickers_with_data", 0)
+          types = cov.get("assets_by_type", {})
+          print(f"| Metric | Value |")
+          print(f"|--------|-------|")
+          print(f"| Assets documented | {n_assets} |")
+          for t, count in types.items():
+              print(f"| {t} | {count} |")
+          EOF
+          fi
 
       - name: 💾 Commit & push
         if: always()
@@ -220,9 +255,10 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Ajouter les artefacts générés (incluant market_context.json)
+          # Ajouter les artefacts générés (incluant market_context.json + backtest_debug.json v4.9.1)
           git add data/portfolios.json \
                   data/backtest_results.json \
+                  data/backtest_debug.json \
                   data/market_context.json \
                   data/portfolio_history/* || true
 
@@ -233,6 +269,9 @@ jobs:
           if git check-ignore -q data/backtest_results.json; then
             git add -f data/backtest_results.json
           fi
+          if git check-ignore -q data/backtest_debug.json; then
+            git add -f data/backtest_debug.json
+          fi
           if git check-ignore -q data/market_context.json; then
             git add -f data/market_context.json
           fi
@@ -240,7 +279,7 @@ jobs:
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v4.9 RADAR + Backtest 90j + Schema ✓" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v4.9.1 RADAR + Backtest 90j + Debug + Schema ✓" || echo "rien à committer"
 
           # Push avec retry robuste en cas de divergence
           git push || (git pull --rebase origin main && git push)
