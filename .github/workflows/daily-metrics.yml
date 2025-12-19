@@ -4,7 +4,7 @@ name: ☀️ Daily ETF/Bond Metrics
 # GÈRE: Métriques quotidiennes ETF + Bonds (refresh rapide)
 # SCRIPT: etf-bond-daily-metrics.js
 # HORAIRES: 
-#   - ☀️ AM: 09:25 Paris (avant ouverture Europe)
+#   - ☀️ AM: 09:34 Paris (après markets 09:20 + sectors 09:25)
 #   - 🌅 PM: 16:00 Paris (après ouverture US)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -13,11 +13,11 @@ on:
 
   schedule:
     # ═══════════════════════════════════════════════════════════════════════════
-    # ☀️ AM REFRESH (09:25 Paris) - avant ouverture Europe
-    # été: 07:25 UTC | hiver: 08:25 UTC
+    # ☀️ AM REFRESH (09:34 Paris) - après markets + sectors
+    # été: 07:34 UTC | hiver: 08:34 UTC
     # ═══════════════════════════════════════════════════════════════════════════
-    - cron: '25 7 * * 1-5'
-    - cron: '25 8 * * 1-5'
+    - cron: '34 7 * * 1-5'
+    - cron: '34 8 * * 1-5'
     
     # ═══════════════════════════════════════════════════════════════════════════
     # 🌅 PM REFRESH (16:00 Paris) - après ouverture US
@@ -70,8 +70,8 @@ jobs:
           
           SESSION=""
           
-          # AM refresh: 09:20 - 09:30 Paris
-          if [ "$PARIS" -ge "0920" ] && [ "$PARIS" -le "0930" ]; then
+          # AM refresh: 09:30 - 09:40 Paris (après markets 09:20 + sectors 09:25)
+          if [ "$PARIS" -ge "0930" ] && [ "$PARIS" -le "0940" ]; then
             SESSION="AM"
             echo "☀️ AM REFRESH window detected"
             
