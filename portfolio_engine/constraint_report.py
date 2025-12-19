@@ -886,7 +886,7 @@ class ConstraintReportGenerator:
         
         return margins
     
-    def _compute_sector_margins(
+def _compute_sector_margins(
         self,
         allocation: Dict[str, float],
         asset_by_id: Dict[str, Any],
@@ -921,77 +921,66 @@ class ConstraintReportGenerator:
         margins.append(margin)
         
         return margins
-       
+
     def _compute_region_margins(
-    self,
-    allocation: Dict[str, float],
-    asset_by_id: Dict[str, Any],
-    profile: Any,
-) -> List[ConstraintMargin]:
-    """
-    Calcule les margins pour max_region.
-    
-    IMPORTANT v7.0: Seuls les actifs EQUITY_LIKE et LEVERAGED comptent.
-    Le fallback utilise category pour classifier si _risk_bucket est absent.
-    
-    Mapping fallback:
-    - Actions → EQUITY_LIKE (compte)
-    - ETF avec "Leveraged" dans le nom → LEVERAGED (compte)
-    - ETF equity (sans "Bond" dans le nom) → EQUITY_LIKE (compte)
-    - Obligations → BOND_LIKE (ne compte pas)
-    - Crypto → CRYPTO (ne compte pas)
-    """
-    region_weights = defaultdict(float)
-    region_weights_all = defaultdict(float)  # Pour info/debug
-    
-    for aid, weight in allocation.items():
-        asset = asset_by_id.get(aid)
-        if not asset:
-            continue
+        self,
+        allocation: Dict[str, float],
+        asset_by_id: Dict[str, Any],
+        profile: Any,
+    ) -> List[ConstraintMargin]:
+        """
+        Calcule les margins pour max_region.
         
-        region = self._get_asset_attr(asset, 'region', 'Global')
-        region_weights_all[region] += weight
+        IMPORTANT v7.0: Seuls les actifs EQUITY_LIKE et LEVERAGED comptent.
+        Le fallback utilise category pour classifier si _risk_bucket est absent.
+        """
+        region_weights = defaultdict(float)
+        region_weights_all = defaultdict(float)
         
-        # Déterminer si compte dans max_region (EQUITY_LIKE ou LEVERAGED)
-        counts = self._counts_in_max_region(asset)
+        for aid, weight in allocation.items():
+            asset = asset_by_id.get(aid)
+            if not asset:
+                continue
+            
+            region = self._get_asset_attr(asset, 'region', 'Global')
+            region_weights_all[region] += weight
+            
+            # Déterminer si compte dans max_region (EQUITY_LIKE ou LEVERAGED)
+            counts = self._counts_in_max_region(asset)
+            
+            if counts:
+                region_weights[region] += weight
         
-        if counts:
-            region_weights[region] += weight
-    
-    margins = []
-    
-    # Calculer observed = max des régions qui comptent
-    if region_weights:
-        max_region_weight = max(region_weights.values())
-        max_region = max(region_weights.items(), key=lambda x: x[1])[0]
-    else:
-        # Aucun actif equity-like → observed = 0 (correct)
-        max_region_weight = 0
-        max_region = "N/A (no equity-like assets)"
-    
-    margin = _compute_margin(
-        name="max_region",
-        constraint_type="max",
-        cap=profile.max_region,
-        observed=max_region_weight,
-        details={
-            "most_concentrated": max_region,
-            "counts_in_max_region": {k: round(v, 2) for k, v in sorted(region_weights.items(), key=lambda x: -x[1])},
-            "all_regions": {k: round(v, 2) for k, v in sorted(region_weights_all.items(), key=lambda x: -x[1])},
-            "scope": "EQUITY_LIKE + LEVERAGED only",
-        },
-    )
-    margins.append(margin)
-    
-    return margins
+        margins = []
+        
+        if region_weights:
+            max_region_weight = max(region_weights.values())
+            max_region = max(region_weights.items(), key=lambda x: x[1])[0]
+        else:
+            max_region_weight = 0
+            max_region = "N/A (no equity-like assets)"
+        
+        margin = _compute_margin(
+            name="max_region",
+            constraint_type="max",
+            cap=profile.max_region,
+            observed=max_region_weight,
+            details={
+                "most_concentrated": max_region,
+                "counts_in_max_region": {k: round(v, 2) for k, v in sorted(region_weights.items(), key=lambda x: -x[1])},
+                "all_regions": {k: round(v, 2) for k, v in sorted(region_weights_all.items(), key=lambda x: -x[1])},
+                "scope": "EQUITY_LIKE + LEVERAGED only",
+            },
+        )
+        margins.append(margin)
+        
+        return margins
 
-
-def _counts_in_max_region(self, asset: Any) -> bool:  # ← 4 espaces
+    def _counts_in_max_region(self, asset: Any) -> bool:
         """
         Détermine si un actif compte dans la contrainte max_region.
         
         Returns True si l'actif est EQUITY_LIKE ou LEVERAGED.
-        Utilise _risk_bucket si disponible, sinon fallback sur category/name.
         """
         # 1. Essayer _risk_bucket explicite
         bucket_str = self._get_asset_attr(asset, '_risk_bucket')
@@ -1000,42 +989,34 @@ def _counts_in_max_region(self, asset: Any) -> bool:  # ← 4 espaces
                 bucket = RiskBucket(bucket_str)
                 return bucket in [RiskBucket.EQUITY_LIKE, RiskBucket.LEVERAGED]
             except ValueError:
-                pass  # Bucket invalide, fallback
+                pass
         
         # 2. Fallback basé sur category et name
         category = self._get_asset_attr(asset, 'category', '')
         name = self._get_asset_attr(asset, 'name', '')
         
-        # Actions = EQUITY_LIKE → compte
         if category == "Actions":
             return True
         
-        # Obligations = BOND_LIKE → ne compte pas
         if category == "Obligations":
             return False
         
-        # Crypto = CRYPTO → ne compte pas
         if category == "Crypto":
             return False
         
-        # ETF: analyser le nom
         if category == "ETF":
             name_lower = name.lower() if name else ""
             
-            # Leveraged ETF → compte
             if any(kw in name_lower for kw in ["leveraged", "2x", "3x", "ultra"]):
                 return True
             
-            # Bond ETF → ne compte pas
             if any(kw in name_lower for kw in ["bond", "treasury", "fixed income", "aggregate"]):
                 return False
             
-            # Equity ETF par défaut → compte
             return True
         
-        # Défaut: ne compte pas (conservative)
         return False
-    
+
     def _compute_count_margins(
         self,
         allocation: Dict[str, float],
@@ -1046,7 +1027,6 @@ def _counts_in_max_region(self, asset: Any) -> bool:  # ← 4 espaces
         
         margins = []
         
-        # Min assets
         margins.append(_compute_margin(
             name="min_assets",
             constraint_type="min",
@@ -1055,7 +1035,6 @@ def _counts_in_max_region(self, asset: Any) -> bool:  # ← 4 espaces
             details={},
         ))
         
-        # Max assets
         margins.append(_compute_margin(
             name="max_assets",
             constraint_type="max",
