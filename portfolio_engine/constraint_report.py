@@ -885,7 +885,6 @@ class ConstraintReportGenerator:
         margins.append(margin)
         
         return margins
-    
     def _compute_sector_margins(
         self,
         allocation: Dict[str, float],
@@ -907,7 +906,6 @@ class ConstraintReportGenerator:
         max_sector_weight = max(sector_weights.values()) if sector_weights else 0
         max_sector = max(sector_weights.items(), key=lambda x: x[1])[0] if sector_weights else "N/A"
         
-        # Une seule entrée pour le secteur le plus concentré
         margin = _compute_margin(
             name="max_sector",
             constraint_type="max",
@@ -945,7 +943,6 @@ class ConstraintReportGenerator:
             region = self._get_asset_attr(asset, 'region', 'Global')
             region_weights_all[region] += weight
             
-            # Déterminer si compte dans max_region (EQUITY_LIKE ou LEVERAGED)
             counts = self._counts_in_max_region(asset)
             
             if counts:
@@ -982,7 +979,6 @@ class ConstraintReportGenerator:
         
         Returns True si l'actif est EQUITY_LIKE ou LEVERAGED.
         """
-        # 1. Essayer _risk_bucket explicite
         bucket_str = self._get_asset_attr(asset, '_risk_bucket')
         if bucket_str:
             try:
@@ -991,7 +987,6 @@ class ConstraintReportGenerator:
             except ValueError:
                 pass
         
-        # 2. Fallback basé sur category et name
         category = self._get_asset_attr(asset, 'category', '')
         name = self._get_asset_attr(asset, 'name', '')
         
@@ -1044,6 +1039,7 @@ class ConstraintReportGenerator:
         ))
         
         return margins
+
     
     def _compute_bucket_margins(
         self,
