@@ -885,7 +885,48 @@ class ConstraintReportGenerator:
         margins.append(margin)
         
         return margins
-   def _compute_sector_margins(
+
+    def _counts_in_max_sector(self, asset: Any) -> bool:
+        """
+        Détermine si un actif compte dans la contrainte max_sector.
+        
+        Seuls les actifs EQUITY_LIKE comptent (Actions et ETF actions).
+        Les obligations (BOND_LIKE) sont exclues car "Bonds" n'est pas un secteur.
+        """
+        bucket_str = self._get_asset_attr(asset, '_risk_bucket')
+        
+        # Utiliser risk_bucket SEULEMENT si c'est une classification valide (pas "unknown")
+        if bucket_str and bucket_str != "unknown":
+            try:
+                bucket = RiskBucket(bucket_str)
+                return bucket in [RiskBucket.EQUITY_LIKE, RiskBucket.LEVERAGED]
+            except ValueError:
+                pass
+        
+        # Fallback pour unknown OU missing risk_bucket
+        category = self._get_asset_attr(asset, 'category', '')
+        name = self._get_asset_attr(asset, 'name', '')
+        
+        if category == "Actions":
+            return True
+        
+        if category in ["Obligations", "Crypto"]:
+            return False
+        
+        if category == "ETF":
+            name_lower = name.lower() if name else ""
+            
+            if any(kw in name_lower for kw in ["leveraged", "2x", "3x", "ultra"]):
+                return True
+            
+            if any(kw in name_lower for kw in ["bond", "treasury", "fixed income", "aggregate"]):
+                return False
+            
+            return True
+        
+        return False
+
+    def _compute_sector_margins(
         self,
         allocation: Dict[str, float],
         asset_by_id: Dict[str, Any],
@@ -936,6 +977,49 @@ class ConstraintReportGenerator:
         margins.append(margin)
         
         return margins
+
+    def _counts_in_max_region(self, asset: Any) -> bool:
+        """
+        Détermine si un actif compte dans la contrainte max_region.
+        
+        Returns True si l'actif est EQUITY_LIKE ou LEVERAGED.
+        Utilise un fallback sur category si _risk_bucket est absent ou "unknown".
+        """
+        bucket_str = self._get_asset_attr(asset, '_risk_bucket')
+        
+        # Utiliser risk_bucket SEULEMENT si c'est une classification valide (pas "unknown")
+        if bucket_str and bucket_str != "unknown":
+            try:
+                bucket = RiskBucket(bucket_str)
+                return bucket in [RiskBucket.EQUITY_LIKE, RiskBucket.LEVERAGED]
+            except ValueError:
+                pass
+        
+        # Fallback pour unknown OU missing risk_bucket
+        category = self._get_asset_attr(asset, 'category', '')
+        name = self._get_asset_attr(asset, 'name', '')
+        
+        if category == "Actions":
+            return True
+        
+        if category == "Obligations":
+            return False
+        
+        if category == "Crypto":
+            return False
+        
+        if category == "ETF":
+            name_lower = name.lower() if name else ""
+            
+            if any(kw in name_lower for kw in ["leveraged", "2x", "3x", "ultra"]):
+                return True
+            
+            if any(kw in name_lower for kw in ["bond", "treasury", "fixed income", "aggregate"]):
+                return False
+            
+            return True
+        
+        return False
 
     def _compute_region_margins(
         self,
@@ -990,89 +1074,6 @@ class ConstraintReportGenerator:
         
         return margins
 
-    def _counts_in_max_region(self, asset: Any) -> bool:
-        """
-        Détermine si un actif compte dans la contrainte max_region.
-        
-        Returns True si l'actif est EQUITY_LIKE ou LEVERAGED.
-        Utilise un fallback sur category si _risk_bucket est absent ou "unknown".
-        """
-        bucket_str = self._get_asset_attr(asset, '_risk_bucket')
-        
-        # Utiliser risk_bucket SEULEMENT si c'est une classification valide (pas "unknown")
-        if bucket_str and bucket_str != "unknown":
-            try:
-                bucket = RiskBucket(bucket_str)
-                return bucket in [RiskBucket.EQUITY_LIKE, RiskBucket.LEVERAGED]
-            except ValueError:
-                pass
-        
-        # Fallback pour unknown OU missing risk_bucket
-        category = self._get_asset_attr(asset, 'category', '')
-        name = self._get_asset_attr(asset, 'name', '')
-        
-        if category == "Actions":
-            return True
-        
-        if category == "Obligations":
-            return False
-        
-        if category == "Crypto":
-            return False
-        
-        if category == "ETF":
-            name_lower = name.lower() if name else ""
-            
-            if any(kw in name_lower for kw in ["leveraged", "2x", "3x", "ultra"]):
-                return True
-            
-            if any(kw in name_lower for kw in ["bond", "treasury", "fixed income", "aggregate"]):
-                return False
-            
-            return True
-        
-        return False
-    def _counts_in_max_sector(self, asset: Any) -> bool:
-        """
-        Détermine si un actif compte dans la contrainte max_sector.
-        
-        Seuls les actifs EQUITY_LIKE comptent (Actions et ETF actions).
-        Les obligations (BOND_LIKE) sont exclues car "Bonds" n'est pas un secteur.
-        """
-        bucket_str = self._get_asset_attr(asset, '_risk_bucket')
-        
-        # Utiliser risk_bucket SEULEMENT si c'est une classification valide (pas "unknown")
-        if bucket_str and bucket_str != "unknown":
-            try:
-                bucket = RiskBucket(bucket_str)
-                return bucket in [RiskBucket.EQUITY_LIKE, RiskBucket.LEVERAGED]
-            except ValueError:
-                pass
-        
-        # Fallback pour unknown OU missing risk_bucket
-        category = self._get_asset_attr(asset, 'category', '')
-        name = self._get_asset_attr(asset, 'name', '')
-        
-        if category == "Actions":
-            return True
-        
-        if category in ["Obligations", "Crypto"]:
-            return False
-        
-        if category == "ETF":
-            name_lower = name.lower() if name else ""
-            
-            if any(kw in name_lower for kw in ["leveraged", "2x", "3x", "ultra"]):
-                return True
-            
-            if any(kw in name_lower for kw in ["bond", "treasury", "fixed income", "aggregate"]):
-                return False
-            
-            return True
-        
-        return False
-        
-
     def _compute_count_margins(
         self,
         allocation: Dict[str, float],
@@ -1101,7 +1102,6 @@ class ConstraintReportGenerator:
         
         return margins
 
-    
     def _compute_bucket_margins(
         self,
         allocation: Dict[str, float],
