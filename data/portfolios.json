@@ -1,39 +1,38 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actions dans des secteurs variés, ce qui peut offrir des opportunités de croissance. Cependant, il est important de noter que la volatilité des marchés peut entraîner des fluctuations importantes des performances. De plus, l'exposition à des actifs spécifiques, comme ceux du secteur financier, peut augmenter le risque global du portefeuille. Les investisseurs doivent être conscients des risques associés à chaque actif et de leur impact potentiel sur le rendement global. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec une concentration sur des actions à fort potentiel de croissance. Les investissements dans des secteurs comme la finance et les industries peuvent offrir des rendements élevés, mais comportent également des risques importants liés à la volatilité du marché. De plus, l'exposition à des entreprises spécifiques peut entraîner des fluctuations significatives en fonction des conditions économiques. Il est essentiel de considérer ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "MUTHOOT FINANCE LTD": "14%",
-      "CUMMINS INC": "14%",
-      "CAIXABANK SA": "2%",
+      "MUTHOOT FINANCE LTD": "13%",
+      "CUMMINS INC": "15%",
+      "CAIXABANK SA": "15%",
       "FOX CORP CLASS A": "5%",
-      "RWE AG": "2%",
-      "UNICREDIT": "14%",
-      "ELI LILLY": "14%",
-      "JOHNSON & JOHNSON": "14%"
+      "UNICREDIT": "5%",
+      "RYANAIR HOLDINGS PLC": "10%",
+      "AIB GROUP PLC": "2%",
+      "JOHNSON & JOHNSON": "15%",
+      "TJX INC": "15%"
     },
-    "ETF": {
-      "Main Buywrite ETF": "16%"
-    },
+    "ETF": {},
     "Obligations": {
-      "FT Tactical High Yield ETF": "5%"
+      "Quadratic Interest Rate Volatility and Inflation Hedge ETF": "5%"
     },
     "Crypto": {},
     "_tickers": {
-      "BUYW": 0.15,
-      "HYLS": 0.05,
-      "MUTHOOTFIN": 0.142,
-      "CMI": 0.142,
-      "CABK": 0.02,
+      "IVOL": 0.05,
+      "MUTHOOTFIN": 0.146,
+      "CMI": 0.146,
+      "CABK": 0.146,
       "FOXA": 0.05,
-      "RWE": 0.02,
-      "UCG": 0.142,
-      "LLY": 0.142,
-      "JNJ": 0.142
+      "UCG": 0.05,
+      "RYA": 0.1,
+      "A5G": 0.02,
+      "JNJ": 0.146,
+      "TJX": 0.146
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 17.44,
+      "vol_realized": 17.99,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -43,15 +42,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 17.44,
-          "slack": 2.44,
+          "observed": 17.99,
+          "slack": 2.99,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -0.56
+            "diff_from_target": -0.01
           }
         },
         {
@@ -66,8 +65,8 @@
             "count": 1,
             "breakdown": [
               {
-                "id": "FT Tactical High Yield ETF",
-                "name": "FT Tactical High Yield ETF",
+                "id": "Quadratic Interest Rate Volatility and Inflation Hedge ETF",
+                "name": "Quadratic Interest Rate Volati",
                 "weight": 5.0
               }
             ]
@@ -89,40 +88,36 @@
           "name": "max_single_position",
           "constraint_type": "max",
           "cap": 15.0,
-          "observed": 15.0,
-          "slack": 0.0,
+          "observed": 14.6,
+          "slack": 0.4,
           "binding": true,
           "status": "BINDING",
           "details": {
             "largest_position": {
-              "id": "Main Buywrite ETF",
-              "name": "Main Buywrite ETF",
-              "weight": 15.0
+              "id": "EQ_913",
+              "name": "MUTHOOT FINANCE LTD",
+              "weight": 14.6
             },
             "positions_above_10pct": [
               {
-                "id": "Main Buywrite ETF",
-                "weight": 15.0
-              },
-              {
                 "id": "EQ_913",
-                "weight": 14.2
+                "weight": 14.6
               },
               {
                 "id": "EQ_146",
-                "weight": 14.2
+                "weight": 14.6
               },
               {
-                "id": "EQ_551",
-                "weight": 14.2
-              },
-              {
-                "id": "EQ_10",
-                "weight": 14.2
+                "id": "EQ_590",
+                "weight": 14.6
               },
               {
                 "id": "EQ_13",
-                "weight": 14.2
+                "weight": 14.6
+              },
+              {
+                "id": "EQ_58",
+                "weight": 14.6
               }
             ]
           }
@@ -130,28 +125,27 @@
         {
           "name": "max_sector",
           "constraint_type": "max",
-          "cap": 30.0,
-          "observed": 30.4,
-          "slack": -0.4,
+          "cap": 35.0,
+          "observed": 36.2,
+          "slack": -1.2,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "most_concentrated": "Finance",
             "counts_in_max_sector": {
-              "Finance": 30.4,
-              "Santé": 28.4,
-              "Industries": 14.2,
-              "La communication": 5.0,
-              "Services publics": 2.0
+              "Finance": 36.2,
+              "Industries": 24.6,
+              "Santé": 14.6,
+              "Biens de consommation cycliques": 14.6,
+              "La communication": 5.0
             },
             "all_sectors": {
-              "Finance": 30.4,
-              "Santé": 28.4,
-              "Diversified": 15.0,
-              "Industries": 14.2,
+              "Finance": 36.2,
+              "Industries": 24.6,
+              "Santé": 14.6,
+              "Biens de consommation cycliques": 14.6,
               "Bonds": 5.0,
-              "La communication": 5.0,
-              "Services publics": 2.0
+              "La communication": 5.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -160,26 +154,26 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 47.6,
-          "slack": 2.4,
+          "observed": 48.8,
+          "slack": 1.2,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Etats-Unis": 47.6,
-              "Inde": 14.2,
-              "Italie": 14.2,
-              "Espagne": 2.0,
-              "Allemagne": 2.0
+              "Etats-Unis": 48.8,
+              "Inde": 14.6,
+              "Espagne": 14.6,
+              "Irlande": 12.0,
+              "Italie": 5.0
             },
             "all_regions": {
-              "Etats-Unis": 47.6,
-              "Global": 20.0,
-              "Inde": 14.2,
-              "Italie": 14.2,
-              "Espagne": 2.0,
-              "Allemagne": 2.0
+              "Etats-Unis": 48.8,
+              "Inde": 14.6,
+              "Espagne": 14.6,
+              "Irlande": 12.0,
+              "Global": 5.0,
+              "Italie": 5.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -278,8 +272,8 @@
           "name": "alternative_cap",
           "constraint_type": "max",
           "cap": 20.0,
-          "observed": 15.0,
-          "slack": 5.0,
+          "observed": 0,
+          "slack": 20.0,
           "binding": false,
           "status": "OK",
           "details": {
@@ -300,53 +294,50 @@
       },
       "quality_score": 71.4,
       "recommendations": [
-        "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
-        "🟠 VIOLATED: max_sector exceeded by 0.4% — reduce exposure",
+        "🟡 BINDING: max_single_position at 14.6% (cap=15.0%) — monitor closely",
+        "🟠 VIOLATED: max_sector exceeded by 1.2% — reduce exposure",
         "🟠 VIOLATED: bucket_core exceeded by 0.8% — reduce exposure",
         "🟠 VIOLATED: bucket_satellite exceeded by 5.8% — reduce exposure",
         "⚠️ 5 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
-          "ETF": 15.0,
           "Obligations": 5.0,
-          "Actions": 80.0
+          "Actions": 95.0
         },
         "by_sector": {
-          "Finance": 30.4,
-          "Santé": 28.4,
-          "Diversified": 15.0,
-          "Industries": 14.2,
+          "Finance": 36.2,
+          "Industries": 24.6,
+          "Santé": 14.6,
+          "Biens de consommation cycliques": 14.6,
           "Bonds": 5.0,
-          "La communication": 5.0,
-          "Services publics": 2.0
+          "La communication": 5.0
         },
         "by_region": {
-          "Etats-Unis": 47.6,
-          "Global": 20.0,
-          "Inde": 14.2,
-          "Italie": 14.2,
-          "Espagne": 2.0,
-          "Allemagne": 2.0
+          "Etats-Unis": 48.8,
+          "Inde": 14.6,
+          "Espagne": 14.6,
+          "Irlande": 12.0,
+          "Global": 5.0,
+          "Italie": 5.0
         },
         "by_risk_bucket": {
-          "alternative": 15.0,
           "bond_like": 5.0,
-          "equity_like": 80.0
+          "equity_like": 95.0
         },
         "by_role": {
-          "core": 29.2,
           "defensive": 5.0,
-          "satellite": 65.8
+          "satellite": 65.8,
+          "core": 29.2
         },
         "concentration": {
-          "hhi": 1291.0,
+          "hhi": 1245.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 7.7,
+          "effective_n": 8.0,
           "n_positions": 10,
-          "top_5_weight": 71.8,
+          "top_5_weight": 73.0,
           "top_10_weight": 100.0,
-          "largest_position": 15.0,
+          "largest_position": 14.6,
           "smallest_position": 2.0,
           "thresholds": {
             "well_diversified": "HHI < 1000",
@@ -358,23 +349,11 @@
       },
       "ticker_mapping": [
         {
-          "id": "Main Buywrite ETF",
-          "ticker": "Main Buywrite ETF",
-          "isin": NaN,
-          "name": "Main Buywrite ETF",
-          "weight_pct": 15.0,
-          "category": "ETF",
-          "risk_bucket": "alternative",
-          "sector": "Diversified",
-          "region": "Global",
-          "exchange": null
-        },
-        {
           "id": "EQ_913",
           "ticker": "EQ_913",
           "isin": null,
           "name": "MUTHOOT FINANCE LTD",
-          "weight_pct": 14.2,
+          "weight_pct": 14.6,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
@@ -386,7 +365,7 @@
           "ticker": "EQ_146",
           "isin": null,
           "name": "CUMMINS INC",
-          "weight_pct": 14.2,
+          "weight_pct": 14.6,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Industries",
@@ -394,27 +373,15 @@
           "exchange": null
         },
         {
-          "id": "EQ_551",
-          "ticker": "EQ_551",
+          "id": "EQ_590",
+          "ticker": "EQ_590",
           "isin": null,
-          "name": "UNICREDIT",
-          "weight_pct": 14.2,
+          "name": "CAIXABANK SA",
+          "weight_pct": 14.6,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
-          "region": "Italie",
-          "exchange": null
-        },
-        {
-          "id": "EQ_10",
-          "ticker": "EQ_10",
-          "isin": null,
-          "name": "ELI LILLY",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Etats-Unis",
+          "region": "Espagne",
           "exchange": null
         },
         {
@@ -422,7 +389,7 @@
           "ticker": "EQ_13",
           "isin": null,
           "name": "JOHNSON & JOHNSON",
-          "weight_pct": 14.2,
+          "weight_pct": 14.6,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Santé",
@@ -430,10 +397,34 @@
           "exchange": null
         },
         {
-          "id": "FT Tactical High Yield ETF",
-          "ticker": "FT Tactical High Yield ETF",
+          "id": "EQ_58",
+          "ticker": "EQ_58",
+          "isin": null,
+          "name": "TJX INC",
+          "weight_pct": 14.6,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Biens de consommation cycliques",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
+          "id": "EQ_619",
+          "ticker": "EQ_619",
+          "isin": null,
+          "name": "RYANAIR HOLDINGS PLC",
+          "weight_pct": 10.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Industries",
+          "region": "Irlande",
+          "exchange": null
+        },
+        {
+          "id": "Quadratic Interest Rate Volatility and Inflation Hedge ETF",
+          "ticker": "Quadratic Interest Rate Volatility and Inflation Hedge ETF",
           "isin": NaN,
-          "name": "FT Tactical High Yield ETF",
+          "name": "Quadratic Interest Rate Volatility and Inflation Hedge ETF",
           "weight_pct": 5.0,
           "category": "Obligations",
           "risk_bucket": "bond_like",
@@ -454,27 +445,27 @@
           "exchange": null
         },
         {
-          "id": "EQ_590",
-          "ticker": "EQ_590",
+          "id": "EQ_551",
+          "ticker": "EQ_551",
           "isin": null,
-          "name": "CAIXABANK SA",
+          "name": "UNICREDIT",
+          "weight_pct": 5.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Finance",
+          "region": "Italie",
+          "exchange": null
+        },
+        {
+          "id": "EQ_637",
+          "ticker": "EQ_637",
+          "isin": null,
+          "name": "AIB GROUP PLC",
           "weight_pct": 2.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
-          "region": "Espagne",
-          "exchange": null
-        },
-        {
-          "id": "EQ_607",
-          "ticker": "EQ_607",
-          "isin": null,
-          "name": "RWE AG",
-          "weight_pct": 2.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Services publics",
-          "region": "Allemagne",
+          "region": "Irlande",
           "exchange": null
         }
       ],
@@ -483,10 +474,10 @@
         "n_exchanges": 0,
         "exchanges": [],
         "total_weight": 100.0,
-        "missing_isin": 8,
+        "missing_isin": 9,
         "missing_ticker": 10,
         "data_quality": {
-          "isin_coverage": 20.0,
+          "isin_coverage": 10.0,
           "ticker_coverage": 0.0
         },
         "ready_for_execution": false
@@ -494,45 +485,42 @@
     },
     "_exposures": {
       "by_category": {
-        "ETF": 15.0,
         "Obligations": 5.0,
-        "Actions": 80.0
+        "Actions": 95.0
       },
       "by_sector": {
-        "Finance": 30.4,
-        "Santé": 28.4,
-        "Diversified": 15.0,
-        "Industries": 14.2,
+        "Finance": 36.2,
+        "Industries": 24.6,
+        "Santé": 14.6,
+        "Biens de consommation cycliques": 14.6,
         "Bonds": 5.0,
-        "La communication": 5.0,
-        "Services publics": 2.0
+        "La communication": 5.0
       },
       "by_region": {
-        "Etats-Unis": 47.6,
-        "Global": 20.0,
-        "Inde": 14.2,
-        "Italie": 14.2,
-        "Espagne": 2.0,
-        "Allemagne": 2.0
+        "Etats-Unis": 48.8,
+        "Inde": 14.6,
+        "Espagne": 14.6,
+        "Irlande": 12.0,
+        "Global": 5.0,
+        "Italie": 5.0
       },
       "by_risk_bucket": {
-        "alternative": 15.0,
         "bond_like": 5.0,
-        "equity_like": 80.0
+        "equity_like": 95.0
       },
       "by_role": {
-        "core": 29.2,
         "defensive": 5.0,
-        "satellite": 65.8
+        "satellite": 65.8,
+        "core": 29.2
       },
       "concentration": {
-        "hhi": 1291.0,
+        "hhi": 1245.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 7.7,
+        "effective_n": 8.0,
         "n_positions": 10,
-        "top_5_weight": 71.8,
+        "top_5_weight": 73.0,
         "top_10_weight": 100.0,
-        "largest_position": 15.0,
+        "largest_position": 14.6,
         "smallest_position": 2.0,
         "thresholds": {
           "well_diversified": "HHI < 1000",
@@ -547,10 +535,10 @@
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 8,
+      "missing_isin": 9,
       "missing_ticker": 10,
       "data_quality": {
-        "isin_coverage": 20.0,
+        "isin_coverage": 10.0,
         "ticker_coverage": 0.0
       },
       "ready_for_execution": false
@@ -558,18 +546,18 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée, combinant des actions et des obligations pour un profil de risque modéré. Bien qu'il vise à réduire la volatilité, les fluctuations des marchés peuvent toujours affecter les performances. En outre, l'exposition à des secteurs spécifiques, comme la finance et la consommation, peut introduire des risques supplémentaires. Les investisseurs doivent être conscients des défis potentiels liés à la conjoncture économique actuelle. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie modérée, équilibrant actions et obligations pour réduire la volatilité. Les investissements dans des ETF diversifiés et des actions de secteurs stables visent à offrir une croissance tout en maintenant un profil défensif. Cependant, les fluctuations des marchés et les risques sectoriels peuvent affecter la performance. Il est important de prendre en compte ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "JOHNSON & JOHNSON": "15%",
-      "RWE AG": "2%",
-      "ENGIE SA": "2%",
-      "UNICREDIT": "14%",
-      "STEEL DYNAMICS INC": "14%",
-      "TAPESTRY INC": "10%"
+      "FOX CORP CLASS A": "2%",
+      "CUMMINS INC": "15%",
+      "MUTHOOT FINANCE LTD": "14%",
+      "CAIXABANK SA": "10%",
+      "JOHNSON & JOHNSON": "14%",
+      "RWE AG": "2%"
     },
     "ETF": {
-      "Innovator Equity Managed Floor ETF": "14%",
-      "First Trust Preferred Securities and Income ETF": "14%"
+      "VanEck Oil Services ETF": "14%",
+      "Invesco Dorsey Wright Industrials ETF": "14%"
     },
     "Obligations": {
       "Vanguard Short-Term Bond ETF": "8%",
@@ -577,21 +565,21 @@
     },
     "Crypto": {},
     "_tickers": {
-      "SFLR": 0.142,
-      "FPE": 0.142,
+      "OIH": 0.142,
+      "PRN": 0.142,
+      "FOXA": 0.02,
+      "CMI": 0.142,
+      "MUTHOOTFIN": 0.142,
+      "CABK": 0.1,
       "JNJ": 0.142,
       "RWE": 0.02,
-      "ENGI": 0.02,
-      "UCG": 0.142,
-      "STLD": 0.142,
-      "TPR": 0.1,
       "BSV": 0.08,
       "VTIP": 0.07
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 10.97,
+      "vol_realized": 11.36,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -601,15 +589,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 10.97,
-          "slack": 1.97,
+          "observed": 11.36,
+          "slack": 2.36,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -1.03
+            "diff_from_target": -0.64
           }
         },
         {
@@ -658,29 +646,29 @@
           "status": "BINDING",
           "details": {
             "largest_position": {
-              "id": "Innovator Equity Managed Floor ETF",
-              "name": "Innovator Equity Managed Floor ETF",
+              "id": "VanEck Oil Services ETF",
+              "name": "VanEck Oil Services ETF",
               "weight": 14.2
             },
             "positions_above_10pct": [
               {
-                "id": "Innovator Equity Managed Floor ETF",
+                "id": "VanEck Oil Services ETF",
                 "weight": 14.2
               },
               {
-                "id": "First Trust Preferred Securities and Income ETF",
+                "id": "Invesco Dorsey Wright Industrials ETF",
+                "weight": 14.2
+              },
+              {
+                "id": "EQ_146",
+                "weight": 14.2
+              },
+              {
+                "id": "EQ_913",
                 "weight": 14.2
               },
               {
                 "id": "EQ_13",
-                "weight": 14.2
-              },
-              {
-                "id": "EQ_551",
-                "weight": 14.2
-              },
-              {
-                "id": "EQ_367",
                 "weight": 14.2
               }
             ]
@@ -690,28 +678,28 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 14.2,
-          "slack": 15.8,
+          "observed": 28.4,
+          "slack": 1.6,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Diversified",
             "counts_in_max_sector": {
-              "Diversified": 14.2,
+              "Diversified": 28.4,
+              "Finance": 24.2,
+              "Industries": 14.2,
               "Santé": 14.2,
-              "Finance": 14.2,
-              "Matériaux": 14.2,
-              "Biens de consommation cycliques": 10.0,
-              "Services publics": 4.0
+              "La communication": 2.0,
+              "Services publics": 2.0
             },
             "all_sectors": {
               "Diversified": 28.4,
+              "Finance": 24.2,
               "Bonds": 15.0,
+              "Industries": 14.2,
               "Santé": 14.2,
-              "Finance": 14.2,
-              "Matériaux": 14.2,
-              "Biens de consommation cycliques": 10.0,
-              "Services publics": 4.0
+              "La communication": 2.0,
+              "Services publics": 2.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -720,25 +708,25 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 38.4,
-          "slack": 11.6,
+          "observed": 30.4,
+          "slack": 19.6,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Etats-Unis": 38.4,
-              "Global": 14.2,
-              "Italie": 14.2,
-              "Allemagne": 2.0,
-              "France": 2.0
+              "Etats-Unis": 30.4,
+              "Global": 28.4,
+              "Inde": 14.2,
+              "Espagne": 10.0,
+              "Allemagne": 2.0
             },
             "all_regions": {
               "Global": 43.4,
-              "Etats-Unis": 38.4,
-              "Italie": 14.2,
-              "Allemagne": 2.0,
-              "France": 2.0
+              "Etats-Unis": 30.4,
+              "Inde": 14.2,
+              "Espagne": 10.0,
+              "Allemagne": 2.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -827,10 +815,10 @@
           "name": "alternative_cap",
           "constraint_type": "max",
           "cap": 15.0,
-          "observed": 14.2,
-          "slack": 0.8,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 0,
+          "slack": 15.0,
+          "binding": false,
+          "status": "OK",
           "details": {
             "includes": [
               "Derivative Income",
@@ -842,18 +830,17 @@
       ],
       "summary": {
         "total": 13,
-        "ok": 5,
-        "binding": 6,
+        "ok": 6,
+        "binding": 5,
         "violated": 2,
         "critical": 0
       },
-      "quality_score": 75.4,
+      "quality_score": 76.9,
       "recommendations": [
         "🟡 BINDING: max_single_position at 14.2% (cap=15.0%) — monitor closely",
         "🟠 VIOLATED: bucket_core exceeded by 6.6% — reduce exposure",
         "🟠 VIOLATED: bucket_satellite exceeded by 7.4% — reduce exposure",
-        "🟡 BINDING: alternative_cap at 14.2% (cap=15.0%) — monitor closely",
-        "⚠️ 6 constraints are binding — consider relaxing profile or reducing positions"
+        "⚠️ 5 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
@@ -863,28 +850,27 @@
         },
         "by_sector": {
           "Diversified": 28.4,
+          "Finance": 24.2,
           "Bonds": 15.0,
+          "Industries": 14.2,
           "Santé": 14.2,
-          "Finance": 14.2,
-          "Matériaux": 14.2,
-          "Biens de consommation cycliques": 10.0,
-          "Services publics": 4.0
+          "La communication": 2.0,
+          "Services publics": 2.0
         },
         "by_region": {
           "Global": 43.4,
-          "Etats-Unis": 38.4,
-          "Italie": 14.2,
-          "Allemagne": 2.0,
-          "France": 2.0
+          "Etats-Unis": 30.4,
+          "Inde": 14.2,
+          "Espagne": 10.0,
+          "Allemagne": 2.0
         },
         "by_risk_bucket": {
-          "alternative": 14.2,
-          "equity_like": 70.8,
+          "equity_like": 85.0,
           "bond_like": 15.0
         },
         "by_role": {
-          "defensive": 29.2,
           "core": 28.4,
+          "defensive": 29.2,
           "satellite": 42.4
         },
         "concentration": {
@@ -906,27 +892,51 @@
       },
       "ticker_mapping": [
         {
-          "id": "Innovator Equity Managed Floor ETF",
-          "ticker": "Innovator Equity Managed Floor ETF",
+          "id": "VanEck Oil Services ETF",
+          "ticker": "VanEck Oil Services ETF",
           "isin": NaN,
-          "name": "Innovator Equity Managed Floor ETF",
-          "weight_pct": 14.2,
-          "category": "ETF",
-          "risk_bucket": "alternative",
-          "sector": "Diversified",
-          "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "First Trust Preferred Securities and Income ETF",
-          "ticker": "First Trust Preferred Securities and Income ETF",
-          "isin": NaN,
-          "name": "First Trust Preferred Securities and Income ETF",
+          "name": "VanEck Oil Services ETF",
           "weight_pct": 14.2,
           "category": "ETF",
           "risk_bucket": "equity_like",
           "sector": "Diversified",
           "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "Invesco Dorsey Wright Industrials ETF",
+          "ticker": "Invesco Dorsey Wright Industrials ETF",
+          "isin": NaN,
+          "name": "Invesco Dorsey Wright Industrials ETF",
+          "weight_pct": 14.2,
+          "category": "ETF",
+          "risk_bucket": "equity_like",
+          "sector": "Diversified",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "EQ_146",
+          "ticker": "EQ_146",
+          "isin": null,
+          "name": "CUMMINS INC",
+          "weight_pct": 14.2,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Industries",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
+          "id": "EQ_913",
+          "ticker": "EQ_913",
+          "isin": null,
+          "name": "MUTHOOT FINANCE LTD",
+          "weight_pct": 14.2,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Finance",
+          "region": "Inde",
           "exchange": null
         },
         {
@@ -942,39 +952,15 @@
           "exchange": null
         },
         {
-          "id": "EQ_551",
-          "ticker": "EQ_551",
+          "id": "EQ_590",
+          "ticker": "EQ_590",
           "isin": null,
-          "name": "UNICREDIT",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Italie",
-          "exchange": null
-        },
-        {
-          "id": "EQ_367",
-          "ticker": "EQ_367",
-          "isin": null,
-          "name": "STEEL DYNAMICS INC",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Matériaux",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "EQ_363",
-          "ticker": "EQ_363",
-          "isin": null,
-          "name": "TAPESTRY INC",
+          "name": "CAIXABANK SA",
           "weight_pct": 10.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Biens de consommation cycliques",
-          "region": "Etats-Unis",
+          "sector": "Finance",
+          "region": "Espagne",
           "exchange": null
         },
         {
@@ -1002,6 +988,18 @@
           "exchange": null
         },
         {
+          "id": "EQ_459",
+          "ticker": "EQ_459",
+          "isin": null,
+          "name": "FOX CORP CLASS A",
+          "weight_pct": 2.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "La communication",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
           "id": "EQ_607",
           "ticker": "EQ_607",
           "isin": null,
@@ -1011,18 +1009,6 @@
           "risk_bucket": "equity_like",
           "sector": "Services publics",
           "region": "Allemagne",
-          "exchange": null
-        },
-        {
-          "id": "EQ_586",
-          "ticker": "EQ_586",
-          "isin": null,
-          "name": "ENGIE SA",
-          "weight_pct": 2.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Services publics",
-          "region": "France",
           "exchange": null
         }
       ],
@@ -1048,28 +1034,27 @@
       },
       "by_sector": {
         "Diversified": 28.4,
+        "Finance": 24.2,
         "Bonds": 15.0,
+        "Industries": 14.2,
         "Santé": 14.2,
-        "Finance": 14.2,
-        "Matériaux": 14.2,
-        "Biens de consommation cycliques": 10.0,
-        "Services publics": 4.0
+        "La communication": 2.0,
+        "Services publics": 2.0
       },
       "by_region": {
         "Global": 43.4,
-        "Etats-Unis": 38.4,
-        "Italie": 14.2,
-        "Allemagne": 2.0,
-        "France": 2.0
+        "Etats-Unis": 30.4,
+        "Inde": 14.2,
+        "Espagne": 10.0,
+        "Allemagne": 2.0
       },
       "by_risk_bucket": {
-        "alternative": 14.2,
-        "equity_like": 70.8,
+        "equity_like": 85.0,
         "bond_like": 15.0
       },
       "by_role": {
-        "defensive": 29.2,
         "core": 28.4,
+        "defensive": 29.2,
         "satellite": 42.4
       },
       "concentration": {
@@ -1105,7 +1090,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche défensive, avec une forte concentration sur les obligations et des actions historiquement stables. Cela vise à réduire la volatilité tout en offrant un potentiel de rendement modéré. Cependant, même avec un profil défensif, des fluctuations de marché peuvent toujours survenir. De plus, l'exposition à des actifs spécifiques, comme ceux du secteur financier, peut introduire des risques supplémentaires. Les investisseurs doivent être conscients des défis potentiels liés à la conjoncture économique actuelle. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, axée sur des obligations et des actions à faible volatilité. L'accent mis sur les titres à revenu fixe vise à réduire les risques tout en offrant une possiblee croissance. Cependant, la dépendance aux taux d'intérêt et aux conditions économiques peut limiter les rendements. Il est crucial de considérer ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "ALLIANZ": "10%",
@@ -1114,7 +1099,7 @@
       "ENGIE SA": "2%"
     },
     "ETF": {
-      "iShares Future AI & Tech ETF": "8%"
+      "First Trust NASDAQ Cybersecurity ETF": "8%"
     },
     "Obligations": {
       "JPMorgan Ultra-Short Municipal Income Fund": "13%",
@@ -1134,13 +1119,13 @@
       "ALV": 0.1026,
       "TJX": 0.1026,
       "G": 0.0513,
-      "IRBO": 0.0821,
+      "CIBR": 0.0821,
       "ENGI": 0.0205
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 5.31,
+      "vol_realized": 5.08,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
@@ -1151,15 +1136,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 5.31,
-          "slack": 2.31,
+          "observed": 5.08,
+          "slack": 2.08,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -0.69
+            "diff_from_target": -0.92
           }
         },
         {
@@ -1541,10 +1526,10 @@
           "exchange": null
         },
         {
-          "id": "iShares Future AI & Tech ETF",
-          "ticker": "iShares Future AI & Tech ETF",
+          "id": "First Trust NASDAQ Cybersecurity ETF",
+          "ticker": "First Trust NASDAQ Cybersecurity ETF",
           "isin": NaN,
-          "name": "iShares Future AI & Tech ETF",
+          "name": "First Trust NASDAQ Cybersecurity ETF",
           "weight_pct": 8.21,
           "category": "ETF",
           "risk_bucket": "equity_like",
@@ -1668,7 +1653,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-19T16:42:35.332990",
+    "generated_at": "2025-12-20T08:13:04.353999",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
