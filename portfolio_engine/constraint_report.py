@@ -1,14 +1,9 @@
 # portfolio_engine/constraint_report.py
 """
-Constraint Report Module — v2.1 (PR0 Integration)
+Constraint Report Module — v2.0
 
 Génère un rapport structuré des contraintes avec margins explicites.
 Chaque contrainte est documentée avec: {cap, observed, slack, binding, status}
-
-v2.1 CHANGES (PR0 Integration):
-- Intégration avec exposures.py (source unique de vérité)
-- Feature flag USE_EXPOSURES_V2 pour dual-run migration
-- _compute_exposures_legacy() conservé pour fallback
 
 v2.0 ADDITIONS (Phase 1.2-1.3):
 - Exposures détaillées (category, sector, region, risk_bucket, role)
@@ -57,21 +52,6 @@ except ImportError:
     
     LEVERAGED_CAP = {"Stable": 0.0, "Modéré": 0.0, "Agressif": 5.0}
     ALTERNATIVE_CAP = {"Stable": 5.0, "Modéré": 10.0, "Agressif": 20.0}
-
-# === PR0: Import exposures.py (source unique de vérité) ===
-try:
-    from portfolio_engine.exposures import (
-        compute_all_exposures,
-        compute_hhi as compute_hhi_v2,
-        compute_role_exposures,
-        compute_concentration_metrics,
-        USE_EXPOSURES_V2,
-        ExposureResult as ExposureResultV2,
-    )
-    HAS_EXPOSURES_V2 = True
-except ImportError:
-    HAS_EXPOSURES_V2 = False
-    USE_EXPOSURES_V2 = False
 
 logger = logging.getLogger("portfolio_engine.constraint_report")
 
@@ -372,7 +352,6 @@ class ConstraintReportGenerator:
     """
     Générateur de rapports de contraintes.
     
-    v2.1: Intégration avec exposures.py (PR0).
     v2.0: Ajout génération exposures et ticker_mapping.
     
     Usage:
@@ -382,8 +361,6 @@ class ConstraintReportGenerator:
     
     def __init__(self):
         self.has_risk_buckets = HAS_RISK_BUCKETS
-        self.has_exposures_v2 = HAS_EXPOSURES_V2
-        self.use_exposures_v2 = HAS_EXPOSURES_V2 and USE_EXPOSURES_V2
     
     def generate(
         self,
@@ -461,7 +438,7 @@ class ConstraintReportGenerator:
         # Generate recommendations
         recommendations = self._generate_recommendations(constraints, profile)
         
-        # Phase 1.2 + PR0: Generate exposures
+        # Phase 1.2: Generate exposures
         exposures = None
         if include_exposures:
             exposures = self._compute_exposures(allocation, asset_by_id)
@@ -499,7 +476,7 @@ class ConstraintReportGenerator:
             return asset.get(attr, default)
         return default
     
-    # ============= PHASE 1.2 + PR0: EXPOSURES =============
+    # ============= PHASE 1.2: EXPOSURES =============
     
     def _compute_exposures(
         self,
@@ -507,110 +484,7 @@ class ConstraintReportGenerator:
         asset_by_id: Dict[str, Any],
     ) -> ExposureReport:
         """
-        Phase 1.2 + PR0: Calcule les expositions détaillées.
-        
-        Si USE_EXPOSURES_V2=True, utilise exposures.py (source unique).
-        Sinon, fallback sur l'ancien code.
-        
-        Returns:
-            ExposureReport avec breakdown complet
-        """
-        # === PR0: Utiliser exposures.py si disponible ===
-        if self.use_exposures_v2:
-            try:
-                return self._compute_exposures_v2(allocation, asset_by_id)
-            except Exception as e:
-                logger.warning(f"exposures.py failed, falling back to legacy: {e}")
-                return self._compute_exposures_legacy(allocation, asset_by_id)
-        
-        # === FALLBACK: Ancien code ===
-        return self._compute_exposures_legacy(allocation, asset_by_id)
-    
-    def _compute_exposures_v2(
-        self,
-        allocation: Dict[str, float],
-        asset_by_id: Dict[str, Any],
-    ) -> ExposureReport:
-        """
-        PR0: Calcule les expositions via exposures.py (source unique de vérité).
-        
-        Returns:
-            ExposureReport construit depuis ExposureResult
-        """
-        # Construire weights dict (convertir % en décimal)
-        weights = {aid: w / 100.0 for aid, w in allocation.items() if w > 0}
-        
-        # Construire asset_data dict pour exposures.py
-        asset_data = {}
-        for aid in weights.keys():
-            asset = asset_by_id.get(aid)
-            if asset:
-                # Extraire le role (peut être un Enum)
-                role = self._get_asset_attr(asset, 'role')
-                role_str = None
-                if role:
-                    role_str = role.value if hasattr(role, 'value') else str(role)
-                
-                asset_data[aid] = {
-                    "role": role_str,
-                    "region": self._get_asset_attr(asset, 'region', 'Global'),
-                    "sector": self._get_asset_attr(asset, 'sector', 'Unknown'),
-                    "category": self._get_asset_attr(asset, 'category', 'Unknown'),
-                    "risk_bucket": self._get_asset_attr(asset, '_risk_bucket', 'unknown'),
-                }
-        
-        # Appeler la source unique de vérité
-        result = compute_all_exposures(weights, asset_data)
-        
-        # Log si PR0 détecte des problèmes
-        if result.warnings:
-            for warning in result.warnings:
-                logger.warning(f"[PR0 exposures.py] {warning}")
-        
-        if not result.is_execution_ready:
-            logger.warning(
-                f"[PR0] Portfolio NOT execution ready: unknown_weight={result.unknown_weight*100:.1f}%"
-            )
-        
-        # Convertir en ExposureReport (format legacy, poids en %)
-        # Note: exposures.py retourne en décimal, on multiplie par 100 pour le format legacy
-        return ExposureReport(
-            by_category={k: v * 100 for k, v in result.by_category.items()},
-            by_sector={k: v * 100 for k, v in result.by_sector.items()},
-            by_region={k: v * 100 for k, v in result.by_region.items()},
-            by_risk_bucket={k: v * 100 for k, v in result.by_risk_bucket.items()},
-            by_role={k: v * 100 for k, v in result.by_role.items()},
-            concentration={
-                "hhi": result.concentration.hhi,
-                "hhi_interpretation": result.concentration.concentration_level,
-                "effective_n": result.concentration.effective_n,
-                "n_positions": result.concentration.n_positions,
-                "top_5_weight": round(result.concentration.top_5_weight * 100, 2),
-                "top_10_weight": round(result.concentration.top_10_weight * 100, 2),
-                "largest_position": round(result.concentration.largest_position * 100, 2),
-                "smallest_position": round(result.concentration.smallest_position * 100, 2),
-                "thresholds": {
-                    "well_diversified": "HHI < 1000",
-                    "diversified": "HHI 1000-1500",
-                    "moderately_concentrated": "HHI 1500-2500",
-                    "highly_concentrated": "HHI > 2500",
-                },
-                # PR0: Nouveau champs
-                "source": "exposures.py (PR0)",
-                "unknown_weight_pct": round(result.unknown_weight * 100, 2),
-                "is_execution_ready": result.is_execution_ready,
-            },
-        )
-    
-    def _compute_exposures_legacy(
-        self,
-        allocation: Dict[str, float],
-        asset_by_id: Dict[str, Any],
-    ) -> ExposureReport:
-        """
-        LEGACY: Ancien code de calcul des expositions (Phase 1.2).
-        
-        Conservé pour dual-run et fallback.
+        Phase 1.2: Calcule les expositions détaillées.
         
         Returns:
             ExposureReport avec breakdown complet
@@ -705,7 +579,6 @@ class ConstraintReportGenerator:
                 "moderately_concentrated": "HHI 1500-2500",
                 "highly_concentrated": "HHI > 2500",
             },
-            "source": "legacy",
         }
         
         return ExposureReport(
@@ -1521,7 +1394,6 @@ def enrich_diagnostics_with_margins(
     """
     Enrichit les diagnostics existants avec le rapport de contraintes.
     
-    v2.1: Inclut indicateur d'utilisation de exposures.py (PR0).
     v2.0: Inclut exposures et ticker_mapping.
     
     Usage dans optimizer.py:
@@ -1555,8 +1427,5 @@ def enrich_diagnostics_with_margins(
     # Phase 1.3: Execution summary au top-level
     if "execution_summary" in report:
         diagnostics["execution_summary"] = report["execution_summary"]
-    
-    # PR0: Indicateur d'utilisation de exposures.py
-    diagnostics["exposures_source"] = "exposures.py (PR0)" if (HAS_EXPOSURES_V2 and USE_EXPOSURES_V2) else "legacy"
     
     return diagnostics
