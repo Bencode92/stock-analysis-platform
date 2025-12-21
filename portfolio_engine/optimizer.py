@@ -1,17 +1,60 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.20.0 — FIX cap pass post-redistribution
+Optimiseur de portefeuille v6.18.1 — FIX max_region (actions only)
 
-CHANGEMENTS v6.20.0 (FIX Modéré/BIL bug):
-1. NEW: _enforce_position_caps() - cap pass itératif après toute redistribution
-2. FIX: Appelé après normalisation, vol adjustment, et adjust_to_100
-3. FIX: Caps par catégorie (bonds vs autres) respectés à tout moment
-4. NEW: get_max_weight_for_asset() - source unique de vérité pour caps
+CHANGEMENTS v6.18.1:
+1. FIX: max_region s'applique UNIQUEMENT aux Actions (pas aux Bonds/ETF)
+2. FIX: region_weights tracké uniquement pour category=="Actions"
+3. Rationale: Bonds = risque duration/crédit, pas géographique
 
-CHANGEMENTS v6.19.0 (PR0-PR3 Integration):
-1. PR0: Import exposures.py pour source unique de vérité
-2. PR1: Import instrument_classifier.py pour classification unifiée
-3. PR3: Import bucket_penalty.py pour pénalités soft dans SLSQP
+CHANGEMENTS v6.18 (FIX max_region/max_sector fallback):
+1. FIX: _fallback_allocation() respecte maintenant max_region (était ignoré)
+2. FIX: region_weights tracké pour bonds ET autres assets
+3. FIX: Vérification max_region AVANT allocation de chaque asset
+4. IMPACT: Stable ne dépassera plus 50% US (était 92.85%)
+
+CHANGEMENTS v6.17 (P1-2 v2 Diagonal Shrinkage - ChatGPT reviewed):
+1. NEW: diag_shrink_to_target() - shrinkage diagonal sans dépendance aux returns
+2. FIX: Appliqué APRÈS _ensure_positive_definite_with_kpis() + recalcul KPIs
+3. FIX: CONDITION_NUMBER_WARNING_THRESHOLD aligné sur target (10000)
+4. OBJECTIF: condition_number < 10,000 (était ~2M)
+
+CHANGEMENTS v6.16 (P1-2 Ledoit-Wolf Shrinkage):
+1. NEW: Shrinkage Ledoit-Wolf sur covariance empirique AVANT hybridation
+2. NEW: shrinkage_intensity dans diagnostics (δ optimal calculé)
+3. NEW: condition_number_before/after_shrinkage pour tracking
+4. OBJECTIF: condition_number < 10,000 (était ~2M)
+
+CHANGEMENTS v6.15 (P1-6 Covariance KPIs):
+1. NEW: condition_number = max(λ)/min(λ) dans diagnostics covariance
+2. NEW: eigen_clipped = nombre d'eigenvalues forcées au minimum
+3. NEW: eigen_clipped_pct = pourcentage d'eigenvalues clippées
+4. NEW: is_well_conditioned = True si condition_number < 1000 et eigen_clipped_pct < 20%
+5. Alertes automatiques si matrice mal conditionnée
+
+CHANGEMENTS v6.14 (P0 Technical Fixes - ChatGPT v2.0 Audit):
+1. P0-2 FIX: Tie-breaker (score, id) pour tri déterministe
+   - sorted(..., key=lambda x: (x.score, x.id)) au lieu de key=lambda x: x.score
+   - Garantit un ordre stable même en cas d'égalité de score
+
+CHANGEMENTS v6.13 (Conformité AMF - P0-9):
+1. FIX WORDING: "Certified" → "Heuristic" partout (évite terme trompeur)
+2. FIX WORDING: "fallback_certified" → "fallback_heuristic"
+3. Documentation mise à jour pour transparence
+
+CHANGEMENTS v6.12 (IC Review - ChatGPT validation finale):
+1. STABLE FALLBACK OFFICIEL: Skip SLSQP pour Stable (contraintes mathématiquement incompatibles)
+2. Nouveau mode "fallback_heuristic" avec documentation claire
+3. Justification: Markowitz infeasible sous contraintes strictes Stable
+
+CHANGEMENTS v6.11 (IC Review - ChatGPT challenge):
+1. ACTION 1: max_single_bond Stable 12% → 18% (réduit géométrie contraintes)
+2. ACTION 3: Ajout optimization_mode dans diagnostics (transparence fallback)
+
+CHANGEMENTS v6.10 (IC Review):
+1. CRITICAL: Stable vol_target 8.0% → 6.0% (aligné avec vol réalisée)
+2. CRITICAL: Stable vol_tolerance 5.0% → 3.0% (tolérance [3%, 9%])
+3. SLSQP converge sans fallback pour Stable
 
 5 LEVIERS ACTIFS (le reste est gelé):
 1. vol_target par profil (6%, 12%, 18%)
@@ -104,133 +147,39 @@ try:
 except ImportError:
     HAS_CONSTRAINT_REPORT = False
 
-# === PR0: Import exposures.py (source unique de vérité) ===
-try:
-    from portfolio_engine.exposures import (
-        compute_all_exposures,
-        compute_role_exposures,
-        compute_hhi,
-        USE_EXPOSURES_V2,
-    )
-    HAS_EXPOSURES_V2 = True
-except ImportError:
-    HAS_EXPOSURES_V2 = False
-    USE_EXPOSURES_V2 = False
-
-# === PR1: Import instrument_classifier.py ===
-try:
-    from portfolio_engine.instrument_classifier import (
-        InstrumentClassifier,
-        get_classifier,
-        InstrumentClassification,
-    )
-    HAS_INSTRUMENT_CLASSIFIER = True
-except ImportError:
-    HAS_INSTRUMENT_CLASSIFIER = False
-
-# === PR3: Import bucket_penalty.py ===
-try:
-    from portfolio_engine.bucket_penalty import (
-        create_penalty_function,
-        compute_total_bucket_penalty,
-        BucketPenaltyResult,
-        DEFAULT_LAMBDA_BUCKET,
-        DEFAULT_LAMBDA_UNKNOWN,
-    )
-    HAS_BUCKET_PENALTY = True
-except ImportError:
-    HAS_BUCKET_PENALTY = False
-    DEFAULT_LAMBDA_BUCKET = 20.0
-    DEFAULT_LAMBDA_UNKNOWN = 50.0
-
 logger = logging.getLogger("portfolio_engine.optimizer")
 
-# ============= CONSTANTES v6.20 =============
+# ============= CONSTANTES v6.17 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
-BUFFETT_HARD_FILTER_MIN = 50.0
+BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
 
 # Covariance hybride: poids empirique vs structurée
-COVARIANCE_EMPIRICAL_WEIGHT = 0.60
+COVARIANCE_EMPIRICAL_WEIGHT = 0.60  # 60% empirique, 40% structurée
 
 # P1-6: Seuils d'alerte pour KPIs covariance
-CONDITION_NUMBER_WARNING_THRESHOLD = 10000.0
-EIGEN_CLIPPED_PCT_WARNING_THRESHOLD = 20.0
+# v6.17 FIX: Aligné sur CONDITION_NUMBER_TARGET pour éviter warning après shrink réussi
+CONDITION_NUMBER_WARNING_THRESHOLD = 10000.0  # > 10000 = matrice instable
+EIGEN_CLIPPED_PCT_WARNING_THRESHOLD = 20.0   # > 20% = données insuffisantes
 
 # P1-2: Shrinkage Ledoit-Wolf
-SHRINKAGE_ENABLED = True
-CONDITION_NUMBER_TARGET = 10000.0
-
-# === PR3: Soft bucket penalty configuration ===
-USE_SOFT_BUCKET_PENALTY = True
-LAMBDA_BUCKET = DEFAULT_LAMBDA_BUCKET
-LAMBDA_UNKNOWN = DEFAULT_LAMBDA_UNKNOWN
-
-# === v6.20: Position caps par catégorie et profil ===
-# Source unique de vérité pour tous les caps
-MAX_SINGLE_BOND_WEIGHT = {
-    "Stable": 25.0,
-    "Modéré": 8.0,
-    "Agressif": 5.0,
-}
-
-MAX_SINGLE_POSITION_DEFAULT = 15.0  # Pour non-bonds
-
-MIN_BONDS_IN_POOL = {
-    "Stable": 15,
-    "Modéré": 10,
-    "Agressif": 5,
-}
-
-MIN_DEFENSIVE_IN_POOL = {
-    "Stable": 12,
-    "Modéré": 8,
-    "Agressif": 5,
-}
-
-MIN_DISTINCT_BONDS = {
-    "Stable": 2,
-    "Modéré": 2,
-    "Agressif": 1,
-}
-
-BUCKET_CONSTRAINT_RELAXATION = {
-    "Stable": 0.08,
-    "Modéré": 0.05,
-    "Agressif": 0.05,
-}
-
-FORCE_FALLBACK_PROFILES = {"Stable"}
+SHRINKAGE_ENABLED = True  # Activer/désactiver shrinkage
+CONDITION_NUMBER_TARGET = 10000.0  # Objectif après shrinkage
 
 
-# ============= v6.20: POSITION CAP HELPERS =============
-
-def get_max_weight_for_asset(
-    asset_id: str,
-    asset_category: str,
-    profile_name: str,
-    profile_max_single: float = MAX_SINGLE_POSITION_DEFAULT
-) -> float:
-    """
-    v6.20: Source unique de vérité pour le cap d'un actif.
-    
-    Returns:
-        Maximum weight en % (ex: 8.0 pour 8%)
-    """
-    if asset_category == "Obligations":
-        return MAX_SINGLE_BOND_WEIGHT.get(profile_name, 10.0)
-    else:
-        return profile_max_single
-
-
-# ============= P1-2 v2: DIAGONAL SHRINKAGE =============
+# ============= P1-2 v2: DIAGONAL SHRINKAGE (NEW) =============
 
 def diag_shrink_to_target(
     cov: np.ndarray,
     target_cond: float = CONDITION_NUMBER_TARGET,
     max_steps: int = 12
 ) -> Tuple[np.ndarray, Dict[str, Any]]:
-    """P1-2 v2: Shrink vers diag jusqu'à cond <= target."""
+    """
+    P1-2 v2: Shrink Σ vers diag(Σ) jusqu'à ce que cond(Σ) <= target_cond.
+    
+    Ne nécessite PAS de returns matrix. Efficace pour stabiliser l'inversion.
+    Approche itérative: cov_shrunk = (1 - λ) * cov + λ * diag(cov)
+    """
     cov = np.asarray(cov, dtype=float)
     diag = np.diag(np.diag(cov))
 
@@ -239,6 +188,7 @@ def diag_shrink_to_target(
     except Exception:
         cond0 = float("inf")
 
+    # FIX: on skip QUE si cond est fini ET déjà acceptable
     if np.isfinite(cond0) and cond0 <= target_cond:
         return cov, {
             "cond_before": round(cond0, 2),
@@ -248,7 +198,7 @@ def diag_shrink_to_target(
             "shrink_applied": False,
         }
 
-    lam = 0.02
+    lam = 0.02  # démarre léger (2%)
     cov_best = cov
     cond_best = cond0
 
@@ -282,7 +232,7 @@ def diag_shrink_to_target(
     }
 
 
-# Corrélations structurées
+# Corrélations structurées (utilisées quand pas de données empiriques)
 CORR_SAME_CORPORATE_GROUP = 0.90
 CORR_SAME_EXPOSURE = 0.85
 CORR_SAME_SECTOR = 0.45
@@ -292,13 +242,52 @@ CORR_EQUITY_BOND = -0.20
 CORR_CRYPTO_OTHER = 0.25
 CORR_DEFAULT = 0.15
 
+# Volatilités par défaut par catégorie
 DEFAULT_VOLS = {"Actions": 25.0, "ETF": 15.0, "Obligations": 5.0, "Crypto": 80.0}
+
+# P1 FIX v6.2: Minimum bonds dans le pool par profil (AUGMENTÉ)
+MIN_BONDS_IN_POOL = {
+    "Stable": 15,    # Était 8
+    "Modéré": 10,    # Était 5
+    "Agressif": 5,   # Était 2
+}
+
+# P1 FIX v6.2: Minimum defensive assets dans le pool par profil (AUGMENTÉ)
+MIN_DEFENSIVE_IN_POOL = {
+    "Stable": 12,    # Était 10
+    "Modéré": 8,     # Était 6
+    "Agressif": 5,   # Était 3
+}
+
+# v6.11 ACTION 1: Maximum weight par obligation (force diversification)
+MAX_SINGLE_BOND_WEIGHT = {
+    "Stable": 25.0,   # v6.11 FIX: 12% → 18% (permet 2 bonds pour 35% au lieu de 4)
+    "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
+    "Agressif": 5.0,  # Max 5% par bond → au moins 1 bond pour 5% total
+}
+
+# P1 FIX v6.2: Minimum nombre de bonds distincts dans l'allocation finale
+MIN_DISTINCT_BONDS = {
+    "Stable": 2,      # v6.11 FIX: 4 → 2 (cohérent avec max 18%)
+    "Modéré": 2,
+    "Agressif": 1,
+}
+
+# v6.9: Bucket constraint relaxation par profil (pour SLSQP)
+BUCKET_CONSTRAINT_RELAXATION = {
+    "Stable": 0.08,    # ±8% pour Stable (était ±5%)
+    "Modéré": 0.05,    # ±5% standard
+    "Agressif": 0.05,  # ±5% standard
+}
+
+# v6.13 FIX: Renommage "Certified" → "Heuristic" (conformité AMF P0-9)
+FORCE_FALLBACK_PROFILES = {"Stable"}
 
 
 # ============= JSON SERIALIZATION HELPER =============
 
 def to_python_native(obj: Any) -> Any:
-    """Convertit types numpy en Python natifs."""
+    """Convertit récursivement les types numpy en types Python natifs pour JSON."""
     if obj is None:
         return None
     if isinstance(obj, (np.floating, np.float64, np.float32)):
@@ -314,10 +303,12 @@ def to_python_native(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [to_python_native(item) for item in obj]
     return obj
-
+# ============= v6.7 FIX: VALID ID HELPER =============
 
 def _is_valid_id(val) -> bool:
-    """v6.7: Vérifie si ID valide."""
+    """
+    v6.7: Vérifie si une valeur est un ID valide (pas None, NaN, vide, "nan").
+    """
     if val is None:
         return False
     if isinstance(val, float):
@@ -329,16 +320,22 @@ def _is_valid_id(val) -> bool:
     return bool(val)
 
 
-# ============= PROFILE CONSTRAINTS =============
+# ============= PROFILE CONSTRAINTS v6.10 =============
 
 @dataclass
 class ProfileConstraints:
-    """Contraintes par profil."""
+    """
+    Contraintes par profil — vol_target est indicatif (pénalité douce).
+    
+    v6.10: Stable vol_target aligné sur réalité (6%), vol_tolerance réduit (3%)
+    v6.9: Stable bonds_min réduit (35%), vol_tolerance augmenté (5%)
+    v6.8: Ajout vol_tolerance spécifique par profil (Stable = 4% au lieu de 3%)
+    """
     name: str
-    vol_target: float
-    vol_tolerance: float = 3.0
-    crypto_max: float = 10.0
-    bonds_min: float = 5.0
+    vol_target: float           # LEVIER 1: Volatilité cible (%)
+    vol_tolerance: float = 3.0  # v6.10: Tolérance autour de la cible
+    crypto_max: float = 10.0    # LEVIER 4: Crypto maximum
+    bonds_min: float = 5.0      # LEVIER 4: Bonds minimum
     max_single_position: float = 15.0
     max_sector: float = 30.0
     max_region: float = 50.0
@@ -346,6 +343,7 @@ class ProfileConstraints:
     max_assets: int = 18
 
 
+# v6.10 FIX: vol_target Stable aligné sur réalité (6% au lieu de 8%)
 PROFILES = {
     "Agressif": ProfileConstraints(
         name="Agressif", 
@@ -394,7 +392,7 @@ class Asset:
 
 
 def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: float = 200.0) -> float:
-    """Nettoie une valeur float."""
+    """Nettoie une valeur float (gère NaN, Inf, None)."""
     try:
         v = float(value) if value is not None else default
         if np.isnan(v) or np.isinf(v):
@@ -414,11 +412,13 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
     sector = asset.sector.lower() if asset.sector else ""
     name_lower = asset.name.lower() if asset.name else ""
     
+    # === OBLIGATIONS / CASH === (P0 FIX: TOUJOURS DEFENSIVE)
     if category == "Obligations":
         if any(kw in name_lower for kw in ["ultra short", "money market", "1-3 month", "boxx", "bil"]):
             return "cash_ultra_short", Role.DEFENSIVE
         return "defensif_oblig", Role.DEFENSIVE
     
+    # === CRYPTO ===
     if category == "Crypto":
         if any(kw in name_lower for kw in ["bitcoin", "btc", "ethereum", "eth"]):
             return "quality_risk", Role.CORE
@@ -428,6 +428,7 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
             return "momentum24h", Role.LOTTERY
         return "trend3_12m", Role.SATELLITE
     
+    # === ETF ===
     if category == "ETF":
         exposure = asset.exposure
         if exposure in ["gold", "precious_metals"]:
@@ -452,6 +453,7 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
             return "inflation_shield", Role.DEFENSIVE
         return "coeur_global", Role.CORE
     
+    # === ACTIONS ===
     if category == "Actions":
         if any(kw in sector for kw in ["utilities", "consumer staples", "healthcare", "pharma"]):
             if vol < 20:
@@ -483,64 +485,32 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
 
 
 def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
-    """Enrichit les actifs avec preset, rôle et risk_bucket."""
-    if HAS_INSTRUMENT_CLASSIFIER:
-        try:
-            classifier = get_classifier()
-            for asset in assets:
-                source_data = asset.source_data or {}
-                source_data["category"] = asset.category
-                source_data["sector"] = asset.sector
-                source_data["region"] = asset.region
-                source_data["name"] = asset.name
-                source_data["ticker"] = asset.id
-                
-                classification = classifier.classify(asset.id, source_data)
-                
-                if classification.role and classification.role != "unknown":
-                    try:
-                        asset.role = Role(classification.role)
-                    except ValueError:
-                        if asset.preset is None or asset.role is None:
-                            preset, role = assign_preset_to_asset(asset)
-                            asset.preset = preset
-                            asset.role = role
-                elif asset.preset is None or asset.role is None:
-                    preset, role = assign_preset_to_asset(asset)
-                    asset.preset = preset
-                    asset.role = role
-                
-                if classification.risk_bucket:
-                    asset._risk_bucket = classification.risk_bucket
-                    
-        except Exception as e:
-            logger.warning(f"[PR1] InstrumentClassifier failed: {e}")
-            for asset in assets:
-                if asset.preset is None or asset.role is None:
-                    preset, role = assign_preset_to_asset(asset)
-                    asset.preset = preset
-                    asset.role = role
-    else:
-        for asset in assets:
-            if asset.preset is None or asset.role is None:
-                preset, role = assign_preset_to_asset(asset)
-                asset.preset = preset
-                asset.role = role
-    
+    """Enrichit tous les actifs avec leur preset, rôle (bucket) et risk_bucket."""
     for asset in assets:
+        if asset.preset is None or asset.role is None:
+            preset, role = assign_preset_to_asset(asset)
+            asset.preset = preset
+            asset.role = role
         if asset.category == "Actions" and asset.corporate_group is None:
             asset.corporate_group = get_corporate_group(asset.name)
-    
-    for asset in assets:
+        
+# === Phase 1: Ajouter risk_bucket classification ===
         if HAS_RISK_BUCKETS and not hasattr(asset, '_risk_bucket'):
-            bucket, _ = classify_asset(asset.source_data or {})
-            asset._risk_bucket = bucket.value
+            bucket, _ = classify_asset(asset.source_data or {})  # Tuple unpacking
+            asset._risk_bucket = bucket.value  # Stocker comme string
     
     role_counts = defaultdict(int)
+    bucket_counts = defaultdict(int)  # Phase 1: tracker risk_buckets
+    
     for asset in assets:
         if asset.role:
             role_counts[asset.role.value] += 1
+        if hasattr(asset, '_risk_bucket'):
+            bucket_counts[asset._risk_bucket] += 1
+    
     logger.info(f"Bucket distribution: {dict(role_counts)}")
+    if HAS_RISK_BUCKETS:
+        logger.info(f"Risk bucket distribution: {dict(bucket_counts)}")
     
     return assets
 
@@ -548,7 +518,7 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
 # ============= HARD FILTER: BUFFETT =============
 
 def apply_buffett_hard_filter(assets: List[Asset], min_score: float = BUFFETT_HARD_FILTER_MIN) -> List[Asset]:
-    """HARD FILTER: Rejette actions avec score < min_score."""
+    """HARD FILTER: Rejette les actions avec score Buffett < min_score."""
     filtered = []
     rejected_count = 0
     
@@ -557,22 +527,23 @@ def apply_buffett_hard_filter(assets: List[Asset], min_score: float = BUFFETT_HA
             buffett_score = asset.buffett_score or 50.0
             if buffett_score < min_score:
                 rejected_count += 1
+                logger.debug(f"Buffett hard filter: rejected {asset.name} (score={buffett_score:.1f} < {min_score})")
                 continue
         filtered.append(asset)
     
     if rejected_count > 0:
-        logger.info(f"Buffett hard filter: rejected {rejected_count} stocks")
+        logger.info(f"Buffett hard filter: rejected {rejected_count} low-quality stocks (score < {min_score})")
     
     return filtered
 
 
-# ============= DEDUPLICATION =============
+# ============= CORPORATE GROUP DEDUPLICATION =============
 
 def deduplicate_stocks_by_corporate_group(
     assets: List[Asset],
     max_per_group: int = MAX_STOCKS_PER_GROUP
 ) -> Tuple[List[Asset], Dict[str, List[str]]]:
-    """Déduplique actions par groupe corporate."""
+    """Déduplique les actions par groupe corporate."""
     stocks = []
     non_stocks = []
     
@@ -595,6 +566,7 @@ def deduplicate_stocks_by_corporate_group(
         if group_id is None:
             deduplicated_stocks.extend(group_stocks)
         else:
+            # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri stable
             group_stocks.sort(key=lambda a: (a.score, a.id), reverse=True)
             kept = group_stocks[:max_per_group]
             removed = group_stocks[max_per_group:]
@@ -602,8 +574,14 @@ def deduplicate_stocks_by_corporate_group(
             if removed:
                 removed_by_group[group_id] = [a.name for a in removed]
     
+    total_removed = sum(len(v) for v in removed_by_group.values())
+    if total_removed > 0:
+        logger.info(f"Corporate deduplication: removed {total_removed} duplicate stocks")
+    
     return non_stocks + deduplicated_stocks, removed_by_group
 
+
+# ============= ETF EXPOSURE DETECTION =============
 
 ETF_NAME_TO_EXPOSURE = {
     "gold": "gold", "or": "gold", "gld": "gold", "iau": "gold",
@@ -620,7 +598,7 @@ ETF_NAME_TO_EXPOSURE = {
 
 
 def detect_etf_exposure(asset: Asset) -> Optional[str]:
-    """Détecte l'exposition d'un ETF."""
+    """Détecte l'exposition d'un ETF ou bond basé sur son nom/ticker."""
     if asset.category not in ["ETF", "Obligations"]:
         return None
     search_text = f"{asset.name} {asset.id}".lower()
@@ -631,9 +609,12 @@ def detect_etf_exposure(asset: Asset) -> Optional[str]:
 
 
 def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asset]:
-    """Déduplique les ETF par exposition."""
+    """Déduplique les ETF par exposition, MAIS PAS les Obligations."""
     etfs_to_dedup = []
     other_assets = []
+    
+    n_bonds_before = sum(1 for a in assets if a.category == "Obligations")
+    n_etf_before = sum(1 for a in assets if a.category == "ETF")
     
     for asset in assets:
         if asset.category in ["ETF", "Obligations"] and asset.exposure is None:
@@ -649,21 +630,44 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
         exposure_groups[etf.exposure].append(etf)
     
     deduplicated_etfs = []
+    removed_count = 0
     
     for exposure, group in exposure_groups.items():
         if exposure is None:
             deduplicated_etfs.extend(group)
         else:
+            # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri stable
             sorted_group = sorted(group, key=lambda a: (a.score, a.id), reverse=True)
             deduplicated_etfs.append(sorted_group[0])
+            if len(sorted_group) > 1:
+                removed_count += len(sorted_group) - 1
+    
+    n_bonds_after = sum(1 for a in other_assets if a.category == "Obligations")
+    n_etf_after = len(deduplicated_etfs)
+    
+    logger.info(f"ETF dedup: ETF {n_etf_before}→{n_etf_after}, Bonds {n_bonds_before}→{n_bonds_after} (unchanged)")
+    
+    if removed_count > 0:
+        logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs")
     
     return other_assets + deduplicated_etfs
 
 
-# ============= COVARIANCE HYBRIDE =============
+# ============= COVARIANCE HYBRIDE v6.15 (P1-6 KPIs) =============
+
+# ============= COVARIANCE HYBRIDE v6.16 (P1-2 Ledoit-Wolf Shrinkage) =============
 
 class HybridCovarianceEstimator:
-    """Estimateur de covariance hybride."""
+    """
+    Estimateur de covariance hybride: empirique + structurée.
+    
+    v6.16 P1-2: Ajout du shrinkage Ledoit-Wolf pour réduire le condition number
+    v6.15 P1-6: Ajout des KPIs de qualité de la matrice:
+    - condition_number: max(λ)/min(λ) - instable si > 1000
+    - eigen_clipped: nombre d'eigenvalues forcées au minimum
+    - eigen_clipped_pct: pourcentage d'eigenvalues clippées - alerte si > 20%
+    - is_well_conditioned: flag booléen pour check rapide
+    """
     
     def __init__(
         self, 
@@ -673,13 +677,20 @@ class HybridCovarianceEstimator:
     ):
         self.empirical_weight = empirical_weight
         self.min_history_days = min_history_days
-        self.use_shrinkage = False
+        self.use_shrinkage = False  # use_shrinkage and HAS_SKLEARN_LW
     
     def compute_empirical_covariance(
         self, 
         assets: List[Asset]
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-        """Calcule la covariance empirique."""
+        """
+        Calcule la covariance empirique si données suffisantes.
+        
+        P1-2: Retourne aussi la matrice de returns pour shrinkage Ledoit-Wolf.
+        
+        Returns:
+            (cov_matrix, returns_matrix) - returns_matrix utilisé pour shrinkage
+        """
         n = len(assets)
         valid_assets = [a for a in assets if a.returns_series is not None and len(a.returns_series) >= self.min_history_days]
         
@@ -718,13 +729,13 @@ class HybridCovarianceEstimator:
                             emp_idx_j += 1
                     emp_idx += 1
             
-            return cov_full, returns
+            return cov_full, returns  # P1-2: Retourner returns pour shrinkage
         except Exception as e:
             logger.warning(f"Covariance empirique échouée: {e}")
             return None, None
     
     def compute_structured_covariance(self, assets: List[Asset]) -> np.ndarray:
-        """Calcule la covariance structurée."""
+        """Calcule la covariance structurée (basée sur catégories/secteurs/exposure)."""
         n = len(assets)
         cov = np.zeros((n, n))
         
@@ -759,8 +770,53 @@ class HybridCovarianceEstimator:
         
         return cov
     
+    def _apply_ledoit_wolf_shrinkage(
+        self, 
+        returns_matrix: np.ndarray
+    ) -> Tuple[np.ndarray, float]:
+        """
+        P1-2: Applique le shrinkage Ledoit-Wolf sur les returns.
+        
+        Le shrinkage réduit le condition number en combinant la covariance
+        empirique avec une matrice structurée (identité scalée).
+        
+        Returns:
+            (cov_shrunk, shrinkage_intensity) où shrinkage_intensity ∈ [0,1]
+        """
+        try:
+            lw = LedoitWolf()
+            lw.fit(returns_matrix)
+            cov_shrunk = lw.covariance_ * 252  # Annualiser
+            shrinkage_intensity = lw.shrinkage_
+            return cov_shrunk, float(shrinkage_intensity)
+        except Exception as e:
+            logger.warning(f"Ledoit-Wolf shrinkage failed: {e}")
+            # Fallback: covariance empirique simple
+            cov_emp = np.cov(returns_matrix, rowvar=False) * 252
+            return cov_emp, 0.0
+    
     def compute(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """Calcule la covariance hybride avec KPIs."""
+        """
+        Calcule la covariance hybride avec KPIs de qualité (P1-6) et shrinkage (P1-2).
+        
+        Returns:
+            (matrice_covariance, diagnostics)
+            
+        Diagnostics incluent:
+            - method: "structured", "hybrid", "hybrid_shrunk"
+            - empirical_available: bool
+            - empirical_weight: float
+            - shrinkage_applied: bool - NOUVEAU P1-2
+            - shrinkage_intensity: float [0,1] - NOUVEAU P1-2
+            - condition_number_before_shrinkage: float - NOUVEAU P1-2
+            - condition_number: max(λ)/min(λ) après shrinkage
+            - eigen_clipped: nombre d'eigenvalues forcées
+            - eigen_clipped_pct: pourcentage clippé
+            - eigenvalue_min: plus petite eigenvalue (après clipping)
+            - eigenvalue_max: plus grande eigenvalue
+            - matrix_size: dimension n×n
+            - is_well_conditioned: True si condition_number < 1000 et clipped < 20%
+        """
         n = len(assets)
         cov_structured = self.compute_structured_covariance(assets)
         cov_empirical, returns_matrix = self.compute_empirical_covariance(assets)
@@ -770,31 +826,107 @@ class HybridCovarianceEstimator:
             "empirical_available": False,
             "empirical_weight": 0.0,
             "matrix_size": n,
+            # P1-2: Nouveaux champs shrinkage
             "shrinkage_applied": False,
             "shrinkage_intensity": 0.0,
+            "condition_number_before_shrinkage": None,
         }
         
         if cov_empirical is not None:
-            cov_hybrid = (
-                self.empirical_weight * cov_empirical + 
-                (1 - self.empirical_weight) * cov_structured
-            )
-            diagnostics["method"] = "hybrid"
+            # P1-2: Calculer condition number AVANT shrinkage
+            try:
+                eigvals_before = np.linalg.eigvalsh(cov_empirical)
+                eigvals_before = np.maximum(eigvals_before, 1e-10)
+                cond_before = float(eigvals_before.max() / eigvals_before.min())
+                diagnostics["condition_number_before_shrinkage"] = round(cond_before, 2)
+            except:
+                cond_before = float("inf")
+                diagnostics["condition_number_before_shrinkage"] = cond_before
+            
+            # P1-2: Appliquer shrinkage si activé ET returns disponibles
+            if self.use_shrinkage and returns_matrix is not None:
+                cov_shrunk, shrinkage_intensity = self._apply_ledoit_wolf_shrinkage(returns_matrix)
+                diagnostics["shrinkage_applied"] = True
+                diagnostics["shrinkage_intensity"] = round(shrinkage_intensity, 4)
+                
+                # Utiliser cov_shrunk au lieu de cov_empirical
+                cov_hybrid = (
+                    self.empirical_weight * cov_shrunk + 
+                    (1 - self.empirical_weight) * cov_structured
+                )
+                diagnostics["method"] = "hybrid_shrunk"
+                
+                logger.info(
+                    f"🔧 Ledoit-Wolf shrinkage: δ={shrinkage_intensity:.3f}, "
+                    f"cond_before={cond_before:.0f}"
+                )
+            else:
+                # Sans shrinkage (comportement original)
+                cov_hybrid = (
+                    self.empirical_weight * cov_empirical + 
+                    (1 - self.empirical_weight) * cov_structured
+                )
+                diagnostics["method"] = "hybrid"
+            
             diagnostics["empirical_available"] = True
             diagnostics["empirical_weight"] = self.empirical_weight
             cov = cov_hybrid
         else:
             cov = cov_structured
         
+        # P1-6: Ensure positive definite ET collecter les KPIs
         cov, eigen_kpis = self._ensure_positive_definite_with_kpis(cov)
+        
+        # Fusionner les KPIs dans diagnostics
         diagnostics.update(eigen_kpis)
         
+        # === P1-2 v2: DIAGONAL SHRINKAGE SI CONDITION NUMBER TROP ÉLEVÉ ===
         cond_number = diagnostics.get("condition_number", float("inf"))
         if cond_number is not None and cond_number > CONDITION_NUMBER_TARGET:
             cov, shrink_info = diag_shrink_to_target(cov, target_cond=CONDITION_NUMBER_TARGET)
+
+            # FIX: Recalculer KPIs APRÈS shrink (sinon diagnostics incohérents)
             cov, eigen_kpis2 = self._ensure_positive_definite_with_kpis(cov)
             diagnostics.update(eigen_kpis2)
+
+            # Ajouter les infos de shrinkage
             diagnostics["diag_shrink_applied"] = shrink_info["shrink_applied"]
+            diagnostics["diag_shrink_lambda"] = shrink_info["shrink_lambda"]
+            diagnostics["diag_shrink_steps"] = shrink_info["shrink_steps"]
+            diagnostics["condition_number_before_diag_shrink"] = shrink_info["cond_before"]
+
+            # Mettre à jour method
+            if diagnostics.get("method") == "structured":
+                diagnostics["method"] = "structured+diag_shrink"
+            elif "+diag_shrink" not in diagnostics.get("method", ""):
+                diagnostics["method"] = diagnostics.get("method", "unknown") + "+diag_shrink"
+
+            logger.info(
+                f"🔧 DIAG SHRINK: cond {shrink_info['cond_before']:.0f} → {diagnostics.get('condition_number'):.0f} "
+                f"(λ={shrink_info['shrink_lambda']:.3f}, steps={shrink_info['shrink_steps']})"
+            )
+        
+        # Log warnings si matrice mal conditionnée
+        if not diagnostics.get("is_well_conditioned", True):
+            if diagnostics.get("condition_number", 0) > CONDITION_NUMBER_WARNING_THRESHOLD:
+                logger.warning(
+                    f"⚠️ COVARIANCE WARNING: condition_number={diagnostics['condition_number']:.1f} "
+                    f"> {CONDITION_NUMBER_WARNING_THRESHOLD} (matrice instable, optimisation fragile)"
+                )
+            if diagnostics.get("eigen_clipped_pct", 0) > EIGEN_CLIPPED_PCT_WARNING_THRESHOLD:
+                logger.warning(
+                    f"⚠️ COVARIANCE WARNING: eigen_clipped_pct={diagnostics['eigen_clipped_pct']:.1f}% "
+                    f"> {EIGEN_CLIPPED_PCT_WARNING_THRESHOLD}% (données insuffisantes)"
+                )
+        
+        # P1-2: Log du résultat shrinkage
+        if diagnostics.get("shrinkage_applied"):
+            cond_after = diagnostics.get("condition_number", "N/A")
+            cond_before = diagnostics.get("condition_number_before_shrinkage", "N/A")
+            logger.info(
+                f"📊 Shrinkage result: cond_number {cond_before} → {cond_after} "
+                f"(target < {CONDITION_NUMBER_TARGET})"
+            )
         
         return cov, diagnostics
     
@@ -803,28 +935,54 @@ class HybridCovarianceEstimator:
         cov: np.ndarray, 
         min_eigenvalue: float = 1e-6
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """Force matrice positive semi-définie + KPIs."""
+        """
+        Force la matrice à être positive semi-définie ET retourne les KPIs.
+        
+        P1-6: Nouveaux KPIs retournés:
+        - condition_number: max(λ)/min(λ)
+        - eigen_clipped: nombre d'eigenvalues forcées au minimum
+        - eigen_clipped_pct: pourcentage d'eigenvalues clippées
+        - eigenvalue_min: plus petite eigenvalue (après clipping)
+        - eigenvalue_max: plus grande eigenvalue
+        - eigenvalue_min_raw: plus petite eigenvalue AVANT clipping
+        - is_well_conditioned: True si condition_number < 1000 et clipped < 20%
+        """
         kpis = {
             "condition_number": None,
             "eigen_clipped": 0,
             "eigen_clipped_pct": 0.0,
+            "eigenvalue_min": None,
+            "eigenvalue_max": None,
+            "eigenvalue_min_raw": None,
             "is_well_conditioned": True,
         }
         
+        # Nettoyage initial
         cov = np.nan_to_num(cov, nan=0.0, posinf=0.0, neginf=0.0)
         cov = (cov + cov.T) / 2
         n = cov.shape[0]
         cov += np.eye(n) * min_eigenvalue
         
         try:
+            # Décomposition en valeurs propres
             eigenvalues, eigenvectors = np.linalg.eigh(cov)
             
+            # KPIs AVANT clipping
+            kpis["eigenvalue_min_raw"] = float(eigenvalues.min())
+            kpis["eigenvalue_max"] = float(eigenvalues.max())
+            
+            # Compter les eigenvalues qui vont être clippées
             eigen_clipped = int(np.sum(eigenvalues < min_eigenvalue))
             kpis["eigen_clipped"] = eigen_clipped
             kpis["eigen_clipped_pct"] = round(100.0 * eigen_clipped / n, 2) if n > 0 else 0.0
             
+            # Clipping des eigenvalues négatives ou trop petites
             eigenvalues_clipped = np.maximum(eigenvalues, min_eigenvalue)
             
+            # KPIs APRÈS clipping
+            kpis["eigenvalue_min"] = float(eigenvalues_clipped.min())
+            
+            # Condition number = max(λ) / min(λ)
             if eigenvalues_clipped.min() > 0:
                 kpis["condition_number"] = round(
                     float(eigenvalues_clipped.max() / eigenvalues_clipped.min()), 
@@ -833,11 +991,15 @@ class HybridCovarianceEstimator:
             else:
                 kpis["condition_number"] = float("inf")
             
-            kpis["is_well_conditioned"] = (
+            # Déterminer si la matrice est bien conditionnée
+            cond_ok = (
                 kpis["condition_number"] is not None and 
                 kpis["condition_number"] < CONDITION_NUMBER_WARNING_THRESHOLD
             )
+            clipped_ok = kpis["eigen_clipped_pct"] < EIGEN_CLIPPED_PCT_WARNING_THRESHOLD
+            kpis["is_well_conditioned"] = cond_ok and clipped_ok
             
+            # Reconstruire la matrice avec eigenvalues clippées
             cov_fixed = eigenvectors @ np.diag(eigenvalues_clipped) @ eigenvectors.T
             cov_fixed = (cov_fixed + cov_fixed.T) / 2
             
@@ -847,16 +1009,28 @@ class HybridCovarianceEstimator:
             logger.warning(f"Eigenvalue decomposition failed: {e}")
             kpis["is_well_conditioned"] = False
             kpis["condition_number"] = float("inf")
+            kpis["eigen_clipped"] = n
+            kpis["eigen_clipped_pct"] = 100.0
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue)), kpis
 
 
-# ============= PORTFOLIO OPTIMIZER v6.20 =============
+# ============= PORTFOLIO OPTIMIZER v6.15 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.20.
+    Optimiseur mean-variance v6.15.
     
-    v6.20: FIX cap pass post-redistribution pour garantir caps respectés.
+    CHANGEMENTS v6.15 (P1-6 Covariance KPIs):
+    1. Diagnostics enrichis avec KPIs covariance (condition_number, eigen_clipped)
+    2. Warnings automatiques si matrice mal conditionnée
+    
+    CHANGEMENTS v6.14 (P0 Technical Fixes - ChatGPT v2.0 Audit):
+    1. P0-2 FIX: Tie-breaker (score, id) pour tri déterministe
+       - sorted(..., key=lambda x: (x.score, x.id)) au lieu de key=lambda x: x.score
+       - Garantit un ordre stable même en cas d'égalité de score
+    
+    CHANGEMENTS v6.13 (Conformité AMF - P0-9):
+    1. FIX WORDING: "Certified" → "Heuristic" (terme non-trompeur)
     """
     
     def __init__(
@@ -866,8 +1040,7 @@ class PortfolioOptimizer:
         deduplicate_corporate: bool = True,
         use_bucket_constraints: bool = True,
         buffett_hard_filter: bool = True,
-        buffett_min_score: float = BUFFETT_HARD_FILTER_MIN,
-        use_soft_bucket_penalty: bool = USE_SOFT_BUCKET_PENALTY,
+        buffett_min_score: float = BUFFETT_HARD_FILTER_MIN
     ):
         self.score_scale = score_scale
         self.deduplicate_etfs_enabled = deduplicate_etfs
@@ -875,125 +1048,37 @@ class PortfolioOptimizer:
         self.use_bucket_constraints = use_bucket_constraints
         self.buffett_hard_filter_enabled = buffett_hard_filter
         self.buffett_min_score = buffett_min_score
-        self.use_soft_bucket_penalty = use_soft_bucket_penalty and HAS_BUCKET_PENALTY
         self.covariance_estimator = HybridCovarianceEstimator()
-    
-    def _enforce_position_caps(
-        self,
-        allocation: Dict[str, float],
-        asset_by_id: Dict[str, Asset],
-        profile: ProfileConstraints,
-        max_iterations: int = 10
-    ) -> Dict[str, float]:
-        """
-        v6.20 FIX: Cap pass itératif après toute redistribution.
-        
-        Garantit que AUCUNE position ne dépasse son cap, même après
-        normalisation, vol adjustment, ou adjust_to_100.
-        
-        Algorithm:
-        1. Identifier positions > cap
-        2. Clip à cap, calculer excès
-        3. Redistribuer excès vers positions sous cap
-        4. Répéter jusqu'à convergence ou max_iterations
-        """
-        if not allocation:
-            return allocation
-        
-        for iteration in range(max_iterations):
-            excess_total = 0.0
-            positions_under_cap = []
-            
-            # Pass 1: Identifier et clipper les dépassements
-            for asset_id, weight in list(allocation.items()):
-                asset = asset_by_id.get(asset_id)
-                if not asset:
-                    continue
-                
-                max_weight = get_max_weight_for_asset(
-                    asset_id=asset_id,
-                    asset_category=asset.category,
-                    profile_name=profile.name,
-                    profile_max_single=profile.max_single_position
-                )
-                
-                if weight > max_weight + 0.01:  # Tolérance 0.01%
-                    excess = weight - max_weight
-                    excess_total += excess
-                    allocation[asset_id] = max_weight
-                    logger.debug(
-                        f"[CAP PASS iter={iteration}] {asset_id} clipped: "
-                        f"{weight:.2f}% → {max_weight:.2f}% (excess={excess:.2f}%)"
-                    )
-                elif weight < max_weight - 0.5:  # Au moins 0.5% sous cap
-                    positions_under_cap.append((asset_id, max_weight - weight))
-            
-            # Si pas d'excès, on a fini
-            if excess_total < 0.01:
-                break
-            
-            # Pass 2: Redistribuer l'excès
-            if positions_under_cap:
-                # Trier par marge disponible (décroissant)
-                positions_under_cap.sort(key=lambda x: -x[1])
-                
-                remaining_excess = excess_total
-                for asset_id, available_margin in positions_under_cap:
-                    if remaining_excess < 0.01:
-                        break
-                    
-                    add_weight = min(available_margin, remaining_excess)
-                    allocation[asset_id] = allocation.get(asset_id, 0) + add_weight
-                    remaining_excess -= add_weight
-                
-                # Si encore de l'excès, redistribuer uniformément
-                if remaining_excess > 0.01:
-                    n_positions = len([w for w in allocation.values() if w > 0.5])
-                    if n_positions > 0:
-                        per_position = remaining_excess / n_positions
-                        for asset_id in allocation:
-                            if allocation[asset_id] > 0.5:
-                                allocation[asset_id] += per_position
-            else:
-                # Pas de positions sous cap, distribuer uniformément
-                n_positions = len([w for w in allocation.values() if w > 0.5])
-                if n_positions > 0:
-                    per_position = excess_total / n_positions
-                    for asset_id in allocation:
-                        if allocation[asset_id] > 0.5:
-                            allocation[asset_id] += per_position
-        
-        # Log si on a atteint max_iterations sans converger
-        if iteration == max_iterations - 1:
-            logger.warning(f"[CAP PASS] Max iterations reached, may not be fully compliant")
-        
-        # Normaliser à 100%
-        total = sum(allocation.values())
-        if total > 0 and abs(total - 100) > 0.1:
-            factor = 100 / total
-            allocation = {k: round(v * factor, 2) for k, v in allocation.items()}
-        
-        return allocation
     
     def select_candidates(
         self, 
         universe: List[Asset], 
         profile: ProfileConstraints
     ) -> List[Asset]:
-        """Pré-sélection avec HARD FILTER et buckets."""
+        """Pré-sélection avec HARD FILTER Buffett, déduplication et buckets."""
+        # === ÉTAPE 1: Déduplication ETF ===
         if self.deduplicate_etfs_enabled:
             universe = deduplicate_etfs(universe, prefer_by="score")
+            logger.info(f"Post-ETF-dedup universe: {len(universe)} actifs")
         
+        # === ÉTAPE 2: Déduplication Corporate ===
         if self.deduplicate_corporate_enabled:
             universe, _ = deduplicate_stocks_by_corporate_group(universe, max_per_group=MAX_STOCKS_PER_GROUP)
+            logger.info(f"Post-corporate-dedup universe: {len(universe)} actifs")
         
+        # === ÉTAPE 3: HARD FILTER BUFFETT ===
         if self.buffett_hard_filter_enabled:
             universe = apply_buffett_hard_filter(universe, min_score=self.buffett_min_score)
+            logger.info(f"Post-Buffett-filter universe: {len(universe)} actifs")
         
+        # === ÉTAPE 4: Enrichir avec buckets ===
         universe = enrich_assets_with_buckets(universe)
         
+        # === ÉTAPE 5: Tri par score avec tie-breaker par ID ===
+        # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
         sorted_assets = sorted(universe, key=lambda x: (x.score, x.id), reverse=True)
         
+        # === ÉTAPE 6: Sélection diversifiée ===
         selected = []
         sector_count = defaultdict(int)
         category_count = defaultdict(int)
@@ -1002,6 +1087,9 @@ class PortfolioOptimizer:
         corporate_group_count = defaultdict(int)
         
         target_pool = profile.max_assets * 3
+        
+        crypto_pool_count = 0
+        crypto_scores = []
         
         for asset in sorted_assets:
             if len(selected) >= target_pool:
@@ -1012,6 +1100,8 @@ class PortfolioOptimizer:
                     continue
                 if category_count["Crypto"] >= 3:
                     continue
+                crypto_pool_count += 1
+                crypto_scores.append(asset.score)
             
             if sector_count[asset.sector] >= 8:
                 continue
@@ -1034,30 +1124,57 @@ class PortfolioOptimizer:
             if asset.corporate_group:
                 corporate_group_count[asset.corporate_group] += 1
         
-        # Garantir minimum de bonds
+        # === P1 FIX v6.2: GARANTIR MINIMUM DE BONDS ===
         min_bonds = MIN_BONDS_IN_POOL.get(profile.name, 5)
         bonds_in_pool = [a for a in selected if a.category == "Obligations"]
         
         if len(bonds_in_pool) < min_bonds:
             all_bonds = sorted(
                 [a for a in universe if a.category == "Obligations" and a not in selected],
-                key=lambda x: (x.vol_annual, x.id)
+                key=lambda x: (x.vol_annual, x.id)  # v6.14 P0-2: tie-breaker
             )
-            bonds_to_add = all_bonds[:min_bonds - len(bonds_in_pool)]
+            bonds_needed = min_bonds - len(bonds_in_pool)
+            bonds_to_add = all_bonds[:bonds_needed]
             selected.extend(bonds_to_add)
+            logger.info(f"P1 FIX v6.2: Added {len(bonds_to_add)} bonds to pool for {profile.name} (minimum {min_bonds})")
         
-        # Garantir minimum defensive
+        # === P1 FIX v6.2: GARANTIR MINIMUM DEFENSIVE ===
         min_defensive = MIN_DEFENSIVE_IN_POOL.get(profile.name, 5)
         defensive_in_pool = [a for a in selected if a.role == Role.DEFENSIVE]
         
         if len(defensive_in_pool) < min_defensive:
             defensive_candidates = sorted(
                 [a for a in universe if a.role == Role.DEFENSIVE and a not in selected],
-                key=lambda x: (x.vol_annual, x.id)
+                key=lambda x: (x.vol_annual, x.id)  # v6.14 P0-2: tie-breaker
             )
-            selected.extend(defensive_candidates[:min_defensive - len(defensive_in_pool)])
+            defensive_needed = min_defensive - len(defensive_in_pool)
+            defensive_to_add = defensive_candidates[:defensive_needed]
+            selected.extend(defensive_to_add)
+            logger.info(f"P1 FIX v6.2: Added {len(defensive_to_add)} defensive assets to pool for {profile.name}")
         
         logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
+        
+        # Log bucket distribution
+        bucket_dist = defaultdict(int)
+        for a in selected:
+            if a.role:
+                bucket_dist[a.role.value] += 1
+        logger.info(f"Buckets pool: {dict(bucket_dist)}")
+        
+        # Log bonds count
+        bonds_count = sum(1 for a in selected if a.category == "Obligations")
+        logger.info(f"Bonds in pool: {bonds_count}")
+        
+        # === v6.8 P3 FIX: DIAGNOSTIC CRYPTO ===
+        crypto_in_pool = sum(1 for a in selected if a.category == "Crypto")
+        crypto_in_universe = sum(1 for a in universe if a.category == "Crypto")
+        avg_crypto_score = sum(crypto_scores) / len(crypto_scores) if crypto_scores else 0
+        
+        logger.info(
+            f"[DIAG CRYPTO {profile.name}] universe={crypto_in_universe}, "
+            f"pool={crypto_in_pool}, max_allowed={profile.crypto_max}%, "
+            f"avg_score={avg_crypto_score:.2f}"
+        )
         
         return selected
     
@@ -1066,7 +1183,7 @@ class PortfolioOptimizer:
         return self.covariance_estimator.compute(assets)
     
     def _compute_portfolio_vol(self, weights: np.ndarray, cov: np.ndarray) -> float:
-        """Calcul robuste de la volatilité."""
+        """Calcul robuste de la volatilité du portefeuille."""
         try:
             weights = np.nan_to_num(weights, nan=0.0)
             variance = np.dot(weights, np.dot(cov, weights))
@@ -1079,43 +1196,37 @@ class PortfolioOptimizer:
         self, 
         candidates: List[Asset], 
         profile: ProfileConstraints,
-        cov: np.ndarray,
-        skip_bucket_constraints: bool = False,
+        cov: np.ndarray
     ) -> List[dict]:
-        """Construit les contraintes SLSQP."""
+        """Construit les contraintes SLSQP avec limite par bond."""
         n = len(candidates)
         constraints = []
         
-        # Somme = 100%
+        # 1. Somme = 100%
         constraints.append({"type": "eq", "fun": lambda w: np.sum(w) - 1.0})
         
-        # Bonds minimum
+        # 2. Bonds minimum
         bonds_idx = [i for i, a in enumerate(candidates) if a.category == "Obligations"]
         if bonds_idx and profile.bonds_min > 0:
             def bonds_constraint(w, idx=bonds_idx, min_val=profile.bonds_min/100):
                 return np.sum(w[idx]) - min_val
             constraints.append({"type": "ineq", "fun": bonds_constraint})
         
-        # MAX WEIGHT PAR BOND - v6.20: utilise get_max_weight_for_asset
+        # 3. MAX WEIGHT PAR BOND
+        max_bond_weight = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0) / 100
         for i in bonds_idx:
-            max_bond_weight = get_max_weight_for_asset(
-                candidates[i].id, 
-                "Obligations", 
-                profile.name,
-                profile.max_single_position
-            ) / 100
             def single_bond_constraint(w, idx=i, max_val=max_bond_weight):
                 return max_val - w[idx]
             constraints.append({"type": "ineq", "fun": single_bond_constraint})
         
-        # Crypto maximum
+        # 4. Crypto maximum
         crypto_idx = [i for i, a in enumerate(candidates) if a.category == "Crypto"]
         if crypto_idx:
             def crypto_constraint(w, idx=crypto_idx, max_val=profile.crypto_max/100):
                 return max_val - np.sum(w[idx])
             constraints.append({"type": "ineq", "fun": crypto_constraint})
         
-        # Sector constraints
+        # 5. Contraintes par SECTEUR
         for sector in set(a.sector for a in candidates):
             sector_idx = [i for i, a in enumerate(candidates) if a.sector == sector]
             if len(sector_idx) > 1:
@@ -1123,7 +1234,7 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": sector_constraint})
         
-        # Region constraints
+        # 6. Contraintes par RÉGION
         for region in set(a.region for a in candidates):
             region_idx = [i for i, a in enumerate(candidates) if a.region == region]
             if len(region_idx) > 1:
@@ -1131,7 +1242,7 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": region_constraint})
         
-        # Corporate group constraints
+        # 7. Contraintes par CORPORATE GROUP
         for group in set(a.corporate_group for a in candidates if a.corporate_group):
             group_idx = [i for i, a in enumerate(candidates) if a.corporate_group == group]
             if len(group_idx) > 1:
@@ -1139,8 +1250,8 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
         
-        # Bucket constraints (skipped if soft penalty)
-        if self.use_bucket_constraints and not skip_bucket_constraints:
+        # 8. Contraintes par BUCKET
+        if self.use_bucket_constraints:
             bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
             relaxation = BUCKET_CONSTRAINT_RELAXATION.get(profile.name, 0.05)
             
@@ -1178,7 +1289,7 @@ class PortfolioOptimizer:
         candidates: List[Asset],
         profile: ProfileConstraints
     ) -> np.ndarray:
-        """Initialisation intelligente des poids."""
+        """Initialisation intelligente des poids pour SLSQP."""
         n = len(candidates)
         
         if profile.name == "Stable":
@@ -1213,17 +1324,19 @@ class PortfolioOptimizer:
         profile: ProfileConstraints,
         cov: Optional[np.ndarray] = None
     ) -> Dict[str, float]:
-        """Allocation fallback VOL-AWARE avec cap pass."""
+        """Allocation fallback VOL-AWARE avec diversification bonds."""
         logger.warning(f"Utilisation du fallback vol-aware pour {profile.name}")
         
         if cov is None:
             cov, _ = self.compute_covariance(candidates)
         
-        asset_by_id = {a.id: a for a in candidates}
+        vol_target = profile.vol_target / 100
         
         if profile.name == "Stable":
+            # v6.14 P0-2: Tie-breaker (vol, id) pour tri stable
             sorted_candidates = sorted(candidates, key=lambda a: (a.vol_annual, a.id))
         elif profile.name == "Agressif":
+            # v6.14 P0-2: Tie-breaker (-score, id) pour tri stable
             sorted_candidates = sorted(candidates, key=lambda a: (-a.score, a.id))
         else:
             sorted_candidates = sorted(candidates, key=lambda a: (-(a.score - 0.02 * a.vol_annual), a.id))
@@ -1233,12 +1346,12 @@ class PortfolioOptimizer:
         
         category_weights = defaultdict(float)
         sector_weights = defaultdict(float)
-        region_weights = defaultdict(float)
+        region_weights = defaultdict(float)  # v6.18 FIX: track region weights
         bucket_weights = defaultdict(float)
         
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         
-        # Bonds avec cap respecté dès le départ
+        # === Assurer bonds minimum AVEC DIVERSIFICATION ===
         bonds = sorted([a for a in sorted_candidates if a.category == "Obligations"], key=lambda x: (x.vol_annual, x.id))
         bonds_needed = float(profile.bonds_min)
         max_single_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0)
@@ -1251,9 +1364,8 @@ class PortfolioOptimizer:
             weight_per_bond = min(max_single_bond, bonds_needed / n_bonds_to_use)
             
             for bond in bonds[:n_bonds_to_use]:
-                # v6.20 FIX: Utiliser get_max_weight_for_asset
-                cap = get_max_weight_for_asset(bond.id, "Obligations", profile.name, profile.max_single_position)
-                weight = min(cap, weight_per_bond, 100 - total_weight)
+                # v6.18.1: Bonds exclus de max_region (contrainte = actions only)
+                weight = min(profile.max_single_position, weight_per_bond, 100 - total_weight)
                 if weight > 0.5:
                     allocation[bond.id] = float(weight)
                     total_weight += weight
@@ -1261,8 +1373,10 @@ class PortfolioOptimizer:
                     category_weights["Obligations"] += weight
                     if bond.role:
                         bucket_weights[bond.role.value] += weight
+            
+            logger.info(f"P1 FIX v6.2: Distributed bonds across {len([b for b in bonds[:n_bonds_to_use] if b.id in allocation])} assets")
         
-        # Remplir par bucket selon targets
+        # === Remplir par bucket selon targets ===
         for role in [Role.DEFENSIVE, Role.CORE, Role.SATELLITE, Role.LOTTERY]:
             if role not in bucket_targets:
                 continue
@@ -1288,20 +1402,19 @@ class PortfolioOptimizer:
                     continue
                 if sector_weights[asset.sector] >= profile.max_sector:
                     continue
+                # v6.18.1 FIX: Vérifier max_region UNIQUEMENT pour Actions
                 if asset.category == "Actions" and region_weights[asset.region] >= profile.max_region:
+                    logger.debug(f"Skipping {asset.id}: max_region {profile.max_region}% reached for {asset.region}")
                     continue
                 
-                # v6.20 FIX: Utiliser get_max_weight_for_asset pour tous les assets
-                cap = get_max_weight_for_asset(asset.id, asset.category, profile.name, profile.max_single_position)
-                
                 if role == Role.DEFENSIVE:
-                    base_weight = min(cap, 12.0)
+                    base_weight = min(profile.max_single_position, 12.0)
                 elif role == Role.CORE:
-                    base_weight = min(cap, 10.0)
+                    base_weight = min(profile.max_single_position, 10.0)
                 elif role == Role.SATELLITE:
-                    base_weight = min(cap, 8.0)
+                    base_weight = min(profile.max_single_position, 8.0)
                 else:
-                    base_weight = min(5.0, cap)
+                    base_weight = min(5.0, profile.max_single_position)
                 
                 weight = min(base_weight, 100 - total_weight, target_pct - current_weight)
                 
@@ -1311,23 +1424,17 @@ class PortfolioOptimizer:
                     category_weights[asset.category] += weight
                     sector_weights[asset.sector] += weight
                     if asset.category == "Actions":
-                        region_weights[asset.region] += weight
+                        region_weights[asset.region] += weight  # v6.18.1: track region (actions only)
                     bucket_weights[role.value] += weight
                     current_weight += weight
         
-        # Normaliser à 100%
+        # === Normaliser à 100% ===
         if total_weight > 0:
             factor = 100 / total_weight
             allocation = {k: round(float(v * factor), 2) for k, v in allocation.items()}
         
-        # v6.20 FIX: CAP PASS après normalisation
-        allocation = self._enforce_position_caps(allocation, asset_by_id, profile)
-        
-        # Ajuster pour vol_target
+        # === Ajuster pour vol_target ===
         allocation = self._adjust_for_vol_target(allocation, candidates, profile, cov)
-        
-        # v6.20 FIX: CAP PASS après vol adjustment
-        allocation = self._enforce_position_caps(allocation, asset_by_id, profile)
         
         return allocation
     
@@ -1345,6 +1452,8 @@ class PortfolioOptimizer:
         
         if abs(current_vol - vol_target) <= profile.vol_tolerance:
             return allocation
+        
+        logger.info(f"Vol adjustment: current={current_vol:.1f}%, target={vol_target:.1f}%")
         
         asset_lookup = {c.id: c for c in candidates}
         
@@ -1368,15 +1477,11 @@ class PortfolioOptimizer:
                         allocation[hv_id] -= transfer
                         break
                 
-                # v6.20 FIX: Vérifier cap AVANT d'ajouter
                 low_vol_sorted = sorted(low_vol_ids, key=lambda x: (allocation.get(x, 0), x))
                 for lv_id in low_vol_sorted:
-                    asset = asset_lookup.get(lv_id)
-                    if asset:
-                        cap = get_max_weight_for_asset(lv_id, asset.category, profile.name, profile.max_single_position)
-                        if allocation.get(lv_id, 0) + transfer <= cap:
-                            allocation[lv_id] = allocation.get(lv_id, 0) + transfer
-                            break
+                    if allocation.get(lv_id, 0) < profile.max_single_position - transfer:
+                        allocation[lv_id] = allocation.get(lv_id, 0) + transfer
+                        break
                 
             elif current_vol < vol_target and high_vol_ids and low_vol_ids:
                 transfer = min(2.0, (vol_target - current_vol) / 2)
@@ -1387,15 +1492,11 @@ class PortfolioOptimizer:
                         allocation[lv_id] -= transfer
                         break
                 
-                # v6.20 FIX: Vérifier cap AVANT d'ajouter
                 high_vol_sorted = sorted(high_vol_ids, key=lambda x: (allocation.get(x, 0), x))
                 for hv_id in high_vol_sorted:
-                    asset = asset_lookup.get(hv_id)
-                    if asset:
-                        cap = get_max_weight_for_asset(hv_id, asset.category, profile.name, profile.max_single_position)
-                        if allocation.get(hv_id, 0) + transfer <= cap:
-                            allocation[hv_id] = allocation.get(hv_id, 0) + transfer
-                            break
+                    if allocation.get(hv_id, 0) < profile.max_single_position - transfer:
+                        allocation[hv_id] = allocation.get(hv_id, 0) + transfer
+                        break
             else:
                 break
             
@@ -1406,6 +1507,8 @@ class PortfolioOptimizer:
         if total > 0 and abs(total - 100) > 0.1:
             allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
         
+        logger.info(f"Vol after adjustment: {current_vol:.1f}% (target={vol_target:.1f}%)")
+        
         return allocation
     
     def optimize(
@@ -1413,48 +1516,41 @@ class PortfolioOptimizer:
         candidates: List[Asset], 
         profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
-        """Optimisation mean-variance avec cap pass post-redistribution."""
+        """
+        Optimisation mean-variance avec covariance hybride.
+        
+        v6.15 P1-6: Diagnostics enrichis avec KPIs covariance.
+        v6.14 P0-2: Tie-breaker (score, id) pour tri déterministe partout.
+        v6.13: STABLE utilise le fallback heuristique (skip SLSQP).
+        """
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
-        
-        asset_by_id = {a.id: a for a in candidates}
         
         raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
         scores = self._normalize_scores(raw_scores) * self.score_scale
         
         cov, cov_diagnostics = self.compute_covariance(candidates)
         
-        # PR3: Soft bucket penalty
-        bucket_penalty_fn = None
-        bucket_penalty_info = {"enabled": False}
+        # ============================================================
+        # v6.13 FIX: STABLE FALLBACK HEURISTIC
+        # ============================================================
         
-        if self.use_soft_bucket_penalty and HAS_BUCKET_PENALTY:
-            role_mapping = {c.id: c.role.value if c.role else "unknown" for c in candidates}
-            bucket_targets = {}
-            for role in Role:
-                if role in PROFILE_BUCKET_TARGETS.get(profile.name, {}):
-                    min_pct, max_pct = PROFILE_BUCKET_TARGETS[profile.name][role]
-                    bucket_targets[role.value] = (min_pct, max_pct)
-            
-            candidate_ids = [c.id for c in candidates]
-            bucket_penalty_fn = create_penalty_function(
-                asset_ids=candidate_ids,
-                roles=role_mapping,
-                targets=bucket_targets,
-                lambda_bucket=LAMBDA_BUCKET,
-                lambda_unknown=LAMBDA_UNKNOWN,
-            )
-            bucket_penalty_info = {"enabled": True, "lambda_bucket": LAMBDA_BUCKET}
-        
-        # Fallback pour Stable
         if profile.name in FORCE_FALLBACK_PROFILES:
+            logger.info(
+                f"🔧 {profile.name}: Utilisation du FALLBACK HEURISTIC "
+                f"(contraintes incompatibles avec Markowitz)"
+            )
             allocation = self._fallback_allocation(candidates, profile, cov)
             optimizer_converged = False
+            fallback_reason = (
+                "Stable profile: strict constraints (vol 6%±3%, bonds_min 35%, "
+                "DEFENSIVE 45-60%) mathematically incompatible with Markowitz optimization"
+            )
             optimization_mode = "fallback_heuristic"
-            fallback_reason = "Stable profile: strict constraints"
+            
         else:
-            # SLSQP
+            # === SLSQP pour Agressif et Modéré ===
             vol_target = profile.vol_target / 100
             
             def objective(w):
@@ -1462,17 +1558,10 @@ class PortfolioOptimizer:
                 port_var = np.dot(w, np.dot(cov, w))
                 port_vol = np.sqrt(max(port_var, 0))
                 vol_penalty = 5.0 * (port_vol - vol_target) ** 2
-                bucket_pen = bucket_penalty_fn(w) if bucket_penalty_fn else 0.0
-                return -(port_score - vol_penalty - bucket_pen)
+                return -(port_score - vol_penalty)
             
-            skip_bucket = self.use_soft_bucket_penalty and bucket_penalty_fn is not None
-            constraints = self._build_constraints(candidates, profile, cov, skip_bucket_constraints=skip_bucket)
-            
-            # v6.20: Bounds par asset avec caps corrects
-            bounds = []
-            for c in candidates:
-                cap = get_max_weight_for_asset(c.id, c.category, profile.name, profile.max_single_position)
-                bounds.append((0, cap / 100))
+            constraints = self._build_constraints(candidates, profile, cov)
+            bounds = [(0, profile.max_single_position / 100) for _ in range(n)]
             
             w0 = self._get_smart_initial_weights(candidates, profile)
             
@@ -1495,12 +1584,9 @@ class PortfolioOptimizer:
                     if w > 0.005:
                         allocation[candidates[i].id] = round(float(w * 100), 2)
                 
-                allocation = self._adjust_to_100(allocation, asset_by_id, profile)
+                allocation = self._adjust_to_100(allocation, profile)
                 
-                # v6.20 FIX: CAP PASS après SLSQP
-                allocation = self._enforce_position_caps(allocation, asset_by_id, profile)
-                
-                # Vérifier bonds
+                # === Vérifier diversification bonds POST-SLSQP ===
                 bonds_in_solution = sum(
                     1 for aid in allocation 
                     if any(c.id == aid and c.category == "Obligations" for c in candidates)
@@ -1508,77 +1594,157 @@ class PortfolioOptimizer:
                 min_bonds_required = MIN_DISTINCT_BONDS.get(profile.name, 1)
                 
                 if bonds_in_solution < min_bonds_required:
-                    fallback_reason = f"SLSQP gave only {bonds_in_solution} bonds < {min_bonds_required}"
+                    logger.warning(
+                        f"P1 FIX v6.3: SLSQP gave only {bonds_in_solution} bonds, "
+                        f"min required = {min_bonds_required} → forcing fallback"
+                    )
+                    fallback_reason = f"SLSQP gave only {bonds_in_solution} bonds < {min_bonds_required} required"
                     allocation = self._fallback_allocation(candidates, profile, cov)
                     optimizer_converged = False
                     optimization_mode = "fallback_bonds_diversification"
                 else:
                     optimizer_converged = True
-                    optimization_mode = "slsqp" + ("+soft_penalty" if bucket_penalty_fn else "")
+                    optimization_mode = "slsqp"
             else:
+                logger.warning(f"SLSQP failed for {profile.name}: {result.message}")
                 fallback_reason = str(result.message)
                 allocation = self._fallback_allocation(candidates, profile, cov)
                 optimizer_converged = False
                 optimization_mode = "fallback_slsqp_failed"
         
-        # Diagnostics
+        # === DEBUG LOG [FINAL] ===
+        asset_by_id = {a.id: a for a in candidates}
+        logger.info(f"=== [FINAL {profile.name}] Allocation details ===")
+        bonds_final = []
+        crypto_final = []
+        
+        for aid, w in sorted(allocation.items(), key=lambda x: (-x[1], x[0])):
+            a = asset_by_id.get(aid)
+            cat = a.category if a else "??"
+            name = a.name if a else "??"
+            ticker = a.source_data.get("ticker", "??") if a and a.source_data else "??"
+            logger.info(f"[FINAL {profile.name}] {aid} | {cat} | {ticker} | {name[:40]} | {w:.2f}%")
+            if cat == "Obligations":
+                bonds_final.append((aid, name, ticker, w))
+            if cat == "Crypto":
+                crypto_final.append((aid, name, ticker, w))
+        
+        # Summary bonds
+        if bonds_final:
+            logger.info(f"[FINAL {profile.name}] === BONDS SUMMARY: {len(bonds_final)} distinct bonds ===")
+            for aid, name, ticker, w in bonds_final:
+                logger.info(f"[FINAL {profile.name}] BOND: {ticker} | {name[:40]} | {w:.2f}%")
+        else:
+            logger.warning(f"[FINAL {profile.name}] === NO BONDS IN ALLOCATION ===")
+        
+        # Summary crypto
+        crypto_total = sum(w for _, _, _, w in crypto_final)
+        logger.info(
+            f"[DIAG CRYPTO {profile.name}] selected={len(crypto_final)}, "
+            f"total={crypto_total:.1f}%, max_allowed={profile.crypto_max}%"
+        )
+        
+        # === DIAGNOSTICS ===
         final_weights = np.array([allocation.get(c.id, 0)/100 for c in candidates])
         port_vol = self._compute_portfolio_vol(final_weights, cov)
         port_score = float(np.dot(final_weights, raw_scores))
         
         sector_exposure = defaultdict(float)
         bucket_exposure = defaultdict(float)
+        corporate_group_exposure = defaultdict(float)
+        
         bonds_in_allocation = 0
         crypto_in_allocation = 0
         
         for asset_id, weight in allocation.items():
-            asset = asset_by_id.get(asset_id)
+            asset = next((a for a in candidates if a.id == asset_id), None)
             if asset:
                 sector_exposure[asset.sector] += weight
                 if asset.role:
                     bucket_exposure[asset.role.value] += weight
+                if asset.corporate_group:
+                    corporate_group_exposure[asset.corporate_group] += weight
                 if asset.category == "Obligations":
                     bonds_in_allocation += 1
                 if asset.category == "Crypto":
                     crypto_in_allocation += 1
         
-        # v6.20: Vérifier caps finaux pour diagnostics
-        cap_violations = []
-        for asset_id, weight in allocation.items():
-            asset = asset_by_id.get(asset_id)
-            if asset:
-                cap = get_max_weight_for_asset(asset_id, asset.category, profile.name, profile.max_single_position)
-                if weight > cap + 0.1:
-                    cap_violations.append(f"{asset_id}: {weight:.1f}% > {cap:.1f}%")
+        bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
+        bucket_compliance = {}
+        for role in Role:
+            actual = float(bucket_exposure.get(role.value, 0))
+            if role in bucket_targets:
+                min_pct, max_pct = bucket_targets[role]
+                bucket_compliance[role.value] = {
+                    "actual": round(actual, 1),
+                    "target_min": round(float(min_pct * 100), 0),
+                    "target_max": round(float(max_pct * 100), 0),
+                    "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
+                }
         
-        if cap_violations:
-            logger.error(f"[CAP VIOLATIONS] {profile.name}: {cap_violations}")
-        
+        # v6.15 P1-6: Inclure les KPIs covariance dans les diagnostics
         diagnostics = to_python_native({
             "converged": optimizer_converged,
             "optimization_mode": optimization_mode,
             "fallback_reason": fallback_reason,
+            "fallback_heuristic": profile.name in FORCE_FALLBACK_PROFILES,
+            "message": "Fallback heuristique (contraintes strictes)" if profile.name in FORCE_FALLBACK_PROFILES else (
+                "SLSQP converged" if optimizer_converged else f"Fallback: {fallback_reason}"
+            ),
             "portfolio_vol": round(port_vol, 2),
             "vol_target": profile.vol_target,
+            "vol_tolerance": profile.vol_tolerance,
+            "vol_diff": round(port_vol - profile.vol_target, 2),
             "portfolio_score": round(port_score, 3),
             "n_assets": len(allocation),
             "n_bonds": bonds_in_allocation,
             "n_crypto": crypto_in_allocation,
+            "crypto_max_allowed": profile.crypto_max,
             "sectors": dict(sector_exposure),
             "bucket_exposure": dict(bucket_exposure),
-            "bucket_penalty_info": bucket_penalty_info,
+            "bucket_compliance": bucket_compliance,
+            "corporate_group_exposure": dict(corporate_group_exposure),
+            # === P1-6: Covariance KPIs ===
             "covariance_method": cov_diagnostics.get("method", "unknown"),
-            "cap_violations": cap_violations,  # v6.20: Traçabilité
-            "pr0_exposures_v2": HAS_EXPOSURES_V2 and USE_EXPOSURES_V2,
-            "pr1_instrument_classifier": HAS_INSTRUMENT_CLASSIFIER,
-            "pr3_soft_bucket_penalty": self.use_soft_bucket_penalty and HAS_BUCKET_PENALTY,
+            "covariance_empirical_weight": cov_diagnostics.get("empirical_weight", 0),
+            "covariance_kpis": {
+                "condition_number": cov_diagnostics.get("condition_number"),
+                "condition_number_before_shrinkage": cov_diagnostics.get("condition_number_before_shrinkage"),
+                "shrinkage_applied": cov_diagnostics.get("shrinkage_applied", False),
+                "shrinkage_intensity": cov_diagnostics.get("shrinkage_intensity", 0.0),
+                "eigen_clipped": cov_diagnostics.get("eigen_clipped", 0),
+                "eigen_clipped_pct": cov_diagnostics.get("eigen_clipped_pct", 0.0),
+                "eigenvalue_min": cov_diagnostics.get("eigenvalue_min"),
+                "eigenvalue_max": cov_diagnostics.get("eigenvalue_max"),
+                "eigenvalue_min_raw": cov_diagnostics.get("eigenvalue_min_raw"),
+                "matrix_size": cov_diagnostics.get("matrix_size", n),
+                "is_well_conditioned": cov_diagnostics.get("is_well_conditioned", True),
+                "thresholds": {
+                    "condition_number_warning": CONDITION_NUMBER_WARNING_THRESHOLD,
+                    "eigen_clipped_pct_warning": EIGEN_CLIPPED_PCT_WARNING_THRESHOLD,
+                },
+            },
+            "buffett_hard_filter_enabled": self.buffett_hard_filter_enabled,
+            "buffett_min_score": self.buffett_min_score,
         })
         
+        opt_mode_display = optimization_mode.upper().replace("_", " ")
+        cov_status = "✅" if cov_diagnostics.get("is_well_conditioned", True) else "⚠️"
         logger.info(
-            f"{profile.name}: {len(allocation)} actifs, vol={port_vol:.1f}%, "
-            f"mode={optimization_mode}, cap_violations={len(cap_violations)}"
+            f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds, {crypto_in_allocation} crypto), "
+            f"vol={port_vol:.1f}% (cible={profile.vol_target}%, tol=±{profile.vol_tolerance}%), "
+            f"mode={opt_mode_display}, cov={cov_diagnostics.get('method')} {cov_status}"
         )
         
+        # P1-6: Log des KPIs covariance
+        logger.info(
+            f"[COV KPIs {profile.name}] condition_number={cov_diagnostics.get('condition_number')}, "
+            f"eigen_clipped={cov_diagnostics.get('eigen_clipped')}/{cov_diagnostics.get('matrix_size')} "
+            f"({cov_diagnostics.get('eigen_clipped_pct', 0):.1f}%), "
+            f"well_conditioned={cov_diagnostics.get('is_well_conditioned')}"
+        )
+        
+        # === Phase 1: Enrichir diagnostics avec margins et exposures ===
         if HAS_CONSTRAINT_REPORT:
             try:
                 diagnostics = enrich_diagnostics_with_margins(
@@ -1587,8 +1753,14 @@ class PortfolioOptimizer:
                     candidates=candidates,
                     profile=profile,
                 )
+                logger.info(
+                    f"[CONSTRAINT REPORT {profile.name}] "
+                    f"quality_score={diagnostics.get('constraint_quality_score', 'N/A')}, "
+                    f"violations={len(diagnostics.get('constraint_violations', []))}, "
+                    f"bindings={len(diagnostics.get('constraint_bindings', []))}"
+                )
             except Exception as e:
-                logger.warning(f"Constraint report failed: {e}")
+                logger.warning(f"Constraint report generation failed: {e}")
         
         return allocation, diagnostics
     
@@ -1636,35 +1808,23 @@ class PortfolioOptimizer:
         
         return weights
     
-    def _adjust_to_100(
-        self, 
-        allocation: Dict[str, float], 
-        asset_by_id: Dict[str, Asset],
-        profile: ProfileConstraints
-    ) -> Dict[str, float]:
-        """Ajustement à 100% avec respect des caps."""
+    def _adjust_to_100(self, allocation: Dict[str, float], profile: ProfileConstraints) -> Dict[str, float]:
+        """Ajustement à 100%."""
         total = sum(allocation.values())
         if abs(total - 100) < 0.01:
             return allocation
         
         diff = 100 - total
-        
-        # v6.20: Trouver une position qui peut absorber le diff sans violer son cap
-        candidates_for_adjust = []
-        for k, v in allocation.items():
-            asset = asset_by_id.get(k)
-            if asset:
-                cap = get_max_weight_for_asset(k, asset.category, profile.name, profile.max_single_position)
-                new_weight = v + diff
-                if 0.5 <= new_weight <= cap:
-                    candidates_for_adjust.append((k, v, cap - v))  # (id, weight, marge)
+        candidates_for_adjust = [
+            (k, v) for k, v in allocation.items()
+            if v + diff <= profile.max_single_position and v + diff >= 0.5
+        ]
         
         if candidates_for_adjust:
-            # Choisir celui avec la plus grande marge
-            target_id = max(candidates_for_adjust, key=lambda x: (x[2], x[0]))[0]
+            # v6.14 P0-2: Tri stable avec tie-breaker
+            target_id = max(candidates_for_adjust, key=lambda x: (x[1], x[0]))[0]
             allocation[target_id] = round(float(allocation[target_id] + diff), 2)
         else:
-            # Redistribuer proportionnellement
             if total > 0:
                 for k in allocation:
                     allocation[k] = round(float(allocation[k] * 100 / total), 2)
@@ -1676,20 +1836,27 @@ class PortfolioOptimizer:
         universe: List[Asset], 
         profile_name: str
     ) -> Tuple[Dict[str, float], dict]:
-        """Pipeline complet."""
+        """Pipeline complet: déduplication + Buffett hard filter + buckets + optimisation."""
         profile = PROFILES[profile_name]
         candidates = self.select_candidates(universe, profile)
         
         if len(candidates) < profile.min_assets:
-            raise ValueError(f"Univers insuffisant pour {profile_name}")
+            raise ValueError(
+                f"Univers insuffisant pour {profile_name}: "
+                f"{len(candidates)} candidats < {profile.min_assets} requis"
+            )
         
         return self.optimize(candidates, profile)
 
 
-# ============= CONVERSION UNIVERS =============
+# ============= CONVERSION UNIVERS v6.7 =============
 
 def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]]) -> List[Asset]:
-    """Convertit l'univers scoré en List[Asset]."""
+    """
+    Convertit l'univers scoré en List[Asset].
+    
+    v6.7 FIX: Génération robuste des IDs avec _is_valid_id().
+    """
     assets = []
     
     if isinstance(universe, list):
@@ -1712,6 +1879,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 cat_normalized = "ETF"
                 default_vol = 15
             
+            # ID generation with v6.7 validation
             raw_id = item.get("id") or item.get("ticker") or item.get("symbol")
             if not _is_valid_id(raw_id):
                 raw_id = item.get("name") or f"{cat_normalized}_{len(assets)+1}"
