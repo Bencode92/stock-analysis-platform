@@ -1,6 +1,10 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.18.1 — FIX max_region (actions only)
+Optimiseur de portefeuille v6.18.2 — FIX normalization 100%
+
+CHANGEMENTS v6.18.2:
+1. FIX: _adjust_for_vol_target() force TOUJOURS normalisation à 100%
+2. FIX: Tolérance 0.1 → 0.01 (corrige Stable 89.77% bug)
 
 CHANGEMENTS v6.18.1:
 1. FIX: max_region s'applique UNIQUEMENT aux Actions (pas aux Bonds/ETF)
@@ -303,6 +307,8 @@ def to_python_native(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [to_python_native(item) for item in obj]
     return obj
+
+
 # ============= v6.7 FIX: VALID ID HELPER =============
 
 def _is_valid_id(val) -> bool:
@@ -494,7 +500,7 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
         if asset.category == "Actions" and asset.corporate_group is None:
             asset.corporate_group = get_corporate_group(asset.name)
         
-# === Phase 1: Ajouter risk_bucket classification ===
+        # === Phase 1: Ajouter risk_bucket classification ===
         if HAS_RISK_BUCKETS and not hasattr(asset, '_risk_bucket'):
             bucket, _ = classify_asset(asset.source_data or {})  # Tuple unpacking
             asset._risk_bucket = bucket.value  # Stocker comme string
@@ -1014,11 +1020,15 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue)), kpis
 
 
-# ============= PORTFOLIO OPTIMIZER v6.15 =============
+# ============= PORTFOLIO OPTIMIZER v6.18.2 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.15.
+    Optimiseur mean-variance v6.18.2.
+    
+    CHANGEMENTS v6.18.2:
+    1. FIX: _adjust_for_vol_target() force TOUJOURS normalisation à 100%
+    2. FIX: Tolérance 0.1 → 0.01 (corrige Stable 89.77% bug)
     
     CHANGEMENTS v6.15 (P1-6 Covariance KPIs):
     1. Diagnostics enrichis avec KPIs covariance (condition_number, eigen_clipped)
@@ -1451,6 +1461,10 @@ class PortfolioOptimizer:
         vol_target = profile.vol_target
         
         if abs(current_vol - vol_target) <= profile.vol_tolerance:
+            # v6.18.2 FIX: Même si vol OK, on normalise à 100%
+            total = sum(allocation.values())
+            if total > 0 and abs(total - 100) > 0.01:
+                allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
             return allocation
         
         logger.info(f"Vol adjustment: current={current_vol:.1f}%, target={vol_target:.1f}%")
@@ -1499,7 +1513,8 @@ class PortfolioOptimizer:
                         break
             else:
                 break
-               weights = np.array([allocation.get(c.id, 0) / 100 for c in candidates])
+            
+            weights = np.array([allocation.get(c.id, 0) / 100 for c in candidates])
             current_vol = self._compute_portfolio_vol(weights, cov)
         
         # v6.18.2 FIX: TOUJOURS normaliser à 100% (corrige bug Stable 89.77%)
@@ -1510,7 +1525,7 @@ class PortfolioOptimizer:
         logger.info(f"Vol after adjustment: {current_vol:.1f}% (target={vol_target:.1f}%)")
         
         return allocation
-            
+    
     def optimize(
         self, 
         candidates: List[Asset], 
@@ -1519,6 +1534,7 @@ class PortfolioOptimizer:
         """
         Optimisation mean-variance avec covariance hybride.
         
+        v6.18.2: FIX normalisation 100% dans _adjust_for_vol_target()
         v6.15 P1-6: Diagnostics enrichis avec KPIs covariance.
         v6.14 P0-2: Tie-breaker (score, id) pour tri déterministe partout.
         v6.13: STABLE utilise le fallback heuristique (skip SLSQP).
