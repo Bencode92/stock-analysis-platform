@@ -1499,17 +1499,18 @@ class PortfolioOptimizer:
                         break
             else:
                 break
-            
-            weights = np.array([allocation.get(c.id, 0) / 100 for c in candidates])
+               weights = np.array([allocation.get(c.id, 0) / 100 for c in candidates])
             current_vol = self._compute_portfolio_vol(weights, cov)
-           
-       total = sum(allocation.values())  
-       if total > 0 and abs(total - 100) > 0.01:
-           allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
-
-       logger.info(...)   
-
-        return allocation    
+        
+        # v6.18.2 FIX: TOUJOURS normaliser à 100% (corrige bug Stable 89.77%)
+        total = sum(allocation.values())
+        if total > 0 and abs(total - 100) > 0.01:
+            allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
+        
+        logger.info(f"Vol after adjustment: {current_vol:.1f}% (target={vol_target:.1f}%)")
+        
+        return allocation
+            
     def optimize(
         self, 
         candidates: List[Asset], 
