@@ -1,40 +1,44 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une approche agressive, visant à maximiser la croissance à long terme par une exposition significative aux actions et aux marchés émergents. Cependant, il est important de noter que cette stratégie comporte des risques, notamment une volatilité élevée et une exposition aux fluctuations économiques. Les actifs sélectionnés, bien que prometteurs, peuvent être sensibles à des facteurs externes tels que les changements réglementaires et les conditions de marché. Les investisseurs doivent être conscients de ces risques avant de s'engager dans ce type de portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive, avec une exposition significative aux actions et aux actifs à risque. Bien que cela puisse offrir un potentiel de rendement élevé, il existe des risques associés à la volatilité des marchés émergents et aux fluctuations des taux d'intérêt. De plus, l'inclusion de crypto-monnaies expose le portefeuille à des variations de prix importantes. Il est essentiel de considérer ces facteurs avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "MUTHOOT FINANCE LTD": "14%",
-      "CUMMINS INC": "15%",
-      "CAIXABANK SA": "7%",
-      "FOX CORP CLASS A": "3%",
-      "UNICREDIT": "12%",
-      "RYANAIR HOLDINGS PLC": "2%",
-      "ELI LILLY": "12%",
-      "JOHNSON & JOHNSON": "15%"
+      "MUTHOOT FINANCE LTD": "15%",
+      "CUMMINS INC": "13%",
+      "CAIXABANK SA": "13%",
+      "FOX CORP CLASS A": "13%",
+      "UNICREDIT": "12%"
     },
     "ETF": {
-      "iShares MSCI Philippines ETF": "15%"
+      "iShares MSCI Philippines ETF": "13%"
     },
     "Obligations": {
-      "iShares Convertible Bond ETF": "5%"
+      "Vanguard Short-Term Bond ETF": "3%",
+      "Vanguard Short-Term Inflation-Protected Securities Index Fund": "3%",
+      "Vanguard Total Bond Market Index Fund": "3%",
+      "iShares Core U.S. Aggregate Bond ETF": "8%"
     },
-    "Crypto": {},
+    "Crypto": {
+      "BCH/USD": "4%"
+    },
     "_tickers": {
-      "EPHE": 0.146,
-      "MUTHOOTFIN": 0.146,
-      "CMI": 0.146,
-      "CABK": 0.071,
-      "FOXA": 0.0267,
-      "UCG": 0.125,
-      "RYA": 0.02,
-      "LLY": 0.1233,
-      "JNJ": 0.146,
-      "ICVT": 0.05
+      "BSV": 0.0278,
+      "VTIP": 0.0278,
+      "BND": 0.0278,
+      "AGG": 0.0833,
+      "EPHE": 0.1333,
+      "MUTHOOT FINANCE LTD": 0.1333,
+      "CUMMINS INC": 0.1333,
+      "CAIXABANK SA": 0.1333,
+      "FOX CORP CLASS A": 0.1333,
+      "UNICREDIT": 0.125,
+      "BCH/USD": 0.0417
     },
     "_optimization": {
-      "mode": "slsqp",
-      "is_heuristic": false,
-      "vol_realized": 17.73,
-      "vol_target": 18.0
+      "mode": "fallback_slsqp_failed",
+      "is_heuristic": true,
+      "vol_realized": 16.82,
+      "vol_target": 18.0,
+      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Agressif) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
     "_constraint_report": {
       "profile_name": "Agressif",
@@ -43,32 +47,47 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 17.73,
-          "slack": 2.73,
+          "observed": 16.82,
+          "slack": 1.82,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -0.27
+            "diff_from_target": -1.18
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 5.0,
-          "observed": 5.0,
-          "slack": 0.0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 16.67,
+          "slack": 11.67,
+          "binding": false,
+          "status": "OK",
           "details": {
-            "count": 1,
+            "count": 4,
             "breakdown": [
               {
-                "id": "iShares Convertible Bond ETF",
-                "name": "iShares Convertible Bond ETF",
-                "weight": 5.0
+                "id": "Vanguard Short-Term Bond ETF",
+                "name": "Vanguard Short-Term Bond ETF",
+                "weight": 2.78
+              },
+              {
+                "id": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
+                "name": "Vanguard Short-Term Inflation-",
+                "weight": 2.78
+              },
+              {
+                "id": "Vanguard Total Bond Market Index Fund",
+                "name": "Vanguard Total Bond Market Ind",
+                "weight": 2.78
+              },
+              {
+                "id": "iShares Core U.S. Aggregate Bond ETF",
+                "name": "iShares Core U.S. Aggregate Bo",
+                "weight": 8.33
               }
             ]
           }
@@ -77,52 +96,58 @@
           "name": "crypto_max",
           "constraint_type": "max",
           "cap": 10.0,
-          "observed": 0.0,
-          "slack": 10.0,
+          "observed": 4.17,
+          "slack": 5.83,
           "binding": false,
           "status": "OK",
           "details": {
-            "breakdown": []
+            "breakdown": [
+              {
+                "id": "BCH/USD",
+                "name": "BCH/USD",
+                "weight": 4.17
+              }
+            ]
           }
         },
         {
           "name": "max_single_position",
           "constraint_type": "max",
           "cap": 15.0,
-          "observed": 14.6,
-          "slack": 0.4,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 13.33,
+          "slack": 1.67,
+          "binding": false,
+          "status": "OK",
           "details": {
             "largest_position": {
               "id": "iShares MSCI Philippines ETF",
               "name": "iShares MSCI Philippines ETF",
-              "weight": 14.6
+              "weight": 13.33
             },
             "positions_above_10pct": [
               {
                 "id": "iShares MSCI Philippines ETF",
-                "weight": 14.6
+                "weight": 13.33
               },
               {
                 "id": "EQ_913",
-                "weight": 14.6
+                "weight": 13.33
               },
               {
                 "id": "EQ_146",
-                "weight": 14.6
+                "weight": 13.33
+              },
+              {
+                "id": "EQ_590",
+                "weight": 13.33
+              },
+              {
+                "id": "EQ_459",
+                "weight": 13.33
               },
               {
                 "id": "EQ_551",
                 "weight": 12.5
-              },
-              {
-                "id": "EQ_10",
-                "weight": 12.33
-              },
-              {
-                "id": "EQ_13",
-                "weight": 14.6
               }
             ]
           }
@@ -131,26 +156,25 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 35.0,
-          "observed": 34.2,
-          "slack": 0.8,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 39.16,
+          "slack": -4.16,
+          "binding": false,
+          "status": "VIOLATED",
           "details": {
             "most_concentrated": "Finance",
             "counts_in_max_sector": {
-              "Finance": 34.2,
-              "Santé": 26.93,
-              "Industries": 16.6,
-              "Diversified": 14.6,
-              "La communication": 2.67
+              "Finance": 39.16,
+              "Diversified": 13.33,
+              "Industries": 13.33,
+              "La communication": 13.33
             },
             "all_sectors": {
-              "Finance": 34.2,
-              "Santé": 26.93,
-              "Industries": 16.6,
-              "Diversified": 14.6,
-              "Bonds": 5.0,
-              "La communication": 2.67
+              "Finance": 39.16,
+              "Bonds": 16.67,
+              "Diversified": 13.33,
+              "Industries": 13.33,
+              "La communication": 13.33,
+              "Crypto": 4.17
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -159,27 +183,25 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 44.2,
-          "slack": 5.8,
+          "observed": 26.66,
+          "slack": 23.34,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Etats-Unis": 44.2,
-              "Global": 14.6,
-              "Inde": 14.6,
-              "Italie": 12.5,
-              "Espagne": 7.1,
-              "Irlande": 2.0
+              "Etats-Unis": 26.66,
+              "Global": 13.33,
+              "Inde": 13.33,
+              "Espagne": 13.33,
+              "Italie": 12.5
             },
             "all_regions": {
-              "Etats-Unis": 44.2,
-              "Global": 19.6,
-              "Inde": 14.6,
-              "Italie": 12.5,
-              "Espagne": 7.1,
-              "Irlande": 2.0
+              "Global": 34.17,
+              "Etats-Unis": 26.66,
+              "Inde": 13.33,
+              "Espagne": 13.33,
+              "Italie": 12.5
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -188,18 +210,18 @@
           "name": "min_assets",
           "constraint_type": "min",
           "cap": 10,
-          "observed": 10,
-          "slack": 0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 11,
+          "slack": 1,
+          "binding": false,
+          "status": "OK",
           "details": {}
         },
         {
           "name": "max_assets",
           "constraint_type": "max",
           "cap": 18,
-          "observed": 10,
-          "slack": 8,
+          "observed": 11,
+          "slack": 7,
           "binding": false,
           "status": "OK",
           "details": {}
@@ -208,60 +230,60 @@
           "name": "bucket_core",
           "constraint_type": "range",
           "cap": 45.0,
-          "observed": 29.2,
-          "slack": -0.8,
+          "observed": 0,
+          "slack": -30.0,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 30.0,
             "range_max": 45.0,
-            "slack_from_min": -0.8,
-            "slack_from_max": 15.8
+            "slack_from_min": -30.0,
+            "slack_from_max": 45.0
           }
         },
         {
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 60.0,
-          "observed": 65.8,
-          "slack": -5.8,
+          "observed": 79.15,
+          "slack": -19.15,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 35.0,
             "range_max": 60.0,
-            "slack_from_min": 30.8,
-            "slack_from_max": -5.8
+            "slack_from_min": 44.15,
+            "slack_from_max": -19.15
           }
         },
         {
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 5.0,
-          "slack": 0.0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 16.67,
+          "slack": -1.67,
+          "binding": false,
+          "status": "VIOLATED",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 0.0,
-            "slack_from_max": 10.0
+            "slack_from_min": 11.67,
+            "slack_from_max": -1.67
           }
         },
         {
           "name": "bucket_lottery",
           "constraint_type": "range",
           "cap": 5.0,
-          "observed": 0,
-          "slack": 0.0,
+          "observed": 4.17,
+          "slack": 0.83,
           "binding": true,
           "status": "BINDING",
           "details": {
             "range_min": 0.0,
             "range_max": 5.0,
-            "slack_from_min": 0.0,
-            "slack_from_max": 5.0
+            "slack_from_min": 4.17,
+            "slack_from_max": 0.83
           }
         },
         {
@@ -293,65 +315,68 @@
       ],
       "summary": {
         "total": 14,
-        "ok": 6,
-        "binding": 6,
-        "violated": 2,
+        "ok": 9,
+        "binding": 1,
+        "violated": 4,
         "critical": 0
       },
-      "quality_score": 77.1,
+      "quality_score": 70.0,
       "recommendations": [
-        "🟡 BINDING: max_single_position at 14.6% (cap=15.0%) — monitor closely",
-        "🟡 BINDING: max_sector at 34.2% (cap=35.0%) — monitor closely",
-        "🟠 VIOLATED: bucket_core exceeded by 0.8% — reduce exposure",
-        "🟠 VIOLATED: bucket_satellite exceeded by 5.8% — reduce exposure",
-        "⚠️ 6 constraints are binding — consider relaxing profile or reducing positions"
+        "🟠 VIOLATED: max_sector exceeded by 4.2% — reduce exposure",
+        "🟠 VIOLATED: bucket_core exceeded by 30.0% — reduce exposure",
+        "🟠 VIOLATED: bucket_satellite exceeded by 19.1% — reduce exposure",
+        "🟠 VIOLATED: bucket_defensive exceeded by 1.7% — reduce exposure"
       ],
       "exposures": {
         "by_category": {
-          "ETF": 14.6,
-          "Actions": 80.4,
-          "Obligations": 5.0
+          "Obligations": 16.67,
+          "ETF": 13.33,
+          "Actions": 65.82,
+          "Crypto": 4.17
         },
         "by_sector": {
-          "Finance": 34.2,
-          "Santé": 26.93,
-          "Industries": 16.6,
-          "Diversified": 14.6,
-          "Bonds": 5.0,
-          "La communication": 2.67
+          "Finance": 39.16,
+          "Diversified": 13.33,
+          "Industries": 13.33,
+          "La communication": 13.33
         },
         "by_region": {
-          "Etats-Unis": 44.2,
-          "Global": 19.6,
-          "Inde": 14.6,
-          "Italie": 12.5,
-          "Espagne": 7.1,
-          "Irlande": 2.0
+          "Global": 34.17,
+          "Etats-Unis": 26.66,
+          "Inde": 13.33,
+          "Espagne": 13.33,
+          "Italie": 12.5
         },
         "by_risk_bucket": {
-          "equity_like": 95.0,
-          "bond_like": 5.0
+          "bond_like": 16.67,
+          "equity_like": 79.15,
+          "crypto": 4.17
         },
         "by_role": {
-          "core": 29.2,
-          "satellite": 65.8,
-          "defensive": 5.0
+          "core": 0.0,
+          "satellite": 79.15,
+          "defensive": 16.67,
+          "lottery": 4.17,
+          "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1248.0,
+          "hhi": 1154.66,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.0,
-          "n_positions": 10,
-          "top_5_weight": 70.9,
-          "top_10_weight": 100.0,
-          "largest_position": 14.6,
-          "smallest_position": 2.0,
+          "effective_n": 8.66,
+          "n_positions": 11,
+          "top_5_weight": 66.65,
+          "top_10_weight": 97.21,
+          "largest_position": 13.33,
+          "smallest_position": 2.78,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
             "moderately_concentrated": "HHI 1500-2500",
             "highly_concentrated": "HHI > 2500"
-          }
+          },
+          "source": "exposures.py (PR0)",
+          "unknown_weight_pct": 0.0,
+          "is_execution_ready": true
         }
       },
       "ticker_mapping": [
@@ -360,7 +385,7 @@
           "ticker": "iShares MSCI Philippines ETF",
           "isin": NaN,
           "name": "iShares MSCI Philippines ETF",
-          "weight_pct": 14.6,
+          "weight_pct": 13.33,
           "category": "ETF",
           "risk_bucket": "equity_like",
           "sector": "Diversified",
@@ -372,7 +397,7 @@
           "ticker": "EQ_913",
           "isin": null,
           "name": "MUTHOOT FINANCE LTD",
-          "weight_pct": 14.6,
+          "weight_pct": 13.33,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
@@ -384,7 +409,7 @@
           "ticker": "EQ_146",
           "isin": null,
           "name": "CUMMINS INC",
-          "weight_pct": 14.6,
+          "weight_pct": 13.33,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Industries",
@@ -392,14 +417,26 @@
           "exchange": null
         },
         {
-          "id": "EQ_13",
-          "ticker": "EQ_13",
+          "id": "EQ_590",
+          "ticker": "EQ_590",
           "isin": null,
-          "name": "JOHNSON & JOHNSON",
-          "weight_pct": 14.6,
+          "name": "CAIXABANK SA",
+          "weight_pct": 13.33,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Santé",
+          "sector": "Finance",
+          "region": "Espagne",
+          "exchange": null
+        },
+        {
+          "id": "EQ_459",
+          "ticker": "EQ_459",
+          "isin": null,
+          "name": "FOX CORP CLASS A",
+          "weight_pct": 13.33,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "La communication",
           "region": "Etats-Unis",
           "exchange": null
         },
@@ -416,35 +453,11 @@
           "exchange": null
         },
         {
-          "id": "EQ_10",
-          "ticker": "EQ_10",
-          "isin": null,
-          "name": "ELI LILLY",
-          "weight_pct": 12.33,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "EQ_590",
-          "ticker": "EQ_590",
-          "isin": null,
-          "name": "CAIXABANK SA",
-          "weight_pct": 7.1,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Espagne",
-          "exchange": null
-        },
-        {
-          "id": "iShares Convertible Bond ETF",
-          "ticker": "iShares Convertible Bond ETF",
+          "id": "iShares Core U.S. Aggregate Bond ETF",
+          "ticker": "iShares Core U.S. Aggregate Bond ETF",
           "isin": NaN,
-          "name": "iShares Convertible Bond ETF",
-          "weight_pct": 5.0,
+          "name": "iShares Core U.S. Aggregate Bond ETF",
+          "weight_pct": 8.33,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -452,39 +465,63 @@
           "exchange": null
         },
         {
-          "id": "EQ_459",
-          "ticker": "EQ_459",
+          "id": "BCH/USD",
+          "ticker": "BCH/USD",
           "isin": null,
-          "name": "FOX CORP CLASS A",
-          "weight_pct": 2.67,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "La communication",
-          "region": "Etats-Unis",
+          "name": "BCH/USD",
+          "weight_pct": 4.17,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
           "exchange": null
         },
         {
-          "id": "EQ_619",
-          "ticker": "EQ_619",
-          "isin": null,
-          "name": "RYANAIR HOLDINGS PLC",
-          "weight_pct": 2.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Industries",
-          "region": "Irlande",
+          "id": "Vanguard Short-Term Bond ETF",
+          "ticker": "Vanguard Short-Term Bond ETF",
+          "isin": NaN,
+          "name": "Vanguard Short-Term Bond ETF",
+          "weight_pct": 2.78,
+          "category": "Obligations",
+          "risk_bucket": "bond_like",
+          "sector": "Bonds",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
+          "ticker": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
+          "isin": NaN,
+          "name": "Vanguard Short-Term Inflation-Protected Securities Index Fun",
+          "weight_pct": 2.78,
+          "category": "Obligations",
+          "risk_bucket": "bond_like",
+          "sector": "Bonds",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "Vanguard Total Bond Market Index Fund",
+          "ticker": "Vanguard Total Bond Market Index Fund",
+          "isin": NaN,
+          "name": "Vanguard Total Bond Market Index Fund",
+          "weight_pct": 2.78,
+          "category": "Obligations",
+          "risk_bucket": "bond_like",
+          "sector": "Bonds",
+          "region": "Global",
           "exchange": null
         }
       ],
       "execution_summary": {
-        "n_positions": 10,
+        "n_positions": 11,
         "n_exchanges": 0,
         "exchanges": [],
-        "total_weight": 100.0,
-        "missing_isin": 8,
-        "missing_ticker": 10,
+        "total_weight": 99.99,
+        "missing_isin": 6,
+        "missing_ticker": 11,
         "data_quality": {
-          "isin_coverage": 20.0,
+          "isin_coverage": 45.5,
           "ticker_coverage": 0.0
         },
         "ready_for_execution": false
@@ -492,103 +529,108 @@
     },
     "_exposures": {
       "by_category": {
-        "ETF": 14.6,
-        "Actions": 80.4,
-        "Obligations": 5.0
+        "Obligations": 16.67,
+        "ETF": 13.33,
+        "Actions": 65.82,
+        "Crypto": 4.17
       },
       "by_sector": {
-        "Finance": 34.2,
-        "Santé": 26.93,
-        "Industries": 16.6,
-        "Diversified": 14.6,
-        "Bonds": 5.0,
-        "La communication": 2.67
+        "Finance": 39.16,
+        "Diversified": 13.33,
+        "Industries": 13.33,
+        "La communication": 13.33
       },
       "by_region": {
-        "Etats-Unis": 44.2,
-        "Global": 19.6,
-        "Inde": 14.6,
-        "Italie": 12.5,
-        "Espagne": 7.1,
-        "Irlande": 2.0
+        "Global": 34.17,
+        "Etats-Unis": 26.66,
+        "Inde": 13.33,
+        "Espagne": 13.33,
+        "Italie": 12.5
       },
       "by_risk_bucket": {
-        "equity_like": 95.0,
-        "bond_like": 5.0
+        "bond_like": 16.67,
+        "equity_like": 79.15,
+        "crypto": 4.17
       },
       "by_role": {
-        "core": 29.2,
-        "satellite": 65.8,
-        "defensive": 5.0
+        "core": 0.0,
+        "satellite": 79.15,
+        "defensive": 16.67,
+        "lottery": 4.17,
+        "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1248.0,
+        "hhi": 1154.66,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.0,
-        "n_positions": 10,
-        "top_5_weight": 70.9,
-        "top_10_weight": 100.0,
-        "largest_position": 14.6,
-        "smallest_position": 2.0,
+        "effective_n": 8.66,
+        "n_positions": 11,
+        "top_5_weight": 66.65,
+        "top_10_weight": 97.21,
+        "largest_position": 13.33,
+        "smallest_position": 2.78,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
           "moderately_concentrated": "HHI 1500-2500",
           "highly_concentrated": "HHI > 2500"
-        }
+        },
+        "source": "exposures.py (PR0)",
+        "unknown_weight_pct": 0.0,
+        "is_execution_ready": true
       }
     },
     "_execution_summary": {
-      "n_positions": 10,
+      "n_positions": 11,
       "n_exchanges": 0,
       "exchanges": [],
-      "total_weight": 100.0,
-      "missing_isin": 8,
-      "missing_ticker": 10,
+      "total_weight": 99.99,
+      "missing_isin": 6,
+      "missing_ticker": 11,
       "data_quality": {
-        "isin_coverage": 20.0,
+        "isin_coverage": 45.5,
         "ticker_coverage": 0.0
       },
       "ready_for_execution": false
     },
-    "_limitations": []
+    "_limitations": [
+      "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Agressif sont incompatibles avec l'optimisation Markowitz classique."
+    ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, visant à équilibrer la croissance et la stabilité à travers une combinaison d'actions et d'obligations. Bien qu'il offre une exposition à des entreprises de divers secteurs, il y a des risques associés, notamment la volatilité des marchés et les fluctuations économiques. Les actifs choisis peuvent également être sensibles aux changements réglementaires et aux tendances de consommation. Les investisseurs doivent prendre en compte ces risques avant de s'engager dans ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie modérée, équilibrant des actifs à faible volatilité avec quelques positions en actions. Bien que cela puisse offrir une possiblee stabilité, il existe des risques liés aux rendements limités des obligations à court terme et à la dépendance des actions à la performance du marché. De plus, les stratégies d'options peuvent restreindre le potentiel de gains en période de forte hausse. Il est important de garder ces considérations à l'esprit. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "FOX CORP CLASS A": "2%",
-      "RWE AG": "2%",
-      "JOHNSON & JOHNSON": "15%",
-      "MUTHOOT FINANCE LTD": "14%",
-      "UNICREDIT": "14%",
-      "STEEL DYNAMICS INC": "10%",
-      "TJX INC": "14%"
+      "FOX CORP CLASS A": "2%"
     },
     "ETF": {
-      "Bahl & Gaynor Small/Mid Cap Income Growth ETF": "14%"
+      "Global X Dow 30 Covered Call ETF": "15%",
+      "Innovator U.S. Equity Power Buffer ETF – November": "15%",
+      "Invesco Financial Preferred ETF": "15%"
     },
     "Obligations": {
-      "iShares 0-5 Year High Yield Corporate Bond ETF": "8%",
-      "Vanguard Short-Term Bond ETF": "7%"
+      "JPMorgan Ultra-Short Municipal Income Fund": "9%",
+      "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF": "9%",
+      "iShares 0-3 Month Treasury Bond ETF": "9%",
+      "SPDR Bloomberg 1-3 Month T-Bill ETF": "21%",
+      "iShares 1-3 Year Treasury Bond ETF": "5%"
     },
     "Crypto": {},
     "_tickers": {
-      "SHYG": 0.08,
-      "SMIG": 0.142,
-      "FOXA": 0.02,
-      "RWE": 0.02,
-      "JNJ": 0.142,
-      "MUTHOOTFIN": 0.142,
-      "UCG": 0.142,
-      "STLD": 0.1,
-      "TJX": 0.142,
-      "BSV": 0.07
+      "JMST": 0.0909,
+      "XHLF": 0.0909,
+      "SGOV": 0.0909,
+      "BIL": 0.2182,
+      "SHY": 0.0545,
+      "DJIA": 0.1455,
+      "PNOV": 0.1455,
+      "PGF": 0.1455,
+      "FOX CORP CLASS A": 0.0182
     },
     "_optimization": {
-      "mode": "slsqp",
-      "is_heuristic": false,
-      "vol_realized": 11.2,
-      "vol_target": 12.0
+      "mode": "fallback_slsqp_failed",
+      "is_heuristic": true,
+      "vol_realized": 3.3,
+      "vol_target": 12.0,
+      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Modéré) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
     "_constraint_report": {
       "profile_name": "Modéré",
@@ -597,37 +639,52 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 11.2,
-          "slack": 2.2,
+          "observed": 3.3,
+          "slack": -5.7,
           "binding": false,
-          "status": "OK",
+          "status": "CRITICAL",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -0.8
+            "diff_from_target": -8.7
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 15.0,
-          "observed": 15.0,
-          "slack": 0.0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 54.54,
+          "slack": 39.54,
+          "binding": false,
+          "status": "OK",
           "details": {
-            "count": 2,
+            "count": 5,
             "breakdown": [
               {
-                "id": "iShares 0-5 Year High Yield Corporate Bond ETF",
-                "name": "iShares 0-5 Year High Yield Co",
-                "weight": 8.0
+                "id": "JPMorgan Ultra-Short Municipal Income Fund",
+                "name": "JPMorgan Ultra-Short Municipal",
+                "weight": 9.09
               },
               {
-                "id": "Vanguard Short-Term Bond ETF",
-                "name": "Vanguard Short-Term Bond ETF",
-                "weight": 7.0
+                "id": "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF",
+                "name": "BondBloxx Bloomberg Six Month ",
+                "weight": 9.09
+              },
+              {
+                "id": "iShares 0-3 Month Treasury Bond ETF",
+                "name": "iShares 0-3 Month Treasury Bon",
+                "weight": 9.09
+              },
+              {
+                "id": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+                "name": "SPDR Bloomberg 1-3 Month T-Bil",
+                "weight": 21.82
+              },
+              {
+                "id": "iShares 1-3 Year Treasury Bond ETF",
+                "name": "iShares 1-3 Year Treasury Bond",
+                "weight": 5.45
               }
             ]
           }
@@ -648,36 +705,32 @@
           "name": "max_single_position",
           "constraint_type": "max",
           "cap": 15.0,
-          "observed": 14.2,
-          "slack": 0.8,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 21.82,
+          "slack": -6.82,
+          "binding": false,
+          "status": "CRITICAL",
           "details": {
             "largest_position": {
-              "id": "Bahl & Gaynor Small/Mid Cap Income Growth ETF",
-              "name": "Bahl & Gaynor Small/Mid Cap Income Growt",
-              "weight": 14.2
+              "id": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+              "name": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+              "weight": 21.82
             },
             "positions_above_10pct": [
               {
-                "id": "Bahl & Gaynor Small/Mid Cap Income Growth ETF",
-                "weight": 14.2
+                "id": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+                "weight": 21.82
               },
               {
-                "id": "EQ_13",
-                "weight": 14.2
+                "id": "Global X Dow 30 Covered Call ETF",
+                "weight": 14.55
               },
               {
-                "id": "EQ_913",
-                "weight": 14.2
+                "id": "Innovator U.S. Equity Power Buffer ETF – November",
+                "weight": 14.55
               },
               {
-                "id": "EQ_551",
-                "weight": 14.2
-              },
-              {
-                "id": "EQ_58",
-                "weight": 14.2
+                "id": "Invesco Financial Preferred ETF",
+                "weight": 14.55
               }
             ]
           }
@@ -686,30 +739,21 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 28.4,
-          "slack": 1.6,
+          "observed": 43.65,
+          "slack": -13.65,
           "binding": false,
-          "status": "OK",
+          "status": "CRITICAL",
           "details": {
-            "most_concentrated": "Finance",
+            "most_concentrated": "Diversified",
             "counts_in_max_sector": {
-              "Finance": 28.4,
-              "Diversified": 14.2,
-              "Santé": 14.2,
-              "Biens de consommation cycliques": 14.2,
-              "Matériaux": 10.0,
-              "La communication": 2.0,
-              "Services publics": 2.0
+              "Diversified": 43.65,
+              "Bonds": 9.09,
+              "La communication": 1.82
             },
             "all_sectors": {
-              "Finance": 28.4,
-              "Bonds": 15.0,
-              "Diversified": 14.2,
-              "Santé": 14.2,
-              "Biens de consommation cycliques": 14.2,
-              "Matériaux": 10.0,
-              "La communication": 2.0,
-              "Services publics": 2.0
+              "Bonds": 54.54,
+              "Diversified": 43.65,
+              "La communication": 1.82
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -718,25 +762,19 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 40.4,
-          "slack": 9.6,
+          "observed": 52.74,
+          "slack": -2.74,
           "binding": false,
-          "status": "OK",
+          "status": "VIOLATED",
           "details": {
-            "most_concentrated": "Etats-Unis",
+            "most_concentrated": "Global",
             "counts_in_max_region": {
-              "Etats-Unis": 40.4,
-              "Global": 14.2,
-              "Inde": 14.2,
-              "Italie": 14.2,
-              "Allemagne": 2.0
+              "Global": 52.74,
+              "Etats-Unis": 1.82
             },
             "all_regions": {
-              "Etats-Unis": 40.4,
-              "Global": 29.2,
-              "Inde": 14.2,
-              "Italie": 14.2,
-              "Allemagne": 2.0
+              "Global": 98.19,
+              "Etats-Unis": 1.82
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -745,18 +783,18 @@
           "name": "min_assets",
           "constraint_type": "min",
           "cap": 10,
-          "observed": 10,
-          "slack": 0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 9,
+          "slack": -1,
+          "binding": false,
+          "status": "VIOLATED",
           "details": {}
         },
         {
           "name": "max_assets",
           "constraint_type": "max",
           "cap": 18,
-          "observed": 10,
-          "slack": 8,
+          "observed": 9,
+          "slack": 9,
           "binding": false,
           "status": "OK",
           "details": {}
@@ -765,60 +803,72 @@
           "name": "bucket_core",
           "constraint_type": "range",
           "cap": 55.0,
-          "observed": 28.4,
-          "slack": -6.6,
+          "observed": 0,
+          "slack": -35.0,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 35.0,
             "range_max": 55.0,
-            "slack_from_min": -6.6,
-            "slack_from_max": 26.6
+            "slack_from_min": -35.0,
+            "slack_from_max": 55.0
           }
         },
         {
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 35.0,
-          "observed": 42.4,
-          "slack": -7.4,
+          "observed": 45.47,
+          "slack": -10.47,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 15.0,
             "range_max": 35.0,
-            "slack_from_min": 27.4,
-            "slack_from_max": -7.4
+            "slack_from_min": 30.47,
+            "slack_from_max": -10.47
           }
         },
         {
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 30.0,
-          "observed": 29.2,
-          "slack": 0.8,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 45.45,
+          "slack": -15.45,
+          "binding": false,
+          "status": "VIOLATED",
           "details": {
             "range_min": 20.0,
             "range_max": 30.0,
-            "slack_from_min": 9.2,
-            "slack_from_max": 0.8
+            "slack_from_min": 25.45,
+            "slack_from_max": -15.45
           }
         },
         {
           "name": "bucket_lottery",
           "constraint_type": "range",
           "cap": 2.0,
-          "observed": 0,
-          "slack": 0.0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 9.09,
+          "slack": -7.09,
+          "binding": false,
+          "status": "VIOLATED",
           "details": {
             "range_min": 0.0,
             "range_max": 2.0,
-            "slack_from_min": 0.0,
-            "slack_from_max": 2.0
+            "slack_from_min": 9.09,
+            "slack_from_max": -7.09
+          }
+        },
+        {
+          "name": "leveraged_cap",
+          "constraint_type": "max",
+          "cap": 0,
+          "observed": 9.09,
+          "slack": -9.09,
+          "binding": false,
+          "status": "VIOLATED",
+          "details": {
+            "message": "LEVERAGED forbidden for Modéré"
           }
         },
         {
@@ -839,147 +889,78 @@
         }
       ],
       "summary": {
-        "total": 13,
-        "ok": 6,
-        "binding": 5,
-        "violated": 2,
-        "critical": 0
+        "total": 14,
+        "ok": 4,
+        "binding": 0,
+        "violated": 7,
+        "critical": 3
       },
-      "quality_score": 76.9,
+      "quality_score": 24.3,
       "recommendations": [
-        "🟡 BINDING: max_single_position at 14.2% (cap=15.0%) — monitor closely",
-        "🟠 VIOLATED: bucket_core exceeded by 6.6% — reduce exposure",
-        "🟠 VIOLATED: bucket_satellite exceeded by 7.4% — reduce exposure",
-        "⚠️ 5 constraints are binding — consider relaxing profile or reducing positions"
+        "🔴 CRITICAL: volatility violated by 5.7% — immediate action required",
+        "🔴 CRITICAL: max_single_position violated by 6.8% — immediate action required",
+        "🔴 CRITICAL: max_sector violated by 13.7% — immediate action required",
+        "🟠 VIOLATED: max_region exceeded by 2.7% — reduce exposure",
+        "🟠 VIOLATED: min_assets exceeded by 1.0% — reduce exposure",
+        "🟠 VIOLATED: bucket_core exceeded by 35.0% — reduce exposure",
+        "🟠 VIOLATED: bucket_satellite exceeded by 10.5% — reduce exposure",
+        "🟠 VIOLATED: bucket_defensive exceeded by 15.4% — reduce exposure",
+        "🟠 VIOLATED: bucket_lottery exceeded by 7.1% — reduce exposure",
+        "🟠 VIOLATED: leveraged_cap exceeded by 9.1% — reduce exposure"
       ],
       "exposures": {
         "by_category": {
-          "Obligations": 15.0,
-          "ETF": 14.2,
-          "Actions": 70.8
+          "Obligations": 54.54,
+          "ETF": 43.65,
+          "Actions": 1.82
         },
         "by_sector": {
-          "Finance": 28.4,
-          "Bonds": 15.0,
-          "Diversified": 14.2,
-          "Santé": 14.2,
-          "Biens de consommation cycliques": 14.2,
-          "Matériaux": 10.0,
-          "La communication": 2.0,
-          "Services publics": 2.0
+          "Diversified": 43.65,
+          "La communication": 1.82
         },
         "by_region": {
-          "Etats-Unis": 40.4,
-          "Global": 29.2,
-          "Inde": 14.2,
-          "Italie": 14.2,
-          "Allemagne": 2.0
+          "Global": 98.19,
+          "Etats-Unis": 1.82
         },
         "by_risk_bucket": {
-          "bond_like": 15.0,
-          "equity_like": 85.0
+          "leveraged": 9.09,
+          "bond_like": 45.45,
+          "equity_like": 45.47
         },
         "by_role": {
-          "defensive": 29.2,
-          "satellite": 42.4,
-          "core": 28.4
+          "core": 0.0,
+          "satellite": 45.47,
+          "defensive": 45.45,
+          "lottery": 9.09,
+          "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1229.0,
+          "hhi": 1392.12,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.1,
-          "n_positions": 10,
-          "top_5_weight": 71.0,
-          "top_10_weight": 100.0,
-          "largest_position": 14.2,
-          "smallest_position": 2.0,
+          "effective_n": 7.18,
+          "n_positions": 9,
+          "top_5_weight": 74.56,
+          "top_10_weight": 100.01,
+          "largest_position": 21.82,
+          "smallest_position": 1.82,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
             "moderately_concentrated": "HHI 1500-2500",
             "highly_concentrated": "HHI > 2500"
-          }
+          },
+          "source": "exposures.py (PR0)",
+          "unknown_weight_pct": 0.0,
+          "is_execution_ready": true
         }
       },
       "ticker_mapping": [
         {
-          "id": "Bahl & Gaynor Small/Mid Cap Income Growth ETF",
-          "ticker": "Bahl & Gaynor Small/Mid Cap Income Growth ETF",
+          "id": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+          "ticker": "SPDR Bloomberg 1-3 Month T-Bill ETF",
           "isin": NaN,
-          "name": "Bahl & Gaynor Small/Mid Cap Income Growth ETF",
-          "weight_pct": 14.2,
-          "category": "ETF",
-          "risk_bucket": "equity_like",
-          "sector": "Diversified",
-          "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "EQ_13",
-          "ticker": "EQ_13",
-          "isin": null,
-          "name": "JOHNSON & JOHNSON",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "EQ_913",
-          "ticker": "EQ_913",
-          "isin": null,
-          "name": "MUTHOOT FINANCE LTD",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Inde",
-          "exchange": null
-        },
-        {
-          "id": "EQ_551",
-          "ticker": "EQ_551",
-          "isin": null,
-          "name": "UNICREDIT",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Italie",
-          "exchange": null
-        },
-        {
-          "id": "EQ_58",
-          "ticker": "EQ_58",
-          "isin": null,
-          "name": "TJX INC",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Biens de consommation cycliques",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "EQ_367",
-          "ticker": "EQ_367",
-          "isin": null,
-          "name": "STEEL DYNAMICS INC",
-          "weight_pct": 10.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Matériaux",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "iShares 0-5 Year High Yield Corporate Bond ETF",
-          "ticker": "iShares 0-5 Year High Yield Corporate Bond ETF",
-          "isin": NaN,
-          "name": "iShares 0-5 Year High Yield Corporate Bond ETF",
-          "weight_pct": 8.0,
+          "name": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+          "weight_pct": 21.82,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -987,11 +968,83 @@
           "exchange": null
         },
         {
-          "id": "Vanguard Short-Term Bond ETF",
-          "ticker": "Vanguard Short-Term Bond ETF",
+          "id": "Global X Dow 30 Covered Call ETF",
+          "ticker": "Global X Dow 30 Covered Call ETF",
           "isin": NaN,
-          "name": "Vanguard Short-Term Bond ETF",
-          "weight_pct": 7.0,
+          "name": "Global X Dow 30 Covered Call ETF",
+          "weight_pct": 14.55,
+          "category": "ETF",
+          "risk_bucket": "equity_like",
+          "sector": "Diversified",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "Innovator U.S. Equity Power Buffer ETF – November",
+          "ticker": "Innovator U.S. Equity Power Buffer ETF – November",
+          "isin": NaN,
+          "name": "Innovator U.S. Equity Power Buffer ETF – November",
+          "weight_pct": 14.55,
+          "category": "ETF",
+          "risk_bucket": "equity_like",
+          "sector": "Diversified",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "Invesco Financial Preferred ETF",
+          "ticker": "Invesco Financial Preferred ETF",
+          "isin": NaN,
+          "name": "Invesco Financial Preferred ETF",
+          "weight_pct": 14.55,
+          "category": "ETF",
+          "risk_bucket": "equity_like",
+          "sector": "Diversified",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "JPMorgan Ultra-Short Municipal Income Fund",
+          "ticker": "JPMorgan Ultra-Short Municipal Income Fund",
+          "isin": NaN,
+          "name": "JPMorgan Ultra-Short Municipal Income Fund",
+          "weight_pct": 9.09,
+          "category": "Obligations",
+          "risk_bucket": "leveraged",
+          "sector": "Bonds",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF",
+          "ticker": "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF",
+          "isin": NaN,
+          "name": "BondBloxx Bloomberg Six Month Target Duration US Treasury ET",
+          "weight_pct": 9.09,
+          "category": "Obligations",
+          "risk_bucket": "bond_like",
+          "sector": "Bonds",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "iShares 0-3 Month Treasury Bond ETF",
+          "ticker": "iShares 0-3 Month Treasury Bond ETF",
+          "isin": NaN,
+          "name": "iShares 0-3 Month Treasury Bond ETF",
+          "weight_pct": 9.09,
+          "category": "Obligations",
+          "risk_bucket": "bond_like",
+          "sector": "Bonds",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "iShares 1-3 Year Treasury Bond ETF",
+          "ticker": "iShares 1-3 Year Treasury Bond ETF",
+          "isin": NaN,
+          "name": "iShares 1-3 Year Treasury Bond ETF",
+          "weight_pct": 5.45,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -1003,35 +1056,23 @@
           "ticker": "EQ_459",
           "isin": null,
           "name": "FOX CORP CLASS A",
-          "weight_pct": 2.0,
+          "weight_pct": 1.82,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "La communication",
           "region": "Etats-Unis",
           "exchange": null
-        },
-        {
-          "id": "EQ_607",
-          "ticker": "EQ_607",
-          "isin": null,
-          "name": "RWE AG",
-          "weight_pct": 2.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Services publics",
-          "region": "Allemagne",
-          "exchange": null
         }
       ],
       "execution_summary": {
-        "n_positions": 10,
+        "n_positions": 9,
         "n_exchanges": 0,
         "exchanges": [],
-        "total_weight": 100.0,
-        "missing_isin": 7,
-        "missing_ticker": 10,
+        "total_weight": 100.01,
+        "missing_isin": 1,
+        "missing_ticker": 9,
         "data_quality": {
-          "isin_coverage": 30.0,
+          "isin_coverage": 88.9,
           "ticker_coverage": 0.0
         },
         "ready_for_execution": false
@@ -1039,103 +1080,98 @@
     },
     "_exposures": {
       "by_category": {
-        "Obligations": 15.0,
-        "ETF": 14.2,
-        "Actions": 70.8
+        "Obligations": 54.54,
+        "ETF": 43.65,
+        "Actions": 1.82
       },
       "by_sector": {
-        "Finance": 28.4,
-        "Bonds": 15.0,
-        "Diversified": 14.2,
-        "Santé": 14.2,
-        "Biens de consommation cycliques": 14.2,
-        "Matériaux": 10.0,
-        "La communication": 2.0,
-        "Services publics": 2.0
+        "Diversified": 43.65,
+        "La communication": 1.82
       },
       "by_region": {
-        "Etats-Unis": 40.4,
-        "Global": 29.2,
-        "Inde": 14.2,
-        "Italie": 14.2,
-        "Allemagne": 2.0
+        "Global": 98.19,
+        "Etats-Unis": 1.82
       },
       "by_risk_bucket": {
-        "bond_like": 15.0,
-        "equity_like": 85.0
+        "leveraged": 9.09,
+        "bond_like": 45.45,
+        "equity_like": 45.47
       },
       "by_role": {
-        "defensive": 29.2,
-        "satellite": 42.4,
-        "core": 28.4
+        "core": 0.0,
+        "satellite": 45.47,
+        "defensive": 45.45,
+        "lottery": 9.09,
+        "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1229.0,
+        "hhi": 1392.12,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.1,
-        "n_positions": 10,
-        "top_5_weight": 71.0,
-        "top_10_weight": 100.0,
-        "largest_position": 14.2,
-        "smallest_position": 2.0,
+        "effective_n": 7.18,
+        "n_positions": 9,
+        "top_5_weight": 74.56,
+        "top_10_weight": 100.01,
+        "largest_position": 21.82,
+        "smallest_position": 1.82,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
           "moderately_concentrated": "HHI 1500-2500",
           "highly_concentrated": "HHI > 2500"
-        }
+        },
+        "source": "exposures.py (PR0)",
+        "unknown_weight_pct": 0.0,
+        "is_execution_ready": true
       }
     },
     "_execution_summary": {
-      "n_positions": 10,
+      "n_positions": 9,
       "n_exchanges": 0,
       "exchanges": [],
-      "total_weight": 100.0,
-      "missing_isin": 7,
-      "missing_ticker": 10,
+      "total_weight": 100.01,
+      "missing_isin": 1,
+      "missing_ticker": 9,
       "data_quality": {
-        "isin_coverage": 30.0,
+        "isin_coverage": 88.9,
         "ticker_coverage": 0.0
       },
       "ready_for_execution": false
     },
-    "_limitations": []
+    "_limitations": [
+      "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Modéré sont incompatibles avec l'optimisation Markowitz classique.",
+      "Volatilité réalisée (3.3%) éloignée de la cible (12.0%) - écart de 8.7%."
+    ]
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche stable, visant à minimiser la volatilité et à offrir une possiblee protection du capital à travers une exposition significative aux obligations. Bien qu'il soit conçu pour être avec un profil défensif, il existe des risques, notamment la sensibilité aux variations des taux d'intérêt et aux fluctuations des marchés financiers. Les actifs choisis, bien que généralement stables, peuvent également être affectés par des changements réglementaires et des conditions économiques. Les investisseurs doivent être conscients de ces risques avant de s'engager dans ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
-    "Actions": {
-      "JOHNSON & JOHNSON": "11%",
-      "ALLIANZ": "6%",
-      "ENGIE SA": "9%",
-      "CISCO SYSTEMS INC": "2%"
-    },
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, principalement axée sur des obligations et des actifs à faible volatilité. Bien que cela puisse offrir une possiblee sécurité, les rendements peuvent être limités dans un environnement de taux d'intérêt bas. De plus, l'exposition à des actifs physiques comme le platine peut introduire des risques de liquidité et de prix. Il est essentiel de considérer ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Actions": {},
     "ETF": {
-      "Invesco S&P 500 Equal Weight Energy ETF": "11%"
+      "Global X Dow 30 Covered Call ETF": "11%",
+      "abrdn Physical Platinum Shares ETF": "10%"
     },
     "Obligations": {
-      "JPMorgan Ultra-Short Municipal Income Fund": "13%",
-      "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF": "13%",
-      "iShares 0-3 Month Treasury Bond ETF": "13%",
-      "iShares Short Treasury Bond ETF": "13%",
-      "US Treasury 3 Month Bill ETF": "7%"
+      "JPMorgan Ultra-Short Municipal Income Fund": "14%",
+      "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF": "14%",
+      "iShares 0-3 Month Treasury Bond ETF": "16%",
+      "iShares Short Treasury Bond ETF": "14%",
+      "US Treasury 3 Month Bill ETF": "14%",
+      "SPDR Bloomberg 1-3 Month T-Bill ETF": "7%"
     },
     "Crypto": {},
     "_tickers": {
-      "JMST": 0.1197,
-      "XHLF": 0.1197,
-      "SGOV": 0.1197,
-      "SHV": 0.1231,
-      "TBIL": 0.0564,
-      "RYE": 0.1026,
-      "JNJ": 0.1026,
-      "ALV": 0.0513,
-      "ENGI": 0.0821,
-      "CSCO": 0.0205
+      "JMST": 0.1416,
+      "XHLF": 0.1396,
+      "SGOV": 0.1573,
+      "SHV": 0.1421,
+      "TBIL": 0.1418,
+      "BIL": 0.0697,
+      "DJIA": 0.1079,
+      "PPLT": 0.1
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 5.49,
+      "vol_realized": 3.23,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
@@ -1146,52 +1182,57 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 5.49,
-          "slack": 2.49,
-          "binding": false,
-          "status": "OK",
+          "observed": 3.23,
+          "slack": 0.23,
+          "binding": true,
+          "status": "BINDING",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -0.51
+            "diff_from_target": -2.77
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 35.0,
-          "observed": 53.86,
-          "slack": 18.86,
+          "observed": 79.22,
+          "slack": 44.22,
           "binding": false,
           "status": "OK",
           "details": {
-            "count": 5,
+            "count": 6,
             "breakdown": [
               {
                 "id": "JPMorgan Ultra-Short Municipal Income Fund",
                 "name": "JPMorgan Ultra-Short Municipal",
-                "weight": 11.97
+                "weight": 14.16
               },
               {
                 "id": "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF",
                 "name": "BondBloxx Bloomberg Six Month ",
-                "weight": 11.97
+                "weight": 13.96
               },
               {
                 "id": "iShares 0-3 Month Treasury Bond ETF",
                 "name": "iShares 0-3 Month Treasury Bon",
-                "weight": 11.97
+                "weight": 15.73
               },
               {
                 "id": "iShares Short Treasury Bond ETF",
                 "name": "iShares Short Treasury Bond ET",
-                "weight": 12.31
+                "weight": 14.21
               },
               {
                 "id": "US Treasury 3 Month Bill ETF",
                 "name": "US Treasury 3 Month Bill ETF",
-                "weight": 5.64
+                "weight": 14.18
+              },
+              {
+                "id": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+                "name": "SPDR Bloomberg 1-3 Month T-Bil",
+                "weight": 6.97
               }
             ]
           }
@@ -1200,40 +1241,44 @@
           "name": "max_single_position",
           "constraint_type": "max",
           "cap": 15.0,
-          "observed": 12.31,
-          "slack": 2.69,
+          "observed": 15.73,
+          "slack": -0.73,
           "binding": false,
-          "status": "OK",
+          "status": "VIOLATED",
           "details": {
             "largest_position": {
-              "id": "iShares Short Treasury Bond ETF",
-              "name": "iShares Short Treasury Bond ETF",
-              "weight": 12.31
+              "id": "iShares 0-3 Month Treasury Bond ETF",
+              "name": "iShares 0-3 Month Treasury Bond ETF",
+              "weight": 15.73
             },
             "positions_above_10pct": [
               {
                 "id": "JPMorgan Ultra-Short Municipal Income Fund",
-                "weight": 11.97
+                "weight": 14.16
               },
               {
                 "id": "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF",
-                "weight": 11.97
+                "weight": 13.96
               },
               {
                 "id": "iShares 0-3 Month Treasury Bond ETF",
-                "weight": 11.97
+                "weight": 15.73
               },
               {
                 "id": "iShares Short Treasury Bond ETF",
-                "weight": 12.31
+                "weight": 14.21
               },
               {
-                "id": "Invesco S&P 500 Equal Weight Energy ETF",
-                "weight": 10.26
+                "id": "US Treasury 3 Month Bill ETF",
+                "weight": 14.18
               },
               {
-                "id": "EQ_13",
-                "weight": 10.26
+                "id": "Global X Dow 30 Covered Call ETF",
+                "weight": 10.79
+              },
+              {
+                "id": "abrdn Physical Platinum Shares ETF",
+                "weight": 10.0
               }
             ]
           }
@@ -1242,26 +1287,19 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 10.26,
-          "slack": 19.74,
+          "observed": 20.79,
+          "slack": 9.21,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Diversified",
             "counts_in_max_sector": {
-              "Diversified": 10.26,
-              "Santé": 10.26,
-              "Services publics": 8.21,
-              "Finance": 5.13,
-              "Technologie de l'information": 2.05
+              "Diversified": 20.79,
+              "Bonds": 14.16
             },
             "all_sectors": {
-              "Bonds": 53.86,
-              "Diversified": 10.26,
-              "Santé": 10.26,
-              "Services publics": 8.21,
-              "Finance": 5.13,
-              "Technologie de l'information": 2.05
+              "Bonds": 79.22,
+              "Diversified": 20.79
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -1270,23 +1308,17 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 12.31,
-          "slack": 37.69,
+          "observed": 34.95,
+          "slack": 15.05,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Etats-Unis",
+            "most_concentrated": "Global",
             "counts_in_max_region": {
-              "Etats-Unis": 12.31,
-              "Global": 10.26,
-              "France": 8.21,
-              "Allemagne": 5.13
+              "Global": 34.95
             },
             "all_regions": {
-              "Global": 64.12,
-              "Etats-Unis": 12.31,
-              "France": 8.21,
-              "Allemagne": 5.13
+              "Global": 100.01
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -1295,18 +1327,18 @@
           "name": "min_assets",
           "constraint_type": "min",
           "cap": 10,
-          "observed": 10,
-          "slack": 0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 8,
+          "slack": -2,
+          "binding": false,
+          "status": "VIOLATED",
           "details": {}
         },
         {
           "name": "max_assets",
           "constraint_type": "max",
           "cap": 18,
-          "observed": 10,
-          "slack": 8,
+          "observed": 8,
+          "slack": 10,
           "binding": false,
           "status": "OK",
           "details": {}
@@ -1315,60 +1347,72 @@
           "name": "bucket_core",
           "constraint_type": "range",
           "cap": 40.0,
-          "observed": 25.65,
-          "slack": -4.35,
+          "observed": 0,
+          "slack": -30.0,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "range_min": 30.0,
             "range_max": 40.0,
-            "slack_from_min": -4.35,
-            "slack_from_max": 14.35
+            "slack_from_min": -30.0,
+            "slack_from_max": 40.0
           }
         },
         {
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 10.26,
-          "slack": 4.74,
+          "observed": 20.79,
+          "slack": -5.79,
           "binding": false,
-          "status": "OK",
+          "status": "VIOLATED",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 5.26,
-            "slack_from_max": 4.74
+            "slack_from_min": 15.79,
+            "slack_from_max": -5.79
           }
         },
         {
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 60.0,
-          "observed": 53.86,
-          "slack": 6.14,
+          "observed": 65.06,
+          "slack": -5.06,
           "binding": false,
-          "status": "OK",
+          "status": "VIOLATED",
           "details": {
             "range_min": 45.0,
             "range_max": 60.0,
-            "slack_from_min": 8.86,
-            "slack_from_max": 6.14
+            "slack_from_min": 20.06,
+            "slack_from_max": -5.06
           }
         },
         {
           "name": "bucket_lottery",
           "constraint_type": "range",
           "cap": 0.0,
-          "observed": 0,
-          "slack": 0.0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 14.16,
+          "slack": -14.16,
+          "binding": false,
+          "status": "VIOLATED",
           "details": {
             "range_min": 0.0,
             "range_max": 0.0,
-            "slack_from_min": 0.0,
-            "slack_from_max": 0.0
+            "slack_from_min": 14.16,
+            "slack_from_max": -14.16
+          }
+        },
+        {
+          "name": "leveraged_cap",
+          "constraint_type": "max",
+          "cap": 0,
+          "observed": 14.16,
+          "slack": -14.16,
+          "binding": false,
+          "status": "VIOLATED",
+          "details": {
+            "message": "LEVERAGED forbidden for Stable"
           }
         },
         {
@@ -1389,69 +1433,96 @@
         }
       ],
       "summary": {
-        "total": 12,
-        "ok": 9,
-        "binding": 2,
-        "violated": 1,
+        "total": 13,
+        "ok": 5,
+        "binding": 1,
+        "violated": 7,
         "critical": 0
       },
-      "quality_score": 88.3,
+      "quality_score": 44.6,
       "recommendations": [
-        "🟠 VIOLATED: bucket_core exceeded by 4.3% — reduce exposure"
+        "🟠 VIOLATED: max_single_position exceeded by 0.7% — reduce exposure",
+        "🟠 VIOLATED: min_assets exceeded by 2.0% — reduce exposure",
+        "🟠 VIOLATED: bucket_core exceeded by 30.0% — reduce exposure",
+        "🟠 VIOLATED: bucket_satellite exceeded by 5.8% — reduce exposure",
+        "🟠 VIOLATED: bucket_defensive exceeded by 5.1% — reduce exposure",
+        "🟠 VIOLATED: bucket_lottery exceeded by 14.2% — reduce exposure",
+        "🟠 VIOLATED: leveraged_cap exceeded by 14.2% — reduce exposure"
       ],
       "exposures": {
         "by_category": {
-          "Obligations": 53.86,
-          "ETF": 10.26,
-          "Actions": 25.65
+          "Obligations": 79.22,
+          "ETF": 20.79
         },
         "by_sector": {
-          "Bonds": 53.86,
-          "Diversified": 10.26,
-          "Santé": 10.26,
-          "Services publics": 8.21,
-          "Finance": 5.13,
-          "Technologie de l'information": 2.05
+          "Diversified": 20.79
         },
         "by_region": {
-          "Global": 64.12,
-          "Etats-Unis": 12.31,
-          "France": 8.21,
-          "Allemagne": 5.13
+          "Global": 100.01
         },
         "by_risk_bucket": {
-          "bond_like": 53.86,
-          "equity_like": 35.91
+          "leveraged": 14.16,
+          "bond_like": 65.06,
+          "equity_like": 20.79
         },
         "by_role": {
-          "defensive": 53.86,
-          "core": 25.65,
-          "satellite": 10.26
+          "core": 0.0,
+          "satellite": 20.79,
+          "defensive": 65.06,
+          "lottery": 14.16,
+          "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1144.0,
+          "hhi": 1311.09,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.7,
-          "n_positions": 10,
-          "top_5_weight": 58.48,
-          "top_10_weight": 89.77,
-          "largest_position": 12.31,
-          "smallest_position": 2.05,
+          "effective_n": 7.63,
+          "n_positions": 8,
+          "top_5_weight": 72.25,
+          "top_10_weight": 100.01,
+          "largest_position": 15.73,
+          "smallest_position": 6.97,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
             "moderately_concentrated": "HHI 1500-2500",
             "highly_concentrated": "HHI > 2500"
-          }
+          },
+          "source": "exposures.py (PR0)",
+          "unknown_weight_pct": 0.0,
+          "is_execution_ready": true
         }
       },
       "ticker_mapping": [
+        {
+          "id": "iShares 0-3 Month Treasury Bond ETF",
+          "ticker": "iShares 0-3 Month Treasury Bond ETF",
+          "isin": NaN,
+          "name": "iShares 0-3 Month Treasury Bond ETF",
+          "weight_pct": 15.73,
+          "category": "Obligations",
+          "risk_bucket": "bond_like",
+          "sector": "Bonds",
+          "region": "Global",
+          "exchange": null
+        },
         {
           "id": "iShares Short Treasury Bond ETF",
           "ticker": "iShares Short Treasury Bond ETF",
           "isin": NaN,
           "name": "iShares Short Treasury Bond ETF",
-          "weight_pct": 12.31,
+          "weight_pct": 14.21,
+          "category": "Obligations",
+          "risk_bucket": "bond_like",
+          "sector": "Bonds",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "US Treasury 3 Month Bill ETF",
+          "ticker": "US Treasury 3 Month Bill ETF",
+          "isin": NaN,
+          "name": "US Treasury 3 Month Bill ETF",
+          "weight_pct": 14.18,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -1463,9 +1534,9 @@
           "ticker": "JPMorgan Ultra-Short Municipal Income Fund",
           "isin": NaN,
           "name": "JPMorgan Ultra-Short Municipal Income Fund",
-          "weight_pct": 11.97,
+          "weight_pct": 14.16,
           "category": "Obligations",
-          "risk_bucket": "bond_like",
+          "risk_bucket": "leveraged",
           "sector": "Bonds",
           "region": "Global",
           "exchange": null
@@ -1475,7 +1546,7 @@
           "ticker": "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF",
           "isin": NaN,
           "name": "BondBloxx Bloomberg Six Month Target Duration US Treasury ET",
-          "weight_pct": 11.97,
+          "weight_pct": 13.96,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -1483,23 +1554,11 @@
           "exchange": null
         },
         {
-          "id": "iShares 0-3 Month Treasury Bond ETF",
-          "ticker": "iShares 0-3 Month Treasury Bond ETF",
+          "id": "Global X Dow 30 Covered Call ETF",
+          "ticker": "Global X Dow 30 Covered Call ETF",
           "isin": NaN,
-          "name": "iShares 0-3 Month Treasury Bond ETF",
-          "weight_pct": 11.97,
-          "category": "Obligations",
-          "risk_bucket": "bond_like",
-          "sector": "Bonds",
-          "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "Invesco S&P 500 Equal Weight Energy ETF",
-          "ticker": "Invesco S&P 500 Equal Weight Energy ETF",
-          "isin": NaN,
-          "name": "Invesco S&P 500 Equal Weight Energy ETF",
-          "weight_pct": 10.26,
+          "name": "Global X Dow 30 Covered Call ETF",
+          "weight_pct": 10.79,
           "category": "ETF",
           "risk_bucket": "equity_like",
           "sector": "Diversified",
@@ -1507,75 +1566,39 @@
           "exchange": null
         },
         {
-          "id": "EQ_13",
-          "ticker": "EQ_13",
-          "isin": null,
-          "name": "JOHNSON & JOHNSON",
-          "weight_pct": 10.26,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "EQ_586",
-          "ticker": "EQ_586",
-          "isin": null,
-          "name": "ENGIE SA",
-          "weight_pct": 8.21,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Services publics",
-          "region": "France",
-          "exchange": null
-        },
-        {
-          "id": "US Treasury 3 Month Bill ETF",
-          "ticker": "US Treasury 3 Month Bill ETF",
+          "id": "abrdn Physical Platinum Shares ETF",
+          "ticker": "abrdn Physical Platinum Shares ETF",
           "isin": NaN,
-          "name": "US Treasury 3 Month Bill ETF",
-          "weight_pct": 5.64,
+          "name": "abrdn Physical Platinum Shares ETF",
+          "weight_pct": 10.0,
+          "category": "ETF",
+          "risk_bucket": "equity_like",
+          "sector": "Diversified",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+          "ticker": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+          "isin": NaN,
+          "name": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+          "weight_pct": 6.97,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
           "region": "Global",
           "exchange": null
-        },
-        {
-          "id": "EQ_533",
-          "ticker": "EQ_533",
-          "isin": null,
-          "name": "ALLIANZ",
-          "weight_pct": 5.13,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Allemagne",
-          "exchange": null
-        },
-        {
-          "id": "EQ_27",
-          "ticker": "EQ_27",
-          "isin": null,
-          "name": "CISCO SYSTEMS INC",
-          "weight_pct": 2.05,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Technologie de l'information",
-          "region": "Etats-Unis",
-          "exchange": null
         }
       ],
       "execution_summary": {
-        "n_positions": 10,
+        "n_positions": 8,
         "n_exchanges": 0,
         "exchanges": [],
-        "total_weight": 89.77,
-        "missing_isin": 4,
-        "missing_ticker": 10,
+        "total_weight": 100.01,
+        "missing_isin": 0,
+        "missing_ticker": 8,
         "data_quality": {
-          "isin_coverage": 60.0,
+          "isin_coverage": 100.0,
           "ticker_coverage": 0.0
         },
         "ready_for_execution": false
@@ -1583,59 +1606,56 @@
     },
     "_exposures": {
       "by_category": {
-        "Obligations": 53.86,
-        "ETF": 10.26,
-        "Actions": 25.65
+        "Obligations": 79.22,
+        "ETF": 20.79
       },
       "by_sector": {
-        "Bonds": 53.86,
-        "Diversified": 10.26,
-        "Santé": 10.26,
-        "Services publics": 8.21,
-        "Finance": 5.13,
-        "Technologie de l'information": 2.05
+        "Diversified": 20.79
       },
       "by_region": {
-        "Global": 64.12,
-        "Etats-Unis": 12.31,
-        "France": 8.21,
-        "Allemagne": 5.13
+        "Global": 100.01
       },
       "by_risk_bucket": {
-        "bond_like": 53.86,
-        "equity_like": 35.91
+        "leveraged": 14.16,
+        "bond_like": 65.06,
+        "equity_like": 20.79
       },
       "by_role": {
-        "defensive": 53.86,
-        "core": 25.65,
-        "satellite": 10.26
+        "core": 0.0,
+        "satellite": 20.79,
+        "defensive": 65.06,
+        "lottery": 14.16,
+        "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1144.0,
+        "hhi": 1311.09,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.7,
-        "n_positions": 10,
-        "top_5_weight": 58.48,
-        "top_10_weight": 89.77,
-        "largest_position": 12.31,
-        "smallest_position": 2.05,
+        "effective_n": 7.63,
+        "n_positions": 8,
+        "top_5_weight": 72.25,
+        "top_10_weight": 100.01,
+        "largest_position": 15.73,
+        "smallest_position": 6.97,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
           "moderately_concentrated": "HHI 1500-2500",
           "highly_concentrated": "HHI > 2500"
-        }
+        },
+        "source": "exposures.py (PR0)",
+        "unknown_weight_pct": 0.0,
+        "is_execution_ready": true
       }
     },
     "_execution_summary": {
-      "n_positions": 10,
+      "n_positions": 8,
       "n_exchanges": 0,
       "exchanges": [],
-      "total_weight": 89.77,
-      "missing_isin": 4,
-      "missing_ticker": 10,
+      "total_weight": 100.01,
+      "missing_isin": 0,
+      "missing_ticker": 8,
       "data_quality": {
-        "isin_coverage": 60.0,
+        "isin_coverage": 100.0,
         "ticker_coverage": 0.0
       },
       "ready_for_execution": false
@@ -1645,7 +1665,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-21T08:13:13.989869",
+    "generated_at": "2025-12-21T15:42:24.809249",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
@@ -1666,8 +1686,8 @@
     "platform_fee_annual_bp": 0.0,
     "ter_handling": "embedded_in_etf_prices",
     "optimization_modes": {
-      "Agressif": "slsqp",
-      "Modéré": "slsqp",
+      "Agressif": "fallback_slsqp_failed",
+      "Modéré": "fallback_slsqp_failed",
       "Stable": "fallback_heuristic"
     }
   }
