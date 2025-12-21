@@ -69,7 +69,7 @@ permissions:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 1: Gate
+  # JOB 1: Gate - fenêtres élargies à ±20 min pour absorber les délais GitHub
   # ═══════════════════════════════════════════════════════════════════════════
   gate:
     runs-on: ubuntu-latest
@@ -95,23 +95,23 @@ jobs:
           
           SESSION=""
           
-          # Minuit: 23:55 - 00:05 Paris
-          if [ "$PARIS" -ge "2355" ] || [ "$PARIS" -le "0005" ]; then
+          # Minuit: 23:45 - 00:20 Paris (fenêtre élargie)
+          if [ "$PARIS" -ge "2345" ] || [ "$PARIS" -le "0020" ]; then
             SESSION="midnight"
             echo "🌙 MIDNIGHT window detected"
             
-          # Matin: 08:35 - 08:45 Paris
-          elif [ "$PARIS" -ge "0835" ] && [ "$PARIS" -le "0845" ]; then
+          # Matin: 08:25 - 09:00 Paris (fenêtre élargie)
+          elif [ "$PARIS" -ge "0825" ] && [ "$PARIS" -le "0900" ]; then
             SESSION="morning"
             echo "☀️ MORNING window detected"
             
-          # Après-midi: 13:55 - 14:05 Paris
-          elif [ "$PARIS" -ge "1355" ] && [ "$PARIS" -le "1405" ]; then
+          # Après-midi: 13:45 - 14:20 Paris (fenêtre élargie)
+          elif [ "$PARIS" -ge "1345" ] && [ "$PARIS" -le "1420" ]; then
             SESSION="afternoon"
             echo "🌅 AFTERNOON window detected"
             
-          # Soir: 18:25 - 18:35 Paris
-          elif [ "$PARIS" -ge "1825" ] && [ "$PARIS" -le "1835" ]; then
+          # Soir: 18:15 - 18:50 Paris (fenêtre élargie)
+          elif [ "$PARIS" -ge "1815" ] && [ "$PARIS" -le "1850" ]; then
             SESSION="evening"
             echo "🌆 EVENING window detected"
           fi
