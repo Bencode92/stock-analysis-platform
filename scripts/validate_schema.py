@@ -5,6 +5,10 @@ Portfolio JSON Schema Validator
 P0-1: Validates portfolio output against JSON Schema.
 Used by CI and can be run locally.
 
+v2.1.0: Updated max position limits to match optimizer.py v6.19
+- Stable: 25% max for bonds (was 15%)
+- Per-profile limits for bonds vs other assets
+
 Usage:
     python scripts/validate_schema.py data/portfolios.json
     python scripts/validate_schema.py --all  # Validate all portfolio files
@@ -87,19 +91,36 @@ def validate_business_rules(data: dict) -> List[str]:
     
     Checks:
     1. Sum of weights = 100% (with tolerance)
-    2. No single position > 15%
+    2. Max single position per profile (bonds have higher limits)
     3. Profile-specific constraints (bonds min/max, crypto max)
     4. _meta required fields
+    
+    v2.1.0: Updated limits to match optimizer.py v6.19
     """
     errors = []
     
     profiles = ["Agressif", "Modéré", "Stable"]
     
-    # Profile-specific constraints
+    # Profile-specific constraints - aligned with optimizer.py v6.19
     constraints = {
-        "Agressif": {"bonds_min": 5, "crypto_max": 10},
-        "Modéré": {"bonds_min": 15, "crypto_max": 5},
-        "Stable": {"bonds_min": 35, "crypto_max": 0},
+        "Agressif": {
+            "bonds_min": 5, 
+            "crypto_max": 10,
+            "max_single_position": 15,  # Default max
+            "max_single_bond": 5,       # From MAX_SINGLE_BOND_WEIGHT
+        },
+        "Modéré": {
+            "bonds_min": 15, 
+            "crypto_max": 5,
+            "max_single_position": 15,  # Default max
+            "max_single_bond": 15,      # Relaxed for diversification
+        },
+        "Stable": {
+            "bonds_min": 35, 
+            "crypto_max": 0,
+            "max_single_position": 15,  # Default max for non-bonds
+            "max_single_bond": 25,      # From MAX_SINGLE_BOND_WEIGHT
+        },
     }
     
     for profile in profiles:
@@ -108,6 +129,37 @@ def validate_business_rules(data: dict) -> List[str]:
             continue
         
         portfolio = data[profile]
+        profile_constraints = constraints[profile]
+        
+        # Get bond tickers for special handling
+        bond_tickers = set()
+        for bond_name in portfolio.get("Obligations", {}).keys():
+            # Try to find the ticker in _tickers that corresponds to this bond
+            # Bond names in Obligations map to tickers
+            pass  # We'll identify bonds by checking Obligations section
+        
+        # Build set of bond tickers from Obligations section
+        # Match by checking if ticker weight matches obligation weight
+        obligations = portfolio.get("Obligations", {})
+        tickers_data = portfolio.get("_tickers", {})
+        
+        # Parse obligation weights
+        bond_weights = {}
+        for name, pct_str in obligations.items():
+            try:
+                weight = float(pct_str.rstrip('%')) / 100
+                bond_weights[name] = weight
+            except:
+                pass
+        
+        # Try to identify which tickers are bonds by matching weights
+        # This is a heuristic - bonds in _tickers should have same weight as in Obligations
+        identified_bond_tickers = set()
+        for ticker, weight in tickers_data.items():
+            for bond_name, bond_weight in bond_weights.items():
+                if abs(weight - bond_weight) < 0.001:  # Same weight = likely the same
+                    identified_bond_tickers.add(ticker)
+                    break
         
         # Check _tickers exists and sum to ~100%
         if "_tickers" in portfolio:
@@ -120,21 +172,30 @@ def validate_business_rules(data: dict) -> List[str]:
                     f"(expected ~1.0, diff = {abs(total_weight - 1.0):.4f})"
                 )
             
-            # Check max single position (15%)
-            max_weight = max(tickers.values()) if tickers else 0
-            if max_weight > 0.151:  # 15% + small tolerance
-                max_ticker = max(tickers.items(), key=lambda x: x[1])[0]
-                errors.append(
-                    f"{profile}: Max position {max_ticker} = {max_weight:.1%} "
-                    f"(exceeds 15% limit)"
-                )
+            # Check max single position with different limits for bonds
+            for ticker, weight in tickers.items():
+                is_bond = ticker in identified_bond_tickers
+                
+                if is_bond:
+                    max_allowed = profile_constraints["max_single_bond"] / 100
+                    asset_type = "bond"
+                else:
+                    max_allowed = profile_constraints["max_single_position"] / 100
+                    asset_type = "position"
+                
+                # Add 0.5% tolerance for rounding
+                if weight > max_allowed + 0.005:
+                    errors.append(
+                        f"{profile}: {asset_type.capitalize()} {ticker} = {weight:.1%} "
+                        f"(exceeds {max_allowed:.0%} limit for {asset_type}s)"
+                    )
         
         # Check bonds minimum (from Obligations category)
         bonds_weight = sum(
             float(v.rstrip('%')) / 100 
             for v in portfolio.get("Obligations", {}).values()
         )
-        bonds_min = constraints[profile]["bonds_min"] / 100
+        bonds_min = profile_constraints["bonds_min"] / 100
         
         if bonds_weight < bonds_min - 0.01:  # 1% tolerance
             errors.append(
@@ -147,7 +208,7 @@ def validate_business_rules(data: dict) -> List[str]:
             float(v.rstrip('%')) / 100 
             for v in portfolio.get("Crypto", {}).values()
         )
-        crypto_max = constraints[profile]["crypto_max"] / 100
+        crypto_max = profile_constraints["crypto_max"] / 100
         
         if crypto_weight > crypto_max + 0.01:  # 1% tolerance
             errors.append(
