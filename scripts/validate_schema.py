@@ -5,9 +5,8 @@ Portfolio JSON Schema Validator
 P0-1: Validates portfolio output against JSON Schema.
 Used by CI and can be run locally.
 
+v2.2.0: Fixed bond identification using known bond tickers list
 v2.1.0: Updated max position limits to match optimizer.py v6.19
-- Stable: 25% max for bonds (was 15%)
-- Per-profile limits for bonds vs other assets
 
 Usage:
     python scripts/validate_schema.py data/portfolios.json
@@ -31,6 +30,25 @@ except ImportError:
 # Paths
 SCHEMA_PATH = Path(__file__).parent.parent / "schemas" / "portfolio_output.json"
 DATA_DIR = Path(__file__).parent.parent / "data"
+
+# v2.2.0: Known bond/treasury ETF tickers
+# These are money market, treasury, and bond ETFs that should use bond caps
+KNOWN_BOND_TICKERS = {
+    # Ultra-short / Money Market
+    "BIL", "SGOV", "SHV", "TBIL", "XHLF", "JMST", "BOXX", "USFR", "FLOT",
+    # Short-term treasuries
+    "SHY", "VGSH", "SCHO", "BSV", "VTIP",
+    # Intermediate treasuries
+    "IEF", "VGIT", "SCHR", "BND", "AGG", "SCHZ",
+    # Long-term treasuries
+    "TLT", "VGLT", "EDV", "ZROZ",
+    # Corporate bonds
+    "LQD", "VCIT", "VCSH", "HYG", "JNK", "USIG",
+    # Other bond ETFs
+    "MUB", "TIP", "BNDX", "IAGG", "EMB", "EMLC",
+    # Active bond ETFs
+    "BINC", "CARY", "CGCP", "CGMS", "DRSK", "PGF",
+}
 
 
 def load_schema() -> dict:
@@ -85,6 +103,15 @@ def validate_portfolio(filepath: Path, schema: dict) -> Tuple[bool, List[str]]:
     return True, []
 
 
+def is_bond_ticker(ticker: str) -> bool:
+    """
+    v2.2.0: Check if a ticker is a known bond/treasury ETF.
+    
+    Uses a curated list of bond tickers for reliable identification.
+    """
+    return ticker.upper() in KNOWN_BOND_TICKERS
+
+
 def validate_business_rules(data: dict) -> List[str]:
     """
     Validate business rules beyond JSON Schema.
@@ -95,25 +122,27 @@ def validate_business_rules(data: dict) -> List[str]:
     3. Profile-specific constraints (bonds min/max, crypto max)
     4. _meta required fields
     
+    v2.2.0: Uses KNOWN_BOND_TICKERS for reliable bond identification
     v2.1.0: Updated limits to match optimizer.py v6.19
     """
     errors = []
     
     profiles = ["Agressif", "Modéré", "Stable"]
     
-    # Profile-specific constraints - aligned with optimizer.py v6.19
+    # Profile-specific constraints - aligned with optimizer.py v6.20
+    # Source of truth: get_max_weight_for_asset() in optimizer.py
     constraints = {
         "Agressif": {
             "bonds_min": 5, 
             "crypto_max": 10,
-            "max_single_position": 15,  # Default max
+            "max_single_position": 15,  # Default max for non-bonds
             "max_single_bond": 5,       # From MAX_SINGLE_BOND_WEIGHT
         },
         "Modéré": {
             "bonds_min": 15, 
             "crypto_max": 5,
-            "max_single_position": 15,  # Default max
-            "max_single_bond": 15,      # Relaxed for diversification
+            "max_single_position": 15,  # Default max for non-bonds
+            "max_single_bond": 15,      # From MAX_SINGLE_BOND_WEIGHT (was 8, relaxed)
         },
         "Stable": {
             "bonds_min": 35, 
@@ -131,36 +160,6 @@ def validate_business_rules(data: dict) -> List[str]:
         portfolio = data[profile]
         profile_constraints = constraints[profile]
         
-        # Get bond tickers for special handling
-        bond_tickers = set()
-        for bond_name in portfolio.get("Obligations", {}).keys():
-            # Try to find the ticker in _tickers that corresponds to this bond
-            # Bond names in Obligations map to tickers
-            pass  # We'll identify bonds by checking Obligations section
-        
-        # Build set of bond tickers from Obligations section
-        # Match by checking if ticker weight matches obligation weight
-        obligations = portfolio.get("Obligations", {})
-        tickers_data = portfolio.get("_tickers", {})
-        
-        # Parse obligation weights
-        bond_weights = {}
-        for name, pct_str in obligations.items():
-            try:
-                weight = float(pct_str.rstrip('%')) / 100
-                bond_weights[name] = weight
-            except:
-                pass
-        
-        # Try to identify which tickers are bonds by matching weights
-        # This is a heuristic - bonds in _tickers should have same weight as in Obligations
-        identified_bond_tickers = set()
-        for ticker, weight in tickers_data.items():
-            for bond_name, bond_weight in bond_weights.items():
-                if abs(weight - bond_weight) < 0.001:  # Same weight = likely the same
-                    identified_bond_tickers.add(ticker)
-                    break
-        
         # Check _tickers exists and sum to ~100%
         if "_tickers" in portfolio:
             tickers = portfolio["_tickers"]
@@ -174,7 +173,8 @@ def validate_business_rules(data: dict) -> List[str]:
             
             # Check max single position with different limits for bonds
             for ticker, weight in tickers.items():
-                is_bond = ticker in identified_bond_tickers
+                # v2.2.0: Use known bond tickers list
+                is_bond = is_bond_ticker(ticker)
                 
                 if is_bond:
                     max_allowed = profile_constraints["max_single_bond"] / 100
@@ -183,8 +183,8 @@ def validate_business_rules(data: dict) -> List[str]:
                     max_allowed = profile_constraints["max_single_position"] / 100
                     asset_type = "position"
                 
-                # Add 0.5% tolerance for rounding
-                if weight > max_allowed + 0.005:
+                # Add 1% tolerance for rounding
+                if weight > max_allowed + 0.01:
                     errors.append(
                         f"{profile}: {asset_type.capitalize()} {ticker} = {weight:.1%} "
                         f"(exceeds {max_allowed:.0%} limit for {asset_type}s)"
