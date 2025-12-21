@@ -4,6 +4,7 @@ name: 📈 Stock Markets Schedule
 # GÈRE: Asia/Europe/US - OPEN + CLOSE + Consolidation globale
 # SCRIPT: stock-advanced-filter.js
 # GATE: Vérifie l'heure locale du marché pour éviter les runs inutiles (DST-proof)
+# FENÊTRES: ±20min pour absorber les délais GitHub Actions
 # ═══════════════════════════════════════════════════════════════════════════════
 
 on:
@@ -76,6 +77,7 @@ env:
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
   # JOB 1: GATE - Déterminer quel marché/session traiter
+  # Fenêtres élargies ±20min pour absorber les délais GitHub
   # ═══════════════════════════════════════════════════════════════════════════
   gate:
     runs-on: ubuntu-latest
@@ -115,45 +117,45 @@ jobs:
           SESSION=""
           
           # ══════════════════════════════════════════════════════════════════
-          # 🌏 ASIA GATES (±5 min tolerance)
+          # 🌏 ASIA GATES (fenêtres élargies ±20min)
           # ══════════════════════════════════════════════════════════════════
-          if [ "$TOKYO" -ge "0855" ] && [ "$TOKYO" -le "0905" ]; then
+          if [ "$TOKYO" -ge "0840" ] && [ "$TOKYO" -le "0920" ]; then
             MARKET="asia"; SESSION="open"
             echo "🌏 Tokyo OPEN detected"
-          elif [ "$SHANGHAI" -ge "0925" ] && [ "$SHANGHAI" -le "0935" ]; then
+          elif [ "$SHANGHAI" -ge "0910" ] && [ "$SHANGHAI" -le "0950" ]; then
             MARKET="asia"; SESSION="open"
             echo "🌏 Shanghai OPEN detected"
-          elif [ "$TOKYO" -ge "1455" ] && [ "$TOKYO" -le "1505" ]; then
+          elif [ "$TOKYO" -ge "1440" ] && [ "$TOKYO" -le "1520" ]; then
             MARKET="asia"; SESSION="close"
             echo "🌏 Tokyo CLOSE detected"
-          elif [ "$SHANGHAI" -ge "1455" ] && [ "$SHANGHAI" -le "1505" ]; then
+          elif [ "$SHANGHAI" -ge "1440" ] && [ "$SHANGHAI" -le "1520" ]; then
             MARKET="asia"; SESSION="close"
             echo "🌏 Shanghai CLOSE detected"
             
           # ══════════════════════════════════════════════════════════════════
-          # 🇪🇺 EUROPE GATES
+          # 🇪🇺 EUROPE GATES (fenêtres élargies ±20min)
           # ══════════════════════════════════════════════════════════════════
-          elif [ "$PARIS" -ge "0855" ] && [ "$PARIS" -le "0905" ]; then
+          elif [ "$PARIS" -ge "0840" ] && [ "$PARIS" -le "0920" ]; then
             MARKET="europe"; SESSION="open"
             echo "🇪🇺 Europe OPEN detected (Paris 09:00)"
-          elif [ "$PARIS" -ge "1730" ] && [ "$PARIS" -le "1740" ]; then
+          elif [ "$PARIS" -ge "1715" ] && [ "$PARIS" -le "1755" ]; then
             MARKET="europe"; SESSION="close"
             echo "🇪🇺 Europe CLOSE detected (Paris 17:35)"
             
           # ══════════════════════════════════════════════════════════════════
-          # 🇺🇸 US GATES
+          # 🇺🇸 US GATES (fenêtres élargies ±20min)
           # ══════════════════════════════════════════════════════════════════
-          elif [ "$NY" -ge "0925" ] && [ "$NY" -le "0935" ]; then
+          elif [ "$NY" -ge "0910" ] && [ "$NY" -le "0950" ]; then
             MARKET="us"; SESSION="open"
             echo "🇺🇸 US OPEN detected (NYSE 09:30)"
-          elif [ "$NY" -ge "1555" ] && [ "$NY" -le "1605" ]; then
+          elif [ "$NY" -ge "1540" ] && [ "$NY" -le "1620" ]; then
             MARKET="us"; SESSION="close"
             echo "🇺🇸 US CLOSE detected (NYSE 16:00)"
             
           # ══════════════════════════════════════════════════════════════════
-          # 🌍 GLOBAL CONSOLIDATION (23:00 Paris)
+          # 🌍 GLOBAL CONSOLIDATION (23:00 Paris, fenêtre élargie ±20min)
           # ══════════════════════════════════════════════════════════════════
-          elif [ "$PARIS" -ge "2255" ] && [ "$PARIS" -le "2305" ]; then
+          elif [ "$PARIS" -ge "2240" ] && [ "$PARIS" -le "2320" ]; then
             MARKET="all"; SESSION="consolidation"
             echo "🌍 GLOBAL CONSOLIDATION detected"
           fi
