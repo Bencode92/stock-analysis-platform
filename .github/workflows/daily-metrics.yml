@@ -39,7 +39,7 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 1: Gate - Vérifier si c'est bien l'heure du refresh
+  # JOB 1: Gate - fenêtres élargies ±20min pour absorber délais GitHub
   # ═══════════════════════════════════════════════════════════════════════════
   gate:
     runs-on: ubuntu-latest
@@ -70,13 +70,13 @@ jobs:
           
           SESSION=""
           
-          # AM refresh: 09:30 - 09:40 Paris (après markets 09:20 + sectors 09:25)
-          if [ "$PARIS" -ge "0930" ] && [ "$PARIS" -le "0940" ]; then
+          # AM refresh: 09:20 - 09:55 Paris (fenêtre élargie ±20min)
+          if [ "$PARIS" -ge "0920" ] && [ "$PARIS" -le "0955" ]; then
             SESSION="AM"
             echo "☀️ AM REFRESH window detected"
             
-          # PM refresh: 15:55 - 16:05 Paris
-          elif [ "$PARIS" -ge "1555" ] && [ "$PARIS" -le "1605" ]; then
+          # PM refresh: 15:45 - 16:20 Paris (fenêtre élargie ±20min)
+          elif [ "$PARIS" -ge "1545" ] && [ "$PARIS" -le "1620" ]; then
             SESSION="PM"
             echo "🌅 PM REFRESH window detected"
           fi
