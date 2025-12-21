@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2025-12-21T16:41:49.851583",
+    "generated_at": "2025-12-21T17:17:56.391670",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -37,7 +37,6 @@
       "JNJ",
       "LLY",
       "MUTHOOTFIN",
-      "RWE",
       "RYA",
       "RYE",
       "SMIG",
@@ -53,6 +52,7 @@
       "SHV",
       "SHYG",
       "TBIL",
+      "VGSH",
       "XHLF"
     ],
     "Crypto": [],
@@ -187,7 +187,7 @@
       "total_return_pct": -0.04,
       "volatility_annual_pct": 1.85,
       "weights_by_profile": {
-        "Modéré": 7.0
+        "Modéré": 5.99
       },
       "price_samples": [
         {
@@ -702,7 +702,7 @@
       "volatility_annual_pct": 15.12,
       "weights_by_profile": {
         "Agressif": 14.6,
-        "Modéré": 14.2,
+        "Modéré": 14.6,
         "Stable": 11.43
       },
       "price_samples": [
@@ -818,7 +818,7 @@
       "volatility_annual_pct": 27.66,
       "weights_by_profile": {
         "Agressif": 14.6,
-        "Modéré": 14.2
+        "Modéré": 14.86
       },
       "price_samples": [
         {
@@ -918,63 +918,6 @@
         }
       ],
       "is_benchmark": true
-    },
-    "RWE": {
-      "ticker": "RWE",
-      "type": "Action",
-      "n_days_data": 85,
-      "first_date": "2025-08-25",
-      "last_date": "2025-12-19",
-      "first_price": 35.29,
-      "last_price": 44.46,
-      "total_return_pct": 25.98,
-      "volatility_annual_pct": 23.11,
-      "weights_by_profile": {
-        "Modéré": 2.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-08-25",
-          "close": 35.29,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-09-23",
-          "close": 36.61,
-          "prev_date": "2025-09-22",
-          "prev_close": 36.39,
-          "daily_return_pct": 0.6046,
-          "formula": "(36.6100 / 36.3900) - 1"
-        },
-        {
-          "date": "2025-10-22",
-          "close": 40.22,
-          "prev_date": "2025-10-21",
-          "prev_close": 40.47,
-          "daily_return_pct": -0.6177,
-          "formula": "(40.2200 / 40.4700) - 1"
-        },
-        {
-          "date": "2025-11-20",
-          "close": 44.87,
-          "prev_date": "2025-11-19",
-          "prev_close": 43.88,
-          "daily_return_pct": 2.2562,
-          "formula": "(44.8700 / 43.8800) - 1"
-        },
-        {
-          "date": "2025-12-19",
-          "close": 44.46,
-          "prev_date": "2025-12-18",
-          "prev_close": 43.77,
-          "daily_return_pct": 1.5764,
-          "formula": "(44.4600 / 43.7700) - 1"
-        }
-      ],
-      "is_benchmark": false
     },
     "RYA": {
       "ticker": "RYA",
@@ -1272,7 +1215,7 @@
       "total_return_pct": -3.28,
       "volatility_annual_pct": 11.44,
       "weights_by_profile": {
-        "Modéré": 14.2
+        "Modéré": 14.6
       },
       "price_samples": [
         {
@@ -1498,7 +1441,7 @@
       "total_return_pct": 14.1,
       "volatility_annual_pct": 14.76,
       "weights_by_profile": {
-        "Modéré": 14.2
+        "Modéré": 14.6
       },
       "price_samples": [
         {
@@ -1556,7 +1499,7 @@
       "volatility_annual_pct": 24.91,
       "weights_by_profile": {
         "Agressif": 12.5,
-        "Modéré": 14.2
+        "Modéré": 14.6
       },
       "price_samples": [
         {
@@ -1656,6 +1599,63 @@
         }
       ],
       "is_benchmark": true
+    },
+    "VGSH": {
+      "ticker": "VGSH",
+      "type": "Bond_ETF",
+      "n_days_data": 85,
+      "first_date": "2025-08-25",
+      "last_date": "2025-12-19",
+      "first_price": 58.72,
+      "last_price": 58.68,
+      "total_return_pct": -0.07,
+      "volatility_annual_pct": 1.62,
+      "weights_by_profile": {
+        "Modéré": 0.75
+      },
+      "price_samples": [
+        {
+          "date": "2025-08-25",
+          "close": 58.72,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-09-23",
+          "close": 58.83,
+          "prev_date": "2025-09-22",
+          "prev_close": 58.81,
+          "daily_return_pct": 0.034,
+          "formula": "(58.8300 / 58.8100) - 1"
+        },
+        {
+          "date": "2025-10-22",
+          "close": 58.96,
+          "prev_date": "2025-10-21",
+          "prev_close": 58.93,
+          "daily_return_pct": 0.0509,
+          "formula": "(58.9600 / 58.9300) - 1"
+        },
+        {
+          "date": "2025-11-20",
+          "close": 58.83,
+          "prev_date": "2025-11-19",
+          "prev_close": 58.77,
+          "daily_return_pct": 0.1021,
+          "formula": "(58.8300 / 58.7700) - 1"
+        },
+        {
+          "date": "2025-12-19",
+          "close": 58.68,
+          "prev_date": "2025-12-18",
+          "prev_close": 58.69,
+          "daily_return_pct": -0.017,
+          "formula": "(58.6800 / 58.6900) - 1"
+        }
+      ],
+      "is_benchmark": false
     },
     "XHLF": {
       "ticker": "XHLF",
@@ -1827,7 +1827,7 @@
       "formula": "(126.7800 / 125.9300) - 1",
       "daily_return_pct": 0.675,
       "weight_pct": 5.71,
-      "contribution_pct": 0.0386,
+      "contribution_pct": 0.0385,
       "explanation": "Le 2025-09-23, ALV (Action) a clôturé à 126.78 vs 125.93 le 2025-09-22, soit un rendement de 0.68%"
     },
     {
@@ -1839,8 +1839,8 @@
       "close_J_minus_1": 78.92,
       "formula": "(78.9700 / 78.9200) - 1",
       "daily_return_pct": 0.0634,
-      "weight_pct": 7.0,
-      "contribution_pct": 0.0044,
+      "weight_pct": 5.99,
+      "contribution_pct": 0.0038,
       "explanation": "Le 2025-09-23, BSV (Bond_ETF) a clôturé à 78.97 vs 78.92 le 2025-09-22, soit un rendement de 0.06%"
     },
     {
@@ -1894,41 +1894,41 @@
       "n_assets": 10,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
-        "Action": 85.0,
+        "Action": 85.26,
         "ETF": 0,
-        "Bond_ETF": 15.0,
+        "Bond_ETF": 14.74,
         "Crypto": 0
       },
       "top_5_holdings": [
         [
+          "MUTHOOTFIN",
+          14.86
+        ],
+        [
           "SMIG",
-          14.2
+          14.6
         ],
         [
           "JNJ",
-          14.2
-        ],
-        [
-          "MUTHOOTFIN",
-          14.2
+          14.6
         ],
         [
           "UCG",
-          14.2
+          14.6
         ],
         [
           "TJX",
-          14.2
+          14.6
         ]
       ]
     },
     "Stable": {
       "n_assets": 10,
-      "total_weight_pct": 100.0,
+      "total_weight_pct": 99.98,
       "allocation_by_type": {
         "Action": 40.0,
         "ETF": 0,
-        "Bond_ETF": 60.0,
+        "Bond_ETF": 59.98,
         "Crypto": 0
       },
       "top_5_holdings": [
@@ -1966,13 +1966,13 @@
       "excess_return_pct": 14.0
     },
     "Modéré": {
-      "gross_return_pct": 11.72,
-      "net_return_pct": 11.72,
-      "volatility_pct": 8.53,
-      "max_drawdown_pct": -1.81,
+      "gross_return_pct": 11.58,
+      "net_return_pct": 11.58,
+      "volatility_pct": 8.69,
+      "max_drawdown_pct": -1.85,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 1.91,
-      "excess_return_pct": 9.81
+      "excess_return_pct": 9.67
     },
     "Stable": {
       "gross_return_pct": 4.35,
@@ -1981,7 +1981,7 @@
       "max_drawdown_pct": -0.9,
       "benchmark_symbol": "AGG",
       "benchmark_return_pct": -0.33,
-      "excess_return_pct": 4.67
+      "excess_return_pct": 4.68
     }
   },
   "uniformity_proof": {
