@@ -1,6 +1,13 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.18.1 — FIX max_region (actions only)
+Optimiseur de portefeuille v6.19.0 — PR0-PR3 Integration
+
+CHANGEMENTS v6.19.0 (PR0-PR3 Integration):
+1. PR0: Import exposures.py pour source unique de vérité
+2. PR1: Import instrument_classifier.py pour classification unifiée
+3. PR3: Import bucket_penalty.py pour pénalités soft dans SLSQP
+4. NEW: USE_SOFT_BUCKET_PENALTY flag pour activer pénalités soft
+5. NEW: Diagnostics enrichis avec bucket_penalty_info
 
 CHANGEMENTS v6.18.1:
 1. FIX: max_region s'applique UNIQUEMENT aux Actions (pas aux Bonds/ETF)
@@ -18,43 +25,6 @@ CHANGEMENTS v6.17 (P1-2 v2 Diagonal Shrinkage - ChatGPT reviewed):
 2. FIX: Appliqué APRÈS _ensure_positive_definite_with_kpis() + recalcul KPIs
 3. FIX: CONDITION_NUMBER_WARNING_THRESHOLD aligné sur target (10000)
 4. OBJECTIF: condition_number < 10,000 (était ~2M)
-
-CHANGEMENTS v6.16 (P1-2 Ledoit-Wolf Shrinkage):
-1. NEW: Shrinkage Ledoit-Wolf sur covariance empirique AVANT hybridation
-2. NEW: shrinkage_intensity dans diagnostics (δ optimal calculé)
-3. NEW: condition_number_before/after_shrinkage pour tracking
-4. OBJECTIF: condition_number < 10,000 (était ~2M)
-
-CHANGEMENTS v6.15 (P1-6 Covariance KPIs):
-1. NEW: condition_number = max(λ)/min(λ) dans diagnostics covariance
-2. NEW: eigen_clipped = nombre d'eigenvalues forcées au minimum
-3. NEW: eigen_clipped_pct = pourcentage d'eigenvalues clippées
-4. NEW: is_well_conditioned = True si condition_number < 1000 et eigen_clipped_pct < 20%
-5. Alertes automatiques si matrice mal conditionnée
-
-CHANGEMENTS v6.14 (P0 Technical Fixes - ChatGPT v2.0 Audit):
-1. P0-2 FIX: Tie-breaker (score, id) pour tri déterministe
-   - sorted(..., key=lambda x: (x.score, x.id)) au lieu de key=lambda x: x.score
-   - Garantit un ordre stable même en cas d'égalité de score
-
-CHANGEMENTS v6.13 (Conformité AMF - P0-9):
-1. FIX WORDING: "Certified" → "Heuristic" partout (évite terme trompeur)
-2. FIX WORDING: "fallback_certified" → "fallback_heuristic"
-3. Documentation mise à jour pour transparence
-
-CHANGEMENTS v6.12 (IC Review - ChatGPT validation finale):
-1. STABLE FALLBACK OFFICIEL: Skip SLSQP pour Stable (contraintes mathématiquement incompatibles)
-2. Nouveau mode "fallback_heuristic" avec documentation claire
-3. Justification: Markowitz infeasible sous contraintes strictes Stable
-
-CHANGEMENTS v6.11 (IC Review - ChatGPT challenge):
-1. ACTION 1: max_single_bond Stable 12% → 18% (réduit géométrie contraintes)
-2. ACTION 3: Ajout optimization_mode dans diagnostics (transparence fallback)
-
-CHANGEMENTS v6.10 (IC Review):
-1. CRITICAL: Stable vol_target 8.0% → 6.0% (aligné avec vol réalisée)
-2. CRITICAL: Stable vol_tolerance 5.0% → 3.0% (tolérance [3%, 9%])
-3. SLSQP converge sans fallback pour Stable
 
 5 LEVIERS ACTIFS (le reste est gelé):
 1. vol_target par profil (6%, 12%, 18%)
@@ -147,9 +117,48 @@ try:
 except ImportError:
     HAS_CONSTRAINT_REPORT = False
 
+# === PR0: Import exposures.py (source unique de vérité) ===
+try:
+    from portfolio_engine.exposures import (
+        compute_all_exposures,
+        compute_role_exposures,
+        compute_hhi,
+        USE_EXPOSURES_V2,
+    )
+    HAS_EXPOSURES_V2 = True
+except ImportError:
+    HAS_EXPOSURES_V2 = False
+    USE_EXPOSURES_V2 = False
+
+# === PR1: Import instrument_classifier.py ===
+try:
+    from portfolio_engine.instrument_classifier import (
+        InstrumentClassifier,
+        get_classifier,
+        InstrumentClassification,
+    )
+    HAS_INSTRUMENT_CLASSIFIER = True
+except ImportError:
+    HAS_INSTRUMENT_CLASSIFIER = False
+
+# === PR3: Import bucket_penalty.py ===
+try:
+    from portfolio_engine.bucket_penalty import (
+        create_penalty_function,
+        compute_total_bucket_penalty,
+        BucketPenaltyResult,
+        DEFAULT_LAMBDA_BUCKET,
+        DEFAULT_LAMBDA_UNKNOWN,
+    )
+    HAS_BUCKET_PENALTY = True
+except ImportError:
+    HAS_BUCKET_PENALTY = False
+    DEFAULT_LAMBDA_BUCKET = 20.0
+    DEFAULT_LAMBDA_UNKNOWN = 50.0
+
 logger = logging.getLogger("portfolio_engine.optimizer")
 
-# ============= CONSTANTES v6.17 =============
+# ============= CONSTANTES v6.19 =============
 
 # HARD FILTER: Score Buffett minimum pour les actions
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
@@ -158,13 +167,17 @@ BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
 COVARIANCE_EMPIRICAL_WEIGHT = 0.60  # 60% empirique, 40% structurée
 
 # P1-6: Seuils d'alerte pour KPIs covariance
-# v6.17 FIX: Aligné sur CONDITION_NUMBER_TARGET pour éviter warning après shrink réussi
 CONDITION_NUMBER_WARNING_THRESHOLD = 10000.0  # > 10000 = matrice instable
 EIGEN_CLIPPED_PCT_WARNING_THRESHOLD = 20.0   # > 20% = données insuffisantes
 
 # P1-2: Shrinkage Ledoit-Wolf
 SHRINKAGE_ENABLED = True  # Activer/désactiver shrinkage
 CONDITION_NUMBER_TARGET = 10000.0  # Objectif après shrinkage
+
+# === PR3: Soft bucket penalty configuration ===
+USE_SOFT_BUCKET_PENALTY = True  # Activer pénalité soft au lieu de contraintes dures
+LAMBDA_BUCKET = DEFAULT_LAMBDA_BUCKET  # Poids pénalité bucket (20.0)
+LAMBDA_UNKNOWN = DEFAULT_LAMBDA_UNKNOWN  # Poids pénalité unknown (50.0)
 
 
 # ============= P1-2 v2: DIAGONAL SHRINKAGE (NEW) =============
@@ -303,6 +316,8 @@ def to_python_native(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [to_python_native(item) for item in obj]
     return obj
+
+
 # ============= v6.7 FIX: VALID ID HELPER =============
 
 def _is_valid_id(val) -> bool:
@@ -485,22 +500,88 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
 
 
 def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
-    """Enrichit tous les actifs avec leur preset, rôle (bucket) et risk_bucket."""
+    """
+    Enrichit tous les actifs avec leur preset, rôle (bucket) et risk_bucket.
+    
+    v6.19 PR1: Utilise InstrumentClassifier si disponible pour classification unifiée.
+    """
+    # === PR1: Utiliser InstrumentClassifier si disponible ===
+    if HAS_INSTRUMENT_CLASSIFIER:
+        try:
+            classifier = get_classifier()
+            classification_issues = []
+            
+            for asset in assets:
+                # Construire source_data pour le classifier
+                source_data = asset.source_data or {}
+                source_data["category"] = asset.category
+                source_data["sector"] = asset.sector
+                source_data["region"] = asset.region
+                source_data["name"] = asset.name
+                source_data["ticker"] = asset.id
+                
+                # Classifier l'instrument
+                classification = classifier.classify(asset.id, source_data)
+                
+                # Appliquer la classification si valide
+                if classification.role and classification.role != "unknown":
+                    try:
+                        asset.role = Role(classification.role)
+                    except ValueError:
+                        # Role non reconnu, fallback
+                        if asset.preset is None or asset.role is None:
+                            preset, role = assign_preset_to_asset(asset)
+                            asset.preset = preset
+                            asset.role = role
+                elif asset.preset is None or asset.role is None:
+                    # Fallback sur l'ancien code
+                    preset, role = assign_preset_to_asset(asset)
+                    asset.preset = preset
+                    asset.role = role
+                
+                # Risk bucket
+                if classification.risk_bucket:
+                    asset._risk_bucket = classification.risk_bucket
+                
+                # Log si problème de classification
+                if not classification.is_valid:
+                    classification_issues.append(f"{asset.id}: {classification.warnings}")
+            
+            if classification_issues:
+                logger.warning(f"[PR1] Classification issues: {len(classification_issues)} assets with warnings")
+                for issue in classification_issues[:5]:  # Log max 5
+                    logger.debug(f"[PR1] {issue}")
+                    
+        except Exception as e:
+            logger.warning(f"[PR1] InstrumentClassifier failed, using legacy: {e}")
+            # Fallback complet sur ancien code
+            for asset in assets:
+                if asset.preset is None or asset.role is None:
+                    preset, role = assign_preset_to_asset(asset)
+                    asset.preset = preset
+                    asset.role = role
+    else:
+        # === FALLBACK: Ancien code (sans InstrumentClassifier) ===
+        for asset in assets:
+            if asset.preset is None or asset.role is None:
+                preset, role = assign_preset_to_asset(asset)
+                asset.preset = preset
+                asset.role = role
+    
+    # Corporate group pour actions
     for asset in assets:
-        if asset.preset is None or asset.role is None:
-            preset, role = assign_preset_to_asset(asset)
-            asset.preset = preset
-            asset.role = role
         if asset.category == "Actions" and asset.corporate_group is None:
             asset.corporate_group = get_corporate_group(asset.name)
-        
-# === Phase 1: Ajouter risk_bucket classification ===
+    
+    # === Phase 1: Ajouter risk_bucket classification (fallback si pas déjà fait) ===
+    for asset in assets:
         if HAS_RISK_BUCKETS and not hasattr(asset, '_risk_bucket'):
             bucket, _ = classify_asset(asset.source_data or {})  # Tuple unpacking
             asset._risk_bucket = bucket.value  # Stocker comme string
     
+    # Log distribution
     role_counts = defaultdict(int)
-    bucket_counts = defaultdict(int)  # Phase 1: tracker risk_buckets
+    bucket_counts = defaultdict(int)
     
     for asset in assets:
         if asset.role:
@@ -511,6 +592,10 @@ def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
     logger.info(f"Bucket distribution: {dict(role_counts)}")
     if HAS_RISK_BUCKETS:
         logger.info(f"Risk bucket distribution: {dict(bucket_counts)}")
+    
+    # Log PR1 status
+    if HAS_INSTRUMENT_CLASSIFIER:
+        logger.info("[PR1] Using InstrumentClassifier for role assignment")
     
     return assets
 
@@ -653,8 +738,6 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
     return other_assets + deduplicated_etfs
 
 
-# ============= COVARIANCE HYBRIDE v6.15 (P1-6 KPIs) =============
-
 # ============= COVARIANCE HYBRIDE v6.16 (P1-2 Ledoit-Wolf Shrinkage) =============
 
 class HybridCovarianceEstimator:
@@ -662,11 +745,7 @@ class HybridCovarianceEstimator:
     Estimateur de covariance hybride: empirique + structurée.
     
     v6.16 P1-2: Ajout du shrinkage Ledoit-Wolf pour réduire le condition number
-    v6.15 P1-6: Ajout des KPIs de qualité de la matrice:
-    - condition_number: max(λ)/min(λ) - instable si > 1000
-    - eigen_clipped: nombre d'eigenvalues forcées au minimum
-    - eigen_clipped_pct: pourcentage d'eigenvalues clippées - alerte si > 20%
-    - is_well_conditioned: flag booléen pour check rapide
+    v6.15 P1-6: Ajout des KPIs de qualité de la matrice
     """
     
     def __init__(
@@ -683,14 +762,7 @@ class HybridCovarianceEstimator:
         self, 
         assets: List[Asset]
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-        """
-        Calcule la covariance empirique si données suffisantes.
-        
-        P1-2: Retourne aussi la matrice de returns pour shrinkage Ledoit-Wolf.
-        
-        Returns:
-            (cov_matrix, returns_matrix) - returns_matrix utilisé pour shrinkage
-        """
+        """Calcule la covariance empirique si données suffisantes."""
         n = len(assets)
         valid_assets = [a for a in assets if a.returns_series is not None and len(a.returns_series) >= self.min_history_days]
         
@@ -729,7 +801,7 @@ class HybridCovarianceEstimator:
                             emp_idx_j += 1
                     emp_idx += 1
             
-            return cov_full, returns  # P1-2: Retourner returns pour shrinkage
+            return cov_full, returns
         except Exception as e:
             logger.warning(f"Covariance empirique échouée: {e}")
             return None, None
@@ -774,15 +846,7 @@ class HybridCovarianceEstimator:
         self, 
         returns_matrix: np.ndarray
     ) -> Tuple[np.ndarray, float]:
-        """
-        P1-2: Applique le shrinkage Ledoit-Wolf sur les returns.
-        
-        Le shrinkage réduit le condition number en combinant la covariance
-        empirique avec une matrice structurée (identité scalée).
-        
-        Returns:
-            (cov_shrunk, shrinkage_intensity) où shrinkage_intensity ∈ [0,1]
-        """
+        """P1-2: Applique le shrinkage Ledoit-Wolf sur les returns."""
         try:
             lw = LedoitWolf()
             lw.fit(returns_matrix)
@@ -791,32 +855,11 @@ class HybridCovarianceEstimator:
             return cov_shrunk, float(shrinkage_intensity)
         except Exception as e:
             logger.warning(f"Ledoit-Wolf shrinkage failed: {e}")
-            # Fallback: covariance empirique simple
             cov_emp = np.cov(returns_matrix, rowvar=False) * 252
             return cov_emp, 0.0
     
     def compute(self, assets: List[Asset]) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """
-        Calcule la covariance hybride avec KPIs de qualité (P1-6) et shrinkage (P1-2).
-        
-        Returns:
-            (matrice_covariance, diagnostics)
-            
-        Diagnostics incluent:
-            - method: "structured", "hybrid", "hybrid_shrunk"
-            - empirical_available: bool
-            - empirical_weight: float
-            - shrinkage_applied: bool - NOUVEAU P1-2
-            - shrinkage_intensity: float [0,1] - NOUVEAU P1-2
-            - condition_number_before_shrinkage: float - NOUVEAU P1-2
-            - condition_number: max(λ)/min(λ) après shrinkage
-            - eigen_clipped: nombre d'eigenvalues forcées
-            - eigen_clipped_pct: pourcentage clippé
-            - eigenvalue_min: plus petite eigenvalue (après clipping)
-            - eigenvalue_max: plus grande eigenvalue
-            - matrix_size: dimension n×n
-            - is_well_conditioned: True si condition_number < 1000 et clipped < 20%
-        """
+        """Calcule la covariance hybride avec KPIs de qualité."""
         n = len(assets)
         cov_structured = self.compute_structured_covariance(assets)
         cov_empirical, returns_matrix = self.compute_empirical_covariance(assets)
@@ -826,14 +869,12 @@ class HybridCovarianceEstimator:
             "empirical_available": False,
             "empirical_weight": 0.0,
             "matrix_size": n,
-            # P1-2: Nouveaux champs shrinkage
             "shrinkage_applied": False,
             "shrinkage_intensity": 0.0,
             "condition_number_before_shrinkage": None,
         }
         
         if cov_empirical is not None:
-            # P1-2: Calculer condition number AVANT shrinkage
             try:
                 eigvals_before = np.linalg.eigvalsh(cov_empirical)
                 eigvals_before = np.maximum(eigvals_before, 1e-10)
@@ -843,13 +884,11 @@ class HybridCovarianceEstimator:
                 cond_before = float("inf")
                 diagnostics["condition_number_before_shrinkage"] = cond_before
             
-            # P1-2: Appliquer shrinkage si activé ET returns disponibles
             if self.use_shrinkage and returns_matrix is not None:
                 cov_shrunk, shrinkage_intensity = self._apply_ledoit_wolf_shrinkage(returns_matrix)
                 diagnostics["shrinkage_applied"] = True
                 diagnostics["shrinkage_intensity"] = round(shrinkage_intensity, 4)
                 
-                # Utiliser cov_shrunk au lieu de cov_empirical
                 cov_hybrid = (
                     self.empirical_weight * cov_shrunk + 
                     (1 - self.empirical_weight) * cov_structured
@@ -861,7 +900,6 @@ class HybridCovarianceEstimator:
                     f"cond_before={cond_before:.0f}"
                 )
             else:
-                # Sans shrinkage (comportement original)
                 cov_hybrid = (
                     self.empirical_weight * cov_empirical + 
                     (1 - self.empirical_weight) * cov_structured
@@ -874,28 +912,19 @@ class HybridCovarianceEstimator:
         else:
             cov = cov_structured
         
-        # P1-6: Ensure positive definite ET collecter les KPIs
         cov, eigen_kpis = self._ensure_positive_definite_with_kpis(cov)
-        
-        # Fusionner les KPIs dans diagnostics
         diagnostics.update(eigen_kpis)
         
-        # === P1-2 v2: DIAGONAL SHRINKAGE SI CONDITION NUMBER TROP ÉLEVÉ ===
         cond_number = diagnostics.get("condition_number", float("inf"))
         if cond_number is not None and cond_number > CONDITION_NUMBER_TARGET:
             cov, shrink_info = diag_shrink_to_target(cov, target_cond=CONDITION_NUMBER_TARGET)
-
-            # FIX: Recalculer KPIs APRÈS shrink (sinon diagnostics incohérents)
             cov, eigen_kpis2 = self._ensure_positive_definite_with_kpis(cov)
             diagnostics.update(eigen_kpis2)
-
-            # Ajouter les infos de shrinkage
             diagnostics["diag_shrink_applied"] = shrink_info["shrink_applied"]
             diagnostics["diag_shrink_lambda"] = shrink_info["shrink_lambda"]
             diagnostics["diag_shrink_steps"] = shrink_info["shrink_steps"]
             diagnostics["condition_number_before_diag_shrink"] = shrink_info["cond_before"]
 
-            # Mettre à jour method
             if diagnostics.get("method") == "structured":
                 diagnostics["method"] = "structured+diag_shrink"
             elif "+diag_shrink" not in diagnostics.get("method", ""):
@@ -906,27 +935,12 @@ class HybridCovarianceEstimator:
                 f"(λ={shrink_info['shrink_lambda']:.3f}, steps={shrink_info['shrink_steps']})"
             )
         
-        # Log warnings si matrice mal conditionnée
         if not diagnostics.get("is_well_conditioned", True):
             if diagnostics.get("condition_number", 0) > CONDITION_NUMBER_WARNING_THRESHOLD:
                 logger.warning(
                     f"⚠️ COVARIANCE WARNING: condition_number={diagnostics['condition_number']:.1f} "
-                    f"> {CONDITION_NUMBER_WARNING_THRESHOLD} (matrice instable, optimisation fragile)"
+                    f"> {CONDITION_NUMBER_WARNING_THRESHOLD} (matrice instable)"
                 )
-            if diagnostics.get("eigen_clipped_pct", 0) > EIGEN_CLIPPED_PCT_WARNING_THRESHOLD:
-                logger.warning(
-                    f"⚠️ COVARIANCE WARNING: eigen_clipped_pct={diagnostics['eigen_clipped_pct']:.1f}% "
-                    f"> {EIGEN_CLIPPED_PCT_WARNING_THRESHOLD}% (données insuffisantes)"
-                )
-        
-        # P1-2: Log du résultat shrinkage
-        if diagnostics.get("shrinkage_applied"):
-            cond_after = diagnostics.get("condition_number", "N/A")
-            cond_before = diagnostics.get("condition_number_before_shrinkage", "N/A")
-            logger.info(
-                f"📊 Shrinkage result: cond_number {cond_before} → {cond_after} "
-                f"(target < {CONDITION_NUMBER_TARGET})"
-            )
         
         return cov, diagnostics
     
@@ -935,18 +949,7 @@ class HybridCovarianceEstimator:
         cov: np.ndarray, 
         min_eigenvalue: float = 1e-6
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """
-        Force la matrice à être positive semi-définie ET retourne les KPIs.
-        
-        P1-6: Nouveaux KPIs retournés:
-        - condition_number: max(λ)/min(λ)
-        - eigen_clipped: nombre d'eigenvalues forcées au minimum
-        - eigen_clipped_pct: pourcentage d'eigenvalues clippées
-        - eigenvalue_min: plus petite eigenvalue (après clipping)
-        - eigenvalue_max: plus grande eigenvalue
-        - eigenvalue_min_raw: plus petite eigenvalue AVANT clipping
-        - is_well_conditioned: True si condition_number < 1000 et clipped < 20%
-        """
+        """Force la matrice à être positive semi-définie ET retourne les KPIs."""
         kpis = {
             "condition_number": None,
             "eigen_clipped": 0,
@@ -957,32 +960,24 @@ class HybridCovarianceEstimator:
             "is_well_conditioned": True,
         }
         
-        # Nettoyage initial
         cov = np.nan_to_num(cov, nan=0.0, posinf=0.0, neginf=0.0)
         cov = (cov + cov.T) / 2
         n = cov.shape[0]
         cov += np.eye(n) * min_eigenvalue
         
         try:
-            # Décomposition en valeurs propres
             eigenvalues, eigenvectors = np.linalg.eigh(cov)
             
-            # KPIs AVANT clipping
             kpis["eigenvalue_min_raw"] = float(eigenvalues.min())
             kpis["eigenvalue_max"] = float(eigenvalues.max())
             
-            # Compter les eigenvalues qui vont être clippées
             eigen_clipped = int(np.sum(eigenvalues < min_eigenvalue))
             kpis["eigen_clipped"] = eigen_clipped
             kpis["eigen_clipped_pct"] = round(100.0 * eigen_clipped / n, 2) if n > 0 else 0.0
             
-            # Clipping des eigenvalues négatives ou trop petites
             eigenvalues_clipped = np.maximum(eigenvalues, min_eigenvalue)
-            
-            # KPIs APRÈS clipping
             kpis["eigenvalue_min"] = float(eigenvalues_clipped.min())
             
-            # Condition number = max(λ) / min(λ)
             if eigenvalues_clipped.min() > 0:
                 kpis["condition_number"] = round(
                     float(eigenvalues_clipped.max() / eigenvalues_clipped.min()), 
@@ -991,7 +986,6 @@ class HybridCovarianceEstimator:
             else:
                 kpis["condition_number"] = float("inf")
             
-            # Déterminer si la matrice est bien conditionnée
             cond_ok = (
                 kpis["condition_number"] is not None and 
                 kpis["condition_number"] < CONDITION_NUMBER_WARNING_THRESHOLD
@@ -999,7 +993,6 @@ class HybridCovarianceEstimator:
             clipped_ok = kpis["eigen_clipped_pct"] < EIGEN_CLIPPED_PCT_WARNING_THRESHOLD
             kpis["is_well_conditioned"] = cond_ok and clipped_ok
             
-            # Reconstruire la matrice avec eigenvalues clippées
             cov_fixed = eigenvectors @ np.diag(eigenvalues_clipped) @ eigenvectors.T
             cov_fixed = (cov_fixed + cov_fixed.T) / 2
             
@@ -1014,23 +1007,17 @@ class HybridCovarianceEstimator:
             return np.diag(np.maximum(np.diag(cov), min_eigenvalue)), kpis
 
 
-# ============= PORTFOLIO OPTIMIZER v6.15 =============
+# ============= PORTFOLIO OPTIMIZER v6.19 =============
 
 class PortfolioOptimizer:
     """
-    Optimiseur mean-variance v6.15.
+    Optimiseur mean-variance v6.19.
     
-    CHANGEMENTS v6.15 (P1-6 Covariance KPIs):
-    1. Diagnostics enrichis avec KPIs covariance (condition_number, eigen_clipped)
-    2. Warnings automatiques si matrice mal conditionnée
-    
-    CHANGEMENTS v6.14 (P0 Technical Fixes - ChatGPT v2.0 Audit):
-    1. P0-2 FIX: Tie-breaker (score, id) pour tri déterministe
-       - sorted(..., key=lambda x: (x.score, x.id)) au lieu de key=lambda x: x.score
-       - Garantit un ordre stable même en cas d'égalité de score
-    
-    CHANGEMENTS v6.13 (Conformité AMF - P0-9):
-    1. FIX WORDING: "Certified" → "Heuristic" (terme non-trompeur)
+    CHANGEMENTS v6.19 (PR0-PR3 Integration):
+    1. PR3: Soft bucket penalty dans objective() au lieu de contraintes dures
+    2. PR1: Classification via InstrumentClassifier
+    3. PR0: Exposures via exposures.py
+    4. NEW: bucket_penalty_info dans diagnostics
     """
     
     def __init__(
@@ -1040,7 +1027,8 @@ class PortfolioOptimizer:
         deduplicate_corporate: bool = True,
         use_bucket_constraints: bool = True,
         buffett_hard_filter: bool = True,
-        buffett_min_score: float = BUFFETT_HARD_FILTER_MIN
+        buffett_min_score: float = BUFFETT_HARD_FILTER_MIN,
+        use_soft_bucket_penalty: bool = USE_SOFT_BUCKET_PENALTY,
     ):
         self.score_scale = score_scale
         self.deduplicate_etfs_enabled = deduplicate_etfs
@@ -1048,6 +1036,7 @@ class PortfolioOptimizer:
         self.use_bucket_constraints = use_bucket_constraints
         self.buffett_hard_filter_enabled = buffett_hard_filter
         self.buffett_min_score = buffett_min_score
+        self.use_soft_bucket_penalty = use_soft_bucket_penalty and HAS_BUCKET_PENALTY
         self.covariance_estimator = HybridCovarianceEstimator()
     
     def select_candidates(
@@ -1075,7 +1064,6 @@ class PortfolioOptimizer:
         universe = enrich_assets_with_buckets(universe)
         
         # === ÉTAPE 5: Tri par score avec tie-breaker par ID ===
-        # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
         sorted_assets = sorted(universe, key=lambda x: (x.score, x.id), reverse=True)
         
         # === ÉTAPE 6: Sélection diversifiée ===
@@ -1131,12 +1119,12 @@ class PortfolioOptimizer:
         if len(bonds_in_pool) < min_bonds:
             all_bonds = sorted(
                 [a for a in universe if a.category == "Obligations" and a not in selected],
-                key=lambda x: (x.vol_annual, x.id)  # v6.14 P0-2: tie-breaker
+                key=lambda x: (x.vol_annual, x.id)
             )
             bonds_needed = min_bonds - len(bonds_in_pool)
             bonds_to_add = all_bonds[:bonds_needed]
             selected.extend(bonds_to_add)
-            logger.info(f"P1 FIX v6.2: Added {len(bonds_to_add)} bonds to pool for {profile.name} (minimum {min_bonds})")
+            logger.info(f"P1 FIX v6.2: Added {len(bonds_to_add)} bonds to pool for {profile.name}")
         
         # === P1 FIX v6.2: GARANTIR MINIMUM DEFENSIVE ===
         min_defensive = MIN_DEFENSIVE_IN_POOL.get(profile.name, 5)
@@ -1145,12 +1133,12 @@ class PortfolioOptimizer:
         if len(defensive_in_pool) < min_defensive:
             defensive_candidates = sorted(
                 [a for a in universe if a.role == Role.DEFENSIVE and a not in selected],
-                key=lambda x: (x.vol_annual, x.id)  # v6.14 P0-2: tie-breaker
+                key=lambda x: (x.vol_annual, x.id)
             )
             defensive_needed = min_defensive - len(defensive_in_pool)
             defensive_to_add = defensive_candidates[:defensive_needed]
             selected.extend(defensive_to_add)
-            logger.info(f"P1 FIX v6.2: Added {len(defensive_to_add)} defensive assets to pool for {profile.name}")
+            logger.info(f"P1 FIX v6.2: Added {len(defensive_to_add)} defensive assets to pool")
         
         logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
         
@@ -1160,21 +1148,6 @@ class PortfolioOptimizer:
             if a.role:
                 bucket_dist[a.role.value] += 1
         logger.info(f"Buckets pool: {dict(bucket_dist)}")
-        
-        # Log bonds count
-        bonds_count = sum(1 for a in selected if a.category == "Obligations")
-        logger.info(f"Bonds in pool: {bonds_count}")
-        
-        # === v6.8 P3 FIX: DIAGNOSTIC CRYPTO ===
-        crypto_in_pool = sum(1 for a in selected if a.category == "Crypto")
-        crypto_in_universe = sum(1 for a in universe if a.category == "Crypto")
-        avg_crypto_score = sum(crypto_scores) / len(crypto_scores) if crypto_scores else 0
-        
-        logger.info(
-            f"[DIAG CRYPTO {profile.name}] universe={crypto_in_universe}, "
-            f"pool={crypto_in_pool}, max_allowed={profile.crypto_max}%, "
-            f"avg_score={avg_crypto_score:.2f}"
-        )
         
         return selected
     
@@ -1196,9 +1169,14 @@ class PortfolioOptimizer:
         self, 
         candidates: List[Asset], 
         profile: ProfileConstraints,
-        cov: np.ndarray
+        cov: np.ndarray,
+        skip_bucket_constraints: bool = False,
     ) -> List[dict]:
-        """Construit les contraintes SLSQP avec limite par bond."""
+        """
+        Construit les contraintes SLSQP.
+        
+        v6.19 PR3: skip_bucket_constraints=True si on utilise soft penalty.
+        """
         n = len(candidates)
         constraints = []
         
@@ -1250,8 +1228,8 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
         
-        # 8. Contraintes par BUCKET
-        if self.use_bucket_constraints:
+        # 8. Contraintes par BUCKET — SKIPPED si soft penalty actif (PR3)
+        if self.use_bucket_constraints and not skip_bucket_constraints:
             bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
             relaxation = BUCKET_CONSTRAINT_RELAXATION.get(profile.name, 0.05)
             
@@ -1333,10 +1311,8 @@ class PortfolioOptimizer:
         vol_target = profile.vol_target / 100
         
         if profile.name == "Stable":
-            # v6.14 P0-2: Tie-breaker (vol, id) pour tri stable
             sorted_candidates = sorted(candidates, key=lambda a: (a.vol_annual, a.id))
         elif profile.name == "Agressif":
-            # v6.14 P0-2: Tie-breaker (-score, id) pour tri stable
             sorted_candidates = sorted(candidates, key=lambda a: (-a.score, a.id))
         else:
             sorted_candidates = sorted(candidates, key=lambda a: (-(a.score - 0.02 * a.vol_annual), a.id))
@@ -1346,7 +1322,7 @@ class PortfolioOptimizer:
         
         category_weights = defaultdict(float)
         sector_weights = defaultdict(float)
-        region_weights = defaultdict(float)  # v6.18 FIX: track region weights
+        region_weights = defaultdict(float)
         bucket_weights = defaultdict(float)
         
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
@@ -1364,7 +1340,6 @@ class PortfolioOptimizer:
             weight_per_bond = min(max_single_bond, bonds_needed / n_bonds_to_use)
             
             for bond in bonds[:n_bonds_to_use]:
-                # v6.18.1: Bonds exclus de max_region (contrainte = actions only)
                 weight = min(profile.max_single_position, weight_per_bond, 100 - total_weight)
                 if weight > 0.5:
                     allocation[bond.id] = float(weight)
@@ -1373,8 +1348,6 @@ class PortfolioOptimizer:
                     category_weights["Obligations"] += weight
                     if bond.role:
                         bucket_weights[bond.role.value] += weight
-            
-            logger.info(f"P1 FIX v6.2: Distributed bonds across {len([b for b in bonds[:n_bonds_to_use] if b.id in allocation])} assets")
         
         # === Remplir par bucket selon targets ===
         for role in [Role.DEFENSIVE, Role.CORE, Role.SATELLITE, Role.LOTTERY]:
@@ -1402,9 +1375,7 @@ class PortfolioOptimizer:
                     continue
                 if sector_weights[asset.sector] >= profile.max_sector:
                     continue
-                # v6.18.1 FIX: Vérifier max_region UNIQUEMENT pour Actions
                 if asset.category == "Actions" and region_weights[asset.region] >= profile.max_region:
-                    logger.debug(f"Skipping {asset.id}: max_region {profile.max_region}% reached for {asset.region}")
                     continue
                 
                 if role == Role.DEFENSIVE:
@@ -1424,7 +1395,7 @@ class PortfolioOptimizer:
                     category_weights[asset.category] += weight
                     sector_weights[asset.sector] += weight
                     if asset.category == "Actions":
-                        region_weights[asset.region] += weight  # v6.18.1: track region (actions only)
+                        region_weights[asset.region] += weight
                     bucket_weights[role.value] += weight
                     current_weight += weight
         
@@ -1519,9 +1490,7 @@ class PortfolioOptimizer:
         """
         Optimisation mean-variance avec covariance hybride.
         
-        v6.15 P1-6: Diagnostics enrichis avec KPIs covariance.
-        v6.14 P0-2: Tie-breaker (score, id) pour tri déterministe partout.
-        v6.13: STABLE utilise le fallback heuristique (skip SLSQP).
+        v6.19 PR3: Utilise soft bucket penalty au lieu de contraintes dures.
         """
         n = len(candidates)
         if n < profile.min_assets:
@@ -1531,6 +1500,43 @@ class PortfolioOptimizer:
         scores = self._normalize_scores(raw_scores) * self.score_scale
         
         cov, cov_diagnostics = self.compute_covariance(candidates)
+        
+        # === PR3: Préparer la fonction de pénalité bucket ===
+        bucket_penalty_fn = None
+        bucket_penalty_info = {"enabled": False, "lambda_bucket": 0, "lambda_unknown": 0}
+        
+        if self.use_soft_bucket_penalty and HAS_BUCKET_PENALTY:
+            # Construire le mapping des roles
+            role_mapping = {
+                c.id: c.role.value if c.role else "unknown"
+                for c in candidates
+            }
+            
+            # Récupérer les targets pour ce profil
+            bucket_targets = {}
+            for role in Role:
+                if role in PROFILE_BUCKET_TARGETS.get(profile.name, {}):
+                    min_pct, max_pct = PROFILE_BUCKET_TARGETS[profile.name][role]
+                    bucket_targets[role.value] = (min_pct, max_pct)
+            
+            # Créer la fonction de pénalité
+            candidate_ids = [c.id for c in candidates]
+            bucket_penalty_fn = create_penalty_function(
+                asset_ids=candidate_ids,
+                roles=role_mapping,
+                targets=bucket_targets,
+                lambda_bucket=LAMBDA_BUCKET,
+                lambda_unknown=LAMBDA_UNKNOWN,
+            )
+            
+            bucket_penalty_info = {
+                "enabled": True,
+                "lambda_bucket": LAMBDA_BUCKET,
+                "lambda_unknown": LAMBDA_UNKNOWN,
+                "targets": bucket_targets,
+            }
+            
+            logger.info(f"[PR3] Soft bucket penalty enabled: λ_bucket={LAMBDA_BUCKET}, λ_unknown={LAMBDA_UNKNOWN}")
         
         # ============================================================
         # v6.13 FIX: STABLE FALLBACK HEURISTIC
@@ -1553,14 +1559,23 @@ class PortfolioOptimizer:
             # === SLSQP pour Agressif et Modéré ===
             vol_target = profile.vol_target / 100
             
+            # === PR3: Objective avec soft bucket penalty ===
             def objective(w):
                 port_score = np.dot(w, scores)
                 port_var = np.dot(w, np.dot(cov, w))
                 port_vol = np.sqrt(max(port_var, 0))
                 vol_penalty = 5.0 * (port_vol - vol_target) ** 2
-                return -(port_score - vol_penalty)
+                
+                # PR3: Ajouter pénalité bucket soft
+                bucket_pen = 0.0
+                if bucket_penalty_fn is not None:
+                    bucket_pen = bucket_penalty_fn(w)
+                
+                return -(port_score - vol_penalty - bucket_pen)
             
-            constraints = self._build_constraints(candidates, profile, cov)
+            # PR3: Skip bucket constraints si soft penalty actif
+            skip_bucket = self.use_soft_bucket_penalty and bucket_penalty_fn is not None
+            constraints = self._build_constraints(candidates, profile, cov, skip_bucket_constraints=skip_bucket)
             bounds = [(0, profile.max_single_position / 100) for _ in range(n)]
             
             w0 = self._get_smart_initial_weights(candidates, profile)
@@ -1604,7 +1619,7 @@ class PortfolioOptimizer:
                     optimization_mode = "fallback_bonds_diversification"
                 else:
                     optimizer_converged = True
-                    optimization_mode = "slsqp"
+                    optimization_mode = "slsqp" + ("+soft_penalty" if bucket_penalty_fn else "")
             else:
                 logger.warning(f"SLSQP failed for {profile.name}: {result.message}")
                 fallback_reason = str(result.message)
@@ -1632,8 +1647,6 @@ class PortfolioOptimizer:
         # Summary bonds
         if bonds_final:
             logger.info(f"[FINAL {profile.name}] === BONDS SUMMARY: {len(bonds_final)} distinct bonds ===")
-            for aid, name, ticker, w in bonds_final:
-                logger.info(f"[FINAL {profile.name}] BOND: {ticker} | {name[:40]} | {w:.2f}%")
         else:
             logger.warning(f"[FINAL {profile.name}] === NO BONDS IN ALLOCATION ===")
         
@@ -1682,7 +1695,7 @@ class PortfolioOptimizer:
                     "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
                 }
         
-        # v6.15 P1-6: Inclure les KPIs covariance dans les diagnostics
+        # v6.19: Inclure les infos PR0-PR3 dans les diagnostics
         diagnostics = to_python_native({
             "converged": optimizer_converged,
             "optimization_mode": optimization_mode,
@@ -1704,6 +1717,8 @@ class PortfolioOptimizer:
             "bucket_exposure": dict(bucket_exposure),
             "bucket_compliance": bucket_compliance,
             "corporate_group_exposure": dict(corporate_group_exposure),
+            # === PR3: Bucket penalty info ===
+            "bucket_penalty_info": bucket_penalty_info,
             # === P1-6: Covariance KPIs ===
             "covariance_method": cov_diagnostics.get("method", "unknown"),
             "covariance_empirical_weight": cov_diagnostics.get("empirical_weight", 0),
@@ -1716,16 +1731,15 @@ class PortfolioOptimizer:
                 "eigen_clipped_pct": cov_diagnostics.get("eigen_clipped_pct", 0.0),
                 "eigenvalue_min": cov_diagnostics.get("eigenvalue_min"),
                 "eigenvalue_max": cov_diagnostics.get("eigenvalue_max"),
-                "eigenvalue_min_raw": cov_diagnostics.get("eigenvalue_min_raw"),
                 "matrix_size": cov_diagnostics.get("matrix_size", n),
                 "is_well_conditioned": cov_diagnostics.get("is_well_conditioned", True),
-                "thresholds": {
-                    "condition_number_warning": CONDITION_NUMBER_WARNING_THRESHOLD,
-                    "eigen_clipped_pct_warning": EIGEN_CLIPPED_PCT_WARNING_THRESHOLD,
-                },
             },
             "buffett_hard_filter_enabled": self.buffett_hard_filter_enabled,
             "buffett_min_score": self.buffett_min_score,
+            # === PR0-PR3 status ===
+            "pr0_exposures_v2": HAS_EXPOSURES_V2 and USE_EXPOSURES_V2,
+            "pr1_instrument_classifier": HAS_INSTRUMENT_CLASSIFIER,
+            "pr3_soft_bucket_penalty": self.use_soft_bucket_penalty and HAS_BUCKET_PENALTY,
         })
         
         opt_mode_display = optimization_mode.upper().replace("_", " ")
@@ -1821,7 +1835,6 @@ class PortfolioOptimizer:
         ]
         
         if candidates_for_adjust:
-            # v6.14 P0-2: Tri stable avec tie-breaker
             target_id = max(candidates_for_adjust, key=lambda x: (x[1], x[0]))[0]
             allocation[target_id] = round(float(allocation[target_id] + diff), 2)
         else:
