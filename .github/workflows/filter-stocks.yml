@@ -34,7 +34,7 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 1: Gate
+  # JOB 1: Gate - fenêtre élargie ±20min pour absorber délais GitHub
   # ═══════════════════════════════════════════════════════════════════════════
   gate:
     runs-on: ubuntu-latest
@@ -56,12 +56,12 @@ jobs:
           echo "📍 Paris time: $PARIS"
           echo "══════════════════════════════════════════════════════════════"
           
-          # Window: 03:55 - 04:05 Paris
-          if [ "$PARIS" -ge "0355" ] && [ "$PARIS" -le "0405" ]; then
+          # Window: 03:40 - 04:20 Paris (fenêtre élargie ±20min)
+          if [ "$PARIS" -ge "0340" ] && [ "$PARIS" -le "0420" ]; then
             echo "🌙 Volume filter window detected"
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
-            echo "⏭️ Skipped: PARIS=$PARIS not in window (03:55-04:05)"
+            echo "⏭️ Skipped: PARIS=$PARIS not in window (03:40-04:20)"
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 
