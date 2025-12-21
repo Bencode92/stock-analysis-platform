@@ -1,0 +1,327 @@
+{
+  "_metadata": {
+    "version": "1.0.0",
+    "description": "Instrument overrides for role/region/sector classification",
+    "created": "2024-12-21",
+    "last_updated": "2024-12-21",
+    "maintainer": "portfolio_engine",
+    "usage": "These overrides take precedence over automatic classification rules"
+  },
+  "_documentation": {
+    "role": "core | satellite | defensive | lottery",
+    "risk_bucket": "equity_like | bond_like | leveraged | alternative | real_assets | crypto",
+    "region": "US | Europe | Emerging | Asia | Global | Unknown",
+    "sector": "Technology | Healthcare | Financials | Consumer | Energy | Industrials | Materials | Utilities | Real Estate | Communication | Diversified | Bonds | Unknown",
+    "flags": {
+      "leveraged": "True if ETF uses leverage (2x, 3x, -1x, etc.)",
+      "alternative": "True if alternative strategy (hedge fund-like)",
+      "pea_eligible": "True if eligible for French PEA"
+    }
+  },
+  "overrides": {
+    "BUYW": {
+      "_comment": "BetaShares Global Sustainability Leaders ETF - Classification correction",
+      "role": "satellite",
+      "risk_bucket": "equity_like",
+      "region": "Global",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "CEFS": {
+      "_comment": "Saba Closed-End Funds ETF - Alternative strategy",
+      "role": "satellite",
+      "risk_bucket": "alternative",
+      "region": "US",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": true
+      }
+    },
+    "FPE": {
+      "_comment": "First Trust Preferred Securities and Income ETF",
+      "role": "defensive",
+      "risk_bucket": "bond_like",
+      "region": "US",
+      "sector": "Bonds",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "TQQQ": {
+      "_comment": "ProShares UltraPro QQQ - 3x Leveraged NASDAQ",
+      "role": "lottery",
+      "risk_bucket": "leveraged",
+      "region": "US",
+      "sector": "Technology",
+      "category": "ETF",
+      "flags": {
+        "leveraged": true,
+        "leverage_factor": 3.0,
+        "alternative": false
+      }
+    },
+    "SQQQ": {
+      "_comment": "ProShares UltraPro Short QQQ - 3x Inverse NASDAQ",
+      "role": "lottery",
+      "risk_bucket": "leveraged",
+      "region": "US",
+      "sector": "Technology",
+      "category": "ETF",
+      "flags": {
+        "leveraged": true,
+        "leverage_factor": -3.0,
+        "alternative": false
+      }
+    },
+    "UPRO": {
+      "_comment": "ProShares UltraPro S&P500 - 3x Leveraged",
+      "role": "lottery",
+      "risk_bucket": "leveraged",
+      "region": "US",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": true,
+        "leverage_factor": 3.0,
+        "alternative": false
+      }
+    },
+    "SPXU": {
+      "_comment": "ProShares UltraPro Short S&P500 - 3x Inverse",
+      "role": "lottery",
+      "risk_bucket": "leveraged",
+      "region": "US",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": true,
+        "leverage_factor": -3.0,
+        "alternative": false
+      }
+    },
+    "QLD": {
+      "_comment": "ProShares Ultra QQQ - 2x Leveraged",
+      "role": "lottery",
+      "risk_bucket": "leveraged",
+      "region": "US",
+      "sector": "Technology",
+      "category": "ETF",
+      "flags": {
+        "leveraged": true,
+        "leverage_factor": 2.0,
+        "alternative": false
+      }
+    },
+    "SSO": {
+      "_comment": "ProShares Ultra S&P500 - 2x Leveraged",
+      "role": "lottery",
+      "risk_bucket": "leveraged",
+      "region": "US",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": true,
+        "leverage_factor": 2.0,
+        "alternative": false
+      }
+    },
+    "BTC-USD": {
+      "_comment": "Bitcoin",
+      "role": "lottery",
+      "risk_bucket": "crypto",
+      "region": "Global",
+      "sector": "Crypto",
+      "category": "Crypto",
+      "flags": {
+        "leveraged": false,
+        "alternative": true
+      }
+    },
+    "ETH-USD": {
+      "_comment": "Ethereum",
+      "role": "lottery",
+      "risk_bucket": "crypto",
+      "region": "Global",
+      "sector": "Crypto",
+      "category": "Crypto",
+      "flags": {
+        "leveraged": false,
+        "alternative": true
+      }
+    },
+    "SPY": {
+      "_comment": "SPDR S&P 500 ETF Trust - Core US equity",
+      "role": "core",
+      "risk_bucket": "equity_like",
+      "region": "US",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false,
+        "pea_eligible": false
+      }
+    },
+    "VOO": {
+      "_comment": "Vanguard S&P 500 ETF - Core US equity",
+      "role": "core",
+      "risk_bucket": "equity_like",
+      "region": "US",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false,
+        "pea_eligible": false
+      }
+    },
+    "VTI": {
+      "_comment": "Vanguard Total Stock Market ETF - Core US equity",
+      "role": "core",
+      "risk_bucket": "equity_like",
+      "region": "US",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "QQQ": {
+      "_comment": "Invesco QQQ Trust - NASDAQ 100",
+      "role": "satellite",
+      "risk_bucket": "equity_like",
+      "region": "US",
+      "sector": "Technology",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "VEA": {
+      "_comment": "Vanguard FTSE Developed Markets ETF",
+      "role": "core",
+      "risk_bucket": "equity_like",
+      "region": "Europe",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "VWO": {
+      "_comment": "Vanguard FTSE Emerging Markets ETF",
+      "role": "satellite",
+      "risk_bucket": "equity_like",
+      "region": "Emerging",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "BND": {
+      "_comment": "Vanguard Total Bond Market ETF",
+      "role": "defensive",
+      "risk_bucket": "bond_like",
+      "region": "US",
+      "sector": "Bonds",
+      "category": "Obligations",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "AGG": {
+      "_comment": "iShares Core U.S. Aggregate Bond ETF",
+      "role": "defensive",
+      "risk_bucket": "bond_like",
+      "region": "US",
+      "sector": "Bonds",
+      "category": "Obligations",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "TLT": {
+      "_comment": "iShares 20+ Year Treasury Bond ETF",
+      "role": "defensive",
+      "risk_bucket": "bond_like",
+      "region": "US",
+      "sector": "Bonds",
+      "category": "Obligations",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "GLD": {
+      "_comment": "SPDR Gold Shares",
+      "role": "defensive",
+      "risk_bucket": "real_assets",
+      "region": "Global",
+      "sector": "Commodities",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "VNQ": {
+      "_comment": "Vanguard Real Estate ETF",
+      "role": "satellite",
+      "risk_bucket": "real_assets",
+      "region": "US",
+      "sector": "Real Estate",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false
+      }
+    },
+    "CW8": {
+      "_comment": "Amundi MSCI World UCITS ETF - PEA eligible",
+      "role": "core",
+      "risk_bucket": "equity_like",
+      "region": "Global",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false,
+        "pea_eligible": true
+      }
+    },
+    "EWLD": {
+      "_comment": "Lyxor MSCI World UCITS ETF - PEA eligible",
+      "role": "core",
+      "risk_bucket": "equity_like",
+      "region": "Global",
+      "sector": "Diversified",
+      "category": "ETF",
+      "flags": {
+        "leveraged": false,
+        "alternative": false,
+        "pea_eligible": true
+      }
+    }
+  },
+  "_validation_rules": {
+    "required_fields": ["role", "risk_bucket", "region", "sector", "category"],
+    "role_values": ["core", "satellite", "defensive", "lottery"],
+    "risk_bucket_values": ["equity_like", "bond_like", "leveraged", "alternative", "real_assets", "crypto"],
+    "on_missing_override": "Use automatic classification rules, log warning if result is 'unknown'"
+  }
+}
