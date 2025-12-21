@@ -40,7 +40,7 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 1: Gate - Vérifier si c'est bien l'heure du heavy
+  # JOB 1: Gate - fenêtre élargie ±20min pour absorber délais GitHub
   # ═══════════════════════════════════════════════════════════════════════════
   gate:
     runs-on: ubuntu-latest
@@ -62,12 +62,12 @@ jobs:
           echo "📍 Paris time: $PARIS"
           echo "══════════════════════════════════════════════════════════════"
           
-          # Night heavy window: 00:55 - 01:05 Paris
-          if [ "$PARIS" -ge "0055" ] && [ "$PARIS" -le "0105" ]; then
+          # Night heavy window: 00:40 - 01:20 Paris (fenêtre élargie ±20min)
+          if [ "$PARIS" -ge "0040" ] && [ "$PARIS" -le "0120" ]; then
             echo "🌙 Night HEAVY window detected"
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
-            echo "⏭️ Gate skipped: PARIS=$PARIS not in heavy window (00:55-01:05)"
+            echo "⏭️ Gate skipped: PARIS=$PARIS not in heavy window (00:40-01:20)"
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 
