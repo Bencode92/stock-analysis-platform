@@ -1277,6 +1277,36 @@ class PortfolioOptimizer:
             def crypto_constraint(w, idx=crypto_idx, max_val=profile.crypto_max/100):
                 return max_val - np.sum(w[idx])
             constraints.append({"type": "ineq", "fun": crypto_constraint})
+        # 4b. LEVERAGED maximum (P0 FIX v6.19)
+        if HAS_RISK_BUCKETS:
+            leveraged_cap_pct = LEVERAGED_CAP.get(profile.name, 0.0)
+            leveraged_idx = []
+            
+            for i, a in enumerate(candidates):
+                bucket_str = getattr(a, '_risk_bucket', None)
+                if bucket_str == 'leveraged':
+                    leveraged_idx.append(i)
+                elif a.source_data:
+                    bucket, _ = classify_asset(a.source_data)
+                    if bucket == RiskBucket.LEVERAGED:
+                        leveraged_idx.append(i)
+                        a._risk_bucket = bucket.value
+            
+            if leveraged_idx:
+                if leveraged_cap_pct == 0:
+                    # Interdit: force poids = 0 pour chaque leveraged
+                    for idx in leveraged_idx:
+                        def zero_lev(w, i=idx):
+                            return -w[i]
+                        constraints.append({"type": "ineq", "fun": zero_lev})
+                    logger.info(f"P0 FIX: Leveraged FORBIDDEN for {profile.name} ({len(leveraged_idx)} assets)")
+                else:
+                    # Cap sur total leveraged
+                    leveraged_cap = leveraged_cap_pct / 100
+                    def leveraged_constraint(w, idx=leveraged_idx, max_val=leveraged_cap):
+                        return max_val - np.sum(w[idx])
+                    constraints.append({"type": "ineq", "fun": leveraged_constraint})
+                    logger.info(f"P0 FIX: Leveraged cap {leveraged_cap_pct:.1f}% for {len(leveraged_idx)} assets")
         
         # 5. Contraintes par SECTEUR
         for sector in set(a.sector for a in candidates):
@@ -1384,6 +1414,10 @@ class PortfolioOptimizer:
         
         vol_target = profile.vol_target / 100
         
+        # P0 FIX v6.19: Initialize leveraged tracking
+        leveraged_weight = 0.0
+        leveraged_cap = LEVERAGED_CAP.get(profile.name, 0.0) if HAS_RISK_BUCKETS else 100.0
+        
         if profile.name == "Stable":
             # v6.14 P0-2: Tie-breaker (vol, id) pour tri stable
             sorted_candidates = sorted(candidates, key=lambda a: (a.vol_annual, a.id))
@@ -1444,7 +1478,7 @@ class PortfolioOptimizer:
             
             current_weight = bucket_weights.get(role.value, 0)
             
-            for asset in bucket_assets:
+         for asset in bucket_assets:
                 if len(allocation) >= profile.max_assets or total_weight >= 99.5:
                     break
                 if current_weight >= target_pct:
@@ -1452,8 +1486,26 @@ class PortfolioOptimizer:
                 
                 if asset.category == "Crypto" and category_weights["Crypto"] >= profile.crypto_max:
                     continue
-                if sector_weights[asset.sector] >= profile.max_sector:
+                
+                # P1 FIX v6.19: Check avec weight prévu, pas juste >=
+                available_sector = profile.max_sector - sector_weights[asset.sector]
+                if available_sector < 0.5:
                     continue
+                
+                # P0 FIX v6.19: Check leveraged cap
+                is_leveraged = False
+                if HAS_RISK_BUCKETS:
+                    bucket_str = getattr(asset, '_risk_bucket', None)
+                    if bucket_str == 'leveraged':
+                        is_leveraged = True
+                    elif asset.source_data:
+                        bucket, _ = classify_asset(asset.source_data)
+                        is_leveraged = (bucket == RiskBucket.LEVERAGED)
+                    
+                    if is_leveraged and leveraged_weight >= leveraged_cap:
+                        logger.debug(f"Skipping {asset.id}: leveraged_cap {leveraged_cap}% reached")
+                        continue
+                
                 # v6.18.1 FIX: Vérifier max_region UNIQUEMENT pour Actions
                 if asset.category == "Actions" and region_weights[asset.region] >= profile.max_region:
                     logger.debug(f"Skipping {asset.id}: max_region {profile.max_region}% reached for {asset.region}")
@@ -1468,7 +1520,12 @@ class PortfolioOptimizer:
                 else:
                     base_weight = min(5.0, profile.max_single_position)
                 
-                weight = min(base_weight, 100 - total_weight, target_pct - current_weight)
+                # P1 FIX v6.19: Inclure available_sector dans le min
+                weight = min(base_weight, 100 - total_weight, target_pct - current_weight, available_sector)
+                
+                # P0 FIX v6.19: Cap par leveraged remaining
+                if is_leveraged:
+                    weight = min(weight, leveraged_cap - leveraged_weight)
                 
                 if weight > 0.5:
                     allocation[asset.id] = round(float(weight), 2)
@@ -1479,6 +1536,9 @@ class PortfolioOptimizer:
                         region_weights[asset.region] += weight  # v6.18.1: track region (actions only)
                     bucket_weights[role.value] += weight
                     current_weight += weight
+                    # P0 FIX v6.19: Update leveraged tracking
+                    if is_leveraged:
+                        leveraged_weight += weight
         
         # === Normaliser à 100% ===
         if total_weight > 0:
@@ -1487,6 +1547,8 @@ class PortfolioOptimizer:
         
         # === Ajuster pour vol_target ===
         allocation = self._adjust_for_vol_target(allocation, candidates, profile, cov)
+        # === P1 FIX v6.19: Enforce sector caps post-normalization ===
+        allocation = self._enforce_sector_caps(allocation, candidates, profile)
         
         return allocation
     
@@ -1631,7 +1693,14 @@ class PortfolioOptimizer:
                 port_score = np.dot(w, scores)
                 port_var = np.dot(w, np.dot(cov, w))
                 port_vol = np.sqrt(max(port_var, 0))
-                vol_penalty = 5.0 * (port_vol - vol_target) ** 2
+                
+                # P2 FIX v6.19: Pénalité asymétrique (sous-vol pénalisée plus fort)
+                vol_diff = port_vol - vol_target
+                if vol_diff < 0:  # Sous la cible
+                    vol_penalty = 8.0 * vol_diff ** 2
+                else:  # Au-dessus
+                    vol_penalty = 3.0 * vol_diff ** 2
+                
                 return -(port_score - vol_penalty)
             
             constraints = self._build_constraints(candidates, profile, cov)
@@ -1888,7 +1957,57 @@ class PortfolioOptimizer:
             weights = weights / weights.sum()
         
         return weights
-    
+        def _enforce_sector_caps(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """P1 FIX v6.19: Enforce sector caps post-normalization."""
+        if not allocation:
+            return allocation
+        
+        asset_lookup = {c.id: c for c in candidates}
+        
+        # Calculer expositions par secteur
+        sector_weights = defaultdict(float)
+        for aid, weight in allocation.items():
+            asset = asset_lookup.get(aid)
+            if asset:
+                sector_weights[asset.sector] += weight
+        
+        # Identifier violations
+        violations = {s: w for s, w in sector_weights.items() if w > profile.max_sector + 0.1}
+        
+        if not violations:
+            return allocation
+        
+        logger.warning(f"P1 FIX: Sector violations post-norm: {violations}")
+        
+        for sector, current_weight in violations.items():
+            excess = current_weight - profile.max_sector
+            
+            # Positions du secteur, triées par poids croissant
+            sector_assets = sorted(
+                [(aid, w) for aid, w in allocation.items() 
+                 if asset_lookup.get(aid) and asset_lookup[aid].sector == sector and w > 0],
+                key=lambda x: (x[1], x[0])
+            )
+            
+            for aid, w in sector_assets:
+                if excess <= 0.01:
+                    break
+                reduction = min(excess, max(0, w - 0.5))
+                if reduction > 0:
+                    allocation[aid] = round(allocation[aid] - reduction, 2)
+                    excess -= reduction
+        
+        # Re-normaliser à 100%
+        total = sum(allocation.values())
+        if total > 0 and abs(total - 100) > 0.1:
+            allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
+        
+        return allocation
     def _adjust_to_100(self, allocation: Dict[str, float], profile: ProfileConstraints) -> Dict[str, float]:
         """Ajustement à 100%."""
         total = sum(allocation.values())
