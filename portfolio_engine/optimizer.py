@@ -1477,8 +1477,7 @@ class PortfolioOptimizer:
                 bucket_assets = sorted(bucket_assets, key=lambda a: (-a.score, a.id))
             
             current_weight = bucket_weights.get(role.value, 0)
-            
-         for asset in bucket_assets:
+            for asset in bucket_assets:
                 if len(allocation) >= profile.max_assets or total_weight >= 99.5:
                     break
                 if current_weight >= target_pct:
