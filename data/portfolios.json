@@ -1,39 +1,39 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une approche agressive, avec une forte exposition aux actions, notamment dans les secteurs de la finance et de la santé. Bien que ce portefeuille vise à générer des rendements élevés, il comporte des risques significatifs liés à la volatilité des marchés et aux fluctuations sectorielles. Les investissements dans des entreprises comme Vedanta et Unicredit peuvent être particulièrement sensibles aux conditions économiques. Il est essentiel de considérer ces risques avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec une forte exposition aux actions, ce qui peut offrir des rendements élevés. Cependant, il est important de noter que cette stratégie est également associée à une volatilité accrue, notamment en raison des fluctuations des marchés. De plus, la concentration dans possibles secteurs, comme l'énergie et les matériaux, peut augmenter le risque global. Les investisseurs doivent être conscients des risques potentiels liés à la performance des actifs sous-jacents. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "CUMMINS INC": "1%",
-      "CAIXABANK SA": "13%",
-      "FOX CORP CLASS A": "2%",
-      "UNICREDIT": "15%",
-      "VEDANTA LTD": "15%",
-      "ELI LILLY": "9%",
-      "JOHNSON & JOHNSON": "15%",
-      "TJX INC": "10%"
+      "CUMMINS INC": "15%",
+      "FOX CORP CLASS A": "10%",
+      "UNICREDIT": "14%",
+      "VEDANTA LTD": "14%",
+      "RYANAIR HOLDINGS PLC": "2%",
+      "ENGIE SA": "14%",
+      "AIB GROUP PLC": "2%",
+      "JOHNSON & JOHNSON": "10%"
     },
     "ETF": {
-      "First Trust North American Energy Infrastructure Fund": "15%"
+      "First Trust North American Energy Infrastructure Fund": "14%"
     },
     "Obligations": {
       "iShares Convertible Bond ETF": "5%"
     },
     "Crypto": {},
     "_tickers": {
-      "EMLP": 0.146,
-      "CMI": 0.0105,
-      "CABK": 0.146,
-      "FOXA": 0.02,
-      "UCG": 0.146,
-      "VEDL": 0.146,
-      "LLY": 0.0895,
-      "JNJ": 0.146,
-      "TJX": 0.1,
+      "EMLP": 0.142,
+      "CMI": 0.142,
+      "FOXA": 0.1,
+      "UCG": 0.142,
+      "VEDL": 0.142,
+      "RYA": 0.02,
+      "ENGI": 0.142,
+      "A5G": 0.02,
+      "JNJ": 0.1,
       "ICVT": 0.05
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 17.58,
+      "vol_realized": 17.27,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -43,15 +43,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 17.58,
-          "slack": 2.58,
+          "observed": 17.27,
+          "slack": 2.27,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -0.42
+            "diff_from_target": -0.73
           }
         },
         {
@@ -89,36 +89,36 @@
           "name": "max_single_position",
           "constraint_type": "max",
           "cap": 15.0,
-          "observed": 14.6,
-          "slack": 0.4,
+          "observed": 14.2,
+          "slack": 0.8,
           "binding": true,
           "status": "BINDING",
           "details": {
             "largest_position": {
               "id": "First Trust North American Energy Infrastructure Fund",
               "name": "First Trust North American Energy Infras",
-              "weight": 14.6
+              "weight": 14.2
             },
             "positions_above_10pct": [
               {
                 "id": "First Trust North American Energy Infrastructure Fund",
-                "weight": 14.6
+                "weight": 14.2
               },
               {
-                "id": "EQ_590",
-                "weight": 14.6
+                "id": "EQ_146",
+                "weight": 14.2
               },
               {
                 "id": "EQ_551",
-                "weight": 14.6
+                "weight": 14.2
               },
               {
                 "id": "EQ_874",
-                "weight": 14.6
+                "weight": 14.2
               },
               {
-                "id": "EQ_13",
-                "weight": 14.6
+                "id": "EQ_586",
+                "weight": 14.2
               }
             ]
           }
@@ -127,30 +127,30 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 35.0,
-          "observed": 29.2,
-          "slack": 5.8,
+          "observed": 16.2,
+          "slack": 18.8,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Finance",
+            "most_concentrated": "Industries",
             "counts_in_max_sector": {
-              "Finance": 29.2,
-              "Santé": 23.55,
-              "Diversified": 14.6,
-              "Matériaux": 14.6,
-              "Biens de consommation cycliques": 10.0,
-              "La communication": 2.0,
-              "Industries": 1.05
+              "Industries": 16.2,
+              "Finance": 16.2,
+              "Diversified": 14.2,
+              "Matériaux": 14.2,
+              "Services publics": 14.2,
+              "La communication": 10.0,
+              "Santé": 10.0
             },
             "all_sectors": {
-              "Finance": 29.2,
-              "Santé": 23.55,
-              "Diversified": 14.6,
-              "Matériaux": 14.6,
-              "Biens de consommation cycliques": 10.0,
-              "Bonds": 5.0,
-              "La communication": 2.0,
-              "Industries": 1.05
+              "Industries": 16.2,
+              "Finance": 16.2,
+              "Diversified": 14.2,
+              "Matériaux": 14.2,
+              "Services publics": 14.2,
+              "La communication": 10.0,
+              "Santé": 10.0,
+              "Bonds": 5.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -159,25 +159,27 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 36.6,
-          "slack": 13.4,
+          "observed": 34.2,
+          "slack": 15.8,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Etats-Unis": 36.6,
-              "Global": 14.6,
-              "Espagne": 14.6,
-              "Italie": 14.6,
-              "Inde": 14.6
+              "Etats-Unis": 34.2,
+              "Global": 14.2,
+              "Italie": 14.2,
+              "Inde": 14.2,
+              "France": 14.2,
+              "Irlande": 4.0
             },
             "all_regions": {
-              "Etats-Unis": 36.6,
-              "Global": 19.6,
-              "Espagne": 14.6,
-              "Italie": 14.6,
-              "Inde": 14.6
+              "Etats-Unis": 34.2,
+              "Global": 19.2,
+              "Italie": 14.2,
+              "Inde": 14.2,
+              "France": 14.2,
+              "Irlande": 4.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -206,45 +208,51 @@
           "name": "bucket_core",
           "constraint_type": "range",
           "cap": 45.0,
-          "observed": 24.6,
-          "slack": -5.4,
+          "observed": 24.2,
+          "slack": -5.8,
           "binding": false,
-          "status": "VIOLATED",
+          "status": "OK",
           "details": {
             "range_min": 30.0,
             "range_max": 45.0,
-            "slack_from_min": -5.4,
-            "slack_from_max": 20.4
+            "slack_from_min": -5.8,
+            "slack_from_max": 20.8,
+            "outside_range": true,
+            "is_indicator": true
           }
         },
         {
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 60.0,
-          "observed": 55.8,
-          "slack": 4.2,
+          "observed": 56.6,
+          "slack": 3.4,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 35.0,
             "range_max": 60.0,
-            "slack_from_min": 20.8,
-            "slack_from_max": 4.2
+            "slack_from_min": 21.6,
+            "slack_from_max": 3.4,
+            "outside_range": false,
+            "is_indicator": true
           }
         },
         {
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 19.6,
-          "slack": -4.6,
+          "observed": 19.2,
+          "slack": -4.2,
           "binding": false,
-          "status": "VIOLATED",
+          "status": "OK",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 14.6,
-            "slack_from_max": -4.6
+            "slack_from_min": 14.2,
+            "slack_from_max": -4.2,
+            "outside_range": true,
+            "is_indicator": true
           }
         },
         {
@@ -259,7 +267,9 @@
             "range_min": 0.0,
             "range_max": 5.0,
             "slack_from_min": 0.0,
-            "slack_from_max": 5.0
+            "slack_from_max": 5.0,
+            "outside_range": false,
+            "is_indicator": true
           }
         },
         {
@@ -291,59 +301,58 @@
       ],
       "summary": {
         "total": 14,
-        "ok": 8,
-        "binding": 4,
-        "violated": 2,
+        "ok": 11,
+        "binding": 3,
+        "violated": 0,
         "critical": 0
       },
-      "quality_score": 80.0,
+      "quality_score": 95.7,
       "recommendations": [
-        "🟡 BINDING: max_single_position at 14.6% (cap=15.0%) — monitor closely",
-        "🟠 VIOLATED: bucket_core exceeded by 5.4% — reduce exposure",
-        "🟠 VIOLATED: bucket_defensive exceeded by 4.6% — reduce exposure",
-        "⚠️ 4 constraints are binding — consider relaxing profile or reducing positions"
+        "🟡 BINDING: max_single_position at 14.2% (cap=15.0%) — monitor closely",
+        "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
-          "ETF": 14.6,
-          "Actions": 80.4,
+          "ETF": 14.2,
+          "Actions": 80.8,
           "Obligations": 5.0
         },
         "by_sector": {
-          "Finance": 29.2,
-          "Santé": 23.55,
-          "Diversified": 14.6,
-          "Matériaux": 14.6,
-          "Biens de consommation cycliques": 10.0,
-          "Bonds": 5.0,
-          "La communication": 2.0,
-          "Industries": 1.05
+          "Industries": 16.2,
+          "Finance": 16.2,
+          "Diversified": 14.2,
+          "Matériaux": 14.2,
+          "Services publics": 14.2,
+          "La communication": 10.0,
+          "Santé": 10.0,
+          "Bonds": 5.0
         },
         "by_region": {
-          "Etats-Unis": 36.6,
-          "Global": 19.6,
-          "Espagne": 14.6,
-          "Italie": 14.6,
-          "Inde": 14.6
+          "Etats-Unis": 34.2,
+          "Global": 19.2,
+          "Italie": 14.2,
+          "Inde": 14.2,
+          "France": 14.2,
+          "Irlande": 4.0
         },
         "by_risk_bucket": {
           "equity_like": 95.0,
           "bond_like": 5.0
         },
         "by_role": {
-          "defensive": 19.6,
-          "satellite": 55.8,
-          "core": 24.6
+          "defensive": 19.2,
+          "satellite": 56.6,
+          "core": 24.2
         },
         "concentration": {
-          "hhi": 1276.0,
+          "hhi": 1241.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 7.8,
+          "effective_n": 8.1,
           "n_positions": 10,
-          "top_5_weight": 73.0,
+          "top_5_weight": 71.0,
           "top_10_weight": 100.0,
-          "largest_position": 14.6,
-          "smallest_position": 1.05,
+          "largest_position": 14.2,
+          "smallest_position": 2.0,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
@@ -358,7 +367,7 @@
           "ticker": "EMLP",
           "isin": NaN,
           "name": "First Trust North American Energy Infrastructure Fund",
-          "weight_pct": 14.6,
+          "weight_pct": 14.2,
           "category": "ETF",
           "risk_bucket": "equity_like",
           "sector": "Diversified",
@@ -366,15 +375,15 @@
           "exchange": null
         },
         {
-          "id": "EQ_590",
-          "ticker": "CABK",
+          "id": "EQ_146",
+          "ticker": "CMI",
           "isin": null,
-          "name": "CAIXABANK SA",
-          "weight_pct": 14.6,
+          "name": "CUMMINS INC",
+          "weight_pct": 14.2,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Espagne",
+          "sector": "Industries",
+          "region": "Etats-Unis",
           "exchange": null
         },
         {
@@ -382,7 +391,7 @@
           "ticker": "UCG",
           "isin": null,
           "name": "UNICREDIT",
-          "weight_pct": 14.6,
+          "weight_pct": 14.2,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
@@ -394,7 +403,7 @@
           "ticker": "VEDL",
           "isin": null,
           "name": "VEDANTA LTD",
-          "weight_pct": 14.6,
+          "weight_pct": 14.2,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Matériaux",
@@ -402,35 +411,35 @@
           "exchange": null
         },
         {
+          "id": "EQ_586",
+          "ticker": "ENGI",
+          "isin": null,
+          "name": "ENGIE SA",
+          "weight_pct": 14.2,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Services publics",
+          "region": "France",
+          "exchange": null
+        },
+        {
+          "id": "EQ_459",
+          "ticker": "FOXA",
+          "isin": null,
+          "name": "FOX CORP CLASS A",
+          "weight_pct": 10.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "La communication",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
           "id": "EQ_13",
           "ticker": "JNJ",
           "isin": null,
           "name": "JOHNSON & JOHNSON",
-          "weight_pct": 14.6,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "EQ_58",
-          "ticker": "TJX",
-          "isin": null,
-          "name": "TJX INC",
           "weight_pct": 10.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Biens de consommation cycliques",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "EQ_10",
-          "ticker": "LLY",
-          "isin": null,
-          "name": "ELI LILLY",
-          "weight_pct": 8.95,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Santé",
@@ -450,27 +459,27 @@
           "exchange": null
         },
         {
-          "id": "EQ_459",
-          "ticker": "FOXA",
+          "id": "EQ_619",
+          "ticker": "RYA",
           "isin": null,
-          "name": "FOX CORP CLASS A",
+          "name": "RYANAIR HOLDINGS PLC",
           "weight_pct": 2.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "La communication",
-          "region": "Etats-Unis",
+          "sector": "Industries",
+          "region": "Irlande",
           "exchange": null
         },
         {
-          "id": "EQ_146",
-          "ticker": "CMI",
+          "id": "EQ_637",
+          "ticker": "A5G",
           "isin": null,
-          "name": "CUMMINS INC",
-          "weight_pct": 1.05,
+          "name": "AIB GROUP PLC",
+          "weight_pct": 2.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Industries",
-          "region": "Etats-Unis",
+          "sector": "Finance",
+          "region": "Irlande",
           "exchange": null
         }
       ],
@@ -490,45 +499,46 @@
     },
     "_exposures": {
       "by_category": {
-        "ETF": 14.6,
-        "Actions": 80.4,
+        "ETF": 14.2,
+        "Actions": 80.8,
         "Obligations": 5.0
       },
       "by_sector": {
-        "Finance": 29.2,
-        "Santé": 23.55,
-        "Diversified": 14.6,
-        "Matériaux": 14.6,
-        "Biens de consommation cycliques": 10.0,
-        "Bonds": 5.0,
-        "La communication": 2.0,
-        "Industries": 1.05
+        "Industries": 16.2,
+        "Finance": 16.2,
+        "Diversified": 14.2,
+        "Matériaux": 14.2,
+        "Services publics": 14.2,
+        "La communication": 10.0,
+        "Santé": 10.0,
+        "Bonds": 5.0
       },
       "by_region": {
-        "Etats-Unis": 36.6,
-        "Global": 19.6,
-        "Espagne": 14.6,
-        "Italie": 14.6,
-        "Inde": 14.6
+        "Etats-Unis": 34.2,
+        "Global": 19.2,
+        "Italie": 14.2,
+        "Inde": 14.2,
+        "France": 14.2,
+        "Irlande": 4.0
       },
       "by_risk_bucket": {
         "equity_like": 95.0,
         "bond_like": 5.0
       },
       "by_role": {
-        "defensive": 19.6,
-        "satellite": 55.8,
-        "core": 24.6
+        "defensive": 19.2,
+        "satellite": 56.6,
+        "core": 24.2
       },
       "concentration": {
-        "hhi": 1276.0,
+        "hhi": 1241.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 7.8,
+        "effective_n": 8.1,
         "n_positions": 10,
-        "top_5_weight": 73.0,
+        "top_5_weight": 71.0,
         "top_10_weight": 100.0,
-        "largest_position": 14.6,
-        "smallest_position": 1.05,
+        "largest_position": 14.2,
+        "smallest_position": 2.0,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -553,18 +563,18 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie modérée, équilibrant actions et obligations pour réduire la volatilité. Bien que ce portefeuille vise à offrir une croissance stable, il comporte des risques liés aux fluctuations des taux d'intérêt et aux performances sectorielles. L'exposition à des entreprises comme Allianz et RWE souligne la sensibilité aux conditions économiques. Il est important de prendre en compte ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie modérée, équilibrant actions et obligations pour réduire la volatilité. La présence d'ETF diversifiés permet d'atténuer possibles risques liés à des secteurs spécifiques. Cependant, la dépendance à l'égard des marchés immobiliers et technologiques peut introduire des incertitudes. Les investisseurs doivent être conscients des risques associés aux fluctuations économiques et aux variations de taux d'intérêt. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "FOX CORP CLASS A": "10%",
-      "RWE AG": "2%",
-      "JOHNSON & JOHNSON": "15%",
-      "CUMMINS INC": "2%",
-      "VEDANTA LTD": "14%",
-      "ALLIANZ": "14%"
+      "ENGIE SA": "15%",
+      "FOX CORP CLASS A": "14%",
+      "JOHNSON & JOHNSON": "14%",
+      "STEEL DYNAMICS INC": "10%"
     },
     "ETF": {
       "iShares U.S. Home Construction ETF": "14%",
-      "First Trust Nasdaq Artificial Intelligence and Robotics ETF": "14%"
+      "Invesco High Yield Equity Dividend Achievers ETF": "2%",
+      "First Trust Nasdaq Artificial Intelligence and Robotics ETF": "14%",
+      "Bahl & Gaynor Small/Mid Cap Income Growth ETF": "2%"
     },
     "Obligations": {
       "Vanguard Short-Term Bond ETF": "8%",
@@ -573,20 +583,20 @@
     "Crypto": {},
     "_tickers": {
       "ITB": 0.142,
+      "PEY": 0.02,
       "ROBT": 0.142,
-      "FOXA": 0.1,
-      "RWE": 0.02,
+      "SMIG": 0.02,
+      "ENGI": 0.142,
+      "FOXA": 0.142,
       "JNJ": 0.142,
-      "CMI": 0.02,
-      "VEDL": 0.142,
-      "ALV": 0.142,
+      "STLD": 0.1,
       "BSV": 0.08,
       "VTIP": 0.07
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 11.21,
+      "vol_realized": 10.93,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -596,15 +606,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 11.21,
-          "slack": 2.21,
+          "observed": 10.93,
+          "slack": 1.93,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -0.79
+            "diff_from_target": -1.07
           }
         },
         {
@@ -667,15 +677,15 @@
                 "weight": 14.2
               },
               {
+                "id": "EQ_586",
+                "weight": 14.2
+              },
+              {
+                "id": "EQ_459",
+                "weight": 14.2
+              },
+              {
                 "id": "EQ_13",
-                "weight": 14.2
-              },
-              {
-                "id": "EQ_874",
-                "weight": 14.2
-              },
-              {
-                "id": "EQ_533",
                 "weight": 14.2
               }
             ]
@@ -685,30 +695,26 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 28.4,
-          "slack": 1.6,
+          "observed": 32.4,
+          "slack": -2.4,
           "binding": false,
-          "status": "OK",
+          "status": "VIOLATED",
           "details": {
             "most_concentrated": "Diversified",
             "counts_in_max_sector": {
-              "Diversified": 28.4,
+              "Diversified": 32.4,
+              "Services publics": 14.2,
+              "La communication": 14.2,
               "Santé": 14.2,
-              "Matériaux": 14.2,
-              "Finance": 14.2,
-              "La communication": 10.0,
-              "Services publics": 2.0,
-              "Industries": 2.0
+              "Matériaux": 10.0
             },
             "all_sectors": {
-              "Diversified": 28.4,
+              "Diversified": 32.4,
               "Bonds": 15.0,
+              "Services publics": 14.2,
+              "La communication": 14.2,
               "Santé": 14.2,
-              "Matériaux": 14.2,
-              "Finance": 14.2,
-              "La communication": 10.0,
-              "Services publics": 2.0,
-              "Industries": 2.0
+              "Matériaux": 10.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -717,23 +723,21 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 28.4,
-          "slack": 21.6,
+          "observed": 38.4,
+          "slack": 11.6,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Global",
+            "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Global": 28.4,
-              "Etats-Unis": 26.2,
-              "Allemagne": 16.2,
-              "Inde": 14.2
+              "Etats-Unis": 38.4,
+              "Global": 32.4,
+              "France": 14.2
             },
             "all_regions": {
-              "Global": 43.4,
-              "Etats-Unis": 26.2,
-              "Allemagne": 16.2,
-              "Inde": 14.2
+              "Global": 47.4,
+              "Etats-Unis": 38.4,
+              "France": 14.2
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -762,45 +766,51 @@
           "name": "bucket_core",
           "constraint_type": "range",
           "cap": 55.0,
-          "observed": 42.6,
-          "slack": 7.6,
+          "observed": 44.6,
+          "slack": 9.6,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 35.0,
             "range_max": 55.0,
-            "slack_from_min": 7.6,
-            "slack_from_max": 12.4
+            "slack_from_min": 9.6,
+            "slack_from_max": 10.4,
+            "outside_range": false,
+            "is_indicator": true
           }
         },
         {
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 35.0,
-          "observed": 42.4,
-          "slack": -7.4,
+          "observed": 38.4,
+          "slack": -3.4,
           "binding": false,
-          "status": "VIOLATED",
+          "status": "OK",
           "details": {
             "range_min": 15.0,
             "range_max": 35.0,
-            "slack_from_min": 27.4,
-            "slack_from_max": -7.4
+            "slack_from_min": 23.4,
+            "slack_from_max": -3.4,
+            "outside_range": true,
+            "is_indicator": true
           }
         },
         {
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 30.0,
-          "observed": 15.0,
-          "slack": -5.0,
+          "observed": 17.0,
+          "slack": -3.0,
           "binding": false,
-          "status": "VIOLATED",
+          "status": "OK",
           "details": {
             "range_min": 20.0,
             "range_max": 30.0,
-            "slack_from_min": -5.0,
-            "slack_from_max": 15.0
+            "slack_from_min": -3.0,
+            "slack_from_max": 13.0,
+            "outside_range": true,
+            "is_indicator": true
           }
         },
         {
@@ -815,7 +825,9 @@
             "range_min": 0.0,
             "range_max": 2.0,
             "slack_from_min": 0.0,
-            "slack_from_max": 2.0
+            "slack_from_max": 2.0,
+            "outside_range": false,
+            "is_indicator": true
           }
         },
         {
@@ -837,48 +849,44 @@
       ],
       "summary": {
         "total": 13,
-        "ok": 7,
-        "binding": 4,
-        "violated": 2,
+        "ok": 9,
+        "binding": 3,
+        "violated": 1,
         "critical": 0
       },
-      "quality_score": 78.5,
+      "quality_score": 87.7,
       "recommendations": [
         "🟡 BINDING: max_single_position at 14.2% (cap=15.0%) — monitor closely",
-        "🟠 VIOLATED: bucket_satellite exceeded by 7.4% — reduce exposure",
-        "🟠 VIOLATED: bucket_defensive exceeded by 5.0% — reduce exposure",
-        "⚠️ 4 constraints are binding — consider relaxing profile or reducing positions"
+        "🟠 VIOLATED: max_sector exceeded by 2.4% — reduce exposure",
+        "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
-          "ETF": 28.4,
-          "Actions": 56.6,
+          "ETF": 32.4,
+          "Actions": 52.6,
           "Obligations": 15.0
         },
         "by_sector": {
-          "Diversified": 28.4,
+          "Diversified": 32.4,
           "Bonds": 15.0,
+          "Services publics": 14.2,
+          "La communication": 14.2,
           "Santé": 14.2,
-          "Matériaux": 14.2,
-          "Finance": 14.2,
-          "La communication": 10.0,
-          "Services publics": 2.0,
-          "Industries": 2.0
+          "Matériaux": 10.0
         },
         "by_region": {
-          "Global": 43.4,
-          "Etats-Unis": 26.2,
-          "Allemagne": 16.2,
-          "Inde": 14.2
+          "Global": 47.4,
+          "Etats-Unis": 38.4,
+          "France": 14.2
         },
         "by_risk_bucket": {
           "equity_like": 85.0,
           "bond_like": 15.0
         },
         "by_role": {
-          "core": 42.6,
-          "satellite": 42.4,
-          "defensive": 15.0
+          "core": 44.6,
+          "satellite": 38.4,
+          "defensive": 17.0
         },
         "concentration": {
           "hhi": 1229.0,
@@ -923,6 +931,30 @@
           "exchange": null
         },
         {
+          "id": "EQ_586",
+          "ticker": "ENGI",
+          "isin": null,
+          "name": "ENGIE SA",
+          "weight_pct": 14.2,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Services publics",
+          "region": "France",
+          "exchange": null
+        },
+        {
+          "id": "EQ_459",
+          "ticker": "FOXA",
+          "isin": null,
+          "name": "FOX CORP CLASS A",
+          "weight_pct": 14.2,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "La communication",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
           "id": "EQ_13",
           "ticker": "JNJ",
           "isin": null,
@@ -935,38 +967,14 @@
           "exchange": null
         },
         {
-          "id": "EQ_874",
-          "ticker": "VEDL",
+          "id": "EQ_367",
+          "ticker": "STLD",
           "isin": null,
-          "name": "VEDANTA LTD",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Matériaux",
-          "region": "Inde",
-          "exchange": null
-        },
-        {
-          "id": "EQ_533",
-          "ticker": "ALV",
-          "isin": null,
-          "name": "ALLIANZ",
-          "weight_pct": 14.2,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Allemagne",
-          "exchange": null
-        },
-        {
-          "id": "EQ_459",
-          "ticker": "FOXA",
-          "isin": null,
-          "name": "FOX CORP CLASS A",
+          "name": "STEEL DYNAMICS INC",
           "weight_pct": 10.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "La communication",
+          "sector": "Matériaux",
           "region": "Etats-Unis",
           "exchange": null
         },
@@ -995,27 +1003,27 @@
           "exchange": null
         },
         {
-          "id": "EQ_607",
-          "ticker": "RWE",
-          "isin": null,
-          "name": "RWE AG",
+          "id": "Invesco High Yield Equity Dividend Achievers ETF",
+          "ticker": "PEY",
+          "isin": NaN,
+          "name": "Invesco High Yield Equity Dividend Achievers ETF",
           "weight_pct": 2.0,
-          "category": "Actions",
+          "category": "ETF",
           "risk_bucket": "equity_like",
-          "sector": "Services publics",
-          "region": "Allemagne",
+          "sector": "Diversified",
+          "region": "Global",
           "exchange": null
         },
         {
-          "id": "EQ_146",
-          "ticker": "CMI",
-          "isin": null,
-          "name": "CUMMINS INC",
+          "id": "Bahl & Gaynor Small/Mid Cap Income Growth ETF",
+          "ticker": "SMIG",
+          "isin": NaN,
+          "name": "Bahl & Gaynor Small/Mid Cap Income Growth ETF",
           "weight_pct": 2.0,
-          "category": "Actions",
+          "category": "ETF",
           "risk_bucket": "equity_like",
-          "sector": "Industries",
-          "region": "Etats-Unis",
+          "sector": "Diversified",
+          "region": "Global",
           "exchange": null
         }
       ],
@@ -1024,10 +1032,10 @@
         "n_exchanges": 0,
         "exchanges": [],
         "total_weight": 100.0,
-        "missing_isin": 6,
+        "missing_isin": 4,
         "missing_ticker": 0,
         "data_quality": {
-          "isin_coverage": 40.0,
+          "isin_coverage": 60.0,
           "ticker_coverage": 100.0
         },
         "ready_for_execution": true
@@ -1035,34 +1043,31 @@
     },
     "_exposures": {
       "by_category": {
-        "ETF": 28.4,
-        "Actions": 56.6,
+        "ETF": 32.4,
+        "Actions": 52.6,
         "Obligations": 15.0
       },
       "by_sector": {
-        "Diversified": 28.4,
+        "Diversified": 32.4,
         "Bonds": 15.0,
+        "Services publics": 14.2,
+        "La communication": 14.2,
         "Santé": 14.2,
-        "Matériaux": 14.2,
-        "Finance": 14.2,
-        "La communication": 10.0,
-        "Services publics": 2.0,
-        "Industries": 2.0
+        "Matériaux": 10.0
       },
       "by_region": {
-        "Global": 43.4,
-        "Etats-Unis": 26.2,
-        "Allemagne": 16.2,
-        "Inde": 14.2
+        "Global": 47.4,
+        "Etats-Unis": 38.4,
+        "France": 14.2
       },
       "by_risk_bucket": {
         "equity_like": 85.0,
         "bond_like": 15.0
       },
       "by_role": {
-        "core": 42.6,
-        "satellite": 42.4,
-        "defensive": 15.0
+        "core": 44.6,
+        "satellite": 38.4,
+        "defensive": 17.0
       },
       "concentration": {
         "hhi": 1229.0,
@@ -1086,10 +1091,10 @@
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 6,
+      "missing_isin": 4,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 40.0,
+        "isin_coverage": 60.0,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
@@ -1097,13 +1102,13 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche stable, avec une forte concentration sur les obligations et une exposition limitée aux actions. Bien que ce portefeuille vise à réduire la volatilité, il comporte des risques liés aux fluctuations des taux d'intérêt et aux performances des secteurs d'énergie et de consommation. L'inclusion d'entreprises comme Johnson & Johnson et Allianz souligne la recherche de stabilité, mais ces investissements peuvent également être affectés par des facteurs externes. Il est crucial de considérer ces risques avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, axée sur des obligations et des actions à faible volatilité. La diversification dans les obligations d'État et les actions défensives vise à minimiser les risques tout en offrant un potentiel de rendement modéré. Cependant, la dépendance à l'égard des taux d'intérêt et des fluctuations des marchés des matières premières peut introduire des incertitudes. Les investisseurs doivent être conscients des risques associés aux variations économiques et réglementaires. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
-      "ALLIANZ": "10%",
+      "ENGIE SA": "10%",
       "TJX INC": "5%",
-      "ENGIE SA": "8%",
-      "CISCO SYSTEMS INC": "2%"
+      "CISCO SYSTEMS INC": "8%",
+      "RIO TINTO PLC": "2%"
     },
     "ETF": {
       "Invesco S&P 500 Equal Weight Energy ETF": "10%"
@@ -1124,15 +1129,15 @@
       "TBIL": 0.0564,
       "RYE": 0.1026,
       "JNJ": 0.1026,
-      "ALV": 0.1026,
+      "ENGI": 0.1026,
       "TJX": 0.0513,
-      "ENGI": 0.0821,
-      "CSCO": 0.0205
+      "CSCO": 0.0821,
+      "RIO": 0.0205
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 5.27,
+      "vol_realized": 5.4,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
@@ -1143,15 +1148,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 5.27,
-          "slack": 2.27,
+          "observed": 5.4,
+          "slack": 2.4,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -0.73
+            "diff_from_target": -0.6
           }
         },
         {
@@ -1233,7 +1238,7 @@
                 "weight": 10.26
               },
               {
-                "id": "EQ_533",
+                "id": "EQ_586",
                 "weight": 10.26
               }
             ]
@@ -1252,19 +1257,19 @@
             "counts_in_max_sector": {
               "Diversified": 10.26,
               "Santé": 10.26,
-              "Finance": 10.26,
-              "Services publics": 8.21,
+              "Services publics": 10.26,
+              "Technologie de l'information": 8.21,
               "Biens de consommation cycliques": 5.13,
-              "Technologie de l'information": 2.05
+              "Matériaux": 2.05
             },
             "all_sectors": {
               "Bonds": 53.86,
               "Diversified": 10.26,
               "Santé": 10.26,
-              "Finance": 10.26,
-              "Services publics": 8.21,
+              "Services publics": 10.26,
+              "Technologie de l'information": 8.21,
               "Biens de consommation cycliques": 5.13,
-              "Technologie de l'information": 2.05
+              "Matériaux": 2.05
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -1273,23 +1278,23 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 17.44,
-          "slack": 32.56,
+          "observed": 23.6,
+          "slack": 26.4,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Etats-Unis": 17.44,
+              "Etats-Unis": 23.6,
               "Global": 10.26,
-              "Allemagne": 10.26,
-              "France": 8.21
+              "France": 10.26,
+              "Royaume-Uni": 2.05
             },
             "all_regions": {
               "Global": 64.12,
-              "Etats-Unis": 17.44,
-              "Allemagne": 10.26,
-              "France": 8.21
+              "Etats-Unis": 23.6,
+              "France": 10.26,
+              "Royaume-Uni": 2.05
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -1326,7 +1331,9 @@
             "range_min": 30.0,
             "range_max": 40.0,
             "slack_from_min": 5.91,
-            "slack_from_max": 4.09
+            "slack_from_max": 4.09,
+            "outside_range": false,
+            "is_indicator": true
           }
         },
         {
@@ -1341,7 +1348,9 @@
             "range_min": 5.0,
             "range_max": 15.0,
             "slack_from_min": 5.26,
-            "slack_from_max": 4.74
+            "slack_from_max": 4.74,
+            "outside_range": false,
+            "is_indicator": true
           }
         },
         {
@@ -1356,7 +1365,9 @@
             "range_min": 45.0,
             "range_max": 60.0,
             "slack_from_min": 8.86,
-            "slack_from_max": 6.14
+            "slack_from_max": 6.14,
+            "outside_range": false,
+            "is_indicator": true
           }
         },
         {
@@ -1371,7 +1382,9 @@
             "range_min": 0.0,
             "range_max": 0.0,
             "slack_from_min": 0.0,
-            "slack_from_max": 0.0
+            "slack_from_max": 0.0,
+            "outside_range": false,
+            "is_indicator": true
           }
         },
         {
@@ -1393,12 +1406,12 @@
       ],
       "summary": {
         "total": 12,
-        "ok": 11,
-        "binding": 1,
+        "ok": 12,
+        "binding": 0,
         "violated": 0,
         "critical": 0
       },
-      "quality_score": 98.3,
+      "quality_score": 100.0,
       "recommendations": [],
       "exposures": {
         "by_category": {
@@ -1410,16 +1423,16 @@
           "Bonds": 53.86,
           "Diversified": 10.26,
           "Santé": 10.26,
-          "Finance": 10.26,
-          "Services publics": 8.21,
+          "Services publics": 10.26,
+          "Technologie de l'information": 8.21,
           "Biens de consommation cycliques": 5.13,
-          "Technologie de l'information": 2.05
+          "Matériaux": 2.05
         },
         "by_region": {
           "Global": 64.12,
-          "Etats-Unis": 17.44,
-          "Allemagne": 10.26,
-          "France": 8.21
+          "Etats-Unis": 23.6,
+          "France": 10.26,
+          "Royaume-Uni": 2.05
         },
         "by_risk_bucket": {
           "bond_like": 53.86,
@@ -1521,27 +1534,27 @@
           "exchange": null
         },
         {
-          "id": "EQ_533",
-          "ticker": "ALV",
-          "isin": null,
-          "name": "ALLIANZ",
-          "weight_pct": 10.26,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Allemagne",
-          "exchange": null
-        },
-        {
           "id": "EQ_586",
           "ticker": "ENGI",
           "isin": null,
           "name": "ENGIE SA",
-          "weight_pct": 8.21,
+          "weight_pct": 10.26,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Services publics",
           "region": "France",
+          "exchange": null
+        },
+        {
+          "id": "EQ_27",
+          "ticker": "CSCO",
+          "isin": null,
+          "name": "CISCO SYSTEMS INC",
+          "weight_pct": 8.21,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Technologie de l'information",
+          "region": "Etats-Unis",
           "exchange": null
         },
         {
@@ -1569,15 +1582,15 @@
           "exchange": null
         },
         {
-          "id": "EQ_27",
-          "ticker": "CSCO",
+          "id": "EQ_558",
+          "ticker": "RIO",
           "isin": null,
-          "name": "CISCO SYSTEMS INC",
+          "name": "RIO TINTO PLC",
           "weight_pct": 2.05,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Technologie de l'information",
-          "region": "Etats-Unis",
+          "sector": "Matériaux",
+          "region": "Royaume-Uni",
           "exchange": null
         }
       ],
@@ -1605,16 +1618,16 @@
         "Bonds": 53.86,
         "Diversified": 10.26,
         "Santé": 10.26,
-        "Finance": 10.26,
-        "Services publics": 8.21,
+        "Services publics": 10.26,
+        "Technologie de l'information": 8.21,
         "Biens de consommation cycliques": 5.13,
-        "Technologie de l'information": 2.05
+        "Matériaux": 2.05
       },
       "by_region": {
         "Global": 64.12,
-        "Etats-Unis": 17.44,
-        "Allemagne": 10.26,
-        "France": 8.21
+        "Etats-Unis": 23.6,
+        "France": 10.26,
+        "Royaume-Uni": 2.05
       },
       "by_risk_bucket": {
         "bond_like": 53.86,
@@ -1660,7 +1673,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-22T08:22:16.862500",
+    "generated_at": "2025-12-22T10:06:29.619165",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
