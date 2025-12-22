@@ -1589,6 +1589,13 @@ class PortfolioOptimizer:
         scores = self._normalize_scores(raw_scores) * self.score_scale
         
         cov, cov_diagnostics = self.compute_covariance(candidates)
+        # PR3: Initialiser heuristic_metadata (vide par défaut, rempli si Stable)
+        heuristic_metadata = {}
+        
+        raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
+        scores = self._normalize_scores(raw_scores) * self.score_scale
+        
+        cov, cov_diagnostics = self.compute_covariance(candidates)
         
         # ============================================================
         # v6.13 FIX: STABLE FALLBACK HEURISTIC
