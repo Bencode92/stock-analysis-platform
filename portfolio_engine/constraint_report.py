@@ -1,9 +1,15 @@
 # portfolio_engine/constraint_report.py
 """
-Constraint Report Module — v2.1.0
+Constraint Report Module — v2.2.0
 
 Génère un rapport structuré des contraintes avec margins explicites.
 Chaque contrainte est documentée avec: {cap, observed, slack, binding, status}
+
+v2.2.0 CHANGES (PR0):
+- SOURCE UNIQUE DE VÉRITÉ: utilise exposures.py pour tous les calculs
+- Suppression des fonctions dupliquées compute_hhi(), compute_effective_n()
+- _compute_exposures() délègue à exposures.compute_all_exposures()
+- Cohérence garantie entre optimizer.py et constraint_report.py
 
 v2.1.0 CHANGES (PR1):
 - Buckets (core/satellite/defensive/lottery) sont des INDICATEURS, pas des contraintes
@@ -32,6 +38,22 @@ from collections import defaultdict
 from enum import Enum
 import logging
 import math
+
+# PR0: Import exposures.py comme SOURCE UNIQUE DE VÉRITÉ
+try:
+    from portfolio_engine.exposures import (
+        compute_all_exposures,
+        compute_concentration_metrics,
+        compute_hhi as exposures_compute_hhi,
+        compute_role_exposures,
+        compute_region_exposures,
+        compute_sector_exposures,
+        compute_category_exposures,
+        compute_risk_bucket_exposures,
+    )
+    HAS_EXPOSURES_MODULE = True
+except ImportError:
+    HAS_EXPOSURES_MODULE = False
 
 # Import risk_buckets si disponible
 try:
@@ -255,11 +277,13 @@ class ConstraintReport:
         return len(self.get_violations()) == 0
 
 
-# ============= CONCENTRATION METRICS =============
+# ============= PR0: CONCENTRATION METRICS (via exposures.py) =============
 
 def compute_hhi(weights: List[float]) -> float:
     """
     Calcule l'indice Herfindahl-Hirschman (HHI).
+    
+    PR0: Délègue à exposures.py pour source unique de vérité.
     
     HHI = Σ(w_i)² * 10000 où w_i en décimal (somme = 1)
     
@@ -268,29 +292,26 @@ def compute_hhi(weights: List[float]) -> float:
     - 1000-1500: Diversified
     - 1500-2500: Moderately concentrated
     - >2500: Highly concentrated
-    
-    Exemples:
-    - 10 positions à 10% chacune → HHI = 1000
-    - 5 positions à 20% chacune → HHI = 2000
-    - 2 positions à 50% chacune → HHI = 5000
-    - 1 position à 100% → HHI = 10000
     """
+    if HAS_EXPOSURES_MODULE:
+        # PR0: Utiliser exposures.py comme source unique
+        weights_dict = {f"asset_{i}": w for i, w in enumerate(weights) if w > 0}
+        hhi, _ = exposures_compute_hhi(weights_dict)
+        return hhi
+    
+    # Fallback si exposures.py non disponible
     if not weights:
         return 0.0
     
-    # Filtrer les poids nuls
     w = [x for x in weights if x > 0]
     if not w:
         return 0.0
     
-    # Normaliser pour que la somme = 1 (robuste aux deux formats)
     total = sum(w)
     if total <= 0:
         return 0.0
     
     w_normalized = [x / total for x in w]
-    
-    # HHI = sum(w²) * 10000
     hhi = sum(x * x for x in w_normalized) * 10000
     
     return round(hhi, 1)
@@ -300,12 +321,7 @@ def compute_effective_n(weights: List[float]) -> float:
     """
     Calcule le nombre effectif de positions (inverse HHI).
     
-    Représente le nombre équivalent de positions si toutes égales.
-    
-    Exemples:
-    - HHI = 1000 → effective_n = 10
-    - HHI = 2000 → effective_n = 5
-    - HHI = 5000 → effective_n = 2
+    PR0: Utilise compute_hhi() qui délègue à exposures.py.
     """
     hhi = compute_hhi(weights)
     if hhi <= 0:
@@ -371,6 +387,7 @@ class ConstraintReportGenerator:
     """
     Générateur de rapports de contraintes.
     
+    v2.2: PR0 - Source unique de vérité via exposures.py.
     v2.1: PR1 - Buckets sont des indicateurs, pas des contraintes.
     v2.0: Ajout génération exposures et ticker_mapping.
     
@@ -381,6 +398,7 @@ class ConstraintReportGenerator:
     
     def __init__(self):
         self.has_risk_buckets = HAS_RISK_BUCKETS
+        self.has_exposures_module = HAS_EXPOSURES_MODULE
     
     def generate(
         self,
@@ -458,7 +476,7 @@ class ConstraintReportGenerator:
         # Generate recommendations (PR1: pas de VIOLATED pour buckets)
         recommendations = self._generate_recommendations(constraints, profile)
         
-        # Phase 1.2: Generate exposures
+        # Phase 1.2: Generate exposures (PR0: via exposures.py)
         exposures = None
         if include_exposures:
             exposures = self._compute_exposures(allocation, asset_by_id)
@@ -496,7 +514,37 @@ class ConstraintReportGenerator:
             return asset.get(attr, default)
         return default
     
-    # ============= PHASE 1.2: EXPOSURES =============
+    # ============= PR0: EXPOSURES VIA exposures.py =============
+    
+    def _extract_asset_data(self, asset_by_id: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        PR0: Extrait les données d'assets pour exposures.py.
+        
+        Returns:
+            Dict {asset_id: {role, region, sector, category, risk_bucket}}
+        """
+        asset_data = {}
+        
+        for aid, asset in asset_by_id.items():
+            if not asset:
+                continue
+            
+            # Role (avec gestion de l'enum)
+            role = self._get_asset_attr(asset, 'role')
+            if role:
+                role_value = role.value if hasattr(role, 'value') else str(role)
+            else:
+                role_value = None
+            
+            asset_data[aid] = {
+                "role": role_value,
+                "region": self._get_asset_attr(asset, 'region', 'Global'),
+                "sector": self._get_asset_attr(asset, 'sector', 'Unknown'),
+                "category": self._get_asset_attr(asset, 'category', 'Unknown'),
+                "risk_bucket": self._get_asset_attr(asset, '_risk_bucket', 'unknown'),
+            }
+        
+        return asset_data
     
     def _compute_exposures(
         self,
@@ -504,10 +552,62 @@ class ConstraintReportGenerator:
         asset_by_id: Dict[str, Any],
     ) -> ExposureReport:
         """
-        Phase 1.2: Calcule les expositions détaillées.
+        Phase 1.2 + PR0: Calcule les expositions via exposures.py.
+        
+        PR0: Délègue à exposures.compute_all_exposures() pour source unique.
         
         Returns:
             ExposureReport avec breakdown complet
+        """
+        # PR0: Utiliser exposures.py si disponible
+        if self.has_exposures_module:
+            # Convertir allocation % → décimal
+            weights_decimal = {k: v / 100.0 for k, v in allocation.items() if v > 0}
+            
+            # Extraire les données des assets
+            asset_data = self._extract_asset_data(asset_by_id)
+            
+            # Appeler la source unique de vérité
+            result = compute_all_exposures(weights_decimal, asset_data)
+            
+            # Convertir décimal → % pour le report
+            return ExposureReport(
+                by_category={k: v * 100 for k, v in result.by_category.items()},
+                by_sector={k: v * 100 for k, v in result.by_sector.items()},
+                by_region={k: v * 100 for k, v in result.by_region.items()},
+                by_risk_bucket={k: v * 100 for k, v in result.by_risk_bucket.items()},
+                by_role={k: v * 100 for k, v in result.by_role.items()},
+                concentration={
+                    "hhi": round(result.concentration.hhi, 0),
+                    "hhi_interpretation": result.concentration.concentration_level,
+                    "effective_n": result.concentration.effective_n,
+                    "n_positions": result.concentration.n_positions,
+                    "top_5_weight": round(result.concentration.top_5_weight * 100, 2),
+                    "top_10_weight": round(result.concentration.top_10_weight * 100, 2),
+                    "largest_position": round(result.concentration.largest_position * 100, 2),
+                    "smallest_position": round(result.concentration.smallest_position * 100, 2),
+                    "thresholds": {
+                        "well_diversified": "HHI < 1000",
+                        "diversified": "HHI 1000-1500",
+                        "moderately_concentrated": "HHI 1500-2500",
+                        "highly_concentrated": "HHI > 2500",
+                    },
+                    "source": "exposures.py",  # PR0: traçabilité
+                },
+            )
+        
+        # Fallback: calcul local si exposures.py non disponible
+        return self._compute_exposures_fallback(allocation, asset_by_id)
+    
+    def _compute_exposures_fallback(
+        self,
+        allocation: Dict[str, float],
+        asset_by_id: Dict[str, Any],
+    ) -> ExposureReport:
+        """
+        Fallback pour calcul des expositions si exposures.py non disponible.
+        
+        Identique à l'ancienne implémentation.
         """
         by_category = defaultdict(float)
         by_sector = defaultdict(float)
@@ -547,7 +647,6 @@ class ConstraintReportGenerator:
             # Risk bucket
             risk_bucket = self._get_asset_attr(asset, '_risk_bucket', 'unknown')
             if not risk_bucket:
-                # Fallback basé sur category
                 if category == "Obligations":
                     risk_bucket = "bond_like"
                 elif category == "Actions":
@@ -558,7 +657,7 @@ class ConstraintReportGenerator:
                     risk_bucket = "equity_like"
             by_risk_bucket[risk_bucket] += weight
             
-            # Role (bucket CORE/DEFENSIVE/etc.)
+            # Role
             role = self._get_asset_attr(asset, 'role')
             if role:
                 role_value = role.value if hasattr(role, 'value') else str(role)
@@ -574,7 +673,6 @@ class ConstraintReportGenerator:
         hhi = compute_hhi(weights_list)
         effective_n = compute_effective_n(weights_list)
         
-        # Déterminer le niveau de concentration
         if hhi < 1000:
             concentration_level = "well_diversified"
         elif hhi < 1500:
@@ -599,6 +697,7 @@ class ConstraintReportGenerator:
                 "moderately_concentrated": "HHI 1500-2500",
                 "highly_concentrated": "HHI > 2500",
             },
+            "source": "fallback_local",  # PR0: traçabilité
         }
         
         return ExposureReport(
@@ -638,7 +737,6 @@ class ConstraintReportGenerator:
             asset = asset_by_id.get(aid)
             
             if not asset:
-                # Asset non trouvé, créer un mapping minimal
                 mappings.append(TickerMapping(
                     id=aid,
                     ticker=aid,
@@ -654,12 +752,10 @@ class ConstraintReportGenerator:
                 missing_isin += 1
                 continue
             
-            # Extraire les informations
             ticker = self._get_asset_attr(asset, 'ticker') or \
                      self._get_asset_attr(asset, 'symbol') or \
                      aid
             
-            # Chercher ISIN dans source_data si disponible
             source_data = self._get_asset_attr(asset, 'source_data', {})
             isin = None
             exchange = None
@@ -675,7 +771,6 @@ class ConstraintReportGenerator:
             if not exchange:
                 exchange = self._get_asset_attr(asset, 'exchange')
             
-            # Statistiques
             if not isin:
                 missing_isin += 1
             if ticker == aid and not self._get_asset_attr(asset, 'ticker'):
@@ -683,7 +778,6 @@ class ConstraintReportGenerator:
             if exchange:
                 exchanges.add(exchange)
             
-            # Risk bucket
             risk_bucket = self._get_asset_attr(asset, '_risk_bucket', '')
             if not risk_bucket:
                 category = self._get_asset_attr(asset, 'category', '')
@@ -709,7 +803,6 @@ class ConstraintReportGenerator:
                 exchange=exchange,
             ))
         
-        # Execution summary
         execution_summary = {
             "n_positions": len(mappings),
             "n_exchanges": len(exchanges),
@@ -736,11 +829,9 @@ class ConstraintReportGenerator:
         cov_diagnostics: Optional[Dict],
     ) -> Optional[ConstraintMargin]:
         """Calcule le margin pour la volatilité."""
-        # Utiliser la vol du rapport si disponible
         if cov_diagnostics and "portfolio_vol" in cov_diagnostics:
             observed_vol = cov_diagnostics["portfolio_vol"]
         else:
-            # Estimation simple
             total_weight = sum(allocation.values())
             if total_weight == 0:
                 return None
@@ -757,7 +848,6 @@ class ConstraintReportGenerator:
         vol_target = profile.vol_target
         vol_tolerance = profile.vol_tolerance
         
-        # Pour volatilité, on veut être dans [target - tol, target + tol]
         diff = abs(observed_vol - vol_target)
         slack = vol_tolerance - diff
         
@@ -827,7 +917,6 @@ class ConstraintReportGenerator:
     ) -> Optional[ConstraintMargin]:
         """Calcule le margin pour crypto_max."""
         if profile.crypto_max == 0:
-            # Vérifier qu'il n'y a pas de crypto
             crypto_weight = sum(
                 weight for aid, weight in allocation.items()
                 if asset_by_id.get(aid) and 
@@ -844,7 +933,7 @@ class ConstraintReportGenerator:
                     status=ConstraintStatus.VIOLATED,
                     details={"message": "Crypto forbidden for this profile"},
                 )
-            return None  # N/A
+            return None
         
         crypto_weight = 0.0
         crypto_details = []
@@ -877,7 +966,6 @@ class ConstraintReportGenerator:
         margins = []
         max_pos = profile.max_single_position
         
-        # Trouver la position la plus grande
         if not allocation:
             return margins
         
@@ -911,11 +999,9 @@ class ConstraintReportGenerator:
         Détermine si un actif compte dans la contrainte max_sector.
         
         Seuls les actifs EQUITY_LIKE comptent (Actions et ETF actions).
-        Les obligations (BOND_LIKE) sont exclues car "Bonds" n'est pas un secteur.
         """
         bucket_str = self._get_asset_attr(asset, '_risk_bucket')
         
-        # Utiliser risk_bucket SEULEMENT si c'est une classification valide (pas "unknown")
         if bucket_str and bucket_str != "unknown":
             try:
                 bucket = RiskBucket(bucket_str)
@@ -923,7 +1009,6 @@ class ConstraintReportGenerator:
             except ValueError:
                 pass
         
-        # Fallback pour unknown OU missing risk_bucket
         category = self._get_asset_attr(asset, 'category', '')
         name = self._get_asset_attr(asset, 'name', '')
         
@@ -952,12 +1037,7 @@ class ConstraintReportGenerator:
         asset_by_id: Dict[str, Any],
         profile: Any,
     ) -> List[ConstraintMargin]:
-        """
-        Calcule les margins pour max_sector.
-        
-        IMPORTANT v7.0: Seuls les actifs EQUITY_LIKE comptent.
-        Les obligations sont exclues car "Bonds" n'est pas un secteur économique.
-        """
+        """Calcule les margins pour max_sector."""
         sector_weights = defaultdict(float)
         sector_weights_all = defaultdict(float)
         
@@ -969,7 +1049,6 @@ class ConstraintReportGenerator:
             sector = self._get_asset_attr(asset, 'sector', 'Unknown')
             sector_weights_all[sector] += weight
             
-            # Ne compter que les equity-like pour max_sector
             if self._counts_in_max_sector(asset):
                 sector_weights[sector] += weight
         
@@ -1001,13 +1080,9 @@ class ConstraintReportGenerator:
     def _counts_in_max_region(self, asset: Any) -> bool:
         """
         Détermine si un actif compte dans la contrainte max_region.
-        
-        Returns True si l'actif est EQUITY_LIKE ou LEVERAGED.
-        Utilise un fallback sur category si _risk_bucket est absent ou "unknown".
         """
         bucket_str = self._get_asset_attr(asset, '_risk_bucket')
         
-        # Utiliser risk_bucket SEULEMENT si c'est une classification valide (pas "unknown")
         if bucket_str and bucket_str != "unknown":
             try:
                 bucket = RiskBucket(bucket_str)
@@ -1015,7 +1090,6 @@ class ConstraintReportGenerator:
             except ValueError:
                 pass
         
-        # Fallback pour unknown OU missing risk_bucket
         category = self._get_asset_attr(asset, 'category', '')
         name = self._get_asset_attr(asset, 'name', '')
         
@@ -1047,12 +1121,7 @@ class ConstraintReportGenerator:
         asset_by_id: Dict[str, Any],
         profile: Any,
     ) -> List[ConstraintMargin]:
-        """
-        Calcule les margins pour max_region.
-        
-        IMPORTANT v7.0: Seuls les actifs EQUITY_LIKE et LEVERAGED comptent.
-        Le fallback utilise category pour classifier si _risk_bucket est absent.
-        """
+        """Calcule les margins pour max_region."""
         region_weights = defaultdict(float)
         region_weights_all = defaultdict(float)
         
@@ -1132,11 +1201,7 @@ class ConstraintReportGenerator:
         Calcule les margins pour les bucket constraints.
         
         PR1 v2.1.0: Les buckets sont des INDICATEURS, pas des contraintes.
-        - Ils ne génèrent jamais de status VIOLATED
-        - Ils utilisent OK ou BINDING uniquement
-        - Le champ "outside_range" dans details indique si hors plage
         """
-        # Import bucket targets
         try:
             from portfolio_engine.preset_meta import PROFILE_BUCKET_TARGETS, Role
         except ImportError:
@@ -1146,7 +1211,6 @@ class ConstraintReportGenerator:
         if not bucket_targets:
             return []
         
-        # Calculer les poids par bucket
         bucket_weights = defaultdict(float)
         
         for aid, weight in allocation.items():
@@ -1166,15 +1230,11 @@ class ConstraintReportGenerator:
             min_pct, max_pct = bucket_targets[role]
             observed = bucket_weights.get(role.value, 0)
             
-            # Min constraint
             min_slack = observed - (min_pct * 100)
-            # Max constraint
             max_slack = (max_pct * 100) - observed
             
-            # PR1: Déterminer si hors plage (pour info seulement)
             outside_range = min_slack < 0 or max_slack < 0
             
-            # PR1: Le slack effectif (pour affichage)
             if min_slack < 0:
                 slack = min_slack
             elif max_slack < 0:
@@ -1182,17 +1242,15 @@ class ConstraintReportGenerator:
             else:
                 slack = min(min_slack, max_slack)
             
-            # PR1: Les buckets sont des INDICATEURS - jamais VIOLATED
-            # Seuls OK ou BINDING sont possibles
             if slack < BINDING_THRESHOLD_PCT and slack >= 0:
                 status = ConstraintStatus.BINDING
             else:
-                status = ConstraintStatus.OK  # Même si hors range!
+                status = ConstraintStatus.OK
             
             margins.append(ConstraintMargin(
                 name=f"bucket_{role.value}",
                 constraint_type="range",
-                cap=max_pct * 100,  # Afficher le max
+                cap=max_pct * 100,
                 observed=round(observed, 2),
                 slack=round(slack, 2),
                 binding=slack < BINDING_THRESHOLD_PCT and slack >= 0,
@@ -1202,8 +1260,8 @@ class ConstraintReportGenerator:
                     "range_max": round(max_pct * 100, 1),
                     "slack_from_min": round(min_slack, 2),
                     "slack_from_max": round(max_slack, 2),
-                    "outside_range": outside_range,  # PR1: indicateur informatif
-                    "is_indicator": True,  # PR1: flag explicite
+                    "outside_range": outside_range,
+                    "is_indicator": True,
                 },
             ))
         
@@ -1218,7 +1276,6 @@ class ConstraintReportGenerator:
         """Calcule les margins pour LEVERAGED et ALTERNATIVE caps."""
         margins = []
         
-        # Calculer les poids par risk_bucket
         risk_bucket_weights = defaultdict(float)
         
         for aid, weight in allocation.items():
@@ -1230,12 +1287,10 @@ class ConstraintReportGenerator:
             if bucket_str:
                 risk_bucket_weights[bucket_str] += weight
         
-        # LEVERAGED cap
         leveraged_cap = LEVERAGED_CAP.get(profile.name, 0.0)
         leveraged_observed = risk_bucket_weights.get("leveraged", 0)
         
         if leveraged_cap == 0 and leveraged_observed > 0:
-            # Interdit mais présent
             margins.append(ConstraintMargin(
                 name="leveraged_cap",
                 constraint_type="max",
@@ -1255,7 +1310,6 @@ class ConstraintReportGenerator:
                 details={},
             ))
         
-        # ALTERNATIVE cap
         alternative_cap = ALTERNATIVE_CAP.get(profile.name, 5.0)
         alternative_observed = risk_bucket_weights.get("alternative", 0)
         
@@ -1274,12 +1328,7 @@ class ConstraintReportGenerator:
     # ============= SUMMARY & RECOMMENDATIONS =============
     
     def _compute_summary(self, constraints: List[ConstraintMargin]) -> Dict[str, int]:
-        """
-        Calcule le résumé des statuts.
-        
-        PR1 v2.1.0: Les buckets (INDICATOR_ONLY_CONSTRAINTS) sont exclus
-        du count "violated" car ce sont des indicateurs informatifs.
-        """
+        """Calcule le résumé des statuts."""
         summary = {
             "total": len(constraints),
             "ok": 0,
@@ -1289,7 +1338,6 @@ class ConstraintReportGenerator:
         }
         
         for c in constraints:
-            # PR1: Les buckets sont toujours comptés comme OK dans le summary
             if c.name in INDICATOR_ONLY_CONSTRAINTS:
                 summary["ok"] += 1
                 continue
@@ -1306,17 +1354,7 @@ class ConstraintReportGenerator:
         return summary
     
     def _compute_quality_score(self, constraints: List[ConstraintMargin]) -> float:
-        """
-        Calcule un score de qualité 0-100.
-        
-        - Chaque contrainte OK = 100 / n_constraints points
-        - BINDING = 80% des points
-        - VIOLATED = 0 points
-        - CRITICAL = -20% des points
-        
-        PR1 v2.1.0: Les buckets (INDICATOR_ONLY_CONSTRAINTS) sont toujours
-        comptés comme OK (100% des points) car ce sont des indicateurs.
-        """
+        """Calcule un score de qualité 0-100."""
         if not constraints:
             return 100.0
         
@@ -1325,7 +1363,6 @@ class ConstraintReportGenerator:
         
         total_score = 0.0
         for c in constraints:
-            # PR1: Les buckets sont toujours OK (ne pénalisent pas le score)
             if c.name in INDICATOR_ONLY_CONSTRAINTS:
                 total_score += points_per_constraint
                 continue
@@ -1346,18 +1383,11 @@ class ConstraintReportGenerator:
         constraints: List[ConstraintMargin],
         profile: Any,
     ) -> List[str]:
-        """
-        Génère des recommandations basées sur les violations/bindings.
-        
-        PR1 v2.1.0: Les buckets ne génèrent pas de recommandation VIOLATED
-        car ce sont des indicateurs informatifs.
-        """
+        """Génère des recommandations basées sur les violations/bindings."""
         recommendations = []
         
         for c in constraints:
-            # PR1: Ignorer les buckets pour les recommandations VIOLATED
             if c.name in INDICATOR_ONLY_CONSTRAINTS:
-                # Optionnel: ajouter une note informative si très hors range
                 if c.details.get("outside_range") and abs(c.slack) > 10:
                     recommendations.append(
                         f"ℹ️ INFO: {c.name} is {abs(c.slack):.1f}% outside target range (indicator only)"
@@ -1378,7 +1408,6 @@ class ConstraintReportGenerator:
                         f"🟡 BINDING: {c.name} at {c.observed:.1f}% (cap={c.cap:.1f}%) — monitor closely"
                     )
         
-        # Recommandations générales (exclure les buckets du count)
         n_binding = sum(
             1 for c in constraints 
             if c.status == ConstraintStatus.BINDING 
@@ -1466,6 +1495,7 @@ def enrich_diagnostics_with_margins(
     """
     Enrichit les diagnostics existants avec le rapport de contraintes.
     
+    v2.2: PR0 - Source unique de vérité via exposures.py.
     v2.1: PR1 - Buckets sont des indicateurs (pas dans violations).
     v2.0: Inclut exposures et ticker_mapping.
     
@@ -1485,7 +1515,6 @@ def enrich_diagnostics_with_margins(
     diagnostics["constraint_summary"] = report["summary"]
     diagnostics["constraint_quality_score"] = report["quality_score"]
     
-    # PR1: Exclure les buckets des violations
     diagnostics["constraint_violations"] = [
         c for c in report["constraints"] 
         if c["status"] in ["VIOLATED", "CRITICAL"]
@@ -1496,11 +1525,9 @@ def enrich_diagnostics_with_margins(
         if c["status"] == "BINDING"
     ]
     
-    # Phase 1.2: Exposures au top-level
     if "exposures" in report:
         diagnostics["exposures"] = report["exposures"]
     
-    # Phase 1.3: Execution summary au top-level
     if "execution_summary" in report:
         diagnostics["execution_summary"] = report["execution_summary"]
     
