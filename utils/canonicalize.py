@@ -189,6 +189,11 @@ def _extract_core(output: dict) -> dict:
                 "n_assets",
                 "n_bonds",
                 "n_crypto"
+                 # PR3: Nouvelles métadonnées heuristiques
+                "heuristic_name",
+                "heuristic_version",
+                "rules_applied",
+                "why_not_slsqp",
             ]:
                 if k in opt:
                     core[profile]["_optimization"][k] = opt[k]
