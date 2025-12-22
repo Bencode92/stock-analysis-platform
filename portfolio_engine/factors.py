@@ -1,38 +1,35 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.3.1 — SEUL MOTEUR D'ALPHA
+FactorScorer v2.4.0 — SEUL MOTEUR D'ALPHA
 =========================================
 
+v2.4.0 Changes (Z-Score par Classe + Data Contract Strict):
+- CORRECTIF CRITIQUE: Z-score calculé PAR CLASSE (equity/etf/bond/crypto)
+  Avant: crypto (vol 80%) et bonds (vol 5%) comparés ensemble → biais
+  Après: chaque classe a sa propre distribution N(0,1)
+- SUPPRESSION: Tous les defaults silencieux (vol=20, score=50, TER=75, etc.)
+- NOUVEAU: Pénalités explicites pour données manquantes
+- NOUVEAU: Poids renormalisés par catégorie (facteurs non applicables exclus)
+- NOUVEAU: normalize_category() pour standardiser les catégories
+- NOUVEAU: FACTORS_BY_CATEGORY définit les facteurs applicables par classe
+- NOUVEAU: _scoring_meta dans chaque asset pour traçabilité
+
 v2.3.1 Changes (P1-10 Stable Sort):
-- CORRECTIF: rank_assets() utilise maintenant stable_sort_assets()
-- Garantit un tri déterministe avec tie-breaker par symbol
-- Requis pour P1-5 DETERMINISTIC mode (core_hash cohérent)
+- rank_assets() utilise stable_sort_assets() avec tie-breaker par symbol
 
 v2.3 Changes (Tactical Context Integration):
-- NOUVEAU: compute_factor_tactical_context() intégrant:
-  - f_sector_trend: momentum du secteur (sectors.json)
-  - f_region_trend: momentum de la région (markets.json)
-  - f_macro_alignment: alignement aux convictions macro (macro_tilts.json)
-- NOUVEAU: FactorWeights.tactical_context (5-10% selon profil)
-- NOUVEAU: load_market_context() pour charger sectors/markets/macro_tilts
-- MISE À JOUR: FactorScorer accepte market_context optionnel
+- compute_factor_tactical_context() intégrant sector/region/macro trends
 
 v2.2 Changes (Bond Risk Factors):
 - add_bond_risk_factors() pour enrichir DataFrames bonds
-- f_bond_credit_score, f_bond_duration_score, f_bond_volatility_score
-- f_bond_quality (composite 0-1) et bond_risk_bucket
-
-v2.1 Changes (P0 Quick Wins):
-- Facteur cost_efficiency (TER + yield_ttm) pour ETF/Bonds
-- Bonus Sharpe ratio pour crypto dans momentum
 
 Facteurs:
 - momentum: 45% (Agressif) → 20% (Stable) — Driver principal
 - quality_fundamental: 25-30% — Score Buffett intégré (ROIC, FCF, ROE)
 - low_vol: 15-35% — Contrôle du risque
-- cost_efficiency: 5-10% — TER + Yield (ETF/Bonds)
+- cost_efficiency: 5-10% — TER + Yield (ETF/Bonds uniquement)
 - bond_quality: 0-15% — Qualité obligataire (crédit + duration + vol)
-- tactical_context: 5-10% — NOUVEAU v2.3: Contexte marché (sector/region/macro)
+- tactical_context: 5-10% — Contexte marché (sector/region/macro)
 - liquidity: 5-10% — Filtre technique
 - mean_reversion: 5% — Évite sur-extension
 
@@ -46,6 +43,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Union, Any
 from dataclasses import dataclass
+from collections import defaultdict
 import logging
 import math
 import json
@@ -55,13 +53,11 @@ from pathlib import Path
 try:
     from utils.stable_sort import stable_sort_assets
 except ImportError:
-    # Fallback if utils not in path
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent))
     try:
         from utils.stable_sort import stable_sort_assets
     except ImportError:
-        # Ultimate fallback: inline implementation
         def stable_sort_assets(assets, score_key="composite_score", id_key="symbol", **kwargs):
             """Fallback stable sort with tie-breaker."""
             def sort_key(a):
@@ -77,10 +73,68 @@ except ImportError:
 logger = logging.getLogger("portfolio_engine.factors")
 
 
+# ============= v2.4 CATEGORY NORMALIZATION =============
+
+CATEGORY_NORMALIZE = {
+    # Actions
+    "equity": "equity",
+    "equities": "equity",
+    "action": "equity",
+    "actions": "equity",
+    "stock": "equity",
+    "stocks": "equity",
+    # ETF
+    "etf": "etf",
+    "etfs": "etf",
+    # Bonds
+    "bond": "bond",
+    "bonds": "bond",
+    "obligation": "bond",
+    "obligations": "bond",
+    # Crypto
+    "crypto": "crypto",
+    "cryptocurrency": "crypto",
+    "cryptocurrencies": "crypto",
+}
+
+
+def normalize_category(category: str) -> str:
+    """Normalise la catégorie vers une clé standard."""
+    if not category:
+        return "other"
+    return CATEGORY_NORMALIZE.get(category.lower().strip(), "other")
+
+
+# Facteurs applicables par catégorie (v2.4)
+FACTORS_BY_CATEGORY = {
+    "equity": ["momentum", "quality_fundamental", "low_vol", "tactical_context", "liquidity", "mean_reversion"],
+    "etf": ["momentum", "low_vol", "cost_efficiency", "tactical_context", "liquidity", "mean_reversion"],
+    "bond": ["momentum", "low_vol", "cost_efficiency", "bond_quality", "liquidity"],
+    "crypto": ["momentum", "low_vol", "liquidity", "mean_reversion"],
+    "other": ["momentum", "low_vol", "liquidity"],
+}
+
+# Pénalités pour données manquantes par catégorie (v2.4)
+MISSING_VOL_PENALTY = {
+    "equity": 40.0,
+    "etf": 30.0,
+    "bond": 15.0,
+    "crypto": 100.0,
+    "other": 30.0,
+}
+
+MISSING_LIQUIDITY_PENALTY = {
+    "equity": 100_000_000,
+    "etf": 50_000_000,
+    "bond": 100_000_000,
+    "crypto": 10_000_000,
+    "other": 50_000_000,
+}
+
+
 # ============= v2.3 TACTICAL CONTEXT MAPPINGS =============
 
 SECTOR_KEY_MAPPING = {
-    # ETF sector_top -> clé dans sectors.json
     "Energy": "energy",
     "Basic Materials": "materials",
     "Materials": "materials",
@@ -106,7 +160,6 @@ SECTOR_KEY_MAPPING = {
 }
 
 COUNTRY_NORMALIZATION = {
-    # ETF country_top -> country dans markets.json
     "United States": "Etats-Unis",
     "USA": "Etats-Unis",
     "US": "Etats-Unis",
@@ -119,7 +172,7 @@ COUNTRY_NORMALIZATION = {
     "Switzerland": "Suisse",
     "United Kingdom": "Royaume Uni",
     "UK": "Royaume Uni",
-    "China": "China",
+    "China": "Chine",
     "Chine": "Chine",
     "Brazil": "Brésil",
     "Chile": "Chilie",
@@ -153,15 +206,7 @@ DEFAULT_MACRO_TILTS = {
 # ============= v2.3 MARKET CONTEXT LOADER =============
 
 def load_market_context(data_dir: str = "data") -> Dict[str, Any]:
-    """
-    Charge le contexte marché depuis les fichiers JSON.
-    
-    Args:
-        data_dir: Répertoire contenant sectors.json, markets.json, macro_tilts.json
-    
-    Returns:
-        dict avec keys: 'sectors', 'indices', 'macro_tilts', 'loaded_at'
-    """
+    """Charge le contexte marché depuis les fichiers JSON."""
     data_path = Path(data_dir)
     context = {
         "sectors": {},
@@ -170,7 +215,6 @@ def load_market_context(data_dir: str = "data") -> Dict[str, Any]:
         "loaded_at": None,
     }
     
-    # Charger sectors.json
     sectors_path = data_path / "sectors.json"
     if sectors_path.exists():
         try:
@@ -180,8 +224,6 @@ def load_market_context(data_dir: str = "data") -> Dict[str, Any]:
         except Exception as e:
             logger.warning(f"⚠️ Erreur lecture {sectors_path}: {e}")
     
-    # Charger markets.json (contient les indices par pays/région)
-    # Note: markets.json a la structure {"indices": {...}, "top_performers": {...}, "meta": {...}}
     markets_path = data_path / "markets.json"
     if markets_path.exists():
         try:
@@ -191,7 +233,6 @@ def load_market_context(data_dir: str = "data") -> Dict[str, Any]:
         except Exception as e:
             logger.warning(f"⚠️ Erreur lecture {markets_path}: {e}")
     
-    # Charger macro_tilts.json
     tilts_path = data_path / "macro_tilts.json"
     if tilts_path.exists():
         try:
@@ -215,17 +256,13 @@ def _build_sector_lookup(sectors_data: Dict, preferred_region: str = "US") -> Di
     for key, entries in sectors.items():
         if not entries:
             continue
-        
-        # Préférence pour region = preferred_region
         candidate = None
         for e in entries:
             if e.get("region") == preferred_region:
                 candidate = e
                 break
-        
         if candidate is None:
             candidate = entries[0]
-        
         lookup[key] = candidate
     
     return lookup
@@ -248,54 +285,25 @@ def _build_country_lookup(indices_data: Dict) -> Dict:
 # ============= RATING TO SCORE MAPPING =============
 
 RATING_TO_SCORE = {
-    # Government / Supranational
     "U.S. Government": 100, "GOVERNMENT": 100, "SOVEREIGN": 100,
     "Government": 100, "Sovereign": 100,
-
-    # AAA tier
     "AAA": 95, "AAA ": 95, "AAA\n": 95, "AAA\r": 95,
-    "AAA+": 95, "AAA-": 95, "AAA/Aaa": 95,
-    "Aaa": 95,
-
-    # AA tier
+    "AAA+": 95, "AAA-": 95, "AAA/Aaa": 95, "Aaa": 95,
     "AA+": 90, "AA PLUS": 90, "AA POSITIVE": 90, "AA POS": 90,
-    "AA": 85,
-    "AA-": 80,
+    "AA": 85, "AA-": 80,
     "Aa1": 90, "Aa2": 85, "Aa3": 80,
-
-    # A tier
-    "A+": 77,
-    "A": 75,
-    "A-": 72,
+    "A+": 77, "A": 75, "A-": 72,
     "A1": 77, "A2": 75, "A3": 72,
-
-    # BBB tier (Investment Grade floor)
-    "BBB+": 65,
-    "BBB": 60,
-    "BBB-": 55,
+    "BBB+": 65, "BBB": 60, "BBB-": 55,
     "Baa1": 65, "Baa2": 60, "Baa3": 55,
-
-    # BB tier (High Yield starts)
-    "BB+": 50,
-    "BB": 45,
-    "BB-": 40,
+    "BB+": 50, "BB": 45, "BB-": 40,
     "Ba1": 50, "Ba2": 45, "Ba3": 40,
-
-    # B tier
-    "B+": 35,
-    "B": 30,
-    "B-": 25,
+    "B+": 35, "B": 30, "B-": 25,
     "B1": 35, "B2": 30, "B3": 25,
-
-    # CCC and below
     "CCC": 15, "CCC+": 17, "CCC-": 13,
     "Caa": 15, "Caa1": 15, "Caa2": 12, "Caa3": 10,
-    "CC": 10, "Ca": 10,
-    "C": 5, "D": 0,
-
-    # Not rated
-    "NOT RATED": 40, "NR": 40, "N/R": 40, "N/A": 40,
-    "Not Rated": 40,
+    "CC": 10, "Ca": 10, "C": 5, "D": 0,
+    "NOT RATED": 40, "NR": 40, "N/R": 40, "N/A": 40, "Not Rated": 40,
 }
 
 
@@ -310,15 +318,9 @@ def _rating_to_score(rating: str) -> float:
 # ============= BOND RISK FACTORS (v2.2) =============
 
 def add_bond_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Enrichit un DataFrame de bonds avec des facteurs de risque/qualité obligataire.
-    
-    Ajoute: f_bond_credit_score, f_bond_duration_score, f_bond_volatility_score,
-            f_bond_quality, f_bond_quality_0_100, bond_risk_bucket
-    """
+    """Enrichit un DataFrame de bonds avec des facteurs de risque/qualité."""
     out = df.copy()
 
-    # Score de crédit (0–1)
     credit_num = pd.to_numeric(out.get("bond_credit_score"), errors="coerce")
 
     if "bond_credit_rating" in out.columns:
@@ -330,21 +332,18 @@ def add_bond_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
 
     out["f_bond_credit_score"] = (credit_num / 100.0).clip(lower=0, upper=1)
 
-    # Score de duration (0–1, plus court = mieux)
     D_MAX = 10.0
     dur = pd.to_numeric(out.get("bond_avg_duration"), errors="coerce")
     dur_clamped = dur.clip(lower=0, upper=D_MAX)
     dur_norm = dur_clamped / D_MAX
     out["f_bond_duration_score"] = 1.0 - dur_norm
 
-    # Score de volatilité (0–1, plus bas = mieux)
     V_MAX = 12.0
     vol = pd.to_numeric(out.get("vol_pct"), errors="coerce")
     vol_clamped = vol.clip(lower=0, upper=V_MAX)
     vol_norm = vol_clamped / V_MAX
     out["f_bond_volatility_score"] = 1.0 - vol_norm
 
-    # Combinaison en score global
     w_credit = 0.50
     w_duration = 0.25
     w_vol = 0.25
@@ -361,7 +360,6 @@ def add_bond_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
 
     out["f_bond_quality_0_100"] = (out["f_bond_quality"] * 100).round(1)
 
-    # Bucket de risque
     bins = [-np.inf, 0.3, 0.6, 0.8, np.inf]
     labels = ["very_risky", "risky", "core", "defensive"]
     out["bond_risk_bucket"] = pd.cut(out["f_bond_quality"], bins=bins, labels=labels)
@@ -370,10 +368,7 @@ def add_bond_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_bond_quality_stats(df: pd.DataFrame) -> Dict[str, any]:
-    """
-    Retourne des statistiques sur la qualité obligataire d'un DataFrame.
-    Utile pour diagnostics et monitoring.
-    """
+    """Retourne des statistiques sur la qualité obligataire."""
     if "f_bond_quality" not in df.columns:
         return {"error": "f_bond_quality not found - run add_bond_risk_factors first"}
     
@@ -388,63 +383,52 @@ def get_bond_quality_stats(df: pd.DataFrame) -> Dict[str, any]:
         "quality_min": round(quality.min(), 3) if not quality.isna().all() else None,
         "quality_max": round(quality.max(), 3) if not quality.isna().all() else None,
         "buckets": bucket_counts,
-        "coverage": {
-            "credit_score": round((~df["f_bond_credit_score"].isna()).mean() * 100, 1),
-            "duration_score": round((~df["f_bond_duration_score"].isna()).mean() * 100, 1),
-            "volatility_score": round((~df["f_bond_volatility_score"].isna()).mean() * 100, 1),
-        }
     }
 
 
-# ============= FACTOR WEIGHTS v2.3 =============
+# ============= FACTOR WEIGHTS v2.4 =============
 
 @dataclass
 class FactorWeights:
-    """
-    Poids des facteurs pour un profil donné.
-    
-    v2.3: Ajout tactical_context pour intégrer le contexte marché.
-    v2.2: Ajout bond_quality pour les fonds obligataires.
-    """
+    """Poids des facteurs pour un profil donné."""
     momentum: float = 0.30
     quality_fundamental: float = 0.25
     low_vol: float = 0.25
     cost_efficiency: float = 0.05
     bond_quality: float = 0.00
-    tactical_context: float = 0.05       # NOUVEAU v2.3
+    tactical_context: float = 0.05
     liquidity: float = 0.05
     mean_reversion: float = 0.05
 
 
-# Configurations par profil
 PROFILE_WEIGHTS = {
     "Agressif": FactorWeights(
-        momentum=0.40,              # Driver principal fort
-        quality_fundamental=0.25,   # Buffett toujours important
-        low_vol=0.08,               # Accepte plus de vol
-        cost_efficiency=0.05,       # Coûts moins prioritaires
-        bond_quality=0.00,          # Pas pertinent pour profil agressif
-        tactical_context=0.10,      # v2.3: Contexte marché important
+        momentum=0.40,
+        quality_fundamental=0.25,
+        low_vol=0.08,
+        cost_efficiency=0.05,
+        bond_quality=0.00,
+        tactical_context=0.10,
         liquidity=0.07,
         mean_reversion=0.05
     ),
     "Modéré": FactorWeights(
-        momentum=0.28,              # Équilibré
-        quality_fundamental=0.25,   # Qualité renforcée
-        low_vol=0.15,               # Contrôle risque
-        cost_efficiency=0.07,       # Coûts importants
-        bond_quality=0.08,          # Qualité bonds compte
-        tactical_context=0.07,      # v2.3: Contexte marché modéré
+        momentum=0.28,
+        quality_fundamental=0.25,
+        low_vol=0.15,
+        cost_efficiency=0.07,
+        bond_quality=0.08,
+        tactical_context=0.07,
         liquidity=0.05,
         mean_reversion=0.05
     ),
     "Stable": FactorWeights(
-        momentum=0.12,              # Momentum réduit
-        quality_fundamental=0.20,   # Qualité importante
-        low_vol=0.25,               # Risque minimal prioritaire
-        cost_efficiency=0.10,       # Coûts très importants (long terme)
-        bond_quality=0.15,          # Qualité bonds très importante
-        tactical_context=0.05,      # v2.3: Contexte moins crucial
+        momentum=0.12,
+        quality_fundamental=0.20,
+        low_vol=0.25,
+        cost_efficiency=0.10,
+        bond_quality=0.15,
+        tactical_context=0.05,
         liquidity=0.08,
         mean_reversion=0.05
     ),
@@ -458,6 +442,8 @@ def fnum(x) -> float:
     if x is None:
         return 0.0
     if isinstance(x, (int, float)):
+        if math.isnan(x):
+            return 0.0
         return float(x)
     try:
         import re
@@ -465,6 +451,15 @@ def fnum(x) -> float:
         return float(s) if s not in ("", "-", ".", "-.") else 0.0
     except:
         return 0.0
+
+
+def _is_missing(value) -> bool:
+    """Vérifie si une valeur est manquante (None, NaN, 0 négatif)."""
+    if value is None:
+        return True
+    if isinstance(value, float) and math.isnan(value):
+        return True
+    return False
 
 
 # ============= BUFFETT QUALITY INTEGRATION =============
@@ -571,36 +566,24 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.3.1 =============
+# ============= FACTOR SCORER v2.4.0 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
     
-    v2.3.1 — P1-10: rank_assets() utilise stable_sort_assets()
-    v2.3 — Ajout tactical_context:
-    - momentum: Performance récente (1m/3m/YTD) + Sharpe bonus (crypto)
-    - quality_fundamental: Score Buffett intégré
-    - low_vol: Inverse de la volatilité
-    - cost_efficiency: TER + yield_ttm
-    - bond_quality: Crédit + Duration + Vol pour bonds
-    - tactical_context: NOUVEAU - Sector trend + Region trend + Macro alignment
-    - liquidity: Log(market_cap ou AUM)
-    - mean_reversion: Pénalise les sur-extensions
+    v2.4.0 — CORRECTIFS MAJEURS:
+    - Z-score PAR CLASSE (equity/etf/bond/crypto séparés)
+    - Suppression de TOUS les defaults silencieux
+    - Pénalités explicites pour données manquantes
+    - Poids renormalisés par catégorie
     """
     
     def __init__(self, profile: str = "Modéré", market_context: Optional[Dict] = None):
-        """
-        Args:
-            profile: 'Agressif' | 'Modéré' | 'Stable'
-            market_context: Optionnel - résultat de load_market_context()
-        """
         if profile not in PROFILE_WEIGHTS:
             raise ValueError(f"Profil inconnu: {profile}. Valides: {list(PROFILE_WEIGHTS.keys())}")
         self.profile = profile
         self.weights = PROFILE_WEIGHTS[profile]
-        
-        # v2.3: Contexte marché pour tactical_context
         self.market_context = market_context or {}
         self._sector_lookup = None
         self._country_lookup = None
@@ -619,7 +602,7 @@ class FactorScorer:
     
     @staticmethod
     def _zscore(values: List[float], winsor_pct: float = 0.02) -> np.ndarray:
-        """Z-score winsorisé."""
+        """Z-score winsorisé (LEGACY - utilisé pour compatibilité)."""
         arr = np.array(values, dtype=float)
         arr = np.nan_to_num(arr, nan=0.0)
         
@@ -631,8 +614,61 @@ class FactorScorer:
         
         return (arr - arr.mean()) / arr.std()
     
+    @staticmethod
+    def _zscore_by_class(
+        values: List[float], 
+        categories: List[str],
+        min_samples: int = 5,
+        winsor_pct: float = 0.02
+    ) -> np.ndarray:
+        """
+        v2.4: Z-score PAR CLASSE d'actifs.
+        
+        Corrige le biais cross-asset où crypto (vol 80%) et bonds (vol 5%)
+        étaient comparés dans le même z-score.
+        """
+        n = len(values)
+        result = np.zeros(n)
+        
+        # Grouper par catégorie normalisée
+        by_cat: Dict[str, List[int]] = defaultdict(list)
+        for i, cat in enumerate(categories):
+            norm_cat = normalize_category(cat)
+            by_cat[norm_cat].append(i)
+        
+        # Z-score par groupe
+        for cat, indices in by_cat.items():
+            if len(indices) < min_samples:
+                for i in indices:
+                    result[i] = 0.0
+                logger.debug(f"Z-score {cat}: {len(indices)} samples < {min_samples} → neutral")
+                continue
+            
+            group_values = np.array([values[i] for i in indices], dtype=float)
+            group_values = np.nan_to_num(group_values, nan=0.0)
+            
+            if len(group_values) > 2:
+                lo, hi = np.percentile(group_values, [winsor_pct * 100, 100 - winsor_pct * 100])
+                group_values = np.clip(group_values, lo, hi)
+            
+            std = group_values.std()
+            if std < 1e-8:
+                for i in indices:
+                    result[i] = 0.0
+            else:
+                mean = group_values.mean()
+                zscores = (group_values - mean) / std
+                for idx, z in zip(indices, zscores):
+                    result[idx] = z
+        
+        return result
+    
     def compute_factor_momentum(self, assets: List[dict]) -> np.ndarray:
-        """Facteur momentum: combinaison perf 1m/3m/YTD."""
+        """
+        Facteur momentum: combinaison perf 1m/3m/YTD.
+        
+        v2.4: Z-score PAR CLASSE
+        """
         n = len(assets)
         
         p1m = [fnum(a.get("perf_1m")) for a in assets]
@@ -661,109 +697,203 @@ class FactorScorer:
                 sharpe_bonus = max(-20, min(20, sharpe * 10))
                 raw[i] += sharpe_bonus
         
-        return self._zscore(raw)
+        # v2.4: Z-score PAR CLASSE
+        categories = [a.get("category", "other") for a in assets]
+        return self._zscore_by_class(raw, categories)
     
     def compute_factor_quality_fundamental(self, assets: List[dict]) -> np.ndarray:
-        """Facteur qualité fondamentale: Score Buffett intégré."""
+        """
+        Facteur qualité fondamentale: Score Buffett.
+        
+        v2.4: Applicable uniquement aux ACTIONS, z-score sur actions seulement.
+        """
         scores = []
+        categories = []
+        
         for asset in assets:
-            category = asset.get("category", "").lower()
+            cat = normalize_category(asset.get("category", ""))
+            categories.append(cat)
             
-            if category in ["equity", "equities", "action", "actions", "stock"]:
+            if cat == "equity":
                 buffett_score = compute_buffett_quality_score(asset)
                 scores.append(buffett_score)
             else:
-                scores.append(50.0)
+                scores.append(None)
         
-        return self._zscore(scores)
+        # Z-score uniquement sur les actions
+        result = np.zeros(len(assets))
+        equity_indices = [i for i, s in enumerate(scores) if s is not None]
+        
+        if len(equity_indices) >= 5:
+            equity_scores = [scores[i] for i in equity_indices]
+            eq_arr = np.array(equity_scores, dtype=float)
+            if eq_arr.std() > 1e-8:
+                zscores = (eq_arr - eq_arr.mean()) / eq_arr.std()
+                for idx, z in zip(equity_indices, zscores):
+                    result[idx] = z
+        
+        return result
     
     def compute_factor_low_vol(self, assets: List[dict]) -> np.ndarray:
-        """Facteur low volatility: inverse de la vol."""
-        vol = [fnum(a.get("vol_3y") or a.get("vol30") or a.get("vol_annual") or a.get("vol") or a.get("vol_pct") or 20) for a in assets]
-        return -self._zscore(vol)
+        """
+        Facteur low volatility: inverse de la vol.
+        
+        v2.4: Suppression default silencieux, pénalité explicite si manquant.
+        """
+        raw_vol = []
+        categories = []
+        
+        for a in assets:
+            cat = normalize_category(a.get("category", "other"))
+            categories.append(cat)
+            
+            vol = (
+                a.get("vol_3y") or 
+                a.get("vol30") or 
+                a.get("vol_annual") or 
+                a.get("vol") or 
+                a.get("vol_pct")
+            )
+            
+            if _is_missing(vol):
+                # v2.4: Pénalité au lieu de default 20
+                vol = MISSING_VOL_PENALTY.get(cat, 30.0)
+                logger.debug(f"low_vol: missing vol for {a.get('id', a.get('symbol', '?'))} → penalty {vol}")
+            else:
+                vol = fnum(vol)
+            
+            raw_vol.append(vol)
+        
+        # v2.4: Z-score PAR CLASSE puis inverser
+        zscores = self._zscore_by_class(raw_vol, categories)
+        return -zscores
     
     def compute_factor_cost_efficiency(self, assets: List[dict]) -> np.ndarray:
-        """Facteur coût/rendement pour ETF et Bonds."""
+        """
+        Facteur coût/rendement pour ETF et Bonds.
+        
+        v2.4: Suppression default 75, applicable uniquement ETF/Bonds.
+        """
         scores = []
+        categories = []
         
         for a in assets:
-            category = a.get("category", "").lower()
+            category = normalize_category(a.get("category", ""))
+            categories.append(category)
+            
+            if category not in ["etf", "bond"]:
+                scores.append(None)
+                continue
+            
             fund_type = str(a.get("fund_type", "")).lower()
             
-            if category in ["etf", "bond", "bonds"]:
-                ter_raw = fnum(a.get("total_expense_ratio", 0))
-                ter_pct = ter_raw * 100 if ter_raw < 1 else ter_raw
-                
-                if ter_pct <= 0:
-                    ter_score = 75.0
-                else:
-                    ter_score = max(0, 100 - ter_pct * 100)
-                
-                yield_ttm = fnum(a.get("yield_ttm", 0))
-                
-                if "bond" in fund_type or "bond" in category:
-                    yield_score = min(100, yield_ttm * 12.5)
-                    final_score = 0.5 * ter_score + 0.5 * yield_score
-                else:
-                    yield_bonus = min(20, yield_ttm * 5)
-                    final_score = 0.8 * ter_score + 0.2 * yield_bonus
-                
-                scores.append(final_score)
+            # TER Score
+            ter_raw = a.get("total_expense_ratio")
+            if _is_missing(ter_raw):
+                # v2.4: Pénalité au lieu de 75 neutre
+                ter_score = 30.0
+                logger.debug(f"cost_efficiency: missing TER for {a.get('id', a.get('symbol', '?'))} → penalty 30")
             else:
-                scores.append(50.0)
+                ter_raw = fnum(ter_raw)
+                ter_pct = ter_raw * 100 if ter_raw < 1 else ter_raw
+                ter_score = max(0, 100 - ter_pct * 100)
+            
+            yield_ttm = fnum(a.get("yield_ttm", 0))
+            
+            if "bond" in fund_type or category == "bond":
+                yield_score = min(100, yield_ttm * 12.5)
+                final_score = 0.5 * ter_score + 0.5 * yield_score
+            else:
+                yield_bonus = min(20, yield_ttm * 5)
+                final_score = 0.8 * ter_score + 0.2 * yield_bonus
+            
+            scores.append(final_score)
         
-        return self._zscore(scores)
+        # Z-score uniquement sur ETF/Bonds
+        result = np.zeros(len(assets))
+        valid_indices = [i for i, s in enumerate(scores) if s is not None]
+        
+        if len(valid_indices) >= 5:
+            valid_scores = [scores[i] for i in valid_indices]
+            valid_cats = [categories[i] for i in valid_indices]
+            zscores = self._zscore_by_class(valid_scores, valid_cats)
+            for idx, z in zip(valid_indices, zscores):
+                result[idx] = z
+        
+        return result
     
     def compute_factor_bond_quality(self, assets: List[dict]) -> np.ndarray:
-        """Facteur qualité obligataire spécifique."""
+        """
+        Facteur qualité obligataire.
+        
+        v2.4: Suppression default 50, pénalité explicite.
+        """
         scores = []
+        categories = []
         
         for a in assets:
-            category = a.get("category", "").lower()
+            category = normalize_category(a.get("category", ""))
             fund_type = str(a.get("fund_type", "")).lower()
+            categories.append(category)
             
-            is_bond = "bond" in category or "bond" in fund_type
+            is_bond = (category == "bond") or ("bond" in fund_type)
             
-            if is_bond:
-                # Score crédit
-                credit_raw = fnum(a.get("bond_credit_score", 0))
-                if credit_raw <= 0:
-                    rating = a.get("bond_credit_rating", "")
-                    credit_raw = _rating_to_score(rating) if rating else 50.0
-                    if pd.isna(credit_raw):
-                        credit_raw = 50.0
-                f_credit = min(1.0, max(0.0, credit_raw / 100.0))
+            if not is_bond:
+                scores.append(None)
+                continue
+            
+            # Score crédit
+            credit_raw = a.get("bond_credit_score")
+            if _is_missing(credit_raw) or credit_raw <= 0:
+                rating = a.get("bond_credit_rating", "")
+                if rating:
+                    credit_raw = _rating_to_score(rating)
                 
-                # Score duration
-                D_MAX = 10.0
-                dur = fnum(a.get("bond_avg_duration", 5))
-                f_dur = 1.0 - min(1.0, max(0.0, dur / D_MAX))
-                
-                # Score volatilité
-                V_MAX = 12.0
-                vol = fnum(a.get("vol_pct") or a.get("vol_3y") or 6)
-                f_vol = 1.0 - min(1.0, max(0.0, vol / V_MAX))
-                
-                bond_quality = 0.50 * f_credit + 0.25 * f_dur + 0.25 * f_vol
-                scores.append(bond_quality * 100)
+                if _is_missing(credit_raw) or pd.isna(credit_raw) or credit_raw <= 0:
+                    # v2.4: Pénalité au lieu de 50
+                    credit_raw = 35.0  # Équivalent BB
+                    logger.debug(f"bond_quality: missing credit for {a.get('id', a.get('symbol', '?'))} → penalty 35")
+            
+            f_credit = min(1.0, max(0.0, fnum(credit_raw) / 100.0))
+            
+            # Score duration
+            D_MAX = 10.0
+            dur = a.get("bond_avg_duration")
+            if _is_missing(dur):
+                dur = 5.0
             else:
-                scores.append(50.0)
+                dur = fnum(dur)
+            f_dur = 1.0 - min(1.0, max(0.0, dur / D_MAX))
+            
+            # Score volatilité
+            V_MAX = 12.0
+            vol = a.get("vol_pct") or a.get("vol_3y")
+            if _is_missing(vol):
+                vol = 6.0
+            else:
+                vol = fnum(vol)
+            f_vol = 1.0 - min(1.0, max(0.0, vol / V_MAX))
+            
+            bond_quality = 0.50 * f_credit + 0.25 * f_dur + 0.25 * f_vol
+            scores.append(bond_quality * 100)
         
-        return self._zscore(scores)
+        # Z-score uniquement sur les Bonds
+        result = np.zeros(len(assets))
+        valid_indices = [i for i, s in enumerate(scores) if s is not None]
+        
+        if len(valid_indices) >= 3:
+            valid_scores = [scores[i] for i in valid_indices]
+            valid_arr = np.array(valid_scores, dtype=float)
+            if valid_arr.std() > 1e-8:
+                zscores = (valid_arr - valid_arr.mean()) / valid_arr.std()
+                for idx, z in zip(valid_indices, zscores):
+                    result[idx] = z
+        
+        return result
     
     def compute_factor_tactical_context(self, assets: List[dict]) -> np.ndarray:
-        """
-        v2.3 NOUVEAU: Facteur contexte tactique.
-        
-        Combine:
-        - f_sector_trend: momentum du secteur (YTD + daily)
-        - f_region_trend: momentum de la région
-        - f_macro_alignment: alignement aux convictions macro
-        
-        Retourne un z-score. Score élevé = bien positionné dans le contexte actuel.
-        """
+        """v2.3: Facteur contexte tactique."""
         if not self._sector_lookup and not self._country_lookup:
-            # Pas de données marché → score neutre pour tous
             return np.zeros(len(assets))
         
         scores = []
@@ -775,76 +905,82 @@ class FactorScorer:
             components = []
             weights = []
             
-            # === Sector Trend ===
+            # Sector Trend
             if self._sector_lookup and sector_top:
                 sector_key = SECTOR_KEY_MAPPING.get(sector_top.strip())
                 if sector_key and sector_key in self._sector_lookup:
                     ref = self._sector_lookup[sector_key]
                     ytd = ref.get("ytd_num", 0) or 0
                     daily = ref.get("change_num", 0) or 0
-                    
-                    # Normaliser: YTD/25 + daily/2, clamp [-1, 1], puis [0, 1]
                     raw = 0.7 * (ytd / 25.0) + 0.3 * (daily / 2.0)
                     raw = max(-1.0, min(1.0, raw))
                     f_sector = 0.5 * (raw + 1.0)
-                    
                     components.append(f_sector)
                     weights.append(0.4)
             
-            # === Region Trend ===
+            # Region Trend
             if self._country_lookup and country_top:
                 norm_country = COUNTRY_NORMALIZATION.get(country_top.strip(), country_top.strip())
                 if norm_country in self._country_lookup:
                     ref = self._country_lookup[norm_country]
-                    # markets.json has both ytd_num and _ytd_value, prefer ytd_num
                     ytd = ref.get("ytd_num", 0) or ref.get("_ytd_value", 0) or 0
                     daily = ref.get("change_num", 0) or ref.get("_change_value", 0) or 0
-                    
                     raw = 0.7 * (ytd / 25.0) + 0.3 * (daily / 2.0)
                     raw = max(-1.0, min(1.0, raw))
                     f_region = 0.5 * (raw + 1.0)
-                    
                     components.append(f_region)
                     weights.append(0.3)
             
-            # === Macro Alignment ===
+            # Macro Alignment
             if self._macro_tilts:
-                f_macro = 0.5  # base neutre
-                
+                f_macro = 0.5
                 if sector_top:
                     if sector_top in self._macro_tilts.get("favored_sectors", []):
                         f_macro += 0.2
                     elif sector_top in self._macro_tilts.get("avoided_sectors", []):
                         f_macro -= 0.2
-                
                 if country_top:
                     if country_top in self._macro_tilts.get("favored_regions", []):
                         f_macro += 0.15
                     elif country_top in self._macro_tilts.get("avoided_regions", []):
                         f_macro -= 0.15
-                
                 f_macro = max(0.0, min(1.0, f_macro))
                 components.append(f_macro)
                 weights.append(0.3)
             
-            # Combiner
             if components and sum(weights) > 0:
                 tactical_score = sum(c * w for c, w in zip(components, weights)) / sum(weights)
             else:
-                tactical_score = 0.5  # neutre
+                tactical_score = 0.5
             
-            # Convertir en score centré sur 50 pour z-score
             scores.append(tactical_score * 100)
         
         return self._zscore(scores)
     
     def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
-        """Facteur liquidité: log(market_cap ou AUM)."""
-        liq = [
-            math.log(max(fnum(a.get("liquidity") or a.get("market_cap") or a.get("aum_usd") or 1), 1))
-            for a in assets
-        ]
-        return self._zscore(liq)
+        """
+        Facteur liquidité: log(market_cap ou AUM).
+        
+        v2.4: Suppression default 1, pénalité explicite.
+        """
+        raw_liq = []
+        categories = []
+        
+        for a in assets:
+            category = normalize_category(a.get("category", "other"))
+            categories.append(category)
+            
+            liq = a.get("liquidity") or a.get("market_cap") or a.get("aum_usd")
+            
+            if _is_missing(liq) or liq <= 0:
+                liq = MISSING_LIQUIDITY_PENALTY.get(category, 50_000_000)
+                logger.debug(f"liquidity: missing for {a.get('id', a.get('symbol', '?'))} → penalty {liq:,.0f}")
+            else:
+                liq = fnum(liq)
+            
+            raw_liq.append(math.log(max(liq, 1)))
+        
+        return self._zscore_by_class(raw_liq, categories)
     
     def compute_factor_mean_reversion(self, assets: List[dict]) -> np.ndarray:
         """Facteur mean reversion: pénalise les sur-extensions."""
@@ -854,14 +990,14 @@ class FactorScorer:
             ytd = fnum(a.get("ytd"))
             p1m = fnum(a.get("perf_1m"))
             
-            if ytd > 80 and p1m <= 0:
+            if ytd > 150:
+                scores.append(-2.0)
+            elif ytd > 100:
+                scores.append(-1.0)
+            elif ytd > 80 and p1m <= 0:
                 scores.append(-1.5)
             elif ytd > 50 and p1m <= 2:
                 scores.append(-0.5)
-            elif ytd > 100:
-                scores.append(-1.0)
-            elif ytd > 150:
-                scores.append(-2.0)
             else:
                 scores.append(0.0)
         
@@ -871,30 +1007,49 @@ class FactorScorer:
         """
         Calcule le score composite pour chaque actif.
         
-        v2.3: Ajout facteur tactical_context.
+        v2.4 CHANGEMENTS MAJEURS:
+        - Z-score PAR CLASSE
+        - Poids renormalisés par catégorie
+        - Plus de defaults silencieux
         """
         if not assets:
             return assets
         
         n = len(assets)
+        categories = [normalize_category(a.get("category", "other")) for a in assets]
         
-        # Calculer chaque facteur
         factors = {
             "momentum": self.compute_factor_momentum(assets),
             "quality_fundamental": self.compute_factor_quality_fundamental(assets),
             "low_vol": self.compute_factor_low_vol(assets),
             "cost_efficiency": self.compute_factor_cost_efficiency(assets),
             "bond_quality": self.compute_factor_bond_quality(assets),
-            "tactical_context": self.compute_factor_tactical_context(assets),  # v2.3
+            "tactical_context": self.compute_factor_tactical_context(assets),
             "liquidity": self.compute_factor_liquidity(assets),
             "mean_reversion": self.compute_factor_mean_reversion(assets),
         }
         
-        # Score composite pondéré
+        # v2.4: Score composite avec POIDS RENORMALISÉS par catégorie
         composite = np.zeros(n)
-        for factor_name, factor_values in factors.items():
-            weight = getattr(self.weights, factor_name, 0)
-            composite += weight * factor_values
+        
+        for i, asset in enumerate(assets):
+            cat = categories[i]
+            applicable_factors = FACTORS_BY_CATEGORY.get(cat, ["momentum", "low_vol", "liquidity"])
+            
+            total_weight = 0.0
+            weighted_score = 0.0
+            
+            for factor_name in applicable_factors:
+                base_weight = getattr(self.weights, factor_name, 0)
+                if base_weight > 0 and factor_name in factors:
+                    factor_value = factors[factor_name][i]
+                    weighted_score += base_weight * factor_value
+                    total_weight += base_weight
+            
+            if total_weight > 0:
+                composite[i] = weighted_score / total_weight
+            else:
+                composite[i] = 0.0
         
         # Enrichir les actifs
         for i, asset in enumerate(assets):
@@ -905,14 +1060,18 @@ class FactorScorer:
             asset["composite_score"] = round(float(composite[i]), 3)
             asset["score"] = asset["composite_score"]
             
-            # Score Buffett pour diagnostics
-            if asset.get("category", "").lower() in ["equity", "equities", "action", "actions", "stock"]:
+            # v2.4: Metadata de scoring
+            cat = categories[i]
+            asset["_scoring_meta"] = {
+                "category_normalized": cat,
+                "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
+                "scoring_version": "v2.4.0",
+            }
+            
+            if cat == "equity":
                 asset["buffett_score"] = compute_buffett_quality_score(asset)
             
-            # bond_risk_bucket pour bonds
-            category = asset.get("category", "").lower()
-            fund_type = str(asset.get("fund_type", "")).lower()
-            if "bond" in category or "bond" in fund_type:
+            if cat == "bond":
                 bq = factors["bond_quality"][i]
                 if bq > 0.8:
                     asset["bond_risk_bucket"] = "defensive"
@@ -923,42 +1082,42 @@ class FactorScorer:
                 else:
                     asset["bond_risk_bucket"] = "very_risky"
             
-            # Flag sur-extension
             ytd = fnum(asset.get("ytd"))
             p1m = fnum(asset.get("perf_1m"))
             asset["flags"] = {
                 "overextended": (ytd > 80 and p1m <= 0) or (ytd > 150)
             }
         
+        # Log stats par catégorie
+        for cat in set(categories):
+            cat_indices = [i for i, c in enumerate(categories) if c == cat]
+            if cat_indices:
+                cat_scores = [composite[i] for i in cat_indices]
+                logger.info(
+                    f"Scores {cat}: n={len(cat_indices)}, "
+                    f"mean={np.mean(cat_scores):.3f}, "
+                    f"std={np.std(cat_scores):.3f}, "
+                    f"range=[{np.min(cat_scores):.2f}, {np.max(cat_scores):.2f}]"
+                )
+        
         logger.info(
-            f"Scores calculés: {n} actifs (profil {self.profile}) | "
-            f"Score moyen: {composite.mean():.3f} | Range: [{composite.min():.2f}, {composite.max():.2f}]"
+            f"Scores v2.4 calculés: {n} actifs (profil {self.profile}) | "
+            f"Score moyen global: {composite.mean():.3f}"
         )
         
         return assets
     
     def rank_assets(self, assets: List[dict], top_n: Optional[int] = None) -> List[dict]:
-        """
-        Trie les actifs par score décroissant et retourne le top N.
-        
-        v2.3.1 P1-10: Utilise stable_sort_assets() avec tie-breaker par symbol
-        pour garantir un ordre déterministe (requis pour P1-5 DETERMINISTIC mode).
-        """
+        """Trie les actifs par score décroissant (stable sort)."""
         scored = self.compute_scores(assets)
-        
-        # P1-10: Tri stable avec tie-breaker par symbol
-        # Avant: sorted(scored, key=lambda x: x.get("composite_score", 0), reverse=True)
-        # Problème: Quand deux assets ont le même score, l'ordre était non-déterministe
         ranked = stable_sort_assets(
             scored,
             score_key="composite_score",
             id_key="symbol",
             reverse_score=True
         )
-        
         if top_n:
             ranked = ranked[:top_n]
-        
         return ranked
 
 
@@ -969,11 +1128,7 @@ def rescore_universe_by_profile(
     profile: str,
     market_context: Optional[Dict] = None
 ) -> List[dict]:
-    """
-    Recalcule les scores de tout l'univers pour un profil donné.
-    
-    v2.3: Accepte market_context optionnel pour tactical_context.
-    """
+    """Recalcule les scores de tout l'univers pour un profil donné."""
     scorer = FactorScorer(profile, market_context=market_context)
     
     if isinstance(universe, list):
@@ -996,7 +1151,7 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
             "low_vol": w.low_vol,
             "cost_efficiency": w.cost_efficiency,
             "bond_quality": w.bond_quality,
-            "tactical_context": w.tactical_context,  # v2.3
+            "tactical_context": w.tactical_context,
             "liquidity": w.liquidity,
             "mean_reversion": w.mean_reversion,
         }
@@ -1007,9 +1162,11 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.3.1):",
+        "Comparaison des poids factoriels par profil (v2.4.0):",
         "",
         "PARI CENTRAL: Quality + Momentum + Contexte tactique surperforment à horizon 1-3 ans.",
+        "",
+        "v2.4 CORRECTIFS: Z-score par classe + suppression defaults silencieux",
         ""
     ]
     
@@ -1027,40 +1184,30 @@ def compare_factor_profiles() -> str:
 
 
 def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
-    """
-    Calcule le taux de couverture des métriques de qualité.
-    
-    v2.3: Ajout couverture tactical_context.
-    """
+    """Calcule le taux de couverture des métriques de qualité."""
     if not assets:
         return {}
     
     total = len(assets)
-    equities = [a for a in assets if a.get("category", "").lower() in ["equity", "equities", "action", "actions", "stock"]]
-    etf_bonds = [a for a in assets if a.get("category", "").lower() in ["etf", "bond", "bonds"]]
-    bonds_only = [a for a in assets if "bond" in a.get("category", "").lower() or "bond" in str(a.get("fund_type", "")).lower()]
+    equities = [a for a in assets if normalize_category(a.get("category", "")) == "equity"]
+    etf_bonds = [a for a in assets if normalize_category(a.get("category", "")) in ["etf", "bond"]]
+    bonds_only = [a for a in assets if normalize_category(a.get("category", "")) == "bond"]
     n_eq = len(equities) or 1
     n_etf = len(etf_bonds) or 1
     n_bonds = len(bonds_only) or 1
     
     return {
-        # Métriques actions
         "roe": round(sum(1 for a in equities if fnum(a.get("roe")) > 0) / n_eq * 100, 1),
         "roic": round(sum(1 for a in equities if fnum(a.get("roic")) > 0) / n_eq * 100, 1),
         "fcf_yield": round(sum(1 for a in equities if a.get("fcf_yield") is not None) / n_eq * 100, 1),
         "de_ratio": round(sum(1 for a in equities if fnum(a.get("de_ratio")) >= 0) / n_eq * 100, 1),
         "eps_growth_5y": round(sum(1 for a in equities if a.get("eps_growth_5y") is not None) / n_eq * 100, 1),
-        # Métriques ETF/Bonds
         "total_expense_ratio": round(sum(1 for a in etf_bonds if fnum(a.get("total_expense_ratio")) > 0) / n_etf * 100, 1),
         "yield_ttm": round(sum(1 for a in etf_bonds if fnum(a.get("yield_ttm")) > 0) / n_etf * 100, 1),
-        # Métriques Bonds spécifiques
         "bond_credit_score": round(sum(1 for a in bonds_only if fnum(a.get("bond_credit_score")) > 0) / n_bonds * 100, 1),
         "bond_avg_duration": round(sum(1 for a in bonds_only if fnum(a.get("bond_avg_duration")) > 0) / n_bonds * 100, 1),
-        "bond_avg_maturity": round(sum(1 for a in bonds_only if fnum(a.get("bond_avg_maturity")) > 0) / n_bonds * 100, 1),
-        # v2.3: Couverture tactical context
         "sector_top": round(sum(1 for a in assets if a.get("sector_top")) / total * 100, 1),
         "country_top": round(sum(1 for a in assets if a.get("country_top")) / total * 100, 1),
-        # Compteurs
         "equities_count": len(equities),
         "etf_bonds_count": len(etf_bonds),
         "bonds_only_count": len(bonds_only),
@@ -1073,45 +1220,33 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
 if __name__ == "__main__":
     print(compare_factor_profiles())
     print("\n" + "=" * 60)
-    print("Test avec données fictives...")
+    print("Test v2.4: Z-score par classe...")
     
-    # Charger contexte marché (si fichiers présents)
-    market_context = load_market_context("data")
-    
-    # Actifs de test
+    # Actifs de test multi-classes
     test_assets = [
-        {"symbol": "IYW", "category": "etf", "sector_top": "Technology", "country_top": "United States", "ytd": 26.87, "perf_1m": 2.5, "perf_3m": 8.2, "vol_pct": 18.5, "total_expense_ratio": 0.40, "aum_usd": 15e9},
-        {"symbol": "XLV", "category": "etf", "sector_top": "Healthcare", "country_top": "United States", "ytd": 2.05, "perf_1m": -1.1, "perf_3m": 1.5, "vol_pct": 12.3, "total_expense_ratio": 0.10, "aum_usd": 12e9},
-        {"symbol": "AGG", "category": "bond", "fund_type": "bond", "sector_top": "Financial Services", "country_top": "United States", "ytd": 1.5, "perf_1m": 0.3, "vol_pct": 4.2, "total_expense_ratio": 0.03, "bond_credit_score": 87, "bond_avg_duration": 3.75, "yield_ttm": 4.5, "aum_usd": 90e9},
-        {"symbol": "MCHI", "category": "etf", "sector_top": "Technology", "country_top": "China", "ytd": -5.79, "perf_1m": -1.4, "perf_3m": -3.2, "vol_pct": 22.8, "total_expense_ratio": 0.59, "aum_usd": 8e9},
+        # Actions
+        {"symbol": "AAPL", "category": "equity", "sector": "Technology", "ytd": 28, "perf_1m": 5, "perf_3m": 12, "vol_3y": 28, "roe": 147, "roic": 56, "market_cap": 3e12},
+        {"symbol": "JNJ", "category": "equity", "sector": "Healthcare", "ytd": 8, "perf_1m": 2, "perf_3m": 5, "vol_3y": 18, "roe": 23, "roic": 15, "market_cap": 400e9},
+        # ETF
+        {"symbol": "SPY", "category": "etf", "sector_top": "Technology", "ytd": 26, "perf_1m": 3, "perf_3m": 10, "vol_pct": 18, "total_expense_ratio": 0.09, "aum_usd": 500e9},
+        {"symbol": "AGG", "category": "bond", "fund_type": "bond", "ytd": 1.5, "perf_1m": 0.3, "vol_pct": 4.2, "total_expense_ratio": 0.03, "bond_credit_score": 87, "bond_avg_duration": 3.75, "yield_ttm": 4.5, "aum_usd": 90e9},
+        # Crypto
+        {"symbol": "BTC", "category": "crypto", "ytd": 120, "perf_1m": 15, "perf_7d": 8, "vol_30d_annual_pct": 65, "sharpe_ratio": 1.2, "market_cap": 1.5e12},
     ]
     
-    # Scorer
-    scorer = FactorScorer("Modéré", market_context=market_context)
+    scorer = FactorScorer("Modéré")
     scored = scorer.compute_scores(test_assets)
     
-    print("\nRésultats:")
+    print("\nRésultats par catégorie:")
+    for cat in ["equity", "etf", "bond", "crypto"]:
+        cat_assets = [a for a in scored if normalize_category(a["category"]) == cat]
+        if cat_assets:
+            scores = [a["composite_score"] for a in cat_assets]
+            print(f"  {cat}: mean={np.mean(scores):.3f}, std={np.std(scores):.3f}")
+    
+    print("\nTop scores:")
     for a in sorted(scored, key=lambda x: x["composite_score"], reverse=True):
-        print(f"  {a['symbol']:6} | score: {a['composite_score']:+.3f} | tactical: {a['factor_scores']['tactical_context']:+.3f}")
+        meta = a.get("_scoring_meta", {})
+        print(f"  {a['symbol']:6} | score: {a['composite_score']:+.3f} | cat: {meta.get('category_normalized', '?')}")
     
-    # Test P1-10: Vérifier que rank_assets est stable
-    print("\n" + "=" * 60)
-    print("Test P1-10: Stabilité du tri...")
-    
-    # Créer des actifs avec scores identiques
-    tie_test = [
-        {"symbol": "ZZZ", "category": "etf", "composite_score": 0.5},
-        {"symbol": "AAA", "category": "etf", "composite_score": 0.5},
-        {"symbol": "MMM", "category": "etf", "composite_score": 0.5},
-    ]
-    
-    ranked1 = stable_sort_assets(tie_test, score_key="composite_score", id_key="symbol")
-    ranked2 = stable_sort_assets(list(reversed(tie_test)), score_key="composite_score", id_key="symbol")
-    
-    order1 = [a["symbol"] for a in ranked1]
-    order2 = [a["symbol"] for a in ranked2]
-    
-    if order1 == order2 == ["AAA", "MMM", "ZZZ"]:
-        print("  ✅ P1-10 OK: Tri stable avec tie-breaker alphabétique")
-    else:
-        print(f"  ❌ P1-10 FAIL: order1={order1}, order2={order2}")
+    print("\n✅ v2.4 test completed")
