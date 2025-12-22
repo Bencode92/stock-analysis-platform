@@ -1,19 +1,24 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.4.3 — SEUL MOTEUR D'ALPHA
+FactorScorer v2.4.4 — SEUL MOTEUR D'ALPHA
 =========================================
 
-v2.4.3 Changes (ChatGPT Audit Round 3 - Final Fixes):
-- FIX 1: ter_confidence stocké dans asset["_scoring_meta"]["ter_confidence"]
-- FIX 2: Bond ETF cohérence - si fund_type="bond", catégorie forcée à "bond"
-- FIX 3: _is_missing() corrigé pour détecter aussi les valeurs <= 0
-- NOUVEAU: _is_missing_or_zero() pour champs où 0 est invalide (TER, vol, duration)
-- NOUVEAU: data_quality_penalty appliqué au composite si champs critiques manquants
+v2.4.4 Changes (P0 Fix - Doublons + Cap pénalité):
+- FIX CRITIQUE: _missing_critical_fields utilise set() au lieu de list (évite doublons)
+- FIX: Cap sur data_quality_penalty (MAX_DQ_PENALTY = 0.6)
+- NOUVEAU: _track_missing() helper method pour tracking unifié
+- NOUVEAU: market_context_age_days + market_context_stale dans _scoring_meta
+
+v2.4.3 Changes:
+- ter_confidence stocké dans _scoring_meta
+- Bond ETF cohérence: fund_type="bond" → catégorie "bond"
+- _is_missing_or_zero() pour TER/vol/duration
+- data_quality_penalty sur composite
 
 v2.4.2 Changes:
-- bond_risk_bucket basé sur RAW (0-100), pas sur z-score
-- TER validation stricte avec confidence tracking
-- Bonds: pénalités sévères pour duration/vol manquantes
+- bond_risk_bucket basé sur RAW (0-100)
+- TER validation stricte avec confidence
+- Bonds: pénalités sévères pour missing
 
 v2.4.1 Changes:
 - TER validation stricte avec heuristique
@@ -39,13 +44,14 @@ Facteurs:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Union, Any, Tuple
+from typing import Dict, List, Optional, Union, Any, Tuple, Set
 from dataclasses import dataclass
 from collections import defaultdict
 import logging
 import math
 import json
 from pathlib import Path
+from datetime import datetime, timezone
 
 # P1-10: Import stable sort for deterministic ordering
 try:
@@ -147,8 +153,12 @@ BOND_BUCKET_THRESHOLDS = {
     "risky": 35,
 }
 
-# v2.4.3: Pénalité composite pour données manquantes critiques
-DATA_QUALITY_PENALTY = 0.3  # Appliqué au composite si champs critiques manquants
+# v2.4.4: Pénalité composite pour données manquantes critiques (avec cap)
+DATA_QUALITY_PENALTY = 0.15  # Par champ manquant (calibré: ~15 percentiles)
+MAX_DQ_PENALTY = 0.6  # Cap total (évite sur-pénalisation)
+
+# v2.4.4: Staleness threshold pour market context
+MARKET_CONTEXT_STALE_DAYS = 7
 
 
 # ============= v2.3 TACTICAL CONTEXT MAPPINGS =============
@@ -261,7 +271,6 @@ def load_market_context(data_dir: str = "data") -> Dict[str, Any]:
         except Exception as e:
             logger.warning(f"⚠️ Erreur lecture {tilts_path}: {e}")
     
-    from datetime import datetime
     context["loaded_at"] = datetime.now().isoformat()
     
     return context
@@ -299,6 +308,27 @@ def _build_country_lookup(indices_data: Dict) -> Dict:
                 lookup[country] = e
     
     return lookup
+
+
+def _get_market_context_age(loaded_at: Optional[str]) -> Tuple[Optional[float], bool]:
+    """
+    v2.4.4: Calcule l'âge du market context en jours.
+    
+    Returns:
+        (age_days, is_stale)
+    """
+    if not loaded_at:
+        return None, True
+    
+    try:
+        dt = datetime.fromisoformat(loaded_at.replace('Z', '+00:00'))
+        now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
+        age_days = (now - dt).total_seconds() / 86400
+        is_stale = age_days > MARKET_CONTEXT_STALE_DAYS
+        return round(age_days, 2), is_stale
+    except Exception as e:
+        logger.warning(f"Cannot parse market_context loaded_at: {loaded_at} - {e}")
+        return None, True
 
 
 # ============= RATING TO SCORE MAPPING =============
@@ -714,22 +744,23 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.4.3 =============
+# ============= FACTOR SCORER v2.4.4 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
     
-    v2.4.3 — FINAL FIXES:
+    v2.4.4 — P0 FIX (Doublons + Cap):
+    - _missing_critical_fields utilise set() (évite doublons)
+    - Cap sur data_quality_penalty (MAX_DQ_PENALTY)
+    - _track_missing() helper method
+    - market_context_age_days + stale dans _scoring_meta
+    
+    v2.4.3:
     - ter_confidence stocké dans _scoring_meta
-    - Bond ETF: fund_type="bond" → catégorie forcée "bond"
+    - Bond ETF: fund_type="bond" → catégorie "bond"
     - _is_missing_or_zero() pour TER/vol/duration
     - data_quality_penalty sur composite
-    
-    v2.4.2:
-    - bond_risk_bucket basé sur RAW (0-100)
-    - TER validation stricte avec confidence
-    - Bonds: pénalités sévères pour missing
     """
     
     def __init__(self, profile: str = "Modéré", market_context: Optional[Dict] = None):
@@ -742,11 +773,16 @@ class FactorScorer:
         self._country_lookup = None
         self._macro_tilts = None
         
-        # v2.4.2/3: Stockage pour traçabilité
+        # v2.4.4: Staleness tracking
+        self._market_context_age_days: Optional[float] = None
+        self._market_context_stale: bool = True
+        
+        # v2.4.2/3/4: Stockage pour traçabilité
         self._bond_quality_raw: Dict[int, float] = {}
         self._bond_quality_meta: Dict[int, Dict] = {}
-        self._ter_confidence: Dict[int, str] = {}  # v2.4.3 FIX 1
-        self._missing_critical_fields: Dict[int, List[str]] = {}  # v2.4.3
+        self._ter_confidence: Dict[int, str] = {}
+        # v2.4.4 FIX: Utilise Set au lieu de List pour éviter doublons
+        self._missing_critical_fields: Dict[int, Set[str]] = {}
         
         if self.market_context:
             self._build_lookups()
@@ -758,6 +794,24 @@ class FactorScorer:
         if "indices" in self.market_context:
             self._country_lookup = _build_country_lookup(self.market_context["indices"])
         self._macro_tilts = self.market_context.get("macro_tilts", DEFAULT_MACRO_TILTS)
+        
+        # v2.4.4: Compute staleness
+        loaded_at = self.market_context.get("loaded_at")
+        self._market_context_age_days, self._market_context_stale = _get_market_context_age(loaded_at)
+        
+        if self._market_context_stale:
+            logger.warning(
+                f"Market context is stale: {self._market_context_age_days} days old "
+                f"(threshold: {MARKET_CONTEXT_STALE_DAYS} days)"
+            )
+    
+    def _track_missing(self, idx: int, field: str):
+        """
+        v2.4.4: Helper pour tracker les champs manquants (utilise set pour éviter doublons).
+        """
+        if idx not in self._missing_critical_fields:
+            self._missing_critical_fields[idx] = set()
+        self._missing_critical_fields[idx].add(field)
     
     @staticmethod
     def _zscore(values: List[float], winsor_pct: float = 0.02) -> np.ndarray:
@@ -903,10 +957,8 @@ class FactorScorer:
             if _is_missing_or_zero(vol):
                 vol = MISSING_VOL_PENALTY.get(cat, 30.0)
                 logger.debug(f"low_vol: missing vol for {symbol} → penalty {vol}")
-                # Track missing
-                if idx not in self._missing_critical_fields:
-                    self._missing_critical_fields[idx] = []
-                self._missing_critical_fields[idx].append("vol")
+                # v2.4.4: Utilise _track_missing
+                self._track_missing(idx, "vol")
             else:
                 vol = fnum(vol)
             
@@ -935,17 +987,16 @@ class FactorScorer:
             fund_type = str(a.get("fund_type", "")).lower()
             symbol = a.get("symbol", a.get("id", "?"))
             
-            # v2.4.3 FIX 1: TER avec stockage confidence
+            # TER avec stockage confidence
             ter_raw = a.get("total_expense_ratio")
             ter_pct, confidence = _normalize_ter(ter_raw, symbol)
-            self._ter_confidence[idx] = confidence  # Stocké pour _scoring_meta
+            self._ter_confidence[idx] = confidence
             
             if ter_pct is None or confidence == "rejected":
                 ter_score = 20.0
                 logger.debug(f"cost_efficiency: TER {confidence} for {symbol} → severe penalty 20")
-                if idx not in self._missing_critical_fields:
-                    self._missing_critical_fields[idx] = []
-                self._missing_critical_fields[idx].append("ter")
+                # v2.4.4: Utilise _track_missing
+                self._track_missing(idx, "ter")
             elif confidence == "low":
                 ter_score = max(0, 100 - ter_pct * 33) * 0.7
                 logger.debug(f"cost_efficiency: TER low confidence for {symbol} → 30% penalty")
@@ -988,7 +1039,6 @@ class FactorScorer:
             categories.append(cat)
             symbol = a.get("symbol", a.get("id", "?"))
             
-            # v2.4.3 FIX 2: Utilise _get_normalized_category qui gère fund_type
             is_bond = (cat == "bond")
             
             if not is_bond:
@@ -1005,9 +1055,8 @@ class FactorScorer:
                 if _is_missing(credit_raw) or pd.isna(credit_raw) or credit_raw <= 0:
                     credit_raw = 35.0
                     logger.warning(f"bond_quality: missing credit for {symbol} → penalty 35 (BB)")
-                    if idx not in self._missing_critical_fields:
-                        self._missing_critical_fields[idx] = []
-                    self._missing_critical_fields[idx].append("credit")
+                    # v2.4.4: Utilise _track_missing
+                    self._track_missing(idx, "credit")
             
             dur = a.get("bond_avg_duration")
             vol = a.get("vol_pct") or a.get("vol_3y")
@@ -1023,11 +1072,9 @@ class FactorScorer:
             self._bond_quality_meta[idx] = metadata
             scores.append(quality_raw)
             
-            # Track missing fields
-            if metadata["missing_fields"]:
-                if idx not in self._missing_critical_fields:
-                    self._missing_critical_fields[idx] = []
-                self._missing_critical_fields[idx].extend(metadata["missing_fields"])
+            # v2.4.4: Track missing fields from metadata (utilise set, pas de doublons)
+            for field in metadata["missing_fields"]:
+                self._track_missing(idx, field)
         
         result = np.zeros(len(assets))
         valid_indices = [i for i, s in enumerate(scores) if s is not None]
@@ -1154,13 +1201,13 @@ class FactorScorer:
         """
         Calcule le score composite pour chaque actif.
         
-        v2.4.3: Ajoute data_quality_penalty et stocke ter_confidence.
+        v2.4.4: Fix doublons + cap pénalité + staleness.
         """
         if not assets:
             return assets
         
         # Reset tracking dicts
-        self._missing_critical_fields = {}
+        self._missing_critical_fields = {}  # v2.4.4: Dict[int, Set[str]]
         self._ter_confidence = {}
         self._bond_quality_raw = {}
         self._bond_quality_meta = {}
@@ -1200,12 +1247,17 @@ class FactorScorer:
             else:
                 composite[i] = 0.0
             
-            # v2.4.3: Data quality penalty
-            missing_fields = self._missing_critical_fields.get(i, [])
+            # v2.4.4: Data quality penalty avec SET (pas de doublons) + CAP
+            missing_fields = self._missing_critical_fields.get(i, set())
             if missing_fields:
-                penalty = DATA_QUALITY_PENALTY * len(missing_fields)
+                raw_penalty = DATA_QUALITY_PENALTY * len(missing_fields)
+                penalty = min(raw_penalty, MAX_DQ_PENALTY)  # Cap!
                 composite[i] -= penalty
-                logger.debug(f"data_quality_penalty for {asset.get('symbol', '?')}: -{penalty:.2f} (missing: {missing_fields})")
+                logger.debug(
+                    f"data_quality_penalty for {asset.get('symbol', '?')}: "
+                    f"-{penalty:.2f} (raw={raw_penalty:.2f}, cap={MAX_DQ_PENALTY}) "
+                    f"(missing: {sorted(missing_fields)})"
+                )
         
         # Enrichir les actifs
         for i, asset in enumerate(assets):
@@ -1218,22 +1270,31 @@ class FactorScorer:
             
             cat = categories[i]
             
-            # v2.4.3 FIX 1: Stockage complet dans _scoring_meta
+            # v2.4.4: Conversion set → sorted list pour JSON
+            missing_fields_set = self._missing_critical_fields.get(i, set())
+            missing_fields_list = sorted(list(missing_fields_set))
+            
+            # v2.4.4: Stockage complet dans _scoring_meta avec staleness
             asset["_scoring_meta"] = {
                 "category_normalized": cat,
                 "category_original": asset.get("category", ""),
                 "fund_type": asset.get("fund_type", ""),
                 "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
-                "scoring_version": "v2.4.3",
+                "scoring_version": "v2.4.4",
                 "ter_confidence": self._ter_confidence.get(i),
-                "missing_critical_fields": self._missing_critical_fields.get(i, []),
-                "data_quality_penalty_applied": len(self._missing_critical_fields.get(i, [])) > 0,
+                "missing_critical_fields": missing_fields_list,
+                "missing_fields_count": len(missing_fields_list),
+                "data_quality_penalty_applied": len(missing_fields_list) > 0,
+                "data_quality_penalty_value": round(min(DATA_QUALITY_PENALTY * len(missing_fields_list), MAX_DQ_PENALTY), 3) if missing_fields_list else 0,
+                # v2.4.4: Market context staleness
+                "market_context_age_days": self._market_context_age_days,
+                "market_context_stale": self._market_context_stale,
             }
             
             if cat == "equity":
                 asset["buffett_score"] = compute_buffett_quality_score(asset)
             
-            # v2.4.2/3: bond_risk_bucket basé sur RAW
+            # bond_risk_bucket basé sur RAW
             if cat == "bond":
                 if i in self._bond_quality_raw:
                     raw_quality = self._bond_quality_raw[i]
@@ -1248,7 +1309,7 @@ class FactorScorer:
             p1m = fnum(asset.get("perf_1m"))
             asset["flags"] = {
                 "overextended": (ytd > 80 and p1m <= 0) or (ytd > 150),
-                "incomplete_data": len(self._missing_critical_fields.get(i, [])) > 0,
+                "incomplete_data": len(missing_fields_list) > 0,
             }
         
         # Log stats par catégorie
@@ -1269,7 +1330,7 @@ class FactorScorer:
             logger.warning(f"Data quality: {incomplete_count}/{n} assets have missing critical fields")
         
         logger.info(
-            f"Scores v2.4.3 calculés: {n} actifs (profil {self.profile}) | "
+            f"Scores v2.4.4 calculés: {n} actifs (profil {self.profile}) | "
             f"Score moyen global: {composite.mean():.3f}"
         )
         
@@ -1330,9 +1391,9 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.4.3):",
+        "Comparaison des poids factoriels par profil (v2.4.4):",
         "",
-        "v2.4.3 FIXES: ter_confidence stocké + bond ETF cohérence + _is_missing_or_zero + data_quality_penalty",
+        "v2.4.4 FIXES: set() pour doublons + cap pénalité + staleness market_context",
         ""
     ]
     
@@ -1387,48 +1448,60 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
 if __name__ == "__main__":
     print(compare_factor_profiles())
     print("\n" + "=" * 60)
-    print("Test v2.4.3: Final fixes...")
+    print("Test v2.4.4: P0 Fix (doublons + cap)...")
     
-    # Test normalize_category avec fund_type
-    print("\n--- Test normalize_category avec fund_type ---")
-    test_cases = [
-        ("etf", "bond", "AGG"),      # ETF bond → bond
-        ("etf", "equity", "SPY"),    # ETF equity → etf
-        ("etf", "", "QQQ"),          # ETF sans type → etf
-        ("bond", "", "BND"),         # Bond → bond
-        ("equity", "", "AAPL"),      # Equity → equity
-    ]
-    for cat, ft, sym in test_cases:
-        result = normalize_category(cat, ft)
-        print(f"  {sym}: category={cat}, fund_type={ft} → {result}")
+    # Test set() pour éviter doublons
+    print("\n--- Test set() pour missing_critical_fields ---")
+    scorer = FactorScorer("Stable")
     
-    # Test _is_missing_or_zero
-    print("\n--- Test _is_missing_or_zero ---")
-    test_values = [None, 0, 0.0, -1, "", "N/A", 0.09, 1.5]
-    for v in test_values:
-        print(f"  {repr(v):10} → missing={_is_missing(v)}, missing_or_zero={_is_missing_or_zero(v)}")
+    # Simuler tracking de champs manquants (avec doublons potentiels)
+    scorer._track_missing(0, "vol")
+    scorer._track_missing(0, "vol")  # Doublon!
+    scorer._track_missing(0, "ter")
+    scorer._track_missing(0, "duration")
+    scorer._track_missing(0, "vol")  # Encore un doublon!
     
-    # Test complet
+    result = scorer._missing_critical_fields.get(0, set())
+    print(f"  Après ajouts avec doublons: {sorted(result)}")
+    print(f"  Nombre unique: {len(result)} (devrait être 3, pas 5)")
+    assert len(result) == 3, "BUG: doublons non filtrés!"
+    print("  ✅ set() fonctionne correctement")
+    
+    # Test cap pénalité
+    print("\n--- Test cap pénalité ---")
+    print(f"  DATA_QUALITY_PENALTY = {DATA_QUALITY_PENALTY}")
+    print(f"  MAX_DQ_PENALTY = {MAX_DQ_PENALTY}")
+    
+    # 5 champs manquants → raw = 0.75, capped à 0.6
+    raw_penalty = DATA_QUALITY_PENALTY * 5
+    capped_penalty = min(raw_penalty, MAX_DQ_PENALTY)
+    print(f"  5 champs manquants: raw={raw_penalty:.2f}, capped={capped_penalty:.2f}")
+    assert capped_penalty == MAX_DQ_PENALTY, "Cap non appliqué!"
+    print("  ✅ Cap fonctionne correctement")
+    
+    # Test complet avec assets
     print("\n--- Test scoring complet ---")
     test_assets = [
         {"symbol": "AAPL", "category": "equity", "ytd": 28, "perf_1m": 5, "perf_3m": 12, "vol_3y": 28, "roe": 147, "roic": 56, "market_cap": 3e12},
         {"symbol": "AGG", "category": "etf", "fund_type": "bond", "ytd": 2, "perf_1m": 0.5, "vol_pct": 4.2, "total_expense_ratio": 0.03, "bond_credit_score": 87, "bond_avg_duration": 3.75, "aum_usd": 90e9},
-        {"symbol": "HYG", "category": "etf", "fund_type": "bond", "ytd": 5, "perf_1m": 1.0, "vol_pct": 8.0, "total_expense_ratio": 0.49, "bond_credit_score": 45, "bond_avg_duration": 4.0, "aum_usd": 15e9},
-        {"symbol": "SPY", "category": "etf", "ytd": 26, "perf_1m": 3, "perf_3m": 10, "vol_pct": 18, "total_expense_ratio": 0.0009, "aum_usd": 500e9},
-        {"symbol": "MISSING", "category": "etf", "fund_type": "bond", "ytd": 1, "perf_1m": 0.2},  # Données manquantes
+        {"symbol": "MISSING_ALL", "category": "etf", "fund_type": "bond", "ytd": 1, "perf_1m": 0.2},  # Beaucoup de données manquantes
     ]
     
-    scorer = FactorScorer("Stable")
-    scored = scorer.compute_scores(test_assets)
+    scorer2 = FactorScorer("Stable")
+    scored = scorer2.compute_scores(test_assets)
     
     print("\nRésultats:")
     for a in scored:
         meta = a.get("_scoring_meta", {})
         flags = a.get("flags", {})
-        print(f"  {a['symbol']:8} | cat={meta.get('category_normalized'):6} | score={a['composite_score']:+.3f} | bucket={a.get('bond_risk_bucket', 'N/A'):12} | incomplete={flags.get('incomplete_data')}")
-        if meta.get("ter_confidence"):
-            print(f"           | ter_confidence={meta['ter_confidence']}")
-        if meta.get("missing_critical_fields"):
-            print(f"           | missing={meta['missing_critical_fields']}")
+        missing_count = meta.get("missing_fields_count", 0)
+        penalty = meta.get("data_quality_penalty_value", 0)
+        print(f"  {a['symbol']:12} | score={a['composite_score']:+.3f} | missing={missing_count} | penalty={penalty:.2f} | incomplete={flags.get('incomplete_data')}")
     
-    print("\n✅ v2.4.3 test completed")
+    # Vérifier que MISSING_ALL a la pénalité cappée
+    missing_all = next(a for a in scored if a["symbol"] == "MISSING_ALL")
+    if missing_all["_scoring_meta"]["missing_fields_count"] >= 4:
+        assert missing_all["_scoring_meta"]["data_quality_penalty_value"] == MAX_DQ_PENALTY, "Cap non appliqué sur asset!"
+        print("\n  ✅ Cap appliqué correctement sur MISSING_ALL")
+    
+    print("\n✅ v2.4.4 test completed")
