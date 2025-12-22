@@ -1,9 +1,15 @@
 # portfolio_engine/constraint_report.py
 """
-Constraint Report Module — v2.0
+Constraint Report Module — v2.1.0
 
 Génère un rapport structuré des contraintes avec margins explicites.
 Chaque contrainte est documentée avec: {cap, observed, slack, binding, status}
+
+v2.1.0 CHANGES (PR1):
+- Buckets (core/satellite/defensive/lottery) sont des INDICATEURS, pas des contraintes
+- Les buckets ne génèrent plus de status VIOLATED
+- Les buckets ne pénalisent plus le quality_score
+- Les buckets ne comptent plus dans summary.violated
 
 v2.0 ADDITIONS (Phase 1.2-1.3):
 - Exposures détaillées (category, sector, region, risk_bucket, role)
@@ -63,6 +69,15 @@ BINDING_THRESHOLD_PCT = 1.0  # < 1% de slack = binding
 
 # Seuil pour considérer une violation comme critique
 CRITICAL_VIOLATION_PCT = 5.0  # > 5% de dépassement = critique
+
+# PR1: Liste des contraintes qui sont des INDICATEURS (pas des contraintes dures)
+# Ces contraintes ne génèrent pas de VIOLATED et ne pénalisent pas le quality_score
+INDICATOR_ONLY_CONSTRAINTS = {
+    "bucket_core",
+    "bucket_satellite", 
+    "bucket_defensive",
+    "bucket_lottery",
+}
 
 
 # ============= DATA CLASSES =============
@@ -224,15 +239,19 @@ class ConstraintReport:
         return result
     
     def get_violations(self) -> List[ConstraintMargin]:
-        """Retourne les contraintes violées."""
-        return [c for c in self.constraints if c.status in [ConstraintStatus.VIOLATED, ConstraintStatus.CRITICAL]]
+        """Retourne les contraintes violées (exclut les indicateurs)."""
+        return [
+            c for c in self.constraints 
+            if c.status in [ConstraintStatus.VIOLATED, ConstraintStatus.CRITICAL]
+            and c.name not in INDICATOR_ONLY_CONSTRAINTS  # PR1: exclure les buckets
+        ]
     
     def get_binding(self) -> List[ConstraintMargin]:
         """Retourne les contraintes saturées."""
         return [c for c in self.constraints if c.status == ConstraintStatus.BINDING]
     
     def is_feasible(self) -> bool:
-        """True si aucune contrainte violée."""
+        """True si aucune contrainte violée (exclut les indicateurs)."""
         return len(self.get_violations()) == 0
 
 
@@ -352,6 +371,7 @@ class ConstraintReportGenerator:
     """
     Générateur de rapports de contraintes.
     
+    v2.1: PR1 - Buckets sont des indicateurs, pas des contraintes.
     v2.0: Ajout génération exposures et ticker_mapping.
     
     Usage:
@@ -420,7 +440,7 @@ class ConstraintReportGenerator:
         count_margins = self._compute_count_margins(allocation, profile)
         constraints.extend(count_margins)
         
-        # 8. Bucket constraints
+        # 8. Bucket constraints (PR1: indicateurs seulement)
         bucket_margins = self._compute_bucket_margins(allocation, asset_by_id, profile)
         constraints.extend(bucket_margins)
         
@@ -429,13 +449,13 @@ class ConstraintReportGenerator:
             risk_bucket_margins = self._compute_risk_bucket_margins(allocation, asset_by_id, profile)
             constraints.extend(risk_bucket_margins)
         
-        # Compute summary
+        # Compute summary (PR1: exclut les buckets des violations)
         summary = self._compute_summary(constraints)
         
-        # Compute quality score
+        # Compute quality score (PR1: buckets toujours OK)
         quality_score = self._compute_quality_score(constraints)
         
-        # Generate recommendations
+        # Generate recommendations (PR1: pas de VIOLATED pour buckets)
         recommendations = self._generate_recommendations(constraints, profile)
         
         # Phase 1.2: Generate exposures
@@ -1108,7 +1128,14 @@ class ConstraintReportGenerator:
         asset_by_id: Dict[str, Any],
         profile: Any,
     ) -> List[ConstraintMargin]:
-        """Calcule les margins pour les bucket constraints."""
+        """
+        Calcule les margins pour les bucket constraints.
+        
+        PR1 v2.1.0: Les buckets sont des INDICATEURS, pas des contraintes.
+        - Ils ne génèrent jamais de status VIOLATED
+        - Ils utilisent OK ou BINDING uniquement
+        - Le champ "outside_range" dans details indique si hors plage
+        """
         # Import bucket targets
         try:
             from portfolio_engine.preset_meta import PROFILE_BUCKET_TARGETS, Role
@@ -1144,16 +1171,23 @@ class ConstraintReportGenerator:
             # Max constraint
             max_slack = (max_pct * 100) - observed
             
-            # Le slack effectif est le min des deux
+            # PR1: Déterminer si hors plage (pour info seulement)
+            outside_range = min_slack < 0 or max_slack < 0
+            
+            # PR1: Le slack effectif (pour affichage)
             if min_slack < 0:
                 slack = min_slack
-                status = ConstraintStatus.VIOLATED if min_slack < -CRITICAL_VIOLATION_PCT else ConstraintStatus.VIOLATED
             elif max_slack < 0:
                 slack = max_slack
-                status = ConstraintStatus.VIOLATED
             else:
                 slack = min(min_slack, max_slack)
-                status = ConstraintStatus.BINDING if slack < BINDING_THRESHOLD_PCT else ConstraintStatus.OK
+            
+            # PR1: Les buckets sont des INDICATEURS - jamais VIOLATED
+            # Seuls OK ou BINDING sont possibles
+            if slack < BINDING_THRESHOLD_PCT and slack >= 0:
+                status = ConstraintStatus.BINDING
+            else:
+                status = ConstraintStatus.OK  # Même si hors range!
             
             margins.append(ConstraintMargin(
                 name=f"bucket_{role.value}",
@@ -1168,6 +1202,8 @@ class ConstraintReportGenerator:
                     "range_max": round(max_pct * 100, 1),
                     "slack_from_min": round(min_slack, 2),
                     "slack_from_max": round(max_slack, 2),
+                    "outside_range": outside_range,  # PR1: indicateur informatif
+                    "is_indicator": True,  # PR1: flag explicite
                 },
             ))
         
@@ -1238,7 +1274,12 @@ class ConstraintReportGenerator:
     # ============= SUMMARY & RECOMMENDATIONS =============
     
     def _compute_summary(self, constraints: List[ConstraintMargin]) -> Dict[str, int]:
-        """Calcule le résumé des statuts."""
+        """
+        Calcule le résumé des statuts.
+        
+        PR1 v2.1.0: Les buckets (INDICATOR_ONLY_CONSTRAINTS) sont exclus
+        du count "violated" car ce sont des indicateurs informatifs.
+        """
         summary = {
             "total": len(constraints),
             "ok": 0,
@@ -1248,6 +1289,11 @@ class ConstraintReportGenerator:
         }
         
         for c in constraints:
+            # PR1: Les buckets sont toujours comptés comme OK dans le summary
+            if c.name in INDICATOR_ONLY_CONSTRAINTS:
+                summary["ok"] += 1
+                continue
+            
             if c.status == ConstraintStatus.OK:
                 summary["ok"] += 1
             elif c.status == ConstraintStatus.BINDING:
@@ -1267,6 +1313,9 @@ class ConstraintReportGenerator:
         - BINDING = 80% des points
         - VIOLATED = 0 points
         - CRITICAL = -20% des points
+        
+        PR1 v2.1.0: Les buckets (INDICATOR_ONLY_CONSTRAINTS) sont toujours
+        comptés comme OK (100% des points) car ce sont des indicateurs.
         """
         if not constraints:
             return 100.0
@@ -1276,6 +1325,11 @@ class ConstraintReportGenerator:
         
         total_score = 0.0
         for c in constraints:
+            # PR1: Les buckets sont toujours OK (ne pénalisent pas le score)
+            if c.name in INDICATOR_ONLY_CONSTRAINTS:
+                total_score += points_per_constraint
+                continue
+            
             if c.status == ConstraintStatus.OK:
                 total_score += points_per_constraint
             elif c.status == ConstraintStatus.BINDING:
@@ -1292,10 +1346,24 @@ class ConstraintReportGenerator:
         constraints: List[ConstraintMargin],
         profile: Any,
     ) -> List[str]:
-        """Génère des recommandations basées sur les violations/bindings."""
+        """
+        Génère des recommandations basées sur les violations/bindings.
+        
+        PR1 v2.1.0: Les buckets ne génèrent pas de recommandation VIOLATED
+        car ce sont des indicateurs informatifs.
+        """
         recommendations = []
         
         for c in constraints:
+            # PR1: Ignorer les buckets pour les recommandations VIOLATED
+            if c.name in INDICATOR_ONLY_CONSTRAINTS:
+                # Optionnel: ajouter une note informative si très hors range
+                if c.details.get("outside_range") and abs(c.slack) > 10:
+                    recommendations.append(
+                        f"ℹ️ INFO: {c.name} is {abs(c.slack):.1f}% outside target range (indicator only)"
+                    )
+                continue
+            
             if c.status == ConstraintStatus.CRITICAL:
                 recommendations.append(
                     f"🔴 CRITICAL: {c.name} violated by {abs(c.slack):.1f}% — immediate action required"
@@ -1310,8 +1378,12 @@ class ConstraintReportGenerator:
                         f"🟡 BINDING: {c.name} at {c.observed:.1f}% (cap={c.cap:.1f}%) — monitor closely"
                     )
         
-        # Recommandations générales
-        n_binding = sum(1 for c in constraints if c.status == ConstraintStatus.BINDING)
+        # Recommandations générales (exclure les buckets du count)
+        n_binding = sum(
+            1 for c in constraints 
+            if c.status == ConstraintStatus.BINDING 
+            and c.name not in INDICATOR_ONLY_CONSTRAINTS
+        )
         if n_binding >= 3:
             recommendations.append(
                 f"⚠️ {n_binding} constraints are binding — consider relaxing profile or reducing positions"
@@ -1394,6 +1466,7 @@ def enrich_diagnostics_with_margins(
     """
     Enrichit les diagnostics existants avec le rapport de contraintes.
     
+    v2.1: PR1 - Buckets sont des indicateurs (pas dans violations).
     v2.0: Inclut exposures et ticker_mapping.
     
     Usage dans optimizer.py:
@@ -1411,9 +1484,12 @@ def enrich_diagnostics_with_margins(
     diagnostics["constraint_report"] = report
     diagnostics["constraint_summary"] = report["summary"]
     diagnostics["constraint_quality_score"] = report["quality_score"]
+    
+    # PR1: Exclure les buckets des violations
     diagnostics["constraint_violations"] = [
         c for c in report["constraints"] 
         if c["status"] in ["VIOLATED", "CRITICAL"]
+        and c["name"] not in INDICATOR_ONLY_CONSTRAINTS
     ]
     diagnostics["constraint_bindings"] = [
         c for c in report["constraints"]
