@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec une forte exposition aux actions, ce qui peut offrir des rendements élevés. Cependant, cette stratégie comporte des risques, notamment la volatilité des marchés et les fluctuations sectorielles. Les actifs comme Unicredit et Vedanta sont particulièrement sensibles aux cycles économiques. Il est essentiel de considérer ces facteurs avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive, avec une concentration sur des actions à fort potentiel de croissance. Cependant, il est important de noter que la volatilité des marchés peut entraîner des fluctuations significatives de la valeur du portefeuille. De plus, l'exposition à des secteurs sensibles aux cycles économiques, comme l'énergie et la finance, peut augmenter le risque global. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "CUMMINS INC": "15%",
       "FOX CORP CLASS A": "10%",
@@ -567,7 +567,7 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant les actions et les obligations pour réduire la volatilité. Toutefois, il existe des risques liés aux fluctuations du marché immobilier et aux innovations technologiques. Les investissements dans des secteurs comme la construction et les technologies peuvent être sensibles aux cycles économiques. Une vigilance est nécessaire pour évaluer les impacts potentiels sur la performance. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant des actions et des obligations pour réduire la volatilité. Toutefois, la dépendance à des secteurs comme la construction et la technologie peut exposer le portefeuille à des fluctuations de marché. De plus, les risques liés aux taux d'intérêt peuvent affecter la performance des obligations. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "ENGIE SA": "15%",
       "FOX CORP CLASS A": "14%",
@@ -1110,7 +1110,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche stable, avec une forte allocation en obligations visant à réduire la volatilité. Toutefois, il existe des risques liés aux fluctuations des taux d'intérêt et aux performances des secteurs comme l'énergie et la consommation. Les actifs tels que Johnson & Johnson et Engie, bien que stables, doivent être surveillés pour les impacts réglementaires. Une attention particulière est nécessaire pour évaluer les risques potentiels. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, axée sur des obligations et des actions à faible volatilité. Cela vise à réduire les fluctuations de valeur tout en offrant un potentiel de rendement modeste. Cependant, l'exposition à des secteurs comme l'énergie et la consommation peut introduire des risques de marché. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "10%",
       "ENGIE SA": "10%",
@@ -1147,7 +1147,32 @@
       "is_heuristic": true,
       "vol_realized": 5.4,
       "vol_target": 6.0,
-      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
+      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
+      "heuristic_name": "stable_rules_v1",
+      "heuristic_version": "1.0.0",
+      "rules_applied": [
+        "bonds_min_35pct",
+        "defensive_bucket_45_60pct",
+        "vol_target_6pct_tolerance_3pct",
+        "max_single_position_15pct",
+        "max_single_bond_25pct",
+        "min_assets_10",
+        "max_assets_18",
+        "low_vol_assets_preferred"
+      ],
+      "rules_parameters": {
+        "bonds_min": 35.0,
+        "vol_target": 6.0,
+        "vol_tolerance": 3.0,
+        "max_single_position": 15.0,
+        "max_single_bond": 25.0,
+        "min_assets": 10,
+        "max_assets": 18,
+        "defensive_min": 45.0,
+        "defensive_max": 60.0
+      },
+      "why_not_slsqp": "vol_target_incompatible_with_markowitz",
+      "why_not_slsqp_details": "Le profil Stable requiert vol_target=6% ± 3% et >35% obligations. Ces contraintes sont mathématiquement incompatibles avec l'optimisation Markowitz mean-variance. L'univers d'actifs disponibles ne permet pas d'atteindre une volatilité si basse avec diversification suffisante. Fallback vers allocation heuristique (règles prédéfinies)."
     },
     "_constraint_report": {
       "profile_name": "Stable",
@@ -1685,7 +1710,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-22T10:29:24.784357",
+    "generated_at": "2025-12-22T12:29:52.651975",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
