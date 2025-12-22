@@ -1349,6 +1349,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "vol_target": diagnostics.get("vol_target"),
         }
         
+        # PR3: Enrichir pour les profils heuristiques (Stable)
         if optimization_mode.startswith("fallback"):
             result[profile]["_optimization"]["disclaimer"] = (
                 "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) "
@@ -1356,6 +1357,15 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 f"({profile}) sont incompatibles avec l'optimisation classique. "
                 "Cette approche privilégie la robustesse à l'optimalité théorique."
             )
+            
+            # PR3: Ajouter les métadonnées heuristiques depuis diagnostics
+            if diagnostics.get("heuristic_name"):
+                result[profile]["_optimization"]["heuristic_name"] = diagnostics["heuristic_name"]
+                result[profile]["_optimization"]["heuristic_version"] = diagnostics.get("heuristic_version")
+                result[profile]["_optimization"]["rules_applied"] = diagnostics.get("rules_applied", [])
+                result[profile]["_optimization"]["rules_parameters"] = diagnostics.get("rules_parameters", {})
+                result[profile]["_optimization"]["why_not_slsqp"] = diagnostics.get("why_not_slsqp")
+                result[profile]["_optimization"]["why_not_slsqp_details"] = diagnostics.get("why_not_slsqp_details")
         
         ticker_collisions = {}
         name_collisions = {}
