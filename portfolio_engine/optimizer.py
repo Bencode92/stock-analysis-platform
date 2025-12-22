@@ -292,6 +292,41 @@ BUCKET_CONSTRAINT_RELAXATION = {
 # v6.13 FIX: Renommage "Certified" → "Heuristic" (conformité AMF P0-9)
 FORCE_FALLBACK_PROFILES = {"Stable"}
 
+# v6.19 PR3: Stable Heuristic Rules — Documentation pour traçabilité
+STABLE_HEURISTIC_RULES = {
+    "name": "stable_rules_v1",
+    "version": "1.0.0",
+    "rules": [
+        "bonds_min_35pct",
+        "defensive_bucket_45_60pct",
+        "vol_target_6pct_tolerance_3pct",
+        "max_single_position_15pct",
+        "max_single_bond_25pct",
+        "min_assets_10",
+        "max_assets_18",
+        "low_vol_assets_preferred",
+    ],
+    "parameters": {
+        "bonds_min": 35.0,
+        "vol_target": 6.0,
+        "vol_tolerance": 3.0,
+        "max_single_position": 15.0,
+        "max_single_bond": 25.0,
+        "min_assets": 10,
+        "max_assets": 18,
+        "defensive_min": 45.0,
+        "defensive_max": 60.0,
+    },
+    "why_not_slsqp": "vol_target_incompatible_with_markowitz",
+    "why_not_slsqp_details": (
+        "Le profil Stable requiert vol_target=6% ± 3% et >35% obligations. "
+        "Ces contraintes sont mathématiquement incompatibles avec l'optimisation "
+        "Markowitz mean-variance. L'univers d'actifs disponibles ne permet pas "
+        "d'atteindre une volatilité si basse avec diversification suffisante. "
+        "Fallback vers allocation heuristique (règles prédéfinies)."
+    ),
+}
+
 
 # ============= JSON SERIALIZATION HELPER =============
 
@@ -1571,6 +1606,15 @@ class PortfolioOptimizer:
                 "DEFENSIVE 45-60%) mathematically incompatible with Markowitz optimization"
             )
             optimization_mode = "fallback_heuristic"
+               # PR3: Enrichir avec métadonnées heuristiques
+            heuristic_metadata = {
+                "heuristic_name": STABLE_HEURISTIC_RULES["name"],
+                "heuristic_version": STABLE_HEURISTIC_RULES["version"],
+                "rules_applied": STABLE_HEURISTIC_RULES["rules"],
+                "rules_parameters": STABLE_HEURISTIC_RULES["parameters"],
+                "why_not_slsqp": STABLE_HEURISTIC_RULES["why_not_slsqp"],
+                "why_not_slsqp_details": STABLE_HEURISTIC_RULES["why_not_slsqp_details"],
+    }
             
         else:
             # === SLSQP pour Agressif et Modéré ===
@@ -1705,12 +1749,19 @@ class PortfolioOptimizer:
                     "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
                 }
         
-        # v6.15 P1-6: Inclure les KPIs covariance dans les diagnostics
+# v6.15 P1-6: Inclure les KPIs covariance dans les diagnostics
         diagnostics = to_python_native({
             "converged": optimizer_converged,
             "optimization_mode": optimization_mode,
             "fallback_reason": fallback_reason,
             "fallback_heuristic": profile.name in FORCE_FALLBACK_PROFILES,
+            # PR3: Métadonnées heuristiques (Stable uniquement)
+            "heuristic_name": heuristic_metadata.get("heuristic_name"),
+            "heuristic_version": heuristic_metadata.get("heuristic_version"),
+            "rules_applied": heuristic_metadata.get("rules_applied"),
+            "rules_parameters": heuristic_metadata.get("rules_parameters"),
+            "why_not_slsqp": heuristic_metadata.get("why_not_slsqp"),
+            "why_not_slsqp_details": heuristic_metadata.get("why_not_slsqp_details"),
             "message": "Fallback heuristique (contraintes strictes)" if profile.name in FORCE_FALLBACK_PROFILES else (
                 "SLSQP converged" if optimizer_converged else f"Fallback: {fallback_reason}"
             ),
