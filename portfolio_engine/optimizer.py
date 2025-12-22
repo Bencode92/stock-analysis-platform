@@ -1,6 +1,11 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.18.2 — FIX normalization 100%
+Optimiseur de portefeuille v6.18.3 — FIX ticker_coverage 0%
+
+CHANGEMENTS v6.18.3:
+1. FIX: Asset dataclass inclut maintenant ticker/symbol
+2. FIX: convert_universe_to_assets() extrait ticker du dict source
+3. IMPACT: ticker_coverage passe de 0% à ~100%
 
 CHANGEMENTS v6.18.2:
 1. FIX: _adjust_for_vol_target() force TOUJOURS normalisation à 100%
@@ -395,6 +400,8 @@ class Asset:
     role: Optional[Role] = None
     corporate_group: Optional[str] = None
     buffett_score: Optional[float] = None
+    ticker: Optional[str] = None      # v6.18.3: FIX ticker_coverage
+    symbol: Optional[str] = None      # v6.18.3: alias pour compatibilité
 
 
 def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: float = 200.0) -> float:
@@ -1916,6 +1923,8 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 exposure=item.get("exposure"),
                 preset=item.get("preset"),
                 buffett_score=item.get("_buffett_score"),
+                ticker=item.get("ticker") or item.get("symbol"),   # v6.18.3: FIX ticker_coverage
+                symbol=item.get("symbol") or item.get("ticker"),   # v6.18.3: alias
             )
             assets.append(asset)
     
