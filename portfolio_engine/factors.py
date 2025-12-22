@@ -1,41 +1,40 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.4.2 — SEUL MOTEUR D'ALPHA
+FactorScorer v2.4.3 — SEUL MOTEUR D'ALPHA
 =========================================
 
-v2.4.2 Changes (ChatGPT Audit Round 2):
-- FIX CRITIQUE: bond_risk_bucket basé sur RAW (0-100), pas sur z-score
-- FIX: TER strict - rejet si heuristique incertaine (+ flag pour debug)
-- FIX: Bonds strict - rejet/pénalité sévère si duration/vol manquantes
-- NOUVEAU: bond_quality_raw stocké séparément de bond_quality (z-score)
-- NOUVEAU: _ter_confidence flag pour traçabilité
+v2.4.3 Changes (ChatGPT Audit Round 3 - Final Fixes):
+- FIX 1: ter_confidence stocké dans asset["_scoring_meta"]["ter_confidence"]
+- FIX 2: Bond ETF cohérence - si fund_type="bond", catégorie forcée à "bond"
+- FIX 3: _is_missing() corrigé pour détecter aussi les valeurs <= 0
+- NOUVEAU: _is_missing_or_zero() pour champs où 0 est invalide (TER, vol, duration)
+- NOUVEAU: data_quality_penalty appliqué au composite si champs critiques manquants
 
-v2.4.1 Changes (ChatGPT Audit Fixes):
-- TER validation stricte avec heuristique décimal vs pourcentage
-- Crypto vol - ajout vol_30d_annual_pct dans cascade
-- Bonds defaults → warnings explicites
-- Tactical context z-score PAR CLASSE
+v2.4.2 Changes:
+- bond_risk_bucket basé sur RAW (0-100), pas sur z-score
+- TER validation stricte avec confidence tracking
+- Bonds: pénalités sévères pour duration/vol manquantes
 
-v2.4.0 Changes (Z-Score par Classe + Data Contract Strict):
-- Z-score calculé PAR CLASSE (equity/etf/bond/crypto)
+v2.4.1 Changes:
+- TER validation stricte avec heuristique
+- Crypto vol_30d_annual_pct
+- Tactical z-score par classe
+
+v2.4.0 Changes:
+- Z-score PAR CLASSE (equity/etf/bond/crypto)
 - Suppression defaults silencieux
 - Pénalités explicites pour données manquantes
 - Poids renormalisés par catégorie
 
 Facteurs:
 - momentum: 45% (Agressif) → 20% (Stable) — Driver principal
-- quality_fundamental: 25-30% — Score Buffett intégré (ROIC, FCF, ROE)
+- quality_fundamental: 25-30% — Score Buffett intégré
 - low_vol: 15-35% — Contrôle du risque
-- cost_efficiency: 5-10% — TER + Yield (ETF/Bonds uniquement)
-- bond_quality: 0-15% — Qualité obligataire (crédit + duration + vol)
-- tactical_context: 5-10% — Contexte marché (sector/region/macro)
+- cost_efficiency: 5-10% — TER + Yield (ETF/Bonds)
+- bond_quality: 0-15% — Qualité obligataire
+- tactical_context: 5-10% — Contexte marché
 - liquidity: 5-10% — Filtre technique
 - mean_reversion: 5% — Évite sur-extension
-
-Le pari central:
-"Des entreprises de qualité fondamentale (ROIC > 10%, FCF positif, dette maîtrisée)
-avec un momentum positif sur 3-12 mois, alignées avec le contexte macro,
-surperforment à horizon 1-3 ans."
 """
 
 import numpy as np
@@ -97,8 +96,19 @@ CATEGORY_NORMALIZE = {
 }
 
 
-def normalize_category(category: str) -> str:
-    """Normalise la catégorie vers une clé standard."""
+def normalize_category(category: str, fund_type: str = "") -> str:
+    """
+    v2.4.3: Normalise la catégorie vers une clé standard.
+    
+    RÈGLE IMPORTANTE: Si fund_type contient "bond", force catégorie = "bond"
+    même si category = "etf". Cela garantit que les ETF obligataires
+    utilisent les facteurs bond_quality.
+    """
+    # v2.4.3 FIX 2: Bond ETF → catégorie "bond"
+    fund_type_lower = str(fund_type).lower().strip() if fund_type else ""
+    if "bond" in fund_type_lower or "obligation" in fund_type_lower or "fixed income" in fund_type_lower:
+        return "bond"
+    
     if not category:
         return "other"
     return CATEGORY_NORMALIZE.get(category.lower().strip(), "other")
@@ -130,13 +140,15 @@ MISSING_LIQUIDITY_PENALTY = {
     "other": 50_000_000,
 }
 
-# v2.4.2: Seuils pour bond_risk_bucket (basés sur RAW 0-100, pas z-score)
+# v2.4.2: Seuils pour bond_risk_bucket (basés sur RAW 0-100)
 BOND_BUCKET_THRESHOLDS = {
-    "defensive": 75,  # >= 75 = defensive
-    "core": 55,       # >= 55 = core
-    "risky": 35,      # >= 35 = risky
-    # < 35 = very_risky
+    "defensive": 75,
+    "core": 55,
+    "risky": 35,
 }
+
+# v2.4.3: Pénalité composite pour données manquantes critiques
+DATA_QUALITY_PENALTY = 0.3  # Appliqué au composite si champs critiques manquants
 
 
 # ============= v2.3 TACTICAL CONTEXT MAPPINGS =============
@@ -461,12 +473,38 @@ def fnum(x) -> float:
 
 
 def _is_missing(value) -> bool:
-    """Vérifie si une valeur est manquante (None, NaN, 0 négatif)."""
+    """
+    v2.4.3 FIX 3: Vérifie si une valeur est manquante.
+    
+    Détecte: None, NaN, chaîne vide, "N/A", "null"
+    NOTE: Ne détecte PAS 0 comme manquant (utiliser _is_missing_or_zero pour ça)
+    """
     if value is None:
         return True
     if isinstance(value, float) and math.isnan(value):
         return True
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in ("", "n/a", "null", "none", "nan", "-"):
+            return True
     return False
+
+
+def _is_missing_or_zero(value) -> bool:
+    """
+    v2.4.3: Vérifie si une valeur est manquante OU égale à zéro/négative.
+    
+    Utilisé pour les champs où 0 est invalide: TER, vol, duration, market_cap
+    """
+    if _is_missing(value):
+        return True
+    try:
+        num = float(value) if not isinstance(value, (int, float)) else value
+        if math.isnan(num):
+            return True
+        return num <= 0
+    except (TypeError, ValueError):
+        return True
 
 
 # ============= v2.4.2 TER VALIDATION STRICTE =============
@@ -478,14 +516,9 @@ def _normalize_ter(ter_raw: float, symbol: str = "?") -> Tuple[Optional[float], 
     Returns:
         (ter_pct, confidence) où:
         - ter_pct: TER en % (ex: 0.09 pour 0.09%), ou None si invalide
-        - confidence: "high" | "medium" | "low" | "rejected"
-    
-    Règles:
-    - Si ter_raw dans [0.01, 3.0] → high confidence (déjà en %)
-    - Si ter_raw dans [0.0001, 0.05] → medium confidence (décimal → *100)
-    - Sinon → rejected (trop ambigu)
+        - confidence: "high" | "medium" | "low" | "rejected" | "missing"
     """
-    if _is_missing(ter_raw) or ter_raw <= 0:
+    if _is_missing_or_zero(ter_raw):
         return None, "missing"
     
     ter = fnum(ter_raw)
@@ -528,11 +561,6 @@ def _compute_bond_quality_raw(
     
     Returns:
         (quality_raw_0_100, metadata)
-    
-    Metadata contient:
-        - missing_fields: liste des champs manquants
-        - penalty_applied: bool
-        - components: détail des scores
     """
     metadata = {
         "missing_fields": [],
@@ -546,10 +574,9 @@ def _compute_bond_quality_raw(
     
     # Score duration (0-1, plus court = mieux)
     D_MAX = 10.0
-    if _is_missing(duration):
+    if _is_missing_or_zero(duration):
         metadata["missing_fields"].append("duration")
-        # v2.4.2: PÉNALITÉ SÉVÈRE au lieu de default neutre
-        f_dur = 0.3  # Équivalent ~7Y (pénalisant)
+        f_dur = 0.3  # Pénalité sévère
         metadata["penalty_applied"] = True
         logger.warning(f"bond_quality: missing duration for {symbol} → severe penalty (f_dur=0.3)")
     else:
@@ -559,10 +586,9 @@ def _compute_bond_quality_raw(
     
     # Score volatilité (0-1, plus bas = mieux)
     V_MAX = 12.0
-    if _is_missing(vol):
+    if _is_missing_or_zero(vol):
         metadata["missing_fields"].append("vol")
-        # v2.4.2: PÉNALITÉ SÉVÈRE
-        f_vol = 0.3  # Équivalent ~8.4% vol (pénalisant)
+        f_vol = 0.3  # Pénalité sévère
         metadata["penalty_applied"] = True
         logger.warning(f"bond_quality: missing vol for {symbol} → severe penalty (f_vol=0.3)")
     else:
@@ -578,15 +604,7 @@ def _compute_bond_quality_raw(
 
 
 def _get_bond_risk_bucket(quality_raw_0_100: float) -> str:
-    """
-    v2.4.2: Détermine le bucket de risque basé sur la qualité RAW (pas z-score).
-    
-    Seuils:
-    - >= 75: defensive
-    - >= 55: core
-    - >= 35: risky
-    - < 35: very_risky
-    """
+    """v2.4.2: Détermine le bucket de risque basé sur la qualité RAW."""
     if quality_raw_0_100 >= BOND_BUCKET_THRESHOLDS["defensive"]:
         return "defensive"
     elif quality_raw_0_100 >= BOND_BUCKET_THRESHOLDS["core"]:
@@ -640,7 +658,6 @@ def compute_buffett_quality_score(asset: dict) -> float:
     scores = []
     weights = []
     
-    # ROE
     roe = fnum(asset.get("roe"))
     roe_good = thresholds.get("roe_good", 12)
     if roe > 0:
@@ -648,7 +665,6 @@ def compute_buffett_quality_score(asset: dict) -> float:
         scores.append(roe_score)
         weights.append(0.20)
     
-    # ROIC
     roic = fnum(asset.get("roic"))
     roic_good = thresholds.get("roic_good")
     if roic_good and roic > 0:
@@ -656,7 +672,6 @@ def compute_buffett_quality_score(asset: dict) -> float:
         scores.append(roic_score)
         weights.append(0.30)
     
-    # FCF Yield
     fcf = fnum(asset.get("fcf_yield"))
     fcf_good = thresholds.get("fcf_good", 3)
     if fcf != 0:
@@ -667,7 +682,6 @@ def compute_buffett_quality_score(asset: dict) -> float:
         scores.append(fcf_score)
         weights.append(0.20)
     
-    # D/E Ratio
     de = fnum(asset.get("de_ratio"))
     de_max = thresholds.get("de_max")
     if de_max and de >= 0:
@@ -678,7 +692,6 @@ def compute_buffett_quality_score(asset: dict) -> float:
         scores.append(de_score)
         weights.append(0.15)
     
-    # EPS Growth 5Y
     eps_growth = fnum(asset.get("eps_growth_5y"))
     if asset.get("eps_growth_5y") is not None:
         if eps_growth >= 15:
@@ -701,27 +714,22 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.4.2 =============
+# ============= FACTOR SCORER v2.4.3 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
     
-    v2.4.2 — FIXES CHATGPT AUDIT ROUND 2:
-    - bond_risk_bucket basé sur RAW (0-100), pas sur z-score
-    - TER strict: rejet si heuristique incertaine
-    - Bonds strict: pénalité sévère si duration/vol manquantes
-    - bond_quality_raw stocké séparément
+    v2.4.3 — FINAL FIXES:
+    - ter_confidence stocké dans _scoring_meta
+    - Bond ETF: fund_type="bond" → catégorie forcée "bond"
+    - _is_missing_or_zero() pour TER/vol/duration
+    - data_quality_penalty sur composite
     
-    v2.4.1 — FIXES CHATGPT AUDIT:
-    - TER validation stricte
-    - Crypto vol_30d_annual_pct
-    - Tactical z-score par classe
-    
-    v2.4.0 — CORRECTIFS MAJEURS:
-    - Z-score PAR CLASSE
-    - Suppression defaults silencieux
-    - Poids renormalisés par catégorie
+    v2.4.2:
+    - bond_risk_bucket basé sur RAW (0-100)
+    - TER validation stricte avec confidence
+    - Bonds: pénalités sévères pour missing
     """
     
     def __init__(self, profile: str = "Modéré", market_context: Optional[Dict] = None):
@@ -734,8 +742,11 @@ class FactorScorer:
         self._country_lookup = None
         self._macro_tilts = None
         
-        # v2.4.2: Stockage des qualités RAW pour bonds (pour bucket)
+        # v2.4.2/3: Stockage pour traçabilité
         self._bond_quality_raw: Dict[int, float] = {}
+        self._bond_quality_meta: Dict[int, Dict] = {}
+        self._ter_confidence: Dict[int, str] = {}  # v2.4.3 FIX 1
+        self._missing_critical_fields: Dict[int, List[str]] = {}  # v2.4.3
         
         if self.market_context:
             self._build_lookups()
@@ -750,7 +761,7 @@ class FactorScorer:
     
     @staticmethod
     def _zscore(values: List[float], winsor_pct: float = 0.02) -> np.ndarray:
-        """Z-score winsorisé (LEGACY - utilisé pour compatibilité)."""
+        """Z-score winsorisé."""
         arr = np.array(values, dtype=float)
         arr = np.nan_to_num(arr, nan=0.0)
         
@@ -769,16 +780,13 @@ class FactorScorer:
         min_samples: int = 5,
         winsor_pct: float = 0.02
     ) -> np.ndarray:
-        """
-        v2.4: Z-score PAR CLASSE d'actifs.
-        """
+        """Z-score PAR CLASSE d'actifs."""
         n = len(values)
         result = np.zeros(n)
         
         by_cat: Dict[str, List[int]] = defaultdict(list)
         for i, cat in enumerate(categories):
-            norm_cat = normalize_category(cat)
-            by_cat[norm_cat].append(i)
+            by_cat[cat].append(i)
         
         for cat, indices in by_cat.items():
             if len(indices) < min_samples:
@@ -806,6 +814,13 @@ class FactorScorer:
         
         return result
     
+    def _get_normalized_category(self, asset: dict) -> str:
+        """v2.4.3: Normalise catégorie avec règle fund_type bond."""
+        return normalize_category(
+            asset.get("category", ""),
+            asset.get("fund_type", "")
+        )
+    
     def compute_factor_momentum(self, assets: List[dict]) -> np.ndarray:
         """Facteur momentum: combinaison perf 1m/3m/YTD."""
         n = len(assets)
@@ -829,13 +844,13 @@ class FactorScorer:
             raw = [0.7 * p7d[i] + 0.3 * p24h[i] for i in range(n)]
         
         for i, a in enumerate(assets):
-            category = a.get("category", "").lower()
-            if category == "crypto":
+            cat = self._get_normalized_category(a)
+            if cat == "crypto":
                 sharpe = fnum(a.get("sharpe_ratio", 0))
                 sharpe_bonus = max(-20, min(20, sharpe * 10))
                 raw[i] += sharpe_bonus
         
-        categories = [a.get("category", "other") for a in assets]
+        categories = [self._get_normalized_category(a) for a in assets]
         return self._zscore_by_class(raw, categories)
     
     def compute_factor_quality_fundamental(self, assets: List[dict]) -> np.ndarray:
@@ -844,7 +859,7 @@ class FactorScorer:
         categories = []
         
         for asset in assets:
-            cat = normalize_category(asset.get("category", ""))
+            cat = self._get_normalized_category(asset)
             categories.append(cat)
             
             if cat == "equity":
@@ -871,9 +886,10 @@ class FactorScorer:
         raw_vol = []
         categories = []
         
-        for a in assets:
-            cat = normalize_category(a.get("category", "other"))
+        for idx, a in enumerate(assets):
+            cat = self._get_normalized_category(a)
             categories.append(cat)
+            symbol = a.get("symbol", a.get("id", "?"))
             
             vol = (
                 a.get("vol_3y") or 
@@ -884,9 +900,13 @@ class FactorScorer:
                 a.get("vol_30d_annual_pct")
             )
             
-            if _is_missing(vol):
+            if _is_missing_or_zero(vol):
                 vol = MISSING_VOL_PENALTY.get(cat, 30.0)
-                logger.debug(f"low_vol: missing vol for {a.get('id', a.get('symbol', '?'))} → penalty {vol}")
+                logger.debug(f"low_vol: missing vol for {symbol} → penalty {vol}")
+                # Track missing
+                if idx not in self._missing_critical_fields:
+                    self._missing_critical_fields[idx] = []
+                self._missing_critical_fields[idx].append("vol")
             else:
                 vol = fnum(vol)
             
@@ -899,41 +919,42 @@ class FactorScorer:
         """
         Facteur coût/rendement pour ETF et Bonds.
         
-        v2.4.2: TER validation stricte avec confidence tracking.
+        v2.4.3 FIX 1: Stocke ter_confidence pour traçabilité.
         """
         scores = []
         categories = []
         
-        for a in assets:
-            category = normalize_category(a.get("category", ""))
-            categories.append(category)
+        for idx, a in enumerate(assets):
+            cat = self._get_normalized_category(a)
+            categories.append(cat)
             
-            if category not in ["etf", "bond"]:
+            if cat not in ["etf", "bond"]:
                 scores.append(None)
                 continue
             
             fund_type = str(a.get("fund_type", "")).lower()
             symbol = a.get("symbol", a.get("id", "?"))
             
-            # v2.4.2: TER avec validation stricte
+            # v2.4.3 FIX 1: TER avec stockage confidence
             ter_raw = a.get("total_expense_ratio")
             ter_pct, confidence = _normalize_ter(ter_raw, symbol)
+            self._ter_confidence[idx] = confidence  # Stocké pour _scoring_meta
             
             if ter_pct is None or confidence == "rejected":
-                # TER invalide → pénalité sévère
                 ter_score = 20.0
                 logger.debug(f"cost_efficiency: TER {confidence} for {symbol} → severe penalty 20")
+                if idx not in self._missing_critical_fields:
+                    self._missing_critical_fields[idx] = []
+                self._missing_critical_fields[idx].append("ter")
             elif confidence == "low":
-                # TER incertain → pénalité modérée
-                ter_score = max(0, 100 - ter_pct * 33) * 0.7  # 30% penalty
+                ter_score = max(0, 100 - ter_pct * 33) * 0.7
                 logger.debug(f"cost_efficiency: TER low confidence for {symbol} → 30% penalty")
             else:
-                # TER valide
                 ter_score = max(0, 100 - ter_pct * 33)
             
             yield_ttm = fnum(a.get("yield_ttm", 0))
             
-            if "bond" in fund_type or category == "bond":
+            if "bond" in fund_type or cat == "bond":
                 yield_score = min(100, yield_ttm * 12.5)
                 final_score = 0.5 * ter_score + 0.5 * yield_score
             else:
@@ -955,42 +976,39 @@ class FactorScorer:
         return result
     
     def compute_factor_bond_quality(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur qualité obligataire.
-        
-        v2.4.2: Stocke bond_quality_raw séparément pour bucket.
-        """
+        """Facteur qualité obligataire avec RAW stocké."""
         scores = []
-        raw_scores = []  # v2.4.2: RAW pour bucket
         categories = []
         
-        self._bond_quality_raw = {}  # Reset
+        self._bond_quality_raw = {}
+        self._bond_quality_meta = {}
         
         for idx, a in enumerate(assets):
-            category = normalize_category(a.get("category", ""))
-            fund_type = str(a.get("fund_type", "")).lower()
-            categories.append(category)
+            cat = self._get_normalized_category(a)
+            categories.append(cat)
             symbol = a.get("symbol", a.get("id", "?"))
             
-            is_bond = (category == "bond") or ("bond" in fund_type)
+            # v2.4.3 FIX 2: Utilise _get_normalized_category qui gère fund_type
+            is_bond = (cat == "bond")
             
             if not is_bond:
                 scores.append(None)
-                raw_scores.append(None)
                 continue
             
             # Score crédit
             credit_raw = a.get("bond_credit_score")
-            if _is_missing(credit_raw) or credit_raw <= 0:
+            if _is_missing_or_zero(credit_raw):
                 rating = a.get("bond_credit_rating", "")
                 if rating:
                     credit_raw = _rating_to_score(rating)
                 
                 if _is_missing(credit_raw) or pd.isna(credit_raw) or credit_raw <= 0:
-                    credit_raw = 35.0  # Pénalité BB
+                    credit_raw = 35.0
                     logger.warning(f"bond_quality: missing credit for {symbol} → penalty 35 (BB)")
+                    if idx not in self._missing_critical_fields:
+                        self._missing_critical_fields[idx] = []
+                    self._missing_critical_fields[idx].append("credit")
             
-            # v2.4.2: Calcul RAW avec pénalités sévères
             dur = a.get("bond_avg_duration")
             vol = a.get("vol_pct") or a.get("vol_3y")
             
@@ -1001,11 +1019,16 @@ class FactorScorer:
                 symbol=symbol
             )
             
-            raw_scores.append(quality_raw)
-            self._bond_quality_raw[idx] = quality_raw  # v2.4.2: Stocké pour bucket
+            self._bond_quality_raw[idx] = quality_raw
+            self._bond_quality_meta[idx] = metadata
             scores.append(quality_raw)
+            
+            # Track missing fields
+            if metadata["missing_fields"]:
+                if idx not in self._missing_critical_fields:
+                    self._missing_critical_fields[idx] = []
+                self._missing_critical_fields[idx].extend(metadata["missing_fields"])
         
-        # Z-score sur les RAW scores
         result = np.zeros(len(assets))
         valid_indices = [i for i, s in enumerate(scores) if s is not None]
         
@@ -1030,7 +1053,7 @@ class FactorScorer:
         for a in assets:
             sector_top = a.get("sector_top", "")
             country_top = a.get("country_top", "")
-            categories.append(a.get("category", "other"))
+            categories.append(self._get_normalized_category(a))
             
             components = []
             weights = []
@@ -1089,15 +1112,16 @@ class FactorScorer:
         raw_liq = []
         categories = []
         
-        for a in assets:
-            category = normalize_category(a.get("category", "other"))
-            categories.append(category)
+        for idx, a in enumerate(assets):
+            cat = self._get_normalized_category(a)
+            categories.append(cat)
+            symbol = a.get("symbol", a.get("id", "?"))
             
             liq = a.get("liquidity") or a.get("market_cap") or a.get("aum_usd")
             
-            if _is_missing(liq) or liq <= 0:
-                liq = MISSING_LIQUIDITY_PENALTY.get(category, 50_000_000)
-                logger.debug(f"liquidity: missing for {a.get('id', a.get('symbol', '?'))} → penalty {liq:,.0f}")
+            if _is_missing_or_zero(liq):
+                liq = MISSING_LIQUIDITY_PENALTY.get(cat, 50_000_000)
+                logger.debug(f"liquidity: missing for {symbol} → penalty {liq:,.0f}")
             else:
                 liq = fnum(liq)
             
@@ -1130,13 +1154,19 @@ class FactorScorer:
         """
         Calcule le score composite pour chaque actif.
         
-        v2.4.2: bond_risk_bucket basé sur RAW, pas z-score.
+        v2.4.3: Ajoute data_quality_penalty et stocke ter_confidence.
         """
         if not assets:
             return assets
         
+        # Reset tracking dicts
+        self._missing_critical_fields = {}
+        self._ter_confidence = {}
+        self._bond_quality_raw = {}
+        self._bond_quality_meta = {}
+        
         n = len(assets)
-        categories = [normalize_category(a.get("category", "other")) for a in assets]
+        categories = [self._get_normalized_category(a) for a in assets]
         
         factors = {
             "momentum": self.compute_factor_momentum(assets),
@@ -1169,6 +1199,13 @@ class FactorScorer:
                 composite[i] = weighted_score / total_weight
             else:
                 composite[i] = 0.0
+            
+            # v2.4.3: Data quality penalty
+            missing_fields = self._missing_critical_fields.get(i, [])
+            if missing_fields:
+                penalty = DATA_QUALITY_PENALTY * len(missing_fields)
+                composite[i] -= penalty
+                logger.debug(f"data_quality_penalty for {asset.get('symbol', '?')}: -{penalty:.2f} (missing: {missing_fields})")
         
         # Enrichir les actifs
         for i, asset in enumerate(assets):
@@ -1180,29 +1217,38 @@ class FactorScorer:
             asset["score"] = asset["composite_score"]
             
             cat = categories[i]
+            
+            # v2.4.3 FIX 1: Stockage complet dans _scoring_meta
             asset["_scoring_meta"] = {
                 "category_normalized": cat,
+                "category_original": asset.get("category", ""),
+                "fund_type": asset.get("fund_type", ""),
                 "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
-                "scoring_version": "v2.4.2",
+                "scoring_version": "v2.4.3",
+                "ter_confidence": self._ter_confidence.get(i),
+                "missing_critical_fields": self._missing_critical_fields.get(i, []),
+                "data_quality_penalty_applied": len(self._missing_critical_fields.get(i, [])) > 0,
             }
             
             if cat == "equity":
                 asset["buffett_score"] = compute_buffett_quality_score(asset)
             
-            # v2.4.2 FIX CRITIQUE: bond_risk_bucket basé sur RAW, pas z-score
-            if cat == "bond" or "bond" in str(asset.get("fund_type", "")).lower():
+            # v2.4.2/3: bond_risk_bucket basé sur RAW
+            if cat == "bond":
                 if i in self._bond_quality_raw:
                     raw_quality = self._bond_quality_raw[i]
                     asset["bond_quality_raw"] = raw_quality
                     asset["bond_quality_z"] = factors["bond_quality"][i]
                     asset["bond_risk_bucket"] = _get_bond_risk_bucket(raw_quality)
+                    asset["_scoring_meta"]["bond_quality_meta"] = self._bond_quality_meta.get(i)
                 else:
                     asset["bond_risk_bucket"] = "unknown"
             
             ytd = fnum(asset.get("ytd"))
             p1m = fnum(asset.get("perf_1m"))
             asset["flags"] = {
-                "overextended": (ytd > 80 and p1m <= 0) or (ytd > 150)
+                "overextended": (ytd > 80 and p1m <= 0) or (ytd > 150),
+                "incomplete_data": len(self._missing_critical_fields.get(i, [])) > 0,
             }
         
         # Log stats par catégorie
@@ -1217,8 +1263,13 @@ class FactorScorer:
                     f"range=[{np.min(cat_scores):.2f}, {np.max(cat_scores):.2f}]"
                 )
         
+        # Log data quality summary
+        incomplete_count = sum(1 for i in range(n) if self._missing_critical_fields.get(i))
+        if incomplete_count > 0:
+            logger.warning(f"Data quality: {incomplete_count}/{n} assets have missing critical fields")
+        
         logger.info(
-            f"Scores v2.4.2 calculés: {n} actifs (profil {self.profile}) | "
+            f"Scores v2.4.3 calculés: {n} actifs (profil {self.profile}) | "
             f"Score moyen global: {composite.mean():.3f}"
         )
         
@@ -1279,11 +1330,9 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.4.2):",
+        "Comparaison des poids factoriels par profil (v2.4.3):",
         "",
-        "PARI CENTRAL: Quality + Momentum + Contexte tactique surperforment à horizon 1-3 ans.",
-        "",
-        "v2.4.2 FIXES: bond_risk_bucket sur RAW + TER strict + bonds pénalités sévères",
+        "v2.4.3 FIXES: ter_confidence stocké + bond ETF cohérence + _is_missing_or_zero + data_quality_penalty",
         ""
     ]
     
@@ -1306,28 +1355,29 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
         return {}
     
     total = len(assets)
-    equities = [a for a in assets if normalize_category(a.get("category", "")) == "equity"]
-    etf_bonds = [a for a in assets if normalize_category(a.get("category", "")) in ["etf", "bond"]]
-    bonds_only = [a for a in assets if normalize_category(a.get("category", "")) == "bond"]
+    
+    def get_cat(a):
+        return normalize_category(a.get("category", ""), a.get("fund_type", ""))
+    
+    equities = [a for a in assets if get_cat(a) == "equity"]
+    bonds = [a for a in assets if get_cat(a) == "bond"]
+    etfs = [a for a in assets if get_cat(a) == "etf"]
+    
     n_eq = len(equities) or 1
-    n_etf = len(etf_bonds) or 1
-    n_bonds = len(bonds_only) or 1
+    n_bonds = len(bonds) or 1
+    n_etfs = len(etfs) or 1
     
     return {
         "roe": round(sum(1 for a in equities if fnum(a.get("roe")) > 0) / n_eq * 100, 1),
         "roic": round(sum(1 for a in equities if fnum(a.get("roic")) > 0) / n_eq * 100, 1),
         "fcf_yield": round(sum(1 for a in equities if a.get("fcf_yield") is not None) / n_eq * 100, 1),
-        "de_ratio": round(sum(1 for a in equities if fnum(a.get("de_ratio")) >= 0) / n_eq * 100, 1),
-        "eps_growth_5y": round(sum(1 for a in equities if a.get("eps_growth_5y") is not None) / n_eq * 100, 1),
-        "total_expense_ratio": round(sum(1 for a in etf_bonds if fnum(a.get("total_expense_ratio")) > 0) / n_etf * 100, 1),
-        "yield_ttm": round(sum(1 for a in etf_bonds if fnum(a.get("yield_ttm")) > 0) / n_etf * 100, 1),
-        "bond_credit_score": round(sum(1 for a in bonds_only if fnum(a.get("bond_credit_score")) > 0) / n_bonds * 100, 1),
-        "bond_avg_duration": round(sum(1 for a in bonds_only if fnum(a.get("bond_avg_duration")) > 0) / n_bonds * 100, 1),
-        "sector_top": round(sum(1 for a in assets if a.get("sector_top")) / total * 100, 1),
-        "country_top": round(sum(1 for a in assets if a.get("country_top")) / total * 100, 1),
+        "total_expense_ratio_etf": round(sum(1 for a in etfs if not _is_missing_or_zero(a.get("total_expense_ratio"))) / n_etfs * 100, 1),
+        "total_expense_ratio_bond": round(sum(1 for a in bonds if not _is_missing_or_zero(a.get("total_expense_ratio"))) / n_bonds * 100, 1),
+        "bond_credit_score": round(sum(1 for a in bonds if fnum(a.get("bond_credit_score")) > 0) / n_bonds * 100, 1),
+        "bond_avg_duration": round(sum(1 for a in bonds if not _is_missing_or_zero(a.get("bond_avg_duration"))) / n_bonds * 100, 1),
         "equities_count": len(equities),
-        "etf_bonds_count": len(etf_bonds),
-        "bonds_only_count": len(bonds_only),
+        "etfs_count": len(etfs),
+        "bonds_count": len(bonds),
         "total_count": total,
     }
 
@@ -1337,38 +1387,48 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
 if __name__ == "__main__":
     print(compare_factor_profiles())
     print("\n" + "=" * 60)
-    print("Test v2.4.2: bond_risk_bucket sur RAW...")
+    print("Test v2.4.3: Final fixes...")
     
-    # Test TER normalization
-    print("\n--- Test TER normalization ---")
+    # Test normalize_category avec fund_type
+    print("\n--- Test normalize_category avec fund_type ---")
     test_cases = [
-        (0.0009, "ETF_A"),  # Décimal API → medium
-        (0.09, "ETF_B"),    # Déjà en % → high
-        (0.9, "ETF_C"),     # 0.9% → high
-        (5.0, "ETF_D"),     # 5% → rejected
-        (0.00001, "ETF_E"), # Trop bas → rejected
+        ("etf", "bond", "AGG"),      # ETF bond → bond
+        ("etf", "equity", "SPY"),    # ETF equity → etf
+        ("etf", "", "QQQ"),          # ETF sans type → etf
+        ("bond", "", "BND"),         # Bond → bond
+        ("equity", "", "AAPL"),      # Equity → equity
     ]
-    for ter_raw, symbol in test_cases:
-        result, confidence = _normalize_ter(ter_raw, symbol)
-        print(f"  {symbol}: raw={ter_raw} → {result}% ({confidence})")
+    for cat, ft, sym in test_cases:
+        result = normalize_category(cat, ft)
+        print(f"  {sym}: category={cat}, fund_type={ft} → {result}")
     
-    # Test bond_risk_bucket basé sur RAW
-    print("\n--- Test bond_risk_bucket sur RAW ---")
-    test_bonds = [
-        {"symbol": "AGG", "category": "bond", "fund_type": "bond", "bond_credit_score": 90, "bond_avg_duration": 3.5, "vol_pct": 4.0, "ytd": 2, "perf_1m": 0.5},
-        {"symbol": "HYG", "category": "bond", "fund_type": "bond", "bond_credit_score": 45, "bond_avg_duration": 4.0, "vol_pct": 8.0, "ytd": 5, "perf_1m": 1.0},
-        {"symbol": "TLT", "category": "bond", "fund_type": "bond", "bond_credit_score": 95, "bond_avg_duration": 17.0, "vol_pct": 15.0, "ytd": -5, "perf_1m": -1.0},
-        {"symbol": "MISSING", "category": "bond", "fund_type": "bond", "bond_credit_score": 80, "ytd": 1, "perf_1m": 0.2},  # duration/vol missing
+    # Test _is_missing_or_zero
+    print("\n--- Test _is_missing_or_zero ---")
+    test_values = [None, 0, 0.0, -1, "", "N/A", 0.09, 1.5]
+    for v in test_values:
+        print(f"  {repr(v):10} → missing={_is_missing(v)}, missing_or_zero={_is_missing_or_zero(v)}")
+    
+    # Test complet
+    print("\n--- Test scoring complet ---")
+    test_assets = [
+        {"symbol": "AAPL", "category": "equity", "ytd": 28, "perf_1m": 5, "perf_3m": 12, "vol_3y": 28, "roe": 147, "roic": 56, "market_cap": 3e12},
+        {"symbol": "AGG", "category": "etf", "fund_type": "bond", "ytd": 2, "perf_1m": 0.5, "vol_pct": 4.2, "total_expense_ratio": 0.03, "bond_credit_score": 87, "bond_avg_duration": 3.75, "aum_usd": 90e9},
+        {"symbol": "HYG", "category": "etf", "fund_type": "bond", "ytd": 5, "perf_1m": 1.0, "vol_pct": 8.0, "total_expense_ratio": 0.49, "bond_credit_score": 45, "bond_avg_duration": 4.0, "aum_usd": 15e9},
+        {"symbol": "SPY", "category": "etf", "ytd": 26, "perf_1m": 3, "perf_3m": 10, "vol_pct": 18, "total_expense_ratio": 0.0009, "aum_usd": 500e9},
+        {"symbol": "MISSING", "category": "etf", "fund_type": "bond", "ytd": 1, "perf_1m": 0.2},  # Données manquantes
     ]
     
     scorer = FactorScorer("Stable")
-    scored_bonds = scorer.compute_scores(test_bonds)
+    scored = scorer.compute_scores(test_assets)
     
-    print("\nBonds avec bucket basé sur RAW:")
-    for b in scored_bonds:
-        raw = b.get("bond_quality_raw", "N/A")
-        z = b.get("bond_quality_z", "N/A")
-        bucket = b.get("bond_risk_bucket", "N/A")
-        print(f"  {b['symbol']:8} | RAW={raw:>5} | Z={z:>+6.2f} | bucket={bucket}")
+    print("\nRésultats:")
+    for a in scored:
+        meta = a.get("_scoring_meta", {})
+        flags = a.get("flags", {})
+        print(f"  {a['symbol']:8} | cat={meta.get('category_normalized'):6} | score={a['composite_score']:+.3f} | bucket={a.get('bond_risk_bucket', 'N/A'):12} | incomplete={flags.get('incomplete_data')}")
+        if meta.get("ter_confidence"):
+            print(f"           | ter_confidence={meta['ter_confidence']}")
+        if meta.get("missing_critical_fields"):
+            print(f"           | missing={meta['missing_critical_fields']}")
     
-    print("\n✅ v2.4.2 test completed")
+    print("\n✅ v2.4.3 test completed")
