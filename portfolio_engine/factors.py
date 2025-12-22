@@ -1,33 +1,26 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.4.1 — SEUL MOTEUR D'ALPHA
+FactorScorer v2.4.2 — SEUL MOTEUR D'ALPHA
 =========================================
 
+v2.4.2 Changes (ChatGPT Audit Round 2):
+- FIX CRITIQUE: bond_risk_bucket basé sur RAW (0-100), pas sur z-score
+- FIX: TER strict - rejet si heuristique incertaine (+ flag pour debug)
+- FIX: Bonds strict - rejet/pénalité sévère si duration/vol manquantes
+- NOUVEAU: bond_quality_raw stocké séparément de bond_quality (z-score)
+- NOUVEAU: _ter_confidence flag pour traçabilité
+
 v2.4.1 Changes (ChatGPT Audit Fixes):
-- FIX A: TER validation stricte avec heuristique décimal vs pourcentage
-- FIX B: Crypto vol - ajout vol_30d_annual_pct dans la cascade
-- FIX C: Bonds defaults → warnings explicites (duration/vol)
-- FIX D: Tactical context z-score PAR CLASSE (equity/etf séparés)
+- TER validation stricte avec heuristique décimal vs pourcentage
+- Crypto vol - ajout vol_30d_annual_pct dans cascade
+- Bonds defaults → warnings explicites
+- Tactical context z-score PAR CLASSE
 
 v2.4.0 Changes (Z-Score par Classe + Data Contract Strict):
-- CORRECTIF CRITIQUE: Z-score calculé PAR CLASSE (equity/etf/bond/crypto)
-  Avant: crypto (vol 80%) et bonds (vol 5%) comparés ensemble → biais
-  Après: chaque classe a sa propre distribution N(0,1)
-- SUPPRESSION: Tous les defaults silencieux (vol=20, score=50, TER=75, etc.)
-- NOUVEAU: Pénalités explicites pour données manquantes
-- NOUVEAU: Poids renormalisés par catégorie (facteurs non applicables exclus)
-- NOUVEAU: normalize_category() pour standardiser les catégories
-- NOUVEAU: FACTORS_BY_CATEGORY définit les facteurs applicables par classe
-- NOUVEAU: _scoring_meta dans chaque asset pour traçabilité
-
-v2.3.1 Changes (P1-10 Stable Sort):
-- rank_assets() utilise stable_sort_assets() avec tie-breaker par symbol
-
-v2.3 Changes (Tactical Context Integration):
-- compute_factor_tactical_context() intégrant sector/region/macro trends
-
-v2.2 Changes (Bond Risk Factors):
-- add_bond_risk_factors() pour enrichir DataFrames bonds
+- Z-score calculé PAR CLASSE (equity/etf/bond/crypto)
+- Suppression defaults silencieux
+- Pénalités explicites pour données manquantes
+- Poids renormalisés par catégorie
 
 Facteurs:
 - momentum: 45% (Agressif) → 20% (Stable) — Driver principal
@@ -47,7 +40,7 @@ surperforment à horizon 1-3 ans."
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Tuple
 from dataclasses import dataclass
 from collections import defaultdict
 import logging
@@ -135,6 +128,14 @@ MISSING_LIQUIDITY_PENALTY = {
     "bond": 100_000_000,
     "crypto": 10_000_000,
     "other": 50_000_000,
+}
+
+# v2.4.2: Seuils pour bond_risk_bucket (basés sur RAW 0-100, pas z-score)
+BOND_BUCKET_THRESHOLDS = {
+    "defensive": 75,  # >= 75 = defensive
+    "core": 55,       # >= 55 = core
+    "risky": 35,      # >= 35 = risky
+    # < 35 = very_risky
 }
 
 
@@ -468,43 +469,132 @@ def _is_missing(value) -> bool:
     return False
 
 
-# ============= v2.4.1 TER VALIDATION =============
+# ============= v2.4.2 TER VALIDATION STRICTE =============
 
-def _normalize_ter(ter_raw: float, symbol: str = "?") -> float:
+def _normalize_ter(ter_raw: float, symbol: str = "?") -> Tuple[Optional[float], str]:
     """
-    v2.4.1: Normalise le TER avec heuristique robuste.
+    v2.4.2: Normalise le TER avec validation STRICTE.
     
-    Gère les ambiguïtés:
-    - 0.0009 → 0.09% (décimal, source API)
-    - 0.09 → 0.09% (déjà en %)
-    - 0.9 → 0.9% (déjà en %)
-    - 9 → 9% (déjà en %, mais suspect)
+    Returns:
+        (ter_pct, confidence) où:
+        - ter_pct: TER en % (ex: 0.09 pour 0.09%), ou None si invalide
+        - confidence: "high" | "medium" | "low" | "rejected"
     
-    Returns: TER en pourcentage (ex: 0.09 pour 0.09%)
+    Règles:
+    - Si ter_raw dans [0.01, 3.0] → high confidence (déjà en %)
+    - Si ter_raw dans [0.0001, 0.05] → medium confidence (décimal → *100)
+    - Sinon → rejected (trop ambigu)
     """
     if _is_missing(ter_raw) or ter_raw <= 0:
-        return None
+        return None, "missing"
     
     ter = fnum(ter_raw)
     
-    # Heuristique: si < 0.05, probablement en décimal (0.0009 = 0.09%)
-    # Les ETF ont rarement un TER > 5%
-    if ter < 0.05:
-        # Probablement décimal: 0.0009 → 0.09
+    # Cas 1: Déjà en % (0.01% à 3%)
+    if 0.01 <= ter <= 3.0:
+        return ter, "high"
+    
+    # Cas 2: Probablement décimal (0.0001 à 0.05 → 0.01% à 5%)
+    if 0.0001 <= ter < 0.05:
         ter_pct = ter * 100
+        if 0.01 <= ter_pct <= 3.0:
+            return ter_pct, "medium"
+        else:
+            logger.warning(f"TER ambigu pour {symbol}: raw={ter_raw} → {ter_pct:.4f}% (hors range)")
+            return ter_pct, "low"
+    
+    # Cas 3: Valeur suspecte
+    if ter > 3.0:
+        logger.warning(f"TER rejeté pour {symbol}: {ter:.2f}% > 3% (trop élevé)")
+        return None, "rejected"
+    
+    if ter < 0.0001:
+        logger.warning(f"TER rejeté pour {symbol}: {ter:.6f} < 0.0001 (trop bas)")
+        return None, "rejected"
+    
+    return None, "rejected"
+
+
+# ============= v2.4.2 BOND QUALITY RAW =============
+
+def _compute_bond_quality_raw(
+    credit_score: float,
+    duration: Optional[float],
+    vol: Optional[float],
+    symbol: str = "?"
+) -> Tuple[float, Dict[str, Any]]:
+    """
+    v2.4.2: Calcule la qualité obligataire RAW (0-100).
+    
+    Returns:
+        (quality_raw_0_100, metadata)
+    
+    Metadata contient:
+        - missing_fields: liste des champs manquants
+        - penalty_applied: bool
+        - components: détail des scores
+    """
+    metadata = {
+        "missing_fields": [],
+        "penalty_applied": False,
+        "components": {},
+    }
+    
+    # Score crédit (0-1)
+    f_credit = min(1.0, max(0.0, credit_score / 100.0))
+    metadata["components"]["credit"] = round(f_credit * 100, 1)
+    
+    # Score duration (0-1, plus court = mieux)
+    D_MAX = 10.0
+    if _is_missing(duration):
+        metadata["missing_fields"].append("duration")
+        # v2.4.2: PÉNALITÉ SÉVÈRE au lieu de default neutre
+        f_dur = 0.3  # Équivalent ~7Y (pénalisant)
+        metadata["penalty_applied"] = True
+        logger.warning(f"bond_quality: missing duration for {symbol} → severe penalty (f_dur=0.3)")
     else:
-        # Probablement déjà en %: 0.09 → 0.09
-        ter_pct = ter
+        dur = fnum(duration)
+        f_dur = 1.0 - min(1.0, max(0.0, dur / D_MAX))
+    metadata["components"]["duration"] = round(f_dur * 100, 1)
     
-    # Validation: TER raisonnable entre 0 et 3%
-    if ter_pct > 3.0:
-        logger.warning(f"TER suspect pour {symbol}: {ter_pct:.2f}% (raw={ter_raw}) → capped à 3%")
-        ter_pct = 3.0
+    # Score volatilité (0-1, plus bas = mieux)
+    V_MAX = 12.0
+    if _is_missing(vol):
+        metadata["missing_fields"].append("vol")
+        # v2.4.2: PÉNALITÉ SÉVÈRE
+        f_vol = 0.3  # Équivalent ~8.4% vol (pénalisant)
+        metadata["penalty_applied"] = True
+        logger.warning(f"bond_quality: missing vol for {symbol} → severe penalty (f_vol=0.3)")
+    else:
+        v = fnum(vol)
+        f_vol = 1.0 - min(1.0, max(0.0, v / V_MAX))
+    metadata["components"]["vol"] = round(f_vol * 100, 1)
     
-    if ter_pct < 0.01:
-        logger.warning(f"TER très bas pour {symbol}: {ter_pct:.4f}% (raw={ter_raw})")
+    # Combinaison pondérée
+    quality_raw = 0.50 * f_credit + 0.25 * f_dur + 0.25 * f_vol
+    quality_raw_0_100 = round(quality_raw * 100, 1)
     
-    return ter_pct
+    return quality_raw_0_100, metadata
+
+
+def _get_bond_risk_bucket(quality_raw_0_100: float) -> str:
+    """
+    v2.4.2: Détermine le bucket de risque basé sur la qualité RAW (pas z-score).
+    
+    Seuils:
+    - >= 75: defensive
+    - >= 55: core
+    - >= 35: risky
+    - < 35: very_risky
+    """
+    if quality_raw_0_100 >= BOND_BUCKET_THRESHOLDS["defensive"]:
+        return "defensive"
+    elif quality_raw_0_100 >= BOND_BUCKET_THRESHOLDS["core"]:
+        return "core"
+    elif quality_raw_0_100 >= BOND_BUCKET_THRESHOLDS["risky"]:
+        return "risky"
+    else:
+        return "very_risky"
 
 
 # ============= BUFFETT QUALITY INTEGRATION =============
@@ -611,22 +701,26 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.4.1 =============
+# ============= FACTOR SCORER v2.4.2 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
     
+    v2.4.2 — FIXES CHATGPT AUDIT ROUND 2:
+    - bond_risk_bucket basé sur RAW (0-100), pas sur z-score
+    - TER strict: rejet si heuristique incertaine
+    - Bonds strict: pénalité sévère si duration/vol manquantes
+    - bond_quality_raw stocké séparément
+    
     v2.4.1 — FIXES CHATGPT AUDIT:
-    - TER: validation stricte avec _normalize_ter()
-    - Crypto: vol_30d_annual_pct ajouté dans cascade
-    - Bonds: warnings explicites pour duration/vol manquants
-    - Tactical: z-score PAR CLASSE (equity/etf séparés)
+    - TER validation stricte
+    - Crypto vol_30d_annual_pct
+    - Tactical z-score par classe
     
     v2.4.0 — CORRECTIFS MAJEURS:
-    - Z-score PAR CLASSE (equity/etf/bond/crypto séparés)
-    - Suppression de TOUS les defaults silencieux
-    - Pénalités explicites pour données manquantes
+    - Z-score PAR CLASSE
+    - Suppression defaults silencieux
     - Poids renormalisés par catégorie
     """
     
@@ -639,6 +733,9 @@ class FactorScorer:
         self._sector_lookup = None
         self._country_lookup = None
         self._macro_tilts = None
+        
+        # v2.4.2: Stockage des qualités RAW pour bonds (pour bucket)
+        self._bond_quality_raw: Dict[int, float] = {}
         
         if self.market_context:
             self._build_lookups()
@@ -674,20 +771,15 @@ class FactorScorer:
     ) -> np.ndarray:
         """
         v2.4: Z-score PAR CLASSE d'actifs.
-        
-        Corrige le biais cross-asset où crypto (vol 80%) et bonds (vol 5%)
-        étaient comparés dans le même z-score.
         """
         n = len(values)
         result = np.zeros(n)
         
-        # Grouper par catégorie normalisée
         by_cat: Dict[str, List[int]] = defaultdict(list)
         for i, cat in enumerate(categories):
             norm_cat = normalize_category(cat)
             by_cat[norm_cat].append(i)
         
-        # Z-score par groupe
         for cat, indices in by_cat.items():
             if len(indices) < min_samples:
                 for i in indices:
@@ -715,11 +807,7 @@ class FactorScorer:
         return result
     
     def compute_factor_momentum(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur momentum: combinaison perf 1m/3m/YTD.
-        
-        v2.4: Z-score PAR CLASSE
-        """
+        """Facteur momentum: combinaison perf 1m/3m/YTD."""
         n = len(assets)
         
         p1m = [fnum(a.get("perf_1m")) for a in assets]
@@ -740,7 +828,6 @@ class FactorScorer:
             p24h = [fnum(a.get("perf_24h")) for a in assets]
             raw = [0.7 * p7d[i] + 0.3 * p24h[i] for i in range(n)]
         
-        # Bonus Sharpe pour crypto
         for i, a in enumerate(assets):
             category = a.get("category", "").lower()
             if category == "crypto":
@@ -748,16 +835,11 @@ class FactorScorer:
                 sharpe_bonus = max(-20, min(20, sharpe * 10))
                 raw[i] += sharpe_bonus
         
-        # v2.4: Z-score PAR CLASSE
         categories = [a.get("category", "other") for a in assets]
         return self._zscore_by_class(raw, categories)
     
     def compute_factor_quality_fundamental(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur qualité fondamentale: Score Buffett.
-        
-        v2.4: Applicable uniquement aux ACTIONS, z-score sur actions seulement.
-        """
+        """Facteur qualité fondamentale: Score Buffett."""
         scores = []
         categories = []
         
@@ -771,7 +853,6 @@ class FactorScorer:
             else:
                 scores.append(None)
         
-        # Z-score uniquement sur les actions
         result = np.zeros(len(assets))
         equity_indices = [i for i, s in enumerate(scores) if s is not None]
         
@@ -786,11 +867,7 @@ class FactorScorer:
         return result
     
     def compute_factor_low_vol(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur low volatility: inverse de la vol.
-        
-        v2.4.1 FIX B: Ajout vol_30d_annual_pct pour crypto
-        """
+        """Facteur low volatility avec vol_30d_annual_pct pour crypto."""
         raw_vol = []
         categories = []
         
@@ -798,18 +875,16 @@ class FactorScorer:
             cat = normalize_category(a.get("category", "other"))
             categories.append(cat)
             
-            # v2.4.1: Ajout vol_30d_annual_pct pour crypto
             vol = (
                 a.get("vol_3y") or 
                 a.get("vol30") or 
                 a.get("vol_annual") or 
                 a.get("vol") or 
                 a.get("vol_pct") or
-                a.get("vol_30d_annual_pct")  # FIX B: clé crypto
+                a.get("vol_30d_annual_pct")
             )
             
             if _is_missing(vol):
-                # v2.4: Pénalité au lieu de default 20
                 vol = MISSING_VOL_PENALTY.get(cat, 30.0)
                 logger.debug(f"low_vol: missing vol for {a.get('id', a.get('symbol', '?'))} → penalty {vol}")
             else:
@@ -817,7 +892,6 @@ class FactorScorer:
             
             raw_vol.append(vol)
         
-        # v2.4: Z-score PAR CLASSE puis inverser
         zscores = self._zscore_by_class(raw_vol, categories)
         return -zscores
     
@@ -825,7 +899,7 @@ class FactorScorer:
         """
         Facteur coût/rendement pour ETF et Bonds.
         
-        v2.4.1 FIX A: Utilise _normalize_ter() pour validation stricte
+        v2.4.2: TER validation stricte avec confidence tracking.
         """
         scores = []
         categories = []
@@ -841,16 +915,20 @@ class FactorScorer:
             fund_type = str(a.get("fund_type", "")).lower()
             symbol = a.get("symbol", a.get("id", "?"))
             
-            # v2.4.1 FIX A: TER avec validation stricte
+            # v2.4.2: TER avec validation stricte
             ter_raw = a.get("total_expense_ratio")
-            ter_pct = _normalize_ter(ter_raw, symbol)
+            ter_pct, confidence = _normalize_ter(ter_raw, symbol)
             
-            if ter_pct is None:
-                # TER manquant → pénalité
-                ter_score = 30.0
-                logger.debug(f"cost_efficiency: missing TER for {symbol} → penalty 30")
+            if ter_pct is None or confidence == "rejected":
+                # TER invalide → pénalité sévère
+                ter_score = 20.0
+                logger.debug(f"cost_efficiency: TER {confidence} for {symbol} → severe penalty 20")
+            elif confidence == "low":
+                # TER incertain → pénalité modérée
+                ter_score = max(0, 100 - ter_pct * 33) * 0.7  # 30% penalty
+                logger.debug(f"cost_efficiency: TER low confidence for {symbol} → 30% penalty")
             else:
-                # Score: 100 - (TER% * 33) → 0.09% = 97, 1% = 67, 3% = 0
+                # TER valide
                 ter_score = max(0, 100 - ter_pct * 33)
             
             yield_ttm = fnum(a.get("yield_ttm", 0))
@@ -864,7 +942,6 @@ class FactorScorer:
             
             scores.append(final_score)
         
-        # Z-score uniquement sur ETF/Bonds
         result = np.zeros(len(assets))
         valid_indices = [i for i, s in enumerate(scores) if s is not None]
         
@@ -881,12 +958,15 @@ class FactorScorer:
         """
         Facteur qualité obligataire.
         
-        v2.4.1 FIX C: Warnings explicites au lieu de defaults silencieux
+        v2.4.2: Stocke bond_quality_raw séparément pour bucket.
         """
         scores = []
+        raw_scores = []  # v2.4.2: RAW pour bucket
         categories = []
         
-        for a in assets:
+        self._bond_quality_raw = {}  # Reset
+        
+        for idx, a in enumerate(assets):
             category = normalize_category(a.get("category", ""))
             fund_type = str(a.get("fund_type", "")).lower()
             categories.append(category)
@@ -896,6 +976,7 @@ class FactorScorer:
             
             if not is_bond:
                 scores.append(None)
+                raw_scores.append(None)
                 continue
             
             # Score crédit
@@ -906,38 +987,25 @@ class FactorScorer:
                     credit_raw = _rating_to_score(rating)
                 
                 if _is_missing(credit_raw) or pd.isna(credit_raw) or credit_raw <= 0:
-                    # v2.4.1 FIX C: Warning explicite
-                    credit_raw = 35.0  # Équivalent BB
+                    credit_raw = 35.0  # Pénalité BB
                     logger.warning(f"bond_quality: missing credit for {symbol} → penalty 35 (BB)")
             
-            f_credit = min(1.0, max(0.0, fnum(credit_raw) / 100.0))
-            
-            # Score duration
-            D_MAX = 10.0
+            # v2.4.2: Calcul RAW avec pénalités sévères
             dur = a.get("bond_avg_duration")
-            if _is_missing(dur):
-                # v2.4.1 FIX C: Warning explicite
-                dur = 5.0
-                logger.warning(f"bond_quality: missing duration for {symbol} → default 5Y")
-            else:
-                dur = fnum(dur)
-            f_dur = 1.0 - min(1.0, max(0.0, dur / D_MAX))
-            
-            # Score volatilité
-            V_MAX = 12.0
             vol = a.get("vol_pct") or a.get("vol_3y")
-            if _is_missing(vol):
-                # v2.4.1 FIX C: Warning explicite
-                vol = 6.0
-                logger.warning(f"bond_quality: missing vol for {symbol} → default 6%")
-            else:
-                vol = fnum(vol)
-            f_vol = 1.0 - min(1.0, max(0.0, vol / V_MAX))
             
-            bond_quality = 0.50 * f_credit + 0.25 * f_dur + 0.25 * f_vol
-            scores.append(bond_quality * 100)
+            quality_raw, metadata = _compute_bond_quality_raw(
+                credit_score=fnum(credit_raw),
+                duration=dur,
+                vol=vol,
+                symbol=symbol
+            )
+            
+            raw_scores.append(quality_raw)
+            self._bond_quality_raw[idx] = quality_raw  # v2.4.2: Stocké pour bucket
+            scores.append(quality_raw)
         
-        # Z-score uniquement sur les Bonds
+        # Z-score sur les RAW scores
         result = np.zeros(len(assets))
         valid_indices = [i for i, s in enumerate(scores) if s is not None]
         
@@ -952,26 +1020,21 @@ class FactorScorer:
         return result
     
     def compute_factor_tactical_context(self, assets: List[dict]) -> np.ndarray:
-        """
-        v2.3: Facteur contexte tactique.
-        
-        v2.4.1 FIX D: Z-score PAR CLASSE (equity/etf séparés)
-        """
+        """Facteur contexte tactique avec z-score par classe."""
         if not self._sector_lookup and not self._country_lookup:
             return np.zeros(len(assets))
         
         scores = []
-        categories = []  # v2.4.1: Pour z-score par classe
+        categories = []
         
         for a in assets:
             sector_top = a.get("sector_top", "")
             country_top = a.get("country_top", "")
-            categories.append(a.get("category", "other"))  # v2.4.1
+            categories.append(a.get("category", "other"))
             
             components = []
             weights = []
             
-            # Sector Trend
             if self._sector_lookup and sector_top:
                 sector_key = SECTOR_KEY_MAPPING.get(sector_top.strip())
                 if sector_key and sector_key in self._sector_lookup:
@@ -984,7 +1047,6 @@ class FactorScorer:
                     components.append(f_sector)
                     weights.append(0.4)
             
-            # Region Trend
             if self._country_lookup and country_top:
                 norm_country = COUNTRY_NORMALIZATION.get(country_top.strip(), country_top.strip())
                 if norm_country in self._country_lookup:
@@ -997,7 +1059,6 @@ class FactorScorer:
                     components.append(f_region)
                     weights.append(0.3)
             
-            # Macro Alignment
             if self._macro_tilts:
                 f_macro = 0.5
                 if sector_top:
@@ -1021,15 +1082,10 @@ class FactorScorer:
             
             scores.append(tactical_score * 100)
         
-        # v2.4.1 FIX D: Z-score PAR CLASSE au lieu de mélangé
         return self._zscore_by_class(scores, categories)
     
     def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
-        """
-        Facteur liquidité: log(market_cap ou AUM).
-        
-        v2.4: Suppression default 1, pénalité explicite.
-        """
+        """Facteur liquidité: log(market_cap ou AUM)."""
         raw_liq = []
         categories = []
         
@@ -1074,10 +1130,7 @@ class FactorScorer:
         """
         Calcule le score composite pour chaque actif.
         
-        v2.4 CHANGEMENTS MAJEURS:
-        - Z-score PAR CLASSE
-        - Poids renormalisés par catégorie
-        - Plus de defaults silencieux
+        v2.4.2: bond_risk_bucket basé sur RAW, pas z-score.
         """
         if not assets:
             return assets
@@ -1096,7 +1149,6 @@ class FactorScorer:
             "mean_reversion": self.compute_factor_mean_reversion(assets),
         }
         
-        # v2.4: Score composite avec POIDS RENORMALISÉS par catégorie
         composite = np.zeros(n)
         
         for i, asset in enumerate(assets):
@@ -1127,27 +1179,25 @@ class FactorScorer:
             asset["composite_score"] = round(float(composite[i]), 3)
             asset["score"] = asset["composite_score"]
             
-            # v2.4: Metadata de scoring
             cat = categories[i]
             asset["_scoring_meta"] = {
                 "category_normalized": cat,
                 "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
-                "scoring_version": "v2.4.1",
+                "scoring_version": "v2.4.2",
             }
             
             if cat == "equity":
                 asset["buffett_score"] = compute_buffett_quality_score(asset)
             
-            if cat == "bond":
-                bq = factors["bond_quality"][i]
-                if bq > 0.8:
-                    asset["bond_risk_bucket"] = "defensive"
-                elif bq > 0:
-                    asset["bond_risk_bucket"] = "core"
-                elif bq > -0.8:
-                    asset["bond_risk_bucket"] = "risky"
+            # v2.4.2 FIX CRITIQUE: bond_risk_bucket basé sur RAW, pas z-score
+            if cat == "bond" or "bond" in str(asset.get("fund_type", "")).lower():
+                if i in self._bond_quality_raw:
+                    raw_quality = self._bond_quality_raw[i]
+                    asset["bond_quality_raw"] = raw_quality
+                    asset["bond_quality_z"] = factors["bond_quality"][i]
+                    asset["bond_risk_bucket"] = _get_bond_risk_bucket(raw_quality)
                 else:
-                    asset["bond_risk_bucket"] = "very_risky"
+                    asset["bond_risk_bucket"] = "unknown"
             
             ytd = fnum(asset.get("ytd"))
             p1m = fnum(asset.get("perf_1m"))
@@ -1168,7 +1218,7 @@ class FactorScorer:
                 )
         
         logger.info(
-            f"Scores v2.4.1 calculés: {n} actifs (profil {self.profile}) | "
+            f"Scores v2.4.2 calculés: {n} actifs (profil {self.profile}) | "
             f"Score moyen global: {composite.mean():.3f}"
         )
         
@@ -1229,11 +1279,11 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.4.1):",
+        "Comparaison des poids factoriels par profil (v2.4.2):",
         "",
         "PARI CENTRAL: Quality + Momentum + Contexte tactique surperforment à horizon 1-3 ans.",
         "",
-        "v2.4.1 FIXES: TER validation + crypto vol + bonds warnings + tactical z-score par classe",
+        "v2.4.2 FIXES: bond_risk_bucket sur RAW + TER strict + bonds pénalités sévères",
         ""
     ]
     
@@ -1287,46 +1337,38 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
 if __name__ == "__main__":
     print(compare_factor_profiles())
     print("\n" + "=" * 60)
-    print("Test v2.4.1: Corrections ChatGPT audit...")
+    print("Test v2.4.2: bond_risk_bucket sur RAW...")
     
     # Test TER normalization
     print("\n--- Test TER normalization ---")
     test_cases = [
-        (0.0009, "ETF_A"),  # Décimal API
-        (0.09, "ETF_B"),    # Déjà en %
-        (0.9, "ETF_C"),     # 0.9%
-        (5.0, "ETF_D"),     # 5% (suspect mais valide)
+        (0.0009, "ETF_A"),  # Décimal API → medium
+        (0.09, "ETF_B"),    # Déjà en % → high
+        (0.9, "ETF_C"),     # 0.9% → high
+        (5.0, "ETF_D"),     # 5% → rejected
+        (0.00001, "ETF_E"), # Trop bas → rejected
     ]
     for ter_raw, symbol in test_cases:
-        result = _normalize_ter(ter_raw, symbol)
-        print(f"  {symbol}: raw={ter_raw} → {result:.4f}%")
+        result, confidence = _normalize_ter(ter_raw, symbol)
+        print(f"  {symbol}: raw={ter_raw} → {result}% ({confidence})")
     
-    # Actifs de test multi-classes
-    test_assets = [
-        # Actions
-        {"symbol": "AAPL", "category": "equity", "sector": "Technology", "ytd": 28, "perf_1m": 5, "perf_3m": 12, "vol_3y": 28, "roe": 147, "roic": 56, "market_cap": 3e12},
-        {"symbol": "JNJ", "category": "equity", "sector": "Healthcare", "ytd": 8, "perf_1m": 2, "perf_3m": 5, "vol_3y": 18, "roe": 23, "roic": 15, "market_cap": 400e9},
-        # ETF
-        {"symbol": "SPY", "category": "etf", "sector_top": "Technology", "country_top": "United States", "ytd": 26, "perf_1m": 3, "perf_3m": 10, "vol_pct": 18, "total_expense_ratio": 0.0009, "aum_usd": 500e9},
-        {"symbol": "AGG", "category": "bond", "fund_type": "bond", "ytd": 1.5, "perf_1m": 0.3, "vol_pct": 4.2, "total_expense_ratio": 0.03, "bond_credit_score": 87, "bond_avg_duration": 3.75, "yield_ttm": 4.5, "aum_usd": 90e9},
-        # Crypto avec vol_30d_annual_pct
-        {"symbol": "BTC", "category": "crypto", "ytd": 120, "perf_1m": 15, "perf_7d": 8, "vol_30d_annual_pct": 65, "sharpe_ratio": 1.2, "market_cap": 1.5e12},
-        {"symbol": "ETH", "category": "crypto", "ytd": 80, "perf_1m": 10, "perf_7d": 5, "vol_30d_annual_pct": 75, "sharpe_ratio": 0.9, "market_cap": 400e9},
+    # Test bond_risk_bucket basé sur RAW
+    print("\n--- Test bond_risk_bucket sur RAW ---")
+    test_bonds = [
+        {"symbol": "AGG", "category": "bond", "fund_type": "bond", "bond_credit_score": 90, "bond_avg_duration": 3.5, "vol_pct": 4.0, "ytd": 2, "perf_1m": 0.5},
+        {"symbol": "HYG", "category": "bond", "fund_type": "bond", "bond_credit_score": 45, "bond_avg_duration": 4.0, "vol_pct": 8.0, "ytd": 5, "perf_1m": 1.0},
+        {"symbol": "TLT", "category": "bond", "fund_type": "bond", "bond_credit_score": 95, "bond_avg_duration": 17.0, "vol_pct": 15.0, "ytd": -5, "perf_1m": -1.0},
+        {"symbol": "MISSING", "category": "bond", "fund_type": "bond", "bond_credit_score": 80, "ytd": 1, "perf_1m": 0.2},  # duration/vol missing
     ]
     
-    scorer = FactorScorer("Modéré")
-    scored = scorer.compute_scores(test_assets)
+    scorer = FactorScorer("Stable")
+    scored_bonds = scorer.compute_scores(test_bonds)
     
-    print("\n--- Résultats par catégorie ---")
-    for cat in ["equity", "etf", "bond", "crypto"]:
-        cat_assets = [a for a in scored if normalize_category(a["category"]) == cat]
-        if cat_assets:
-            scores = [a["composite_score"] for a in cat_assets]
-            print(f"  {cat}: n={len(cat_assets)}, mean={np.mean(scores):.3f}, std={np.std(scores):.3f}")
+    print("\nBonds avec bucket basé sur RAW:")
+    for b in scored_bonds:
+        raw = b.get("bond_quality_raw", "N/A")
+        z = b.get("bond_quality_z", "N/A")
+        bucket = b.get("bond_risk_bucket", "N/A")
+        print(f"  {b['symbol']:8} | RAW={raw:>5} | Z={z:>+6.2f} | bucket={bucket}")
     
-    print("\n--- Top scores ---")
-    for a in sorted(scored, key=lambda x: x["composite_score"], reverse=True):
-        meta = a.get("_scoring_meta", {})
-        print(f"  {a['symbol']:6} | score: {a['composite_score']:+.3f} | cat: {meta.get('category_normalized', '?')}")
-    
-    print("\n✅ v2.4.1 test completed")
+    print("\n✅ v2.4.2 test completed")
