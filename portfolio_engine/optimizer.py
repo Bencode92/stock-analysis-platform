@@ -174,26 +174,6 @@ EIGEN_CLIPPED_PCT_WARNING_THRESHOLD = 20.0   # > 20% = données insuffisantes
 # P1-2: Shrinkage Ledoit-Wolf
 SHRINKAGE_ENABLED = True  # Activer/désactiver shrinkage
 CONDITION_NUMBER_TARGET = 10000.0  # Objectif après shrinkage
-# ============= P0 PARTNER: TURNOVER CONTROL =============
-
-# Pénalité turnover dans objectif SLSQP (lambda)
-TURNOVER_PENALTY_LAMBDA = {
-    "Agressif": 0.05,   # Faible pénalité (tolérance au changement)
-    "Modéré": 0.10,     # Pénalité modérée
-    "Stable": 0.20,     # Forte pénalité (stabilité prioritaire)
-}
-
-# Contrainte dure: turnover max par rebalancement
-MAX_TURNOVER_PCT = {
-    "Agressif": 30.0,   # 30% max turnover
-    "Modéré": 25.0,     # 25% max turnover
-    "Stable": 15.0,     # 15% max turnover (très conservateur)
-}
-
-# Turnover = 0.5 * sum(|w_new - w_old|) (one-way)
-def compute_turnover(weights_new: np.ndarray, weights_old: np.ndarray) -> float:
-    """Calcule le turnover one-way entre deux allocations."""
-    return 0.5 * np.sum(np.abs(weights_new - weights_old))
 
 
 # ============= P1-2 v2: DIAGONAL SHRINKAGE (NEW) =============
@@ -479,9 +459,6 @@ class ProfileConstraints:
     max_region: float = 50.0
     min_assets: int = 10
     max_assets: int = 18
-   # v6.21 P0 PARTNER: Turnover control
-    max_turnover: float = 25.0       # Max turnover % par rebalancement
-    turnover_penalty: float = 0.10   # Lambda pénalité dans objectif
 
 
 # v6.10 FIX: vol_target Stable aligné sur réalité (6% au lieu de 8%)
@@ -493,26 +470,20 @@ PROFILES = {
         crypto_max=10.0, 
         bonds_min=5.0,
         max_sector=35.0,
-        max_turnover=30.0,        # P0 PARTNER
-        turnover_penalty=0.05,    # P0 PARTNER
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
         vol_target=12.0, 
         vol_tolerance=3.0,
         crypto_max=5.0, 
-        bonds_min=15.0,
-        max_turnover=25.0,        # P0 PARTNER
-        turnover_penalty=0.10,    # P0 PARTNER
+        bonds_min=15.0
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
         vol_target=6.0,
         vol_tolerance=3.0,
         crypto_max=0.0, 
-        bonds_min=35.0,
-        max_turnover=15.0,        # P0 PARTNER
-        turnover_penalty=0.20,    # P0 PARTNER
+        bonds_min=35.0
     ),
 }
 
@@ -1461,19 +1432,6 @@ class PortfolioOptimizer:
                     def bucket_max(w, idx=role_idx, max_val=adjusted_max):
                         return max_val - np.sum(w[idx])
                     constraints.append({"type": "ineq", "fun": bucket_max})
-      # 9. P0 PARTNER: Contrainte turnover max
-        # Note: prev_weights_array doit être passé via closure ou attribut
-        # Ici on utilise une approche simplifiée via self._prev_weights_array
-        if hasattr(self, '_prev_weights_array') and self._prev_weights_array is not None:
-            max_to = profile.max_turnover / 100.0
-            prev_w = self._prev_weights_array
-            
-            def turnover_constraint(w, prev=prev_w, max_val=max_to):
-                turnover = 0.5 * np.sum(np.abs(w - prev))
-                return max_val - turnover  # >= 0 pour respecter
-            
-            constraints.append({"type": "ineq", "fun": turnover_constraint})
-            logger.info(f"P0 PARTNER: Added turnover constraint <= {profile.max_turnover}%")
         
         return constraints
     
@@ -1522,8 +1480,7 @@ class PortfolioOptimizer:
         self,
         candidates: List[Asset],
         profile: ProfileConstraints,
-        cov: Optional[np.ndarray] = None,
-        prev_weights: Optional[Dict[str, float]] = None  # P0 PARTNER
+        cov: Optional[np.ndarray] = None
     ) -> Dict[str, float]:
         """Allocation fallback VOL-AWARE avec diversification bonds."""
         logger.warning(f"Utilisation du fallback vol-aware pour {profile.name}")
@@ -1665,16 +1622,8 @@ class PortfolioOptimizer:
         
         # === Ajuster pour vol_target ===
         allocation = self._adjust_for_vol_target(allocation, candidates, profile, cov)
-       # === P1 FIX v6.19: Enforce sector caps post-normalization ===
+        # === P1 FIX v6.19: Enforce sector caps post-normalization ===
         allocation = self._enforce_sector_caps(allocation, candidates, profile)
-        
-        # === P1 FIX v6.21: FORCE BONDS MINIMUM (après toutes modifications) ===
-        allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
-        
-        
-        # P0 PARTNER: Respecter turnover max en fallback
-        if prev_weights is not None:
-            allocation = self._clip_turnover(allocation, prev_weights, profile.max_turnover, candidates)
         
         return allocation
     
@@ -1755,93 +1704,23 @@ class PortfolioOptimizer:
         logger.info(f"Vol after adjustment: {current_vol:.1f}% (target={vol_target:.1f}%)")
         
         return allocation
-    def _clip_turnover(
-        self,
-        allocation: Dict[str, float],
-        prev_weights: Dict[str, float],
-        max_turnover: float,
-        candidates: List[Asset]
-    ) -> Dict[str, float]:
-        """
-        P0 PARTNER: Clip allocation pour respecter max_turnover.
-        
-        Si turnover > max, on blend vers prev_weights.
-        """
-        # Calculer turnover actuel
-        all_ids = set(allocation.keys()) | set(prev_weights.keys())
-        turnover = 0.5 * sum(
-            abs(allocation.get(aid, 0) - prev_weights.get(aid, 0))
-            for aid in all_ids
-        )
-        
-        if turnover <= max_turnover:
-            return allocation
-        
-        # Blend factor: combien de prev_weights garder
-        # turnover_blend = alpha * prev + (1-alpha) * new
-        # On veut: 0.5 * sum(|alpha*prev + (1-alpha)*new - prev|) = max_turnover
-        # = 0.5 * (1-alpha) * sum(|new - prev|) = max_turnover
-        # => alpha = 1 - max_turnover / turnover
-        alpha = 1.0 - (max_turnover / turnover)
-        alpha = max(0, min(1, alpha))
-        
-        blended = {}
-        for aid in all_ids:
-            w_new = allocation.get(aid, 0)
-            w_old = prev_weights.get(aid, 0)
-            blended[aid] = round(alpha * w_old + (1 - alpha) * w_new, 2)
-        
-        # Normaliser à 100%
-        total = sum(blended.values())
-        if total > 0:
-            blended = {k: round(v * 100 / total, 2) for k, v in blended.items()}
-        
-        # Retirer les poids < 0.5%
-        blended = {k: v for k, v in blended.items() if v >= 0.5}
-        
-        logger.warning(
-            f"P0 PARTNER: Turnover clipped from {turnover:.1f}% to {max_turnover:.1f}% "
-            f"(blend alpha={alpha:.2f})"
-        )
-        
-        return blended
+    
     def optimize(
         self, 
         candidates: List[Asset], 
-        profile: ProfileConstraints,
-        prev_weights: Optional[Dict[str, float]] = None  # P0 PARTNER: poids précédents
+        profile: ProfileConstraints
     ) -> Tuple[Dict[str, float], dict]:
         """
         Optimisation mean-variance avec covariance hybride.
         
-        v6.21 P0 PARTNER: Ajout turnover control (prev_weights)
         v6.18.2: FIX normalisation 100% dans _adjust_for_vol_target()
         v6.15 P1-6: Diagnostics enrichis avec KPIs covariance.
         v6.14 P0-2: Tie-breaker (score, id) pour tri déterministe partout.
         v6.13: STABLE utilise le fallback heuristique (skip SLSQP).
-        
-        Args:
-            candidates: Liste des actifs candidats
-            profile: Contraintes du profil
-            prev_weights: Poids précédents {asset_id: weight%} pour contrôle turnover
-                         Si None, pas de contrainte turnover (première allocation)
         """
         n = len(candidates)
         if n < profile.min_assets:
             raise ValueError(f"Pool insuffisant ({n} < {profile.min_assets})")
-        
-        # === P0 PARTNER: Préparer prev_weights pour turnover ===
-        if prev_weights is not None:
-            # Convertir dict {id: pct} en array aligné sur candidates
-            prev_weights_array = np.array([
-                prev_weights.get(c.id, 0.0) / 100.0 for c in candidates
-            ])
-            has_prev_weights = True
-            prev_total = sum(prev_weights.values())
-            logger.info(f"P0 PARTNER: Turnover control enabled, prev_total={prev_total:.1f}%")
-        else:
-            prev_weights_array = np.zeros(n)
-            has_prev_weights = False
         
         raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
         scores = self._normalize_scores(raw_scores) * self.score_scale
@@ -1849,6 +1728,11 @@ class PortfolioOptimizer:
         cov, cov_diagnostics = self.compute_covariance(candidates)
         # PR3: Initialiser heuristic_metadata (vide par défaut, rempli si Stable)
         heuristic_metadata = {}
+        
+        raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
+        scores = self._normalize_scores(raw_scores) * self.score_scale
+        
+        cov, cov_diagnostics = self.compute_covariance(candidates)
         
         # ============================================================
         # v6.13 FIX: STABLE FALLBACK HEURISTIC
@@ -1859,14 +1743,14 @@ class PortfolioOptimizer:
                 f"🔧 {profile.name}: Utilisation du FALLBACK HEURISTIC "
                 f"(contraintes incompatibles avec Markowitz)"
             )
-            allocation = self._fallback_allocation(candidates, profile, cov, prev_weights)
+            allocation = self._fallback_allocation(candidates, profile, cov)
             optimizer_converged = False
             fallback_reason = (
                 "Stable profile: strict constraints (vol 6%±3%, bonds_min 35%, "
                 "DEFENSIVE 45-60%) mathematically incompatible with Markowitz optimization"
             )
             optimization_mode = "fallback_heuristic"
-            # PR3: Enrichir avec métadonnées heuristiques
+               # PR3: Enrichir avec métadonnées heuristiques
             heuristic_metadata = {
                 "heuristic_name": STABLE_HEURISTIC_RULES["name"],
                 "heuristic_version": STABLE_HEURISTIC_RULES["version"],
@@ -1874,35 +1758,25 @@ class PortfolioOptimizer:
                 "rules_parameters": STABLE_HEURISTIC_RULES["parameters"],
                 "why_not_slsqp": STABLE_HEURISTIC_RULES["why_not_slsqp"],
                 "why_not_slsqp_details": STABLE_HEURISTIC_RULES["why_not_slsqp_details"],
-            }
+    }
             
         else:
             # === SLSQP pour Agressif et Modéré ===
             vol_target = profile.vol_target / 100
-            
-            # P0 PARTNER: Stocker pour _build_constraints()
-            self._prev_weights_array = prev_weights_array if has_prev_weights else None
             
             def objective(w):
                 port_score = np.dot(w, scores)
                 port_var = np.dot(w, np.dot(cov, w))
                 port_vol = np.sqrt(max(port_var, 0))
                 
-                # Pénalité vol asymétrique
+                # P2 FIX v6.19: Pénalité asymétrique (sous-vol pénalisée plus fort)
                 vol_diff = port_vol - vol_target
                 if vol_diff < 0:  # Sous la cible
                     vol_penalty = 8.0 * vol_diff ** 2
                 else:  # Au-dessus
                     vol_penalty = 3.0 * vol_diff ** 2
                 
-                # P0 PARTNER: Pénalité turnover
-                if has_prev_weights:
-                    turnover = np.sum(np.abs(w - prev_weights_array))
-                    turnover_penalty = profile.turnover_penalty * turnover
-                else:
-                    turnover_penalty = 0.0
-                
-                return -(port_score - vol_penalty - turnover_penalty)
+                return -(port_score - vol_penalty)
             
             constraints = self._build_constraints(candidates, profile, cov)
             bounds = [(0, profile.max_single_position / 100) for _ in range(n)]
@@ -1943,7 +1817,7 @@ class PortfolioOptimizer:
                         f"min required = {min_bonds_required} → forcing fallback"
                     )
                     fallback_reason = f"SLSQP gave only {bonds_in_solution} bonds < {min_bonds_required} required"
-                    allocation = self._fallback_allocation(candidates, profile, cov, prev_weights)
+                    allocation = self._fallback_allocation(candidates, profile, cov)
                     optimizer_converged = False
                     optimization_mode = "fallback_bonds_diversification"
                 else:
@@ -1952,7 +1826,7 @@ class PortfolioOptimizer:
             else:
                 logger.warning(f"SLSQP failed for {profile.name}: {result.message}")
                 fallback_reason = str(result.message)
-                allocation = self._fallback_allocation(candidates, profile, cov, prev_weights)
+                allocation = self._fallback_allocation(candidates, profile, cov)
                 optimizer_converged = False
                 optimization_mode = "fallback_slsqp_failed"
         
@@ -1993,12 +1867,6 @@ class PortfolioOptimizer:
         port_vol = self._compute_portfolio_vol(final_weights, cov)
         port_score = float(np.dot(final_weights, raw_scores))
         
-        # P0 PARTNER: Calculer turnover final
-        if has_prev_weights:
-            final_turnover = compute_turnover(final_weights, prev_weights_array) * 100
-        else:
-            final_turnover = None
-        
         sector_exposure = defaultdict(float)
         bucket_exposure = defaultdict(float)
         corporate_group_exposure = defaultdict(float)
@@ -2032,7 +1900,7 @@ class PortfolioOptimizer:
                     "in_range": bool(min_pct * 100 - 5 <= actual <= max_pct * 100 + 5),
                 }
         
-        # v6.15 P1-6: Inclure les KPIs covariance dans les diagnostics
+# v6.15 P1-6: Inclure les KPIs covariance dans les diagnostics
         diagnostics = to_python_native({
             "converged": optimizer_converged,
             "optimization_mode": optimization_mode,
@@ -2052,11 +1920,6 @@ class PortfolioOptimizer:
             "vol_target": profile.vol_target,
             "vol_tolerance": profile.vol_tolerance,
             "vol_diff": round(port_vol - profile.vol_target, 2),
-            # P0 PARTNER: Turnover diagnostics
-            "turnover_control_enabled": has_prev_weights,
-            "turnover_pct": round(final_turnover, 2) if final_turnover is not None else None,
-            "turnover_max_allowed": profile.max_turnover,
-            "turnover_penalty_lambda": profile.turnover_penalty,
             "portfolio_score": round(port_score, 3),
             "n_assets": len(allocation),
             "n_bonds": bonds_in_allocation,
@@ -2092,10 +1955,9 @@ class PortfolioOptimizer:
         
         opt_mode_display = optimization_mode.upper().replace("_", " ")
         cov_status = "✅" if cov_diagnostics.get("is_well_conditioned", True) else "⚠️"
-        turnover_str = f", turnover={final_turnover:.1f}%" if final_turnover is not None else ""
         logger.info(
             f"{profile.name}: {len(allocation)} actifs ({bonds_in_allocation} bonds, {crypto_in_allocation} crypto), "
-            f"vol={port_vol:.1f}% (cible={profile.vol_target}%, tol=±{profile.vol_tolerance}%){turnover_str}, "
+            f"vol={port_vol:.1f}% (cible={profile.vol_target}%, tol=±{profile.vol_tolerance}%), "
             f"mode={opt_mode_display}, cov={cov_diagnostics.get('method')} {cov_status}"
         )
         
@@ -2106,14 +1968,6 @@ class PortfolioOptimizer:
             f"({cov_diagnostics.get('eigen_clipped_pct', 0):.1f}%), "
             f"well_conditioned={cov_diagnostics.get('is_well_conditioned')}"
         )
-        
-        # P0 PARTNER: Log turnover
-        if has_prev_weights:
-            turnover_status = "✅" if final_turnover <= profile.max_turnover else "⚠️"
-            logger.info(
-                f"[TURNOVER {profile.name}] {turnover_status} turnover={final_turnover:.1f}% "
-                f"(max={profile.max_turnover}%, penalty_λ={profile.turnover_penalty})"
-            )
         
         # === Phase 1: Enrichir diagnostics avec margins et exposures ===
         if HAS_CONSTRAINT_REPORT:
@@ -2298,90 +2152,6 @@ class PortfolioOptimizer:
                 allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
         
         return allocation
-    def _enforce_bonds_minimum(
-        self,
-        allocation: Dict[str, float],
-        candidates: List[Asset],
-        profile: ProfileConstraints
-    ) -> Dict[str, float]:
-        """
-        P1 FIX v6.21: Force bonds >= bonds_min après toutes modifications.
-        """
-        if profile.bonds_min <= 0:
-            return allocation
-        
-        asset_lookup = {c.id: c for c in candidates}
-        
-        bonds_current = sum(
-            w for aid, w in allocation.items()
-            if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
-        )
-        
-        if bonds_current >= profile.bonds_min - 0.1:
-            return allocation
-        
-        shortfall = profile.bonds_min - bonds_current
-        logger.warning(
-            f"P1 FIX v6.21: Bonds {bonds_current:.1f}% < {profile.bonds_min}% minimum, "
-            f"need to add {shortfall:.1f}%"
-        )
-        
-        bonds_in_pool = [c for c in candidates if c.category == "Obligations"]
-        max_single_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25.0)
-        
-        for bond in bonds_in_pool:
-            if shortfall <= 0.1:
-                break
-            current_w = allocation.get(bond.id, 0)
-            headroom = max_single_bond - current_w
-            if headroom > 0.5:
-                add = min(headroom, shortfall)
-                allocation[bond.id] = round(current_w + add, 2)
-                shortfall -= add
-        
-        if shortfall > 0.1:
-            non_bonds = sorted(
-                [(aid, w) for aid, w in allocation.items()
-                 if asset_lookup.get(aid) and asset_lookup[aid].category != "Obligations"
-                 and w > 3.0],
-                key=lambda x: (-x[1], x[0])
-            )
-            
-            for aid, w in non_bonds:
-                if shortfall <= 0.1:
-                    break
-                reduction = min(w - 2.0, shortfall)
-                if reduction > 0:
-                    allocation[aid] = round(allocation[aid] - reduction, 2)
-                    shortfall -= reduction
-        
-        total = sum(allocation.values())
-        if abs(total - 100) > 0.5:
-            non_bonds_total = sum(
-                w for aid, w in allocation.items()
-                if asset_lookup.get(aid) and asset_lookup[aid].category != "Obligations"
-            )
-            bonds_total = sum(
-                w for aid, w in allocation.items()
-                if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
-            )
-            
-            target_non_bonds = 100 - bonds_total
-            if non_bonds_total > 0 and target_non_bonds > 0:
-                factor = target_non_bonds / non_bonds_total
-                for aid in list(allocation.keys()):
-                    if asset_lookup.get(aid) and asset_lookup[aid].category != "Obligations":
-                        allocation[aid] = round(allocation[aid] * factor, 2)
-        
-        allocation = {k: v for k, v in allocation.items() if v >= 0.5}
-        
-        bonds_final = sum(
-            w for aid, w in allocation.items()
-            if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
-        )
-        logger.info(f"P1 FIX v6.21: Bonds after enforcement = {bonds_final:.1f}%")
-        
-        return allocation
     def _adjust_to_100(self, allocation: Dict[str, float], profile: ProfileConstraints) -> Dict[str, float]:
         """Ajustement à 100%."""
         total = sum(allocation.values())
@@ -2408,17 +2178,9 @@ class PortfolioOptimizer:
     def build_portfolio(
         self, 
         universe: List[Asset], 
-        profile_name: str,
-        prev_weights: Optional[Dict[str, float]] = None  # P0 PARTNER
+        profile_name: str
     ) -> Tuple[Dict[str, float], dict]:
-        """
-        Pipeline complet: déduplication + Buffett hard filter + buckets + optimisation.
-        
-        Args:
-            universe: Liste des actifs
-            profile_name: Nom du profil ("Agressif", "Modéré", "Stable")
-            prev_weights: Poids précédents pour contrôle turnover (optionnel)
-        """
+        """Pipeline complet: déduplication + Buffett hard filter + buckets + optimisation."""
         profile = PROFILES[profile_name]
         candidates = self.select_candidates(universe, profile)
         
@@ -2428,7 +2190,7 @@ class PortfolioOptimizer:
                 f"{len(candidates)} candidats < {profile.min_assets} requis"
             )
         
-        return self.optimize(candidates, profile, prev_weights)
+        return self.optimize(candidates, profile)
 
 
 # ============= CONVERSION UNIVERS v6.7 =============
