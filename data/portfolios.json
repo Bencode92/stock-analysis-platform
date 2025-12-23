@@ -1,11 +1,11 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actifs à forte volatilité, notamment dans les secteurs financier et de la santé. Bien qu'il vise à générer des rendements élevés, les fluctuations du marché et les risques sectoriels peuvent affecter la performance. De plus, l'inclusion de cryptomonnaies ajoute une dimension de risque supplémentaire. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement agressive, visant une croissance à long terme à travers des actifs diversifiés. Les investissements dans des secteurs comme la finance et la santé peuvent offrir des opportunités, mais sont également soumis à des risques de volatilité. De plus, l'exposition aux cryptomonnaies et aux marchés émergents ajoute une couche de risque supplémentaire. Il est important de considérer ces éléments avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "AIB GROUP PLC": "15%",
       "ELI LILLY": "15%",
       "BAYER AG": "15%",
-      "STEEL DYNAMICS INC": "5%"
+      "FREEPORT MCMORAN INC": "5%"
     },
     "ETF": {
       "Fidelity MSCI Financials Index ETF": "15%",
@@ -24,17 +24,17 @@
       "VSLU": 0.15,
       "EMLC": 0.05,
       "ICVT": 0.05,
-      "LEMB": 0.0197,
-      "BCH/USD": 0.0803,
+      "LEMB": 0.0239,
+      "BCH/USD": 0.0761,
       "A5G": 0.15,
       "LLY": 0.15,
       "BAYN": 0.15,
-      "STLD": 0.05
+      "FCX": 0.05
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 17.73,
+      "vol_realized": 17.72,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -44,23 +44,23 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 17.73,
-          "slack": 2.73,
+          "observed": 17.72,
+          "slack": 2.72,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -0.27
+            "diff_from_target": -0.28
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 5.0,
-          "observed": 11.97,
-          "slack": 6.97,
+          "observed": 12.39,
+          "slack": 7.39,
           "binding": false,
           "status": "OK",
           "details": {
@@ -79,7 +79,7 @@
               {
                 "id": "iShares J.P. Morgan EM Local Currency Bond ETF",
                 "name": "iShares J.P. Morgan EM Local C",
-                "weight": 1.97
+                "weight": 2.39
               }
             ]
           }
@@ -88,8 +88,8 @@
           "name": "crypto_max",
           "constraint_type": "max",
           "cap": 10.0,
-          "observed": 8.03,
-          "slack": 1.97,
+          "observed": 7.61,
+          "slack": 2.39,
           "binding": false,
           "status": "OK",
           "details": {
@@ -97,7 +97,7 @@
               {
                 "id": "BCH/USD",
                 "name": "BCH/USD",
-                "weight": 8.03
+                "weight": 7.61
               }
             ]
           }
@@ -160,8 +160,8 @@
               "Diversified": 30.0,
               "Santé": 30.0,
               "Finance": 15.0,
-              "Bonds": 11.97,
-              "Crypto": 8.03,
+              "Bonds": 12.39,
+              "Crypto": 7.61,
               "Matériaux": 5.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -250,15 +250,15 @@
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 11.97,
-          "slack": 3.03,
+          "observed": 12.39,
+          "slack": 2.61,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 6.97,
-            "slack_from_max": 3.03,
+            "slack_from_min": 7.39,
+            "slack_from_max": 2.61,
             "outside_range": false,
             "is_indicator": true
           }
@@ -267,15 +267,15 @@
           "name": "bucket_lottery",
           "constraint_type": "range",
           "cap": 5.0,
-          "observed": 8.03,
-          "slack": -3.03,
+          "observed": 7.61,
+          "slack": -2.61,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 0.0,
             "range_max": 5.0,
-            "slack_from_min": 8.03,
-            "slack_from_max": -3.03,
+            "slack_from_min": 7.61,
+            "slack_from_max": -2.61,
             "outside_range": true,
             "is_indicator": true
           }
@@ -321,8 +321,8 @@
       "exposures": {
         "by_category": {
           "ETF": 30.0,
-          "Obligations": 11.97,
-          "Crypto": 8.03,
+          "Obligations": 12.39,
+          "Crypto": 7.61,
           "Actions": 50.0
         },
         "by_sector": {
@@ -339,25 +339,25 @@
         },
         "by_risk_bucket": {
           "equity_like": 80.0,
-          "bond_like": 11.97,
-          "crypto": 8.03
+          "bond_like": 12.39,
+          "crypto": 7.61
         },
         "by_role": {
           "core": 30.0,
           "satellite": 50.0,
-          "defensive": 11.97,
-          "lottery": 8.03,
+          "defensive": 12.39,
+          "lottery": 7.61,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1268.0,
+          "hhi": 1264.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 7.88,
+          "effective_n": 7.91,
           "n_positions": 10,
           "top_5_weight": 75.0,
           "top_10_weight": 100.0,
           "largest_position": 15.0,
-          "smallest_position": 1.97,
+          "smallest_position": 2.39,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
@@ -433,7 +433,7 @@
           "ticker": "BCH/USD",
           "isin": null,
           "name": "BCH/USD",
-          "weight_pct": 8.03,
+          "weight_pct": 7.61,
           "category": "Crypto",
           "risk_bucket": "crypto",
           "sector": "Crypto",
@@ -465,10 +465,10 @@
           "exchange": null
         },
         {
-          "id": "EQ_369",
-          "ticker": "STLD",
+          "id": "EQ_181",
+          "ticker": "FCX",
           "isin": null,
-          "name": "STEEL DYNAMICS INC",
+          "name": "FREEPORT MCMORAN INC",
           "weight_pct": 5.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
@@ -481,7 +481,7 @@
           "ticker": "LEMB",
           "isin": NaN,
           "name": "iShares J.P. Morgan EM Local Currency Bond ETF",
-          "weight_pct": 1.97,
+          "weight_pct": 2.39,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -506,8 +506,8 @@
     "_exposures": {
       "by_category": {
         "ETF": 30.0,
-        "Obligations": 11.97,
-        "Crypto": 8.03,
+        "Obligations": 12.39,
+        "Crypto": 7.61,
         "Actions": 50.0
       },
       "by_sector": {
@@ -524,25 +524,25 @@
       },
       "by_risk_bucket": {
         "equity_like": 80.0,
-        "bond_like": 11.97,
-        "crypto": 8.03
+        "bond_like": 12.39,
+        "crypto": 7.61
       },
       "by_role": {
         "core": 30.0,
         "satellite": 50.0,
-        "defensive": 11.97,
-        "lottery": 8.03,
+        "defensive": 12.39,
+        "lottery": 7.61,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1268.0,
+        "hhi": 1264.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 7.88,
+        "effective_n": 7.91,
         "n_positions": 10,
         "top_5_weight": 75.0,
         "top_10_weight": 100.0,
         "largest_position": 15.0,
-        "smallest_position": 1.97,
+        "smallest_position": 2.39,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -568,17 +568,17 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée, combinant des actifs défensifs et des investissements plus volatils. Bien qu'il vise à offrir une croissance modérée, les fluctuations du marché et les risques sectoriels demeurent des préoccupations. L'exposition aux cryptomonnaies et aux obligations en devises locales peut également ajouter une couche de risque. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant croissance et sécurité à travers une sélection diversifiée d'actifs. Les investissements dans des secteurs tels que la consommation de base et les obligations visent à réduire la volatilité tout en offrant un potentiel de rendement. Cependant, des risques subsistent, notamment liés aux fluctuations des taux d'intérêt et aux conditions économiques. Il est essentiel d'évaluer ces facteurs avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
+      "NATWEST GROUP PLC": "15%",
       "AIB GROUP PLC": "15%",
-      "ALLIANZ": "15%",
       "ELI LILLY": "15%",
       "RIO TINTO PLC": "4%",
       "ENGIE SA": "1%"
     },
     "ETF": {
       "Consumer Staples Select Sector SPDR Fund": "15%",
-      "iShares Silver Trust": "14%"
+      "abrdn Physical Precious Metals Basket Shares ETF": "14%"
     },
     "Obligations": {
       "iShares 3 Year International Treasury Bond ETF": "8%",
@@ -589,12 +589,12 @@
     },
     "_tickers": {
       "ZRX/USD": 0.05,
+      "NWG": 0.15,
       "XLP": 0.15,
       "ISHG": 0.08,
       "EMLC": 0.08,
-      "SLV": 0.14,
+      "GLTR": 0.14,
       "A5G": 0.15,
-      "ALV": 0.15,
       "LLY": 0.15,
       "RIO": 0.04,
       "ENGI": 0.01
@@ -602,7 +602,7 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 11.37,
+      "vol_realized": 11.64,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -612,15 +612,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 11.37,
-          "slack": 2.37,
+          "observed": 11.64,
+          "slack": 2.64,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -0.63
+            "diff_from_target": -0.36
           }
         },
         {
@@ -675,25 +675,25 @@
           "status": "BINDING",
           "details": {
             "largest_position": {
-              "id": "Consumer Staples Select Sector SPDR Fund",
-              "name": "Consumer Staples Select Sector SPDR Fund",
+              "id": "EQ_573",
+              "name": "NATWEST GROUP PLC",
               "weight": 15.0
             },
             "positions_above_10pct": [
+              {
+                "id": "EQ_573",
+                "weight": 15.0
+              },
               {
                 "id": "Consumer Staples Select Sector SPDR Fund",
                 "weight": 15.0
               },
               {
-                "id": "iShares Silver Trust",
+                "id": "abrdn Physical Precious Metals Basket Shares ETF",
                 "weight": 14.0
               },
               {
                 "id": "EQ_641",
-                "weight": 15.0
-              },
-              {
-                "id": "EQ_537",
                 "weight": 15.0
               },
               {
@@ -736,26 +736,24 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 15.0,
-          "slack": 35.0,
+          "observed": 19.0,
+          "slack": 31.0,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Global",
+            "most_concentrated": "Royaume-Uni",
             "counts_in_max_region": {
+              "Royaume-Uni": 19.0,
               "Global": 15.0,
               "Irlande": 15.0,
-              "Allemagne": 15.0,
               "Etats-Unis": 15.0,
-              "Royaume-Uni": 4.0,
               "France": 1.0
             },
             "all_regions": {
               "Global": 50.0,
+              "Royaume-Uni": 19.0,
               "Irlande": 15.0,
-              "Allemagne": 15.0,
               "Etats-Unis": 15.0,
-              "Royaume-Uni": 4.0,
               "France": 1.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
@@ -883,9 +881,9 @@
       "exposures": {
         "by_category": {
           "Crypto": 5.0,
+          "Actions": 50.0,
           "ETF": 29.0,
-          "Obligations": 16.0,
-          "Actions": 50.0
+          "Obligations": 16.0
         },
         "by_sector": {
           "Finance": 30.0,
@@ -896,10 +894,9 @@
         },
         "by_region": {
           "Global": 50.0,
+          "Royaume-Uni": 19.0,
           "Irlande": 15.0,
-          "Allemagne": 15.0,
           "Etats-Unis": 15.0,
-          "Royaume-Uni": 4.0,
           "France": 1.0
         },
         "by_risk_bucket": {
@@ -935,6 +932,18 @@
       },
       "ticker_mapping": [
         {
+          "id": "EQ_573",
+          "ticker": "NWG",
+          "isin": null,
+          "name": "NATWEST GROUP PLC",
+          "weight_pct": 15.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Finance",
+          "region": "Royaume-Uni",
+          "exchange": null
+        },
+        {
           "id": "Consumer Staples Select Sector SPDR Fund",
           "ticker": "XLP",
           "isin": NaN,
@@ -959,18 +968,6 @@
           "exchange": null
         },
         {
-          "id": "EQ_537",
-          "ticker": "ALV",
-          "isin": null,
-          "name": "ALLIANZ",
-          "weight_pct": 15.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Allemagne",
-          "exchange": null
-        },
-        {
           "id": "EQ_10",
           "ticker": "LLY",
           "isin": null,
@@ -983,10 +980,10 @@
           "exchange": null
         },
         {
-          "id": "iShares Silver Trust",
-          "ticker": "SLV",
+          "id": "abrdn Physical Precious Metals Basket Shares ETF",
+          "ticker": "GLTR",
           "isin": NaN,
-          "name": "iShares Silver Trust",
+          "name": "abrdn Physical Precious Metals Basket Shares ETF",
           "weight_pct": 14.0,
           "category": "ETF",
           "risk_bucket": "real_assets",
@@ -1072,9 +1069,9 @@
     "_exposures": {
       "by_category": {
         "Crypto": 5.0,
+        "Actions": 50.0,
         "ETF": 29.0,
-        "Obligations": 16.0,
-        "Actions": 50.0
+        "Obligations": 16.0
       },
       "by_sector": {
         "Finance": 30.0,
@@ -1085,10 +1082,9 @@
       },
       "by_region": {
         "Global": 50.0,
+        "Royaume-Uni": 19.0,
         "Irlande": 15.0,
-        "Allemagne": 15.0,
         "Etats-Unis": 15.0,
-        "Royaume-Uni": 4.0,
         "France": 1.0
       },
       "by_risk_bucket": {
@@ -1138,7 +1134,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement axée sur la stabilité, avec une prédominance d'obligations à court terme et d'actifs défensifs. Bien qu'il vise à minimiser la volatilité, les fluctuations des marchés internationaux et les risques économiques peuvent toujours impacter la performance. L'exposition aux marchés asiatiques et aux obligations peut également introduire des risques supplémentaires. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement stable, visant à minimiser la volatilité tout en offrant des rendements modérés. Les investissements dans des obligations à court terme et des actions de sociétés établies contribuent à un profil défensif. Toutefois, des risques subsistent, notamment liés aux fluctuations économiques et aux rendements limités des obligations. Une évaluation attentive de ces éléments est essentielle avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "ALLIANZ": "5%",
       "VISA INC CLASS A": "8%",
@@ -1173,7 +1169,7 @@
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 4.18,
+      "vol_realized": 4.17,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -1209,15 +1205,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 4.18,
-          "slack": 1.18,
+          "observed": 4.17,
+          "slack": 1.17,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -1.82
+            "diff_from_target": -1.83
           }
         },
         {
@@ -1720,7 +1716,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-23T10:47:32.132822",
+    "generated_at": "2025-12-23T15:24:25.759222",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
