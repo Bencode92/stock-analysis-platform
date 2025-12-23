@@ -251,6 +251,78 @@ CORR_EQUITY_BOND = -0.20
 CORR_CRYPTO_OTHER = 0.25
 CORR_DEFAULT = 0.15
 
+# ============= FUND TYPE CLASSIFICATION v6.20 =============
+
+# Fund types qui NE COMPTENT PAS pour max_sector (bond-like)
+BOND_LIKE_FUND_TYPES = {
+    "Corporate Bond", "High Yield Bond", "Inflation-Protected Bond",
+    "Intermediate Core Bond", "Intermediate Core-Plus Bond", 
+    "Long Government", "Short Government", "Short-Term Bond", 
+    "Ultrashort Bond", "Multisector Bond", "Muni National Interm",
+    "Nontraditional Bond", "Miscellaneous Fixed Income", 
+    "Target Maturity", "Convertibles", "Preferred Stock",
+}
+
+# Leveraged/Inverse ETFs
+LEVERAGED_FUND_TYPES = {
+    "Multi-Asset Leveraged", "Trading--Leveraged Equity", 
+    "Trading--Leveraged Commodities", "Trading--Inverse Equity",
+    "Trading--Inverse Commodities", "Trading--Miscellaneous",
+}
+
+# Alternatives (non-directional)
+ALTERNATIVE_FUND_TYPES = {
+    "Derivative Income", "Defined Outcome", "Equity Hedged",
+    "Equity Market Neutral", "Long-Short Equity", "Multistrategy",
+    "Systematic Trend", "Tactical Allocation",
+}
+
+# Allocation funds (multi-asset)
+ALLOCATION_FUND_TYPES = {
+    "Aggressive Allocation", "Moderate Allocation", 
+    "Moderately Conservative Allocation", "Global Aggressive Allocation",
+    "Global Conservative Allocation", "Global Moderate Allocation",
+    "Global Moderately Conservative Allocation",
+}
+
+# Union: tous les fund_types exclus de max_sector
+NON_EQUITY_FUND_TYPES = (
+    BOND_LIKE_FUND_TYPES | LEVERAGED_FUND_TYPES | 
+    ALTERNATIVE_FUND_TYPES | ALLOCATION_FUND_TYPES
+)
+def _is_equity_like(asset: Asset) -> bool:
+    """
+    v6.20: Détermine si un actif compte pour max_sector.
+    
+    Inclus: Actions, ETF equity (Large Blend, Tech, Health, etc.)
+    Exclus: Obligations, Crypto, bond ETFs, leveraged, alternatives, allocations
+    """
+    # Obligations et Crypto toujours exclus
+    if asset.category in ["Obligations", "Crypto"]:
+        return False
+    
+    # Actions toujours incluses
+    if asset.category == "Actions":
+        return True
+    
+    # ETF: vérifier fund_type dans source_data
+    if asset.category == "ETF":
+        fund_type = None
+        if asset.source_data:
+            fund_type = asset.source_data.get("fund_type") or asset.source_data.get("fundType")
+        
+        if fund_type and fund_type in NON_EQUITY_FUND_TYPES:
+            return False
+        
+        # Fallback: vérifier risk_bucket si disponible
+        if hasattr(asset, '_risk_bucket'):
+            if asset._risk_bucket in ['bond_like', 'leveraged', 'alternative']:
+                return False
+        
+        return True  # ETF equity par défaut
+    
+    return False
+
 # Volatilités par défaut par catégorie
 DEFAULT_VOLS = {"Actions": 25.0, "ETF": 15.0, "Obligations": 5.0, "Crypto": 80.0}
 
@@ -1309,8 +1381,12 @@ class PortfolioOptimizer:
                     logger.info(f"P0 FIX: Leveraged cap {leveraged_cap_pct:.1f}% for {len(leveraged_idx)} assets")
         
         # 5. Contraintes par SECTEUR
-        for sector in set(a.sector for a in candidates):
-            sector_idx = [i for i, a in enumerate(candidates) if a.sector == sector]
+        equity_like_candidates = [a for a in candidates if _is_equity_like(a)]
+        equity_like_idx_map = {a.id: i for i, a in enumerate(candidates) if _is_equity_like(a)}
+        
+        for sector in set(a.sector for a in equity_like_candidates):
+            sector_idx = [i for i, a in enumerate(candidates) 
+                         if a.sector == sector and _is_equity_like(a)]
             if len(sector_idx) > 1:
                 def sector_constraint(w, idx=sector_idx, max_val=profile.max_sector/100):
                     return max_val - np.sum(w[idx])
@@ -1956,55 +2032,124 @@ class PortfolioOptimizer:
             weights = weights / weights.sum()
         
         return weights
-    def _enforce_sector_caps(
+   def _enforce_sector_caps(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
         profile: ProfileConstraints
     ) -> Dict[str, float]:
-        """P1 FIX v6.19: Enforce sector caps post-normalization."""
+        """
+        P1 FIX v6.20: Enforce sector caps + max_single_position avec REDISTRIBUTION.
+        
+        Changements v6.20:
+        - Utilise _is_equity_like() pour exclure bonds/leveraged/alternatives
+        - Redistribue le poids libéré au lieu de scaling global
+        - Itère jusqu'à convergence (max 5 itérations)
+        """
         if not allocation:
             return allocation
         
         asset_lookup = {c.id: c for c in candidates}
+        max_iterations = 5
         
-        # Calculer expositions par secteur
-        sector_weights = defaultdict(float)
-        for aid, weight in allocation.items():
-            asset = asset_lookup.get(aid)
-            if asset:
-                sector_weights[asset.sector] += weight
-        
-        # Identifier violations
-        violations = {s: w for s, w in sector_weights.items() if w > profile.max_sector + 0.1}
-        
-        if not violations:
-            return allocation
-        
-        logger.warning(f"P1 FIX: Sector violations post-norm: {violations}")
-        
-        for sector, current_weight in violations.items():
-            excess = current_weight - profile.max_sector
+        for iteration in range(max_iterations):
+            # === 1. Calculer secteurs (equity-like uniquement) ===
+            sector_weights = defaultdict(float)
+            for aid, weight in allocation.items():
+                asset = asset_lookup.get(aid)
+                if asset and _is_equity_like(asset):
+                    sector_weights[asset.sector] += weight
             
-            # Positions du secteur, triées par poids croissant
-            sector_assets = sorted(
-                [(aid, w) for aid, w in allocation.items() 
-                 if asset_lookup.get(aid) and asset_lookup[aid].sector == sector and w > 0],
-                key=lambda x: (x[1], x[0])
-            )
+            # === 2. Identifier violations secteur ===
+            sector_violations = {s: w for s, w in sector_weights.items() 
+                                if w > profile.max_sector + 0.1}
             
-            for aid, w in sector_assets:
-                if excess <= 0.01:
-                    break
-                reduction = min(excess, max(0, w - 0.5))
-                if reduction > 0:
-                    allocation[aid] = round(allocation[aid] - reduction, 2)
-                    excess -= reduction
+            # === 3. Identifier violations max_single_position ===
+            position_violations = [(aid, w) for aid, w in allocation.items() 
+                                   if w > profile.max_single_position + 0.1]
+            
+            if not sector_violations and not position_violations:
+                break  # Aucune violation, on sort
+            
+            if iteration == 0 and (sector_violations or position_violations):
+                logger.warning(f"P1 FIX v6.20: Violations detected - sectors: {sector_violations}, positions: {len(position_violations)}")
+            
+            freed_weight = 0.0
+            violating_sectors = set(sector_violations.keys())
+            
+            # === 4. Réduire secteurs violateurs ===
+            for sector, current_weight in sector_violations.items():
+                excess = current_weight - profile.max_sector
+                
+                # Trier par poids décroissant (réduire les plus gros d'abord)
+                sector_assets = sorted(
+                    [(aid, w) for aid, w in allocation.items() 
+                     if asset_lookup.get(aid) and asset_lookup[aid].sector == sector 
+                     and _is_equity_like(asset_lookup[aid]) and w > 1.0],
+                    key=lambda x: (-x[1], x[0])
+                )
+                
+                for aid, w in sector_assets:
+                    if excess <= 0.01:
+                        break
+                    max_reduction = max(0, w - 3.0)  # Garder minimum 3%
+                    reduction = min(excess, max_reduction)
+                    if reduction > 0:
+                        allocation[aid] = round(allocation[aid] - reduction, 2)
+                        freed_weight += reduction
+                        excess -= reduction
+                        logger.debug(f"  Sector cap: reduced {aid} by {reduction:.2f}%")
+            
+            # === 5. Réduire positions > max_single_position ===
+            for aid, weight in position_violations:
+                excess = weight - profile.max_single_position
+                allocation[aid] = round(profile.max_single_position, 2)
+                freed_weight += excess
+                logger.debug(f"  Position cap: capped {aid} at {profile.max_single_position}%")
+            
+            # === 6. Redistribuer freed_weight vers actifs éligibles ===
+            if freed_weight > 0.1:
+                # Candidats: sous max_single_position ET hors secteurs violateurs
+                eligible = [
+                    (aid, w) for aid, w in allocation.items()
+                    if w > 0 
+                    and w < profile.max_single_position - 0.5
+                    and asset_lookup.get(aid)
+                    and (not _is_equity_like(asset_lookup[aid]) 
+                         or asset_lookup[aid].sector not in violating_sectors)
+                ]
+                
+                if eligible:
+                    # Trier par poids croissant (remplir les plus petits d'abord)
+                    eligible = sorted(eligible, key=lambda x: (x[1], x[0]))
+                    
+                    for aid, w in eligible:
+                        if freed_weight < 0.1:
+                            break
+                        headroom = profile.max_single_position - w
+                        add = min(headroom, freed_weight)
+                        if add > 0.1:
+                            allocation[aid] = round(allocation[aid] + add, 2)
+                            freed_weight -= add
+            
+            if iteration > 0:
+                logger.info(f"  Iteration {iteration+1}: freed={freed_weight:.2f}% remaining")
         
-        # Re-normaliser à 100%
+        # === 7. Ajuster à 100% si nécessaire (petits écarts seulement) ===
         total = sum(allocation.values())
         if total > 0 and abs(total - 100) > 0.1:
-            allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
+            diff = 100 - total
+            # Trouver le meilleur candidat pour absorber la différence
+            candidates_for_adjust = [
+                (aid, w) for aid, w in allocation.items()
+                if w + diff <= profile.max_single_position and w + diff >= 0.5
+            ]
+            if candidates_for_adjust:
+                best = max(candidates_for_adjust, key=lambda x: (x[1], x[0]))[0]
+                allocation[best] = round(allocation[best] + diff, 2)
+            else:
+                # Dernier recours: scaling (risque faible car écart petit)
+                allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
         
         return allocation
     def _adjust_to_100(self, allocation: Dict[str, float], profile: ProfileConstraints) -> Dict[str, float]:
