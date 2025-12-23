@@ -2298,7 +2298,7 @@ class PortfolioOptimizer:
                 allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
         
         return allocation
-       def _enforce_bonds_minimum(
+    def _enforce_bonds_minimum(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
