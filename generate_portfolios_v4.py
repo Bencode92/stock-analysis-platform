@@ -202,65 +202,6 @@ def load_brief_data() -> Optional[Dict]:
                 return data
     logger.warning("Aucun brief trouvé")
     return None
-# ============= P0 PARTNER: LOAD PREVIOUS WEIGHTS =============
-
-def load_previous_weights(output_path: str = None) -> Dict[str, Dict[str, float]]:
-    """
-    P0 PARTNER: Charge les poids du portefeuille précédent pour le turnover control.
-    
-    Returns:
-        Dict[profile_name, Dict[asset_id, weight_pct]]
-        Ex: {"Agressif": {"AAPL": 15.0, "MSFT": 10.0, ...}, ...}
-    """
-    path = output_path or CONFIG["output_path"]
-    
-    if not Path(path).exists():
-        logger.info("P0 PARTNER: Pas de portefeuille précédent (première génération)")
-        return {}
-    
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        prev_weights = {}
-        
-        for profile in ["Agressif", "Modéré", "Stable"]:
-            if profile not in data:
-                continue
-            
-            profile_data = data[profile]
-            weights = {}
-            
-            # Extraire depuis _tickers (format: {ticker: decimal_weight})
-            tickers = profile_data.get("_tickers", {})
-            for ticker, decimal_weight in tickers.items():
-                # Convertir decimal (0.15) en pourcentage (15.0)
-                weights[ticker] = round(decimal_weight * 100, 2)
-            
-            # Alternative: extraire depuis les catégories lisibles
-            if not weights:
-                for cat in ["Actions", "ETF", "Obligations", "Crypto"]:
-                    cat_data = profile_data.get(cat, {})
-                    for name, pct_str in cat_data.items():
-                        try:
-                            pct_val = float(pct_str.replace("%", ""))
-                            weights[name] = pct_val
-                        except:
-                            pass
-            
-            if weights:
-                prev_weights[profile] = weights
-                total = sum(weights.values())
-                logger.info(
-                    f"P0 PARTNER: {profile} prev_weights loaded - "
-                    f"{len(weights)} positions, total={total:.1f}%"
-                )
-        
-        return prev_weights
-        
-    except Exception as e:
-        logger.warning(f"P0 PARTNER: Impossible de charger prev_weights: {e}")
-        return {}    
 
 
 def load_stocks_data() -> list:
@@ -666,8 +607,6 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     all_assets = []
     
     feasibility_reports = {}
-    # P0 PARTNER: Charger les poids précédents pour turnover control
-    prev_weights_all = load_previous_weights()
     
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation profil {profile}...")
@@ -717,9 +656,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         else:
             logger.warning(f"   ⚠️ [P0-4] {profile}: Faisabilité LIMITÉE - {feasibility.reason}")
         
-        # P0 PARTNER: Passer prev_weights pour turnover control
-        prev_weights = prev_weights_all.get(profile)
-        allocation, diagnostics = optimizer.build_portfolio(assets, profile, prev_weights=prev_weights)
+        allocation, diagnostics = optimizer.build_portfolio(assets, profile)
         
         diagnostics["_feasibility"] = feasibility.to_dict()
         
@@ -1817,4 +1754,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
