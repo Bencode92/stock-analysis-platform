@@ -501,7 +501,7 @@ PROFILES = {
         vol_target=12.0, 
         vol_tolerance=3.0,
         crypto_max=5.0, 
-        bonds_min=15.0
+        bonds_min=15.0,
         max_turnover=25.0,        # P0 PARTNER
         turnover_penalty=0.10,    # P0 PARTNER
     ),
@@ -510,7 +510,7 @@ PROFILES = {
         vol_target=6.0,
         vol_tolerance=3.0,
         crypto_max=0.0, 
-        bonds_min=35.0
+        bonds_min=35.0,
         max_turnover=15.0,        # P0 PARTNER
         turnover_penalty=0.20,    # P0 PARTNER
     ),
@@ -1751,7 +1751,7 @@ class PortfolioOptimizer:
         logger.info(f"Vol after adjustment: {current_vol:.1f}% (target={vol_target:.1f}%)")
         
         return allocation
-        def _clip_turnover(
+    def _clip_turnover(
         self,
         allocation: Dict[str, float],
         prev_weights: Dict[str, float],
@@ -1801,7 +1801,7 @@ class PortfolioOptimizer:
         )
         
         return blended
-def optimize(
+    def optimize(
         self, 
         candidates: List[Asset], 
         profile: ProfileConstraints,
