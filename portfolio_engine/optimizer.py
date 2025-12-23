@@ -1665,8 +1665,12 @@ class PortfolioOptimizer:
         
         # === Ajuster pour vol_target ===
         allocation = self._adjust_for_vol_target(allocation, candidates, profile, cov)
-        # === P1 FIX v6.19: Enforce sector caps post-normalization ===
+       # === P1 FIX v6.19: Enforce sector caps post-normalization ===
         allocation = self._enforce_sector_caps(allocation, candidates, profile)
+        
+        # === P1 FIX v6.21: FORCE BONDS MINIMUM (après toutes modifications) ===
+        allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
+        
         
         # P0 PARTNER: Respecter turnover max en fallback
         if prev_weights is not None:
@@ -2292,6 +2296,90 @@ class PortfolioOptimizer:
             else:
                 # Dernier recours: scaling (risque faible car écart petit)
                 allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
+        
+        return allocation
+       def _enforce_bonds_minimum(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """
+        P1 FIX v6.21: Force bonds >= bonds_min après toutes modifications.
+        """
+        if profile.bonds_min <= 0:
+            return allocation
+        
+        asset_lookup = {c.id: c for c in candidates}
+        
+        bonds_current = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
+        )
+        
+        if bonds_current >= profile.bonds_min - 0.1:
+            return allocation
+        
+        shortfall = profile.bonds_min - bonds_current
+        logger.warning(
+            f"P1 FIX v6.21: Bonds {bonds_current:.1f}% < {profile.bonds_min}% minimum, "
+            f"need to add {shortfall:.1f}%"
+        )
+        
+        bonds_in_pool = [c for c in candidates if c.category == "Obligations"]
+        max_single_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25.0)
+        
+        for bond in bonds_in_pool:
+            if shortfall <= 0.1:
+                break
+            current_w = allocation.get(bond.id, 0)
+            headroom = max_single_bond - current_w
+            if headroom > 0.5:
+                add = min(headroom, shortfall)
+                allocation[bond.id] = round(current_w + add, 2)
+                shortfall -= add
+        
+        if shortfall > 0.1:
+            non_bonds = sorted(
+                [(aid, w) for aid, w in allocation.items()
+                 if asset_lookup.get(aid) and asset_lookup[aid].category != "Obligations"
+                 and w > 3.0],
+                key=lambda x: (-x[1], x[0])
+            )
+            
+            for aid, w in non_bonds:
+                if shortfall <= 0.1:
+                    break
+                reduction = min(w - 2.0, shortfall)
+                if reduction > 0:
+                    allocation[aid] = round(allocation[aid] - reduction, 2)
+                    shortfall -= reduction
+        
+        total = sum(allocation.values())
+        if abs(total - 100) > 0.5:
+            non_bonds_total = sum(
+                w for aid, w in allocation.items()
+                if asset_lookup.get(aid) and asset_lookup[aid].category != "Obligations"
+            )
+            bonds_total = sum(
+                w for aid, w in allocation.items()
+                if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
+            )
+            
+            target_non_bonds = 100 - bonds_total
+            if non_bonds_total > 0 and target_non_bonds > 0:
+                factor = target_non_bonds / non_bonds_total
+                for aid in list(allocation.keys()):
+                    if asset_lookup.get(aid) and asset_lookup[aid].category != "Obligations":
+                        allocation[aid] = round(allocation[aid] * factor, 2)
+        
+        allocation = {k: v for k, v in allocation.items() if v >= 0.5}
+        
+        bonds_final = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
+        )
+        logger.info(f"P1 FIX v6.21: Bonds after enforcement = {bonds_final:.1f}%")
         
         return allocation
     def _adjust_to_100(self, allocation: Dict[str, float], profile: ProfileConstraints) -> Dict[str, float]:
