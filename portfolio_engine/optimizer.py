@@ -290,7 +290,7 @@ NON_EQUITY_FUND_TYPES = (
     BOND_LIKE_FUND_TYPES | LEVERAGED_FUND_TYPES | 
     ALTERNATIVE_FUND_TYPES | ALLOCATION_FUND_TYPES
 )
-def _is_equity_like(asset: Asset) -> bool:
+def _is_equity_like(asset: "Asset") -> bool: 
     """
     v6.20: Détermine si un actif compte pour max_sector.
     
