@@ -2032,7 +2032,7 @@ class PortfolioOptimizer:
             weights = weights / weights.sum()
         
         return weights
-   def _enforce_sector_caps(
+    def _enforce_sector_caps(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
