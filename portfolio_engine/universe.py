@@ -215,29 +215,35 @@ def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
         if not (bounds["vol_min"] <= v <= bounds["vol_max"] and dd <= bounds["dd_max"]):
             return False
         
-        # v3.3.1: Filtres spécifiques crypto (RELAXÉS)
+# v3.4: Filtres spécifiques crypto (avec stale + USD only - ChatGPT review)
         if asset_type == "crypto":
-            # Filtre VaR 95% (risque extrême) - v3.3.1: 20% → 30%
-            var_95 = abs(fnum(r.get("var_95_pct", 0)))
-            if var_95 > bounds.get("var_max", 30):
-                logger.debug(f"Crypto filtrée VaR: {r.get('name')} (VaR={var_95}%)")
+            # NOUVEAU v3.4: Filtre stale (données obsolètes)
+            stale = r.get("stale")
+            if stale is True:
+                logger.debug(f"Crypto filtrée stale: {r.get('symbol')} (stale=True)")
                 return False
             
-            # v3.3.1: tier1_listed DÉSACTIVÉ - trop restrictif pour l'univers crypto
-            # tier1 = r.get("tier1_listed")
-            # if tier1 is False:  # Explicitement False, pas None
-            #     logger.debug(f"Crypto filtrée tier1: {r.get('name')}")
-            #     return False
+            # NOUVEAU v3.4: USD only (évite biais FX EUR/USD)
+            currency_quote = str(r.get("currency_quote", "")).upper()
+            if currency_quote and currency_quote not in ["US DOLLAR", "USD", ""]:
+                logger.debug(f"Crypto filtrée non-USD: {r.get('symbol')} (quote={currency_quote})")
+                return False
+            
+            # Filtre VaR 95% (risque extrême)
+            var_95 = abs(fnum(r.get("var_95_pct", 0)))
+            if var_95 > bounds.get("var_max", 30):
+                logger.debug(f"Crypto filtrée VaR: {r.get('symbol')} (VaR={var_95}%)")
+                return False
             
             # Filtre historique insuffisant
             enough_history = r.get("enough_history_90d")
-            if enough_history is False:  # Explicitement False
-                logger.debug(f"Crypto filtrée history: {r.get('name')}")
+            if enough_history is False:
+                logger.debug(f"Crypto filtrée history: {r.get('symbol')}")
                 return False
             
-            # Filtre drawdown extrême - v3.3.1: 80% → 85%
+            # Filtre drawdown extrême
             if dd > 85:
-                logger.debug(f"Crypto filtrée DD: {r.get('name')} (DD={dd}%)")
+                logger.debug(f"Crypto filtrée DD: {r.get('symbol')} (DD={dd}%)")
                 return False
         
         return True
