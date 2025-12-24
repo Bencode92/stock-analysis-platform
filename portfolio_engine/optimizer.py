@@ -372,7 +372,29 @@ MAX_SINGLE_BOND_WEIGHT = {
     "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
     "Agressif": 5.0,  # Max 5% par bond → au moins 1 bond pour 5% total
 }
+# ============= v6.23 CRYPTO CORE/SATELLITE =============
 
+CRYPTO_CORE_SATELLITE = {
+    "Agressif": {
+        "enabled": True,
+        "core_pct": 0.60,           # 60% du budget crypto en core
+        "core_assets": ["BTC/USD", "ETH/USD"],
+        "core_split": [0.50, 0.50], # 50/50 entre BTC et ETH
+        "satellite_max_per_asset": 0.15,  # Max 15% du budget crypto par alt
+        "satellite_dd_max": 35.0,   # Exclure alts avec DD > 35%
+    },
+    "Modéré": {
+        "enabled": True,
+        "core_pct": 0.70,           # 70% du budget crypto en core
+        "core_assets": ["BTC/USD", "ETH/USD"],
+        "core_split": [0.60, 0.40], # 60/40 BTC/ETH
+        "satellite_max_per_asset": 0.10,
+        "satellite_dd_max": 30.0,
+    },
+    "Stable": {
+        "enabled": False,  # Pas de crypto pour Stable
+    },
+}
 # P1 FIX v6.2: Minimum nombre de bonds distincts dans l'allocation finale
 MIN_DISTINCT_BONDS = {
     "Stable": 2,      # v6.11 FIX: 4 → 2 (cohérent avec max 18%)
@@ -1680,7 +1702,8 @@ class PortfolioOptimizer:
         # === P0 FIX v6.22: FORCE CRYPTO CAP ===
         allocation = self._enforce_crypto_cap(allocation, candidates, profile)
        
-        
+       # === v6.23: Appliquer Core/Satellite crypto ===
+        allocation = self._apply_crypto_core_satellite(allocation, candidates, profile)
         
         # P0 PARTNER: Respecter turnover max en fallback
         if prev_weights is not None:
@@ -2505,6 +2528,83 @@ class PortfolioOptimizer:
         logger.info(f"P0 FIX v6.22: Crypto after enforcement = {crypto_final:.1f}%")
         
         return allocation
+    def _apply_crypto_core_satellite(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """
+        v6.23: Applique la structure Core/Satellite pour crypto.
+        
+        Core: BTC + ETH (60-70% du budget crypto)
+        Satellite: Autres cryptos filtrées par DD (30-40% restant)
+        """
+        config = CRYPTO_CORE_SATELLITE.get(profile.name, {})
+        if not config.get("enabled", False):
+            return allocation
+        
+        asset_lookup = {c.id: c for c in candidates}
+        
+        # Calculer budget crypto total actuel
+        crypto_total = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
+        )
+        
+        if crypto_total < 0.5:
+            return allocation  # Pas de crypto, rien à faire
+        
+        # Retirer toutes les cryptos existantes
+        crypto_ids = [aid for aid in allocation 
+                     if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"]
+        for aid in crypto_ids:
+            del allocation[aid]
+        
+        # === CORE: BTC + ETH ===
+        core_budget = crypto_total * config["core_pct"]
+        core_assets = config["core_assets"]
+        core_split = config["core_split"]
+        
+        for i, core_id in enumerate(core_assets):
+            # Chercher l'asset dans les candidats
+            core_asset = next((c for c in candidates if c.id == core_id), None)
+            if core_asset:
+                weight = core_budget * core_split[i]
+                if weight >= 0.5:
+                    allocation[core_id] = round(weight, 2)
+                    logger.info(f"v6.23 CORE: {core_id} = {weight:.2f}%")
+        
+        # === SATELLITE: Autres cryptos ===
+        satellite_budget = crypto_total * (1 - config["core_pct"])
+        satellite_max = config["satellite_max_per_asset"] * crypto_total
+        satellite_dd_max = config["satellite_dd_max"]
+        
+        # Filtrer et trier les satellites par score
+        satellite_candidates = [
+            c for c in candidates 
+            if c.category == "Crypto" 
+            and c.id not in core_assets
+            and abs(fnum(c.source_data.get("drawdown_90d_pct", 0) if c.source_data else 0)) <= satellite_dd_max
+        ]
+        satellite_candidates = sorted(satellite_candidates, key=lambda x: (-x.score, x.id))
+        
+        remaining = satellite_budget
+        for sat in satellite_candidates:
+            if remaining < 0.5:
+                break
+            weight = min(satellite_max, remaining)
+            if weight >= 0.5:
+                allocation[sat.id] = round(weight, 2)
+                remaining -= weight
+                logger.info(f"v6.23 SATELLITE: {sat.id} = {weight:.2f}%")
+        
+        # Log résumé
+        core_final = sum(allocation.get(cid, 0) for cid in core_assets)
+        sat_final = crypto_total - core_final
+        logger.info(f"v6.23 CRYPTO: core={core_final:.1f}%, satellite={sat_final:.1f}%, total={crypto_total:.1f}%")
+        
+        return allocation   
     def build_portfolio(
         self, 
         universe: List[Asset], 
