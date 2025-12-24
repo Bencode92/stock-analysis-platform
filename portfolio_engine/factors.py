@@ -899,10 +899,38 @@ class FactorScorer:
         
         for i, a in enumerate(assets):
             cat = self._get_normalized_category(a)
-            if cat == "crypto":
-                sharpe = fnum(a.get("sharpe_ratio", 0))
-                sharpe_bonus = max(-20, min(20, sharpe * 10))
-                raw[i] += sharpe_bonus
+if cat == "crypto":
+    # 1. Sharpe bonus (existant)
+    sharpe = fnum(a.get("sharpe_ratio", 0))
+    sharpe_bonus = max(-20, min(20, sharpe * 10))
+    
+    # 2. NOUVEAU: ret_90d bonus/malus
+    ret_90d = fnum(a.get("ret_90d_pct") or a.get("perf_3m") or 0)
+    if ret_90d > 0:
+        ret_bonus = 15
+    elif ret_90d > -15:
+        ret_bonus = 10
+    elif ret_90d > -25:
+        ret_bonus = 0
+    elif ret_90d > -35:
+        ret_bonus = -10
+    elif ret_90d > -45:
+        ret_bonus = -20
+    else:
+        ret_bonus = -30
+    
+    # 3. NOUVEAU: drawdown penalty
+    dd = abs(fnum(a.get("drawdown_90d_pct") or a.get("maxdd90") or 0))
+    if dd > 55:
+        dd_penalty = -15
+    elif dd > 45:
+        dd_penalty = -10
+    elif dd > 35:
+        dd_penalty = -5
+    else:
+        dd_penalty = 0
+    
+    raw[i] += sharpe_bonus + ret_bonus + dd_penalty
         
         categories = [self._get_normalized_category(a) for a in assets]
         return self._zscore_by_class(raw, categories)
