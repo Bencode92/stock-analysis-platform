@@ -1,6 +1,12 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.18.3 — FIX ticker_coverage 0%
+Optimiseur de portefeuille v6.22 — FIX crypto_cap enforcement
+
+CHANGEMENTS v6.22:
+1. NEW: _enforce_crypto_cap() force crypto <= crypto_max post-normalisation
+2. FIX: Appelé dans _fallback_allocation() après _enforce_bonds_minimum()
+3. FIX: Appelé dans optimize() après SLSQP + _adjust_to_100()
+4. IMPACT: Crypto respectera 10% (Agressif), 5% (Modéré), 0% (Stable)
 
 CHANGEMENTS v6.18.3:
 1. FIX: Asset dataclass inclut maintenant ticker/symbol
@@ -1670,6 +1676,10 @@ class PortfolioOptimizer:
         
         # === P1 FIX v6.21: FORCE BONDS MINIMUM (après toutes modifications) ===
         allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
+       # AJOUTER JUSTE APRÈS:
+        # === P0 FIX v6.22: FORCE CRYPTO CAP ===
+        allocation = self._enforce_crypto_cap(allocation, candidates, profile)
+       
         
         
         # P0 PARTNER: Respecter turnover max en fallback
@@ -1929,6 +1939,9 @@ class PortfolioOptimizer:
                         allocation[candidates[i].id] = round(float(w * 100), 2)
                 
                 allocation = self._adjust_to_100(allocation, profile)
+               # === P0 FIX v6.22: FORCE CRYPTO CAP POST-SLSQP ===
+                allocation = self._enforce_crypto_cap(allocation, candidates, profile)
+               
                 
                 # === Vérifier diversification bonds POST-SLSQP ===
                 bonds_in_solution = sum(
@@ -2404,7 +2417,94 @@ class PortfolioOptimizer:
                     allocation[k] = round(float(allocation[k] * 100 / total), 2)
         
         return allocation
-    
+        def _enforce_crypto_cap(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """
+        P0 FIX v6.22: Force crypto <= crypto_max après toutes modifications.
+        """
+        asset_lookup = {c.id: c for c in candidates}
+        
+        # Stable: crypto_max = 0, retirer toute crypto
+        if profile.crypto_max <= 0:
+            crypto_ids = [aid for aid in allocation 
+                         if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"]
+            if crypto_ids:
+                freed = sum(allocation[aid] for aid in crypto_ids)
+                for aid in crypto_ids:
+                    del allocation[aid]
+                # Redistribuer vers non-crypto
+                non_crypto = [aid for aid in allocation if allocation[aid] > 0]
+                if non_crypto and freed > 0:
+                    per_asset = freed / len(non_crypto)
+                    for aid in non_crypto:
+                        allocation[aid] = round(allocation[aid] + per_asset, 2)
+                logger.warning(f"P0 FIX v6.22: Removed all crypto for {profile.name} (crypto_max=0)")
+            return allocation
+        
+        # Calculer poids crypto actuel
+        crypto_weight = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
+        )
+        
+        if crypto_weight <= profile.crypto_max + 0.1:
+            return allocation  # OK, pas de dépassement
+        
+        excess = crypto_weight - profile.crypto_max
+        logger.warning(
+            f"P0 FIX v6.22: Crypto {crypto_weight:.1f}% > {profile.crypto_max}% max, "
+            f"reducing by {excess:.1f}%"
+        )
+        
+        # Réduire les cryptos (plus gros poids d'abord)
+        crypto_assets = sorted(
+            [(aid, w) for aid, w in allocation.items()
+             if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"],
+            key=lambda x: (-x[1], x[0])
+        )
+        
+        freed_weight = 0.0
+        for aid, w in crypto_assets:
+            if excess <= 0.1:
+                break
+            # Réduction proportionnelle, garder minimum 0.5%
+            reduction = min(w - 0.5, excess * (w / crypto_weight))
+            if reduction > 0.1:
+                allocation[aid] = round(w - reduction, 2)
+                freed_weight += reduction
+                excess -= reduction
+        
+        # Retirer cryptos < 0.5%
+        for aid, w in list(allocation.items()):
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto" and w < 0.5:
+                freed_weight += w
+                del allocation[aid]
+        
+        # Redistribuer freed_weight vers non-crypto
+        if freed_weight > 0.1:
+            eligible = [
+                (aid, w) for aid, w in allocation.items()
+                if asset_lookup.get(aid) 
+                and asset_lookup[aid].category != "Crypto"
+                and w < profile.max_single_position - 1
+            ]
+            if eligible:
+                per_asset = freed_weight / len(eligible)
+                for aid, _ in eligible:
+                    allocation[aid] = round(allocation[aid] + per_asset, 2)
+        
+        # Log final
+        crypto_final = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
+        )
+        logger.info(f"P0 FIX v6.22: Crypto after enforcement = {crypto_final:.1f}%")
+        
+        return allocation
     def build_portfolio(
         self, 
         universe: List[Asset], 
