@@ -897,7 +897,7 @@ class FactorScorer:
             p24h = [fnum(a.get("perf_24h")) for a in assets]
             raw = [0.7 * p7d[i] + 0.3 * p24h[i] for i in range(n)]
         
-       for i, a in enumerate(assets):
+        for i, a in enumerate(assets):
             cat = self._get_normalized_category(a)
             if cat == "crypto":
                 # 1. Sharpe bonus (existant)
