@@ -1,11 +1,10 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec une forte exposition aux actions et aux cryptomonnaies. Bien que cela puisse offrir des rendements potentiels élevés, il est important de noter que la volatilité est significative. Les investissements dans les cryptomonnaies et les actions peuvent entraîner des fluctuations importantes. De plus, les conditions économiques peuvent affecter la performance des actifs financiers. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une allocation agressive, avec des actifs diversifiés dans différents secteurs. L'exposition aux cryptomonnaies et aux matières premières peut offrir des opportunités de rendement, mais cela augmente également la volatilité. Les risques incluent la sensibilité aux fluctuations des marchés émergents et les impacts des réglementations sur les entreprises du secteur de la santé. Les investisseurs doivent être conscients des risques inhérents à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "AIB GROUP PLC": "15%",
       "ELI LILLY": "15%",
-      "FREEPORT MCMORAN INC": "5%",
-      "NATWEST GROUP PLC": "10%",
+      "AIB GROUP PLC": "15%",
+      "FREEPORT MCMORAN INC": "15%",
       "ALLIANZ": "5%"
     },
     "ETF": {
@@ -17,26 +16,25 @@
       "VanEck J.P. Morgan EM Local Currency Bond ETF": "5%"
     },
     "Crypto": {
-      "XMR/EUR": "9%",
-      "BCH/USD": "1%"
+      "XMR/EUR": "7%",
+      "BCH/USD": "3%"
     },
     "_tickers": {
       "JKF": 0.15,
       "EMLC": 0.05,
-      "XMR/EUR": 0.0858,
-      "BCH/USD": 0.0142,
+      "XMR/EUR": 0.0705,
+      "BCH/USD": 0.0295,
       "SLV": 0.15,
       "GLTR": 0.05,
-      "A5G": 0.15,
       "LLY": 0.15,
-      "FCX": 0.0547,
-      "NWG": 0.0953,
+      "A5G": 0.15,
+      "FCX": 0.15,
       "ALV": 0.05
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 18.65,
+      "vol_realized": 19.64,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -46,15 +44,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 18.65,
-          "slack": 2.35,
+          "observed": 19.64,
+          "slack": 1.36,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": 0.65
+            "diff_from_target": 1.64
           }
         },
         {
@@ -89,12 +87,12 @@
               {
                 "id": "XMR/EUR",
                 "name": "XMR/EUR",
-                "weight": 8.58
+                "weight": 7.05
               },
               {
                 "id": "BCH/USD",
                 "name": "BCH/USD",
-                "weight": 1.42
+                "weight": 2.95
               }
             ]
           }
@@ -123,11 +121,15 @@
                 "weight": 15.0
               },
               {
+                "id": "EQ_10",
+                "weight": 15.0
+              },
+              {
                 "id": "EQ_641",
                 "weight": 15.0
               },
               {
-                "id": "EQ_10",
+                "id": "EQ_181",
                 "weight": 15.0
               }
             ]
@@ -137,24 +139,24 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 35.0,
-          "observed": 29.53,
-          "slack": 5.47,
+          "observed": 20.0,
+          "slack": 15.0,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Finance",
             "counts_in_max_sector": {
-              "Finance": 29.53,
+              "Finance": 20.0,
               "Diversified": 15.0,
               "Santé": 15.0,
-              "Matériaux": 5.47
+              "Matériaux": 15.0
             },
             "all_sectors": {
               "Diversified": 35.0,
-              "Finance": 29.53,
+              "Finance": 20.0,
               "Santé": 15.0,
+              "Matériaux": 15.0,
               "Crypto": 10.0,
-              "Matériaux": 5.47,
               "Bonds": 5.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -164,24 +166,22 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 20.47,
-          "slack": 29.53,
+          "observed": 30.0,
+          "slack": 20.0,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Etats-Unis": 20.47,
+              "Etats-Unis": 30.0,
               "Global": 15.0,
               "Irlande": 15.0,
-              "Royaume-Uni": 9.53,
               "Allemagne": 5.0
             },
             "all_regions": {
               "Global": 50.0,
-              "Etats-Unis": 20.47,
+              "Etats-Unis": 30.0,
               "Irlande": 15.0,
-              "Royaume-Uni": 9.53,
               "Allemagne": 5.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
@@ -191,18 +191,18 @@
           "name": "min_assets",
           "constraint_type": "min",
           "cap": 10,
-          "observed": 11,
-          "slack": 1,
-          "binding": false,
-          "status": "OK",
+          "observed": 10,
+          "slack": 0,
+          "binding": true,
+          "status": "BINDING",
           "details": {}
         },
         {
           "name": "max_assets",
           "constraint_type": "max",
           "cap": 18,
-          "observed": 11,
-          "slack": 7,
+          "observed": 10,
+          "slack": 8,
           "binding": false,
           "status": "OK",
           "details": {}
@@ -304,16 +304,16 @@
       ],
       "summary": {
         "total": 14,
-        "ok": 11,
-        "binding": 3,
+        "ok": 10,
+        "binding": 4,
         "violated": 0,
         "critical": 0
       },
-      "quality_score": 95.7,
+      "quality_score": 94.3,
       "recommendations": [
         "🟡 BINDING: crypto_max at 10.0% (cap=10.0%) — monitor closely",
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
-        "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
+        "⚠️ 4 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
@@ -324,15 +324,14 @@
         },
         "by_sector": {
           "Diversified": 35.0,
-          "Finance": 29.53,
+          "Finance": 20.0,
           "Santé": 15.0,
-          "Matériaux": 5.47
+          "Matériaux": 15.0
         },
         "by_region": {
           "Global": 50.0,
-          "Etats-Unis": 20.47,
+          "Etats-Unis": 30.0,
           "Irlande": 15.0,
-          "Royaume-Uni": 9.53,
           "Allemagne": 5.0
         },
         "by_risk_bucket": {
@@ -349,14 +348,14 @@
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1171.0,
+          "hhi": 1258.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.54,
-          "n_positions": 11,
-          "top_5_weight": 69.53,
-          "top_10_weight": 98.58,
+          "effective_n": 7.95,
+          "n_positions": 10,
+          "top_5_weight": 75.0,
+          "top_10_weight": 100.0,
           "largest_position": 15.0,
-          "smallest_position": 1.42,
+          "smallest_position": 2.95,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
@@ -392,18 +391,6 @@
           "exchange": null
         },
         {
-          "id": "EQ_641",
-          "ticker": "A5G",
-          "isin": null,
-          "name": "AIB GROUP PLC",
-          "weight_pct": 15.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Irlande",
-          "exchange": null
-        },
-        {
           "id": "EQ_10",
           "ticker": "LLY",
           "isin": null,
@@ -416,27 +403,15 @@
           "exchange": null
         },
         {
-          "id": "EQ_573",
-          "ticker": "NWG",
+          "id": "EQ_641",
+          "ticker": "A5G",
           "isin": null,
-          "name": "NATWEST GROUP PLC",
-          "weight_pct": 9.53,
+          "name": "AIB GROUP PLC",
+          "weight_pct": 15.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
-          "region": "Royaume-Uni",
-          "exchange": null
-        },
-        {
-          "id": "XMR/EUR",
-          "ticker": "XMR/EUR",
-          "isin": null,
-          "name": "XMR/EUR",
-          "weight_pct": 8.58,
-          "category": "Crypto",
-          "risk_bucket": "crypto",
-          "sector": "Crypto",
-          "region": "Global",
+          "region": "Irlande",
           "exchange": null
         },
         {
@@ -444,11 +419,23 @@
           "ticker": "FCX",
           "isin": null,
           "name": "FREEPORT MCMORAN INC",
-          "weight_pct": 5.47,
+          "weight_pct": 15.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Matériaux",
           "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
+          "id": "XMR/EUR",
+          "ticker": "XMR/EUR",
+          "isin": null,
+          "name": "XMR/EUR",
+          "weight_pct": 7.05,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
           "exchange": null
         },
         {
@@ -492,7 +479,7 @@
           "ticker": "BCH/USD",
           "isin": null,
           "name": "BCH/USD",
-          "weight_pct": 1.42,
+          "weight_pct": 2.95,
           "category": "Crypto",
           "risk_bucket": "crypto",
           "sector": "Crypto",
@@ -501,14 +488,14 @@
         }
       ],
       "execution_summary": {
-        "n_positions": 11,
+        "n_positions": 10,
         "n_exchanges": 0,
         "exchanges": [],
         "total_weight": 100.0,
-        "missing_isin": 7,
+        "missing_isin": 6,
         "missing_ticker": 0,
         "data_quality": {
-          "isin_coverage": 36.4,
+          "isin_coverage": 40.0,
           "ticker_coverage": 100.0
         },
         "ready_for_execution": true
@@ -523,15 +510,14 @@
       },
       "by_sector": {
         "Diversified": 35.0,
-        "Finance": 29.53,
+        "Finance": 20.0,
         "Santé": 15.0,
-        "Matériaux": 5.47
+        "Matériaux": 15.0
       },
       "by_region": {
         "Global": 50.0,
-        "Etats-Unis": 20.47,
+        "Etats-Unis": 30.0,
         "Irlande": 15.0,
-        "Royaume-Uni": 9.53,
         "Allemagne": 5.0
       },
       "by_risk_bucket": {
@@ -548,14 +534,14 @@
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1171.0,
+        "hhi": 1258.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.54,
-        "n_positions": 11,
-        "top_5_weight": 69.53,
-        "top_10_weight": 98.58,
+        "effective_n": 7.95,
+        "n_positions": 10,
+        "top_5_weight": 75.0,
+        "top_10_weight": 100.0,
         "largest_position": 15.0,
-        "smallest_position": 1.42,
+        "smallest_position": 2.95,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -566,14 +552,14 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 11,
+      "n_positions": 10,
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 7,
+      "missing_isin": 6,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 36.4,
+        "isin_coverage": 40.0,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
@@ -581,12 +567,12 @@
     "_limitations": []
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, alliant des actifs à faible volatilité et des investissements plus risqués. Bien que la diversification puisse réduire le risque global, l'exposition aux marchés émergents et aux cryptomonnaies peut introduire des fluctuations. Les investisseurs doivent être conscients que les performances des actifs peuvent varier en fonction des conditions économiques. Il est essentiel de rester informé des risques associés à chaque classe d'actifs. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant croissance et protection. L'inclusion d'ETF de consommation de base et d'obligations vise à réduire la volatilité tout en offrant un potentiel de rendement. Cependant, les risques incluent la dépendance aux performances des marchés émergents et l'impact des fluctuations des prix de l'énergie. Les investisseurs doivent évaluer leur tolérance au risque avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "AIB GROUP PLC": "14%",
       "ALLIANZ": "14%",
-      "ENGIE SA": "6%",
-      "ELI LILLY": "14%"
+      "ELI LILLY": "14%",
+      "ENGIE SA": "6%"
     },
     "ETF": {
       "VANGUARD CONSUMER STAPLES ETF": "14%",
@@ -609,13 +595,13 @@
       "EMLC": 0.0753,
       "A5G": 0.146,
       "ALV": 0.146,
-      "ENGI": 0.0553,
-      "LLY": 0.146
+      "LLY": 0.146,
+      "ENGI": 0.0553
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 10.39,
+      "vol_realized": 10.38,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -625,15 +611,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 10.39,
-          "slack": 1.39,
+          "observed": 10.38,
+          "slack": 1.38,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -1.61
+            "diff_from_target": -1.62
           }
         },
         {
@@ -1149,7 +1135,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche stable, avec une forte concentration sur les obligations et des actions à faible volatilité. Cela vise à réduire les fluctuations tout en offrant un potentiel de rendement modéré. Cependant, même les investissements dans des obligations peuvent être affectés par des changements de taux d'intérêt. De plus, l'exposition aux marchés internationaux peut introduire des risques de change. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie stable, axée sur des actifs à faible volatilité. L'allocation à des obligations et des actions de services publics vise à réduire les fluctuations tout en offrant des rendements modérés. Cependant, les risques incluent la sensibilité aux variations des taux d'intérêt et les impacts des conditions économiques sur les marchés développés. Les investisseurs doivent être conscients des risques associés à cette approche. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "ALLIANZ": "5%",
       "VISA INC CLASS A": "8%",
@@ -1184,7 +1170,7 @@
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 4.09,
+      "vol_realized": 4.11,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -1220,15 +1206,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 4.09,
-          "slack": 1.09,
+          "observed": 4.11,
+          "slack": 1.11,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -1.91
+            "diff_from_target": -1.89
           }
         },
         {
@@ -1731,7 +1717,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2025-12-24T11:16:23.020305",
+    "generated_at": "2025-12-24T16:51:02.150681",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
