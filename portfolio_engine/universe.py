@@ -506,14 +506,18 @@ def build_raw_universe(
             cr_rows.append({
                 "id": it.get("symbol") or it.get("pair") or f"CR_{len(cr_rows)+1}",
                 "name": it.get("symbol") or it.get("name"),
-                "ticker": it.get("symbol"),  # Crypto: symbol = ticker
+                "ticker": it.get("symbol"),
                 "symbol": it.get("symbol"),
                 "perf_24h": it.get("ret_1d_pct") or it.get("perf_24h"),
                 "perf_7d": it.get("ret_7d_pct") or it.get("perf_7d"),
+                "perf_1m": it.get("ret_30d_pct"),                       # NOUVEAU v3.4
+                "perf_3m": it.get("ret_90d_pct"),                       # NOUVEAU v3.4
+                "ret_90d_pct": it.get("ret_90d_pct"),                   # NOUVEAU v3.4
                 "ytd": it.get("ret_ytd_pct") or it.get("ytd"),
                 "vol30": it.get("vol_30d_annual_pct") or it.get("vol"),
                 "vol": it.get("vol_30d_annual_pct") or it.get("vol"),
                 "maxdd90": it.get("drawdown_90d_pct"),
+                "drawdown_90d_pct": it.get("drawdown_90d_pct"),         # NOUVEAU v3.4
                 "sector": "Crypto",
                 "country": "Global",
                 "category": "crypto",
@@ -664,13 +668,17 @@ def build_raw_universe_from_files(
             cr_rows.append({
                 "id": r.get("symbol") or r.get("pair"),
                 "name": str(r.get("symbol", "")),
-                "ticker": r.get("symbol"),  # Crypto: symbol = ticker
+                "ticker": r.get("symbol"),
                 "symbol": r.get("symbol"),
                 "perf_24h": r.get("ret_1d_pct"),
                 "perf_7d": r.get("ret_7d_pct"),
+                "perf_1m": r.get("ret_30d_pct"),                       # NOUVEAU v3.4
+                "perf_3m": r.get("ret_90d_pct"),                       # NOUVEAU v3.4
+                "ret_90d_pct": r.get("ret_90d_pct"),                   # NOUVEAU v3.4
                 "ytd": r.get("ret_ytd_pct"),
                 "vol30": r.get("vol_30d_annual_pct"),
                 "maxdd90": r.get("drawdown_90d_pct"),
+                "drawdown_90d_pct": r.get("drawdown_90d_pct"),         # NOUVEAU v3.4
                 "sector": "Crypto",
                 "country": "Global",
                 "category": "crypto",
