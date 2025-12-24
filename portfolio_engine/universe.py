@@ -1,6 +1,11 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.3.1 — Fix filtres trop restrictifs.
+Construction de l'univers d'actifs v3.5 — Filtre crypto robuste.
+
+CHANGEMENTS v3.5 (Crypto Quote Filter - ChatGPT review):
+- Utilise crypto_utils.crypto_quote_filter() pour filtrage robuste
+- Autorise EUR + USD + stablecoins (portefeuille base EUR)
+- STRICT: filtre si quote non déterminable (évite les faux positifs)
 
 CHANGEMENTS v3.3.1 (Fix Diversification):
 - ETF: dd_max 40% → 55% (permet QQQ, VTI, etc.)
@@ -183,11 +188,15 @@ def load_returns_series(
     return returns
 
 
-# ============= FILTRES DE RISQUE v3.3.1 =============
+# ============= FILTRES DE RISQUE v3.5 =============
 
 def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
     """
     Filtre simple par bornes de volatilité.
+    
+    v3.5: Filtre crypto robuste via crypto_utils (ChatGPT review)
+    - Autorise EUR + USD + stablecoins (portefeuille base EUR)
+    - STRICT: filtre si quote non déterminable
     
     v3.3.1: Seuils relaxés pour permettre la diversification:
     - ETF: dd_max 40% → 55% (permet QQQ, VTI, etc.)
@@ -207,6 +216,17 @@ def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
     
     bounds = risk_bounds.get(asset_type, risk_bounds["etf"])
     
+    # v3.5: Import lazy crypto_utils
+    HAS_CRYPTO_UTILS = False
+    crypto_quote_filter = None
+    if asset_type == "crypto":
+        try:
+            from .crypto_utils import crypto_quote_filter as _cqf
+            crypto_quote_filter = _cqf
+            HAS_CRYPTO_UTILS = True
+        except ImportError:
+            pass
+    
     def is_valid(r):
         v = fnum(r.get("vol_3y") or r.get("vol30") or r.get("vol") or r.get("vol_pct") or 20)
         dd = abs(fnum(r.get("max_drawdown_ytd") or r.get("maxdd90") or r.get("max_dd") or 0))
@@ -215,19 +235,35 @@ def filter_by_risk_bounds(rows: List[dict], asset_type: str) -> List[dict]:
         if not (bounds["vol_min"] <= v <= bounds["vol_max"] and dd <= bounds["dd_max"]):
             return False
         
-# v3.4: Filtres spécifiques crypto (avec stale + USD only - ChatGPT review)
+        # v3.5: Filtres spécifiques crypto (avec crypto_utils robuste - ChatGPT review)
         if asset_type == "crypto":
-            # NOUVEAU v3.4: Filtre stale (données obsolètes)
+            # NOUVEAU v3.5: Filtre stale (données obsolètes)
             stale = r.get("stale")
             if stale is True:
                 logger.debug(f"Crypto filtrée stale: {r.get('symbol')} (stale=True)")
                 return False
             
-            # NOUVEAU v3.4: USD only (évite biais FX EUR/USD)
-            currency_quote = str(r.get("currency_quote", "")).upper()
-            if currency_quote and currency_quote not in ["US DOLLAR", "USD", ""]:
-                logger.debug(f"Crypto filtrée non-USD: {r.get('symbol')} (quote={currency_quote})")
-                return False
+            # NOUVEAU v3.5: Filtre devise robuste via crypto_utils
+            # Portefeuille base EUR → autorise EUR + USD + stablecoins
+            if HAS_CRYPTO_UTILS and crypto_quote_filter:
+                if not crypto_quote_filter(r, portfolio_base="EUR", logger_instance=logger):
+                    return False  # Déjà loggé dans crypto_quote_filter
+            else:
+                # Fallback si crypto_utils non disponible
+                currency_quote = str(r.get("currency_quote", "")).upper()
+                symbol = str(r.get("symbol") or r.get("id") or "").upper()
+                
+                # Si currency_quote présent et non autorisé → filtrer
+                if currency_quote and currency_quote not in ["US DOLLAR", "USD", "EUR", "USDT", "USDC", ""]:
+                    logger.debug(f"Crypto filtrée non-autorisée: {r.get('symbol')} (quote={currency_quote})")
+                    return False
+                
+                # Si pas de currency_quote, vérifier le symbole (STRICT)
+                if not currency_quote and "/" in symbol:
+                    quote = symbol.split("/")[-1]
+                    if quote not in ["USD", "EUR", "USDT", "USDC", "BUSD"]:
+                        logger.debug(f"Crypto filtrée (symbol quote={quote}): {symbol}")
+                        return False
             
             # Filtre VaR 95% (risque extrême)
             var_95 = abs(fnum(r.get("var_95_pct", 0)))
@@ -370,7 +406,7 @@ def _enrich_bonds_inline(bond_rows: List[dict]) -> List[dict]:
     return bond_rows
 
 
-# ============= CONSTRUCTION UNIVERS v3.3 =============
+# ============= CONSTRUCTION UNIVERS v3.5 =============
 
 def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
@@ -383,6 +419,7 @@ def build_raw_universe(
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
@@ -401,7 +438,7 @@ def build_raw_universe(
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.3.1...")
+    logger.info("🧮 Construction de l'univers brut v3.5...")
     
     all_assets = []
     
@@ -533,6 +570,9 @@ def build_raw_universe(
                 "tier1_listed": it.get("tier1_listed"),
                 "enough_history_90d": it.get("enough_history_90d"),
                 "coverage_ratio": it.get("coverage_ratio"),
+                # === v3.5: Colonne currency_quote pour filtrage ===
+                "currency_quote": it.get("currency_quote"),
+                "stale": it.get("stale"),
             })
     
     if cr_rows:
@@ -566,13 +606,14 @@ def build_raw_universe_from_files(
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.3.1 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.5 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -694,6 +735,9 @@ def build_raw_universe_from_files(
                 "tier1_listed": r.get("tier1_listed"),
                 "enough_history_90d": r.get("enough_history_90d"),
                 "coverage_ratio": r.get("coverage_ratio"),
+                # === v3.5: Colonnes pour filtrage devise ===
+                "currency_quote": r.get("currency_quote"),
+                "stale": r.get("stale"),
             })
         if apply_risk_filters:
             cr_rows = filter_by_risk_bounds(cr_rows, "crypto")
@@ -728,6 +772,7 @@ def load_and_prepare_universe(
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
     v3.2: Chargement colonnes étendues (TER, yield, sharpe, var)
