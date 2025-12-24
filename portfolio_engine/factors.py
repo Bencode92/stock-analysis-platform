@@ -919,13 +919,15 @@ class FactorScorer:
                 else:
                     ret_bonus = -30
                 
-                # 3. NOUVEAU: drawdown penalty
+                # 3. NOUVEAU v2.6: drawdown penalty (seuils abaissés - ChatGPT review)
                 dd = abs(fnum(a.get("drawdown_90d_pct") or a.get("maxdd90") or 0))
-                if dd > 55:
+                if dd > 50:
+                    dd_penalty = -20
+                elif dd > 40:
                     dd_penalty = -15
-                elif dd > 45:
+                elif dd > 30:
                     dd_penalty = -10
-                elif dd > 35:
+                elif dd > 25:
                     dd_penalty = -5
                 else:
                     dd_penalty = 0
