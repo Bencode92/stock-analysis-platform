@@ -2417,7 +2417,7 @@ class PortfolioOptimizer:
                     allocation[k] = round(float(allocation[k] * 100 / total), 2)
         
         return allocation
-        def _enforce_crypto_cap(
+    def _enforce_crypto_cap(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
