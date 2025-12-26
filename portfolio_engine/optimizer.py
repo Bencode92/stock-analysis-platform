@@ -155,6 +155,13 @@ try:
 except ImportError:
     HAS_RISK_BUCKETS = False
 
+# Phase 1: Import constraint_report pour margins et exposures
+try:
+    from portfolio_engine.constraint_report import enrich_diagnostics_with_margins
+    HAS_CONSTRAINT_REPORT = True
+except ImportError:
+    HAS_CONSTRAINT_REPORT = False
+
 # v6.24: Import crypto_utils pour matching flexible BTC/ETH
 try:
     from portfolio_engine.crypto_utils import find_crypto_by_base
