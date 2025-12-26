@@ -9,6 +9,7 @@ Architecture:
 - llm_commentary.py : Génération des commentaires via LLM
 - sector_quality.py : Métriques Buffett par secteur (utilisé par factors.py)
 - preset_meta.py    : Presets, buckets, contraintes par profil
+- etf_exposure.py   : Mapping ETF → exposure pour déduplication (v3.0)
 
 PARI CENTRAL:
 "Des entreprises de qualité fondamentale (ROIC > 10%, FCF positif)
@@ -67,7 +68,6 @@ from .optimizer import (
     enrich_assets_with_buckets,
     # Deduplication
     deduplicate_etfs,
-    detect_etf_exposure,
     deduplicate_stocks_by_corporate_group,
     # Hard filter
     apply_buffett_hard_filter,
@@ -75,6 +75,13 @@ from .optimizer import (
     # Covariance hybride
     HybridCovarianceEstimator,
     COVARIANCE_EMPIRICAL_WEIGHT,
+)
+
+# ETF Exposure Mapping (v3.0 - séparation ticker/keywords)
+from .etf_exposure import (
+    TICKER_TO_EXPOSURE,
+    KEYWORD_PATTERNS,
+    detect_etf_exposure,
 )
 
 # LLM Commentary
@@ -137,7 +144,7 @@ from .preset_meta import (
     validate_portfolio_buckets,
 )
 
-__version__ = "4.0.1"
+__version__ = "4.0.2"
 
 __all__ = [
     # Universe (v3.0)
@@ -177,12 +184,15 @@ __all__ = [
     "assign_preset_to_asset",
     "enrich_assets_with_buckets",
     "deduplicate_etfs",
-    "detect_etf_exposure",
     "deduplicate_stocks_by_corporate_group",
     "apply_buffett_hard_filter",
     "BUFFETT_HARD_FILTER_MIN",
     "HybridCovarianceEstimator",
     "COVARIANCE_EMPIRICAL_WEIGHT",
+    # ETF Exposure (v3.0)
+    "TICKER_TO_EXPOSURE",
+    "KEYWORD_PATTERNS",
+    "detect_etf_exposure",
     # LLM Commentary
     "build_commentary_prompt",
     "parse_llm_response",
