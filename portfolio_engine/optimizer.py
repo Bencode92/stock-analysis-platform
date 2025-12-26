@@ -2589,7 +2589,7 @@ class PortfolioOptimizer:
             c for c in candidates 
             if c.category == "Crypto" 
             and c.id not in core_assets
-            and abs(fnum(c.source_data.get("drawdown_90d_pct", 0) if c.source_data else 0)) <= satellite_dd_max
+            and abs(_clean_float(c.source_data.get("drawdown_90d_pct", 0) if c.source_data else 0, 0, -100, 100)) <= satellite_dd_max
         ]
         satellite_candidates = sorted(satellite_candidates, key=lambda x: (-x.score, x.id))
         
