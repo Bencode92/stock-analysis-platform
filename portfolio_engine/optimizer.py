@@ -155,12 +155,12 @@ try:
 except ImportError:
     HAS_RISK_BUCKETS = False
 
-# Phase 1: Import constraint_report pour margins et exposures
+# v6.24: Import crypto_utils pour matching flexible BTC/ETH
 try:
-    from portfolio_engine.constraint_report import enrich_diagnostics_with_margins
-    HAS_CONSTRAINT_REPORT = True
+    from portfolio_engine.crypto_utils import find_crypto_by_base
+    HAS_CRYPTO_UTILS = True
 except ImportError:
-    HAS_CONSTRAINT_REPORT = False
+    HAS_CRYPTO_UTILS = False
 
 logger = logging.getLogger("portfolio_engine.optimizer")
 
@@ -1964,6 +1964,10 @@ class PortfolioOptimizer:
                 allocation = self._adjust_to_100(allocation, profile)
                # === P0 FIX v6.22: FORCE CRYPTO CAP POST-SLSQP ===
                 allocation = self._enforce_crypto_cap(allocation, candidates, profile)
+
+               # === v6.24 FIX: APPLIQUER CORE/SATELLITE POST-SLSQP ===
+                allocation = self._apply_crypto_core_satellite(allocation, candidates, profile)
+                allocation = self._adjust_to_100(allocation, profile)
                
                 
                 # === Vérifier diversification bonds POST-SLSQP ===
