@@ -2577,14 +2577,21 @@ class PortfolioOptimizer:
         core_assets = config["core_assets"]
         core_split = config["core_split"]
         
-        for i, core_id in enumerate(core_assets):
-            # Chercher l'asset dans les candidats
-            core_asset = next((c for c in candidates if c.id == core_id), None)
+         for i, core_pattern in enumerate(core_assets):
+            # v6.24 FIX: Matching flexible via crypto_utils
+            base_currency = core_pattern.split("/")[0]  # "BTC" ou "ETH"
+            
+            if HAS_CRYPTO_UTILS:
+                core_asset = find_crypto_by_base(candidates, base_currency, portfolio_base="EUR")
+            else:
+                # Fallback: matching exact (comportement legacy)
+                core_asset = next((c for c in candidates if c.id == core_pattern), None)
+            
             if core_asset:
                 weight = core_budget * core_split[i]
                 if weight >= 0.5:
-                    allocation[core_id] = round(weight, 2)
-                    logger.info(f"v6.23 CORE: {core_id} = {weight:.2f}%")
+                    allocation[core_asset.id] = round(weight, 2)
+                    logger.info(f"v6.24 CORE: {core_asset.id} (matched from {core_pattern}) = {weight:.2f}%")           
         
         # === SATELLITE: Autres cryptos ===
         satellite_budget = crypto_total * (1 - config["core_pct"])
