@@ -94,7 +94,8 @@ try:
     HAS_SKLEARN_LW = True
 except ImportError:
     HAS_SKLEARN_LW = False
-
+# v3.0: Import ETF exposure mapping (séparé du module)
+from .etf_exposure import TICKER_TO_EXPOSURE, detect_etf_exposure
 # Import preset_meta pour buckets et déduplication
 try:
     from portfolio_engine.preset_meta import (
@@ -763,34 +764,6 @@ def deduplicate_stocks_by_corporate_group(
         logger.info(f"Corporate deduplication: removed {total_removed} duplicate stocks")
     
     return non_stocks + deduplicated_stocks, removed_by_group
-
-
-# ============= ETF EXPOSURE DETECTION =============
-
-ETF_NAME_TO_EXPOSURE = {
-    "gold": "gold", "or": "gold", "gld": "gold", "iau": "gold",
-    "world": "world", "msci world": "world", "urth": "world",
-    "s&amp;p 500": "sp500", "spy": "sp500", "voo": "sp500",
-    "nasdaq": "nasdaq", "qqq": "nasdaq", "tech": "tech",
-    "emerging": "emerging_markets", "eem": "emerging_markets",
-    "treasury": "bonds_treasury", "tlt": "bonds_treasury", "ief": "bonds_treasury",
-    "investment grade": "bonds_ig", "lqd": "bonds_ig", "agg": "bonds_ig",
-    "money market": "cash", "ultra short": "cash", "bil": "cash",
-    "min vol": "min_vol", "low vol": "min_vol",
-    "dividend": "dividend", "inflation": "inflation", "tips": "inflation",
-}
-
-
-def detect_etf_exposure(asset: Asset) -> Optional[str]:
-    """Détecte l'exposition d'un ETF ou bond basé sur son nom/ticker."""
-    if asset.category not in ["ETF", "Obligations"]:
-        return None
-    search_text = f"{asset.name} {asset.id}".lower()
-    for keyword, exposure in ETF_NAME_TO_EXPOSURE.items():
-        if keyword in search_text:
-            return exposure
-    return None
-
 
 def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asset]:
     """Déduplique les ETF par exposition, MAIS PAS les Obligations."""
