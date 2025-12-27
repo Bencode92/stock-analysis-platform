@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2025-12-27T17:47:16.388840",
+    "generated_at": "2025-12-27T18:07:24.861363",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -20,8 +20,8 @@
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 30,
-    "tickers_with_data": 30,
+    "total_tickers_requested": 31,
+    "tickers_with_data": 31,
     "tickers_missing": []
   },
   "assets_by_type": {
@@ -38,6 +38,7 @@
       "ICVT",
       "ISHG",
       "KO",
+      "PI/USDT",
       "PTNQ",
       "SBIN",
       "SLV",
@@ -305,7 +306,7 @@
       "total_return_pct": 9.14,
       "volatility_annual_pct": 67.08,
       "weights_by_profile": {
-        "Agressif": 1.48,
+        "Agressif": 7.7,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -535,7 +536,7 @@
       "total_return_pct": -14.41,
       "volatility_annual_pct": 84.64,
       "weights_by_profile": {
-        "Agressif": 1.48,
+        "Agressif": 1.5,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -593,7 +594,7 @@
       "total_return_pct": 31.09,
       "volatility_annual_pct": 20.61,
       "weights_by_profile": {
-        "Agressif": 14.6
+        "Agressif": 8.4
       },
       "price_samples": [
         {
@@ -936,7 +937,7 @@
       "total_return_pct": 2.16,
       "volatility_annual_pct": 5.9,
       "weights_by_profile": {
-        "Modéré": 12.0
+        "Modéré": 11.5
       },
       "price_samples": [
         {
@@ -978,6 +979,63 @@
           "prev_close": 41.58,
           "daily_return_pct": 0.0962,
           "formula": "(41.6200 / 41.5800) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
+    "PI/USDT": {
+      "ticker": "PI/USDT",
+      "type": "Action",
+      "n_days_data": 83,
+      "first_date": "2025-09-01",
+      "last_date": "2025-12-26",
+      "first_price": 0.3409,
+      "last_price": 0.2046,
+      "total_return_pct": -39.98,
+      "volatility_annual_pct": 77.11,
+      "weights_by_profile": {
+        "Modéré": 0.5
+      },
+      "price_samples": [
+        {
+          "date": "2025-09-01",
+          "close": 0.3409,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-09-29",
+          "close": 0.2687,
+          "prev_date": "2025-09-26",
+          "prev_close": 0.2712,
+          "daily_return_pct": -0.9218,
+          "formula": "(0.2687 / 0.2712) - 1"
+        },
+        {
+          "date": "2025-10-30",
+          "close": 0.2503,
+          "prev_date": "2025-10-29",
+          "prev_close": 0.2589,
+          "daily_return_pct": -3.3217,
+          "formula": "(0.2503 / 0.2589) - 1"
+        },
+        {
+          "date": "2025-11-28",
+          "close": 0.2502,
+          "prev_date": "2025-11-27",
+          "prev_close": 0.272,
+          "daily_return_pct": -8.0147,
+          "formula": "(0.2502 / 0.2720) - 1"
+        },
+        {
+          "date": "2025-12-26",
+          "close": 0.2046,
+          "prev_date": "2025-12-25",
+          "prev_close": 0.2049,
+          "daily_return_pct": -0.1464,
+          "formula": "(0.2046 / 0.2049) - 1"
         }
       ],
       "is_benchmark": false
@@ -1162,7 +1220,7 @@
       "total_return_pct": -0.4,
       "volatility_annual_pct": 1.27,
       "weights_by_profile": {
-        "Stable": 12.31
+        "Stable": 12.28
       },
       "price_samples": [
         {
@@ -1276,7 +1334,7 @@
       "total_return_pct": 96.52,
       "volatility_annual_pct": 39.22,
       "weights_by_profile": {
-        "Agressif": 11.93
+        "Agressif": 12.0
       },
       "price_samples": [
         {
@@ -1614,7 +1672,7 @@
       "total_return_pct": 0.9,
       "volatility_annual_pct": 8.39,
       "weights_by_profile": {
-        "Agressif": 14.71
+        "Agressif": 14.6
       },
       "price_samples": [
         {
@@ -1784,20 +1842,11 @@
         {
           "ticker": "USMV",
           "type": "Action",
-          "weight_pct": 14.71,
+          "weight_pct": 14.6,
           "price_prev": 95.07,
           "price_today": 95.11,
           "return_pct": 0.0421,
-          "contribution_pct": 0.0062
-        },
-        {
-          "ticker": "IAU",
-          "type": "Action",
-          "weight_pct": 14.6,
-          "price_prev": 84.34,
-          "price_today": 85.34,
-          "return_pct": 1.1857,
-          "contribution_pct": 0.1731
+          "contribution_pct": 0.0061
         },
         {
           "ticker": "326030",
@@ -1829,11 +1878,29 @@
         {
           "ticker": "SLV",
           "type": "Action",
-          "weight_pct": 11.93,
+          "weight_pct": 12.0,
           "price_prev": 65.22,
           "price_today": 71.12,
           "return_pct": 9.0463,
-          "contribution_pct": 1.0792
+          "contribution_pct": 1.0856
+        },
+        {
+          "ticker": "IAU",
+          "type": "Action",
+          "weight_pct": 8.4,
+          "price_prev": 84.34,
+          "price_today": 85.34,
+          "return_pct": 1.1857,
+          "contribution_pct": 0.0996
+        },
+        {
+          "ticker": "BCH/USD",
+          "type": "Action",
+          "weight_pct": 7.7,
+          "price_prev": 589.8,
+          "price_today": 594.9,
+          "return_pct": 0.8647,
+          "contribution_pct": 0.0666
         },
         {
           "ticker": "VGLT",
@@ -1861,18 +1928,9 @@
           "price_today": 99.65,
           "return_pct": -0.2203,
           "contribution_pct": -0.0044
-        },
-        {
-          "ticker": "BCH/USD",
-          "type": "Action",
-          "weight_pct": 1.48,
-          "price_prev": 589.8,
-          "price_today": 594.9,
-          "return_pct": 0.8647,
-          "contribution_pct": 0.0128
         }
       ],
-      "total_portfolio_return_pct": 1.1805,
+      "total_portfolio_return_pct": 1.167,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1930,10 +1988,6 @@
       "top_5_holdings": [
         [
           "USMV",
-          14.71
-        ],
-        [
-          "IAU",
           14.6
         ],
         [
@@ -1947,16 +2001,20 @@
         [
           "AXISBANK",
           14.6
+        ],
+        [
+          "SLV",
+          12.0
         ]
       ]
     },
     "Modéré": {
-      "n_assets": 11,
+      "n_assets": 12,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
-        "Action": 85.0,
+        "Action": 85.5,
         "ETF": 0,
-        "Bond_ETF": 15.0,
+        "Bond_ETF": 14.5,
         "Crypto": 0
       },
       "top_5_holdings": [
@@ -1978,23 +2036,23 @@
         ],
         [
           "LEMB",
-          12.0
+          11.5
         ]
       ]
     },
     "Stable": {
       "n_assets": 11,
-      "total_weight_pct": 100.03,
+      "total_weight_pct": 100.0,
       "allocation_by_type": {
         "Action": 46.17,
         "ETF": 0,
-        "Bond_ETF": 53.86,
+        "Bond_ETF": 53.83,
         "Crypto": 0
       },
       "top_5_holdings": [
         [
           "SGOV",
-          12.31
+          12.28
         ],
         [
           "JMST",
@@ -2017,22 +2075,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 17.12,
-      "net_return_pct": 17.12,
-      "volatility_pct": 13.32,
-      "max_drawdown_pct": -2.4,
+      "gross_return_pct": 16.73,
+      "net_return_pct": 16.73,
+      "volatility_pct": 14.68,
+      "max_drawdown_pct": -2.78,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 4.2,
-      "excess_return_pct": 12.92
+      "excess_return_pct": 12.53
     },
     "Modéré": {
-      "gross_return_pct": 8.32,
-      "net_return_pct": 8.32,
-      "volatility_pct": 11.17,
-      "max_drawdown_pct": -2.8,
+      "gross_return_pct": 8.2,
+      "net_return_pct": 8.2,
+      "volatility_pct": 11.3,
+      "max_drawdown_pct": -2.86,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 3.8,
-      "excess_return_pct": 4.52
+      "excess_return_pct": 4.4
     },
     "Stable": {
       "gross_return_pct": 3.86,
