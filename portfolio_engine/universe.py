@@ -1,6 +1,11 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.5 — Filtre crypto robuste.
+Construction de l'univers d'actifs v3.6 — Support perf_1m/perf_3m ETF.
+
+CHANGEMENTS v3.6 (ETF Momentum Fix):
+- Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
+- Permet à factors.py d'utiliser le momentum académique (50% 3m + 30% 1m + 20% YTD)
+- Corrige le biais momentum ETF (était 70% YTD + 30% daily = trop bruité)
 
 CHANGEMENTS v3.5 (Crypto Quote Filter - ChatGPT review):
 - Utilise crypto_utils.crypto_quote_filter() pour filtrage robuste
@@ -113,9 +118,10 @@ def load_etf_csv(path: str) -> pd.DataFrame:
     """Charge et prépare les ETF depuis CSV."""
     df = pd.read_csv(path)
     
-    # v3.3: Colonnes numériques étendues (TER, yield, bond metrics)
+    # v3.6: Colonnes numériques étendues (TER, yield, bond metrics, perf_1m/3m)
     num_cols = [
         "daily_change_pct", "ytd_return_pct", "one_year_return_pct",
+        "perf_1m_pct", "perf_3m_pct",  # v3.6: Nouvelles colonnes momentum
         "vol_pct", "vol_3y_pct", "aum_usd", "total_expense_ratio",
         "yield_ttm",
         # v3.3: Bond-specific metrics
@@ -406,7 +412,7 @@ def _enrich_bonds_inline(bond_rows: List[dict]) -> List[dict]:
     return bond_rows
 
 
-# ============= CONSTRUCTION UNIVERS v3.5 =============
+# ============= CONSTRUCTION UNIVERS v3.6 =============
 
 def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
@@ -419,6 +425,7 @@ def build_raw_universe(
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
@@ -438,7 +445,7 @@ def build_raw_universe(
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.5...")
+    logger.info("🧮 Construction de l'univers brut v3.6...")
     
     all_assets = []
     
@@ -501,6 +508,9 @@ def build_raw_universe(
                 "perf_24h": it.get("daily_change_pct"),
                 "ytd": it.get("ytd_return_pct") or it.get("ytd"),
                 "one_year_return_pct": it.get("one_year_return_pct"),  # v3.2
+                # === v3.6: Nouvelles colonnes momentum ===
+                "perf_1m": it.get("perf_1m_pct"),  # Mappe perf_1m_pct → perf_1m
+                "perf_3m": it.get("perf_3m_pct"),  # Mappe perf_3m_pct → perf_3m
                 # Risque
                 "vol_3y": it.get("vol_3y_pct") or it.get("vol_pct") or it.get("vol"),
                 "vol30": it.get("vol_pct"),
@@ -606,6 +616,7 @@ def build_raw_universe_from_files(
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
@@ -613,7 +624,7 @@ def build_raw_universe_from_files(
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.5 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.6 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -659,7 +670,7 @@ def build_raw_universe_from_files(
         etf_bonds = pd.DataFrame()
     
     def df_to_rows(df, is_bond=False):
-        """Convertit un DataFrame en liste de dicts avec colonnes étendues (V3.3)."""
+        """Convertit un DataFrame en liste de dicts avec colonnes étendues (V3.6)."""
         rows = []
         for _, r in df.iterrows():
             rows.append({
@@ -672,6 +683,9 @@ def build_raw_universe_from_files(
                 "perf_24h": r.get("daily_change_pct"),
                 "ytd": r.get("ytd_return_pct"),
                 "one_year_return_pct": r.get("one_year_return_pct"),  # v3.2
+                # === v3.6: Nouvelles colonnes momentum ===
+                "perf_1m": r.get("perf_1m_pct"),  # Mappe perf_1m_pct → perf_1m
+                "perf_3m": r.get("perf_3m_pct"),  # Mappe perf_3m_pct → perf_3m
                 # Risque
                 "vol_3y": r.get("vol_3y_pct") or r.get("vol_pct"),
                 "vol30": r.get("vol_pct"),
@@ -772,6 +786,7 @@ def load_and_prepare_universe(
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
     v3.3: Enrichissement automatique des bonds avec f_bond_* factors
