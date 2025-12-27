@@ -876,26 +876,60 @@ class FactorScorer:
         )
     
     def compute_factor_momentum(self, assets: List[dict]) -> np.ndarray:
-        """Facteur momentum: combinaison perf 1m/3m/YTD."""
+        """
+        Facteur momentum: Jegadeesh-Titman 12m-1m (académique).
+        
+        v2.5.0: Implémente le vrai momentum académique 12m-1m
+        - Formule: (1+R12)/(1+R1) - 1 (pas une simple soustraction)
+        - Exclut le dernier mois pour éviter l'effet reversal court-terme
+        
+        Référence: Jegadeesh & Titman (1993)
+        """
         n = len(assets)
         
+        # Récupération des données de performance
+        p12m = [fnum(a.get("one_year_return_pct") or a.get("perf_12m") or a.get("one_year_return")) for a in assets]
         p1m = [fnum(a.get("perf_1m")) for a in assets]
         p3m = [fnum(a.get("perf_3m")) for a in assets]
         ytd = [fnum(a.get("ytd")) for a in assets]
         
-        has_3m = any(p3m)
+        has_12m = any(p12m)
         has_1m = any(p1m)
+        has_3m = any(p3m)
         
-        if has_3m and has_1m:
-            raw = [0.5 * p3m[i] + 0.3 * p1m[i] + 0.2 * ytd[i] for i in range(n)]
+        def mom_12m_1m(r12: float, r1: float) -> float:
+            """
+            Calcule le momentum 12m-1m avec la formule correcte.
+            R_{2-12} = (1 + R_{12}) / (1 + R_{1}) - 1
+            où r12 et r1 sont en % (ex: 12.3 pour 12.3%)
+            """
+            if r1 <= -99:  # Protection division par zéro
+                return r12
+            return ((1 + r12/100) / (1 + r1/100) - 1) * 100
+        
+        # Cascade de fallbacks selon disponibilité
+        if has_12m and has_1m:
+            # ✅ Momentum académique Jegadeesh-Titman: 12m-1m
+            raw = [mom_12m_1m(p12m[i], p1m[i]) for i in range(n)]
+            logger.debug("Momentum: using 12m-1m (Jegadeesh-Titman)")
+        elif has_12m:
+            raw = [p12m[i] for i in range(n)]
+            logger.debug("Momentum: using 12m only")
+        elif has_3m and has_1m:
+            # 3m-1m (version courte)
+            raw = [mom_12m_1m(p3m[i], p1m[i]) for i in range(n)]
+            logger.debug("Momentum: using 3m-1m")
         elif has_3m:
-            raw = [0.7 * p3m[i] + 0.3 * ytd[i] for i in range(n)]
+            raw = [p3m[i] for i in range(n)]
+            logger.debug("Momentum: using 3m only")
         elif has_1m:
             raw = [0.6 * p1m[i] + 0.4 * ytd[i] for i in range(n)]
+            logger.debug("Momentum: using 1m + YTD fallback")
         else:
             p7d = [fnum(a.get("perf_7d")) for a in assets]
             p24h = [fnum(a.get("perf_24h")) for a in assets]
             raw = [0.7 * p7d[i] + 0.3 * p24h[i] for i in range(n)]
+            logger.debug("Momentum: using 7d/24h crypto fallback")
         
         for i, a in enumerate(assets):
             cat = self._get_normalized_category(a)
