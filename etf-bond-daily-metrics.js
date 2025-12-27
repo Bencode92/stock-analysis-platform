@@ -2,6 +2,7 @@
 // Daily scrape: perfs & risque, et fusion avec le weekly snapshot
 // Calcule: daily % (quote), YTD %, 1Y %, 1M %, 3M %, Vol 3Y % (annualisée) depuis /time_series
 // Sorties: data/daily_metrics.json, data/daily_metrics_*.csv, data/combined_*.{json,csv}
+// v2.7: Anchor all date calculations on last.datetime (robustness fix for weekends/holidays)
 // v2.6: Add perf_1m_pct and perf_3m_pct for momentum scoring
 // v2.5: Support bond_credit_rating (notation dominante) dans combined_bonds.csv
 
@@ -42,6 +43,9 @@ const round = (x, dp=2) => (x==null) ? null : Number(x.toFixed(dp));
 const uniqBy = (arr, keyFn) => Array.from(new Map(arr.map(x=>[keyFn(x), x])).values());
 const todayISO = () => new Date().toISOString();
 
+// v2.7: Parser de date robuste (évite les problèmes de timezone JS)
+const parseISODate = (d) => new Date(`${d}T00:00:00Z`);
+
 // --- Utilitaires qualité ---
 function hasObjective(x) {
   const s = (x?.objective ?? '').toString().trim().toLowerCase();
@@ -61,25 +65,27 @@ function buildSymbolParam({ symbol, mic_code }) {
   return base;
 }
 
-function firstTradingDayOfYear(values) {
-  const arr = [...values].sort((a,b)=> new Date(a.datetime) - new Date(b.datetime));
+// v2.7: Accepte asOfDate pour ancrer sur la dernière donnée
+function firstTradingDayOfYear(values, asOfDate) {
+  const arr = [...values].sort((a,b)=> parseISODate(a.datetime) - parseISODate(b.datetime));
   if (arr.length === 0) return null;
-  const year = new Date().getFullYear();
+  const year = asOfDate.getUTCFullYear();
   const first = arr.find(v => v.datetime.startsWith(`${year}-`));
   return first || arr[0];
 }
 
+// v2.7: Utilise parseISODate pour cohérence
 function findCloseOnOrAfter(values, targetDate) {
-  const arr = [...values].sort((a,b)=> new Date(a.datetime) - new Date(b.datetime));
+  const arr = [...values].sort((a,b)=> parseISODate(a.datetime) - parseISODate(b.datetime));
   for (const v of arr) {
-    if (new Date(v.datetime) >= targetDate) return v;
+    if (parseISODate(v.datetime) >= targetDate) return v;
   }
   return null;
 }
 
 function computeVolPreferredFromSeries(values, opts = {}) {
   const cfg = { windows: [252*3, 252], minCoverage: 0.8, minSinceInception: 60, ...opts };
-  const prices = [...values].sort((a,b)=> new Date(a.datetime) - new Date(b.datetime)).map(v => Number(v.close)).filter(v => Number.isFinite(v) && v > 0);
+  const prices = [...values].sort((a,b)=> parseISODate(a.datetime) - parseISODate(b.datetime)).map(v => Number(v.close)).filter(v => Number.isFinite(v) && v > 0);
   if (prices.length < 2) return { value: null, label: null, reason: 'insufficient_points' };
 
   const volFromLastN = (n) => {
@@ -122,8 +128,10 @@ async function fetchTimeSeriesFrom(dateStartISO, symbolParam){
 }
 
 async function computeMetricsFor(symbolParam){
-  const now = new Date();
-  const threeYearsAgo = new Date(now); threeYearsAgo.setFullYear(now.getFullYear()-3);
+  // v2.7: Calcul de start_date basé sur now (pour la requête API uniquement)
+  const nowForApi = new Date();
+  const threeYearsAgo = new Date(nowForApi); 
+  threeYearsAgo.setFullYear(nowForApi.getFullYear()-3);
   const threeYearsAgoISO = threeYearsAgo.toISOString().slice(0,10);
 
   let daily_change_pct = null; let last_close = null;
@@ -144,20 +152,39 @@ async function computeMetricsFor(symbolParam){
     last_close 
   };
 
-  const tsDesc = [...ts].sort((a,b)=> new Date(b.datetime) - new Date(a.datetime));
-  const last = tsDesc[0]; const prev = tsDesc[1]; const lastClose = Number(last.close);
+  // v2.7: Tri avec parseISODate pour cohérence
+  const tsDesc = [...ts].sort((a,b)=> parseISODate(b.datetime) - parseISODate(a.datetime));
+  const last = tsDesc[0]; 
+  const prev = tsDesc[1]; 
+  const lastClose = Number(last.close);
+  
+  // v2.7: ✅ ANCRAGE SUR LA DERNIÈRE DONNÉE (pas sur new Date())
+  // Évite les décalages week-end/jours fériés
+  const asOfDate = parseISODate(last.datetime);
+  
   if (last_close == null) last_close = lastClose;
   if (daily_change_pct == null && prev && Number(prev.close)>0) daily_change_pct = ((lastClose / Number(prev.close) - 1) * 100);
 
-  const firstYtd = firstTradingDayOfYear(ts);
+  // v2.7: YTD basé sur asOfDate (année de la dernière donnée)
+  const firstYtd = firstTradingDayOfYear(ts, asOfDate);
   let ytd_return_pct = null;
   if (firstYtd && Number(firstYtd.close)>0) ytd_return_pct = (lastClose / Number(firstYtd.close) - 1) * 100;
 
+  // v2.7: 1Y basé sur asOfDate
   let one_year_return_pct = null;
-  if (tsDesc.length > 252){ const close252 = Number(tsDesc[252].close); if (close252>0) one_year_return_pct = (lastClose/close252 - 1) * 100; }
-  else { const oneYearAgo = new Date(now); oneYearAgo.setFullYear(now.getFullYear()-1); const ref = findCloseOnOrAfter(ts, oneYearAgo); if (ref && Number(ref.close)>0) one_year_return_pct = (lastClose/Number(ref.close) - 1) * 100; }
+  if (tsDesc.length > 252){ 
+    const close252 = Number(tsDesc[252].close); 
+    if (close252>0) one_year_return_pct = (lastClose/close252 - 1) * 100; 
+  } else { 
+    // Fallback: date calendaire basée sur asOfDate
+    const oneYearAgo = new Date(asOfDate); 
+    oneYearAgo.setUTCFullYear(asOfDate.getUTCFullYear()-1); 
+    const ref = findCloseOnOrAfter(ts, oneYearAgo); 
+    if (ref && Number(ref.close)>0) one_year_return_pct = (lastClose/Number(ref.close) - 1) * 100; 
+  }
 
   // v2.6: Calcul perf_1m (21 trading days) et perf_3m (63 trading days)
+  // Note: On garde 21/63 trading days (standard momentum académique Jegadeesh-Titman)
   let perf_1m_pct = null;
   let perf_3m_pct = null;
 
@@ -177,7 +204,7 @@ async function computeMetricsFor(symbolParam){
   let vol_3y_pct = (vol_window === '3y' && vol_pct != null) ? vol_pct : null;
 
   return { 
-    as_of: todayISO(), 
+    as_of: asOfDate.toISOString(),  // v2.7: as_of = date de la dernière donnée
     daily_change_pct: round(clampAbs(daily_change_pct, 100), 3), 
     ytd_return_pct: round(clampAbs(ytd_return_pct, 1000), 2), 
     one_year_return_pct: round(clampAbs(one_year_return_pct, 1000), 2), 
@@ -203,7 +230,7 @@ async function writeCSV(filePath, rows, columns) {
 }
 
 async function main(){
-  console.log('⚡ Daily ETF/Bond metrics: perfs & risque (time_series + quote) v2.6');
+  console.log('⚡ Daily ETF/Bond metrics: perfs & risque (time_series + quote) v2.7');
 
   const etfCsv = path.join(OUT_DIR, 'weekly_snapshot_etfs.csv');
   const bondCsv = path.join(OUT_DIR, 'weekly_snapshot_bonds.csv');
