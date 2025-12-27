@@ -834,7 +834,9 @@ class HybridCovarianceEstimator:
     ):
         self.empirical_weight = empirical_weight
         self.min_history_days = min_history_days
-        self.use_shrinkage = False  # use_shrinkage and HAS_SKLEARN_LW
+        # v6.23 P0 FIX: Ledoit-Wolf désactivé explicitement (diag_shrink suffit)
+        # Si réactivé, corriger le mismatch de dimensions (cov_shrunk vs cov_structured)
+        self.use_shrinkage = False
     
     def compute_empirical_covariance(
         self, 
@@ -1429,9 +1431,10 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": sector_constraint})
         
-        # 6. Contraintes par RÉGION
-        for region in set(a.region for a in candidates):
-            region_idx = [i for i, a in enumerate(candidates) if a.region == region]
+        # 6. Contraintes par RÉGION (v6.23 P0 FIX: Actions seulement)
+        for region in set(a.region for a in candidates if a.category == "Actions"):
+            region_idx = [i for i, a in enumerate(candidates) 
+                          if a.category == "Actions" and a.region == region]
             if len(region_idx) > 1:
                 def region_constraint(w, idx=region_idx, max_val=profile.max_region/100):
                     return max_val - np.sum(w[idx])
@@ -1908,9 +1911,9 @@ class PortfolioOptimizer:
                 else:  # Au-dessus
                     vol_penalty = 3.0 * vol_diff ** 2
                 
-                # P0 PARTNER: Pénalité turnover
+                # P0 PARTNER: Pénalité turnover (v6.23 P0 FIX: 0.5× cohérent avec contrainte)
                 if has_prev_weights:
-                    turnover = np.sum(np.abs(w - prev_weights_array))
+                    turnover = 0.5 * np.sum(np.abs(w - prev_weights_array))
                     turnover_penalty = profile.turnover_penalty * turnover
                 else:
                     turnover_penalty = 0.0
@@ -2491,7 +2494,7 @@ class PortfolioOptimizer:
                 freed_weight += w
                 del allocation[aid]
         
-        # Redistribuer freed_weight vers non-crypto
+        # Redistribuer freed_weight vers non-crypto (v6.23 P0 FIX: itératif avec headroom)
         if freed_weight > 0.1:
             eligible = [
                 (aid, w) for aid, w in allocation.items()
@@ -2500,9 +2503,17 @@ class PortfolioOptimizer:
                 and w < profile.max_single_position - 1
             ]
             if eligible:
-                per_asset = freed_weight / len(eligible)
-                for aid, _ in eligible:
-                    allocation[aid] = round(allocation[aid] + per_asset, 2)
+                # Trier par poids croissant (remplir les plus petits d'abord)
+                eligible = sorted(eligible, key=lambda x: (x[1], x[0]))
+                remaining = freed_weight
+                for aid, w in eligible:
+                    if remaining < 0.1:
+                        break
+                    headroom = profile.max_single_position - w
+                    add = min(headroom, remaining, 3.0)  # Max 3% par itération
+                    if add > 0.1:
+                        allocation[aid] = round(allocation[aid] + add, 2)
+                        remaining -= add
         
         # Log final
         crypto_final = sum(
@@ -2576,11 +2587,14 @@ class PortfolioOptimizer:
         satellite_max = config["satellite_max_per_asset"] * crypto_total
         satellite_dd_max = config["satellite_dd_max"]
         
+        # v6.23 P0 FIX: Exclure par IDs déjà alloués, pas par patterns
+        core_ids_allocated = set(allocation.keys())
+        
         # Filtrer et trier les satellites par score
         satellite_candidates = [
             c for c in candidates 
             if c.category == "Crypto" 
-            and c.id not in core_assets
+            and c.id not in core_ids_allocated  # FIX: utilise IDs réels, pas patterns
             and abs(_clean_float(c.source_data.get("drawdown_90d_pct", 0) if c.source_data else 0, 0, -100, 100)) <= satellite_dd_max
         ]
         satellite_candidates = sorted(satellite_candidates, key=lambda x: (-x.score, x.id))
@@ -2595,8 +2609,12 @@ class PortfolioOptimizer:
                 remaining -= weight
                 logger.info(f"v6.23 SATELLITE: {sat.id} = {weight:.2f}%")
         
-        # Log résumé
-        core_final = sum(allocation.get(cid, 0) for cid in core_assets)
+        # Log résumé (v6.23 P0 FIX: utilise IDs réels, pas patterns)
+        core_final = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
+            and aid in core_ids_allocated
+        )
         sat_final = crypto_total - core_final
         logger.info(f"v6.23 CRYPTO: core={core_final:.1f}%, satellite={sat_final:.1f}%, total={crypto_total:.1f}%")
         
