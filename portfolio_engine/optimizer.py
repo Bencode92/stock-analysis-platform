@@ -1,6 +1,6 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.22 — FIX crypto_cap enforcement
+Optimiseur de portefeuille v6.24 — P0 BUGFIXES + P1 momentum filter
 
 CHANGEMENTS v6.22:
 1. NEW: _enforce_crypto_cap() force crypto <= crypto_max post-normalisation
@@ -713,7 +713,16 @@ def _passes_momentum_filter(asset: Asset, profile_name: str) -> Tuple[bool, Opti
     if not asset.source_data:
         return True, None
     
-    perf_3m = asset.source_data.get("perf_3m") or asset.source_data.get("perf_3m_pct") or 0
+    # === Récupérer perf 3 mois selon la catégorie ===
+    if asset.category == "Crypto":
+        # Crypto: ret_90d_pct (90 jours ≈ 3 mois)
+        perf_3m = asset.source_data.get("ret_90d_pct") or 0
+    elif asset.category == "ETF":
+        # ETF: perf_3m_pct
+        perf_3m = asset.source_data.get("perf_3m_pct") or asset.source_data.get("perf_3m") or 0
+    else:
+        # Actions: perf_3m
+        perf_3m = asset.source_data.get("perf_3m") or 0
     
     # Récupérer seuil pour ce profil + rôle
     role = asset.role or Role.SATELLITE
@@ -722,7 +731,7 @@ def _passes_momentum_filter(asset: Asset, profile_name: str) -> Tuple[bool, Opti
     
     # Crypto: seuils plus larges (vol énorme)
     if asset.category == "Crypto":
-        min_3m *= 1.5  # -15% → -22.5%
+        min_3m *= 2.0  # -15% → -30%
     
     # Check
     if perf_3m < min_3m:
@@ -730,8 +739,6 @@ def _passes_momentum_filter(asset: Asset, profile_name: str) -> Tuple[bool, Opti
     
     return True, None
 
-
-def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
 def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
     """Enrichit tous les actifs avec leur preset, rôle (bucket) et risk_bucket."""
     for asset in assets:
@@ -2555,7 +2562,7 @@ class PortfolioOptimizer:
                 violations.append(f"sector:{sector}={w:.1f}%")
         
         return violations
-     def _post_process_allocation(
+    def _post_process_allocation(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
@@ -2612,8 +2619,6 @@ class PortfolioOptimizer:
             logger.warning(f"Post-process: {len(violations)} violations after {max_iterations} iter: {violations}")
         
         return allocation
-
-    def _enforce_crypto_cap(  
 
     def _enforce_crypto_cap(
         self,
