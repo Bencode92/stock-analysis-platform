@@ -174,7 +174,6 @@ class TickerMapping:
         return {
             "id": self.id,
             "ticker": self.ticker,
-            "isin": self.isin,
             "name": self.name,
             "weight_pct": round(self.weight_pct, 2),
             "category": self.category,
