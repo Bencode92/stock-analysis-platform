@@ -1,12 +1,10 @@
 /**
- * Portfolio Loader v2.0 - AMF Compliant
+ * Portfolio Loader v2.1 - AMF Compliant
  * 
- * Changements majeurs:
- * - Chemin corrigé vers data/portfolios.json
- * - Exploitation complète des métadonnées (_constraint_report, _limitations, _optimization)
- * - Affichage des warnings AMF obligatoires
- * - Transparence sur la méthodologie (SLSQP vs heuristique)
- * - Métriques de risque visibles (HHI, volatilité, concentration)
+ * Changements v2.1:
+ * - Ajout chemin absolu GitHub Pages comme fallback
+ * - Meilleure gestion des erreurs de chargement
+ * - Support URL raw GitHub en dernier recours
  */
 
 class PortfolioManagerAMF {
@@ -20,17 +18,14 @@ class PortfolioManagerAMF {
         
         // Configuration AMF
         this.AMF_CONFIG = {
-            maxCryptoWarningThreshold: 5,  // % au-delà duquel afficher warning crypto
-            qualityScoreWarningThreshold: 90,  // Score en dessous duquel afficher warning
+            maxCryptoWarningThreshold: 5,
+            qualityScoreWarningThreshold: 90,
             showMethodologyDetails: true,
             showRiskMetrics: true,
             showConstraintViolations: true
         };
     }
 
-    /**
-     * Initialise le gestionnaire de portefeuilles
-     */
     async init() {
         try {
             this.showLoading(true);
@@ -46,9 +41,6 @@ class PortfolioManagerAMF {
         }
     }
 
-    /**
-     * Normalise les types de portefeuille
-     */
     normalizeType(type) {
         return type.toLowerCase()
             .normalize("NFD")
@@ -56,24 +48,40 @@ class PortfolioManagerAMF {
     }
 
     /**
-     * CORRIGÉ: Charge depuis data/portfolios.json
+     * Charge les portefeuilles avec plusieurs fallbacks
      */
     async loadPortfolios() {
         const timestamp = new Date().getTime();
         
-        // CORRECTION: Bon chemin vers le fichier généré
+        // Détection du base path pour GitHub Pages
+        const basePath = window.location.pathname.includes('/stock-analysis-platform') 
+            ? '/stock-analysis-platform' 
+            : '';
+        
+        // Chemins à essayer (du plus local au plus distant)
         const paths = [
+            `${basePath}/data/portfolios.json?_=${timestamp}`,
             `data/portfolios.json?_=${timestamp}`,
             `./data/portfolios.json?_=${timestamp}`,
-            `portfolios.json?_=${timestamp}`  // Fallback
+            // Fallback absolu GitHub Pages
+            `https://bencode92.github.io/stock-analysis-platform/data/portfolios.json?_=${timestamp}`,
+            // Fallback raw GitHub (toujours à jour)
+            `https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/portfolios.json?_=${timestamp}`
         ];
         
         let loaded = false;
+        let lastError = null;
         
         for (const path of paths) {
             try {
                 console.log(`📂 Tentative de chargement: ${path}`);
-                const response = await fetch(path);
+                const response = await fetch(path, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    cache: 'no-store'
+                });
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -105,25 +113,24 @@ class PortfolioManagerAMF {
                     
                     loaded = true;
                     break;
+                } else {
+                    console.warn(`⚠️ Échec ${path}: HTTP ${response.status}`);
+                    lastError = `HTTP ${response.status}`;
                 }
             } catch (e) {
                 console.warn(`⚠️ Échec ${path}:`, e.message);
+                lastError = e.message;
             }
         }
         
         if (!loaded) {
-            throw new Error('Impossible de charger portfolios.json');
+            throw new Error(`Impossible de charger portfolios.json. Dernière erreur: ${lastError}`);
         }
         
-        // Mettre à jour l'affichage de la date
         this.updateDisplayedDate();
-        
         return this.portfolios;
     }
 
-    /**
-     * Met à jour les dates affichées
-     */
     updateDisplayedDate() {
         const elements = [
             document.getElementById('portfolioUpdateTime'),
@@ -137,9 +144,6 @@ class PortfolioManagerAMF {
         });
     }
 
-    /**
-     * Génère le bloc de conformité AMF
-     */
     generateAMFComplianceBlock(portfolioType, portfolio) {
         const optimization = portfolio._optimization || {};
         const constraints = portfolio._constraint_report || {};
@@ -150,12 +154,10 @@ class PortfolioManagerAMF {
         const qualityScore = constraints.quality_score || 100;
         const violations = constraints.summary?.violated || 0;
         
-        // Calcul exposition crypto
         const cryptoExposure = this.calculateCryptoExposure(portfolio);
         
         let html = `<div class="amf-compliance-block">`;
         
-        // Header conformité
         html += `
             <div class="amf-header">
                 <i class="fas fa-shield-alt"></i>
@@ -163,7 +165,6 @@ class PortfolioManagerAMF {
             </div>
         `;
         
-        // Disclaimer principal AMF
         html += `
             <div class="amf-disclaimer primary">
                 <i class="fas fa-exclamation-triangle"></i>
@@ -173,7 +174,6 @@ class PortfolioManagerAMF {
             </div>
         `;
         
-        // Warning crypto si > seuil
         if (cryptoExposure > this.AMF_CONFIG.maxCryptoWarningThreshold) {
             html += `
                 <div class="amf-warning crypto">
@@ -186,7 +186,6 @@ class PortfolioManagerAMF {
             `;
         }
         
-        // Méthodologie
         if (this.AMF_CONFIG.showMethodologyDetails) {
             const methodLabel = isHeuristic ? 'Allocation heuristique' : 'Optimisation Markowitz (SLSQP)';
             const methodIcon = isHeuristic ? 'fa-cogs' : 'fa-calculator';
@@ -211,7 +210,6 @@ class PortfolioManagerAMF {
             html += `</div>`;
         }
         
-        // Violations de contraintes
         if (this.AMF_CONFIG.showConstraintViolations && violations > 0) {
             html += `
                 <div class="amf-warning violations">
@@ -240,7 +238,6 @@ class PortfolioManagerAMF {
             html += `</ul></div>`;
         }
         
-        // Limitations documentées
         if (limitations.length > 0) {
             html += `
                 <div class="amf-limitations">
@@ -256,7 +253,6 @@ class PortfolioManagerAMF {
             html += `</ul></div>`;
         }
         
-        // Métriques de risque
         if (this.AMF_CONFIG.showRiskMetrics && exposures.concentration) {
             const conc = exposures.concentration;
             html += `
@@ -290,7 +286,6 @@ class PortfolioManagerAMF {
             `;
         }
         
-        // Footer avec version et date
         html += `
             <div class="amf-footer">
                 <span>Version ${this.meta.version || 'N/A'}</span>
@@ -306,9 +301,6 @@ class PortfolioManagerAMF {
         return html;
     }
 
-    /**
-     * Calcule l'exposition crypto totale
-     */
     calculateCryptoExposure(portfolio) {
         const crypto = portfolio.Crypto || {};
         return Object.values(crypto).reduce((sum, val) => {
@@ -317,9 +309,6 @@ class PortfolioManagerAMF {
         }, 0);
     }
 
-    /**
-     * Retourne la classe CSS selon le score
-     */
     getScoreClass(score) {
         if (score >= 95) return 'excellent';
         if (score >= 85) return 'good';
@@ -327,9 +316,6 @@ class PortfolioManagerAMF {
         return 'critical';
     }
 
-    /**
-     * Retourne la classe CSS selon HHI
-     */
     getHHIClass(hhi) {
         if (hhi < 1000) return 'well-diversified';
         if (hhi < 1500) return 'diversified';
@@ -337,9 +323,6 @@ class PortfolioManagerAMF {
         return 'highly-concentrated';
     }
 
-    /**
-     * Retourne l'interprétation du HHI
-     */
     getHHIInterpretation(hhi) {
         if (hhi < 1000) return '✅ Portefeuille bien diversifié';
         if (hhi < 1500) return '🟢 Diversification acceptable';
@@ -347,15 +330,11 @@ class PortfolioManagerAMF {
         return '🔴 Forte concentration - risque élevé';
     }
 
-    /**
-     * Génère le contenu complet d'un portefeuille
-     */
     generatePortfolioContent(portfolioType, portfolio) {
         const normalizedType = this.normalizeType(portfolioType);
         const optimization = portfolio._optimization || {};
         const exposures = portfolio._exposures || {};
         
-        // Couleurs par type
         const colors = {
             agressif: { main: '#FF7B00', rgb: '255, 123, 0' },
             modere: { main: '#00FF87', rgb: '0, 255, 135' },
@@ -365,7 +344,6 @@ class PortfolioManagerAMF {
         
         let html = '';
         
-        // Header avec badge méthodologie
         html += `
             <div class="portfolio-header">
                 <h2 style="color: ${color.main}">${portfolioType}</h2>
@@ -382,7 +360,6 @@ class PortfolioManagerAMF {
             </div>
         `;
         
-        // Commentaire stratégique
         const comment = portfolio.Commentaire || this.getDefaultDescription(portfolioType);
         html += `
             <div class="portfolio-commentary" style="border-left-color: ${color.main}">
@@ -394,7 +371,6 @@ class PortfolioManagerAMF {
             </div>
         `;
         
-        // Graphique + Répartition
         html += `
             <div class="portfolio-overview">
                 <div class="portfolio-chart-container">
@@ -407,14 +383,12 @@ class PortfolioManagerAMF {
             </div>
         `;
         
-        // Tableaux détaillés par catégorie
         html += '<div class="portfolio-details">';
         
         ['Actions', 'ETF', 'Obligations', 'Crypto'].forEach(category => {
             const assets = portfolio[category];
             if (!assets || Object.keys(assets).length === 0) return;
             
-            // Vérifier si tous les actifs sont à 0%
             const hasNonZero = Object.values(assets).some(v => 
                 parseFloat(String(v).replace('%', '')) > 0
             );
@@ -436,7 +410,6 @@ class PortfolioManagerAMF {
                         <tbody>
             `;
             
-            // Trier par allocation décroissante
             const sorted = Object.entries(assets)
                 .map(([name, val]) => ({
                     name,
@@ -467,10 +440,8 @@ class PortfolioManagerAMF {
         
         html += '</div>';
         
-        // SECTION AMF COMPLIANCE (obligatoire)
         html += this.generateAMFComplianceBlock(portfolioType, portfolio);
         
-        // Boutons d'action
         html += `
             <div class="portfolio-actions">
                 <button class="btn-download" data-portfolio="${portfolioType}" style="border-color: ${color.main}; color: ${color.main}">
@@ -485,9 +456,6 @@ class PortfolioManagerAMF {
         return html;
     }
 
-    /**
-     * Génère les barres d'allocation
-     */
     generateAllocationBars(portfolio, color) {
         const categories = ['Actions', 'ETF', 'Obligations', 'Crypto'];
         let html = '<ul class="category-allocation">';
@@ -519,9 +487,6 @@ class PortfolioManagerAMF {
         return html;
     }
 
-    /**
-     * Retourne l'icône pour une catégorie
-     */
     getCategoryIcon(category) {
         const icons = {
             'Actions': 'fas fa-chart-line',
@@ -532,9 +497,6 @@ class PortfolioManagerAMF {
         return icons[category] || 'fas fa-cube';
     }
 
-    /**
-     * Description par défaut par profil
-     */
     getDefaultDescription(type) {
         const descriptions = {
             'Agressif': 'Portefeuille orienté croissance maximale avec une tolérance élevée au risque.',
@@ -544,17 +506,11 @@ class PortfolioManagerAMF {
         return descriptions[type] || 'Portefeuille optimisé selon les conditions de marché.';
     }
 
-    /**
-     * Affiche/masque le loader
-     */
     showLoading(show) {
         const el = document.querySelector(this.loadingSelector);
         if (el) el.style.display = show ? 'flex' : 'none';
     }
 
-    /**
-     * Affiche une erreur
-     */
     showError(message) {
         const el = document.querySelector(this.errorSelector);
         if (el) {
@@ -563,18 +519,13 @@ class PortfolioManagerAMF {
         }
     }
 
-    /**
-     * Rend tous les portefeuilles
-     */
     renderPortfolios() {
         const container = document.querySelector(this.containerSelector);
         if (!container || !this.portfolios) return;
         
-        // Créer le conteneur de contenu
         const contentContainer = document.createElement('div');
         contentContainer.className = 'portfolio-content';
         
-        // Générer chaque panneau de portefeuille
         Object.keys(this.portfolios).forEach((type, index) => {
             const panel = document.createElement('div');
             panel.className = `portfolio-panel ${index === 0 ? 'active' : ''}`;
@@ -583,18 +534,13 @@ class PortfolioManagerAMF {
             contentContainer.appendChild(panel);
         });
         
-        // Remplacer le contenu existant
         const existing = container.querySelector('.portfolio-content');
         if (existing) existing.remove();
         container.appendChild(contentContainer);
         
-        // Initialiser les graphiques
         this.initCharts();
     }
 
-    /**
-     * Initialise les graphiques Chart.js
-     */
     initCharts() {
         if (!window.Chart) {
             console.warn('Chart.js non disponible');
@@ -653,9 +599,6 @@ class PortfolioManagerAMF {
         });
     }
 
-    /**
-     * Couleurs du graphique par type
-     */
     getChartColors(type) {
         const palettes = {
             agressif: ['#FF7B00', '#FF9E44', '#FFB266', '#FFCB8E', '#FFE4C4'],
@@ -665,11 +608,7 @@ class PortfolioManagerAMF {
         return palettes[type] || palettes.modere;
     }
 
-    /**
-     * Configure les interactions
-     */
     setupInteractions() {
-        // Onglets
         document.querySelectorAll('.portfolio-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.portfolio-tab, .portfolio-panel')
@@ -679,35 +618,25 @@ class PortfolioManagerAMF {
                 const target = document.getElementById(tab.dataset.target);
                 if (target) target.classList.add('active');
                 
-                // Mettre à jour le titre
                 const type = tab.dataset.originalType || tab.dataset.target.replace('portfolio-', '');
                 const titleEl = document.getElementById('portfolioTitle');
                 if (titleEl) titleEl.textContent = `PORTEFEUILLE ${type.toUpperCase()}`;
             });
         });
         
-        // Téléchargement
         document.querySelectorAll('.btn-download').forEach(btn => {
             btn.addEventListener('click', () => this.downloadPDF(btn.dataset.portfolio));
         });
         
-        // Partage
         document.querySelectorAll('.btn-share').forEach(btn => {
             btn.addEventListener('click', () => this.sharePortfolio(btn.dataset.portfolio));
         });
     }
 
-    /**
-     * Télécharge le PDF (implémentation simplifiée)
-     */
     downloadPDF(type) {
-        // TODO: Implémenter avec jsPDF
         this.showNotification(`Génération PDF ${type} en cours...`, 'info');
     }
 
-    /**
-     * Partage le portefeuille
-     */
     sharePortfolio(type) {
         const url = `${window.location.origin}${window.location.pathname}?type=${this.normalizeType(type)}`;
         
@@ -722,9 +651,6 @@ class PortfolioManagerAMF {
         }
     }
 
-    /**
-     * Affiche une notification
-     */
     showNotification(message, type = 'success') {
         let notif = document.querySelector('.tp-notification');
         if (!notif) {
@@ -740,9 +666,6 @@ class PortfolioManagerAMF {
         setTimeout(() => { notif.style.display = 'none'; }, 3000);
     }
 
-    /**
-     * Formate une date
-     */
     formatDate(date) {
         if (!date) return 'N/A';
         return new Intl.DateTimeFormat('fr-FR', {
@@ -757,7 +680,7 @@ class PortfolioManagerAMF {
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Initialisation PortfolioManager AMF v2');
+    console.log('🚀 Initialisation PortfolioManager AMF v2.1');
     const manager = new PortfolioManagerAMF();
     window.portfolioManager = manager;
     manager.init();
