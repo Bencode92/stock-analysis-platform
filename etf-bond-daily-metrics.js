@@ -1,7 +1,8 @@
 // etf-bond-daily-metrics.js
 // Daily scrape: perfs & risque, et fusion avec le weekly snapshot
-// Calcule: daily % (quote), YTD %, 1Y %, Vol 3Y % (annualisée) depuis /time_series
+// Calcule: daily % (quote), YTD %, 1Y %, 1M %, 3M %, Vol 3Y % (annualisée) depuis /time_series
 // Sorties: data/daily_metrics.json, data/daily_metrics_*.csv, data/combined_*.{json,csv}
+// v2.6: Add perf_1m_pct and perf_3m_pct for momentum scoring
 // v2.5: Support bond_credit_rating (notation dominante) dans combined_bonds.csv
 
 const fs = require('fs').promises;
@@ -130,7 +131,18 @@ async function computeMetricsFor(symbolParam){
   if (q){ daily_change_pct = toNum(q.percent_change); last_close = toNum(q.close) ?? toNum(q.previous_close) ?? null; }
 
   const ts = await fetchTimeSeriesFrom(threeYearsAgoISO, symbolParam);
-  if (!ts || ts.length===0) return { as_of: todayISO(), daily_change_pct, ytd_return_pct: null, one_year_return_pct: null, vol_pct: null, vol_window: '', vol_3y_pct: null, last_close };
+  if (!ts || ts.length===0) return { 
+    as_of: todayISO(), 
+    daily_change_pct, 
+    ytd_return_pct: null, 
+    one_year_return_pct: null, 
+    perf_1m_pct: null,
+    perf_3m_pct: null,
+    vol_pct: null, 
+    vol_window: '', 
+    vol_3y_pct: null, 
+    last_close 
+  };
 
   const tsDesc = [...ts].sort((a,b)=> new Date(b.datetime) - new Date(a.datetime));
   const last = tsDesc[0]; const prev = tsDesc[1]; const lastClose = Number(last.close);
@@ -145,12 +157,37 @@ async function computeMetricsFor(symbolParam){
   if (tsDesc.length > 252){ const close252 = Number(tsDesc[252].close); if (close252>0) one_year_return_pct = (lastClose/close252 - 1) * 100; }
   else { const oneYearAgo = new Date(now); oneYearAgo.setFullYear(now.getFullYear()-1); const ref = findCloseOnOrAfter(ts, oneYearAgo); if (ref && Number(ref.close)>0) one_year_return_pct = (lastClose/Number(ref.close) - 1) * 100; }
 
+  // v2.6: Calcul perf_1m (21 trading days) et perf_3m (63 trading days)
+  let perf_1m_pct = null;
+  let perf_3m_pct = null;
+
+  if (tsDesc.length > 21) {
+    const close21 = Number(tsDesc[21].close);
+    if (close21 > 0) perf_1m_pct = (lastClose / close21 - 1) * 100;
+  }
+
+  if (tsDesc.length > 63) {
+    const close63 = Number(tsDesc[63].close);
+    if (close63 > 0) perf_3m_pct = (lastClose / close63 - 1) * 100;
+  }
+
   const volPref = computeVolPreferredFromSeries(ts, { minCoverage: 0.8, minSinceInception: 60 });
   const vol_pct = volPref.value != null ? (volPref.value * 100) : null;
   const vol_window = volPref.label || '';
   let vol_3y_pct = (vol_window === '3y' && vol_pct != null) ? vol_pct : null;
 
-  return { as_of: todayISO(), daily_change_pct: round(clampAbs(daily_change_pct, 100), 3), ytd_return_pct: round(clampAbs(ytd_return_pct, 1000), 2), one_year_return_pct: round(clampAbs(one_year_return_pct, 1000), 2), vol_pct: round(vol_pct, 2), vol_window: vol_window || '', vol_3y_pct: round(vol_3y_pct, 2), last_close: round(last_close, 4) };
+  return { 
+    as_of: todayISO(), 
+    daily_change_pct: round(clampAbs(daily_change_pct, 100), 3), 
+    ytd_return_pct: round(clampAbs(ytd_return_pct, 1000), 2), 
+    one_year_return_pct: round(clampAbs(one_year_return_pct, 1000), 2), 
+    perf_1m_pct: round(clampAbs(perf_1m_pct, 500), 2),
+    perf_3m_pct: round(clampAbs(perf_3m_pct, 500), 2),
+    vol_pct: round(vol_pct, 2), 
+    vol_window: vol_window || '', 
+    vol_3y_pct: round(vol_3y_pct, 2), 
+    last_close: round(last_close, 4) 
+  };
 }
 
 async function readCSV(filePath){ const raw = await fs.readFile(filePath, 'utf8'); return csvParse.parse(raw, { columns: true, skip_empty_lines: true }); }
@@ -166,7 +203,7 @@ async function writeCSV(filePath, rows, columns) {
 }
 
 async function main(){
-  console.log('⚡ Daily ETF/Bond metrics: perfs & risque (time_series + quote) v2.5');
+  console.log('⚡ Daily ETF/Bond metrics: perfs & risque (time_series + quote) v2.6');
 
   const etfCsv = path.join(OUT_DIR, 'weekly_snapshot_etfs.csv');
   const bondCsv = path.join(OUT_DIR, 'weekly_snapshot_bonds.csv');
@@ -188,15 +225,18 @@ async function main(){
   } catch (e) { console.log('ℹ️  filtered_advanced.json absent ou illisible — leverage non injecté.'); }
   const findLeverage = (row) => leverageByKey.get(`SYM:${row.symbol}`) ?? (row.isin ? leverageByKey.get(`ISIN:${row.isin}`) : '') ?? '';
 
+  // v2.6: Colonnes daily metrics avec perf_1m_pct et perf_3m_pct
+  const DAILY_METRICS_COLS = ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of'];
+
   if (all.length === 0) {
     console.log('ℹ️  Aucune ligne dans les CSV weekly — je crée des fichiers daily vides.');
     await fs.mkdir(OUT_DIR, { recursive: true });
     await fs.writeFile(path.join(OUT_DIR, 'daily_metrics.json'), JSON.stringify({ timestamp: todayISO(), etfs: [], bonds: [] }, null, 2));
-    await writeCSV(path.join(OUT_DIR, 'daily_metrics_etfs.csv'), [], ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of']);
-    await writeCSV(path.join(OUT_DIR, 'daily_metrics_bonds.csv'), [], ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of']);
+    await writeCSV(path.join(OUT_DIR, 'daily_metrics_etfs.csv'), [], DAILY_METRICS_COLS);
+    await writeCSV(path.join(OUT_DIR, 'daily_metrics_bonds.csv'), [], DAILY_METRICS_COLS);
     await fs.writeFile(path.join(OUT_DIR, 'combined_snapshot.json'), JSON.stringify({ timestamp: todayISO(), etfs: [], bonds: [] }, null, 2));
-    await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm','objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score']);
-    await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm','bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating','objective','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score']);
+    await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm','objective','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score']);
+    await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm','bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating','objective','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score']);
     await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm','objective','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score']);
     await fs.writeFile(path.join(OUT_DIR, 'combined_bonds_holdings.csv'), 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n');
     return;
@@ -212,10 +252,10 @@ async function main(){
     try {
       const m = await computeMetricsFor(it.symbolParam);
       metricsMap.set(it.symbol, { symbol: it.symbol, ...m });
-      console.log(`  · ${it.symbolParam} ⇒ D:${m.daily_change_pct}%  YTD:${m.ytd_return_pct}%  1Y:${m.one_year_return_pct}%  VOL:${m.vol_pct}% (${m.vol_window||'—'})  [VOL3Y:${m.vol_3y_pct ?? '—'}]`);
+      console.log(`  · ${it.symbolParam} ⇒ D:${m.daily_change_pct}%  YTD:${m.ytd_return_pct}%  1Y:${m.one_year_return_pct}%  1M:${m.perf_1m_pct ?? '—'}%  3M:${m.perf_3m_pct ?? '—'}%  VOL:${m.vol_pct}% (${m.vol_window||'—'})  [VOL3Y:${m.vol_3y_pct ?? '—'}]`);
     } catch (e) {
       console.log(`  ! ${it.symbolParam} métriques KO: ${e.message}`);
-      metricsMap.set(it.symbol, { symbol: it.symbol, as_of: todayISO(), daily_change_pct: null, ytd_return_pct: null, one_year_return_pct: null, vol_pct: null, vol_window: '', vol_3y_pct: null, last_close: null });
+      metricsMap.set(it.symbol, { symbol: it.symbol, as_of: todayISO(), daily_change_pct: null, ytd_return_pct: null, one_year_return_pct: null, perf_1m_pct: null, perf_3m_pct: null, vol_pct: null, vol_window: '', vol_3y_pct: null, last_close: null });
     }
   }
 
@@ -225,8 +265,8 @@ async function main(){
   const bondDaily = bonds.map(b => ({ name: b.name || '', ...metricsMap.get(b.symbol) }));
 
   await fs.writeFile(path.join(OUT_DIR, 'daily_metrics.json'), JSON.stringify({ timestamp: todayISO(), etfs: etfDaily, bonds: bondDaily }, null, 2));
-  await writeCSV(path.join(OUT_DIR, 'daily_metrics_etfs.csv'), etfDaily, ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of']);
-  await writeCSV(path.join(OUT_DIR, 'daily_metrics_bonds.csv'), bondDaily, ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of']);
+  await writeCSV(path.join(OUT_DIR, 'daily_metrics_etfs.csv'), etfDaily, DAILY_METRICS_COLS);
+  await writeCSV(path.join(OUT_DIR, 'daily_metrics_bonds.csv'), bondDaily, DAILY_METRICS_COLS);
   console.log('💾 Daily JSON/CSV écrits (trace brute).');
 
   const weeklyEtfs = etfRows.map(r => ({
@@ -292,13 +332,13 @@ async function main(){
   });
 
   const bondFinal = bondMergedWithExposure.filter(hasObjective);
-  // v2.5: colonne bond_credit_rating
+  // v2.6: colonnes avec perf_1m_pct et perf_3m_pct
   await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), bondFinal, [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type',
     'aum_usd','total_expense_ratio','yield_ttm',
     'bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating',
     'objective',
-    'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of',
+    'daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of',
     'sector_top','sector_top_weight','country_top','country_top_weight',
     'sector_top5','country_top5',
     'holding_top','holdings_top10',
@@ -341,10 +381,11 @@ async function main(){
   });
 
   const etfFinal = etfMergedWithExposure.filter(hasObjective);
+  // v2.6: colonnes avec perf_1m_pct et perf_3m_pct
   await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), etfFinal, [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',
     'aum_usd','total_expense_ratio','yield_ttm','objective',
-    'daily_change_pct','ytd_return_pct','one_year_return_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of',
+    'daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of',
     'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
     'holding_top','holdings_top10',
     'data_quality_score'
@@ -366,9 +407,15 @@ async function main(){
   const bondsWithCredit = bondFinal.filter(e => e.bond_credit_score != null && e.bond_credit_score !== '').length;
   const bondsWithRating = bondFinal.filter(e => e.bond_credit_rating != null && e.bond_credit_rating !== '').length;
 
+  // v2.6: Stats perf_1m et perf_3m
+  const etfsWith1m = etfFinal.filter(e => e.perf_1m_pct != null && e.perf_1m_pct !== '').length;
+  const etfsWith3m = etfFinal.filter(e => e.perf_3m_pct != null && e.perf_3m_pct !== '').length;
+
   console.log('🔗 Fusions weekly+daily écrites (JSON & CSV).');
   console.log(`✅ Total: ${etfFinal.length} ETFs, ${bondFinal.length} Bonds traités (après filtrage qualité)`);
   console.log(`📊 CSV Exposure créé avec ${etfExposureFiltered.length} ETFs`);
+  console.log(`📈 ETFs avec perf_1m: ${etfsWith1m}/${etfFinal.length}`);
+  console.log(`📈 ETFs avec perf_3m: ${etfsWith3m}/${etfFinal.length}`);
   console.log(`📈 Bonds avec duration: ${bondsWithDuration}/${bondFinal.length}`);
   console.log(`📈 Bonds avec credit_score: ${bondsWithCredit}/${bondFinal.length}`);
   console.log(`📈 Bonds avec credit_rating: ${bondsWithRating}/${bondFinal.length}`);
