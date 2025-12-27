@@ -1,0 +1,535 @@
+/**
+ * Portfolio AMF Compliance Styles
+ * Styles pour les éléments réglementaires obligatoires
+ */
+
+/* ========================================
+   BLOC CONFORMITÉ AMF
+   ======================================== */
+
+.amf-compliance-block {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, rgba(255, 87, 34, 0.05) 100%);
+    border: 1px solid rgba(255, 193, 7, 0.2);
+    border-radius: 12px;
+}
+
+.amf-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.amf-header i {
+    color: #ffc107;
+    font-size: 1.25rem;
+}
+
+.amf-header span {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #ffc107;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ========================================
+   DISCLAIMER PRINCIPAL
+   ======================================== */
+
+.amf-disclaimer {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.amf-disclaimer.primary {
+    background: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid #ffc107;
+}
+
+.amf-disclaimer i {
+    color: #ffc107;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.amf-disclaimer p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.amf-disclaimer strong {
+    color: #ffc107;
+}
+
+/* ========================================
+   WARNINGS SPÉCIFIQUES
+   ======================================== */
+
+.amf-warning {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.amf-warning.crypto {
+    background: rgba(255, 87, 34, 0.1);
+    border-left: 4px solid #ff5722;
+}
+
+.amf-warning.crypto i {
+    color: #ff5722;
+}
+
+.amf-warning.crypto strong {
+    color: #ff5722;
+}
+
+.amf-warning.violations {
+    background: rgba(244, 67, 54, 0.1);
+    border-left: 4px solid #f44336;
+}
+
+.amf-warning .warning-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.amf-warning .warning-header i {
+    color: #f44336;
+}
+
+.amf-warning .warning-header span {
+    font-weight: 600;
+    color: #f44336;
+}
+
+.violation-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0 0;
+}
+
+.violation-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.violation-list li:last-child {
+    margin-bottom: 0;
+}
+
+.violation-list .slack {
+    font-family: 'Courier New', monospace;
+    color: #f44336;
+    font-weight: 600;
+}
+
+/* ========================================
+   QUALITY BADGE
+   ======================================== */
+
+.quality-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.quality-badge.score-excellent {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+}
+
+.quality-badge.score-good {
+    background: rgba(139, 195, 74, 0.2);
+    color: #8bc34a;
+}
+
+.quality-badge.score-warning {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.quality-badge.score-critical {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+}
+
+/* ========================================
+   MÉTHODOLOGIE
+   ======================================== */
+
+.amf-methodology {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.amf-methodology.optimized {
+    background: rgba(76, 175, 80, 0.1);
+    border-left: 4px solid #4caf50;
+}
+
+.amf-methodology.heuristic {
+    background: rgba(156, 39, 176, 0.1);
+    border-left: 4px solid #9c27b0;
+}
+
+.method-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.amf-methodology.optimized .method-header i {
+    color: #4caf50;
+}
+
+.amf-methodology.optimized .method-header span {
+    color: #4caf50;
+    font-weight: 600;
+}
+
+.amf-methodology.heuristic .method-header i {
+    color: #9c27b0;
+}
+
+.amf-methodology.heuristic .method-header span {
+    color: #9c27b0;
+    font-weight: 600;
+}
+
+.method-explanation {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.75rem;
+    border-radius: 6px;
+}
+
+.method-explanation p {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ========================================
+   LIMITATIONS
+   ======================================== */
+
+.amf-limitations {
+    padding: 1rem;
+    background: rgba(158, 158, 158, 0.1);
+    border-left: 4px solid #9e9e9e;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.limitations-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.limitations-header i {
+    color: #9e9e9e;
+}
+
+.limitations-header span {
+    font-weight: 600;
+    color: #9e9e9e;
+}
+
+.amf-limitations ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.amf-limitations li {
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.amf-limitations li:last-child {
+    border-bottom: none;
+}
+
+.amf-limitations li::before {
+    content: "•";
+    margin-right: 0.5rem;
+    color: #9e9e9e;
+}
+
+/* ========================================
+   MÉTRIQUES DE RISQUE
+   ======================================== */
+
+.amf-risk-metrics {
+    padding: 1rem;
+    background: rgba(33, 150, 243, 0.1);
+    border-left: 4px solid #2196f3;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.metrics-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.metrics-header i {
+    color: #2196f3;
+}
+
+.metrics-header span {
+    font-weight: 600;
+    color: #2196f3;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.metric-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2196f3;
+}
+
+.metric-value.well-diversified {
+    color: #4caf50;
+}
+
+.metric-value.diversified {
+    color: #8bc34a;
+}
+
+.metric-value.concentrated {
+    color: #ffc107;
+}
+
+.metric-value.highly-concentrated {
+    color: #f44336;
+}
+
+.hhi-interpretation {
+    margin: 0.75rem 0 0 0;
+    font-size: 0.8rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* ========================================
+   FOOTER AMF
+   ======================================== */
+
+.amf-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* ========================================
+   BADGES PORTEFEUILLE
+   ======================================== */
+
+.portfolio-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.badge.optimized {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+}
+
+.badge.heuristic {
+    background: rgba(156, 39, 176, 0.2);
+    color: #9c27b0;
+}
+
+.badge.volatility {
+    background: rgba(33, 150, 243, 0.2);
+    color: #2196f3;
+}
+
+/* ========================================
+   COMMENTAIRE STRATÉGIQUE
+   ======================================== */
+
+.portfolio-commentary {
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 4px solid;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1.5rem;
+}
+
+.commentary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.commentary-header span {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.portfolio-commentary p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ========================================
+   NOTIFICATIONS
+   ======================================== */
+
+.tp-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+    display: none;
+}
+
+.tp-notification.success {
+    background: rgba(76, 175, 80, 0.95);
+    color: white;
+}
+
+.tp-notification.error {
+    background: rgba(244, 67, 54, 0.95);
+    color: white;
+}
+
+.tp-notification.info {
+    background: rgba(33, 150, 243, 0.95);
+    color: white;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+    .amf-compliance-block {
+        padding: 1rem;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .amf-footer {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .violation-list li {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .quality-badge {
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .portfolio-badges {
+        flex-direction: column;
+    }
+}
