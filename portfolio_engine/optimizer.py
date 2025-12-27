@@ -716,13 +716,19 @@ def _passes_momentum_filter(asset: Asset, profile_name: str) -> Tuple[bool, Opti
     # === Récupérer perf 3 mois selon la catégorie ===
     if asset.category == "Crypto":
         # Crypto: ret_90d_pct (90 jours ≈ 3 mois)
-        perf_3m = asset.source_data.get("ret_90d_pct") or 0
+        raw_perf = asset.source_data.get("ret_90d_pct")
     elif asset.category == "ETF":
         # ETF: perf_3m_pct
-        perf_3m = asset.source_data.get("perf_3m_pct") or asset.source_data.get("perf_3m") or 0
+        raw_perf = asset.source_data.get("perf_3m_pct") or asset.source_data.get("perf_3m")
     else:
         # Actions: perf_3m
-        perf_3m = asset.source_data.get("perf_3m") or 0
+        raw_perf = asset.source_data.get("perf_3m")
+    
+    # Convertir en float de manière sécurisée
+    try:
+        perf_3m = float(raw_perf) if raw_perf is not None else 0.0
+    except (TypeError, ValueError):
+        perf_3m = 0.0
     
     # Récupérer seuil pour ce profil + rôle
     role = asset.role or Role.SATELLITE
