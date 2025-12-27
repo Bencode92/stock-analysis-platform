@@ -420,6 +420,35 @@ BUCKET_CONSTRAINT_RELAXATION = {
 # v6.13 FIX: Renommage "Certified" → "Heuristic" (conformité AMF P0-9)
 FORCE_FALLBACK_PROFILES = {"Stable"}
 
+# ============= v6.24 MOMENTUM FILTER BY ROLE =============
+
+# Seuils momentum (perf_3m_min) par profil et rôle
+MOMENTUM_THRESHOLDS = {
+    "Stable": {
+        Role.CORE: -10.0,
+        Role.DEFENSIVE: -15.0,
+        Role.SATELLITE: -20.0,
+        Role.LOTTERY: -30.0,
+    },
+    "Modéré": {
+        Role.CORE: -15.0,
+        Role.DEFENSIVE: -20.0,
+        Role.SATELLITE: -25.0,
+        Role.LOTTERY: -35.0,
+    },
+    "Agressif": {
+        Role.CORE: -20.0,
+        Role.DEFENSIVE: -25.0,
+        Role.SATELLITE: -30.0,
+        Role.LOTTERY: -40.0,
+    },
+}
+
+# Presets EXCLUS du filtre momentum (contrarian par design)
+MOMENTUM_FILTER_EXEMPT_PRESETS = {
+    "recovery", "recovery_crypto", "contrarian"
+}
+
 # v6.19 PR3: Stable Heuristic Rules — Documentation pour traçabilité
 STABLE_HEURISTIC_RULES = {
     "name": "stable_rules_v1",
@@ -668,7 +697,41 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
     
     return None, Role.SATELLITE
 
+def _passes_momentum_filter(asset: Asset, profile_name: str) -> Tuple[bool, Optional[str]]:
+    """
+    v6.24: Vérifie si l'asset passe le filtre momentum.
+    Conditionné par rôle/preset - ne bloque pas les presets contrarian.
+    
+    Returns:
+        (passes: bool, reason: Optional[str])
+    """
+    # Pas de filtre pour presets contrarian
+    if asset.preset in MOMENTUM_FILTER_EXEMPT_PRESETS:
+        return True, None
+    
+    # Pas de données = on laisse passer
+    if not asset.source_data:
+        return True, None
+    
+    perf_3m = asset.source_data.get("perf_3m") or asset.source_data.get("perf_3m_pct") or 0
+    
+    # Récupérer seuil pour ce profil + rôle
+    role = asset.role or Role.SATELLITE
+    thresholds = MOMENTUM_THRESHOLDS.get(profile_name, {})
+    min_3m = thresholds.get(role, -25.0)  # Default -25%
+    
+    # Crypto: seuils plus larges (vol énorme)
+    if asset.category == "Crypto":
+        min_3m *= 1.5  # -15% → -22.5%
+    
+    # Check
+    if perf_3m < min_3m:
+        return False, f"perf_3m={perf_3m:.1f}% < {min_3m:.1f}%"
+    
+    return True, None
 
+
+def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
 def enrich_assets_with_buckets(assets: List[Asset]) -> List[Asset]:
     """Enrichit tous les actifs avec leur preset, rôle (bucket) et risk_bucket."""
     for asset in assets:
@@ -1254,9 +1317,18 @@ class PortfolioOptimizer:
         crypto_pool_count = 0
         crypto_scores = []
         
+        momentum_rejected = 0
+        
         for asset in sorted_assets:
             if len(selected) >= target_pool:
                 break
+            
+            # === v6.24: FILTRE MOMENTUM PAR RÔLE ===
+            passes, reason = _passes_momentum_filter(asset, profile.name)
+            if not passes:
+                momentum_rejected += 1
+                logger.debug(f"Momentum filter: {asset.id} rejected ({reason})")
+                continue
             
             if asset.category == "Crypto":
                 if profile.crypto_max == 0:
@@ -1314,6 +1386,11 @@ class PortfolioOptimizer:
             defensive_to_add = defensive_candidates[:defensive_needed]
             selected.extend(defensive_to_add)
             logger.info(f"P1 FIX v6.2: Added {len(defensive_to_add)} defensive assets to pool for {profile.name}")
+        
+ 
+         # === v6.24: Log momentum rejections ===
+        if momentum_rejected > 0:
+            logger.info(f"Momentum filter: rejected {momentum_rejected} assets for {profile.name}")
         
         logger.info(f"Pool candidats: {len(selected)} actifs pour {profile.name}")
         
@@ -1688,9 +1765,10 @@ class PortfolioOptimizer:
        # === v6.23: Appliquer Core/Satellite crypto ===
         allocation = self._apply_crypto_core_satellite(allocation, candidates, profile)
         
-        # P0 PARTNER: Respecter turnover max en fallback
-        if prev_weights is not None:
-            allocation = self._clip_turnover(allocation, prev_weights, profile.max_turnover, candidates)
+        # === v6.24: POST-PROCESSOR UNIFIÉ ===
+        allocation = self._post_process_allocation(
+            allocation, candidates, profile, prev_weights
+        )
         
         return allocation
     
@@ -1948,9 +2026,13 @@ class PortfolioOptimizer:
                # === P0 FIX v6.22: FORCE CRYPTO CAP POST-SLSQP ===
                 allocation = self._enforce_crypto_cap(allocation, candidates, profile)
 
-               # === v6.24 FIX: APPLIQUER CORE/SATELLITE POST-SLSQP ===
+                # === v6.24 FIX: APPLIQUER CORE/SATELLITE POST-SLSQP ===
                 allocation = self._apply_crypto_core_satellite(allocation, candidates, profile)
-                allocation = self._adjust_to_100(allocation, profile)
+                
+                # === v6.24: POST-PROCESSOR UNIFIÉ ===
+                allocation = self._post_process_allocation(
+                    allocation, candidates, profile, prev_weights
+                )
                
                 
                 # === Vérifier diversification bonds POST-SLSQP ===
@@ -2427,6 +2509,112 @@ class PortfolioOptimizer:
                     allocation[k] = round(float(allocation[k] * 100 / total), 2)
         
         return allocation
+    def _check_all_violations(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> List[str]:
+        """
+        v6.24: Vérifie toutes les contraintes, retourne liste de violations.
+        """
+        asset_lookup = {c.id: c for c in candidates}
+        violations = []
+        
+        # 1. Somme = 100%
+        total = sum(allocation.values())
+        if abs(total - 100) > 0.5:
+            violations.append(f"sum={total:.1f}%")
+        
+        # 2. max_single_position
+        for aid, w in allocation.items():
+            if w > profile.max_single_position + 0.5:
+                violations.append(f"max_position:{aid}={w:.1f}%")
+        
+        # 3. Bonds minimum
+        bonds_pct = sum(w for aid, w in allocation.items() 
+                        if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations")
+        if bonds_pct < profile.bonds_min - 0.5:
+            violations.append(f"bonds={bonds_pct:.1f}%<{profile.bonds_min}%")
+        
+        # 4. Crypto maximum
+        crypto_pct = sum(w for aid, w in allocation.items() 
+                         if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto")
+        if crypto_pct > profile.crypto_max + 0.5:
+            violations.append(f"crypto={crypto_pct:.1f}%>{profile.crypto_max}%")
+        
+        # 5. Sector caps (equity-like only)
+        sector_weights = defaultdict(float)
+        for aid, w in allocation.items():
+            asset = asset_lookup.get(aid)
+            if asset and _is_equity_like(asset):
+                sector_weights[asset.sector] += w
+        
+        for sector, w in sector_weights.items():
+            if w > profile.max_sector + 0.5:
+                violations.append(f"sector:{sector}={w:.1f}%")
+        
+        return violations
+     def _post_process_allocation(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints,
+        prev_weights: Optional[Dict[str, float]] = None,
+        max_iterations: int = 5,
+        epsilon: float = 0.1
+    ) -> Dict[str, float]:
+        """
+        v6.24: Post-processor unifié avec convergence réelle.
+        Critère d'arrêt: 0 violations ET delta < epsilon
+        """
+        prev_alloc = allocation.copy()
+        
+        for iteration in range(max_iterations):
+            # 1. Normaliser
+            allocation = self._adjust_to_100(allocation, profile)
+            
+            # 2. Caps durs
+            for aid, w in list(allocation.items()):
+                if w > profile.max_single_position:
+                    allocation[aid] = profile.max_single_position
+            
+            # 3. Enforce contraintes
+            allocation = self._enforce_crypto_cap(allocation, candidates, profile)
+            allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
+            allocation = self._enforce_sector_caps(allocation, candidates, profile)
+            
+            # 4. Re-normaliser
+            allocation = self._adjust_to_100(allocation, profile)
+            
+            # 5. Turnover check
+            if prev_weights is not None:
+                allocation = self._clip_turnover(
+                    allocation, prev_weights, profile.max_turnover, candidates
+                )
+                allocation = self._adjust_to_100(allocation, profile)
+            
+            # 6. Check violations
+            violations = self._check_all_violations(allocation, candidates, profile)
+            
+            # 7. Delta
+            delta = sum(abs(allocation.get(k, 0) - prev_alloc.get(k, 0)) 
+                        for k in set(allocation.keys()) | set(prev_alloc.keys()))
+            
+            # 8. Convergence?
+            if len(violations) == 0 and delta < epsilon:
+                logger.info(f"Post-process converged at iteration {iteration + 1}")
+                break
+            
+            prev_alloc = allocation.copy()
+        
+        if violations:
+            logger.warning(f"Post-process: {len(violations)} violations after {max_iterations} iter: {violations}")
+        
+        return allocation
+
+    def _enforce_crypto_cap(  
+
     def _enforce_crypto_cap(
         self,
         allocation: Dict[str, float],
