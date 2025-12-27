@@ -1,5 +1,5 @@
 /**
- * Portfolio Loader v2.3 - AMF Compliant - FIXED NaN issue
+ * Portfolio Loader v2.4 - AMF Compliant - FIXED NaN issue
  * Corrige le problème de NaN invalide dans le JSON Python
  */
 
@@ -28,7 +28,7 @@ class PortfolioManagerAMF {
             this.renderPortfolios();
             this.setupInteractions();
             this.showLoading(false);
-            console.log('✅ Portefeuilles AMF chargés avec succès');
+            console.log('✅ Portefeuilles AMF v2.4 chargés avec succès');
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation:', error);
             this.showError(`Erreur de chargement: ${error.message}`);
@@ -44,13 +44,21 @@ class PortfolioManagerAMF {
 
     /**
      * Nettoie le JSON généré par Python (remplace NaN par null)
+     * Python pandas/numpy génère NaN qui n'est pas valide en JSON standard
      */
     cleanPythonJSON(text) {
-        // Remplacer NaN, Infinity, -Infinity par null (invalides en JSON standard)
-        return text
-            .replace(/:\s*NaN\b/g, ': null')
-            .replace(/:\s*Infinity\b/g, ': null')
-            .replace(/:\s*-Infinity\b/g, ': null');
+        console.log('🧹 Nettoyage du JSON Python...');
+        // Remplacer tous les NaN par null (plus robuste)
+        let cleaned = text
+            .replace(/\bNaN\b/g, 'null')
+            .replace(/\bInfinity\b/g, 'null')
+            .replace(/\b-Infinity\b/g, 'null');
+        
+        // Log pour debug
+        const nanCount = (text.match(/\bNaN\b/g) || []).length;
+        console.log(`🔧 ${nanCount} NaN remplacés par null`);
+        
+        return cleaned;
     }
 
     /**
@@ -58,6 +66,7 @@ class PortfolioManagerAMF {
      */
     async loadPortfolios() {
         const timestamp = Date.now();
+        console.log('📂 Chargement des portefeuilles v2.4...');
         
         // URL directe vers raw.githubusercontent.com - TOUJOURS ACCESSIBLE
         const rawUrl = `https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/portfolios.json?_=${timestamp}`;
@@ -71,6 +80,7 @@ class PortfolioManagerAMF {
         
         let data = null;
         let loadedFrom = null;
+        let lastError = null;
         
         // 1. Essayer les chemins locaux d'abord
         for (const path of localPaths) {
@@ -79,24 +89,29 @@ class PortfolioManagerAMF {
                 const response = await fetch(`${path}?_=${timestamp}`);
                 if (response.ok) {
                     const text = await response.text();
+                    console.log(`📄 Reçu ${text.length} caractères`);
                     const cleanedText = this.cleanPythonJSON(text);
                     data = JSON.parse(cleanedText);
                     loadedFrom = path;
                     console.log(`✅ Chargé depuis: ${path}`);
                     break;
+                } else {
+                    console.warn(`⚠️ HTTP ${response.status} pour ${path}`);
                 }
             } catch (e) {
                 console.warn(`⚠️ Échec ${path}: ${e.message}`);
+                lastError = e.message;
             }
         }
         
         // 2. Fallback vers raw.githubusercontent.com
         if (!data) {
             try {
-                console.log(`📂 Fallback: ${rawUrl}`);
+                console.log(`📂 Fallback: raw.githubusercontent.com`);
                 const response = await fetch(rawUrl);
                 if (response.ok) {
                     const text = await response.text();
+                    console.log(`📄 Reçu ${text.length} caractères depuis GitHub`);
                     const cleanedText = this.cleanPythonJSON(text);
                     data = JSON.parse(cleanedText);
                     loadedFrom = 'raw.githubusercontent.com';
@@ -105,7 +120,8 @@ class PortfolioManagerAMF {
                     throw new Error(`HTTP ${response.status}`);
                 }
             } catch (e) {
-                throw new Error(`Impossible de charger portfolios.json: ${e.message}`);
+                console.error('❌ Échec du fallback:', e.message);
+                throw new Error(`Impossible de charger portfolios.json. Erreur: ${e.message}`);
             }
         }
         
@@ -164,15 +180,15 @@ class PortfolioManagerAMF {
         const violations = constraints.summary?.violated || 0;
         const cryptoExposure = this.calculateCryptoExposure(portfolio);
         
-        let html = `<div class="amf-compliance-block">
-            <div class="amf-header">
+        let html = `<div class="amf-compliance-block" style="margin-top: 2rem; padding: 1.5rem; background: rgba(255,193,7,0.05); border: 1px solid rgba(255,193,7,0.2); border-radius: 12px;">
+            <div class="amf-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; color: #ffc107;">
                 <i class="fas fa-shield-alt"></i>
-                <span>Information réglementaire (AMF)</span>
+                <span style="font-weight: 600;">Information réglementaire (AMF)</span>
             </div>
             
-            <div class="amf-disclaimer primary">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p><strong>Avertissement :</strong> Ce portefeuille modèle est fourni à titre informatif et éducatif uniquement. 
+            <div class="amf-disclaimer primary" style="display: flex; gap: 0.75rem; padding: 1rem; background: rgba(255,152,0,0.1); border-radius: 8px; margin-bottom: 1rem;">
+                <i class="fas fa-exclamation-triangle" style="color: #ff9800; flex-shrink: 0;"></i>
+                <p style="margin: 0; font-size: 0.85rem; line-height: 1.5;"><strong>Avertissement :</strong> Ce portefeuille modèle est fourni à titre informatif et éducatif uniquement. 
                 Il ne constitue pas un conseil en investissement personnalisé. 
                 Les performances passées ne préjugent pas des performances futures.</p>
             </div>`;
@@ -180,9 +196,9 @@ class PortfolioManagerAMF {
         // Warning crypto si > seuil
         if (cryptoExposure > this.AMF_CONFIG.maxCryptoWarningThreshold) {
             html += `
-            <div class="amf-warning crypto">
-                <i class="fas fa-coins"></i>
-                <p><strong>Risque crypto-actifs (${cryptoExposure.toFixed(1)}%) :</strong> 
+            <div class="amf-warning crypto" style="display: flex; gap: 0.75rem; padding: 1rem; background: rgba(244,67,54,0.1); border-radius: 8px; margin-bottom: 1rem;">
+                <i class="fas fa-coins" style="color: #f44336; flex-shrink: 0;"></i>
+                <p style="margin: 0; font-size: 0.85rem;"><strong>Risque crypto-actifs (${cryptoExposure.toFixed(1)}%) :</strong> 
                 Les crypto-actifs présentent un risque de perte en capital très élevé.</p>
             </div>`;
         }
@@ -190,20 +206,20 @@ class PortfolioManagerAMF {
         // Méthodologie
         if (this.AMF_CONFIG.showMethodologyDetails) {
             const methodLabel = isHeuristic ? 'Allocation heuristique' : 'Optimisation Markowitz (SLSQP)';
-            const methodClass = isHeuristic ? 'heuristic' : 'optimized';
+            const methodColor = isHeuristic ? '#9c27b0' : '#4caf50';
             const methodIcon = isHeuristic ? 'fa-cogs' : 'fa-calculator';
             
             html += `
-            <div class="amf-methodology ${methodClass}">
-                <div class="method-header">
+            <div class="amf-methodology" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 1rem;">
+                <div class="method-header" style="display: flex; align-items: center; gap: 0.5rem; color: ${methodColor};">
                     <i class="fas ${methodIcon}"></i>
-                    <span>Méthodologie : ${methodLabel}</span>
+                    <span style="font-weight: 600;">Méthodologie : ${methodLabel}</span>
                 </div>`;
             
             if (isHeuristic && optimization.why_not_slsqp_details) {
                 html += `
-                <div class="method-explanation">
-                    <p>${optimization.why_not_slsqp_details}</p>
+                <div class="method-explanation" style="margin-top: 0.75rem; font-size: 0.85rem; color: rgba(255,255,255,0.7);">
+                    <p style="margin: 0;">${optimization.why_not_slsqp_details}</p>
                 </div>`;
             }
             html += `</div>`;
@@ -213,17 +229,17 @@ class PortfolioManagerAMF {
         if (this.AMF_CONFIG.showConstraintViolations && violations > 0) {
             const violatedList = (constraints.constraints || []).filter(c => c.status === 'VIOLATED');
             html += `
-            <div class="amf-warning violations">
-                <div class="warning-header">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span>Contraintes non respectées (${violations})</span>
-                    <span class="quality-badge score-${this.getScoreClass(qualityScore)}">
+            <div class="amf-warning violations" style="padding: 1rem; background: rgba(244,67,54,0.1); border-radius: 8px; margin-bottom: 1rem;">
+                <div class="warning-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <i class="fas fa-exclamation-circle" style="color: #f44336;"></i>
+                    <span style="font-weight: 600;">Contraintes non respectées (${violations})</span>
+                    <span style="margin-left: auto; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; background: ${qualityScore >= 85 ? 'rgba(76,175,80,0.2)' : 'rgba(244,67,54,0.2)'}; color: ${qualityScore >= 85 ? '#4caf50' : '#f44336'};">
                         Score: ${qualityScore.toFixed(1)}%
                     </span>
                 </div>
-                <ul class="violation-list">
+                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem;">
                     ${violatedList.map(v => `
-                        <li><strong>${v.name}</strong>: ${v.observed}% (limite: ${v.cap}%)</li>
+                        <li style="margin-bottom: 0.25rem;"><strong>${v.name}</strong>: ${v.observed}% (limite: ${v.cap}%)</li>
                     `).join('')}
                 </ul>
             </div>`;
@@ -232,12 +248,12 @@ class PortfolioManagerAMF {
         // Limitations
         if (limitations.length > 0) {
             html += `
-            <div class="amf-limitations">
-                <div class="limitations-header">
+            <div class="amf-limitations" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 1rem;">
+                <div class="limitations-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; color: #2196f3;">
                     <i class="fas fa-info-circle"></i>
-                    <span>Limitations connues</span>
+                    <span style="font-weight: 600;">Limitations connues</span>
                 </div>
-                <ul>${limitations.map(l => `<li>${l}</li>`).join('')}</ul>
+                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem;">${limitations.map(l => `<li>${l}</li>`).join('')}</ul>
             </div>`;
         }
         
@@ -245,36 +261,36 @@ class PortfolioManagerAMF {
         const conc = exposures.concentration;
         if (this.AMF_CONFIG.showRiskMetrics && conc) {
             html += `
-            <div class="amf-risk-metrics">
-                <div class="metrics-header">
+            <div class="amf-risk-metrics" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 1rem;">
+                <div class="metrics-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; color: #00bcd4;">
                     <i class="fas fa-chart-bar"></i>
-                    <span>Indicateurs de risque</span>
+                    <span style="font-weight: 600;">Indicateurs de risque</span>
                 </div>
-                <div class="metrics-grid">
-                    <div class="metric">
-                        <span class="metric-label">Volatilité</span>
-                        <span class="metric-value">${(optimization.vol_realized || 0).toFixed(1)}%</span>
+                <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div class="metric" style="text-align: center;">
+                        <span class="metric-label" style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 0.25rem;">Volatilité</span>
+                        <span class="metric-value" style="font-size: 1.25rem; font-weight: 700;">${(optimization.vol_realized || 0).toFixed(1)}%</span>
                     </div>
-                    <div class="metric">
-                        <span class="metric-label">HHI</span>
-                        <span class="metric-value ${this.getHHIClass(conc.hhi)}">${Math.round(conc.hhi || 0)}</span>
+                    <div class="metric" style="text-align: center;">
+                        <span class="metric-label" style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 0.25rem;">HHI</span>
+                        <span class="metric-value ${this.getHHIClass(conc.hhi)}" style="font-size: 1.25rem; font-weight: 700;">${Math.round(conc.hhi || 0)}</span>
                     </div>
-                    <div class="metric">
-                        <span class="metric-label">Positions</span>
-                        <span class="metric-value">${conc.n_positions || 0}</span>
+                    <div class="metric" style="text-align: center;">
+                        <span class="metric-label" style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 0.25rem;">Positions</span>
+                        <span class="metric-value" style="font-size: 1.25rem; font-weight: 700;">${conc.n_positions || 0}</span>
                     </div>
-                    <div class="metric">
-                        <span class="metric-label">Top 5</span>
-                        <span class="metric-value">${conc.top_5_weight || 0}%</span>
+                    <div class="metric" style="text-align: center;">
+                        <span class="metric-label" style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 0.25rem;">Top 5</span>
+                        <span class="metric-value" style="font-size: 1.25rem; font-weight: 700;">${conc.top_5_weight || 0}%</span>
                     </div>
                 </div>
-                <p class="hhi-interpretation"><em>${this.getHHIInterpretation(conc.hhi || 0)}</em></p>
+                <p class="hhi-interpretation" style="margin: 1rem 0 0 0; text-align: center; font-size: 0.85rem;"><em>${this.getHHIInterpretation(conc.hhi || 0)}</em></p>
             </div>`;
         }
         
         // Footer
         html += `
-            <div class="amf-footer">
+            <div class="amf-footer" style="display: flex; justify-content: center; gap: 1rem; font-size: 0.75rem; color: rgba(255,255,255,0.4); padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
                 <span>Version ${this.meta.version || 'N/A'}</span>
                 <span>•</span>
                 <span>Généré le ${this.formatDate(this.lastUpdate)}</span>
@@ -330,11 +346,11 @@ class PortfolioManagerAMF {
         <div class="portfolio-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
             <h2 style="color: ${color}; margin: 0;">${portfolioType}</h2>
             <div class="portfolio-badges" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <span class="badge ${optimization.is_heuristic ? 'heuristic' : 'optimized'}" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; background: ${optimization.is_heuristic ? 'rgba(156, 39, 176, 0.2)' : 'rgba(76, 175, 80, 0.2)'}; color: ${optimization.is_heuristic ? '#9c27b0' : '#4caf50'};">
+                <span class="badge" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; background: ${optimization.is_heuristic ? 'rgba(156, 39, 176, 0.2)' : 'rgba(76, 175, 80, 0.2)'}; color: ${optimization.is_heuristic ? '#9c27b0' : '#4caf50'};">
                     <i class="fas ${optimization.is_heuristic ? 'fa-cogs' : 'fa-calculator'}"></i>
                     ${optimization.is_heuristic ? 'Heuristique' : 'Optimisé'}
                 </span>
-                <span class="badge volatility" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; background: rgba(33, 150, 243, 0.2); color: #2196f3;">
+                <span class="badge" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; background: rgba(33, 150, 243, 0.2); color: #2196f3;">
                     <i class="fas fa-chart-line"></i>
                     Vol: ${(optimization.vol_realized || 0).toFixed(1)}%
                 </span>
@@ -486,9 +502,11 @@ class PortfolioManagerAMF {
         const existing = container.querySelector('.portfolio-content');
         if (existing) existing.remove();
         
-        // Cacher le loading
+        // Cacher le loading et l'erreur
         const loading = container.querySelector('.portfolio-loading');
         if (loading) loading.style.display = 'none';
+        const error = container.querySelector('.portfolio-error');
+        if (error) error.style.display = 'none';
         
         // Ajouter le nouveau contenu
         container.appendChild(contentContainer);
@@ -619,7 +637,7 @@ class PortfolioManagerAMF {
 
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 PortfolioManager AMF v2.3 - Initialisation');
+    console.log('🚀 PortfolioManager AMF v2.4 - Initialisation');
     window.portfolioManager = new PortfolioManagerAMF();
     window.portfolioManager.init();
 });
