@@ -116,6 +116,12 @@ try:
         MAX_STOCKS_PER_GROUP,
         get_corporate_group,
         deduplicate_by_corporate_group,
+        # === v2.0 STOCK REGION CAPS ===
+        COUNTRY_TO_REGION,
+        STOCK_REGION_CAPS,
+        DEFAULT_REGION_CAP,
+        get_region,
+        get_stock_region_cap,
     )
     HAS_PRESET_META = True
 except ImportError:
@@ -124,6 +130,14 @@ except ImportError:
     CORPORATE_GROUPS = {}
     MAX_CORPORATE_GROUP_WEIGHT = 0.20
     MAX_STOCKS_PER_GROUP = 1
+    # Fallback region caps
+    COUNTRY_TO_REGION = {}
+    STOCK_REGION_CAPS = {}
+    DEFAULT_REGION_CAP = 0.30
+    def get_region(country: str) -> str:
+        return "OTHER"
+    def get_stock_region_cap(profile: str, region: str) -> float:
+        return 0.30
     from enum import Enum
     class Role(Enum):
         CORE = "core"
@@ -1521,14 +1535,20 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": sector_constraint})
         
-        # 6. Contraintes par RÉGION (v6.23 P0 FIX: Actions seulement)
-        for region in set(a.region for a in candidates if a.category == "Actions"):
-            region_idx = [i for i, a in enumerate(candidates) 
-                          if a.category == "Actions" and a.region == region]
-            if len(region_idx) > 1:
-                def region_constraint(w, idx=region_idx, max_val=profile.max_region/100):
+        # 6. Contraintes par RÉGION DIFFÉRENCIÉES (actions seulement) v2.0
+        region_groups = defaultdict(list)
+        for i, a in enumerate(candidates):
+            if a.category == "Actions":
+                region = get_region(a.region)
+                region_groups[region].append(i)
+        
+        for region, region_idx in region_groups.items():
+            if len(region_idx) > 0:
+                cap = get_stock_region_cap(profile.name, region)
+                def region_constraint(w, idx=region_idx, max_val=cap):
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": region_constraint})
+                logger.debug(f"Region cap [{profile.name}]: {region}={cap*100:.0f}%")
         
         # 7. Contraintes par CORPORATE GROUP
         for group in set(a.corporate_group for a in candidates if a.corporate_group):
@@ -1725,10 +1745,13 @@ class PortfolioOptimizer:
                         logger.debug(f"Skipping {asset.id}: leveraged_cap {leveraged_cap}% reached")
                         continue
                 
-                # v6.18.1 FIX: Vérifier max_region UNIQUEMENT pour Actions
-                if asset.category == "Actions" and region_weights[asset.region] >= profile.max_region:
-                    logger.debug(f"Skipping {asset.id}: max_region {profile.max_region}% reached for {asset.region}")
-                    continue
+                # v2.0 FIX: Vérifier region caps DIFFÉRENCIÉS pour Actions
+                if asset.category == "Actions":
+                    region = get_region(asset.region)
+                    region_cap = get_stock_region_cap(profile.name, region) * 100
+                    if region_weights[region] >= region_cap:
+                        logger.debug(f"Skipping {asset.id}: {region} cap {region_cap:.0f}% reached")
+                        continue
                 
                 if role == Role.DEFENSIVE:
                     base_weight = min(profile.max_single_position, 12.0)
@@ -1752,7 +1775,8 @@ class PortfolioOptimizer:
                     category_weights[asset.category] += weight
                     sector_weights[asset.sector] += weight
                     if asset.category == "Actions":
-                        region_weights[asset.region] += weight  # v6.18.1: track region (actions only)
+                        region = get_region(asset.region)
+                        region_weights[region] += weight  # v2.0: track par région mappée
                     bucket_weights[role.value] += weight
                     current_weight += weight
                     # P0 FIX v6.19: Update leveraged tracking
