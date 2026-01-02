@@ -220,6 +220,60 @@ MAX_CORPORATE_GROUP_WEIGHT = 0.20
 MAX_STOCKS_PER_GROUP = 1
 
 
+# ============ STOCK REGION CAPS v2.0 (actions seulement) ============
+# Taxonomie simplifiée - ChatGPT review intégré
+# IN séparé de ASIA_EX_IN = pas de double comptage
+
+COUNTRY_TO_REGION: Dict[str, str] = {
+    # === INDE (cap pays strict — biais ROE banques) ===
+    "Inde": "IN",
+    
+    # === ASIE HORS INDE ===
+    "Chine": "ASIA_EX_IN",
+    "Corée": "ASIA_EX_IN",
+    "Indonésie": "ASIA_EX_IN",
+    "Philippines": "ASIA_EX_IN",
+    "Taïwan": "ASIA_EX_IN",
+    
+    # === EUROPE ===
+    "Allemagne": "EU",
+    "Autriche": "EU",
+    "Belgique": "EU",
+    "Espagne": "EU",
+    "France": "EU",
+    "Irlande": "EU",
+    "Italie": "EU",
+    "Norvège": "EU",
+    "Pays-Bas": "EU",
+    "Portugal": "EU",
+    "Royaume-Uni": "EU",
+    "Suisse": "EU",
+    
+    # === USA ===
+    "Etats-Unis": "US",
+    "États-Unis": "US",
+}
+
+STOCK_REGION_CAPS: Dict[str, Dict[str, float]] = {
+    "Stable": {"IN": 0.08, "ASIA_EX_IN": 0.12, "EU": 0.50, "US": 0.55},
+    "Modéré": {"IN": 0.10, "ASIA_EX_IN": 0.18, "EU": 0.50, "US": 0.55},
+    "Agressif": {"IN": 0.15, "ASIA_EX_IN": 0.25, "EU": 0.45, "US": 0.50},
+}
+
+DEFAULT_REGION_CAP: float = 0.30
+
+
+def get_region(country: str) -> str:
+    """Mappe un pays vers sa région."""
+    return COUNTRY_TO_REGION.get(country, "OTHER")
+
+
+def get_stock_region_cap(profile: str, region: str) -> float:
+    """Retourne le cap régional pour un profil."""
+    caps = STOCK_REGION_CAPS.get(profile, STOCK_REGION_CAPS["Modéré"])
+    return caps.get(region, DEFAULT_REGION_CAP)
+
+
 # ============ PRESET META - ACTIONS ============
 
 EQUITY_PRESETS: Dict[str, PresetConfig] = {
@@ -1043,3 +1097,10 @@ if __name__ == "__main__":
     deduped = deduplicate_etf_by_exposure(test_etfs)
     print(f"  Input: {test_etfs}")
     print(f"  Output: {deduped}")
+    
+    print("\n--- Stock Region Caps Test ---")
+    for profile in ["Stable", "Modéré", "Agressif"]:
+        print(f"\n  {profile}:")
+        for region in ["IN", "ASIA_EX_IN", "EU", "US"]:
+            cap = get_stock_region_cap(profile, region)
+            print(f"    {region}: {cap*100:.0f}%")
