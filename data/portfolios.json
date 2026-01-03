@@ -1,10 +1,9 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec une exposition significative aux actions et aux ETF, visant une croissance élevée. Cependant, la volatilité des actifs comme les cryptomonnaies et les actions des marchés émergents peut entraîner des fluctuations importantes. De plus, la dépendance à des secteurs spécifiques, comme la santé et les matériaux, expose le portefeuille à des risques sectoriels. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement agressive, avec une exposition significative aux actions et aux actifs alternatifs comme les cryptomonnaies. Bien qu'il vise un rendement élevé, il est important de noter que la volatilité peut être élevée, ce qui peut entraîner des fluctuations importantes du capital. De plus, l'exposition aux marchés émergents et aux actifs à effet de levier augmente le risque de pertes. Les investisseurs doivent être conscients des risques associés à cette approche. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "ASIAN PAINTS LTD": "14%",
-      "UNIVERSAL HEALTH SERVICES INC CLAS": "14%",
-      "POSCO FUTURE M LTD": "1%"
+      "AXIS BANK LTD": "14%",
+      "SK BIOPHARMACEUTICALS LTD": "15%"
     },
     "ETF": {
       "iShares Morningstar Large-Cap ETF": "15%",
@@ -15,32 +14,33 @@
     "Obligations": {
       "VanEck J.P. Morgan EM Local Currency Bond ETF": "5%",
       "iShares Convertible Bond ETF": "5%",
-      "iShares J.P. Morgan EM Local Currency Bond ETF": "12%",
+      "iShares J.P. Morgan EM Local Currency Bond ETF": "11%",
       "iShares 3 Year International Treasury Bond ETF": "5%"
     },
     "Crypto": {
       "BTS/USD": "2%",
-      "BCH/USD": "2%"
+      "GNO/USD": "2%",
+      "BCH/USD": "1%"
     },
     "_tickers": {
       "JKD": 0.15,
       "EMLC": 0.05,
       "ICVT": 0.05,
-      "LEMB": 0.12,
+      "LEMB": 0.11,
       "ISHG": 0.05,
       "SLV": 0.15,
       "GDX": 0.05,
       "BRZU": 0.05,
-      "ASIANPAINT": 0.1353,
-      "UHS": 0.15,
-      "003670": 0.0147,
+      "AXISBANK": 0.15,
+      "326030": 0.15,
       "BTS/USD": 0.015,
-      "BCH/USD": 0.015
+      "GNO/USD": 0.015,
+      "BCH/USD": 0.01
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 12.79,
+      "vol_realized": 13.99,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -50,23 +50,23 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 12.79,
-          "slack": -2.21,
+          "observed": 13.99,
+          "slack": -1.01,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -5.21
+            "diff_from_target": -4.01
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 5.0,
-          "observed": 27.0,
-          "slack": 22.0,
+          "observed": 26.0,
+          "slack": 21.0,
           "binding": false,
           "status": "OK",
           "details": {
@@ -85,7 +85,7 @@
               {
                 "id": "iShares J.P. Morgan EM Local Currency Bond ETF",
                 "name": "iShares J.P. Morgan EM Local C",
-                "weight": 12.0
+                "weight": 11.0
               },
               {
                 "id": "iShares 3 Year International Treasury Bond ETF",
@@ -99,8 +99,8 @@
           "name": "crypto_max",
           "constraint_type": "max",
           "cap": 10.0,
-          "observed": 3.0,
-          "slack": 7.0,
+          "observed": 4.0,
+          "slack": 6.0,
           "binding": false,
           "status": "OK",
           "details": {
@@ -111,9 +111,14 @@
                 "weight": 1.5
               },
               {
+                "id": "GNO/USD",
+                "name": "GNO/USD",
+                "weight": 1.5
+              },
+              {
                 "id": "BCH/USD",
                 "name": "BCH/USD",
-                "weight": 1.5
+                "weight": 1.0
               }
             ]
           }
@@ -139,18 +144,18 @@
               },
               {
                 "id": "iShares J.P. Morgan EM Local Currency Bond ETF",
-                "weight": 12.0
+                "weight": 11.0
               },
               {
                 "id": "iShares Silver Trust",
                 "weight": 15.0
               },
               {
-                "id": "EQ_849",
-                "weight": 13.53
+                "id": "EQ_807",
+                "weight": 15.0
               },
               {
-                "id": "EQ_493",
+                "id": "EQ_975",
                 "weight": 15.0
               }
             ]
@@ -168,17 +173,15 @@
             "most_concentrated": "Diversified",
             "counts_in_max_sector": {
               "Diversified": 20.0,
-              "Santé": 15.0,
-              "Matériaux": 13.53,
-              "Industries": 1.47
+              "Finance": 15.0,
+              "Santé": 15.0
             },
             "all_sectors": {
               "Diversified": 40.0,
-              "Bonds": 27.0,
+              "Bonds": 26.0,
+              "Finance": 15.0,
               "Santé": 15.0,
-              "Matériaux": 13.53,
-              "Crypto": 3.0,
-              "Industries": 1.47
+              "Crypto": 4.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -195,15 +198,13 @@
             "most_concentrated": "Global",
             "counts_in_max_region": {
               "Global": 20.0,
-              "Etats-Unis": 15.0,
-              "Inde": 13.53,
-              "Corée": 1.47
+              "Inde": 15.0,
+              "Corée": 15.0
             },
             "all_regions": {
               "Global": 70.0,
-              "Etats-Unis": 15.0,
-              "Inde": 13.53,
-              "Corée": 1.47
+              "Inde": 15.0,
+              "Corée": 15.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -249,15 +250,15 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 60.0,
-          "observed": 31.5,
-          "slack": -3.5,
+          "observed": 33.0,
+          "slack": -2.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 35.0,
             "range_max": 60.0,
-            "slack_from_min": -3.5,
-            "slack_from_max": 28.5,
+            "slack_from_min": -2.0,
+            "slack_from_max": 27.0,
             "outside_range": true,
             "is_indicator": true
           }
@@ -266,15 +267,15 @@
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 27.0,
-          "slack": -12.0,
+          "observed": 26.0,
+          "slack": -11.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 22.0,
-            "slack_from_max": -12.0,
+            "slack_from_min": 21.0,
+            "slack_from_max": -11.0,
             "outside_range": true,
             "is_indicator": true
           }
@@ -283,15 +284,15 @@
           "name": "bucket_lottery",
           "constraint_type": "range",
           "cap": 5.0,
-          "observed": 1.5,
-          "slack": 1.5,
+          "observed": 1.0,
+          "slack": 1.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 0.0,
             "range_max": 5.0,
-            "slack_from_min": 1.5,
-            "slack_from_max": 3.5,
+            "slack_from_min": 1.0,
+            "slack_from_max": 4.0,
             "outside_range": false,
             "is_indicator": true
           }
@@ -332,53 +333,51 @@
       },
       "quality_score": 90.0,
       "recommendations": [
-        "🟠 VIOLATED: volatility exceeded by 2.2% — reduce exposure",
+        "🟠 VIOLATED: volatility exceeded by 1.0% — reduce exposure",
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
-        "ℹ️ INFO: bucket_defensive is 12.0% outside target range (indicator only)",
+        "ℹ️ INFO: bucket_defensive is 11.0% outside target range (indicator only)",
         "🟡 BINDING: leveraged_cap at 5.0% (cap=5.0%) — monitor closely"
       ],
       "exposures": {
         "by_category": {
           "ETF": 40.0,
-          "Obligations": 27.0,
+          "Obligations": 26.0,
           "Actions": 30.0,
-          "Crypto": 3.0
+          "Crypto": 4.0
         },
         "by_sector": {
           "Diversified": 40.0,
-          "Santé": 15.0,
-          "Matériaux": 13.53,
-          "Industries": 1.47
+          "Finance": 15.0,
+          "Santé": 15.0
         },
         "by_region": {
           "Global": 70.0,
-          "Etats-Unis": 15.0,
-          "Inde": 13.53,
-          "Corée": 1.47
+          "Inde": 15.0,
+          "Corée": 15.0
         },
         "by_risk_bucket": {
           "equity_like": 45.0,
-          "bond_like": 27.0,
+          "bond_like": 26.0,
           "real_assets": 20.0,
           "leveraged": 5.0,
-          "crypto": 3.0
+          "crypto": 4.0
         },
         "by_role": {
           "core": 40.0,
-          "satellite": 31.5,
-          "defensive": 27.0,
-          "lottery": 1.5,
+          "satellite": 33.0,
+          "defensive": 26.0,
+          "lottery": 1.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1134.0,
+          "hhi": 1152.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.82,
+          "effective_n": 8.68,
           "n_positions": 13,
-          "top_5_weight": 70.53,
-          "top_10_weight": 95.53,
+          "top_5_weight": 71.0,
+          "top_10_weight": 96.0,
           "largest_position": 15.0,
-          "smallest_position": 1.47,
+          "smallest_position": 1.0,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
@@ -412,32 +411,32 @@
           "exchange": null
         },
         {
-          "id": "EQ_493",
-          "ticker": "UHS",
-          "name": "UNIVERSAL HEALTH SERVICES INC CLAS",
+          "id": "EQ_807",
+          "ticker": "AXISBANK",
+          "name": "AXIS BANK LTD",
+          "weight_pct": 15.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Finance",
+          "region": "Inde",
+          "exchange": null
+        },
+        {
+          "id": "EQ_975",
+          "ticker": "326030",
+          "name": "SK BIOPHARMACEUTICALS LTD",
           "weight_pct": 15.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Santé",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
-          "id": "EQ_849",
-          "ticker": "ASIANPAINT",
-          "name": "ASIAN PAINTS LTD",
-          "weight_pct": 13.53,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Matériaux",
-          "region": "Inde",
+          "region": "Corée",
           "exchange": null
         },
         {
           "id": "iShares J.P. Morgan EM Local Currency Bond ETF",
           "ticker": "LEMB",
           "name": "iShares J.P. Morgan EM Local Currency Bond ETF",
-          "weight_pct": 12.0,
+          "weight_pct": 11.0,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -511,9 +510,9 @@
           "exchange": null
         },
         {
-          "id": "BCH/USD",
-          "ticker": "BCH/USD",
-          "name": "BCH/USD",
+          "id": "GNO/USD",
+          "ticker": "GNO/USD",
+          "name": "GNO/USD",
           "weight_pct": 1.5,
           "category": "Crypto",
           "risk_bucket": "crypto",
@@ -522,14 +521,14 @@
           "exchange": null
         },
         {
-          "id": "EQ_929",
-          "ticker": "003670",
-          "name": "POSCO FUTURE M LTD",
-          "weight_pct": 1.47,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Industries",
-          "region": "Corée",
+          "id": "BCH/USD",
+          "ticker": "BCH/USD",
+          "name": "BCH/USD",
+          "weight_pct": 1.0,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
           "exchange": null
         }
       ],
@@ -550,45 +549,43 @@
     "_exposures": {
       "by_category": {
         "ETF": 40.0,
-        "Obligations": 27.0,
+        "Obligations": 26.0,
         "Actions": 30.0,
-        "Crypto": 3.0
+        "Crypto": 4.0
       },
       "by_sector": {
         "Diversified": 40.0,
-        "Santé": 15.0,
-        "Matériaux": 13.53,
-        "Industries": 1.47
+        "Finance": 15.0,
+        "Santé": 15.0
       },
       "by_region": {
         "Global": 70.0,
-        "Etats-Unis": 15.0,
-        "Inde": 13.53,
-        "Corée": 1.47
+        "Inde": 15.0,
+        "Corée": 15.0
       },
       "by_risk_bucket": {
         "equity_like": 45.0,
-        "bond_like": 27.0,
+        "bond_like": 26.0,
         "real_assets": 20.0,
         "leveraged": 5.0,
-        "crypto": 3.0
+        "crypto": 4.0
       },
       "by_role": {
         "core": 40.0,
-        "satellite": 31.5,
-        "defensive": 27.0,
-        "lottery": 1.5,
+        "satellite": 33.0,
+        "defensive": 26.0,
+        "lottery": 1.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1134.0,
+        "hhi": 1152.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.82,
+        "effective_n": 8.68,
         "n_positions": 13,
-        "top_5_weight": 70.53,
-        "top_10_weight": 95.53,
+        "top_5_weight": 71.0,
+        "top_10_weight": 96.0,
         "largest_position": 15.0,
-        "smallest_position": 1.47,
+        "smallest_position": 1.0,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -612,15 +609,15 @@
       "ready_for_execution": true
     },
     "_limitations": [
-      "Volatilité réalisée (12.8%) éloignée de la cible (18.0%) - écart de 5.2%."
+      "Volatilité réalisée (14.0%) éloignée de la cible (18.0%) - écart de 4.0%."
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant des actifs à revenu fixe et des actions. Bien qu'il vise à réduire la volatilité, des risques subsistent, notamment liés aux fluctuations des marchés émergents et aux actifs cryptographiques. De plus, la dépendance à des secteurs spécifiques, comme la santé et la finance, expose le portefeuille à des risques sectoriels. Les investisseurs doivent être attentifs aux conditions de marché qui peuvent affecter la performance globale. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant des actifs à revenu fixe et des actions, tout en intégrant une petite exposition aux cryptomonnaies. Bien qu'il vise à réduire la volatilité, il existe toujours des risques associés aux fluctuations des marchés, notamment en ce qui concerne les actions et les obligations. De plus, l'exposition aux cryptomonnaies, bien que limitée, peut entraîner des variations significatives. Les investisseurs doivent être conscients des risques potentiels avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "AXIS BANK LTD": "14%",
-      "UNIVERSAL HEALTH SERVICES INC CLAS": "16%",
-      "POSCO FUTURE M LTD": "5%"
+      "SK BIOPHARMACEUTICALS LTD": "16%",
+      "ASTRAZENECA PLC": "5%"
     },
     "ETF": {
       "Global X SuperDividend ETF": "15%",
@@ -635,7 +632,7 @@
     },
     "Crypto": {
       "BTS/USD": "0%",
-      "BCH/USD": "0%",
+      "GNO/USD": "0%",
       "GNT/USD": "0%"
     },
     "_tickers": {
@@ -647,16 +644,16 @@
       "IGOV": 0.08,
       "ICVT": 0.03,
       "AXISBANK": 0.135,
-      "UHS": 0.15,
-      "003670": 0.05,
+      "326030": 0.15,
+      "AZN": 0.05,
       "BTS/USD": 0.005,
-      "BCH/USD": 0.005,
+      "GNO/USD": 0.005,
       "GNT/USD": 0.005
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 8.93,
+      "vol_realized": 9.3,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -666,15 +663,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 8.93,
-          "slack": -0.07,
-          "binding": false,
-          "status": "VIOLATED",
+          "observed": 9.3,
+          "slack": 0.3,
+          "binding": true,
+          "status": "BINDING",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -3.07
+            "diff_from_target": -2.7
           }
         },
         {
@@ -732,8 +729,8 @@
                 "weight": 0.5
               },
               {
-                "id": "BCH/USD",
-                "name": "BCH/USD",
+                "id": "GNO/USD",
+                "name": "GNO/USD",
                 "weight": 0.5
               },
               {
@@ -772,7 +769,7 @@
                 "weight": 13.5
               },
               {
-                "id": "EQ_493",
+                "id": "EQ_975",
                 "weight": 15.0
               }
             ]
@@ -782,24 +779,22 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 15.0,
-          "slack": 15.0,
+          "observed": 20.0,
+          "slack": 10.0,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Diversified",
+            "most_concentrated": "Santé",
             "counts_in_max_sector": {
+              "Santé": 20.0,
               "Diversified": 15.0,
-              "Santé": 15.0,
-              "Finance": 13.5,
-              "Industries": 5.0
+              "Finance": 13.5
             },
             "all_sectors": {
               "Bonds": 35.0,
               "Diversified": 30.0,
-              "Santé": 15.0,
+              "Santé": 20.0,
               "Finance": 13.5,
-              "Industries": 5.0,
               "Crypto": 1.5
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -817,15 +812,15 @@
             "most_concentrated": "Global",
             "counts_in_max_region": {
               "Global": 15.0,
-              "Etats-Unis": 15.0,
+              "Corée": 15.0,
               "Inde": 13.5,
-              "Corée": 5.0
+              "Royaume-Uni": 5.0
             },
             "all_regions": {
               "Global": 66.5,
-              "Etats-Unis": 15.0,
+              "Corée": 15.0,
               "Inde": 13.5,
-              "Corée": 5.0
+              "Royaume-Uni": 5.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -871,15 +866,15 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 35.0,
-          "observed": 34.5,
-          "slack": 0.5,
+          "observed": 35.0,
+          "slack": 0.0,
           "binding": true,
           "status": "BINDING",
           "details": {
             "range_min": 15.0,
             "range_max": 35.0,
-            "slack_from_min": 19.5,
-            "slack_from_max": 0.5,
+            "slack_from_min": 20.0,
+            "slack_from_max": 0.0,
             "outside_range": false,
             "is_indicator": true
           }
@@ -905,15 +900,15 @@
           "name": "bucket_lottery",
           "constraint_type": "range",
           "cap": 2.0,
-          "observed": 0.5,
-          "slack": 0.5,
+          "observed": 0,
+          "slack": 0.0,
           "binding": true,
           "status": "BINDING",
           "details": {
             "range_min": 0.0,
             "range_max": 2.0,
-            "slack_from_min": 0.5,
-            "slack_from_max": 1.5,
+            "slack_from_min": 0.0,
+            "slack_from_max": 2.0,
             "outside_range": false,
             "is_indicator": true
           }
@@ -938,14 +933,14 @@
       "summary": {
         "total": 13,
         "ok": 10,
-        "binding": 2,
-        "violated": 1,
+        "binding": 3,
+        "violated": 0,
         "critical": 0
       },
-      "quality_score": 89.2,
+      "quality_score": 95.4,
       "recommendations": [
-        "🟠 VIOLATED: volatility exceeded by 0.1% — reduce exposure",
-        "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely"
+        "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
+        "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
@@ -956,15 +951,14 @@
         },
         "by_sector": {
           "Diversified": 30.0,
-          "Santé": 15.0,
-          "Finance": 13.5,
-          "Industries": 5.0
+          "Santé": 20.0,
+          "Finance": 13.5
         },
         "by_region": {
           "Global": 66.5,
-          "Etats-Unis": 15.0,
+          "Corée": 15.0,
           "Inde": 13.5,
-          "Corée": 5.0
+          "Royaume-Uni": 5.0
         },
         "by_risk_bucket": {
           "equity_like": 48.5,
@@ -974,9 +968,9 @@
         },
         "by_role": {
           "core": 30.0,
-          "satellite": 34.5,
+          "satellite": 35.0,
           "defensive": 35.0,
-          "lottery": 0.5,
+          "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
@@ -1021,14 +1015,14 @@
           "exchange": null
         },
         {
-          "id": "EQ_493",
-          "ticker": "UHS",
-          "name": "UNIVERSAL HEALTH SERVICES INC CLAS",
+          "id": "EQ_975",
+          "ticker": "326030",
+          "name": "SK BIOPHARMACEUTICALS LTD",
           "weight_pct": 15.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Santé",
-          "region": "Etats-Unis",
+          "region": "Corée",
           "exchange": null
         },
         {
@@ -1087,14 +1081,14 @@
           "exchange": null
         },
         {
-          "id": "EQ_929",
-          "ticker": "003670",
-          "name": "POSCO FUTURE M LTD",
+          "id": "EQ_528",
+          "ticker": "AZN",
+          "name": "ASTRAZENECA PLC",
           "weight_pct": 5.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Industries",
-          "region": "Corée",
+          "sector": "Santé",
+          "region": "Royaume-Uni",
           "exchange": null
         },
         {
@@ -1120,9 +1114,9 @@
           "exchange": null
         },
         {
-          "id": "BCH/USD",
-          "ticker": "BCH/USD",
-          "name": "BCH/USD",
+          "id": "GNO/USD",
+          "ticker": "GNO/USD",
+          "name": "GNO/USD",
           "weight_pct": 0.5,
           "category": "Crypto",
           "risk_bucket": "crypto",
@@ -1165,15 +1159,14 @@
       },
       "by_sector": {
         "Diversified": 30.0,
-        "Santé": 15.0,
-        "Finance": 13.5,
-        "Industries": 5.0
+        "Santé": 20.0,
+        "Finance": 13.5
       },
       "by_region": {
         "Global": 66.5,
-        "Etats-Unis": 15.0,
+        "Corée": 15.0,
         "Inde": 13.5,
-        "Corée": 5.0
+        "Royaume-Uni": 5.0
       },
       "by_risk_bucket": {
         "equity_like": 48.5,
@@ -1183,9 +1176,9 @@
       },
       "by_role": {
         "core": 30.0,
-        "satellite": 34.5,
+        "satellite": 35.0,
         "defensive": 35.0,
-        "lottery": 0.5,
+        "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
@@ -1219,16 +1212,14 @@
       },
       "ready_for_execution": true
     },
-    "_limitations": [
-      "Volatilité réalisée (8.9%) éloignée de la cible (12.0%) - écart de 3.1%."
-    ]
+    "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche stable, axée sur des obligations et des actions à faible volatilité. Bien qu'il vise à minimiser les risques, des défis subsistent, notamment en ce qui concerne les rendements limités des obligations à court terme et les fluctuations des marchés. De plus, l'exposition à des secteurs comme la santé et la finance peut introduire des risques spécifiques. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement stable, axée sur des obligations et des actions de grandes entreprises, visant à réduire la volatilité. Bien qu'il soit conçu pour offrir une possiblee sécurité, il existe des risques liés aux fluctuations des taux d'intérêt et à la performance des actions. De plus, l'exposition à des actifs comme l'or, bien que défensive, peut également être sujette à des variations de prix. Les investisseurs doivent être conscients des risques associés à cette approche. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "JOHNSON & JOHNSON": "5%",
+      "NESTLE SA": "5%",
       "AXIS BANK LTD": "8%",
-      "CENCORA INC": "3%"
+      "ASTRAZENECA PLC": "3%"
     },
     "ETF": {
       "SPDR Gold MiniShares Trust": "9%",
@@ -1252,14 +1243,14 @@
       "GLDM": 0.0948,
       "VSS": 0.1026,
       "SCHX": 0.1026,
-      "JNJ": 0.0513,
+      "NESN": 0.0513,
       "AXISBANK": 0.0821,
-      "COR": 0.0283
+      "AZN": 0.0283
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 4.23,
+      "vol_realized": 4.28,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -1295,15 +1286,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 4.23,
-          "slack": 1.23,
+          "observed": 4.28,
+          "slack": 1.28,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -1.77
+            "diff_from_target": -1.72
           }
         },
         {
@@ -1400,13 +1391,15 @@
             "counts_in_max_sector": {
               "Diversified": 20.52,
               "Finance": 8.21,
-              "Santé": 7.96
+              "Biens de consommation de base": 5.13,
+              "Santé": 2.83
             },
             "all_sectors": {
               "Bonds": 53.83,
               "Diversified": 30.0,
               "Finance": 8.21,
-              "Santé": 7.96
+              "Biens de consommation de base": 5.13,
+              "Santé": 2.83
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -1424,12 +1417,14 @@
             "counts_in_max_region": {
               "Global": 20.52,
               "Inde": 8.21,
-              "Etats-Unis": 7.96
+              "Suisse": 5.13,
+              "Royaume-Uni": 2.83
             },
             "all_regions": {
               "Global": 83.83,
               "Inde": 8.21,
-              "Etats-Unis": 7.96
+              "Suisse": 5.13,
+              "Royaume-Uni": 2.83
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -1557,12 +1552,14 @@
         "by_sector": {
           "Diversified": 30.0,
           "Finance": 8.21,
-          "Santé": 7.96
+          "Biens de consommation de base": 5.13,
+          "Santé": 2.83
         },
         "by_region": {
           "Global": 83.83,
           "Inde": 8.21,
-          "Etats-Unis": 7.96
+          "Suisse": 5.13,
+          "Royaume-Uni": 2.83
         },
         "by_risk_bucket": {
           "bond_like": 53.83,
@@ -1695,25 +1692,25 @@
           "exchange": null
         },
         {
-          "id": "EQ_13",
-          "ticker": "JNJ",
-          "name": "JOHNSON & JOHNSON",
+          "id": "EQ_530",
+          "ticker": "NESN",
+          "name": "NESTLE SA",
           "weight_pct": 5.13,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Etats-Unis",
+          "sector": "Biens de consommation de base",
+          "region": "Suisse",
           "exchange": null
         },
         {
-          "id": "EQ_149",
-          "ticker": "COR",
-          "name": "CENCORA INC",
+          "id": "EQ_528",
+          "ticker": "AZN",
+          "name": "ASTRAZENECA PLC",
           "weight_pct": 2.83,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Santé",
-          "region": "Etats-Unis",
+          "region": "Royaume-Uni",
           "exchange": null
         }
       ],
@@ -1740,12 +1737,14 @@
       "by_sector": {
         "Diversified": 30.0,
         "Finance": 8.21,
-        "Santé": 7.96
+        "Biens de consommation de base": 5.13,
+        "Santé": 2.83
       },
       "by_region": {
         "Global": 83.83,
         "Inde": 8.21,
-        "Etats-Unis": 7.96
+        "Suisse": 5.13,
+        "Royaume-Uni": 2.83
       },
       "by_risk_bucket": {
         "bond_like": 53.83,
@@ -1795,7 +1794,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2026-01-02T11:14:01.392287",
+    "generated_at": "2026-01-03T08:13:55.269946",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
