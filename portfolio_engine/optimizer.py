@@ -2447,7 +2447,7 @@ class PortfolioOptimizer:
         profile: ProfileConstraints
     ) -> Dict[str, float]:
         """
-        v2.0: Force region caps différenciés pour Actions après normalisation.
+        v2.1 FIX: Force region caps différenciés pour Actions - tolérance réduite.
         """
         if not allocation:
             return allocation
@@ -2462,15 +2462,18 @@ class PortfolioOptimizer:
                 region = get_region(asset.region)
                 region_weights[region] += w
         
+        # v2.1 FIX: Tolérance réduite de 0.5% à 0.1%
+        TOLERANCE = 0.1
+        
         # Identifier et corriger violations
         for region, current_weight in list(region_weights.items()):
             cap = get_stock_region_cap(profile.name, region) * 100
             
-            if current_weight > cap + 0.5:
+            if current_weight > cap + TOLERANCE:
                 excess = current_weight - cap
                 logger.warning(
-                    f"v2.0 REGION CAP: {region} {current_weight:.1f}% > {cap:.0f}%, "
-                    f"reducing {excess:.1f}%"
+                    f"v2.1 REGION CAP FIX: {region} {current_weight:.2f}% > {cap:.0f}%, "
+                    f"reducing {excess:.2f}%"
                 )
                 
                 # Réduire les actifs de cette région (plus gros d'abord)
@@ -2483,18 +2486,78 @@ class PortfolioOptimizer:
                 )
                 
                 for aid, w in region_assets:
-                    if excess <= 0.1:
+                    if excess <= 0.05:
                         break
-                    reduction = min(w - 1.0, excess)  # Garder min 1%
+                    # v2.1: Garder minimum 0.5% au lieu de 1%
+                    reduction = min(w - 0.5, excess)
                     if reduction > 0:
                         allocation[aid] = round(allocation[aid] - reduction, 2)
                         excess -= reduction
-                        logger.debug(f"  Region cap: reduced {aid} by {reduction:.2f}%")
+                        logger.info(f"  Region cap: reduced {aid} by {reduction:.2f}%")
         
         # Retirer positions < 0.5%
         allocation = {k: v for k, v in allocation.items() if v >= 0.5}
         
-        return allocation   
+        return allocation
+    def _redistribute_after_region_caps(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints,
+        amount_to_add: float
+    ) -> Dict[str, float]:
+        """
+        v2.1: Redistribue le poids libéré par region caps vers actifs éligibles.
+        Priorité: Obligations > ETF > Actions hors régions saturées
+        """
+        if abs(amount_to_add) < 0.1:
+            return allocation
+        
+        asset_lookup = {c.id: c for c in candidates}
+        
+        # Calculer régions saturées
+        region_weights = defaultdict(float)
+        for aid, w in allocation.items():
+            asset = asset_lookup.get(aid)
+            if asset and asset.category == "Actions":
+                region = get_region(asset.region)
+                region_weights[region] += w
+        
+        saturated_regions = {
+            r for r, w in region_weights.items()
+            if w >= get_stock_region_cap(profile.name, r) * 100 - 0.5
+        }
+        
+        # Candidats par priorité
+        bonds = [(aid, w) for aid, w in allocation.items()
+                 if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
+                 and w < MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25)]
+        
+        etfs = [(aid, w) for aid, w in allocation.items()
+                if asset_lookup.get(aid) and asset_lookup[aid].category == "ETF"
+                and w < profile.max_single_position - 1]
+        
+        actions_ok = [(aid, w) for aid, w in allocation.items()
+                      if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+                      and get_region(asset_lookup[aid].region) not in saturated_regions
+                      and w < profile.max_single_position - 1]
+        
+        # Redistribuer
+        remaining = amount_to_add
+        for candidates_list in [bonds, etfs, actions_ok]:
+            if remaining < 0.1:
+                break
+            candidates_list = sorted(candidates_list, key=lambda x: (x[1], x[0]))
+            for aid, w in candidates_list:
+                if remaining < 0.1:
+                    break
+                headroom = profile.max_single_position - w
+                add = min(headroom, remaining, 2.0)
+                if add > 0.1:
+                    allocation[aid] = round(allocation[aid] + add, 2)
+                    remaining -= add
+        
+        return allocation    
        
     def _enforce_bonds_minimum(
         self,
@@ -2609,7 +2672,7 @@ class PortfolioOptimizer:
         profile: ProfileConstraints
     ) -> List[str]:
         """
-        v6.24: Vérifie toutes les contraintes, retourne liste de violations.
+        v6.24 + v2.1 FIX: Vérifie toutes les contraintes, retourne liste de violations.
         """
         asset_lookup = {c.id: c for c in candidates}
         violations = []
@@ -2647,6 +2710,19 @@ class PortfolioOptimizer:
             if w > profile.max_sector + 0.5:
                 violations.append(f"sector:{sector}={w:.1f}%")
         
+        # 6. v2.1 FIX: Region caps (actions seulement)
+        region_weights = defaultdict(float)
+        for aid, w in allocation.items():
+            asset = asset_lookup.get(aid)
+            if asset and asset.category == "Actions":
+                region = get_region(asset.region)
+                region_weights[region] += w
+        
+        for region, w in region_weights.items():
+            cap = get_stock_region_cap(profile.name, region) * 100
+            if w > cap + 0.1:  # Tolérance stricte
+                violations.append(f"region:{region}={w:.1f}%>{cap:.0f}%")
+        
         return violations
     def _post_process_allocation(
         self,
@@ -2658,44 +2734,48 @@ class PortfolioOptimizer:
         epsilon: float = 0.1
     ) -> Dict[str, float]:
         """
-        v6.24: Post-processor unifié avec convergence réelle.
-        Critère d'arrêt: 0 violations ET delta < epsilon
+        v2.1 FIX: Post-processor avec region caps EN DERNIER après normalisation.
         """
         prev_alloc = allocation.copy()
         
         for iteration in range(max_iterations):
-            # 1. Normaliser
-            allocation = self._adjust_to_100(allocation, profile)
-            
-            # 2. Caps durs
+            # 1. Caps durs sur positions individuelles
             for aid, w in list(allocation.items()):
                 if w > profile.max_single_position:
                     allocation[aid] = profile.max_single_position
             
-            # 3. Enforce contraintes
+            # 2. Enforce contraintes catégorie
             allocation = self._enforce_crypto_cap(allocation, candidates, profile)
             allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
             allocation = self._enforce_sector_caps(allocation, candidates, profile)
-            allocation = self._enforce_region_caps(allocation, candidates, profile)
             
-            # 4. Re-normaliser
+            # 3. Normaliser à 100%
             allocation = self._adjust_to_100(allocation, profile)
             
-            # 5. Turnover check
+            # 4. v2.1 FIX: Region caps APRÈS normalisation (dernier!)
+            allocation = self._enforce_region_caps(allocation, candidates, profile)
+            
+            # 5. Re-normaliser si region caps ont changé les poids
+            total = sum(allocation.values())
+            if abs(total - 100) > 0.5:
+                # Redistribuer vers non-actions ou actions hors régions saturées
+                allocation = self._redistribute_after_region_caps(
+                    allocation, candidates, profile, 100 - total
+                )
+            
+            # 6. Turnover check
             if prev_weights is not None:
                 allocation = self._clip_turnover(
                     allocation, prev_weights, profile.max_turnover, candidates
                 )
-                allocation = self._adjust_to_100(allocation, profile)
             
-            # 6. Check violations
+            # 7. Check violations
             violations = self._check_all_violations(allocation, candidates, profile)
             
-            # 7. Delta
+            # 8. Delta convergence
             delta = sum(abs(allocation.get(k, 0) - prev_alloc.get(k, 0)) 
                         for k in set(allocation.keys()) | set(prev_alloc.keys()))
             
-            # 8. Convergence?
             if len(violations) == 0 and delta < epsilon:
                 logger.info(f"Post-process converged at iteration {iteration + 1}")
                 break
