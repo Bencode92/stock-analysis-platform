@@ -255,12 +255,33 @@ COUNTRY_TO_REGION: Dict[str, str] = {
 }
 
 STOCK_REGION_CAPS: Dict[str, Dict[str, float]] = {
-    "Stable": {"IN": 0.08, "ASIA_EX_IN": 0.12, "EU": 0.50, "US": 0.55},
-    "Modéré": {"IN": 0.10, "ASIA_EX_IN": 0.18, "EU": 0.50, "US": 0.55},
-    "Agressif": {"IN": 0.15, "ASIA_EX_IN": 0.25, "EU": 0.45, "US": 0.50},
+    "Stable": {
+        "IN": 0.08,
+        "ASIA_EX_IN": 0.08,
+        "EU": 0.20,
+        "US": 0.25,
+        "LATAM": 0.05,
+        "OTHER": 0.10,
+    },
+    "Modéré": {
+        "IN": 0.10,
+        "ASIA_EX_IN": 0.10,
+        "EU": 0.25,
+        "US": 0.30,
+        "LATAM": 0.08,
+        "OTHER": 0.12,
+    },
+    "Agressif": {
+        "IN": 0.15,
+        "ASIA_EX_IN": 0.15,
+        "EU": 0.30,
+        "US": 0.35,
+        "LATAM": 0.10,
+        "OTHER": 0.15,
+    },
 }
 
-DEFAULT_REGION_CAP: float = 0.30
+DEFAULT_REGION_CAP: float = 0.15
 
 
 def get_region(country: str) -> str:
