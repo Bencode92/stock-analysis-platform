@@ -94,8 +94,10 @@ try:
     HAS_SKLEARN_LW = True
 except ImportError:
     HAS_SKLEARN_LW = False
+
 # v3.0: Import ETF exposure mapping (séparé du module)
 from .etf_exposure import TICKER_TO_EXPOSURE, detect_etf_exposure
+
 # Import preset_meta pour buckets et déduplication
 try:
     from portfolio_engine.preset_meta import (
@@ -122,6 +124,12 @@ try:
         DEFAULT_REGION_CAP,
         get_region,
         get_stock_region_cap,
+        # === v2.2 EU/US FOCUS ===
+        STOCK_REGION_CAPS_EUUS,
+        ALLOWED_REGIONS_EUUS,
+        BLOCKED_REGIONS_EUUS,
+        get_stock_region_cap_euus,
+        is_region_allowed_euus,
     )
     HAS_PRESET_META = True
 except ImportError:
@@ -138,6 +146,15 @@ except ImportError:
         return "OTHER"
     def get_stock_region_cap(profile: str, region: str) -> float:
         return 0.30
+    # === Fallback EU/US v2.2 ===
+    STOCK_REGION_CAPS_EUUS = {}
+    ALLOWED_REGIONS_EUUS = {"EU", "US", "OTHER"}
+    BLOCKED_REGIONS_EUUS = {"IN", "ASIA_EX_IN", "LATAM"}
+    def get_stock_region_cap_euus(profile: str, region: str) -> float:
+        return 0.0
+    def is_region_allowed_euus(region: str) -> bool:
+        return region in {"EU", "US", "OTHER"}
+    # === Fin Fallback EU/US ===
     from enum import Enum
     class Role(Enum):
         CORE = "core"
@@ -561,6 +578,8 @@ class ProfileConstraints:
    # v6.21 P0 PARTNER: Turnover control
     max_turnover: float = 25.0       # Max turnover % par rebalancement
     turnover_penalty: float = 0.10   # Lambda pénalité dans objectif
+    # === v2.2 EU/US Focus ===
+    euus_mode: bool = False          # Si True, utilise caps EU/US
 
 
 # v6.10 FIX: vol_target Stable aligné sur réalité (6% au lieu de 8%)
@@ -574,6 +593,7 @@ PROFILES = {
         max_sector=35.0,
         max_turnover=30.0,        # P0 PARTNER
         turnover_penalty=0.05,    # P0 PARTNER
+        euus_mode=True,
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -583,6 +603,7 @@ PROFILES = {
         bonds_min=15.0,
         max_turnover=25.0,        # P0 PARTNER
         turnover_penalty=0.10,    # P0 PARTNER
+        euus_mode=True,
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -592,6 +613,7 @@ PROFILES = {
         bonds_min=35.0,
         max_turnover=15.0,        # P0 PARTNER
         turnover_penalty=0.20,    # P0 PARTNER
+        euus_mode=True,
     ),
 }
 
@@ -1309,6 +1331,23 @@ class PortfolioOptimizer:
         profile: ProfileConstraints
     ) -> List[Asset]:
         """Pré-sélection avec HARD FILTER Buffett, déduplication et buckets."""
+        
+        # === v2.2 EU/US FILTER ===
+        if profile.euus_mode:
+            universe_before = len(universe)
+            filtered_universe = []
+            for asset in universe:
+                region = get_region(asset.region)
+                # Actions : bloquer régions interdites
+                if asset.category == "Actions" and region in BLOCKED_REGIONS_EUUS:
+                    continue
+                filtered_universe.append(asset)
+            universe = filtered_universe
+            logger.info(
+                f"EU/US Filter: {universe_before} → {len(universe)} assets "
+                f"(removed {universe_before - len(universe)} non-EU/US)"
+            )
+        
         # === ÉTAPE 1: Déduplication ETF ===
         if self.deduplicate_etfs_enabled:
             universe = deduplicate_etfs(universe, prefer_by="score")
@@ -2440,14 +2479,14 @@ class PortfolioOptimizer:
                 allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
         
         return allocation
-    def _enforce_region_caps(
+def _enforce_region_caps(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
         profile: ProfileConstraints
     ) -> Dict[str, float]:
         """
-        v2.1 FIX: Force region caps différenciés pour Actions - tolérance réduite.
+        v2.2: Force region caps - supporte mode EU/US.
         """
         if not allocation:
             return allocation
@@ -2462,21 +2501,36 @@ class PortfolioOptimizer:
                 region = get_region(asset.region)
                 region_weights[region] += w
         
-        # v2.1 FIX: Tolérance réduite de 0.5% à 0.1%
         TOLERANCE = 0.1
         
         # Identifier et corriger violations
         for region, current_weight in list(region_weights.items()):
-            cap = get_stock_region_cap(profile.name, region) * 100
+            # v2.2: Utiliser les bons caps selon le mode
+            if profile.euus_mode:
+                cap = get_stock_region_cap_euus(profile.name, region) * 100
+            else:
+                cap = get_stock_region_cap(profile.name, region) * 100
+            
+            # v2.2: En mode EU/US, cap=0 signifie INTERDIT
+            if profile.euus_mode and cap == 0 and current_weight > 0:
+                logger.warning(
+                    f"EU/US MODE: {region} is BLOCKED, removing {current_weight:.2f}%"
+                )
+                for aid, w in list(allocation.items()):
+                    asset = asset_lookup.get(aid)
+                    if asset and asset.category == "Actions":
+                        if get_region(asset.region) == region:
+                            del allocation[aid]
+                            logger.info(f"  Removed {aid} (blocked region {region})")
+                continue
             
             if current_weight > cap + TOLERANCE:
                 excess = current_weight - cap
                 logger.warning(
-                    f"v2.1 REGION CAP FIX: {region} {current_weight:.2f}% > {cap:.0f}%, "
+                    f"v2.2 REGION CAP FIX: {region} {current_weight:.2f}% > {cap:.0f}%, "
                     f"reducing {excess:.2f}%"
                 )
                 
-                # Réduire les actifs de cette région (plus gros d'abord)
                 region_assets = sorted(
                     [(aid, w) for aid, w in allocation.items()
                      if asset_lookup.get(aid) 
@@ -2488,14 +2542,12 @@ class PortfolioOptimizer:
                 for aid, w in region_assets:
                     if excess <= 0.05:
                         break
-                    # v2.1: Garder minimum 0.5% au lieu de 1%
                     reduction = min(w - 0.5, excess)
                     if reduction > 0:
                         allocation[aid] = round(allocation[aid] - reduction, 2)
                         excess -= reduction
                         logger.info(f"  Region cap: reduced {aid} by {reduction:.2f}%")
         
-        # Retirer positions < 0.5%
         allocation = {k: v for k, v in allocation.items() if v >= 0.5}
         
         return allocation
@@ -2979,7 +3031,7 @@ class PortfolioOptimizer:
         logger.info(f"v6.23 CRYPTO: core={core_final:.1f}%, satellite={sat_final:.1f}%, total={crypto_total:.1f}%")
         
         return allocation   
-    def build_portfolio(
+def build_portfolio(
         self, 
         universe: List[Asset], 
         profile_name: str,
@@ -3003,6 +3055,32 @@ class PortfolioOptimizer:
             )
         
         return self.optimize(candidates, profile, prev_weights)
+
+    def build_portfolio_euus(
+        self, 
+        universe: List[Asset], 
+        profile_name: str,
+        prev_weights: Optional[Dict[str, float]] = None
+    ) -> Tuple[Dict[str, float], dict]:
+        """
+        Pipeline EU/US Focus: filtre géographique + optimisation.
+        """
+        profile = PROFILES_EUUS[profile_name]
+        candidates = self.select_candidates(universe, profile)
+        
+        if len(candidates) < profile.min_assets:
+            raise ValueError(
+                f"Univers EU/US insuffisant pour {profile_name}: "
+                f"{len(candidates)} candidats < {profile.min_assets} requis. "
+                f"Vérifiez que vous avez assez d'actions EU/US dans l'univers."
+            )
+        
+        allocation, diagnostics = self.optimize(candidates, profile, prev_weights)
+        
+        diagnostics["euus_mode"] = True
+        diagnostics["euus_filter_applied"] = True
+        
+        return allocation, diagnostics
 
 
 # ============= CONVERSION UNIVERS v6.7 =============
