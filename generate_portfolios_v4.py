@@ -56,6 +56,17 @@ from portfolio_engine import (
     sector_balanced_selection,
 )
 
+# === v2.2: Import EU/US profiles ===
+try:
+    from portfolio_engine.optimizer import PROFILES_EUUS
+    from portfolio_engine.preset_meta import BLOCKED_REGIONS_EUUS, get_region
+    HAS_EUUS_PROFILES = True
+except ImportError:
+    HAS_EUUS_PROFILES = False
+    PROFILES_EUUS = {}
+    BLOCKED_REGIONS_EUUS = {"IN", "ASIA_EX_IN", "LATAM"}
+    def get_region(country): return "OTHER"
+
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
 
@@ -154,6 +165,9 @@ CONFIG = {
         "max_avoided_regions": 3,
     },
     "market_data_dir": "data",
+    # === v2.2: EU/US Focus Mode ===
+    "generate_euus_portfolios": True,
+    "euus_output_path": "data/portfolios_euus.json",
 }
 
 # === v4.7 P2: DISCLAIMER BACKTEST ===
@@ -672,6 +686,148 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         )
     
     return portfolios, all_assets
+def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
+    """
+    Pipeline EU/US Focus : filtre géographique + optimisation.
+    """
+    if not HAS_EUUS_PROFILES:
+        logger.warning("⚠️ PROFILES_EUUS non disponible, skip EU/US generation")
+        return {}, []
+    
+    logger.info("🇪🇺🇺🇸 Construction des portefeuilles EU/US Focus...")
+    
+    # 1. Charger les données
+    stocks_data = load_stocks_data()
+    
+    etf_data = []
+    bonds_data = []
+    
+    if Path(CONFIG["etf_csv"]).exists():
+        try:
+            df = pd.read_csv(CONFIG["etf_csv"])
+            etf_data = df.to_dict('records')
+        except Exception as e:
+            logger.warning(f"Impossible de charger ETF: {e}")
+    
+    if Path(CONFIG["bonds_csv"]).exists():
+        try:
+            df_b = pd.read_csv(CONFIG["bonds_csv"])
+            df_b["category"] = "bond"
+            bonds_data = df_b.to_dict("records")
+        except Exception as e:
+            logger.warning(f"Impossible de charger Bonds: {e}")
+    
+    # 2. Extraire equities et filtrer EU/US
+    eq_rows = []
+    eq_skipped = 0
+    for data in stocks_data:
+        stocks_list = data.get("stocks", []) if isinstance(data, dict) else data
+        for it in stocks_list:
+            country = it.get("country", "Global")
+            region = get_region(country)
+            
+            if region in BLOCKED_REGIONS_EUUS:
+                eq_skipped += 1
+                continue
+            
+            eq_rows.append({
+                "id": f"EQ_{len(eq_rows)+1}",
+                "name": it.get("name") or it.get("ticker"),
+                "ticker": it.get("ticker"),
+                "perf_1m": it.get("perf_1m"),
+                "perf_3m": it.get("perf_3m"),
+                "ytd": it.get("perf_ytd") or it.get("ytd"),
+                "perf_24h": it.get("perf_1d"),
+                "vol_3y": it.get("volatility_3y") or it.get("vol"),
+                "vol": it.get("volatility_3y") or it.get("vol"),
+                "volatility_3y": it.get("volatility_3y"),
+                "max_dd": it.get("max_drawdown_ytd"),
+                "max_drawdown_ytd": it.get("max_drawdown_ytd"),
+                "liquidity": it.get("market_cap"),
+                "market_cap": it.get("market_cap"),
+                "sector": it.get("sector", "Unknown"),
+                "country": country,
+                "category": "equity",
+                "roe": it.get("roe"),
+                "de_ratio": it.get("de_ratio"),
+                "payout_ratio_ttm": it.get("payout_ratio_ttm"),
+                "dividend_yield": it.get("dividend_yield"),
+                "pe_ratio": it.get("pe_ratio"),
+                "sector_top": it.get("sector"),
+                "country_top": it.get("country"),
+            })
+    
+    logger.info(f"   Equities EU/US: {len(eq_rows)} (skipped {eq_skipped} non-EU/US)")
+    
+    # 3. Appliquer filtre Buffett
+    if CONFIG["buffett_mode"] != "none" and eq_rows:
+        eq_rows = apply_buffett_filter(
+            eq_rows,
+            mode=CONFIG["buffett_mode"],
+            strict=False,
+            min_score=CONFIG["buffett_min_score"],
+        )
+        logger.info(f"   Equities EU/US après Buffett: {len(eq_rows)}")
+    
+    # 4. Scoring et sélection
+    eq_rows = compute_scores(eq_rows, "equity", None)
+    eq_filtered = filter_equities(eq_rows)
+    equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
+    
+    logger.info(f"   Equities EU/US finales: {len(equities)}")
+    
+    # 5. Fusionner ETF + Bonds
+    all_funds_data = etf_data + bonds_data
+    
+    # 6. Construire univers (pas de crypto pour simplifier)
+    universe_others = build_scored_universe(
+        stocks_data=None,
+        etf_data=all_funds_data,
+        crypto_data=[],
+        returns_series=None,
+        buffett_mode="none",
+        buffett_min_score=0,
+    )
+    
+    universe = equities + universe_others
+    logger.info(f"   Univers EU/US total: {len(universe)} actifs")
+    
+    # 7. Optimiser pour chaque profil
+    optimizer = PortfolioOptimizer()
+    portfolios = {}
+    all_assets = []
+    
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        logger.info(f"⚙️  Optimisation EU/US {profile}...")
+        
+        scored_universe = rescore_universe_by_profile(universe, profile, market_context=None)
+        assets = convert_universe_to_assets(scored_universe)
+        
+        if not all_assets:
+            all_assets = assets
+        
+        try:
+            allocation, diagnostics = optimizer.build_portfolio_euus(assets, profile)
+            
+            portfolios[profile] = {
+                "allocation": allocation,
+                "diagnostics": diagnostics,
+                "assets": assets,
+            }
+            
+            logger.info(
+                f"   → {len(allocation)} lignes, "
+                f"vol={diagnostics.get('portfolio_vol', 'N/A'):.1f}%"
+            )
+        except ValueError as e:
+            logger.error(f"❌ EU/US {profile} failed: {e}")
+            portfolios[profile] = {
+                "allocation": {},
+                "diagnostics": {"error": str(e)},
+                "assets": [],
+            }
+    
+    return portfolios, all_assets    
 
 
 def add_commentary(
@@ -1687,6 +1843,32 @@ def save_portfolios(portfolios: Dict, assets: list):
     for profile in ["Agressif", "Modéré", "Stable"]:
         n_assets = len(portfolios.get(profile, {}).get("allocation", {}))
         logger.info(f"   {profile}: {n_assets} lignes")
+def save_portfolios_euus(portfolios: Dict, assets: list):
+    """Sauvegarde les portefeuilles EU/US Focus."""
+    os.makedirs("data", exist_ok=True)
+    
+    v1_data = normalize_to_frontend_v1(portfolios, assets)
+    
+    # Ajouter flags EU/US dans meta
+    v1_data["_meta"]["euus_mode"] = True
+    v1_data["_meta"]["geographic_filter"] = "EU + US only"
+    v1_data["_meta"]["blocked_regions"] = ["IN", "ASIA_EX_IN", "LATAM"]
+    
+    euus_path = CONFIG.get("euus_output_path", "data/portfolios_euus.json")
+    with open(euus_path, "w", encoding="utf-8") as f:
+        json.dump(v1_data, f, ensure_ascii=False, indent=2)
+    logger.info(f"✅ Sauvegardé: {euus_path}")
+    
+    # Archive
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_path = f"{CONFIG['history_dir']}/portfolios_euus_{ts}.json"
+    with open(archive_path, "w", encoding="utf-8") as f:
+        json.dump(v1_data, f, ensure_ascii=False, indent=2, default=str)
+    logger.info(f"✅ Archive EU/US: {archive_path}")
+    
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        n_assets = len(portfolios.get(profile, {}).get("allocation", {}))
+        logger.info(f"   EU/US {profile}: {n_assets} lignes")        
 
 
 def save_backtest_results(backtest_data: Dict):
@@ -1704,19 +1886,48 @@ def save_backtest_results(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.9.0 - RADAR Tactical Integration")
+    logger.info("🚀 Portfolio Engine v4.10.0 - Global + EU/US Focus")
     logger.info("=" * 60)
     
     brief_data = load_brief_data()
     
+    # === 1. PORTEFEUILLES GLOBAUX ===
+    logger.info("\n" + "=" * 60)
+    logger.info("🌍 GÉNÉRATION PORTEFEUILLES GLOBAUX")
+    logger.info("=" * 60)
+    
     portfolios, assets = build_portfolios_deterministic()
-    
     portfolios = add_commentary(portfolios, assets, brief_data)
-    
     portfolios = apply_compliance(portfolios)
-    
     save_portfolios(portfolios, assets)
     
+    # === 2. PORTEFEUILLES EU/US FOCUS ===
+    if CONFIG.get("generate_euus_portfolios", False) and HAS_EUUS_PROFILES:
+        logger.info("\n" + "=" * 60)
+        logger.info("🇪🇺🇺🇸 GÉNÉRATION PORTEFEUILLES EU/US FOCUS")
+        logger.info("=" * 60)
+        
+        try:
+            portfolios_euus, assets_euus = build_portfolios_euus()
+            
+            if portfolios_euus and any(p.get("allocation") for p in portfolios_euus.values()):
+                portfolios_euus = add_commentary(portfolios_euus, assets_euus, brief_data)
+                portfolios_euus = apply_compliance(portfolios_euus)
+                save_portfolios_euus(portfolios_euus, assets_euus)
+                logger.info("✅ Portefeuilles EU/US générés avec succès")
+            else:
+                logger.warning("⚠️ Aucun portefeuille EU/US généré (univers insuffisant?)")
+        except Exception as e:
+            logger.error(f"❌ Erreur génération EU/US: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        if not CONFIG.get("generate_euus_portfolios", False):
+            logger.info("⏭️  Génération EU/US désactivée (generate_euus_portfolios=False)")
+        else:
+            logger.warning("⚠️ PROFILES_EUUS non disponible")
+    
+    # === 3. BACKTEST ===
     backtest_results = None
     if CONFIG["run_backtest"]:
         yaml_config = load_yaml_config(CONFIG["config_path"])
@@ -1725,27 +1936,28 @@ def main():
         if not backtest_results.get("skipped"):
             save_backtest_results(backtest_results)
     
+    # === 4. RÉSUMÉ FINAL ===
     logger.info("\n" + "=" * 60)
     logger.info("✨ Génération terminée avec succès!")
     logger.info("=" * 60)
     logger.info("Fichiers générés:")
-    logger.info(f"   • {CONFIG['output_path']} (portfolios)")
+    logger.info(f"   • {CONFIG['output_path']} (Global)")
+    if CONFIG.get("generate_euus_portfolios", False) and HAS_EUUS_PROFILES:
+        logger.info(f"   • {CONFIG.get('euus_output_path', 'data/portfolios_euus.json')} (EU/US Focus)")
     if backtest_results and not backtest_results.get("skipped"):
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
         if backtest_results.get("debug_file"):
             logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
     logger.info("")
-    logger.info("Fonctionnalités v4.9.1:")
-    logger.info("   • ✅ NEW: backtest_debug.json avec prix réels et calculs")
+    logger.info("Fonctionnalités v4.10.0:")
+    logger.info("   • ✅ NEW: Portefeuilles EU/US Focus (Europe + USA uniquement)")
+    logger.info("   • ✅ Filtre géographique pour brokers européens")
+    logger.info("   • ✅ backtest_debug.json avec prix réels et calculs")
     logger.info("   • ✅ TER FIX: embedded in ETF prices, NOT deducted separately")
-    logger.info("   • ✅ platform_fee_annual_bp replaces ter_annual_bp")
-    logger.info("   • ✅ Gross/Net separation via transaction costs + platform fees")
-    logger.info("   • ✅ Weighted avg TER exposed as INFO (not deducted)")
-    logger.info("   • P1-7: Profile-specific benchmarks (QQQ/URTH/AGG)")
     tactical_mode = CONFIG.get("tactical_mode", "radar")
     if CONFIG.get("use_tactical_context", False):
         smoothing = CONFIG.get("tactical_rules", {}).get("smoothing_alpha", 0.3)
-        logger.info(f"   • v4.9.0: Tilts tactiques ACTIVÉS (mode={tactical_mode}, smoothing={smoothing})")
+        logger.info(f"   • Tilts tactiques ACTIVÉS (mode={tactical_mode}, smoothing={smoothing})")
     else:
         logger.info("   • Tilts tactiques DÉSACTIVÉS")
     logger.info(f"   • Platform fee: {CONFIG.get('platform_fee_annual_bp', 0)}bp/an")
