@@ -137,6 +137,7 @@ CONFIG = {
     "output_path": "data/portfolios.json",
     "history_dir": "data/portfolio_history",
     "backtest_output": "data/backtest_results.json",
+    "backtest_euus_output": "data/backtest_results_euus.json",
     "config_path": "config/portfolio_config.yaml",
     "use_llm": True,
     "llm_model": "gpt-4o-mini",
@@ -1120,7 +1121,122 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
             for r in results if r.get("success")
         }
     }
-
+def run_backtest_euus_profiles(config: Dict) -> Dict:
+    """
+    Exécute le backtest pour les portefeuilles EU/US Focus.
+    """
+    logger.info("\n" + "="*60)
+    logger.info("📈 BACKTEST EU/US - Validation historique (POIDS FIXES)")
+    logger.info("="*60)
+    
+    euus_path = CONFIG.get("euus_output_path", "data/portfolios_euus.json")
+    if not Path(euus_path).exists():
+        logger.warning(f"⚠️ {euus_path} non trouvé, backtest EU/US ignoré")
+        return {"error": "EU/US portfolio file not found", "skipped": True}
+    
+    api_key = os.environ.get("TWELVE_DATA_API")
+    if not api_key:
+        logger.warning("⚠️ TWELVE_DATA_API non définie, backtest EU/US ignoré")
+        return {"error": "TWELVE_DATA_API not set", "skipped": True}
+    
+    try:
+        from backtest import BacktestConfig, load_prices_for_backtest
+        from backtest.engine import run_backtest_fixed_weights, print_backtest_report
+        from backtest.data_loader import extract_portfolio_weights
+    except ImportError as e:
+        logger.error(f"❌ Import backtest failed: {e}")
+        return {"error": str(e), "skipped": True}
+    
+    yaml_config = load_yaml_config(CONFIG["config_path"])
+    if not yaml_config:
+        yaml_config = {"backtest": {"test_universe": {"stocks": ["AAPL", "MSFT", "GOOGL"]}}}
+    
+    end_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.datetime.now() - timedelta(days=CONFIG["backtest_days"] + 30)).strftime("%Y-%m-%d")
+    backtest_start = (datetime.datetime.now() - timedelta(days=CONFIG["backtest_days"])).strftime("%Y-%m-%d")
+    
+    logger.info(f"📥 Chargement des poids EU/US depuis {euus_path}...")
+    portfolio_weights = extract_portfolio_weights(euus_path)
+    
+    if not portfolio_weights:
+        logger.error("❌ Impossible de charger les poids EU/US")
+        return {"error": "No EU/US portfolio weights found", "skipped": True}
+    
+    for profile, weights in portfolio_weights.items():
+        logger.info(f"   EU/US {profile}: {len(weights)} actifs, total={sum(weights.values()):.1%}")
+    
+    logger.info(f"📥 Chargement des prix ({CONFIG['backtest_days']}j)...")
+    try:
+        result = load_prices_for_backtest(
+            yaml_config,
+            start_date=start_date,
+            end_date=end_date,
+            api_key=api_key,
+            plan="ultra"
+        )
+        
+        if isinstance(result, tuple):
+            prices, price_diagnostics = result
+        else:
+            prices = result
+            price_diagnostics = {}
+        logger.info(f"✅ {len(prices.columns)} symboles, {len(prices)} jours")
+    except Exception as e:
+        logger.error(f"❌ Échec chargement prix: {e}")
+        return {"error": str(e), "skipped": True}
+    
+    platform_fee_annual_bp = CONFIG.get("platform_fee_annual_bp", 0.0)
+    results = []
+    
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        logger.info(f"\n⚙️  Backtest EU/US {profile}...")
+        
+        fixed_weights = portfolio_weights.get(profile, {})
+        if not fixed_weights:
+            results.append({"profile": profile, "success": False, "error": "No weights"})
+            continue
+        
+        backtest_config = BacktestConfig(
+            profile=profile,
+            start_date=backtest_start,
+            end_date=end_date,
+            rebalance_freq=CONFIG["backtest_freq"],
+            transaction_cost_bp=yaml_config.get("backtest", {}).get("transaction_cost_bp", 10),
+            platform_fee_annual_bp=platform_fee_annual_bp,
+            turnover_penalty=0,
+        )
+        
+        try:
+            result = run_backtest_fixed_weights(
+                prices=prices,
+                fixed_weights=fixed_weights,
+                config=backtest_config,
+            )
+            print_backtest_report(result)
+            
+            results.append({
+                "profile": profile,
+                "success": True,
+                "stats": result.stats,
+                "equity_curve": {
+                    str(k.date()): round(v, 2)
+                    for k, v in result.equity_curve.items()
+                },
+            })
+        except Exception as e:
+            logger.error(f"❌ Backtest EU/US {profile} failed: {e}")
+            results.append({"profile": profile, "success": False, "error": str(e)})
+    
+    return {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "period_days": CONFIG["backtest_days"],
+        "mode": "EU/US Focus",
+        "results": results,
+        "comparison": {
+            r["profile"]: r.get("stats", {})
+            for r in results if r.get("success")
+        }
+    }
 
 def print_comparison_table(results: List[dict]):
     """
@@ -1879,6 +1995,15 @@ def save_backtest_results(backtest_data: Dict):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(backtest_data, f, ensure_ascii=False, indent=2, default=str)
     logger.info(f"✅ Backtest sauvegardé: {output_path}")
+    
+def save_backtest_results_euus(backtest_data: Dict):
+    """Sauvegarde les résultats du backtest EU/US."""
+    os.makedirs("data", exist_ok=True)
+    
+    output_path = CONFIG.get("backtest_euus_output", "data/backtest_results_euus.json")
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(backtest_data, f, ensure_ascii=False, indent=2, default=str)
+    logger.info(f"✅ Backtest EU/US sauvegardé: {output_path}")  
 
 
 # ============= MAIN =============
@@ -1927,7 +2052,7 @@ def main():
         else:
             logger.warning("⚠️ PROFILES_EUUS non disponible")
     
-    # === 3. BACKTEST ===
+    # === 3. BACKTEST GLOBAL ===
     backtest_results = None
     if CONFIG["run_backtest"]:
         yaml_config = load_yaml_config(CONFIG["config_path"])
@@ -1935,6 +2060,15 @@ def main():
         
         if not backtest_results.get("skipped"):
             save_backtest_results(backtest_results)
+    
+    # === 4. BACKTEST EU/US ===
+    backtest_euus_results = None
+    if CONFIG["run_backtest"] and CONFIG.get("generate_euus_portfolios", False):
+        yaml_config = load_yaml_config(CONFIG["config_path"])
+        backtest_euus_results = run_backtest_euus_profiles(yaml_config)
+        
+        if not backtest_euus_results.get("skipped"):
+            save_backtest_results_euus(backtest_euus_results)
     
     # === 4. RÉSUMÉ FINAL ===
     logger.info("\n" + "=" * 60)
