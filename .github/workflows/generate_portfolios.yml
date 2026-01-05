@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles v4.12.0 + Selection Audit + Backtest + Debug + Validation
+name: Génération des Portefeuilles v4.12.1 + Selection Explained + Backtest + Debug + Validation
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
           echo ""
           echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
 
-      - name: 🚀 Exécuter le moteur v4.12.0 + Selection Audit + Backtest + Debug
+      - name: 🚀 Exécuter le moteur v4.12.1 + Selection Explained + Backtest + Debug
         run: python generate_portfolios_v4.py
 
       # ============= v4.5 NEW: Schema Validation =============
@@ -139,16 +139,32 @@ jobs:
           print(f"   Equities selected: {summary.get('equities_selected', 0)}")
           print(f"   Equities rejected notable: {summary.get('equities_rejected_notable', 0)}")
           print(f"   Filters applied: {summary.get('total_filters_applied', 0)}")
-          rejected = data.get("equities_rejected", [])[:3]
-          if rejected:
-              print(f"   Top rejected stocks:")
-              for r in rejected:
-                  name = r.get('name', 'Unknown')[:20]
-                  reason = r.get('rejection_reason', 'N/A')[:40]
-                  print(f"      - {name}: {reason}")
           EOF
           else
             echo "⚠️ selection_audit.json ABSENT"
+          fi
+          
+          # v4.12.1: Selection Explained (TOP caps analysis)
+          if [ -f data/selection_explained.json ]; then
+            echo "✅ selection_explained.json (v4.12.1)"
+            python3 << 'EOF'
+          import json
+          with open("data/selection_explained.json") as f:
+              data = json.load(f)
+          summary = data.get("summary", {})
+          print(f"   Total universe: {summary.get('total_universe', 0)}")
+          print(f"   Total selected: {summary.get('total_selected', 0)}")
+          print(f"   Selection rate: {summary.get('selection_rate', 'N/A')}")
+          # Show TOP caps by region
+          top_caps = data.get("top_caps_by_region", {})
+          for region in ["US", "Europe", "Asia"]:
+              if region in top_caps:
+                  selected = top_caps[region].get("selected_in_top_20", 0)
+                  rejection_rate = top_caps[region].get("rejection_rate_top_20", "N/A")
+                  print(f"   {region} TOP 20: {selected}/20 selected ({rejection_rate} rejected)")
+          EOF
+          else
+            echo "⚠️ selection_explained.json ABSENT"
           fi
           
           # Backtest results (Global)
@@ -214,7 +230,7 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v4.12.0 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v4.12.1 Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Schema Validation Status
@@ -277,6 +293,34 @@ jobs:
           print(f"| ETF Selected | {summary.get('etf_selected', 0)} |")
           print(f"| Crypto Selected | {summary.get('crypto_selected', 0)} |")
           print(f"| Filters Applied | {len(filters)} |")
+          EOF
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # v4.12.1: Selection Explained Summary (TOP caps by region)
+          if [ -f data/selection_explained.json ]; then
+            echo "### 🏆 TOP Caps Analysis (v4.12.1)" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("data/selection_explained.json") as f:
+              data = json.load(f)
+          summary = data.get("summary", {})
+          print(f"| Metric | Value |")
+          print(f"|--------|-------|")
+          print(f"| Total Universe | {summary.get('total_universe', 0)} |")
+          print(f"| Total Selected | {summary.get('total_selected', 0)} |")
+          print(f"| Selection Rate | {summary.get('selection_rate', 'N/A')} |")
+          print(f"")
+          print(f"**TOP 20 Caps by Region:**")
+          print(f"| Region | Selected | Rejected | Rate |")
+          print(f"|--------|----------|----------|------|")
+          top_caps = data.get("top_caps_by_region", {})
+          for region in ["US", "Europe", "Asia"]:
+              if region in top_caps:
+                  selected = top_caps[region].get("selected_in_top_20", 0)
+                  rejected = 20 - selected
+                  rate = top_caps[region].get("rejection_rate_top_20", "N/A")
+                  print(f"| {region} | {selected} | {rejected} | {rate} |")
           EOF
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
@@ -381,7 +425,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Ajouter les artefacts générés (v4.12.0 avec selection_audit.json)
+          # Ajouter les artefacts générés (v4.12.1 avec selection_explained.json)
           git add data/portfolios.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
@@ -389,6 +433,7 @@ jobs:
                   data/backtest_debug.json \
                   data/market_context.json \
                   data/selection_audit.json \
+                  data/selection_explained.json \
                   data/portfolio_history/* || true
 
           # Si .gitignore les filtre, forcer l'ajout
@@ -413,11 +458,14 @@ jobs:
           if git check-ignore -q data/selection_audit.json; then
             git add -f data/selection_audit.json
           fi
+          if git check-ignore -q data/selection_explained.json; then
+            git add -f data/selection_explained.json
+          fi
           if git check-ignore -q data/portfolio_history; then
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v4.12.0 RADAR + Selection Audit + EU/US Focus + Backtest 90j ✓" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v4.12.1 RADAR + Selection Explained + EU/US Focus + Backtest 90j ✓" || echo "rien à committer"
 
           git push || (git pull --rebase origin main && git push)
 
