@@ -3063,7 +3063,7 @@ class PortfolioOptimizer:
         logger.info(f"v6.23 CRYPTO: core={core_final:.1f}%, satellite={sat_final:.1f}%, total={crypto_total:.1f}%")
         
         return allocation   
-def build_portfolio(
+    def build_portfolio(
         self, 
         universe: List[Asset], 
         profile_name: str,
