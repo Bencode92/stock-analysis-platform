@@ -133,6 +133,15 @@ except ImportError:
     ASSET_RATIONALE_AVAILABLE = False
     logger.warning("⚠️ Module asset_rationale_generator non disponible")    
 
+# v4.12.0: Import du module d'audit de sélection
+try:
+    from portfolio_engine.selection_audit import SelectionAuditor, create_selection_audit
+    SELECTION_AUDIT_AVAILABLE = True
+    logger.info("✅ Module selection_audit disponible")
+except ImportError:
+    SELECTION_AUDIT_AVAILABLE = False
+    logger.warning("⚠️ Module selection_audit non disponible")
+
 # ============= CONFIGURATION =============
 
 CONFIG = {
@@ -182,6 +191,9 @@ CONFIG = {
     "euus_output_path": "data/portfolios_euus.json",
     # === v4.11.0: Asset Rationale LLM Generation ===
     "generate_asset_rationales": True,
+    # === v4.12.0: Selection Audit ===
+    "generate_selection_audit": True,
+    "selection_audit_output": "data/selection_audit.json",
 }
 
 # === v4.7 P2: DISCLAIMER BACKTEST ===
@@ -583,6 +595,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
     
     # 4. Appliquer le filtre Buffett
+    eq_rows_before_buffett = eq_rows.copy()  # v4.12.0: Garder pour audit
+    
     if CONFIG["buffett_mode"] != "none" and eq_rows:
         logger.info(f"   Application filtre Buffett sur {len(eq_rows)} actions...")
         
@@ -698,6 +712,37 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             f"   → {len(allocation)} lignes, "
             f"vol={diagnostics.get('portfolio_vol', 'N/A'):.1f}%"
         )
+    
+    # === v4.12.0: Génération de l'audit de sélection ===
+    if CONFIG.get("generate_selection_audit", False) and SELECTION_AUDIT_AVAILABLE:
+        try:
+            # Extraire les actifs sélectionnés depuis les allocations
+            selected_tickers = set()
+            for profile_data in portfolios.values():
+                for asset_id in profile_data.get("allocation", {}).keys():
+                    selected_tickers.add(asset_id)
+            
+            equities_final = [e for e in equities if e.get("id") in selected_tickers or e.get("ticker") in selected_tickers]
+            etf_selected = [e for e in universe_others if e.get("category") == "etf" and (e.get("id") in selected_tickers or e.get("ticker") in selected_tickers)]
+            crypto_selected = [e for e in universe_others if e.get("category") == "crypto" and (e.get("id") in selected_tickers or e.get("ticker") in selected_tickers)]
+            
+            create_selection_audit(
+                config=CONFIG,
+                equities_initial=eq_rows_before_buffett,
+                equities_after_buffett=eq_rows,
+                equities_final=equities_final,
+                etf_data=all_funds_data,
+                etf_selected=etf_selected,
+                crypto_data=crypto_data,
+                crypto_selected=crypto_selected,
+                market_context=market_context,
+                output_path=CONFIG.get("selection_audit_output", "data/selection_audit.json"),
+            )
+            logger.info("✅ Audit de sélection généré")
+        except Exception as e:
+            logger.warning(f"⚠️ Erreur génération audit: {e}")
+            import traceback
+            traceback.print_exc()
     
     return portfolios, all_assets
 def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
