@@ -2440,6 +2440,62 @@ class PortfolioOptimizer:
                 allocation = {k: round(v * 100 / total, 2) for k, v in allocation.items()}
         
         return allocation
+    def _enforce_region_caps(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """
+        v2.0: Force region caps différenciés pour Actions après normalisation.
+        """
+        if not allocation:
+            return allocation
+        
+        asset_lookup = {c.id: c for c in candidates}
+        
+        # Calculer poids par région mappée (Actions seulement)
+        region_weights = defaultdict(float)
+        for aid, w in allocation.items():
+            asset = asset_lookup.get(aid)
+            if asset and asset.category == "Actions":
+                region = get_region(asset.region)
+                region_weights[region] += w
+        
+        # Identifier et corriger violations
+        for region, current_weight in list(region_weights.items()):
+            cap = get_stock_region_cap(profile.name, region) * 100
+            
+            if current_weight > cap + 0.5:
+                excess = current_weight - cap
+                logger.warning(
+                    f"v2.0 REGION CAP: {region} {current_weight:.1f}% > {cap:.0f}%, "
+                    f"reducing {excess:.1f}%"
+                )
+                
+                # Réduire les actifs de cette région (plus gros d'abord)
+                region_assets = sorted(
+                    [(aid, w) for aid, w in allocation.items()
+                     if asset_lookup.get(aid) 
+                     and asset_lookup[aid].category == "Actions"
+                     and get_region(asset_lookup[aid].region) == region],
+                    key=lambda x: (-x[1], x[0])
+                )
+                
+                for aid, w in region_assets:
+                    if excess <= 0.1:
+                        break
+                    reduction = min(w - 1.0, excess)  # Garder min 1%
+                    if reduction > 0:
+                        allocation[aid] = round(allocation[aid] - reduction, 2)
+                        excess -= reduction
+                        logger.debug(f"  Region cap: reduced {aid} by {reduction:.2f}%")
+        
+        # Retirer positions < 0.5%
+        allocation = {k: v for k, v in allocation.items() if v >= 0.5}
+        
+        return allocation   
+       
     def _enforce_bonds_minimum(
         self,
         allocation: Dict[str, float],
@@ -2620,6 +2676,7 @@ class PortfolioOptimizer:
             allocation = self._enforce_crypto_cap(allocation, candidates, profile)
             allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
             allocation = self._enforce_sector_caps(allocation, candidates, profile)
+            allocation = self._enforce_region_caps(allocation, candidates, profile)
             
             # 4. Re-normaliser
             allocation = self._adjust_to_100(allocation, profile)
