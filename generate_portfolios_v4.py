@@ -141,6 +141,14 @@ try:
 except ImportError:
     SELECTION_AUDIT_AVAILABLE = False
     logger.warning("⚠️ Module selection_audit non disponible")
+# v4.12.1: Import du module d'explication des sélections TOP caps
+try:
+    from portfolio_engine.selection_explainer import explain_top_caps_selection
+    SELECTION_EXPLAINER_AVAILABLE = True
+    logger.info("✅ Module selection_explainer disponible")
+except ImportError:
+    SELECTION_EXPLAINER_AVAILABLE = False
+    logger.warning("⚠️ Module selection_explainer non disponible")    
 
 # ============= CONFIGURATION =============
 
@@ -194,6 +202,9 @@ CONFIG = {
     # === v4.12.0: Selection Audit ===
     "generate_selection_audit": True,
     "selection_audit_output": "data/selection_audit.json",
+    # === v4.12.1: Selection Explainer (TOP caps analysis) ===
+    "generate_selection_explained": True,
+    "selection_explained_output": "data/selection_explained.json",
 }
 
 # === v4.7 P2: DISCLAIMER BACKTEST ===
@@ -743,6 +754,21 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"⚠️ Erreur génération audit: {e}")
             import traceback
             traceback.print_exc()
+    # === v4.12.1: Génération de l'explication des sélections TOP caps ===
+    if CONFIG.get("generate_selection_explained", False) and SELECTION_EXPLAINER_AVAILABLE:
+        try:
+            explain_top_caps_selection(
+                eq_rows_initial=eq_rows_before_buffett,
+                equities_final=equities,
+                config=CONFIG,
+                market_context=market_context,
+                output_path=CONFIG.get("selection_explained_output", "data/selection_explained.json"),
+            )
+            logger.info("✅ Explication des sélections TOP caps générée")
+        except Exception as e:
+            logger.warning(f"⚠️ Erreur génération explication: {e}")
+            import traceback
+            traceback.print_exc()        
     
     return portfolios, all_assets
 def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
