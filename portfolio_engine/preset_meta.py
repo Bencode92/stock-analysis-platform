@@ -2,7 +2,8 @@
 """
 PRESET_META - Source unique de vérité pour les presets.
 
-v1.1 P0.5 FIX: Bucket targets relaxés pour réduire les violations
+v2.2 EU/US Focus: Added region caps and filters for EU/US only portfolios
+v2.1 P0.5 FIX: Bucket targets relaxés pour réduire les violations
 - Modéré: CORE min 45→35%, SATELLITE max 25→35%
 - Agressif: SATELLITE max 50→60%
 
@@ -220,38 +221,104 @@ MAX_CORPORATE_GROUP_WEIGHT = 0.20
 MAX_STOCKS_PER_GROUP = 1
 
 
-# ============ STOCK REGION CAPS v2.0 (actions seulement) ============
+# ============ STOCK REGION CAPS v2.1 (actions seulement) ============
 # Taxonomie simplifiée - ChatGPT review intégré
 # IN séparé de ASIA_EX_IN = pas de double comptage
 
 COUNTRY_TO_REGION: Dict[str, str] = {
-    # === INDE (cap pays strict — biais ROE banques) ===
+    # === INDE ===
     "Inde": "IN",
+    "India": "IN",
     
     # === ASIE HORS INDE ===
     "Chine": "ASIA_EX_IN",
+    "China": "ASIA_EX_IN",
     "Corée": "ASIA_EX_IN",
-    "Indonésie": "ASIA_EX_IN",
-    "Philippines": "ASIA_EX_IN",
+    "South Korea": "ASIA_EX_IN",
+    "Korea": "ASIA_EX_IN",
+    "Japon": "ASIA_EX_IN",
+    "Japan": "ASIA_EX_IN",
     "Taïwan": "ASIA_EX_IN",
+    "Taiwan": "ASIA_EX_IN",
+    "Hong Kong": "ASIA_EX_IN",
+    "Singapour": "ASIA_EX_IN",
+    "Singapore": "ASIA_EX_IN",
+    "Indonésie": "ASIA_EX_IN",
+    "Indonesia": "ASIA_EX_IN",
+    "Malaisie": "ASIA_EX_IN",
+    "Malaysia": "ASIA_EX_IN",
+    "Thaïlande": "ASIA_EX_IN",
+    "Thailand": "ASIA_EX_IN",
+    "Vietnam": "ASIA_EX_IN",
+    "Philippines": "ASIA_EX_IN",
     
     # === EUROPE ===
     "Allemagne": "EU",
-    "Autriche": "EU",
-    "Belgique": "EU",
-    "Espagne": "EU",
+    "Germany": "EU",
     "France": "EU",
-    "Irlande": "EU",
-    "Italie": "EU",
-    "Norvège": "EU",
-    "Pays-Bas": "EU",
-    "Portugal": "EU",
     "Royaume-Uni": "EU",
+    "United Kingdom": "EU",
+    "UK": "EU",
+    "Italie": "EU",
+    "Italy": "EU",
+    "Espagne": "EU",
+    "Spain": "EU",
+    "Pays-Bas": "EU",
+    "Netherlands": "EU",
+    "Belgique": "EU",
+    "Belgium": "EU",
     "Suisse": "EU",
+    "Switzerland": "EU",
+    "Autriche": "EU",
+    "Austria": "EU",
+    "Suède": "EU",
+    "Sweden": "EU",
+    "Danemark": "EU",
+    "Denmark": "EU",
+    "Norvège": "EU",
+    "Norway": "EU",
+    "Finlande": "EU",
+    "Finland": "EU",
+    "Irlande": "EU",
+    "Ireland": "EU",
+    "Portugal": "EU",
+    "Grèce": "EU",
+    "Greece": "EU",
+    "Pologne": "EU",
+    "Poland": "EU",
+    "Luxembourg": "EU",
     
     # === USA ===
     "Etats-Unis": "US",
     "États-Unis": "US",
+    "United States": "US",
+    "USA": "US",
+    "US": "US",
+    
+    # === LATAM ===
+    "Brésil": "LATAM",
+    "Brazil": "LATAM",
+    "Mexique": "LATAM",
+    "Mexico": "LATAM",
+    "Argentine": "LATAM",
+    "Argentina": "LATAM",
+    "Chili": "LATAM",
+    "Chile": "LATAM",
+    "Colombie": "LATAM",
+    "Colombia": "LATAM",
+    "Pérou": "LATAM",
+    "Peru": "LATAM",
+    
+    # === OTHER ===
+    "Canada": "OTHER",
+    "Australie": "OTHER",
+    "Australia": "OTHER",
+    "Nouvelle-Zélande": "OTHER",
+    "New Zealand": "OTHER",
+    "Israël": "OTHER",
+    "Israel": "OTHER",
+    "Afrique du Sud": "OTHER",
+    "South Africa": "OTHER",
 }
 
 STOCK_REGION_CAPS: Dict[str, Dict[str, float]] = {
@@ -293,6 +360,55 @@ def get_stock_region_cap(profile: str, region: str) -> float:
     """Retourne le cap régional pour un profil."""
     caps = STOCK_REGION_CAPS.get(profile, STOCK_REGION_CAPS["Modéré"])
     return caps.get(region, DEFAULT_REGION_CAP)
+
+
+# ============ STOCK REGION CAPS EU/US FOCUS v2.2 ============
+# Pour investisseurs sans accès aux marchés asiatiques/émergents
+# Actions EU + US uniquement, ETF/Obligations globaux OK
+
+STOCK_REGION_CAPS_EUUS: Dict[str, Dict[str, float]] = {
+    "Stable": {
+        "EU": 0.45,      # 45% max Europe
+        "US": 0.50,      # 50% max USA
+        "IN": 0.00,      # Interdit
+        "ASIA_EX_IN": 0.00,  # Interdit
+        "LATAM": 0.00,   # Interdit
+        "OTHER": 0.05,   # 5% autres (Canada, Australie, etc.)
+    },
+    "Modéré": {
+        "EU": 0.40,      # 40% max Europe
+        "US": 0.55,      # 55% max USA
+        "IN": 0.00,      # Interdit
+        "ASIA_EX_IN": 0.00,  # Interdit
+        "LATAM": 0.05,   # 5% LATAM via ETF
+        "OTHER": 0.05,   # 5% autres
+    },
+    "Agressif": {
+        "EU": 0.35,      # 35% max Europe
+        "US": 0.60,      # 60% max USA
+        "IN": 0.00,      # Interdit
+        "ASIA_EX_IN": 0.00,  # Interdit
+        "LATAM": 0.10,   # 10% LATAM via ETF
+        "OTHER": 0.10,   # 10% autres
+    },
+}
+
+# Régions autorisées pour le mode EU/US Focus
+ALLOWED_REGIONS_EUUS: Set[str] = {"EU", "US", "OTHER"}
+
+# Régions interdites (actions directes bloquées)
+BLOCKED_REGIONS_EUUS: Set[str] = {"IN", "ASIA_EX_IN", "LATAM"}
+
+
+def get_stock_region_cap_euus(profile: str, region: str) -> float:
+    """Retourne le cap régional EU/US Focus pour un profil."""
+    caps = STOCK_REGION_CAPS_EUUS.get(profile, STOCK_REGION_CAPS_EUUS["Modéré"])
+    return caps.get(region, 0.0)  # Default 0% = interdit
+
+
+def is_region_allowed_euus(region: str) -> bool:
+    """Vérifie si une région est autorisée en mode EU/US."""
+    return region in ALLOWED_REGIONS_EUUS
 
 
 # ============ PRESET META - ACTIONS ============
@@ -1119,9 +1235,23 @@ if __name__ == "__main__":
     print(f"  Input: {test_etfs}")
     print(f"  Output: {deduped}")
     
-    print("\n--- Stock Region Caps Test ---")
+    print("\n--- Stock Region Caps Test (Global) ---")
     for profile in ["Stable", "Modéré", "Agressif"]:
         print(f"\n  {profile}:")
         for region in ["IN", "ASIA_EX_IN", "EU", "US"]:
             cap = get_stock_region_cap(profile, region)
             print(f"    {region}: {cap*100:.0f}%")
+    
+    print("\n--- Stock Region Caps Test (EU/US Focus) ---")
+    for profile in ["Stable", "Modéré", "Agressif"]:
+        print(f"\n  {profile}:")
+        for region in ["IN", "ASIA_EX_IN", "EU", "US", "OTHER"]:
+            cap = get_stock_region_cap_euus(profile, region)
+            print(f"    {region}: {cap*100:.0f}%")
+    
+    print("\n--- EU/US Region Filter Test ---")
+    test_countries = ["France", "Etats-Unis", "Inde", "Japon", "Brésil", "Canada"]
+    for country in test_countries:
+        region = get_region(country)
+        allowed = is_region_allowed_euus(region)
+        print(f"  {country} → {region} → {'✅ ALLOWED' if allowed else '❌ BLOCKED'}")
