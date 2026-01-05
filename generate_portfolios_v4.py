@@ -121,6 +121,17 @@ try:
 except ImportError:
     RADAR_AVAILABLE = False
     logger.warning("⚠️ Module RADAR non disponible, fallback GPT si activé")
+# v4.11.0: Import du générateur de justifications LLM par actif
+try:
+    from portfolio_engine.asset_rationale_generator import (
+        generate_asset_rationales_sync,
+        load_market_context_radar,
+    )
+    ASSET_RATIONALE_AVAILABLE = True
+    logger.info("✅ Module asset_rationale_generator disponible")
+except ImportError:
+    ASSET_RATIONALE_AVAILABLE = False
+    logger.warning("⚠️ Module asset_rationale_generator non disponible")    
 
 # ============= CONFIGURATION =============
 
@@ -169,6 +180,8 @@ CONFIG = {
     # === v2.2: EU/US Focus Mode ===
     "generate_euus_portfolios": True,
     "euus_output_path": "data/portfolios_euus.json",
+    # === v4.11.0: Asset Rationale LLM Generation ===
+    "generate_asset_rationales": True,
 }
 
 # === v4.7 P2: DISCLAIMER BACKTEST ===
@@ -2012,7 +2025,7 @@ def save_backtest_results_euus(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.10.0 - Global + EU/US Focus")
+    logger.info("🚀 Portfolio Engine v4.11.0 - Global + EU/US Focus + Asset Rationales")
     logger.info("=" * 60)
     
     brief_data = load_brief_data()
@@ -2025,6 +2038,43 @@ def main():
     portfolios, assets = build_portfolios_deterministic()
     portfolios = add_commentary(portfolios, assets, brief_data)
     portfolios = apply_compliance(portfolios)
+    
+    # === v4.11.0: Génération des justifications LLM par actif ===
+    if CONFIG.get("generate_asset_rationales", False) and ASSET_RATIONALE_AVAILABLE:
+        logger.info("\n" + "=" * 60)
+        logger.info("📝 GÉNÉRATION JUSTIFICATIONS LLM PAR ACTIF")
+        logger.info("=" * 60)
+        
+        try:
+            api_key = os.environ.get("API_CHAT") or os.environ.get("OPENAI_API_KEY")
+            if api_key:
+                from openai import OpenAI
+                client = OpenAI(api_key=api_key)
+                
+                # Charger le contexte marché RADAR
+                market_context = load_market_context_radar(CONFIG.get("market_data_dir", "data"))
+                
+                # Générer les justifications
+                rationales = generate_asset_rationales_sync(
+                    portfolios=portfolios,
+                    assets=assets,
+                    market_context=market_context,
+                    openai_client=client,
+                    model=CONFIG["llm_model"],
+                )
+                
+                # Fusionner dans les portfolios
+                for profile in ["Agressif", "Modéré", "Stable"]:
+                    if profile in rationales and rationales[profile]:
+                        portfolios[profile]["_asset_details"] = rationales[profile]
+                        logger.info(f"✅ {profile}: {len(rationales[profile])} justifications ajoutées")
+            else:
+                logger.warning("⚠️ Pas de clé API, justifications LLM ignorées")
+        except Exception as e:
+            logger.error(f"❌ Erreur génération justifications: {e}")
+            import traceback
+            traceback.print_exc()
+    
     save_portfolios(portfolios, assets)
     
     # === 2. PORTEFEUILLES EU/US FOCUS ===
@@ -2071,7 +2121,7 @@ def main():
         if not backtest_euus_results.get("skipped"):
             save_backtest_results_euus(backtest_euus_results)
     
-    # === 4. RÉSUMÉ FINAL ===
+    # === 5. RÉSUMÉ FINAL ===
     logger.info("\n" + "=" * 60)
     logger.info("✨ Génération terminée avec succès!")
     logger.info("=" * 60)
@@ -2084,8 +2134,9 @@ def main():
         if backtest_results.get("debug_file"):
             logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
     logger.info("")
-    logger.info("Fonctionnalités v4.10.0:")
-    logger.info("   • ✅ NEW: Portefeuilles EU/US Focus (Europe + USA uniquement)")
+    logger.info("Fonctionnalités v4.11.0:")
+    logger.info("   • ✅ NEW: Justifications LLM par actif avec contexte RADAR")
+    logger.info("   • ✅ Portefeuilles EU/US Focus (Europe + USA uniquement)")
     logger.info("   • ✅ Filtre géographique pour brokers européens")
     logger.info("   • ✅ backtest_debug.json avec prix réels et calculs")
     logger.info("   • ✅ TER FIX: embedded in ETF prices, NOT deducted separately")
