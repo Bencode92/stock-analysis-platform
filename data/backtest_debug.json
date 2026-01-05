@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-01-04T08:14:00.872821",
+    "generated_at": "2026-01-05T08:17:26.429304",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -20,8 +20,8 @@
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 32,
-    "tickers_with_data": 32,
+    "total_tickers_requested": 30,
+    "tickers_with_data": 30,
     "tickers_missing": []
   },
   "assets_by_type": {
@@ -41,9 +41,7 @@
       "IGOV",
       "ISHG",
       "JKD",
-      "LAZIO/USD",
       "NESN",
-      "PORTO/USD",
       "SCHX",
       "SDIV",
       "SLV",
@@ -364,6 +362,7 @@
       "total_return_pct": -15.71,
       "volatility_annual_pct": 39.1,
       "weights_by_profile": {
+        "Agressif": 1.5,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -594,6 +593,7 @@
       "total_return_pct": -0.18,
       "volatility_annual_pct": 66.43,
       "weights_by_profile": {
+        "Agressif": 1.5,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -651,7 +651,7 @@
       "total_return_pct": -2.97,
       "volatility_annual_pct": 85.74,
       "weights_by_profile": {
-        "Agressif": 1.5,
+        "Agressif": 1.0,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -1042,63 +1042,6 @@
       ],
       "is_benchmark": false
     },
-    "LAZIO/USD": {
-      "ticker": "LAZIO/USD",
-      "type": "Action",
-      "n_days_data": 83,
-      "first_date": "2025-09-08",
-      "last_date": "2026-01-02",
-      "first_price": 0.938,
-      "last_price": 1.054,
-      "total_return_pct": 12.37,
-      "volatility_annual_pct": 74.01,
-      "weights_by_profile": {
-        "Agressif": 1.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-09-08",
-          "close": 0.938,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-10-06",
-          "close": 1.111,
-          "prev_date": "2025-10-03",
-          "prev_close": 1.032,
-          "daily_return_pct": 7.655,
-          "formula": "(1.1110 / 1.0320) - 1"
-        },
-        {
-          "date": "2025-11-06",
-          "close": 0.915,
-          "prev_date": "2025-11-05",
-          "prev_close": 0.907,
-          "daily_return_pct": 0.882,
-          "formula": "(0.9150 / 0.9070) - 1"
-        },
-        {
-          "date": "2025-12-05",
-          "close": 1.055,
-          "prev_date": "2025-12-04",
-          "prev_close": 1.131,
-          "daily_return_pct": -6.7197,
-          "formula": "(1.0550 / 1.1310) - 1"
-        },
-        {
-          "date": "2026-01-02",
-          "close": 1.054,
-          "prev_date": "2026-01-01",
-          "prev_close": 1.026,
-          "daily_return_pct": 2.729,
-          "formula": "(1.0540 / 1.0260) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "LEMB": {
       "ticker": "LEMB",
       "type": "Bond_ETF",
@@ -1210,63 +1153,6 @@
           "prev_close": 78.74,
           "daily_return_pct": 0.0,
           "formula": "(78.7400 / 78.7400) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "PORTO/USD": {
-      "ticker": "PORTO/USD",
-      "type": "Action",
-      "n_days_data": 83,
-      "first_date": "2025-09-08",
-      "last_date": "2026-01-02",
-      "first_price": 1.023,
-      "last_price": 1.101,
-      "total_return_pct": 7.62,
-      "volatility_annual_pct": 63.92,
-      "weights_by_profile": {
-        "Agressif": 1.5
-      },
-      "price_samples": [
-        {
-          "date": "2025-09-08",
-          "close": 1.023,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-10-06",
-          "close": 1.164,
-          "prev_date": "2025-10-03",
-          "prev_close": 1.1,
-          "daily_return_pct": 5.8182,
-          "formula": "(1.1640 / 1.1000) - 1"
-        },
-        {
-          "date": "2025-11-06",
-          "close": 1.002,
-          "prev_date": "2025-11-05",
-          "prev_close": 0.983,
-          "daily_return_pct": 1.9329,
-          "formula": "(1.0020 / 0.9830) - 1"
-        },
-        {
-          "date": "2025-12-05",
-          "close": 1.097,
-          "prev_date": "2025-12-04",
-          "prev_close": 1.178,
-          "daily_return_pct": -6.8761,
-          "formula": "(1.0970 / 1.1780) - 1"
-        },
-        {
-          "date": "2026-01-02",
-          "close": 1.101,
-          "prev_date": "2026-01-01",
-          "prev_close": 1.079,
-          "daily_return_pct": 2.0389,
-          "formula": "(1.1010 / 1.0790) - 1"
         }
       ],
       "is_benchmark": false
@@ -2135,31 +2021,31 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 12.51,
-      "net_return_pct": 12.51,
+      "gross_return_pct": 12.88,
+      "net_return_pct": 12.88,
       "volatility_pct": 14.33,
-      "max_drawdown_pct": -2.03,
+      "max_drawdown_pct": -1.93,
       "benchmark_symbol": "QQQ",
-      "benchmark_return_pct": 0.89,
-      "excess_return_pct": 11.62
+      "benchmark_return_pct": 1.42,
+      "excess_return_pct": 11.45
     },
     "Modéré": {
-      "gross_return_pct": 5.38,
-      "net_return_pct": 5.38,
-      "volatility_pct": 8.41,
+      "gross_return_pct": 5.91,
+      "net_return_pct": 5.91,
+      "volatility_pct": 8.39,
       "max_drawdown_pct": -1.86,
       "benchmark_symbol": "URTH",
-      "benchmark_return_pct": 1.58,
-      "excess_return_pct": 3.8
+      "benchmark_return_pct": 2.13,
+      "excess_return_pct": 3.78
     },
     "Stable": {
-      "gross_return_pct": 2.06,
-      "net_return_pct": 2.06,
-      "volatility_pct": 4.39,
+      "gross_return_pct": 2.29,
+      "net_return_pct": 2.29,
+      "volatility_pct": 4.4,
       "max_drawdown_pct": -1.58,
       "benchmark_symbol": "AGG",
-      "benchmark_return_pct": -0.11,
-      "excess_return_pct": 2.17
+      "benchmark_return_pct": -0.28,
+      "excess_return_pct": 2.57
     }
   },
   "uniformity_proof": {

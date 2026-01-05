@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une allocation agressive, visant à maximiser le potentiel de rendement à long terme. Cependant, la forte exposition aux actifs volatils, comme les cryptomonnaies et les actions cycliques, augmente le risque de fluctuations importantes. De plus, la dépendance à des secteurs spécifiques, comme la santé et les matières premières, peut entraîner des performances inégales en fonction des conditions de marché. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une allocation agressive, visant à maximiser les rendements à travers une exposition diversifiée à des actifs à forte volatilité. Cependant, il est important de noter que les investissements en actions et en cryptomonnaies peuvent entraîner des fluctuations de valeur significatives. De plus, l'exposition aux marchés émergents et aux matières premières peut augmenter le risque global du portefeuille. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "HERO MOTOCORP LTD": "14%",
       "SK BIOPHARMACEUTICALS LTD": "15%"
@@ -18,9 +18,9 @@
       "iShares 3 Year International Treasury Bond ETF": "5%"
     },
     "Crypto": {
-      "GNT/USD": "2%",
-      "PORTO/USD": "2%",
-      "LAZIO/USD": "1%"
+      "BTS/USD": "2%",
+      "GNO/USD": "2%",
+      "GNT/USD": "1%"
     },
     "_tickers": {
       "JKD": 0.15,
@@ -33,14 +33,14 @@
       "BRZU": 0.05,
       "HEROMOTOCO": 0.15,
       "326030": 0.15,
-      "GNT/USD": 0.015,
-      "PORTO/USD": 0.015,
-      "LAZIO/USD": 0.01
+      "BTS/USD": 0.015,
+      "GNO/USD": 0.015,
+      "GNT/USD": 0.01
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 14.48,
+      "vol_realized": 14.23,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -50,15 +50,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 14.48,
-          "slack": -0.52,
+          "observed": 14.23,
+          "slack": -0.77,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -3.52
+            "diff_from_target": -3.77
           }
         },
         {
@@ -106,18 +106,18 @@
           "details": {
             "breakdown": [
               {
+                "id": "BTS/USD",
+                "name": "BTS/USD",
+                "weight": 1.5
+              },
+              {
+                "id": "GNO/USD",
+                "name": "GNO/USD",
+                "weight": 1.5
+              },
+              {
                 "id": "GNT/USD",
                 "name": "GNT/USD",
-                "weight": 1.5
-              },
-              {
-                "id": "PORTO/USD",
-                "name": "PORTO/USD",
-                "weight": 1.5
-              },
-              {
-                "id": "LAZIO/USD",
-                "name": "LAZIO/USD",
                 "weight": 1.0
               }
             ]
@@ -250,15 +250,15 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 60.0,
-          "observed": 32.5,
-          "slack": -2.5,
+          "observed": 34.0,
+          "slack": -1.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 35.0,
             "range_max": 60.0,
-            "slack_from_min": -2.5,
-            "slack_from_max": 27.5,
+            "slack_from_min": -1.0,
+            "slack_from_max": 26.0,
             "outside_range": true,
             "is_indicator": true
           }
@@ -284,15 +284,15 @@
           "name": "bucket_lottery",
           "constraint_type": "range",
           "cap": 5.0,
-          "observed": 1.5,
-          "slack": 1.5,
-          "binding": false,
-          "status": "OK",
+          "observed": 0,
+          "slack": 0.0,
+          "binding": true,
+          "status": "BINDING",
           "details": {
             "range_min": 0.0,
             "range_max": 5.0,
-            "slack_from_min": 1.5,
-            "slack_from_max": 3.5,
+            "slack_from_min": 0.0,
+            "slack_from_max": 5.0,
             "outside_range": false,
             "is_indicator": true
           }
@@ -333,7 +333,7 @@
       },
       "quality_score": 90.0,
       "recommendations": [
-        "🟠 VIOLATED: volatility exceeded by 0.5% — reduce exposure",
+        "🟠 VIOLATED: volatility exceeded by 0.8% — reduce exposure",
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
         "ℹ️ INFO: bucket_defensive is 11.0% outside target range (indicator only)",
         "🟡 BINDING: leveraged_cap at 5.0% (cap=5.0%) — monitor closely"
@@ -364,9 +364,9 @@
         },
         "by_role": {
           "core": 40.0,
-          "satellite": 32.5,
+          "satellite": 34.0,
           "defensive": 26.0,
-          "lottery": 1.5,
+          "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
@@ -499,31 +499,31 @@
           "exchange": null
         },
         {
+          "id": "BTS/USD",
+          "ticker": "BTS/USD",
+          "name": "BTS/USD",
+          "weight_pct": 1.5,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "GNO/USD",
+          "ticker": "GNO/USD",
+          "name": "GNO/USD",
+          "weight_pct": 1.5,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
+          "exchange": null
+        },
+        {
           "id": "GNT/USD",
           "ticker": "GNT/USD",
           "name": "GNT/USD",
-          "weight_pct": 1.5,
-          "category": "Crypto",
-          "risk_bucket": "crypto",
-          "sector": "Crypto",
-          "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "PORTO/USD",
-          "ticker": "PORTO/USD",
-          "name": "PORTO/USD",
-          "weight_pct": 1.5,
-          "category": "Crypto",
-          "risk_bucket": "crypto",
-          "sector": "Crypto",
-          "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "LAZIO/USD",
-          "ticker": "LAZIO/USD",
-          "name": "LAZIO/USD",
           "weight_pct": 1.0,
           "category": "Crypto",
           "risk_bucket": "crypto",
@@ -572,9 +572,9 @@
       },
       "by_role": {
         "core": 40.0,
-        "satellite": 32.5,
+        "satellite": 34.0,
         "defensive": 26.0,
-        "lottery": 1.5,
+        "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
@@ -609,11 +609,11 @@
       "ready_for_execution": true
     },
     "_limitations": [
-      "Volatilité réalisée (14.5%) éloignée de la cible (18.0%) - écart de 3.5%."
+      "Volatilité réalisée (14.2%) éloignée de la cible (18.0%) - écart de 3.8%."
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, visant à équilibrer croissance et stabilité. L'allocation diversifiée entre actions, obligations et actifs refuges peut offrir une possiblee résilience face aux fluctuations du marché. Cependant, la dépendance à des secteurs comme la santé et la finance expose le portefeuille à des risques spécifiques. Les investisseurs doivent être conscients des risques liés aux actifs volatils et aux conditions de marché changeantes. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, cherchant à équilibrer la croissance et la stabilité à travers une diversification d'actifs. Bien que l'exposition aux actions et aux obligations puisse offrir des rendements intéressants, il est crucial de prendre en compte les risques associés aux fluctuations du marché et aux conditions économiques. De plus, l'inclusion de cryptomonnaies ajoute un niveau de volatilité qui peut affecter le rendement global. Les investisseurs doivent être conscients des risques liés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "AXIS BANK LTD": "14%",
       "SK BIOPHARMACEUTICALS LTD": "16%",
@@ -631,8 +631,8 @@
       "iShares Convertible Bond ETF": "3%"
     },
     "Crypto": {
-      "GNO/USD": "0%",
       "BTS/USD": "0%",
+      "GNO/USD": "0%",
       "GNT/USD": "0%"
     },
     "_tickers": {
@@ -646,8 +646,8 @@
       "AXISBANK": 0.135,
       "326030": 0.15,
       "AZN": 0.05,
-      "GNO/USD": 0.005,
       "BTS/USD": 0.005,
+      "GNO/USD": 0.005,
       "GNT/USD": 0.005
     },
     "_optimization": {
@@ -724,13 +724,13 @@
           "details": {
             "breakdown": [
               {
-                "id": "GNO/USD",
-                "name": "GNO/USD",
+                "id": "BTS/USD",
+                "name": "BTS/USD",
                 "weight": 0.5
               },
               {
-                "id": "BTS/USD",
-                "name": "BTS/USD",
+                "id": "GNO/USD",
+                "name": "GNO/USD",
                 "weight": 0.5
               },
               {
@@ -1103,9 +1103,9 @@
           "exchange": null
         },
         {
-          "id": "GNO/USD",
-          "ticker": "GNO/USD",
-          "name": "GNO/USD",
+          "id": "BTS/USD",
+          "ticker": "BTS/USD",
+          "name": "BTS/USD",
           "weight_pct": 0.5,
           "category": "Crypto",
           "risk_bucket": "crypto",
@@ -1114,9 +1114,9 @@
           "exchange": null
         },
         {
-          "id": "BTS/USD",
-          "ticker": "BTS/USD",
-          "name": "BTS/USD",
+          "id": "GNO/USD",
+          "ticker": "GNO/USD",
+          "name": "GNO/USD",
           "weight_pct": 0.5,
           "category": "Crypto",
           "risk_bucket": "crypto",
@@ -1215,7 +1215,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement stable, visant à minimiser la volatilité tout en cherchant des rendements modestes. L'allocation majoritaire en obligations et en actifs refuges contribue à un profil défensif, mais peut également limiter le potentiel de croissance. Les investissements dans des actions de grandes entreprises et des obligations à court terme offrent une possiblee protection, mais sont soumis à des risques de taux d'intérêt. Les investisseurs doivent être conscients des risques liés à la performance des actifs et aux fluctuations du marché. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie stable, visant à minimiser la volatilité tout en cherchant à générer des rendements modérés. L'allocation majoritaire en obligations et en actifs à faible volatilité peut offrir une possiblee protection contre les fluctuations du marché. Cependant, il est essentiel de noter que même les investissements considérés comme stables peuvent comporter des risques, notamment en période de hausse des taux d'intérêt. De plus, l'exposition aux actions, bien que limitée, peut introduire des risques supplémentaires. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "NESTLE SA": "5%",
       "AXIS BANK LTD": "8%",
@@ -1794,7 +1794,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2026-01-04T08:13:55.536823",
+    "generated_at": "2026-01-05T08:17:21.268027",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
