@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles v4.9.1 + Backtest + Debug + Validation
+name: Génération des Portefeuilles v4.12.0 + Selection Audit + Backtest + Debug + Validation
 
 on:
   push:
@@ -39,9 +39,6 @@ jobs:
           pip install pandas numpy scipy requests beautifulsoup4 lxml openai pyyaml jsonschema
 
       # ============= v4.9 RADAR: Deterministic Market Context =============
-      # Le contexte est généré par market_sector_radar.py dans generate_portfolios_v4.py
-      # GPT n'est plus utilisé pour les tilts (déterministe + auditable)
-      # OpenAI est conservé UNIQUEMENT pour les commentaires (UX)
       - name: 🧹 Clean stale market_context (RADAR v4.9)
         run: |
           echo "🧹 Nettoyage des anciens fichiers market_context..."
@@ -51,7 +48,7 @@ jobs:
           echo ""
           echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
 
-      - name: 🚀 Exécuter le moteur v4.9.1 + Backtest + Debug
+      - name: 🚀 Exécuter le moteur v4.12.0 + Selection Audit + Backtest + Debug
         run: python generate_portfolios_v4.py
 
       # ============= v4.5 NEW: Schema Validation =============
@@ -64,13 +61,11 @@ jobs:
             exit 1
           fi
           
-          # Validation avec le script dédié
           python scripts/validate_schema.py data/portfolios.json --verbose
           
           VALIDATION_EXIT=$?
           if [ $VALIDATION_EXIT -ne 0 ]; then
             echo "❌ ERREUR: Validation du schéma échouée!"
-            echo "   Le fichier portfolios.json ne respecte pas le contrat de sortie."
             exit 1
           fi
           
@@ -86,7 +81,6 @@ jobs:
           # Market Context
           if [ -f data/market_context.json ]; then
             echo "✅ market_context.json"
-            # Vérifier que c'est bien du RADAR
             python3 << 'EOF'
           import json
           with open("data/market_context.json") as f:
@@ -131,6 +125,30 @@ jobs:
           EOF
           else
             echo "⚠️ portfolios_euus.json ABSENT"
+          fi
+          
+          # v4.12.0: Selection Audit
+          if [ -f data/selection_audit.json ]; then
+            echo "✅ selection_audit.json (v4.12.0)"
+            python3 << 'EOF'
+          import json
+          with open("data/selection_audit.json") as f:
+              data = json.load(f)
+          summary = data.get("summary", {})
+          print(f"   Equities initial: {summary.get('equities_initial', 0)}")
+          print(f"   Equities selected: {summary.get('equities_selected', 0)}")
+          print(f"   Equities rejected notable: {summary.get('equities_rejected_notable', 0)}")
+          print(f"   Filters applied: {summary.get('total_filters_applied', 0)}")
+          rejected = data.get("equities_rejected", [])[:3]
+          if rejected:
+              print(f"   Top rejected stocks:")
+              for r in rejected:
+                  name = r.get('name', 'Unknown')[:20]
+                  reason = r.get('rejection_reason', 'N/A')[:40]
+                  print(f"      - {name}: {reason}")
+          EOF
+          else
+            echo "⚠️ selection_audit.json ABSENT"
           fi
           
           # Backtest results (Global)
@@ -196,7 +214,7 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v4.9.1 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v4.12.0 Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Schema Validation Status
@@ -238,6 +256,27 @@ jobs:
           print(f"| Avoided Sectors | {avoid_sec} |")
           print(f"| Favored Regions | {fav_reg} |")
           print(f"| Avoided Regions | {avoid_reg} |")
+          EOF
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # v4.12.0: Selection Audit Summary
+          if [ -f data/selection_audit.json ]; then
+            echo "### 🔍 Selection Audit (v4.12.0)" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("data/selection_audit.json") as f:
+              data = json.load(f)
+          summary = data.get("summary", {})
+          filters = data.get("filters_applied", [])
+          print(f"| Metric | Value |")
+          print(f"|--------|-------|")
+          print(f"| Equities Initial | {summary.get('equities_initial', 0)} |")
+          print(f"| Equities Selected | {summary.get('equities_selected', 0)} |")
+          print(f"| Equities Rejected (Notable) | {summary.get('equities_rejected_notable', 0)} |")
+          print(f"| ETF Selected | {summary.get('etf_selected', 0)} |")
+          print(f"| Crypto Selected | {summary.get('crypto_selected', 0)} |")
+          print(f"| Filters Applied | {len(filters)} |")
           EOF
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
@@ -339,11 +378,10 @@ jobs:
       - name: 💾 Commit & push
         if: always()
         run: |
-          # FIX: Configurer l'identité git GLOBALEMENT (pour commit ET rebase)
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Ajouter les artefacts générés (incluant EU/US backtest results)
+          # Ajouter les artefacts générés (v4.12.0 avec selection_audit.json)
           git add data/portfolios.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
@@ -372,16 +410,17 @@ jobs:
           if git check-ignore -q data/market_context.json; then
             git add -f data/market_context.json
           fi
+          if git check-ignore -q data/selection_audit.json; then
+            git add -f data/selection_audit.json
+          fi
           if git check-ignore -q data/portfolio_history; then
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v4.9.1 RADAR + EU/US Focus + Backtest 90j ✓" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v4.12.0 RADAR + Selection Audit + EU/US Focus + Backtest 90j ✓" || echo "rien à committer"
 
-          # Push avec retry robuste en cas de divergence
           git push || (git pull --rebase origin main && git push)
 
-      # ============= v4.9: Archive RADAR Context =============
       - name: 🗂️ Archive market_context.json
         if: success()
         run: |
