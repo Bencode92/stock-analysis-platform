@@ -104,12 +104,33 @@ jobs:
             echo "⚠️ market_context.json ABSENT (tilts neutres)"
           fi
           
-          # Portfolios
+          # Portfolios Global
           if [ -f data/portfolios.json ]; then
-            echo "✅ portfolios.json"
+            echo "✅ portfolios.json (Global)"
             sha1sum data/portfolios.json || true
           else
             echo "❌ portfolios.json ABSENT"
+          fi
+          
+          # Portfolios EU/US v2.2
+          if [ -f data/portfolios_euus.json ]; then
+            echo "✅ portfolios_euus.json (EU/US Focus v2.2)"
+            python3 << 'EOF'
+          import json
+          with open("data/portfolios_euus.json") as f:
+              data = json.load(f)
+          meta = data.get("_meta", {})
+          print(f"   EU/US Mode: {meta.get('euus_mode', False)}")
+          print(f"   Blocked regions: {meta.get('blocked_regions', [])}")
+          for profile in ["Agressif", "Modéré", "Stable"]:
+              if profile in data:
+                  n_actions = len(data[profile].get("Actions", {}))
+                  n_etf = len(data[profile].get("ETF", {}))
+                  n_bonds = len(data[profile].get("Obligations", {}))
+                  print(f"   {profile}: {n_actions} actions, {n_etf} ETF, {n_bonds} bonds")
+          EOF
+          else
+            echo "⚠️ portfolios_euus.json ABSENT"
           fi
           
           # Backtest results
@@ -247,6 +268,33 @@ jobs:
               print(f"| {t} | {count} |")
           EOF
           fi
+          
+          # EU/US Focus Portfolios Summary (v2.2)
+          if [ -f data/portfolios_euus.json ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🇪🇺🇺🇸 EU/US Focus Portfolios (v2.2)" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("data/portfolios_euus.json") as f:
+              data = json.load(f)
+          meta = data.get("_meta", {})
+          blocked = meta.get("blocked_regions", ["IN", "ASIA_EX_IN", "LATAM"])
+          print(f"| Metric | Value |")
+          print(f"|--------|-------|")
+          print(f"| Mode | EU/US Focus |")
+          print(f"| Blocked Regions | {', '.join(blocked)} |")
+          print(f"")
+          print(f"| Profile | Actions | ETF | Bonds | Vol % |")
+          print(f"|---------|---------|-----|-------|-------|")
+          for profile in ["Agressif", "Modéré", "Stable"]:
+              if profile in data:
+                  n_act = len(data[profile].get("Actions", {}))
+                  n_etf = len(data[profile].get("ETF", {}))
+                  n_bnd = len(data[profile].get("Obligations", {}))
+                  vol = data[profile].get("_optimization", {}).get("vol_realized", "N/A")
+                  print(f"| {profile} | {n_act} | {n_etf} | {n_bnd} | {vol} |")
+          EOF
+          fi
 
       - name: 💾 Commit & push
         if: always()
@@ -267,6 +315,9 @@ jobs:
           if git check-ignore -q data/portfolios.json; then
             git add -f data/portfolios.json
           fi
+          if git check-ignore -q data/portfolios_euus.json; then
+            git add -f data/portfolios_euus.json
+          fi
           if git check-ignore -q data/backtest_results.json; then
             git add -f data/backtest_results.json
           fi
@@ -280,7 +331,7 @@ jobs:
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v4.9.1 RADAR + Backtest 90j + Debug + Schema ✓" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v4.9.1 RADAR + EU/US Focus + Backtest 90j ✓" || echo "rien à committer"
 
           # Push avec retry robuste en cas de divergence
           git push || (git pull --rebase origin main && git push)
