@@ -1906,6 +1906,11 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
+        
+      # === v4.11.0: Copier _asset_details si présent ===
+        if data.get("_asset_details"):
+            result[profile]["_asset_details"] = data["_asset_details"]
+            logger.info(f"   {profile}: {len(data['_asset_details'])} asset_details copiés")
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
