@@ -1,8 +1,8 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une allocation agressive, visant à maximiser les rendements à travers une exposition diversifiée à des actifs à forte volatilité. Cependant, il est important de noter que les investissements en actions et en cryptomonnaies peuvent entraîner des fluctuations de valeur significatives. De plus, l'exposition aux marchés émergents et aux matières premières peut augmenter le risque global du portefeuille. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actifs à haut risque, ce qui peut offrir des rendements potentiels élevés. Cependant, la volatilité associée à des investissements en actions, en matières premières et en cryptomonnaies peut entraîner des pertes substantielles. De plus, l'exposition aux marchés émergents et aux devises peut accroître le risque global. Il est important de considérer ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "HERO MOTOCORP LTD": "14%",
+      "AXIS BANK LTD": "14%",
       "SK BIOPHARMACEUTICALS LTD": "15%"
     },
     "ETF": {
@@ -31,7 +31,7 @@
       "SLV": 0.15,
       "GDX": 0.05,
       "BRZU": 0.05,
-      "HEROMOTOCO": 0.15,
+      "AXISBANK": 0.15,
       "326030": 0.15,
       "BTS/USD": 0.015,
       "GNO/USD": 0.015,
@@ -40,7 +40,7 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 14.23,
+      "vol_realized": 13.94,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -50,15 +50,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 14.23,
-          "slack": -0.77,
+          "observed": 13.94,
+          "slack": -1.06,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -3.77
+            "diff_from_target": -4.06
           }
         },
         {
@@ -151,7 +151,7 @@
                 "weight": 15.0
               },
               {
-                "id": "EQ_874",
+                "id": "EQ_807",
                 "weight": 15.0
               },
               {
@@ -173,13 +173,13 @@
             "most_concentrated": "Diversified",
             "counts_in_max_sector": {
               "Diversified": 20.0,
-              "Biens de consommation cycliques": 15.0,
+              "Finance": 15.0,
               "Santé": 15.0
             },
             "all_sectors": {
               "Diversified": 40.0,
               "Bonds": 26.0,
-              "Biens de consommation cycliques": 15.0,
+              "Finance": 15.0,
               "Santé": 15.0,
               "Crypto": 4.0
             },
@@ -333,7 +333,7 @@
       },
       "quality_score": 90.0,
       "recommendations": [
-        "🟠 VIOLATED: volatility exceeded by 0.8% — reduce exposure",
+        "🟠 VIOLATED: volatility exceeded by 1.1% — reduce exposure",
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
         "ℹ️ INFO: bucket_defensive is 11.0% outside target range (indicator only)",
         "🟡 BINDING: leveraged_cap at 5.0% (cap=5.0%) — monitor closely"
@@ -347,7 +347,7 @@
         },
         "by_sector": {
           "Diversified": 40.0,
-          "Biens de consommation cycliques": 15.0,
+          "Finance": 15.0,
           "Santé": 15.0
         },
         "by_region": {
@@ -411,13 +411,13 @@
           "exchange": null
         },
         {
-          "id": "EQ_874",
-          "ticker": "HEROMOTOCO",
-          "name": "HERO MOTOCORP LTD",
+          "id": "EQ_807",
+          "ticker": "AXISBANK",
+          "name": "AXIS BANK LTD",
           "weight_pct": 15.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Biens de consommation cycliques",
+          "sector": "Finance",
           "region": "Inde",
           "exchange": null
         },
@@ -555,7 +555,7 @@
       },
       "by_sector": {
         "Diversified": 40.0,
-        "Biens de consommation cycliques": 15.0,
+        "Finance": 15.0,
         "Santé": 15.0
       },
       "by_region": {
@@ -609,15 +609,15 @@
       "ready_for_execution": true
     },
     "_limitations": [
-      "Volatilité réalisée (14.2%) éloignée de la cible (18.0%) - écart de 3.8%."
+      "Volatilité réalisée (13.9%) éloignée de la cible (18.0%) - écart de 4.1%."
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, cherchant à équilibrer la croissance et la stabilité à travers une diversification d'actifs. Bien que l'exposition aux actions et aux obligations puisse offrir des rendements intéressants, il est crucial de prendre en compte les risques associés aux fluctuations du marché et aux conditions économiques. De plus, l'inclusion de cryptomonnaies ajoute un niveau de volatilité qui peut affecter le rendement global. Les investisseurs doivent être conscients des risques liés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée, combinant des actifs à revenu fixe et des actions. Bien qu'il vise à offrir une croissance modérée, les investissements en actions et en ETF peuvent toujours être soumis à des fluctuations de marché. De plus, l'exposition aux marchés émergents et aux cryptomonnaies peut accroître le risque global. Il est essentiel de garder à l'esprit ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
+      "ELI LILLY": "16%",
       "AXIS BANK LTD": "14%",
-      "SK BIOPHARMACEUTICALS LTD": "16%",
-      "ASTRAZENECA PLC": "5%"
+      "HANMI SEMICONDUCTOR LTD": "7%"
     },
     "ETF": {
       "Global X SuperDividend ETF": "15%",
@@ -628,7 +628,7 @@
       "VanEck J.P. Morgan EM Local Currency Bond ETF": "8%",
       "iShares J.P. Morgan EM Local Currency Bond ETF": "8%",
       "iShares International Treasury Bond ETF": "8%",
-      "iShares Convertible Bond ETF": "3%"
+      "iShares Convertible Bond ETF": "1%"
     },
     "Crypto": {
       "BTS/USD": "0%",
@@ -637,15 +637,15 @@
     },
     "_tickers": {
       "SDIV": 0.15,
+      "LLY": 0.15,
       "GLDM": 0.15,
       "ISHG": 0.08,
       "EMLC": 0.08,
       "LEMB": 0.08,
       "IGOV": 0.08,
-      "ICVT": 0.03,
+      "ICVT": 0.0143,
       "AXISBANK": 0.135,
-      "326030": 0.15,
-      "AZN": 0.05,
+      "042700": 0.0657,
       "BTS/USD": 0.005,
       "GNO/USD": 0.005,
       "GNT/USD": 0.005
@@ -653,7 +653,7 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 9.3,
+      "vol_realized": 10.05,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -663,23 +663,23 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 9.3,
-          "slack": 0.3,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 10.05,
+          "slack": 1.05,
+          "binding": false,
+          "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -2.7
+            "diff_from_target": -1.95
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 15.0,
-          "observed": 35.0,
-          "slack": 20.0,
+          "observed": 33.43,
+          "slack": 18.43,
           "binding": false,
           "status": "OK",
           "details": {
@@ -708,7 +708,7 @@
               {
                 "id": "iShares Convertible Bond ETF",
                 "name": "iShares Convertible Bond ETF",
-                "weight": 3.0
+                "weight": 1.43
               }
             ]
           }
@@ -761,16 +761,16 @@
                 "weight": 15.0
               },
               {
+                "id": "EQ_10",
+                "weight": 15.0
+              },
+              {
                 "id": "SPDR Gold MiniShares Trust",
                 "weight": 15.0
               },
               {
                 "id": "EQ_807",
                 "weight": 13.5
-              },
-              {
-                "id": "EQ_975",
-                "weight": 15.0
               }
             ]
           }
@@ -779,22 +779,24 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 20.0,
-          "slack": 10.0,
+          "observed": 15.0,
+          "slack": 15.0,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Santé",
+            "most_concentrated": "Diversified",
             "counts_in_max_sector": {
-              "Santé": 20.0,
               "Diversified": 15.0,
-              "Finance": 13.5
+              "Santé": 15.0,
+              "Finance": 13.5,
+              "Technologie de l'information": 6.57
             },
             "all_sectors": {
-              "Bonds": 35.0,
+              "Bonds": 33.43,
               "Diversified": 30.0,
-              "Santé": 20.0,
+              "Santé": 15.0,
               "Finance": 13.5,
+              "Technologie de l'information": 6.57,
               "Crypto": 1.5
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -812,15 +814,15 @@
             "most_concentrated": "Global",
             "counts_in_max_region": {
               "Global": 15.0,
-              "Corée": 15.0,
+              "Etats-Unis": 15.0,
               "Inde": 13.5,
-              "Royaume-Uni": 5.0
+              "Corée": 6.57
             },
             "all_regions": {
-              "Global": 66.5,
-              "Corée": 15.0,
+              "Global": 64.93,
+              "Etats-Unis": 15.0,
               "Inde": 13.5,
-              "Royaume-Uni": 5.0
+              "Corée": 6.57
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -866,16 +868,16 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 35.0,
-          "observed": 35.0,
-          "slack": 0.0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 36.57,
+          "slack": -1.57,
+          "binding": false,
+          "status": "OK",
           "details": {
             "range_min": 15.0,
             "range_max": 35.0,
-            "slack_from_min": 20.0,
-            "slack_from_max": 0.0,
-            "outside_range": false,
+            "slack_from_min": 21.57,
+            "slack_from_max": -1.57,
+            "outside_range": true,
             "is_indicator": true
           }
         },
@@ -883,15 +885,15 @@
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 30.0,
-          "observed": 35.0,
-          "slack": -5.0,
+          "observed": 33.43,
+          "slack": -3.43,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 20.0,
             "range_max": 30.0,
-            "slack_from_min": 15.0,
-            "slack_from_max": -5.0,
+            "slack_from_min": 13.43,
+            "slack_from_max": -3.43,
             "outside_range": true,
             "is_indicator": true
           }
@@ -932,51 +934,51 @@
       ],
       "summary": {
         "total": 13,
-        "ok": 10,
-        "binding": 3,
+        "ok": 11,
+        "binding": 2,
         "violated": 0,
         "critical": 0
       },
-      "quality_score": 95.4,
+      "quality_score": 96.9,
       "recommendations": [
-        "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
-        "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
+        "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely"
       ],
       "exposures": {
         "by_category": {
           "ETF": 30.0,
-          "Obligations": 35.0,
-          "Actions": 33.5,
+          "Actions": 35.07,
+          "Obligations": 33.43,
           "Crypto": 1.5
         },
         "by_sector": {
           "Diversified": 30.0,
-          "Santé": 20.0,
-          "Finance": 13.5
+          "Santé": 15.0,
+          "Finance": 13.5,
+          "Technologie de l'information": 6.57
         },
         "by_region": {
-          "Global": 66.5,
-          "Corée": 15.0,
+          "Global": 64.93,
+          "Etats-Unis": 15.0,
           "Inde": 13.5,
-          "Royaume-Uni": 5.0
+          "Corée": 6.57
         },
         "by_risk_bucket": {
-          "equity_like": 48.5,
+          "equity_like": 50.07,
           "real_assets": 15.0,
-          "bond_like": 35.0,
+          "bond_like": 33.43,
           "crypto": 1.5
         },
         "by_role": {
           "core": 30.0,
-          "satellite": 35.0,
-          "defensive": 35.0,
+          "satellite": 36.57,
+          "defensive": 33.43,
           "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1148.0,
+          "hhi": 1159.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.71,
+          "effective_n": 8.63,
           "n_positions": 13,
           "top_5_weight": 66.5,
           "top_10_weight": 98.5,
@@ -1004,6 +1006,17 @@
           "exchange": null
         },
         {
+          "id": "EQ_10",
+          "ticker": "LLY",
+          "name": "ELI LILLY",
+          "weight_pct": 15.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Santé",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
           "id": "SPDR Gold MiniShares Trust",
           "ticker": "GLDM",
           "name": "SPDR Gold MiniShares Trust",
@@ -1012,17 +1025,6 @@
           "risk_bucket": "real_assets",
           "sector": "Diversified",
           "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "EQ_975",
-          "ticker": "326030",
-          "name": "SK BIOPHARMACEUTICALS LTD",
-          "weight_pct": 15.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Corée",
           "exchange": null
         },
         {
@@ -1081,21 +1083,21 @@
           "exchange": null
         },
         {
-          "id": "EQ_528",
-          "ticker": "AZN",
-          "name": "ASTRAZENECA PLC",
-          "weight_pct": 5.0,
+          "id": "EQ_946",
+          "ticker": "042700",
+          "name": "HANMI SEMICONDUCTOR LTD",
+          "weight_pct": 6.57,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Royaume-Uni",
+          "sector": "Technologie de l'information",
+          "region": "Corée",
           "exchange": null
         },
         {
           "id": "iShares Convertible Bond ETF",
           "ticker": "ICVT",
           "name": "iShares Convertible Bond ETF",
-          "weight_pct": 3.0,
+          "weight_pct": 1.43,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -1153,38 +1155,39 @@
     "_exposures": {
       "by_category": {
         "ETF": 30.0,
-        "Obligations": 35.0,
-        "Actions": 33.5,
+        "Actions": 35.07,
+        "Obligations": 33.43,
         "Crypto": 1.5
       },
       "by_sector": {
         "Diversified": 30.0,
-        "Santé": 20.0,
-        "Finance": 13.5
+        "Santé": 15.0,
+        "Finance": 13.5,
+        "Technologie de l'information": 6.57
       },
       "by_region": {
-        "Global": 66.5,
-        "Corée": 15.0,
+        "Global": 64.93,
+        "Etats-Unis": 15.0,
         "Inde": 13.5,
-        "Royaume-Uni": 5.0
+        "Corée": 6.57
       },
       "by_risk_bucket": {
-        "equity_like": 48.5,
+        "equity_like": 50.07,
         "real_assets": 15.0,
-        "bond_like": 35.0,
+        "bond_like": 33.43,
         "crypto": 1.5
       },
       "by_role": {
         "core": 30.0,
-        "satellite": 35.0,
-        "defensive": 35.0,
+        "satellite": 36.57,
+        "defensive": 33.43,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1148.0,
+        "hhi": 1159.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.71,
+        "effective_n": 8.63,
         "n_positions": 13,
         "top_5_weight": 66.5,
         "top_10_weight": 98.5,
@@ -1215,9 +1218,9 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie stable, visant à minimiser la volatilité tout en cherchant à générer des rendements modérés. L'allocation majoritaire en obligations et en actifs à faible volatilité peut offrir une possiblee protection contre les fluctuations du marché. Cependant, il est essentiel de noter que même les investissements considérés comme stables peuvent comporter des risques, notamment en période de hausse des taux d'intérêt. De plus, l'exposition aux actions, bien que limitée, peut introduire des risques supplémentaires. Les investisseurs doivent être conscients des risques associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement avec un profil défensif, axée sur des actifs à faible volatilité. Bien qu'il vise à offrir une possiblee stabilité, les rendements peuvent être limités dans un environnement de taux bas. De plus, l'exposition aux petites capitalisations et aux actions peut introduire des risques de marché. Il est important de considérer ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "NESTLE SA": "5%",
+      "JOHNSON & JOHNSON": "5%",
       "AXIS BANK LTD": "8%",
       "ASTRAZENECA PLC": "3%"
     },
@@ -1243,14 +1246,14 @@
       "GLDM": 0.0948,
       "VSS": 0.1026,
       "SCHX": 0.1026,
-      "NESN": 0.0513,
+      "JNJ": 0.0513,
       "AXISBANK": 0.0821,
       "AZN": 0.0283
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 4.28,
+      "vol_realized": 4.27,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -1286,15 +1289,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 4.28,
-          "slack": 1.28,
+          "observed": 4.27,
+          "slack": 1.27,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -1.72
+            "diff_from_target": -1.73
           }
         },
         {
@@ -1391,15 +1394,13 @@
             "counts_in_max_sector": {
               "Diversified": 20.52,
               "Finance": 8.21,
-              "Biens de consommation de base": 5.13,
-              "Santé": 2.83
+              "Santé": 7.96
             },
             "all_sectors": {
               "Bonds": 53.83,
               "Diversified": 30.0,
               "Finance": 8.21,
-              "Biens de consommation de base": 5.13,
-              "Santé": 2.83
+              "Santé": 7.96
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -1417,13 +1418,13 @@
             "counts_in_max_region": {
               "Global": 20.52,
               "Inde": 8.21,
-              "Suisse": 5.13,
+              "Etats-Unis": 5.13,
               "Royaume-Uni": 2.83
             },
             "all_regions": {
               "Global": 83.83,
               "Inde": 8.21,
-              "Suisse": 5.13,
+              "Etats-Unis": 5.13,
               "Royaume-Uni": 2.83
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
@@ -1552,13 +1553,12 @@
         "by_sector": {
           "Diversified": 30.0,
           "Finance": 8.21,
-          "Biens de consommation de base": 5.13,
-          "Santé": 2.83
+          "Santé": 7.96
         },
         "by_region": {
           "Global": 83.83,
           "Inde": 8.21,
-          "Suisse": 5.13,
+          "Etats-Unis": 5.13,
           "Royaume-Uni": 2.83
         },
         "by_risk_bucket": {
@@ -1692,14 +1692,14 @@
           "exchange": null
         },
         {
-          "id": "EQ_530",
-          "ticker": "NESN",
-          "name": "NESTLE SA",
+          "id": "EQ_13",
+          "ticker": "JNJ",
+          "name": "JOHNSON & JOHNSON",
           "weight_pct": 5.13,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Biens de consommation de base",
-          "region": "Suisse",
+          "sector": "Santé",
+          "region": "Etats-Unis",
           "exchange": null
         },
         {
@@ -1737,13 +1737,12 @@
       "by_sector": {
         "Diversified": 30.0,
         "Finance": 8.21,
-        "Biens de consommation de base": 5.13,
-        "Santé": 2.83
+        "Santé": 7.96
       },
       "by_region": {
         "Global": 83.83,
         "Inde": 8.21,
-        "Suisse": 5.13,
+        "Etats-Unis": 5.13,
         "Royaume-Uni": 2.83
       },
       "by_risk_bucket": {
@@ -1794,7 +1793,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2026-01-05T08:17:21.268027",
+    "generated_at": "2026-01-05T09:56:59.715235",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
