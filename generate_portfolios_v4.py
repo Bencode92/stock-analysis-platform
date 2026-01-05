@@ -1172,6 +1172,7 @@ def run_backtest_euus_profiles(config: Dict) -> Dict:
             start_date=start_date,
             end_date=end_date,
             api_key=api_key,
+            portfolios_path=euus_path
             plan="ultra"
         )
         
