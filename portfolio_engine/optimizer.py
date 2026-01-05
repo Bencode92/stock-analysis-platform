@@ -593,7 +593,6 @@ PROFILES = {
         max_sector=35.0,
         max_turnover=30.0,        # P0 PARTNER
         turnover_penalty=0.05,    # P0 PARTNER
-        euus_mode=True,
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -603,7 +602,6 @@ PROFILES = {
         bonds_min=15.0,
         max_turnover=25.0,        # P0 PARTNER
         turnover_penalty=0.10,    # P0 PARTNER
-        euus_mode=True,
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -613,6 +611,39 @@ PROFILES = {
         bonds_min=35.0,
         max_turnover=15.0,        # P0 PARTNER
         turnover_penalty=0.20,    # P0 PARTNER
+    ),
+}
+# === v2.2: PROFILES EU/US Focus ===
+PROFILES_EUUS = {
+    "Agressif": ProfileConstraints(
+        name="Agressif", 
+        vol_target=18.0, 
+        vol_tolerance=3.0,
+        crypto_max=10.0, 
+        bonds_min=5.0,
+        max_sector=35.0,
+        max_turnover=30.0,
+        turnover_penalty=0.05,
+        euus_mode=True,
+    ),
+    "Modéré": ProfileConstraints(
+        name="Modéré", 
+        vol_target=12.0, 
+        vol_tolerance=3.0,
+        crypto_max=5.0, 
+        bonds_min=15.0,
+        max_turnover=25.0,
+        turnover_penalty=0.10,
+        euus_mode=True,
+    ),
+    "Stable": ProfileConstraints(
+        name="Stable", 
+        vol_target=6.0,
+        vol_tolerance=3.0,
+        crypto_max=0.0, 
+        bonds_min=35.0,
+        max_turnover=15.0,
+        turnover_penalty=0.20,
         euus_mode=True,
     ),
 }
