@@ -133,9 +133,9 @@ jobs:
             echo "⚠️ portfolios_euus.json ABSENT"
           fi
           
-          # Backtest results
+          # Backtest results (Global)
           if [ -f data/backtest_results.json ]; then
-            echo "✅ backtest_results.json"
+            echo "✅ backtest_results.json (Global)"
             echo "Comparaison des 3 profils:"
             python3 << 'EOF'
           import json
@@ -152,6 +152,25 @@ jobs:
           EOF
           else
             echo "⚠️ backtest_results.json ABSENT (TWELVE_DATA_API non configurée?)"
+          fi
+          
+          # Backtest results EU/US
+          if [ -f data/backtest_results_euus.json ]; then
+            echo "✅ backtest_results_euus.json (EU/US)"
+            python3 << 'EOF'
+          import json
+          with open("data/backtest_results_euus.json") as f:
+              data = json.load(f)
+          comp = data.get("comparison", {})
+          print("EU/US Backtest:")
+          for profile in ["Agressif", "Modéré", "Stable"]:
+              stats = comp.get(profile, {})
+              ret = stats.get("total_return_pct", "N/A")
+              vol = stats.get("volatility_pct", "N/A")
+              print(f"   {profile}: return={ret}%, vol={vol}%")
+          EOF
+          else
+            echo "⚠️ backtest_results_euus.json ABSENT"
           fi
           
           # v4.9.1: Backtest debug file
@@ -223,8 +242,9 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
           
+          # Global Backtest Results
           if [ -f data/backtest_results.json ]; then
-            echo "### 📈 Backtest Comparison (90 days)" >> $GITHUB_STEP_SUMMARY
+            echo "### 📈 Global Backtest Comparison (90 days)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Agressif | Modéré | Stable |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|----------|--------|--------|" >> $GITHUB_STEP_SUMMARY
@@ -295,6 +315,26 @@ jobs:
                   print(f"| {profile} | {n_act} | {n_etf} | {n_bnd} | {vol} |")
           EOF
           fi
+          
+          # EU/US Backtest Results
+          if [ -f data/backtest_results_euus.json ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📈 EU/US Backtest Comparison (90 days)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Agressif | Modéré | Stable |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("data/backtest_results_euus.json") as f:
+              data = json.load(f)
+          comp = data.get("comparison", {})
+          for label, key in [("Total Return %", "total_return_pct"), ("Volatility %", "volatility_pct"), ("Max Drawdown %", "max_drawdown_pct"), ("Sharpe Ratio", "sharpe_ratio")]:
+              agg = comp.get("Agressif", {}).get(key, "N/A")
+              mod = comp.get("Modéré", {}).get(key, "N/A")
+              stb = comp.get("Stable", {}).get(key, "N/A")
+              print(f"| {label} | {agg} | {mod} | {stb} |")
+          EOF
+          fi
 
       - name: 💾 Commit & push
         if: always()
@@ -303,10 +343,11 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Ajouter les artefacts générés (incluant market_context.json + backtest_debug.json v4.9.1)
+          # Ajouter les artefacts générés (incluant EU/US backtest results)
           git add data/portfolios.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
+                  data/backtest_results_euus.json \
                   data/backtest_debug.json \
                   data/market_context.json \
                   data/portfolio_history/* || true
@@ -320,6 +361,9 @@ jobs:
           fi
           if git check-ignore -q data/backtest_results.json; then
             git add -f data/backtest_results.json
+          fi
+          if git check-ignore -q data/backtest_results_euus.json; then
+            git add -f data/backtest_results_euus.json
           fi
           if git check-ignore -q data/backtest_debug.json; then
             git add -f data/backtest_debug.json
