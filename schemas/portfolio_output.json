@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://tradepulse.io/schemas/portfolio_output.json",
   "title": "TradePulse Portfolio Output Schema",
-  "description": "Schema for validating generated portfolio JSON files (v2.3.0 - Phase 1)",
+  "description": "Schema for validating generated portfolio JSON files (v2.4.0 - Asset Rationales)",
   "type": "object",
   "required": ["Agressif", "Modéré", "Stable", "_meta"],
   "additionalProperties": false,
@@ -95,6 +95,10 @@
         "_execution_summary": {
           "$ref": "#/definitions/ExecutionSummary",
           "description": "Phase 1: Ticker mapping and execution readiness"
+        },
+        "_asset_details": {
+          "$ref": "#/definitions/AssetDetailsList",
+          "description": "v4.11.0: LLM-generated rationales for each asset with RADAR context"
         }
       }
     },
@@ -116,6 +120,81 @@
         "description": "Decimal weight (0.0 to 1.0)"
       },
       "description": "Map of ticker symbols to decimal weights"
+    },
+    "AssetDetailsList": {
+      "type": "array",
+      "description": "v4.11.0: List of asset details with LLM-generated rationales",
+      "items": {
+        "$ref": "#/definitions/AssetDetail"
+      }
+    },
+    "AssetDetail": {
+      "type": "object",
+      "description": "v4.11.0: Individual asset detail with rationale and context",
+      "required": ["name", "weight_pct"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Asset display name"
+        },
+        "ticker": {
+          "type": ["string", "null"],
+          "description": "Ticker symbol"
+        },
+        "weight_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Allocation weight in percentage"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Actions", "ETF", "Obligations", "Crypto"],
+          "description": "Asset category"
+        },
+        "sector": {
+          "type": ["string", "null"],
+          "description": "Sector classification"
+        },
+        "country": {
+          "type": ["string", "null"],
+          "description": "Country of domicile"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 1000,
+          "description": "LLM-generated explanation for selection"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["core", "satellite", "hedge", "income", "diversification"],
+          "description": "Role in portfolio construction"
+        },
+        "risk_note": {
+          "type": ["string", "null"],
+          "description": "Key risk to monitor"
+        },
+        "market_context_link": {
+          "type": ["string", "null"],
+          "description": "Link to RADAR market context if applicable"
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Asset metrics snapshot",
+          "additionalProperties": true,
+          "properties": {
+            "roe": { "type": ["string", "number", "null"] },
+            "pe_ratio": { "type": ["number", "null"] },
+            "dividend_yield": { "type": ["string", "number", "null"] },
+            "ytd": { "type": ["string", "number", "null"] },
+            "volatility": { "type": ["string", "number", "null"] },
+            "buffett_score": { "type": ["number", "null"] },
+            "ter": { "type": ["string", "number", "null"] }
+          }
+        }
+      }
     },
     "MetaInfo": {
       "type": "object",
@@ -321,10 +400,10 @@
     "OptimizationInfo": {
       "type": "object",
       "description": "P0-9: Optimization mode and diagnostics",
+      "additionalProperties": true,
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["slsqp", "fallback_heuristic", "fallback_slsqp_failed", "fallback_bonds_diversification"],
           "description": "Optimization method used"
         },
         "is_heuristic": {
@@ -357,7 +436,6 @@
         },
         "covariance_method": {
           "type": "string",
-          "enum": ["structured", "hybrid", "empirical"],
           "description": "Covariance estimation method"
         },
         "n_assets": {
