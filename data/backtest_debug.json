@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-01-05T09:57:07.502623",
+    "generated_at": "2026-01-05T10:29:04.980385",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -77,7 +77,7 @@
       "total_return_pct": 102.05,
       "volatility_annual_pct": 69.29,
       "weights_by_profile": {
-        "Modéré": 6.57
+        "Modéré": 8.07
       },
       "price_samples": [
         {
@@ -242,13 +242,13 @@
       "first_date": "2025-09-08",
       "last_date": "2026-01-05",
       "first_price": 1055.5,
-      "last_price": 1266.9,
-      "total_return_pct": 20.03,
-      "volatility_annual_pct": 18.35,
+      "last_price": 1286.5,
+      "total_return_pct": 21.89,
+      "volatility_annual_pct": 18.49,
       "weights_by_profile": {
         "Agressif": 15.0,
-        "Modéré": 13.5,
-        "Stable": 8.21
+        "Modéré": 10.0,
+        "Stable": 8.0
       },
       "price_samples": [
         {
@@ -285,11 +285,11 @@
         },
         {
           "date": "2026-01-05",
-          "close": 1266.9,
+          "close": 1286.5,
           "prev_date": "2026-01-02",
           "prev_close": 1266.9,
-          "daily_return_pct": 0.0,
-          "formula": "(1266.9000 / 1266.9000) - 1"
+          "daily_return_pct": 1.5471,
+          "formula": "(1286.5000 / 1266.9000) - 1"
         }
       ],
       "is_benchmark": false
@@ -416,8 +416,8 @@
       "last_date": "2026-01-05",
       "first_price": 0.0013,
       "last_price": 0.0012,
-      "total_return_pct": -12.66,
-      "volatility_annual_pct": 39.42,
+      "total_return_pct": -12.85,
+      "volatility_annual_pct": 39.35,
       "weights_by_profile": {
         "Agressif": 1.5,
         "Modéré": 0.5
@@ -460,7 +460,7 @@
           "close": 0.0012,
           "prev_date": "2026-01-02",
           "prev_close": 0.0011,
-          "daily_return_pct": 3.6218,
+          "daily_return_pct": 3.3988,
           "formula": "(0.0012 / 0.0011) - 1"
         }
       ],
@@ -767,7 +767,7 @@
       "volatility_annual_pct": 14.09,
       "weights_by_profile": {
         "Agressif": 5.0,
-        "Modéré": 1.43
+        "Modéré": 3.43
       },
       "price_samples": [
         {
@@ -1451,7 +1451,7 @@
       "total_return_pct": -0.07,
       "volatility_annual_pct": 1.12,
       "weights_by_profile": {
-        "Stable": 12.28
+        "Stable": 12.49
       },
       "price_samples": [
         {
@@ -1865,9 +1865,9 @@
           "type": "Action",
           "weight_pct": 15.0,
           "price_prev": 1266.9,
-          "price_today": 1266.9,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
+          "price_today": 1286.5,
+          "return_pct": 1.5471,
+          "contribution_pct": 0.2321
         },
         {
           "ticker": "326030",
@@ -1933,7 +1933,7 @@
           "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": 0.3784,
+      "total_portfolio_return_pct": 0.6104,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1947,7 +1947,7 @@
       "close_J_minus_1": 100200.0,
       "formula": "(100200.0000 / 100200.0000) - 1",
       "daily_return_pct": 0.0,
-      "weight_pct": 6.57,
+      "weight_pct": 8.07,
       "contribution_pct": 0.0,
       "explanation": "Le 2025-10-07, 042700 (Action) a clôturé à 100200.0 vs 100200.0 le 2025-10-06, soit un rendement de 0.00%"
     },
@@ -2035,11 +2035,11 @@
         ],
         [
           "AXISBANK",
-          13.5
+          10.0
         ],
         [
-          "ISHG",
-          8.0
+          "042700",
+          8.07
         ]
       ]
     },
@@ -2047,15 +2047,15 @@
       "n_assets": 11,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
-        "Action": 46.17,
+        "Action": 45.96,
         "ETF": 0,
-        "Bond_ETF": 53.83,
+        "Bond_ETF": 54.04,
         "Crypto": 0
       },
       "top_5_holdings": [
         [
           "SHV",
-          12.28
+          12.49
         ],
         [
           "JMST",
@@ -2078,31 +2078,31 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 13.6,
-      "net_return_pct": 13.6,
-      "volatility_pct": 13.66,
+      "gross_return_pct": 13.86,
+      "net_return_pct": 13.86,
+      "volatility_pct": 13.69,
       "max_drawdown_pct": -2.22,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 1.42,
-      "excess_return_pct": 12.18
+      "excess_return_pct": 12.43
     },
     "Modéré": {
-      "gross_return_pct": 11.0,
-      "net_return_pct": 11.0,
-      "volatility_pct": 9.31,
-      "max_drawdown_pct": -2.33,
+      "gross_return_pct": 11.83,
+      "net_return_pct": 11.83,
+      "volatility_pct": 10.08,
+      "max_drawdown_pct": -2.36,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 2.13,
-      "excess_return_pct": 8.87
+      "excess_return_pct": 9.7
     },
     "Stable": {
-      "gross_return_pct": 2.47,
-      "net_return_pct": 2.47,
-      "volatility_pct": 4.33,
+      "gross_return_pct": 2.58,
+      "net_return_pct": 2.58,
+      "volatility_pct": 4.32,
       "max_drawdown_pct": -1.45,
       "benchmark_symbol": "AGG",
       "benchmark_return_pct": -0.28,
-      "excess_return_pct": 2.75
+      "excess_return_pct": 2.86
     }
   },
   "uniformity_proof": {

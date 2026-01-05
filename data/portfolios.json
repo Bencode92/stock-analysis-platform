@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une exposition significative à des actifs à haut risque, ce qui peut offrir des rendements potentiels élevés. Cependant, la volatilité associée à des investissements en actions, en matières premières et en cryptomonnaies peut entraîner des pertes substantielles. De plus, l'exposition aux marchés émergents et aux devises peut accroître le risque global. Il est important de considérer ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec un potentiel de rendement élevé, mais il comporte également des risques significatifs. La forte exposition aux actions et aux actifs volatils, comme les cryptomonnaies, peut entraîner des fluctuations importantes. De plus, l'investissement dans des marchés émergents et des secteurs spécifiques, comme la santé, peut être sensible aux conditions économiques changeantes. Il est donc essentiel de garder à l'esprit que ce portefeuille peut subir des pertes en capital. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "AXIS BANK LTD": "14%",
       "SK BIOPHARMACEUTICALS LTD": "15%"
@@ -613,11 +613,11 @@
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche équilibrée, combinant des actifs à revenu fixe et des actions. Bien qu'il vise à offrir une croissance modérée, les investissements en actions et en ETF peuvent toujours être soumis à des fluctuations de marché. De plus, l'exposition aux marchés émergents et aux cryptomonnaies peut accroître le risque global. Il est essentiel de garder à l'esprit ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, visant à équilibrer la croissance et la stabilité. Bien qu'il inclue des actions et des obligations, il est important de noter que la performance peut être affectée par des fluctuations économiques. Les investissements dans des secteurs comme la santé et la technologie peuvent offrir des opportunités, mais comportent également des risques liés à la réglementation et à la concurrence. Les actifs liés aux cryptomonnaies ajoutent une couche de volatilité qui pourrait impacter le rendement global. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "ELI LILLY": "16%",
-      "AXIS BANK LTD": "14%",
-      "HANMI SEMICONDUCTOR LTD": "7%"
+      "ELI LILLY": "17%",
+      "AXIS BANK LTD": "10%",
+      "HANMI SEMICONDUCTOR LTD": "8%"
     },
     "ETF": {
       "Global X SuperDividend ETF": "15%",
@@ -628,7 +628,7 @@
       "VanEck J.P. Morgan EM Local Currency Bond ETF": "8%",
       "iShares J.P. Morgan EM Local Currency Bond ETF": "8%",
       "iShares International Treasury Bond ETF": "8%",
-      "iShares Convertible Bond ETF": "1%"
+      "iShares Convertible Bond ETF": "3%"
     },
     "Crypto": {
       "BTS/USD": "0%",
@@ -643,9 +643,9 @@
       "EMLC": 0.08,
       "LEMB": 0.08,
       "IGOV": 0.08,
-      "ICVT": 0.0143,
-      "AXISBANK": 0.135,
-      "042700": 0.0657,
+      "ICVT": 0.0343,
+      "AXISBANK": 0.1,
+      "042700": 0.0807,
       "BTS/USD": 0.005,
       "GNO/USD": 0.005,
       "GNT/USD": 0.005
@@ -653,7 +653,7 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 10.05,
+      "vol_realized": 10.35,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -663,23 +663,23 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 10.05,
-          "slack": 1.05,
+          "observed": 10.35,
+          "slack": 1.35,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -1.95
+            "diff_from_target": -1.65
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 15.0,
-          "observed": 33.43,
-          "slack": 18.43,
+          "observed": 35.43,
+          "slack": 20.43,
           "binding": false,
           "status": "OK",
           "details": {
@@ -708,7 +708,7 @@
               {
                 "id": "iShares Convertible Bond ETF",
                 "name": "iShares Convertible Bond ETF",
-                "weight": 1.43
+                "weight": 3.43
               }
             ]
           }
@@ -767,10 +767,6 @@
               {
                 "id": "SPDR Gold MiniShares Trust",
                 "weight": 15.0
-              },
-              {
-                "id": "EQ_807",
-                "weight": 13.5
               }
             ]
           }
@@ -788,15 +784,15 @@
             "counts_in_max_sector": {
               "Diversified": 15.0,
               "Santé": 15.0,
-              "Finance": 13.5,
-              "Technologie de l'information": 6.57
+              "Finance": 10.0,
+              "Technologie de l'information": 8.07
             },
             "all_sectors": {
-              "Bonds": 33.43,
+              "Bonds": 35.43,
               "Diversified": 30.0,
               "Santé": 15.0,
-              "Finance": 13.5,
-              "Technologie de l'information": 6.57,
+              "Finance": 10.0,
+              "Technologie de l'information": 8.07,
               "Crypto": 1.5
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -815,14 +811,14 @@
             "counts_in_max_region": {
               "Global": 15.0,
               "Etats-Unis": 15.0,
-              "Inde": 13.5,
-              "Corée": 6.57
+              "Inde": 10.0,
+              "Corée": 8.07
             },
             "all_regions": {
-              "Global": 64.93,
+              "Global": 66.93,
               "Etats-Unis": 15.0,
-              "Inde": 13.5,
-              "Corée": 6.57
+              "Inde": 10.0,
+              "Corée": 8.07
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -868,16 +864,16 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 35.0,
-          "observed": 36.57,
-          "slack": -1.57,
-          "binding": false,
-          "status": "OK",
+          "observed": 34.57,
+          "slack": 0.43,
+          "binding": true,
+          "status": "BINDING",
           "details": {
             "range_min": 15.0,
             "range_max": 35.0,
-            "slack_from_min": 21.57,
-            "slack_from_max": -1.57,
-            "outside_range": true,
+            "slack_from_min": 19.57,
+            "slack_from_max": 0.43,
+            "outside_range": false,
             "is_indicator": true
           }
         },
@@ -885,15 +881,15 @@
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 30.0,
-          "observed": 33.43,
-          "slack": -3.43,
+          "observed": 35.43,
+          "slack": -5.43,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 20.0,
             "range_max": 30.0,
-            "slack_from_min": 13.43,
-            "slack_from_max": -3.43,
+            "slack_from_min": 15.43,
+            "slack_from_max": -5.43,
             "outside_range": true,
             "is_indicator": true
           }
@@ -946,41 +942,41 @@
       "exposures": {
         "by_category": {
           "ETF": 30.0,
-          "Actions": 35.07,
-          "Obligations": 33.43,
+          "Actions": 33.07,
+          "Obligations": 35.43,
           "Crypto": 1.5
         },
         "by_sector": {
           "Diversified": 30.0,
           "Santé": 15.0,
-          "Finance": 13.5,
-          "Technologie de l'information": 6.57
+          "Finance": 10.0,
+          "Technologie de l'information": 8.07
         },
         "by_region": {
-          "Global": 64.93,
+          "Global": 66.93,
           "Etats-Unis": 15.0,
-          "Inde": 13.5,
-          "Corée": 6.57
+          "Inde": 10.0,
+          "Corée": 8.07
         },
         "by_risk_bucket": {
-          "equity_like": 50.07,
+          "equity_like": 48.07,
           "real_assets": 15.0,
-          "bond_like": 33.43,
+          "bond_like": 35.43,
           "crypto": 1.5
         },
         "by_role": {
           "core": 30.0,
-          "satellite": 36.57,
-          "defensive": 33.43,
+          "satellite": 34.57,
+          "defensive": 35.43,
           "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1159.0,
+          "hhi": 1109.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.63,
+          "effective_n": 9.02,
           "n_positions": 13,
-          "top_5_weight": 66.5,
+          "top_5_weight": 63.07,
           "top_10_weight": 98.5,
           "largest_position": 15.0,
           "smallest_position": 0.5,
@@ -1031,11 +1027,22 @@
           "id": "EQ_807",
           "ticker": "AXISBANK",
           "name": "AXIS BANK LTD",
-          "weight_pct": 13.5,
+          "weight_pct": 10.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
           "region": "Inde",
+          "exchange": null
+        },
+        {
+          "id": "EQ_946",
+          "ticker": "042700",
+          "name": "HANMI SEMICONDUCTOR LTD",
+          "weight_pct": 8.07,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Technologie de l'information",
+          "region": "Corée",
           "exchange": null
         },
         {
@@ -1083,21 +1090,10 @@
           "exchange": null
         },
         {
-          "id": "EQ_946",
-          "ticker": "042700",
-          "name": "HANMI SEMICONDUCTOR LTD",
-          "weight_pct": 6.57,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Technologie de l'information",
-          "region": "Corée",
-          "exchange": null
-        },
-        {
           "id": "iShares Convertible Bond ETF",
           "ticker": "ICVT",
           "name": "iShares Convertible Bond ETF",
-          "weight_pct": 1.43,
+          "weight_pct": 3.43,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -1155,41 +1151,41 @@
     "_exposures": {
       "by_category": {
         "ETF": 30.0,
-        "Actions": 35.07,
-        "Obligations": 33.43,
+        "Actions": 33.07,
+        "Obligations": 35.43,
         "Crypto": 1.5
       },
       "by_sector": {
         "Diversified": 30.0,
         "Santé": 15.0,
-        "Finance": 13.5,
-        "Technologie de l'information": 6.57
+        "Finance": 10.0,
+        "Technologie de l'information": 8.07
       },
       "by_region": {
-        "Global": 64.93,
+        "Global": 66.93,
         "Etats-Unis": 15.0,
-        "Inde": 13.5,
-        "Corée": 6.57
+        "Inde": 10.0,
+        "Corée": 8.07
       },
       "by_risk_bucket": {
-        "equity_like": 50.07,
+        "equity_like": 48.07,
         "real_assets": 15.0,
-        "bond_like": 33.43,
+        "bond_like": 35.43,
         "crypto": 1.5
       },
       "by_role": {
         "core": 30.0,
-        "satellite": 36.57,
-        "defensive": 33.43,
+        "satellite": 34.57,
+        "defensive": 35.43,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1159.0,
+        "hhi": 1109.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.63,
+        "effective_n": 9.02,
         "n_positions": 13,
-        "top_5_weight": 66.5,
+        "top_5_weight": 63.07,
         "top_10_weight": 98.5,
         "largest_position": 15.0,
         "smallest_position": 0.5,
@@ -1218,7 +1214,7 @@
     "_limitations": []
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement avec un profil défensif, axée sur des actifs à faible volatilité. Bien qu'il vise à offrir une possiblee stabilité, les rendements peuvent être limités dans un environnement de taux bas. De plus, l'exposition aux petites capitalisations et aux actions peut introduire des risques de marché. Il est important de considérer ces éléments avant de prendre des décisions d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, visant à minimiser la volatilité tout en cherchant à générer des rendements modérés. L'accent est mis sur les obligations à court terme et les grandes capitalisations, qui peuvent offrir une possiblee protection dans un environnement de marché inpossible. Cependant, il est important de noter que même les investissements considérés comme stables peuvent être affectés par des fluctuations économiques. De plus, l'exposition aux actions, bien que limitée, comporte des risques inhérents liés à la performance des marchés. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "5%",
       "AXIS BANK LTD": "8%",
@@ -1241,19 +1237,19 @@
       "JMST": 0.1197,
       "XHLF": 0.1197,
       "SGOV": 0.1197,
-      "SHV": 0.1228,
+      "SHV": 0.1249,
       "TBIL": 0.0564,
       "GLDM": 0.0948,
       "VSS": 0.1026,
       "SCHX": 0.1026,
       "JNJ": 0.0513,
-      "AXISBANK": 0.0821,
+      "AXISBANK": 0.08,
       "AZN": 0.0283
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 4.27,
+      "vol_realized": 4.24,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -1289,23 +1285,23 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 4.27,
-          "slack": 1.27,
+          "observed": 4.24,
+          "slack": 1.24,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -1.73
+            "diff_from_target": -1.76
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 35.0,
-          "observed": 53.83,
-          "slack": 18.83,
+          "observed": 54.04,
+          "slack": 19.04,
           "binding": false,
           "status": "OK",
           "details": {
@@ -1329,7 +1325,7 @@
               {
                 "id": "iShares Short Treasury Bond ETF",
                 "name": "iShares Short Treasury Bond ET",
-                "weight": 12.28
+                "weight": 12.49
               },
               {
                 "id": "US Treasury 3 Month Bill ETF",
@@ -1343,15 +1339,15 @@
           "name": "max_single_position",
           "constraint_type": "max",
           "cap": 15.0,
-          "observed": 12.28,
-          "slack": 2.72,
+          "observed": 12.49,
+          "slack": 2.51,
           "binding": false,
           "status": "OK",
           "details": {
             "largest_position": {
               "id": "iShares Short Treasury Bond ETF",
               "name": "iShares Short Treasury Bond ETF",
-              "weight": 12.28
+              "weight": 12.49
             },
             "positions_above_10pct": [
               {
@@ -1368,7 +1364,7 @@
               },
               {
                 "id": "iShares Short Treasury Bond ETF",
-                "weight": 12.28
+                "weight": 12.49
               },
               {
                 "id": "Vanguard FTSE All-World ex-US Small-Cap ETF",
@@ -1393,13 +1389,13 @@
             "most_concentrated": "Diversified",
             "counts_in_max_sector": {
               "Diversified": 20.52,
-              "Finance": 8.21,
+              "Finance": 8.0,
               "Santé": 7.96
             },
             "all_sectors": {
-              "Bonds": 53.83,
+              "Bonds": 54.04,
               "Diversified": 30.0,
-              "Finance": 8.21,
+              "Finance": 8.0,
               "Santé": 7.96
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -1417,13 +1413,13 @@
             "most_concentrated": "Global",
             "counts_in_max_region": {
               "Global": 20.52,
-              "Inde": 8.21,
+              "Inde": 8.0,
               "Etats-Unis": 5.13,
               "Royaume-Uni": 2.83
             },
             "all_regions": {
-              "Global": 83.83,
-              "Inde": 8.21,
+              "Global": 84.04,
+              "Inde": 8.0,
               "Etats-Unis": 5.13,
               "Royaume-Uni": 2.83
             },
@@ -1471,15 +1467,15 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 11.04,
-          "slack": 3.96,
+          "observed": 10.83,
+          "slack": 4.17,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 6.04,
-            "slack_from_max": 3.96,
+            "slack_from_min": 5.83,
+            "slack_from_max": 4.17,
             "outside_range": false,
             "is_indicator": true
           }
@@ -1488,15 +1484,15 @@
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 60.0,
-          "observed": 53.83,
-          "slack": 6.17,
+          "observed": 54.04,
+          "slack": 5.96,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 45.0,
             "range_max": 60.0,
-            "slack_from_min": 8.83,
-            "slack_from_max": 6.17,
+            "slack_from_min": 9.04,
+            "slack_from_max": 5.96,
             "outside_range": false,
             "is_indicator": true
           }
@@ -1546,41 +1542,41 @@
       "recommendations": [],
       "exposures": {
         "by_category": {
-          "Obligations": 53.83,
+          "Obligations": 54.04,
           "ETF": 30.0,
-          "Actions": 16.17
+          "Actions": 15.96
         },
         "by_sector": {
           "Diversified": 30.0,
-          "Finance": 8.21,
+          "Finance": 8.0,
           "Santé": 7.96
         },
         "by_region": {
-          "Global": 83.83,
-          "Inde": 8.21,
+          "Global": 84.04,
+          "Inde": 8.0,
           "Etats-Unis": 5.13,
           "Royaume-Uni": 2.83
         },
         "by_risk_bucket": {
-          "bond_like": 53.83,
+          "bond_like": 54.04,
           "real_assets": 9.48,
-          "equity_like": 36.69
+          "equity_like": 36.48
         },
         "by_role": {
           "core": 35.13,
-          "satellite": 11.04,
-          "defensive": 53.83,
+          "satellite": 10.83,
+          "defensive": 54.04,
           "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1015.0,
+          "hhi": 1016.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 9.86,
+          "effective_n": 9.84,
           "n_positions": 11,
-          "top_5_weight": 58.45,
+          "top_5_weight": 58.66,
           "top_10_weight": 97.17,
-          "largest_position": 12.28,
+          "largest_position": 12.49,
           "smallest_position": 2.83,
           "thresholds": {
             "well_diversified": "HHI < 1000",
@@ -1596,7 +1592,7 @@
           "id": "iShares Short Treasury Bond ETF",
           "ticker": "SHV",
           "name": "iShares Short Treasury Bond ETF",
-          "weight_pct": 12.28,
+          "weight_pct": 12.49,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -1673,7 +1669,7 @@
           "id": "EQ_807",
           "ticker": "AXISBANK",
           "name": "AXIS BANK LTD",
-          "weight_pct": 8.21,
+          "weight_pct": 8.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
@@ -1730,41 +1726,41 @@
     },
     "_exposures": {
       "by_category": {
-        "Obligations": 53.83,
+        "Obligations": 54.04,
         "ETF": 30.0,
-        "Actions": 16.17
+        "Actions": 15.96
       },
       "by_sector": {
         "Diversified": 30.0,
-        "Finance": 8.21,
+        "Finance": 8.0,
         "Santé": 7.96
       },
       "by_region": {
-        "Global": 83.83,
-        "Inde": 8.21,
+        "Global": 84.04,
+        "Inde": 8.0,
         "Etats-Unis": 5.13,
         "Royaume-Uni": 2.83
       },
       "by_risk_bucket": {
-        "bond_like": 53.83,
+        "bond_like": 54.04,
         "real_assets": 9.48,
-        "equity_like": 36.69
+        "equity_like": 36.48
       },
       "by_role": {
         "core": 35.13,
-        "satellite": 11.04,
-        "defensive": 53.83,
+        "satellite": 10.83,
+        "defensive": 54.04,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1015.0,
+        "hhi": 1016.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 9.86,
+        "effective_n": 9.84,
         "n_positions": 11,
-        "top_5_weight": 58.45,
+        "top_5_weight": 58.66,
         "top_10_weight": 97.17,
-        "largest_position": 12.28,
+        "largest_position": 12.49,
         "smallest_position": 2.83,
         "thresholds": {
           "well_diversified": "HHI < 1000",
@@ -1793,7 +1789,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2026-01-05T09:56:59.715235",
+    "generated_at": "2026-01-05T10:28:58.474808",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
