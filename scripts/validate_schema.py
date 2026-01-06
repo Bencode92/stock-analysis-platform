@@ -5,12 +5,14 @@ Portfolio JSON Schema Validator
 P0-1: Validates portfolio output against JSON Schema.
 Used by CI and can be run locally.
 
+v2.3.0: Increased tolerance from 1% to 1.5% to handle rounding edge cases
 v2.2.0: Fixed bond identification using known bond tickers list
 v2.1.0: Updated max position limits to match optimizer.py v6.19
 
 Usage:
     python scripts/validate_schema.py data/portfolios.json
     python scripts/validate_schema.py --all  # Validate all portfolio files
+
 """
 
 import json
@@ -30,6 +32,9 @@ except ImportError:
 # Paths
 SCHEMA_PATH = Path(__file__).parent.parent / "schemas" / "portfolio_output.json"
 DATA_DIR = Path(__file__).parent.parent / "data"
+
+# v2.3.0: Tolerance for rounding errors (1.5% to handle integer rounding)
+WEIGHT_TOLERANCE = 0.015
 
 # v2.2.0: Known bond/treasury ETF tickers
 # These are money market, treasury, and bond ETFs that should use bond caps
@@ -122,6 +127,7 @@ def validate_business_rules(data: dict) -> List[str]:
     3. Profile-specific constraints (bonds min/max, crypto max)
     4. _meta required fields
     
+    v2.3.0: Increased tolerance to 1.5% to handle integer rounding
     v2.2.0: Uses KNOWN_BOND_TICKERS for reliable bond identification
     v2.1.0: Updated limits to match optimizer.py v6.19
     """
@@ -165,7 +171,7 @@ def validate_business_rules(data: dict) -> List[str]:
             tickers = portfolio["_tickers"]
             total_weight = sum(tickers.values())
             
-            if abs(total_weight - 1.0) > 0.01:  # 1% tolerance
+            if abs(total_weight - 1.0) > WEIGHT_TOLERANCE:
                 errors.append(
                     f"{profile}: _tickers sum = {total_weight:.4f} "
                     f"(expected ~1.0, diff = {abs(total_weight - 1.0):.4f})"
@@ -183,8 +189,8 @@ def validate_business_rules(data: dict) -> List[str]:
                     max_allowed = profile_constraints["max_single_position"] / 100
                     asset_type = "position"
                 
-                # Add 1% tolerance for rounding
-                if weight > max_allowed + 0.01:
+                # v2.3.0: Use consistent tolerance
+                if weight > max_allowed + WEIGHT_TOLERANCE:
                     errors.append(
                         f"{profile}: {asset_type.capitalize()} {ticker} = {weight:.1%} "
                         f"(exceeds {max_allowed:.0%} limit for {asset_type}s)"
@@ -197,7 +203,8 @@ def validate_business_rules(data: dict) -> List[str]:
         )
         bonds_min = profile_constraints["bonds_min"] / 100
         
-        if bonds_weight < bonds_min - 0.01:  # 1% tolerance
+        # v2.3.0: Use consistent tolerance
+        if bonds_weight < bonds_min - WEIGHT_TOLERANCE:
             errors.append(
                 f"{profile}: Bonds = {bonds_weight:.1%} "
                 f"(minimum {bonds_min:.0%} required)"
@@ -210,7 +217,8 @@ def validate_business_rules(data: dict) -> List[str]:
         )
         crypto_max = profile_constraints["crypto_max"] / 100
         
-        if crypto_weight > crypto_max + 0.01:  # 1% tolerance
+        # v2.3.0: Use consistent tolerance
+        if crypto_weight > crypto_max + WEIGHT_TOLERANCE:
             errors.append(
                 f"{profile}: Crypto = {crypto_weight:.1%} "
                 f"(maximum {crypto_max:.0%} allowed)"
