@@ -1,46 +1,46 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement agressive, avec une forte exposition aux actions et aux actifs alternatifs comme les cryptomonnaies. Bien qu'il vise à générer des rendements élevés, il est important de noter que la volatilité peut être significative, surtout dans le secteur des cryptomonnaies. De plus, l'exposition aux marchés émergents et aux matières premières peut entraîner des risques supplémentaires. Les investisseurs doivent être conscients des fluctuations potentielles de leur capital. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive, visant à maximiser la croissance à long terme. Il est composé d'actifs diversifiés, incluant des actions, des ETF et des cryptomonnaies. Cependant, la volatilité élevée de possibles actifs, comme les cryptomonnaies, peut entraîner des fluctuations significatives. De plus, l'exposition à des marchés émergents et à des secteurs cycliques comporte des risques inhérents. Il est essentiel d'évaluer ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "AXIS BANK LTD": "14%",
-      "SK BIOPHARMACEUTICALS LTD": "15%"
+      "APPLE INC": "15%"
     },
     "ETF": {
       "iShares Morningstar Large-Cap ETF": "15%",
-      "iShares Silver Trust": "15%",
-      "VanEck Gold Miners ETF": "5%",
+      "iShares Silver Trust": "11%",
+      "VanEck Gold Miners ETF": "9%",
       "Direxion Daily MSCI Brazil Bull 3X Shares": "5%"
     },
     "Obligations": {
       "VanEck J.P. Morgan EM Local Currency Bond ETF": "5%",
       "iShares Convertible Bond ETF": "5%",
-      "iShares J.P. Morgan EM Local Currency Bond ETF": "11%",
+      "iShares J.P. Morgan EM Local Currency Bond ETF": "5%",
       "iShares 3 Year International Treasury Bond ETF": "5%"
     },
     "Crypto": {
       "BTS/USD": "2%",
       "GNO/USD": "2%",
-      "GNT/USD": "1%"
+      "GNT/USD": "7%"
     },
     "_tickers": {
       "JKD": 0.15,
       "EMLC": 0.05,
       "ICVT": 0.05,
-      "LEMB": 0.11,
+      "LEMB": 0.05,
       "ISHG": 0.05,
-      "SLV": 0.15,
-      "GDX": 0.05,
+      "SLV": 0.11,
+      "GDX": 0.09,
       "BRZU": 0.05,
       "AXISBANK": 0.15,
-      "326030": 0.15,
+      "AAPL": 0.15,
       "BTS/USD": 0.015,
       "GNO/USD": 0.015,
-      "GNT/USD": 0.01
+      "GNT/USD": 0.07
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 13.94,
+      "vol_realized": 14.19,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -50,23 +50,23 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 13.94,
-          "slack": -1.06,
+          "observed": 14.19,
+          "slack": -0.81,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -4.06
+            "diff_from_target": -3.81
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 5.0,
-          "observed": 26.0,
-          "slack": 21.0,
+          "observed": 20.0,
+          "slack": 15.0,
           "binding": false,
           "status": "OK",
           "details": {
@@ -85,7 +85,7 @@
               {
                 "id": "iShares J.P. Morgan EM Local Currency Bond ETF",
                 "name": "iShares J.P. Morgan EM Local C",
-                "weight": 11.0
+                "weight": 5.0
               },
               {
                 "id": "iShares 3 Year International Treasury Bond ETF",
@@ -99,10 +99,10 @@
           "name": "crypto_max",
           "constraint_type": "max",
           "cap": 10.0,
-          "observed": 4.0,
-          "slack": 6.0,
-          "binding": false,
-          "status": "OK",
+          "observed": 10.0,
+          "slack": 0.0,
+          "binding": true,
+          "status": "BINDING",
           "details": {
             "breakdown": [
               {
@@ -118,7 +118,7 @@
               {
                 "id": "GNT/USD",
                 "name": "GNT/USD",
-                "weight": 1.0
+                "weight": 7.0
               }
             ]
           }
@@ -143,19 +143,15 @@
                 "weight": 15.0
               },
               {
-                "id": "iShares J.P. Morgan EM Local Currency Bond ETF",
-                "weight": 11.0
-              },
-              {
                 "id": "iShares Silver Trust",
-                "weight": 15.0
+                "weight": 11.0
               },
               {
                 "id": "EQ_807",
                 "weight": 15.0
               },
               {
-                "id": "EQ_975",
+                "id": "EQ_2",
                 "weight": 15.0
               }
             ]
@@ -174,14 +170,14 @@
             "counts_in_max_sector": {
               "Diversified": 20.0,
               "Finance": 15.0,
-              "Santé": 15.0
+              "Technologie de l'information": 15.0
             },
             "all_sectors": {
               "Diversified": 40.0,
-              "Bonds": 26.0,
+              "Bonds": 20.0,
               "Finance": 15.0,
-              "Santé": 15.0,
-              "Crypto": 4.0
+              "Technologie de l'information": 15.0,
+              "Crypto": 10.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -199,12 +195,12 @@
             "counts_in_max_region": {
               "Global": 20.0,
               "Inde": 15.0,
-              "Corée": 15.0
+              "Etats-Unis": 15.0
             },
             "all_regions": {
               "Global": 70.0,
               "Inde": 15.0,
-              "Corée": 15.0
+              "Etats-Unis": 15.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -250,16 +246,16 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 60.0,
-          "observed": 34.0,
-          "slack": -1.0,
+          "observed": 40.0,
+          "slack": 5.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 35.0,
             "range_max": 60.0,
-            "slack_from_min": -1.0,
-            "slack_from_max": 26.0,
-            "outside_range": true,
+            "slack_from_min": 5.0,
+            "slack_from_max": 20.0,
+            "outside_range": false,
             "is_indicator": true
           }
         },
@@ -267,15 +263,15 @@
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 26.0,
-          "slack": -11.0,
+          "observed": 20.0,
+          "slack": -5.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 21.0,
-            "slack_from_max": -11.0,
+            "slack_from_min": 15.0,
+            "slack_from_max": -5.0,
             "outside_range": true,
             "is_indicator": true
           }
@@ -326,58 +322,59 @@
       ],
       "summary": {
         "total": 14,
-        "ok": 11,
-        "binding": 2,
+        "ok": 10,
+        "binding": 3,
         "violated": 1,
         "critical": 0
       },
-      "quality_score": 90.0,
+      "quality_score": 88.6,
       "recommendations": [
-        "🟠 VIOLATED: volatility exceeded by 1.1% — reduce exposure",
+        "🟠 VIOLATED: volatility exceeded by 0.8% — reduce exposure",
+        "🟡 BINDING: crypto_max at 10.0% (cap=10.0%) — monitor closely",
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
-        "ℹ️ INFO: bucket_defensive is 11.0% outside target range (indicator only)",
-        "🟡 BINDING: leveraged_cap at 5.0% (cap=5.0%) — monitor closely"
+        "🟡 BINDING: leveraged_cap at 5.0% (cap=5.0%) — monitor closely",
+        "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
       ],
       "exposures": {
         "by_category": {
           "ETF": 40.0,
-          "Obligations": 26.0,
+          "Obligations": 20.0,
           "Actions": 30.0,
-          "Crypto": 4.0
+          "Crypto": 10.0
         },
         "by_sector": {
           "Diversified": 40.0,
           "Finance": 15.0,
-          "Santé": 15.0
+          "Technologie de l'information": 15.0
         },
         "by_region": {
           "Global": 70.0,
           "Inde": 15.0,
-          "Corée": 15.0
+          "Etats-Unis": 15.0
         },
         "by_risk_bucket": {
           "equity_like": 45.0,
-          "bond_like": 26.0,
+          "bond_like": 20.0,
           "real_assets": 20.0,
           "leveraged": 5.0,
-          "crypto": 4.0
+          "crypto": 10.0
         },
         "by_role": {
           "core": 40.0,
-          "satellite": 34.0,
-          "defensive": 26.0,
+          "satellite": 40.0,
+          "defensive": 20.0,
           "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1152.0,
+          "hhi": 1056.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.68,
+          "effective_n": 9.47,
           "n_positions": 13,
-          "top_5_weight": 71.0,
-          "top_10_weight": 96.0,
+          "top_5_weight": 65.0,
+          "top_10_weight": 92.0,
           "largest_position": 15.0,
-          "smallest_position": 1.0,
+          "smallest_position": 1.5,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
@@ -400,17 +397,6 @@
           "exchange": null
         },
         {
-          "id": "iShares Silver Trust",
-          "ticker": "SLV",
-          "name": "iShares Silver Trust",
-          "weight_pct": 15.0,
-          "category": "ETF",
-          "risk_bucket": "real_assets",
-          "sector": "Diversified",
-          "region": "Global",
-          "exchange": null
-        },
-        {
           "id": "EQ_807",
           "ticker": "AXISBANK",
           "name": "AXIS BANK LTD",
@@ -422,24 +408,46 @@
           "exchange": null
         },
         {
-          "id": "EQ_975",
-          "ticker": "326030",
-          "name": "SK BIOPHARMACEUTICALS LTD",
+          "id": "EQ_2",
+          "ticker": "AAPL",
+          "name": "APPLE INC",
           "weight_pct": 15.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Corée",
+          "sector": "Technologie de l'information",
+          "region": "Etats-Unis",
           "exchange": null
         },
         {
-          "id": "iShares J.P. Morgan EM Local Currency Bond ETF",
-          "ticker": "LEMB",
-          "name": "iShares J.P. Morgan EM Local Currency Bond ETF",
+          "id": "iShares Silver Trust",
+          "ticker": "SLV",
+          "name": "iShares Silver Trust",
           "weight_pct": 11.0,
-          "category": "Obligations",
-          "risk_bucket": "bond_like",
-          "sector": "Bonds",
+          "category": "ETF",
+          "risk_bucket": "real_assets",
+          "sector": "Diversified",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "VanEck Gold Miners ETF",
+          "ticker": "GDX",
+          "name": "VanEck Gold Miners ETF",
+          "weight_pct": 9.0,
+          "category": "ETF",
+          "risk_bucket": "real_assets",
+          "sector": "Diversified",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "GNT/USD",
+          "ticker": "GNT/USD",
+          "name": "GNT/USD",
+          "weight_pct": 7.0,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
           "region": "Global",
           "exchange": null
         },
@@ -466,9 +474,9 @@
           "exchange": null
         },
         {
-          "id": "iShares 3 Year International Treasury Bond ETF",
-          "ticker": "ISHG",
-          "name": "iShares 3 Year International Treasury Bond ETF",
+          "id": "iShares J.P. Morgan EM Local Currency Bond ETF",
+          "ticker": "LEMB",
+          "name": "iShares J.P. Morgan EM Local Currency Bond ETF",
           "weight_pct": 5.0,
           "category": "Obligations",
           "risk_bucket": "bond_like",
@@ -477,13 +485,13 @@
           "exchange": null
         },
         {
-          "id": "VanEck Gold Miners ETF",
-          "ticker": "GDX",
-          "name": "VanEck Gold Miners ETF",
+          "id": "iShares 3 Year International Treasury Bond ETF",
+          "ticker": "ISHG",
+          "name": "iShares 3 Year International Treasury Bond ETF",
           "weight_pct": 5.0,
-          "category": "ETF",
-          "risk_bucket": "real_assets",
-          "sector": "Diversified",
+          "category": "Obligations",
+          "risk_bucket": "bond_like",
+          "sector": "Bonds",
           "region": "Global",
           "exchange": null
         },
@@ -519,17 +527,6 @@
           "sector": "Crypto",
           "region": "Global",
           "exchange": null
-        },
-        {
-          "id": "GNT/USD",
-          "ticker": "GNT/USD",
-          "name": "GNT/USD",
-          "weight_pct": 1.0,
-          "category": "Crypto",
-          "risk_bucket": "crypto",
-          "sector": "Crypto",
-          "region": "Global",
-          "exchange": null
         }
       ],
       "execution_summary": {
@@ -549,43 +546,43 @@
     "_exposures": {
       "by_category": {
         "ETF": 40.0,
-        "Obligations": 26.0,
+        "Obligations": 20.0,
         "Actions": 30.0,
-        "Crypto": 4.0
+        "Crypto": 10.0
       },
       "by_sector": {
         "Diversified": 40.0,
         "Finance": 15.0,
-        "Santé": 15.0
+        "Technologie de l'information": 15.0
       },
       "by_region": {
         "Global": 70.0,
         "Inde": 15.0,
-        "Corée": 15.0
+        "Etats-Unis": 15.0
       },
       "by_risk_bucket": {
         "equity_like": 45.0,
-        "bond_like": 26.0,
+        "bond_like": 20.0,
         "real_assets": 20.0,
         "leveraged": 5.0,
-        "crypto": 4.0
+        "crypto": 10.0
       },
       "by_role": {
         "core": 40.0,
-        "satellite": 34.0,
-        "defensive": 26.0,
+        "satellite": 40.0,
+        "defensive": 20.0,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1152.0,
+        "hhi": 1056.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.68,
+        "effective_n": 9.47,
         "n_positions": 13,
-        "top_5_weight": 71.0,
-        "top_10_weight": 96.0,
+        "top_5_weight": 65.0,
+        "top_10_weight": 92.0,
         "largest_position": 15.0,
-        "smallest_position": 1.0,
+        "smallest_position": 1.5,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -609,16 +606,16 @@
       "ready_for_execution": true
     },
     "_limitations": [
-      "Volatilité réalisée (13.9%) éloignée de la cible (18.0%) - écart de 4.1%."
+      "Volatilité réalisée (14.2%) éloignée de la cible (18.0%) - écart de 3.8%."
     ],
     "_asset_details": [
       {
         "name": "iShares Morningstar Large-Cap ETF",
         "ticker": "JKD",
-        "rationale": "Cet ETF offre une exposition diversifiée aux grandes capitalisations, ce qui est essentiel pour capter le momentum positif du marché. Il joue un rôle central dans le portefeuille en fournissant une base solide d'actions de qualité.",
+        "rationale": "Cet ETF offre une exposition diversifiée aux grandes capitalisations, avec une performance solide de 16.43% YTD, ce qui reflète un bon momentum. Il joue un rôle central dans le portefeuille en fournissant une base stable d'investissement.",
         "role": "core",
-        "risk_note": "Volatilité légèrement supérieure à la cible du portefeuille.",
-        "market_context_link": "null",
+        "risk_note": "Volatilité légèrement supérieure à la cible, à surveiller dans un contexte de marché fluctuant.",
+        "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -635,10 +632,10 @@
       {
         "name": "VanEck J.P. Morgan EM Local Currency Bond ETF",
         "ticker": "EMLC",
-        "rationale": "Ce fonds obligataire permet d'accéder à des titres de créance en devises locales des marchés émergents, offrant un potentiel de rendement intéressant dans un contexte de taux d'intérêt bas. Il sert de diversification dans le portefeuille.",
+        "rationale": "Ce fonds obligataire permet d'accéder à des rendements intéressants dans les marchés émergents, avec une performance YTD de 11.53%. Il sert de diversification au portefeuille, en équilibrant les actifs plus volatils.",
         "role": "diversification",
-        "risk_note": "Risque de change et de crédit dans les marchés émergents.",
-        "market_context_link": "null",
+        "risk_note": "Risque de change et de crédit dans les marchés émergents à surveiller.",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -655,10 +652,10 @@
       {
         "name": "iShares Convertible Bond ETF",
         "ticker": "ICVT",
-        "rationale": "Les obligations convertibles offrent une protection contre la baisse tout en permettant de bénéficier de la hausse des actions, ce qui est idéal dans un environnement 'risk-on'. Ce fonds joue un rôle de satellite dans le portefeuille.",
+        "rationale": "Les obligations convertibles offrent un potentiel de hausse tout en fournissant une protection contre la baisse, avec une performance YTD de 15.86%. Elles ajoutent une couche de sécurité tout en permettant une participation à la croissance.",
         "role": "satellite",
-        "risk_note": "Sensibilité aux mouvements des taux d'intérêt.",
-        "market_context_link": "null",
+        "risk_note": "Sensibilité aux taux d'intérêt, à surveiller dans un environnement de hausse des taux.",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -675,11 +672,11 @@
       {
         "name": "iShares J.P. Morgan EM Local Currency Bond ETF",
         "ticker": "LEMB",
-        "rationale": "Ce fonds permet d'investir dans des obligations en devises locales, offrant un rendement attractif dans un contexte de recherche de performance. Il contribue à la diversification du portefeuille.",
+        "rationale": "Avec une performance YTD de 15.09%, cet ETF offre une exposition aux obligations en devise locale des marchés émergents, ce qui peut générer des rendements attractifs. Il contribue à diversifier le portefeuille.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité des devises et des marchés émergents.",
-        "market_context_link": "null",
-        "weight_pct": 11.0,
+        "risk_note": "Risque de volatilité des devises et de défaut dans les marchés émergents.",
+        "market_context_link": null,
+        "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -695,10 +692,10 @@
       {
         "name": "iShares 3 Year International Treasury Bond ETF",
         "ticker": "ISHG",
-        "rationale": "Ce fonds offre une exposition aux obligations d'État internationales, ce qui peut aider à stabiliser le portefeuille en période de volatilité. Il joue un rôle de couverture contre les fluctuations du marché.",
+        "rationale": "Ce fonds offre une exposition aux obligations d'État internationales, avec une performance YTD de 12.5%. Il sert de couverture contre la volatilité des actions tout en offrant un revenu stable.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt sur les obligations.",
-        "market_context_link": "null",
+        "risk_note": "Risque de taux d'intérêt, surtout si les taux augmentent.",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -715,11 +712,11 @@
       {
         "name": "iShares Silver Trust",
         "ticker": "SLV",
-        "rationale": "Avec une performance exceptionnelle cette année, l'argent est un actif refuge qui peut également servir de couverture contre l'inflation. Il est un actif satellite dans le portefeuille, ajoutant un potentiel de croissance.",
+        "rationale": "Avec une performance exceptionnelle de 139.21% YTD, cet actif est un excellent moyen de profiter de la hausse des métaux précieux. Il ajoute une dimension spéculative au portefeuille.",
         "role": "satellite",
-        "risk_note": "Volatilité élevée et dépendance aux prix des matières premières.",
-        "market_context_link": "null",
-        "weight_pct": 15.0,
+        "risk_note": "Volatilité élevée, à surveiller dans un contexte de fluctuations des matières premières.",
+        "market_context_link": null,
+        "weight_pct": 11.0,
         "category": "ETF",
         "sector": "Diversified",
         "country": "Global",
@@ -735,11 +732,11 @@
       {
         "name": "VanEck Gold Miners ETF",
         "ticker": "GDX",
-        "rationale": "Ce fonds offre une exposition aux sociétés minières d'or, qui bénéficient d'une demande accrue pour les métaux précieux dans un environnement incertain. Il est un actif satellite dans le portefeuille.",
+        "rationale": "Ce fonds a affiché une performance YTD de 142.7%, capitalisant sur la hausse des prix de l'or. Il est idéal pour les investisseurs cherchant à profiter de la dynamique des métaux précieux.",
         "role": "satellite",
-        "risk_note": "Volatilité très élevée et dépendance aux prix de l'or.",
-        "market_context_link": "null",
-        "weight_pct": 5.0,
+        "risk_note": "Risque de volatilité accrue lié aux fluctuations des prix de l'or.",
+        "market_context_link": null,
+        "weight_pct": 9.0,
         "category": "ETF",
         "sector": "Diversified",
         "country": "Global",
@@ -755,10 +752,10 @@
       {
         "name": "Direxion Daily MSCI Brazil Bull 3X Shares",
         "ticker": "BRZU",
-        "rationale": "Ce fonds à effet de levier permet de capitaliser sur la croissance potentielle du marché brésilien, offrant des rendements élevés dans un contexte 'risk-on'. Il est un actif satellite à haut risque.",
+        "rationale": "Avec une performance YTD de 88.56%, cet ETF à effet de levier permet de capitaliser sur la croissance potentielle du marché brésilien. Il est adapté aux investisseurs agressifs cherchant des rendements rapides.",
         "role": "satellite",
         "risk_note": "Risque de perte amplifiée en cas de retournement du marché.",
-        "market_context_link": "null",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -775,10 +772,10 @@
       {
         "name": "AXIS BANK LTD",
         "ticker": "AXISBANK",
-        "rationale": "Bien que la performance YTD soit négative, AXIS BANK présente un ROE solide et un score de qualité élevé, ce qui en fait une opportunité d'achat dans le secteur financier. Il est un actif core dans le portefeuille.",
+        "rationale": "Cette banque indienne présente un ROE de 15.01% et un bon score qualité Buffett de 80/100, ce qui en fait un choix solide dans le secteur financier. Elle joue un rôle central dans le portefeuille en tant qu'action de croissance.",
         "role": "core",
-        "risk_note": "Risque de performance dans un environnement économique incertain.",
-        "market_context_link": "secteur favorisé: financials",
+        "risk_note": "Risque lié à la performance économique en Inde et à la réglementation bancaire.",
+        "market_context_link": "Secteur favorisé: financials",
         "weight_pct": 15.0,
         "category": "Actions",
         "sector": "Finance",
@@ -787,38 +784,38 @@
           "roe": 15.01,
           "pe_ratio": 15.1742735,
           "dividend_yield": 0.08,
-          "ytd": "-0.59",
-          "volatility": "21.57",
+          "ytd": "0.89",
+          "volatility": "21.58",
           "buffett_score": 80.0
         }
       },
       {
-        "name": "SK BIOPHARMACEUTICALS LTD",
-        "ticker": "326030",
-        "rationale": "Avec un ROE très élevé, cette société dans le secteur de la santé a un potentiel de croissance significatif, ce qui en fait un ajout stratégique au portefeuille. Il est un actif core.",
+        "name": "APPLE INC",
+        "ticker": "AAPL",
+        "rationale": "Avec un ROE impressionnant de 151.91% et une forte position sur le marché technologique, Apple est un pilier de croissance dans le portefeuille. Son inclusion vise à maximiser le potentiel de rendement.",
         "role": "core",
-        "risk_note": "Risque lié à la réglementation et à la concurrence dans le secteur de la santé.",
-        "market_context_link": "secteur favorisé: healthcare",
+        "risk_note": "Risque de dépendance à l'innovation et à la concurrence accrue dans le secteur technologique.",
+        "market_context_link": "Secteur favorisé: information-technology",
         "weight_pct": 15.0,
         "category": "Actions",
-        "sector": "Santé",
-        "country": "Corée",
+        "sector": "Technologie de l'information",
+        "country": "Etats-Unis",
         "metrics": {
-          "roe": 39.54,
-          "pe_ratio": 40.98893949251789,
-          "dividend_yield": null,
-          "ytd": "2.52",
-          "volatility": "41.03",
+          "roe": 151.91,
+          "pe_ratio": 36.377182,
+          "dividend_yield": 0.38,
+          "ytd": null,
+          "volatility": "25.50",
           "buffett_score": 80.0
         }
       },
       {
         "name": "BTS/USD",
         "ticker": "BTS/USD",
-        "rationale": "Ce crypto-actif offre une exposition à un marché en pleine expansion, bien que volatile, ce qui peut potentiellement générer des rendements élevés. Il est un actif satellite dans le portefeuille.",
+        "rationale": "Cet actif crypto a montré une performance YTD de 3.61%, ajoutant une exposition aux cryptomonnaies dans un portefeuille agressif. Il est considéré comme un actif satellite pour diversifier davantage.",
         "role": "satellite",
-        "risk_note": "Volatilité extrême et risques de sécurité associés aux cryptomonnaies.",
-        "market_context_link": "null",
+        "risk_note": "Volatilité extrême et incertitude réglementaire dans le secteur des cryptomonnaies.",
+        "market_context_link": null,
         "weight_pct": 1.5,
         "category": "Crypto",
         "sector": "Crypto",
@@ -827,18 +824,18 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 3.55,
-          "volatility": 35.3,
+          "ytd": 3.61,
+          "volatility": 35.29,
           "buffett_score": null
         }
       },
       {
         "name": "GNO/USD",
         "ticker": "GNO/USD",
-        "rationale": "Ce crypto-actif présente un potentiel de croissance dans un secteur innovant, mais il est également très volatil. Il est un actif satellite dans le portefeuille.",
+        "rationale": "Avec une performance YTD de 5.95%, cet actif crypto offre une opportunité d'investissement dans un secteur en pleine croissance. Il sert de diversification dans le portefeuille.",
         "role": "satellite",
-        "risk_note": "Risque de volatilité et de réglementation dans le secteur des cryptomonnaies.",
-        "market_context_link": "null",
+        "risk_note": "Risque de volatilité et de sécurité lié aux actifs numériques.",
+        "market_context_link": null,
         "weight_pct": 1.5,
         "category": "Crypto",
         "sector": "Crypto",
@@ -847,19 +844,19 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 6.21,
-          "volatility": 39.43,
+          "ytd": 5.95,
+          "volatility": 39.47,
           "buffett_score": null
         }
       },
       {
         "name": "GNT/USD",
         "ticker": "GNT/USD",
-        "rationale": "Ce crypto-actif offre une opportunité d'investissement dans un marché dynamique, bien que risqué. Il est un actif satellite dans le portefeuille.",
+        "rationale": "Cet actif a affiché une performance YTD de 8.55%, ajoutant une exposition supplémentaire aux cryptomonnaies. Il est un choix pour les investisseurs cherchant à diversifier leur portefeuille.",
         "role": "satellite",
-        "risk_note": "Risque de volatilité extrême et de liquidité.",
-        "market_context_link": "null",
-        "weight_pct": 1.0,
+        "risk_note": "Volatilité élevée et risques de liquidité dans le marché crypto.",
+        "market_context_link": null,
+        "weight_pct": 7.0,
         "category": "Crypto",
         "sector": "Crypto",
         "country": "Global",
@@ -867,22 +864,22 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 6.01,
-          "volatility": 51.34,
+          "ytd": 8.55,
+          "volatility": 52.97,
           "buffett_score": null
         }
       }
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant des actifs à revenu fixe et des actions. Bien qu'il vise à générer des rendements stables, la dépendance aux dividendes et aux obligations peut exposer les investisseurs à des fluctuations de marché. De plus, l'exposition aux marchés émergents et aux cryptomonnaies peut introduire des risques supplémentaires. Les investisseurs doivent être conscients des impacts potentiels sur leur capital. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, visant à équilibrer croissance et stabilité. Il est composé d'actifs diversifiés, y compris des actions, des obligations et des ETF. Bien que la présence d'obligations puisse réduire la volatilité, possibles actifs comme les actions et les cryptomonnaies peuvent encore présenter des risques significatifs. De plus, l'exposition à des marchés émergents peut accroître l'incertitude. Une évaluation des risques est cruciale avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "ELI LILLY": "17%",
       "AXIS BANK LTD": "10%",
-      "HANMI SEMICONDUCTOR LTD": "8%"
+      "APPLE INC": "14%",
+      "HANMI SEMICONDUCTOR LTD": "10%"
     },
     "ETF": {
-      "Global X SuperDividend ETF": "15%",
+      "Global X SuperDividend ETF": "16%",
       "SPDR Gold MiniShares Trust": "15%"
     },
     "Obligations": {
@@ -899,15 +896,15 @@
     },
     "_tickers": {
       "SDIV": 0.15,
-      "LLY": 0.15,
       "GLDM": 0.15,
       "ISHG": 0.08,
       "EMLC": 0.08,
       "LEMB": 0.08,
       "IGOV": 0.08,
-      "ICVT": 0.0343,
+      "ICVT": 0.03,
       "AXISBANK": 0.1,
-      "042700": 0.0807,
+      "AAPL": 0.1359,
+      "042700": 0.0991,
       "BTS/USD": 0.005,
       "GNO/USD": 0.005,
       "GNT/USD": 0.005
@@ -915,7 +912,7 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 10.35,
+      "vol_realized": 10.23,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -925,23 +922,23 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 10.35,
-          "slack": 1.35,
+          "observed": 10.23,
+          "slack": 1.23,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -1.65
+            "diff_from_target": -1.77
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 15.0,
-          "observed": 35.43,
-          "slack": 20.43,
+          "observed": 35.0,
+          "slack": 20.0,
           "binding": false,
           "status": "OK",
           "details": {
@@ -970,7 +967,7 @@
               {
                 "id": "iShares Convertible Bond ETF",
                 "name": "iShares Convertible Bond ETF",
-                "weight": 3.43
+                "weight": 3.0
               }
             ]
           }
@@ -1023,12 +1020,12 @@
                 "weight": 15.0
               },
               {
-                "id": "EQ_10",
+                "id": "SPDR Gold MiniShares Trust",
                 "weight": 15.0
               },
               {
-                "id": "SPDR Gold MiniShares Trust",
-                "weight": 15.0
+                "id": "EQ_2",
+                "weight": 13.59
               }
             ]
           }
@@ -1037,24 +1034,22 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 15.0,
-          "slack": 15.0,
+          "observed": 23.5,
+          "slack": 6.5,
           "binding": false,
           "status": "OK",
           "details": {
-            "most_concentrated": "Diversified",
+            "most_concentrated": "Technologie de l'information",
             "counts_in_max_sector": {
+              "Technologie de l'information": 23.5,
               "Diversified": 15.0,
-              "Santé": 15.0,
-              "Finance": 10.0,
-              "Technologie de l'information": 8.07
+              "Finance": 10.0
             },
             "all_sectors": {
-              "Bonds": 35.43,
+              "Bonds": 35.0,
               "Diversified": 30.0,
-              "Santé": 15.0,
+              "Technologie de l'information": 23.5,
               "Finance": 10.0,
-              "Technologie de l'information": 8.07,
               "Crypto": 1.5
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -1072,15 +1067,15 @@
             "most_concentrated": "Global",
             "counts_in_max_region": {
               "Global": 15.0,
-              "Etats-Unis": 15.0,
+              "Etats-Unis": 13.59,
               "Inde": 10.0,
-              "Corée": 8.07
+              "Corée": 9.91
             },
             "all_regions": {
-              "Global": 66.93,
-              "Etats-Unis": 15.0,
+              "Global": 66.5,
+              "Etats-Unis": 13.59,
               "Inde": 10.0,
-              "Corée": 8.07
+              "Corée": 9.91
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -1126,15 +1121,15 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 35.0,
-          "observed": 34.57,
-          "slack": 0.43,
+          "observed": 35.0,
+          "slack": 0.0,
           "binding": true,
           "status": "BINDING",
           "details": {
             "range_min": 15.0,
             "range_max": 35.0,
-            "slack_from_min": 19.57,
-            "slack_from_max": 0.43,
+            "slack_from_min": 20.0,
+            "slack_from_max": 0.0,
             "outside_range": false,
             "is_indicator": true
           }
@@ -1143,15 +1138,15 @@
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 30.0,
-          "observed": 35.43,
-          "slack": -5.43,
+          "observed": 35.0,
+          "slack": -5.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 20.0,
             "range_max": 30.0,
-            "slack_from_min": 15.43,
-            "slack_from_max": -5.43,
+            "slack_from_min": 15.0,
+            "slack_from_max": -5.0,
             "outside_range": true,
             "is_indicator": true
           }
@@ -1204,41 +1199,40 @@
       "exposures": {
         "by_category": {
           "ETF": 30.0,
-          "Actions": 33.07,
-          "Obligations": 35.43,
+          "Obligations": 35.0,
+          "Actions": 33.5,
           "Crypto": 1.5
         },
         "by_sector": {
           "Diversified": 30.0,
-          "Santé": 15.0,
-          "Finance": 10.0,
-          "Technologie de l'information": 8.07
+          "Technologie de l'information": 23.5,
+          "Finance": 10.0
         },
         "by_region": {
-          "Global": 66.93,
-          "Etats-Unis": 15.0,
+          "Global": 66.5,
+          "Etats-Unis": 13.59,
           "Inde": 10.0,
-          "Corée": 8.07
+          "Corée": 9.91
         },
         "by_risk_bucket": {
-          "equity_like": 48.07,
+          "equity_like": 48.5,
           "real_assets": 15.0,
-          "bond_like": 35.43,
+          "bond_like": 35.0,
           "crypto": 1.5
         },
         "by_role": {
           "core": 30.0,
-          "satellite": 34.57,
-          "defensive": 35.43,
+          "satellite": 35.0,
+          "defensive": 35.0,
           "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1109.0,
+          "hhi": 1099.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 9.02,
+          "effective_n": 9.1,
           "n_positions": 13,
-          "top_5_weight": 63.07,
+          "top_5_weight": 63.5,
           "top_10_weight": 98.5,
           "largest_position": 15.0,
           "smallest_position": 0.5,
@@ -1264,17 +1258,6 @@
           "exchange": null
         },
         {
-          "id": "EQ_10",
-          "ticker": "LLY",
-          "name": "ELI LILLY",
-          "weight_pct": 15.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Santé",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
           "id": "SPDR Gold MiniShares Trust",
           "ticker": "GLDM",
           "name": "SPDR Gold MiniShares Trust",
@@ -1283,6 +1266,17 @@
           "risk_bucket": "real_assets",
           "sector": "Diversified",
           "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "EQ_2",
+          "ticker": "AAPL",
+          "name": "APPLE INC",
+          "weight_pct": 13.59,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Technologie de l'information",
+          "region": "Etats-Unis",
           "exchange": null
         },
         {
@@ -1300,7 +1294,7 @@
           "id": "EQ_946",
           "ticker": "042700",
           "name": "HANMI SEMICONDUCTOR LTD",
-          "weight_pct": 8.07,
+          "weight_pct": 9.91,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Technologie de l'information",
@@ -1355,7 +1349,7 @@
           "id": "iShares Convertible Bond ETF",
           "ticker": "ICVT",
           "name": "iShares Convertible Bond ETF",
-          "weight_pct": 3.43,
+          "weight_pct": 3.0,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
@@ -1413,41 +1407,40 @@
     "_exposures": {
       "by_category": {
         "ETF": 30.0,
-        "Actions": 33.07,
-        "Obligations": 35.43,
+        "Obligations": 35.0,
+        "Actions": 33.5,
         "Crypto": 1.5
       },
       "by_sector": {
         "Diversified": 30.0,
-        "Santé": 15.0,
-        "Finance": 10.0,
-        "Technologie de l'information": 8.07
+        "Technologie de l'information": 23.5,
+        "Finance": 10.0
       },
       "by_region": {
-        "Global": 66.93,
-        "Etats-Unis": 15.0,
+        "Global": 66.5,
+        "Etats-Unis": 13.59,
         "Inde": 10.0,
-        "Corée": 8.07
+        "Corée": 9.91
       },
       "by_risk_bucket": {
-        "equity_like": 48.07,
+        "equity_like": 48.5,
         "real_assets": 15.0,
-        "bond_like": 35.43,
+        "bond_like": 35.0,
         "crypto": 1.5
       },
       "by_role": {
         "core": 30.0,
-        "satellite": 34.57,
-        "defensive": 35.43,
+        "satellite": 35.0,
+        "defensive": 35.0,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1109.0,
+        "hhi": 1099.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 9.02,
+        "effective_n": 9.1,
         "n_positions": 13,
-        "top_5_weight": 63.07,
+        "top_5_weight": 63.5,
         "top_10_weight": 98.5,
         "largest_position": 15.0,
         "smallest_position": 0.5,
@@ -1478,9 +1471,9 @@
       {
         "name": "Global X SuperDividend ETF",
         "ticker": "SDIV",
-        "rationale": "Ce fonds offre une exposition à des dividendes élevés, ce qui est attractif dans un environnement de 'risk-on'. Sa performance YTD de 15.97% indique un bon momentum. ",
+        "rationale": "Cet ETF offre une exposition à des dividendes élevés, ce qui est attractif dans un environnement de recherche de rendement. Il joue un rôle d'income dans le portefeuille, apportant des flux de trésorerie réguliers.",
         "role": "income",
-        "risk_note": "Volatilité relativement élevée à 15.7%, ce qui peut affecter le rendement à court terme.",
+        "risk_note": "Volatilité relativement élevée par rapport à l'objectif de volatilité du portefeuille.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
@@ -1496,31 +1489,11 @@
         }
       },
       {
-        "name": "ELI LILLY",
-        "ticker": "LLY",
-        "rationale": "Avec un ROE de 74.2% et un score qualité Buffett de 80/100, Eli Lilly est une action de qualité dans le secteur de la santé, favorisé actuellement. Son P/E élevé peut indiquer une valorisation excessive.",
-        "role": "core",
-        "risk_note": "Volatilité élevée à 33.36%, ce qui peut entraîner des fluctuations de prix importantes.",
-        "market_context_link": "Secteur santé favorisé",
-        "weight_pct": 15.0,
-        "category": "Actions",
-        "sector": "Santé",
-        "country": "Etats-Unis",
-        "metrics": {
-          "roe": 74.2,
-          "pe_ratio": 52.90695,
-          "dividend_yield": 0.56,
-          "ytd": null,
-          "volatility": "33.36",
-          "buffett_score": 80.0
-        }
-      },
-      {
         "name": "SPDR Gold MiniShares Trust",
         "ticker": "GLDM",
-        "rationale": "Avec une performance YTD de 62.02%, cet ETF offre une exposition aux matières premières, servant de couverture contre l'inflation et l'incertitude économique.",
+        "rationale": "L'or est traditionnellement considéré comme une valeur refuge, surtout en période d'incertitude économique. Il sert de hedge contre l'inflation et les fluctuations du marché.",
         "role": "hedge",
-        "risk_note": "La volatilité de 16.27% peut entraîner des variations de prix significatives.",
+        "risk_note": "Sensibilité aux variations des taux d'intérêt et à la demande des investisseurs pour les actifs refuges.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
@@ -1538,8 +1511,8 @@
       {
         "name": "iShares 3 Year International Treasury Bond ETF",
         "ticker": "ISHG",
-        "rationale": "Ce fonds obligataire offre une sécurité et une stabilité, avec une performance YTD de 12.5%, ce qui est attrayant pour un investisseur modéré.",
-        "role": "core",
+        "rationale": "Ce fonds offre une exposition à des obligations d'État internationales, fournissant une stabilité et une protection contre la volatilité du marché. Il contribue à la diversification du portefeuille.",
+        "role": "diversification",
         "risk_note": "Risque de taux d'intérêt, surtout si les taux augmentent.",
         "market_context_link": null,
         "weight_pct": 8.0,
@@ -1558,7 +1531,7 @@
       {
         "name": "VanEck J.P. Morgan EM Local Currency Bond ETF",
         "ticker": "EMLC",
-        "rationale": "Avec une performance YTD de 11.53%, cet ETF offre une exposition aux obligations en devises locales des marchés émergents, ce qui peut diversifier le portefeuille.",
+        "rationale": "Ce fonds permet d'accéder à des obligations en devises locales des marchés émergents, offrant un potentiel de rendement supérieur. Il aide à diversifier les risques de change.",
         "role": "diversification",
         "risk_note": "Risque de change et volatilité des marchés émergents.",
         "market_context_link": null,
@@ -1578,9 +1551,9 @@
       {
         "name": "iShares J.P. Morgan EM Local Currency Bond ETF",
         "ticker": "LEMB",
-        "rationale": "Ce fonds a montré une performance solide de 15.09% YTD, offrant une exposition à des obligations de qualité dans les marchés émergents.",
+        "rationale": "Similaire à EMLC, ce fonds offre une exposition aux obligations des marchés émergents, avec un bon rendement et une volatilité gérable. Il renforce la diversification du portefeuille.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité des devises et des taux d'intérêt.",
+        "risk_note": "Risque de crédit et de liquidité dans les marchés émergents.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1598,9 +1571,9 @@
       {
         "name": "iShares International Treasury Bond ETF",
         "ticker": "IGOV",
-        "rationale": "Avec une performance YTD de 9.09%, cet ETF offre une exposition à des obligations souveraines internationales, ajoutant de la stabilité au portefeuille.",
-        "role": "core",
-        "risk_note": "Risque de taux d'intérêt et de défaut souverain.",
+        "rationale": "Ce fonds investit dans des obligations d'État internationales, offrant une protection contre la volatilité des actions. Il contribue à la stabilité du portefeuille.",
+        "role": "diversification",
+        "risk_note": "Risque de taux d'intérêt et de change.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1618,11 +1591,11 @@
       {
         "name": "iShares Convertible Bond ETF",
         "ticker": "ICVT",
-        "rationale": "Ce fonds a une performance YTD de 15.86%, offrant une exposition aux obligations convertibles, qui peuvent bénéficier d'une hausse des actions.",
+        "rationale": "Les obligations convertibles offrent un potentiel de hausse grâce à leur conversion en actions, tout en fournissant un revenu fixe. Elles apportent une certaine protection contre la volatilité des marchés.",
         "role": "satellite",
-        "risk_note": "Volatilité liée aux actions sous-jacentes.",
+        "risk_note": "Volatilité élevée due à la nature des actions sous-jacentes.",
         "market_context_link": null,
-        "weight_pct": 3.4,
+        "weight_pct": 3.0,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -1638,10 +1611,10 @@
       {
         "name": "AXIS BANK LTD",
         "ticker": "AXISBANK",
-        "rationale": "Bien que sa performance YTD soit légèrement négative, AXIS BANK présente un ROE de 15.01% et un P/E raisonnable, ce qui en fait une action intéressante dans le secteur financier.",
+        "rationale": "Avec un ROE solide et une valorisation raisonnable, Axis Bank représente une opportunité d'investissement dans le secteur financier indien. Son inclusion renforce l'exposition au secteur favorisé.",
         "role": "core",
-        "risk_note": "Risque de performance en raison de la volatilité du marché indien.",
-        "market_context_link": "Secteur financier favorisé",
+        "risk_note": "Risque de crédit et de régulation dans le secteur bancaire indien.",
+        "market_context_link": "Secteur favorisé: financials",
         "weight_pct": 10.0,
         "category": "Actions",
         "sector": "Finance",
@@ -1650,25 +1623,45 @@
           "roe": 15.01,
           "pe_ratio": 15.1742735,
           "dividend_yield": 0.08,
-          "ytd": "-0.59",
-          "volatility": "21.57",
+          "ytd": "0.89",
+          "volatility": "21.58",
+          "buffett_score": 80.0
+        }
+      },
+      {
+        "name": "APPLE INC",
+        "ticker": "AAPL",
+        "rationale": "Apple est un leader du secteur technologique avec des marges élevées et une forte croissance. Sa position dominante en fait un actif central dans le portefeuille.",
+        "role": "core",
+        "risk_note": "Volatilité élevée liée aux tendances du marché technologique.",
+        "market_context_link": "Secteur favorisé: information-technology",
+        "weight_pct": 13.6,
+        "category": "Actions",
+        "sector": "Technologie de l'information",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": 151.91,
+          "pe_ratio": 36.377182,
+          "dividend_yield": 0.38,
+          "ytd": null,
+          "volatility": "25.50",
           "buffett_score": 80.0
         }
       },
       {
         "name": "HANMI SEMICONDUCTOR LTD",
         "ticker": "042700",
-        "rationale": "Avec un ROE de 28.22% et une performance YTD de 15.78%, cette action dans le secteur technologique est prometteuse malgré une valorisation élevée.",
+        "rationale": "Hanmi Semiconductor présente un potentiel de croissance dans le secteur technologique, bien que sa valorisation soit élevée. Cela en fait un actif satellite intéressant.",
         "role": "satellite",
-        "risk_note": "Volatilité très élevée à 66.49%, ce qui peut entraîner des fluctuations importantes.",
-        "market_context_link": "Secteur technologie favorisé",
-        "weight_pct": 8.1,
+        "risk_note": "Volatilité très élevée, ce qui peut affecter le portefeuille.",
+        "market_context_link": "Secteur favorisé: information-technology",
+        "weight_pct": 9.9,
         "category": "Actions",
         "sector": "Technologie de l'information",
         "country": "Corée",
         "metrics": {
           "roe": 28.22,
-          "pe_ratio": 105.2863436123348,
+          "pe_ratio": 111.13908118313405,
           "dividend_yield": 0.91,
           "ytd": "15.78",
           "volatility": "66.49",
@@ -1678,9 +1671,9 @@
       {
         "name": "BTS/USD",
         "ticker": "BTS/USD",
-        "rationale": "Bien que sa performance YTD soit modeste à 3.55%, cet actif crypto peut offrir une diversification dans un portefeuille traditionnel.",
+        "rationale": "Bien que représentant une petite part du portefeuille, BTS/USD permet d'explorer le potentiel de croissance des cryptomonnaies. Cela ajoute une dimension de diversification.",
         "role": "diversification",
-        "risk_note": "Volatilité élevée à 35.3%, ce qui peut affecter la stabilité du portefeuille.",
+        "risk_note": "Volatilité extrême et incertitude réglementaire dans le secteur crypto.",
         "market_context_link": null,
         "weight_pct": 0.5,
         "category": "Crypto",
@@ -1690,17 +1683,17 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 3.55,
-          "volatility": 35.3,
+          "ytd": 3.61,
+          "volatility": 35.29,
           "buffett_score": null
         }
       },
       {
         "name": "GNO/USD",
         "ticker": "GNO/USD",
-        "rationale": "Avec une performance YTD de 6.21%, cet actif crypto peut servir d'outil de diversification, bien qu'il soit encore très spéculatif.",
+        "rationale": "GNO/USD, comme autre actif crypto, offre une exposition à un marché en pleine expansion. Cela peut potentiellement augmenter le rendement global du portefeuille.",
         "role": "diversification",
-        "risk_note": "Volatilité élevée à 39.43%, ce qui peut entraîner des pertes importantes.",
+        "risk_note": "Risque de liquidité et fluctuations de prix importantes.",
         "market_context_link": null,
         "weight_pct": 0.5,
         "category": "Crypto",
@@ -1710,17 +1703,17 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 6.21,
-          "volatility": 39.43,
+          "ytd": 5.95,
+          "volatility": 39.47,
           "buffett_score": null
         }
       },
       {
         "name": "GNT/USD",
         "ticker": "GNT/USD",
-        "rationale": "Avec une performance YTD de 6.01%, cet actif crypto ajoute une couche de diversification, mais son risque est élevé.",
+        "rationale": "GNT/USD complète l'exposition aux cryptomonnaies, offrant une opportunité de rendement dans un secteur volatile. Cela contribue à la diversification du portefeuille.",
         "role": "diversification",
-        "risk_note": "Volatilité très élevée à 51.34%, ce qui peut affecter le portefeuille.",
+        "risk_note": "Risque de volatilité extrême et de régulation.",
         "market_context_link": null,
         "weight_pct": 0.5,
         "category": "Crypto",
@@ -1730,15 +1723,15 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 6.01,
-          "volatility": 51.34,
+          "ytd": 8.55,
+          "volatility": 52.97,
           "buffett_score": null
         }
       }
     ]
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement stable, axée sur des obligations et des actions défensives. Bien qu'il vise à minimiser la volatilité, les rendements peuvent être limités en période de faible croissance économique. De plus, l'exposition aux petites capitalisations et aux secteurs sensibles peut introduire des risques supplémentaires. Les investisseurs doivent être conscients des impacts potentiels sur leur capital. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, visant à minimiser la volatilité tout en offrant un potentiel de rendement. Il est principalement composé d'obligations et d'actions de grandes capitalisations, ce qui contribue à un profil défensif. Cependant, la dépendance aux obligations à faible rendement peut limiter la croissance à long terme. De plus, l'exposition à des actions, même stables, comporte des risques liés aux fluctuations du marché. Une évaluation des risques est essentielle avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "JOHNSON & JOHNSON": "5%",
       "AXIS BANK LTD": "8%",
@@ -1773,7 +1766,7 @@
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 4.24,
+      "vol_realized": 4.25,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -1809,15 +1802,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 4.24,
-          "slack": 1.24,
+          "observed": 4.25,
+          "slack": 1.25,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -1.76
+            "diff_from_target": -1.75
           }
         },
         {
@@ -2315,7 +2308,7 @@
       {
         "name": "JPMorgan Ultra-Short Municipal Income Fund",
         "ticker": "JMST",
-        "rationale": "Ce fonds offre une exposition à des obligations municipales à court terme, ce qui est idéal pour un investisseur cherchant à préserver son capital tout en générant des revenus réguliers. Sa faible volatilité de 1.17% le rend adapté à un profil d'investisseur stable.",
+        "rationale": "Ce fonds offre une exposition à des obligations municipales à court terme, ce qui permet de préserver le capital tout en générant des revenus réguliers. Sa faible volatilité le rend adapté à un investisseur cherchant à minimiser les fluctuations.",
         "role": "income",
         "risk_note": "Risque de taux d'intérêt pouvant affecter la performance des obligations.",
         "market_context_link": null,
@@ -2335,9 +2328,9 @@
       {
         "name": "BondBloxx Bloomberg Six Month Target Duration US Treasury ETF",
         "ticker": "XHLF",
-        "rationale": "Ce fonds cible une durée de six mois, offrant une protection contre la volatilité des taux d'intérêt tout en générant des rendements modestes. Sa performance stable est alignée avec l'objectif de préservation du capital.",
+        "rationale": "Ce fonds cible une durée de six mois, offrant une protection contre la volatilité des taux d'intérêt tout en générant des rendements stables. Il est idéal pour un investisseur cherchant à sécuriser son capital.",
         "role": "income",
-        "risk_note": "Sensibilité aux variations des taux d'intérêt.",
+        "risk_note": "Risque de taux d'intérêt et de liquidité.",
         "market_context_link": null,
         "weight_pct": 12.0,
         "category": "Obligations",
@@ -2355,9 +2348,9 @@
       {
         "name": "iShares 0-3 Month Treasury Bond ETF",
         "ticker": "SGOV",
-        "rationale": "Ce fonds investit dans des bons du Trésor à très court terme, ce qui minimise le risque de taux d'intérêt et offre une sécurité élevée. Cela correspond bien à un portefeuille cherchant à réduire la volatilité.",
+        "rationale": "Avec une exposition à des bons du Trésor à très court terme, ce fonds offre une sécurité maximale et des rendements prévisibles, ce qui est essentiel pour la préservation du capital.",
         "role": "income",
-        "risk_note": "Risque de liquidité en période de stress de marché.",
+        "risk_note": "Risque de taux d'intérêt, bien que limité sur des maturités très courtes.",
         "market_context_link": null,
         "weight_pct": 12.0,
         "category": "Obligations",
@@ -2375,9 +2368,9 @@
       {
         "name": "iShares Short Treasury Bond ETF",
         "ticker": "SHV",
-        "rationale": "Ce fonds fournit une exposition à des obligations du Trésor à court terme, offrant une sécurité et des rendements prévisibles. Il est particulièrement adapté pour un investisseur cherchant à éviter la volatilité.",
+        "rationale": "Ce fonds investit dans des obligations du Trésor à court terme, offrant une faible volatilité et des rendements constants, ce qui correspond bien au profil d'un investisseur stable.",
         "role": "income",
-        "risk_note": "Risque lié aux fluctuations des taux d'intérêt.",
+        "risk_note": "Risque de taux d'intérêt, mais atténué par la courte durée des obligations.",
         "market_context_link": null,
         "weight_pct": 12.5,
         "category": "Obligations",
@@ -2395,9 +2388,9 @@
       {
         "name": "US Treasury 3 Month Bill ETF",
         "ticker": "TBIL",
-        "rationale": "Ce fonds investit dans des bons du Trésor à trois mois, offrant une sécurité et un rendement stable. Cela s'aligne avec l'objectif de préservation du capital et de revenus réguliers.",
+        "rationale": "Ce fonds investit dans des bons du Trésor à trois mois, offrant une sécurité et une liquidité élevées, ce qui est essentiel pour un investisseur cherchant à minimiser le risque.",
         "role": "income",
-        "risk_note": "Risque de taux d'intérêt pouvant impacter les rendements.",
+        "risk_note": "Risque de taux d'intérêt, bien que limité sur des maturités très courtes.",
         "market_context_link": null,
         "weight_pct": 5.6,
         "category": "Obligations",
@@ -2415,9 +2408,9 @@
       {
         "name": "SPDR Gold MiniShares Trust",
         "ticker": "GLDM",
-        "rationale": "L'or est traditionnellement considéré comme une valeur refuge, surtout en période d'incertitude économique. Sa performance exceptionnelle YTD de 62.02% en fait un actif attractif pour diversifier le portefeuille.",
+        "rationale": "L'or est traditionnellement considéré comme une valeur refuge, ce qui en fait un bon complément pour diversifier le portefeuille et se protéger contre l'inflation et l'incertitude économique.",
         "role": "diversification",
-        "risk_note": "Volatilité élevée et risque de baisse des prix de l'or.",
+        "risk_note": "Volatilité élevée liée aux fluctuations des prix de l'or.",
         "market_context_link": null,
         "weight_pct": 9.5,
         "category": "ETF",
@@ -2435,9 +2428,9 @@
       {
         "name": "Vanguard FTSE All-World ex-US Small-Cap ETF",
         "ticker": "VSS",
-        "rationale": "Ce fonds offre une exposition à des actions de petites capitalisations en dehors des États-Unis, ce qui peut bénéficier de la croissance mondiale. Sa performance YTD de 25.42% indique un bon momentum.",
+        "rationale": "Ce fonds offre une exposition aux petites capitalisations internationales, ce qui peut générer une croissance à long terme et diversifier le portefeuille. Sa performance YTD solide indique un bon momentum.",
         "role": "satellite",
-        "risk_note": "Risque de change et volatilité des marchés émergents.",
+        "risk_note": "Risque de change et volatilité liée aux marchés émergents.",
         "market_context_link": null,
         "weight_pct": 10.3,
         "category": "ETF",
@@ -2455,9 +2448,9 @@
       {
         "name": "Schwab U.S. Large-Cap ETF",
         "ticker": "SCHX",
-        "rationale": "Ce fonds investit dans des grandes entreprises américaines, offrant une stabilité et un potentiel de croissance. Sa performance YTD de 16.24% est un indicateur positif dans un contexte de marché favorable.",
+        "rationale": "Ce fonds investit dans des grandes capitalisations américaines, offrant une stabilité et un potentiel de croissance, ce qui est essentiel dans un environnement de marché favorable aux actions.",
         "role": "core",
-        "risk_note": "Risque de concentration sectorielle et volatilité du marché.",
+        "risk_note": "Risque de marché lié aux fluctuations des grandes entreprises.",
         "market_context_link": null,
         "weight_pct": 10.3,
         "category": "ETF",
@@ -2475,9 +2468,9 @@
       {
         "name": "JOHNSON & JOHNSON",
         "ticker": "JNJ",
-        "rationale": "Johnson & Johnson est une entreprise de santé de premier plan avec un ROE solide de 19.68% et un rendement dividende de 2.48%. Cela en fait un choix attrayant pour un investisseur cherchant à générer des revenus tout en maintenant une certaine stabilité.",
+        "rationale": "Johnson & Johnson est une entreprise de santé avec un solide ROE et un bon rendement en dividendes, ce qui en fait un choix attrayant pour la préservation du capital et les revenus réguliers.",
         "role": "core",
-        "risk_note": "Risque réglementaire et de litige dans le secteur de la santé.",
+        "risk_note": "Risque lié à la réglementation et aux litiges dans le secteur de la santé.",
         "market_context_link": "secteur favorisé: healthcare",
         "weight_pct": 5.1,
         "category": "Actions",
@@ -2495,9 +2488,9 @@
       {
         "name": "AXIS BANK LTD",
         "ticker": "AXISBANK",
-        "rationale": "Bien qu'AXIS Bank ait enregistré une performance YTD négative, son ROE de 15.01% et son P/E raisonnable de 15.17 en font un actif intéressant pour un investisseur à long terme. Cela peut également offrir une exposition au secteur financier indien en croissance.",
+        "rationale": "Axis Bank présente un bon ROE et une valorisation attractive, ce qui en fait un choix intéressant dans le secteur financier, surtout dans un environnement de marché favorable aux actions financières.",
         "role": "satellite",
-        "risk_note": "Risque de marché lié à l'économie indienne et à la volatilité des actions.",
+        "risk_note": "Risque de crédit et volatilité liée aux marchés émergents.",
         "market_context_link": "secteur favorisé: financials",
         "weight_pct": 8.0,
         "category": "Actions",
@@ -2507,17 +2500,17 @@
           "roe": 15.01,
           "pe_ratio": 15.1742735,
           "dividend_yield": 0.08,
-          "ytd": "-0.59",
-          "volatility": "21.57",
+          "ytd": "0.89",
+          "volatility": "21.58",
           "buffett_score": 80.0
         }
       },
       {
         "name": "ASTRAZENECA PLC",
         "ticker": "AZN",
-        "rationale": "AstraZeneca présente un ROE de 17.23% et un rendement dividende de 1.72%, ce qui en fait un choix solide dans le secteur de la santé. Bien que son P/E soit élevé, son potentiel de croissance justifie cet investissement.",
+        "rationale": "AstraZeneca, bien que récemment sous pression, reste une entreprise de santé avec un potentiel de croissance à long terme et un bon ROE, ce qui peut offrir des opportunités d'achat à des niveaux attractifs.",
         "role": "satellite",
-        "risk_note": "Risque de dépendance à l'égard des pipelines de médicaments et des régulations.",
+        "risk_note": "Risque de performance en raison de la concurrence et des résultats cliniques.",
         "market_context_link": "secteur favorisé: healthcare",
         "weight_pct": 2.8,
         "category": "Actions",
@@ -2526,16 +2519,16 @@
         "metrics": {
           "roe": 17.23,
           "pe_ratio": 30.40716,
-          "dividend_yield": 1.72,
-          "ytd": null,
-          "volatility": "23.42",
+          "dividend_yield": 1.75,
+          "ytd": "-1.52",
+          "volatility": "23.43",
           "buffett_score": 80.0
         }
       }
     ]
   },
   "_meta": {
-    "generated_at": "2026-01-05T15:08:06.556307",
+    "generated_at": "2026-01-06T08:00:42.834699",
     "version": "v4.9.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,

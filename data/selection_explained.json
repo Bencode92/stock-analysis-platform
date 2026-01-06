@@ -1,0 +1,1244 @@
+{
+  "generated_at": "2026-01-06T07:58:49.739419",
+  "version": "v1.0.0",
+  "selection_pipeline": {
+    "version": "v4.12.0",
+    "description": "Pipeline de sélection des actions pour les portefeuilles",
+    "steps": [
+      {
+        "step": 1,
+        "name": "Chargement des données",
+        "source": "data/stocks_us.json, data/stocks_europe.json, data/stocks_asia.json",
+        "description": "Charge toutes les actions avec leurs métriques fondamentales (ROE, D/E, PE, YTD, volatilité, market cap)",
+        "output": "~450-500 actions brutes"
+      },
+      {
+        "step": 2,
+        "name": "Filtre Buffett",
+        "mode": "soft (par défaut)",
+        "threshold": "score_min = 40",
+        "description": "Évalue la qualité fondamentale selon les critères Warren Buffett",
+        "formula": {
+          "ROE_score": "0-40 points (ROE >= 20% = 40pts, >= 15% = 30pts, >= 10% = 20pts)",
+          "DE_score": "0-30 points (D/E <= 50% = 30pts, <= 100% = 20pts, <= 150% = 10pts)",
+          "Stability_score": "0-30 points (basé sur volatilité et drawdown)",
+          "Total": "ROE_score + DE_score + Stability_score (max 100)"
+        },
+        "rejection_reasons": [
+          "ROE trop faible (< 10%)",
+          "Endettement excessif (D/E > 150%)",
+          "Données manquantes (ROE ou D/E non disponible)",
+          "Score total < 40"
+        ],
+        "output": "~280-350 actions après filtre"
+      },
+      {
+        "step": 3,
+        "name": "Scoring quantitatif",
+        "description": "Calcule un score composite pour chaque action",
+        "components": {
+          "momentum_score": "Performance YTD + 3M + 1M normalisée (0-1)",
+          "quality_score": "ROE + stabilité des fondamentaux (0-1)",
+          "risk_score": "Inverse de volatilité et drawdown (0-1)",
+          "composite_score": "0.4 * momentum + 0.3 * quality + 0.3 * risk"
+        },
+        "output": "Actions scorées et classées"
+      },
+      {
+        "step": 4,
+        "name": "Filtre volatilité/liquidité",
+        "thresholds": {
+          "max_volatility": "60% annualisée",
+          "min_market_cap": "Implicite (données disponibles = liquide)"
+        },
+        "description": "Élimine les actions trop volatiles ou illiquides",
+        "output": "~200-300 actions filtrées"
+      },
+      {
+        "step": 5,
+        "name": "Sélection équilibrée par secteur",
+        "function": "sector_balanced_selection()",
+        "target": "25 actions maximum",
+        "logic": {
+          "diversification": "Max 3-4 actions par secteur",
+          "ranking": "Tri par composite_score décroissant dans chaque secteur",
+          "selection": "Prend les meilleurs de chaque secteur jusqu'à 25 total"
+        },
+        "rejection_reasons": [
+          "Quota sectoriel atteint (ex: déjà 4 actions Technologie)",
+          "Score composite insuffisant vs concurrents du secteur",
+          "Secteur surreprésenté dans l'univers"
+        ],
+        "output": "25 actions finales pour les portefeuilles"
+      },
+      {
+        "step": 6,
+        "name": "Tilts RADAR (optionnel)",
+        "description": "Ajuste les scores selon le contexte marché",
+        "adjustments": {
+          "favored_sectors": "+15% sur le score",
+          "avoided_sectors": "-15% sur le score",
+          "favored_regions": "+15% sur le score",
+          "avoided_regions": "-15% sur le score"
+        },
+        "source": "data/market_context.json (généré par RADAR)"
+      }
+    ],
+    "key_points": [
+      "Les grandes capitalisations NE SONT PAS automatiquement sélectionnées",
+      "La qualité fondamentale (Buffett) prime sur la taille",
+      "La diversification sectorielle limite le nombre d'actions par secteur",
+      "Une action peut être rejetée même avec un bon score si son secteur est déjà plein",
+      "Les données manquantes (ROE, D/E) entraînent un rejet"
+    ]
+  },
+  "config_used": {
+    "buffett_mode": "soft",
+    "buffett_min_score": 40,
+    "max_equities": 25,
+    "max_per_sector": 4,
+    "tactical_context_enabled": true
+  },
+  "summary": {
+    "total_universe": 1006,
+    "total_selected": 50,
+    "selection_rate": "5.0%",
+    "by_region": {
+      "US": {
+        "universe": 0,
+        "in_top_20_selected": 0
+      },
+      "Europe": {
+        "universe": 268,
+        "in_top_20_selected": 2
+      },
+      "Asia": {
+        "universe": 143,
+        "in_top_20_selected": 3
+      }
+    }
+  },
+  "sectors_distribution": {
+    "Services publics": {
+      "selected_count": 3,
+      "selected_names": [
+        "SSE PLC",
+        "KOREA ELECTRIC POWER CORP",
+        "ENGIE SA"
+      ]
+    },
+    "Matériaux": {
+      "selected_count": 2,
+      "selected_names": [
+        "ASIAN PAINTS LTD",
+        "RIO TINTO PLC"
+      ]
+    },
+    "La communication": {
+      "selected_count": 3,
+      "selected_names": [
+        "ALPHABET INC CLASS A",
+        "ALPHABET INC CLASS C",
+        "BHARTI AIRTEL LTD"
+      ]
+    },
+    "Technologie de l'information": {
+      "selected_count": 12,
+      "selected_names": [
+        "SK HYNIX INC",
+        "CHROMA ATE INC",
+        "PERSISTENT SYSTEMS LTD",
+        "WIWYNN CORPORATION CORP",
+        "LTIMINDTREE LTD",
+        "HANMI SEMICONDUCTOR LTD",
+        "TERADYNE INC",
+        "CIENA CORP",
+        "CISCO SYSTEMS INC",
+        "INFOSYS LTD",
+        "APPLE INC",
+        "WESTERN DIGITAL CORP"
+      ]
+    },
+    "Santé": {
+      "selected_count": 10,
+      "selected_names": [
+        "ELI LILLY",
+        "INTUITIVE SURGICAL INC",
+        "WATERS CORP",
+        "REGENERON PHARMACEUTICALS",
+        "NATERA INC",
+        "CENCORA INC",
+        "JOHNSON & JOHNSON",
+        "MERCK & CO INC",
+        "ASTRAZENECA PLC",
+        "AMGEN INC"
+      ]
+    },
+    "Finance": {
+      "selected_count": 8,
+      "selected_names": [
+        "JACK HENRY AND ASSOCIATES",
+        "SBI LIFE INSURANCE COMPAN",
+        "AU SMALL FINANCE BANK LTD",
+        "BANCO BILBAO VIZCAYA ARGE",
+        "AXIS BANK LTD",
+        "AMERICAN EXPRESS",
+        "LPL FINANCIAL HOLDINGS IN",
+        "CAIXABANK SA"
+      ]
+    },
+    "Industries": {
+      "selected_count": 7,
+      "selected_names": [
+        "JB HUNT TRANSPORT SERVICE",
+        "EXPEDITORS INTERNATIONAL ",
+        "CATERPILLAR INC",
+        "CUMMINS INC",
+        "CH ROBINSON WORLDWIDE INC",
+        "POSCO FUTURE M LTD",
+        "AIRTAC INTERNATIONAL GROU"
+      ]
+    },
+    "Biens de consommation cycliques": {
+      "selected_count": 5,
+      "selected_names": [
+        "LAS VEGAS SANDS CORP",
+        "KIA CORPORATION CORP",
+        "HANKOOK TIRE & TECHNOLOGY",
+        "LVMH",
+        "ROSS STORES INC"
+      ]
+    }
+  },
+  "top_caps_by_region": {
+    "US": {
+      "total_in_universe": 0,
+      "top_20_analyzed": 0,
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
+      "stocks": []
+    },
+    "Europe": {
+      "total_in_universe": 268,
+      "top_20_analyzed": 20,
+      "selected_in_top_20": 2,
+      "rejection_rate_top_20": "90%",
+      "stocks": [
+        {
+          "rank": 1,
+          "name": "ASTRAZENECA PLC",
+          "ticker": "AZN",
+          "market_cap": "21.1T",
+          "market_cap_billions": 21130.4,
+          "sector": "Santé",
+          "country": "Royaume-Uni",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
+          "details": {
+            "status": "selected"
+          },
+          "buffett_score": 80.0,
+          "roe": 17.23,
+          "de_ratio": 0.74,
+          "ytd": "-1.52"
+        },
+        {
+          "rank": 2,
+          "name": "HSBC HOLDINGS PLC",
+          "ticker": "HSBA",
+          "market_cap": "20.4T",
+          "market_cap_billions": 20441.2,
+          "sector": "Finance",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 77.4,
+          "roe": 13,
+          "de_ratio": 1.26,
+          "ytd": "1.02"
+        },
+        {
+          "rank": 3,
+          "name": "SHELL PLC",
+          "ticker": "SHEL",
+          "market_cap": "15.7T",
+          "market_cap_billions": 15744.8,
+          "sector": "Energie",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Energie"
+          },
+          "buffett_score": 77.5,
+          "roe": 9.17,
+          "de_ratio": 0.43,
+          "ytd": "-0.62"
+        },
+        {
+          "rank": 4,
+          "name": "UNILEVER PLC",
+          "ticker": "ULVR",
+          "market_cap": "10.5T",
+          "market_cap_billions": 10521.8,
+          "sector": "Biens de consommation de base",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Biens de consommation de base"
+          },
+          "buffett_score": 76.5,
+          "roe": 28.24,
+          "de_ratio": 1.36,
+          "ytd": "-2.53"
+        },
+        {
+          "rank": 5,
+          "name": "RIO TINTO PLC",
+          "ticker": "RIO",
+          "market_cap": "9.8T",
+          "market_cap_billions": 9751.1,
+          "sector": "Matériaux",
+          "country": "Royaume-Uni",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
+          "details": {
+            "status": "selected"
+          },
+          "buffett_score": 76.0,
+          "roe": 19.97,
+          "de_ratio": 0.24,
+          "ytd": "1.80"
+        },
+        {
+          "rank": 6,
+          "name": "BRITISH AMERICAN TOBACCO",
+          "ticker": "BATS",
+          "market_cap": "9.1T",
+          "market_cap_billions": 9111.3,
+          "sector": "Biens de consommation de base",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Biens de consommation de base"
+          },
+          "buffett_score": 50.9,
+          "roe": 6.36,
+          "de_ratio": 0.74,
+          "ytd": "-2.86"
+        },
+        {
+          "rank": 7,
+          "name": "GLAXOSMITHKLINE",
+          "ticker": "GSK",
+          "market_cap": "7.4T",
+          "market_cap_billions": 7372.8,
+          "sector": "Santé",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Volatilité excessive (376.1% > 60%)",
+          "details": {
+            "volatility": 376.11
+          },
+          "buffett_score": 80.0,
+          "roe": 22.55,
+          "de_ratio": 1.3,
+          "ytd": "-0.66"
+        },
+        {
+          "rank": 8,
+          "name": "BARCLAYS PLC",
+          "ticker": "BARC",
+          "market_cap": "6.6T",
+          "market_cap_billions": 6627.7,
+          "sector": "Finance",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 8.77,
+          "de_ratio": 2.56,
+          "ytd": "1.36"
+        },
+        {
+          "rank": 9,
+          "name": "RELX PLC",
+          "ticker": "REL",
+          "market_cap": "5.4T",
+          "market_cap_billions": 5428.4,
+          "sector": "Industries",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Industries",
+            "sector_quota": "7/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JB HUNT TRANSPORT SE",
+              "EXPEDITORS INTERNATI",
+              "CATERPILLAR INC",
+              "CUMMINS INC",
+              "CH ROBINSON WORLDWID",
+              "POSCO FUTURE M LTD",
+              "AIRTAC INTERNATIONAL"
+            ]
+          },
+          "buffett_score": 76.7,
+          "roe": 55.48,
+          "de_ratio": 1.87,
+          "ytd": "3.55"
+        },
+        {
+          "rank": 10,
+          "name": "NATWEST GROUP PLC",
+          "ticker": "NWG",
+          "market_cap": "5.2T",
+          "market_cap_billions": 5246.5,
+          "sector": "Finance",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 12.22,
+          "de_ratio": 1.67
+        },
+        {
+          "rank": 11,
+          "name": "LONDON STOCK EXCHANGE GROUP PLC",
+          "ticker": "LSEG",
+          "market_cap": "4.5T",
+          "market_cap_billions": 4487.8,
+          "sector": "Finance",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Volatilité excessive (376.6% > 60%)",
+          "details": {
+            "volatility": 376.65
+          },
+          "buffett_score": 55.0,
+          "roe": 3.66,
+          "de_ratio": 0.4,
+          "ytd": "3.11"
+        },
+        {
+          "rank": 12,
+          "name": "STANDARD CHARTERED PLC",
+          "ticker": "STAN",
+          "market_cap": "4.2T",
+          "market_cap_billions": 4177.1,
+          "sector": "Finance",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 79.4,
+          "roe": 7.88,
+          "de_ratio": 1.88,
+          "ytd": "0.81"
+        },
+        {
+          "rank": 13,
+          "name": "RECKITT BENCKISER GROUP PLC",
+          "ticker": "RKT",
+          "market_cap": "4.0T",
+          "market_cap_billions": 4014.4,
+          "sector": "Biens de consommation de base",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Biens de consommation de base"
+          },
+          "buffett_score": 57.2,
+          "roe": 7.03,
+          "de_ratio": 0.59,
+          "ytd": "-0.07"
+        },
+        {
+          "rank": 14,
+          "name": "COMPASS GROUP PLC",
+          "ticker": "CPG",
+          "market_cap": "4.0T",
+          "market_cap_billions": 3967.9,
+          "sector": "Biens de consommation cycliques",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 5/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Biens de consommation cycliques",
+            "sector_quota": "5/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "LAS VEGAS SANDS CORP",
+              "KIA CORPORATION CORP",
+              "HANKOOK TIRE & TECHN",
+              "LVMH",
+              "ROSS STORES INC"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 20.47,
+          "de_ratio": 0.86,
+          "ytd": "-1.20"
+        },
+        {
+          "rank": 15,
+          "name": "DIAGEO PLC",
+          "ticker": "DGE",
+          "market_cap": "3.6T",
+          "market_cap_billions": 3588.6,
+          "sector": "Biens de consommation de base",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Biens de consommation de base"
+          },
+          "buffett_score": 72.8,
+          "roe": 19.26,
+          "de_ratio": 1.85,
+          "ytd": "2.02"
+        },
+        {
+          "rank": 16,
+          "name": "ANTOFAGASTA PLC",
+          "ticker": "ANTO",
+          "market_cap": "3.4T",
+          "market_cap_billions": 3399.9,
+          "sector": "Matériaux",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Matériaux"
+          },
+          "buffett_score": 80.0,
+          "roe": 10.16,
+          "de_ratio": 0.41,
+          "ytd": "5.92"
+        },
+        {
+          "rank": 17,
+          "name": "ANGLO AMERICAN PLC",
+          "ticker": "AAL",
+          "market_cap": "3.3T",
+          "market_cap_billions": 3267.9,
+          "sector": "Matériaux",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Score Buffett insuffisant (20 < 40)",
+          "details": {
+            "buffett_score": 20.0,
+            "roe": -21.27,
+            "de_ratio": -9.44
+          },
+          "buffett_score": 20.0,
+          "roe": -21.27,
+          "de_ratio": -9.44,
+          "ytd": "3.13"
+        },
+        {
+          "rank": 18,
+          "name": "3I GROUP PLC",
+          "ticker": "III",
+          "market_cap": "3.2T",
+          "market_cap_billions": 3182.0,
+          "sector": "Finance",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Volatilité excessive (532.6% > 60%)",
+          "details": {
+            "volatility": 532.56
+          },
+          "buffett_score": 54.8,
+          "roe": 2.95,
+          "de_ratio": 0.67,
+          "ytd": "1.65"
+        },
+        {
+          "rank": 19,
+          "name": "EXPERIAN PLC",
+          "ticker": "EXPN",
+          "market_cap": "3.0T",
+          "market_cap_billions": 3043.8,
+          "sector": "Industries",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Volatilité excessive (377.0% > 60%)",
+          "details": {
+            "volatility": 377.0
+          },
+          "buffett_score": 80.0,
+          "roe": 22.99,
+          "de_ratio": 0.99,
+          "ytd": "3.03"
+        },
+        {
+          "rank": 20,
+          "name": "PRUDENTIAL PLC",
+          "ticker": "PRU",
+          "market_cap": "2.9T",
+          "market_cap_billions": 2918.9,
+          "sector": "Finance",
+          "country": "Royaume-Uni",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 9.45,
+          "de_ratio": 0.72,
+          "ytd": "2.16"
+        }
+      ]
+    },
+    "Asia": {
+      "total_in_universe": 143,
+      "top_20_analyzed": 20,
+      "selected_in_top_20": 3,
+      "rejection_rate_top_20": "85%",
+      "stocks": [
+        {
+          "rank": 1,
+          "name": "DIAN SWASTATIKA SENTOSA",
+          "ticker": "DSSA",
+          "market_cap": "601.0T",
+          "market_cap_billions": 600979.6,
+          "sector": "Energie",
+          "country": "Indonésie",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Energie"
+          },
+          "buffett_score": 80.0,
+          "roe": 27.93,
+          "de_ratio": 0.63,
+          "ytd": "-1.37"
+        },
+        {
+          "rank": 2,
+          "name": "TAIWAN SEMICONDUCTOR MANUFACTURING",
+          "ticker": "2330",
+          "market_cap": "43.3T",
+          "market_cap_billions": 43307.3,
+          "sector": "Technologie de l'information",
+          "country": "Taïwan",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 12/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Technologie de l'information",
+            "sector_quota": "12/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "CHROMA ATE INC",
+              "PERSISTENT SYSTEMS L",
+              "WIWYNN CORPORATION C",
+              "LTIMINDTREE LTD",
+              "HANMI SEMICONDUCTOR ",
+              "TERADYNE INC",
+              "CIENA CORP",
+              "CISCO SYSTEMS INC",
+              "INFOSYS LTD",
+              "APPLE INC",
+              "WESTERN DIGITAL CORP"
+            ]
+          },
+          "buffett_score": 56.4,
+          "roe": 2.58,
+          "de_ratio": 0.1,
+          "ytd": "5.36"
+        },
+        {
+          "rank": 3,
+          "name": "RELIANCE INDUSTRIES LTD",
+          "ticker": "RELIANCE",
+          "market_cap": "21.4T",
+          "market_cap_billions": 21356.4,
+          "sector": "Energie",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Energie"
+          },
+          "buffett_score": 74.2,
+          "roe": 8.05,
+          "de_ratio": 0.37,
+          "ytd": "0.16"
+        },
+        {
+          "rank": 4,
+          "name": "HDFC BANK LTD",
+          "ticker": "HDFCBANK",
+          "market_cap": "15.0T",
+          "market_cap_billions": 15038.4,
+          "sector": "Finance",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 79.8,
+          "roe": 7.96,
+          "de_ratio": 0.85,
+          "ytd": "-1.38"
+        },
+        {
+          "rank": 5,
+          "name": "BHARTI AIRTEL LTD",
+          "ticker": "BHARTIARTL",
+          "market_cap": "12.8T",
+          "market_cap_billions": 12821.7,
+          "sector": "La communication",
+          "country": "Inde",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
+          "details": {
+            "status": "selected"
+          },
+          "buffett_score": 80.0,
+          "roe": 24.42,
+          "de_ratio": 1.39,
+          "ytd": "-0.26"
+        },
+        {
+          "rank": 6,
+          "name": "ICICI BANK LTD",
+          "ticker": "ICICIBANK",
+          "market_cap": "9.8T",
+          "market_cap_billions": 9807.4,
+          "sector": "Finance",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 16.6,
+          "de_ratio": 0.62,
+          "ytd": "2.50"
+        },
+        {
+          "rank": 7,
+          "name": "STATE BANK OF INDIA",
+          "ticker": "SBIN",
+          "market_cap": "9.3T",
+          "market_cap_billions": 9281.8,
+          "sector": "Finance",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 15.94,
+          "de_ratio": 1.22
+        },
+        {
+          "rank": 8,
+          "name": "INFOSYS LTD",
+          "ticker": "INFY",
+          "market_cap": "6.5T",
+          "market_cap_billions": 6498.8,
+          "sector": "Technologie de l'information",
+          "country": "Inde",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
+          "details": {
+            "status": "selected"
+          },
+          "buffett_score": 75.7,
+          "roe": 28.09,
+          "de_ratio": 0.09,
+          "ytd": "-1.44"
+        },
+        {
+          "rank": 9,
+          "name": "BAJAJ FINANCE LTD",
+          "ticker": "BAJFINANCE",
+          "market_cap": "6.1T",
+          "market_cap_billions": 6083.1,
+          "sector": "Finance",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 16.96,
+          "de_ratio": 2.78,
+          "ytd": "0.58"
+        },
+        {
+          "rank": 10,
+          "name": "LARSEN AND TOUBRO LTD",
+          "ticker": "LT",
+          "market_cap": "5.7T",
+          "market_cap_billions": 5709.2,
+          "sector": "Industries",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Industries",
+            "sector_quota": "7/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JB HUNT TRANSPORT SE",
+              "EXPEDITORS INTERNATI",
+              "CATERPILLAR INC",
+              "CUMMINS INC",
+              "CH ROBINSON WORLDWID",
+              "POSCO FUTURE M LTD",
+              "AIRTAC INTERNATIONAL"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 15.31,
+          "de_ratio": 1.15,
+          "ytd": "0.24"
+        },
+        {
+          "rank": 11,
+          "name": "HINDUSTAN UNILEVER LTD",
+          "ticker": "HINDUNILVR",
+          "market_cap": "5.6T",
+          "market_cap_billions": 5601.8,
+          "sector": "Biens de consommation de base",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Biens de consommation de base"
+          },
+          "buffett_score": 73.6,
+          "roe": 21.51,
+          "de_ratio": 0.03,
+          "ytd": "2.63"
+        },
+        {
+          "rank": 12,
+          "name": "MARUTI SUZUKI INDIA LTD",
+          "ticker": "MARUTI",
+          "market_cap": "5.4T",
+          "market_cap_billions": 5393.6,
+          "sector": "Biens de consommation cycliques",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 5/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Biens de consommation cycliques",
+            "sector_quota": "5/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "LAS VEGAS SANDS CORP",
+              "KIA CORPORATION CORP",
+              "HANKOOK TIRE & TECHN",
+              "LVMH",
+              "ROSS STORES INC"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 15.07,
+          "de_ratio": 0,
+          "ytd": "2.68"
+        },
+        {
+          "rank": 13,
+          "name": "KOTAK MAHINDRA BANK LTD",
+          "ticker": "KOTAKBANK",
+          "market_cap": "4.4T",
+          "market_cap_billions": 4357.2,
+          "sector": "Finance",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Finance: 8/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Finance",
+            "sector_quota": "8/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JACK HENRY AND ASSOC",
+              "SBI LIFE INSURANCE C",
+              "AU SMALL FINANCE BAN",
+              "BANCO BILBAO VIZCAYA",
+              "AXIS BANK LTD",
+              "AMERICAN EXPRESS",
+              "LPL FINANCIAL HOLDIN",
+              "CAIXABANK SA"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 14.05,
+          "de_ratio": 0.55,
+          "ytd": "-1.21"
+        },
+        {
+          "rank": 14,
+          "name": "HCL TECHNOLOGIES LTD",
+          "ticker": "HCLTECH",
+          "market_cap": "4.4T",
+          "market_cap_billions": 4355.5,
+          "sector": "Technologie de l'information",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 12/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Technologie de l'information",
+            "sector_quota": "12/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "CHROMA ATE INC",
+              "PERSISTENT SYSTEMS L",
+              "WIWYNN CORPORATION C",
+              "LTIMINDTREE LTD",
+              "HANMI SEMICONDUCTOR ",
+              "TERADYNE INC",
+              "CIENA CORP",
+              "CISCO SYSTEMS INC",
+              "INFOSYS LTD",
+              "APPLE INC",
+              "WESTERN DIGITAL CORP"
+            ]
+          },
+          "buffett_score": 69.1,
+          "roe": 24.97,
+          "de_ratio": 0.09
+        },
+        {
+          "rank": 15,
+          "name": "SUN PHARMACEUTICAL INDUSTRIES LTD",
+          "ticker": "SUNPHARMA",
+          "market_cap": "4.1T",
+          "market_cap_billions": 4148.2,
+          "sector": "Santé",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Santé: 10/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Santé",
+            "sector_quota": "10/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "ELI LILLY",
+              "INTUITIVE SURGICAL I",
+              "WATERS CORP",
+              "REGENERON PHARMACEUT",
+              "NATERA INC",
+              "CENCORA INC",
+              "JOHNSON & JOHNSON",
+              "MERCK & CO INC",
+              "ASTRAZENECA PLC",
+              "AMGEN INC"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 15.13,
+          "de_ratio": 0.03,
+          "ytd": "0.45"
+        },
+        {
+          "rank": 16,
+          "name": "AXIS BANK LTD",
+          "ticker": "AXISBANK",
+          "market_cap": "4.0T",
+          "market_cap_billions": 3992.4,
+          "sector": "Finance",
+          "country": "Inde",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
+          "details": {
+            "status": "selected"
+          },
+          "buffett_score": 80.0,
+          "roe": 15.01,
+          "de_ratio": 1.17,
+          "ytd": "0.89"
+        },
+        {
+          "rank": 17,
+          "name": "TITAN COMPANY LTD",
+          "ticker": "TITAN",
+          "market_cap": "3.6T",
+          "market_cap_billions": 3618.9,
+          "sector": "Biens de consommation cycliques",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 5/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Biens de consommation cycliques",
+            "sector_quota": "5/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "LAS VEGAS SANDS CORP",
+              "KIA CORPORATION CORP",
+              "HANKOOK TIRE & TECHN",
+              "LVMH",
+              "ROSS STORES INC"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 28.71,
+          "de_ratio": 1.79
+        },
+        {
+          "rank": 18,
+          "name": "ULTRATECH CEMENT LTD",
+          "ticker": "ULTRACEMCO",
+          "market_cap": "3.6T",
+          "market_cap_billions": 3555.2,
+          "sector": "Matériaux",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
+          "details": {
+            "composite_score": 0,
+            "sector": "Matériaux"
+          },
+          "buffett_score": 74.5,
+          "roe": 8.17,
+          "de_ratio": 0.33
+        },
+        {
+          "rank": 19,
+          "name": "ADANI PORTS AND SPECIAL ECONOMIC Z",
+          "ticker": "ADANIPORTS",
+          "market_cap": "3.4T",
+          "market_cap_billions": 3440.2,
+          "sector": "Industries",
+          "country": "Inde",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Industries",
+            "sector_quota": "7/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "JB HUNT TRANSPORT SE",
+              "EXPEDITORS INTERNATI",
+              "CATERPILLAR INC",
+              "CUMMINS INC",
+              "CH ROBINSON WORLDWID",
+              "POSCO FUTURE M LTD",
+              "AIRTAC INTERNATIONAL"
+            ]
+          },
+          "buffett_score": 80.0,
+          "roe": 17.02,
+          "de_ratio": 0.79,
+          "ytd": "0.80"
+        },
+        {
+          "rank": 20,
+          "name": "HON HAI PRECISION INDUSTRY LTD",
+          "ticker": "2317",
+          "market_cap": "3.3T",
+          "market_cap_billions": 3274.3,
+          "sector": "Technologie de l'information",
+          "country": "Taïwan",
+          "selected": false,
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 12/4), score 0.000 < seuil 0.000",
+          "details": {
+            "sector": "Technologie de l'information",
+            "sector_quota": "12/4",
+            "your_score": 0,
+            "min_selected_score": 0,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "CHROMA ATE INC",
+              "PERSISTENT SYSTEMS L",
+              "WIWYNN CORPORATION C",
+              "LTIMINDTREE LTD",
+              "HANMI SEMICONDUCTOR ",
+              "TERADYNE INC",
+              "CIENA CORP",
+              "CISCO SYSTEMS INC",
+              "INFOSYS LTD",
+              "APPLE INC",
+              "WESTERN DIGITAL CORP"
+            ]
+          },
+          "buffett_score": 63.3,
+          "roe": 5.31,
+          "de_ratio": 0.09,
+          "ytd": "1.08"
+        }
+      ]
+    }
+  },
+  "radar_context": {
+    "regime": "risk-on",
+    "favored_sectors": [
+      "utilities",
+      "healthcare",
+      "financials",
+      "industrials",
+      "information-technology"
+    ],
+    "avoided_sectors": [
+      "consumer-staples",
+      "real-estate"
+    ],
+    "favored_regions": [],
+    "avoided_regions": [],
+    "impact": "Les secteurs/régions favorisés reçoivent +15% sur leur score, les évités -15%"
+  }
+}
