@@ -3,6 +3,7 @@
  * Utilise prioritairement les libellés display_fr du JSON
  * Garde la traduction française côté client pour flexibilité
  * Intègre l'affichage des holdings ETF depuis un fichier consolidé
+ * + Support 52W (performance 52 semaines glissantes)
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -494,10 +495,10 @@ document.addEventListener('DOMContentLoaded', function() {
      * Convertit un pourcentage string en nombre
      */
     function parsePercentToNumber(pct) {
-        if (pct == null) return 0;
+        if (pct == null || pct === '' || pct === '—') return null;
         const s = String(pct).replace('%','').replace(/\s/g,'').replace(',', '.');
         const m = s.match(/-?\d+(\.\d+)?/);
-        return m ? parseFloat(m[0]) : 0;
+        return m ? parseFloat(m[0]) : null;
     }
     
     /**
@@ -515,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * Formate un nombre en pourcentage FR
      */
     function formatPercent(n) {
-        if (n == null || isNaN(n)) return '-';
+        if (n == null || isNaN(n)) return '—';
         const sign = n > 0 ? '+' : '';
         return `${sign}${new Intl.NumberFormat('fr-FR', {
             minimumFractionDigits: 2,
@@ -530,20 +531,23 @@ document.addEventListener('DOMContentLoaded', function() {
     function median(nums) {
         const arr = nums.filter(n => Number.isFinite(n)).sort((a, b) => a - b);
         const n = arr.length;
-        if (!n) return 0;
+        if (!n) return null;
         const mid = Math.floor(n / 2);
         return n % 2 ? arr[mid] : (arr[mid - 1] + arr[mid]) / 2;
     }
     
     /**
      * Agrège les données d'une catégorie en calculant la médiane
-     * des variations quotidiennes et YTD
+     * des variations quotidiennes, YTD et 52W
      */
     function aggregateCategory(list, label = '') {
         const changes = list.map(s => s.change_num).filter(Number.isFinite);
         const ytds = list.map(s => s.ytd_num).filter(Number.isFinite);
+        const w52s = list.map(s => s.w52_num).filter(Number.isFinite);
+        
         const mChange = median(changes);
         const mYTD = median(ytds);
+        const mW52 = w52s.length ? median(w52s) : null;
         
         // Debug log pour vérifier le calcul de la médiane
         console.debug('[MEDIAN]', label, {
@@ -551,12 +555,15 @@ document.addEventListener('DOMContentLoaded', function() {
             changes: changes,
             medianChange: mChange,
             ytds: ytds,
-            medianYTD: mYTD
+            medianYTD: mYTD,
+            w52s: w52s,
+            medianW52: mW52
         });
         
         return {
             change: mChange,
             ytd: mYTD,
+            w52: mW52,
             count: list.length
         };
     }
@@ -574,11 +581,25 @@ document.addEventListener('DOMContentLoaded', function() {
             r.value_num = r.value_num;
             r.change_num = r.change_num;
             r.ytd_num = r.ytd_num;
+            
+            // 52W : utiliser w52_num du JSON si disponible
+            if ('w52_num' in r) {
+                r.w52_num = r.w52_num;  // Peut être null si historique insuffisant
+            } else {
+                r.w52_num = parsePercentToNumber(r.w52Change);
+            }
         } else {
             // Fallback : parser les valeurs formatées (ancienne méthode)
             r.value_num = toNumber(r.value);
             r.change_num = parsePercentToNumber(r.changePercent);
             r.ytd_num = parsePercentToNumber(r.ytdChange);
+            r.w52_num = parsePercentToNumber(r.w52Change);
+        }
+        
+        // CRITIQUE: Garder null si le backend renvoie null (historique insuffisant)
+        // Ne pas convertir null en 0
+        if (r.w52_num === 0 && (r.w52Change == null || r.w52Change === '' || r.w52Change === '—')) {
+            r.w52_num = null;
         }
         
         r.trend = r.change_num > 0 ? 'up' : r.change_num < 0 ? 'down' : 'flat';
@@ -598,7 +619,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function createTableCell(text, className) {
         const td = document.createElement('td');
         if (className) td.className = className;
-        td.textContent = text ?? '-';
+        td.textContent = text ?? '—';
         return td;
     }
     
@@ -621,7 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 labelsContainer.innerHTML = `
                     <div style="min-width: 62px; text-align: right;">VAR %</div>
-                    <div style="min-width: 62px; text-align: right;">YTD</div>
+                    <div style="min-width: 62px; text-align: right;">YTD / 52W</div>
                 `;
                 
                 col.insertBefore(labelsContainer, dataContainer);
@@ -762,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (sectors.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="4" class="text-center py-4 text-gray-400">
+                            <td colspan="5" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune donnée disponible pour cette région
                             </td>
@@ -783,6 +804,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                               sector.change_num > 0.01 ? 'positive' : 'neutral';
                             const ytdClass = sector.ytd_num < -0.01 ? 'negative' : 
                                            sector.ytd_num > 0.01 ? 'positive' : 'neutral';
+                            
+                            // Classe pour 52W (peut être null)
+                            const w52Class = (sector.w52_num == null) ? 'neutral' :
+                                           sector.w52_num < -0.01 ? 'negative' :
+                                           sector.w52_num > 0.01 ? 'positive' : 'neutral';
                             
                             // Priorité : display_fr du JSON, puis traduction FR, puis fallback
                             const rawName = sector.name || '';  // nom complet ETF pour tooltip
@@ -834,6 +860,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             tr.appendChild(createTableCell(sector.value));
                             tr.appendChild(createTableCell(formatPercent(sector.change_num), changeClass));
                             tr.appendChild(createTableCell(formatPercent(sector.ytd_num), ytdClass));
+                            
+                            // Nouvelle colonne 52W
+                            const w52Text = sector.w52_num == null ? '—' : formatPercent(sector.w52_num);
+                            const w52Td = createTableCell(w52Text, w52Class);
+                            
+                            // Tooltip pour 52W
+                            if (sector.w52_ref_date) {
+                                w52Td.title = `Base 52W: ${sector.w52_ref_date}`;
+                            } else if (sector.w52_num == null) {
+                                w52Td.title = 'Historique insuffisant (< 12 mois)';
+                            }
+                            
+                            tr.appendChild(w52Td);
                             
                             tableBody.appendChild(tr);
                         });
@@ -920,12 +959,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Calcule la médiane des variations jour et YTD
-                const { change, ytd, count } = aggregateCategory(list, `${region}/${sectorInfo.category}`);
+                // Calcule la médiane des variations jour, YTD et 52W
+                const { change, ytd, w52, count } = aggregateCategory(list, `${region}/${sectorInfo.category}`);
                 
                 const nameElement = container.querySelector('.sector-name');
                 const valueElement = container.querySelector('.sector-value');
                 const ytdElement = container.querySelector('.sector-ytd');
+                const w52Element = container.querySelector('.sector-w52');
                 
                 if (nameElement) {
                     // Pour l'aperçu, on garde les noms français simplifiés
@@ -935,15 +975,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (valueElement) {
                     valueElement.textContent = formatPercent(change);
                     valueElement.className = 'sector-value ' + 
-                        (change < -0.01 ? 'negative' : 
+                        (change == null ? 'neutral' :
+                         change < -0.01 ? 'negative' : 
                          change > 0.01 ? 'positive' : 'neutral');
                 }
                 
                 if (ytdElement) {
                     ytdElement.textContent = `YTD ${formatPercent(ytd)}`;
                     ytdElement.className = 'sector-ytd ' + 
-                        (ytd < -0.01 ? 'negative' : 
+                        (ytd == null ? '' :
+                         ytd < -0.01 ? 'negative' : 
                          ytd > 0.01 ? 'positive' : 'neutral');
+                    ytdElement.title = 'YTD glissant (médiane)';
+                }
+                
+                // Mise à jour du chip 52W
+                if (w52Element) {
+                    w52Element.textContent = w52 == null ? '52W —' : `52W ${formatPercent(w52)}`;
+                    w52Element.className = 'sector-w52 ' + 
+                        (w52 == null ? '' :
+                         w52 < -0.01 ? 'negative' : 
+                         w52 > 0.01 ? 'positive' : 'neutral');
+                    w52Element.title = w52 == null ? 'Historique insuffisant (< 12 mois)' : '52W glissant (médiane)';
                 }
                 
                 // Ajoute un tooltip listant les ETFs contributifs
@@ -987,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Calcule et affiche les top performers
+     * Calcule et affiche les top performers (daily, YTD et 52W)
      */
     function updateTopPerformers() {
         const regions = ['europe', 'us'];
@@ -995,18 +1048,33 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (allSectors.length < 3) return;
         
-        // Trier par variation quotidienne et YTD
+        // Trier par variation quotidienne
         const byDaily = [...allSectors].sort((a, b) => 
-            b.change_num - a.change_num || b.ytd_num - a.ytd_num
-        );
-        const byYTD = [...allSectors].sort((a, b) => 
-            b.ytd_num - a.ytd_num || b.change_num - a.change_num
+            (b.change_num - a.change_num) || (b.ytd_num - a.ytd_num)
         );
         
+        // Trier par YTD
+        const byYTD = [...allSectors].sort((a, b) => 
+            (b.ytd_num - a.ytd_num) || (b.change_num - a.change_num)
+        );
+        
+        // Trier par 52W (exclure les null)
+        const w52Only = allSectors.filter(s => Number.isFinite(s.w52_num));
+        const byW52 = [...w52Only].sort((a, b) => 
+            (b.w52_num - a.w52_num) || (b.ytd_num - a.ytd_num)
+        );
+        
+        // Daily top/bottom
         updateTopPerformersHTML('daily-top', byDaily.slice(0, 3), 'change_num');
         updateTopPerformersHTML('daily-bottom', byDaily.slice(-3).reverse(), 'change_num');
+        
+        // YTD top/bottom
         updateTopPerformersHTML('ytd-top', byYTD.slice(0, 3), 'ytd_num');
         updateTopPerformersHTML('ytd-bottom', byYTD.slice(-3).reverse(), 'ytd_num');
+        
+        // 52W top/bottom
+        updateTopPerformersHTML('w52-top', byW52.slice(0, 3), 'w52_num');
+        updateTopPerformersHTML('w52-bottom', byW52.slice(-3).reverse(), 'w52_num');
     }
     
     /**
@@ -1017,6 +1085,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!container) return;
         
         container.innerHTML = '';
+        
+        if (items.length === 0) {
+            container.innerHTML = '<div class="performer-row" style="opacity: 0.5; justify-content: center;">Aucune donnée</div>';
+            return;
+        }
         
         items.forEach(sector => {
             const val = sector[field] ?? 0;
