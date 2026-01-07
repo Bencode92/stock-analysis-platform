@@ -4,6 +4,7 @@ Script de mise à jour des données sectorielles via Twelve Data API
 Utilise des ETFs sectoriels pour représenter les performances des secteurs
 Génère des libellés normalisés bilingues pour l'affichage
 
+v4 - AJOUT: Calcul 52W (52 semaines glissant)
 v3 - FIX: Passage exchange/mic_code aux fonctions API
 """
 
@@ -21,6 +22,7 @@ from twelve_data_utils import (
     get_td_client,
     quote_one,
     baseline_ytd,
+    baseline_52w,
     format_value,
     format_percent,
     parse_percentage,
@@ -207,6 +209,10 @@ def create_empty_sectors_data():
             "ytd": {
                 "best": [],
                 "worst": []
+            },
+            "w52": {
+                "best": [],
+                "worst": []
             }
         },
         "meta": {
@@ -302,11 +308,12 @@ def clean_sector_data(sector_dict: dict) -> dict:
 
 
 def calculate_top_performers(sectors_data: dict, all_sectors: list):
-    """Calcule top/bottom jour et YTD"""
+    """Calcule top/bottom jour, YTD et 52W"""
     logger.info("Calcul des top performers sectoriels...")
 
     daily = [s for s in all_sectors if isinstance(s.get("change_num"), (int, float))]
     ytd = [s for s in all_sectors if isinstance(s.get("ytd_num"), (int, float))]
+    w52 = [s for s in all_sectors if s.get("w52_num") is not None]
 
     if daily:
         daily_sorted = sorted(daily, key=lambda x: x["change_num"], reverse=True)
@@ -323,6 +330,14 @@ def calculate_top_performers(sectors_data: dict, all_sectors: list):
 
         sectors_data["top_performers"]["ytd"]["best"] = [clean_sector_data(s) for s in best_ytd]
         sectors_data["top_performers"]["ytd"]["worst"] = [clean_sector_data(s) for s in worst_ytd]
+
+    if w52:
+        w52_sorted = sorted(w52, key=lambda x: x["w52_num"], reverse=True)
+        best_w52 = w52_sorted[:3]
+        worst_w52 = sorted(w52, key=lambda x: x["w52_num"])[:3]
+
+        sectors_data["top_performers"]["w52"]["best"] = [clean_sector_data(s) for s in best_w52]
+        sectors_data["top_performers"]["w52"]["worst"] = [clean_sector_data(s) for s in worst_w52]
 
 
 def main():
@@ -372,6 +387,7 @@ def main():
     processed_count = 0
     error_count = 0
     ytd_warnings = 0
+    w52_missing_count = 0
     year = dt.date.today().year
     
     for idx, etf in enumerate(sectors_mapping):
@@ -432,6 +448,25 @@ def main():
             
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0.0
             
+            # Pause avant l'appel 52W
+            rate_limit_pause(0.5)
+            
+            # Baseline 52W (close le plus proche de J-365)
+            base_52w_close, base_52w_date = baseline_52w(
+                sym,
+                region_display,
+                exchange=exchange,
+                mic_code=mic_code
+            )
+            
+            # Calculer le 52W (None si historique insuffisant)
+            w52_pct = None
+            if base_52w_close and base_52w_close > 0:
+                w52_pct = 100 * (last - base_52w_close) / base_52w_close
+            else:
+                w52_missing_count += 1
+                logger.info(f"ℹ️ {sym}: Pas de données 52W (historique < 1 an)")
+            
             sector_entry = {
                 "symbol": sym,
                 "name": etf.get("name", sym),
@@ -443,11 +478,14 @@ def main():
                 "value": format_value(last, etf.get("currency", "USD")),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
+                "w52Change": format_percent(w52_pct) if w52_pct is not None else None,
                 "value_num": float(last),
                 "change_num": float(day_pct),
                 "ytd_num": float(ytd_pct),
+                "w52_num": float(w52_pct) if w52_pct is not None else None,
                 "last_price_source": last_src,
                 "ytd_ref_date": base_date,
+                "w52_ref_date": base_52w_date,
                 "ytd_method": "price_last_close_prev_year_to_last_close",
                 "trend": "down" if day_pct < 0 else "up",
                 "region": region_display,
@@ -459,7 +497,8 @@ def main():
             ALL_SECTORS.append(sector_entry.copy())
             processed_count += 1
             
-            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}%")
+            w52_str = f"52W: {w52_pct:+.2f}%" if w52_pct is not None else "52W: N/A"
+            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% {w52_str}")
             
         except Exception as e:
             error_count += 1
@@ -484,6 +523,8 @@ def main():
     logger.info(f"  - Erreurs: {error_count}")
     if ytd_warnings > 0:
         logger.info(f"  - ℹ️ Baselines YTD début {year}: {ytd_warnings}")
+    if w52_missing_count > 0:
+        logger.info(f"  - ℹ️ ETFs sans données 52W (historique < 1 an): {w52_missing_count}")
     
     for category, sectors in SECTORS_DATA["sectors"].items():
         if sectors:
@@ -505,8 +546,17 @@ def main():
         "timezone_mapping": TZ_BY_REGION,
         "note": f"YTD basé sur le dernier close de {year-1} ou fallback 1er jour {year}"
     }
+    SECTORS_DATA["meta"]["w52_calculation"] = {
+        "method": "price_close_nearest_to_today_minus_365d",
+        "lookback_days": 365,
+        "outputsize": 420,
+        "max_gap_days": 10,
+        "note": "Retourne null si historique < 1 an"
+    }
     if ytd_warnings > 0:
         SECTORS_DATA["meta"]["ytd_fallback_count"] = ytd_warnings
+    if w52_missing_count > 0:
+        SECTORS_DATA["meta"]["w52_missing_count"] = w52_missing_count
     
     # 6. Sauvegarde
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
