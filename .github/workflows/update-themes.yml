@@ -1,9 +1,22 @@
 name: Update Themes Data
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# GÈRE: Thèmes et actualités avec FinBERT
+# HORAIRE: 1x/jour à 03:00 Paris (02:00 UTC) - heure creuse
+# DURÉE: ~55 minutes
+# ═══════════════════════════════════════════════════════════════════════════════
+
 on:
   schedule:
-    - cron: '0 */4 * * *'  # Toutes les 4 heures
+    - cron: '0 2 * * *'  # 03:00 Paris (02:00 UTC hiver) - 1 seule fois/jour
   workflow_dispatch:  # Permet l'exécution manuelle
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Groupe de concurrence SÉPARÉ pour ne pas bloquer les autres workflows
+# ═══════════════════════════════════════════════════════════════════════════════
+concurrency:
+  group: themes-update-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   update-themes:
