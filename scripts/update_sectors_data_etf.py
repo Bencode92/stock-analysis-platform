@@ -4,6 +4,10 @@ Script de mise à jour des données sectorielles via Twelve Data API
 Utilise des ETFs sectoriels pour représenter les performances des secteurs
 Génère des libellés normalisés bilingues pour l'affichage
 
+v5 - AJOUT: Calcul 3M et 6M (momentum court/moyen terme)
+     - Nouvelles métriques m3_num, m6_num
+     - Dates de référence m3_ref_date, m6_ref_date
+     - Top performers 3M et 6M
 v4 - AJOUT: Calcul 52W (52 semaines glissant)
 v3 - FIX: Passage exchange/mic_code aux fonctions API
 """
@@ -23,12 +27,17 @@ from twelve_data_utils import (
     quote_one,
     baseline_ytd,
     baseline_52w,
+    baseline_3m,
+    baseline_6m,
     format_value,
     format_percent,
     parse_percentage,
     rate_limit_pause,
     TZ_BY_REGION,
-    API_KEY
+    API_KEY,
+    PERIOD_3M_DAYS,
+    PERIOD_6M_DAYS,
+    PERIOD_52W_DAYS,
 )
 
 # Configuration du logger
@@ -210,6 +219,14 @@ def create_empty_sectors_data():
                 "best": [],
                 "worst": []
             },
+            "m3": {
+                "best": [],
+                "worst": []
+            },
+            "m6": {
+                "best": [],
+                "worst": []
+            },
             "w52": {
                 "best": [],
                 "worst": []
@@ -308,13 +325,16 @@ def clean_sector_data(sector_dict: dict) -> dict:
 
 
 def calculate_top_performers(sectors_data: dict, all_sectors: list):
-    """Calcule top/bottom jour, YTD et 52W"""
+    """Calcule top/bottom jour, YTD, 3M, 6M et 52W"""
     logger.info("Calcul des top performers sectoriels...")
 
     daily = [s for s in all_sectors if isinstance(s.get("change_num"), (int, float))]
     ytd = [s for s in all_sectors if isinstance(s.get("ytd_num"), (int, float))]
+    m3 = [s for s in all_sectors if s.get("m3_num") is not None]
+    m6 = [s for s in all_sectors if s.get("m6_num") is not None]
     w52 = [s for s in all_sectors if s.get("w52_num") is not None]
 
+    # Daily
     if daily:
         daily_sorted = sorted(daily, key=lambda x: x["change_num"], reverse=True)
         best_daily = daily_sorted[:3]
@@ -323,6 +343,7 @@ def calculate_top_performers(sectors_data: dict, all_sectors: list):
         sectors_data["top_performers"]["daily"]["best"] = [clean_sector_data(s) for s in best_daily]
         sectors_data["top_performers"]["daily"]["worst"] = [clean_sector_data(s) for s in worst_daily]
 
+    # YTD
     if ytd:
         ytd_sorted = sorted(ytd, key=lambda x: x["ytd_num"], reverse=True)
         best_ytd = ytd_sorted[:3]
@@ -331,6 +352,25 @@ def calculate_top_performers(sectors_data: dict, all_sectors: list):
         sectors_data["top_performers"]["ytd"]["best"] = [clean_sector_data(s) for s in best_ytd]
         sectors_data["top_performers"]["ytd"]["worst"] = [clean_sector_data(s) for s in worst_ytd]
 
+    # 3M (v5)
+    if m3:
+        m3_sorted = sorted(m3, key=lambda x: x["m3_num"], reverse=True)
+        best_m3 = m3_sorted[:3]
+        worst_m3 = sorted(m3, key=lambda x: x["m3_num"])[:3]
+
+        sectors_data["top_performers"]["m3"]["best"] = [clean_sector_data(s) for s in best_m3]
+        sectors_data["top_performers"]["m3"]["worst"] = [clean_sector_data(s) for s in worst_m3]
+
+    # 6M (v5)
+    if m6:
+        m6_sorted = sorted(m6, key=lambda x: x["m6_num"], reverse=True)
+        best_m6 = m6_sorted[:3]
+        worst_m6 = sorted(m6, key=lambda x: x["m6_num"])[:3]
+
+        sectors_data["top_performers"]["m6"]["best"] = [clean_sector_data(s) for s in best_m6]
+        sectors_data["top_performers"]["m6"]["worst"] = [clean_sector_data(s) for s in worst_m6]
+
+    # 52W
     if w52:
         w52_sorted = sorted(w52, key=lambda x: x["w52_num"], reverse=True)
         best_w52 = w52_sorted[:3]
@@ -387,6 +427,8 @@ def main():
     processed_count = 0
     error_count = 0
     ytd_warnings = 0
+    m3_missing_count = 0
+    m6_missing_count = 0
     w52_missing_count = 0
     year = dt.date.today().year
     
@@ -448,10 +490,43 @@ def main():
             
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0.0
             
-            # Pause avant l'appel 52W
+            # ==================== v5: Baseline 3M ====================
             rate_limit_pause(0.5)
             
-            # Baseline 52W (close le plus proche de J-365)
+            base_3m_close, base_3m_date = baseline_3m(
+                sym,
+                region_display,
+                exchange=exchange,
+                mic_code=mic_code
+            )
+            
+            m3_pct = None
+            if base_3m_close and base_3m_close > 0:
+                m3_pct = 100 * (last - base_3m_close) / base_3m_close
+            else:
+                m3_missing_count += 1
+                logger.info(f"ℹ️ {sym}: Pas de données 3M (historique < 3 mois)")
+            
+            # ==================== v5: Baseline 6M ====================
+            rate_limit_pause(0.5)
+            
+            base_6m_close, base_6m_date = baseline_6m(
+                sym,
+                region_display,
+                exchange=exchange,
+                mic_code=mic_code
+            )
+            
+            m6_pct = None
+            if base_6m_close and base_6m_close > 0:
+                m6_pct = 100 * (last - base_6m_close) / base_6m_close
+            else:
+                m6_missing_count += 1
+                logger.info(f"ℹ️ {sym}: Pas de données 6M (historique < 6 mois)")
+            
+            # ==================== Baseline 52W ====================
+            rate_limit_pause(0.5)
+            
             base_52w_close, base_52w_date = baseline_52w(
                 sym,
                 region_display,
@@ -459,7 +534,6 @@ def main():
                 mic_code=mic_code
             )
             
-            # Calculer le 52W (None si historique insuffisant)
             w52_pct = None
             if base_52w_close and base_52w_close > 0:
                 w52_pct = 100 * (last - base_52w_close) / base_52w_close
@@ -467,6 +541,7 @@ def main():
                 w52_missing_count += 1
                 logger.info(f"ℹ️ {sym}: Pas de données 52W (historique < 1 an)")
             
+            # ==================== Construire l'entrée ====================
             sector_entry = {
                 "symbol": sym,
                 "name": etf.get("name", sym),
@@ -478,13 +553,19 @@ def main():
                 "value": format_value(last, etf.get("currency", "USD")),
                 "changePercent": format_percent(day_pct),
                 "ytdChange": format_percent(ytd_pct),
+                "m3Change": format_percent(m3_pct) if m3_pct is not None else None,
+                "m6Change": format_percent(m6_pct) if m6_pct is not None else None,
                 "w52Change": format_percent(w52_pct) if w52_pct is not None else None,
                 "value_num": float(last),
                 "change_num": float(day_pct),
                 "ytd_num": float(ytd_pct),
+                "m3_num": float(m3_pct) if m3_pct is not None else None,
+                "m6_num": float(m6_pct) if m6_pct is not None else None,
                 "w52_num": float(w52_pct) if w52_pct is not None else None,
                 "last_price_source": last_src,
                 "ytd_ref_date": base_date,
+                "m3_ref_date": base_3m_date,
+                "m6_ref_date": base_6m_date,
                 "w52_ref_date": base_52w_date,
                 "ytd_method": "price_last_close_prev_year_to_last_close",
                 "trend": "down" if day_pct < 0 else "up",
@@ -497,8 +578,11 @@ def main():
             ALL_SECTORS.append(sector_entry.copy())
             processed_count += 1
             
+            # Log résumé
+            m3_str = f"3M: {m3_pct:+.2f}%" if m3_pct is not None else "3M: N/A"
+            m6_str = f"6M: {m6_pct:+.2f}%" if m6_pct is not None else "6M: N/A"
             w52_str = f"52W: {w52_pct:+.2f}%" if w52_pct is not None else "52W: N/A"
-            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% {w52_str}")
+            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% {m3_str} {m6_str} {w52_str}")
             
         except Exception as e:
             error_count += 1
@@ -523,6 +607,10 @@ def main():
     logger.info(f"  - Erreurs: {error_count}")
     if ytd_warnings > 0:
         logger.info(f"  - ℹ️ Baselines YTD début {year}: {ytd_warnings}")
+    if m3_missing_count > 0:
+        logger.info(f"  - ℹ️ ETFs sans données 3M (historique < 3 mois): {m3_missing_count}")
+    if m6_missing_count > 0:
+        logger.info(f"  - ℹ️ ETFs sans données 6M (historique < 6 mois): {m6_missing_count}")
     if w52_missing_count > 0:
         logger.info(f"  - ℹ️ ETFs sans données 52W (historique < 1 an): {w52_missing_count}")
     
@@ -546,15 +634,32 @@ def main():
         "timezone_mapping": TZ_BY_REGION,
         "note": f"YTD basé sur le dernier close de {year-1} ou fallback 1er jour {year}"
     }
+    # v5: Metadata pour 3M et 6M
+    SECTORS_DATA["meta"]["m3_calculation"] = {
+        "method": "price_close_nearest_to_today_minus_91d",
+        "lookback_days": PERIOD_3M_DAYS,
+        "max_gap_days": 7,
+        "note": "Retourne null si historique < 3 mois"
+    }
+    SECTORS_DATA["meta"]["m6_calculation"] = {
+        "method": "price_close_nearest_to_today_minus_182d",
+        "lookback_days": PERIOD_6M_DAYS,
+        "max_gap_days": 10,
+        "note": "Retourne null si historique < 6 mois"
+    }
     SECTORS_DATA["meta"]["w52_calculation"] = {
         "method": "price_close_nearest_to_today_minus_365d",
-        "lookback_days": 365,
+        "lookback_days": PERIOD_52W_DAYS,
         "outputsize": 420,
         "max_gap_days": 10,
         "note": "Retourne null si historique < 1 an"
     }
     if ytd_warnings > 0:
         SECTORS_DATA["meta"]["ytd_fallback_count"] = ytd_warnings
+    if m3_missing_count > 0:
+        SECTORS_DATA["meta"]["m3_missing_count"] = m3_missing_count
+    if m6_missing_count > 0:
+        SECTORS_DATA["meta"]["m6_missing_count"] = m6_missing_count
     if w52_missing_count > 0:
         SECTORS_DATA["meta"]["w52_missing_count"] = w52_missing_count
     
