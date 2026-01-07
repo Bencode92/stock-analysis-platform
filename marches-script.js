@@ -2,6 +2,7 @@
  * marches-script.js - Version compatible Twelve Data avec corrections majeures
  * Les données sont mises à jour régulièrement par GitHub Actions
  * 
+ * v4 - AJOUT: Support 52W (performance 52 semaines glissantes)
  * v3 - AJOUT: Colonne Composition avec modal holdings (comme secteurs)
  * v2 - FIX: Correction des sélecteurs CSS pour l'aperçu des marchés
  */
@@ -522,12 +523,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Convertit un pourcentage string en nombre
+     * Retourne null si valeur vide/invalide (important pour 52W)
      */
     function parsePercentToNumber(pct) {
-        if (pct == null) return 0;
+        if (pct == null || pct === '' || pct === '—') return null;
         const s = String(pct).replace('%','').replace(/\s/g,'').replace(',', '.');
         const m = s.match(/-?\d+(\.\d+)?/);
-        return m ? parseFloat(m[0]) : 0;
+        return m ? parseFloat(m[0]) : null;
     }
     
     /**
@@ -542,9 +544,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Formate un nombre en pourcentage FR
+     * Affiche "—" si null
      */
     function formatPercent(n) {
-        if (n == null || isNaN(n)) return '-';
+        if (n == null || isNaN(n)) return '—';
         const sign = n > 0 ? '+' : '';
         return `${sign}${new Intl.NumberFormat('fr-FR', {
             minimumFractionDigits: 2,
@@ -554,13 +557,37 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Normalise un enregistrement de données
+     * Gère w52_num avec préservation de null si historique insuffisant
      */
     function normalizeRecord(rec) {
         const r = {...rec};
         r.country = COUNTRY_NORMALIZATION[r.country] || r.country;
-        r.value_num = toNumber(r.value);
-        r.change_num = parsePercentToNumber(r.changePercent);
-        r.ytd_num = parsePercentToNumber(r.ytdChange);
+        
+        // Utiliser les valeurs numériques du JSON si disponibles
+        if ('value_num' in r && 'change_num' in r && 'ytd_num' in r) {
+            r.value_num = r.value_num;
+            r.change_num = r.change_num;
+            r.ytd_num = r.ytd_num;
+            
+            // 52W : utiliser w52_num du JSON si disponible
+            if ('w52_num' in r) {
+                r.w52_num = r.w52_num;  // Peut être null si historique insuffisant
+            } else {
+                r.w52_num = parsePercentToNumber(r.w52Change);
+            }
+        } else {
+            // Fallback : parser les valeurs formatées
+            r.value_num = toNumber(r.value);
+            r.change_num = parsePercentToNumber(r.changePercent);
+            r.ytd_num = parsePercentToNumber(r.ytdChange);
+            r.w52_num = parsePercentToNumber(r.w52Change);
+        }
+        
+        // CRITIQUE: Garder null si le backend renvoie null (historique insuffisant)
+        if (r.w52_num === 0 && (r.w52Change == null || r.w52Change === '' || r.w52Change === '—')) {
+            r.w52_num = null;
+        }
+        
         r.trend = r.change_num > 0 ? 'up' : r.change_num < 0 ? 'down' : 'flat';
         return r;
     }
@@ -660,7 +687,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function createTableCell(text, className) {
         const td = document.createElement('td');
         if (className) td.className = className;
-        td.textContent = text ?? '-';
+        td.textContent = text ?? '—';
         return td;
     }
     
@@ -683,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 labelsContainer.innerHTML = `
                     <div style="min-width: 62px; text-align: right;">VAR %</div>
-                    <div style="min-width: 62px; text-align: right;">YTD</div>
+                    <div style="min-width: 62px; text-align: right;">YTD / 52W</div>
                 `;
                 
                 col.insertBefore(labelsContainer, dataContainer);
@@ -824,6 +851,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = index.ytd_num < -0.01 ? 'negative' : 
                                            index.ytd_num > 0.01 ? 'positive' : 'neutral';
                             
+                            // Classe pour 52W (peut être null)
+                            const w52Class = (index.w52_num == null) ? 'neutral' :
+                                           index.w52_num < -0.01 ? 'negative' :
+                                           index.w52_num > 0.01 ? 'positive' : 'neutral';
+                            
                             tr.appendChild(createTableCell(index.country, 'font-medium'));
                             
                             // Cellule Libellé avec bouton Composition
@@ -832,7 +864,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             nameContainer.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px;';
                             
                             const nameSpan = document.createElement('span');
-                            nameSpan.textContent = index.index_name || '-';
+                            nameSpan.textContent = index.index_name || '—';
                             nameSpan.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
                             nameContainer.appendChild(nameSpan);
                             
@@ -856,6 +888,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             tr.appendChild(createTableCell(index.value));
                             tr.appendChild(createTableCell(formatPercent(index.change_num), changeClass));
                             tr.appendChild(createTableCell(formatPercent(index.ytd_num), ytdClass));
+                            
+                            // Nouvelle colonne 52W
+                            const w52Text = index.w52_num == null ? '—' : formatPercent(index.w52_num);
+                            const w52Td = createTableCell(w52Text, w52Class);
+                            
+                            // Tooltip pour 52W
+                            if (index.w52_ref_date) {
+                                w52Td.title = `Base 52W: ${index.w52_ref_date}`;
+                            } else if (index.w52_num == null) {
+                                w52Td.title = 'Historique insuffisant (< 12 mois)';
+                            }
+                            
+                            tr.appendChild(w52Td);
                             
                             tableBody.appendChild(tr);
                         });
@@ -933,7 +978,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Met à jour une région spécifique de l'aperçu des marchés - VERSION CORRIGÉE
+     * Met à jour une région spécifique de l'aperçu des marchés
+     * Inclut maintenant le chip 52W
      */
     function updateMarketOverviewRegion(region, indicesInfo) {
         indicesInfo.forEach(indexInfo => {
@@ -950,11 +996,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                console.log(`✅ Trouvé ${indexInfo.key}: ${index.index_name} (${index.change_num}%, YTD ${index.ytd_num}%)`);
+                console.log(`✅ Trouvé ${indexInfo.key}: ${index.index_name} (${index.change_num}%, YTD ${index.ytd_num}%, 52W ${index.w52_num}%)`);
                 
                 const nameElement = container.querySelector('.market-index-name');
                 const valueElement = container.querySelector('.market-value');
                 const ytdElement = container.querySelector('.market-ytd');
+                const w52Element = container.querySelector('.market-w52');
                 
                 if (nameElement) {
                     nameElement.textContent = indexInfo.display || index.country || indexInfo.key;
@@ -963,16 +1010,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (valueElement) {
                     valueElement.textContent = formatPercent(index.change_num);
                     valueElement.className = 'market-value ' + 
-                        (index.change_num < -0.01 ? 'negative' : 
+                        (index.change_num == null ? 'neutral' :
+                         index.change_num < -0.01 ? 'negative' : 
                          index.change_num > 0.01 ? 'positive' : 'neutral');
                 }
                 
                 if (ytdElement) {
                     ytdElement.textContent = `YTD ${formatPercent(index.ytd_num)}`;
                     ytdElement.className = 'market-ytd ' + 
-                        (index.ytd_num < -0.01 ? 'negative' : 
+                        (index.ytd_num == null ? '' :
+                         index.ytd_num < -0.01 ? 'negative' : 
                          index.ytd_num > 0.01 ? 'positive' : 'neutral');
                 }
+                
+                // Mise à jour du chip 52W
+                if (w52Element) {
+                    w52Element.textContent = index.w52_num == null ? '52W —' : `52W ${formatPercent(index.w52_num)}`;
+                    w52Element.className = 'market-w52 ' + 
+                        (index.w52_num == null ? '' :
+                         index.w52_num < -0.01 ? 'negative' : 
+                         index.w52_num > 0.01 ? 'positive' : 'neutral');
+                    w52Element.title = index.w52_num == null ? 'Historique insuffisant (< 12 mois)' : '52W glissant';
+                }
+                
             } catch (error) {
                 console.error(`Erreur lors de la mise à jour de ${indexInfo.key}:`, error);
             }
@@ -1005,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Calcule et affiche les top performers
+     * Calcule et affiche les top performers (daily, YTD et 52W)
      */
     function updateTopPerformers() {
         const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
@@ -1013,17 +1073,33 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (allIndices.length < 3) return;
         
+        // Trier par variation quotidienne
         const byDaily = [...allIndices].sort((a, b) => 
-            b.change_num - a.change_num || b.ytd_num - a.ytd_num
-        );
-        const byYTD = [...allIndices].sort((a, b) => 
-            b.ytd_num - a.ytd_num || b.change_num - a.change_num
+            (b.change_num - a.change_num) || (b.ytd_num - a.ytd_num)
         );
         
+        // Trier par YTD
+        const byYTD = [...allIndices].sort((a, b) => 
+            (b.ytd_num - a.ytd_num) || (b.change_num - a.change_num)
+        );
+        
+        // Trier par 52W (exclure les null)
+        const w52Only = allIndices.filter(idx => Number.isFinite(idx.w52_num));
+        const byW52 = [...w52Only].sort((a, b) => 
+            (b.w52_num - a.w52_num) || (b.ytd_num - a.ytd_num)
+        );
+        
+        // Daily top/bottom
         updateTopPerformersHTML('daily-top', byDaily.slice(0, 3), 'change_num');
         updateTopPerformersHTML('daily-bottom', byDaily.slice(-3).reverse(), 'change_num');
+        
+        // YTD top/bottom
         updateTopPerformersHTML('ytd-top', byYTD.slice(0, 3), 'ytd_num');
         updateTopPerformersHTML('ytd-bottom', byYTD.slice(-3).reverse(), 'ytd_num');
+        
+        // 52W top/bottom
+        updateTopPerformersHTML('w52-top', byW52.slice(0, 3), 'w52_num');
+        updateTopPerformersHTML('w52-bottom', byW52.slice(-3).reverse(), 'w52_num');
     }
     
     /**
@@ -1034,6 +1110,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!container) return;
         
         container.innerHTML = '';
+        
+        if (items.length === 0) {
+            container.innerHTML = '<div class="performer-row" style="opacity: 0.5; justify-content: center;">Aucune donnée</div>';
+            return;
+        }
         
         items.forEach(idx => {
             const val = idx[field] ?? 0;
