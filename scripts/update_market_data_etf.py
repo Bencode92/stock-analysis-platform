@@ -3,6 +3,10 @@
 Script de mise à jour des données de marché via Twelve Data API
 Utilise des ETFs pour représenter les indices boursiers
 
+v4 - AJOUT: Calcul 3M et 6M (momentum court/moyen terme)
+  - Nouvelles métriques m3_num, m6_num
+  - Dates de référence m3_ref_date, m6_ref_date
+  - Top performers 3M et 6M
 v3 - AJOUT: Calcul 52W (52 semaines glissant)
   - Nouvelle métrique w52Change
   - Retourne null si historique < 1 an
@@ -26,6 +30,8 @@ from twelve_data_utils import (
     quote_one,
     baseline_ytd,
     baseline_52w,
+    baseline_3m,
+    baseline_6m,
     format_value,
     format_percent,
     parse_percentage,
@@ -34,7 +40,10 @@ from twelve_data_utils import (
     determine_market_region,
     TZ_BY_REGION,
     API_KEY,
-    RATE_LIMIT_DELAY
+    RATE_LIMIT_DELAY,
+    PERIOD_3M_DAYS,
+    PERIOD_6M_DAYS,
+    PERIOD_52W_DAYS,
 )
 
 # Configuration du logger
@@ -65,6 +74,14 @@ def create_empty_market_data() -> Dict:
                 "worst": []
             },
             "ytd": {
+                "best": [],
+                "worst": []
+            },
+            "m3": {
+                "best": [],
+                "worst": []
+            },
+            "m6": {
                 "best": [],
                 "worst": []
             },
@@ -110,11 +127,13 @@ def clean_index_data(idx: dict) -> dict:
 
 
 def calculate_top_performers(market_data: Dict, all_indices: List):
-    """Calcule les indices avec les meilleures et pires performances"""
+    """Calcule les indices avec les meilleures et pires performances (daily, YTD, 3M, 6M, 52W)"""
     logger.info("Calcul des top performers...")
     
     daily_indices = [idx for idx in all_indices if idx.get("changePercent")]
     ytd_indices = [idx for idx in all_indices if idx.get("ytdChange")]
+    m3_indices = [idx for idx in all_indices if idx.get("m3_num") is not None]
+    m6_indices = [idx for idx in all_indices if idx.get("m6_num") is not None]
     w52_indices = [idx for idx in all_indices if idx.get("w52_num") is not None]
     
     # Trier par variation quotidienne
@@ -140,6 +159,24 @@ def calculate_top_performers(market_data: Dict, all_indices: List):
         
         market_data["top_performers"]["ytd"]["best"] = [clean_index_data(idx) for idx in best_ytd]
         market_data["top_performers"]["ytd"]["worst"] = [clean_index_data(idx) for idx in worst_ytd]
+    
+    # Trier par variation 3M (v4)
+    if m3_indices:
+        sorted_m3 = sorted(m3_indices, key=lambda x: x["m3_num"], reverse=True)
+        best_m3 = sorted_m3[:3]
+        worst_m3 = sorted(sorted_m3, key=lambda x: x["m3_num"])[:3]
+        
+        market_data["top_performers"]["m3"]["best"] = [clean_index_data(idx) for idx in best_m3]
+        market_data["top_performers"]["m3"]["worst"] = [clean_index_data(idx) for idx in worst_m3]
+    
+    # Trier par variation 6M (v4)
+    if m6_indices:
+        sorted_m6 = sorted(m6_indices, key=lambda x: x["m6_num"], reverse=True)
+        best_m6 = sorted_m6[:3]
+        worst_m6 = sorted(sorted_m6, key=lambda x: x["m6_num"])[:3]
+        
+        market_data["top_performers"]["m6"]["best"] = [clean_index_data(idx) for idx in best_m6]
+        market_data["top_performers"]["m6"]["worst"] = [clean_index_data(idx) for idx in worst_m6]
     
     # Trier par variation 52W
     if w52_indices:
@@ -190,6 +227,8 @@ def main():
     processed_count = 0
     error_count = 0
     ytd_fallback_count = 0
+    m3_missing_count = 0
+    m6_missing_count = 0
     w52_missing_count = 0
     year = dt.date.today().year
     
@@ -224,13 +263,35 @@ def main():
             # Calculer le YTD
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0
             
-            # Pause avant l'appel 52W
+            # ==================== v4: Baseline 3M ====================
             rate_limit_pause(0.5)
             
-            # Baseline 52W (close le plus proche de J-365)
+            base_3m_close, base_3m_date = baseline_3m(sym, api_region)
+            
+            m3_pct = None
+            if base_3m_close and base_3m_close > 0:
+                m3_pct = 100 * (last - base_3m_close) / base_3m_close
+            else:
+                m3_missing_count += 1
+                logger.info(f"ℹ️ {sym}: Pas de données 3M (historique < 3 mois)")
+            
+            # ==================== v4: Baseline 6M ====================
+            rate_limit_pause(0.5)
+            
+            base_6m_close, base_6m_date = baseline_6m(sym, api_region)
+            
+            m6_pct = None
+            if base_6m_close and base_6m_close > 0:
+                m6_pct = 100 * (last - base_6m_close) / base_6m_close
+            else:
+                m6_missing_count += 1
+                logger.info(f"ℹ️ {sym}: Pas de données 6M (historique < 6 mois)")
+            
+            # ==================== Baseline 52W ====================
+            rate_limit_pause(0.5)
+            
             base_52w_close, base_52w_date = baseline_52w(sym, api_region)
             
-            # Calculer le 52W (None si historique insuffisant)
             w52_pct = None
             if base_52w_close and base_52w_close > 0:
                 w52_pct = 100 * (last - base_52w_close) / base_52w_close
@@ -238,7 +299,7 @@ def main():
                 w52_missing_count += 1
                 logger.info(f"ℹ️ {sym}: Pas de données 52W (historique < 1 an)")
             
-            # Créer l'objet de données
+            # ==================== Créer l'objet de données ====================
             market_entry = {
                 "country": country,
                 "index_name": etf.get("name", sym),
@@ -250,6 +311,12 @@ def main():
                 "ytdChange": format_percent(ytd_pct),
                 "ytd_num": float(ytd_pct),
                 "ytd_ref_date": base_date,
+                "m3Change": format_percent(m3_pct) if m3_pct is not None else None,
+                "m3_num": float(m3_pct) if m3_pct is not None else None,
+                "m3_ref_date": base_3m_date,
+                "m6Change": format_percent(m6_pct) if m6_pct is not None else None,
+                "m6_num": float(m6_pct) if m6_pct is not None else None,
+                "m6_ref_date": base_6m_date,
                 "w52Change": format_percent(w52_pct) if w52_pct is not None else None,
                 "w52_num": float(w52_pct) if w52_pct is not None else None,
                 "w52_ref_date": base_52w_date,
@@ -262,8 +329,11 @@ def main():
             ALL_INDICES.append(market_entry)
             processed_count += 1
             
+            # Log résumé
+            m3_str = f"3M: {m3_pct:+.2f}%" if m3_pct is not None else "3M: N/A"
+            m6_str = f"6M: {m6_pct:+.2f}%" if m6_pct is not None else "6M: N/A"
             w52_str = f"52W: {w52_pct:+.2f}%" if w52_pct is not None else "52W: N/A"
-            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% {w52_str}")
+            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% {m3_str} {m6_str} {w52_str}")
             
         except Exception as e:
             error_count += 1
@@ -287,6 +357,10 @@ def main():
     logger.info(f"  - Erreurs: {error_count}")
     if ytd_fallback_count > 0:
         logger.info(f"  - ℹ️ Baselines YTD début {year}: {ytd_fallback_count}")
+    if m3_missing_count > 0:
+        logger.info(f"  - ℹ️ ETFs sans données 3M (historique < 3 mois): {m3_missing_count}")
+    if m6_missing_count > 0:
+        logger.info(f"  - ℹ️ ETFs sans données 6M (historique < 6 mois): {m6_missing_count}")
     if w52_missing_count > 0:
         logger.info(f"  - ℹ️ ETFs sans données 52W (historique < 1 an): {w52_missing_count}")
     
@@ -312,15 +386,32 @@ def main():
         "outputsize": 250,
         "note": f"YTD basé sur le dernier close de {year-1} ou fallback 1er jour {year}"
     }
+    # v4: Metadata pour 3M et 6M
+    MARKET_DATA["meta"]["m3_calculation"] = {
+        "method": "price_close_nearest_to_today_minus_91d",
+        "lookback_days": PERIOD_3M_DAYS,
+        "max_gap_days": 7,
+        "note": "Retourne null si historique < 3 mois"
+    }
+    MARKET_DATA["meta"]["m6_calculation"] = {
+        "method": "price_close_nearest_to_today_minus_182d",
+        "lookback_days": PERIOD_6M_DAYS,
+        "max_gap_days": 10,
+        "note": "Retourne null si historique < 6 mois"
+    }
     MARKET_DATA["meta"]["w52_calculation"] = {
         "method": "price_close_nearest_to_today_minus_365d",
-        "lookback_days": 365,
+        "lookback_days": PERIOD_52W_DAYS,
         "outputsize": 420,
         "max_gap_days": 10,
         "note": "Retourne null si historique < 1 an"
     }
     if ytd_fallback_count > 0:
         MARKET_DATA["meta"]["ytd_fallback_count"] = ytd_fallback_count
+    if m3_missing_count > 0:
+        MARKET_DATA["meta"]["m3_missing_count"] = m3_missing_count
+    if m6_missing_count > 0:
+        MARKET_DATA["meta"]["m6_missing_count"] = m6_missing_count
     if w52_missing_count > 0:
         MARKET_DATA["meta"]["w52_missing_count"] = w52_missing_count
     
