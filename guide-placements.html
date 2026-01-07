@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SUPPRIMÉ: Chart.js non utilisé sur cette page (performance) -->
     <link rel="stylesheet" href="css/simulation.css">
     <style>
         /* Variables personnalisées TradePulse */
@@ -270,7 +270,7 @@
             font-size: 0.92rem;
         }
         
-        /* Accordéon styles (conservés de l'original) */
+        /* Accordéon styles - FIX: Font Awesome 6 */
         .accordion-header {
             cursor: pointer;
             padding: 15px;
@@ -284,9 +284,10 @@
             background-color: rgba(0, 255, 135, 0.1);
         }
         
+        /* FIX: Font Awesome 6 au lieu de 5 */
         .accordion-header::after {
             content: '\f078';
-            font-family: 'Font Awesome 5 Free';
+            font-family: "Font Awesome 6 Free";
             font-weight: 900;
             position: absolute;
             right: 15px;
@@ -488,7 +489,7 @@
             <!-- En-tête de page -->
             <div class="page-header text-center mb-12">
                 <h1 class="section-title text-4xl font-bold">GUIDE DES PLACEMENTS</h1>
-                <p class="section-subtitle text-xl opacity-80 mt-2" id="currentDate">11 SEPTEMBRE 2025</p>
+                <p class="section-subtitle text-xl opacity-80 mt-2" id="currentDate">1 JANVIER 2026</p>
             </div>
 
             <!-- Introduction -->
@@ -1009,11 +1010,11 @@
                 </p>
                 <p class="flex items-center">
                     <i class="fas fa-sync-alt text-green-400 mr-2"></i>
-                    Informations fiscales mises à jour régulièrement
+                    Taux réglementés susceptibles de changer au 01/02/2026
                 </p>
                 <p class="flex items-center">
                     <i class="fas fa-clock text-green-400 mr-2"></i>
-                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">11/09/2025 15:30:22</span>
+                    Données valables au : <span class="text-green-400 font-medium ml-1 update-time">01/01/2026</span>
                 </p>
             </div>
         </footer>
@@ -1047,7 +1048,18 @@
 
     <!-- Scripts -->
     <script>
-        // Données complètes des placements - MISES À JOUR SEPTEMBRE 2025
+        // ===========================================
+        // CONFIGURATION DES DONNÉES - MAJ 01/01/2026
+        // ===========================================
+        // Sources officielles :
+        // - CEL 1,25% : economie.gouv.fr (depuis 01/08/2025)
+        // - PEL 2,0% : service-public.gouv.fr (ouverture >= 01/01/2026)
+        // - Livret A 1,7% : service-public.gouv.fr (période 01/08/2025-31/01/2026)
+        // - LEP 2,7% : service-public.gouv.fr (période 01/08/2025-31/01/2026)
+        
+        const DATA_ASOF = '01/01/2026'; // Date de validité des données affichées
+        
+        // Données complètes des placements - MISES À JOUR JANVIER 2026
         const placementsData = {
             'pea': {
                 title: 'PEA',
@@ -1368,7 +1380,7 @@
                             '<span class="important-info">Capital 100 % garanti</span> par l\'État (Caisse des dépôts)',
                             '<span class="important-info">Liquidité totale</span> : retraits et versements libres (mini 10 €)',
                             '<span class="important-info">Simplicité</span> : ouverture dans toute banque, aucun frais',
-                            'Taux : <span class="important-info">1,7 %</span> depuis le 1ᵉʳ août 2025'
+                            'Taux : <span class="important-info">1,7 %</span> (période 01/08/2025 → 31/01/2026)'
                         ]
                     },
                     {
@@ -1377,7 +1389,8 @@
                         iconClass: 'warning',
                         items: [
                             '<span class="important-info">Rendement souvent &lt; inflation</span> : pouvoir d\'achat érodé sur le long terme',
-                            'Plafond relativement bas pour des projets importants (<span class="important-info">22 950 €</span>)'
+                            'Plafond relativement bas pour des projets importants (<span class="important-info">22 950 €</span>)',
+                            '<span class="important-info">Taux révisable</span> : prochaine révision au 01/02/2026'
                         ],
                         risk: 'low'
                     },
@@ -1454,7 +1467,7 @@
                         title: 'Points forts',
                         icon: 'fas fa-check-circle',
                         items: [
-                            'Taux réglementé : <span class="important-info">2,7 %</span> (≈ +1,0 pt vs Livret A)',
+                            'Taux réglementé : <span class="important-info">2,7 %</span> (période 01/08/2025 → 31/01/2026)',
                             '<span class="important-info">Capital garanti</span> : épargne couverte jusqu\'à 100 000 € par le FGDR + garantie État',
                             '<span class="important-info">Liquidité totale</span> : dépôts et retraits gratuits à tout moment',
                             '<span class="important-info">Réservé aux revenus modestes</span> : taux bonifié pour les ménages éligibles'
@@ -1512,7 +1525,7 @@
                         items: [
                             '<span class="important-info">Volatilité extrême</span>, possible perte totale du capital',
                             '<span class="important-info">Cyber-risque</span> : piratage, perte de clés privées, faillite d\'exchange',
-                            'Réglementation encore jeune : cadre européen <span class="important-info">MiCA</span> en vigueur depuis 30/12/2024'
+                            'Cadre européen <span class="important-info">MiCA</span> : stablecoins régulés mi-2024, prestataires fin 2024'
                         ],
                         risk: 'high'
                     },
@@ -1590,7 +1603,7 @@
                         title: 'Points forts',
                         icon: 'fas fa-check-circle',
                         items: [
-                            '<span class="important-info">FCPI</span> : réduction IR <span class="important-info">25 %</span> (loi de finances 2025)',
+                            '<span class="important-info">FCPI</span> : réduction IR <span class="important-info">25 %</span> (sous conditions)',
                             '<span class="important-info">FIP Corse/Outre-mer</span> : réduction IR <span class="important-info">30 %</span> (FIP métropolitains supprimés en 2025)',
                             'Gains <span class="important-info">exonérés d\'IR</span> (hors PS) si conservé jusqu\'au terme',
                             'Soutien innovation / PME françaises'
@@ -1604,7 +1617,8 @@
                             '<span class="important-info">Capital non garanti</span>, PME non cotées → risque très élevé',
                             '<span class="important-info">Blocage 5 à 10 ans</span> (durée fixée par le fonds)',
                             'Liquidité quasi nulle avant la liquidation',
-                            'Plafond de souscription : <span class="important-info">12 000 €</span> (24 000 € couple)'
+                            'Plafond de souscription : <span class="important-info">12 000 €</span> (24 000 € couple)',
+                            '<span class="important-info text-yellow-400">⚠️ Règles susceptibles d\'évoluer</span> (vérifier les conditions d\'agrément)'
                         ],
                         risk: 'high'
                     },
@@ -1666,6 +1680,9 @@
                     }
                 ]
             },
+            // ==========================================
+            // PEL - CORRIGÉ AU 01/01/2026
+            // ==========================================
             'pel': {
                 title: 'PEL',
                 subtitle: 'Plan d\'Épargne Logement',
@@ -1673,7 +1690,7 @@
                 color: 'blue',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '1,75% brut',
+                    taux: '2,0% brut (≥2026)',
                     plafond: '61 200€',
                     objectif: 'Achat immobilier'
                 },
@@ -1682,10 +1699,11 @@
                         title: 'Points forts',
                         icon: 'fas fa-check-circle',
                         items: [
-                            'Taux fixe : <span class="important-info">1,75 % brut</span> pour tout PEL ouvert depuis le 1ᵉʳ janvier 2025',
-                            '<span class="important-info">Droit à prêt épargne-logement</span> : jusqu\'à <span class="important-info">92 000 €</span> au taux <span class="important-info">2,95 %</span>',
-                            '<span class="important-info">Capital garanti</span> et couvert jusqu\'à 100 000 € par le FGDR',
-                            '<span class="important-info">Objectif logement</span> : épargne + taux de prêt connus dès l\'ouverture'
+                            'Taux fixe : <span class="important-info">2,0 % brut</span> pour tout PEL ouvert à partir du <span class="important-info">01/01/2026</span>',
+                            '<span class="important-info">PEL ouverts en 2025</span> : 1,75 % brut (taux garanti à l\'ouverture)',
+                            '<span class="important-info">Droit à prêt épargne-logement</span> : jusqu\'à <span class="important-info">92 000 €</span>',
+                            'Taux prêt : <span class="important-info">3,20 %</span> (PEL ≥ 2026) / <span class="important-info">2,95 %</span> (PEL 2025)',
+                            '<span class="important-info">Capital garanti</span> et couvert jusqu\'à 100 000 € par le FGDR'
                         ]
                     },
                     {
@@ -1695,7 +1713,7 @@
                         items: [
                             '<span class="important-info">Retrait = clôture</span> ; impossible de retirer partiellement',
                             'Retrait < 4 ans fait perdre les avantages prêts/intérêts',
-                            '<span class="important-info">Rendement net modeste</span> : ≈ <span class="important-info">1,225 %</span> après PFU',
+                            '<span class="important-info">Rendement net modeste</span> : ≈ <span class="important-info">1,40 %</span> après PFU (pour 2,0 % brut)',
                             '<span class="important-info">Versements réguliers imposés</span> (540 €/an minimum)'
                         ],
                         risk: 'low'
@@ -1712,6 +1730,9 @@
                     }
                 ]
             },
+            // ==========================================
+            // CEL - CORRIGÉ AU 01/01/2026
+            // ==========================================
             'cel': {
                 title: 'CEL',
                 subtitle: 'Compte d\'Épargne Logement',
@@ -1719,7 +1740,7 @@
                 color: 'blue',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '1,5% brut',
+                    taux: '1,25% brut',
                     plafond: '15 300€',
                     liquidite: 'Totale'
                 },
@@ -1728,7 +1749,7 @@
                         title: 'Points forts',
                         icon: 'fas fa-check-circle',
                         items: [
-                            'Taux variable : <span class="important-info">1,5 % brut</span> (depuis février 2025)',
+                            'Taux variable : <span class="important-info">1,25 % brut</span> (depuis le <span class="important-info">01/08/2025</span>)',
                             '<span class="important-info">Liquidité totale</span> : dépôts et retraits libres, solde mini 300 €',
                             '<span class="important-info">Capital garanti</span> et couvert FGDR 100 000 €',
                             '<span class="important-info">Droit à prêt</span> après <span class="important-info">18 mois</span> : jusqu\'à 23 000 €, taux actuellement <span class="important-info">3 %</span>'
@@ -1739,7 +1760,7 @@
                         icon: 'fas fa-exclamation-triangle',
                         iconClass: 'warning',
                         items: [
-                            '<span class="important-info">Rendement net faible</span> : ≈ <span class="important-info">1,05 %</span> après PFU',
+                            '<span class="important-info">Rendement net faible</span> : ≈ <span class="important-info">0,875 %</span> après PFU',
                             '<span class="important-info">Prêt limité & rarement avantageux</span> versus taux du marché',
                             '<span class="important-info">Plafond réduit</span> et absence de taux garanti',
                             '<span class="important-info">Pas de prime d\'État</span> pour les comptes récents'
@@ -2028,7 +2049,8 @@
             
             createCard(id, placement, index) {
                 const card = document.createElement('div');
-                card.className = 'placement-card';
+                // FIX: Ajout de la classe "group" pour group-hover
+                card.className = 'placement-card group';
                 card.dataset.placement = id;
                 card.style.setProperty('--card-index', index);
                 
@@ -2108,29 +2130,24 @@
         
         // Initialisation
         document.addEventListener('DOMContentLoaded', () => {
-            // Mise à jour de la date
+            // Mise à jour de la date - UTILISER LA CONSTANTE DATA_ASOF
             const dateElement = document.getElementById('currentDate');
             if (dateElement) {
-                const today = new Date();
-                dateElement.textContent = today.toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                }).toUpperCase();
+                // Afficher la date de validité des données, pas la date du jour
+                dateElement.textContent = '1 JANVIER 2026';
             }
             
-            // Mise à jour de l'heure de dernière modification
+            // FIX: Afficher la date de validité des données, pas l'heure de chargement
             const updateTimeElements = document.querySelectorAll('.update-time');
             updateTimeElements.forEach(element => {
-                const now = new Date();
-                element.textContent = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR');
+                element.textContent = DATA_ASOF;
             });
             
             // Initialisation des managers
             new PlacementCardManager();
             new AccordionManager();
             
-            console.log('✅ Guide des placements initialisé avec les corrections septembre 2025');
+            console.log('✅ Guide des placements initialisé - Données valables au ' + DATA_ASOF);
         });
         
         // Theme toggle functionality
