@@ -1,20 +1,22 @@
 # portfolio_engine/market_sector_radar.py
 """
-Market/Sector Radar v1.3 (Deterministic, Anti-overheat, Anti-contamination, 52W Gate)
-======================================================================================
+Market/Sector Radar v1.4 (Deterministic, 3M/6M Gates, Anti-overheat, Anti-contamination)
+========================================================================================
 
 Objectif:
 - Exploiter sectors.json + markets.json pour produire un market_context.json
   (format compatible avec le pipeline existant).
 - Zéro GPT, règles fixes, auditable, AMF-compliant.
 
-Règles SECTEURS (ajustées v1.3):
+Règles SECTEURS (ajustées v1.4):
 - avoided  : ytd < 0 ET w52 < 0 (underperform confirmé)
 - avoided  : ytd < -5 même si w52 > 0 (deep negative)
 - neutral  : ytd < 0 ET w52 > 0 ET ytd >= -5 (rescued par 52W)
 - neutral  : ytd >= 50 (surchauffe → pas de pénalité, mais pas de bonus)
 - favored  : 10 <= ytd <= 35 AND daily >= -0.5 AND w52 > 0 (sweet spot confirmé)
 - neutral  : favored legacy mais w52 < 0 (blocked)
+- neutral  : favored mais m6 <= 0 (blocked par m6 gate) [v1.4]
+- neutral  : w52 >= 60% ET m3 <= -2% (overheat + cooling = veto) [v1.4]
 - neutral  : sinon
 
 RÉGIONS (marchés/pays):
@@ -24,6 +26,14 @@ Régime:
 - risk-on  si >=60% des secteurs ont ytd > 0
 - risk-off si >=60% des secteurs ont ytd < 0
 - neutral sinon
+
+Ajustements v1.4 vs v1.3:
+- Gates 3M/6M: confirmation momentum court/moyen terme
+- overheat_w52_min: cap à 60% pour flag overheat
+- m6_confirm_favored_min: m6 > 0 pour confirmer favored
+- m3_cooling_threshold: m3 < -2% = signal cooling
+- VETO combiné: overheat + cooling → neutral (pas favored seul)
+- Chargement m3_num, m6_num depuis sectors/markets.json
 
 Ajustements v1.3 vs v1.2:
 - 52W Gate: sign-based logic (pas de seuil arbitraire)
@@ -61,6 +71,13 @@ class RadarRules:
     """
     Règles paramétrables pour la classification secteurs/régions.
     
+    Ajustements v1.4:
+    - Gates 3M/6M: confirmation momentum court/moyen terme
+    - overheat_w52_min: cap à 60% pour flag overheat
+    - m6_confirm_favored_min: m6 > 0 pour confirmer favored
+    - m3_cooling_threshold: m3 < -2% = signal cooling
+    - VETO combiné: overheat + cooling → neutral
+    
     Ajustements v1.3:
     - 52W Gate: confirmation sign-based
     - ytd_mild_negative_floor: seuil pour rescue
@@ -94,6 +111,17 @@ class RadarRules:
     
     # Divergence threshold: tag info seulement (pas veto)
     divergence_threshold: float = 20.0
+
+    # ========== v1.4: 3M/6M Gates ==========
+    # Cap overheat sur 52W: w52 >= ce seuil = flag "overheat"
+    # MAIS veto favored SEULEMENT si overheat + cooling combinés
+    overheat_w52_min: float = 60.0
+    
+    # Gate m6: m6 > ce seuil pour confirmer favored (si m6 disponible)
+    m6_confirm_favored_min: float = 0.0
+    
+    # Seuil cooling: m3 <= ce seuil = signal de refroidissement
+    m3_cooling_threshold: float = -2.0
 
     # Selection caps
     max_favored_sectors: int = 5
@@ -314,7 +342,7 @@ def _safe_num_opt(v: Any) -> Optional[float]:
     """
     Convertit une valeur en float, retourne None si invalide.
     
-    v1.3: CRITIQUE pour w52 - ne jamais transformer un manque en 0.
+    v1.3: CRITIQUE pour w52/m3/m6 - ne jamais transformer un manque en 0.
     """
     try:
         if v is None:
@@ -345,8 +373,10 @@ def load_sectors(data_dir: str) -> Dict[str, Dict[str, Any]]:
     }
     
     Retour:
-      {sector_key: {"ytd": float, "daily": float, "w52": Optional[float], "raw": {...}}}
+      {sector_key: {"ytd": float, "daily": float, "w52": Optional[float], 
+                    "m3": Optional[float], "m6": Optional[float], "raw": {...}}}
     
+    v1.4: Ajout de m3 et m6 avec _safe_num_opt (None si absent/invalide)
     v1.3: Ajout de w52 avec _safe_num_opt (None si absent/invalide)
     """
     path = Path(data_dir) / "sectors.json"
@@ -392,15 +422,24 @@ def load_sectors(data_dir: str) -> Dict[str, Dict[str, Any]]:
                 w52 = _safe_num_opt(
                     entry.get("w52_num") or entry.get("w52") or entry.get("w52Change")
                 )
+                # v1.4: m3 et m6 avec _safe_num_opt (None si absent)
+                m3 = _safe_num_opt(
+                    entry.get("m3_num") or entry.get("m3") or entry.get("m3Change")
+                )
+                m6 = _safe_num_opt(
+                    entry.get("m6_num") or entry.get("m6") or entry.get("m6Change")
+                )
                 
                 key = normalize_sector(sector_name)
-                out[key] = {"ytd": ytd, "daily": daily, "w52": w52, "raw": entry}
+                out[key] = {"ytd": ytd, "daily": daily, "w52": w52, "m3": m3, "m6": m6, "raw": entry}
 
     logger.info(f"✅ Chargé {len(out)} secteurs depuis {path}")
     
-    # v1.3: Log w52 coverage
+    # v1.4: Log coverage pour toutes les métriques
     w52_count = sum(1 for d in out.values() if d.get("w52") is not None)
-    logger.info(f"   └─ w52 disponible: {w52_count}/{len(out)} secteurs")
+    m3_count = sum(1 for d in out.values() if d.get("m3") is not None)
+    m6_count = sum(1 for d in out.values() if d.get("m6") is not None)
+    logger.info(f"   └─ Couverture: w52={w52_count}/{len(out)}, m3={m3_count}/{len(out)}, m6={m6_count}/{len(out)}")
     
     return out
 
@@ -413,8 +452,10 @@ def load_markets(data_dir: str) -> Dict[str, Dict[str, Any]]:
     {"indices": {"developed":[{country,...}], "asia":[...], ...}}
     
     Retour:
-      {country_key: {"ytd": float, "daily": float, "w52": Optional[float], "raw": {...}}}
+      {country_key: {"ytd": float, "daily": float, "w52": Optional[float],
+                     "m3": Optional[float], "m6": Optional[float], "raw": {...}}}
     
+    v1.4: Ajout de m3 et m6 avec _safe_num_opt
     v1.3: Ajout de w52 avec _safe_num_opt
     """
     path = Path(data_dir) / "markets.json"
@@ -458,14 +499,23 @@ def load_markets(data_dir: str) -> Dict[str, Dict[str, Any]]:
                 w52 = _safe_num_opt(
                     e.get("w52_num") or e.get("w52") or e.get("w52Change")
                 )
+                # v1.4: m3 et m6 avec _safe_num_opt
+                m3 = _safe_num_opt(
+                    e.get("m3_num") or e.get("m3") or e.get("m3Change")
+                )
+                m6 = _safe_num_opt(
+                    e.get("m6_num") or e.get("m6") or e.get("m6Change")
+                )
                 
-                out[key] = {"ytd": ytd, "daily": daily, "w52": w52, "raw": e}
+                out[key] = {"ytd": ytd, "daily": daily, "w52": w52, "m3": m3, "m6": m6, "raw": e}
 
     logger.info(f"✅ Chargé {len(out)} marchés/pays depuis {path}")
     
-    # v1.3: Log w52 coverage
+    # v1.4: Log coverage pour toutes les métriques
     w52_count = sum(1 for d in out.values() if d.get("w52") is not None)
-    logger.info(f"   └─ w52 disponible: {w52_count}/{len(out)} marchés")
+    m3_count = sum(1 for d in out.values() if d.get("m3") is not None)
+    m6_count = sum(1 for d in out.values() if d.get("m6") is not None)
+    logger.info(f"   └─ Couverture: w52={w52_count}/{len(out)}, m3={m3_count}/{len(out)}, m6={m6_count}/{len(out)}")
     
     return out
 
@@ -479,7 +529,7 @@ def classify(ytd: float, daily: float, rules: RadarRules) -> Tuple[str, str]:
     Retourne: (classification, raison)
     
     Note: Cette fonction est conservée pour compatibilité.
-    Utiliser classify_v2() pour la classification avec 52W gate.
+    Utiliser classify_v3() pour la classification avec 52W/3M/6M gates.
     """
     # Underperform: YTD négatif → avoided
     if ytd < rules.underperform_ytd_max:
@@ -506,6 +556,8 @@ def classify_v2(
 ) -> Tuple[str, str]:
     """
     Classification v1.3 avec 52W Gate (sign-based).
+    
+    Note: Conservée pour compatibilité. Utiliser classify_v3() pour v1.4.
     
     Logique:
     1. Classification legacy (YTD + daily) → cls
@@ -563,6 +615,103 @@ def classify_v2(
     return cls, reason + (f"|{flag_str}" if flag_str else "")
 
 
+def classify_v3(
+    ytd: float, 
+    daily: float, 
+    w52: Optional[float],
+    m3: Optional[float],
+    m6: Optional[float],
+    rules: RadarRules
+) -> Tuple[str, str]:
+    """
+    Classification v1.4 avec 52W Gate + 3M/6M Gates.
+    
+    Logique v1.4:
+    1. Classification legacy (YTD + daily) → cls
+    2. Gates 52W (v1.3): sign-based
+    3. Gate m6: si favored ET m6 disponible ET m6 <= 0 → neutral (trend moyen-terme faible)
+    4. VETO combiné: si w52 >= overheat_w52_min ET m3 <= m3_cooling_threshold → neutral
+       (Nuance ChatGPT: w52 élevé seul = warning, pas veto)
+    5. Tags: overheat, cooling, m6_weak, etc.
+    
+    Retourne: (classification, raison_avec_flags)
+    """
+    # 1. Classification legacy
+    cls, reason = classify(ytd, daily, rules)
+    
+    # Collecter les flags
+    flags: List[str] = []
+    
+    # ========== Détection des conditions v1.4 ==========
+    # Overheat sur 52W
+    is_overheat = w52 is not None and w52 >= rules.overheat_w52_min
+    if is_overheat:
+        flags.append("overheat_w52")
+    
+    # Cooling sur 3M
+    is_cooling = m3 is not None and m3 <= rules.m3_cooling_threshold
+    if is_cooling:
+        flags.append("cooling_m3")
+    
+    # M6 faible
+    is_m6_weak = m6 is not None and m6 <= rules.m6_confirm_favored_min
+    
+    # ========== 2. Gates 52W (v1.3) ==========
+    if w52 is None:
+        flags.append("w52_missing")
+    else:
+        # Tag divergence (info seulement, pas veto)
+        if abs(ytd - w52) > rules.divergence_threshold:
+            flags.append("divergent")
+    
+    # ========== 3. Gate favored: w52 + m6 + veto combiné ==========
+    if cls == "favored":
+        # Gate w52 sign-based (v1.3)
+        if w52 is not None and rules.confirm_favored_requires_w52_positive:
+            if w52 < 0:
+                flag_str = "|".join(flags) if flags else ""
+                return "neutral", reason + "|favored_blocked_w52_negative" + (f"|{flag_str}" if flag_str else "")
+            else:
+                flags.append("w52_confirmed")
+        
+        # Gate m6: si m6 disponible et <= 0, bloquer favored (v1.4)
+        if m6 is not None and is_m6_weak:
+            flags.append("m6_weak")
+            flag_str = "|".join(flags) if flags else ""
+            return "neutral", reason + "|favored_blocked_m6_nonpositive" + (f"|{flag_str}" if flag_str else "")
+        elif m6 is not None and m6 > rules.m6_confirm_favored_min:
+            flags.append("m6_confirmed")
+        
+        # VETO combiné: overheat + cooling → neutral (v1.4)
+        # Nuance ChatGPT: w52 élevé seul = OK si m3 pas en cooling
+        if is_overheat and is_cooling:
+            flag_str = "|".join(flags) if flags else ""
+            return "neutral", reason + "|favored_blocked_overheat_cooling" + (f"|{flag_str}" if flag_str else "")
+        elif is_overheat and not is_cooling:
+            # w52 élevé mais m3 tient → warning seulement, pas veto
+            flags.append("overheat_warning")
+    
+    # ========== 4. Gate avoided: logique sign-based (v1.3) ==========
+    if cls == "avoided" and rules.confirm_avoided_requires_w52_negative:
+        if w52 is not None:
+            if w52 < 0:
+                # w52 négatif confirme underperform
+                flags.append("underperform_confirmed")
+            else:
+                # w52 > 0: possible rescue ou deep negative
+                if ytd >= rules.ytd_mild_negative_floor:
+                    # YTD légèrement négatif + w52 positif → rescue
+                    flag_str = "|".join(flags) if flags else ""
+                    return "neutral", reason + "|avoided_rescued_w52_positive" + (f"|{flag_str}" if flag_str else "")
+                else:
+                    # YTD très négatif → garder avoided malgré w52 positif
+                    flags.append("deep_negative_kept")
+    
+    # Retourner avec flags
+    flag_str = "|".join(flags) if flags else ""
+    return cls, reason + (f"|{flag_str}" if flag_str else "")
+
+
 def pick_lists(
     items: Dict[str, Dict[str, Any]],
     rules: RadarRules,
@@ -570,44 +719,48 @@ def pick_lists(
     max_avoided: int,
 ) -> Tuple[List[str], List[str], List[Dict[str, Any]]]:
     """
-    Applique la classification v1.3 (avec 52W gate) et retourne les listes favored/avoided.
+    Applique la classification v1.4 (avec 52W/3M/6M gates) et retourne les listes favored/avoided.
     
     Retourne: (favored_list, avoided_list, diagnostics)
     
     - favored trié par YTD décroissant (meilleurs momentum d'abord)
     - avoided trié par YTD croissant (pires d'abord)
     
-    v1.3: Utilise classify_v2 avec w52 gate
+    v1.4: Utilise classify_v3 avec w52/m3/m6 gates
     """
-    favored: List[Tuple[str, float, float, Optional[float], str]] = []
-    avoided: List[Tuple[str, float, float, Optional[float], str]] = []
-    neutral: List[Tuple[str, float, float, Optional[float], str]] = []
+    favored: List[Tuple[str, float, float, Optional[float], Optional[float], Optional[float], str]] = []
+    avoided: List[Tuple[str, float, float, Optional[float], Optional[float], Optional[float], str]] = []
+    neutral: List[Tuple[str, float, float, Optional[float], Optional[float], Optional[float], str]] = []
     diag: List[Dict[str, Any]] = []
 
     for key, data in items.items():
         ytd = _safe_num(data.get("ytd", 0.0), 0.0)
         daily = _safe_num(data.get("daily", 0.0), 0.0)
         w52 = data.get("w52")  # Déjà Optional[float] depuis load_*
+        m3 = data.get("m3")    # v1.4
+        m6 = data.get("m6")    # v1.4
         
-        # v1.3: Utiliser classify_v2 avec w52
-        classification, reason = classify_v2(ytd, daily, w52, rules)
+        # v1.4: Utiliser classify_v3 avec w52/m3/m6
+        classification, reason = classify_v3(ytd, daily, w52, m3, m6, rules)
         
         diag_entry = {
             "key": key,
             "ytd": round(ytd, 2),
             "daily": round(daily, 2),
             "w52": round(w52, 2) if w52 is not None else None,
+            "m3": round(m3, 2) if m3 is not None else None,
+            "m6": round(m6, 2) if m6 is not None else None,
             "classification": classification,
             "reason": reason,
         }
         diag.append(diag_entry)
 
         if classification == "favored":
-            favored.append((key, ytd, daily, w52, reason))
+            favored.append((key, ytd, daily, w52, m3, m6, reason))
         elif classification == "avoided":
-            avoided.append((key, ytd, daily, w52, reason))
+            avoided.append((key, ytd, daily, w52, m3, m6, reason))
         else:
-            neutral.append((key, ytd, daily, w52, reason))
+            neutral.append((key, ytd, daily, w52, m3, m6, reason))
 
     # Tri: favored par YTD desc, avoided par YTD asc
     favored.sort(key=lambda x: x[1], reverse=True)
@@ -778,7 +931,7 @@ def generate_market_context_radar(
     Returns:
         Dict compatible avec load_market_context() et apply_macro_tilts()
     
-    v1.3: Classification avec 52W gate (sign-based)
+    v1.4: Classification avec 52W/3M/6M gates
     """
     rules = rules or RadarRules()
 
@@ -793,7 +946,7 @@ def generate_market_context_radar(
     # Déterminer le régime
     regime, confidence, rationale = compute_regime(sectors, rules)
 
-    # Classifier secteurs et régions (v1.3: avec 52W gate)
+    # Classifier secteurs et régions (v1.4: avec 52W/3M/6M gates)
     favored_sectors, avoided_sectors, sector_diag = pick_lists(
         sectors, rules, rules.max_favored_sectors, rules.max_avoided_sectors
     )
@@ -801,19 +954,42 @@ def generate_market_context_radar(
         markets, rules, rules.max_favored_regions, rules.max_avoided_regions
     )
 
-    # v1.3: Calculer les stats 52W pour le diagnostic
-    w52_stats = {
+    # v1.4: Calculer les stats pour le diagnostic
+    momentum_stats = {
+        # Couverture des métriques
         "sectors_with_w52": sum(1 for d in sectors.values() if d.get("w52") is not None),
+        "sectors_with_m3": sum(1 for d in sectors.values() if d.get("m3") is not None),
+        "sectors_with_m6": sum(1 for d in sectors.values() if d.get("m6") is not None),
         "sectors_total": len(sectors),
         "markets_with_w52": sum(1 for d in markets.values() if d.get("w52") is not None),
+        "markets_with_m3": sum(1 for d in markets.values() if d.get("m3") is not None),
+        "markets_with_m6": sum(1 for d in markets.values() if d.get("m6") is not None),
         "markets_total": len(markets),
+        # Impact des gates
         "favored_blocked_by_w52": sum(
             1 for d in sector_diag 
             if "favored_blocked_w52_negative" in d.get("reason", "")
         ),
+        "favored_blocked_by_m6": sum(
+            1 for d in sector_diag 
+            if "favored_blocked_m6_nonpositive" in d.get("reason", "")
+        ),
+        "favored_blocked_by_overheat_cooling": sum(
+            1 for d in sector_diag 
+            if "favored_blocked_overheat_cooling" in d.get("reason", "")
+        ),
         "avoided_rescued_by_w52": sum(
             1 for d in sector_diag 
             if "avoided_rescued_w52_positive" in d.get("reason", "")
+        ),
+        # Flags détectés
+        "overheat_w52_count": sum(
+            1 for d in sector_diag 
+            if "overheat_w52" in d.get("reason", "") or "overheat_warning" in d.get("reason", "")
+        ),
+        "cooling_m3_count": sum(
+            1 for d in sector_diag 
+            if "cooling_m3" in d.get("reason", "")
         ),
     }
 
@@ -833,18 +1009,23 @@ def generate_market_context_radar(
         "risks": _extract_risks(sectors, markets, rules),
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "model": "radar_deterministic_v1.3",
+            "model": "radar_deterministic_v1.4",
             "mode": "DATA_DRIVEN",
             "amf_compliant": True,
             "is_fallback": False,
-            "w52_gate_enabled": True,
+            "gates_enabled": {
+                "w52_gate": True,
+                "m3_cooling_gate": True,
+                "m6_confirm_gate": True,
+                "overheat_cooling_veto": True,
+            },
             "rules": asdict(rules),
             "tilt_config": {
                 "favored": rules.tilt_favored,
                 "avoided": rules.tilt_avoided,
                 "max_tactical": rules.tilt_max,
             },
-            "w52_stats": w52_stats,
+            "momentum_stats": momentum_stats,
             "diagnostics": {
                 "sectors_loaded": len(sectors),
                 "markets_loaded": len(markets),
@@ -904,8 +1085,11 @@ def generate_market_context_radar(
     logger.info(f"   Régions favored: {favored_regions}")
     logger.info(f"   Régions avoided: {avoided_regions}")
     
-    # v1.3: Log 52W gate impact
-    logger.info(f"🎯 52W Gate: {w52_stats['favored_blocked_by_w52']} favored bloqués, {w52_stats['avoided_rescued_by_w52']} avoided rescued")
+    # v1.4: Log impact des gates
+    logger.info(f"🎯 Gates v1.4:")
+    logger.info(f"   └─ Favored bloqués: w52={momentum_stats['favored_blocked_by_w52']}, m6={momentum_stats['favored_blocked_by_m6']}, overheat+cooling={momentum_stats['favored_blocked_by_overheat_cooling']}")
+    logger.info(f"   └─ Avoided rescued: {momentum_stats['avoided_rescued_by_w52']}")
+    logger.info(f"   └─ Flags: overheat={momentum_stats['overheat_w52_count']}, cooling={momentum_stats['cooling_m3_count']}")
 
     return ctx
 
@@ -938,13 +1122,29 @@ def _extract_trends(
         top = sorted_markets[0]
         trends.append(f"Région leader: {top[0]} (+{_safe_num(top[1].get('ytd', 0), 0):.1f}% YTD)")
     
-    # Compter secteurs en surchauffe
-    overheat_count = sum(
+    # Compter secteurs en surchauffe YTD
+    overheat_ytd_count = sum(
         1 for d in sectors.values() 
         if _safe_num(d.get("ytd", 0), 0) >= rules.overheat_ytd_min
     )
-    if overheat_count > 0:
-        trends.append(f"{overheat_count} secteur(s) en zone de surchauffe (YTD ≥ {rules.overheat_ytd_min}%)")
+    if overheat_ytd_count > 0:
+        trends.append(f"{overheat_ytd_count} secteur(s) en zone de surchauffe YTD (≥ {rules.overheat_ytd_min}%)")
+    
+    # v1.4: Secteurs avec overheat 52W
+    overheat_w52_count = sum(
+        1 for d in sectors.values() 
+        if d.get("w52") is not None and d.get("w52") >= rules.overheat_w52_min
+    )
+    if overheat_w52_count > 0:
+        trends.append(f"{overheat_w52_count} secteur(s) avec 52W ≥ {rules.overheat_w52_min}% (overheat long terme)")
+    
+    # v1.4: Secteurs en cooling (m3 négatif)
+    cooling_count = sum(
+        1 for d in sectors.values()
+        if d.get("m3") is not None and d.get("m3") <= rules.m3_cooling_threshold
+    )
+    if cooling_count > 0:
+        trends.append(f"{cooling_count} secteur(s) en refroidissement (3M ≤ {rules.m3_cooling_threshold}%)")
     
     # v1.3: Trend basé sur 52W
     w52_leaders = [
@@ -955,6 +1155,16 @@ def _extract_trends(
         w52_leaders.sort(key=lambda x: x[1], reverse=True)
         top_w52 = w52_leaders[0]
         trends.append(f"52W leader: {top_w52[0]} (+{top_w52[1]:.1f}% sur 12 mois)")
+    
+    # v1.4: Trend basé sur 6M
+    m6_leaders = [
+        (k, d.get("m6")) for k, d in sectors.items() 
+        if d.get("m6") is not None and d.get("m6") > 15
+    ]
+    if m6_leaders:
+        m6_leaders.sort(key=lambda x: x[1], reverse=True)
+        top_m6 = m6_leaders[0]
+        trends.append(f"6M leader: {top_m6[0]} (+{top_m6[1]:.1f}% sur 6 mois)")
     
     return trends
 
@@ -1000,6 +1210,23 @@ def _extract_risks(
     if divergent_count >= 3:
         risks.append(f"{divergent_count} secteurs avec divergence YTD/52W (retournement possible)")
     
+    # v1.4: Risque overheat + cooling combiné
+    overheat_cooling = [
+        k for k, d in sectors.items()
+        if (d.get("w52") is not None and d.get("w52") >= rules.overheat_w52_min
+            and d.get("m3") is not None and d.get("m3") <= rules.m3_cooling_threshold)
+    ]
+    if overheat_cooling:
+        risks.append(f"Risque retournement: {', '.join(overheat_cooling[:3])} (52W chaud + 3M en baisse)")
+    
+    # v1.4: Secteurs avec m6 négatif (trend moyen-terme faible)
+    m6_weak = [
+        k for k, d in sectors.items()
+        if d.get("m6") is not None and d.get("m6") < 0
+    ]
+    if len(m6_weak) >= 3:
+        risks.append(f"{len(m6_weak)} secteurs avec 6M négatif (momentum moyen-terme dégradé)")
+    
     return risks
 
 
@@ -1020,11 +1247,16 @@ def _get_fallback_context(rules: RadarRules) -> Dict[str, Any]:
         "risks": ["Contexte marché non disponible"],
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "model": "radar_deterministic_v1.3",
+            "model": "radar_deterministic_v1.4",
             "mode": "FALLBACK",
             "amf_compliant": True,
             "is_fallback": True,
-            "w52_gate_enabled": True,
+            "gates_enabled": {
+                "w52_gate": True,
+                "m3_cooling_gate": True,
+                "m6_confirm_gate": True,
+                "overheat_cooling_veto": True,
+            },
             "tilt_config": {
                 "favored": rules.tilt_favored,
                 "avoided": rules.tilt_avoided,
@@ -1090,20 +1322,26 @@ if __name__ == "__main__":
     )
 
     ap = argparse.ArgumentParser(
-        description="Génère market_context.json de manière déterministe (sans GPT) - v1.3 avec 52W Gate"
+        description="Génère market_context.json de manière déterministe (sans GPT) - v1.4 avec 3M/6M Gates"
     )
     ap.add_argument("--data-dir", default="data", help="Répertoire des données")
     ap.add_argument("--output", default=None, help="Chemin de sortie")
     ap.add_argument("--previous", default=None, help="Ancien market_context.json pour smoothing")
     ap.add_argument("--smoothing", type=float, default=0.3, help="Alpha smoothing (0-1)")
     ap.add_argument("--no-save", action="store_true", help="Ne pas sauvegarder")
+    ap.add_argument("--overheat-w52", type=float, default=60.0, help="Seuil overheat 52W (défaut: 60)")
+    ap.add_argument("--m3-cooling", type=float, default=-2.0, help="Seuil cooling 3M (défaut: -2)")
     args = ap.parse_args()
 
     print("=" * 70)
-    print("🎯 MARKET/SECTOR RADAR v1.3 (Déterministe + 52W Gate + Anti-contamination)")
+    print("🎯 MARKET/SECTOR RADAR v1.4 (Déterministe + 3M/6M Gates + Anti-contamination)")
     print("=" * 70)
 
-    rules = RadarRules(smoothing_alpha=args.smoothing)
+    rules = RadarRules(
+        smoothing_alpha=args.smoothing,
+        overheat_w52_min=args.overheat_w52,
+        m3_cooling_threshold=args.m3_cooling,
+    )
 
     ctx = generate_market_context_radar(
         data_dir=args.data_dir,
@@ -1120,7 +1358,7 @@ if __name__ == "__main__":
         "macro_tilts": ctx["macro_tilts"],
         "key_trends": ctx.get("key_trends", []),
         "risks": ctx.get("risks", []),
-        "w52_stats": ctx.get("_meta", {}).get("w52_stats", {}),
+        "momentum_stats": ctx.get("_meta", {}).get("momentum_stats", {}),
         "as_of": ctx["as_of"],
     }, indent=2, ensure_ascii=False))
     
