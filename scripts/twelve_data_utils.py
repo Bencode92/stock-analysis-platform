@@ -3,6 +3,11 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
+v17 - AJOUT: baseline_period() générique + baseline_3m() / baseline_6m()
+     - Fonction générique pour calculer des baselines sur n jours
+     - Wrappers 3M (91j), 6M (182j), 52W (365j)
+     - Logging de la date réellement utilisée (audit)
+
 v16 - AJOUT: baseline_52w() pour calcul 52 semaines glissant
      - Méthode calendaire (365 jours)
      - Retourne None si historique insuffisant
@@ -37,6 +42,13 @@ RATE_LIMIT_DELAY = 0.8  # secondes entre chaque appel API
 
 # Client Twelve Data (singleton)
 _TD_CLIENT: Optional[TDClient] = None
+
+# ============================================================
+# CONSTANTES POUR LES PÉRIODES (jours calendaires)
+# ============================================================
+PERIOD_3M_DAYS = 91      # ~3 mois calendaires (~63 jours de bourse)
+PERIOD_6M_DAYS = 182     # ~6 mois calendaires (~126 jours de bourse)
+PERIOD_52W_DAYS = 365    # ~52 semaines (~252 jours de bourse)
 
 # ============================================================
 # FALLBACK VSE -> XETR (Vienna Stock Exchange -> Xetra)
@@ -341,30 +353,51 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     raise ValueError(f"Aucune baseline exploitable pour {sym}. Last={last_diag}")
 
 
-def baseline_52w(
+# ============================================================
+# BASELINE GÉNÉRIQUE POUR PÉRIODES (3M, 6M, 52W)
+# ============================================================
+
+def baseline_period(
     sym: str,
+    lookback_days: int,
     region: str = "US",
     exchange: str = None,
     mic_code: str = None,
-    lookback_days: int = 365,
-    outputsize: int = 420,
+    outputsize: int = None,
     max_gap_days: int = 10,
+    period_label: str = None,
 ) -> Tuple[Optional[float], Optional[str]]:
     """
-    Baseline 52W = close le plus proche de (today - lookback_days).
+    Baseline générique = close le plus proche de (today - lookback_days).
     
-    - Méthode calendaire (365 jours), pas "252 trading days".
+    v17 - Fonction générique pour 3M, 6M, 52W, ou toute autre période.
+    
+    - Méthode calendaire (jours calendaires), pas "trading days".
     - Retourne (None, None) si historique insuffisant (ETF trop récent).
+    - Loggue la date réellement utilisée pour audit.
 
     Args:
-        lookback_days: nombre de jours calendaires (défaut: 365)
-        outputsize: nombre de points journaliers à charger (420 ~ > 1 an de jours de bourse)
-        max_gap_days: tolérance en jours entre date cible et date trouvée (week-ends / fériés)
+        sym: Symbole de l'ETF/action
+        lookback_days: Nombre de jours calendaires à remonter
+        region: Région pour le timezone (US, Europe, Asia, Other)
+        exchange: Exchange optionnel
+        mic_code: MIC code optionnel
+        outputsize: Nombre de points à charger (auto-calculé si None)
+        max_gap_days: Tolérance en jours entre date cible et date trouvée
+        period_label: Label pour les logs (ex: "3M", "6M", "52W")
 
     Returns:
         (close_value, date_str) ou (None, None) si historique insuffisant
     """
     sym, exchange, mic_code = _apply_vse_fallback(sym, exchange, mic_code)
+
+    # Auto-calculer outputsize si non fourni (~1.2x jours de bourse)
+    if outputsize is None:
+        # Approximation: 252 jours de bourse / 365 jours calendaires ≈ 0.69
+        outputsize = int(lookback_days * 0.8) + 50  # Marge de sécurité
+
+    # Label pour les logs
+    label_str = period_label or f"{lookback_days}d"
 
     today = dt.date.today()
     target = today - dt.timedelta(days=lookback_days)
@@ -380,8 +413,8 @@ def baseline_52w(
 
     last_diag = None
 
-    for label, kwargs in attempts:
-        logger.info(f"📡 baseline_52w({sym}) tentative: {label}")
+    for attempt_label, kwargs in attempts:
+        logger.info(f"📡 baseline_{label_str}({sym}) tentative: {attempt_label}")
         try:
             rate_limit_pause()
 
@@ -395,7 +428,7 @@ def baseline_52w(
 
             rows = _normalize_and_sort(js)
             if not rows:
-                last_diag = f"{label}: aucune donnée"
+                last_diag = f"{attempt_label}: aucune donnée"
                 logger.warning(f"  ⚠️ {last_diag}")
                 continue
 
@@ -405,7 +438,7 @@ def baseline_52w(
 
             # Historique insuffisant : la date cible est avant le 1er point
             if target < first_date:
-                logger.info(f"  ℹ️ Historique insuffisant pour 52W: target={target} < first={first_date}")
+                logger.info(f"  ℹ️ Historique insuffisant pour {label_str}: target={target} < first={first_date}")
                 return None, None
 
             # Trouver la date la plus proche de target
@@ -420,26 +453,147 @@ def baseline_52w(
                     best_d, best_c = d_str, close
 
             if best_d is None or best_c is None:
-                last_diag = f"{label}: impossible de sélectionner un point"
+                last_diag = f"{attempt_label}: impossible de sélectionner un point"
                 logger.warning(f"  ⚠️ {last_diag}")
                 continue
 
             # Garde-fou: si la meilleure date est trop loin, renvoyer None (plus safe)
             if best_diff is not None and best_diff > max_gap_days:
-                logger.warning(f"  ⚠️ 52W baseline trop éloignée: diff={best_diff}j (> {max_gap_days}j)")
+                logger.warning(f"  ⚠️ {label_str} baseline trop éloignée: diff={best_diff}j (> {max_gap_days}j)")
                 return None, None
 
-            logger.info(f"  ✅ Baseline 52W = {best_d} (close: {best_c:.2f}) diff={best_diff}j")
+            logger.info(f"  ✅ Baseline {label_str} = {best_d} (close: {best_c:.2f}) diff={best_diff}j")
             return float(best_c), best_d
 
         except Exception as e:
-            last_diag = f"{label}: exception {type(e).__name__}: {e}"
+            last_diag = f"{attempt_label}: exception {type(e).__name__}: {e}"
             logger.warning(f"  ⚠️ {last_diag}")
             continue
 
     # Si toutes les tentatives échouent, retourner None (pas d'exception)
-    logger.warning(f"⚠️ Aucune baseline 52W exploitable pour {sym}. Last={last_diag}")
+    logger.warning(f"⚠️ Aucune baseline {label_str} exploitable pour {sym}. Last={last_diag}")
     return None, None
+
+
+# ============================================================
+# WRAPPERS SPÉCIFIQUES (3M, 6M, 52W)
+# ============================================================
+
+def baseline_3m(
+    sym: str,
+    region: str = "US",
+    exchange: str = None,
+    mic_code: str = None,
+    max_gap_days: int = 7,
+) -> Tuple[Optional[float], Optional[str]]:
+    """
+    Baseline 3M = close le plus proche de (today - 91 jours).
+    
+    v17 - Wrapper pour baseline_period() avec lookback=91 jours.
+    
+    - ~3 mois calendaires (~63 jours de bourse)
+    - Utile pour détecter les retournements récents (cooling)
+    - Retourne (None, None) si historique < 3 mois
+
+    Args:
+        sym: Symbole de l'ETF/action
+        region: Région pour le timezone
+        exchange: Exchange optionnel
+        mic_code: MIC code optionnel
+        max_gap_days: Tolérance (défaut: 7 jours, plus strict que 52W)
+
+    Returns:
+        (close_value, date_str) ou (None, None) si historique insuffisant
+    """
+    return baseline_period(
+        sym=sym,
+        lookback_days=PERIOD_3M_DAYS,
+        region=region,
+        exchange=exchange,
+        mic_code=mic_code,
+        outputsize=120,  # ~4 mois de données
+        max_gap_days=max_gap_days,
+        period_label="3M",
+    )
+
+
+def baseline_6m(
+    sym: str,
+    region: str = "US",
+    exchange: str = None,
+    mic_code: str = None,
+    max_gap_days: int = 10,
+) -> Tuple[Optional[float], Optional[str]]:
+    """
+    Baseline 6M = close le plus proche de (today - 182 jours).
+    
+    v17 - Wrapper pour baseline_period() avec lookback=182 jours.
+    
+    - ~6 mois calendaires (~126 jours de bourse)
+    - Utile pour confirmer les trends moyen-terme
+    - Retourne (None, None) si historique < 6 mois
+
+    Args:
+        sym: Symbole de l'ETF/action
+        region: Région pour le timezone
+        exchange: Exchange optionnel
+        mic_code: MIC code optionnel
+        max_gap_days: Tolérance (défaut: 10 jours)
+
+    Returns:
+        (close_value, date_str) ou (None, None) si historique insuffisant
+    """
+    return baseline_period(
+        sym=sym,
+        lookback_days=PERIOD_6M_DAYS,
+        region=region,
+        exchange=exchange,
+        mic_code=mic_code,
+        outputsize=200,  # ~7 mois de données
+        max_gap_days=max_gap_days,
+        period_label="6M",
+    )
+
+
+def baseline_52w(
+    sym: str,
+    region: str = "US",
+    exchange: str = None,
+    mic_code: str = None,
+    lookback_days: int = 365,
+    outputsize: int = 420,
+    max_gap_days: int = 10,
+) -> Tuple[Optional[float], Optional[str]]:
+    """
+    Baseline 52W = close le plus proche de (today - 365 jours).
+    
+    v17 - Refactorisé comme wrapper de baseline_period().
+    
+    - ~52 semaines calendaires (~252 jours de bourse)
+    - Retourne (None, None) si historique < 1 an
+
+    Args:
+        sym: Symbole de l'ETF/action
+        region: Région pour le timezone
+        exchange: Exchange optionnel
+        mic_code: MIC code optionnel
+        lookback_days: Nombre de jours (défaut: 365)
+        outputsize: Nombre de points à charger (défaut: 420)
+        max_gap_days: Tolérance (défaut: 10 jours)
+
+    Returns:
+        (close_value, date_str) ou (None, None) si historique insuffisant
+    """
+    return baseline_period(
+        sym=sym,
+        lookback_days=lookback_days,
+        region=region,
+        exchange=exchange,
+        mic_code=mic_code,
+        outputsize=outputsize,
+        max_gap_days=max_gap_days,
+        period_label="52W",
+    )
 
 
 # ============================================================
