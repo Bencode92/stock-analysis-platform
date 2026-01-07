@@ -3,6 +3,9 @@
 Script de mise à jour des données de marché via Twelve Data API
 Utilise des ETFs pour représenter les indices boursiers
 
+v3 - AJOUT: Calcul 52W (52 semaines glissant)
+  - Nouvelle métrique w52Change
+  - Retourne null si historique < 1 an
 v2 - Aligné avec update_sectors_data_etf.py:
   - Rate limiting entre appels API
   - Timezone par région
@@ -22,6 +25,7 @@ from twelve_data_utils import (
     get_td_client,
     quote_one,
     baseline_ytd,
+    baseline_52w,
     format_value,
     format_percent,
     parse_percentage,
@@ -61,6 +65,10 @@ def create_empty_market_data() -> Dict:
                 "worst": []
             },
             "ytd": {
+                "best": [],
+                "worst": []
+            },
+            "w52": {
                 "best": [],
                 "worst": []
             }
@@ -107,6 +115,7 @@ def calculate_top_performers(market_data: Dict, all_indices: List):
     
     daily_indices = [idx for idx in all_indices if idx.get("changePercent")]
     ytd_indices = [idx for idx in all_indices if idx.get("ytdChange")]
+    w52_indices = [idx for idx in all_indices if idx.get("w52_num") is not None]
     
     # Trier par variation quotidienne
     if daily_indices:
@@ -131,6 +140,15 @@ def calculate_top_performers(market_data: Dict, all_indices: List):
         
         market_data["top_performers"]["ytd"]["best"] = [clean_index_data(idx) for idx in best_ytd]
         market_data["top_performers"]["ytd"]["worst"] = [clean_index_data(idx) for idx in worst_ytd]
+    
+    # Trier par variation 52W
+    if w52_indices:
+        sorted_w52 = sorted(w52_indices, key=lambda x: x["w52_num"], reverse=True)
+        best_w52 = sorted_w52[:3]
+        worst_w52 = sorted(sorted_w52, key=lambda x: x["w52_num"])[:3]
+        
+        market_data["top_performers"]["w52"]["best"] = [clean_index_data(idx) for idx in best_w52]
+        market_data["top_performers"]["w52"]["worst"] = [clean_index_data(idx) for idx in worst_w52]
 
 
 def main():
@@ -172,6 +190,7 @@ def main():
     processed_count = 0
     error_count = 0
     ytd_fallback_count = 0
+    w52_missing_count = 0
     year = dt.date.today().year
     
     for idx, etf in enumerate(etf_mapping):
@@ -205,6 +224,20 @@ def main():
             # Calculer le YTD
             ytd_pct = 100 * (last - base_close) / base_close if base_close > 0 else 0
             
+            # Pause avant l'appel 52W
+            rate_limit_pause(0.5)
+            
+            # Baseline 52W (close le plus proche de J-365)
+            base_52w_close, base_52w_date = baseline_52w(sym, api_region)
+            
+            # Calculer le 52W (None si historique insuffisant)
+            w52_pct = None
+            if base_52w_close and base_52w_close > 0:
+                w52_pct = 100 * (last - base_52w_close) / base_52w_close
+            else:
+                w52_missing_count += 1
+                logger.info(f"ℹ️ {sym}: Pas de données 52W (historique < 1 an)")
+            
             # Créer l'objet de données
             market_entry = {
                 "country": country,
@@ -217,6 +250,9 @@ def main():
                 "ytdChange": format_percent(ytd_pct),
                 "ytd_num": float(ytd_pct),
                 "ytd_ref_date": base_date,
+                "w52Change": format_percent(w52_pct) if w52_pct is not None else None,
+                "w52_num": float(w52_pct) if w52_pct is not None else None,
+                "w52_ref_date": base_52w_date,
                 "trend": "down" if day_pct < 0 else "up"
             }
             
@@ -226,7 +262,8 @@ def main():
             ALL_INDICES.append(market_entry)
             processed_count += 1
             
-            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% (base: {base_date})")
+            w52_str = f"52W: {w52_pct:+.2f}%" if w52_pct is not None else "52W: N/A"
+            logger.info(f"✅ {sym}: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% {w52_str}")
             
         except Exception as e:
             error_count += 1
@@ -250,6 +287,8 @@ def main():
     logger.info(f"  - Erreurs: {error_count}")
     if ytd_fallback_count > 0:
         logger.info(f"  - ℹ️ Baselines YTD début {year}: {ytd_fallback_count}")
+    if w52_missing_count > 0:
+        logger.info(f"  - ℹ️ ETFs sans données 52W (historique < 1 an): {w52_missing_count}")
     
     for region, indices in MARKET_DATA["indices"].items():
         if indices:
@@ -273,8 +312,17 @@ def main():
         "outputsize": 250,
         "note": f"YTD basé sur le dernier close de {year-1} ou fallback 1er jour {year}"
     }
+    MARKET_DATA["meta"]["w52_calculation"] = {
+        "method": "price_close_nearest_to_today_minus_365d",
+        "lookback_days": 365,
+        "outputsize": 420,
+        "max_gap_days": 10,
+        "note": "Retourne null si historique < 1 an"
+    }
     if ytd_fallback_count > 0:
         MARKET_DATA["meta"]["ytd_fallback_count"] = ytd_fallback_count
+    if w52_missing_count > 0:
+        MARKET_DATA["meta"]["w52_missing_count"] = w52_missing_count
     
     # 6. Sauvegarder le fichier JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
