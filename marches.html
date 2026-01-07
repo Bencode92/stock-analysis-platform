@@ -50,6 +50,7 @@
             --sidebar-width: 80px;
             /* Rouge moins saturé */
             --negative-color: #ef4444;
+            --negative-subtle: rgba(239, 68, 68, 0.08);
             --neutral-color: #999999;
             --separator-color: rgba(255, 255, 255, 0.04);
         }
@@ -90,6 +91,7 @@
         body.density-compact .market-overview-grid { gap: 12px; }
         body.density-compact .performer-card { padding: 0; }
         body.density-compact .performer-row { padding: 10px 14px; }
+        body.density-compact .market-metrics { gap: 4px; }
         
         /* Animation pour les changements de valeurs */
         @keyframes valueFlash {
@@ -503,10 +505,11 @@
             to   { opacity: 0.7; transform: translateY(0); }
         }
         
-        /* Alignement à droite pour les colonnes numériques */
+        /* Alignement à droite pour les colonnes numériques (6 colonnes maintenant) */
         .data-table th:nth-child(3),
         .data-table th:nth-child(4),
-        .data-table th:nth-child(5) {
+        .data-table th:nth-child(5),
+        .data-table th:nth-child(6) {
             text-align: right;
         }
         
@@ -538,7 +541,8 @@
         
         .data-table td:nth-child(3),
         .data-table td:nth-child(4),
-        .data-table td:nth-child(5) {
+        .data-table td:nth-child(5),
+        .data-table td:nth-child(6) {
             font-variant-numeric: tabular-nums;
             letter-spacing: -0.01em;
             text-align: right;
@@ -688,6 +692,14 @@
             transition: color 0.3s ease;
         }
         
+        /* Container pour empiler YTD et 52W */
+        .market-metrics {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+        
         .market-ytd {
             font-size: 0.75rem;
             opacity: 0.85;
@@ -697,6 +709,40 @@
             font-variant-numeric: tabular-nums;
             letter-spacing: -0.02em;
             transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .market-ytd.positive {
+            background: var(--accent-subtle);
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+        
+        .market-ytd.negative {
+            background: var(--negative-subtle);
+            border-color: rgba(239, 68, 68, 0.25);
+        }
+        
+        /* Chip 52W */
+        .market-w52 {
+            font-size: 0.75rem;
+            opacity: 0.85;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .market-w52.positive {
+            background: var(--accent-subtle);
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+        
+        .market-w52.negative {
+            background: var(--negative-subtle);
+            border-color: rgba(239, 68, 68, 0.25);
         }
         
         /* Top performers en bandeau horizontal */
@@ -766,6 +812,29 @@
             font-variant-numeric: tabular-nums;
             letter-spacing: -0.01em;
             font-size: 0.9rem;
+        }
+        
+        /* Boutons toggle Top Performers */
+        .tp-metric-btn {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.85);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .tp-metric-btn:hover {
+            background: rgba(34, 197, 94, 0.10);
+            border-color: rgba(34, 197, 94, 0.35);
+        }
+        
+        .tp-metric-btn.active {
+            background: var(--accent-subtle);
+            border-color: rgba(34, 197, 94, 0.35);
+            color: var(--accent-color);
         }
 
         /* Autres styles */
@@ -1016,6 +1085,11 @@
             .market-index-col {
                 margin-bottom: 8px;
             }
+            
+            .market-metrics {
+                flex-direction: row;
+                gap: 4px;
+            }
         }
     </style>
 </head>
@@ -1102,7 +1176,7 @@
             <div class="market-overview-section mb-12">
                 <h2 class="market-overview-title">Aperçu des marchés mondiaux</h2>
                 
-                <div class="market-overview-grid">
+                <div class="market-overview-grid" id="market-overview-container">
                     <!-- EUROPE -->
                     <div class="market-region-header">
                         <span>Europe</span>
@@ -1113,7 +1187,10 @@
                         <div class="market-index-name">Allemagne</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,35%</div>
-                            <div class="market-ytd positive">YTD 7,87%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 7,87%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1121,7 +1198,10 @@
                         <div class="market-index-name">France</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,55%</div>
-                            <div class="market-ytd positive">YTD 13,27%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 13,27%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1129,7 +1209,10 @@
                         <div class="market-index-name">Royaume-Uni</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,20%</div>
-                            <div class="market-ytd positive">YTD 4,71%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 4,71%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1137,7 +1220,10 @@
                         <div class="market-index-name">Suisse</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,25%</div>
-                            <div class="market-ytd positive">YTD 9,19%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 9,19%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1151,7 +1237,10 @@
                         <div class="market-index-name">S&P 500</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,49%</div>
-                            <div class="market-ytd negative">YTD −4,80%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd negative">YTD −4,80%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1159,7 +1248,10 @@
                         <div class="market-index-name">Dow Jones</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,20%</div>
-                            <div class="market-ytd negative">YTD −2,80%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd negative">YTD −2,80%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1167,7 +1259,10 @@
                         <div class="market-index-name">Canada</div>
                         <div class="market-index-data">
                             <div class="market-value positive">1,22%</div>
-                            <div class="market-ytd negative">YTD −8,61%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd negative">YTD −8,61%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1175,7 +1270,10 @@
                         <div class="market-index-name">VIX</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,82%</div>
-                            <div class="market-ytd positive">YTD 4,95%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 4,95%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1189,7 +1287,10 @@
                         <div class="market-index-name">Brésil</div>
                         <div class="market-index-data">
                             <div class="market-value positive">1,42%</div>
-                            <div class="market-ytd positive">YTD 9,15%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 9,15%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1197,7 +1298,10 @@
                         <div class="market-index-name">Mexique</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,15%</div>
-                            <div class="market-ytd positive">YTD 9,20%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 9,20%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1205,7 +1309,10 @@
                         <div class="market-index-name">Chili</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,38%</div>
-                            <div class="market-ytd positive">YTD 17,11%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 17,11%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1213,7 +1320,10 @@
                         <div class="market-index-name">Argentine</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−1,79%</div>
-                            <div class="market-ytd negative">YTD −11,90%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd negative">YTD −11,90%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1227,7 +1337,10 @@
                         <div class="market-index-name">Chine</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,08%</div>
-                            <div class="market-ytd negative">YTD −7,78%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd negative">YTD −7,78%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1235,7 +1348,10 @@
                         <div class="market-index-name">Japon</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,65%</div>
-                            <div class="market-ytd positive">YTD 16,28%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 16,28%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1243,7 +1359,10 @@
                         <div class="market-index-name">Inde</div>
                         <div class="market-index-data">
                             <div class="market-value negative">−0,39%</div>
-                            <div class="market-ytd positive">YTD 0,21%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 0,21%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1251,20 +1370,29 @@
                         <div class="market-index-name">Taïwan</div>
                         <div class="market-index-data">
                             <div class="market-value positive">0,14%</div>
-                            <div class="market-ytd positive">YTD 2,86%</div>
+                            <div class="market-metrics">
+                                <div class="market-ytd positive">YTD 2,86%</div>
+                                <div class="market-w52">52W —</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Top Performers en bandeau horizontal -->
+            <!-- Top Performers en bandeau horizontal avec toggle -->
             <section class="tp-strip mb-10" aria-labelledby="tp-title">
                 <div class="flex items-center justify-between mb-4">
                     <h2 id="tp-title" class="section-title !mb-0">Top performers</h2>
+                    <div class="flex items-center gap-2">
+                        <button class="tp-metric-btn active" data-metric="daily" type="button">1J</button>
+                        <button class="tp-metric-btn" data-metric="ytd" type="button">YTD</button>
+                        <button class="tp-metric-btn" data-metric="w52" type="button">52W</button>
+                    </div>
                 </div>
 
-                <div id="tp-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <div class="performer-card">
+                <div id="tp-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Daily performers -->
+                    <div class="performer-card" data-metric="daily">
                         <div class="performer-header">
                             <span>Top 3 Hausse (Jour)</span>
                             <span class="text-sm positive" aria-label="Hausse"><i class="fas fa-arrow-up"></i></span>
@@ -1274,7 +1402,7 @@
                         </div>
                     </div>
                     
-                    <div class="performer-card">
+                    <div class="performer-card" data-metric="daily">
                         <div class="performer-header">
                             <span>Top 3 Baisse (Jour)</span>
                             <span class="text-sm negative" aria-label="Baisse"><i class="fas fa-arrow-down"></i></span>
@@ -1284,7 +1412,8 @@
                         </div>
                     </div>
                     
-                    <div class="performer-card">
+                    <!-- YTD performers -->
+                    <div class="performer-card hidden" data-metric="ytd">
                         <div class="performer-header">
                             <span>Top 3 Hausse (YTD)</span>
                             <span class="text-sm positive" aria-label="Hausse YTD"><i class="fas fa-arrow-up"></i></span>
@@ -1294,12 +1423,33 @@
                         </div>
                     </div>
                     
-                    <div class="performer-card">
+                    <div class="performer-card hidden" data-metric="ytd">
                         <div class="performer-header">
                             <span>Top 3 Baisse (YTD)</span>
                             <span class="text-sm negative" aria-label="Baisse YTD"><i class="fas fa-arrow-down"></i></span>
                         </div>
                         <div id="ytd-bottom">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- 52W performers -->
+                    <div class="performer-card hidden" data-metric="w52">
+                        <div class="performer-header">
+                            <span>Top 3 Hausse (52W)</span>
+                            <span class="text-sm positive" aria-label="Hausse 52W"><i class="fas fa-arrow-up"></i></span>
+                        </div>
+                        <div id="w52-top">
+                            <!-- Données injectées par JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="performer-card hidden" data-metric="w52">
+                        <div class="performer-header">
+                            <span>Top 3 Baisse (52W)</span>
+                            <span class="text-sm negative" aria-label="Baisse 52W"><i class="fas fa-arrow-down"></i></span>
+                        </div>
+                        <div id="w52-bottom">
                             <!-- Données injectées par JS -->
                         </div>
                     </div>
@@ -1348,7 +1498,8 @@
                                             <th data-column="1">LIBELLÉ</th>
                                             <th data-column="2">DERNIER</th>
                                             <th data-column="3">VAR. %</th>
-                                            <th data-column="4">VAR/1JANV</th>
+                                            <th data-column="4">YTD</th>
+                                            <th data-column="5">52W</th>
                                         </tr>
                                     </thead>
                                     <tbody id="europe-indices-body">
@@ -1367,7 +1518,8 @@
                                             <th data-column="1">LIBELLÉ</th>
                                             <th data-column="2">DERNIER</th>
                                             <th data-column="3">VAR. %</th>
-                                            <th data-column="4">VAR/1JANV</th>
+                                            <th data-column="4">YTD</th>
+                                            <th data-column="5">52W</th>
                                         </tr>
                                     </thead>
                                     <tbody id="north-america-indices-body">
@@ -1386,7 +1538,8 @@
                                             <th data-column="1">LIBELLÉ</th>
                                             <th data-column="2">DERNIER</th>
                                             <th data-column="3">VAR. %</th>
-                                            <th data-column="4">VAR/1JANV</th>
+                                            <th data-column="4">YTD</th>
+                                            <th data-column="5">52W</th>
                                         </tr>
                                     </thead>
                                     <tbody id="latin-america-indices-body">
@@ -1405,7 +1558,8 @@
                                             <th data-column="1">LIBELLÉ</th>
                                             <th data-column="2">DERNIER</th>
                                             <th data-column="3">VAR. %</th>
-                                            <th data-column="4">VAR/1JANV</th>
+                                            <th data-column="4">YTD</th>
+                                            <th data-column="5">52W</th>
                                         </tr>
                                     </thead>
                                     <tbody id="asia-indices-body">
@@ -1424,7 +1578,8 @@
                                             <th data-column="1">LIBELLÉ</th>
                                             <th data-column="2">DERNIER</th>
                                             <th data-column="3">VAR. %</th>
-                                            <th data-column="4">VAR/1JANV</th>
+                                            <th data-column="4">YTD</th>
+                                            <th data-column="5">52W</th>
                                         </tr>
                                     </thead>
                                     <tbody id="other-indices-body">
@@ -1522,6 +1677,30 @@
             localStorage.setItem('density', isCompact ? 'compact' : 'comfort');
             densityBtn.innerHTML = `<i class="fas fa-compress-alt mr-2"></i>Densité : ${isCompact ? 'Compact' : 'Confort'}`;
         });
+
+        // === Toggle Top Performers (1J / YTD / 52W) ===
+        let tpMetric = localStorage.getItem('tpMetric') || 'daily';
+
+        function applyTpMetric(metric) {
+            tpMetric = metric;
+            localStorage.setItem('tpMetric', metric);
+
+            document.querySelectorAll('.tp-metric-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.metric === metric);
+            });
+
+            document.querySelectorAll('#tp-grid .performer-card').forEach(card => {
+                const show = card.dataset.metric === metric;
+                card.classList.toggle('hidden', !show);
+            });
+        }
+
+        document.querySelectorAll('.tp-metric-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyTpMetric(btn.dataset.metric));
+        });
+
+        // Applique au chargement
+        applyTpMetric(tpMetric);
 
         // Recherche globale sur toutes les régions avec activation de l'onglet
         const searchInput = document.getElementById('table-search');
