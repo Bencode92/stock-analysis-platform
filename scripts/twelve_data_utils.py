@@ -3,8 +3,9 @@
 Module partagé pour les scripts Twelve Data API
 Factorise: rate limiting, timezone, calcul YTD, formatage
 
-v15 - FIX CRITIQUE: Bypass du wrapper twelvedata bugué → appel HTTP direct
-Le wrapper ne retourne qu'1 point au lieu de 100, l'appel HTTP direct fonctionne.
+v16 - AJOUT: baseline_52w() pour calcul 52 semaines glissant
+     - Méthode calendaire (365 jours)
+     - Retourne None si historique insuffisant
 """
 
 import os
@@ -340,6 +341,107 @@ def baseline_ytd(sym: str, region: str = "US", exchange: str = None, mic_code: s
     raise ValueError(f"Aucune baseline exploitable pour {sym}. Last={last_diag}")
 
 
+def baseline_52w(
+    sym: str,
+    region: str = "US",
+    exchange: str = None,
+    mic_code: str = None,
+    lookback_days: int = 365,
+    outputsize: int = 420,
+    max_gap_days: int = 10,
+) -> Tuple[Optional[float], Optional[str]]:
+    """
+    Baseline 52W = close le plus proche de (today - lookback_days).
+    
+    - Méthode calendaire (365 jours), pas "252 trading days".
+    - Retourne (None, None) si historique insuffisant (ETF trop récent).
+
+    Args:
+        lookback_days: nombre de jours calendaires (défaut: 365)
+        outputsize: nombre de points journaliers à charger (420 ~ > 1 an de jours de bourse)
+        max_gap_days: tolérance en jours entre date cible et date trouvée (week-ends / fériés)
+
+    Returns:
+        (close_value, date_str) ou (None, None) si historique insuffisant
+    """
+    sym, exchange, mic_code = _apply_vse_fallback(sym, exchange, mic_code)
+
+    today = dt.date.today()
+    target = today - dt.timedelta(days=lookback_days)
+
+    # Tentatives: mic_code -> exchange -> symbol seul
+    attempts = []
+    if mic_code:
+        attempts.append(("mic_code", {"mic_code": mic_code}))
+        attempts.append(("mic_as_exchange", {"exchange": mic_code}))
+    if exchange:
+        attempts.append(("exchange", {"exchange": exchange}))
+    attempts.append(("symbol_only", {}))
+
+    last_diag = None
+
+    for label, kwargs in attempts:
+        logger.info(f"📡 baseline_52w({sym}) tentative: {label}")
+        try:
+            rate_limit_pause()
+
+            js = _time_series_http(
+                sym,
+                end_date=today.isoformat(),
+                outputsize=outputsize,
+                order="ASC",
+                **kwargs,
+            )
+
+            rows = _normalize_and_sort(js)
+            if not rows:
+                last_diag = f"{label}: aucune donnée"
+                logger.warning(f"  ⚠️ {last_diag}")
+                continue
+
+            first_date = dt.date.fromisoformat(rows[0][0])
+            last_date = dt.date.fromisoformat(rows[-1][0])
+            logger.info(f"  📅 {len(rows)} points, min={rows[0][0]}, max={rows[-1][0]}")
+
+            # Historique insuffisant : la date cible est avant le 1er point
+            if target < first_date:
+                logger.info(f"  ℹ️ Historique insuffisant pour 52W: target={target} < first={first_date}")
+                return None, None
+
+            # Trouver la date la plus proche de target
+            best_d, best_c = None, None
+            best_diff = None
+
+            for d_str, close in rows:
+                d = dt.date.fromisoformat(d_str)
+                diff = abs((d - target).days)
+                if best_diff is None or diff < best_diff:
+                    best_diff = diff
+                    best_d, best_c = d_str, close
+
+            if best_d is None or best_c is None:
+                last_diag = f"{label}: impossible de sélectionner un point"
+                logger.warning(f"  ⚠️ {last_diag}")
+                continue
+
+            # Garde-fou: si la meilleure date est trop loin, renvoyer None (plus safe)
+            if best_diff is not None and best_diff > max_gap_days:
+                logger.warning(f"  ⚠️ 52W baseline trop éloignée: diff={best_diff}j (> {max_gap_days}j)")
+                return None, None
+
+            logger.info(f"  ✅ Baseline 52W = {best_d} (close: {best_c:.2f}) diff={best_diff}j")
+            return float(best_c), best_d
+
+        except Exception as e:
+            last_diag = f"{label}: exception {type(e).__name__}: {e}"
+            logger.warning(f"  ⚠️ {last_diag}")
+            continue
+
+    # Si toutes les tentatives échouent, retourner None (pas d'exception)
+    logger.warning(f"⚠️ Aucune baseline 52W exploitable pour {sym}. Last={last_diag}")
+    return None, None
+
+
 # ============================================================
 # FONCTIONS DE FORMATAGE
 # ============================================================
@@ -368,6 +470,9 @@ def format_value_with_currency(value: float, currency: str) -> str:
 
 
 def format_percent(value: float) -> str:
+    """Formate un pourcentage. Retourne None si value est None."""
+    if value is None:
+        return None
     return f"{value:+.2f} %"
 
 
