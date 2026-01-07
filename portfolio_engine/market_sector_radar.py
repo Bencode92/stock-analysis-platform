@@ -1,18 +1,20 @@
 # portfolio_engine/market_sector_radar.py
 """
-Market/Sector Radar v1.2 (Deterministic, Anti-overheat, Anti-contamination)
-===========================================================================
+Market/Sector Radar v1.3 (Deterministic, Anti-overheat, Anti-contamination, 52W Gate)
+======================================================================================
 
 Objectif:
 - Exploiter sectors.json + markets.json pour produire un market_context.json
   (format compatible avec le pipeline existant).
 - Zéro GPT, règles fixes, auditable, AMF-compliant.
 
-Règles (ajustées v1.1):
-SECTEURS:
-- avoided  : ytd < 0 (underperform)
+Règles SECTEURS (ajustées v1.3):
+- avoided  : ytd < 0 ET w52 < 0 (underperform confirmé)
+- avoided  : ytd < -5 même si w52 > 0 (deep negative)
+- neutral  : ytd < 0 ET w52 > 0 ET ytd >= -5 (rescued par 52W)
 - neutral  : ytd >= 50 (surchauffe → pas de pénalité, mais pas de bonus)
-- favored  : 10 <= ytd <= 35  AND  daily >= -0.5  (sweet spot avec tolérance)
+- favored  : 10 <= ytd <= 35 AND daily >= -0.5 AND w52 > 0 (sweet spot confirmé)
+- neutral  : favored legacy mais w52 < 0 (blocked)
 - neutral  : sinon
 
 RÉGIONS (marchés/pays):
@@ -22,6 +24,12 @@ Régime:
 - risk-on  si >=60% des secteurs ont ytd > 0
 - risk-off si >=60% des secteurs ont ytd < 0
 - neutral sinon
+
+Ajustements v1.3 vs v1.2:
+- 52W Gate: sign-based logic (pas de seuil arbitraire)
+- _safe_num_opt(): retourne None au lieu de 0 pour w52
+- classify_v2(): intègre w52 comme gate de confirmation
+- Diagnostics enrichis avec w52 et flags
 
 Ajustements v1.2 vs v1.1:
 - Anti-contamination: smoothing ignoré si ancien contexte non-RADAR (GPT)
@@ -53,6 +61,10 @@ class RadarRules:
     """
     Règles paramétrables pour la classification secteurs/régions.
     
+    Ajustements v1.3:
+    - 52W Gate: confirmation sign-based
+    - ytd_mild_negative_floor: seuil pour rescue
+    
     Ajustements v1.1:
     - daily_min abaissé pour tolérer le bruit
     - smoothing activé par défaut
@@ -68,6 +80,20 @@ class RadarRules:
     
     # Underperform (< ce seuil = avoided)
     underperform_ytd_max: float = 0.0
+
+    # ========== v1.3: 52W Gate (sign-based) ==========
+    # Confirmer favored: exiger w52 > 0
+    confirm_favored_requires_w52_positive: bool = True
+    
+    # Confirmer avoided: logique sign-based
+    confirm_avoided_requires_w52_negative: bool = True
+    
+    # Seuil pour rescue: si ytd >= ce seuil ET w52 > 0, rescue possible
+    # En-dessous de ce seuil, on garde avoided même si w52 > 0 (deep negative)
+    ytd_mild_negative_floor: float = -5.0
+    
+    # Divergence threshold: tag info seulement (pas veto)
+    divergence_threshold: float = 20.0
 
     # Selection caps
     max_favored_sectors: int = 5
@@ -284,6 +310,28 @@ def _safe_num(v: Any, default: float = 0.0) -> float:
         return default
 
 
+def _safe_num_opt(v: Any) -> Optional[float]:
+    """
+    Convertit une valeur en float, retourne None si invalide.
+    
+    v1.3: CRITIQUE pour w52 - ne jamais transformer un manque en 0.
+    """
+    try:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip().replace(",", ".").replace("%", "")
+            if not v or v.lower() in ("n/a", "nan", "-", "—", ""):
+                return None
+        result = float(v)
+        # Vérifier NaN
+        if result != result:  # NaN check
+            return None
+        return result
+    except Exception:
+        return None
+
+
 def load_sectors(data_dir: str) -> Dict[str, Dict[str, Any]]:
     """
     Charge sectors.json et retourne un dict normalisé.
@@ -291,13 +339,15 @@ def load_sectors(data_dir: str) -> Dict[str, Dict[str, Any]]:
     Format attendu:
     {
       "sectors": {
-        "information-technology": [{"ytd_num":..., "change_num":...}, ...],
+        "information-technology": [{...}, ...],
         ...
       }
     }
     
     Retour:
-      {sector_key: {"ytd": float, "daily": float, "raw": {...}}}
+      {sector_key: {"ytd": float, "daily": float, "w52": Optional[float], "raw": {...}}}
+    
+    v1.3: Ajout de w52 avec _safe_num_opt (None si absent/invalide)
     """
     path = Path(data_dir) / "sectors.json"
     if not path.exists():
@@ -338,10 +388,20 @@ def load_sectors(data_dir: str) -> Dict[str, Dict[str, Any]]:
                     entry.get("change_num") or entry.get("_change_value") or entry.get("change") or entry.get("daily"),
                     0.0
                 )
+                # v1.3: w52 avec _safe_num_opt (None si absent)
+                w52 = _safe_num_opt(
+                    entry.get("w52_num") or entry.get("w52") or entry.get("w52Change")
+                )
+                
                 key = normalize_sector(sector_name)
-                out[key] = {"ytd": ytd, "daily": daily, "raw": entry}
+                out[key] = {"ytd": ytd, "daily": daily, "w52": w52, "raw": entry}
 
     logger.info(f"✅ Chargé {len(out)} secteurs depuis {path}")
+    
+    # v1.3: Log w52 coverage
+    w52_count = sum(1 for d in out.values() if d.get("w52") is not None)
+    logger.info(f"   └─ w52 disponible: {w52_count}/{len(out)} secteurs")
+    
     return out
 
 
@@ -353,7 +413,9 @@ def load_markets(data_dir: str) -> Dict[str, Dict[str, Any]]:
     {"indices": {"developed":[{country,...}], "asia":[...], ...}}
     
     Retour:
-      {country_key: {"ytd": float, "daily": float, "raw": {...}}}
+      {country_key: {"ytd": float, "daily": float, "w52": Optional[float], "raw": {...}}}
+    
+    v1.3: Ajout de w52 avec _safe_num_opt
     """
     path = Path(data_dir) / "markets.json"
     if not path.exists():
@@ -392,9 +454,19 @@ def load_markets(data_dir: str) -> Dict[str, Dict[str, Any]]:
                     e.get("change_num") or e.get("_change_value") or e.get("change") or e.get("daily"),
                     0.0
                 )
-                out[key] = {"ytd": ytd, "daily": daily, "raw": e}
+                # v1.3: w52 avec _safe_num_opt
+                w52 = _safe_num_opt(
+                    e.get("w52_num") or e.get("w52") or e.get("w52Change")
+                )
+                
+                out[key] = {"ytd": ytd, "daily": daily, "w52": w52, "raw": e}
 
     logger.info(f"✅ Chargé {len(out)} marchés/pays depuis {path}")
+    
+    # v1.3: Log w52 coverage
+    w52_count = sum(1 for d in out.values() if d.get("w52") is not None)
+    logger.info(f"   └─ w52 disponible: {w52_count}/{len(out)} marchés")
+    
     return out
 
 
@@ -402,12 +474,12 @@ def load_markets(data_dir: str) -> Dict[str, Dict[str, Any]]:
 
 def classify(ytd: float, daily: float, rules: RadarRules) -> Tuple[str, str]:
     """
-    Classifie un secteur/région selon les règles.
+    Classification LEGACY (v1.2) basée sur YTD + daily uniquement.
     
     Retourne: (classification, raison)
     
-    v1.1 IMPORTANT: overheat = NEUTRAL (pas avoided)
-    Un marché peut rester "chaud" longtemps (momentum).
+    Note: Cette fonction est conservée pour compatibilité.
+    Utiliser classify_v2() pour la classification avec 52W gate.
     """
     # Underperform: YTD négatif → avoided
     if ytd < rules.underperform_ytd_max:
@@ -426,6 +498,71 @@ def classify(ytd: float, daily: float, rules: RadarRules) -> Tuple[str, str]:
     return "neutral", "out_of_range"
 
 
+def classify_v2(
+    ytd: float, 
+    daily: float, 
+    w52: Optional[float], 
+    rules: RadarRules
+) -> Tuple[str, str]:
+    """
+    Classification v1.3 avec 52W Gate (sign-based).
+    
+    Logique:
+    1. Classification legacy (YTD + daily) → cls
+    2. Si w52 = null → retourner cls + "|w52_missing"
+    3. Si cls = "favored" ET w52 < 0 → "neutral" (blocked)
+    4. Si cls = "avoided":
+       - w52 < 0 → "avoided" (confirmé)
+       - w52 > 0 ET ytd >= -5% → "neutral" (rescued)
+       - w52 > 0 ET ytd < -5% → "avoided" (deep negative)
+    5. Tag "divergent" si |ytd - w52| > 20% (info seulement)
+    
+    Retourne: (classification, raison_avec_flags)
+    """
+    # 1. Classification legacy
+    cls, reason = classify(ytd, daily, rules)
+    
+    # 2. Si pas de w52, retourner classification legacy avec flag
+    if w52 is None:
+        return cls, reason + "|w52_missing"
+    
+    # Collecter les flags
+    flags: List[str] = []
+    
+    # Tag divergence (info seulement, pas veto)
+    if abs(ytd - w52) > rules.divergence_threshold:
+        flags.append("divergent")
+    
+    # 3. Gate favored: exiger w52 > 0
+    if cls == "favored" and rules.confirm_favored_requires_w52_positive:
+        if w52 < 0:
+            flag_str = "|".join(flags) if flags else ""
+            return "neutral", reason + "|favored_blocked_w52_negative" + (f"|{flag_str}" if flag_str else "")
+        # w52 > 0: confirmer favored
+        flags.append("w52_confirmed")
+    
+    # 4. Gate avoided: logique sign-based
+    if cls == "avoided" and rules.confirm_avoided_requires_w52_negative:
+        if w52 < 0:
+            # w52 négatif confirme underperform
+            flag_str = "|".join(flags) if flags else ""
+            return "avoided", reason + "|underperform_confirmed" + (f"|{flag_str}" if flag_str else "")
+        else:
+            # w52 > 0: possible rescue ou deep negative
+            if ytd >= rules.ytd_mild_negative_floor:
+                # YTD légèrement négatif + w52 positif → rescue
+                flag_str = "|".join(flags) if flags else ""
+                return "neutral", reason + "|avoided_rescued_w52_positive" + (f"|{flag_str}" if flag_str else "")
+            else:
+                # YTD très négatif → garder avoided malgré w52 positif
+                flag_str = "|".join(flags) if flags else ""
+                return "avoided", reason + "|avoided_kept_ytd_deep_negative" + (f"|{flag_str}" if flag_str else "")
+    
+    # Retourner avec flags
+    flag_str = "|".join(flags) if flags else ""
+    return cls, reason + (f"|{flag_str}" if flag_str else "")
+
+
 def pick_lists(
     items: Dict[str, Dict[str, Any]],
     rules: RadarRules,
@@ -433,39 +570,44 @@ def pick_lists(
     max_avoided: int,
 ) -> Tuple[List[str], List[str], List[Dict[str, Any]]]:
     """
-    Applique la classification et retourne les listes favored/avoided.
+    Applique la classification v1.3 (avec 52W gate) et retourne les listes favored/avoided.
     
     Retourne: (favored_list, avoided_list, diagnostics)
     
     - favored trié par YTD décroissant (meilleurs momentum d'abord)
     - avoided trié par YTD croissant (pires d'abord)
+    
+    v1.3: Utilise classify_v2 avec w52 gate
     """
-    favored: List[Tuple[str, float, float, str]] = []
-    avoided: List[Tuple[str, float, float, str]] = []
-    neutral: List[Tuple[str, float, float, str]] = []
+    favored: List[Tuple[str, float, float, Optional[float], str]] = []
+    avoided: List[Tuple[str, float, float, Optional[float], str]] = []
+    neutral: List[Tuple[str, float, float, Optional[float], str]] = []
     diag: List[Dict[str, Any]] = []
 
     for key, data in items.items():
         ytd = _safe_num(data.get("ytd", 0.0), 0.0)
         daily = _safe_num(data.get("daily", 0.0), 0.0)
+        w52 = data.get("w52")  # Déjà Optional[float] depuis load_*
         
-        classification, reason = classify(ytd, daily, rules)
+        # v1.3: Utiliser classify_v2 avec w52
+        classification, reason = classify_v2(ytd, daily, w52, rules)
         
         diag_entry = {
             "key": key,
             "ytd": round(ytd, 2),
             "daily": round(daily, 2),
+            "w52": round(w52, 2) if w52 is not None else None,
             "classification": classification,
             "reason": reason,
         }
         diag.append(diag_entry)
 
         if classification == "favored":
-            favored.append((key, ytd, daily, reason))
+            favored.append((key, ytd, daily, w52, reason))
         elif classification == "avoided":
-            avoided.append((key, ytd, daily, reason))
+            avoided.append((key, ytd, daily, w52, reason))
         else:
-            neutral.append((key, ytd, daily, reason))
+            neutral.append((key, ytd, daily, w52, reason))
 
     # Tri: favored par YTD desc, avoided par YTD asc
     favored.sort(key=lambda x: x[1], reverse=True)
@@ -635,6 +777,8 @@ def generate_market_context_radar(
     
     Returns:
         Dict compatible avec load_market_context() et apply_macro_tilts()
+    
+    v1.3: Classification avec 52W gate (sign-based)
     """
     rules = rules or RadarRules()
 
@@ -649,13 +793,29 @@ def generate_market_context_radar(
     # Déterminer le régime
     regime, confidence, rationale = compute_regime(sectors, rules)
 
-    # Classifier secteurs et régions
+    # Classifier secteurs et régions (v1.3: avec 52W gate)
     favored_sectors, avoided_sectors, sector_diag = pick_lists(
         sectors, rules, rules.max_favored_sectors, rules.max_avoided_sectors
     )
     favored_regions, avoided_regions, region_diag = pick_lists(
         markets, rules, rules.max_favored_regions, rules.max_avoided_regions
     )
+
+    # v1.3: Calculer les stats 52W pour le diagnostic
+    w52_stats = {
+        "sectors_with_w52": sum(1 for d in sectors.values() if d.get("w52") is not None),
+        "sectors_total": len(sectors),
+        "markets_with_w52": sum(1 for d in markets.values() if d.get("w52") is not None),
+        "markets_total": len(markets),
+        "favored_blocked_by_w52": sum(
+            1 for d in sector_diag 
+            if "favored_blocked_w52_negative" in d.get("reason", "")
+        ),
+        "avoided_rescued_by_w52": sum(
+            1 for d in sector_diag 
+            if "avoided_rescued_w52_positive" in d.get("reason", "")
+        ),
+    }
 
     # Construire le contexte
     ctx: Dict[str, Any] = {
@@ -673,16 +833,18 @@ def generate_market_context_radar(
         "risks": _extract_risks(sectors, markets, rules),
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "model": "radar_deterministic_v1.2",
+            "model": "radar_deterministic_v1.3",
             "mode": "DATA_DRIVEN",
             "amf_compliant": True,
             "is_fallback": False,
+            "w52_gate_enabled": True,
             "rules": asdict(rules),
             "tilt_config": {
                 "favored": rules.tilt_favored,
                 "avoided": rules.tilt_avoided,
                 "max_tactical": rules.tilt_max,
             },
+            "w52_stats": w52_stats,
             "diagnostics": {
                 "sectors_loaded": len(sectors),
                 "markets_loaded": len(markets),
@@ -741,6 +903,9 @@ def generate_market_context_radar(
     logger.info(f"   Secteurs avoided: {avoided_sectors}")
     logger.info(f"   Régions favored: {favored_regions}")
     logger.info(f"   Régions avoided: {avoided_regions}")
+    
+    # v1.3: Log 52W gate impact
+    logger.info(f"🎯 52W Gate: {w52_stats['favored_blocked_by_w52']} favored bloqués, {w52_stats['avoided_rescued_by_w52']} avoided rescued")
 
     return ctx
 
@@ -781,6 +946,16 @@ def _extract_trends(
     if overheat_count > 0:
         trends.append(f"{overheat_count} secteur(s) en zone de surchauffe (YTD ≥ {rules.overheat_ytd_min}%)")
     
+    # v1.3: Trend basé sur 52W
+    w52_leaders = [
+        (k, d.get("w52")) for k, d in sectors.items() 
+        if d.get("w52") is not None and d.get("w52") > 30
+    ]
+    if w52_leaders:
+        w52_leaders.sort(key=lambda x: x[1], reverse=True)
+        top_w52 = w52_leaders[0]
+        trends.append(f"52W leader: {top_w52[0]} (+{top_w52[1]:.1f}% sur 12 mois)")
+    
     return trends
 
 
@@ -817,6 +992,14 @@ def _extract_risks(
     if favored_count <= 2:
         risks.append("Concentration: peu de secteurs en zone favorable (rotation possible)")
     
+    # v1.3: Risque divergence YTD/52W
+    divergent_count = sum(
+        1 for d in sectors.values()
+        if d.get("w52") is not None and abs(_safe_num(d.get("ytd", 0), 0) - d.get("w52")) > rules.divergence_threshold
+    )
+    if divergent_count >= 3:
+        risks.append(f"{divergent_count} secteurs avec divergence YTD/52W (retournement possible)")
+    
     return risks
 
 
@@ -837,10 +1020,11 @@ def _get_fallback_context(rules: RadarRules) -> Dict[str, Any]:
         "risks": ["Contexte marché non disponible"],
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "model": "radar_deterministic_v1.2",
+            "model": "radar_deterministic_v1.3",
             "mode": "FALLBACK",
             "amf_compliant": True,
             "is_fallback": True,
+            "w52_gate_enabled": True,
             "tilt_config": {
                 "favored": rules.tilt_favored,
                 "avoided": rules.tilt_avoided,
@@ -906,7 +1090,7 @@ if __name__ == "__main__":
     )
 
     ap = argparse.ArgumentParser(
-        description="Génère market_context.json de manière déterministe (sans GPT)"
+        description="Génère market_context.json de manière déterministe (sans GPT) - v1.3 avec 52W Gate"
     )
     ap.add_argument("--data-dir", default="data", help="Répertoire des données")
     ap.add_argument("--output", default=None, help="Chemin de sortie")
@@ -915,9 +1099,9 @@ if __name__ == "__main__":
     ap.add_argument("--no-save", action="store_true", help="Ne pas sauvegarder")
     args = ap.parse_args()
 
-    print("=" * 60)
-    print("🎯 MARKET/SECTOR RADAR v1.2 (Déterministe + Anti-contamination)")
-    print("=" * 60)
+    print("=" * 70)
+    print("🎯 MARKET/SECTOR RADAR v1.3 (Déterministe + 52W Gate + Anti-contamination)")
+    print("=" * 70)
 
     rules = RadarRules(smoothing_alpha=args.smoothing)
 
@@ -936,7 +1120,8 @@ if __name__ == "__main__":
         "macro_tilts": ctx["macro_tilts"],
         "key_trends": ctx.get("key_trends", []),
         "risks": ctx.get("risks", []),
+        "w52_stats": ctx.get("_meta", {}).get("w52_stats", {}),
         "as_of": ctx["as_of"],
     }, indent=2, ensure_ascii=False))
     
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
