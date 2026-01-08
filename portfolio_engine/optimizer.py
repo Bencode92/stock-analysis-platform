@@ -2090,13 +2090,11 @@ class PortfolioOptimizer:
                 port_vol = np.sqrt(max(port_var, 0))
                 
                 # Pénalité vol asymétrique
-                # === TEST B: DÉSACTIVÉ ===
-                # vol_diff = port_vol - vol_target
-                # if vol_diff < 0:  # Sous la cible
-                #     vol_penalty = 8.0 * vol_diff ** 2
-                # else:  # Au-dessus
-                #     vol_penalty = 3.0 * vol_diff ** 2
-                vol_penalty = 0.0  # TEST B: Force à zéro
+                vol_diff = port_vol - vol_target
+                if vol_diff < 0:  # Sous la cible
+                    vol_penalty = 8.0 * vol_diff ** 2
+                else:  # Au-dessus
+                    vol_penalty = 3.0 * vol_diff ** 2
                 
                 # P0 PARTNER: Pénalité turnover (v6.23 P0 FIX: 0.5× cohérent avec contrainte)
                 if has_prev_weights:
