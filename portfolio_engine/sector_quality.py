@@ -1,7 +1,12 @@
 # portfolio_engine/sector_quality.py
 """
-Buffett-style Sector Quality Filter v2.0
+Buffett-style Sector Quality Filter v2.1
 =========================================
+
+v2.1 - FIX: ROE/ROIC négatifs maintenant correctement pénalisés
+  - Bug fix: ROE négatif passait le filtre (ex: POSCO -6.97% → score 80)
+  - buffett_hard_filter(): ROE/ROIC ≤ 0 = rejet immédiat
+  - compute_buffett_penalty(): ROE/ROIC ≤ 0 = pénalité maximale
 
 Filtre fondamental inspiré des critères Buffett avec seuils ajustés par secteur.
 Les REIT, banques et utilities ont des profils de dette/payout différents des techs.
@@ -526,6 +531,7 @@ def buffett_hard_filter(
     """
     Filtre binaire : passe ou ne passe pas.
     
+    v2.1 FIX: ROE/ROIC négatifs = rejet immédiat (était ignoré avant)
     v2.0: Ajoute vérifications ROIC, FCF Yield, EPS Growth, PEG.
     
     Args:
@@ -558,15 +564,34 @@ def buffett_hard_filter(
         if de == 0 and profile.get("de_hard") is not None:
             return False, "missing_de"
     
-    # Vérifications hard limits - ROE
+    # ============= v2.1 FIX: ROE négatif = REJET IMMÉDIAT =============
     roe_hard = profile.get("roe_hard")
-    if roe_hard is not None and roe > 0 and roe < roe_hard:
-        return False, f"roe_below_{roe_hard}%"
+    if roe_hard is not None:
+        # v2.1: Vérifier si ROE existe dans les données (même si 0 après parsing)
+        roe_raw = asset.get("roe")
+        has_roe_data = roe_raw is not None and str(roe_raw).strip() not in ("", "N/A", "n/a", "-")
+        
+        if has_roe_data:
+            if roe <= 0:
+                # ROE négatif ou nul = REJET IMMÉDIAT
+                logger.debug(f"Rejet ROE négatif: {asset.get('name')} ROE={roe:.2f}%")
+                return False, f"roe_negative_{roe:.1f}%"
+            elif roe < roe_hard:
+                return False, f"roe_below_{roe_hard}%"
     
-    # v2.0: ROIC
+    # ============= v2.1 FIX: ROIC négatif = REJET =============
     roic_hard = profile.get("roic_hard")
-    if roic_hard is not None and roic > 0 and roic < roic_hard:
-        return False, f"roic_below_{roic_hard}%"
+    if roic_hard is not None:
+        roic_raw = asset.get("roic")
+        has_roic_data = roic_raw is not None and str(roic_raw).strip() not in ("", "N/A", "n/a", "-")
+        
+        if has_roic_data:
+            if roic < 0:
+                # ROIC négatif = REJET
+                logger.debug(f"Rejet ROIC négatif: {asset.get('name')} ROIC={roic:.2f}%")
+                return False, f"roic_negative_{roic:.1f}%"
+            elif roic > 0 and roic < roic_hard:
+                return False, f"roic_below_{roic_hard}%"
     
     # D/E
     de_hard = profile.get("de_hard")
@@ -614,6 +639,7 @@ def compute_buffett_penalty(
     Calcule une pénalité normalisée [0, 1] basée sur les soft limits.
     0 = parfait, 1 = très mauvais
     
+    v2.1 FIX: ROE/ROIC négatifs = pénalité MAXIMALE (1.0)
     v2.0: Intègre ROIC, FCF Yield, EPS Growth avec pondérations.
     
     Args:
@@ -629,22 +655,39 @@ def compute_buffett_penalty(
     weighted_penalties = []
     total_weight = 0
     
-    # ROE : Pénalité si inférieur au soft
+    # ============= v2.1 FIX: ROE - Pénalité max si négatif =============
     roe = safe_float(asset.get("roe"))
     roe_soft = profile.get("roe_soft", 10)
-    if roe > 0:
-        if roe < roe_soft:
+    roe_raw = asset.get("roe")
+    has_roe_data = roe_raw is not None and str(roe_raw).strip() not in ("", "N/A", "n/a", "-")
+    
+    if has_roe_data:
+        if roe <= 0:
+            # v2.1: ROE négatif ou nul = pénalité MAXIMALE
+            pen = 1.0
+            logger.debug(f"Pénalité max ROE: {asset.get('name')} ROE={roe:.2f}%")
+        elif roe < roe_soft:
             pen = min(1.0, (roe_soft - roe) / roe_soft)
         else:
             pen = 0.0
         weighted_penalties.append(pen * METRIC_WEIGHTS["roe"])
         total_weight += METRIC_WEIGHTS["roe"]
     
-    # v2.0: ROIC - Plus important que ROE
+    # ============= v2.1 FIX: ROIC - Pénalité max si négatif =============
     roic = safe_float(asset.get("roic"))
     roic_soft = profile.get("roic_soft")
-    if roic_soft is not None and roic > 0:
-        if roic < roic_soft:
+    roic_raw = asset.get("roic")
+    has_roic_data = roic_raw is not None and str(roic_raw).strip() not in ("", "N/A", "n/a", "-")
+    
+    if roic_soft is not None and has_roic_data:
+        if roic < 0:
+            # v2.1: ROIC négatif = pénalité MAXIMALE
+            pen = 1.0
+            logger.debug(f"Pénalité max ROIC: {asset.get('name')} ROIC={roic:.2f}%")
+        elif roic == 0:
+            # ROIC nul = pénalité élevée mais pas max
+            pen = 0.8
+        elif roic < roic_soft:
             pen = min(1.0, (roic_soft - roic) / roic_soft)
         else:
             pen = 0.0
@@ -751,6 +794,7 @@ def compute_buffett_score(asset: dict, profile: Optional[Dict] = None) -> float:
     """
     Calcule un score Buffett combiné [0, 100].
     
+    v2.1: Intègre le fix ROE/ROIC négatif via compute_buffett_penalty()
     v2.0: Combine quality score (penalty-based) et value score.
     100 = parfait selon critères Buffett + Value, 0 = très mauvais
     
@@ -783,6 +827,7 @@ def apply_buffett_filter(
     """
     Pipeline complet de filtrage Buffett.
     
+    v2.1: Fix ROE/ROIC négatifs (rejet immédiat + pénalité max)
     v2.0: Utilise ROIC, FCF Yield, EPS Growth dans le scoring.
     
     Args:
@@ -805,7 +850,7 @@ def apply_buffett_filter(
     if not assets:
         return assets
     
-    logger.info(f"🎯 Filtrage Buffett v2.0: {len(assets)} actifs, mode={mode}, strict={strict}")
+    logger.info(f"🎯 Filtrage Buffett v2.1: {len(assets)} actifs, mode={mode}, strict={strict}")
     
     # Étape 1: Enrichir avec stats sectorielles
     assets = enrich_with_sector_stats(assets)
@@ -822,6 +867,8 @@ def apply_buffett_filter(
     if mode in ("hard", "both"):
         filtered = []
         rejected_count = 0
+        rejected_by_reason = {}
+        
         for a in assets:
             profile = get_profile(a.get("sector"))
             passed, reason = buffett_hard_filter(a, profile, strict)
@@ -830,9 +877,14 @@ def apply_buffett_filter(
             else:
                 a["_buffett_reject_reason"] = reason
                 rejected_count += 1
+                # v2.1: Tracker les raisons de rejet
+                reason_key = reason.split("_")[0] if reason else "unknown"
+                rejected_by_reason[reason_key] = rejected_by_reason.get(reason_key, 0) + 1
                 logger.debug(f"Rejeté: {a.get('name')} - {reason}")
         
         logger.info(f"Hard filter: {rejected_count} rejetés, {len(filtered)} restants")
+        if rejected_by_reason:
+            logger.info(f"  Raisons: {rejected_by_reason}")
         assets = filtered
     
     # Étape 4: Filtre par score minimum
@@ -841,7 +893,7 @@ def apply_buffett_filter(
         assets = [a for a in assets if a.get("_buffett_score", 0) >= min_score]
         logger.info(f"Score minimum {min_score}: {before - len(assets)} rejetés, {len(assets)} restants")
     
-    logger.info(f"✅ Filtrage Buffett v2.0 terminé: {len(assets)} actifs retenus")
+    logger.info(f"✅ Filtrage Buffett v2.1 terminé: {len(assets)} actifs retenus")
     
     return assets
 
