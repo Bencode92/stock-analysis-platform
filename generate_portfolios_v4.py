@@ -540,13 +540,16 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     bonds_data = []
     crypto_data = []
     
-    if Path(CONFIG["etf_csv"]).exists():
-        try:
-            df = pd.read_csv(CONFIG["etf_csv"])
-            etf_data = df.to_dict('records')
-            logger.info(f"ETF: {CONFIG['etf_csv']} ({len(etf_data)} entrées)")
-        except Exception as e:
-            logger.warning(f"Impossible de charger ETF: {e}")
+    # === TEST A: DÉSACTIVER ETF ===
+    # if Path(CONFIG["etf_csv"]).exists():
+    #     try:
+    #         df = pd.read_csv(CONFIG["etf_csv"])
+    #         etf_data = df.to_dict('records')
+    #         logger.info(f"ETF: {CONFIG['etf_csv']} ({len(etf_data)} entrées)")
+    #     except Exception as e:
+    #         logger.warning(f"Impossible de charger ETF: {e}")
+    etf_data = []  # TEST A: Force liste vide
+    logger.info("⚠️ TEST A: ETF désactivés pour diagnostic")
     
     if Path(CONFIG["bonds_csv"]).exists():
         try:
