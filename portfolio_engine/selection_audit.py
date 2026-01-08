@@ -7,6 +7,7 @@ Generates a detailed JSON report explaining:
 - Which assets were rejected and why (filters, thresholds)
 - Filter statistics and thresholds used
 
+v1.1.0 - Added RADAR tilts normalization (sector/region mapping)
 v1.0.0 - Initial version
 """
 
@@ -19,6 +20,300 @@ from dataclasses import dataclass, field, asdict
 
 logger = logging.getLogger("selection-audit")
 
+
+# ============= v1.1.0: RADAR TILTS NORMALIZATION =============
+# Imported from factors.py v2.4.5 for consistency
+
+# Mapping secteur → format RADAR (lowercase, hyphenated)
+SECTOR_TO_RADAR = {
+    # === Depuis sectors.json (EN) ===
+    "Technology": "information-technology",
+    "Semiconductor": "information-technology",
+    "Cybersecurity": "information-technology",
+    "Internet": "communication-services",
+    "Telecommunications": "communication-services",
+    
+    "Health Care": "healthcare",
+    "Healthcare": "healthcare",
+    "Pharmaceuticals": "healthcare",
+    "Biotechnology": "healthcare",
+    
+    "Financial Services": "financials",
+    "Financials": "financials",
+    "Banks": "financials",
+    "Insurance": "financials",
+    
+    "Consumer Discretionary": "consumer-discretionary",
+    "Retail": "consumer-discretionary",
+    "Travel & Leisure": "consumer-discretionary",
+    "Automobiles & Parts": "consumer-discretionary",
+    "Personal & Household Goods": "consumer-discretionary",
+    
+    "Food & Beverage": "consumer-staples",
+    "Consumer Staples": "consumer-staples",
+    "Consumer Defensive": "consumer-staples",
+    
+    "Energy": "energy",
+    "Oil & Gas": "energy",
+    
+    "Industrials": "industrials",
+    "Industrial": "industrials",
+    "Transportation": "industrials",
+    "Construction & Materials": "industrials",
+    
+    "Materials": "materials",
+    "Basic Materials": "materials",
+    "Basic Resources": "materials",
+    "Chemicals": "materials",
+    
+    "Utilities": "utilities",
+    "Smart Grid Infrastructure": "utilities",
+    
+    "Real Estate": "real-estate",
+    
+    # === Depuis stocks (FR) ===
+    "Technologie de l'information": "information-technology",
+    "Santé": "healthcare",
+    "Finance": "financials",
+    "Biens de consommation cycliques": "consumer-discretionary",
+    "Biens de consommation de base": "consumer-staples",
+    "Energie": "energy",
+    "Industries": "industrials",
+    "Matériaux": "materials",
+    "La communication": "communication-services",
+    "Services publics": "utilities",
+    "Immobilier": "real-estate",
+    "Autres": "_other",
+    
+    # === Depuis sectors.json (FR) ===
+    "Pétrole & Gaz": "energy",
+    "Énergie": "energy",
+    "Ressources de base": "materials",
+    "Chimie": "materials",
+    "Construction & Matériaux": "industrials",
+    "Industriels": "industrials",
+    "Transports": "industrials",
+    "Automobiles & Équipementiers": "consumer-discretionary",
+    "Biens personnels & ménagers": "consumer-discretionary",
+    "Distribution": "consumer-discretionary",
+    "Voyages & Loisirs": "consumer-discretionary",
+    "Consommation discrétionnaire": "consumer-discretionary",
+    "Alimentation & Boissons": "consumer-staples",
+    "Pharmaceutiques": "healthcare",
+    "Biotechnologie": "healthcare",
+    "Banques": "financials",
+    "Services financiers": "financials",
+    "Assurances": "financials",
+    "Technologie": "information-technology",
+    "Semi-conducteurs": "information-technology",
+    "Télécommunications": "communication-services",
+    "Infrastructures réseaux intelligents": "utilities",
+    
+    # === Mappings additionnels (lowercase) ===
+    "healthcare": "healthcare",
+    "financials": "financials",
+    "information-technology": "information-technology",
+    "consumer-discretionary": "consumer-discretionary",
+    "consumer-staples": "consumer-staples",
+    "energy": "energy",
+    "industrials": "industrials",
+    "materials": "materials",
+    "communication-services": "communication-services",
+    "utilities": "utilities",
+    "real-estate": "real-estate",
+}
+
+# Mapping pays → format RADAR (lowercase, hyphenated)
+COUNTRY_TO_RADAR = {
+    # === Asie ===
+    "Corée du Sud": "south-korea",
+    "Corée": "south-korea",
+    "South Korea": "south-korea",
+    "Korea": "south-korea",
+    
+    "Chine": "china",
+    "China": "china",
+    
+    "Japon": "japan",
+    "Japan": "japan",
+    
+    "Inde": "india",
+    "India": "india",
+    
+    "Taiwan": "taiwan",
+    "Taïwan": "taiwan",
+    
+    "Hong Kong": "hong-kong",
+    
+    "Singapour": "singapore",
+    "Singapore": "singapore",
+    
+    "Indonésie": "indonesia",
+    "Indonesia": "indonesia",
+    
+    "Philippines": "philippines",
+    
+    "Thaïlande": "thailand",
+    "Thailand": "thailand",
+    
+    "Malaisie": "malaysia",
+    "Malaysia": "malaysia",
+    
+    # === Europe ===
+    "Allemagne": "germany",
+    "Germany": "germany",
+    
+    "France": "france",
+    
+    "Royaume-Uni": "uk",
+    "Royaume Uni": "uk",
+    "United Kingdom": "uk",
+    "UK": "uk",
+    
+    "Italie": "italy",
+    "Italy": "italy",
+    
+    "Espagne": "spain",
+    "Spain": "spain",
+    
+    "Pays-Bas": "netherlands",
+    "Netherlands": "netherlands",
+    
+    "Suisse": "switzerland",
+    "Switzerland": "switzerland",
+    
+    "Belgique": "belgium",
+    "Belgium": "belgium",
+    
+    "Autriche": "austria",
+    "Austria": "austria",
+    
+    "Irlande": "ireland",
+    "Ireland": "ireland",
+    
+    "Portugal": "portugal",
+    
+    "Norvège": "norway",
+    "Norway": "norway",
+    
+    "Suède": "sweden",
+    "Sweden": "sweden",
+    
+    "Danemark": "denmark",
+    "Denmark": "denmark",
+    
+    "Finlande": "finland",
+    "Finland": "finland",
+    
+    # === Amériques ===
+    "Etats-Unis": "usa",
+    "États-Unis": "usa",
+    "United States": "usa",
+    "USA": "usa",
+    "US": "usa",
+    
+    "Canada": "canada",
+    
+    "Mexique": "mexico",
+    "Mexico": "mexico",
+    
+    "Brésil": "brazil",
+    "Brazil": "brazil",
+    
+    "Argentine": "argentina",
+    "Argentina": "argentina",
+    
+    "Chili": "chile",
+    "Chile": "chile",
+    
+    # === Autres ===
+    "Australie": "australia",
+    "Australia": "australia",
+    
+    "Israel": "israel",
+    "Israël": "israel",
+    
+    "Saudi Arabia": "saudi-arabia",
+    "Arabie Saoudite": "saudi-arabia",
+    
+    "South Africa": "south-africa",
+    "Afrique du Sud": "south-africa",
+    
+    "Turquie": "turkey",
+    "Turkey": "turkey",
+    
+    # === RÉGIONS À IGNORER (retournent chaîne vide) ===
+    "Asie": "",
+    "Europe": "",
+    "Zone Euro": "",
+    "Global": "",
+}
+
+
+def normalize_sector_for_tilts(sector: str) -> str:
+    """
+    v1.1.0: Normalise un secteur vers le format RADAR.
+    
+    Exemples:
+        "Healthcare" → "healthcare"
+        "Santé" → "healthcare"
+        "Financial Services" → "financials"
+        "Technologie de l'information" → "information-technology"
+    """
+    if not sector:
+        return ""
+    
+    sector_clean = sector.strip()
+    
+    # 1. Mapping direct
+    if sector_clean in SECTOR_TO_RADAR:
+        return SECTOR_TO_RADAR[sector_clean]
+    
+    # 2. Essayer en lowercase
+    sector_lower = sector_clean.lower()
+    for key, value in SECTOR_TO_RADAR.items():
+        if key.lower() == sector_lower:
+            return value
+    
+    # 3. Recherche partielle (contient)
+    for key, value in SECTOR_TO_RADAR.items():
+        if sector_lower in key.lower() or key.lower() in sector_lower:
+            return value
+    
+    # 4. Fallback: convertir en lowercase hyphenated
+    return sector_clean.lower().replace(" ", "-").replace("_", "-")
+
+
+def normalize_region_for_tilts(country: str) -> str:
+    """
+    v1.1.0: Normalise un pays vers le format RADAR.
+    
+    Exemples:
+        "Corée du Sud" → "south-korea"
+        "Corée" → "south-korea"
+        "Chine" → "china"
+        "Etats-Unis" → "usa"
+    """
+    if not country:
+        return ""
+    
+    country_clean = country.strip()
+    
+    # 1. Mapping direct
+    if country_clean in COUNTRY_TO_RADAR:
+        return COUNTRY_TO_RADAR[country_clean]
+    
+    # 2. Essayer en lowercase
+    country_lower = country_clean.lower()
+    for key, value in COUNTRY_TO_RADAR.items():
+        if key.lower() == country_lower:
+            return value
+    
+    # 3. Fallback: convertir en lowercase hyphenated
+    return country_clean.lower().replace(" ", "-").replace("_", "-")
+
+
+# ============= DATACLASSES =============
 
 @dataclass
 class FilterStats:
@@ -79,7 +374,7 @@ class AssetAuditEntry:
 class SelectionAuditReport:
     """Complete audit report for asset selection."""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "v1.0.0"
+    version: str = "v1.1.0"
     
     # Summary counts
     summary: Dict[str, int] = field(default_factory=dict)
@@ -113,6 +408,8 @@ class SelectionAuditReport:
 class SelectionAuditor:
     """
     Tracks and records asset selection decisions throughout the pipeline.
+    
+    v1.1.0: Added RADAR tilts normalization for correct sector/region matching.
     
     Usage:
         auditor = SelectionAuditor(config)
@@ -406,7 +703,12 @@ class SelectionAuditor:
         return asset
     
     def _create_audit_entry(self, asset: Dict, category: str) -> Dict:
-        """Create audit entry from raw asset data."""
+        """
+        Create audit entry from raw asset data.
+        
+        v1.1.0: Uses normalize_sector_for_tilts() and normalize_region_for_tilts()
+        for correct RADAR tilt matching.
+        """
         entry = {
             "name": asset.get("name") or asset.get("ticker") or "Unknown",
             "ticker": asset.get("ticker") or asset.get("symbol"),
@@ -416,6 +718,9 @@ class SelectionAuditor:
         # Scores
         if asset.get("_buffett_score") is not None:
             entry["buffett_score"] = round(asset["_buffett_score"], 1)
+        elif asset.get("buffett_score") is not None:
+            entry["buffett_score"] = round(asset["buffett_score"], 1)
+            
         if asset.get("_composite_score") is not None:
             entry["composite_score"] = round(asset["_composite_score"], 2)
         if asset.get("_momentum_score") is not None:
@@ -448,29 +753,60 @@ class SelectionAuditor:
         entry["sector"] = asset.get("sector") or asset.get("_sector_key")
         entry["country"] = asset.get("country")
         
-        # RADAR tilt
+        # v1.1.0 FIX: RADAR tilt with NORMALIZATION
         if self.report.radar_context:
-            sector = entry.get("sector")
-            region = entry.get("country")
+            sector_raw = entry.get("sector") or ""
+            region_raw = entry.get("country") or ""
+            
+            # Normalize to RADAR format
+            sector_normalized = normalize_sector_for_tilts(sector_raw)
+            region_normalized = normalize_region_for_tilts(region_raw)
             
             favored_sectors = self.report.radar_context.get("favored_sectors", [])
             avoided_sectors = self.report.radar_context.get("avoided_sectors", [])
+            favored_regions = self.report.radar_context.get("favored_regions", [])
+            avoided_regions = self.report.radar_context.get("avoided_regions", [])
             
-            if sector in favored_sectors:
+            # Determine tilt based on NORMALIZED values
+            sector_tilt = "neutral"
+            region_tilt = "neutral"
+            
+            if sector_normalized and sector_normalized in favored_sectors:
+                sector_tilt = "favored"
+            elif sector_normalized and sector_normalized in avoided_sectors:
+                sector_tilt = "avoided"
+            
+            if region_normalized and region_normalized in favored_regions:
+                region_tilt = "favored"
+            elif region_normalized and region_normalized in avoided_regions:
+                region_tilt = "avoided"
+            
+            # Combined tilt: favored if either is favored, avoided only if one is avoided and none favored
+            if sector_tilt == "favored" or region_tilt == "favored":
                 entry["radar_tilt"] = "favored"
-            elif sector in avoided_sectors:
+            elif sector_tilt == "avoided" or region_tilt == "avoided":
                 entry["radar_tilt"] = "avoided"
             else:
                 entry["radar_tilt"] = "neutral"
+            
+            # v1.1.0: Store matching details for debugging
+            entry["_radar_matching"] = {
+                "sector_raw": sector_raw,
+                "sector_normalized": sector_normalized,
+                "sector_tilt": sector_tilt,
+                "region_raw": region_raw,
+                "region_normalized": region_normalized,
+                "region_tilt": region_tilt,
+            }
         
-        # Remove None values
+        # Remove None values (but keep _radar_matching)
         return {k: v for k, v in entry.items() if v is not None}
     
     def _get_selection_reason(self, asset: Dict, category: str) -> str:
         """Generate selection reason based on scores."""
         reasons = []
         
-        buffett = asset.get("_buffett_score")
+        buffett = asset.get("_buffett_score") or asset.get("buffett_score")
         if buffett and buffett >= 70:
             reasons.append(f"Qualité Buffett excellente ({buffett:.0f})")
         elif buffett and buffett >= 50:
@@ -485,11 +821,21 @@ class SelectionAuditor:
             except:
                 pass
         
-        # RADAR context
+        # v1.1.0: RADAR context with normalization
         if self.report.radar_context:
-            sector = asset.get("sector") or asset.get("_sector_key")
-            if sector in self.report.radar_context.get("favored_sectors", []):
-                reasons.append(f"Secteur favorisé RADAR ({sector})")
+            sector_raw = asset.get("sector") or asset.get("_sector_key") or ""
+            region_raw = asset.get("country") or ""
+            
+            sector_normalized = normalize_sector_for_tilts(sector_raw)
+            region_normalized = normalize_region_for_tilts(region_raw)
+            
+            favored_sectors = self.report.radar_context.get("favored_sectors", [])
+            favored_regions = self.report.radar_context.get("favored_regions", [])
+            
+            if sector_normalized in favored_sectors:
+                reasons.append(f"Secteur favorisé RADAR ({sector_normalized})")
+            if region_normalized in favored_regions:
+                reasons.append(f"Région favorisée RADAR ({region_normalized})")
         
         momentum = asset.get("_momentum_score")
         if momentum and momentum > 0.7:
