@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-01-08T14:43:35.859707",
+    "generated_at": "2026-01-08T15:58:53.816476",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -593,6 +593,7 @@
       "total_return_pct": 22.37,
       "volatility_annual_pct": 22.28,
       "weights_by_profile": {
+        "Modéré": 15.0,
         "Stable": 10.26
       },
       "price_samples": [
@@ -646,9 +647,9 @@
       "first_date": "2025-09-11",
       "last_date": "2026-01-08",
       "first_price": 140.3912,
-      "last_price": 136.2874,
-      "total_return_pct": -2.92,
-      "volatility_annual_pct": 64.53,
+      "last_price": 138.042,
+      "total_return_pct": -1.67,
+      "volatility_annual_pct": 64.45,
       "weights_by_profile": {
         "Agressif": 1.5,
         "Modéré": 0.5
@@ -688,11 +689,11 @@
         },
         {
           "date": "2026-01-08",
-          "close": 136.2874,
+          "close": 138.042,
           "prev_date": "2026-01-07",
           "prev_close": 138.9908,
-          "daily_return_pct": -1.945,
-          "formula": "(136.2874 / 138.9908) - 1"
+          "daily_return_pct": -0.6826,
+          "formula": "(138.0420 / 138.9908) - 1"
         }
       ],
       "is_benchmark": false
@@ -1336,8 +1337,7 @@
       "total_return_pct": 87.77,
       "volatility_annual_pct": 45.26,
       "weights_by_profile": {
-        "Agressif": 15.0,
-        "Modéré": 15.0
+        "Agressif": 15.0
       },
       "price_samples": [
         {
@@ -1969,7 +1969,7 @@
           15.0
         ],
         [
-          "SLV",
+          "GLDM",
           15.0
         ],
         [
@@ -2021,22 +2021,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 17.63,
-      "net_return_pct": 17.63,
+      "gross_return_pct": 17.65,
+      "net_return_pct": 17.65,
       "volatility_pct": 18.75,
       "max_drawdown_pct": -5.38,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 5.86,
-      "excess_return_pct": 11.77
+      "excess_return_pct": 11.8
     },
     "Modéré": {
-      "gross_return_pct": 11.59,
-      "net_return_pct": 11.59,
-      "volatility_pct": 11.03,
-      "max_drawdown_pct": -2.35,
+      "gross_return_pct": 5.68,
+      "net_return_pct": 5.68,
+      "volatility_pct": 8.26,
+      "max_drawdown_pct": -1.9,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 5.62,
-      "excess_return_pct": 5.97
+      "excess_return_pct": 0.06
     },
     "Stable": {
       "gross_return_pct": 4.35,
