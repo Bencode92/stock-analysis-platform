@@ -1,6 +1,6 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.24 — P0 BUGFIXES + P1 momentum filter
+Optimiseur de portefeuille v6.25 — PHASE 3: Raw weights diagnostic
 
 CHANGEMENTS v6.22:
 1. NEW: _enforce_crypto_cap() force crypto <= crypto_max post-normalisation
@@ -2122,6 +2122,39 @@ class PortfolioOptimizer:
             
             if result.success:
                 weights = result.x.copy()
+                
+                # === PHASE 3: Capturer poids bruts AVANT seuil 0.5% ===
+                raw_weights_detail = []
+                for i, w in enumerate(weights):
+                    asset = candidates[i]
+                    region = getattr(asset, 'region', 'Unknown') or 'Unknown'
+                    
+                    raw_weights_detail.append({
+                        "id": asset.id,
+                        "uid": asset.ticker or asset.name,
+                        "name": (asset.name or "")[:40],
+                        "raw_weight_pct": round(float(w * 100), 4),
+                        "above_threshold": w > 0.005,
+                        "raw_score": float(raw_scores[i]) if i < len(raw_scores) else 0,
+                        "z_score": float(scores[i]) if i < len(scores) else 0,
+                        "vol": asset.vol_annual,
+                        "sector": asset.sector,
+                        "region": region,
+                        "role": asset.role.value if asset.role else None,
+                    })
+                
+                raw_weights_detail.sort(key=lambda x: -x["raw_weight_pct"])
+                
+                almost_selected = [x for x in raw_weights_detail if 0.001 < x["raw_weight_pct"] < 0.5]
+                
+                if almost_selected:
+                    logger.info(f"[PHASE 3] {profile.name}: {len(almost_selected)} assets presque selectionnes (0.1-0.5%)")
+                    for item in almost_selected[:5]:
+                        logger.info(f"   - {item['name'][:25]} ({item['region']}): {item['raw_weight_pct']:.3f}% (z={item['z_score']:.2f})")
+                
+                self._raw_weights_detail = raw_weights_detail
+                # === FIN PHASE 3 ===
+                
                 weights = self._enforce_asset_count(weights, candidates, profile)
                 
                 allocation = {}
@@ -2300,8 +2333,14 @@ class PortfolioOptimizer:
             },
             "buffett_hard_filter_enabled": self.buffett_hard_filter_enabled,
             "buffett_min_score": self.buffett_min_score,
+            # === PHASE 3: Raw weights diagnostic ===
+            "optimizer_candidates": {
+                "count": len(candidates),
+                "raw_weights_top_30": getattr(self, '_raw_weights_detail', [])[:30],
+                "below_threshold_notable": [x for x in getattr(self, '_raw_weights_detail', []) if 0.001 < x["raw_weight_pct"] < 0.5][:10],
+                "korea_in_candidates": sum(1 for x in getattr(self, '_raw_weights_detail', []) if "korea" in x.get("region", "").lower()),
+            },
         })
-        
         opt_mode_display = optimization_mode.upper().replace("_", " ")
         cov_status = "✅" if cov_diagnostics.get("is_well_conditioned", True) else "⚠️"
         turnover_str = f", turnover={final_turnover:.1f}%" if final_turnover is not None else ""
