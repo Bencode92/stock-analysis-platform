@@ -20,6 +20,22 @@ from dataclasses import dataclass, field, asdict
 
 logger = logging.getLogger("selection-audit")
 
+# ============= PHASE 2: STABLE UID =============
+def get_stable_uid(item: dict) -> str:
+    """
+    Génère un UID stable pour traçabilité cross-runs.
+    Priorité: ISIN > ticker > symbol > name normalisé
+    """
+    for key in ["isin", "ticker", "symbol"]:
+        val = item.get(key)
+        if val is not None:
+            val_str = str(val).strip()
+            if val_str and val_str.lower() not in ["nan", "none", "", "null"]:
+                return val_str
+    
+    # Fallback: name normalisé
+    name = item.get("name", "UNKNOWN") or "UNKNOWN"
+    return name.upper().replace(" ", "_").replace(",", "")[:50]
 
 # ============= v1.1.0: RADAR TILTS NORMALIZATION =============
 # Imported from factors.py v2.4.5 for consistency
