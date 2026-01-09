@@ -92,7 +92,7 @@ CATEGORY_NORMALIZE = {
     "equities": "equity",
     "action": "equity",
     "actions": "equity",
-    "stock": "stock",
+    "stock": "equity",
     "stocks": "equity",
     # ETF
     "etf": "etf",
@@ -1634,6 +1634,13 @@ class FactorScorer:
         
         n = len(assets)
         categories = [self._get_normalized_category(a) for a in assets]
+        from collections import Counter
+        cat_counts = Counter(categories)
+        print(f"[DIAG] Scoring {len(assets)} assets")
+        print(f"[DIAG] Categories: {dict(cat_counts)}")
+        for cat, count in cat_counts.items():
+        if count < 5:
+        print(f"[DIAG] ⚠️ Catégorie '{cat}' = {count} éléments (< 5)")
         
         factors = {
             "momentum": self.compute_factor_momentum(assets),
