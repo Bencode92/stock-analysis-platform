@@ -99,6 +99,28 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 )
 logger = logging.getLogger("portfolio-v4")
+# ============= PHASE 1: KOREA TRACE DIAGNOSTIC =============
+
+def count_korea(items, step_name):
+    """Compte les actions coréennes à chaque étape du pipeline."""
+    korea_keywords = ["korea", "corée", "coree", "south korea"]
+    
+    korea_items = []
+    for e in items:
+        country = str(e.get("country", "") or "").lower()
+        if any(kw in country for kw in korea_keywords):
+            korea_items.append(e)
+    
+    korea_count = len(korea_items)
+    korea_names = [e.get("name", "?")[:35] for e in korea_items[:5]]
+    
+    print(f"[KOREA TRACE] {step_name}: {korea_count} actions coréennes")
+    if korea_names:
+        print(f"              Exemples: {korea_names}")
+    
+    return korea_count, korea_items
+
+# ============= FIN PHASE 1 FUNCTION =============
 
 # v4.9.1: Import du générateur de debug backtest
 try:
@@ -605,6 +627,9 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
     
+    # === PHASE 1: TRACE 1 - Initial ===
+    count_korea(eq_rows, "1. Initial (après chargement)")
+    
     # 4. Appliquer le filtre Buffett
     eq_rows_before_buffett = eq_rows.copy()  # v4.12.0: Garder pour audit
     
@@ -625,11 +650,29 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         
         logger.info(f"   Equities après filtre Buffett: {len(eq_rows_filtered)}")
         eq_rows = eq_rows_filtered
+    # === PHASE 1: TRACE 2 - After Buffett ===
+    count_korea(eq_rows, "2. After Buffett filter")    
     
     # 5. Appliquer scoring quantitatif et filtres standards
     eq_rows = compute_scores(eq_rows, "equity", None)
     eq_filtered = filter_equities(eq_rows)
+    
+    # === PHASE 1: TRACE 3 - After filter_equities ===
+    count_korea(eq_filtered, "3. After filter_equities")
+    
     equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
+    
+    # === PHASE 1: TRACE 4 - After sector quota ===
+    korea_count, korea_in_quota = count_korea(equities, "4. After sector_balanced_selection")
+    
+    # === PHASE 1: TRACE quota rejections ===
+    eq_filtered_ids = {e.get("id") or e.get("name") for e in eq_filtered}
+    equities_ids = {e.get("id") or e.get("name") for e in equities}
+    rejected_by_quota = [e for e in eq_filtered if (e.get("id") or e.get("name")) not in equities_ids]
+    korea_rejected = [e for e in rejected_by_quota 
+                      if "korea" in str(e.get("country", "")).lower()]
+    if korea_rejected:
+        print(f"[KOREA TRACE] ⚠️ Rejetées par quota: {[e.get('name')[:30] for e in korea_rejected]}")
     
     logger.info(f"   Equities finales sélectionnées: {len(equities)}")
     
@@ -710,6 +753,20 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"   ⚠️ [P0-4] {profile}: Faisabilité LIMITÉE - {feasibility.reason}")
         
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
+        
+        # === PHASE 1: TRACE 5 - Optimizer allocation ===
+        allocated_ids = set(allocation.keys())
+        korea_allocated = []
+        for a in assets:
+            if a.id in allocated_ids:
+                region = getattr(a, 'region', '') or ''
+                if "korea" in region.lower() or "corée" in region.lower():
+                    korea_allocated.append(a)
+        
+        print(f"[KOREA TRACE] 5. {profile} - Allocated by optimizer: {len(korea_allocated)}")
+        if korea_allocated:
+            for ka in korea_allocated:
+                print(f"              • {ka.name[:30]} = {allocation.get(ka.id, 0):.2f}%")
         
         diagnostics["_feasibility"] = feasibility.to_dict()
         
