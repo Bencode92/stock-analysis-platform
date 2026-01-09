@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-01-09T13:59:13.639389",
+  "generated_at": "2026-01-09T14:16:32.854490",
   "version": "v1.0.0",
   "selection_pipeline": {
     "version": "v4.12.0",
@@ -101,8 +101,8 @@
   },
   "summary": {
     "total_universe": 1006,
-    "total_selected": 50,
-    "selection_rate": "5.0%",
+    "total_selected": 5,
+    "selection_rate": "0.5%",
     "by_region": {
       "US": {
         "universe": 0,
@@ -110,7 +110,7 @@
       },
       "Europe": {
         "universe": 268,
-        "in_top_20_selected": 2
+        "in_top_20_selected": 1
       },
       "Asia": {
         "universe": 143,
@@ -120,103 +120,28 @@
   },
   "sectors_distribution": {
     "Services publics": {
-      "selected_count": 3,
+      "selected_count": 1,
       "selected_names": [
-        "SSE PLC",
-        "KOREA ELECTRIC POWER CORP",
         "ENGIE SA"
       ]
     },
-    "Technologie de l'information": {
-      "selected_count": 8,
-      "selected_names": [
-        "SK HYNIX INC",
-        "WIWYNN CORPORATION CORP",
-        "TERADYNE INC",
-        "WESTERN DIGITAL CORP",
-        "CHROMA ATE INC",
-        "PERSISTENT SYSTEMS LTD",
-        "CISCO SYSTEMS INC",
-        "LTIMINDTREE LTD"
-      ]
-    },
-    "La communication": {
+    "Finance": {
       "selected_count": 2,
       "selected_names": [
-        "ALPHABET INC CLASS A",
-        "ALPHABET INC CLASS C"
-      ]
-    },
-    "Finance": {
-      "selected_count": 9,
-      "selected_names": [
-        "JACK HENRY AND ASSOCIATES",
-        "AU SMALL FINANCE BANK LTD",
-        "LPL FINANCIAL HOLDINGS IN",
-        "BANCO BILBAO VIZCAYA ARGE",
         "AXIS BANK LTD",
-        "AMERICAN EXPRESS",
-        "CAIXABANK SA",
-        "CBOE GLOBAL MARKETS INC",
-        "AIB GROUP PLC"
-      ]
-    },
-    "Matériaux": {
-      "selected_count": 3,
-      "selected_names": [
-        "ASIAN PAINTS LTD",
-        "RIO TINTO PLC",
-        "STEEL DYNAMICS INC"
+        "CBOE GLOBAL MARKETS INC"
       ]
     },
     "Industries": {
-      "selected_count": 9,
+      "selected_count": 1,
       "selected_names": [
-        "EXPEDITORS INTERNATIONAL ",
-        "JB HUNT TRANSPORT SERVICE",
-        "CATERPILLAR INC",
-        "CUMMINS INC",
-        "POSCO FUTURE M LTD",
-        "CUMMINS INDIA LTD",
-        "DOVER CORP",
-        "CH ROBINSON WORLDWIDE INC",
-        "PARKER-HANNIFIN CORP"
-      ]
-    },
-    "Biens de consommation cycliques": {
-      "selected_count": 5,
-      "selected_names": [
-        "LAS VEGAS SANDS CORP",
-        "HYUNDAI MOTOR",
-        "HANKOOK TIRE & TECHNOLOGY",
-        "ROSS STORES INC",
-        "LVMH"
+        "CUMMINS INDIA LTD"
       ]
     },
     "Santé": {
-      "selected_count": 8,
-      "selected_names": [
-        "INTUITIVE SURGICAL INC",
-        "ELI LILLY",
-        "NATERA INC",
-        "REGENERON PHARMACEUTICALS",
-        "WATERS CORP",
-        "AMGEN INC",
-        "MERCK & CO INC",
-        "ASTRAZENECA PLC"
-      ]
-    },
-    "Biens de consommation de base": {
-      "selected_count": 2,
-      "selected_names": [
-        "DOLLAR TREE INC",
-        "WALMART INC"
-      ]
-    },
-    "Energie": {
       "selected_count": 1,
       "selected_names": [
-        "HD HYUNDAI LTD"
+        "ASTRAZENECA PLC"
       ]
     }
   },
@@ -231,8 +156,8 @@
     "Europe": {
       "total_in_universe": 268,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 2,
-      "rejection_rate_top_20": "90%",
+      "selected_in_top_20": 1,
+      "rejection_rate_top_20": "95%",
       "stocks": [
         {
           "rank": 1,
@@ -261,23 +186,10 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 77.4,
           "roe": 13,
@@ -330,10 +242,11 @@
           "market_cap_billions": 9751.1,
           "sector": "Matériaux",
           "country": "Royaume-Uni",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "status": "selected"
+            "composite_score": 0,
+            "sector": "Matériaux"
           },
           "buffett_score": 76.0,
           "roe": 19.97,
@@ -386,23 +299,10 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 80.0,
           "roe": 8.77,
@@ -418,23 +318,10 @@
           "sector": "Industries",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "EXPEDITORS INTERNATI",
-              "JB HUNT TRANSPORT SE",
-              "CATERPILLAR INC",
-              "CUMMINS INC",
-              "POSCO FUTURE M LTD",
-              "CUMMINS INDIA LTD",
-              "DOVER CORP",
-              "CH ROBINSON WORLDWID",
-              "PARKER-HANNIFIN CORP"
-            ]
+            "composite_score": 0,
+            "sector": "Industries"
           },
           "buffett_score": 76.7,
           "roe": 55.48,
@@ -450,23 +337,10 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 80.0,
           "roe": 12.22,
@@ -499,23 +373,10 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 79.4,
           "roe": 7.88,
@@ -550,19 +411,10 @@
           "sector": "Biens de consommation cycliques",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 5/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Biens de consommation cycliques",
-            "sector_quota": "5/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "LAS VEGAS SANDS CORP",
-              "HYUNDAI MOTOR",
-              "HANKOOK TIRE & TECHN",
-              "ROSS STORES INC",
-              "LVMH"
-            ]
+            "composite_score": 0,
+            "sector": "Biens de consommation cycliques"
           },
           "buffett_score": 80.0,
           "roe": 20.47,
@@ -672,23 +524,10 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 80.0,
           "roe": 9.45,
@@ -731,22 +570,10 @@
           "sector": "Technologie de l'information",
           "country": "Taïwan",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 8/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "8/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "SK HYNIX INC",
-              "WIWYNN CORPORATION C",
-              "TERADYNE INC",
-              "WESTERN DIGITAL CORP",
-              "CHROMA ATE INC",
-              "PERSISTENT SYSTEMS L",
-              "CISCO SYSTEMS INC",
-              "LTIMINDTREE LTD"
-            ]
+            "composite_score": 0,
+            "sector": "Technologie de l'information"
           },
           "buffett_score": 56.4,
           "roe": 2.58,
@@ -781,23 +608,10 @@
           "sector": "Finance",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 79.8,
           "roe": 7.96,
@@ -832,23 +646,10 @@
           "sector": "Finance",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 80.0,
           "roe": 16.6,
@@ -864,23 +665,10 @@
           "sector": "Finance",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 80.0,
           "roe": 15.94,
@@ -895,22 +683,10 @@
           "sector": "Technologie de l'information",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 8/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "8/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "SK HYNIX INC",
-              "WIWYNN CORPORATION C",
-              "TERADYNE INC",
-              "WESTERN DIGITAL CORP",
-              "CHROMA ATE INC",
-              "PERSISTENT SYSTEMS L",
-              "CISCO SYSTEMS INC",
-              "LTIMINDTREE LTD"
-            ]
+            "composite_score": 0,
+            "sector": "Technologie de l'information"
           },
           "buffett_score": 75.7,
           "roe": 28.09,
@@ -926,23 +702,10 @@
           "sector": "Finance",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 80.0,
           "roe": 16.96,
@@ -977,23 +740,10 @@
           "sector": "Industries",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "EXPEDITORS INTERNATI",
-              "JB HUNT TRANSPORT SE",
-              "CATERPILLAR INC",
-              "CUMMINS INC",
-              "POSCO FUTURE M LTD",
-              "CUMMINS INDIA LTD",
-              "DOVER CORP",
-              "CH ROBINSON WORLDWID",
-              "PARKER-HANNIFIN CORP"
-            ]
+            "composite_score": 0,
+            "sector": "Industries"
           },
           "buffett_score": 80.0,
           "roe": 15.31,
@@ -1009,19 +759,10 @@
           "sector": "Biens de consommation cycliques",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 5/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Biens de consommation cycliques",
-            "sector_quota": "5/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "LAS VEGAS SANDS CORP",
-              "HYUNDAI MOTOR",
-              "HANKOOK TIRE & TECHN",
-              "ROSS STORES INC",
-              "LVMH"
-            ]
+            "composite_score": 0,
+            "sector": "Biens de consommation cycliques"
           },
           "buffett_score": 80.0,
           "roe": 15.07,
@@ -1037,22 +778,10 @@
           "sector": "Technologie de l'information",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 8/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "8/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "SK HYNIX INC",
-              "WIWYNN CORPORATION C",
-              "TERADYNE INC",
-              "WESTERN DIGITAL CORP",
-              "CHROMA ATE INC",
-              "PERSISTENT SYSTEMS L",
-              "CISCO SYSTEMS INC",
-              "LTIMINDTREE LTD"
-            ]
+            "composite_score": 0,
+            "sector": "Technologie de l'information"
           },
           "buffett_score": 69.1,
           "roe": 24.97,
@@ -1067,23 +796,10 @@
           "sector": "Finance",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 80.0,
           "roe": 14.05,
@@ -1098,22 +814,10 @@
           "sector": "Santé",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Santé: 8/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Santé",
-            "sector_quota": "8/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "INTUITIVE SURGICAL I",
-              "ELI LILLY",
-              "NATERA INC",
-              "REGENERON PHARMACEUT",
-              "WATERS CORP",
-              "AMGEN INC",
-              "MERCK & CO INC",
-              "ASTRAZENECA PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Santé"
           },
           "buffett_score": 80.0,
           "roe": 15.13,
@@ -1147,19 +851,10 @@
           "sector": "Biens de consommation cycliques",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 5/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Biens de consommation cycliques",
-            "sector_quota": "5/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "LAS VEGAS SANDS CORP",
-              "HYUNDAI MOTOR",
-              "HANKOOK TIRE & TECHN",
-              "ROSS STORES INC",
-              "LVMH"
-            ]
+            "composite_score": 0,
+            "sector": "Biens de consommation cycliques"
           },
           "buffett_score": 80.0,
           "roe": 28.71,
@@ -1192,23 +887,10 @@
           "sector": "Industries",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "EXPEDITORS INTERNATI",
-              "JB HUNT TRANSPORT SE",
-              "CATERPILLAR INC",
-              "CUMMINS INC",
-              "POSCO FUTURE M LTD",
-              "CUMMINS INDIA LTD",
-              "DOVER CORP",
-              "CH ROBINSON WORLDWID",
-              "PARKER-HANNIFIN CORP"
-            ]
+            "composite_score": 0,
+            "sector": "Industries"
           },
           "buffett_score": 80.0,
           "roe": 17.02,
@@ -1224,23 +906,10 @@
           "sector": "Finance",
           "country": "Inde",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 9/4), score 0.000 < seuil 0.000",
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "9/4",
-            "your_score": 0,
-            "min_selected_score": 0,
-            "selected_in_sector": [
-              "JACK HENRY AND ASSOC",
-              "AU SMALL FINANCE BAN",
-              "LPL FINANCIAL HOLDIN",
-              "BANCO BILBAO VIZCAYA",
-              "AXIS BANK LTD",
-              "AMERICAN EXPRESS",
-              "CAIXABANK SA",
-              "CBOE GLOBAL MARKETS ",
-              "AIB GROUP PLC"
-            ]
+            "composite_score": 0,
+            "sector": "Finance"
           },
           "buffett_score": 80.0,
           "roe": 13.67,
