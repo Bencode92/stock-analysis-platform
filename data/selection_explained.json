@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-01-09T14:16:32.854490",
+  "generated_at": "2026-01-09T15:37:42.069715",
   "version": "v1.0.0",
   "selection_pipeline": {
     "version": "v4.12.0",
@@ -101,8 +101,8 @@
   },
   "summary": {
     "total_universe": 1006,
-    "total_selected": 5,
-    "selection_rate": "0.5%",
+    "total_selected": 6,
+    "selection_rate": "0.6%",
     "by_region": {
       "US": {
         "universe": 0,
@@ -110,7 +110,7 @@
       },
       "Europe": {
         "universe": 268,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 0
       },
       "Asia": {
         "universe": 143,
@@ -119,29 +119,30 @@
     }
   },
   "sectors_distribution": {
-    "Services publics": {
-      "selected_count": 1,
+    "Biens de consommation cycliques": {
+      "selected_count": 2,
       "selected_names": [
-        "ENGIE SA"
+        "LAS VEGAS SANDS CORP",
+        "TJX INC"
       ]
     },
     "Finance": {
       "selected_count": 2,
       "selected_names": [
         "AXIS BANK LTD",
-        "CBOE GLOBAL MARKETS INC"
+        "LPL FINANCIAL HOLDINGS IN"
+      ]
+    },
+    "Technologie de l'information": {
+      "selected_count": 1,
+      "selected_names": [
+        "CISCO SYSTEMS INC"
       ]
     },
     "Industries": {
       "selected_count": 1,
       "selected_names": [
         "CUMMINS INDIA LTD"
-      ]
-    },
-    "Santé": {
-      "selected_count": 1,
-      "selected_names": [
-        "ASTRAZENECA PLC"
       ]
     }
   },
@@ -156,8 +157,8 @@
     "Europe": {
       "total_in_universe": 268,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
       "stocks": [
         {
           "rank": 1,
@@ -167,10 +168,11 @@
           "market_cap_billions": 21130.4,
           "sector": "Santé",
           "country": "Royaume-Uni",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.000)",
           "details": {
-            "status": "selected"
+            "composite_score": 0,
+            "sector": "Santé"
           },
           "buffett_score": 80.0,
           "roe": 17.23,
