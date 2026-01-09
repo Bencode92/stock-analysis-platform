@@ -657,7 +657,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     eq_rows = compute_scores(eq_rows, "equity", None)
     eq_filtered = filter_equities(eq_rows)
     
-    # === PHASE 1: TRACE 3 - After filter_equities ===
+  # === PHASE 1: TRACE 3 - After filter_equities ===
     count_korea(eq_filtered, "3. After filter_equities")
     
     equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
@@ -665,16 +665,40 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # === PHASE 1: TRACE 4 - After sector quota ===
     korea_count, korea_in_quota = count_korea(equities, "4. After sector_balanced_selection")
     
-    # === PHASE 1: TRACE quota rejections ===
-    eq_filtered_ids = {e.get("id") or e.get("name") for e in eq_filtered}
-    equities_ids = {e.get("id") or e.get("name") for e in equities}
-    rejected_by_quota = [e for e in eq_filtered if (e.get("id") or e.get("name")) not in equities_ids]
+    # === PHASE 2: Tracer les rejets par quota (détaillé) ===
+    # Import get_stable_uid si pas déjà fait
+    try:
+        from portfolio_engine.selection_audit import get_stable_uid
+    except ImportError:
+        def get_stable_uid(item):
+            return item.get("ticker") or item.get("name") or item.get("id") or "UNKNOWN"
+    
+    ids_selected = {get_stable_uid(e) for e in equities}
+    rejected_by_quota = [e for e in eq_filtered if get_stable_uid(e) not in ids_selected]
+    
+    logger.info(f"   Quota rejection: {len(rejected_by_quota)} actions rejetées par sector_balanced_selection")
+    
+    # Détail des rejets coréens
+    korea_rejected_quota = [e for e in rejected_by_quota 
+                           if "korea" in str(e.get("country", "")).lower()]
+    if korea_rejected_quota:
+        logger.warning(f"   ⚠️ KOREA rejected by quota ({len(korea_rejected_quota)}): {[e.get('name')[:30] for e in korea_rejected_quota[:5]]}")
+        
+        # Afficher les secteurs des rejetés coréens
+        korea_sectors = {}
+        for e in korea_rejected_quota:
+            sector = e.get("sector", "Unknown")
+            korea_sectors[sector] = korea_sectors.get(sector, 0) + 1
+        logger.warning(f"      Secteurs rejetés: {korea_sectors}")
+    
+    # Garder aussi le trace PHASE 1 pour compatibilité
     korea_rejected = [e for e in rejected_by_quota 
                       if "korea" in str(e.get("country", "")).lower()]
     if korea_rejected:
         print(f"[KOREA TRACE] ⚠️ Rejetées par quota: {[e.get('name')[:30] for e in korea_rejected]}")
     
     logger.info(f"   Equities finales sélectionnées: {len(equities)}")
+
     
     # 6. Fusionner bonds + ETF
     all_funds_data = []
@@ -814,9 +838,28 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # === v4.12.1: Génération de l'explication des sélections TOP caps ===
     if CONFIG.get("generate_selection_explained", False) and SELECTION_EXPLAINER_AVAILABLE:
         try:
+            # === PHASE 2 FIX: Utiliser les vrais alloués, pas la pré-sélection ===
+            # Collecter les IDs réellement alloués (union des 3 profils)
+            allocated_ids = set()
+            for profile_name, portfolio in portfolios.items():
+                if isinstance(portfolio, dict):
+                    for asset_id, weight in portfolio.get("allocation", {}).items():
+                        if weight > 0:
+                            allocated_ids.add(asset_id)
+            
+            # Filtrer equities pour ne garder que les alloués
+            equities_actually_allocated = [
+                e for e in equities 
+                if e.get("id") in allocated_ids 
+                or e.get("ticker") in allocated_ids
+                or e.get("name") in allocated_ids
+            ]
+            
+            logger.info(f"   Selection explainer: {len(equities_actually_allocated)} equities réellement allouées (sur {len(equities)} pré-sélectionnées)")
+            
             explain_top_caps_selection(
                 eq_rows_initial=eq_rows_before_buffett,
-                equities_final=equities,
+                equities_final=equities_actually_allocated,  # FIX: vrais alloués
                 config=CONFIG,
                 market_context=market_context,
                 output_path=CONFIG.get("selection_explained_output", "data/selection_explained.json"),
@@ -825,7 +868,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         except Exception as e:
             logger.warning(f"⚠️ Erreur génération explication: {e}")
             import traceback
-            traceback.print_exc()        
+            traceback.print_exc()
     
     return portfolios, all_assets
 def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
