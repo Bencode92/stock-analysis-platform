@@ -642,10 +642,79 @@
                                 </table>
                             </div>
 
-                            <!-- Conseil pratique -->
+<!-- Conseil pratique -->
                             <div class="bg-green-900 bg-opacity-10 rounded-lg p-4 border-l-4 border-green-400">
                                 <p class="font-medium flex items-center"><i class="fas fa-check-circle text-green-400 mr-2"></i> Conseil pratique&nbsp;:</p>
                                 <p class="text-sm leading-relaxed">Ne saute pas d'étapes ! Chaque enveloppe protège la suivante. Lance le <strong>PEA dès aujourd'hui</strong> : même 1 € versé verrouille la date d'ouverture (et donc la sortie à 0 % d'impôt sur les plus‑values après 5 ans).</p>
+                            </div>
+
+                            <!-- Comparatif PEL vs CEL -->
+                            <div class="bg-yellow-900 bg-opacity-20 rounded-lg p-5 border-l-4 border-yellow-400 mt-6">
+                                <h5 class="font-semibold flex items-center mb-3">
+                                    <i class="fas fa-balance-scale text-yellow-400 mr-2"></i>
+                                    PEL vs CEL : quelle logique ?
+                                </h5>
+                                <div class="overflow-x-auto">
+                                    <table class="table-auto text-xs w-full">
+                                        <thead>
+                                            <tr class="text-yellow-300">
+                                                <th class="px-3 py-2 text-left">Critère</th>
+                                                <th class="px-3 py-2 text-left">PEL</th>
+                                                <th class="px-3 py-2 text-left">CEL</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-yellow-700/30">
+                                            <tr>
+                                                <td class="px-3 py-2 font-medium">Taux épargne</td>
+                                                <td class="px-3 py-2">2,0% brut <span class="text-green-400">(fixe)</span></td>
+                                                <td class="px-3 py-2">1,25% brut <span class="text-yellow-400">(variable)</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-3 py-2 font-medium">Taux prêt</td>
+                                                <td class="px-3 py-2">3,20% <span class="text-green-400">(verrouillé)</span></td>
+                                                <td class="px-3 py-2">3,00% <span class="text-yellow-400">(variable)</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-3 py-2 font-medium">Prêt max</td>
+                                                <td class="px-3 py-2">92 000€ (selon droits)</td>
+                                                <td class="px-3 py-2">23 000€</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-3 py-2 font-medium">Liquidité</td>
+                                                <td class="px-3 py-2 text-red-400">❌ Nulle (retrait = clôture)</td>
+                                                <td class="px-3 py-2 text-green-400">✅ Totale</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-3 py-2 font-medium">Versements</td>
+                                                <td class="px-3 py-2">Obligatoires (≥ 540€/an)</td>
+                                                <td class="px-3 py-2">Libres</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-3 py-2 font-medium">Horizon idéal</td>
+                                                <td class="px-3 py-2">≥ 4 ans certain</td>
+                                                <td class="px-3 py-2">Flexible / court terme</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-3 py-2 font-medium">Intérêt principal</td>
+                                                <td class="px-3 py-2">Option taux fixe si hausse</td>
+                                                <td class="px-3 py-2">Coussin liquide + petit prêt</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-4 p-3 bg-blue-900 bg-opacity-30 rounded-lg">
+                                    <p class="text-xs text-gray-300">
+                                        <i class="fas fa-lightbulb text-yellow-400 mr-1"></i>
+                                        <strong>Règle simple :</strong><br>
+                                        • <strong>PEL</strong> = pari sur hausse des taux + achat <strong>certain</strong> dans 4+ ans<br>
+                                        • <strong>CEL</strong> = flexibilité avant tout + petit prêt complémentaire
+                                    </p>
+                                </div>
+                                <p class="text-[10px] text-gray-500 mt-3">
+                                    Sources :
+                                    <a href="https://www.service-public.fr/particuliers/vosdroits/F16140" target="_blank" class="text-blue-400 underline">Service-Public (PEL)</a>,
+                                    <a href="https://www.service-public.fr/particuliers/vosdroits/F16136" target="_blank" class="text-blue-400 underline">Service-Public (CEL)</a>
+                                </p>
                             </div>
 
                         </div>
@@ -1692,40 +1761,132 @@
                 summary: {
                     taux: '2,0% brut (≥2026)',
                     plafond: '61 200€',
-                    objectif: 'Achat immobilier'
+                    pret: 'Jusqu\'à 92 000€',
+                    blocage: '4 ans mini utile'
                 },
                 sections: [
                     {
-                        title: 'Points forts',
-                        icon: 'fas fa-check-circle',
+                        title: 'Rôle',
+                        icon: 'fas fa-bullseye',
                         items: [
-                            'Taux fixe : <span class="important-info">2,0 % brut</span> pour tout PEL ouvert à partir du <span class="important-info">01/01/2026</span>',
-                            '<span class="important-info">PEL ouverts en 2025</span> : 1,75 % brut (taux garanti à l\'ouverture)',
-                            '<span class="important-info">Droit à prêt épargne-logement</span> : jusqu\'à <span class="important-info">92 000 €</span>',
-                            'Taux prêt : <span class="important-info">3,20 %</span> (PEL ≥ 2026) / <span class="important-info">2,95 %</span> (PEL 2025)',
-                            '<span class="important-info">Capital garanti</span> et couvert jusqu\'à 100 000 € par le FGDR'
+                            'Épargne réglementée pour préparer un <span class="important-info">financement immobilier de résidence principale</span>',
+                            'Possibilité de <span class="important-info">prêt à taux fixé à l\'ouverture</span> (option, pas obligation)',
+                            '<a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000023372155" target="_blank" class="text-blue-400 underline text-xs">Source : Légifrance</a>'
                         ]
                     },
                     {
-                        title: 'Risques et limites',
-                        icon: 'fas fa-exclamation-triangle',
+                        title: 'Paramètres clés',
+                        icon: 'fas fa-sliders-h',
+                        items: [
+                            '<span class="important-info">Taux épargne : 2,00% brut</span> (PEL ouverts ≥ 01/01/2026, fixé à l\'ouverture)',
+                            '<span class="important-info">Plafond versements : 61 200 €</span> (hors intérêts capitalisés)',
+                            '<span class="important-info">Versements obligatoires</span> : initial ≥ 225 € puis ≥ 540 €/an',
+                            '<span class="important-info">Liquidité : tout retrait = clôture</span> (peut annuler l\'avantage prêt)',
+                            'Garantie FGDR : <span class="important-info">100 000 €</span> par client/établissement',
+                            '<a href="https://www.economie.gouv.fr/particuliers/plan-epargne-logement-pel" target="_blank" class="text-blue-400 underline text-xs">Source : economie.gouv.fr</a>'
+                        ]
+                    },
+                    {
+                        title: 'Prêt épargne logement (adossé au PEL)',
+                        icon: 'fas fa-hand-holding-usd',
+                        items: [
+                            '<span class="important-info">Montant : 5 000 € à 92 000 €</span> max',
+                            '<span class="important-info">Durée : 2 à 15 ans</span>',
+                            '<span class="important-info">Taux du prêt : figé à l\'ouverture</span> du PEL (3,20% pour PEL ≥2026)',
+                            '<span class="important-info">Droits à prêt = total des intérêts accumulés</span> sur le PEL',
+                            '<a href="https://www.service-public.fr/particuliers/vosdroits/F16142" target="_blank" class="text-blue-400 underline text-xs">Source : Service-Public.fr</a>'
+                        ]
+                    },
+                    {
+                        title: '📊 Exemple chiffré : intérêts → droits → prêt',
+                        icon: 'fas fa-calculator',
+                        customContent: `
+                            <div class="bg-blue-800 bg-opacity-30 rounded-lg p-4 space-y-4 text-sm">
+                                <div>
+                                    <p class="font-semibold text-green-400 mb-2">Hypothèse :</p>
+                                    <p>61 200 € sur PEL à 2% brut pendant 4 ans</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div class="bg-blue-900 bg-opacity-50 p-3 rounded-lg text-center">
+                                        <p class="text-xs text-gray-400">Intérêts cumulés</p>
+                                        <p class="text-xl font-bold text-green-400">≈ 5 045 €</p>
+                                    </div>
+                                    <div class="bg-blue-900 bg-opacity-50 p-3 rounded-lg text-center">
+                                        <p class="text-xs text-gray-400">Droits à prêt</p>
+                                        <p class="text-xl font-bold text-yellow-400">= 5 045 €</p>
+                                    </div>
+                                    <div class="bg-blue-900 bg-opacity-50 p-3 rounded-lg text-center">
+                                        <p class="text-xs text-gray-400">Budget intérêts prêt</p>
+                                        <p class="text-xl font-bold text-purple-400">≈ 12 612 €</p>
+                                        <p class="text-[10px] text-gray-500">(droits × 2,5)</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-yellow-400 mb-2">Capital empruntable (taux 3,20%) :</p>
+                                    <div class="overflow-x-auto">
+                                        <table class="table-auto text-xs w-full">
+                                            <thead>
+                                                <tr class="text-gray-400">
+                                                    <th class="px-2 py-1 text-left">Durée</th>
+                                                    <th class="px-2 py-1 text-left">Prêt max</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-blue-700/30">
+                                                <tr>
+                                                    <td class="px-2 py-1">15 ans</td>
+                                                    <td class="px-2 py-1 font-medium">≈ 48 000 €</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="px-2 py-1">10 ans</td>
+                                                    <td class="px-2 py-1 font-medium">≈ 74 000 €</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="px-2 py-1">8 ans</td>
+                                                    <td class="px-2 py-1 font-medium text-green-400">≈ 92 000 € (plafond)</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-gray-500">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Chiffres indicatifs. Le calcul exact dépend des quinzaines et du calcul bancaire.
+                                    <a href="https://www.service-public.fr/particuliers/vosdroits/F16142" target="_blank" class="text-blue-400 underline">Source</a>
+                                </p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: '⚠️ Point de vue contrariant',
+                        icon: 'fas fa-balance-scale-right',
                         iconClass: 'warning',
                         items: [
-                            '<span class="important-info">Retrait = clôture</span> ; impossible de retirer partiellement',
-                            'Retrait < 4 ans fait perdre les avantages prêts/intérêts',
-                            '<span class="important-info">Rendement net modeste</span> : ≈ <span class="important-info">1,40 %</span> après PFU (pour 2,0 % brut)',
-                            '<span class="important-info">Versements réguliers imposés</span> (540 €/an minimum)'
+                            '<span class="important-info">Ouvrir "parce que les taux sont bas" n\'est pas automatiquement rentable</span>',
+                            'Le prêt est <span class="important-info">plafonné par vos droits acquis</span>, pas par le plafond 92k€',
+                            '<span class="important-info">Si taux marché < taux PEL dans 4 ans</span> → le prêt PEL devient inutile',
+                            'Le PEL devient alors une épargne à <span class="important-info">rendement net modeste (~1,4%)</span> + contraintes'
                         ],
-                        risk: 'low'
+                        risk: 'medium'
+                    },
+                    {
+                        title: '✅ Checklist : quand ouvrir un PEL ?',
+                        icon: 'fas fa-clipboard-check',
+                        items: [
+                            '☑️ <span class="important-info">Probabilité élevée</span> d\'acheter dans <span class="important-info">≥ 4 ans</span>',
+                            '☑️ Vous voulez une <span class="important-info">option de taux fixe</span> (sans obligation de l\'utiliser)',
+                            '☑️ Vous acceptez une épargne <span class="important-info">100% illiquide</span> (retrait = clôture)',
+                            '☑️ Vous avez déjà votre épargne de précaution ailleurs',
+                            '❌ <span class="important-info">Ne pas ouvrir</span> si horizon incertain ou < 4 ans'
+                        ]
                     },
                     {
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">PFU 30 %</span> (12,8 % IR + 17,2 % PS) prélevé chaque année',
-                            '<span class="important-info">Prime d\'État supprimée</span> pour les nouveaux plans (≥ 2018)',
-                            'Fiscalité appliquée annuellement sur les intérêts',
-                            'Pas d\'avantage fiscal'
+                            '<span class="important-info">PFU 30%</span> (12,8% IR + 17,2% PS) prélevé chaque année',
+                            'Rendement net ≈ <span class="important-info">1,40%</span> (pour 2% brut)',
+                            'Prime d\'État supprimée (PEL ≥ 2018)',
+                            '<a href="https://www.lafinancepourtous.com/pratique/placements/epargne-logement/le-plan-epargne-logement-pel-une-epargne-de-projet/le-pel-un-placement-ouvert-a-tous/" target="_blank" class="text-blue-400 underline text-xs">Source : La finance pour tous</a>'
                         ]
                     }
                 ]
@@ -1733,48 +1894,81 @@
             // ==========================================
             // CEL - CORRIGÉ AU 01/01/2026
             // ==========================================
-            'cel': {
+'cel': {
                 title: 'CEL',
                 subtitle: 'Compte d\'Épargne Logement',
                 icon: 'fas fa-house-user',
                 color: 'blue',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '1,25% brut',
+                    taux: '1,25% brut (variable)',
                     plafond: '15 300€',
+                    pret: 'Jusqu\'à 23 000€',
                     liquidite: 'Totale'
                 },
                 sections: [
                     {
-                        title: 'Points forts',
-                        icon: 'fas fa-check-circle',
+                        title: 'Rôle',
+                        icon: 'fas fa-bullseye',
                         items: [
-                            'Taux variable : <span class="important-info">1,25 % brut</span> (depuis le <span class="important-info">01/08/2025</span>)',
-                            '<span class="important-info">Liquidité totale</span> : dépôts et retraits libres, solde mini 300 €',
-                            '<span class="important-info">Capital garanti</span> et couvert FGDR 100 000 €',
-                            '<span class="important-info">Droit à prêt</span> après <span class="important-info">18 mois</span> : jusqu\'à 23 000 €, taux actuellement <span class="important-info">3 %</span>'
+                            'Épargne logement <span class="important-info">plus liquide</span> que le PEL',
+                            'Ouvre un droit à un <span class="important-info">petit prêt complémentaire</span>',
+                            'Peut se combiner avec un PEL dans la même banque'
                         ]
                     },
                     {
-                        title: 'Risques et limites',
+                        title: 'Paramètres clés',
+                        icon: 'fas fa-sliders-h',
+                        items: [
+                            '<span class="important-info">Taux épargne : 1,25% brut</span> (variable, depuis 01/08/2025)',
+                            '<span class="important-info">Plafond : 15 300 €</span> (hors intérêts capitalisés)',
+                            '<span class="important-info">Liquidité : retraits possibles</span> (solde mini selon banque, souvent 300€)',
+                            'Calcul des intérêts : par <span class="important-info">quinzaine</span> (1er/16)',
+                            'Garantie FGDR : <span class="important-info">100 000 €</span> par client/établissement',
+                            '<a href="https://www.economie.gouv.fr/particuliers/compte-epargne-logement-cel" target="_blank" class="text-blue-400 underline text-xs">Source : economie.gouv.fr</a>'
+                        ]
+                    },
+                    {
+                        title: 'Prêt CEL',
+                        icon: 'fas fa-hand-holding-usd',
+                        items: [
+                            '<span class="important-info">Montant max : 23 000 €</span>',
+                            '<span class="important-info">Taux du prêt : 3,00%</span> (CEL ouverts ≥ 01/02/2025)',
+                            'Si CEL + PEL même banque : <span class="important-info">total prêts ≤ 92 000 €</span>',
+                            '<a href="https://www.service-public.fr/particuliers/vosdroits/F16139" target="_blank" class="text-blue-400 underline text-xs">Source : Service-Public.fr</a>'
+                        ]
+                    },
+                    {
+                        title: '⚠️ Limites à comprendre',
                         icon: 'fas fa-exclamation-triangle',
                         iconClass: 'warning',
                         items: [
-                            '<span class="important-info">Rendement net faible</span> : ≈ <span class="important-info">0,875 %</span> après PFU',
-                            '<span class="important-info">Prêt limité & rarement avantageux</span> versus taux du marché',
-                            '<span class="important-info">Plafond réduit</span> et absence de taux garanti',
-                            '<span class="important-info">Pas de prime d\'État</span> pour les comptes récents'
+                            '<span class="important-info">Taux VARIABLE</span> : contrairement au PEL, rien n\'est verrouillé',
+                            '<span class="important-info">Rendement net faible</span> : ~0,875% après PFU',
+                            '<span class="important-info">Prêt limité (23k€) et rarement compétitif</span> vs offres bancaires classiques',
+                            'Plafond bas : <span class="important-info">15 300€</span> seulement'
                         ],
                         risk: 'low'
+                    },
+                    {
+                        title: '✅ Quand le CEL a du sens',
+                        icon: 'fas fa-clipboard-check',
+                        items: [
+                            '☑️ Vous voulez de la <span class="important-info">liquidité</span> tout en gardant une option prêt',
+                            '☑️ Vous envisagez un <span class="important-info">petit prêt complémentaire</span> (travaux, apport)',
+                            '☑️ Vous ne voulez <span class="important-info">pas vous engager</span> sur un horizon fixe',
+                            '☑️ Complément à un PEL pour <span class="important-info">maximiser les droits à prêt</span>',
+                            '❌ <span class="important-info">Peu pertinent</span> si objectif = gros financement immo'
+                        ]
                     },
                     {
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">PFU 30 %</span> (12,8 % IR + 17,2 % PS) retenu sur les intérêts chaque année',
-                            'Possibilité d\'opter pour le barème progressif',
-                            'Pas d\'avantage fiscal spécifique',
-                            'Fiscalité classique'
+                            '<span class="important-info">PFU 30%</span> sur les intérêts (12,8% IR + 17,2% PS)',
+                            'Option barème progressif possible',
+                            'Pas d\'avantage fiscal',
+                            '<a href="https://www.service-public.fr/particuliers/vosdroits/F16136" target="_blank" class="text-blue-400 underline text-xs">Source : Service-Public.fr</a>'
                         ]
                     }
                 ]
