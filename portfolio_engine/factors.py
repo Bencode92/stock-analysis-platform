@@ -1639,8 +1639,8 @@ class FactorScorer:
         print(f"[DIAG] Scoring {len(assets)} assets")
         print(f"[DIAG] Categories: {dict(cat_counts)}")
         for cat, count in cat_counts.items():
-        if count < 5:
-        print(f"[DIAG] ⚠️ Catégorie '{cat}' = {count} éléments (< 5)")
+            if count < 5:
+                print(f"[DIAG] ⚠️ Catégorie '{cat}' = {count} éléments (< 5)")
         
         factors = {
             "momentum": self.compute_factor_momentum(assets),
