@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://tradepulse.io/schemas/portfolio_output.json",
   "title": "TradePulse Portfolio Output Schema",
-  "description": "Schema for validating generated portfolio JSON files (v2.4.0 - Asset Rationales)",
+  "description": "Schema for validating generated portfolio JSON files (v2.5.0 - Extended Roles)",
   "type": "object",
   "required": ["Agressif", "Modéré", "Stable", "_meta"],
   "additionalProperties": false,
@@ -169,7 +169,7 @@
         },
         "role": {
           "type": "string",
-          "enum": ["core", "satellite", "hedge", "income", "diversification"],
+          "enum": ["core", "satellite", "hedge", "income", "diversification", "trading", "defensive", "lottery", "growth", "value", "momentum", "recovery", "speculative"],
           "description": "Role in portfolio construction"
         },
         "risk_note": {
