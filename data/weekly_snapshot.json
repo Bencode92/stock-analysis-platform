@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-11T09:27:09.747Z",
+  "timestamp": "2026-01-11T09:54:16.749Z",
   "limited_run": true,
   "etfs": [
     {
@@ -44,11 +44,12 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
-      "sector_signal_ok": true,
-      "sector_suspect": false,
+      "sector_trust": 0.2,
+      "sector_signal_ok": false,
+      "sector_suspect": true,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "FS_BUT_COMMODITY_TEXT",
+        "SINGLE_STOCK_CONCENTRATION"
       ],
       "countries": [
         {
@@ -79,8 +80,8 @@
         "name": "MA",
         "weight": 1
       },
-      "as_of_summary": "2026-01-11T09:25:09.948Z",
-      "as_of_composition": "2026-01-11T09:25:09.948Z",
+      "as_of_summary": "2026-01-11T09:52:17.126Z",
+      "as_of_composition": "2026-01-11T09:52:17.126Z",
       "is_single_stock": true,
       "auto_detected_composition": true,
       "data_quality_score": 110,
@@ -128,8 +129,8 @@
       "sector_signal_ok": false,
       "sector_suspect": true,
       "sector_guard_reasons": [
-        "NO_SECTOR_DATA",
-        "NON_STANDARD_LEVERAGED"
+        "NON_STANDARD_LEVERAGED",
+        "NO_SECTOR_DATA"
       ],
       "countries": [
         {
@@ -153,8 +154,8 @@
       "domicile": "United States",
       "holdings_top10": [],
       "holding_top": null,
-      "as_of_summary": "2026-01-11T09:25:09.949Z",
-      "as_of_composition": "2026-01-11T09:25:09.949Z",
+      "as_of_summary": "2026-01-11T09:52:17.127Z",
+      "as_of_composition": "2026-01-11T09:52:17.127Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 82,
@@ -202,8 +203,8 @@
       "sector_signal_ok": false,
       "sector_suspect": true,
       "sector_guard_reasons": [
-        "NO_SECTOR_DATA",
-        "NON_STANDARD_INVERSE"
+        "NON_STANDARD_INVERSE",
+        "NO_SECTOR_DATA"
       ],
       "countries": [
         {
@@ -227,8 +228,8 @@
       "domicile": "United States",
       "holdings_top10": [],
       "holding_top": null,
-      "as_of_summary": "2026-01-11T09:25:09.949Z",
-      "as_of_composition": "2026-01-11T09:25:09.949Z",
+      "as_of_summary": "2026-01-11T09:52:17.128Z",
+      "as_of_composition": "2026-01-11T09:52:17.128Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 77,
@@ -400,8 +401,8 @@
         "name": "Apple Inc.",
         "weight": 0.1211
       },
-      "as_of_summary": "2026-01-11T09:25:09.950Z",
-      "as_of_composition": "2026-01-11T09:25:09.950Z",
+      "as_of_summary": "2026-01-11T09:52:17.129Z",
+      "as_of_composition": "2026-01-11T09:52:17.129Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 110,
@@ -535,11 +536,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
+      "sector_trust": 1,
       "sector_signal_ok": true,
       "sector_suspect": false,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "STANDARD_ETF"
       ],
       "countries": [
         {
@@ -618,8 +619,8 @@
         "name": "Taiwan Semiconductor Manufacturing Company Limited",
         "weight": 0.13479
       },
-      "as_of_summary": "2026-01-11T09:25:09.950Z",
-      "as_of_composition": "2026-01-11T09:25:09.950Z",
+      "as_of_summary": "2026-01-11T09:52:17.129Z",
+      "as_of_composition": "2026-01-11T09:52:17.129Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 110,
@@ -753,12 +754,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.45,
-      "sector_signal_ok": false,
-      "sector_suspect": true,
+      "sector_trust": 1,
+      "sector_signal_ok": true,
+      "sector_suspect": false,
       "sector_guard_reasons": [
-        "VOL_PRODUCT",
-        "SINGLE_STOCK"
+        "OPTIONS_OVERLAY"
       ],
       "countries": [
         {
@@ -832,8 +832,8 @@
         "name": "NVIDIA Corp",
         "weight": 0.07724
       },
-      "as_of_summary": "2026-01-11T09:26:08.784Z",
-      "as_of_composition": "2026-01-11T09:26:08.784Z",
+      "as_of_summary": "2026-01-11T09:53:15.966Z",
+      "as_of_composition": "2026-01-11T09:53:15.966Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 110,
@@ -845,74 +845,6 @@
         "has_sectors": true,
         "has_countries": true,
         "has_holdings_top10": true,
-        "has_bond_metrics": false
-      }
-    },
-    {
-      "symbol": "ACT",
-      "name": "Enact Holdings, Inc.",
-      "isin": null,
-      "mic_code": "XNMS",
-      "currency": null,
-      "fund_type": null,
-      "fund_type_fr": null,
-      "etf_type": "standard",
-      "aum_usd": null,
-      "total_expense_ratio": null,
-      "yield_ttm": null,
-      "objective": "",
-      "objective_en": "",
-      "bond_avg_duration": null,
-      "bond_avg_maturity": null,
-      "bond_credit_score": null,
-      "bond_credit_rating": null,
-      "bond_credit_quality": [],
-      "sectors": [],
-      "sector_top5": [],
-      "sector_top": null,
-      "sector_top5_fr": [],
-      "sector_top_fr": null,
-      "sector_trust": 0.3,
-      "sector_signal_ok": false,
-      "sector_suspect": true,
-      "sector_guard_reasons": [
-        "NO_SECTOR_DATA"
-      ],
-      "countries": [
-        {
-          "country": "United States",
-          "weight": null,
-          "is_domicile": true
-        }
-      ],
-      "country_top5": [
-        {
-          "country": "United States",
-          "weight": null,
-          "is_domicile": true
-        }
-      ],
-      "country_top": {
-        "country": "United States",
-        "weight": null,
-        "is_domicile": true
-      },
-      "domicile": "United States",
-      "holdings_top10": [],
-      "holding_top": null,
-      "as_of_summary": "2026-01-11T09:26:09.080Z",
-      "as_of_composition": "2026-01-11T09:26:09.080Z",
-      "is_single_stock": false,
-      "auto_detected_composition": false,
-      "data_quality_score": 17,
-      "data_quality_details": {
-        "has_aum": false,
-        "has_ter": false,
-        "has_yield": false,
-        "has_objective": "",
-        "has_sectors": false,
-        "has_countries": true,
-        "has_holdings_top10": false,
         "has_bond_metrics": false
       }
     }
@@ -1037,11 +969,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
+      "sector_trust": 1,
       "sector_signal_ok": true,
       "sector_suspect": false,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "STANDARD_ETF"
       ],
       "countries": [
         {
@@ -1075,8 +1007,8 @@
         "name": "Ally Financial Inc FXDFR PRF PERPETUAL USD 1000 - Ser B",
         "weight": 0.01593
       },
-      "as_of_summary": "2026-01-11T09:26:09.141Z",
-      "as_of_composition": "2026-01-11T09:26:09.141Z",
+      "as_of_summary": "2026-01-11T09:53:16.281Z",
+      "as_of_composition": "2026-01-11T09:53:16.281Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 115,
@@ -1170,11 +1102,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
+      "sector_trust": 1,
       "sector_signal_ok": true,
       "sector_suspect": false,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "STANDARD_ETF"
       ],
       "countries": [
         {
@@ -1205,8 +1137,8 @@
         "name": "BlackRock Cash Funds Instl SL Agency",
         "weight": 0.02818
       },
-      "as_of_summary": "2026-01-11T09:26:09.142Z",
-      "as_of_composition": "2026-01-11T09:26:09.142Z",
+      "as_of_summary": "2026-01-11T09:53:16.282Z",
+      "as_of_composition": "2026-01-11T09:53:16.282Z",
       "is_single_stock": true,
       "auto_detected_composition": true,
       "data_quality_score": 115,
@@ -1372,11 +1304,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
+      "sector_trust": 1,
       "sector_signal_ok": true,
       "sector_suspect": false,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "STANDARD_ETF"
       ],
       "countries": [
         {
@@ -1410,8 +1342,8 @@
         "name": "iShares Core U.S. Aggregate Bond ETF",
         "weight": 0.77533
       },
-      "as_of_summary": "2026-01-11T09:26:09.144Z",
-      "as_of_composition": "2026-01-11T09:26:09.144Z",
+      "as_of_summary": "2026-01-11T09:53:16.285Z",
+      "as_of_composition": "2026-01-11T09:53:16.285Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 115,
@@ -1505,11 +1437,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
+      "sector_trust": 0.7,
       "sector_signal_ok": true,
       "sector_suspect": false,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "SINGLE_STOCK_CONCENTRATION"
       ],
       "countries": [
         {
@@ -1540,8 +1472,8 @@
         "name": "V",
         "weight": 1
       },
-      "as_of_summary": "2026-01-11T09:26:09.147Z",
-      "as_of_composition": "2026-01-11T09:26:09.147Z",
+      "as_of_summary": "2026-01-11T09:53:16.287Z",
+      "as_of_composition": "2026-01-11T09:53:16.287Z",
       "is_single_stock": true,
       "auto_detected_composition": true,
       "data_quality_score": 115,
@@ -1635,11 +1567,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
+      "sector_trust": 0.7,
       "sector_signal_ok": true,
       "sector_suspect": false,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "SINGLE_STOCK_CONCENTRATION"
       ],
       "countries": [
         {
@@ -1670,8 +1602,8 @@
         "name": "V",
         "weight": 1
       },
-      "as_of_summary": "2026-01-11T09:27:08.977Z",
-      "as_of_composition": "2026-01-11T09:27:08.977Z",
+      "as_of_summary": "2026-01-11T09:53:16.289Z",
+      "as_of_composition": "2026-01-11T09:53:16.289Z",
       "is_single_stock": true,
       "auto_detected_composition": true,
       "data_quality_score": 115,
@@ -1837,11 +1769,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
+      "sector_trust": 1,
       "sector_signal_ok": true,
       "sector_suspect": false,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "STANDARD_ETF"
       ],
       "countries": [
         {
@@ -1875,8 +1807,8 @@
         "name": "Standard Chartered PLC GDR",
         "weight": 0.01478
       },
-      "as_of_summary": "2026-01-11T09:27:08.980Z",
-      "as_of_composition": "2026-01-11T09:27:08.980Z",
+      "as_of_summary": "2026-01-11T09:54:16.128Z",
+      "as_of_composition": "2026-01-11T09:54:16.128Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 115,
@@ -2010,11 +1942,11 @@
         }
       ],
       "sector_top_fr": null,
-      "sector_trust": 0.75,
+      "sector_trust": 1,
       "sector_signal_ok": true,
       "sector_suspect": false,
       "sector_guard_reasons": [
-        "SINGLE_STOCK"
+        "STANDARD_ETF"
       ],
       "countries": [
         {
@@ -2063,8 +1995,8 @@
         "name": "iShares MBS ETF",
         "weight": 0.13875
       },
-      "as_of_summary": "2026-01-11T09:27:09.314Z",
-      "as_of_composition": "2026-01-11T09:27:09.314Z",
+      "as_of_summary": "2026-01-11T09:54:16.425Z",
+      "as_of_composition": "2026-01-11T09:54:16.425Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 115,
@@ -2144,8 +2076,8 @@
       "sector_signal_ok": false,
       "sector_suspect": true,
       "sector_guard_reasons": [
-        "NO_SECTOR_DATA",
-        "NON_STANDARD_LEVERAGED"
+        "NON_STANDARD_LEVERAGED",
+        "NO_SECTOR_DATA"
       ],
       "countries": [
         {
@@ -2169,8 +2101,8 @@
       "domicile": "United States",
       "holdings_top10": [],
       "holding_top": null,
-      "as_of_summary": "2026-01-11T09:27:09.315Z",
-      "as_of_composition": "2026-01-11T09:27:09.315Z",
+      "as_of_summary": "2026-01-11T09:54:16.426Z",
+      "as_of_composition": "2026-01-11T09:54:16.426Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 82,
@@ -2250,8 +2182,8 @@
       "sector_signal_ok": false,
       "sector_suspect": true,
       "sector_guard_reasons": [
-        "NO_SECTOR_DATA",
-        "NON_STANDARD_INVERSE"
+        "NON_STANDARD_INVERSE",
+        "NO_SECTOR_DATA"
       ],
       "countries": [
         {
@@ -2275,8 +2207,8 @@
       "domicile": "United States",
       "holdings_top10": [],
       "holding_top": null,
-      "as_of_summary": "2026-01-11T09:27:09.315Z",
-      "as_of_composition": "2026-01-11T09:27:09.315Z",
+      "as_of_summary": "2026-01-11T09:54:16.428Z",
+      "as_of_composition": "2026-01-11T09:54:16.428Z",
       "is_single_stock": false,
       "auto_detected_composition": false,
       "data_quality_score": 82,
@@ -2293,28 +2225,29 @@
     }
   ],
   "stats": {
-    "total_etfs": 7,
+    "total_etfs": 6,
     "total_bonds": 9,
     "data_quality": {
       "with_aum": 6,
       "with_ter": 6,
       "with_yield": 6,
       "with_sectors": 4,
-      "with_countries": 7,
+      "with_countries": 6,
       "with_objective": 6,
       "with_holdings": 4,
       "with_auto_detection": 1,
-      "avg_quality_score": 88,
+      "avg_quality_score": 100,
       "by_etf_type": {
-        "standard": 1,
+        "standard": 0,
         "inverse": 1,
         "leveraged": 2,
         "single_stock": 3
       }
     },
     "sector_guard": {
-      "suspects_count": 4,
-      "reliable_count": 3
+      "suspects_count": 3,
+      "reliable_count": 3,
+      "equity_filtered": 1
     },
     "bond_metrics": {
       "with_duration": 9,
