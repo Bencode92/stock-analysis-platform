@@ -118,12 +118,16 @@ jobs:
           echo "📂 Generated files:"
           ls -lh data/filtered_advanced.json data/weekly_snapshot*.* 2>/dev/null || true
           ls -lh data/combined_*.csv 2>/dev/null || true
+          ls -lh data/sector_suspects.csv 2>/dev/null || true
           echo ""
           echo "📋 ETF Holdings (first 5 lines):"
           head -n 5 data/combined_etfs_holdings.csv 2>/dev/null || echo "Not found"
           echo ""
           echo "📋 Bonds Holdings (first 5 lines):"
           head -n 5 data/combined_bonds_holdings.csv 2>/dev/null || echo "Not found"
+          echo ""
+          echo "🛡️ Sector Suspects (first 10 lines):"
+          head -n 10 data/sector_suspects.csv 2>/dev/null || echo "Not found"
 
       - name: 💾 Commit and push
         run: |
@@ -137,6 +141,7 @@ jobs:
           git add data/weekly_snapshot_bonds.csv 2>/dev/null || true
           git add data/combined_etfs_holdings.csv 2>/dev/null || true
           git add data/combined_bonds_holdings.csv 2>/dev/null || true
+          git add data/sector_suspects.csv 2>/dev/null || true
           git add data/objective_translations.cache.json 2>/dev/null || true
           
           if git diff --quiet && git diff --staged --quiet; then
