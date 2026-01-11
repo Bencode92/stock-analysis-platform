@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v14.0: Ajout Sector Guard pour détection anomalies taxonomiques
+// v14.1: Sector Guard amélioré (fix ACIO/ACT, VIX-only, equity filter)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -192,68 +192,54 @@ const LEVERAGE_PATTERNS = {
     singleStock: new RegExp(`(${Object.keys(SINGLE_STOCK_SECTORS).join('|')})`, 'i')
 };
 
-// === SECTOR GUARD v2 : Détection anomalies taxonomiques ===
+// === SECTOR GUARD v14.1 : Détection anomalies taxonomiques ===
 
-// Exceptions pour éviter faux positifs
-const SECTOR_GUARD_EXCEPTIONS = [
-  /\bgoldman\s+sachs\b/i,
-  /\bgold\s*standard\b/i,
-];
+// Filtre actions glissées dans all_etfs.csv
+const ETF_NAME_TOKENS = /\b(etf|exchange\s*traded|fund|trust|shares|etn|etc|note|ucits)\b/i;
+const COMPANY_SUFFIX = /\b(inc\.?|corp\.?|corporation|ltd\.?|plc|company|co\.|holdings|group)\s*$/i;
 
-// Patterns commodities (contextuels)
-const COMMODITY_PATTERNS = [
-  /\bphysical\s+(gold|silver|platinum|palladium)\b/i,
-  /\b(gold|silver|platinum|palladium)\s+(trust|bullion|shares?|minishares?)\b/i,
-  /\bprecious\s+metals?\b/i,
-  /\bcommodit(y|ies)\b/i,
-  /\b(bloomberg|gsci|commodity\s+index|db\s+commodity)\b/i,
-  /\b(crude\s+oil|brent|wti|natural\s+gas|gasoline|copper|base\s+metals)\b/i,
-  /\b(soybean|wheat|corn|agriculture)\b/i,
-  /\bk-?1\s+free\b/i,
-  /\b(oil|gas)\s+(fund|etf|index)\b/i,
-  /\b(united\s+states)\s+(oil|gas|brent|gasoline|natural\s+gas)\b/i,
-];
+function nameLooksLikeEquityNotETF(name) {
+  const n = String(name || '').trim();
+  if (!n) return false;
+  if (ETF_NAME_TOKENS.test(n)) return false;
+  return COMPANY_SUFFIX.test(n);
+}
+
+// Patterns commodities
+const COMMODITY_KEYWORDS = /\b(gold|silver|platinum|palladium|bullion|precious\s*metals?|commodity|commodities|crude\s*oil|oil\s*fund|natural\s*gas|uranium|copper|wheat|corn|soybean|agriculture|base\s*metals?)\b/i;
 
 // Patterns crypto
-const CRYPTO_PATTERNS = [
-  /\b(bitcoin|btc)\b/i,
-  /\b(ethereum|eth)\b/i,
-  /\b(cryptocurrency|crypto|digital\s+asset)\b/i,
-  /\bgrayscale\b.*\b(trust|etf)\b/i,
-  /\bblockchain\b/i,
-];
+const CRYPTO_KEYWORDS = /\b(bitcoin|btc|ethereum|eth|crypto|cryptocurrency|digital\s*asset|blockchain)\b/i;
 
 // Patterns devises/FX
-const FX_PATTERNS = [
-  /\bcurrencyshares\b/i,
-  /\b(euro|yen|sterling|swiss\s+franc|canadian\s+dollar)\s+trust\b/i,
-  /\b(u\.?s\.?\s+dollar|dollar\s+index)\b/i,
-];
+const FX_KEYWORDS = /\bcurrencyshares\b|\b(euro|yen|sterling|swiss\s*franc|canadian\s*dollar)\s*trust\b|\bu\.?s\.?\s*dollar\s*index\b/i;
 
 // Patterns structures véhicules
-const VEHICLE_PATTERNS = [
-  /\bgrantor\s+trust\b/i,
-  /\b(etn|etc)\b/i,
-  /\bcommodity\s+pool\b/i,
-  /\b(l\.?p\.?|lp)\s*$/i,
-];
+const VEHICLE_KEYWORDS = /\b(grantor\s*trust|commodity\s*pool|etn|etc)\b|\blp\s*$|\bl\.p\.\s*$/i;
 
-// Patterns options/overlay
-const OPTIONS_OVERLAY_PATTERNS = [
-  /\boption\s+income\s+strategy\b/i,
-  /\byieldmax\b/i,
-  /\bcovered\s+call\b/i,
-  /\bbuywrite\b/i,
-  /\b0dte\b/i,
-];
-
-// Patterns volatilité
-const VOL_PATTERNS = [
+// VIX uniquement (fix ACIO - ne matche plus "volatility" seul)
+const VIX_PATTERNS = [
   /\bvix\b/i,
-  /\bvolatility\b/i,
+  /\bcboe\s+volatility\b/i,
+  /\bvolatility\s+(index|indices|futures?|etf|etn|note)\b/i,
+  /\bshort[- ]term\s+volatility\b/i,
+  /\bvolatility\s+futures?\b/i,
 ];
 
-// Patterns vrais ETF financiers (shortcircuit)
+// Options overlay (informatif, SANS pénalité)
+const OPTIONS_OVERLAY_PATTERNS = [
+  /\bcovered\s*call(s)?\b/i,
+  /\bbuy[- ]?write\b/i,
+  /\bcall\s*writing\b/i,
+  /\bcollar(ed)?\b/i,
+  /\b0dte\b/i,
+  /\boption\s+income\b/i,
+  /\bdefined\s+outcome\b/i,
+  /\bbuffer\b/i,
+  /\byieldmax\b/i,
+];
+
+// Vrais ETF financiers (shortcircuit)
 const TRUE_FINANCIAL_PATTERNS = [
   /\b(bank|banks|banking|regional\s*bank)\b/i,
   /\bfinancial(s)?\s*(select|sector|index|alphadex)\b/i,
@@ -271,74 +257,86 @@ function computeSectorGuard(etf) {
   const reasons = [];
   let trust = 1.0;
 
-  const textRaw = [etf.symbol, etf.name, etf.fund_type, etf.objective_en].filter(Boolean).join(' ');
-  const isException = testAny(SECTOR_GUARD_EXCEPTIONS, textRaw);
-  const sectorName = (etf.sector_top?.sector || '').trim();
-  const sectorWeight = etf.sector_top?.weight ?? 0;
-  const holdingsCount = (etf.holdings_top10 || []).length;
-  const hasSectors = (etf.sectors || []).length > 0;
+  const text = [etf.symbol, etf.name, etf.fund_type, etf.objective_en].filter(Boolean).join(' ');
 
-  // Signal fort: fund_type explicite de l'API
-  const ft = (etf.fund_type || '').toLowerCase();
-  if (/\b(commodit|precious|metals|gold|silver|energy\s+commodities|agriculture|natural\s+resources)\b/i.test(ft)) {
-    trust = Math.min(trust, 0.15);
+  const sectors = etf.sectors || [];
+  const sectorTop = etf.sector_top || null;
+  const sectorName = (sectorTop?.sector || '').trim();
+  const sectorWeight = Number(sectorTop?.weight ?? 0);
+
+  const holdings = etf.holdings_top10 || [];
+  const holdingsCount = holdings.length;
+  const topW = Number(holdings?.[0]?.weight ?? 0);
+
+  // Tag options overlay (informatif, SANS pénalité)
+  if (testAny(OPTIONS_OVERLAY_PATTERNS, text)) {
+    reasons.push('OPTIONS_OVERLAY');
+  }
+
+  // Signal fort : fund_type explicite
+  const ft = String(etf.fund_type || '').toLowerCase();
+  if (/\b(commodit|precious\s*metal|gold|silver|energy\s*commodit|agricultur|natural\s*resource|metals?)\b/i.test(ft)) {
+    trust = Math.min(trust, 0.20);
     reasons.push('FUND_TYPE_COMMODITY');
   }
-  if (/\b(digital\s+assets?|cryptocurrency|bitcoin)\b/i.test(ft)) {
-    trust = Math.min(trust, 0.15);
+  if (/\b(bitcoin|crypto|digital\s*asset|cryptocurrency|ethereum)\b/i.test(ft)) {
+    trust = Math.min(trust, 0.20);
     reasons.push('FUND_TYPE_CRYPTO');
   }
 
-  // Texte (avec exceptions)
-  const hasCommodityText = !isException && testAny(COMMODITY_PATTERNS, textRaw);
-  const hasCryptoText = !isException && testAny(CRYPTO_PATTERNS, textRaw);
-  const hasFxText = !isException && testAny(FX_PATTERNS, textRaw);
-  const hasVehicleText = !isException && testAny(VEHICLE_PATTERNS, textRaw);
-  const hasOptionsOverlay = !isException && testAny(OPTIONS_OVERLAY_PATTERNS, textRaw);
-  const hasVolText = !isException && testAny(VOL_PATTERNS, textRaw);
-  const isTrueFinancial = testAny(TRUE_FINANCIAL_PATTERNS, textRaw);
+  const hasCommodityText = COMMODITY_KEYWORDS.test(text);
+  const hasCryptoText = CRYPTO_KEYWORDS.test(text);
+  const hasFxText = FX_KEYWORDS.test(text);
+  const hasVehicleText = VEHICLE_KEYWORDS.test(text);
+  const isVixProduct = testAny(VIX_PATTERNS, text);
+  const isTrueFinancial = testAny(TRUE_FINANCIAL_PATTERNS, text);
 
-  // Si "Financial Services dominant" + vrai ETF financier => OK
+  // Shortcircuit : Financial Services dominant + vrai ETF financier => OK
   if (sectorName === 'Financial Services' && sectorWeight >= 0.60 && isTrueFinancial) {
     return { sector_trust: 1.0, sector_signal_ok: true, sector_suspect: false, sector_guard_reasons: ['VERIFIED_FINANCIAL_ETF'] };
   }
 
-  // Si "Financial Services dominant" + incohérence => secteur non fiable
+  // Financial Services dominant + incohérence => suspect
   if (sectorName === 'Financial Services' && sectorWeight >= 0.60) {
     if (hasCommodityText) { trust = Math.min(trust, 0.20); reasons.push('FS_BUT_COMMODITY_TEXT'); }
-    if (hasCryptoText) { trust = Math.min(trust, 0.20); reasons.push('FS_BUT_CRYPTO_TEXT'); }
-    if (hasFxText) { trust = Math.min(trust, 0.25); reasons.push('FS_BUT_FX_TEXT'); }
+    if (hasCryptoText)    { trust = Math.min(trust, 0.20); reasons.push('FS_BUT_CRYPTO_TEXT'); }
+    if (hasFxText)        { trust = Math.min(trust, 0.25); reasons.push('FS_BUT_FX_TEXT'); }
+    if (isVixProduct)     { trust = Math.min(trust, 0.25); reasons.push('FS_BUT_VIX_PRODUCT'); }
     if (hasVehicleText && sectorWeight >= 0.90) {
       trust = Math.min(trust, 0.40);
       reasons.push('FS_VEHICLE_STRUCTURE');
     }
   }
 
-  // Pas de holdings + alternative asset => très suspect
-  if (holdingsCount === 0 && (hasCommodityText || hasCryptoText || hasFxText)) {
+  // 0 holdings + texte commodity/crypto/VIX => souvent trust/ETN synthétique
+  if (holdingsCount === 0 && (hasCommodityText || hasCryptoText || isVixProduct)) {
     trust = Math.min(trust, 0.25);
     reasons.push('NO_HOLDINGS_ALT_ASSET');
   }
 
-  // Options overlay / vol => pas un "sector ETF" classique
-  if (hasOptionsOverlay) { trust = Math.min(trust, 0.55); reasons.push('OPTIONS_OVERLAY'); }
-  if (hasVolText) { trust = Math.min(trust, 0.45); reasons.push('VOL_PRODUCT'); }
+  // Single-stock basé sur concentration réelle (pas juste pattern nom)
+  if (holdingsCount > 0 && holdingsCount <= 2 && topW >= 0.85) {
+    trust = Math.min(trust, 0.70);
+    reasons.push('SINGLE_STOCK_CONCENTRATION');
+  }
 
-  // Pas de breakdown secteurs => données faibles
-  if (!hasSectors) { trust = Math.min(trust, 0.30); reasons.push('NO_SECTOR_DATA'); }
-
-  // Non-standard déjà détecté
-  if (etf.etf_type === 'single_stock') { trust = Math.min(trust, 0.75); reasons.push('SINGLE_STOCK'); }
+  // Leverage/inverse : pénalité modérée
   if (etf.etf_type === 'leveraged' || etf.etf_type === 'inverse') {
     trust = Math.min(trust, 0.65);
-    reasons.push(`NON_STANDARD_${etf.etf_type.toUpperCase()}`);
+    reasons.push(`NON_STANDARD_${String(etf.etf_type).toUpperCase()}`);
+  }
+
+  // Pas de data sectorielle => confiance basse
+  if (!sectors.length) {
+    trust = Math.min(trust, 0.30);
+    reasons.push('NO_SECTOR_DATA');
   }
 
   trust = Math.max(0, Math.min(1, trust));
   return {
     sector_trust: Number(trust.toFixed(2)),
-    sector_signal_ok: trust >= 0.60,
-    sector_suspect: trust < 0.60,
+    sector_signal_ok: trust >= 0.50,
+    sector_suspect: trust < 0.50,
     sector_guard_reasons: reasons.length ? reasons : ['STANDARD_ETF']
   };
 }
@@ -534,6 +532,12 @@ async function processListing(item) {
         const { symbolParam, quote } = resolved;
         const nameFromQuote = quote.name || quote.instrument_name || quote.fund_name || null;
         let finalName = nameFromQuote; if (!finalName && CONFIG.DEBUG) finalName = await lookupNameViaSearch(cleanSymbol(item.symbol));
+
+        // Guard: action glissée dans la liste ETF (fix ACT)
+        if (item.type === 'ETF' && nameLooksLikeEquityNotETF(finalName)) {
+          return { ...item, name: finalName, reason: 'NOT_ETF_NAME_LOOKS_EQUITY' };
+        }
+
         const currency = quote.currency || 'USD'; const fx = await fxToUSD(currency);
         const advData = await calculate30DayADV(symbolParam);
         let adv_median_usd;
@@ -544,7 +548,7 @@ async function processListing(item) {
 }
 
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement + SECTOR GUARD v14.0\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement + SECTOR GUARD v14.1\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📏  Longueur max objectifs: ${CONFIG.OBJECTIVE_MAXLEN} caractères`);
@@ -588,8 +592,9 @@ async function filterETFs() {
     const taxonomyTranslatedCount = results.etfs.filter(e => e.fund_type_fr || e.sector_top_fr).length + results.bonds.filter(e => e.fund_type_fr || e.sector_top_fr).length;
     const bondsWithDuration = results.bonds.filter(e => e.bond_avg_duration != null).length; const bondsWithCredit = results.bonds.filter(e => e.bond_credit_score != null).length; const bondsWithRating = results.bonds.filter(e => e.bond_credit_rating != null).length;
     const sectorSuspectsCount = results.etfs.filter(e => e.sector_suspect).length;
+    const equityRejectedCount = results.rejected.filter(r => r.reason === 'NOT_ETF_NAME_LOOKS_EQUITY').length;
     results.stats.data_quality = { with_aum: results.etfs.filter(e => e.aum_usd != null).length, with_ter: results.etfs.filter(e => e.total_expense_ratio != null).length, with_yield: results.etfs.filter(e => e.yield_ttm != null).length, with_sectors: results.etfs.filter(e => e.sectors && e.sectors.length > 0).length, with_countries: results.etfs.filter(e => e.countries && e.countries.length > 0).length, with_objective: results.etfs.filter(e => e.objective && e.objective.length > 0).length, with_holdings: results.etfs.filter(e => e.holdings_top10 && e.holdings_top10.length > 0).length, with_auto_detection: results.etfs.filter(e => e.auto_detected_composition).length, avg_quality_score: results.etfs.length > 0 ? Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length) : 0, by_etf_type: { standard: results.etfs.filter(e => e.etf_type === 'standard').length, inverse: results.etfs.filter(e => e.etf_type === 'inverse').length, leveraged: results.etfs.filter(e => e.etf_type === 'leveraged').length, single_stock: results.etfs.filter(e => e.etf_type === 'single_stock').length } };
-    results.stats.sector_guard = { suspects_count: sectorSuspectsCount, reliable_count: results.etfs.length - sectorSuspectsCount };
+    results.stats.sector_guard = { suspects_count: sectorSuspectsCount, reliable_count: results.etfs.length - sectorSuspectsCount, equity_filtered: equityRejectedCount };
     results.stats.bond_metrics = { with_duration: bondsWithDuration, with_credit_score: bondsWithCredit, with_credit_rating: bondsWithRating, coverage_pct: results.bonds.length > 0 ? Math.round(bondsWithDuration / results.bonds.length * 100) : 0 };
     if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) results.stats.translation = { objectives_translated: translatedCount, taxonomies_translated: taxonomyTranslatedCount, cache_size: Object.keys(translationCache).length };
     const rejectionReasons = {}; results.rejected.forEach(item => { if (item.reason) rejectionReasons[item.reason] = (rejectionReasons[item.reason] || 0) + 1; else if (item.failed) item.failed.forEach(f => { rejectionReasons[f] = (rejectionReasons[f] || 0) + 1; }); }); results.stats.rejection_reasons = rejectionReasons;
@@ -613,12 +618,12 @@ async function filterETFs() {
     const bondsNarrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n'; const bondsNarrowRows = results.bonds.flatMap(fund => { const hs = (fund.holdings_top10 && fund.holdings_top10.length) ? fund.holdings_top10 : topN(fund.holdings || [], 'weight', 10); return hs.map((h, idx) => { const etfSym = fund.symbol || ''; const rank = idx + 1; const hSym = h.symbol || ''; const hName = (h.name || '').replace(/"/g,'""'); const wPct = (h.weight != null) ? (h.weight * 100).toFixed(2) : ''; const cells = [etfSym, rank, hSym, hName, wPct].map(v => { const s = String(v); return /[",\n]/.test(s) ? `"${s}"` : s; }); return cells.join(','); }); }); const combinedBondsHoldingsPath = path.join(OUT_DIR, 'combined_bonds_holdings.csv'); await fs.writeFile(combinedBondsHoldingsPath, bondsNarrowHeader + (bondsNarrowRows.length ? bondsNarrowRows.join('\n') + '\n' : '')); console.log(`📝 Combined BONDS holdings (Top10): ${bondsNarrowRows.length} lignes → ${combinedBondsHoldingsPath}`);
     await saveTranslationCache();
     console.log('\n📊 RÉSUMÉ:'); if (results.stats.limited_run) console.log(`⚠️  RUN LIMITÉ: ETFs ${etfs.length}/${totalEtfsOriginal} | Bonds ${bonds.length}/${totalBondsOriginal}`); console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`); console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`); console.log(`Rejetés: ${results.rejected.length}`); console.log(`Holdings ETFs: ${etfPositionsCount} positions (Top10)`); console.log(`Holdings Bonds: ${bondsPositionsCount} positions (Top10)`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) { console.log(`Traductions objectifs: ${translatedCount} traduits`); console.log(`Traductions taxonomies: ${taxonomyTranslatedCount} traduits`); console.log(`Cache: ${Object.keys(translationCache).length} entrées`); } console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
-    console.log('\n🛡️ Sector Guard:'); console.log(`  - ETFs suspects: ${sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - ETFs fiables: ${results.etfs.length - sectorSuspectsCount}/${results.etfs.length}`);
+    console.log('\n🛡️ Sector Guard v14.1:'); console.log(`  - ETFs suspects (trust<0.50): ${sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - ETFs fiables (trust>=0.50): ${results.etfs.length - sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - Actions filtrées (NOT_ETF): ${equityRejectedCount}`);
     console.log('\n📈 Métriques obligataires:'); console.log(`  - Bonds avec duration: ${bondsWithDuration}/${results.bonds.length}`); console.log(`  - Bonds avec credit_score: ${bondsWithCredit}/${results.bonds.length}`); console.log(`  - Bonds avec credit_rating: ${bondsWithRating}/${results.bonds.length}`);
     console.log('\n📊 Qualité des données:'); Object.entries(results.stats.data_quality).forEach(([key, count]) => { if (typeof count === 'object') { console.log(`  - ${key}:`); Object.entries(count).forEach(([subkey, subcount]) => { console.log(`    • ${subkey}: ${subcount}`); }); } else console.log(`  - ${key}: ${count}/${results.etfs.length}`); });
     console.log('\n📊 Raisons de rejet:'); Object.entries(rejectionReasons).forEach(([reason, count]) => { console.log(`  - ${reason}: ${count}`); });
     console.log(`\n✅ Résultats complets: ${filteredPath}`); console.log(`✅ Weekly snapshot JSON: ${weeklyPath}`); console.log(`✅ CSV ETFs: ${etfCsvPath}`); console.log(`✅ CSV Bonds: ${bondsCsvPath}`); console.log(`✅ CSV Holdings ETFs: ${holdingsCsvPath}`); console.log(`✅ CSV Holdings Bonds: ${combinedBondsHoldingsPath}`); console.log(`✅ Sector suspects: ${suspectsPath}`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) console.log(`✅ Cache traductions: ${TRANSLATION_CACHE_PATH}`);
-    if (process.env.GITHUB_OUTPUT) { const fsSync = require('fs'); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_count=${results.bonds.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etf_holdings_rows=${narrowRows.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_holdings_rows=${bondsNarrowRows.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_holdings_positions=${etfPositionsCount + bondsPositionsCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_duration=${bondsWithDuration}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_credit=${bondsWithCredit}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_rating=${bondsWithRating}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `sector_suspects=${sectorSuspectsCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `limited_run=${results.stats.limited_run}\n`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) { fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `objectives_translated=${translatedCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `taxonomies_translated=${taxonomyTranslatedCount}\n`); } }
+    if (process.env.GITHUB_OUTPUT) { const fsSync = require('fs'); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_count=${results.bonds.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etf_holdings_rows=${narrowRows.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_holdings_rows=${bondsNarrowRows.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_holdings_positions=${etfPositionsCount + bondsPositionsCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_duration=${bondsWithDuration}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_credit=${bondsWithCredit}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_rating=${bondsWithRating}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `sector_suspects=${sectorSuspectsCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `equity_filtered=${equityRejectedCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `limited_run=${results.stats.limited_run}\n`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) { fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `objectives_translated=${translatedCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `taxonomies_translated=${taxonomyTranslatedCount}\n`); } }
 }
 
 if (!CONFIG.API_KEY) { console.error('❌ TWELVE_DATA_API_KEY manquante'); process.exit(1); }
