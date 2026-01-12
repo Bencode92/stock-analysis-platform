@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.10 - Ajout CSG non déductible pour TNS à l'IS
+// Version 3.11 - Ajout tauxMarge et cashNetReel pour Micro-entreprise
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -238,11 +238,18 @@ class SimulationsFiscales {
         return normalizedParams;
     }
     
-    // MICRO-ENTREPRISE
+// MICRO-ENTREPRISE - v3.11 : Ajout tauxMarge et cashNetReel
     static simulerMicroEntreprise(params) {
         // Normaliser les paramètres
         const normalizedParams = this.normalizeAssociatesParams(params, 'micro');
-        const { ca, typeMicro = 'BIC', modeExpert = true, versementLiberatoire = false } = normalizedParams;
+        const { 
+            ca, 
+            typeMicro = 'BIC', 
+            modeExpert = true, 
+            versementLiberatoire = false,
+            tauxMarge = 1.0,           // NOUVEAU : marge réelle (1.0 = 100% = pas de dépenses)
+            depensesPro = null         // NOUVEAU : dépenses explicites (prioritaire sur tauxMarge)
+        } = normalizedParams;
         
         // Utiliser les plafonds depuis legalStatuses si disponible
         const plafonds = {
@@ -315,8 +322,47 @@ class SimulationsFiscales {
             }
         }
         
-        // Calcul du revenu net après impôt
+        // Calcul du revenu net après impôt (NET FISCAL - sans tenir compte des dépenses réelles)
         const revenuNetApresImpot = ca - cotisationsSociales - impotRevenu;
+        
+        // ========== NOUVEAU : Calcul du cash net réel ==========
+        // Dépenses pro : soit explicites, soit estimées via tauxMarge
+        const depensesProEstimees = depensesPro !== null 
+            ? depensesPro 
+            : Math.round(ca * (1 - tauxMarge));
+        
+        // Cash net réel = ce qui reste vraiment en poche après dépenses + cotisations + IR
+        const cashNetReel = ca - depensesProEstimees - cotisationsSociales - impotRevenu;
+        
+        // Bénéfice forfaitaire (ce que le fisc considère comme ton bénéfice)
+        const abattementEffectif = abattements[typeEffectif];
+        const beneficeForfaitaire = ca * (1 - abattementEffectif);
+        
+        // Bénéfice réel (ce que tu gagnes vraiment)
+        const beneficeReel = ca - depensesProEstimees;
+        
+        // Écart fiscal : positif = tu paies trop d'impôts par rapport à ta marge réelle
+        const ecartFiscal = beneficeForfaitaire - beneficeReel;
+        
+        // Warnings
+        const warnings = [];
+        
+        // Alerte si marge réelle < bénéfice forfaitaire (micro défavorable)
+        if (tauxMarge < (1 - abattementEffectif)) {
+            warnings.push(`⚠️ Micro potentiellement défavorable : votre marge réelle (${Math.round(tauxMarge * 100)}%) est inférieure au bénéfice forfaitaire (${Math.round((1 - abattementEffectif) * 100)}%). Vous êtes imposé sur ${Math.round(beneficeForfaitaire)}€ alors que votre bénéfice réel est de ${Math.round(beneficeReel)}€.`);
+        }
+        
+        // Alerte si cash net réel négatif ou très faible
+        if (cashNetReel < 0) {
+            warnings.push(`🚨 Attention : avec ces dépenses, votre cash net réel est négatif (${Math.round(cashNetReel)}€). La micro-entreprise n'est pas viable dans cette configuration.`);
+        } else if (cashNetReel < revenuNetApresImpot * 0.3) {
+            warnings.push(`⚠️ Votre cash net réel (${Math.round(cashNetReel)}€) est très inférieur au net fiscal affiché (${Math.round(revenuNetApresImpot)}€). Vérifiez si la micro est adaptée.`);
+        }
+        
+        // Seuil de marge de survie (cotisations + IR doivent être couverts)
+        const chargesFiscales = cotisationsSociales + impotRevenu;
+        const seuilMargeSurvie = chargesFiscales / ca;
+        // ==========================================================
         
         return {
             compatible: true,
@@ -324,13 +370,41 @@ class SimulationsFiscales {
             typeEntreprise: 'Micro-entreprise',
             typeMicro: typeEffectif,
             abattement: abattements[typeEffectif] * 100 + '%',
+            abattementDecimal: abattementEffectif,           // NOUVEAU
             revenuImposable: revenuImposable,
             cotisationsSociales: cotisationsSociales,
             impotRevenu: impotRevenu,
+            
+            // Net fiscal (ancien calcul, inchangé pour compatibilité)
             revenuNetApresImpot: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
+            
+            // ========== NOUVEAUX CHAMPS ==========
+            // Marge et dépenses
+            tauxMarge: tauxMarge,
+            tauxMargePct: Math.round(tauxMarge * 100) + '%',
+            depensesPro: depensesProEstimees,
+            
+            // Bénéfices comparés
+            beneficeForfaitaire: beneficeForfaitaire,        // Ce que le fisc voit
+            beneficeReel: beneficeReel,                      // Ce que tu gagnes vraiment
+            ecartFiscal: ecartFiscal,                        // Différence (positif = défavorable)
+            
+            // Cash net réel (ce qui compte vraiment)
+            cashNetReel: cashNetReel,
+            ratioCashNetCA: (cashNetReel / ca) * 100,
+            
+            // Indicateurs de viabilité
+            seuilMargeSurvie: seuilMargeSurvie,
+            seuilMargeSurviePct: Math.round(seuilMargeSurvie * 100) + '%',
+            microDefavorable: tauxMarge < (1 - abattementEffectif),
+            
+            // Warnings
+            warnings: warnings,
+            // =====================================
+            
             versementLiberatoire: versementLiberatoire,
-            modeExpert: true, // Toujours en mode expert
+            modeExpert: true,
             tmiReel: tmiReel,
             // Infos associés (toujours 1 pour micro)
             nbAssocies: 1,
