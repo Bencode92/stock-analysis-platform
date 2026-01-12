@@ -1510,7 +1510,7 @@ function runComparison() {
         'sci': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 1, capitalSocial: 0 }
     };
     
-    // Associer chaque statut à sa fonction de simulation et son nom d'affichage
+// Associer chaque statut à sa fonction de simulation et son nom d'affichage
     const statutsComplets = {
        'micro': { 
   nom: 'Micro-entreprise', 
@@ -1520,40 +1520,36 @@ function runComparison() {
 
     // 🔹 Lecture ACRE (et prorata si tu as activé le champ mois)
     const acreEnabled = document.getElementById('micro-acre')?.checked || false;
-    // si tu n’utilises pas le champ mois, garde 12 :
     const acreMois = parseInt(document.getElementById('micro-acre-mois')?.value) || 12;
 
-    // 🧮 Appel moteur (s’il sait gérer l’ACRE, on lui passe l’info)
+    // 🔹 Lecture MARGE depuis l'UI (AJOUT CLÉ)
+    const margePct = parseFloat(document.getElementById('sim-marge')?.value) || 30;
+    const tauxMarge = margePct / 100;  // ex: 90% → 0.90
+
+    // 🧮 Appel moteur avec tauxMarge
     const sim = window.SimulationsFiscales.simulerMicroEntreprise({
       ca: ca,
       typeMicro: type,
       tmiActuel: tmi,
       modeExpert: modeExpert,
       versementLiberatoire: vfl,
-      acre: acreEnabled,         // <- ignoré si non géré dans ton moteur (ok)
-      acreMois: acreMois
+      acre: acreEnabled,
+      acreMois: acreMois,
+      tauxMarge: tauxMarge   // ← AJOUT : passe la marge au moteur
     });
 
     // 🔒 Patch local ACRE (garanti même si le moteur ne le gère pas)
     if (acreEnabled && sim?.compatible) {
-      // nécessite les helpers:
-      // const MICRO_SOC_TAUX = { BIC_VENTE: 0.123, BIC_SERVICE: 0.212, BNC: 0.246 };
-      // function microTauxCotisations(type='BIC_SERVICE', {acre=false, mois=12}={}) { ... }
-     const txACRE = microTauxCotisations(type, { acre: true, mois: acreMois }); // p.ex. 0.106
-  sim.cotisationsSociales = round2(ca * txACRE);  // ✅ 70 000 × 0.106 = 7 420 €
+      const txACRE = microTauxCotisations(type, { acre: true, mois: acreMois });
+      sim.cotisationsSociales = round2(ca * txACRE);
 
-      // IR ne change pas en micro :
-      //  - VFL actif : impôt = taux * CA (déjà dans sim.impotRevenu)
-      //  - sinon : barème sur CA après abattement (on ne touche pas sim.impotRevenu)
       const impots = Number(sim.impotRevenu) || 0;
       const cfp = Number(sim.cfp) || 0;
       const cfe = Number(sim.cfe) || 0;
 
-      // Net et ratio recalculés
       sim.revenuNetApresImpot = round2(ca - sim.cotisationsSociales - cfp - cfe - impots);
       sim.ratioNetCA = round2((sim.revenuNetApresImpot / ca) * 100);
 
-      // Trace pour l’écran de détail
       sim._acre_applique = { txAvant: MICRO_SOC_TAUX[type], txApres: txACRE, mois: acreMois };
     }
 
