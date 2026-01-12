@@ -2864,7 +2864,6 @@ if (statutId === 'micro') {
       <strong>Hypothèse :</strong> dépenses pro = CA × (1 − marge). Ajuste la marge pour refléter tes charges réelles.
     </div>
   `;
-}
 } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
   // Cas des structures avec dirigeant assimilé salarié
 
