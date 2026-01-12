@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v14.1: Sector Guard amélioré (fix ACIO/ACT, VIX-only, equity filter)
+// v14.2: Sector Guard amélioré (buckets, imputation, alt assets, detectETFType fix)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -153,6 +153,7 @@ async function translateLabel(label, domain = 'generic', to = 'fr') {
 
 const US_MIC_CODES = ['ARCX', 'BATS', 'XNAS', 'XNYS', 'XASE', 'XNGS', 'XNMS'];
 
+// === SINGLE STOCK SECTORS (extended) ===
 const SINGLE_STOCK_SECTORS = {
     'AAPL': { sector: 'Technology', country: 'United States' },
     'MSFT': { sector: 'Technology', country: 'United States' },
@@ -173,7 +174,14 @@ const SINGLE_STOCK_SECTORS = {
     'BRK': { sector: 'Financial Services', country: 'United States' },
     'XOM': { sector: 'Energy', country: 'United States' },
     'UNH': { sector: 'Healthcare', country: 'United States' },
-    'PG': { sector: 'Consumer Defensive', country: 'United States' }
+    'PG': { sector: 'Consumer Defensive', country: 'United States' },
+    'AMD': { sector: 'Technology', country: 'United States' },
+    'AVGO': { sector: 'Technology', country: 'United States' },
+    'COIN': { sector: 'Financial Services', country: 'United States' },
+    'LLY': { sector: 'Healthcare', country: 'United States' },
+    'MU': { sector: 'Technology', country: 'United States' },
+    'RIOT': { sector: 'Financial Services', country: 'United States' },
+    'BABA': { sector: 'Consumer Cyclical', country: 'China' },
 };
 
 const SECTOR_NORMALIZATION = {
@@ -186,47 +194,90 @@ const SECTOR_NORMALIZATION = {
     'communication': 'Communication Services', 'telecom': 'Communication Services'
 };
 
-const LEVERAGE_PATTERNS = {
-    inverse: /(-1X|BEAR|SHORT|INVERSE|SH$|PSQ|DOG|DXD|SDS|SQQQ)/i,
-    leveraged: /(2X|3X|ULTRA|TQQQ|UPRO|SPXL|QLD|SSO|UDOW|UMDD|URTY|TNA)/i,
-    singleStock: new RegExp(`(${Object.keys(SINGLE_STOCK_SECTORS).join('|')})`, 'i')
+// === DETECT ETF TYPE v2 (fix faux positifs leveraged) ===
+const ETF_TYPE_RX = {
+  inverse: /\b(-?1x|inverse|short(?!\s*term)|bear|ultra\s*short|ultrashort)\b/i,
+  leveraged: /\b([23])\s*x\b|\b(2x|3x)\b|\bleveraged\b|\bultra\s*pro\b|\bultrapro\b/i,
+  ultraAlone: /\bultra\b/i,
+  ultraIssuer: /\b(proshares|direxion|graniteshares|t-?rex|tradr|microsectors)\b/i,
+  vehicle: /\b(etn|etc|notes?\b|grantor\s*trust|commodity\s*pool)\b/i,
+  indexDerivative: /\b(s&p\s*500|spx|spy|qqq|nasdaq|dow|russell|r2k|iwm|dia)\b/i,
 };
 
-// === SECTOR GUARD v14.1 : Détection anomalies taxonomiques ===
+const SINGLE_STOCK_RX = new RegExp(`\\b(${Object.keys(SINGLE_STOCK_SECTORS).join('|')})\\b`, 'i');
 
-// Filtre actions glissées dans all_etfs.csv
+function detectETFType(symbol, name, objective) {
+  const fullText = `${symbol} ${name || ''} ${objective || ''}`;
+  const textLower = fullText.toLowerCase();
+
+  // Detect underlying ticker
+  let underlying_ticker = null;
+  const m = fullText.match(SINGLE_STOCK_RX);
+  if (m?.[0]) {
+    const t = m[0].toUpperCase();
+    if (SINGLE_STOCK_SECTORS[t]) underlying_ticker = t;
+  }
+
+  // Structured vehicle (ETN/ETC/NOTE) - priority over leveraged
+  if (ETF_TYPE_RX.vehicle.test(textLower)) {
+    return { type: 'structured', underlying_ticker };
+  }
+
+  const isInverse = ETF_TYPE_RX.inverse.test(textLower);
+  // "Ultra" seul => leveraged seulement si issuer typique et pas ultrashort
+  const isLeveraged = ETF_TYPE_RX.leveraged.test(textLower) ||
+    (ETF_TYPE_RX.ultraAlone.test(textLower) && ETF_TYPE_RX.ultraIssuer.test(textLower) && !isInverse);
+
+  // Check if index derivative (no single stock)
+  const isIndexDeriv = !underlying_ticker && ETF_TYPE_RX.indexDerivative.test(textLower);
+
+  if (isInverse) {
+    return { type: 'inverse', leverage: -1, underlying_ticker, is_index_derivative: isIndexDeriv };
+  }
+  if (isLeveraged) {
+    const mm = textLower.match(/\b([23])\s*x\b|\b(2x|3x)\b/i);
+    const lev = mm ? parseInt((mm[1] || mm[2] || '2')[0], 10) : 2;
+    return { type: 'leveraged', leverage: lev, underlying_ticker, is_index_derivative: isIndexDeriv };
+  }
+  if (underlying_ticker) {
+    return { type: 'single_stock', ticker: underlying_ticker, underlying_ticker };
+  }
+
+  return { type: 'standard' };
+}
+
+// === EQUITY FILTER (actions dans all_etfs.csv) ===
 const ETF_NAME_TOKENS = /\b(etf|exchange\s*traded|fund|trust|shares|etn|etc|note|ucits)\b/i;
 const COMPANY_SUFFIX = /\b(inc\.?|corp\.?|corporation|ltd\.?|plc|company|co\.|holdings|group)\s*$/i;
+const ADR_PATTERN = /\b(inc\.?|corp\.?|ltd\.?)\b.*\b(american\s+depositary|adr|ads)\b/i;
 
 function nameLooksLikeEquityNotETF(name) {
   const n = String(name || '').trim();
   if (!n) return false;
   if (ETF_NAME_TOKENS.test(n)) return false;
+  if (ADR_PATTERN.test(n)) return true;
   return COMPANY_SUFFIX.test(n);
 }
 
-// Patterns commodities
-const COMMODITY_KEYWORDS = /\b(gold|silver|platinum|palladium|bullion|precious\s*metals?|commodity|commodities|crude\s*oil|oil\s*fund|natural\s*gas|uranium|copper|wheat|corn|soybean|agriculture|base\s*metals?)\b/i;
+// === SECTOR GUARD v14.2 : Alt Assets + Buckets ===
 
-// Patterns crypto
+// Alt asset detection
+const COMMODITY_KEYWORDS = /\b(gold|silver|platinum|palladium|bullion|precious\s*metals?|commodit(y|ies)|crude\s*oil|oil\s*fund|natural\s*gas|uranium|copper|wheat|corn|soybean|agriculture|base\s*metals?)\b/i;
 const CRYPTO_KEYWORDS = /\b(bitcoin|btc|ethereum|eth|crypto|cryptocurrency|digital\s*asset|blockchain)\b/i;
+const FX_KEYWORDS = /\b(us\s*dollar|dollar\s*index|currencyshares|euro\s*trust|yen\s*trust|franc\s*trust|sterling\s*trust)\b/i;
+const VIX_KEYWORDS = /\b(vix|volatility\s+(index|futures?|etf|etn)|short[- ]term\s+volatility)\b/i;
 
-// Patterns devises/FX
-const FX_KEYWORDS = /\bcurrencyshares\b|\b(euro|yen|sterling|swiss\s*franc|canadian\s*dollar)\s*trust\b|\bu\.?s\.?\s*dollar\s*index\b/i;
+function inferAltAsset(text, fundType = '') {
+  const t = String(text || '').toLowerCase();
+  const ft = String(fundType || '').toLowerCase();
+  if (VIX_KEYWORDS.test(t)) return { alt: true, kind: 'volatility' };
+  if (CRYPTO_KEYWORDS.test(t) || ft.includes('crypto') || ft.includes('bitcoin') || ft.includes('digital')) return { alt: true, kind: 'crypto' };
+  if (COMMODITY_KEYWORDS.test(t) || ft.includes('commodity') || ft.includes('precious') || ft.includes('metal') || ft.includes('gold') || ft.includes('silver')) return { alt: true, kind: 'commodity' };
+  if (FX_KEYWORDS.test(t) || ft.includes('currency')) return { alt: true, kind: 'fx' };
+  return { alt: false, kind: null };
+}
 
-// Patterns structures véhicules
-const VEHICLE_KEYWORDS = /\b(grantor\s*trust|commodity\s*pool|etn|etc)\b|\blp\s*$|\bl\.p\.\s*$/i;
-
-// VIX uniquement (fix ACIO - ne matche plus "volatility" seul)
-const VIX_PATTERNS = [
-  /\bvix\b/i,
-  /\bcboe\s+volatility\b/i,
-  /\bvolatility\s+(index|indices|futures?|etf|etn|note)\b/i,
-  /\bshort[- ]term\s+volatility\b/i,
-  /\bvolatility\s+futures?\b/i,
-];
-
-// Options overlay (informatif, SANS pénalité)
+// Options overlay (informatif)
 const OPTIONS_OVERLAY_PATTERNS = [
   /\bcovered\s*call(s)?\b/i,
   /\bbuy[- ]?write\b/i,
@@ -256,8 +307,11 @@ function testAny(patterns, text) {
 function computeSectorGuard(etf) {
   const reasons = [];
   let trust = 1.0;
+  let bucket = 'STANDARD';
 
   const text = [etf.symbol, etf.name, etf.fund_type, etf.objective_en].filter(Boolean).join(' ');
+  const textLower = text.toLowerCase();
+  const ftLower = String(etf.fund_type || '').toLowerCase();
 
   const sectors = etf.sectors || [];
   const sectorTop = etf.sector_top || null;
@@ -266,77 +320,102 @@ function computeSectorGuard(etf) {
 
   const holdings = etf.holdings_top10 || [];
   const holdingsCount = holdings.length;
-  const topW = Number(holdings?.[0]?.weight ?? 0);
 
-  // Tag options overlay (informatif, SANS pénalité)
+  // Infer alt asset
+  const altAsset = inferAltAsset(text, etf.fund_type);
+
+  // Options overlay (tag info)
   if (testAny(OPTIONS_OVERLAY_PATTERNS, text)) {
     reasons.push('OPTIONS_OVERLAY');
   }
 
-  // Signal fort : fund_type explicite
-  const ft = String(etf.fund_type || '').toLowerCase();
-  if (/\b(commodit|precious\s*metal|gold|silver|energy\s*commodit|agricultur|natural\s*resource|metals?)\b/i.test(ft)) {
-    trust = Math.min(trust, 0.20);
-    reasons.push('FUND_TYPE_COMMODITY');
-  }
-  if (/\b(bitcoin|crypto|digital\s*asset|cryptocurrency|ethereum)\b/i.test(ft)) {
-    trust = Math.min(trust, 0.20);
-    reasons.push('FUND_TYPE_CRYPTO');
-  }
+  // === BUCKET ASSIGNMENT ===
 
-  const hasCommodityText = COMMODITY_KEYWORDS.test(text);
-  const hasCryptoText = CRYPTO_KEYWORDS.test(text);
-  const hasFxText = FX_KEYWORDS.test(text);
-  const hasVehicleText = VEHICLE_KEYWORDS.test(text);
-  const isVixProduct = testAny(VIX_PATTERNS, text);
-  const isTrueFinancial = testAny(TRUE_FINANCIAL_PATTERNS, text);
+  // 1. Alt assets (commodity/crypto/fx/vix)
+  if (altAsset.alt) {
+    bucket = `ALT_ASSET_${altAsset.kind.toUpperCase()}`;
+    trust = Math.min(trust, 0.35);
+    reasons.push(`ALT_ASSET_${altAsset.kind.toUpperCase()}`);
 
-  // Shortcircuit : Financial Services dominant + vrai ETF financier => OK
-  if (sectorName === 'Financial Services' && sectorWeight >= 0.60 && isTrueFinancial) {
-    return { sector_trust: 1.0, sector_signal_ok: true, sector_suspect: false, sector_guard_reasons: ['VERIFIED_FINANCIAL_ETF'] };
-  }
-
-  // Financial Services dominant + incohérence => suspect
-  if (sectorName === 'Financial Services' && sectorWeight >= 0.60) {
-    if (hasCommodityText) { trust = Math.min(trust, 0.20); reasons.push('FS_BUT_COMMODITY_TEXT'); }
-    if (hasCryptoText)    { trust = Math.min(trust, 0.20); reasons.push('FS_BUT_CRYPTO_TEXT'); }
-    if (hasFxText)        { trust = Math.min(trust, 0.25); reasons.push('FS_BUT_FX_TEXT'); }
-    if (isVixProduct)     { trust = Math.min(trust, 0.25); reasons.push('FS_BUT_VIX_PRODUCT'); }
-    if (hasVehicleText && sectorWeight >= 0.90) {
-      trust = Math.min(trust, 0.40);
-      reasons.push('FS_VEHICLE_STRUCTURE');
+    // Financial Services mislabel
+    if (sectorName === 'Financial Services' && sectorWeight >= 0.60) {
+      trust = Math.min(trust, 0.20);
+      if (altAsset.kind === 'commodity') reasons.push('FS_BUT_COMMODITY');
+      if (altAsset.kind === 'crypto') reasons.push('FS_BUT_CRYPTO');
+      if (altAsset.kind === 'fx') reasons.push('FS_BUT_FX');
+      if (altAsset.kind === 'volatility') reasons.push('FS_BUT_VIX');
     }
   }
 
-  // 0 holdings + texte commodity/crypto/VIX => souvent trust/ETN synthétique
-  if (holdingsCount === 0 && (hasCommodityText || hasCryptoText || isVixProduct)) {
-    trust = Math.min(trust, 0.25);
-    reasons.push('NO_HOLDINGS_ALT_ASSET');
+  // 2. Structured vehicle (ETN/ETC/NOTE)
+  else if (etf.etf_type === 'structured') {
+    bucket = 'STRUCTURED_VEHICLE';
+    trust = Math.min(trust, 0.40);
+    reasons.push('STRUCTURED_VEHICLE');
   }
 
-  // Single-stock basé sur concentration réelle (pas juste pattern nom)
-  if (holdingsCount > 0 && holdingsCount <= 2 && topW >= 0.85) {
+  // 3. Index derivative (inverse/leveraged on index, no single stock)
+  else if ((etf.etf_type === 'inverse' || etf.etf_type === 'leveraged') && etf.is_index_derivative) {
+    bucket = 'INDEX_DERIVATIVE';
+    trust = Math.min(trust, 0.45);
+    reasons.push('INDEX_DERIVATIVE');
+    if (etf.etf_type === 'inverse') reasons.push('NON_STANDARD_INVERSE');
+    if (etf.etf_type === 'leveraged') reasons.push('NON_STANDARD_LEVERAGED');
+  }
+
+  // 4. Single stock derivative (inverse/leveraged on single stock)
+  else if ((etf.etf_type === 'inverse' || etf.etf_type === 'leveraged') && etf.underlying_ticker) {
+    bucket = 'SINGLE_STOCK_DERIVATIVE';
+    trust = Math.min(trust, 0.55);
+    reasons.push('SINGLE_STOCK_DERIVATIVE');
+    if (etf.etf_type === 'inverse') reasons.push('NON_STANDARD_INVERSE');
+    if (etf.etf_type === 'leveraged') reasons.push('NON_STANDARD_LEVERAGED');
+  }
+
+  // 5. Leveraged/inverse without underlying (data missing)
+  else if (etf.etf_type === 'inverse' || etf.etf_type === 'leveraged') {
+    bucket = 'NON_STANDARD';
+    trust = Math.min(trust, 0.40);
+    if (etf.etf_type === 'inverse') reasons.push('NON_STANDARD_INVERSE');
+    if (etf.etf_type === 'leveraged') reasons.push('NON_STANDARD_LEVERAGED');
+    if (!sectors.length) reasons.push('NO_SECTOR_DATA');
+  }
+
+  // 6. Single stock ETF
+  else if (etf.etf_type === 'single_stock') {
+    bucket = 'SINGLE_STOCK';
     trust = Math.min(trust, 0.70);
-    reasons.push('SINGLE_STOCK_CONCENTRATION');
+    reasons.push('SINGLE_STOCK');
   }
 
-  // Leverage/inverse : pénalité modérée
-  if (etf.etf_type === 'leveraged' || etf.etf_type === 'inverse') {
-    trust = Math.min(trust, 0.65);
-    reasons.push(`NON_STANDARD_${String(etf.etf_type).toUpperCase()}`);
+  // 7. Standard ETF
+  else {
+    // Check if verified financial
+    if (sectorName === 'Financial Services' && sectorWeight >= 0.60 && testAny(TRUE_FINANCIAL_PATTERNS, text)) {
+      bucket = 'VERIFIED_FINANCIAL';
+      trust = 1.0;
+      reasons.push('VERIFIED_FINANCIAL_ETF');
+    }
+    // No sector data
+    else if (!sectors.length) {
+      bucket = 'DATA_MISSING';
+      trust = Math.min(trust, 0.30);
+      reasons.push('NO_SECTOR_DATA');
+    }
+    // Standard with data
+    else {
+      bucket = 'STANDARD';
+    }
   }
 
-  // Pas de data sectorielle => confiance basse
-  if (!sectors.length) {
-    trust = Math.min(trust, 0.30);
-    reasons.push('NO_SECTOR_DATA');
-  }
-
+  // Final clamp
   trust = Math.max(0, Math.min(1, trust));
+  
   return {
     sector_trust: Number(trust.toFixed(2)),
     sector_signal_ok: trust >= 0.50,
     sector_suspect: trust < 0.50,
+    sector_bucket: bucket,
     sector_guard_reasons: reasons.length ? reasons : ['STANDARD_ETF']
   };
 }
@@ -369,14 +448,6 @@ function clampAbs(v, maxAbs) { if (v == null) return null; const n = Number(v); 
 function cleanSymbol(symbol) { if (symbol.includes('.')) return symbol.split('.')[0]; return symbol; }
 function normalizeSector(sector) { if (!sector) return sector; const lower = sector.toLowerCase().trim(); return SECTOR_NORMALIZATION[lower] || sector; }
 
-function detectETFType(symbol, name, objective) {
-    const fullText = `${symbol} ${name || ''} ${objective || ''}`;
-    if (LEVERAGE_PATTERNS.inverse.test(fullText)) return { type: 'inverse', leverage: -1 };
-    if (LEVERAGE_PATTERNS.leveraged.test(fullText)) { const match = fullText.match(/([23])X/i); return { type: 'leveraged', leverage: match ? parseInt(match[1]) : 2 }; }
-    if (LEVERAGE_PATTERNS.singleStock.test(fullText)) { const ticker = fullText.match(LEVERAGE_PATTERNS.singleStock)?.[0]?.toUpperCase(); if (ticker && SINGLE_STOCK_SECTORS[ticker]) return { type: 'single_stock', ticker }; }
-    return { type: 'standard' };
-}
-
 async function lookupNameViaSearch(sym) {
   try { const r = await axios.get('https://api.twelvedata.com/symbol_search', { params: { symbol: sym, apikey: CONFIG.API_KEY } }); const hit = r.data?.data?.[0]; return hit?.instrument_name || hit?.name || null; } catch { return null; }
 }
@@ -385,6 +456,7 @@ function pickWeekly(etf) {
     return {
         symbol: etf.symbol, name: etf.name || null, isin: etf.isin || null, mic_code: etf.mic_code || null, currency: etf.currency || null,
         fund_type: etf.fund_type || null, fund_type_fr: etf.fund_type_fr || null, etf_type: etf.etf_type || null,
+        underlying_ticker: etf.underlying_ticker || null, is_index_derivative: etf.is_index_derivative || false,
         aum_usd: etf.aum_usd ?? null, total_expense_ratio: etf.total_expense_ratio ?? null, yield_ttm: etf.yield_ttm ?? null,
         objective: etf.objective || '', objective_en: etf.objective_en || '',
         bond_avg_duration: etf.bond_avg_duration ?? null, bond_avg_maturity: etf.bond_avg_maturity ?? null,
@@ -393,7 +465,8 @@ function pickWeekly(etf) {
         sectors: etf.sectors || [], sector_top5: etf.sector_top5 || [], sector_top: etf.sector_top || null,
         sector_top5_fr: etf.sector_top5_fr || [], sector_top_fr: etf.sector_top_fr || null,
         sector_trust: etf.sector_trust ?? null, sector_signal_ok: etf.sector_signal_ok ?? null,
-        sector_suspect: etf.sector_suspect ?? null, sector_guard_reasons: etf.sector_guard_reasons || [],
+        sector_suspect: etf.sector_suspect ?? null, sector_bucket: etf.sector_bucket || null,
+        sector_guard_reasons: etf.sector_guard_reasons || [],
         countries: (etf.countries && etf.countries.length ? etf.countries : []),
         country_top5: (etf.country_top5 && etf.country_top5.length ? etf.country_top5 : []),
         country_top: (etf.country_top5 && etf.country_top5[0]) ? etf.country_top5[0] : null,
@@ -491,8 +564,14 @@ async function fetchWeeklyPack(symbolParam, item) {
         bond_avg_duration: avgDuration, bond_avg_maturity: avgMaturity, bond_credit_quality: creditQuality,
         bond_credit_score: creditScoreNum, bond_credit_rating: creditRatingDominant
     };
-    const etfTypeInfo = detectETFType(item.symbol, item.name, pack.objective);
-    pack.etf_type = etfTypeInfo.type; if (etfTypeInfo.leverage) pack.leverage = etfTypeInfo.leverage;
+    
+    // Detect ETF type with new v2 logic
+    const etfTypeInfo = detectETFType(item.symbol, fundName, pack.objective);
+    pack.etf_type = etfTypeInfo.type;
+    pack.underlying_ticker = etfTypeInfo.underlying_ticker || null;
+    pack.is_index_derivative = etfTypeInfo.is_index_derivative || false;
+    if (etfTypeInfo.leverage) pack.leverage = etfTypeInfo.leverage;
+    
     let fundTypeFr = null;
     if (CONFIG.TRANSLATE_TAXONOMY && pack.fund_type && !looksFrench(pack.fund_type)) fundTypeFr = await translateLabel(pack.fund_type, 'fund_type');
     let sectors = (c.major_market_sectors || []).map(x => ({ sector: normalizeSector(x.sector), weight: (x.weight != null) ? Number(x.weight) : null }));
@@ -501,6 +580,8 @@ async function fetchWeeklyPack(symbolParam, item) {
     const holdingsRaw = (c.top_holdings || c.holdings || c.constituents || []).filter(Boolean);
     const holdings = holdingsRaw.map(h => ({ symbol: cleanSymbol(h.symbol || h.ticker || h.code || ''), name: h.name || h.security || h.company || h.title || '', weight: (h.weight != null) ? Number(h.weight) : (h.allocation != null) ? Number(h.allocation) : (h.percent != null) ? Number(h.percent) : null })).filter(h => (h.symbol || h.name));
     let autoDetected = false;
+    
+    // Imputation for single_stock ETF
     if (!sectors.length && etfTypeInfo.type === 'single_stock' && etfTypeInfo.ticker) {
         const stockInfo = SINGLE_STOCK_SECTORS[etfTypeInfo.ticker];
         if (stockInfo) {
@@ -511,6 +592,20 @@ async function fetchWeeklyPack(symbolParam, item) {
             autoDetected = true; pack.is_single_stock = true;
         }
     }
+    
+    // Imputation for leveraged/inverse single-stock derivative
+    if (!sectors.length && (etfTypeInfo.type === 'leveraged' || etfTypeInfo.type === 'inverse') && etfTypeInfo.underlying_ticker) {
+        const stockInfo = SINGLE_STOCK_SECTORS[etfTypeInfo.underlying_ticker];
+        if (stockInfo) {
+            sectors = [{ sector: stockInfo.sector, weight: 1.0 }];
+            if (CONFIG.TRANSLATE_TAXONOMY) sectors[0].sector_fr = await translateLabel(stockInfo.sector, 'sector');
+            countries = [{ country: stockInfo.country, weight: 1.0 }];
+            if (!holdings.length) holdings.push({ symbol: etfTypeInfo.underlying_ticker, name: etfTypeInfo.underlying_ticker, weight: 1.0 });
+            autoDetected = true;
+            pack.is_single_stock = true;
+        }
+    }
+    
     if (!countries.length && pack.domicile) countries = [{ country: pack.domicile, weight: autoDetected ? 1.0 : null, is_domicile: !autoDetected }];
     const sector_top5 = topN(sectors, 'weight', 5);
     const country_top5 = topN(countries, 'weight', 5);
@@ -521,9 +616,13 @@ async function fetchWeeklyPack(symbolParam, item) {
     const sector_top_fr = sector_top ? (sector_top.sector_fr || '') : '';
 
     // === SECTOR GUARD ===
-    const guard = computeSectorGuard({ symbol: item.symbol, name: fundName, fund_type: pack.fund_type, objective_en: pack.objective_en, sectors, sector_top, holdings_top10, etf_type: pack.etf_type });
+    const guard = computeSectorGuard({ 
+      symbol: item.symbol, name: fundName, fund_type: pack.fund_type, objective_en: pack.objective_en, 
+      sectors, sector_top, holdings_top10, etf_type: pack.etf_type,
+      underlying_ticker: pack.underlying_ticker, is_index_derivative: pack.is_index_derivative
+    });
 
-    return { ...pack, fund_type_fr: fundTypeFr, sectors, sector_top5, sector_top, sector_top5_fr, sector_top_fr, countries, country_top5, country_top: country_top5[0] || null, holdings, holdings_top10, holding_top, auto_detected_composition: autoDetected, sector_trust: guard.sector_trust, sector_signal_ok: guard.sector_signal_ok, sector_suspect: guard.sector_suspect, sector_guard_reasons: guard.sector_guard_reasons };
+    return { ...pack, fund_type_fr: fundTypeFr, sectors, sector_top5, sector_top, sector_top5_fr, sector_top_fr, countries, country_top5, country_top: country_top5[0] || null, holdings, holdings_top10, holding_top, auto_detected_composition: autoDetected, sector_trust: guard.sector_trust, sector_signal_ok: guard.sector_signal_ok, sector_suspect: guard.sector_suspect, sector_bucket: guard.sector_bucket, sector_guard_reasons: guard.sector_guard_reasons };
 }
 
 async function processListing(item) {
@@ -533,7 +632,7 @@ async function processListing(item) {
         const nameFromQuote = quote.name || quote.instrument_name || quote.fund_name || null;
         let finalName = nameFromQuote; if (!finalName && CONFIG.DEBUG) finalName = await lookupNameViaSearch(cleanSymbol(item.symbol));
 
-        // Guard: action glissée dans la liste ETF (fix ACT)
+        // Guard: action glissée dans la liste ETF
         if (item.type === 'ETF' && nameLooksLikeEquityNotETF(finalName)) {
           return { ...item, name: finalName, reason: 'NOT_ETF_NAME_LOOKS_EQUITY' };
         }
@@ -548,7 +647,7 @@ async function processListing(item) {
 }
 
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement + SECTOR GUARD v14.1\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement + SECTOR GUARD v14.2\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📏  Longueur max objectifs: ${CONFIG.OBJECTIVE_MAXLEN} caractères`);
@@ -580,12 +679,12 @@ async function filterETFs() {
         console.log(`  ${isin} (${listings.length} listing${listings.length > 1 ? 's' : ''}) | Total ADV: ${(totalADV/1e6).toFixed(2)}M$ | ${passed ? '✅ PASS' : '❌ FAIL'}`);
         if (passed) { if (main.type === 'ETF') results.etfs.push(finalItem); else results.bonds.push(finalItem); } else results.rejected.push({ ...finalItem, failed: ['liquidity'] });
     });
-    console.log('\n🧩 Enrichissement HEBDO ETFs (summary + composition + SECTOR GUARD) sous budget 2584/min…');
+    console.log('\n🧩 Enrichissement HEBDO ETFs (summary + composition + SECTOR GUARD v14.2) sous budget 2584/min…');
     results.etfs.sort((a, b) => (b.net_assets || 0) - (a.net_assets || 0));
-    for (let i = 0; i < results.etfs.length; i += ENRICH_CONCURRENCY) { const batch = results.etfs.slice(i, i + ENRICH_CONCURRENCY); const batchNum = Math.floor(i/ENRICH_CONCURRENCY) + 1; const totalBatches = Math.ceil(results.etfs.length/ENRICH_CONCURRENCY); console.log(`📦 Enrichissement ETF lot ${batchNum}/${totalBatches}`); await Promise.all(batch.map(async (it) => { const symbolForApi = it.symbolParam || it.symbol; try { const weekly = await fetchWeeklyPack(symbolForApi, it); Object.assign(it, weekly); it.data_quality_score = calculateDataQualityScore(it); if (CONFIG.DEBUG) console.log(`  ${symbolForApi} | Type: ${it.etf_type} | Trust: ${it.sector_trust} | ${it.sector_guard_reasons.join(',')}`); } catch (e) { console.log(`  ${symbolForApi} | ⚠️ Enrichissement hebdo KO: ${e.message}`); } })); }
+    for (let i = 0; i < results.etfs.length; i += ENRICH_CONCURRENCY) { const batch = results.etfs.slice(i, i + ENRICH_CONCURRENCY); const batchNum = Math.floor(i/ENRICH_CONCURRENCY) + 1; const totalBatches = Math.ceil(results.etfs.length/ENRICH_CONCURRENCY); console.log(`📦 Enrichissement ETF lot ${batchNum}/${totalBatches}`); await Promise.all(batch.map(async (it) => { const symbolForApi = it.symbolParam || it.symbol; try { const weekly = await fetchWeeklyPack(symbolForApi, it); Object.assign(it, weekly); it.data_quality_score = calculateDataQualityScore(it); if (CONFIG.DEBUG) console.log(`  ${symbolForApi} | Type: ${it.etf_type} | Bucket: ${it.sector_bucket} | Trust: ${it.sector_trust}`); } catch (e) { console.log(`  ${symbolForApi} | ⚠️ Enrichissement hebdo KO: ${e.message}`); } })); }
     console.log('\n🧩 Enrichissement HEBDO BONDS (summary + composition + SECTOR GUARD) sous budget 2584/min…');
     results.bonds.sort((a, b) => (b.net_assets || 0) - (a.net_assets || 0));
-    for (let i = 0; i < results.bonds.length; i += ENRICH_CONCURRENCY) { const batch = results.bonds.slice(i, i + ENRICH_CONCURRENCY); const batchNum = Math.floor(i / ENRICH_CONCURRENCY) + 1; const totalBatches = Math.ceil(results.bonds.length / ENRICH_CONCURRENCY); console.log(`📦 Enrichissement BONDS lot ${batchNum}/${totalBatches}`); await Promise.all(batch.map(async (it) => { const symbolForApi = it.symbolParam || it.symbol; try { const weekly = await fetchWeeklyPack(symbolForApi, it); Object.assign(it, weekly); it.data_quality_score = calculateDataQualityScore(it); if (CONFIG.DEBUG) console.log(`  ${symbolForApi} | Trust: ${it.sector_trust}`); } catch (e) { console.log(`  ${symbolForApi} | ⚠️ Enrichissement bonds KO: ${e.message}`); } })); }
+    for (let i = 0; i < results.bonds.length; i += ENRICH_CONCURRENCY) { const batch = results.bonds.slice(i, i + ENRICH_CONCURRENCY); const batchNum = Math.floor(i / ENRICH_CONCURRENCY) + 1; const totalBatches = Math.ceil(results.bonds.length / ENRICH_CONCURRENCY); console.log(`📦 Enrichissement BONDS lot ${batchNum}/${totalBatches}`); await Promise.all(batch.map(async (it) => { const symbolForApi = it.symbolParam || it.symbol; try { const weekly = await fetchWeeklyPack(symbolForApi, it); Object.assign(it, weekly); it.data_quality_score = calculateDataQualityScore(it); if (CONFIG.DEBUG) console.log(`  ${symbolForApi} | Bucket: ${it.sector_bucket} | Trust: ${it.sector_trust}`); } catch (e) { console.log(`  ${symbolForApi} | ⚠️ Enrichissement bonds KO: ${e.message}`); } })); }
     const elapsedTime = Date.now() - results.stats.start_time; results.stats.elapsed_seconds = Math.round(elapsedTime / 1000); results.stats.etfs_retained = results.etfs.length; results.stats.bonds_retained = results.bonds.length; results.stats.total_retained = results.etfs.length + results.bonds.length; results.stats.rejected_count = results.rejected.length;
     const etfPositionsCount = results.etfs.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0); const bondsPositionsCount = results.bonds.reduce((acc,e)=> acc + ((e.holdings_top10 || []).length), 0);
     const translatedCount = results.etfs.filter(e => e.objective !== e.objective_en).length + results.bonds.filter(e => e.objective !== e.objective_en).length;
@@ -593,8 +692,13 @@ async function filterETFs() {
     const bondsWithDuration = results.bonds.filter(e => e.bond_avg_duration != null).length; const bondsWithCredit = results.bonds.filter(e => e.bond_credit_score != null).length; const bondsWithRating = results.bonds.filter(e => e.bond_credit_rating != null).length;
     const sectorSuspectsCount = results.etfs.filter(e => e.sector_suspect).length;
     const equityRejectedCount = results.rejected.filter(r => r.reason === 'NOT_ETF_NAME_LOOKS_EQUITY').length;
-    results.stats.data_quality = { with_aum: results.etfs.filter(e => e.aum_usd != null).length, with_ter: results.etfs.filter(e => e.total_expense_ratio != null).length, with_yield: results.etfs.filter(e => e.yield_ttm != null).length, with_sectors: results.etfs.filter(e => e.sectors && e.sectors.length > 0).length, with_countries: results.etfs.filter(e => e.countries && e.countries.length > 0).length, with_objective: results.etfs.filter(e => e.objective && e.objective.length > 0).length, with_holdings: results.etfs.filter(e => e.holdings_top10 && e.holdings_top10.length > 0).length, with_auto_detection: results.etfs.filter(e => e.auto_detected_composition).length, avg_quality_score: results.etfs.length > 0 ? Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length) : 0, by_etf_type: { standard: results.etfs.filter(e => e.etf_type === 'standard').length, inverse: results.etfs.filter(e => e.etf_type === 'inverse').length, leveraged: results.etfs.filter(e => e.etf_type === 'leveraged').length, single_stock: results.etfs.filter(e => e.etf_type === 'single_stock').length } };
-    results.stats.sector_guard = { suspects_count: sectorSuspectsCount, reliable_count: results.etfs.length - sectorSuspectsCount, equity_filtered: equityRejectedCount };
+    
+    // Bucket stats
+    const bucketCounts = {};
+    results.etfs.forEach(e => { const b = e.sector_bucket || 'UNKNOWN'; bucketCounts[b] = (bucketCounts[b] || 0) + 1; });
+    
+    results.stats.data_quality = { with_aum: results.etfs.filter(e => e.aum_usd != null).length, with_ter: results.etfs.filter(e => e.total_expense_ratio != null).length, with_yield: results.etfs.filter(e => e.yield_ttm != null).length, with_sectors: results.etfs.filter(e => e.sectors && e.sectors.length > 0).length, with_countries: results.etfs.filter(e => e.countries && e.countries.length > 0).length, with_objective: results.etfs.filter(e => e.objective && e.objective.length > 0).length, with_holdings: results.etfs.filter(e => e.holdings_top10 && e.holdings_top10.length > 0).length, with_auto_detection: results.etfs.filter(e => e.auto_detected_composition).length, avg_quality_score: results.etfs.length > 0 ? Math.round(results.etfs.reduce((acc, e) => acc + (e.data_quality_score || 0), 0) / results.etfs.length) : 0, by_etf_type: { standard: results.etfs.filter(e => e.etf_type === 'standard').length, inverse: results.etfs.filter(e => e.etf_type === 'inverse').length, leveraged: results.etfs.filter(e => e.etf_type === 'leveraged').length, single_stock: results.etfs.filter(e => e.etf_type === 'single_stock').length, structured: results.etfs.filter(e => e.etf_type === 'structured').length } };
+    results.stats.sector_guard = { suspects_count: sectorSuspectsCount, reliable_count: results.etfs.length - sectorSuspectsCount, equity_filtered: equityRejectedCount, by_bucket: bucketCounts };
     results.stats.bond_metrics = { with_duration: bondsWithDuration, with_credit_score: bondsWithCredit, with_credit_rating: bondsWithRating, coverage_pct: results.bonds.length > 0 ? Math.round(bondsWithDuration / results.bonds.length * 100) : 0 };
     if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) results.stats.translation = { objectives_translated: translatedCount, taxonomies_translated: taxonomyTranslatedCount, cache_size: Object.keys(translationCache).length };
     const rejectionReasons = {}; results.rejected.forEach(item => { if (item.reason) rejectionReasons[item.reason] = (rejectionReasons[item.reason] || 0) + 1; else if (item.failed) item.failed.forEach(f => { rejectionReasons[f] = (rejectionReasons[f] || 0) + 1; }); }); results.stats.rejection_reasons = rejectionReasons;
@@ -603,22 +707,23 @@ async function filterETFs() {
     const weeklyPath = path.join(OUT_DIR, 'weekly_snapshot.json'); await fs.writeFile(weeklyPath, JSON.stringify(weekly, null, 2));
 
     // === SECTOR SUSPECTS CSV (audit) ===
-    const suspects = results.etfs.filter(e => e.sector_suspect).map(e => ({ symbol: e.symbol, name: e.name, sector_top: e.sector_top?.sector || '', sector_top_w: e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : '', trust: e.sector_trust, reasons: (e.sector_guard_reasons || []).join('|') }));
-    const suspectsHeader = 'symbol,name,sector_top,sector_top_weight_pct,sector_trust,reasons\n';
-    const suspectsRows = suspects.map(x => { const esc = (s) => `"${String(s ?? '').replace(/"/g,'""')}"`; return [x.symbol, esc(x.name), esc(x.sector_top), x.sector_top_w, x.trust, esc(x.reasons)].join(','); }).join('\n');
+    const suspects = results.etfs.filter(e => e.sector_suspect).map(e => ({ symbol: e.symbol, name: e.name, sector_top: e.sector_top?.sector || '', sector_top_w: e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : '', trust: e.sector_trust, bucket: e.sector_bucket || '', reasons: (e.sector_guard_reasons || []).join('|') }));
+    const suspectsHeader = 'symbol,name,sector_top,sector_top_weight_pct,sector_trust,bucket,reasons\n';
+    const suspectsRows = suspects.map(x => { const esc = (s) => `"${String(s ?? '').replace(/"/g,'""')}"`; return [x.symbol, esc(x.name), esc(x.sector_top), x.sector_top_w, x.trust, x.bucket, esc(x.reasons)].join(','); }).join('\n');
     const suspectsPath = path.join(OUT_DIR, 'sector_suspects.csv'); await fs.writeFile(suspectsPath, suspectsHeader + (suspectsRows ? suspectsRows + '\n' : '')); console.log(`🧪 Audit sector guard: ${suspects.length} suspect(s) → ${suspectsPath}`);
 
-    const csvHeaderEtf = ['symbol','name','isin','mic_code','currency','fund_type','fund_type_fr','etf_type','aum_usd','total_expense_ratio','yield_ttm','objective','sector_top','sector_top_fr','sector_top_weight','sector_trust','sector_signal_ok','country_top','country_top_weight','sector_top5','sector_top5_fr','country_top5','holding_top','holdings_top10','data_quality_score'].join(',') + '\n';
-    const csvRowsEtf = results.etfs.map(e => { const nameCell = `"${(e.name || '').replace(/"/g,'""')}"`; const sectorTop = e.sector_top ? e.sector_top.sector : ''; const sectorTopFr = e.sector_top_fr || e.sector_top?.sector_fr || ''; const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : ''; const countryTop = e.country_top ? e.country_top.country : (e.domicile || ''); const countryTopW = e.country_top?.weight != null ? (e.country_top.weight*100).toFixed(2) : ''; const sectorTop5 = JSON.stringify((e.sector_top5 || []).map(x => ({ s: x.sector, w: Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""'); const sectorTop5Fr = JSON.stringify(e.sector_top5_fr || []).replace(/"/g,'""'); const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c: x.country, w: x.weight ? Number((x.weight*100).toFixed(2)) : null }))).replace(/"/g,'""'); const holdingTop = e.holding_top ? `${e.holding_top.symbol || ''} ${e.holding_top.name ? '('+e.holding_top.name+')' : ''}`.trim() : ''; const holdingsTop10 = JSON.stringify((e.holdings_top10 || []).map(h => ({ t: h.symbol || null, n: h.name || null, w: h.weight != null ? Number((h.weight*100).toFixed(2)) : null }))).replace(/"/g,'""'); const objective = `"${(e.objective || '').replace(/"/g, '""')}"`; return [e.symbol, nameCell, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.fund_type_fr || '', e.etf_type || '', e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '', objective, `"${sectorTop}"`, `"${sectorTopFr}"`, sectorTopW, e.sector_trust ?? '', e.sector_signal_ok ? '1' : '0', `"${countryTop}"`, countryTopW, `"${sectorTop5}"`, `"${sectorTop5Fr}"`, `"${countryTop5}"`, `"${holdingTop}"`, `"${holdingsTop10}"`, e.data_quality_score || 0].join(','); }).join('\n');
+    const csvHeaderEtf = ['symbol','name','isin','mic_code','currency','fund_type','fund_type_fr','etf_type','underlying_ticker','aum_usd','total_expense_ratio','yield_ttm','objective','sector_top','sector_top_fr','sector_top_weight','sector_trust','sector_signal_ok','sector_bucket','country_top','country_top_weight','sector_top5','sector_top5_fr','country_top5','holding_top','holdings_top10','data_quality_score'].join(',') + '\n';
+    const csvRowsEtf = results.etfs.map(e => { const nameCell = `"${(e.name || '').replace(/"/g,'""')}"`; const sectorTop = e.sector_top ? e.sector_top.sector : ''; const sectorTopFr = e.sector_top_fr || e.sector_top?.sector_fr || ''; const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : ''; const countryTop = e.country_top ? e.country_top.country : (e.domicile || ''); const countryTopW = e.country_top?.weight != null ? (e.country_top.weight*100).toFixed(2) : ''; const sectorTop5 = JSON.stringify((e.sector_top5 || []).map(x => ({ s: x.sector, w: Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""'); const sectorTop5Fr = JSON.stringify(e.sector_top5_fr || []).replace(/"/g,'""'); const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c: x.country, w: x.weight ? Number((x.weight*100).toFixed(2)) : null }))).replace(/"/g,'""'); const holdingTop = e.holding_top ? `${e.holding_top.symbol || ''} ${e.holding_top.name ? '('+e.holding_top.name+')' : ''}`.trim() : ''; const holdingsTop10 = JSON.stringify((e.holdings_top10 || []).map(h => ({ t: h.symbol || null, n: h.name || null, w: h.weight != null ? Number((h.weight*100).toFixed(2)) : null }))).replace(/"/g,'""'); const objective = `"${(e.objective || '').replace(/"/g, '""')}"`; return [e.symbol, nameCell, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.fund_type_fr || '', e.etf_type || '', e.underlying_ticker || '', e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '', objective, `"${sectorTop}"`, `"${sectorTopFr}"`, sectorTopW, e.sector_trust ?? '', e.sector_signal_ok ? '1' : '0', e.sector_bucket || '', `"${countryTop}"`, countryTopW, `"${sectorTop5}"`, `"${sectorTop5Fr}"`, `"${countryTop5}"`, `"${holdingTop}"`, `"${holdingsTop10}"`, e.data_quality_score || 0].join(','); }).join('\n');
     const etfCsvPath = path.join(OUT_DIR, 'weekly_snapshot_etfs.csv'); await fs.writeFile(etfCsvPath, csvHeaderEtf + (csvRowsEtf ? csvRowsEtf + '\n' : '')); console.log(`📝 CSV ETFs: ${results.etfs.length} ligne(s) → ${etfCsvPath}`);
-    const csvHeaderBonds = ['symbol','name','isin','mic_code','currency','fund_type','fund_type_fr','etf_type','aum_usd','total_expense_ratio','yield_ttm','bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating','objective','sector_top','sector_top_fr','sector_top_weight','sector_trust','sector_signal_ok','country_top','country_top_weight','sector_top5','sector_top5_fr','country_top5','holding_top','holdings_top10','data_quality_score'].join(',') + '\n';
-    const csvRowsBonds = results.bonds.map(e => { const nameCell = `"${(e.name || '').replace(/"/g,'""')}"`; const sectorTop = e.sector_top ? e.sector_top.sector : ''; const sectorTopFr = e.sector_top_fr || e.sector_top?.sector_fr || ''; const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : ''; const countryTop = e.country_top ? e.country_top.country : (e.domicile || ''); const countryTopW = e.country_top?.weight != null ? (e.country_top.weight*100).toFixed(2) : ''; const sectorTop5 = JSON.stringify((e.sector_top5 || []).map(x => ({ s:x.sector, w:Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""'); const sectorTop5Fr = JSON.stringify(e.sector_top5_fr || []).replace(/"/g,'""'); const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c:x.country, w:x.weight!=null?Number((x.weight*100).toFixed(2)):null }))).replace(/"/g,'""'); const holdingTop = e.holding_top ? `${e.holding_top.symbol || ''} ${e.holding_top.name ? '('+e.holding_top.name+')' : ''}`.trim() : ''; const holdingsTop10 = JSON.stringify((e.holdings_top10 || []).map(h => ({ t:h.symbol || null, n:h.name || null, w:h.weight!=null?Number((h.weight*100).toFixed(2)):null }))).replace(/"/g,'""'); const objective = `"${(e.objective || '').replace(/"/g,'""')}"`; return [e.symbol, nameCell, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.fund_type_fr || '', e.etf_type || '', e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '', e.bond_avg_duration ?? '', e.bond_avg_maturity ?? '', e.bond_credit_score ?? '', e.bond_credit_rating ?? '', objective, `"${sectorTop}"`, `"${sectorTopFr}"`, sectorTopW, e.sector_trust ?? '', e.sector_signal_ok ? '1' : '0', `"${countryTop}"`, countryTopW, `"${sectorTop5}"`, `"${sectorTop5Fr}"`, `"${countryTop5}"`, `"${holdingTop}"`, `"${holdingsTop10}"`, e.data_quality_score || 0].join(','); }).join('\n');
+    const csvHeaderBonds = ['symbol','name','isin','mic_code','currency','fund_type','fund_type_fr','etf_type','aum_usd','total_expense_ratio','yield_ttm','bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating','objective','sector_top','sector_top_fr','sector_top_weight','sector_trust','sector_signal_ok','sector_bucket','country_top','country_top_weight','sector_top5','sector_top5_fr','country_top5','holding_top','holdings_top10','data_quality_score'].join(',') + '\n';
+    const csvRowsBonds = results.bonds.map(e => { const nameCell = `"${(e.name || '').replace(/"/g,'""')}"`; const sectorTop = e.sector_top ? e.sector_top.sector : ''; const sectorTopFr = e.sector_top_fr || e.sector_top?.sector_fr || ''; const sectorTopW = e.sector_top?.weight != null ? (e.sector_top.weight*100).toFixed(2) : ''; const countryTop = e.country_top ? e.country_top.country : (e.domicile || ''); const countryTopW = e.country_top?.weight != null ? (e.country_top.weight*100).toFixed(2) : ''; const sectorTop5 = JSON.stringify((e.sector_top5 || []).map(x => ({ s:x.sector, w:Number((x.weight*100).toFixed(2)) }))).replace(/"/g,'""'); const sectorTop5Fr = JSON.stringify(e.sector_top5_fr || []).replace(/"/g,'""'); const countryTop5 = JSON.stringify((e.country_top5 || []).map(x => ({ c:x.country, w:x.weight!=null?Number((x.weight*100).toFixed(2)):null }))).replace(/"/g,'""'); const holdingTop = e.holding_top ? `${e.holding_top.symbol || ''} ${e.holding_top.name ? '('+e.holding_top.name+')' : ''}`.trim() : ''; const holdingsTop10 = JSON.stringify((e.holdings_top10 || []).map(h => ({ t:h.symbol || null, n:h.name || null, w:h.weight!=null?Number((h.weight*100).toFixed(2)):null }))).replace(/"/g,'""'); const objective = `"${(e.objective || '').replace(/"/g,'""')}"`; return [e.symbol, nameCell, e.isin || '', e.mic_code || '', e.currency || '', e.fund_type || '', e.fund_type_fr || '', e.etf_type || '', e.aum_usd ?? '', e.total_expense_ratio ?? '', e.yield_ttm ?? '', e.bond_avg_duration ?? '', e.bond_avg_maturity ?? '', e.bond_credit_score ?? '', e.bond_credit_rating ?? '', objective, `"${sectorTop}"`, `"${sectorTopFr}"`, sectorTopW, e.sector_trust ?? '', e.sector_signal_ok ? '1' : '0', e.sector_bucket || '', `"${countryTop}"`, countryTopW, `"${sectorTop5}"`, `"${sectorTop5Fr}"`, `"${countryTop5}"`, `"${holdingTop}"`, `"${holdingsTop10}"`, e.data_quality_score || 0].join(','); }).join('\n');
     const bondsCsvPath = path.join(OUT_DIR, 'weekly_snapshot_bonds.csv'); await fs.writeFile(bondsCsvPath, csvHeaderBonds + (csvRowsBonds ? csvRowsBonds + '\n' : '')); console.log(`📝 CSV Bonds (enriched): ${results.bonds.length} ligne(s) → ${bondsCsvPath}`);
     const narrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n'; const narrowRows = results.etfs.flatMap(etf => { const hs = (etf.holdings_top10 && etf.holdings_top10.length) ? etf.holdings_top10 : topN(etf.holdings || [], 'weight', 10); return hs.map((h, idx) => { const etfSym = etf.symbol || ''; const rank = idx + 1; const hSym = h.symbol || ''; const hName = (h.name || '').replace(/"/g, '""'); const wPct = (h.weight != null) ? (h.weight * 100).toFixed(2) : ''; const cells = [etfSym, rank, hSym, hName, wPct].map(v => { const s = String(v); return /[",\n]/.test(s) ? `"${s}"` : s; }); return cells.join(','); }); }); const holdingsCsvPath = path.join(OUT_DIR, 'combined_etfs_holdings.csv'); await fs.writeFile(holdingsCsvPath, narrowHeader + (narrowRows.length ? narrowRows.join('\n') + '\n' : '')); console.log(`📝 CSV Holdings ETFs (Top10 only): ${narrowRows.length} lignes → ${holdingsCsvPath}`);
     const bondsNarrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n'; const bondsNarrowRows = results.bonds.flatMap(fund => { const hs = (fund.holdings_top10 && fund.holdings_top10.length) ? fund.holdings_top10 : topN(fund.holdings || [], 'weight', 10); return hs.map((h, idx) => { const etfSym = fund.symbol || ''; const rank = idx + 1; const hSym = h.symbol || ''; const hName = (h.name || '').replace(/"/g,'""'); const wPct = (h.weight != null) ? (h.weight * 100).toFixed(2) : ''; const cells = [etfSym, rank, hSym, hName, wPct].map(v => { const s = String(v); return /[",\n]/.test(s) ? `"${s}"` : s; }); return cells.join(','); }); }); const combinedBondsHoldingsPath = path.join(OUT_DIR, 'combined_bonds_holdings.csv'); await fs.writeFile(combinedBondsHoldingsPath, bondsNarrowHeader + (bondsNarrowRows.length ? bondsNarrowRows.join('\n') + '\n' : '')); console.log(`📝 Combined BONDS holdings (Top10): ${bondsNarrowRows.length} lignes → ${combinedBondsHoldingsPath}`);
     await saveTranslationCache();
     console.log('\n📊 RÉSUMÉ:'); if (results.stats.limited_run) console.log(`⚠️  RUN LIMITÉ: ETFs ${etfs.length}/${totalEtfsOriginal} | Bonds ${bonds.length}/${totalBondsOriginal}`); console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`); console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`); console.log(`Rejetés: ${results.rejected.length}`); console.log(`Holdings ETFs: ${etfPositionsCount} positions (Top10)`); console.log(`Holdings Bonds: ${bondsPositionsCount} positions (Top10)`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) { console.log(`Traductions objectifs: ${translatedCount} traduits`); console.log(`Traductions taxonomies: ${taxonomyTranslatedCount} traduits`); console.log(`Cache: ${Object.keys(translationCache).length} entrées`); } console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
-    console.log('\n🛡️ Sector Guard v14.1:'); console.log(`  - ETFs suspects (trust<0.50): ${sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - ETFs fiables (trust>=0.50): ${results.etfs.length - sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - Actions filtrées (NOT_ETF): ${equityRejectedCount}`);
+    console.log('\n🛡️ Sector Guard v14.2:'); console.log(`  - ETFs suspects (trust<0.50): ${sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - ETFs fiables (trust>=0.50): ${results.etfs.length - sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - Actions filtrées (NOT_ETF): ${equityRejectedCount}`);
+    console.log('  - Par bucket:'); Object.entries(bucketCounts).sort((a,b) => b[1] - a[1]).forEach(([bucket, count]) => { console.log(`    • ${bucket}: ${count}`); });
     console.log('\n📈 Métriques obligataires:'); console.log(`  - Bonds avec duration: ${bondsWithDuration}/${results.bonds.length}`); console.log(`  - Bonds avec credit_score: ${bondsWithCredit}/${results.bonds.length}`); console.log(`  - Bonds avec credit_rating: ${bondsWithRating}/${results.bonds.length}`);
     console.log('\n📊 Qualité des données:'); Object.entries(results.stats.data_quality).forEach(([key, count]) => { if (typeof count === 'object') { console.log(`  - ${key}:`); Object.entries(count).forEach(([subkey, subcount]) => { console.log(`    • ${subkey}: ${subcount}`); }); } else console.log(`  - ${key}: ${count}/${results.etfs.length}`); });
     console.log('\n📊 Raisons de rejet:'); Object.entries(rejectionReasons).forEach(([reason, count]) => { console.log(`  - ${reason}: ${count}`); });
