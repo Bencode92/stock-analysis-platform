@@ -2865,7 +2865,6 @@ if (statutId === 'micro') {
     </div>
   `;
 }
-  `;
 } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || statutId === 'selas') {
   // Cas des structures avec dirigeant assimilé salarié
 
