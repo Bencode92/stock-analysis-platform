@@ -1,6 +1,6 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.4.6 — SEUL MOTEUR D'ALPHA
+FactorScorer v2.4.7 — SEUL MOTEUR D'ALPHA
 =========================================
 
 v2.4.6 Changes (RADAR ETF Integration):
@@ -119,7 +119,7 @@ CATEGORY_NORMALIZE = {
 }
 
 
-def normalize_category(category: str, fund_type: str = "") -> str:
+def normalize_category(category: str, fund_type: str = "", etf_type: str = "", sector_bucket: str = "") -> str:
     """
     v2.4.3: Normalise la catégorie vers une clé standard.
     
@@ -131,6 +131,10 @@ def normalize_category(category: str, fund_type: str = "") -> str:
     fund_type_lower = str(fund_type).lower().strip() if fund_type else ""
     if "bond" in fund_type_lower or "obligation" in fund_type_lower or "fixed income" in fund_type_lower:
         return "bond"
+    
+    # v2.4.7 FIX: Détection ETF via etf_type ou sector_bucket
+    if etf_type or sector_bucket:
+        return "etf"
     
     if not category:
         return "other"
@@ -1260,10 +1264,12 @@ class FactorScorer:
         return result
     
     def _get_normalized_category(self, asset: dict) -> str:
-        """v2.4.3: Normalise catégorie avec règle fund_type bond."""
+        """v2.4.7: Normalise catégorie avec détection ETF."""
         return normalize_category(
             asset.get("category", ""),
-            asset.get("fund_type", "")
+            asset.get("fund_type", ""),
+            asset.get("etf_type", ""),
+            asset.get("sector_bucket", "")
         )
         
     # ============= v2.4.6 ETF RADAR HELPERS =============
