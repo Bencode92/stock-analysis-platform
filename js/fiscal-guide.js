@@ -2104,8 +2104,10 @@ if (statutId === 'sciIS') {
       sim.remuneration        = brut;
       sim.cotisationsSociales = cotisations;
     }
+    // Statuts IR : conserver les valeurs du moteur (cotisationsSociales intactes)
+  }
 
-  // 4) Le reliquat (profit avant IS) sert de base à l’IS
+  // 4) Le reliquat (profit avant IS) sert de base à l'IS
   sim.resultatApresRemuneration = round2(profitPreIS);
 }
        }
