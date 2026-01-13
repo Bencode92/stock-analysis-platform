@@ -1,6 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
-// v14.2: Sector Guard amélioré (buckets, imputation, alt assets, detectETFType fix)
+// v14.3: Sector Guard - fix faux positifs (Low Vol, XLE/XOP/XME, ARKF)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -246,34 +246,108 @@ function detectETFType(symbol, name, objective) {
   return { type: 'standard' };
 }
 
-// === EQUITY FILTER (actions dans all_etfs.csv) ===
-const ETF_NAME_TOKENS = /\b(etf|exchange\s*traded|fund|trust|shares|etn|etc|note|ucits)\b/i;
+// === EQUITY FILTER (actions dans all_etfs.csv) - v14.3 improved ===
+const ETF_NAME_TOKENS = /\b(etf|exchange\s*traded|fund|trust|shares|etn|etc|ucits)\b/i;
 const COMPANY_SUFFIX = /\b(inc\.?|corp\.?|corporation|ltd\.?|plc|company|co\.|holdings|group)\s*$/i;
-const ADR_PATTERN = /\b(inc\.?|corp\.?|ltd\.?)\b.*\b(american\s+depositary|adr|ads)\b/i;
+const ADR_PATTERN = /\b(inc\.?|corp\.?|ltd\.?|tbk\.?)\b.*\b(american\s+depositary|adr|ads|subordinate|voting)\b/i;
+const STOCK_PATTERN = /\b(common\s+stock|ordinary\s+shares|class\s+[a-z]\s+shares?)\b/i;
 
 function nameLooksLikeEquityNotETF(name) {
   const n = String(name || '').trim();
   if (!n) return false;
   if (ETF_NAME_TOKENS.test(n)) return false;
   if (ADR_PATTERN.test(n)) return true;
+  if (STOCK_PATTERN.test(n)) return true;
   return COMPANY_SUFFIX.test(n);
 }
 
-// === SECTOR GUARD v14.2 : Alt Assets + Buckets ===
+// === SECTOR GUARD v14.3 : Fix faux positifs ===
 
-// Alt asset detection
-const COMMODITY_KEYWORDS = /\b(gold|silver|platinum|palladium|bullion|precious\s*metals?|commodit(y|ies)|crude\s*oil|oil\s*fund|natural\s*gas|uranium|copper|wheat|corn|soybean|agriculture|base\s*metals?)\b/i;
-const CRYPTO_KEYWORDS = /\b(bitcoin|btc|ethereum|eth|crypto|cryptocurrency|digital\s*asset|blockchain)\b/i;
+// VIX STRICT - exclure "Low Volatility", "Min Volatility" (fix SPLV, ACWV, etc.)
+const VIX_PRODUCT_KEYWORDS = /\b(vix|cboe\s+volatility|volatility\s+(index|futures)\s+(etf|etn|fund))\b/i;
+const LOW_VOL_EXCLUSION = /\b(low|min(imum)?|managed|reduce[d]?)\s+volatil/i;
+
+function isVixProduct(text) {
+  if (LOW_VOL_EXCLUSION.test(text)) return false;
+  return VIX_PRODUCT_KEYWORDS.test(text);
+}
+
+// COMMODITY PHYSICAL vs EQUITY SECTOR (fix XLE, XOP, XME)
+// Physical = trusts, futures, LP, physical
+const PHYSICAL_COMMODITY_KEYWORDS = /\b(physical|bullion|gold\s+trust|silver\s+trust|gold\s+shares|silver\s+shares|oil\s+fund|gas\s+fund|commodity\s+(index|strategy|pool|trust)|futures\s+fund|,?\s*l\.?p\.?\s*$)\b/i;
+// Equity sector = miners, producers, exploration, sector, select
+const EQUITY_SECTOR_KEYWORDS = /\b(miners?|mining|producers?|exploration|production|sector|select|index)\s*(etf|fund|shares?)?\b/i;
+// Commodity keywords that need context
+const COMMODITY_WORDS = /\b(gold|silver|platinum|palladium|bullion|precious\s*metals?|crude\s*oil|natural\s*gas|uranium|copper|wheat|corn|soybean|agriculture|commodit)/i;
+
+function isCommodityProduct(text, fundType = '') {
+  const t = String(text || '').toLowerCase();
+  const ft = String(fundType || '').toLowerCase();
+  
+  // fund_type explicitly says commodity
+  if (/commodity|precious.*metal/i.test(ft)) {
+    // But check if it's miners/sector (equity)
+    if (EQUITY_SECTOR_KEYWORDS.test(t)) return false;
+    return true;
+  }
+  
+  // If it has equity sector keywords (miners, sector, select, exploration) → NOT commodity
+  if (EQUITY_SECTOR_KEYWORDS.test(t)) return false;
+  
+  // If it has physical commodity keywords → commodity
+  if (PHYSICAL_COMMODITY_KEYWORDS.test(t)) return true;
+  
+  // If text has commodity words but also "sector" or "select" → NOT commodity
+  if (COMMODITY_WORDS.test(t)) {
+    if (/\b(sector|select)\b/i.test(t)) return false;
+    // Check for trust/fund/LP structure
+    if (/\b(trust|fund,?\s*l\.?p\.?|physical|bullion)\b/i.test(t)) return true;
+  }
+  
+  return false;
+}
+
+// CRYPTO - more strict (fix ARKF which is fintech, not pure crypto)
+const CRYPTO_PURE_KEYWORDS = /\b(bitcoin|btc|ethereum|eth|ether\b|crypto(?:currency)?|digital\s*asset)\b/i;
+const CRYPTO_FUND_NAMES = /\b(bitcoin\s+(trust|fund|etf)|ethereum\s+(trust|fund|etf)|crypto\s+(trust|fund|etf)|grayscale.*trust)\b/i;
+// Exclude fintech/innovation that may mention blockchain
+const FINTECH_EXCLUSION = /\b(fintech|innovation|transformational|disrupt)/i;
+
+function isCryptoProduct(text, fundType = '') {
+  const t = String(text || '').toLowerCase();
+  const ft = String(fundType || '').toLowerCase();
+  
+  // fund_type explicitly crypto
+  if (/crypto|bitcoin|digital.*asset/i.test(ft)) return true;
+  
+  // Exclude fintech/innovation ETFs (ARKF, etc.)
+  if (FINTECH_EXCLUSION.test(t)) return false;
+  
+  // Pure crypto keywords or fund names
+  if (CRYPTO_FUND_NAMES.test(t)) return true;
+  if (CRYPTO_PURE_KEYWORDS.test(t) && !/\b(industry|innovator|blockchain\s+(?:and|&)\s+tech)/i.test(t)) return true;
+  
+  return false;
+}
+
+// FX keywords
 const FX_KEYWORDS = /\b(us\s*dollar|dollar\s*index|currencyshares|euro\s*trust|yen\s*trust|franc\s*trust|sterling\s*trust)\b/i;
-const VIX_KEYWORDS = /\b(vix|volatility\s+(index|futures?|etf|etn)|short[- ]term\s+volatility)\b/i;
 
 function inferAltAsset(text, fundType = '') {
   const t = String(text || '').toLowerCase();
-  const ft = String(fundType || '').toLowerCase();
-  if (VIX_KEYWORDS.test(t)) return { alt: true, kind: 'volatility' };
-  if (CRYPTO_KEYWORDS.test(t) || ft.includes('crypto') || ft.includes('bitcoin') || ft.includes('digital')) return { alt: true, kind: 'crypto' };
-  if (COMMODITY_KEYWORDS.test(t) || ft.includes('commodity') || ft.includes('precious') || ft.includes('metal') || ft.includes('gold') || ft.includes('silver')) return { alt: true, kind: 'commodity' };
-  if (FX_KEYWORDS.test(t) || ft.includes('currency')) return { alt: true, kind: 'fx' };
+  
+  // VIX first (with exclusion for Low Vol)
+  if (isVixProduct(t)) return { alt: true, kind: 'volatility' };
+  
+  // Crypto (with exclusion for fintech)
+  if (isCryptoProduct(t, fundType)) return { alt: true, kind: 'crypto' };
+  
+  // Commodity (with exclusion for sector/miners)
+  if (isCommodityProduct(t, fundType)) return { alt: true, kind: 'commodity' };
+  
+  // FX
+  if (FX_KEYWORDS.test(t) || String(fundType || '').toLowerCase().includes('currency')) return { alt: true, kind: 'fx' };
+  
   return { alt: false, kind: null };
 }
 
@@ -321,7 +395,7 @@ function computeSectorGuard(etf) {
   const holdings = etf.holdings_top10 || [];
   const holdingsCount = holdings.length;
 
-  // Infer alt asset
+  // Infer alt asset (v14.3 improved)
   const altAsset = inferAltAsset(text, etf.fund_type);
 
   // Options overlay (tag info)
@@ -647,7 +721,7 @@ async function processListing(item) {
 }
 
 async function filterETFs() {
-    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement + SECTOR GUARD v14.2\n');
+    console.log('📊 Filtrage hebdomadaire : ADV + enrichissement + SECTOR GUARD v14.3\n');
     console.log(`⚙️  Seuils: ETF ${(CONFIG.MIN_ADV_USD_ETF/1e6).toFixed(1)}M$ | Bonds ${(CONFIG.MIN_ADV_USD_BOND/1e6).toFixed(1)}M$`);
     console.log(`💳  Budget: ${CONFIG.CREDIT_LIMIT} crédits/min | Enrichissement: ${ENRICH_CONCURRENCY} ETF/min max`);
     console.log(`📏  Longueur max objectifs: ${CONFIG.OBJECTIVE_MAXLEN} caractères`);
@@ -679,7 +753,7 @@ async function filterETFs() {
         console.log(`  ${isin} (${listings.length} listing${listings.length > 1 ? 's' : ''}) | Total ADV: ${(totalADV/1e6).toFixed(2)}M$ | ${passed ? '✅ PASS' : '❌ FAIL'}`);
         if (passed) { if (main.type === 'ETF') results.etfs.push(finalItem); else results.bonds.push(finalItem); } else results.rejected.push({ ...finalItem, failed: ['liquidity'] });
     });
-    console.log('\n🧩 Enrichissement HEBDO ETFs (summary + composition + SECTOR GUARD v14.2) sous budget 2584/min…');
+    console.log('\n🧩 Enrichissement HEBDO ETFs (summary + composition + SECTOR GUARD v14.3) sous budget 2584/min…');
     results.etfs.sort((a, b) => (b.net_assets || 0) - (a.net_assets || 0));
     for (let i = 0; i < results.etfs.length; i += ENRICH_CONCURRENCY) { const batch = results.etfs.slice(i, i + ENRICH_CONCURRENCY); const batchNum = Math.floor(i/ENRICH_CONCURRENCY) + 1; const totalBatches = Math.ceil(results.etfs.length/ENRICH_CONCURRENCY); console.log(`📦 Enrichissement ETF lot ${batchNum}/${totalBatches}`); await Promise.all(batch.map(async (it) => { const symbolForApi = it.symbolParam || it.symbol; try { const weekly = await fetchWeeklyPack(symbolForApi, it); Object.assign(it, weekly); it.data_quality_score = calculateDataQualityScore(it); if (CONFIG.DEBUG) console.log(`  ${symbolForApi} | Type: ${it.etf_type} | Bucket: ${it.sector_bucket} | Trust: ${it.sector_trust}`); } catch (e) { console.log(`  ${symbolForApi} | ⚠️ Enrichissement hebdo KO: ${e.message}`); } })); }
     console.log('\n🧩 Enrichissement HEBDO BONDS (summary + composition + SECTOR GUARD) sous budget 2584/min…');
@@ -722,7 +796,7 @@ async function filterETFs() {
     const bondsNarrowHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n'; const bondsNarrowRows = results.bonds.flatMap(fund => { const hs = (fund.holdings_top10 && fund.holdings_top10.length) ? fund.holdings_top10 : topN(fund.holdings || [], 'weight', 10); return hs.map((h, idx) => { const etfSym = fund.symbol || ''; const rank = idx + 1; const hSym = h.symbol || ''; const hName = (h.name || '').replace(/"/g,'""'); const wPct = (h.weight != null) ? (h.weight * 100).toFixed(2) : ''; const cells = [etfSym, rank, hSym, hName, wPct].map(v => { const s = String(v); return /[",\n]/.test(s) ? `"${s}"` : s; }); return cells.join(','); }); }); const combinedBondsHoldingsPath = path.join(OUT_DIR, 'combined_bonds_holdings.csv'); await fs.writeFile(combinedBondsHoldingsPath, bondsNarrowHeader + (bondsNarrowRows.length ? bondsNarrowRows.join('\n') + '\n' : '')); console.log(`📝 Combined BONDS holdings (Top10): ${bondsNarrowRows.length} lignes → ${combinedBondsHoldingsPath}`);
     await saveTranslationCache();
     console.log('\n📊 RÉSUMÉ:'); if (results.stats.limited_run) console.log(`⚠️  RUN LIMITÉ: ETFs ${etfs.length}/${totalEtfsOriginal} | Bonds ${bonds.length}/${totalBondsOriginal}`); console.log(`ETFs retenus: ${results.etfs.length}/${etfs.length}`); console.log(`Bonds retenus: ${results.bonds.length}/${bonds.length}`); console.log(`Rejetés: ${results.rejected.length}`); console.log(`Holdings ETFs: ${etfPositionsCount} positions (Top10)`); console.log(`Holdings Bonds: ${bondsPositionsCount} positions (Top10)`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) { console.log(`Traductions objectifs: ${translatedCount} traduits`); console.log(`Traductions taxonomies: ${taxonomyTranslatedCount} traduits`); console.log(`Cache: ${Object.keys(translationCache).length} entrées`); } console.log(`Temps total: ${results.stats.elapsed_seconds}s`);
-    console.log('\n🛡️ Sector Guard v14.2:'); console.log(`  - ETFs suspects (trust<0.50): ${sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - ETFs fiables (trust>=0.50): ${results.etfs.length - sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - Actions filtrées (NOT_ETF): ${equityRejectedCount}`);
+    console.log('\n🛡️ Sector Guard v14.3:'); console.log(`  - ETFs suspects (trust<0.50): ${sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - ETFs fiables (trust>=0.50): ${results.etfs.length - sectorSuspectsCount}/${results.etfs.length}`); console.log(`  - Actions filtrées (NOT_ETF): ${equityRejectedCount}`);
     console.log('  - Par bucket:'); Object.entries(bucketCounts).sort((a,b) => b[1] - a[1]).forEach(([bucket, count]) => { console.log(`    • ${bucket}: ${count}`); });
     console.log('\n📈 Métriques obligataires:'); console.log(`  - Bonds avec duration: ${bondsWithDuration}/${results.bonds.length}`); console.log(`  - Bonds avec credit_score: ${bondsWithCredit}/${results.bonds.length}`); console.log(`  - Bonds avec credit_rating: ${bondsWithRating}/${results.bonds.length}`);
     console.log('\n📊 Qualité des données:'); Object.entries(results.stats.data_quality).forEach(([key, count]) => { if (typeof count === 'object') { console.log(`  - ${key}:`); Object.entries(count).forEach(([subkey, subcount]) => { console.log(`    • ${subkey}: ${subcount}`); }); } else console.log(`  - ${key}: ${count}/${results.etfs.length}`); });
