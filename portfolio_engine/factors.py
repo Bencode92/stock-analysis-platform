@@ -1605,8 +1605,8 @@ class FactorScorer:
             weights = []
             
             # 1. Score secteur basé sur données marché
-            if self._sector_lookup and sector_top:
-                sector_key = SECTOR_KEY_MAPPING.get(sector_top.strip())
+            if self._sector_lookup and sector_for_tilt:
+                sector_key = SECTOR_KEY_MAPPING.get(sector_for_tilt.strip())
                 if sector_key and sector_key in self._sector_lookup:
                     ref = self._sector_lookup[sector_key]
                     ytd = ref.get("ytd_num", 0) or 0
@@ -1618,8 +1618,8 @@ class FactorScorer:
                     weights.append(0.4)
             
             # 2. Score région basé sur indices
-            if self._country_lookup and country_top:
-                norm_country = COUNTRY_NORMALIZATION.get(country_top.strip(), country_top.strip())
+            if self._country_lookup and region_for_tilt:
+                norm_country = COUNTRY_NORMALIZATION.get(region_for_tilt.strip(), region_for_tilt.strip())
                 if norm_country in self._country_lookup:
                     ref = self._country_lookup[norm_country]
                     ytd = ref.get("ytd_num", 0) or ref.get("_ytd_value", 0) or 0
@@ -1633,10 +1633,10 @@ class FactorScorer:
             # 3. Score macro tilts (RADAR) - v2.4.5 FIX: NORMALISER AVANT MATCHING
             if self._macro_tilts:
                 f_macro = 0.5
-                
-                # v2.4.5 FIX: Normaliser secteur et région vers format RADAR
-                sector_normalized = normalize_sector_for_tilts(sector_top)
-                region_normalized = normalize_region_for_tilts(country_top)
+
+                # v2.4.6 FIX: Normaliser secteur et région vers format RADAR
+                sector_normalized = normalize_sector_for_tilts(sector_for_tilt)
+                region_normalized = normalize_region_for_tilts(region_for_tilt)
                 
                 favored_sectors = self._macro_tilts.get("favored_sectors", [])
                 avoided_sectors = self._macro_tilts.get("avoided_sectors", [])
@@ -1671,12 +1671,12 @@ class FactorScorer:
                 
                 # v2.4.5: Stocker les détails du matching pour debug/traçabilité
                 a["_radar_matching"] = {
-                    "sector_raw": sector_top,
+                    "sector_raw": sector_for_tilt,
                     "sector_normalized": sector_normalized,
                     "sector_in_favored": sector_normalized in favored_sectors if sector_normalized else False,
                     "sector_in_avoided": sector_normalized in avoided_sectors if sector_normalized else False,
                     "sector_tilt": sector_tilt,
-                    "region_raw": country_top,
+                    "region_raw": region_for_tilt,
                     "region_normalized": region_normalized,
                     "region_in_favored": region_normalized in favored_regions if region_normalized else False,
                     "region_in_avoided": region_normalized in avoided_regions if region_normalized else False,
