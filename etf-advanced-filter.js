@@ -1,5 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
+// v14.4: Sector Guard - enrichissement direct combined_etfs.csv pour portfolio engine
 // v14.3: Sector Guard - fix faux positifs (Low Vol, XLE/XOP/XME, ARKF)
 
 const fs = require('fs').promises;
@@ -802,7 +803,137 @@ async function filterETFs() {
     console.log('\n📊 Qualité des données:'); Object.entries(results.stats.data_quality).forEach(([key, count]) => { if (typeof count === 'object') { console.log(`  - ${key}:`); Object.entries(count).forEach(([subkey, subcount]) => { console.log(`    • ${subkey}: ${subcount}`); }); } else console.log(`  - ${key}: ${count}/${results.etfs.length}`); });
     console.log('\n📊 Raisons de rejet:'); Object.entries(rejectionReasons).forEach(([reason, count]) => { console.log(`  - ${reason}: ${count}`); });
     console.log(`\n✅ Résultats complets: ${filteredPath}`); console.log(`✅ Weekly snapshot JSON: ${weeklyPath}`); console.log(`✅ CSV ETFs: ${etfCsvPath}`); console.log(`✅ CSV Bonds: ${bondsCsvPath}`); console.log(`✅ CSV Holdings ETFs: ${holdingsCsvPath}`); console.log(`✅ CSV Holdings Bonds: ${combinedBondsHoldingsPath}`); console.log(`✅ Sector suspects: ${suspectsPath}`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) console.log(`✅ Cache traductions: ${TRANSLATION_CACHE_PATH}`);
+    // === v14.4: Enrichir combined_etfs.csv et combined_bonds.csv ===
+    console.log('\n🔄 v14.4: Enrichissement des fichiers combined CSV...');
+    const enrichEtfResult = await enrichCombinedEtfsCsv(results.etfs, path.join(OUT_DIR, 'combined_etfs.csv'));
+    const enrichBondResult = await enrichCombinedBondsCsv(results.bonds, path.join(OUT_DIR, 'combined_bonds.csv'));
+    console.log('✅ Enrichissement combined_etfs.csv:', enrichEtfResult.success ? `OK (${enrichEtfResult.stats?.matched || 0} matchés)` : enrichEtfResult.reason);
+    console.log('✅ Enrichissement combined_bonds.csv:', enrichBondResult.success ? `OK (${enrichBondResult.matched || 0} matchés)` : enrichBondResult.reason);
     if (process.env.GITHUB_OUTPUT) { const fsSync = require('fs'); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_count=${results.bonds.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etf_holdings_rows=${narrowRows.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_holdings_rows=${bondsNarrowRows.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_holdings_positions=${etfPositionsCount + bondsPositionsCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_duration=${bondsWithDuration}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_credit=${bondsWithCredit}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_rating=${bondsWithRating}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `sector_suspects=${sectorSuspectsCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `equity_filtered=${equityRejectedCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `limited_run=${results.stats.limited_run}\n`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) { fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `objectives_translated=${translatedCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `taxonomies_translated=${taxonomyTranslatedCount}\n`); } }
+}
+// ==================== v14.4: ENRICHISSEMENT combined_etfs.csv ====================
+
+async function enrichCombinedEtfsCsv(enrichedEtfs, combinedCsvPath) {
+    console.log('\n🔄 v14.4: Enrichissement de combined_etfs.csv avec Sector Guard...');
+    
+    if (!enrichedEtfs || enrichedEtfs.length === 0) {
+        console.log('⚠️ Pas d\'ETFs enrichis, skip enrichissement combined_etfs.csv');
+        return { success: false, reason: 'no_enriched_etfs' };
+    }
+
+    try { await fs.access(combinedCsvPath); } catch {
+        console.log(`⚠️ ${combinedCsvPath} non trouvé, skip enrichissement`);
+        return { success: false, reason: 'file_not_found' };
+    }
+
+    const csvContent = await fs.readFile(combinedCsvPath, 'utf8');
+    const rows = csv.parse(csvContent, { columns: true, skip_empty_lines: true });
+    console.log(`📊 combined_etfs.csv: ${rows.length} lignes lues`);
+
+    const enrichmentIndex = new Map();
+    for (const etf of enrichedEtfs) {
+        const symbol = (etf.symbol || '').toUpperCase().trim();
+        if (symbol) {
+            enrichmentIndex.set(symbol, {
+                sector_bucket: etf.sector_bucket || 'UNKNOWN',
+                sector_trust: etf.sector_trust != null ? etf.sector_trust : '',
+                sector_signal_ok: etf.sector_signal_ok ? '1' : '0',
+                sector_top: etf.sector_top?.sector || '',
+                sector_top_weight: etf.sector_top?.weight != null ? (etf.sector_top.weight * 100).toFixed(2) : '',
+                etf_type: etf.etf_type || 'standard',
+                underlying_ticker: etf.underlying_ticker || '',
+                fund_type: etf.fund_type || '',
+                aum_usd: etf.aum_usd ?? '',
+                ter: etf.total_expense_ratio ?? '',
+                yield_ttm: etf.yield_ttm ?? '',
+                country_top: etf.country_top?.country || etf.domicile || '',
+            });
+        }
+    }
+    console.log(`📦 Index enrichissement: ${enrichmentIndex.size} ETFs`);
+
+    const sectorGuardCols = ['sector_bucket', 'sector_trust', 'sector_signal_ok', 'sector_top', 'sector_top_weight', 'etf_type', 'underlying_ticker', 'fund_type_enriched', 'aum_usd_enriched', 'ter_enriched', 'yield_enriched', 'country_top_enriched'];
+    const existingCols = Object.keys(rows[0] || {});
+    const symbolColName = existingCols.find(c => c.toLowerCase() === 'symbol' || c.toLowerCase() === 'ticker' || c.toLowerCase() === 'code') || 'symbol';
+    const newCols = sectorGuardCols.filter(c => !existingCols.includes(c));
+    const finalCols = [...existingCols, ...newCols];
+
+    let matchCount = 0, noMatchCount = 0;
+    const enrichedRows = rows.map(row => {
+        const symbol = (row[symbolColName] || '').toUpperCase().trim();
+        const enrichment = enrichmentIndex.get(symbol);
+        if (enrichment) {
+            matchCount++;
+            return { ...row, ...enrichment };
+        } else {
+            noMatchCount++;
+            const result = { ...row };
+            for (const col of newCols) { if (!(col in result)) result[col] = ''; }
+            return result;
+        }
+    });
+
+    console.log(`✅ Enrichissement ETFs: ${matchCount} matchés, ${noMatchCount} non matchés`);
+
+    const escapeCSV = (val) => { if (val == null) return ''; const s = String(val); if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`; return s; };
+    const outputCsv = [finalCols.join(','), ...enrichedRows.map(row => finalCols.map(col => escapeCSV(row[col])).join(','))].join('\n') + '\n';
+
+    await fs.writeFile(combinedCsvPath, outputCsv, 'utf8');
+    console.log(`💾 combined_etfs.csv enrichi: ${enrichedRows.length} lignes, ${finalCols.length} colonnes`);
+
+    return { success: true, stats: { total: enrichedRows.length, matched: matchCount, unmatched: noMatchCount } };
+}
+
+async function enrichCombinedBondsCsv(enrichedBonds, combinedCsvPath) {
+    console.log('\n🔄 v14.4: Enrichissement de combined_bonds.csv...');
+    
+    if (!enrichedBonds || enrichedBonds.length === 0) return { success: false, reason: 'no_enriched_bonds' };
+
+    try { await fs.access(combinedCsvPath); } catch { return { success: false, reason: 'file_not_found' }; }
+
+    const csvContent = await fs.readFile(combinedCsvPath, 'utf8');
+    const rows = csv.parse(csvContent, { columns: true, skip_empty_lines: true });
+
+    const enrichmentIndex = new Map();
+    for (const bond of enrichedBonds) {
+        const symbol = (bond.symbol || '').toUpperCase().trim();
+        if (symbol) {
+            enrichmentIndex.set(symbol, {
+                sector_bucket: bond.sector_bucket || 'BOND',
+                sector_trust: bond.sector_trust != null ? bond.sector_trust : '',
+                sector_signal_ok: bond.sector_signal_ok ? '1' : '0',
+                bond_duration_enriched: bond.bond_avg_duration ?? '',
+                bond_credit_score_enriched: bond.bond_credit_score ?? '',
+                bond_credit_rating_enriched: bond.bond_credit_rating || '',
+                fund_type_enriched: bond.fund_type || '',
+                yield_enriched: bond.yield_ttm ?? '',
+            });
+        }
+    }
+
+    const bondCols = ['sector_bucket', 'sector_trust', 'sector_signal_ok', 'bond_duration_enriched', 'bond_credit_score_enriched', 'bond_credit_rating_enriched', 'fund_type_enriched', 'yield_enriched'];
+    const existingCols = Object.keys(rows[0] || {});
+    const symbolColName = existingCols.find(c => c.toLowerCase() === 'symbol' || c.toLowerCase() === 'ticker') || 'symbol';
+    const newCols = bondCols.filter(c => !existingCols.includes(c));
+    const finalCols = [...existingCols, ...newCols];
+
+    let matchCount = 0;
+    const enrichedRows = rows.map(row => {
+        const symbol = (row[symbolColName] || '').toUpperCase().trim();
+        const enrichment = enrichmentIndex.get(symbol);
+        if (enrichment) { matchCount++; return { ...row, ...enrichment }; }
+        const result = { ...row };
+        for (const col of newCols) { if (!(col in result)) result[col] = ''; }
+        return result;
+    });
+
+    const escapeCSV = (val) => { if (val == null) return ''; const s = String(val); if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`; return s; };
+    const outputCsv = [finalCols.join(','), ...enrichedRows.map(row => finalCols.map(col => escapeCSV(row[col])).join(','))].join('\n') + '\n';
+
+    await fs.writeFile(combinedCsvPath, outputCsv, 'utf8');
+    console.log(`💾 combined_bonds.csv enrichi: ${matchCount}/${rows.length} matchés`);
+
+    return { success: true, matched: matchCount, total: rows.length };
 }
 
 if (!CONFIG.API_KEY) { console.error('❌ TWELVE_DATA_API_KEY manquante'); process.exit(1); }
