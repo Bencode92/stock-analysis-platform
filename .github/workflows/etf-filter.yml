@@ -142,6 +142,8 @@ jobs:
           git add data/combined_etfs_holdings.csv 2>/dev/null || true
           git add data/combined_bonds_holdings.csv 2>/dev/null || true
           git add data/sector_suspects.csv 2>/dev/null || true
+          git add data/combined_etfs.csv 2>/dev/null || true
+          git add data/combined_bonds.csv 2>/dev/null || true
           git add data/objective_translations.cache.json 2>/dev/null || true
           
           if git diff --quiet && git diff --staged --quiet; then
