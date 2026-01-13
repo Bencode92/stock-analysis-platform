@@ -1586,6 +1586,7 @@ class FactorScorer:
         """
         Facteur contexte tactique avec z-score par classe.
         
+        v2.4.6 FIX: Utilise _get_sector_for_tilt() et _get_region_for_tilt() helpers.
         v2.4.5 FIX: Normalise secteurs et régions AVANT comparaison avec macro_tilts.
         """
         if not self._sector_lookup and not self._country_lookup and not self._macro_tilts:
@@ -1630,10 +1631,10 @@ class FactorScorer:
                     components.append(f_region)
                     weights.append(0.3)
             
-            # 3. Score macro tilts (RADAR) - v2.4.5 FIX: NORMALISER AVANT MATCHING
+            # 3. Score macro tilts (RADAR) - v2.4.6 FIX: NORMALISER AVANT MATCHING
             if self._macro_tilts:
                 f_macro = 0.5
-
+                
                 # v2.4.6 FIX: Normaliser secteur et région vers format RADAR
                 sector_normalized = normalize_sector_for_tilts(sector_for_tilt)
                 region_normalized = normalize_region_for_tilts(region_for_tilt)
@@ -1643,33 +1644,33 @@ class FactorScorer:
                 favored_regions = self._macro_tilts.get("favored_regions", [])
                 avoided_regions = self._macro_tilts.get("avoided_regions", [])
                 
-                # v2.4.5: Boost/malus secteur avec normalisation
+                # v2.4.6: Boost/malus secteur avec normalisation
                 sector_tilt = "neutral"
                 if sector_normalized and sector_normalized in favored_sectors:
                     f_macro += 0.2
                     sector_tilt = "favored"
-                    logger.debug(f"RADAR sector boost: {sector_top} → {sector_normalized} in favored")
+                    logger.debug(f"RADAR sector boost: {sector_for_tilt} → {sector_normalized} in favored")
                 elif sector_normalized and sector_normalized in avoided_sectors:
                     f_macro -= 0.2
                     sector_tilt = "avoided"
-                    logger.debug(f"RADAR sector penalty: {sector_top} → {sector_normalized} in avoided")
+                    logger.debug(f"RADAR sector penalty: {sector_for_tilt} → {sector_normalized} in avoided")
                 
-                # v2.4.5: Boost/malus région avec normalisation
+                # v2.4.6: Boost/malus région avec normalisation
                 region_tilt = "neutral"
                 if region_normalized and region_normalized in favored_regions:
                     f_macro += 0.15
                     region_tilt = "favored"
-                    logger.debug(f"RADAR region boost: {country_top} → {region_normalized} in favored")
+                    logger.debug(f"RADAR region boost: {region_for_tilt} → {region_normalized} in favored")
                 elif region_normalized and region_normalized in avoided_regions:
                     f_macro -= 0.15
                     region_tilt = "avoided"
-                    logger.debug(f"RADAR region penalty: {country_top} → {region_normalized} in avoided")
+                    logger.debug(f"RADAR region penalty: {region_for_tilt} → {region_normalized} in avoided")
                 
                 f_macro = max(0.0, min(1.0, f_macro))
                 components.append(f_macro)
                 weights.append(0.3)
                 
-                # v2.4.5: Stocker les détails du matching pour debug/traçabilité
+                # v2.4.6: Stocker les détails du matching pour debug/traçabilité
                 a["_radar_matching"] = {
                     "sector_raw": sector_for_tilt,
                     "sector_normalized": sector_normalized,
