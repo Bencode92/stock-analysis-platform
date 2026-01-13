@@ -2092,9 +2092,18 @@ if (statutId === 'sciIS') {
     sim.remunerationNetteSociale = sim.salaireNet;
 
   } else if (['eurlIS','sarl','selarl','sca','ei','eurl','snc'].includes(statutId)) {
-    sim.remuneration        = brut;
-    sim.cotisationsSociales = cotisations;
-  }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FIX: Ne pas écraser les cotisations pour les statuts IR (ei, eurl, snc)
+    // Ces statuts n'ont pas de split salaire/dividendes - le moteur calcule
+    // correctement les cotisations TNS sur l'intégralité du bénéfice.
+    // Le recalcul via splitBrutFromBloc() ne s'applique qu'aux statuts IS.
+    // ═══════════════════════════════════════════════════════════════════════════
+    const isStatutIRPur = ['ei','eurl','snc','sci'].includes(statutId);
+    if (!isStatutIRPur) {
+      // Statuts IS TNS : recalcul bloc rémunération selon ratio UI
+      sim.remuneration        = brut;
+      sim.cotisationsSociales = cotisations;
+    }
 
   // 4) Le reliquat (profit avant IS) sert de base à l’IS
   sim.resultatApresRemuneration = round2(profitPreIS);
