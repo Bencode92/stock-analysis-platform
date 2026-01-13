@@ -1522,9 +1522,11 @@ function runComparison() {
     const acreEnabled = document.getElementById('micro-acre')?.checked || false;
     const acreMois = parseInt(document.getElementById('micro-acre-mois')?.value) || 12;
 
-    // 🔹 Lecture MARGE depuis l'UI (AJOUT CLÉ)
-    const margePct = parseFloat(document.getElementById('sim-marge')?.value) || 30;
-    const tauxMarge = margePct / 100;  // ex: 90% → 0.90
+    // 🔹 Lecture MARGE depuis l'UI (robuste : évite || qui écrase 0)
+    const margePctUI = parseFloat(document.getElementById('sim-marge')?.value);
+    const tauxMarge = Number.isFinite(margePctUI)
+      ? Math.max(0, Math.min(1, margePctUI / 100))
+      : 0.30;
 
     // 🧮 Appel moteur avec tauxMarge
     const sim = window.SimulationsFiscales.simulerMicroEntreprise({
@@ -1535,10 +1537,50 @@ function runComparison() {
       versementLiberatoire: vfl,
       acre: acreEnabled,
       acreMois: acreMois,
-      tauxMarge: tauxMarge   // ← AJOUT : passe la marge au moteur
+      tauxMarge: tauxMarge
     });
 
-    // 🔒 Patch local ACRE (garanti même si le moteur ne le gère pas)
+    // ═══════════════════════════════════════════════════════════════
+    // 🔧 PATCH : Forcer le calcul marge/dépenses/cashNetReel côté UI
+    //    (contourne le bug du moteur qui ignore tauxMarge)
+    // ═══════════════════════════════════════════════════════════════
+    if (sim?.compatible) {
+      // 1) Recaler la marge réelle
+      sim.tauxMarge = tauxMarge;
+      sim.tauxMargePct = `${Math.round(tauxMarge * 100)}%`;
+
+      // 2) Dépenses pro et bénéfice réel
+      sim.depensesPro = round2(ca * (1 - tauxMarge));
+      sim.beneficeReel = round2(ca - sim.depensesPro);
+
+      // 3) Recalculer le cash net réel
+      const cotSoc = Number(sim.cotisationsSociales) || 0;
+      const cfp    = Number(sim.cfp) || 0;
+      const cfe    = Number(sim.cfe) || 0;
+      const ir     = Number(sim.impotRevenu) || 0;
+
+      sim.cashNetReel = round2(ca - sim.depensesPro - cotSoc - cfp - cfe - ir);
+
+      // 4) Ratios
+      sim.ratioCashNetCA = ca > 0 ? round2((sim.cashNetReel / ca) * 100) : 0;
+
+      // 5) Warnings si micro défavorable
+      const abattements = { BIC_VENTE: 0.71, BIC_SERVICE: 0.50, BNC: 0.34 };
+      const abattEff = abattements[type] || 0.50;
+      sim.beneficeForfaitaire = round2(ca * (1 - abattEff));
+      sim.microDefavorable = tauxMarge < (1 - abattEff);
+
+      if (!sim.warnings) sim.warnings = [];
+      if (sim.microDefavorable && !sim.warnings.some(w => w.includes('défavorable'))) {
+        sim.warnings.push(`⚠️ Micro potentiellement défavorable : marge réelle (${Math.round(tauxMarge * 100)}%) < bénéfice forfaitaire (${Math.round((1 - abattEff) * 100)}%).`);
+      }
+      if (sim.cashNetReel < 0 && !sim.warnings.some(w => w.includes('négatif'))) {
+        sim.warnings.push(`🚨 Cash net réel négatif (${Math.round(sim.cashNetReel)}€). Micro non viable.`);
+      }
+    }
+    // ═══════════════════════════════════════════════════════════════
+
+    // 🔒 Patch ACRE (garanti même si le moteur ne le gère pas)
     if (acreEnabled && sim?.compatible) {
       const txACRE = microTauxCotisations(type, { acre: true, mois: acreMois });
       sim.cotisationsSociales = round2(ca * txACRE);
@@ -1547,8 +1589,9 @@ function runComparison() {
       const cfp = Number(sim.cfp) || 0;
       const cfe = Number(sim.cfe) || 0;
 
-      sim.revenuNetApresImpot = round2(ca - sim.cotisationsSociales - cfp - cfe - impots);
-      sim.ratioNetCA = round2((sim.revenuNetApresImpot / ca) * 100);
+      // Recalculer cashNetReel avec le nouveau taux ACRE
+      sim.cashNetReel = round2(ca - sim.depensesPro - sim.cotisationsSociales - cfp - cfe - impots);
+      sim.ratioCashNetCA = ca > 0 ? round2((sim.cashNetReel / ca) * 100) : 0;
 
       sim._acre_applique = { txAvant: MICRO_SOC_TAUX[type], txApres: txACRE, mois: acreMois };
     }
