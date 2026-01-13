@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-01-13T14:49:50.111189",
+    "generated_at": "2026-01-13T15:44:20.222912",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -21,10 +21,8 @@
   },
   "data_coverage": {
     "total_tickers_requested": 32,
-    "tickers_with_data": 31,
-    "tickers_missing": [
-      "ICVT"
-    ]
+    "tickers_with_data": 32,
+    "tickers_missing": []
   },
   "assets_by_type": {
     "Action": [
@@ -40,6 +38,7 @@
       "GDX",
       "GLDM",
       "IBMP",
+      "ICVT",
       "IGOV",
       "ISHG",
       "IUS",
@@ -303,9 +302,9 @@
       "first_date": "2025-09-16",
       "last_date": "2026-01-13",
       "first_price": 598.8,
-      "last_price": 612.3,
-      "total_return_pct": 2.25,
-      "volatility_annual_pct": 65.59,
+      "last_price": 609.6,
+      "total_return_pct": 1.8,
+      "volatility_annual_pct": 65.63,
       "weights_by_profile": {
         "Agressif": 1.0
       },
@@ -344,11 +343,11 @@
         },
         {
           "date": "2026-01-13",
-          "close": 612.3,
+          "close": 609.6,
           "prev_date": "2026-01-12",
           "prev_close": 621.7,
-          "daily_return_pct": -1.512,
-          "formula": "(612.3000 / 621.7000) - 1"
+          "daily_return_pct": -1.9463,
+          "formula": "(609.6000 / 621.7000) - 1"
         }
       ],
       "is_benchmark": false
@@ -361,8 +360,8 @@
       "last_date": "2026-01-13",
       "first_price": 0.0014,
       "last_price": 0.0012,
-      "total_return_pct": -14.61,
-      "volatility_annual_pct": 39.85,
+      "total_return_pct": -15.7,
+      "volatility_annual_pct": 39.95,
       "weights_by_profile": {
         "Modéré": 0.5
       },
@@ -404,7 +403,7 @@
           "close": 0.0012,
           "prev_date": "2026-01-12",
           "prev_close": 0.0012,
-          "daily_return_pct": -0.5809,
+          "daily_return_pct": -1.8437,
           "formula": "(0.0012 / 0.0012) - 1"
         }
       ],
@@ -810,6 +809,63 @@
       ],
       "is_benchmark": false
     },
+    "ICVT": {
+      "ticker": "ICVT",
+      "type": "Action",
+      "n_days_data": 84,
+      "first_date": "2025-09-16",
+      "last_date": "2026-01-13",
+      "first_price": 98.01,
+      "last_price": 102.63,
+      "total_return_pct": 4.71,
+      "volatility_annual_pct": 14.27,
+      "weights_by_profile": {
+        "Agressif": 5.0
+      },
+      "price_samples": [
+        {
+          "date": "2025-09-16",
+          "close": 98.01,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-10-17",
+          "close": 101.81,
+          "prev_date": "2025-10-16",
+          "prev_close": 102.265,
+          "daily_return_pct": -0.4449,
+          "formula": "(101.8100 / 102.2650) - 1"
+        },
+        {
+          "date": "2025-11-17",
+          "close": 97.65,
+          "prev_date": "2025-11-14",
+          "prev_close": 98.1,
+          "daily_return_pct": -0.4587,
+          "formula": "(97.6500 / 98.1000) - 1"
+        },
+        {
+          "date": "2025-12-16",
+          "close": 98.21,
+          "prev_date": "2025-12-15",
+          "prev_close": 98.45,
+          "daily_return_pct": -0.2438,
+          "formula": "(98.2100 / 98.4500) - 1"
+        },
+        {
+          "date": "2026-01-13",
+          "close": 102.63,
+          "prev_date": "2026-01-12",
+          "prev_close": 102.63,
+          "daily_return_pct": 0.0,
+          "formula": "(102.6300 / 102.6300) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
     "IGOV": {
       "ticker": "IGOV",
       "type": "Action",
@@ -1045,9 +1101,9 @@
       "first_date": "2025-09-16",
       "last_date": "2026-01-13",
       "first_price": 0.936,
-      "last_price": 1.095,
-      "total_return_pct": 16.99,
-      "volatility_annual_pct": 74.8,
+      "last_price": 1.096,
+      "total_return_pct": 17.09,
+      "volatility_annual_pct": 74.82,
       "weights_by_profile": {
         "Agressif": 1.5,
         "Modéré": 0.5
@@ -1087,11 +1143,11 @@
         },
         {
           "date": "2026-01-13",
-          "close": 1.095,
+          "close": 1.096,
           "prev_date": "2026-01-12",
           "prev_close": 1.054,
-          "daily_return_pct": 3.8899,
-          "formula": "(1.0950 / 1.0540) - 1"
+          "daily_return_pct": 3.9848,
+          "formula": "(1.0960 / 1.0540) - 1"
         }
       ],
       "is_benchmark": false
@@ -1161,9 +1217,9 @@
       "first_date": "2025-09-16",
       "last_date": "2026-01-13",
       "first_price": 1.025,
-      "last_price": 1.133,
-      "total_return_pct": 10.54,
-      "volatility_annual_pct": 63.31,
+      "last_price": 1.131,
+      "total_return_pct": 10.34,
+      "volatility_annual_pct": 63.29,
       "weights_by_profile": {
         "Agressif": 1.5,
         "Modéré": 0.5
@@ -1203,11 +1259,11 @@
         },
         {
           "date": "2026-01-13",
-          "close": 1.133,
+          "close": 1.131,
           "prev_date": "2026-01-12",
           "prev_close": 1.103,
-          "daily_return_pct": 2.7199,
-          "formula": "(1.1330 / 1.1030) - 1"
+          "daily_return_pct": 2.5385,
+          "formula": "(1.1310 / 1.1030) - 1"
         }
       ],
       "is_benchmark": false
@@ -1887,6 +1943,15 @@
           "contribution_pct": 0.0
         },
         {
+          "ticker": "ICVT",
+          "type": "Action",
+          "weight_pct": 5.0,
+          "price_prev": 102.63,
+          "price_today": 102.63,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
           "ticker": "EMLC",
           "type": "Action",
           "weight_pct": 5.0,
@@ -2068,17 +2133,17 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 17.18,
-      "net_return_pct": 17.18,
-      "volatility_pct": 13.98,
-      "max_drawdown_pct": -3.81,
+      "gross_return_pct": 17.06,
+      "net_return_pct": 17.06,
+      "volatility_pct": 14.43,
+      "max_drawdown_pct": -4.09,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 4.14,
-      "excess_return_pct": 13.04
+      "excess_return_pct": 12.92
     },
     "Modéré": {
-      "gross_return_pct": 12.7,
-      "net_return_pct": 12.7,
+      "gross_return_pct": 12.69,
+      "net_return_pct": 12.69,
       "volatility_pct": 12.48,
       "max_drawdown_pct": -3.63,
       "benchmark_symbol": "URTH",
