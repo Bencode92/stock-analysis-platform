@@ -2261,11 +2261,12 @@ if (statutId === 'sciIS') {
   net = sim.revenuNetApresImpot;
 
 } else if (statutId === 'eurl' && !sim.is) {
-  brut = sim.beneficeImposable + sim.cotisationsSociales;
+  // FIX: Utiliser beneficeAvantCotisations si disponible (cohérent avec EI)
+  brut = sim.beneficeAvantCotisations ?? (sim.beneficeImposable + sim.cotisationsSociales);
   charges = sim.cotisationsSociales;
   impots = sim.impotRevenu;
   net = sim.revenuNetApresImpot;
-
+   
 } else if (statutId === 'snc') {
   brut = sim.beneficeAssociePrincipal;
   charges = sim.cotisationsSociales;
