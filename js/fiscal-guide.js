@@ -2263,8 +2263,8 @@ if (statutId === 'sciIS') {
   net = sim.revenuNetApresImpot;
 
 } else if (statutId === 'eurl' && !sim.is) {
-  // FIX: Utiliser beneficeAvantCotisations si disponible (cohérent avec EI)
-  brut = sim.beneficeAvantCotisations ?? (sim.ca * (sim.tauxMarge ?? 1));
+  // FIX: Utiliser beneficeAvantCotisations si dispo, sinon recalculer depuis CA * marge
+  brut = sim.beneficeAvantCotisations ?? sim.ca * (sim.tauxMarge ?? 1);
   charges = sim.cotisationsSociales;
   impots = sim.impotRevenu;
   net = sim.revenuNetApresImpot;
