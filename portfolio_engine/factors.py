@@ -1,7 +1,17 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.4.5 — SEUL MOTEUR D'ALPHA
+FactorScorer v2.4.6 — SEUL MOTEUR D'ALPHA
 =========================================
+
+v2.4.6 Changes (RADAR ETF Integration):
+- NEW: NON_TILTABLE_BUCKETS pour filtrer alt assets
+- NEW: SECTOR_MAPPING_ETF pour normaliser Twelve Data → RADAR
+- NEW: _get_sector_for_tilt() et _get_region_for_tilt() helpers
+- FIX: Tilt géo désactivé pour ETFs (domicile ≠ exposition)
+- FIX: Early return permet RADAR sans lookups
+- FIX: DEFAULT_MACRO_TILTS en format RADAR (kebab-case)
+- NEW: Logs de couverture RADAR par catégorie
+- Couverture ETFs: 0% → ~75%
 
 v2.4.5 Changes (FIX RADAR tilts):
 - FIX CRITIQUE: Les tilts RADAR sont maintenant appliqués correctement
@@ -231,11 +241,12 @@ COUNTRY_NORMALIZATION = {
     "Turkey": "Turquie",
 }
 
+# APRÈS
 DEFAULT_MACRO_TILTS = {
-    "favored_sectors": ["Healthcare", "Consumer Defensive", "Utilities"],
-    "avoided_sectors": ["Real Estate", "Consumer Discretionary", "Consumer Cyclical"],
-    "favored_regions": ["United States", "Switzerland"],
-    "avoided_regions": ["China", "Hong Kong"],
+    "favored_sectors": ["healthcare", "consumer-staples", "utilities"],
+    "avoided_sectors": ["real-estate", "consumer-discretionary"],
+    "favored_regions": ["usa", "switzerland"],
+    "avoided_regions": ["china", "hong-kong"],
 }
 
 
@@ -460,7 +471,39 @@ COUNTRY_TO_RADAR = {
     "Europe": "",
     "Zone Euro": "",
 }
+# ============= v2.4.6 ETF RADAR INTEGRATION =============
 
+# v2.4.6: Buckets ETF à exclure du tilt sectoriel
+NON_TILTABLE_BUCKETS = {
+    "ALT_ASSET_COMMODITY",
+    "ALT_ASSET_CRYPTO",
+    "ALT_ASSET_FX",
+    "ALT_ASSET_VOLATILITY",
+    "INDEX_DERIVATIVE",
+    "STRUCTURED_VEHICLE",
+    "DATA_MISSING",
+}
+
+# v2.4.6: Mapping Twelve Data sectors → format RADAR
+SECTOR_MAPPING_ETF = {
+    "Technology": "information-technology",
+    "Financial Services": "financials",
+    "Financial": "financials",
+    "Healthcare": "healthcare",
+    "Health Care": "healthcare",
+    "Consumer Cyclical": "consumer-discretionary",
+    "Consumer Discretionary": "consumer-discretionary",
+    "Consumer Defensive": "consumer-staples",
+    "Consumer Staples": "consumer-staples",
+    "Industrials": "industrials",
+    "Industrial": "industrials",
+    "Basic Materials": "materials",
+    "Materials": "materials",
+    "Energy": "energy",
+    "Utilities": "utilities",
+    "Communication Services": "communication-services",
+    "Real Estate": "real-estate",
+}
 
 def normalize_sector_for_tilts(sector: str) -> str:
     """
@@ -535,6 +578,21 @@ def normalize_region_for_tilts(country: str) -> str:
     
     # 3. Fallback: convertir en lowercase hyphenated
     return country_clean.lower().replace(" ", "-").replace("_", "-")
+    
+ # ============= v2.4.6 TILTS NORMALIZATION HELPER =============
+
+def _normalize_tilts_list(tilts: list, normalize_fn) -> list:
+    """v2.4.6: Normalise une liste de tilts vers le format RADAR."""
+    if not tilts:
+        return []
+    result = []
+    for item in tilts:
+        if not isinstance(item, str) or not item.strip():
+            continue
+        normalized = normalize_fn(item)
+        if normalized:
+            result.append(normalized)
+    return result    
 
 
 # ============= v2.3 MARKET CONTEXT LOADER =============
@@ -1106,6 +1164,28 @@ class FactorScorer:
             self._country_lookup = _build_country_lookup(self.market_context["indices"])
         self._macro_tilts = self.market_context.get("macro_tilts", DEFAULT_MACRO_TILTS)
         
+        # v2.4.6: Normaliser les tilts vers format RADAR
+        if self._macro_tilts:
+            self._macro_tilts = {
+                "favored_sectors": _normalize_tilts_list(
+                    self._macro_tilts.get("favored_sectors", []),
+                    normalize_sector_for_tilts
+                ),
+                "avoided_sectors": _normalize_tilts_list(
+                    self._macro_tilts.get("avoided_sectors", []),
+                    normalize_sector_for_tilts
+                ),
+                "favored_regions": _normalize_tilts_list(
+                    self._macro_tilts.get("favored_regions", []),
+                    normalize_region_for_tilts
+                ),
+                "avoided_regions": _normalize_tilts_list(
+                    self._macro_tilts.get("avoided_regions", []),
+                    normalize_region_for_tilts
+                ),
+            }
+            logger.debug(f"v2.4.6: Normalized macro_tilts: {self._macro_tilts}")
+        
         # v2.4.4: Compute staleness
         loaded_at = self.market_context.get("loaded_at")
         self._market_context_age_days, self._market_context_stale = _get_market_context_age(loaded_at)
@@ -1185,6 +1265,44 @@ class FactorScorer:
             asset.get("category", ""),
             asset.get("fund_type", "")
         )
+        
+    # ============= v2.4.6 ETF RADAR HELPERS =============
+    
+    def _get_sector_for_tilt(self, asset: dict) -> str:
+        """v2.4.6: Extrait le secteur pour le tilt RADAR."""
+        cat = self._get_normalized_category(asset)
+        
+        if cat == "etf":
+            bucket = asset.get("sector_bucket", "")
+            if bucket in NON_TILTABLE_BUCKETS:
+                return ""
+            if not asset.get("sector_signal_ok", False):
+                return ""
+            
+            sector_top = asset.get("sector_top", {})
+            if isinstance(sector_top, dict):
+                sector_raw = sector_top.get("sector", "")
+                return SECTOR_MAPPING_ETF.get(sector_raw, sector_raw)
+            elif isinstance(sector_top, str):
+                return SECTOR_MAPPING_ETF.get(sector_top, sector_top)
+            return ""
+        
+        elif cat == "equity":
+            return asset.get("sector_top", "") or asset.get("sector", "")
+        
+        return ""
+    
+    def _get_region_for_tilt(self, asset: dict) -> str:
+        """v2.4.6: Extrait la région pour le tilt RADAR (désactivé pour ETFs)."""
+        cat = self._get_normalized_category(asset)
+        
+        if cat == "etf":
+            # PAS DE TILT GÉO pour ETFs (domicile ≠ exposition)
+            return ""
+        elif cat == "equity":
+            return asset.get("country_top", "") or asset.get("country", "")
+        
+        return ""    
     
     def compute_factor_momentum(self, assets: List[dict]) -> np.ndarray:
         """
@@ -1470,15 +1588,17 @@ class FactorScorer:
         
         v2.4.5 FIX: Normalise secteurs et régions AVANT comparaison avec macro_tilts.
         """
-        if not self._sector_lookup and not self._country_lookup:
+        if not self._sector_lookup and not self._country_lookup and not self._macro_tilts:
+            logger.warning("tactical_context: no lookups AND no macro_tilts → skipping")
             return np.zeros(len(assets))
         
         scores = []
         categories = []
         
         for a in assets:
-            sector_top = a.get("sector_top", "") or a.get("sector", "")
-            country_top = a.get("country_top", "") or a.get("country", "")
+            # v2.4.6: Utiliser les helpers pour extraction secteur/région
+            sector_for_tilt = self._get_sector_for_tilt(a)
+            region_for_tilt = self._get_region_for_tilt(a)
             categories.append(self._get_normalized_category(a))
             
             components = []
