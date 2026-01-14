@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.12.2: FIX - ETF selection audit extraction from all_funds_data (dicts) not universe_others (Assets)
 V4.9.1: Backtest debug file generation - real prices and calculations export
 V4.9.0: RADAR tactical integration - deterministic data-driven tilts
 V4.8.7: P1-8c FIX - TER is embedded in ETF prices, use platform_fee instead
@@ -805,18 +806,49 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             f"vol={diagnostics.get('portfolio_vol', 'N/A'):.1f}%"
         )
     
-    # === v4.12.0: Génération de l'audit de sélection ===
+    # === v4.12.2 FIX: Génération de l'audit de sélection avec extraction correcte ===
     if CONFIG.get("generate_selection_audit", False) and SELECTION_AUDIT_AVAILABLE:
         try:
-            # Extraire les actifs sélectionnés depuis les allocations
+            # Extraire les actifs sélectionnés depuis les allocations (union des 3 profils)
             selected_tickers = set()
             for profile_data in portfolios.values():
                 for asset_id in profile_data.get("allocation", {}).keys():
                     selected_tickers.add(asset_id)
             
-            equities_final = [e for e in equities if e.get("id") in selected_tickers or e.get("ticker") in selected_tickers]
-            etf_selected = [e for e in universe_others if e.get("category") == "etf" and (e.get("id") in selected_tickers or e.get("ticker") in selected_tickers)]
-            crypto_selected = [e for e in universe_others if e.get("category") == "crypto" and (e.get("id") in selected_tickers or e.get("ticker") in selected_tickers)]
+            # v4.12.2 FIX: Match equities correctement
+            equities_final = [e for e in equities if e.get("id") in selected_tickers or e.get("ticker") in selected_tickers or e.get("name") in selected_tickers]
+            
+            # v4.12.2 FIX: Extraire ETF sélectionnés depuis all_funds_data (qui sont des dicts)
+            # et pas depuis universe_others (qui sont des objets Asset)
+            etf_selected = []
+            for etf in all_funds_data:
+                # all_funds_data contient ETF + bonds, filtrer sur category
+                cat = str(etf.get("category", "") or etf.get("fund_type", "") or "").lower()
+                if "bond" in cat:
+                    continue  # Skip bonds
+                
+                # Vérifier si cet ETF est dans les allocations
+                etf_id = etf.get("id") or etf.get("ticker") or etf.get("symbol") or etf.get("name")
+                etf_ticker = etf.get("ticker") or etf.get("symbol")
+                etf_name = etf.get("name")
+                
+                if etf_id in selected_tickers or etf_ticker in selected_tickers or etf_name in selected_tickers:
+                    # Marquer comme ETF pour l'audit
+                    etf_copy = etf.copy()
+                    etf_copy["category"] = "etf"
+                    etf_selected.append(etf_copy)
+            
+            # v4.12.2 FIX: Extraire crypto sélectionnées depuis crypto_data (dicts)
+            crypto_selected = []
+            for cr in crypto_data:
+                cr_id = cr.get("id") or cr.get("ticker") or cr.get("symbol") or cr.get("name")
+                cr_ticker = cr.get("ticker") or cr.get("symbol")
+                cr_name = cr.get("name")
+                
+                if cr_id in selected_tickers or cr_ticker in selected_tickers or cr_name in selected_tickers:
+                    crypto_selected.append(cr)
+            
+            logger.info(f"   📊 Audit: {len(equities_final)} equities, {len(etf_selected)} ETF, {len(crypto_selected)} crypto sélectionnés")
             
             create_selection_audit(
                 config=CONFIG,
@@ -1072,7 +1104,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.8.7"
+        merged[profile]["_compliance_audit"]["version"] = "v4.12.2"
         
         if report.removal_ratio > 0.5:
             logger.error(
@@ -2085,7 +2117,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.9.0",
+        "version": "v4.12.2",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -2122,7 +2154,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.8.7",
+        "version": "v4.12.2",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -2201,7 +2233,7 @@ def save_backtest_results_euus(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.11.0 - Global + EU/US Focus + Asset Rationales")
+    logger.info("🚀 Portfolio Engine v4.12.2 - Global + EU/US Focus + Asset Rationales")
     logger.info("=" * 60)
     
     brief_data = load_brief_data()
@@ -2310,7 +2342,8 @@ def main():
         if backtest_results.get("debug_file"):
             logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
     logger.info("")
-    logger.info("Fonctionnalités v4.11.0:")
+    logger.info("Fonctionnalités v4.12.2:")
+    logger.info("   • ✅ FIX: ETF sélectionnés avec tilts RADAR corrects dans selection_audit.json")
     logger.info("   • ✅ NEW: Justifications LLM par actif avec contexte RADAR")
     logger.info("   • ✅ Portefeuilles EU/US Focus (Europe + USA uniquement)")
     logger.info("   • ✅ Filtre géographique pour brokers européens")
@@ -2328,6 +2361,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
