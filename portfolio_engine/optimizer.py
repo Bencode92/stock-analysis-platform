@@ -387,6 +387,27 @@ def _is_equity_like(asset: "Asset") -> bool:
         return True  # ETF equity par défaut
     
     return False
+def _is_bond_like(asset: "Asset") -> bool:
+    """
+    v6.26: Identifie les actifs bond-like (Obligations + ETF obligataires).
+    Utilisé pour appliquer MAX_SINGLE_BOND_WEIGHT uniformément.
+    """
+    if asset.category == "Obligations":
+        return True
+    if asset.category == "ETF":
+        # Via exposure mapping
+        if asset.exposure in {"bonds_ig", "bonds_treasury", "cash"}:
+            return True
+        # Via fund_type Morningstar
+        ft = None
+        if asset.source_data:
+            ft = asset.source_data.get("fund_type") or asset.source_data.get("fundType")
+        if ft and ft in BOND_LIKE_FUND_TYPES:
+            return True
+        # Via risk_bucket
+        if hasattr(asset, "_risk_bucket") and asset._risk_bucket == "bond_like":
+            return True
+    return False
 
 # Volatilités par défaut par catégorie
 DEFAULT_VOLS = {"Actions": 25.0, "ETF": 15.0, "Obligations": 5.0, "Crypto": 80.0}
@@ -2652,9 +2673,13 @@ class PortfolioOptimizer:
         }
         
         # Candidats par priorité
-        bonds = [(aid, w) for aid, w in allocation.items()
-                 if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
-                 and w < MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25)]
+        # v6.26 FIX: Respecter cap bond dans redistribution
+        max_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25.0)
+        bonds = [
+            (aid, w) for aid, w in allocation.items()
+            if asset_lookup.get(aid) and _is_bond_like(asset_lookup[aid])
+            and w < max_bond - 0.5
+        ]
         
         etfs = [(aid, w) for aid, w in allocation.items()
                 if asset_lookup.get(aid) and asset_lookup[aid].category == "ETF"
@@ -2674,7 +2699,12 @@ class PortfolioOptimizer:
             for aid, w in candidates_list:
                 if remaining < 0.1:
                     break
-                headroom = profile.max_single_position - w
+                # v6.26 FIX: headroom respecte cap bond
+                asset = asset_lookup.get(aid)
+                if asset and _is_bond_like(asset):
+                    headroom = min(profile.max_single_position, max_bond) - w
+                else:
+                    headroom = profile.max_single_position - w
                 add = min(headroom, remaining, 2.0)
                 if add > 0.1:
                     allocation[aid] = round(allocation[aid] + add, 2)
@@ -2766,16 +2796,34 @@ class PortfolioOptimizer:
         logger.info(f"P1 FIX v6.21: Bonds after enforcement = {bonds_final:.1f}%")
         
         return allocation
-    def _adjust_to_100(self, allocation: Dict[str, float], profile: ProfileConstraints) -> Dict[str, float]:
-        """Ajustement à 100%."""
+    def _adjust_to_100(
+        self, 
+        allocation: Dict[str, float], 
+        profile: ProfileConstraints,
+        candidates: Optional[List[Asset]] = None  # v6.26: optionnel pour bond cap
+    ) -> Dict[str, float]:
+        """Ajustement à 100% en respectant max_single_position ET max_bond."""
         total = sum(allocation.values())
         if abs(total - 100) < 0.01:
             return allocation
         
         diff = 100 - total
+        max_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25.0)
+        
+        # v6.26: Si candidates fourni, respecter cap bond
+        asset_lookup = {c.id: c for c in candidates} if candidates else {}
+        
+        def get_max_for_asset(aid: str, current_w: float) -> float:
+            """Retourne le max autorisé pour cet asset."""
+            if asset_lookup:
+                asset = asset_lookup.get(aid)
+                if asset and _is_bond_like(asset):
+                    return min(profile.max_single_position, max_bond)
+            return profile.max_single_position
+        
         candidates_for_adjust = [
             (k, v) for k, v in allocation.items()
-            if v + diff <= profile.max_single_position and v + diff >= 0.5
+            if v + diff <= get_max_for_asset(k, v) and v + diff >= 0.5
         ]
         
         if candidates_for_adjust:
@@ -2821,8 +2869,14 @@ class PortfolioOptimizer:
                          if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto")
         if crypto_pct > profile.crypto_max + 0.5:
             violations.append(f"crypto={crypto_pct:.1f}%>{profile.crypto_max}%")
+        # 5. v6.26: Single bond cap
+        max_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25.0)
+        for aid, w in allocation.items():
+            asset = asset_lookup.get(aid)
+            if asset and _is_bond_like(asset) and w > max_bond + 0.5:
+                violations.append(f"bond_cap:{aid}={w:.1f}%>{max_bond}%")   
         
-        # 5. Sector caps (equity-like only)
+        # 6. Sector caps (equity-like only)
         sector_weights = defaultdict(float)
         for aid, w in allocation.items():
             asset = asset_lookup.get(aid)
@@ -2833,7 +2887,7 @@ class PortfolioOptimizer:
             if w > profile.max_sector + 0.5:
                 violations.append(f"sector:{sector}={w:.1f}%")
         
-        # 6. v2.1 FIX: Region caps (actions seulement)
+        # 7. v2.1 FIX: Region caps (actions seulement)
         region_weights = defaultdict(float)
         for aid, w in allocation.items():
             asset = asset_lookup.get(aid)
@@ -2872,30 +2926,35 @@ class PortfolioOptimizer:
             allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
             allocation = self._enforce_sector_caps(allocation, candidates, profile)
             
-            # 3. Normaliser à 100%
-            allocation = self._adjust_to_100(allocation, profile)
+            # 3. Normaliser à 100% (avec respect cap bond)
+            allocation = self._adjust_to_100(allocation, profile, candidates)
             
-            # 4. v2.1 FIX: Region caps APRÈS normalisation (dernier!)
+            # 4. Region caps APRÈS normalisation
             allocation = self._enforce_region_caps(allocation, candidates, profile)
             
             # 5. Re-normaliser si region caps ont changé les poids
             total = sum(allocation.values())
             if abs(total - 100) > 0.5:
-                # Redistribuer vers non-actions ou actions hors régions saturées
                 allocation = self._redistribute_after_region_caps(
                     allocation, candidates, profile, 100 - total
                 )
             
-            # 6. Turnover check
+            # 6. v6.26 FIX: CAP BOND FINAL (après toutes redistributions)
+            allocation = self._enforce_single_bond_cap(allocation, candidates, profile)
+            
+            # 7. Ajustement final à 100%
+            allocation = self._adjust_to_100(allocation, profile, candidates)
+            
+            # 8. Turnover check
             if prev_weights is not None:
                 allocation = self._clip_turnover(
                     allocation, prev_weights, profile.max_turnover, candidates
                 )
             
-            # 7. Check violations
+            # 9. Check violations
             violations = self._check_all_violations(allocation, candidates, profile)
             
-            # 8. Delta convergence
+            # 10. Delta convergence
             delta = sum(abs(allocation.get(k, 0) - prev_alloc.get(k, 0)) 
                         for k in set(allocation.keys()) | set(prev_alloc.keys()))
             
@@ -3006,6 +3065,70 @@ class PortfolioOptimizer:
         logger.info(f"P0 FIX v6.22: Crypto after enforcement = {crypto_final:.1f}%")
         
         return allocation
+     def _enforce_single_bond_cap(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """
+        v6.26 FIX: Force chaque bond-like <= MAX_SINGLE_BOND_WEIGHT[profile].
+        """
+        asset_lookup = {c.id: c for c in candidates}
+        max_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25.0)
+        
+        freed_weight = 0.0
+        
+        for aid, w in list(allocation.items()):
+            asset = asset_lookup.get(aid)
+            if asset and _is_bond_like(asset) and w > max_bond + 0.1:
+                excess = w - max_bond
+                allocation[aid] = round(max_bond, 2)
+                freed_weight += excess
+                logger.warning(
+                    f"v6.26 FIX: Bond {aid} capped {w:.1f}% → {max_bond:.1f}% "
+                    f"(freed {excess:.1f}%)"
+                )
+        
+        # Redistribuer vers autres bonds si headroom disponible
+        if freed_weight > 0.1:
+            other_bonds = [
+                (aid, w) for aid, w in allocation.items()
+                if asset_lookup.get(aid) 
+                and _is_bond_like(asset_lookup[aid])
+                and w < max_bond - 0.5
+            ]
+            other_bonds = sorted(other_bonds, key=lambda x: (x[1], x[0]))
+            
+            for aid, w in other_bonds:
+                if freed_weight < 0.1:
+                    break
+                headroom = max_bond - w
+                add = min(headroom, freed_weight)
+                if add > 0.1:
+                    allocation[aid] = round(allocation[aid] + add, 2)
+                    freed_weight -= add
+            
+            # Si reste, redistribuer vers non-bonds
+            if freed_weight > 0.1:
+                non_bonds = [
+                    (aid, w) for aid, w in allocation.items()
+                    if asset_lookup.get(aid) 
+                    and not _is_bond_like(asset_lookup[aid])
+                    and w < profile.max_single_position - 1
+                ]
+                non_bonds = sorted(non_bonds, key=lambda x: (x[1], x[0]))
+                
+                for aid, w in non_bonds:
+                    if freed_weight < 0.1:
+                        break
+                    headroom = profile.max_single_position - w
+                    add = min(headroom, freed_weight, 2.0)
+                    if add > 0.1:
+                        allocation[aid] = round(allocation[aid] + add, 2)
+                        freed_weight -= add
+        
+        return allocation  
     def _apply_crypto_core_satellite(
         self,
         allocation: Dict[str, float],
