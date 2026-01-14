@@ -8,10 +8,14 @@ ChatGPT v2.0 Audit:
 - Q15: "As-tu un data freshness SLA?"
 
 Réponse: Ce module.
+
+v1.1 (2026-01-14): Ajout sanity check volatilité générique (Étape 1.1)
 """
 
 import pandas as pd
 import numpy as np
+import math
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
@@ -351,3 +355,313 @@ def check_data_freshness(
         logger.warning(f"Data is stale: {stale_days} days old (max: {max_stale_days})")
     
     return is_fresh, details
+
+
+# =============================================================================
+# VOLATILITY SANITY CHECK v1.0 (Étape 1.1 - 2026-01-14)
+# =============================================================================
+# Corrige les volatilités aberrantes de manière GÉNÉRIQUE
+# (pas de hardcoding par pays comme UK)
+# =============================================================================
+
+# Seuils de volatilité par type d'actif
+VOL_THRESHOLDS = {
+    "equity": {
+        "suspect_threshold": 150,    # Vol > 150% = suspect pour equity
+        "invalid_threshold": 300,    # Vol > 300% = invalide
+        "valid_range": (5, 100),     # Range acceptable après correction
+    },
+    "etf": {
+        "suspect_threshold": 100,
+        "invalid_threshold": 250,
+        "valid_range": (3, 80),
+    },
+    "bond": {
+        "suspect_threshold": 50,
+        "invalid_threshold": 100,
+        "valid_range": (1, 30),
+    },
+    "crypto": {
+        "suspect_threshold": 300,    # Crypto peut être très volatile
+        "invalid_threshold": 500,
+        "valid_range": (20, 200),
+    },
+}
+
+# Champs de volatilité à vérifier
+VOL_FIELDS = ["vol_3y", "vol30", "vol_annual", "vol", "vol_pct", "volatility_3y"]
+
+
+def _fnum(x) -> float:
+    """Conversion robuste vers float."""
+    if x is None:
+        return 0.0
+    if isinstance(x, (int, float)):
+        if math.isnan(x):
+            return 0.0
+        return float(x)
+    try:
+        s = re.sub(r"[^0-9.\-]", "", str(x))
+        return float(s) if s not in ("", "-", ".", "-.") else 0.0
+    except:
+        return 0.0
+
+
+def _is_leveraged_asset(asset: dict) -> bool:
+    """Vérifie si l'actif est leveraged (ETF 2x, 3x, etc.)."""
+    # Champ leverage explicite
+    leverage = asset.get("leverage")
+    if leverage and str(leverage).strip() not in ("", "0", "1", "none", "nan", "n/a"):
+        return True
+    
+    # Patterns dans le nom
+    name = str(asset.get("name") or "").lower()
+    etf_type = str(asset.get("etf_type") or "").lower()
+    
+    leveraged_patterns = ["2x", "3x", "-2x", "-3x", "ultra", "leveraged", "inverse", "bear", "short"]
+    
+    for pattern in leveraged_patterns:
+        if pattern in name or pattern in etf_type:
+            return True
+    
+    return False
+
+
+def _try_rescale_volatility(vol: float, valid_range: Tuple[float, float]) -> Tuple[Optional[float], Optional[int]]:
+    """
+    Tente de rescaler une volatilité vers un range valide.
+    
+    Args:
+        vol: Volatilité originale
+        valid_range: (min, max) du range acceptable
+    
+    Returns:
+        (vol_corrigée, facteur) ou (None, None) si échec
+    """
+    min_valid, max_valid = valid_range
+    
+    # Essayer différents facteurs de division
+    for factor in [100, 10]:
+        rescaled = vol / factor
+        if min_valid <= rescaled <= max_valid:
+            return round(rescaled, 4), factor
+    
+    return None, None
+
+
+def sanitize_volatility(asset: dict) -> dict:
+    """
+    Corrige les volatilités aberrantes de manière GÉNÉRIQUE.
+    
+    Règle:
+    1. Si vol > seuil_suspect ET actif n'est PAS crypto/leveraged:
+       - Tenter rescaling: vol/100, vol/10
+       - Si rescalé dans range valide: ACCEPTER + LOG
+       - Sinon: FLAGGER comme suspect
+    
+    Args:
+        asset: Dictionnaire de l'actif
+    
+    Returns:
+        Asset modifié avec champs de correction si applicable:
+        - _vol_rescaled: True si corrigé
+        - _vol_original: Valeur originale
+        - _vol_correction_factor: Facteur de division appliqué
+        - _vol_suspect: True si non corrigeable
+        - _vol_correction_reason: Raison de la correction
+    
+    Example:
+        >>> asset = {"symbol": "GSK", "vol_3y": 376.12, "category": "equity"}
+        >>> sanitize_volatility(asset)
+        >>> asset["vol_3y"]
+        3.7612  # Corrigé (÷100)
+        >>> asset["_vol_rescaled"]
+        True
+    """
+    # Déterminer le type d'actif
+    category = str(asset.get("category", "") or "").lower()
+    if category not in VOL_THRESHOLDS:
+        category = "equity"  # Default
+    
+    thresholds = VOL_THRESHOLDS[category]
+    
+    # Vérifier si c'est un actif leveraged (ne pas corriger)
+    is_leveraged = _is_leveraged_asset(asset)
+    if is_leveraged:
+        return asset
+    
+    # Parcourir tous les champs de volatilité
+    for field in VOL_FIELDS:
+        vol_raw = asset.get(field)
+        if vol_raw is None:
+            continue
+        
+        vol = _fnum(vol_raw)
+        if vol <= 0:
+            continue
+        
+        # Vérifier si la vol est suspecte
+        if vol > thresholds["suspect_threshold"]:
+            symbol = asset.get("symbol") or asset.get("id") or asset.get("name") or "?"
+            
+            # Tenter le rescaling
+            corrected, factor = _try_rescale_volatility(vol, thresholds["valid_range"])
+            
+            if corrected is not None:
+                # Correction réussie
+                asset[field] = corrected
+                asset["_vol_rescaled"] = True
+                asset["_vol_original"] = vol
+                asset["_vol_correction_factor"] = factor
+                asset["_vol_correction_reason"] = f"rescaled_by_{factor}"
+                asset["_vol_field_corrected"] = field
+                
+                logger.warning(
+                    f"[VOL SANITY] Corrected {symbol} ({category}): "
+                    f"{field}={vol:.2f}% → {corrected:.2f}% (÷{factor})"
+                )
+            else:
+                # Impossible à corriger → flagger comme suspect
+                if vol > thresholds["invalid_threshold"]:
+                    asset["_vol_suspect"] = True
+                    asset["_vol_suspect_value"] = vol
+                    asset["_vol_suspect_field"] = field
+                    
+                    logger.warning(
+                        f"[VOL SANITY] SUSPECT {symbol} ({category}): "
+                        f"{field}={vol:.2f}% > {thresholds['invalid_threshold']}% (cannot rescale)"
+                    )
+    
+    return asset
+
+
+def batch_sanitize_volatility(assets: List[dict]) -> Tuple[List[dict], Dict]:
+    """
+    Applique sanitize_volatility sur une liste d'actifs.
+    
+    Args:
+        assets: Liste des actifs
+    
+    Returns:
+        (assets_modifiés, statistiques)
+    
+    Example:
+        >>> assets, stats = batch_sanitize_volatility(raw_assets)
+        >>> print(stats)
+        {
+            "total": 1006,
+            "corrected": 12,
+            "suspect": 3,
+            "by_category": {"equity": 8, "etf": 4},
+            "corrections": [...]
+        }
+    """
+    stats = {
+        "total": len(assets),
+        "corrected": 0,
+        "suspect": 0,
+        "by_category": {},
+        "corrections": [],  # Liste des corrections pour audit
+    }
+    
+    for asset in assets:
+        # Avant correction
+        was_corrected = asset.get("_vol_rescaled", False)
+        was_suspect = asset.get("_vol_suspect", False)
+        
+        # Appliquer la correction
+        sanitize_volatility(asset)
+        
+        # Compter les nouvelles corrections
+        if asset.get("_vol_rescaled") and not was_corrected:
+            stats["corrected"] += 1
+            category = asset.get("category", "unknown")
+            stats["by_category"][category] = stats["by_category"].get(category, 0) + 1
+            
+            # Log pour audit
+            stats["corrections"].append({
+                "symbol": asset.get("symbol") or asset.get("id"),
+                "category": category,
+                "field": asset.get("_vol_field_corrected"),
+                "original": asset.get("_vol_original"),
+                "corrected": asset.get(asset.get("_vol_field_corrected", "vol")),
+                "factor": asset.get("_vol_correction_factor"),
+            })
+        
+        if asset.get("_vol_suspect") and not was_suspect:
+            stats["suspect"] += 1
+    
+    # Log résumé
+    if stats["corrected"] > 0 or stats["suspect"] > 0:
+        logger.info(
+            f"[VOL SANITY] Batch complete: {stats['corrected']}/{stats['total']} corrected, "
+            f"{stats['suspect']} suspect"
+        )
+        
+        if stats["by_category"]:
+            logger.info(f"[VOL SANITY] By category: {stats['by_category']}")
+    
+    return assets, stats
+
+
+def validate_volatility_sanity(assets: List[dict]) -> Dict:
+    """
+    Valide que les volatilités sont dans des ranges acceptables.
+    
+    Utilisé pour les tests de non-régression.
+    
+    Returns:
+        {
+            "passed": bool,
+            "violations": [...],
+            "stats": {...}
+        }
+    """
+    violations = []
+    
+    for asset in assets:
+        category = str(asset.get("category", "equity")).lower()
+        if category not in VOL_THRESHOLDS:
+            category = "equity"
+        
+        thresholds = VOL_THRESHOLDS[category]
+        market_cap = _fnum(asset.get("market_cap", 0))
+        is_large_cap = market_cap > 50e9
+        
+        for field in VOL_FIELDS:
+            vol = _fnum(asset.get(field, 0))
+            if vol <= 0:
+                continue
+            
+            symbol = asset.get("symbol") or asset.get("id") or "?"
+            
+            # Règle 1: Large cap ne doit pas avoir vol > 150%
+            if is_large_cap and vol > 150:
+                violations.append({
+                    "symbol": symbol,
+                    "rule": "large_cap_vol_max",
+                    "field": field,
+                    "value": vol,
+                    "threshold": 150,
+                    "market_cap": market_cap,
+                })
+            
+            # Règle 2: Aucun equity ne doit avoir vol > 250%
+            if category == "equity" and vol > 250:
+                violations.append({
+                    "symbol": symbol,
+                    "rule": "equity_vol_max",
+                    "field": field,
+                    "value": vol,
+                    "threshold": 250,
+                })
+    
+    return {
+        "passed": len(violations) == 0,
+        "violation_count": len(violations),
+        "violations": violations[:20],  # Limiter à 20 pour lisibilité
+        "stats": {
+            "total_assets": len(assets),
+            "large_caps_checked": sum(1 for a in assets if _fnum(a.get("market_cap", 0)) > 50e9),
+        }
+    }
