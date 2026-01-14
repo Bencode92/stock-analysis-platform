@@ -92,6 +92,16 @@ except ImportError:
             return sorted(assets, key=sort_key)
 
 logger = logging.getLogger("portfolio_engine.factors")
+# v3.0.0: Import scipy pour rankdata
+try:
+    from scipy.stats import rankdata
+except ImportError:
+    def rankdata(a, method='average'):
+        arr = np.array(a)
+        sorter = np.argsort(arr)
+        inv = np.empty_like(sorter)
+        inv[sorter] = np.arange(len(arr))
+        return inv + 1
 
 
 # ============= v2.4 CATEGORY NORMALIZATION =============
@@ -177,6 +187,8 @@ BOND_BUCKET_THRESHOLDS = {
 # v2.4.4: Pénalité composite pour données manquantes critiques (avec cap)
 DATA_QUALITY_PENALTY = 0.15  # Par champ manquant (calibré: ~15 percentiles)
 MAX_DQ_PENALTY = 0.6  # Cap total (évite sur-pénalisation)
+# v3.0.0: Normalisation par RANKS au lieu de Z-SCORES
+USE_RANK_NORMALIZATION = True
 
 # v2.4.4: Staleness threshold pour market context
 MARKET_CONTEXT_STALE_DAYS = 7
@@ -1223,6 +1235,34 @@ class FactorScorer:
         return (arr - arr.mean()) / arr.std()
     
     @staticmethod
+       def _rank_by_class(values: List[float], categories: List[str], min_samples: int = 5) -> np.ndarray:
+        """v3.0.0: Rank percentile PAR CLASSE - distribution uniforme [-1, +1]."""
+        n = len(values)
+        result = np.zeros(n)
+        
+        by_cat: Dict[str, List[int]] = defaultdict(list)
+        for i, cat in enumerate(categories):
+            by_cat[cat].append(i)
+        
+        for cat, indices in by_cat.items():
+            if len(indices) < min_samples:
+                continue
+            
+            group_values = np.array([values[i] for i in indices], dtype=float)
+            group_values = np.nan_to_num(group_values, nan=0.0)
+            
+            ranks = rankdata(group_values, method='average')
+            n_group = len(indices)
+            if n_group > 1:
+                normalized_ranks = (ranks - 1) / (n_group - 1)
+                centered_ranks = (normalized_ranks - 0.5) * 2
+            else:
+                centered_ranks = np.array([0.0])
+            
+            for idx, rank_val in zip(indices, centered_ranks):
+                result[idx] = rank_val
+        
+        return result
     def _zscore_by_class(
         values: List[float], 
         categories: List[str],
@@ -1262,6 +1302,21 @@ class FactorScorer:
                     result[idx] = z
         
         return result
+    def _normalize_by_class(self, values: List[float], categories: List[str], min_samples: int = 5, 
+                           higher_is_better: bool = True, use_ranks: bool = None) -> np.ndarray:
+        """v3.0.0: Wrapper - choisit ranks ou z-scores."""
+        if use_ranks is None:
+            use_ranks = USE_RANK_NORMALIZATION
+        
+        if use_ranks:
+            result = self._rank_by_class(values, categories, min_samples)
+        else:
+            result = self._zscore_by_class(values, categories, min_samples)
+        
+        if not higher_is_better:
+            result = -result
+        
+        return result        
     
     def _get_normalized_category(self, asset: dict) -> str:
         """v2.4.7: Normalise catégorie avec détection ETF."""
@@ -1404,7 +1459,7 @@ class FactorScorer:
                 raw[i] += sharpe_bonus + ret_bonus + dd_penalty
         
         categories = [self._get_normalized_category(a) for a in assets]
-        return self._zscore_by_class(raw, categories)
+        return self._normalize_by_class(raw, categories, higher_is_better=True)
     
     def compute_factor_quality_fundamental(self, assets: List[dict]) -> np.ndarray:
         """Facteur qualité fondamentale: Score Buffett."""
@@ -1463,8 +1518,7 @@ class FactorScorer:
             
             raw_vol.append(vol)
         
-        zscores = self._zscore_by_class(raw_vol, categories)
-        return -zscores
+        return self._normalize_by_class(raw_vol, categories, higher_is_better=False)
     
     def compute_factor_cost_efficiency(self, assets: List[dict]) -> np.ndarray:
         """
@@ -1518,10 +1572,10 @@ class FactorScorer:
         
         if len(valid_indices) >= 5:
             valid_scores = [scores[i] for i in valid_indices]
-            valid_cats = [categories[i] for i in valid_indices]
-            zscores = self._zscore_by_class(valid_scores, valid_cats)
-            for idx, z in zip(valid_indices, zscores):
-                result[idx] = z
+            valid_cats = [categories[i] for i in valid_indices]z
+            normalized = self._normalize_by_class(valid_scores, valid_cats, higher_is_better=True)
+            for idx, z in zip(valid_indices, normalized):
+                result[idx] = z    
         
         return result
     
@@ -1697,8 +1751,8 @@ class FactorScorer:
                 tactical_score = 0.5
             
             scores.append(tactical_score * 100)
-        
-        return self._zscore_by_class(scores, categories)
+ 
+        return self._normalize_by_class(scores, categories, higher_is_better=True)
     
     def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
         """Facteur liquidité: log(market_cap ou AUM)."""
@@ -1720,7 +1774,7 @@ class FactorScorer:
             
             raw_liq.append(math.log(max(liq, 1)))
         
-        return self._zscore_by_class(raw_liq, categories)
+        return self._normalize_by_class(raw_liq, categories, higher_is_better=True)
     
     def compute_factor_mean_reversion(self, assets: List[dict]) -> np.ndarray:
         """Facteur mean reversion: pénalise les sur-extensions."""
