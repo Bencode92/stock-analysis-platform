@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-01-14T14:29:54.045119",
+    "generated_at": "2026-01-14T14:55:25.832413",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -816,8 +816,8 @@
       "last_date": "2026-01-14",
       "first_price": 0.0014,
       "last_price": 0.0012,
-      "total_return_pct": -14.61,
-      "volatility_annual_pct": 37.36,
+      "total_return_pct": -13.16,
+      "volatility_annual_pct": 37.43,
       "weights_by_profile": {
         "Agressif": 3.5,
         "Modéré": 0.5
@@ -860,7 +860,7 @@
           "close": 0.0012,
           "prev_date": "2026-01-13",
           "prev_close": 0.0012,
-          "daily_return_pct": -0.4559,
+          "daily_return_pct": 1.2409,
           "formula": "(0.0012 / 0.0012) - 1"
         }
       ],
@@ -1641,11 +1641,11 @@
           "weight_pct": 3.5,
           "price_prev": 0.0012,
           "price_today": 0.0012,
-          "return_pct": -0.4559,
-          "contribution_pct": -0.016
+          "return_pct": 1.2409,
+          "contribution_pct": 0.0434
         }
       ],
-      "total_portfolio_return_pct": 0.1553,
+      "total_portfolio_return_pct": 0.2147,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1790,22 +1790,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 12.28,
-      "net_return_pct": 12.28,
-      "volatility_pct": 13.18,
+      "gross_return_pct": 12.35,
+      "net_return_pct": 12.35,
+      "volatility_pct": 13.19,
       "max_drawdown_pct": -4.38,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 4.38,
-      "excess_return_pct": 7.91
+      "excess_return_pct": 7.97
     },
     "Modéré": {
-      "gross_return_pct": 9.54,
-      "net_return_pct": 9.54,
+      "gross_return_pct": 9.55,
+      "net_return_pct": 9.55,
       "volatility_pct": 9.71,
       "max_drawdown_pct": -2.43,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 4.78,
-      "excess_return_pct": 4.76
+      "excess_return_pct": 4.77
     },
     "Stable": {
       "gross_return_pct": 3.62,
