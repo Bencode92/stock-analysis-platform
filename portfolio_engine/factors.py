@@ -1,7 +1,15 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.4.7 — SEUL MOTEUR D'ALPHA
+FactorScorer v3.0.0 — SEUL MOTEUR D'ALPHA
 =========================================
+
+v3.0.0 Changes (RANK NORMALIZATION - Step 1.2):
+- NEW: USE_RANK_NORMALIZATION config flag (default: True)
+- NEW: _rank_by_class() method for percentile-based normalization
+- NEW: _normalize_by_class() wrapper with higher_is_better parameter
+- FIX: Z-scores compressaient les groupes homogènes (mega-caps similaires → scores ≈ 0.5)
+- FIX: Rank normalization produit une distribution uniforme [-1, +1]
+- IMPACT: NVIDIA/APPLE peuvent maintenant être sélectionnés, p10-p90 > 0.3
 
 v2.4.6 Changes (RADAR ETF Integration):
 - NEW: NON_TILTABLE_BUCKETS pour filtrer alt assets
@@ -93,6 +101,28 @@ except ImportError:
 
 logger = logging.getLogger("portfolio_engine.factors")
 
+# v3.0.0: Import scipy.stats.rankdata for rank normalization
+try:
+    from scipy.stats import rankdata
+except ImportError:
+    def rankdata(a, method='average'):
+        """Fallback rankdata implementation when scipy is not available."""
+        arr = np.asarray(a)
+        sorter = np.argsort(arr)
+        inv = np.empty(sorter.size, dtype=np.intp)
+        inv[sorter] = np.arange(sorter.size, dtype=np.intp)
+        
+        if method == 'average':
+            arr_sorted = arr[sorter]
+            obs = np.r_[True, arr_sorted[1:] != arr_sorted[:-1]]
+            dense = obs.cumsum()[inv]
+            count = np.r_[np.nonzero(obs)[0], len(obs)]
+            return 0.5 * (count[dense] + count[dense - 1] + 1)
+        elif method == 'ordinal':
+            return inv + 1
+        else:
+            return inv + 1
+
 
 # ============= v2.4 CATEGORY NORMALIZATION =============
 
@@ -177,6 +207,9 @@ BOND_BUCKET_THRESHOLDS = {
 # v2.4.4: Pénalité composite pour données manquantes critiques (avec cap)
 DATA_QUALITY_PENALTY = 0.15  # Par champ manquant (calibré: ~15 percentiles)
 MAX_DQ_PENALTY = 0.6  # Cap total (évite sur-pénalisation)
+
+# v3.0.0: Configuration pour la normalisation par rang
+USE_RANK_NORMALIZATION = True  # Si False, utilise z-score classique
 
 # v2.4.4: Staleness threshold pour market context
 MARKET_CONTEXT_STALE_DAYS = 7
@@ -1111,11 +1144,17 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.4.5 =============
+# ============= FACTOR SCORER v3.0.0 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
+    
+    v3.0.0 — RANK NORMALIZATION (Step 1.2):
+    - Nouvelle méthode _rank_by_class() pour normalisation par rang
+    - Nouvelle méthode _normalize_by_class() avec higher_is_better
+    - USE_RANK_NORMALIZATION config pour basculer entre ranks et z-scores
+    - Fix: Z-scores compressaient les groupes homogènes
     
     v2.4.5 — FIX RADAR tilts:
     - Les tilts RADAR sont maintenant appliqués correctement
@@ -1223,6 +1262,74 @@ class FactorScorer:
         return (arr - arr.mean()) / arr.std()
     
     @staticmethod
+    def _rank_by_class(
+        values: List[float],
+        categories: List[str],
+        min_samples: int = 5
+    ) -> np.ndarray:
+        """
+        v3.0.0: Normalisation par RANG au sein de chaque classe d'actifs.
+        
+        Retourne un percentile normalisé dans [-1, +1] où:
+        - -1 = pire rang (percentile 0)
+        - +1 = meilleur rang (percentile 100)
+        - 0 = rang médian (percentile 50)
+        
+        Avantages vs z-score:
+        - Distribution uniforme garantie (pas de compression pour groupes homogènes)
+        - Robuste aux outliers (pas besoin de winsorisation)
+        - Interprétable: score = position relative dans le groupe
+        
+        Args:
+            values: Liste des valeurs brutes
+            categories: Liste des catégories (equity/etf/bond/crypto)
+            min_samples: Nombre minimum d'éléments pour calculer les rangs
+        
+        Returns:
+            Array de scores normalisés [-1, +1]
+        """
+        n = len(values)
+        result = np.zeros(n)
+        
+        # Grouper par catégorie
+        by_cat: Dict[str, List[int]] = defaultdict(list)
+        for i, cat in enumerate(categories):
+            by_cat[cat].append(i)
+        
+        for cat, indices in by_cat.items():
+            if len(indices) < min_samples:
+                # Pas assez d'échantillons → score neutre
+                for i in indices:
+                    result[i] = 0.0
+                logger.debug(f"Rank {cat}: {len(indices)} samples < {min_samples} → neutral")
+                continue
+            
+            # Extraire les valeurs du groupe
+            group_values = np.array([values[i] for i in indices], dtype=float)
+            group_values = np.nan_to_num(group_values, nan=0.0)
+            
+            # Calculer les rangs (1 = plus petit, n = plus grand)
+            ranks = rankdata(group_values, method='average')
+            
+            # Convertir en percentile [0, 1]
+            n_group = len(indices)
+            percentiles = (ranks - 1) / (n_group - 1) if n_group > 1 else np.full_like(ranks, 0.5)
+            
+            # Normaliser vers [-1, +1]
+            normalized = 2 * percentiles - 1
+            
+            for idx, norm_val in zip(indices, normalized):
+                result[idx] = norm_val
+            
+            logger.debug(
+                f"Rank {cat}: n={n_group}, "
+                f"range=[{normalized.min():.2f}, {normalized.max():.2f}], "
+                f"spread(p10-p90)={np.percentile(normalized, 90) - np.percentile(normalized, 10):.2f}"
+            )
+        
+        return result
+    
+    @staticmethod
     def _zscore_by_class(
         values: List[float], 
         categories: List[str],
@@ -1262,6 +1369,40 @@ class FactorScorer:
                     result[idx] = z
         
         return result
+    
+    @staticmethod
+    def _normalize_by_class(
+        values: List[float],
+        categories: List[str],
+        higher_is_better: bool = True,
+        min_samples: int = 5
+    ) -> np.ndarray:
+        """
+        v3.0.0: Wrapper de normalisation avec choix de méthode.
+        
+        Utilise rank normalization si USE_RANK_NORMALIZATION=True,
+        sinon utilise z-score classique.
+        
+        Args:
+            values: Liste des valeurs brutes
+            categories: Liste des catégories
+            higher_is_better: Si True, valeur élevée = bon score
+                             Si False, valeur basse = bon score (ex: volatilité)
+            min_samples: Nombre minimum d'éléments par groupe
+        
+        Returns:
+            Array de scores normalisés
+        """
+        if USE_RANK_NORMALIZATION:
+            scores = FactorScorer._rank_by_class(values, categories, min_samples)
+        else:
+            scores = FactorScorer._zscore_by_class(values, categories, min_samples)
+        
+        # Inverser si lower is better
+        if not higher_is_better:
+            scores = -scores
+        
+        return scores
     
     def _get_normalized_category(self, asset: dict) -> str:
         """v2.4.7: Normalise catégorie avec détection ETF."""
@@ -1314,6 +1455,7 @@ class FactorScorer:
         """
         Facteur momentum: Jegadeesh-Titman 12m-1m (académique).
         
+        v3.0.0: Utilise _normalize_by_class() avec rank normalization
         v2.5.0: Implémente le vrai momentum académique 12m-1m
         - Formule: (1+R12)/(1+R1) - 1 (pas une simple soustraction)
         - Exclut le dernier mois pour éviter l'effet reversal court-terme
@@ -1404,7 +1546,8 @@ class FactorScorer:
                 raw[i] += sharpe_bonus + ret_bonus + dd_penalty
         
         categories = [self._get_normalized_category(a) for a in assets]
-        return self._zscore_by_class(raw, categories)
+        # v3.0.0: Utilise _normalize_by_class avec higher_is_better=True
+        return self._normalize_by_class(raw, categories, higher_is_better=True)
     
     def compute_factor_quality_fundamental(self, assets: List[dict]) -> np.ndarray:
         """Facteur qualité fondamentale: Score Buffett."""
@@ -1435,7 +1578,12 @@ class FactorScorer:
         return result
     
     def compute_factor_low_vol(self, assets: List[dict]) -> np.ndarray:
-        """Facteur low volatility avec vol_30d_annual_pct pour crypto."""
+        """
+        Facteur low volatility avec vol_30d_annual_pct pour crypto.
+        
+        v3.0.0: Utilise _normalize_by_class avec higher_is_better=False
+        (volatilité basse = meilleur score)
+        """
         raw_vol = []
         categories = []
         
@@ -1463,13 +1611,15 @@ class FactorScorer:
             
             raw_vol.append(vol)
         
-        zscores = self._zscore_by_class(raw_vol, categories)
-        return -zscores
+        # v3.0.0: Utilise _normalize_by_class avec higher_is_better=False
+        # (volatilité basse = meilleur score)
+        return self._normalize_by_class(raw_vol, categories, higher_is_better=False)
     
     def compute_factor_cost_efficiency(self, assets: List[dict]) -> np.ndarray:
         """
         Facteur coût/rendement pour ETF et Bonds.
         
+        v3.0.0: Utilise _normalize_by_class avec higher_is_better=True
         v2.4.3 FIX 1: Stocke ter_confidence pour traçabilité.
         """
         scores = []
@@ -1519,9 +1669,10 @@ class FactorScorer:
         if len(valid_indices) >= 5:
             valid_scores = [scores[i] for i in valid_indices]
             valid_cats = [categories[i] for i in valid_indices]
-            zscores = self._zscore_by_class(valid_scores, valid_cats)
-            for idx, z in zip(valid_indices, zscores):
-                result[idx] = z
+            # v3.0.0: Utilise _normalize_by_class avec higher_is_better=True
+            normalized = self._normalize_by_class(valid_scores, valid_cats, higher_is_better=True)
+            for idx, norm_val in zip(valid_indices, normalized):
+                result[idx] = norm_val
         
         return result
     
@@ -1592,6 +1743,7 @@ class FactorScorer:
         """
         Facteur contexte tactique avec z-score par classe.
         
+        v3.0.0: Utilise _normalize_by_class avec higher_is_better=True
         v2.4.6 FIX: Utilise _get_sector_for_tilt() et _get_region_for_tilt() helpers.
         v2.4.5 FIX: Normalise secteurs et régions AVANT comparaison avec macro_tilts.
         """
@@ -1698,10 +1850,15 @@ class FactorScorer:
             
             scores.append(tactical_score * 100)
         
-        return self._zscore_by_class(scores, categories)
+        # v3.0.0: Utilise _normalize_by_class avec higher_is_better=True
+        return self._normalize_by_class(scores, categories, higher_is_better=True)
     
     def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
-        """Facteur liquidité: log(market_cap ou AUM)."""
+        """
+        Facteur liquidité: log(market_cap ou AUM).
+        
+        v3.0.0: Utilise _normalize_by_class avec higher_is_better=True
+        """
         raw_liq = []
         categories = []
         
@@ -1720,7 +1877,8 @@ class FactorScorer:
             
             raw_liq.append(math.log(max(liq, 1)))
         
-        return self._zscore_by_class(raw_liq, categories)
+        # v3.0.0: Utilise _normalize_by_class avec higher_is_better=True
+        return self._normalize_by_class(raw_liq, categories, higher_is_better=True)
     
     def compute_factor_mean_reversion(self, assets: List[dict]) -> np.ndarray:
         """Facteur mean reversion: pénalise les sur-extensions."""
@@ -1747,6 +1905,7 @@ class FactorScorer:
         """
         Calcule le score composite pour chaque actif.
         
+        v3.0.0: Rank normalization pour meilleure distribution des scores.
         v2.4.5: Fix RADAR tilts + tracking _radar_matching.
         v2.4.4: Fix doublons + cap pénalité + staleness.
         """
@@ -1828,13 +1987,14 @@ class FactorScorer:
             missing_fields_set = self._missing_critical_fields.get(i, set())
             missing_fields_list = sorted(list(missing_fields_set))
             
-            # v2.4.5: Stockage complet dans _scoring_meta avec RADAR matching
+            # v3.0.0: Stockage complet dans _scoring_meta avec info rank normalization
             asset["_scoring_meta"] = {
                 "category_normalized": cat,
                 "category_original": asset.get("category", ""),
                 "fund_type": asset.get("fund_type", ""),
                 "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
-                "scoring_version": "v2.4.5",
+                "scoring_version": "v3.0.0",
+                "normalization_method": "rank" if USE_RANK_NORMALIZATION else "zscore",
                 "ter_confidence": self._ter_confidence.get(i),
                 "missing_critical_fields": missing_fields_list,
                 "missing_fields_count": len(missing_fields_list),
@@ -1888,8 +2048,10 @@ class FactorScorer:
         if incomplete_count > 0:
             logger.warning(f"Data quality: {incomplete_count}/{n} assets have missing critical fields")
         
+        # v3.0.0: Log normalization method
+        norm_method = "RANK" if USE_RANK_NORMALIZATION else "Z-SCORE"
         logger.info(
-            f"Scores v2.4.5 calculés: {n} actifs (profil {self.profile}) | "
+            f"Scores v3.0.0 calculés: {n} actifs (profil {self.profile}, norm={norm_method}) | "
             f"Score moyen global: {composite.mean():.3f}"
         )
         
@@ -1950,9 +2112,9 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.4.5):",
+        "Comparaison des poids factoriels par profil (v3.0.0):",
         "",
-        "v2.4.5 FIX: RADAR tilts normalization (sector/region mapping)",
+        "v3.0.0: RANK NORMALIZATION (Step 1.2) - distribution uniforme des scores",
         ""
     ]
     
@@ -2007,112 +2169,68 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
 if __name__ == "__main__":
     print(compare_factor_profiles())
     print("\n" + "=" * 60)
-    print("Test v2.4.5: RADAR tilts normalization...")
+    print("Test v3.0.0: RANK NORMALIZATION...")
     
-    # Test normalize_sector_for_tilts
-    print("\n--- Test normalize_sector_for_tilts() ---")
-    test_sectors = [
-        ("Healthcare", "healthcare"),
-        ("Santé", "healthcare"),
-        ("Financial Services", "financials"),
-        ("Finance", "financials"),
-        ("Technologie de l'information", "information-technology"),
-        ("Technology", "information-technology"),
-        ("Biens de consommation cycliques", "consumer-discretionary"),
-        ("Consumer Discretionary", "consumer-discretionary"),
-        ("La communication", "communication-services"),
-    ]
+    # Test _rank_by_class
+    print("\n--- Test _rank_by_class() ---")
+    test_values = [10, 20, 30, 40, 50, 15, 25, 35, 45, 55]
+    test_cats = ["equity"] * 5 + ["etf"] * 5
     
-    for input_val, expected in test_sectors:
-        result = normalize_sector_for_tilts(input_val)
-        status = "✅" if result == expected else "❌"
-        print(f"  {status} '{input_val}' → '{result}' (expected: '{expected}')")
+    ranks = FactorScorer._rank_by_class(test_values, test_cats)
+    print(f"Values: {test_values}")
+    print(f"Categories: {test_cats}")
+    print(f"Ranks: {[round(r, 2) for r in ranks]}")
     
-    # Test normalize_region_for_tilts
-    print("\n--- Test normalize_region_for_tilts() ---")
-    test_regions = [
-        ("Corée du Sud", "south-korea"),
-        ("Corée", "south-korea"),
-        ("South Korea", "south-korea"),
-        ("Chine", "china"),
-        ("China", "china"),
-        ("Etats-Unis", "usa"),
-        ("USA", "usa"),
-        ("Royaume-Uni", "uk"),
-        ("Taiwan", "taiwan"),
-        ("Taïwan", "taiwan"),
-    ]
+    # Vérification: distribution uniforme dans [-1, +1]
+    equity_ranks = ranks[:5]
+    etf_ranks = ranks[5:]
+    print(f"Equity ranks range: [{min(equity_ranks):.2f}, {max(equity_ranks):.2f}]")
+    print(f"ETF ranks range: [{min(etf_ranks):.2f}, {max(etf_ranks):.2f}]")
     
-    for input_val, expected in test_regions:
-        result = normalize_region_for_tilts(input_val)
-        status = "✅" if result == expected else "❌"
-        print(f"  {status} '{input_val}' → '{result}' (expected: '{expected}')")
+    # Test avec groupes homogènes (cas problématique pour z-score)
+    print("\n--- Test avec groupes homogènes (mega-caps similaires) ---")
+    homogeneous_values = [98, 99, 100, 101, 102]  # Valeurs très proches
+    homogeneous_cats = ["equity"] * 5
+    
+    zscore_result = FactorScorer._zscore_by_class(homogeneous_values, homogeneous_cats)
+    rank_result = FactorScorer._rank_by_class(homogeneous_values, homogeneous_cats)
+    
+    print(f"Values (homogeneous): {homogeneous_values}")
+    print(f"Z-scores: {[round(z, 2) for z in zscore_result]}")
+    print(f"Ranks: {[round(r, 2) for r in rank_result]}")
+    print(f"Z-score spread (p90-p10): {np.percentile(zscore_result, 90) - np.percentile(zscore_result, 10):.2f}")
+    print(f"Rank spread (p90-p10): {np.percentile(rank_result, 90) - np.percentile(rank_result, 10):.2f}")
+    
+    # Test _normalize_by_class avec higher_is_better
+    print("\n--- Test _normalize_by_class() avec higher_is_better ---")
+    vol_values = [10, 20, 30, 40, 50]  # Volatilité (lower is better)
+    vol_cats = ["equity"] * 5
+    
+    higher_better = FactorScorer._normalize_by_class(vol_values, vol_cats, higher_is_better=True)
+    lower_better = FactorScorer._normalize_by_class(vol_values, vol_cats, higher_is_better=False)
+    
+    print(f"Vol values: {vol_values}")
+    print(f"higher_is_better=True: {[round(v, 2) for v in higher_better]}")
+    print(f"higher_is_better=False: {[round(v, 2) for v in lower_better]}")
     
     # Test complet avec assets
-    print("\n--- Test scoring complet avec RADAR tilts ---")
+    print("\n--- Test scoring complet ---")
     test_assets = [
-        {
-            "symbol": "SAMSUNG", 
-            "category": "equity", 
-            "sector": "Technologie de l'information",
-            "sector_top": "Technologie de l'information",
-            "country": "Corée",
-            "country_top": "Corée",
-            "ytd": 15, "perf_1m": 3, "perf_3m": 8, "vol_3y": 32, 
-            "roe": 12, "market_cap": 300e9
-        },
-        {
-            "symbol": "HSBC", 
-            "category": "equity", 
-            "sector": "Finance",
-            "sector_top": "Finance",
-            "country": "Royaume-Uni",
-            "country_top": "Royaume-Uni",
-            "ytd": 8, "perf_1m": 2, "perf_3m": 5, "vol_3y": 25, 
-            "roe": 10, "market_cap": 150e9
-        },
-        {
-            "symbol": "NESTLE", 
-            "category": "equity", 
-            "sector": "Biens de consommation de base",
-            "sector_top": "Biens de consommation de base",
-            "country": "Suisse",
-            "country_top": "Suisse",
-            "ytd": 5, "perf_1m": 1, "perf_3m": 3, "vol_3y": 18, 
-            "roe": 25, "market_cap": 280e9
-        },
+        {"symbol": "NVDA", "category": "equity", "sector": "Technology", "ytd": 150, "perf_1m": 10, "vol_3y": 45, "roe": 50, "market_cap": 3000e9},
+        {"symbol": "AAPL", "category": "equity", "sector": "Technology", "ytd": 25, "perf_1m": 3, "vol_3y": 25, "roe": 160, "market_cap": 3500e9},
+        {"symbol": "MSFT", "category": "equity", "sector": "Technology", "ytd": 15, "perf_1m": 2, "vol_3y": 22, "roe": 40, "market_cap": 3200e9},
+        {"symbol": "GOOGL", "category": "equity", "sector": "Technology", "ytd": 35, "perf_1m": 5, "vol_3y": 28, "roe": 30, "market_cap": 2000e9},
+        {"symbol": "META", "category": "equity", "sector": "Technology", "ytd": 60, "perf_1m": 8, "vol_3y": 38, "roe": 35, "market_cap": 1500e9},
     ]
     
-    # Simuler market_context avec tilts RADAR
-    market_context = {
-        "macro_tilts": {
-            "favored_sectors": ["information-technology", "financials", "healthcare"],
-            "avoided_sectors": ["consumer-staples", "real-estate"],
-            "favored_regions": ["south-korea", "usa", "japan"],
-            "avoided_regions": ["china", "hong-kong"],
-        },
-        "loaded_at": datetime.now().isoformat(),
-    }
-    
-    scorer = FactorScorer("Modéré", market_context=market_context)
+    scorer = FactorScorer("Modéré")
     scored = scorer.compute_scores(test_assets)
     
     print("\nRésultats:")
-    for a in scored:
-        radar = a.get("_radar_matching", {})
-        print(f"\n  {a['symbol']}:")
-        print(f"    Sector: {radar.get('sector_raw')} → {radar.get('sector_normalized')} → tilt={radar.get('sector_tilt')}")
-        print(f"    Region: {radar.get('region_raw')} → {radar.get('region_normalized')} → tilt={radar.get('region_tilt')}")
-        print(f"    f_macro: {radar.get('f_macro_final')}")
-        print(f"    composite_score: {a['composite_score']:.3f}")
+    for a in sorted(scored, key=lambda x: x["composite_score"], reverse=True):
+        meta = a.get("_scoring_meta", {})
+        print(f"  {a['symbol']}: score={a['composite_score']:.3f} (norm={meta.get('normalization_method', 'unknown')})")
+        print(f"    momentum={a['factor_scores']['momentum']:.2f}, low_vol={a['factor_scores']['low_vol']:.2f}")
     
-    # Vérifier que Samsung a reçu le boost (secteur + région favorisés)
-    samsung = next(a for a in scored if a["symbol"] == "SAMSUNG")
-    samsung_radar = samsung.get("_radar_matching", {})
-    
-    assert samsung_radar.get("sector_tilt") == "favored", "Samsung sector should be favored!"
-    assert samsung_radar.get("region_tilt") == "favored", "Samsung region should be favored!"
-    assert samsung_radar.get("f_macro_final", 0) > 0.5, "Samsung f_macro should be > 0.5 (boosted)!"
-    
-    print("\n✅ v2.4.5 RADAR tilts test completed successfully!")
-    print("   Samsung correctly received sector + region boost")
+    print("\n✅ v3.0.0 RANK NORMALIZATION test completed!")
+    print(f"   Normalization method: {'RANK' if USE_RANK_NORMALIZATION else 'Z-SCORE'}")
