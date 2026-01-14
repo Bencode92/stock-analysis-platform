@@ -2947,8 +2947,11 @@ class PortfolioOptimizer:
             
             # 8. Turnover check
             if prev_weights is not None:
-                allocation = self._clip_turnover(
-                    allocation, prev_weights, profile.max_turnover, candidates
+                allocation = self._clip_turnover(allocation, prev_weights, profile.max_turnover, candidates)
+
+            # IMPORTANT: turnover peut casser le cap bond (et crypto aussi)
+                allocation = self._enforce_single_bond_cap(allocation, candidates, profile)
+                    allocation = self._adjust_to_100(allocation, profile, candidates)       
                 )
             
             # 9. Check violations
@@ -3065,7 +3068,7 @@ class PortfolioOptimizer:
         logger.info(f"P0 FIX v6.22: Crypto after enforcement = {crypto_final:.1f}%")
         
         return allocation
-     def _enforce_single_bond_cap(
+    def _enforce_single_bond_cap(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
