@@ -2949,10 +2949,9 @@ class PortfolioOptimizer:
             if prev_weights is not None:
                 allocation = self._clip_turnover(allocation, prev_weights, profile.max_turnover, candidates)
 
-            # IMPORTANT: turnover peut casser le cap bond (et crypto aussi)
+                # IMPORTANT: turnover peut casser le cap bond (et crypto aussi)
                 allocation = self._enforce_single_bond_cap(allocation, candidates, profile)
-                    allocation = self._adjust_to_100(allocation, profile, candidates)       
-                )
+                allocation = self._adjust_to_100(allocation, profile, candidates)
             
             # 9. Check violations
             violations = self._check_all_violations(allocation, candidates, profile)
