@@ -7,6 +7,7 @@ Génère un fichier JSON documentant:
 2. Les TOP 20 capitalisations US/Europe/Asie avec leur statut détaillé
 3. Les raisons précises de sélection/rejet
 
+v1.1.0 - FIX: Calcul du composite_score si absent dans les données brutes
 v1.0.0 - Initial version
 """
 
@@ -22,7 +23,7 @@ logger = logging.getLogger("selection-explainer")
 # === LOGIQUE DE SÉLECTION DOCUMENTÉE ===
 
 SELECTION_PIPELINE = {
-    "version": "v4.12.0",
+    "version": "v4.12.2",
     "description": "Pipeline de sélection des actions pour les portefeuilles",
     "steps": [
         {
@@ -154,7 +155,7 @@ def get_region(country: str) -> str:
     """Determine region from country."""
     country = (country or "").upper()
     
-    us_countries = {"USA", "US", "UNITED STATES", "ÉTATS-UNIS"}
+    us_countries = {"USA", "US", "UNITED STATES", "ÉTATS-UNIS", "ETATS-UNIS"}
     europe_countries = {
         "FRANCE", "GERMANY", "ALLEMAGNE", "UK", "UNITED KINGDOM", "ROYAUME-UNI",
         "NETHERLANDS", "PAYS-BAS", "SWITZERLAND", "SUISSE", "ITALY", "ITALIE",
@@ -164,7 +165,7 @@ def get_region(country: str) -> str:
     }
     asia_countries = {
         "JAPAN", "JAPON", "CHINA", "CHINE", "HONG KONG", "SOUTH KOREA", "CORÉE DU SUD",
-        "TAIWAN", "TAÏWAN", "INDIA", "INDE", "SINGAPORE", "SINGAPOUR",
+        "KOREA", "CORÉE", "TAIWAN", "TAÏWAN", "INDIA", "INDE", "SINGAPORE", "SINGAPOUR",
         "AUSTRALIA", "AUSTRALIE", "INDONESIA", "INDONÉSIE", "THAILAND", "THAÏLANDE"
     }
     
@@ -176,6 +177,95 @@ def get_region(country: str) -> str:
         return "Asia"
     else:
         return "Other"
+
+
+# === v1.1.0 FIX: Calcul du score composite si absent ===
+
+def _safe_float(value, default: float = 0.0) -> float:
+    """Convertit une valeur en float de manière sûre."""
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            # Nettoyer les strings comme "17.23%" ou "-3.5"
+            cleaned = value.replace("%", "").replace(",", "").strip()
+            if cleaned == "" or cleaned.upper() == "N/A":
+                return default
+            return float(cleaned)
+        except:
+            return default
+    return default
+
+
+def calculate_composite_score(eq: Dict) -> float:
+    """
+    Calcule le score composite pour une action.
+    
+    Formule: 0.4 * momentum + 0.3 * quality + 0.3 * risk
+    
+    Retourne un score entre 0 et 1.
+    """
+    # === 1. Momentum Score (40%) ===
+    # Basé sur YTD, perf_3m, perf_1m
+    ytd = _safe_float(eq.get("ytd") or eq.get("perf_ytd"))
+    perf_3m = _safe_float(eq.get("perf_3m"))
+    perf_1m = _safe_float(eq.get("perf_1m"))
+    
+    # Normaliser: performances entre -50% et +100% → 0-1
+    def normalize_perf(p, min_val=-50, max_val=100):
+        if p <= min_val:
+            return 0.0
+        if p >= max_val:
+            return 1.0
+        return (p - min_val) / (max_val - min_val)
+    
+    momentum_raw = 0.5 * normalize_perf(ytd) + 0.3 * normalize_perf(perf_3m) + 0.2 * normalize_perf(perf_1m)
+    momentum_score = min(1.0, max(0.0, momentum_raw))
+    
+    # === 2. Quality Score (30%) ===
+    # Basé sur ROE et score Buffett
+    roe = _safe_float(eq.get("roe"))
+    buffett = _safe_float(eq.get("_buffett_score"), 50)  # Default 50 si absent
+    
+    # ROE normalisé: 0-30% → 0-1
+    roe_norm = min(1.0, max(0.0, roe / 30.0))
+    # Buffett normalisé: 0-100 → 0-1
+    buffett_norm = buffett / 100.0
+    
+    quality_score = 0.6 * roe_norm + 0.4 * buffett_norm
+    
+    # === 3. Risk Score (30%) ===
+    # Basé sur volatilité (inverse) et drawdown (inverse)
+    vol = _safe_float(eq.get("vol") or eq.get("volatility_3y") or eq.get("vol_3y"), 30)
+    max_dd = _safe_float(eq.get("max_dd") or eq.get("max_drawdown_ytd"), -20)
+    
+    # Volatilité inversée: 60% = 0, 10% = 1
+    vol_inv = max(0.0, min(1.0, (60 - vol) / 50.0))
+    # Drawdown inversé: -50% = 0, 0% = 1
+    dd_inv = max(0.0, min(1.0, (max_dd + 50) / 50.0))
+    
+    risk_score = 0.6 * vol_inv + 0.4 * dd_inv
+    
+    # === Score composite final ===
+    composite = 0.4 * momentum_score + 0.3 * quality_score + 0.3 * risk_score
+    
+    return round(composite, 4)
+
+
+def enrich_with_composite_scores(equities: List[Dict]) -> List[Dict]:
+    """
+    Ajoute _composite_score à toutes les actions qui n'en ont pas.
+    
+    v1.1.0 FIX: Les données brutes (eq_rows_before_buffett) n'ont pas de score.
+    Cette fonction calcule le score pour l'affichage dans selection_explained.json.
+    """
+    for eq in equities:
+        if eq.get("_composite_score") is None or eq.get("_composite_score") == 0:
+            eq["_composite_score"] = calculate_composite_score(eq)
+    
+    return equities
 
 
 def analyze_rejection_reason(
@@ -285,6 +375,12 @@ def generate_selection_explanation(
     config = config or {}
     buffett_min_score = config.get("buffett_min_score", 40)
     
+    # === v1.1.0 FIX: Enrichir avec les scores composites ===
+    all_equities = enrich_with_composite_scores(all_equities)
+    selected_equities = enrich_with_composite_scores(selected_equities)
+    
+    logger.info(f"📊 Scores composites calculés pour {len(all_equities)} actions")
+    
     # Build selected IDs set
     selected_ids = set()
     selected_by_sector = {}
@@ -292,6 +388,11 @@ def generate_selection_explanation(
     for eq in selected_equities:
         eq_id = eq.get("id") or eq.get("ticker")
         selected_ids.add(eq_id)
+        # Ajouter aussi le ticker et le nom pour matcher
+        if eq.get("ticker"):
+            selected_ids.add(eq.get("ticker"))
+        if eq.get("name"):
+            selected_ids.add(eq.get("name"))
         
         sector = eq.get("sector") or eq.get("_sector_key") or "Unknown"
         if sector not in selected_by_sector:
@@ -333,6 +434,13 @@ def generate_selection_explanation(
             sector = eq.get("sector") or "Unknown"
             country = eq.get("country") or "Unknown"
             
+            # Vérifier si sélectionné (par id, ticker ou name)
+            is_selected = (
+                eq.get("id") in selected_ids or
+                ticker in selected_ids or
+                name in selected_ids
+            )
+            
             # Analyser la raison
             reason, details = analyze_rejection_reason(
                 eq, selected_ids, selected_by_sector, buffett_min_score
@@ -346,7 +454,7 @@ def generate_selection_explanation(
                 "market_cap_billions": round(mcap, 1),
                 "sector": sector,
                 "country": country,
-                "selected": eq.get("id") in selected_ids or ticker in selected_ids,
+                "selected": is_selected,
                 "status": reason,
                 "details": details,
             }
@@ -354,10 +462,15 @@ def generate_selection_explanation(
             # Ajouter métriques clés
             if eq.get("_buffett_score") is not None:
                 entry["buffett_score"] = round(eq["_buffett_score"], 1)
-            if eq.get("_composite_score") is not None:
-                entry["composite_score"] = round(eq["_composite_score"], 3)
+            
+            # v1.1.0 FIX: Toujours inclure le composite_score (maintenant calculé)
+            composite = eq.get("_composite_score", 0)
+            if composite > 0:
+                entry["composite_score"] = round(composite, 3)
+            
             if eq.get("roe"):
-                entry["roe"] = eq["roe"]
+                roe_val = _safe_float(eq.get("roe"))
+                entry["roe"] = roe_val
             if eq.get("de_ratio") is not None:
                 entry["de_ratio"] = eq["de_ratio"]
             if eq.get("ytd") or eq.get("perf_ytd"):
@@ -379,7 +492,7 @@ def generate_selection_explanation(
     # Construire le rapport final
     report = {
         "generated_at": datetime.now().isoformat(),
-        "version": "v1.0.0",
+        "version": "v1.1.0",
         
         "selection_pipeline": SELECTION_PIPELINE,
         
