@@ -90,6 +90,28 @@ def winsorize(arr: np.ndarray, pct: float = 0.02) -> np.ndarray:
     arr = np.array(arr, dtype=float)
     lo, hi = np.percentile(arr, [pct * 100, 100 - pct * 100])
     return np.clip(arr, lo, hi)
+  
+ # ============= SECTOR GUARD HELPER v3.7 =============
+
+def _build_sector_top_dict(data: dict) -> Optional[dict]:
+    """
+    Reconstruit sector_top comme dict pour factors.py.
+    
+    CSV a: sector_top="Technology", sector_top_weight=48.12
+    factors.py attend: {"sector": "Technology", "weight": 0.4812}
+    """
+    sector = data.get("sector_top")
+    if not sector or (pd.isna(sector) if hasattr(pd, 'isna') else sector is None):
+        return None
+    
+    weight = data.get("sector_top_weight")
+    if weight and not (pd.isna(weight) if hasattr(pd, 'isna') else False):
+        # Convertir de % (48.12) en décimal (0.4812)
+        weight_decimal = float(weight) / 100.0 if float(weight) > 1 else float(weight)
+    else:
+        weight_decimal = None
+    
+    return {"sector": str(sector), "weight": weight_decimal} 
 
 
 # ============= DÉTECTION ETF LEVIER =============
@@ -533,6 +555,13 @@ def build_raw_universe(
                 "bond_avg_maturity": it.get("bond_avg_maturity"),
                 "bond_credit_score": it.get("bond_credit_score"),
                 "bond_credit_rating": it.get("bond_credit_rating"),
+                # === v3.7 FIX: Sector Guard v14.2 fields for RADAR ===
+                "sector_bucket": it.get("sector_bucket"),
+                "sector_signal_ok": it.get("sector_signal_ok"),
+                "sector_trust": it.get("sector_trust"),
+                "etf_type": it.get("etf_type"),
+                # Reconstruire sector_top comme dict pour factors.py
+                "sector_top": _build_sector_top_dict(it),
             }
             if is_bond:
                 bond_rows.append(row)
@@ -707,6 +736,13 @@ def build_raw_universe_from_files(
                 "bond_avg_maturity": r.get("bond_avg_maturity"),
                 "bond_credit_score": r.get("bond_credit_score"),
                 "bond_credit_rating": r.get("bond_credit_rating"),
+                # === v3.7 FIX: Sector Guard v14.2 fields for RADAR ===
+                "sector_bucket": r.get("sector_bucket"),
+                "sector_signal_ok": r.get("sector_signal_ok"),
+                "sector_trust": r.get("sector_trust"),
+                "etf_type": r.get("etf_type"),
+                # Reconstruire sector_top comme dict pour factors.py
+                "sector_top": _build_sector_top_dict(r.to_dict()),
             })
         return rows
     
