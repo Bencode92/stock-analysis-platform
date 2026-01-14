@@ -1,6 +1,12 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.6 — Support perf_1m/perf_3m ETF.
+Construction de l'univers d'actifs v3.8 — Volatility Sanity Check.
+
+CHANGEMENTS v3.8 (Étape 1.1 - Volatility Sanity):
+- Intégration automatique de batch_sanitize_volatility() depuis data_quality
+- Corrige les volatilités aberrantes (ex: GSK 376% → 3.76%)
+- Règle générique (pas de hardcoding par pays)
+- Log des corrections appliquées
 
 CHANGEMENTS v3.6 (ETF Momentum Fix):
 - Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
@@ -434,7 +440,49 @@ def _enrich_bonds_inline(bond_rows: List[dict]) -> List[dict]:
     return bond_rows
 
 
-# ============= CONSTRUCTION UNIVERS v3.6 =============
+# ============= VOLATILITY SANITY CHECK v3.8 =============
+
+def _apply_volatility_sanity_check(all_assets: List[dict]) -> List[dict]:
+    """
+    Applique le sanity check de volatilité sur tous les actifs.
+    
+    v3.8: Nouvelle fonction - corrige les volatilités aberrantes.
+    Utilise batch_sanitize_volatility de data_quality.py.
+    
+    Règle générique (pas de hardcoding par pays):
+    - Si vol > 150% (equity) et pas crypto/leveraged
+    - Tenter rescaling: vol/100, vol/10
+    - Si rescalé dans range valide: accepter + log
+    - Sinon: flagger comme suspect
+    """
+    try:
+        from .data_quality import batch_sanitize_volatility
+        
+        all_assets, vol_stats = batch_sanitize_volatility(all_assets)
+        
+        if vol_stats["corrected"] > 0 or vol_stats["suspect"] > 0:
+            logger.warning(
+                f"[VOL SANITY] {vol_stats['corrected']} assets corrected, "
+                f"{vol_stats['suspect']} flagged suspect"
+            )
+            if vol_stats.get("corrections"):
+                for corr in vol_stats["corrections"][:5]:  # Log les 5 premiers
+                    logger.info(
+                        f"  → {corr['symbol']}: {corr['field']} "
+                        f"{corr['original']:.2f}% → {corr['corrected']:.4f}% (÷{corr['factor']})"
+                    )
+        
+        return all_assets
+        
+    except ImportError as e:
+        logger.warning(f"[VOL SANITY] Impossible d'importer batch_sanitize_volatility: {e}")
+        return all_assets
+    except Exception as e:
+        logger.error(f"[VOL SANITY] Erreur: {e}")
+        return all_assets
+
+
+# ============= CONSTRUCTION UNIVERS v3.8 =============
 
 def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
@@ -442,11 +490,13 @@ def build_raw_universe(
     crypto_data: Union[List[dict], None] = None,
     returns_series: Optional[Dict[str, np.ndarray]] = None,
     apply_risk_filters: bool = True,
-    enrich_bonds: bool = True  # v3.3: Activer par défaut
+    enrich_bonds: bool = True,  # v3.3: Activer par défaut
+    apply_vol_sanity: bool = True  # v3.8: Nouveau - sanity check volatilité
 ) -> List[dict]:
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v3.8: Sanity check volatilité automatique (corrige GSK 376% → 3.76%)
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
@@ -463,11 +513,12 @@ def build_raw_universe(
         returns_series: Dict optionnel des séries de rendements
         apply_risk_filters: Appliquer les filtres de risque basiques
         enrich_bonds: v3.3 - Enrichir bonds avec f_bond_* factors
+        apply_vol_sanity: v3.8 - Appliquer sanity check volatilité
     
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.6...")
+    logger.info("🧮 Construction de l'univers brut v3.8...")
     
     all_assets = []
     
@@ -626,6 +677,10 @@ def build_raw_universe(
             if name and name in returns_series:
                 asset["returns_series"] = returns_series[name]
     
+    # === v3.8: Sanity check volatilité (Étape 1.1) ===
+    if apply_vol_sanity:
+        all_assets = _apply_volatility_sanity_check(all_assets)
+    
     logger.info(f"✅ Univers brut construit: {len(all_assets)} actifs")
     
     return all_assets
@@ -639,12 +694,14 @@ def build_raw_universe_from_files(
     crypto_csv_path: str,
     returns_series: Optional[Dict[str, np.ndarray]] = None,
     apply_risk_filters: bool = True,
-    enrich_bonds: bool = True  # v3.3
+    enrich_bonds: bool = True,  # v3.3
+    apply_vol_sanity: bool = True  # v3.8: Nouveau
 ) -> Dict[str, List[dict]]:
     """
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v3.8: Sanity check volatilité automatique
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
@@ -653,7 +710,7 @@ def build_raw_universe_from_files(
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.6 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.8 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -795,6 +852,18 @@ def build_raw_universe_from_files(
         logger.error(f"Erreur chargement crypto: {e}")
         cr_rows = []
     
+    # === v3.8: Sanity check volatilité (Étape 1.1) ===
+    # Appliquer sur toutes les catégories combinées
+    if apply_vol_sanity:
+        all_combined = eq_rows + etf_rows + bond_rows + cr_rows
+        all_combined = _apply_volatility_sanity_check(all_combined)
+        
+        # Reséparer par catégorie
+        eq_rows = [a for a in all_combined if a.get("category") == "equity"]
+        etf_rows = [a for a in all_combined if a.get("category") == "etf"]
+        bond_rows = [a for a in all_combined if a.get("category") == "bond"]
+        cr_rows = [a for a in all_combined if a.get("category") == "crypto"]
+    
     universe = {
         "equities": eq_rows,
         "etfs": etf_rows,
@@ -817,11 +886,13 @@ def load_and_prepare_universe(
     crypto_csv: Optional[str] = None,
     load_returns: bool = False,
     apply_risk_filters: bool = True,
-    enrich_bonds: bool = True  # v3.3
+    enrich_bonds: bool = True,  # v3.3
+    apply_vol_sanity: bool = True  # v3.8: Nouveau
 ) -> List[dict]:
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v3.8: Sanity check volatilité automatique
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
     v3.3.1: Filtres relaxés (ETF dd 55%, Bond dd 35%, Crypto var 30%)
@@ -856,6 +927,7 @@ def load_and_prepare_universe(
         load_returns: Charger les séries de rendements si disponibles
         apply_risk_filters: Appliquer les filtres de risque basiques
         enrich_bonds: v3.3 - Enrichir bonds avec f_bond_* factors
+        apply_vol_sanity: v3.8 - Appliquer sanity check volatilité
     
     Returns:
         Liste plate de tous les actifs (NON scorés, mais bonds enrichis)
@@ -898,7 +970,8 @@ def load_and_prepare_universe(
         crypto_data, 
         returns_series,
         apply_risk_filters=apply_risk_filters,
-        enrich_bonds=enrich_bonds
+        enrich_bonds=enrich_bonds,
+        apply_vol_sanity=apply_vol_sanity
     )
 
 
