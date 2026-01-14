@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-01-14T09:00:16.741644",
+    "generated_at": "2026-01-14T09:56:01.795610",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -187,7 +187,7 @@
       "total_return_pct": -0.37,
       "volatility_annual_pct": 3.19,
       "weights_by_profile": {
-        "Agressif": 11.0,
+        "Agressif": 5.0,
         "Modéré": 8.0
       },
       "price_samples": [
@@ -648,7 +648,7 @@
       "total_return_pct": -13.67,
       "volatility_annual_pct": 37.38,
       "weights_by_profile": {
-        "Agressif": 1.5,
+        "Agressif": 3.5,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -1161,11 +1161,11 @@
       "first_date": "2025-09-17",
       "last_date": "2026-01-14",
       "first_price": 0.95,
-      "last_price": 1.113,
-      "total_return_pct": 17.16,
+      "last_price": 1.124,
+      "total_return_pct": 18.32,
       "volatility_annual_pct": 73.14,
       "weights_by_profile": {
-        "Agressif": 1.0,
+        "Agressif": 3.0,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -1203,11 +1203,11 @@
         },
         {
           "date": "2026-01-14",
-          "close": 1.113,
+          "close": 1.124,
           "prev_date": "2026-01-13",
           "prev_close": 1.115,
-          "daily_return_pct": -0.1794,
-          "formula": "(1.1130 / 1.1150) - 1"
+          "daily_return_pct": 0.8072,
+          "formula": "(1.1240 / 1.1150) - 1"
         }
       ],
       "is_benchmark": false
@@ -1276,11 +1276,11 @@
       "first_date": "2025-09-17",
       "last_date": "2026-01-14",
       "first_price": 1.041,
-      "last_price": 1.175,
-      "total_return_pct": 12.87,
-      "volatility_annual_pct": 65.24,
+      "last_price": 1.179,
+      "total_return_pct": 13.26,
+      "volatility_annual_pct": 65.25,
       "weights_by_profile": {
-        "Agressif": 1.5
+        "Agressif": 3.5
       },
       "price_samples": [
         {
@@ -1317,11 +1317,11 @@
         },
         {
           "date": "2026-01-14",
-          "close": 1.175,
+          "close": 1.179,
           "prev_date": "2026-01-13",
           "prev_close": 1.164,
-          "daily_return_pct": 0.945,
-          "formula": "(1.1750 / 1.1640) - 1"
+          "daily_return_pct": 1.2887,
+          "formula": "(1.1790 / 1.1640) - 1"
         }
       ],
       "is_benchmark": false
@@ -1535,20 +1535,20 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "AGG",
-          "type": "Benchmark",
-          "weight_pct": 11.0,
-          "price_prev": 100.2,
-          "price_today": 100.2,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
-        },
-        {
           "ticker": "BRZU",
           "type": "Action",
           "weight_pct": 5.0,
           "price_prev": 83.8,
           "price_today": 83.8,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
+          "ticker": "AGG",
+          "type": "Benchmark",
+          "weight_pct": 5.0,
+          "price_prev": 100.2,
+          "price_today": 100.2,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1629,8 +1629,8 @@
       "close_J_minus_1": 100.74,
       "formula": "(101.1000 / 100.7400) - 1",
       "daily_return_pct": 0.3574,
-      "weight_pct": 11.0,
-      "contribution_pct": 0.0393,
+      "weight_pct": 5.0,
+      "contribution_pct": 0.0179,
       "explanation": "Le 2025-10-16, AGG (Benchmark) a clôturé à 101.1 vs 100.74 le 2025-10-15, soit un rendement de 0.36%"
     }
   ],
@@ -1639,7 +1639,7 @@
       "n_assets": 13,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
-        "Action": 84.0,
+        "Action": 90.0,
         "ETF": 5.0,
         "Bond_ETF": 0,
         "Crypto": 0
@@ -1662,8 +1662,8 @@
           15.0
         ],
         [
-          "AGG",
-          11.0
+          "BRZU",
+          5.0
         ]
       ]
     },
@@ -1734,13 +1734,13 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 13.69,
-      "net_return_pct": 13.69,
-      "volatility_pct": 13.24,
-      "max_drawdown_pct": -3.07,
+      "gross_return_pct": 15.22,
+      "net_return_pct": 15.22,
+      "volatility_pct": 14.2,
+      "max_drawdown_pct": -3.11,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 4.38,
-      "excess_return_pct": 9.32
+      "excess_return_pct": 10.85
     },
     "Modéré": {
       "gross_return_pct": 8.88,
