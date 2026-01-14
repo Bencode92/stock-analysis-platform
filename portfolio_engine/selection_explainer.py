@@ -7,6 +7,7 @@ Génère un fichier JSON documentant:
 2. Les TOP 20 capitalisations US/Europe/Asie avec leur statut détaillé
 3. Les raisons précises de sélection/rejet
 
+v1.2.0 - FIX: Intégration du sanity check volatilité (corrige LSEG 376% → 3.76%)
 v1.1.0 - FIX: Calcul du composite_score si absent dans les données brutes
 v1.0.0 - Initial version
 """
@@ -179,6 +180,42 @@ def get_region(country: str) -> str:
         return "Other"
 
 
+# === v1.2.0: SANITY CHECK VOLATILITÉ ===
+
+def _apply_volatility_sanity_check(equities: List[Dict]) -> List[Dict]:
+    """
+    Applique le sanity check de volatilité aux données entrantes.
+    
+    v1.2.0: Corrige les volatilités aberrantes (ex: LSEG 376% → 3.76%)
+    avant d'analyser les raisons de rejet.
+    """
+    try:
+        from .data_quality import batch_sanitize_volatility
+        
+        equities, vol_stats = batch_sanitize_volatility(equities)
+        
+        if vol_stats["corrected"] > 0:
+            logger.info(
+                f"[VOL SANITY] {vol_stats['corrected']} volatilités corrigées "
+                f"dans selection_explainer"
+            )
+            # Log les corrections pour debug
+            for corr in vol_stats.get("corrections", [])[:5]:
+                logger.debug(
+                    f"  → {corr['symbol']}: {corr['original']:.2f}% → "
+                    f"{corr['corrected']:.4f}% (÷{corr['factor']})"
+                )
+        
+        return equities
+        
+    except ImportError as e:
+        logger.warning(f"[VOL SANITY] Import failed: {e}")
+        return equities
+    except Exception as e:
+        logger.error(f"[VOL SANITY] Error: {e}")
+        return equities
+
+
 # === v1.1.0 FIX: Calcul du score composite si absent ===
 
 def _safe_float(value, default: float = 0.0) -> float:
@@ -316,6 +353,7 @@ def analyze_rejection_reason(
         return "❌ Données manquantes: ROE non disponible", details
     
     # 4. Check volatilité
+    # v1.2.0: La volatilité est maintenant corrigée par le sanity check en amont
     vol = asset.get("vol") or asset.get("volatility_3y") or asset.get("vol_3y")
     if vol:
         try:
@@ -374,6 +412,11 @@ def generate_selection_explanation(
     """
     config = config or {}
     buffett_min_score = config.get("buffett_min_score", 40)
+    
+    # === v1.2.0 FIX: Appliquer le sanity check volatilité AVANT analyse ===
+    logger.info("🔧 Application du sanity check volatilité...")
+    all_equities = _apply_volatility_sanity_check(all_equities)
+    selected_equities = _apply_volatility_sanity_check(selected_equities)
     
     # === v1.1.0 FIX: Enrichir avec les scores composites ===
     all_equities = enrich_with_composite_scores(all_equities)
@@ -492,7 +535,7 @@ def generate_selection_explanation(
     # Construire le rapport final
     report = {
         "generated_at": datetime.now().isoformat(),
-        "version": "v1.1.0",
+        "version": "v1.2.0",
         
         "selection_pipeline": SELECTION_PIPELINE,
         
@@ -502,6 +545,7 @@ def generate_selection_explanation(
             "max_equities": 25,
             "max_per_sector": 4,
             "tactical_context_enabled": config.get("use_tactical_context", False),
+            "volatility_sanity_check": True,  # v1.2.0
         },
         
         "summary": {
