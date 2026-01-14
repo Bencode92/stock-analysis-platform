@@ -7,6 +7,7 @@ Generates a detailed JSON report explaining:
 - Which assets were rejected and why (filters, thresholds)
 - Filter statistics and thresholds used
 
+v1.2.0 - Fixed ETF sector extraction from sector_top field
 v1.1.0 - Added RADAR tilts normalization (sector/region mapping)
 v1.0.0 - Initial version
 """
@@ -36,6 +37,19 @@ def get_stable_uid(item: dict) -> str:
     # Fallback: name normalisé
     name = item.get("name", "UNKNOWN") or "UNKNOWN"
     return name.upper().replace(" ", "_").replace(",", "")[:50]
+
+# ============= v1.2.0: NON-TILTABLE ETF BUCKETS =============
+# ETFs in these buckets should not receive RADAR sector tilts
+NON_TILTABLE_BUCKETS = {
+    "ALT_ASSET_CRYPTO",
+    "ALT_ASSET_COMMODITY",
+    "SINGLE_STOCK",
+    "SINGLE_STOCK_DERIVATIVE",
+    "INDEX_DERIVATIVE",
+    "STRUCTURED_VEHICLE",
+    "DATA_MISSING",
+    "NON_STANDARD",
+}
 
 # ============= v1.1.0: RADAR TILTS NORMALIZATION =============
 # Imported from factors.py v2.4.5 for consistency
@@ -329,6 +343,49 @@ def normalize_region_for_tilts(country: str) -> str:
     return country_clean.lower().replace(" ", "-").replace("_", "-")
 
 
+# ============= v1.2.0: ETF SECTOR EXTRACTION =============
+
+def extract_etf_sector(asset: Dict) -> str:
+    """
+    v1.2.0: Extract sector from ETF asset.
+    
+    ETFs have sector in 'sector_top' field which can be:
+    - A string: "Technology"
+    - A dict: {"sector": "Technology", "weight": 0.48}
+    - None/empty
+    
+    Also checks sector_signal_ok flag.
+    """
+    # Check if sector_signal_ok is set (ETF has reliable sector data)
+    sector_signal_ok = asset.get("sector_signal_ok")
+    if sector_signal_ok is not None:
+        # Convert to bool (could be int 0/1 from CSV)
+        if not bool(int(sector_signal_ok) if isinstance(sector_signal_ok, (int, float, str)) else sector_signal_ok):
+            return ""  # Sector data not reliable
+    
+    # Check if ETF is in a non-tiltable bucket
+    bucket = asset.get("sector_bucket", "")
+    if bucket in NON_TILTABLE_BUCKETS:
+        return ""  # ETF type doesn't support sector tilts
+    
+    # Try sector_top first (ETF-specific)
+    sector_top = asset.get("sector_top")
+    if sector_top:
+        if isinstance(sector_top, dict):
+            return sector_top.get("sector", "")
+        elif isinstance(sector_top, str):
+            # Could be "nan" from CSV
+            if sector_top.lower() not in ["nan", "none", ""]:
+                return sector_top
+    
+    # Fallback to regular sector field
+    sector = asset.get("sector") or asset.get("_sector_key")
+    if sector and str(sector).lower() not in ["nan", "none", ""]:
+        return sector
+    
+    return ""
+
+
 # ============= DATACLASSES =============
 
 @dataclass
@@ -390,7 +447,7 @@ class AssetAuditEntry:
 class SelectionAuditReport:
     """Complete audit report for asset selection."""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "v1.1.0"
+    version: str = "v1.2.0"
     
     # Summary counts
     summary: Dict[str, int] = field(default_factory=dict)
@@ -425,6 +482,7 @@ class SelectionAuditor:
     """
     Tracks and records asset selection decisions throughout the pipeline.
     
+    v1.2.0: Fixed ETF sector extraction from sector_top field.
     v1.1.0: Added RADAR tilts normalization for correct sector/region matching.
     
     Usage:
@@ -722,6 +780,7 @@ class SelectionAuditor:
         """
         Create audit entry from raw asset data.
         
+        v1.2.0: Uses extract_etf_sector() for ETF-specific sector handling.
         v1.1.0: Uses normalize_sector_for_tilts() and normalize_region_for_tilts()
         for correct RADAR tilt matching.
         """
@@ -766,16 +825,21 @@ class SelectionAuditor:
             ytd = asset.get("ytd") or asset.get("perf_ytd")
             entry["ytd"] = f"{ytd}%" if isinstance(ytd, (int, float)) else str(ytd)
         
-        entry["sector"] = asset.get("sector") or asset.get("_sector_key")
+        # v1.2.0 FIX: Get sector - handle ETF case where sector is in sector_top
+        if category == "etf":
+            sector_raw = extract_etf_sector(asset)
+        else:
+            sector_raw = asset.get("sector") or asset.get("_sector_key") or ""
+        
+        entry["sector"] = sector_raw if sector_raw else None
         entry["country"] = asset.get("country")
         
         # v1.1.0 FIX: RADAR tilt with NORMALIZATION
         if self.report.radar_context:
-            sector_raw = entry.get("sector") or ""
             region_raw = entry.get("country") or ""
             
             # Normalize to RADAR format
-            sector_normalized = normalize_sector_for_tilts(sector_raw)
+            sector_normalized = normalize_sector_for_tilts(sector_raw) if sector_raw else ""
             region_normalized = normalize_region_for_tilts(region_raw)
             
             favored_sectors = self.report.radar_context.get("favored_sectors", [])
@@ -837,12 +901,16 @@ class SelectionAuditor:
             except:
                 pass
         
-        # v1.1.0: RADAR context with normalization
+        # v1.2.0: RADAR context with ETF-specific sector extraction
         if self.report.radar_context:
-            sector_raw = asset.get("sector") or asset.get("_sector_key") or ""
+            if category == "etf":
+                sector_raw = extract_etf_sector(asset)
+            else:
+                sector_raw = asset.get("sector") or asset.get("_sector_key") or ""
+            
             region_raw = asset.get("country") or ""
             
-            sector_normalized = normalize_sector_for_tilts(sector_raw)
+            sector_normalized = normalize_sector_for_tilts(sector_raw) if sector_raw else ""
             region_normalized = normalize_region_for_tilts(region_raw)
             
             favored_sectors = self.report.radar_context.get("favored_sectors", [])
