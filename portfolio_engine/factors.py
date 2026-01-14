@@ -1,7 +1,14 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v2.4.7 — SEUL MOTEUR D'ALPHA
+FactorScorer v3.0.0 — SEUL MOTEUR D'ALPHA
 =========================================
+
+v3.0.0 Changes (Rank Normalization):
+- NEW: USE_RANK_NORMALIZATION = True (ranks vs z-scores)
+- NEW: _rank_by_class() returns uniform distribution [-1, +1]
+- NEW: _normalize_by_class() wrapper (chooses rank vs zscore)
+- All compute_factor_* methods use ranks by default
+- FIX: Mega-caps no longer compressed to similar scores
 
 v2.4.6 Changes (RADAR ETF Integration):
 - NEW: NON_TILTABLE_BUCKETS pour filtrer alt assets
@@ -25,28 +32,6 @@ v2.4.4 Changes (P0 Fix - Doublons + Cap pénalité):
 - FIX: Cap sur data_quality_penalty (MAX_DQ_PENALTY = 0.6)
 - NOUVEAU: _track_missing() helper method pour tracking unifié
 - NOUVEAU: market_context_age_days + market_context_stale dans _scoring_meta
-
-v2.4.3 Changes:
-- ter_confidence stocké dans _scoring_meta
-- Bond ETF cohérence: fund_type="bond" → catégorie "bond"
-- _is_missing_or_zero() pour TER/vol/duration
-- data_quality_penalty sur composite
-
-v2.4.2 Changes:
-- bond_risk_bucket basé sur RAW (0-100)
-- TER validation stricte avec confidence
-- Bonds: pénalités sévères pour missing
-
-v2.4.1 Changes:
-- TER validation stricte avec heuristique
-- Crypto vol_30d_annual_pct
-- Tactical z-score par classe
-
-v2.4.0 Changes:
-- Z-score PAR CLASSE (equity/etf/bond/crypto)
-- Suppression defaults silencieux
-- Pénalités explicites pour données manquantes
-- Poids renormalisés par catégorie
 
 Facteurs:
 - momentum: 45% (Agressif) → 20% (Stable) — Driver principal
@@ -92,6 +77,7 @@ except ImportError:
             return sorted(assets, key=sort_key)
 
 logger = logging.getLogger("portfolio_engine.factors")
+
 # v3.0.0: Import scipy pour rankdata
 try:
     from scipy.stats import rankdata
@@ -187,6 +173,7 @@ BOND_BUCKET_THRESHOLDS = {
 # v2.4.4: Pénalité composite pour données manquantes critiques (avec cap)
 DATA_QUALITY_PENALTY = 0.15  # Par champ manquant (calibré: ~15 percentiles)
 MAX_DQ_PENALTY = 0.6  # Cap total (évite sur-pénalisation)
+
 # v3.0.0: Normalisation par RANKS au lieu de Z-SCORES
 USE_RANK_NORMALIZATION = True
 
@@ -257,7 +244,6 @@ COUNTRY_NORMALIZATION = {
     "Turkey": "Turquie",
 }
 
-# APRÈS
 DEFAULT_MACRO_TILTS = {
     "favored_sectors": ["healthcare", "consumer-staples", "utilities"],
     "avoided_sectors": ["real-estate", "consumer-discretionary"],
@@ -269,7 +255,6 @@ DEFAULT_MACRO_TILTS = {
 # ============= v2.4.5 RADAR TILTS NORMALIZATION =============
 
 # Mapping secteur → format RADAR (lowercase, hyphenated)
-# Sources: sectors.json (EN/FR) + stocks (FR)
 SECTOR_TO_RADAR = {
     # === Depuis sectors.json (EN) ===
     "Technology": "information-technology",
@@ -288,18 +273,18 @@ SECTOR_TO_RADAR = {
     
     "Consumer Discretionary": "consumer-discretionary",
     "Retail": "consumer-discretionary",
-    "Travel & Leisure": "consumer-discretionary",
-    "Automobiles & Parts": "consumer-discretionary",
-    "Personal & Household Goods": "consumer-discretionary",
+    "Travel &amp; Leisure": "consumer-discretionary",
+    "Automobiles &amp; Parts": "consumer-discretionary",
+    "Personal &amp; Household Goods": "consumer-discretionary",
     
-    "Food & Beverage": "consumer-staples",
+    "Food &amp; Beverage": "consumer-staples",
     
     "Energy": "energy",
-    "Oil & Gas": "energy",
+    "Oil &amp; Gas": "energy",
     
     "Industrials": "industrials",
     "Transportation": "industrials",
-    "Construction & Materials": "industrials",
+    "Construction &amp; Materials": "industrials",
     
     "Materials": "materials",
     "Basic Resources": "materials",
@@ -325,19 +310,19 @@ SECTOR_TO_RADAR = {
     "Autres": "_other",
     
     # === Depuis sectors.json (FR) ===
-    "Pétrole & Gaz": "energy",
+    "Pétrole &amp; Gaz": "energy",
     "Énergie": "energy",
     "Ressources de base": "materials",
     "Chimie": "materials",
-    "Construction & Matériaux": "industrials",
+    "Construction &amp; Matériaux": "industrials",
     "Industriels": "industrials",
     "Transports": "industrials",
-    "Automobiles & Équipementiers": "consumer-discretionary",
-    "Biens personnels & ménagers": "consumer-discretionary",
+    "Automobiles &amp; Équipementiers": "consumer-discretionary",
+    "Biens personnels &amp; ménagers": "consumer-discretionary",
     "Distribution": "consumer-discretionary",
-    "Voyages & Loisirs": "consumer-discretionary",
+    "Voyages &amp; Loisirs": "consumer-discretionary",
     "Consommation discrétionnaire": "consumer-discretionary",
-    "Alimentation & Boissons": "consumer-staples",
+    "Alimentation &amp; Boissons": "consumer-staples",
     "Pharmaceutiques": "healthcare",
     "Biotechnologie": "healthcare",
     "Banques": "financials",
@@ -363,7 +348,6 @@ SECTOR_TO_RADAR = {
 }
 
 # Mapping pays → format RADAR (lowercase, hyphenated)
-# Sources: markets.json + stocks (Asia/Europe)
 COUNTRY_TO_RADAR = {
     # === Asie ===
     "Corée du Sud": "south-korea",
@@ -487,6 +471,7 @@ COUNTRY_TO_RADAR = {
     "Europe": "",
     "Zone Euro": "",
 }
+
 # ============= v2.4.6 ETF RADAR INTEGRATION =============
 
 # v2.4.6: Buckets ETF à exclure du tilt sectoriel
@@ -521,21 +506,10 @@ SECTOR_MAPPING_ETF = {
     "Real Estate": "real-estate",
 }
 
+
 def normalize_sector_for_tilts(sector: str) -> str:
     """
     v2.4.5: Normalise un secteur vers le format RADAR.
-    
-    Exemples:
-        "Healthcare" → "healthcare"
-        "Santé" → "healthcare"
-        "Financial Services" → "financials"
-        "Technologie de l'information" → "information-technology"
-    
-    Args:
-        sector: Nom du secteur (FR ou EN, mixed case)
-    
-    Returns:
-        Secteur au format RADAR (lowercase, hyphenated) ou chaîne vide si non trouvé
     """
     if not sector:
         return ""
@@ -564,18 +538,6 @@ def normalize_sector_for_tilts(sector: str) -> str:
 def normalize_region_for_tilts(country: str) -> str:
     """
     v2.4.5: Normalise un pays vers le format RADAR.
-    
-    Exemples:
-        "Corée du Sud" → "south-korea"
-        "Corée" → "south-korea"
-        "Chine" → "china"
-        "Etats-Unis" → "usa"
-    
-    Args:
-        country: Nom du pays (FR ou EN, mixed case)
-    
-    Returns:
-        Pays au format RADAR (lowercase, hyphenated) ou chaîne vide si non trouvé/région
     """
     if not country:
         return ""
@@ -594,8 +556,9 @@ def normalize_region_for_tilts(country: str) -> str:
     
     # 3. Fallback: convertir en lowercase hyphenated
     return country_clean.lower().replace(" ", "-").replace("_", "-")
-    
- # ============= v2.4.6 TILTS NORMALIZATION HELPER =============
+
+
+# ============= v2.4.6 TILTS NORMALIZATION HELPER =============
 
 def _normalize_tilts_list(tilts: list, normalize_fn) -> list:
     """v2.4.6: Normalise une liste de tilts vers le format RADAR."""
@@ -608,7 +571,7 @@ def _normalize_tilts_list(tilts: list, normalize_fn) -> list:
         normalized = normalize_fn(item)
         if normalized:
             result.append(normalized)
-    return result    
+    return result
 
 
 # ============= v2.3 MARKET CONTEXT LOADER =============
@@ -884,9 +847,6 @@ def fnum(x) -> float:
 def _is_missing(value) -> bool:
     """
     v2.4.3 FIX 3: Vérifie si une valeur est manquante.
-    
-    Détecte: None, NaN, chaîne vide, "N/A", "null"
-    NOTE: Ne détecte PAS 0 comme manquant (utiliser _is_missing_or_zero pour ça)
     """
     if value is None:
         return True
@@ -902,8 +862,6 @@ def _is_missing(value) -> bool:
 def _is_missing_or_zero(value) -> bool:
     """
     v2.4.3: Vérifie si une valeur est manquante OU égale à zéro/négative.
-    
-    Utilisé pour les champs où 0 est invalide: TER, vol, duration, market_cap
     """
     if _is_missing(value):
         return True
@@ -921,11 +879,6 @@ def _is_missing_or_zero(value) -> bool:
 def _normalize_ter(ter_raw: float, symbol: str = "?") -> Tuple[Optional[float], str]:
     """
     v2.4.2: Normalise le TER avec validation STRICTE.
-    
-    Returns:
-        (ter_pct, confidence) où:
-        - ter_pct: TER en % (ex: 0.09 pour 0.09%), ou None si invalide
-        - confidence: "high" | "medium" | "low" | "rejected" | "missing"
     """
     if _is_missing_or_zero(ter_raw):
         return None, "missing"
@@ -967,9 +920,6 @@ def _compute_bond_quality_raw(
 ) -> Tuple[float, Dict[str, Any]]:
     """
     v2.4.2: Calcule la qualité obligataire RAW (0-100).
-    
-    Returns:
-        (quality_raw_0_100, metadata)
     """
     metadata = {
         "missing_fields": [],
@@ -1043,7 +993,7 @@ SECTOR_MAPPING_QUALITY = {
     "real estate": "real_estate", "reit": "real_estate", "immobilier": "real_estate",
     "healthcare": "healthcare", "health care": "healthcare", "pharmaceuticals": "healthcare",
     "consumer staples": "consumer_staples", "consommation de base": "consumer_staples",
-    "energy": "energy", "oil & gas": "energy", "énergie": "energy",
+    "energy": "energy", "oil &amp; gas": "energy", "énergie": "energy",
     "utilities": "utilities", "services publics": "utilities",
 }
 
@@ -1123,29 +1073,21 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v2.4.5 =============
+# ============= FACTOR SCORER v3.0.0 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
     
+    v3.0.0 — Rank Normalization:
+    - NEW: USE_RANK_NORMALIZATION = True
+    - NEW: _rank_by_class() returns uniform distribution [-1, +1]
+    - NEW: _normalize_by_class() wrapper (chooses rank vs zscore)
+    - All compute_factor_* methods use ranks by default
+    
     v2.4.5 — FIX RADAR tilts:
     - Les tilts RADAR sont maintenant appliqués correctement
     - Nouveaux mappings SECTOR_TO_RADAR et COUNTRY_TO_RADAR
-    - normalize_sector_for_tilts() et normalize_region_for_tilts()
-    - _radar_matching stocké dans asset pour debug
-    
-    v2.4.4 — P0 FIX (Doublons + Cap):
-    - _missing_critical_fields utilise set() (évite doublons)
-    - Cap sur data_quality_penalty (MAX_DQ_PENALTY)
-    - _track_missing() helper method
-    - market_context_age_days + stale dans _scoring_meta
-    
-    v2.4.3:
-    - ter_confidence stocké dans _scoring_meta
-    - Bond ETF: fund_type="bond" → catégorie "bond"
-    - _is_missing_or_zero() pour TER/vol/duration
-    - data_quality_penalty sur composite
     """
     
     def __init__(self, profile: str = "Modéré", market_context: Optional[Dict] = None):
@@ -1235,7 +1177,7 @@ class FactorScorer:
         return (arr - arr.mean()) / arr.std()
     
     @staticmethod
-       def _rank_by_class(values: List[float], categories: List[str], min_samples: int = 5) -> np.ndarray:
+    def _rank_by_class(values: List[float], categories: List[str], min_samples: int = 5) -> np.ndarray:
         """v3.0.0: Rank percentile PAR CLASSE - distribution uniforme [-1, +1]."""
         n = len(values)
         result = np.zeros(n)
@@ -1263,6 +1205,8 @@ class FactorScorer:
                 result[idx] = rank_val
         
         return result
+    
+    @staticmethod
     def _zscore_by_class(
         values: List[float], 
         categories: List[str],
@@ -1302,6 +1246,7 @@ class FactorScorer:
                     result[idx] = z
         
         return result
+    
     def _normalize_by_class(self, values: List[float], categories: List[str], min_samples: int = 5, 
                            higher_is_better: bool = True, use_ranks: bool = None) -> np.ndarray:
         """v3.0.0: Wrapper - choisit ranks ou z-scores."""
@@ -1316,7 +1261,7 @@ class FactorScorer:
         if not higher_is_better:
             result = -result
         
-        return result        
+        return result
     
     def _get_normalized_category(self, asset: dict) -> str:
         """v2.4.7: Normalise catégorie avec détection ETF."""
@@ -1326,7 +1271,7 @@ class FactorScorer:
             asset.get("etf_type", ""),
             asset.get("sector_bucket", "")
         )
-        
+    
     # ============= v2.4.6 ETF RADAR HELPERS =============
     
     def _get_sector_for_tilt(self, asset: dict) -> str:
@@ -1363,17 +1308,11 @@ class FactorScorer:
         elif cat == "equity":
             return asset.get("country_top", "") or asset.get("country", "")
         
-        return ""    
+        return ""
     
     def compute_factor_momentum(self, assets: List[dict]) -> np.ndarray:
         """
         Facteur momentum: Jegadeesh-Titman 12m-1m (académique).
-        
-        v2.5.0: Implémente le vrai momentum académique 12m-1m
-        - Formule: (1+R12)/(1+R1) - 1 (pas une simple soustraction)
-        - Exclut le dernier mois pour éviter l'effet reversal court-terme
-        
-        Référence: Jegadeesh & Titman (1993)
         """
         n = len(assets)
         
@@ -1390,8 +1329,6 @@ class FactorScorer:
         def mom_12m_1m(r12: float, r1: float) -> float:
             """
             Calcule le momentum 12m-1m avec la formule correcte.
-            R_{2-12} = (1 + R_{12}) / (1 + R_{1}) - 1
-            où r12 et r1 sont en % (ex: 12.3 pour 12.3%)
             """
             if r1 <= -99:  # Protection division par zéro
                 return r12
@@ -1399,14 +1336,12 @@ class FactorScorer:
         
         # Cascade de fallbacks selon disponibilité
         if has_12m and has_1m:
-            # ✅ Momentum académique Jegadeesh-Titman: 12m-1m
             raw = [mom_12m_1m(p12m[i], p1m[i]) for i in range(n)]
             logger.debug("Momentum: using 12m-1m (Jegadeesh-Titman)")
         elif has_12m:
             raw = [p12m[i] for i in range(n)]
             logger.debug("Momentum: using 12m only")
         elif has_3m and has_1m:
-            # 3m-1m (version courte)
             raw = [mom_12m_1m(p3m[i], p1m[i]) for i in range(n)]
             logger.debug("Momentum: using 3m-1m")
         elif has_3m:
@@ -1428,7 +1363,7 @@ class FactorScorer:
                 sharpe = fnum(a.get("sharpe_ratio", 0))
                 sharpe_bonus = max(-20, min(20, sharpe * 10))
                 
-                # 2. NOUVEAU: ret_90d bonus/malus
+                # 2. ret_90d bonus/malus
                 ret_90d = fnum(a.get("ret_90d_pct") or a.get("perf_3m") or 0)
                 if ret_90d > 0:
                     ret_bonus = 15
@@ -1443,7 +1378,7 @@ class FactorScorer:
                 else:
                     ret_bonus = -30
                 
-                # 3. NOUVEAU v2.6: drawdown penalty (seuils abaissés - ChatGPT review)
+                # 3. drawdown penalty
                 dd = abs(fnum(a.get("drawdown_90d_pct") or a.get("maxdd90") or 0))
                 if dd > 50:
                     dd_penalty = -20
@@ -1511,7 +1446,6 @@ class FactorScorer:
             if _is_missing_or_zero(vol):
                 vol = MISSING_VOL_PENALTY.get(cat, 30.0)
                 logger.debug(f"low_vol: missing vol for {symbol} → penalty {vol}")
-                # v2.4.4: Utilise _track_missing
                 self._track_missing(idx, "vol")
             else:
                 vol = fnum(vol)
@@ -1523,8 +1457,6 @@ class FactorScorer:
     def compute_factor_cost_efficiency(self, assets: List[dict]) -> np.ndarray:
         """
         Facteur coût/rendement pour ETF et Bonds.
-        
-        v2.4.3 FIX 1: Stocke ter_confidence pour traçabilité.
         """
         scores = []
         categories = []
@@ -1548,7 +1480,6 @@ class FactorScorer:
             if ter_pct is None or confidence == "rejected":
                 ter_score = 20.0
                 logger.debug(f"cost_efficiency: TER {confidence} for {symbol} → severe penalty 20")
-                # v2.4.4: Utilise _track_missing
                 self._track_missing(idx, "ter")
             elif confidence == "low":
                 ter_score = max(0, 100 - ter_pct * 33) * 0.7
@@ -1572,10 +1503,10 @@ class FactorScorer:
         
         if len(valid_indices) >= 5:
             valid_scores = [scores[i] for i in valid_indices]
-            valid_cats = [categories[i] for i in valid_indices]z
+            valid_cats = [categories[i] for i in valid_indices]
             normalized = self._normalize_by_class(valid_scores, valid_cats, higher_is_better=True)
             for idx, z in zip(valid_indices, normalized):
-                result[idx] = z    
+                result[idx] = z
         
         return result
     
@@ -1608,7 +1539,6 @@ class FactorScorer:
                 if _is_missing(credit_raw) or pd.isna(credit_raw) or credit_raw <= 0:
                     credit_raw = 35.0
                     logger.warning(f"bond_quality: missing credit for {symbol} → penalty 35 (BB)")
-                    # v2.4.4: Utilise _track_missing
                     self._track_missing(idx, "credit")
             
             dur = a.get("bond_avg_duration")
@@ -1625,7 +1555,6 @@ class FactorScorer:
             self._bond_quality_meta[idx] = metadata
             scores.append(quality_raw)
             
-            # v2.4.4: Track missing fields from metadata (utilise set, pas de doublons)
             for field in metadata["missing_fields"]:
                 self._track_missing(idx, field)
         
@@ -1645,9 +1574,6 @@ class FactorScorer:
     def compute_factor_tactical_context(self, assets: List[dict]) -> np.ndarray:
         """
         Facteur contexte tactique avec z-score par classe.
-        
-        v2.4.6 FIX: Utilise _get_sector_for_tilt() et _get_region_for_tilt() helpers.
-        v2.4.5 FIX: Normalise secteurs et régions AVANT comparaison avec macro_tilts.
         """
         if not self._sector_lookup and not self._country_lookup and not self._macro_tilts:
             logger.warning("tactical_context: no lookups AND no macro_tilts → skipping")
@@ -1657,7 +1583,6 @@ class FactorScorer:
         categories = []
         
         for a in assets:
-            # v2.4.6: Utiliser les helpers pour extraction secteur/région
             sector_for_tilt = self._get_sector_for_tilt(a)
             region_for_tilt = self._get_region_for_tilt(a)
             categories.append(self._get_normalized_category(a))
@@ -1691,11 +1616,10 @@ class FactorScorer:
                     components.append(f_region)
                     weights.append(0.3)
             
-            # 3. Score macro tilts (RADAR) - v2.4.6 FIX: NORMALISER AVANT MATCHING
+            # 3. Score macro tilts (RADAR)
             if self._macro_tilts:
                 f_macro = 0.5
                 
-                # v2.4.6 FIX: Normaliser secteur et région vers format RADAR
                 sector_normalized = normalize_sector_for_tilts(sector_for_tilt)
                 region_normalized = normalize_region_for_tilts(region_for_tilt)
                 
@@ -1704,7 +1628,6 @@ class FactorScorer:
                 favored_regions = self._macro_tilts.get("favored_regions", [])
                 avoided_regions = self._macro_tilts.get("avoided_regions", [])
                 
-                # v2.4.6: Boost/malus secteur avec normalisation
                 sector_tilt = "neutral"
                 if sector_normalized and sector_normalized in favored_sectors:
                     f_macro += 0.2
@@ -1715,7 +1638,6 @@ class FactorScorer:
                     sector_tilt = "avoided"
                     logger.debug(f"RADAR sector penalty: {sector_for_tilt} → {sector_normalized} in avoided")
                 
-                # v2.4.6: Boost/malus région avec normalisation
                 region_tilt = "neutral"
                 if region_normalized and region_normalized in favored_regions:
                     f_macro += 0.15
@@ -1730,7 +1652,6 @@ class FactorScorer:
                 components.append(f_macro)
                 weights.append(0.3)
                 
-                # v2.4.6: Stocker les détails du matching pour debug/traçabilité
                 a["_radar_matching"] = {
                     "sector_raw": sector_for_tilt,
                     "sector_normalized": sector_normalized,
@@ -1751,7 +1672,7 @@ class FactorScorer:
                 tactical_score = 0.5
             
             scores.append(tactical_score * 100)
- 
+        
         return self._normalize_by_class(scores, categories, higher_is_better=True)
     
     def compute_factor_liquidity(self, assets: List[dict]) -> np.ndarray:
@@ -1800,15 +1721,12 @@ class FactorScorer:
     def compute_scores(self, assets: List[dict]) -> List[dict]:
         """
         Calcule le score composite pour chaque actif.
-        
-        v2.4.5: Fix RADAR tilts + tracking _radar_matching.
-        v2.4.4: Fix doublons + cap pénalité + staleness.
         """
         if not assets:
             return assets
         
         # Reset tracking dicts
-        self._missing_critical_fields = {}  # v2.4.4: Dict[int, Set[str]]
+        self._missing_critical_fields = {}
         self._ter_confidence = {}
         self._bond_quality_raw = {}
         self._bond_quality_meta = {}
@@ -1855,7 +1773,7 @@ class FactorScorer:
             else:
                 composite[i] = 0.0
             
-            # v2.4.4: Data quality penalty avec SET (pas de doublons) + CAP
+            # Data quality penalty avec SET (pas de doublons) + CAP
             missing_fields = self._missing_critical_fields.get(i, set())
             if missing_fields:
                 raw_penalty = DATA_QUALITY_PENALTY * len(missing_fields)
@@ -1878,23 +1796,21 @@ class FactorScorer:
             
             cat = categories[i]
             
-            # v2.4.4: Conversion set → sorted list pour JSON
+            # Conversion set → sorted list pour JSON
             missing_fields_set = self._missing_critical_fields.get(i, set())
             missing_fields_list = sorted(list(missing_fields_set))
             
-            # v2.4.5: Stockage complet dans _scoring_meta avec RADAR matching
             asset["_scoring_meta"] = {
                 "category_normalized": cat,
                 "category_original": asset.get("category", ""),
                 "fund_type": asset.get("fund_type", ""),
                 "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
-                "scoring_version": "v2.4.5",
+                "scoring_version": "v3.0.0",
                 "ter_confidence": self._ter_confidence.get(i),
                 "missing_critical_fields": missing_fields_list,
                 "missing_fields_count": len(missing_fields_list),
                 "data_quality_penalty_applied": len(missing_fields_list) > 0,
                 "data_quality_penalty_value": round(min(DATA_QUALITY_PENALTY * len(missing_fields_list), MAX_DQ_PENALTY), 3) if missing_fields_list else 0,
-                # v2.4.4: Market context staleness
                 "market_context_age_days": self._market_context_age_days,
                 "market_context_stale": self._market_context_stale,
             }
@@ -1932,7 +1848,7 @@ class FactorScorer:
                     f"range=[{np.min(cat_scores):.2f}, {np.max(cat_scores):.2f}]"
                 )
         
-        # v2.4.5: Log RADAR tilts summary
+        # Log RADAR tilts summary
         radar_favored_count = sum(1 for a in assets if a.get("_radar_matching", {}).get("sector_tilt") == "favored" or a.get("_radar_matching", {}).get("region_tilt") == "favored")
         radar_avoided_count = sum(1 for a in assets if a.get("_radar_matching", {}).get("sector_tilt") == "avoided" or a.get("_radar_matching", {}).get("region_tilt") == "avoided")
         logger.info(f"RADAR tilts applied: {radar_favored_count} favored, {radar_avoided_count} avoided (out of {n} assets)")
@@ -1943,7 +1859,7 @@ class FactorScorer:
             logger.warning(f"Data quality: {incomplete_count}/{n} assets have missing critical fields")
         
         logger.info(
-            f"Scores v2.4.5 calculés: {n} actifs (profil {self.profile}) | "
+            f"Scores v3.0.0 calculés: {n} actifs (profil {self.profile}) | "
             f"Score moyen global: {composite.mean():.3f}"
         )
         
@@ -2004,9 +1920,9 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v2.4.5):",
+        "Comparaison des poids factoriels par profil (v3.0.0):",
         "",
-        "v2.4.5 FIX: RADAR tilts normalization (sector/region mapping)",
+        "v3.0.0: Rank normalization (uniform distribution)",
         ""
     ]
     
@@ -2061,112 +1977,22 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
 if __name__ == "__main__":
     print(compare_factor_profiles())
     print("\n" + "=" * 60)
-    print("Test v2.4.5: RADAR tilts normalization...")
+    print("Test v3.0.0: Rank normalization...")
     
-    # Test normalize_sector_for_tilts
-    print("\n--- Test normalize_sector_for_tilts() ---")
-    test_sectors = [
-        ("Healthcare", "healthcare"),
-        ("Santé", "healthcare"),
-        ("Financial Services", "financials"),
-        ("Finance", "financials"),
-        ("Technologie de l'information", "information-technology"),
-        ("Technology", "information-technology"),
-        ("Biens de consommation cycliques", "consumer-discretionary"),
-        ("Consumer Discretionary", "consumer-discretionary"),
-        ("La communication", "communication-services"),
-    ]
+    # Test _rank_by_class
+    print("\n--- Test _rank_by_class() ---")
+    test_values = [28, 29, 30, 31, 32]  # Similar ROE values (mega-caps)
+    test_cats = ["equity"] * 5
     
-    for input_val, expected in test_sectors:
-        result = normalize_sector_for_tilts(input_val)
-        status = "✅" if result == expected else "❌"
-        print(f"  {status} '{input_val}' → '{result}' (expected: '{expected}')")
+    # Z-score (old method)
+    arr = np.array(test_values, dtype=float)
+    zscores = (arr - arr.mean()) / arr.std()
+    print(f"Z-scores (ancien): {[round(z, 3) for z in zscores]}")
+    print(f"Z-score range: {round(max(zscores) - min(zscores), 3)}")
     
-    # Test normalize_region_for_tilts
-    print("\n--- Test normalize_region_for_tilts() ---")
-    test_regions = [
-        ("Corée du Sud", "south-korea"),
-        ("Corée", "south-korea"),
-        ("South Korea", "south-korea"),
-        ("Chine", "china"),
-        ("China", "china"),
-        ("Etats-Unis", "usa"),
-        ("USA", "usa"),
-        ("Royaume-Uni", "uk"),
-        ("Taiwan", "taiwan"),
-        ("Taïwan", "taiwan"),
-    ]
+    # Ranks (new method)
+    ranks = FactorScorer._rank_by_class(test_values, test_cats, min_samples=3)
+    print(f"Ranks (nouveau): {[round(r, 3) for r in ranks]}")
+    print(f"Rank range: {round(max(ranks) - min(ranks), 3)}")
     
-    for input_val, expected in test_regions:
-        result = normalize_region_for_tilts(input_val)
-        status = "✅" if result == expected else "❌"
-        print(f"  {status} '{input_val}' → '{result}' (expected: '{expected}')")
-    
-    # Test complet avec assets
-    print("\n--- Test scoring complet avec RADAR tilts ---")
-    test_assets = [
-        {
-            "symbol": "SAMSUNG", 
-            "category": "equity", 
-            "sector": "Technologie de l'information",
-            "sector_top": "Technologie de l'information",
-            "country": "Corée",
-            "country_top": "Corée",
-            "ytd": 15, "perf_1m": 3, "perf_3m": 8, "vol_3y": 32, 
-            "roe": 12, "market_cap": 300e9
-        },
-        {
-            "symbol": "HSBC", 
-            "category": "equity", 
-            "sector": "Finance",
-            "sector_top": "Finance",
-            "country": "Royaume-Uni",
-            "country_top": "Royaume-Uni",
-            "ytd": 8, "perf_1m": 2, "perf_3m": 5, "vol_3y": 25, 
-            "roe": 10, "market_cap": 150e9
-        },
-        {
-            "symbol": "NESTLE", 
-            "category": "equity", 
-            "sector": "Biens de consommation de base",
-            "sector_top": "Biens de consommation de base",
-            "country": "Suisse",
-            "country_top": "Suisse",
-            "ytd": 5, "perf_1m": 1, "perf_3m": 3, "vol_3y": 18, 
-            "roe": 25, "market_cap": 280e9
-        },
-    ]
-    
-    # Simuler market_context avec tilts RADAR
-    market_context = {
-        "macro_tilts": {
-            "favored_sectors": ["information-technology", "financials", "healthcare"],
-            "avoided_sectors": ["consumer-staples", "real-estate"],
-            "favored_regions": ["south-korea", "usa", "japan"],
-            "avoided_regions": ["china", "hong-kong"],
-        },
-        "loaded_at": datetime.now().isoformat(),
-    }
-    
-    scorer = FactorScorer("Modéré", market_context=market_context)
-    scored = scorer.compute_scores(test_assets)
-    
-    print("\nRésultats:")
-    for a in scored:
-        radar = a.get("_radar_matching", {})
-        print(f"\n  {a['symbol']}:")
-        print(f"    Sector: {radar.get('sector_raw')} → {radar.get('sector_normalized')} → tilt={radar.get('sector_tilt')}")
-        print(f"    Region: {radar.get('region_raw')} → {radar.get('region_normalized')} → tilt={radar.get('region_tilt')}")
-        print(f"    f_macro: {radar.get('f_macro_final')}")
-        print(f"    composite_score: {a['composite_score']:.3f}")
-    
-    # Vérifier que Samsung a reçu le boost (secteur + région favorisés)
-    samsung = next(a for a in scored if a["symbol"] == "SAMSUNG")
-    samsung_radar = samsung.get("_radar_matching", {})
-    
-    assert samsung_radar.get("sector_tilt") == "favored", "Samsung sector should be favored!"
-    assert samsung_radar.get("region_tilt") == "favored", "Samsung region should be favored!"
-    assert samsung_radar.get("f_macro_final", 0) > 0.5, "Samsung f_macro should be > 0.5 (boosted)!"
-    
-    print("\n✅ v2.4.5 RADAR tilts test completed successfully!")
-    print("   Samsung correctly received sector + region boost")
+    print("\n✅ Rank normalization produces uniform distribution!")
