@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-01-14T14:03:31.629494",
+  "timestamp": "2026-01-14T14:27:15.067218",
   "version": "v1.2.0",
   "summary": {
     "equities_initial": 1006,
     "equities_selected": 5,
     "equities_rejected_notable": 50,
     "etf_initial": 232,
-    "etf_selected": 0,
+    "etf_selected": 6,
     "etf_rejected_notable": 20,
     "crypto_initial": 324,
     "crypto_selected": 3,
@@ -1347,8 +1347,7 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
   ],
-  "etf_selected": [],
-  "etf_rejected": [
+  "etf_selected": [
     {
       "name": "Goldman Sachs Physical Gold ETF",
       "ticker": "AAAU",
@@ -1362,9 +1361,101 @@
         "region_normalized": "",
         "region_tilt": "neutral"
       },
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+      "selected": true,
+      "ranking": 1,
+      "selection_reason": "Score composite favorable"
     },
+    {
+      "name": "Avantis International Small Cap Value ETF",
+      "ticker": "AVDV",
+      "category": "etf",
+      "sector": "Industrial",
+      "radar_tilt": "favored",
+      "_radar_matching": {
+        "sector_raw": "Industrial",
+        "sector_normalized": "industrials",
+        "sector_tilt": "favored",
+        "region_raw": "",
+        "region_normalized": "",
+        "region_tilt": "neutral"
+      },
+      "selected": true,
+      "ranking": 2,
+      "selection_reason": "Secteur favorisé RADAR (industrials)"
+    },
+    {
+      "name": "Avantis U.S. Large Cap Value ETF",
+      "ticker": "AVLV",
+      "category": "etf",
+      "sector": "Consumer Cyclical",
+      "radar_tilt": "neutral",
+      "_radar_matching": {
+        "sector_raw": "Consumer Cyclical",
+        "sector_normalized": "consumer-cyclical",
+        "sector_tilt": "neutral",
+        "region_raw": "",
+        "region_normalized": "",
+        "region_tilt": "neutral"
+      },
+      "selected": true,
+      "ranking": 3,
+      "selection_reason": "Score composite favorable"
+    },
+    {
+      "name": "Direxion Daily MSCI Brazil Bull 3X Shares",
+      "ticker": "BRZU",
+      "category": "etf",
+      "radar_tilt": "neutral",
+      "_radar_matching": {
+        "sector_raw": "",
+        "sector_normalized": "",
+        "sector_tilt": "neutral",
+        "region_raw": "",
+        "region_normalized": "",
+        "region_tilt": "neutral"
+      },
+      "selected": true,
+      "ranking": 4,
+      "selection_reason": "Score composite favorable"
+    },
+    {
+      "name": "Global X Copper Miners ETF",
+      "ticker": "COPX",
+      "category": "etf",
+      "sector": "Basic Materials",
+      "radar_tilt": "favored",
+      "_radar_matching": {
+        "sector_raw": "Basic Materials",
+        "sector_normalized": "materials",
+        "sector_tilt": "favored",
+        "region_raw": "",
+        "region_normalized": "",
+        "region_tilt": "neutral"
+      },
+      "selected": true,
+      "ranking": 5,
+      "selection_reason": "Secteur favorisé RADAR (materials)"
+    },
+    {
+      "name": "Xtrackers MSCI EAFE Hedged Equity ETF",
+      "ticker": "DBEF",
+      "category": "etf",
+      "sector": "Financial Services",
+      "radar_tilt": "neutral",
+      "_radar_matching": {
+        "sector_raw": "Financial Services",
+        "sector_normalized": "financials",
+        "sector_tilt": "neutral",
+        "region_raw": "",
+        "region_normalized": "",
+        "region_tilt": "neutral"
+      },
+      "selected": true,
+      "ranking": 6,
+      "selection_reason": "Score composite favorable"
+    }
+  ],
+  "etf_rejected": [
     {
       "name": "GraniteShares 2x Long AAPL Daily ETF",
       "ticker": "AAPB",
@@ -1679,23 +1770,36 @@
       },
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Alerian MLP ETF",
+      "ticker": "AMLP",
+      "category": "etf",
+      "sector": "Energy",
+      "radar_tilt": "favored",
+      "_radar_matching": {
+        "sector_raw": "Energy",
+        "sector_normalized": "energy",
+        "sector_tilt": "favored",
+        "region_raw": "",
+        "region_normalized": "",
+        "region_tilt": "neutral"
+      },
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
   ],
   "crypto_selected": [
     {
-      "name": "BTS/USD",
+      "name": "Unknown",
       "ticker": "BTS/USD",
       "category": "crypto",
-      "volatility": 38.2,
-      "ytd": "6.03%",
-      "sector": "Crypto",
-      "country": "Global",
       "radar_tilt": "neutral",
       "_radar_matching": {
-        "sector_raw": "Crypto",
-        "sector_normalized": "crypto",
+        "sector_raw": "",
+        "sector_normalized": "",
         "sector_tilt": "neutral",
-        "region_raw": "Global",
+        "region_raw": "",
         "region_normalized": "",
         "region_tilt": "neutral"
       },
@@ -1704,19 +1808,15 @@
       "selection_reason": "Score composite favorable"
     },
     {
-      "name": "LAZIO/USD",
+      "name": "Unknown",
       "ticker": "LAZIO/USD",
       "category": "crypto",
-      "volatility": 42.7,
-      "ytd": "9.06%",
-      "sector": "Crypto",
-      "country": "Global",
       "radar_tilt": "neutral",
       "_radar_matching": {
-        "sector_raw": "Crypto",
-        "sector_normalized": "crypto",
+        "sector_raw": "",
+        "sector_normalized": "",
         "sector_tilt": "neutral",
-        "region_raw": "Global",
+        "region_raw": "",
         "region_normalized": "",
         "region_tilt": "neutral"
       },
@@ -1725,19 +1825,15 @@
       "selection_reason": "Score composite favorable"
     },
     {
-      "name": "PORTO/USD",
+      "name": "Unknown",
       "ticker": "PORTO/USD",
       "category": "crypto",
-      "volatility": 45.0,
-      "ytd": "8.16%",
-      "sector": "Crypto",
-      "country": "Global",
       "radar_tilt": "neutral",
       "_radar_matching": {
-        "sector_raw": "Crypto",
-        "sector_normalized": "crypto",
+        "sector_raw": "",
+        "sector_normalized": "",
         "sector_tilt": "neutral",
-        "region_raw": "Global",
+        "region_raw": "",
         "region_normalized": "",
         "region_tilt": "neutral"
       },
