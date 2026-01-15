@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-01-15T08:18:05.920568",
+    "generated_at": "2026-01-15T08:58:41.408309",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -20,38 +20,34 @@
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 32,
-    "tickers_with_data": 32,
+    "total_tickers_requested": 28,
+    "tickers_with_data": 28,
     "tickers_missing": []
   },
   "assets_by_type": {
     "Action": [
       "AAAU",
-      "AAPL",
       "ACWI",
       "AFIF",
       "AGZ",
       "AVDV",
       "AVSF",
       "AXP",
+      "BAB",
       "BBAG",
       "BRZU",
       "BTS/USD",
       "BUFQ",
-      "CABK",
       "CARY",
       "CSHI",
       "DCMB",
       "DFIC",
       "DFIV",
+      "G",
       "GNO/USD",
-      "KOTAKBANK",
-      "LPLA",
+      "JKHY",
       "NFT/USD",
-      "SLHN",
-      "SYF",
-      "TJX",
-      "TRV"
+      "TJX"
     ],
     "ETF": [
       "AVIG"
@@ -125,63 +121,6 @@
       ],
       "is_benchmark": false
     },
-    "AAPL": {
-      "ticker": "AAPL",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-09-18",
-      "last_date": "2026-01-15",
-      "first_price": 237.88,
-      "last_price": 259.96,
-      "total_return_pct": 9.28,
-      "volatility_annual_pct": 18.62,
-      "weights_by_profile": {
-        "Agressif": 10.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-09-18",
-          "close": 237.88,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-10-17",
-          "close": 252.29,
-          "prev_date": "2025-10-16",
-          "prev_close": 247.45,
-          "daily_return_pct": 1.9559,
-          "formula": "(252.2900 / 247.4500) - 1"
-        },
-        {
-          "date": "2025-11-18",
-          "close": 267.44,
-          "prev_date": "2025-11-17",
-          "prev_close": 267.46,
-          "daily_return_pct": -0.0075,
-          "formula": "(267.4400 / 267.4600) - 1"
-        },
-        {
-          "date": "2025-12-17",
-          "close": 271.84,
-          "prev_date": "2025-12-16",
-          "prev_close": 274.61,
-          "daily_return_pct": -1.0087,
-          "formula": "(271.8400 / 274.6100) - 1"
-        },
-        {
-          "date": "2026-01-15",
-          "close": 259.96,
-          "prev_date": "2026-01-14",
-          "prev_close": 259.96,
-          "daily_return_pct": 0.0,
-          "formula": "(259.9600 / 259.9600) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "ACWI": {
       "ticker": "ACWI",
       "type": "Action",
@@ -250,7 +189,7 @@
       "total_return_pct": 0.53,
       "volatility_annual_pct": 3.46,
       "weights_by_profile": {
-        "Modéré": 5.0
+        "Modéré": 7.0
       },
       "price_samples": [
         {
@@ -365,6 +304,7 @@
       "total_return_pct": -0.25,
       "volatility_annual_pct": 3.33,
       "weights_by_profile": {
+        "Agressif": 5.0,
         "Modéré": 8.0
       },
       "price_samples": [
@@ -652,7 +592,9 @@
       "total_return_pct": 4.86,
       "volatility_annual_pct": 25.24,
       "weights_by_profile": {
-        "Modéré": 13.0
+        "Agressif": 15.0,
+        "Modéré": 15.0,
+        "Stable": 2.05
       },
       "price_samples": [
         {
@@ -694,6 +636,63 @@
           "prev_close": 358.26,
           "daily_return_pct": 0.0,
           "formula": "(358.2600 / 358.2600) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
+    "BAB": {
+      "ticker": "BAB",
+      "type": "Action",
+      "n_days_data": 86,
+      "first_date": "2025-09-18",
+      "last_date": "2026-01-15",
+      "first_price": 27.16,
+      "last_price": 27.39,
+      "total_return_pct": 0.85,
+      "volatility_annual_pct": 4.97,
+      "weights_by_profile": {
+        "Agressif": 5.0
+      },
+      "price_samples": [
+        {
+          "date": "2025-09-18",
+          "close": 27.16,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-10-17",
+          "close": 27.55,
+          "prev_date": "2025-10-16",
+          "prev_close": 27.52,
+          "daily_return_pct": 0.109,
+          "formula": "(27.5500 / 27.5200) - 1"
+        },
+        {
+          "date": "2025-11-18",
+          "close": 27.44,
+          "prev_date": "2025-11-17",
+          "prev_close": 27.29,
+          "daily_return_pct": 0.5497,
+          "formula": "(27.4400 / 27.2900) - 1"
+        },
+        {
+          "date": "2025-12-17",
+          "close": 27.26,
+          "prev_date": "2025-12-16",
+          "prev_close": 27.15,
+          "daily_return_pct": 0.4052,
+          "formula": "(27.2600 / 27.1500) - 1"
+        },
+        {
+          "date": "2026-01-15",
+          "close": 27.39,
+          "prev_date": "2026-01-14",
+          "prev_close": 27.39,
+          "daily_return_pct": 0.0,
+          "formula": "(27.3900 / 27.3900) - 1"
         }
       ],
       "is_benchmark": false
@@ -820,11 +819,11 @@
       "last_date": "2026-01-15",
       "first_price": 0.0014,
       "last_price": 0.0012,
-      "total_return_pct": -12.63,
+      "total_return_pct": -12.39,
       "volatility_annual_pct": 37.32,
       "weights_by_profile": {
         "Agressif": 3.5,
-        "Modéré": 2.5
+        "Modéré": 0.5
       },
       "price_samples": [
         {
@@ -864,7 +863,7 @@
           "close": 0.0012,
           "prev_date": "2026-01-14",
           "prev_close": 0.0012,
-          "daily_return_pct": -0.5191,
+          "daily_return_pct": -0.2428,
           "formula": "(0.0012 / 0.0012) - 1"
         }
       ],
@@ -927,63 +926,6 @@
       ],
       "is_benchmark": false
     },
-    "CABK": {
-      "ticker": "CABK",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-09-18",
-      "last_date": "2026-01-15",
-      "first_price": 8.636,
-      "last_price": 10.805,
-      "total_return_pct": 25.12,
-      "volatility_annual_pct": 20.45,
-      "weights_by_profile": {
-        "Agressif": 15.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-09-18",
-          "close": 8.636,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-10-17",
-          "close": 8.684,
-          "prev_date": "2025-10-16",
-          "prev_close": 8.964,
-          "daily_return_pct": -3.1236,
-          "formula": "(8.6840 / 8.9640) - 1"
-        },
-        {
-          "date": "2025-11-18",
-          "close": 9.008,
-          "prev_date": "2025-11-17",
-          "prev_close": 9.27,
-          "daily_return_pct": -2.8263,
-          "formula": "(9.0080 / 9.2700) - 1"
-        },
-        {
-          "date": "2025-12-17",
-          "close": 10.315,
-          "prev_date": "2025-12-16",
-          "prev_close": 10.16,
-          "daily_return_pct": 1.5256,
-          "formula": "(10.3150 / 10.1600) - 1"
-        },
-        {
-          "date": "2026-01-15",
-          "close": 10.805,
-          "prev_date": "2026-01-14",
-          "prev_close": 10.805,
-          "daily_return_pct": 0.0,
-          "formula": "(10.8050 / 10.8050) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "CARY": {
       "ticker": "CARY",
       "type": "Action",
@@ -995,7 +937,7 @@
       "total_return_pct": -0.59,
       "volatility_annual_pct": 2.54,
       "weights_by_profile": {
-        "Stable": 12.49
+        "Stable": 12.28
       },
       "price_samples": [
         {
@@ -1269,6 +1211,63 @@
       ],
       "is_benchmark": false
     },
+    "G": {
+      "ticker": "G",
+      "type": "Action",
+      "n_days_data": 86,
+      "first_date": "2025-09-18",
+      "last_date": "2026-01-15",
+      "first_price": 41.3,
+      "last_price": 47.44,
+      "total_return_pct": 14.87,
+      "volatility_annual_pct": 33.27,
+      "weights_by_profile": {
+        "Agressif": 15.0
+      },
+      "price_samples": [
+        {
+          "date": "2025-09-18",
+          "close": 41.3,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-10-17",
+          "close": 39.44,
+          "prev_date": "2025-10-16",
+          "prev_close": 38.95,
+          "daily_return_pct": 1.258,
+          "formula": "(39.4400 / 38.9500) - 1"
+        },
+        {
+          "date": "2025-11-18",
+          "close": 43.8,
+          "prev_date": "2025-11-17",
+          "prev_close": 43.74,
+          "daily_return_pct": 0.1372,
+          "formula": "(43.8000 / 43.7400) - 1"
+        },
+        {
+          "date": "2025-12-17",
+          "close": 47.95,
+          "prev_date": "2025-12-16",
+          "prev_close": 47.77,
+          "daily_return_pct": 0.3768,
+          "formula": "(47.9500 / 47.7700) - 1"
+        },
+        {
+          "date": "2026-01-15",
+          "close": 47.44,
+          "prev_date": "2026-01-14",
+          "prev_close": 47.44,
+          "daily_return_pct": 0.0,
+          "formula": "(47.4400 / 47.4400) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
     "GNO/USD": {
       "ticker": "GNO/USD",
       "type": "Action",
@@ -1276,9 +1275,9 @@
       "first_date": "2025-09-18",
       "last_date": "2026-01-15",
       "first_price": 150.9507,
-      "last_price": 145.9088,
-      "total_return_pct": -3.34,
-      "volatility_annual_pct": 64.2,
+      "last_price": 145.5204,
+      "total_return_pct": -3.6,
+      "volatility_annual_pct": 64.21,
       "weights_by_profile": {
         "Agressif": 3.0
       },
@@ -1317,33 +1316,34 @@
         },
         {
           "date": "2026-01-15",
-          "close": 145.9088,
+          "close": 145.5204,
           "prev_date": "2026-01-14",
           "prev_close": 146.6446,
-          "daily_return_pct": -0.5018,
-          "formula": "(145.9088 / 146.6446) - 1"
+          "daily_return_pct": -0.7666,
+          "formula": "(145.5204 / 146.6446) - 1"
         }
       ],
       "is_benchmark": false
     },
-    "KOTAKBANK": {
-      "ticker": "KOTAKBANK",
+    "JKHY": {
+      "ticker": "JKHY",
       "type": "Action",
       "n_days_data": 86,
       "first_date": "2025-09-18",
       "last_date": "2026-01-15",
-      "first_price": 410.92,
-      "last_price": 421.0,
-      "total_return_pct": 2.45,
-      "volatility_annual_pct": 15.37,
+      "first_price": 154.47,
+      "last_price": 192.6,
+      "total_return_pct": 24.68,
+      "volatility_annual_pct": 19.69,
       "weights_by_profile": {
-        "Modéré": 10.0,
-        "Stable": 8.0
+        "Agressif": 5.0,
+        "Modéré": 15.0,
+        "Stable": 8.21
       },
       "price_samples": [
         {
           "date": "2025-09-18",
-          "close": 410.92,
+          "close": 154.47,
           "prev_date": null,
           "prev_close": null,
           "daily_return_pct": null,
@@ -1351,92 +1351,35 @@
         },
         {
           "date": "2025-10-17",
-          "close": 441.16,
+          "close": 152.93,
           "prev_date": "2025-10-16",
-          "prev_close": 441.08,
-          "daily_return_pct": 0.0181,
-          "formula": "(441.1600 / 441.0800) - 1"
+          "prev_close": 152.94,
+          "daily_return_pct": -0.0065,
+          "formula": "(152.9300 / 152.9400) - 1"
         },
         {
           "date": "2025-11-18",
-          "close": 418.62,
+          "close": 163.94,
           "prev_date": "2025-11-17",
-          "prev_close": 420.58,
-          "daily_return_pct": -0.466,
-          "formula": "(418.6200 / 420.5800) - 1"
+          "prev_close": 163.64,
+          "daily_return_pct": 0.1833,
+          "formula": "(163.9400 / 163.6400) - 1"
         },
         {
           "date": "2025-12-17",
-          "close": 434.64,
+          "close": 188.09,
           "prev_date": "2025-12-16",
-          "prev_close": 436.48,
-          "daily_return_pct": -0.4216,
-          "formula": "(434.6400 / 436.4800) - 1"
+          "prev_close": 186.91,
+          "daily_return_pct": 0.6313,
+          "formula": "(188.0900 / 186.9100) - 1"
         },
         {
           "date": "2026-01-15",
-          "close": 421.0,
+          "close": 192.6,
           "prev_date": "2026-01-14",
-          "prev_close": 421.0,
+          "prev_close": 192.6,
           "daily_return_pct": 0.0,
-          "formula": "(421.0000 / 421.0000) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "LPLA": {
-      "ticker": "LPLA",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-09-18",
-      "last_date": "2026-01-15",
-      "first_price": 339.37,
-      "last_price": 371.82,
-      "total_return_pct": 9.56,
-      "volatility_annual_pct": 32.07,
-      "weights_by_profile": {
-        "Agressif": 5.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-09-18",
-          "close": 339.37,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-10-17",
-          "close": 337.94,
-          "prev_date": "2025-10-16",
-          "prev_close": 333.43,
-          "daily_return_pct": 1.3526,
-          "formula": "(337.9400 / 333.4300) - 1"
-        },
-        {
-          "date": "2025-11-18",
-          "close": 355.58,
-          "prev_date": "2025-11-17",
-          "prev_close": 361.4,
-          "daily_return_pct": -1.6104,
-          "formula": "(355.5800 / 361.4000) - 1"
-        },
-        {
-          "date": "2025-12-17",
-          "close": 355.72,
-          "prev_date": "2025-12-16",
-          "prev_close": 367.97,
-          "daily_return_pct": -3.3291,
-          "formula": "(355.7200 / 367.9700) - 1"
-        },
-        {
-          "date": "2026-01-15",
-          "close": 371.82,
-          "prev_date": "2026-01-14",
-          "prev_close": 371.82,
-          "daily_return_pct": 0.0,
-          "formula": "(371.8200 / 371.8200) - 1"
+          "formula": "(192.6000 / 192.6000) - 1"
         }
       ],
       "is_benchmark": false
@@ -1554,63 +1497,6 @@
       ],
       "is_benchmark": true
     },
-    "SLHN": {
-      "ticker": "SLHN",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-09-18",
-      "last_date": "2026-01-15",
-      "first_price": 821.4,
-      "last_price": 871.6,
-      "total_return_pct": 6.11,
-      "volatility_annual_pct": 14.48,
-      "weights_by_profile": {
-        "Stable": 2.05
-      },
-      "price_samples": [
-        {
-          "date": "2025-09-18",
-          "close": 821.4,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-10-17",
-          "close": 857.6,
-          "prev_date": "2025-10-16",
-          "prev_close": 869.2,
-          "daily_return_pct": -1.3346,
-          "formula": "(857.6000 / 869.2000) - 1"
-        },
-        {
-          "date": "2025-11-18",
-          "close": 848.6,
-          "prev_date": "2025-11-17",
-          "prev_close": 864.4,
-          "daily_return_pct": -1.8279,
-          "formula": "(848.6000 / 864.4000) - 1"
-        },
-        {
-          "date": "2025-12-17",
-          "close": 900.8,
-          "prev_date": "2025-12-16",
-          "prev_close": 894.2,
-          "daily_return_pct": 0.7381,
-          "formula": "(900.8000 / 894.2000) - 1"
-        },
-        {
-          "date": "2026-01-15",
-          "close": 871.6,
-          "prev_date": "2026-01-14",
-          "prev_close": 871.6,
-          "daily_return_pct": 0.0,
-          "formula": "(871.6000 / 871.6000) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "SPY": {
       "ticker": "SPY",
       "type": "Benchmark",
@@ -1666,63 +1552,6 @@
       ],
       "is_benchmark": true
     },
-    "SYF": {
-      "ticker": "SYF",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-09-18",
-      "last_date": "2026-01-15",
-      "first_price": 76.53,
-      "last_price": 77.82,
-      "total_return_pct": 1.69,
-      "volatility_annual_pct": 28.79,
-      "weights_by_profile": {
-        "Agressif": 15.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-09-18",
-          "close": 76.53,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-10-17",
-          "close": 71.51,
-          "prev_date": "2025-10-16",
-          "prev_close": 70.25,
-          "daily_return_pct": 1.7936,
-          "formula": "(71.5100 / 70.2500) - 1"
-        },
-        {
-          "date": "2025-11-18",
-          "close": 71.22,
-          "prev_date": "2025-11-17",
-          "prev_close": 70.47,
-          "daily_return_pct": 1.0643,
-          "formula": "(71.2200 / 70.4700) - 1"
-        },
-        {
-          "date": "2025-12-17",
-          "close": 83.23,
-          "prev_date": "2025-12-16",
-          "prev_close": 83.39,
-          "daily_return_pct": -0.1919,
-          "formula": "(83.2300 / 83.3900) - 1"
-        },
-        {
-          "date": "2026-01-15",
-          "close": 77.82,
-          "prev_date": "2026-01-14",
-          "prev_close": 77.82,
-          "daily_return_pct": 0.0,
-          "formula": "(77.8200 / 77.8200) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "TJX": {
       "ticker": "TJX",
       "type": "Action",
@@ -1776,63 +1605,6 @@
           "prev_close": 155.13,
           "daily_return_pct": 0.0,
           "formula": "(155.1300 / 155.1300) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "TRV": {
-      "ticker": "TRV",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-09-18",
-      "last_date": "2026-01-15",
-      "first_price": 277.9,
-      "last_price": 272.74,
-      "total_return_pct": -1.86,
-      "volatility_annual_pct": 17.16,
-      "weights_by_profile": {
-        "Modéré": 7.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-09-18",
-          "close": 277.9,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-10-17",
-          "close": 262.01,
-          "prev_date": "2025-10-16",
-          "prev_close": 261.57,
-          "daily_return_pct": 0.1682,
-          "formula": "(262.0100 / 261.5700) - 1"
-        },
-        {
-          "date": "2025-11-18",
-          "close": 286.85,
-          "prev_date": "2025-11-17",
-          "prev_close": 284.51,
-          "daily_return_pct": 0.8225,
-          "formula": "(286.8500 / 284.5100) - 1"
-        },
-        {
-          "date": "2025-12-17",
-          "close": 291.27,
-          "prev_date": "2025-12-16",
-          "prev_close": 289.61,
-          "daily_return_pct": 0.5732,
-          "formula": "(291.2700 / 289.6100) - 1"
-        },
-        {
-          "date": "2026-01-15",
-          "close": 272.74,
-          "prev_date": "2026-01-14",
-          "prev_close": 272.74,
-          "daily_return_pct": 0.0,
-          "formula": "(272.7400 / 272.7400) - 1"
         }
       ],
       "is_benchmark": false
@@ -1900,11 +1672,11 @@
       "profile": "Agressif",
       "assets": [
         {
-          "ticker": "CABK",
+          "ticker": "AXP",
           "type": "Action",
           "weight_pct": 15.0,
-          "price_prev": 10.805,
-          "price_today": 10.805,
+          "price_prev": 358.26,
+          "price_today": 358.26,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1918,11 +1690,11 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "SYF",
+          "ticker": "G",
           "type": "Action",
           "weight_pct": 15.0,
-          "price_prev": 77.82,
-          "price_today": 77.82,
+          "price_prev": 47.44,
+          "price_today": 47.44,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1936,20 +1708,20 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "AAPL",
-          "type": "Action",
-          "weight_pct": 10.0,
-          "price_prev": 259.96,
-          "price_today": 259.96,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
-        },
-        {
           "ticker": "AGG",
           "type": "Benchmark",
           "weight_pct": 5.0,
           "price_prev": 100.35,
           "price_today": 100.35,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
+          "ticker": "JKHY",
+          "type": "Action",
+          "weight_pct": 5.0,
+          "price_prev": 192.6,
+          "price_today": 192.6,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1963,11 +1735,20 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "LPLA",
+          "ticker": "BAB",
           "type": "Action",
           "weight_pct": 5.0,
-          "price_prev": 371.82,
-          "price_today": 371.82,
+          "price_prev": 27.39,
+          "price_today": 27.39,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
+          "ticker": "AGGY",
+          "type": "Bond_ETF",
+          "weight_pct": 5.0,
+          "price_prev": 44.275,
+          "price_today": 44.275,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1979,18 +1760,9 @@
           "price_today": 86.45,
           "return_pct": 0.0,
           "contribution_pct": 0.0
-        },
-        {
-          "ticker": "NFT/USD",
-          "type": "Action",
-          "weight_pct": 3.5,
-          "price_prev": 0.0,
-          "price_today": 0.0,
-          "return_pct": -2.7027,
-          "contribution_pct": -0.0946
         }
       ],
-      "total_portfolio_return_pct": -0.0946,
+      "total_portfolio_return_pct": 0.0,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -2030,8 +1802,8 @@
       "close_J_minus_1": 44.688,
       "formula": "(44.6360 / 44.6880) - 1",
       "daily_return_pct": -0.1164,
-      "weight_pct": 8.0,
-      "contribution_pct": -0.0093,
+      "weight_pct": 5.0,
+      "contribution_pct": -0.0058,
       "explanation": "Le 2025-10-17, AGGY (Bond_ETF) a clôturé à 44.636 vs 44.688 le 2025-10-16, soit un rendement de -0.12%"
     },
     {
@@ -2050,17 +1822,17 @@
   ],
   "profiles_summary": {
     "Agressif": {
-      "n_assets": 12,
+      "n_assets": 13,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
-        "Action": 90.0,
+        "Action": 85.0,
         "ETF": 5.0,
-        "Bond_ETF": 0,
+        "Bond_ETF": 5.0,
         "Crypto": 0
       },
       "top_5_holdings": [
         [
-          "CABK",
+          "AXP",
           15.0
         ],
         [
@@ -2068,7 +1840,7 @@
           15.0
         ],
         [
-          "SYF",
+          "G",
           15.0
         ],
         [
@@ -2076,13 +1848,13 @@
           15.0
         ],
         [
-          "AAPL",
-          10.0
+          "AGG",
+          5.0
         ]
       ]
     },
     "Modéré": {
-      "n_assets": 12,
+      "n_assets": 11,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
         "Action": 76.0,
@@ -2092,20 +1864,20 @@
       },
       "top_5_holdings": [
         [
+          "AXP",
+          15.0
+        ],
+        [
+          "JKHY",
+          15.0
+        ],
+        [
           "AVDV",
           15.0
         ],
         [
           "DFIV",
           15.0
-        ],
-        [
-          "AXP",
-          13.0
-        ],
-        [
-          "KOTAKBANK",
-          10.0
         ],
         [
           "AGG",
@@ -2125,7 +1897,7 @@
       "top_5_holdings": [
         [
           "CARY",
-          12.49
+          12.28
         ],
         [
           "CSHI",
@@ -2148,31 +1920,31 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 11.22,
-      "net_return_pct": 11.22,
-      "volatility_pct": 11.48,
-      "max_drawdown_pct": -3.19,
+      "gross_return_pct": 10.15,
+      "net_return_pct": 10.15,
+      "volatility_pct": 12.12,
+      "max_drawdown_pct": -3.14,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 2.59,
-      "excess_return_pct": 8.63
+      "excess_return_pct": 7.56
     },
     "Modéré": {
-      "gross_return_pct": 3.86,
-      "net_return_pct": 3.86,
-      "volatility_pct": 6.25,
-      "max_drawdown_pct": -2.41,
+      "gross_return_pct": 7.48,
+      "net_return_pct": 7.48,
+      "volatility_pct": 7.85,
+      "max_drawdown_pct": -2.67,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 4.01,
-      "excess_return_pct": -0.15
+      "excess_return_pct": 3.47
     },
     "Stable": {
-      "gross_return_pct": 1.52,
-      "net_return_pct": 1.52,
-      "volatility_pct": 3.24,
-      "max_drawdown_pct": -1.46,
+      "gross_return_pct": 3.91,
+      "net_return_pct": 3.91,
+      "volatility_pct": 4.23,
+      "max_drawdown_pct": -1.33,
       "benchmark_symbol": "AGG",
       "benchmark_return_pct": -0.6,
-      "excess_return_pct": 2.12
+      "excess_return_pct": 4.51
     }
   },
   "uniformity_proof": {
