@@ -661,7 +661,13 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
   # === PHASE 1: TRACE 3 - After filter_equities ===
     count_korea(eq_filtered, "3. After filter_equities")
     
-    equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
+    equities, selection_meta = sector_balanced_selection(
+        assets=eq_filtered, 
+        target_n=min(25, len(eq_filtered)),
+        initial_max_per_sector=4,
+        score_field="composite_score"
+    )
+    logger.info(f"   [TOP-N] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']})")
     
     # === PHASE 1: TRACE 4 - After sector quota ===
     korea_count, korea_in_quota = count_korea(equities, "4. After sector_balanced_selection")
@@ -989,9 +995,13 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     # 4. Scoring et sélection
     eq_rows = compute_scores(eq_rows, "equity", None)
     eq_filtered = filter_equities(eq_rows)
-    equities = sector_balanced_selection(eq_filtered, min(25, len(eq_filtered)))
-    
-    logger.info(f"   Equities EU/US finales: {len(equities)}")
+    equities, selection_meta = sector_balanced_selection(
+        assets=eq_filtered, 
+        target_n=min(25, len(eq_filtered)),
+        initial_max_per_sector=4,
+        score_field="composite_score"
+    )
+    logger.info(f"   [TOP-N EU/US] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']})")
     
     # 5. Fusionner ETF + Bonds
     all_funds_data = etf_data + bonds_data
