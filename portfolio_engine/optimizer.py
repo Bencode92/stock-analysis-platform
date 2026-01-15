@@ -98,6 +98,9 @@ except ImportError:
 # v3.0: Import ETF exposure mapping (séparé du module)
 from .etf_exposure import TICKER_TO_EXPOSURE, detect_etf_exposure
 
+# v3.9: Import Top-N Guaranteed Selection
+from .universe import sector_balanced_selection
+
 # Import preset_meta pour buckets et déduplication
 try:
     from portfolio_engine.preset_meta import (
@@ -1505,8 +1508,54 @@ class PortfolioOptimizer:
             selected.extend(defensive_to_add)
             logger.info(f"P1 FIX v6.2: Added {len(defensive_to_add)} defensive assets to pool for {profile.name}")
         
- 
-         # === v6.24: Log momentum rejections ===
+        # === v3.9: TOP-N GUARANTEED SELECTION ===
+        # Garantit TOUJOURS 25 actifs minimum (sauf univers < 25)
+        TARGET_N = 25
+        
+        if len(selected) < TARGET_N:
+            logger.warning(
+                f"[TOP-N] Pool insuffisant: {len(selected)} < {TARGET_N}. "
+                f"Application de sector_balanced_selection() sur l'univers complet."
+            )
+            
+            # Appliquer sur l'univers APRÈS filtres (Buffett, dedup, etc.)
+            # mais AVANT la sélection diversifiée restrictive
+            selected_dicts, selection_meta = sector_balanced_selection(
+                assets=[{
+                    "id": a.id,
+                    "name": a.name,
+                    "sector": a.sector,
+                    "composite_score": a.score,
+                    "category": a.category,
+                    "role": a.role,
+                    "vol_annual": a.vol_annual,
+                    "_original_asset": a,  # Garder référence
+                } for a in universe],  # universe = post-Buffett, post-dedup
+                target_n=TARGET_N,
+                initial_max_per_sector=4,
+                score_field="composite_score"
+            )
+            
+            # Reconvertir en Asset objects
+            selected = [item["_original_asset"] for item in selected_dicts if "_original_asset" in item]
+            
+            logger.info(
+                f"[TOP-N] Sélection garantie: {selection_meta['selected']}/{selection_meta['target_n']} actifs "
+                f"(PASS {selection_meta['pass_used']}, constraint_respected={selection_meta['constraint_respected']})"
+            )
+            
+            # Stocker metadata pour diagnostics
+            self._selection_metadata = selection_meta
+        else:
+            self._selection_metadata = {
+                "version": "legacy",
+                "selected": len(selected),
+                "target_n": TARGET_N,
+                "pass_used": 0,
+                "constraint_respected": True,
+            }
+        
+        # === v6.24: Log momentum rejections ===
         if momentum_rejected > 0:
             logger.info(f"Momentum filter: rejected {momentum_rejected} assets for {profile.name}")
         
@@ -2301,6 +2350,8 @@ class PortfolioOptimizer:
         # v6.15 P1-6: Inclure les KPIs covariance dans les diagnostics
         diagnostics = to_python_native({
             "converged": optimizer_converged,
+            # === v3.9: Selection metadata ===
+            "selection_metadata": getattr(self, '_selection_metadata', None),
             "optimization_mode": optimization_mode,
             "fallback_reason": fallback_reason,
             "fallback_heuristic": profile.name in FORCE_FALLBACK_PROFILES,
