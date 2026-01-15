@@ -1,6 +1,14 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.8 — Volatility Sanity Check.
+Construction de l'univers d'actifs v3.9 — Top-N Guaranteed Selection.
+
+CHANGEMENTS v3.9 (Étape 1.3 - Top-N Garanti):
+- NOUVEAU: sector_balanced_selection() avec relaxation progressive
+- Garantit TOUJOURS 25 titres (sauf univers < 25)
+- Multi-passes: max=4 → max=6 → max=8 → illimité
+- Retourne métadonnées de sélection (pass utilisé, rejets, etc.)
+- Log clair des raisons de sélection/rejet
+- Corrige le bug du champ "score" → "composite_score"
 
 CHANGEMENTS v3.8 (Étape 1.1 - Volatility Sanity):
 - Intégration automatique de batch_sanitize_volatility() depuis data_quality
@@ -56,7 +64,7 @@ import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, Tuple
 from collections import defaultdict
 
 logger = logging.getLogger("portfolio_engine.universe")
@@ -341,24 +349,195 @@ def filter_crypto(rows: List[dict]) -> List[dict]:
     return filter_by_risk_bounds(rows, "crypto")
 
 
-def sector_balanced_selection(assets: List[dict], max_per_sector: int = 5, top_n: int = 50) -> List[dict]:
+# ============= TOP-N GUARANTEED SELECTION v3.9 =============
+
+def sector_balanced_selection(
+    assets: List[dict], 
+    target_n: int = 25,
+    initial_max_per_sector: int = 4,
+    score_field: str = "composite_score"
+) -> Tuple[List[dict], Dict[str, Any]]:
     """
-    Sélection équilibrée par secteur (compatibilité).
+    Sélection Top-N GARANTIE avec contrainte secteur progressive.
     
-    v3.0: Simplifié - tri par score puis limite par secteur.
+    v3.9: Nouvelle implémentation multi-passes (Étape 1.3).
+    
+    Algorithme:
+        PASS 1: Top-N avec contrainte secteur stricte (max=4)
+        PASS 2: Relaxer contrainte (max=6) si nécessaire
+        PASS 3: Relaxer encore (max=8) si nécessaire  
+        PASS 4: Ignorer contrainte secteur (garantie N)
+    
+    Args:
+        assets: Liste des actifs scorés
+        target_n: Nombre de titres cibles (défaut: 25)
+        initial_max_per_sector: Contrainte initiale par secteur (défaut: 4)
+        score_field: Champ de score à utiliser (défaut: "composite_score")
+    
+    Returns:
+        Tuple[selected_assets, metadata]
+        - selected_assets: Liste des actifs sélectionnés (len = min(target_n, len(assets)))
+        - metadata: Dict avec stats de sélection (passes, rejets, etc.)
+    
+    Critères de succès:
+        - TOUJOURS target_n titres (sauf univers < target_n)
+        - Contrainte secteur respectée quand possible
+        - Log clair des raisons de sélection/rejet
     """
-    sorted_assets = sorted(assets, key=lambda x: fnum(x.get("score", 0)), reverse=True)
+    if not assets:
+        return [], {"pass_used": 0, "total_universe": 0, "selected": 0, "reason": "empty_universe"}
+    
+    # Ajuster target si univers trop petit
+    actual_target = min(target_n, len(assets))
+    
+    # === STEP 1: Trier par score composite (décroissant) ===
+    # Chercher le bon champ de score
+    def get_score(asset: dict) -> float:
+        # Essayer plusieurs noms de champs (compatibilité)
+        for field in [score_field, f"_{score_field}", "score", "_score"]:
+            val = asset.get(field)
+            if val is not None:
+                return fnum(val)
+        return 0.0
+    
+    sorted_assets = sorted(assets, key=get_score, reverse=True)
+    
+    # === STEP 2: Multi-pass selection ===
+    # Définir les niveaux de relaxation
+    relaxation_levels = [
+        (initial_max_per_sector, "strict"),      # PASS 1: max=4
+        (initial_max_per_sector + 2, "relaxed"), # PASS 2: max=6
+        (initial_max_per_sector + 4, "loose"),   # PASS 3: max=8
+        (float('inf'), "no_constraint"),         # PASS 4: illimité
+    ]
     
     selected = []
-    sector_count = defaultdict(int)
+    selection_log = []  # Log détaillé pour debug
+    rejected_by_sector = defaultdict(list)  # Actifs rejetés par contrainte secteur
     
-    for asset in sorted_assets:
-        if len(selected) >= top_n:
-            break
-        sector = asset.get("sector", "Unknown")
-        if sector_count[sector] < max_per_sector:
-            selected.append(asset)
+    for pass_num, (max_per_sector, constraint_name) in enumerate(relaxation_levels, 1):
+        sector_count = defaultdict(int)
+        
+        # Compter les secteurs déjà sélectionnés
+        for asset in selected:
+            sector = asset.get("sector", "Unknown")
             sector_count[sector] += 1
+        
+        # Parcourir les actifs non encore sélectionnés
+        for asset in sorted_assets:
+            if asset in selected:
+                continue
+            if len(selected) >= actual_target:
+                break
+            
+            sector = asset.get("sector", "Unknown")
+            score = get_score(asset)
+            name = asset.get("name") or asset.get("ticker") or asset.get("id", "?")
+            
+            if sector_count[sector] < max_per_sector:
+                # Sélectionner
+                selected.append(asset)
+                sector_count[sector] += 1
+                asset["_selection_pass"] = pass_num
+                asset["_selection_reason"] = f"selected_pass{pass_num}_{constraint_name}"
+                selection_log.append({
+                    "action": "selected",
+                    "pass": pass_num,
+                    "name": name,
+                    "sector": sector,
+                    "score": round(score, 4),
+                    "sector_count": sector_count[sector],
+                    "max_allowed": max_per_sector if max_per_sector != float('inf') else "unlimited"
+                })
+            else:
+                # Rejeté par contrainte secteur (mais peut être sélectionné en pass suivante)
+                if pass_num == 1:  # Logger seulement au premier pass
+                    rejected_by_sector[sector].append({
+                        "name": name,
+                        "score": round(score, 4)
+                    })
+        
+        # Vérifier si on a atteint la cible
+        if len(selected) >= actual_target:
+            logger.info(
+                f"[TOP-N] ✅ Sélection terminée en PASS {pass_num} ({constraint_name}): "
+                f"{len(selected)}/{actual_target} actifs"
+            )
+            break
+    
+    # === STEP 3: Compiler les métadonnées ===
+    final_pass = selected[-1].get("_selection_pass", 1) if selected else 0
+    
+    # Distribution sectorielle finale
+    sector_distribution = defaultdict(int)
+    for asset in selected:
+        sector_distribution[asset.get("sector", "Unknown")] += 1
+    
+    metadata = {
+        "version": "v3.9_top_n_guaranteed",
+        "total_universe": len(assets),
+        "target_n": target_n,
+        "selected": len(selected),
+        "selection_rate": f"{len(selected)/len(assets)*100:.1f}%",
+        "pass_used": final_pass,
+        "constraint_respected": final_pass <= 3,  # True si pas besoin de PASS 4
+        "initial_max_per_sector": initial_max_per_sector,
+        "sector_distribution": dict(sector_distribution),
+        "sectors_count": len(sector_distribution),
+        "rejected_by_sector_pass1": {
+            sector: len(rejected_assets) for sector, rejected_assets in rejected_by_sector.items()
+        },
+        "selection_log_sample": selection_log[:10],  # 10 premiers pour debug
+    }
+    
+    # === STEP 4: Logging détaillé ===
+    if final_pass > 1:
+        logger.warning(
+            f"[TOP-N] ⚠️ Contrainte secteur relaxée (PASS {final_pass}). "
+            f"Secteurs saturés en PASS 1: {list(rejected_by_sector.keys())}"
+        )
+    
+    # Log des top rejets si on n'a pas atteint la cible avec contrainte stricte
+    if rejected_by_sector:
+        top_rejected_sectors = sorted(
+            rejected_by_sector.items(), 
+            key=lambda x: len(x[1]), 
+            reverse=True
+        )[:3]
+        for sector, rejected in top_rejected_sectors:
+            if rejected:
+                logger.debug(
+                    f"[TOP-N] Secteur '{sector}' saturé: "
+                    f"{len(rejected)} actifs rejetés en PASS 1 "
+                    f"(top: {rejected[0]['name']} score={rejected[0]['score']})"
+                )
+    
+    return selected, metadata
+
+
+def sector_balanced_selection_simple(
+    assets: List[dict], 
+    max_per_sector: int = 5, 
+    top_n: int = 50
+) -> List[dict]:
+    """
+    Wrapper de compatibilité pour l'ancienne signature.
+    
+    DEPRECATED: Utilisez sector_balanced_selection() avec la nouvelle signature.
+    Retourne uniquement la liste (sans métadonnées) pour compatibilité.
+    """
+    selected, metadata = sector_balanced_selection(
+        assets=assets,
+        target_n=top_n,
+        initial_max_per_sector=max_per_sector
+    )
+    
+    # Log le warning si on a dû relaxer
+    if metadata["pass_used"] > 1:
+        logger.warning(
+            f"[TOP-N LEGACY] Contrainte relaxée "
+            f"(PASS {metadata['pass_used']}) pour atteindre {len(selected)}/{top_n} actifs"
+        )
     
     return selected
 
@@ -482,7 +661,7 @@ def _apply_volatility_sanity_check(all_assets: List[dict]) -> List[dict]:
         return all_assets
 
 
-# ============= CONSTRUCTION UNIVERS v3.8 =============
+# ============= CONSTRUCTION UNIVERS v3.9 =============
 
 def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
@@ -496,6 +675,7 @@ def build_raw_universe(
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v3.9: Top-N guaranteed selection avec relaxation progressive
     v3.8: Sanity check volatilité automatique (corrige GSK 376% → 3.76%)
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
@@ -518,7 +698,7 @@ def build_raw_universe(
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.8...")
+    logger.info("🧮 Construction de l'univers brut v3.9...")
     
     all_assets = []
     
@@ -701,6 +881,7 @@ def build_raw_universe_from_files(
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v3.9: Top-N guaranteed selection avec relaxation progressive
     v3.8: Sanity check volatilité automatique
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
@@ -710,7 +891,7 @@ def build_raw_universe_from_files(
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.8 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v3.9 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -892,6 +1073,7 @@ def load_and_prepare_universe(
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v3.9: Top-N guaranteed selection avec relaxation progressive
     v3.8: Sanity check volatilité automatique
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
     v3.5: Filtre crypto robuste via crypto_utils (autorise EUR + USD + stables)
