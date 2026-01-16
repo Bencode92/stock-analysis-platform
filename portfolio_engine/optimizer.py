@@ -604,6 +604,10 @@ class ProfileConstraints:
     turnover_penalty: float = 0.10   # Lambda pénalité dans objectif
     # === v2.2 EU/US Focus ===
     euus_mode: bool = False          # Si True, utilise caps EU/US
+    # === P1 FIX: Sleeve Actions ===
+    min_stock_weight: float = 0.0      # % minimum en Actions
+    min_stock_positions: int = 0       # nb minimum de lignes Actions
+    stock_pos_threshold: float = 1.0   # % min pour compter une ligne action
 
 
 # v6.10 FIX: vol_target Stable aligné sur réalité (6% au lieu de 8%)
@@ -617,6 +621,9 @@ PROFILES = {
         max_sector=35.0,
         max_turnover=30.0,        # P0 PARTNER
         turnover_penalty=0.05,    # P0 PARTNER
+        # P1 FIX: Sleeve Actions
+        min_stock_weight=45.0,
+        min_stock_positions=10,
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -626,6 +633,9 @@ PROFILES = {
         bonds_min=15.0,
         max_turnover=25.0,        # P0 PARTNER
         turnover_penalty=0.10,    # P0 PARTNER
+        # P1 FIX: Sleeve Actions
+        min_stock_weight=25.0,
+        min_stock_positions=6,
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -635,6 +645,9 @@ PROFILES = {
         bonds_min=35.0,
         max_turnover=15.0,        # P0 PARTNER
         turnover_penalty=0.20,    # P0 PARTNER
+        # P1 FIX: Sleeve Actions (pas de minimum pour Stable)
+        min_stock_weight=0.0,
+        min_stock_positions=0,
     ),
 }
 # === v2.2: PROFILES EU/US Focus ===
@@ -1042,6 +1055,21 @@ class HybridCovarianceEstimator:
         try:
             returns = np.column_stack(returns_matrix)
             returns = np.nan_to_num(returns, nan=0.0, posinf=0.0, neginf=0.0)
+            
+            # === P0 FIX: guardrail échelle returns (pct vs decimal) ===
+            daily_std = np.nanstd(returns, axis=0)
+            med = float(np.nanmedian(daily_std)) if daily_std.size else 0.0
+            if med > 0.03:  # 3% daily = ~47% annualisé, énorme
+                logger.warning(
+                    f"[P0 RETURNS FIX] returns_series en %, rescale /100 "
+                    f"(median daily std={med:.4f})"
+                )
+                # Log les 5 pires outliers
+                outlier_idx = np.where(daily_std > 0.05)[0][:5]
+                for idx in outlier_idx:
+                    logger.warning(f"  Outlier asset idx={idx}: daily_std={daily_std[idx]:.4f}")
+                returns = returns / 100.0
+            
             cov_emp = np.cov(returns, rowvar=False) * 252
             
             cov_full = np.zeros((n, n))
@@ -1413,10 +1441,17 @@ class PortfolioOptimizer:
             universe, _ = deduplicate_stocks_by_corporate_group(universe, max_per_group=MAX_STOCKS_PER_GROUP)
             logger.info(f"Post-corporate-dedup universe: {len(universe)} actifs")
         
-        # === ÉTAPE 3: HARD FILTER BUFFETT ===
+        # === ÉTAPE 3: HARD FILTER BUFFETT PAR PROFIL ===
         if self.buffett_hard_filter_enabled:
-            universe = apply_buffett_hard_filter(universe, min_score=self.buffett_min_score)
-            logger.info(f"Post-Buffett-filter universe: {len(universe)} actifs")
+            # P1 FIX: Seuil Buffett différencié par profil
+            BUFFETT_MIN_BY_PROFILE = {
+                "Agressif": 40.0,  # Plus permissif → growth stocks
+                "Modéré": 50.0,
+                "Stable": 55.0,   # Plus strict → quality only
+            }
+            min_score = BUFFETT_MIN_BY_PROFILE.get(profile.name, self.buffett_min_score)
+            universe = apply_buffett_hard_filter(universe, min_score=min_score)
+            logger.info(f"Post-Buffett-filter universe: {len(universe)} actifs (min={min_score})")
         
         # === ÉTAPE 4: Enrichir avec buckets ===
         universe = enrich_assets_with_buckets(universe)
@@ -1735,6 +1770,15 @@ class PortfolioOptimizer:
             
             constraints.append({"type": "ineq", "fun": turnover_constraint})
             logger.info(f"P0 PARTNER: Added turnover constraint <= {profile.max_turnover}%")
+        
+        # 10. P1 FIX: Contrainte minimum Actions (sleeve)
+        stocks_idx = [i for i, a in enumerate(candidates) if a.category == "Actions"]
+        if stocks_idx and profile.min_stock_weight > 0:
+            min_val = profile.min_stock_weight / 100.0
+            def min_stocks_constraint(w, idx=stocks_idx, mv=min_val):
+                return np.sum(w[idx]) - mv
+            constraints.append({"type": "ineq", "fun": min_stocks_constraint})
+            logger.info(f"[P1 FIX] Added min_stock_weight >= {profile.min_stock_weight:.1f}%")
         
         return constraints
     
@@ -2333,6 +2377,15 @@ class PortfolioOptimizer:
                     bonds_in_allocation += 1
                 if asset.category == "Crypto":
                     crypto_in_allocation += 1
+        # P2 FIX: Compter actions et ETF
+        n_actions = sum(
+            1 for aid in allocation 
+            if asset_by_id.get(aid) and asset_by_id[aid].category == "Actions"
+        )
+        n_etf = sum(
+            1 for aid in allocation 
+            if asset_by_id.get(aid) and asset_by_id[aid].category == "ETF"
+        )          
         
         bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
         bucket_compliance = {}
@@ -2376,6 +2429,9 @@ class PortfolioOptimizer:
             "turnover_penalty_lambda": profile.turnover_penalty,
             "portfolio_score": round(port_score, 3),
             "n_assets": len(allocation),
+            # P2 FIX: Compter actions et ETF
+            "n_actions": n_actions,
+            "n_etf": n_etf
             "n_bonds": bonds_in_allocation,
             "n_crypto": crypto_in_allocation,
             "crypto_max_allowed": profile.crypto_max,
@@ -2976,6 +3032,8 @@ class PortfolioOptimizer:
             allocation = self._enforce_crypto_cap(allocation, candidates, profile)
             allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
             allocation = self._enforce_sector_caps(allocation, candidates, profile)
+            # P1 FIX: Enforce min stock positions
+            allocation = self._enforce_min_stock_positions(allocation, candidates, profile)
             
             # 3. Normaliser à 100% (avec respect cap bond)
             allocation = self._adjust_to_100(allocation, profile, candidates)
@@ -3182,6 +3240,81 @@ class PortfolioOptimizer:
                         freed_weight -= add
         
         return allocation  
+    def _enforce_min_stock_positions(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """
+        P1 FIX: Force minimum de lignes Actions dans l'allocation.
+        Post-process car SLSQP ne gère pas l'optimisation entière.
+        """
+        if profile.min_stock_positions <= 0:
+            return allocation
+        
+        asset_lookup = {c.id: c for c in candidates}
+        thr = profile.stock_pos_threshold
+        
+        # Compter actions actuelles >= threshold
+        stock_ids = [
+            aid for aid, w in allocation.items()
+            if w >= thr 
+            and asset_lookup.get(aid) 
+            and asset_lookup[aid].category == "Actions"
+        ]
+        
+        missing = profile.min_stock_positions - len(stock_ids)
+        if missing <= 0:
+            return allocation
+        
+        logger.warning(
+            f"[P1 FIX] min_stock_positions: {len(stock_ids)}/{profile.min_stock_positions}, "
+            f"need to add {missing} stocks"
+        )
+        
+        # Candidats actions à ajouter (meilleur score d'abord)
+        available_stocks = sorted(
+            [c for c in candidates 
+             if c.category == "Actions" 
+             and c.id not in allocation],
+            key=lambda x: (-x.score, x.id)
+        )
+        
+        # Financer depuis ETF (réduire les plus gros ETF)
+        etf_ids = sorted(
+            [aid for aid, w in allocation.items()
+             if asset_lookup.get(aid) and asset_lookup[aid].category == "ETF"],
+            key=lambda aid: (-allocation[aid], aid)
+        )
+        
+        add_w = max(thr, 1.0)  # 1% par action ajoutée
+        MAX_ITER = 20
+        iterations = 0
+        
+        for c in available_stocks[:missing]:
+            if iterations >= MAX_ITER:
+                logger.warning("[P1 FIX] Max iterations reached in _enforce_min_stock_positions")
+                break
+            iterations += 1
+            
+            need = add_w
+            for eid in list(etf_ids):
+                if need <= 0.01:
+                    break
+                if allocation.get(eid, 0) > (2.0 + need):
+                    cut = min(need, allocation[eid] - 2.0)
+                    allocation[eid] = round(allocation[eid] - cut, 2)
+                    need -= cut
+            
+            if need <= 0.01:
+                allocation[c.id] = round(add_w, 2)
+                logger.info(f"[P1 FIX] Added stock {c.id} ({c.name[:30]}) = {add_w}%")
+        
+        # Nettoyer + normaliser
+        allocation = {k: v for k, v in allocation.items() if v >= 0.5}
+        
+        return allocation   
     def _apply_crypto_core_satellite(
         self,
         allocation: Dict[str, float],
@@ -3365,6 +3498,15 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             if not _is_valid_id(raw_id):
                 raw_id = item.get("name") or f"{cat_normalized}_{len(assets)+1}"
             
+            # P0 FIX: Caps vol différenciés par catégorie
+            VOL_CAPS = {
+                "Actions": (5.0, 80.0),
+                "ETF": (3.0, 50.0),
+                "Obligations": (1.0, 15.0),
+                "Crypto": (20.0, 150.0),
+            }
+            min_v, max_v = VOL_CAPS.get(cat_normalized, (1.0, 150.0))
+            
             asset = Asset(
                 id=str(raw_id),
                 name=item.get("name") or str(raw_id),
@@ -3374,7 +3516,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 score=_clean_float(item.get("score") or item.get("_score"), 50.0, 0, 100),
                 vol_annual=_clean_float(
                     item.get("vol") or item.get("volatility_3y") or item.get("vol_3y"),
-                    default_vol, 1.0, 150.0
+                    default_vol, min_v, max_v
                 ),
                 returns_series=item.get("returns_series"),
                 source_data=item,
