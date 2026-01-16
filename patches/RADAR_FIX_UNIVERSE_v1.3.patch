@@ -1,0 +1,116 @@
+# PATCH pour portfolio_engine/universe.py
+# Version: v1.3 RADAR TIE-BREAKER
+#
+# CHANGEMENTS v1.3:
+# - Coverage séparée: mapping vs tilt
+# - Gate sur coverage_tilt (pas coverage_raw)
+# - has_meaningful_radar() strict (tilt effectif seulement)
+# - floor() au lieu de round() pour bucketisation
+
+# ============================================================================
+# FIX #1: Ajouter import math en haut (si pas déjà présent)
+# ============================================================================
+
+import math
+
+# ============================================================================
+# FIX #2: Ajouter has_meaningful_radar() AVANT sector_balanced_selection
+# ============================================================================
+
+def has_meaningful_radar(asset: dict) -> bool:
+    """
+    v1.3 STRICT: meaningful seulement si tilt EFFECTIF (favored/avoided).
+    Un mapping non-vide sans tilt = inutile pour le tie-breaker.
+    """
+    m = asset.get("_radar_matching") or {}
+    if not m:
+        return False
+    
+    # meaningful = tilt effectif uniquement
+    return bool(
+        m.get("sector_in_favored") or m.get("sector_in_avoided") or
+        m.get("region_in_favored") or m.get("region_in_avoided")
+    )
+
+# ============================================================================
+# FIX #3: Remplacer _compute_radar_coverage() par version v1.3
+# ============================================================================
+
+def _compute_radar_coverage(assets: List[dict]) -> Dict[str, Any]:
+    """
+    v1.3: Sépare coverage_mapping (normalisé) de coverage_tilt (effectif).
+    Le gate tie-breaker utilise coverage_tilt.
+    """
+    total = len(assets)
+    if total == 0:
+        return {
+            "total": 0, 
+            "with_radar_key": 0,
+            "with_mapping": 0,
+            "with_tilt": 0,
+            "coverage_raw": 0,
+            "coverage_mapping": 0,
+            "coverage_tilt": 0,
+        }
+    
+    with_radar_key = 0
+    with_mapping = 0  # sector_normalized ou region_normalized non vide
+    with_tilt = 0     # favored/avoided effectif (CELUI QUI COMPTE)
+    
+    for a in assets:
+        m = a.get("_radar_matching") or {}
+        if m:
+            with_radar_key += 1
+            
+            # Mapping coverage (informatif)
+            if m.get("sector_normalized") or m.get("region_normalized"):
+                with_mapping += 1
+            
+            # Tilt coverage (pour gate) - STRICT
+            if (m.get("sector_in_favored") or m.get("sector_in_avoided") or
+                m.get("region_in_favored") or m.get("region_in_avoided")):
+                with_tilt += 1
+    
+    return {
+        "total": total,
+        "with_radar_key": with_radar_key,
+        "with_mapping": with_mapping,
+        "with_tilt": with_tilt,
+        "coverage_raw": round(with_radar_key / total, 4),
+        "coverage_mapping": round(with_mapping / total, 4),
+        "coverage_tilt": round(with_tilt / total, 4),  # ← GATE SUR CELUI-CI
+    }
+
+# ============================================================================
+# FIX #4: Dans sector_balanced_selection, modifier le gate coverage
+# ============================================================================
+#
+# CHERCHER:
+#
+    if enable_radar_tiebreaker and coverage < radar_min_coverage:
+#
+# REMPLACER PAR:
+#
+    # v1.3: Gate sur coverage_tilt (pas coverage_raw ni coverage_mapping)
+    if enable_radar_tiebreaker and coverage_stats["coverage_tilt"] < radar_min_coverage:
+        logger.warning(
+            f"[RADAR] Désactivé: coverage_tilt {coverage_stats['coverage_tilt']:.1%} "
+            f"< seuil {radar_min_coverage:.0%}. "
+            f"(mapping={coverage_stats['coverage_mapping']:.1%}, "
+            f"tilt={coverage_stats['with_tilt']}/{coverage_stats['total']})"
+        )
+        radar_active = False
+        radar_disable_reason = f"coverage_tilt_too_low ({coverage_stats['coverage_tilt']:.1%})"
+
+# ============================================================================
+# FIX #5: Dans sort_key_radar, utiliser floor() au lieu de round()
+# ============================================================================
+#
+# CHERCHER:
+#
+        bucket = int(round(score / eps)) if eps > 0 else 0
+#
+# REMPLACER PAR:
+#
+        # v1.3: floor() au lieu de round() (comportement prévisible aux limites)
+        bucket = math.floor(score / eps) if eps > 0 else 0
