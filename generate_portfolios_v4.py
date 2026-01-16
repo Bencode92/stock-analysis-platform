@@ -750,6 +750,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
     
+
     # === PHASE 1: TRACE 1 - Initial ===
     count_korea(eq_rows, "1. Initial (après chargement)")
     
@@ -780,7 +781,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     eq_rows = compute_scores(eq_rows, "equity", None)
     eq_filtered = filter_equities(eq_rows)
     
-   # === PHASE 1: TRACE 3 - After filter_equities ===
+    # === PHASE 1: TRACE 3 - After filter_equities ===
     count_korea(eq_filtered, "3. After filter_equities")
     
     # === v4.13: Sélection d'équités DIFFÉRENTE par profil ===
@@ -790,45 +791,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # Log du pool global (remplace l'ancienne sélection unique)
     logger.info(f"   Pool équités post-filtre: {len(eq_filtered)} (sélection par profil dans la boucle)")
     
-    # NOTE v4.13: Les lignes suivantes sont SUPPRIMÉES car déplacées dans la boucle par profil:
-    # - sector_balanced_selection() → appelé dans select_equities_for_profile()
-    # - Log RADAR status → fait par profil
-    # - TRACE 4 korea → fait par profil
-    
-    # === PHASE 2: Tracer les rejets par quota (détaillé) ===
-    # Import get_stable_uid si pas déjà fait
+    # === v4.13: Import get_stable_uid pour usage ultérieur dans l'audit ===
     try:
         from portfolio_engine.selection_audit import get_stable_uid
     except ImportError:
         def get_stable_uid(item):
             return item.get("ticker") or item.get("name") or item.get("id") or "UNKNOWN"
     
-    ids_selected = {get_stable_uid(e) for e in equities}
-    rejected_by_quota = [e for e in eq_filtered if get_stable_uid(e) not in ids_selected]
-    
-    logger.info(f"   Quota rejection: {len(rejected_by_quota)} actions rejetées par sector_balanced_selection")
-    
-    # Détail des rejets coréens
-    korea_rejected_quota = [e for e in rejected_by_quota 
-                           if "korea" in str(e.get("country", "")).lower()]
-    if korea_rejected_quota:
-        logger.warning(f"   ⚠️ KOREA rejected by quota ({len(korea_rejected_quota)}): {[e.get('name')[:30] for e in korea_rejected_quota[:5]]}")
-        
-        # Afficher les secteurs des rejetés coréens
-        korea_sectors = {}
-        for e in korea_rejected_quota:
-            sector = e.get("sector", "Unknown")
-            korea_sectors[sector] = korea_sectors.get(sector, 0) + 1
-        logger.warning(f"      Secteurs rejetés: {korea_sectors}")
-    
-    # Garder aussi le trace PHASE 1 pour compatibilité
-    korea_rejected = [e for e in rejected_by_quota 
-                      if "korea" in str(e.get("country", "")).lower()]
-    if korea_rejected:
-        print(f"[KOREA TRACE] ⚠️ Rejetées par quota: {[e.get('name')[:30] for e in korea_rejected]}")
-    
-    logger.info(f"   Equities finales sélectionnées: {len(equities)}")
-
+    # NOTE v4.13: Le diagnostic de quota et Korea se fait maintenant PAR PROFIL
+    # dans select_equities_for_profile() - supprimé ici car 'equities' n'existe plus
     
     # 6. Fusionner bonds + ETF
     all_funds_data = []
@@ -836,7 +807,6 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     all_funds_data.extend(bonds_data)
     
     logger.info(f"   Fonds combinés (ETF + Bonds): {len(all_funds_data)} ({len(etf_data)} ETF + {len(bonds_data)} Bonds)")
-    
     # 7. Construire le reste de l'univers
     universe_others = build_scored_universe(
         stocks_data=None,
