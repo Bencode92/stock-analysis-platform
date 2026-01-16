@@ -2431,7 +2431,7 @@ class PortfolioOptimizer:
             "n_assets": len(allocation),
             # P2 FIX: Compter actions et ETF
             "n_actions": n_actions,
-            "n_etf": n_etf
+            "n_etf": n_etf,
             "n_bonds": bonds_in_allocation,
             "n_crypto": crypto_in_allocation,
             "crypto_max_allowed": profile.crypto_max,
