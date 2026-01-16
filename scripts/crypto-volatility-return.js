@@ -4,7 +4,7 @@
  * Implements statistical best practices with sample std deviation, data quality checks,
  * and exchange normalization
  * 
- * @version 3.6.1
+ * @version 3.6.2
  * @author TradePulse Quant Team
  * Score: 10/10 - Perfect exchange matching with calendar mode and exact anchoring
  * 
@@ -1195,7 +1195,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Log de démarrage
-console.log('✅ Crypto Volatility & Returns Module v3.6.1 loaded');
+console.log('✅ Crypto Volatility & Returns Module v3.6.2 loaded');
 console.log(`📈 Mode: ${CONFIG.RETURNS_MODE} | Anchor: ${CONFIG.ANCHOR_MEDIAN_WINDOW} | MinVol: ${CONFIG.MIN_VOLUME_FOR_ANCHOR}`);
 console.log(`📅 Calendar mode: 1M/3M/6M/1Y (exchange matching) | Rolling: 30D/90D/365D`);
 console.log(`📊 Include today: ${CONFIG.INCLUDE_TODAY} | Stale: ${MAX_STALE_HOURS}h`);
@@ -1332,7 +1332,8 @@ if (typeof require !== 'undefined' && require.main === module) {
         console.log('✅ Écrit: Top10_momentum.csv, Top10_volatility.csv, Top10_sharpe.csv');
 
         // 6) Filtres acceptés/rejetés + raison
-        const MIN_VOL_30D = Number(process.env.MIN_VOL_30D || '30');
+        // ⚠️ MODIFIÉ: MIN_VOL_30D de 30 → 10 pour inclure BTC/ETH/BNB
+        const MIN_VOL_30D = Number(process.env.MIN_VOL_30D || '10');
         const MAX_VOL_30D = Number(process.env.MAX_VOL_30D || '500');
         const MIN_RET_7D  = Number(process.env.MIN_RET_7D  || '-50');
 
@@ -1373,6 +1374,7 @@ if (typeof require !== 'undefined' && require.main === module) {
         console.log('  - 1D/7D toujours en jours (standard)');
         console.log('  - YTD toujours calendaire');
         console.log('  - Sharpe Ratio et VaR calculés');
+        console.log(`  - ⚠️ MIN_VOL_30D: ${MIN_VOL_30D}% (abaissé pour inclure BTC/ETH)`);
         
         // Stats globales
         const validReturns = rows.filter(r => r.ret_30d_pct !== '');
