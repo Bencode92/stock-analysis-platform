@@ -1,32 +1,32 @@
 # PATCH pour portfolio_engine/factors.py
 # Version: v1.3 RADAR TIE-BREAKER FIX
 #
-# CORRECTIONS v1.3:
-# - deepcopy dans _build_lookups() (pas dans __init__)
-# - Évite mutation du global DEFAULT_MACRO_TILTS
+# CHANGEMENTS v1.3:
+# - deepcopy DANS _build_lookups() (pas dans __init__)
+# - Évite écrasement du deepcopy + mutation du global
 
 # ============================================================================
-# FIX #1: Ajouter import copy en haut du fichier (après les autres imports)
+# FIX #1: Ajouter import copy en haut du fichier (si pas déjà présent)
 # ============================================================================
 
-import copy  # v1.3: Pour deepcopy des tilts
+import copy
 
 # ============================================================================
-# FIX #2: Modifier _build_lookups() pour utiliser deepcopy
+# FIX #2: Dans _build_lookups() - REMPLACER la ligne macro_tilts
 # ============================================================================
 #
-# CHERCHER dans _build_lookups():
+# CHERCHER (dans _build_lookups):
 #
         self._macro_tilts = self.market_context.get("macro_tilts", DEFAULT_MACRO_TILTS)
 #
 # REMPLACER PAR:
 #
-        # v1.3 FIX: deepcopy TOUJOURS pour éviter mutation du global
+        # v3.1.3 FIX: deepcopy TOUJOURS pour éviter mutation du global
         tilts_src = self.market_context.get("macro_tilts") or DEFAULT_MACRO_TILTS
         self._macro_tilts = copy.deepcopy(tilts_src)
 
 # ============================================================================
-# FIX #3: Modifier __init__ pour appeler _build_lookups() TOUJOURS
+# FIX #3: Dans FactorScorer.__init__ - Appeler _build_lookups() TOUJOURS
 # ============================================================================
 #
 # CHERCHER:
@@ -36,25 +36,27 @@ import copy  # v1.3: Pour deepcopy des tilts
 #
 # REMPLACER PAR:
 #
-        # v1.3: TOUJOURS appeler _build_lookups (gère le cas vide avec deepcopy)
+        # v3.1.3: Appeler _build_lookups() TOUJOURS (gère le cas vide)
         self._build_lookups()
 
 # ============================================================================
-# FIX #4: Supprimer l'initialisation self._macro_tilts = None dans __init__
+# FIX #4: Dans _build_lookups() - Ajouter log si market_context vide
 # ============================================================================
 #
-# CHERCHER et SUPPRIMER:
+# AU DÉBUT de _build_lookups(), après "def _build_lookups(self):", AJOUTER:
 #
-        self._macro_tilts = None
-#
-# (La variable sera initialisée par _build_lookups())
+        if not self.market_context:
+            logger.info(
+                "FactorScorer: market_context vide → utilisation DEFAULT_MACRO_TILTS. "
+                "_radar_matching sera calculé mais ne reflète pas le marché actuel."
+            )
 
 # ============================================================================
-# FIX #5: Ajouter compute_radar_bonus_from_matching() avant if __name__
+# FIX #5: Ajouter compute_radar_bonus_from_matching (avant if __name__)
 # ============================================================================
 
 # =============================================================================
-# v1.3: RADAR BONUS HELPER (pour tie-breaker dans universe.py)
+# v3.1.3: RADAR BONUS HELPER (pour tie-breaker dans universe.py)
 # =============================================================================
 
 def compute_radar_bonus_from_matching(

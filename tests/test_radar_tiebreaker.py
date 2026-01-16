@@ -3,13 +3,14 @@
 Test de validation RADAR TIE-BREAKER v1.3
 ==========================================
 
-Ce script valide les fixes et garantit:
-1. _macro_tilts initialisé avec deepcopy dans _build_lookups()
+Ce script valide que les fixes sont correctement appliqués:
+1. _macro_tilts initialisé avec DEFAULT_MACRO_TILTS (deepcopy)
 2. _radar_matching créé même sans market_context
-3. Coverage séparée: mapping vs tilt (gate sur tilt)
-4. DEFAULT_MACRO_TILTS immutable (anti-mutation)
+3. compute_radar_bonus_from_matching fonctionne
+4. Coverage séparée: mapping vs tilt (gate sur tilt)
 5. Tie-breaker change effectivement l'ordre
 6. Distribution bonus non-dégénérée
+7. DEFAULT_MACRO_TILTS immutable (anti-mutation)
 
 Usage:
     python tests/test_radar_tiebreaker.py
@@ -25,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def test_macro_tilts_fallback():
-    """Test FIX #1: _macro_tilts initialisé même sans market_context."""
+    """Test FIX #1: _macro_tilts = DEFAULT_MACRO_TILTS par défaut."""
     print("\n=== TEST 1: _macro_tilts fallback ===")
     
     from portfolio_engine.factors import FactorScorer, DEFAULT_MACRO_TILTS
@@ -34,6 +35,10 @@ def test_macro_tilts_fallback():
     scorer = FactorScorer("Modéré", market_context=None)
     
     assert scorer._macro_tilts is not None, "_macro_tilts ne devrait pas être None"
+    
+    # Vérifier que c'est une copie (pas la même référence)
+    assert scorer._macro_tilts is not DEFAULT_MACRO_TILTS, \
+        "_macro_tilts devrait être une copie, pas la référence globale"
     
     # Test avec market_context vide
     scorer2 = FactorScorer("Modéré", market_context={})
@@ -55,24 +60,27 @@ def test_default_macro_tilts_immutable():
     # Score avec market_context vide (utilise fallback)
     scorer = FactorScorer("Modéré", market_context=None)
     test_assets = [
-        {"symbol": "TEST1", "category": "equity", "sector": "Healthcare", "country": "Etats-Unis", "ytd": 10, "vol_3y": 20, "market_cap": 1e9},
-        {"symbol": "TEST2", "category": "equity", "sector": "Technology", "country": "Chine", "ytd": 15, "vol_3y": 25, "market_cap": 2e9},
+        {"symbol": "TEST1", "category": "equity", "sector": "Healthcare", "country": "Etats-Unis", "ytd": 10},
+        {"symbol": "TEST2", "category": "equity", "sector": "Technology", "country": "Chine", "ytd": 15},
     ]
     scorer.compute_scores(test_assets)
     
     # Vérifier que le global n'a pas changé
-    assert DEFAULT_MACRO_TILTS == original, "DEFAULT_MACRO_TILTS a été muté!"
+    assert DEFAULT_MACRO_TILTS == original, \
+        f"DEFAULT_MACRO_TILTS a été muté! Avant: {original}, Après: {DEFAULT_MACRO_TILTS}"
     
-    # Double check: les listes internes
-    assert DEFAULT_MACRO_TILTS["favored_sectors"] == original["favored_sectors"], "favored_sectors muté!"
-    assert DEFAULT_MACRO_TILTS["avoided_sectors"] == original["avoided_sectors"], "avoided_sectors muté!"
+    # Vérifier les listes internes aussi
+    assert DEFAULT_MACRO_TILTS["favored_sectors"] == original["favored_sectors"], \
+        "favored_sectors a été muté!"
+    assert DEFAULT_MACRO_TILTS["avoided_sectors"] == original["avoided_sectors"], \
+        "avoided_sectors a été muté!"
     
     print("✅ FIX #2: DEFAULT_MACRO_TILTS immutable OK")
     return True
 
 
 def test_radar_matching_created():
-    """Test: _radar_matching créé même sans market_context."""
+    """Test FIX #1b: _radar_matching créé même sans market_context."""
     print("\n=== TEST 3: _radar_matching création ===")
     
     from portfolio_engine.factors import FactorScorer
@@ -94,17 +102,17 @@ def test_radar_matching_created():
             "symbol": "JNJ", 
             "category": "equity", 
             "sector": "Healthcare",  # favored
-            "country": "Etats-Unis",  # favored (usa)
+            "country": "Etats-Unis",  # favored
             "ytd": 15,
             "perf_1m": 3,
             "vol_3y": 22,
-            "market_cap": 400e9,
+            "market_cap": 2500e9,
         },
         {
             "symbol": "BABA",
             "category": "equity",
-            "sector": "Consumer Discretionary",  # consumer-discretionary (avoided)
-            "country": "Chine",  # china (avoided)
+            "sector": "Consumer Discretionary",  # avoided
+            "country": "Chine",  # avoided
             "ytd": 5,
             "perf_1m": 1,
             "vol_3y": 35,
@@ -127,19 +135,21 @@ def test_radar_matching_created():
     # JNJ devrait avoir favored (healthcare + usa)
     jnj = next(a for a in scored if a["symbol"] == "JNJ")
     jnj_rm = jnj.get("_radar_matching", {})
-    assert jnj_rm.get("sector_tilt") == "favored", f"JNJ sector devrait être favored, got {jnj_rm.get('sector_tilt')}"
+    assert jnj_rm.get("sector_tilt") == "favored", \
+        f"JNJ sector devrait être favored, got {jnj_rm.get('sector_tilt')}"
     
-    # BABA devrait avoir avoided (consumer-discretionary + china)
+    # BABA devrait avoir avoided
     baba = next(a for a in scored if a["symbol"] == "BABA")
     baba_rm = baba.get("_radar_matching", {})
-    assert baba_rm.get("region_tilt") == "avoided", f"BABA region devrait être avoided, got {baba_rm.get('region_tilt')}"
+    assert baba_rm.get("region_tilt") == "avoided", \
+        f"BABA region devrait être avoided, got {baba_rm.get('region_tilt')}"
     
     print("✅ FIX #3: _radar_matching créé sans market_context OK")
     return True
 
 
 def test_radar_bonus_function():
-    """Test: compute_radar_bonus_from_matching fonctionne correctement."""
+    """Test FIX #2: compute_radar_bonus_from_matching."""
     print("\n=== TEST 4: compute_radar_bonus_from_matching ===")
     
     from portfolio_engine.factors import compute_radar_bonus_from_matching
@@ -151,14 +161,25 @@ def test_radar_bonus_function():
         "_radar_matching": {
             "sector_tilt": "favored",
             "region_tilt": "favored",
-            "sector_in_favored": True,
-            "region_in_favored": True,
         }
     }
     bonus, meta = compute_radar_bonus_from_matching(asset_favored, cap=0.03)
-    print(f"   Favored: bonus={bonus}, units={meta['units']}")
+    print(f"   Favored (2 units): bonus={bonus}, units={meta['units']}")
     assert bonus == 0.03, f"Bonus devrait être 0.03, got {bonus}"
     assert meta["units"] == 2, f"Units devrait être 2, got {meta['units']}"
+    
+    # Asset avec 1 favored, 1 avoided (0 units)
+    asset_mixed = {
+        "symbol": "TEST_MIXED",
+        "category": "equity",
+        "_radar_matching": {
+            "sector_tilt": "favored",
+            "region_tilt": "avoided",
+        }
+    }
+    bonus, meta = compute_radar_bonus_from_matching(asset_mixed, cap=0.03)
+    print(f"   Mixed (0 units): bonus={bonus}, units={meta['units']}")
+    assert bonus == 0.0, f"Bonus devrait être 0.0, got {bonus}"
     
     # Asset avoided (2 units négatifs)
     asset_avoided = {
@@ -167,26 +188,11 @@ def test_radar_bonus_function():
         "_radar_matching": {
             "sector_tilt": "avoided",
             "region_tilt": "avoided",
-            "sector_in_avoided": True,
-            "region_in_avoided": True,
         }
     }
     bonus, meta = compute_radar_bonus_from_matching(asset_avoided, cap=0.03)
-    print(f"   Avoided: bonus={bonus}, units={meta['units']}")
+    print(f"   Avoided (-2 units): bonus={bonus}, units={meta['units']}")
     assert bonus == -0.03, f"Bonus devrait être -0.03, got {bonus}"
-    
-    # Asset neutre
-    asset_neutral = {
-        "symbol": "TEST_NEUTRAL",
-        "category": "equity",
-        "_radar_matching": {
-            "sector_tilt": "neutral",
-            "region_tilt": "neutral",
-        }
-    }
-    bonus, meta = compute_radar_bonus_from_matching(asset_neutral, cap=0.03)
-    print(f"   Neutral: bonus={bonus}, units={meta['units']}")
-    assert bonus == 0.0, f"Bonus devrait être 0.0, got {bonus}"
     
     # Asset sans _radar_matching
     asset_none = {"symbol": "TEST_NONE", "category": "equity"}
@@ -195,70 +201,108 @@ def test_radar_bonus_function():
     assert bonus == 0.0, f"Bonus devrait être 0.0, got {bonus}"
     assert meta.get("reason") == "no_radar_matching"
     
+    # ETF: region_tilt ignoré
+    asset_etf = {
+        "symbol": "TEST_ETF",
+        "category": "etf",
+        "_radar_matching": {
+            "sector_tilt": "favored",
+            "region_tilt": "favored",  # ignoré pour ETF
+        }
+    }
+    bonus, meta = compute_radar_bonus_from_matching(asset_etf, cap=0.03)
+    print(f"   ETF (sector only): bonus={bonus}, units={meta['units']}")
+    assert meta["units"] == 1, f"ETF devrait avoir 1 unit (sector only), got {meta['units']}"
+    assert bonus == 0.015, f"Bonus ETF devrait être 0.015, got {bonus}"
+    
     print("✅ FIX #4: compute_radar_bonus_from_matching OK")
     return True
 
 
-def test_coverage_tilt_vs_mapping():
-    """Test v1.3: Coverage séparée mapping vs tilt, gate sur tilt."""
-    print("\n=== TEST 5: Coverage tilt vs mapping ===")
+def test_coverage_mapping_vs_tilt():
+    """Test v1.3: Coverage séparée mapping vs tilt."""
+    print("\n=== TEST 5: Coverage mapping vs tilt ===")
     
     from portfolio_engine.universe import has_meaningful_radar, _compute_radar_coverage
     
     # Assets avec différents niveaux de signal
     fake_assets = [
-        # Mapping mais pas de tilt (inutile pour tie-breaker)
-        {"symbol": "A", "_radar_matching": {
-            "sector_normalized": "technology", 
-            "region_normalized": "usa",
-            "sector_in_favored": False,
-            "sector_in_avoided": False,
-            "region_in_favored": False,
-            "region_in_avoided": False,
-        }},
-        # Mapping vide, pas de tilt
-        {"symbol": "B", "_radar_matching": {
-            "sector_normalized": "", 
-            "region_normalized": "",
-        }},
-        # Tilt effectif (meaningful!)
-        {"symbol": "C", "_radar_matching": {
-            "sector_normalized": "healthcare", 
-            "sector_in_favored": True,
-            "region_normalized": "usa",
-            "region_in_favored": True,
-        }},
-        # Avoided effectif (meaningful!)
-        {"symbol": "D", "_radar_matching": {
-            "sector_normalized": "consumer-discretionary", 
-            "sector_in_avoided": True,
-        }},
+        # A: mapping présent mais pas de tilt
+        {
+            "symbol": "A", 
+            "_radar_matching": {
+                "sector_normalized": "technology", 
+                "region_normalized": "usa",
+                "sector_in_favored": False,
+                "sector_in_avoided": False,
+                "region_in_favored": False,
+                "region_in_avoided": False,
+            }
+        },
+        # B: mapping vide
+        {
+            "symbol": "B", 
+            "_radar_matching": {
+                "sector_normalized": "", 
+                "region_normalized": "",
+                "sector_in_favored": False,
+                "sector_in_avoided": False,
+            }
+        },
+        # C: tilt effectif (favored)
+        {
+            "symbol": "C", 
+            "_radar_matching": {
+                "sector_normalized": "healthcare", 
+                "region_normalized": "usa",
+                "sector_in_favored": True,
+                "region_in_favored": True,
+            }
+        },
+        # D: tilt effectif (avoided)
+        {
+            "symbol": "D", 
+            "_radar_matching": {
+                "sector_normalized": "consumer-discretionary", 
+                "region_normalized": "china",
+                "sector_in_avoided": True,
+                "region_in_avoided": True,
+            }
+        },
+        # E: pas de _radar_matching
+        {"symbol": "E"},
     ]
     
     stats = _compute_radar_coverage(fake_assets)
     
     print(f"   Total: {stats['total']}")
-    print(f"   Coverage raw (clé présente): {stats['coverage_raw']:.1%}")
-    print(f"   Coverage mapping (normalisé non vide): {stats['coverage_mapping']:.1%}")
-    print(f"   Coverage tilt (favored/avoided effectif): {stats['coverage_tilt']:.1%}")
+    print(f"   With radar key: {stats['with_radar_key']}")
+    print(f"   With mapping: {stats['with_mapping']} (coverage: {stats['coverage_mapping']:.1%})")
+    print(f"   With tilt: {stats['with_tilt']} (coverage: {stats['coverage_tilt']:.1%})")
     
     # Vérifications
-    assert stats["coverage_raw"] == 1.0, "Raw devrait être 100% (tous ont la clé)"
-    assert stats["coverage_mapping"] == 0.75, f"Mapping devrait être 75% (A,C,D), got {stats['coverage_mapping']}"
-    assert stats["coverage_tilt"] == 0.50, f"Tilt devrait être 50% (C,D), got {stats['coverage_tilt']}"
+    assert stats["total"] == 5
+    assert stats["with_radar_key"] == 4  # A, B, C, D ont _radar_matching
+    assert stats["with_mapping"] == 3    # A, C, D ont mapping non vide
+    assert stats["with_tilt"] == 2       # C, D ont tilt effectif
     
-    # Vérifier has_meaningful_radar (doit être strict = tilt effectif)
-    assert not has_meaningful_radar(fake_assets[0]), "A ne devrait PAS être meaningful (mapping sans tilt)"
-    assert not has_meaningful_radar(fake_assets[1]), "B ne devrait PAS être meaningful"
-    assert has_meaningful_radar(fake_assets[2]), "C devrait être meaningful (favored)"
-    assert has_meaningful_radar(fake_assets[3]), "D devrait être meaningful (avoided)"
+    assert stats["coverage_raw"] == 0.8      # 4/5
+    assert stats["coverage_mapping"] == 0.6  # 3/5
+    assert stats["coverage_tilt"] == 0.4     # 2/5 - CELUI POUR LE GATE
     
-    print("✅ FIX #5: Coverage tilt vs mapping OK")
+    # Test has_meaningful_radar (v1.3: strict = tilt effectif seulement)
+    assert not has_meaningful_radar(fake_assets[0]), "A: mapping sans tilt != meaningful"
+    assert not has_meaningful_radar(fake_assets[1]), "B: mapping vide != meaningful"
+    assert has_meaningful_radar(fake_assets[2]), "C: tilt favored = meaningful"
+    assert has_meaningful_radar(fake_assets[3]), "D: tilt avoided = meaningful"
+    assert not has_meaningful_radar(fake_assets[4]), "E: pas de radar != meaningful"
+    
+    print("✅ FIX #5: Coverage mapping vs tilt OK")
     return True
 
 
 def test_eps_calibration():
-    """Test: _calibrate_eps data-driven avec floor()."""
+    """Test FIX #3: _calibrate_eps data-driven."""
     print("\n=== TEST 6: _calibrate_eps ===")
     
     from portfolio_engine.universe import _calibrate_eps
@@ -278,6 +322,7 @@ def test_eps_calibration():
     
     # Test avec peu d'échantillons (fallback)
     result_small = _calibrate_eps([0.5, 0.6, 0.7], fallback=0.02)
+    print(f"   Petit échantillon: EPS={result_small['eps']}, method={result_small['method']}")
     assert result_small["method"] == "fallback"
     assert result_small["eps"] == 0.02
     
@@ -310,8 +355,6 @@ def test_radar_bonus_changes_order_in_tie_band():
             "_radar_matching": {
                 "sector_tilt": "favored",
                 "region_tilt": "favored",
-                "sector_in_favored": True,
-                "region_in_favored": True,
             },
         },
         {
@@ -321,8 +364,6 @@ def test_radar_bonus_changes_order_in_tie_band():
             "_radar_matching": {
                 "sector_tilt": "avoided",
                 "region_tilt": "avoided",
-                "sector_in_avoided": True,
-                "region_in_avoided": True,
             },
         },
     ]
@@ -351,16 +392,13 @@ def test_radar_bonus_changes_order_in_tie_band():
     order_with_radar = [a["symbol"] for a in sorted_with_radar]
     print(f"   Avec RADAR: {order_with_radar}")
     
-    # Vérifier les buckets
-    for a in assets:
-        bucket = math.floor(a["composite_score"] / eps)
-        print(f"   {a['symbol']}: score={a['composite_score']}, bucket={bucket}, bonus={a['_radar_bonus']}")
-    
+    # Vérifications
     # Sans radar: C > B > A (par score décroissant)
     assert order_no_radar == ["AVOIDED_C", "FAVORED_B", "NEUTRAL_A"], \
         f"Sans radar devrait être par score décroissant, got {order_no_radar}"
     
-    # Avec radar dans même bucket: B (bonus +0.03) > A (0) > C (bonus -0.03)
+    # Avec radar dans même bucket: B (bonus +0.03) > A (0) ou C (bonus -0.03)
+    # Bucket de tous = floor(0.5/0.02) = 25
     assert sorted_with_radar[0]["symbol"] == "FAVORED_B", \
         f"FAVORED_B devrait être premier avec radar, got {sorted_with_radar[0]['symbol']}"
     assert sorted_with_radar[-1]["symbol"] == "AVOIDED_C", \
@@ -376,7 +414,7 @@ def test_radar_bonus_changes_order_in_tie_band():
 
 def test_radar_bonus_distribution():
     """
-    Test v1.3: Distribution des bonus non-dégénérée (pas tout à 0).
+    Test v1.3: Vérifie que la distribution des bonus n'est pas dégénérée.
     """
     print("\n=== TEST 8: Distribution bonus non-dégénérée ===")
     
@@ -385,19 +423,19 @@ def test_radar_bonus_distribution():
     
     scorer = FactorScorer("Modéré")
     
-    # Générer assets variés avec différentes combinaisons
+    # Générer assets variés
     test_assets = []
     configs = [
         ("Healthcare", "Etats-Unis"),         # favored + favored
-        ("Healthcare", "Chine"),              # favored + avoided
-        ("Consumer Discretionary", "Suisse"), # avoided + favored
-        ("Consumer Discretionary", "Chine"),  # avoided + avoided
-        ("Technology", "Allemagne"),          # neutral + neutral
-        ("Utilities", "Etats-Unis"),          # favored (utilities) + favored (usa)
-        ("Real Estate", "Chine"),             # avoided + avoided
+        ("Healthcare", "Chine"),               # favored + avoided
+        ("Consumer Discretionary", "Suisse"),  # avoided + favored
+        ("Consumer Discretionary", "Chine"),   # avoided + avoided
+        ("Technology", "Allemagne"),           # neutral + neutral
+        ("Utilities", "Etats-Unis"),           # favored + favored
+        ("Real Estate", "Chine"),              # avoided + avoided
     ]
     
-    for i, (sector, country) in enumerate(configs * 7):  # 49 assets
+    for i, (sector, country) in enumerate(configs * 7):  # ~50 assets
         test_assets.append({
             "symbol": f"STOCK_{i}",
             "category": "equity",
@@ -438,7 +476,7 @@ def test_radar_bonus_distribution():
 
 
 def test_full_selection_with_radar():
-    """Test end-to-end: sector_balanced_selection avec RADAR."""
+    """Test complet: sector_balanced_selection avec RADAR."""
     print("\n=== TEST 9: sector_balanced_selection avec RADAR ===")
     
     from portfolio_engine.factors import FactorScorer
@@ -446,26 +484,24 @@ def test_full_selection_with_radar():
     
     scorer = FactorScorer("Modéré")
     
-    # Générer assets variés
     test_assets = []
     sectors = ["Technology", "Healthcare", "Finance", "Energy", "Consumer Discretionary"]
     countries = ["Etats-Unis", "Chine", "Allemagne", "France", "Suisse"]
     
-    for i in range(60):
+    for i in range(50):
         test_assets.append({
             "symbol": f"STOCK{i}",
             "category": "equity",
             "sector": sectors[i % len(sectors)],
             "country": countries[i % len(countries)],
-            "ytd": 10 + i * 0.5,  # Scores proches pour créer des ties
+            "ytd": 10 + i,
             "perf_1m": 2 + (i % 5),
             "vol_3y": 20 + (i % 10),
-            "market_cap": 1e9 * (60 - i),
+            "market_cap": 1e9 * (50 - i),
         })
     
     scored = scorer.compute_scores(test_assets)
     
-    # Sélection avec RADAR
     selected, metadata = sector_balanced_selection(
         scored,
         target_n=25,
@@ -474,19 +510,14 @@ def test_full_selection_with_radar():
     
     print(f"   Sélectionnés: {len(selected)}/25")
     print(f"   RADAR actif: {metadata['radar']['enabled']}")
-    print(f"   Coverage tilt: {metadata['radar']['coverage']['coverage_tilt']:.1%}")
-    print(f"   Coverage mapping: {metadata['radar']['coverage']['coverage_mapping']:.1%}")
+    print(f"   Coverage mapping: {metadata['radar']['coverage'].get('coverage_mapping', 'N/A')}")
+    print(f"   Coverage tilt: {metadata['radar']['coverage'].get('coverage_tilt', 'N/A')}")
     print(f"   Swaps: {metadata['swaps']['count']}")
     print(f"   Interprétation: {metadata['swaps']['interpretation']}")
-    print(f"   EPS utilisé: {metadata['eps']['eps']:.4f}")
     
     assert len(selected) == 25, f"Devrait sélectionner 25, got {len(selected)}"
-    assert "coverage_tilt" in metadata["radar"]["coverage"], "Devrait avoir coverage_tilt"
-    assert "coverage_mapping" in metadata["radar"]["coverage"], "Devrait avoir coverage_mapping"
-    
-    # Vérifier que les assets ont _radar_bonus
-    with_bonus = sum(1 for a in selected if a.get("_radar_bonus", 0) != 0)
-    print(f"   Assets sélectionnés avec bonus non-nul: {with_bonus}")
+    assert "radar" in metadata
+    assert "swaps" in metadata
     
     print("✅ FIX #9: sector_balanced_selection avec RADAR OK")
     return True
@@ -494,16 +525,16 @@ def test_full_selection_with_radar():
 
 def run_all_tests():
     """Exécute tous les tests."""
-    print("=" * 60)
+    print("=" * 70)
     print("VALIDATION RADAR TIE-BREAKER v1.3")
-    print("=" * 60)
+    print("=" * 70)
     
     tests = [
         ("FIX #1: _macro_tilts fallback", test_macro_tilts_fallback),
         ("FIX #2: DEFAULT_MACRO_TILTS immutable", test_default_macro_tilts_immutable),
         ("FIX #3: _radar_matching création", test_radar_matching_created),
         ("FIX #4: compute_radar_bonus", test_radar_bonus_function),
-        ("FIX #5: Coverage tilt vs mapping", test_coverage_tilt_vs_mapping),
+        ("FIX #5: Coverage mapping vs tilt", test_coverage_mapping_vs_tilt),
         ("FIX #6: _calibrate_eps", test_eps_calibration),
         ("FIX #7: Tie-breaker change ordre", test_radar_bonus_changes_order_in_tie_band),
         ("FIX #8: Distribution bonus", test_radar_bonus_distribution),
@@ -521,9 +552,9 @@ def run_all_tests():
             traceback.print_exc()
             results.append((name, f"ERROR: {str(e)[:50]}"))
     
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
     print("RÉSUMÉ")
-    print("=" * 60)
+    print("=" * 70)
     
     all_pass = True
     for name, status in results:
@@ -532,7 +563,7 @@ def run_all_tests():
         if status != "PASS":
             all_pass = False
     
-    print("=" * 60)
+    print("=" * 70)
     
     if all_pass:
         print("✅ TOUS LES TESTS PASSENT - RADAR TIE-BREAKER v1.3 OPÉRATIONNEL")

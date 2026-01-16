@@ -1,19 +1,21 @@
 # PATCH pour portfolio_engine/universe.py
 # Version: v1.3 RADAR TIE-BREAKER
 #
-# CORRECTIONS v1.3:
+# CHANGEMENTS v1.3:
 # - Coverage séparée: mapping vs tilt
 # - Gate sur coverage_tilt (pas coverage_raw)
+# - has_meaningful_radar() strict (tilt effectif seulement)
 # - floor() au lieu de round() pour bucketisation
-# - has_meaningful_radar() strict (tilt effectif uniquement)
 
 # ============================================================================
-# FIX #1: Ajouter AVANT "def sector_balanced_selection("
+# FIX #1: Ajouter import math en haut (si pas déjà présent)
 # ============================================================================
 
-# =============================================================================
-# v1.3: RADAR TIE-BREAKER HELPERS
-# =============================================================================
+import math
+
+# ============================================================================
+# FIX #2: Ajouter has_meaningful_radar() AVANT sector_balanced_selection
+# ============================================================================
 
 def has_meaningful_radar(asset: dict) -> bool:
     """
@@ -24,44 +26,15 @@ def has_meaningful_radar(asset: dict) -> bool:
     if not m:
         return False
     
-    # Meaningful = tilt effectif uniquement
+    # meaningful = tilt effectif uniquement
     return bool(
         m.get("sector_in_favored") or m.get("sector_in_avoided") or
         m.get("region_in_favored") or m.get("region_in_avoided")
     )
 
-
-def _calibrate_eps(scores: List[float], fallback: float = 0.02) -> Dict[str, float]:
-    """
-    Calibre EPS (tie-band epsilon) de manière data-driven.
-    
-    Formule: EPS = max(0.005, 0.25 * std, IQR/20)
-    Fallback si < 30 échantillons.
-    """
-    valid_scores = [s for s in scores if s is not None and not (isinstance(s, float) and math.isnan(s))]
-    
-    n = len(valid_scores)
-    if n < 30:
-        std_val = float(np.std(valid_scores)) if n > 1 else 0.0
-        return {"eps": fallback, "std": std_val, "iqr": 0.0, "n": n, "method": "fallback"}
-    
-    arr = np.array(valid_scores, dtype=float)
-    std_val = float(np.std(arr))
-    q75, q25 = np.percentile(arr, [75, 25])
-    iqr = float(q75 - q25)
-    
-    eps_std = 0.25 * std_val
-    eps_iqr = iqr / 20.0 if iqr > 0 else 0.0
-    eps = max(0.005, eps_std, eps_iqr)
-    
-    return {
-        "eps": float(eps), 
-        "std": std_val, 
-        "iqr": iqr, 
-        "n": n,
-        "method": "data-driven",
-    }
-
+# ============================================================================
+# FIX #3: Remplacer _compute_radar_coverage() par version v1.3
+# ============================================================================
 
 def _compute_radar_coverage(assets: List[dict]) -> Dict[str, Any]:
     """
@@ -75,7 +48,7 @@ def _compute_radar_coverage(assets: List[dict]) -> Dict[str, Any]:
             "with_radar_key": 0,
             "with_mapping": 0,
             "with_tilt": 0,
-            "coverage_raw": 0, 
+            "coverage_raw": 0,
             "coverage_mapping": 0,
             "coverage_tilt": 0,
         }
@@ -108,44 +81,16 @@ def _compute_radar_coverage(assets: List[dict]) -> Dict[str, Any]:
         "coverage_tilt": round(with_tilt / total, 4),  # ← GATE SUR CELUI-CI
     }
 
-
 # ============================================================================
-# FIX #2: Dans sector_balanced_selection(), utiliser floor() et coverage_tilt
-# ============================================================================
-#
-# NOUVELLE SIGNATURE:
-#
-def sector_balanced_selection(
-    assets: List[dict], 
-    target_n: int = 25,
-    initial_max_per_sector: int = 4,
-    score_field: str = "composite_score",
-    # v1.3: RADAR tie-breaker params
-    enable_radar_tiebreaker: bool = True,
-    radar_bonus_cap: float = 0.03,
-    radar_min_coverage: float = 0.40,
-    eps_fallback: float = 0.02,
-    market_context: Optional[Dict] = None,
-) -> Tuple[List[dict], Dict[str, Any]]:
-
-# ============================================================================
-# FIX #3: Dans la fonction de tri, utiliser math.floor() pas round()
+# FIX #4: Dans sector_balanced_selection, modifier le gate coverage
 # ============================================================================
 #
-    def sort_key_radar(a: dict):
-        score = get_score(a)
-        # v1.3: floor au lieu de round (comportement prévisible)
-        bucket = math.floor(score / eps) if eps > 0 else 0
-        radar = float(a.get("_radar_bonus", 0.0))
-        aid = str(a.get("symbol") or a.get("id") or "").lower()
-        return (-bucket, -radar, -score, aid)
-
-# ============================================================================
-# FIX #4: Gate sur coverage_tilt (pas coverage_raw)
-# ============================================================================
+# CHERCHER:
 #
-    coverage_stats = _compute_radar_coverage(assets)
-    
+    if enable_radar_tiebreaker and coverage < radar_min_coverage:
+#
+# REMPLACER PAR:
+#
     # v1.3: Gate sur coverage_tilt (pas coverage_raw ni coverage_mapping)
     if enable_radar_tiebreaker and coverage_stats["coverage_tilt"] < radar_min_coverage:
         logger.warning(
@@ -156,3 +101,16 @@ def sector_balanced_selection(
         )
         radar_active = False
         radar_disable_reason = f"coverage_tilt_too_low ({coverage_stats['coverage_tilt']:.1%})"
+
+# ============================================================================
+# FIX #5: Dans sort_key_radar, utiliser floor() au lieu de round()
+# ============================================================================
+#
+# CHERCHER:
+#
+        bucket = int(round(score / eps)) if eps > 0 else 0
+#
+# REMPLACER PAR:
+#
+        # v1.3: floor() au lieu de round() (comportement prévisible aux limites)
+        bucket = math.floor(score / eps) if eps > 0 else 0

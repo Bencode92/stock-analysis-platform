@@ -1,4 +1,13 @@
-# RADAR TIE-BREAKER FIX v4.0.0
+# RADAR TIE-BREAKER FIX v1.3
+
+## Historique des versions
+
+| Version | Date | Changements |
+|---------|------|-------------|
+| v1.0 | Initial | Diagnostic root cause |
+| v1.1 | +deepcopy | Fix mutation global |
+| v1.2 | +coverage meaningful | Fix métrique trompeuse |
+| v1.3 | +coverage_tilt strict | Gate sur tilt effectif uniquement |
 
 ## Problème identifié
 
@@ -12,41 +21,72 @@ if self.market_context:
     self._build_lookups()  # ← jamais appelé si market_context={}
 ```
 
-**Conséquence**: `compute_factor_tactical_context()` fait un early-return → `_radar_matching` n'existe jamais → tie-breaker inopérant → **swaps = 0**.
+**Chaîne de conséquences**:
+1. `_macro_tilts = None`
+2. `compute_factor_tactical_context()` early-return
+3. `_radar_matching` jamais créé
+4. Tie-breaker inopérant
+5. **swaps = 0**
 
-## Solution en 4 fixes
+## Solution v1.3
 
-### FIX #1: _macro_tilts fallback (factors.py)
-
-Initialiser `_macro_tilts = DEFAULT_MACRO_TILTS.copy()` AVANT le if.
+### FIX #1: `_build_lookups()` TOUJOURS appelé
 
 ```python
-# APRÈS (fix):
-self._macro_tilts = DEFAULT_MACRO_TILTS.copy()  # ← Toujours initialisé
-
-if self.market_context:
-    self._build_lookups()
-else:
-    logger.warning("market_context vide → utilisation DEFAULT_MACRO_TILTS")
+# APRÈS:
+self.market_context = market_context or {}
+self._build_lookups()  # TOUJOURS
 ```
 
-### FIX #1b: Helper bonus (factors.py)
+### FIX #2: `deepcopy` DANS `_build_lookups()`
 
-Nouvelle fonction `compute_radar_bonus_from_matching()` pour calcul depuis `_radar_matching` existant.
+```python
+import copy
 
-### FIX #2-4: Tie-breaker (universe.py)
+def _build_lookups(self):
+    # v1.3: deepcopy TOUJOURS
+    tilts_src = self.market_context.get("macro_tilts") or DEFAULT_MACRO_TILTS
+    self._macro_tilts = copy.deepcopy(tilts_src)
+```
 
-- `_calibrate_eps()`: EPS data-driven (0.25×std ou IQR/20)
-- `_compute_radar_coverage()`: Check coverage minimum 40%
-- `sector_balanced_selection()`: Tie-band + bonus RADAR + mesure swaps ON/OFF
+### FIX #3: Coverage séparée mapping vs tilt
 
-## Impact attendu
+```python
+def _compute_radar_coverage(assets):
+    return {
+        "coverage_mapping": ...,  # sector/region normalisé non vide
+        "coverage_tilt": ...,     # favored/avoided EFFECTIF ← GATE ICI
+    }
+```
 
-| Métrique | Avant | Après |
-|----------|-------|-------|
-| Coverage `_radar_matching` | ~0% | ~80-100% |
-| Swaps RADAR dans top-25 | 0 | 2-5 |
-| EPS calibré | N/A | ~0.02 (data-driven) |
+### FIX #4: `has_meaningful_radar()` strict
+
+```python
+def has_meaningful_radar(asset):
+    m = asset.get("_radar_matching") or {}
+    # STRICT: tilt effectif seulement
+    return bool(
+        m.get("sector_in_favored") or m.get("sector_in_avoided") or
+        m.get("region_in_favored") or m.get("region_in_avoided")
+    )
+```
+
+### FIX #5: `floor()` au lieu de `round()`
+
+```python
+# v1.3: floor() prévisible aux limites
+bucket = math.floor(score / eps) if eps > 0 else 0
+```
+
+## Métriques de succès
+
+| Métrique | Critère | Pourquoi |
+|----------|---------|----------|
+| `coverage_tilt` | ≥ 40% | Sinon tie-breaker auto-désactivé |
+| `bonus std` | > 0.001 | Distribution non-dégénérée |
+| `swaps ON/OFF` | Mesurable | Preuve que ça fonctionne |
+
+⚠️ **Note**: "2-5 swaps" n'est PAS garanti. Si les top-25 n'ont pas de tilt, swaps peut être 0 même avec le fix. La vraie métrique est `coverage_tilt` + `bonus distribution`.
 
 ## Validation
 
@@ -54,14 +94,18 @@ Nouvelle fonction `compute_radar_bonus_from_matching()` pour calcul depuis `_rad
 python tests/test_radar_tiebreaker.py
 ```
 
-Critères de succès:
-- ✅ `_macro_tilts` non-None sans market_context
-- ✅ `_radar_matching` créé pour tous les assets
-- ✅ `compute_radar_bonus_from_matching()` fonctionne
-- ✅ EPS calibré automatiquement
-- ✅ 2-5 swaps dans top-25
+Tests inclus:
+1. ✅ `_macro_tilts` non-None sans market_context
+2. ✅ `DEFAULT_MACRO_TILTS` immutable (anti-mutation)
+3. ✅ `_radar_matching` créé pour tous les assets
+4. ✅ `compute_radar_bonus_from_matching()` fonctionne
+5. ✅ Coverage mapping vs tilt séparées
+6. ✅ EPS calibré automatiquement
+7. ✅ **Tie-breaker change effectivement l'ordre**
+8. ✅ Distribution bonus non-dégénérée
+9. ✅ Full selection avec RADAR
 
-## Auteurs
+## Crédits
 
-- Claude (Anthropic) - Diagnostic initial + implémentation
-- ChatGPT (OpenAI) - Validation + identification root cause
+- **Claude** (Anthropic) - Diagnostic initial + implémentation
+- **ChatGPT** (OpenAI) - Validation + identification pièges v1.1/v1.2/v1.3
