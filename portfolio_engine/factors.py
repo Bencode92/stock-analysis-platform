@@ -67,16 +67,18 @@ Facteurs:
 - mean_reversion: 5% — Évite sur-extension
 """
 
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Optional, Union, Any, Tuple, Set
-from dataclasses import dataclass
-from collections import defaultdict
+import copy
+import json
 import logging
 import math
-import json
-from pathlib import Path
+from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List, Optional, Union, Any, Tuple, Set
+
+import numpy as np
+import pandas as pd
 
 # P1-10: Import stable sort for deterministic ordering
 try:
@@ -1196,16 +1198,19 @@ class FactorScorer:
         # v2.4.4 FIX: Utilise Set au lieu de List pour éviter doublons
         self._missing_critical_fields: Dict[int, Set[str]] = {}
         
-        if self.market_context:
-            self._build_lookups()
+        # v1.3: TOUJOURS appeler _build_lookups
+        self._build_lookups()
     
     def _build_lookups(self):
         """Construit les lookups pour le scoring tactique."""
         if "sectors" in self.market_context:
-            self._sector_lookup = _build_sector_lookup(self.market_context["sectors"])
+        self._sector_lookup = _build_sector_lookup(self.market_context["sectors"])
         if "indices" in self.market_context:
-            self._country_lookup = _build_country_lookup(self.market_context["indices"])
-        self._macro_tilts = self.market_context.get("macro_tilts", DEFAULT_MACRO_TILTS)
+        self._country_lookup = _build_country_lookup(self.market_context["indices"])
+    
+        # v1.3 FIX: deepcopy TOUJOURS pour éviter mutation du global
+        tilts_src = self.market_context.get("macro_tilts") or DEFAULT_MACRO_TILTS
+        self._macro_tilts = copy.deepcopy(tilts_src)
         
         # v2.4.6: Normaliser les tilts vers format RADAR
         if self._macro_tilts:
@@ -2162,6 +2167,77 @@ def get_quality_coverage(assets: List[dict]) -> Dict[str, float]:
         "bonds_count": len(bonds),
         "total_count": total,
     }
+# =============================================================================
+# v1.3: RADAR BONUS HELPER (pour tie-breaker dans universe.py)
+# =============================================================================
+
+def compute_radar_bonus_from_matching(
+    asset: dict,
+    cap: float = 0.03,
+    sector_trust_threshold: float = 0.6
+) -> Tuple[float, Dict[str, Any]]:
+    """
+    Calcule le bonus RADAR à partir du _radar_matching existant.
+    
+    Ne recalcule PAS les tilts - utilise ce qui a été calculé par FactorScorer.
+    Cela garantit la cohérence entre scoring et tie-breaker.
+    
+    Args:
+        asset: Dictionnaire de l'actif avec _radar_matching
+        cap: Bonus maximum (±cap)
+        sector_trust_threshold: Seuil en dessous duquel on ignore le tilt ETF
+        
+    Returns:
+        (bonus, metadata) où bonus est dans [-cap, +cap]
+    """
+    matching = asset.get("_radar_matching") or {}
+    
+    if not matching:
+        return 0.0, {"reason": "no_radar_matching", "bonus": 0.0}
+    
+    # ETF: si sector_trust faible, ignorer (évite faux positifs type AAAU)
+    sector_trust = asset.get("sector_trust")
+    if sector_trust is not None and sector_trust < sector_trust_threshold:
+        return 0.0, {
+            "reason": "low_sector_trust", 
+            "sector_trust": sector_trust,
+            "threshold": sector_trust_threshold,
+            "bonus": 0.0
+        }
+    
+    # Calculer les "units" de bonus
+    units = 0
+    
+    sector_tilt = matching.get("sector_tilt", "neutral")
+    if sector_tilt == "favored":
+        units += 1
+    elif sector_tilt == "avoided":
+        units -= 1
+    
+    # Région uniquement pour actions (ETFs n'ont pas de tilt géo fiable)
+    category = asset.get("category", "").lower()
+    region_tilt = matching.get("region_tilt", "neutral")
+    
+    if category == "equity":
+        if region_tilt == "favored":
+            units += 1
+        elif region_tilt == "avoided":
+            units -= 1
+    
+    # 1 unit = cap/2, 2 units = cap (max)
+    unit_value = cap / 2.0
+    bonus = max(-cap, min(cap, units * unit_value))
+    
+    metadata = {
+        "units": units,
+        "bonus": round(bonus, 6),
+        "cap": cap,
+        "sector_tilt": sector_tilt,
+        "region_tilt": region_tilt if category == "equity" else "n/a (etf)",
+        "category": category,
+    }
+    
+    return bonus, metadata    
 
 
 # ============= MAIN (pour test) =============
