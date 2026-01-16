@@ -1,10 +1,20 @@
 # portfolio_engine/universe.py
 """
-Construction de l'univers d'actifs v3.9 — Top-N Guaranteed Selection.
+Construction de l'univers d'actifs v4.0 — RADAR Tie-Breaker Integration.
+
+CHANGEMENTS v4.0 (RADAR Tie-Breaker v1.3):
+- NOUVEAU: has_meaningful_radar() - strict: tilt effectif seulement
+- NOUVEAU: _calibrate_eps() - calibration EPS data-driven
+- NOUVEAU: _compute_radar_coverage() - coverage mapping vs tilt séparées
+- AMÉLIORÉ: sector_balanced_selection() avec RADAR tie-breaker intégré
+  - Paramètres: enable_radar_tiebreaker, radar_bonus_cap, radar_min_coverage
+  - floor() au lieu de round() pour bucketisation
+  - Gate sur coverage_tilt (pas coverage_raw)
+  - Mesure des swaps ON/OFF
 
 CHANGEMENTS v3.9 (Étape 1.3 - Top-N Garanti):
 - NOUVEAU: sector_balanced_selection() avec relaxation progressive
-- Garantit TOUJOURS 25 titres (sauf univers < 25)
+- Garantit TOUJOURS 25 titres (sauf univers &lt; 25)
 - Multi-passes: max=4 → max=6 → max=8 → illimité
 - Retourne métadonnées de sélection (pass utilisé, rejets, etc.)
 - Log clair des raisons de sélection/rejet
@@ -349,20 +359,152 @@ def filter_crypto(rows: List[dict]) -> List[dict]:
     return filter_by_risk_bounds(rows, "crypto")
 
 
-# ============= TOP-N GUARANTEED SELECTION v3.9 =============
+# =============================================================================
+# v4.0: RADAR TIE-BREAKER HELPERS (ChatGPT-reviewed v1.3)
+# =============================================================================
+
+def has_meaningful_radar(asset: dict) -> bool:
+    """
+    v1.3 STRICT: meaningful seulement si tilt EFFECTIF (favored/avoided).
+    Un mapping non-vide sans tilt = inutile pour le tie-breaker.
+    
+    Args:
+        asset: Dictionnaire de l'actif avec _radar_matching
+        
+    Returns:
+        True si l'asset a un tilt effectif (favored ou avoided)
+    """
+    m = asset.get("_radar_matching") or {}
+    if not m:
+        return False
+    
+    # meaningful = tilt effectif uniquement
+    return bool(
+        m.get("sector_in_favored") or m.get("sector_in_avoided") or
+        m.get("region_in_favored") or m.get("region_in_avoided")
+    )
+
+
+def _calibrate_eps(scores: List[float], fallback: float = 0.02) -> Dict[str, Any]:
+    """
+    Calibre EPS (tie-band epsilon) de manière data-driven.
+    
+    v1.3: Formule: EPS = max(0.005, 0.25 * std, IQR/20)
+    Fallback si < 30 échantillons.
+    
+    Args:
+        scores: Liste des scores composite
+        fallback: Valeur EPS par défaut si pas assez de données
+        
+    Returns:
+        Dict avec eps, std, iqr, n, method
+    """
+    valid_scores = [s for s in scores if s is not None and not (isinstance(s, float) and math.isnan(s))]
+    
+    n = len(valid_scores)
+    if n < 30:
+        std_val = float(np.std(valid_scores)) if n > 1 else 0.0
+        return {"eps": fallback, "std": std_val, "iqr": 0.0, "n": n, "method": "fallback"}
+    
+    arr = np.array(valid_scores, dtype=float)
+    std_val = float(np.std(arr))
+    q75, q25 = np.percentile(arr, [75, 25])
+    iqr = float(q75 - q25)
+    
+    eps_std = 0.25 * std_val
+    eps_iqr = iqr / 20.0 if iqr > 0 else 0.0
+    eps = max(0.005, eps_std, eps_iqr)
+    
+    return {
+        "eps": float(eps), 
+        "std": std_val, 
+        "iqr": iqr, 
+        "n": n,
+        "method": "data-driven",
+    }
+
+
+def _compute_radar_coverage(assets: List[dict]) -> Dict[str, Any]:
+    """
+    v1.3: Sépare coverage_mapping (normalisé) de coverage_tilt (effectif).
+    Le gate tie-breaker utilise coverage_tilt.
+    
+    Args:
+        assets: Liste des actifs avec _radar_matching
+        
+    Returns:
+        Dict avec total, with_radar_key, with_mapping, with_tilt, 
+        coverage_raw, coverage_mapping, coverage_tilt
+    """
+    total = len(assets)
+    if total == 0:
+        return {
+            "total": 0, 
+            "with_radar_key": 0,
+            "with_mapping": 0,
+            "with_tilt": 0,
+            "coverage_raw": 0,
+            "coverage_mapping": 0,
+            "coverage_tilt": 0,
+        }
+    
+    with_radar_key = 0
+    with_mapping = 0  # sector_normalized ou region_normalized non vide
+    with_tilt = 0     # favored/avoided effectif (CELUI QUI COMPTE)
+    
+    for a in assets:
+        m = a.get("_radar_matching") or {}
+        if m:
+            with_radar_key += 1
+            
+            # Mapping coverage (informatif)
+            if m.get("sector_normalized") or m.get("region_normalized"):
+                with_mapping += 1
+            
+            # Tilt coverage (pour gate) - STRICT
+            if (m.get("sector_in_favored") or m.get("sector_in_avoided") or
+                m.get("region_in_favored") or m.get("region_in_avoided")):
+                with_tilt += 1
+    
+    return {
+        "total": total,
+        "with_radar_key": with_radar_key,
+        "with_mapping": with_mapping,
+        "with_tilt": with_tilt,
+        "coverage_raw": round(with_radar_key / total, 4),
+        "coverage_mapping": round(with_mapping / total, 4),
+        "coverage_tilt": round(with_tilt / total, 4),  # ← GATE SUR CELUI-CI
+    }
+
+
+# ============= TOP-N GUARANTEED SELECTION v4.0 =============
 
 def sector_balanced_selection(
     assets: List[dict], 
     target_n: int = 25,
     initial_max_per_sector: int = 4,
-    score_field: str = "composite_score"
+    score_field: str = "composite_score",
+    # v4.0: RADAR tie-breaker params
+    enable_radar_tiebreaker: bool = True,
+    radar_bonus_cap: float = 0.03,
+    radar_min_coverage: float = 0.40,
+    eps_fallback: float = 0.02,
+    market_context: Optional[Dict] = None,
 ) -> Tuple[List[dict], Dict[str, Any]]:
     """
-    Sélection Top-N GARANTIE avec contrainte secteur progressive.
+    Sélection Top-N GARANTIE avec contrainte secteur progressive + RADAR tie-breaker.
     
+    v4.0: Intégration RADAR tie-breaker (ChatGPT-reviewed v1.3).
     v3.9: Nouvelle implémentation multi-passes (Étape 1.3).
     
-    Algorithme:
+    RADAR Tie-Breaker:
+        - Calibre EPS data-driven (0.25*std ou IQR/20)
+        - Calcule bonus RADAR pour chaque asset (±0.03 max)
+        - Tri: bucket (floor) > radar_bonus > score > symbol
+        - Gate: désactivé si coverage_tilt < 40%
+        - Mesure: swaps ON/OFF pour validation
+    
+    Algorithme Multi-Pass:
         PASS 1: Top-N avec contrainte secteur stricte (max=4)
         PASS 2: Relaxer contrainte (max=6) si nécessaire
         PASS 3: Relaxer encore (max=8) si nécessaire  
@@ -373,144 +515,257 @@ def sector_balanced_selection(
         target_n: Nombre de titres cibles (défaut: 25)
         initial_max_per_sector: Contrainte initiale par secteur (défaut: 4)
         score_field: Champ de score à utiliser (défaut: "composite_score")
+        enable_radar_tiebreaker: Activer le tie-breaker RADAR (défaut: True)
+        radar_bonus_cap: Bonus RADAR maximum (défaut: 0.03)
+        radar_min_coverage: Coverage minimum pour activer RADAR (défaut: 0.40)
+        eps_fallback: EPS fallback si pas assez de données (défaut: 0.02)
+        market_context: Context marché optionnel
     
     Returns:
         Tuple[selected_assets, metadata]
         - selected_assets: Liste des actifs sélectionnés (len = min(target_n, len(assets)))
-        - metadata: Dict avec stats de sélection (passes, rejets, etc.)
+        - metadata: Dict avec stats de sélection (passes, rejets, radar, swaps, etc.)
     
     Critères de succès:
         - TOUJOURS target_n titres (sauf univers < target_n)
         - Contrainte secteur respectée quand possible
+        - RADAR tie-breaker actif si coverage_tilt >= 40%
         - Log clair des raisons de sélection/rejet
     """
     if not assets:
-        return [], {"pass_used": 0, "total_universe": 0, "selected": 0, "reason": "empty_universe"}
+        return [], {
+            "pass_used": 0, 
+            "total_universe": 0, 
+            "selected": 0, 
+            "reason": "empty_universe",
+            "radar": {"enabled": False, "reason": "empty_universe"},
+            "swaps": {"count": 0, "interpretation": "n/a"},
+        }
     
     # Ajuster target si univers trop petit
     actual_target = min(target_n, len(assets))
     
-    # === STEP 1: Trier par score composite (décroissant) ===
-    # Chercher le bon champ de score
+    # === STEP 1: Score helper ===
     def get_score(asset: dict) -> float:
-        # Essayer plusieurs noms de champs (compatibilité)
         for field in [score_field, f"_{score_field}", "score", "_score"]:
             val = asset.get(field)
             if val is not None:
                 return fnum(val)
         return 0.0
     
-    sorted_assets = sorted(assets, key=get_score, reverse=True)
+    # === STEP 2: RADAR Tie-Breaker Setup ===
+    radar_active = False
+    radar_disable_reason = None
+    eps_stats = {"eps": eps_fallback, "method": "fallback", "n": 0}
+    coverage_stats = _compute_radar_coverage(assets)
     
-    # === STEP 2: Multi-pass selection ===
-    # Définir les niveaux de relaxation
-    relaxation_levels = [
-        (initial_max_per_sector, "strict"),      # PASS 1: max=4
-        (initial_max_per_sector + 2, "relaxed"), # PASS 2: max=6
-        (initial_max_per_sector + 4, "loose"),   # PASS 3: max=8
-        (float('inf'), "no_constraint"),         # PASS 4: illimité
-    ]
-    
-    selected = []
-    selection_log = []  # Log détaillé pour debug
-    rejected_by_sector = defaultdict(list)  # Actifs rejetés par contrainte secteur
-    
-    for pass_num, (max_per_sector, constraint_name) in enumerate(relaxation_levels, 1):
-        sector_count = defaultdict(int)
+    if enable_radar_tiebreaker:
+        # Calibrer EPS
+        all_scores = [get_score(a) for a in assets]
+        eps_stats = _calibrate_eps(all_scores, fallback=eps_fallback)
+        eps = eps_stats["eps"]
         
-        # Compter les secteurs déjà sélectionnés
-        for asset in selected:
-            sector = asset.get("sector", "Unknown")
-            sector_count[sector] += 1
+        # v1.3: Gate sur coverage_tilt (pas coverage_raw ni coverage_mapping)
+        if coverage_stats["coverage_tilt"] >= radar_min_coverage:
+            radar_active = True
+            logger.info(
+                f"[RADAR] Activé: coverage_tilt {coverage_stats['coverage_tilt']:.1%} "
+                f">= seuil {radar_min_coverage:.0%}. EPS={eps:.4f} ({eps_stats['method']})"
+            )
+        else:
+            radar_disable_reason = f"coverage_tilt_too_low ({coverage_stats['coverage_tilt']:.1%})"
+            logger.warning(
+                f"[RADAR] Désactivé: coverage_tilt {coverage_stats['coverage_tilt']:.1%} "
+                f"< seuil {radar_min_coverage:.0%}. "
+                f"(mapping={coverage_stats['coverage_mapping']:.1%}, "
+                f"tilt={coverage_stats['with_tilt']}/{coverage_stats['total']})"
+            )
+    else:
+        radar_disable_reason = "disabled_by_param"
+        eps = eps_fallback
+    
+    # === STEP 3: Compute RADAR bonus for each asset ===
+    if radar_active:
+        try:
+            from .factors import compute_radar_bonus_from_matching
+            
+            for asset in assets:
+                bonus, bonus_meta = compute_radar_bonus_from_matching(
+                    asset, cap=radar_bonus_cap
+                )
+                asset["_radar_bonus"] = bonus
+                asset["_radar_bonus_meta"] = bonus_meta
+        except ImportError as e:
+            logger.warning(f"[RADAR] compute_radar_bonus_from_matching non disponible: {e}")
+            radar_active = False
+            radar_disable_reason = "import_error"
+            for asset in assets:
+                asset["_radar_bonus"] = 0.0
+    else:
+        for asset in assets:
+            asset["_radar_bonus"] = 0.0
+    
+    # === STEP 4: Define sort keys ===
+    def sort_key_radar(a: dict):
+        """Tri avec RADAR: bucket > radar_bonus > score > symbol"""
+        score = get_score(a)
+        # v1.3: floor() au lieu de round() (comportement prévisible aux limites)
+        bucket = math.floor(score / eps) if eps > 0 else 0
+        radar = float(a.get("_radar_bonus", 0.0))
+        aid = str(a.get("symbol") or a.get("ticker") or a.get("id") or "").lower()
+        return (-bucket, -radar, -score, aid)
+    
+    def sort_key_no_radar(a: dict):
+        """Tri sans RADAR: score > symbol"""
+        score = get_score(a)
+        aid = str(a.get("symbol") or a.get("ticker") or a.get("id") or "").lower()
+        return (-score, aid)
+    
+    # === STEP 5: Multi-pass selection function ===
+    def run_selection(sorted_assets: List[dict]) -> Tuple[List[dict], int, Dict]:
+        """Exécute la sélection multi-pass."""
+        relaxation_levels = [
+            (initial_max_per_sector, "strict"),
+            (initial_max_per_sector + 2, "relaxed"),
+            (initial_max_per_sector + 4, "loose"),
+            (float('inf'), "no_constraint"),
+        ]
         
-        # Parcourir les actifs non encore sélectionnés
-        for asset in sorted_assets:
-            if asset in selected:
-                continue
+        selected = []
+        selection_log = []
+        rejected_by_sector = defaultdict(list)
+        
+        for pass_num, (max_per_sector, constraint_name) in enumerate(relaxation_levels, 1):
+            sector_count = defaultdict(int)
+            
+            for asset in selected:
+                sector = asset.get("sector", "Unknown")
+                sector_count[sector] += 1
+            
+            for asset in sorted_assets:
+                if asset in selected:
+                    continue
+                if len(selected) >= actual_target:
+                    break
+                
+                sector = asset.get("sector", "Unknown")
+                score = get_score(asset)
+                name = asset.get("name") or asset.get("ticker") or asset.get("id", "?")
+                
+                if sector_count[sector] < max_per_sector:
+                    selected.append(asset)
+                    sector_count[sector] += 1
+                    asset["_selection_pass"] = pass_num
+                    asset["_selection_reason"] = f"selected_pass{pass_num}_{constraint_name}"
+                    selection_log.append({
+                        "action": "selected",
+                        "pass": pass_num,
+                        "name": name,
+                        "sector": sector,
+                        "score": round(score, 4),
+                        "radar_bonus": round(asset.get("_radar_bonus", 0), 4),
+                        "sector_count": sector_count[sector],
+                    })
+                else:
+                    if pass_num == 1:
+                        rejected_by_sector[sector].append({
+                            "name": name,
+                            "score": round(score, 4)
+                        })
+            
             if len(selected) >= actual_target:
                 break
-            
-            sector = asset.get("sector", "Unknown")
-            score = get_score(asset)
-            name = asset.get("name") or asset.get("ticker") or asset.get("id", "?")
-            
-            if sector_count[sector] < max_per_sector:
-                # Sélectionner
-                selected.append(asset)
-                sector_count[sector] += 1
-                asset["_selection_pass"] = pass_num
-                asset["_selection_reason"] = f"selected_pass{pass_num}_{constraint_name}"
-                selection_log.append({
-                    "action": "selected",
-                    "pass": pass_num,
-                    "name": name,
-                    "sector": sector,
-                    "score": round(score, 4),
-                    "sector_count": sector_count[sector],
-                    "max_allowed": max_per_sector if max_per_sector != float('inf') else "unlimited"
-                })
-            else:
-                # Rejeté par contrainte secteur (mais peut être sélectionné en pass suivante)
-                if pass_num == 1:  # Logger seulement au premier pass
-                    rejected_by_sector[sector].append({
-                        "name": name,
-                        "score": round(score, 4)
-                    })
         
-        # Vérifier si on a atteint la cible
-        if len(selected) >= actual_target:
-            logger.info(
-                f"[TOP-N] ✅ Sélection terminée en PASS {pass_num} ({constraint_name}): "
-                f"{len(selected)}/{actual_target} actifs"
-            )
-            break
+        final_pass = selected[-1].get("_selection_pass", 1) if selected else 0
+        return selected, final_pass, {"log": selection_log, "rejected": rejected_by_sector}
     
-    # === STEP 3: Compiler les métadonnées ===
-    final_pass = selected[-1].get("_selection_pass", 1) if selected else 0
+    # === STEP 6: Run selection WITH RADAR ===
+    sorted_with_radar = sorted(assets, key=sort_key_radar if radar_active else sort_key_no_radar)
+    selected, final_pass, selection_meta = run_selection(sorted_with_radar)
     
-    # Distribution sectorielle finale
+    # === STEP 7: Measure swaps (RADAR ON vs OFF) ===
+    swaps_count = 0
+    swaps_details = []
+    
+    if radar_active:
+        # Run selection WITHOUT RADAR for comparison
+        sorted_no_radar = sorted(assets, key=sort_key_no_radar)
+        selected_no_radar, _, _ = run_selection(sorted_no_radar)
+        
+        # Compare IDs
+        ids_with = set(a.get("symbol") or a.get("id") for a in selected)
+        ids_without = set(a.get("symbol") or a.get("id") for a in selected_no_radar)
+        
+        swaps_count = len(ids_with.symmetric_difference(ids_without)) // 2
+        
+        # Details
+        added_by_radar = ids_with - ids_without
+        removed_by_radar = ids_without - ids_with
+        swaps_details = {
+            "added_by_radar": list(added_by_radar)[:5],  # Top 5
+            "removed_by_radar": list(removed_by_radar)[:5],
+        }
+        
+        if swaps_count > 0:
+            logger.info(f"[RADAR] Swaps ON/OFF: {swaps_count} changements dans top-{actual_target}")
+    
+    # === STEP 8: Compile metadata ===
     sector_distribution = defaultdict(int)
     for asset in selected:
         sector_distribution[asset.get("sector", "Unknown")] += 1
     
+    # Bonus distribution stats
+    bonuses = [a.get("_radar_bonus", 0) for a in selected]
+    bonus_stats = {
+        "non_zero": sum(1 for b in bonuses if b != 0),
+        "positive": sum(1 for b in bonuses if b > 0),
+        "negative": sum(1 for b in bonuses if b < 0),
+        "mean": round(np.mean(bonuses), 4) if bonuses else 0,
+        "std": round(np.std(bonuses), 4) if bonuses else 0,
+    }
+    
     metadata = {
-        "version": "v3.9_top_n_guaranteed",
+        "version": "v4.0_radar_tiebreaker",
         "total_universe": len(assets),
         "target_n": target_n,
         "selected": len(selected),
         "selection_rate": f"{len(selected)/len(assets)*100:.1f}%",
         "pass_used": final_pass,
-        "constraint_respected": final_pass <= 3,  # True si pas besoin de PASS 4
+        "constraint_respected": final_pass <= 3,
         "initial_max_per_sector": initial_max_per_sector,
         "sector_distribution": dict(sector_distribution),
         "sectors_count": len(sector_distribution),
-        "rejected_by_sector_pass1": {
-            sector: len(rejected_assets) for sector, rejected_assets in rejected_by_sector.items()
+        # RADAR metadata
+        "radar": {
+            "enabled": radar_active,
+            "disable_reason": radar_disable_reason,
+            "coverage": coverage_stats,
+            "bonus_stats": bonus_stats,
         },
-        "selection_log_sample": selection_log[:10],  # 10 premiers pour debug
+        "eps": eps_stats,
+        "swaps": {
+            "count": swaps_count,
+            "details": swaps_details,
+            "interpretation": (
+                "significant" if swaps_count >= 3 else
+                "moderate" if swaps_count >= 1 else
+                "none"
+            ),
+        },
+        "selection_log_sample": selection_meta["log"][:10],
     }
     
-    # === STEP 4: Logging détaillé ===
+    # === STEP 9: Logging ===
     if final_pass > 1:
         logger.warning(
             f"[TOP-N] ⚠️ Contrainte secteur relaxée (PASS {final_pass}). "
-            f"Secteurs saturés en PASS 1: {list(rejected_by_sector.keys())}"
+            f"Secteurs saturés en PASS 1: {list(selection_meta['rejected'].keys())}"
         )
     
-    # Log des top rejets si on n'a pas atteint la cible avec contrainte stricte
-    if rejected_by_sector:
-        top_rejected_sectors = sorted(
-            rejected_by_sector.items(), 
-            key=lambda x: len(x[1]), 
-            reverse=True
-        )[:3]
-        for sector, rejected in top_rejected_sectors:
-            if rejected:
-                logger.debug(
-                    f"[TOP-N] Secteur '{sector}' saturé: "
-                    f"{len(rejected)} actifs rejetés en PASS 1 "
-                    f"(top: {rejected[0]['name']} score={rejected[0]['score']})"
-                )
+    logger.info(
+        f"[TOP-N] ✅ Sélection terminée: {len(selected)}/{actual_target} actifs "
+        f"(PASS {final_pass}, RADAR={'ON' if radar_active else 'OFF'}, swaps={swaps_count})"
+    )
     
     return selected, metadata
 
@@ -661,7 +916,7 @@ def _apply_volatility_sanity_check(all_assets: List[dict]) -> List[dict]:
         return all_assets
 
 
-# ============= CONSTRUCTION UNIVERS v3.9 =============
+# ============= CONSTRUCTION UNIVERS v4.0 =============
 
 def build_raw_universe(
     stocks_data: Union[List[dict], None] = None,
@@ -675,6 +930,7 @@ def build_raw_universe(
     """
     Construction de l'univers BRUT (sans scoring).
     
+    v4.0: RADAR tie-breaker integration (coverage, eps, swaps)
     v3.9: Top-N guaranteed selection avec relaxation progressive
     v3.8: Sanity check volatilité automatique (corrige GSK 376% → 3.76%)
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
@@ -698,7 +954,7 @@ def build_raw_universe(
     Returns:
         Liste plate de tous les actifs avec leurs métriques brutes
     """
-    logger.info("🧮 Construction de l'univers brut v3.9...")
+    logger.info("🧮 Construction de l'univers brut v4.0...")
     
     all_assets = []
     
@@ -881,6 +1137,7 @@ def build_raw_universe_from_files(
     Construction de l'univers brut depuis fichiers.
     Retourne un dict organisé par catégorie.
     
+    v4.0: RADAR tie-breaker integration
     v3.9: Top-N guaranteed selection avec relaxation progressive
     v3.8: Sanity check volatilité automatique
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
@@ -891,7 +1148,7 @@ def build_raw_universe_from_files(
     v3.1: Ajout des champs ticker/symbol pour ETF et bonds (fix V4.2.4)
     v3.0: Pas de scoring - juste chargement et préparation.
     """
-    logger.info("🧮 Construction de l'univers brut v3.9 (fichiers)...")
+    logger.info("🧮 Construction de l'univers brut v4.0 (fichiers)...")
     
     # ====== ACTIONS ======
     eq_rows = []
@@ -1073,6 +1330,7 @@ def load_and_prepare_universe(
     """
     Interface haut niveau pour charger et préparer l'univers.
     
+    v4.0: RADAR tie-breaker integration
     v3.9: Top-N guaranteed selection avec relaxation progressive
     v3.8: Sanity check volatilité automatique
     v3.6: Mappe perf_1m_pct → perf_1m et perf_3m_pct → perf_3m pour ETF/Bonds
