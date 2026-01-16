@@ -1204,9 +1204,9 @@ class FactorScorer:
     def _build_lookups(self):
         """Construit les lookups pour le scoring tactique."""
         if "sectors" in self.market_context:
-        self._sector_lookup = _build_sector_lookup(self.market_context["sectors"])
+            self._sector_lookup = _build_sector_lookup(self.market_context["sectors"])
         if "indices" in self.market_context:
-        self._country_lookup = _build_country_lookup(self.market_context["indices"])
+            self._country_lookup = _build_country_lookup(self.market_context["indices"])
     
         # v1.3 FIX: deepcopy TOUJOURS pour éviter mutation du global
         tilts_src = self.market_context.get("macro_tilts") or DEFAULT_MACRO_TILTS
