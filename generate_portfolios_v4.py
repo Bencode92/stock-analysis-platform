@@ -68,6 +68,24 @@ except ImportError:
     BLOCKED_REGIONS_EUUS = {"IN", "ASIA_EX_IN", "LATAM"}
     def get_region(country): return "OTHER"
 
+# === v4.13: Import PROFILE_POLICY pour scoring différencié par profil ===
+try:
+    from portfolio_engine.preset_meta import (
+        PROFILE_POLICY,
+        get_profile_policy,
+        score_equity_for_profile,
+        filter_equities_by_profile,
+        compute_universe_stats,
+    )
+    HAS_PROFILE_POLICY = True
+except ImportError:
+    HAS_PROFILE_POLICY = False
+    PROFILE_POLICY = {}
+    def get_profile_policy(p): return {}
+    def score_equity_for_profile(e, p, s): return e.get("composite_score", 0)
+    def filter_equities_by_profile(e, p): return e
+    def compute_universe_stats(e): return {}
+
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
 
@@ -100,6 +118,12 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 )
 logger = logging.getLogger("portfolio-v4")
+
+# === v4.13: Log disponibilité PROFILE_POLICY après logger init ===
+if HAS_PROFILE_POLICY:
+    logger.info("✅ Module PROFILE_POLICY disponible")
+else:
+    logger.warning("⚠️ PROFILE_POLICY non disponible, fallback scoring uniforme")
 # ============= PHASE 1: KOREA TRACE DIAGNOSTIC =============
 
 def count_korea(items, step_name):
@@ -486,6 +510,104 @@ def print_tactical_context_diagnostic(market_context: Dict, mode: str = "radar")
         print(f"\n🔧 Méta: model={model}, fallback={is_fallback}")
     
     print("\n" + "=" * 80 + "\n")
+ # ============= v4.13: SÉLECTION ÉQUITIES PAR PROFIL =============
+
+def select_equities_for_profile(
+    eq_filtered: List[dict],
+    profile: str,
+    market_context: Optional[Dict] = None,
+    target_n: int = 25,
+) -> Tuple[List[dict], Dict]:
+    """
+    v4.13: Sélectionne les équités avec scoring différencié par profil.
+    
+    Utilise PROFILE_POLICY pour:
+    1. Filtrer par allowed_equity_presets
+    2. Appliquer min_buffett_score par profil  
+    3. Scorer avec score_weights spécifiques au profil
+    
+    Args:
+        eq_filtered: Liste d'équités pré-filtrées
+        profile: "Agressif", "Modéré", ou "Stable"
+        market_context: Contexte RADAR pour tilts
+        target_n: Nombre cible d'équités
+    
+    Returns:
+        (equities_selected, selection_meta)
+    """
+    if not HAS_PROFILE_POLICY or profile not in PROFILE_POLICY:
+        logger.warning(f"⚠️ PROFILE_POLICY non disponible pour {profile}, fallback uniforme")
+        return sector_balanced_selection(
+            assets=eq_filtered,
+            target_n=min(target_n, len(eq_filtered)),
+            initial_max_per_sector=4,
+            score_field="composite_score",
+            enable_radar_tiebreaker=True,
+            radar_bonus_cap=0.03,
+            radar_min_coverage=0.40,
+            market_context=market_context,
+        )
+    
+    policy = get_profile_policy(profile)
+    logger.info(f"   [{profile}] Applying PROFILE_POLICY: min_buffett={policy['min_buffett_score']}, presets={policy['allowed_equity_presets']}")
+    
+    # 1. Filtrer par min_buffett_score
+    min_buffett = policy.get("min_buffett_score", 0)
+    eq_buffett_filtered = [
+        e for e in eq_filtered
+        if (e.get("_buffett_score") or 0) >= min_buffett
+    ]
+    logger.info(f"   [{profile}] After min_buffett_score >= {min_buffett}: {len(eq_buffett_filtered)}/{len(eq_filtered)}")
+    
+    # 2. Filtrer par allowed_equity_presets (si implémenté)
+    allowed_presets = policy.get("allowed_equity_presets", set())
+    if allowed_presets:
+        eq_preset_filtered = filter_equities_by_profile(eq_buffett_filtered, profile)
+        if len(eq_preset_filtered) >= target_n // 2:
+            eq_buffett_filtered = eq_preset_filtered
+            logger.info(f"   [{profile}] After preset filter: {len(eq_buffett_filtered)}")
+        else:
+            logger.warning(f"   [{profile}] Preset filter too restrictive ({len(eq_preset_filtered)}), keeping all")
+    
+    # 3. Scorer avec les poids spécifiques au profil
+    universe_stats = compute_universe_stats(eq_buffett_filtered)
+    
+    for eq in eq_buffett_filtered:
+        profile_score = score_equity_for_profile(eq, profile, universe_stats)
+        eq["_profile_score"] = profile_score
+        # Combiner avec le composite_score existant (60% profile, 40% original)
+        original_score = eq.get("composite_score", 0) or 0
+        eq["composite_score"] = 0.6 * profile_score + 0.4 * original_score
+    
+    # 4. Log top 5 scores pour diagnostic
+    sorted_by_profile = sorted(eq_buffett_filtered, key=lambda x: x.get("_profile_score", 0), reverse=True)
+    top5 = sorted_by_profile[:5]
+    logger.info(f"   [{profile}] Top 5 by profile_score:")
+    for e in top5:
+        logger.info(f"      • {e.get('name', '?')[:25]}: profile_score={e.get('_profile_score', 0):.2f}, composite={e.get('composite_score', 0):.2f}")
+    
+    # 5. Sélection finale avec sector_balanced
+    equities, selection_meta = sector_balanced_selection(
+        assets=eq_buffett_filtered,
+        target_n=min(target_n, len(eq_buffett_filtered)),
+        initial_max_per_sector=4,
+        score_field="composite_score",
+        enable_radar_tiebreaker=True,
+        radar_bonus_cap=0.03,
+        radar_min_coverage=0.40,
+        market_context=market_context,
+    )
+    
+    # 6. Enrichir la meta avec les infos PROFILE_POLICY
+    selection_meta["profile_policy"] = {
+        "profile": profile,
+        "min_buffett_score": min_buffett,
+        "allowed_presets": list(allowed_presets) if allowed_presets else [],
+        "universe_after_buffett": len(eq_buffett_filtered),
+        "selected": len(equities),
+    }
+    
+    return equities, selection_meta   
 
 
 # ============= PIPELINE PRINCIPAL =============
@@ -658,32 +780,20 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     eq_rows = compute_scores(eq_rows, "equity", None)
     eq_filtered = filter_equities(eq_rows)
     
-  # === PHASE 1: TRACE 3 - After filter_equities ===
+   # === PHASE 1: TRACE 3 - After filter_equities ===
     count_korea(eq_filtered, "3. After filter_equities")
     
-    equities, selection_meta = sector_balanced_selection(
-        assets=eq_filtered, 
-        target_n=min(25, len(eq_filtered)),
-        initial_max_per_sector=4,
-        score_field="composite_score",
-        enable_radar_tiebreaker=True,
-        radar_bonus_cap=0.03,
-        radar_min_coverage=0.40,
-        market_context=market_context,
-    )
+    # === v4.13: Sélection d'équités DIFFÉRENTE par profil ===
+    # On garde eq_filtered comme pool, la sélection se fera par profil dans la boucle
+    # Cela permet d'avoir des équités DIFFÉRENTES entre Agressif, Modéré et Stable
     
-    # Log RADAR status
-    radar_info = selection_meta.get("radar", {})
-    if radar_info.get("enabled"):
-        cov = radar_info.get("coverage", {})
-        swaps = selection_meta.get("swaps", {}).get("count", 0)
-        logger.info(f"   [TOP-N] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']}, RADAR=ON, swaps={swaps})")
-        logger.info(f"   [RADAR] coverage_tilt={cov.get('coverage_tilt', 0):.1%}, coverage_mapping={cov.get('coverage_mapping', 0):.1%}")
-    else:
-        logger.info(f"   [TOP-N] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']}, RADAR=OFF: {radar_info.get('disable_reason', 'N/A')})")
+    # Log du pool global (remplace l'ancienne sélection unique)
+    logger.info(f"   Pool équités post-filtre: {len(eq_filtered)} (sélection par profil dans la boucle)")
     
-    # === PHASE 1: TRACE 4 - After sector quota ===
-    korea_count, korea_in_quota = count_korea(equities, "4. After sector_balanced_selection")
+    # NOTE v4.13: Les lignes suivantes sont SUPPRIMÉES car déplacées dans la boucle par profil:
+    # - sector_balanced_selection() → appelé dans select_equities_for_profile()
+    # - Log RADAR status → fait par profil
+    # - TRACE 4 korea → fait par profil
     
     # === PHASE 2: Tracer les rejets par quota (détaillé) ===
     # Import get_stable_uid si pas déjà fait
@@ -748,11 +858,35 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     feasibility_reports = {}
     
+    # === v4.13: Sélection + optimisation par profil ===
+    equities_by_profile = {}  # Pour diagnostic overlap
+    
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation profil {profile}...")
         
+        # === v4.13: Sélection d'équités spécifique au profil ===
+        profile_equities, profile_selection_meta = select_equities_for_profile(
+            eq_filtered=eq_filtered,
+            profile=profile,
+            market_context=market_context,
+            target_n=min(25, len(eq_filtered)),
+        )
+        
+        equities_by_profile[profile] = profile_equities
+        
+        # Log RADAR status
+        radar_info = profile_selection_meta.get("radar", {})
+        policy_info = profile_selection_meta.get("profile_policy", {})
+        if radar_info.get("enabled"):
+            logger.info(f"   [{profile}] TOP-N: {profile_selection_meta['selected']}/{profile_selection_meta['target_n']} (RADAR=ON, min_buffett={policy_info.get('min_buffett_score', 'N/A')})")
+        else:
+            logger.info(f"   [{profile}] TOP-N: {profile_selection_meta['selected']}/{profile_selection_meta['target_n']} (RADAR=OFF, min_buffett={policy_info.get('min_buffett_score', 'N/A')})")
+        
+        # Construire l'univers avec les équités de CE profil
+        profile_universe = profile_equities + universe_others
+        
         scored_universe = rescore_universe_by_profile(
-            universe, 
+            profile_universe, 
             profile, 
             market_context=market_context
         )
@@ -824,7 +958,34 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             f"   → {len(allocation)} lignes, "
             f"vol={diagnostics.get('portfolio_vol', 'N/A'):.1f}%"
         )
-    
+    # === v4.13: Diagnostic overlap entre profils ===
+    if HAS_PROFILE_POLICY and len(equities_by_profile) == 3:
+        agg_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile.get("Agressif", [])}
+        mod_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile.get("Modéré", [])}
+        stb_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile.get("Stable", [])}
+        
+        overlap_agg_mod = len(agg_ids & mod_ids)
+        overlap_agg_stb = len(agg_ids & stb_ids)
+        overlap_mod_stb = len(mod_ids & stb_ids)
+        overlap_all = len(agg_ids & mod_ids & stb_ids)
+        
+        logger.info("="*60)
+        logger.info("📊 DIAGNOSTIC OVERLAP ÉQUITIES (v4.13 PROFILE_POLICY)")
+        logger.info("="*60)
+        logger.info(f"   Agressif: {len(agg_ids)} équités")
+        logger.info(f"   Modéré:   {len(mod_ids)} équités")
+        logger.info(f"   Stable:   {len(stb_ids)} équités")
+        logger.info(f"   Overlap Agressif ∩ Modéré: {overlap_agg_mod}")
+        logger.info(f"   Overlap Agressif ∩ Stable: {overlap_agg_stb}")
+        logger.info(f"   Overlap Modéré ∩ Stable:   {overlap_mod_stb}")
+        logger.info(f"   Overlap commun (3 profils): {overlap_all}")
+        
+        # Cibles attendues
+        target_overlap_agg_stb = len(agg_ids) * 0.30  # Max 30%
+        if overlap_agg_stb > target_overlap_agg_stb:
+            logger.warning(f"   ⚠️ Overlap Agressif-Stable trop élevé: {overlap_agg_stb} > {target_overlap_agg_stb:.0f} (cible <30%)")
+        else:
+            logger.info(f"   ✅ Overlap Agressif-Stable OK: {overlap_agg_stb} <= {target_overlap_agg_stb:.0f}")
     # === v4.12.2 FIX: Génération de l'audit de sélection avec extraction correcte ===
     if CONFIG.get("generate_selection_audit", False) and SELECTION_AUDIT_AVAILABLE:
         try:
