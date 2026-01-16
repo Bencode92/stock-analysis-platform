@@ -9,6 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.13.0: PROFILE_POLICY integration - stylistically differentiated portfolios per profile
 V4.12.2: FIX - ETF selection audit extraction from all_funds_data (dicts) not universe_others (Assets)
 V4.9.1: Backtest debug file generation - real prices and calculations export
 V4.9.0: RADAR tactical integration - deterministic data-driven tilts
@@ -124,6 +125,7 @@ if HAS_PROFILE_POLICY:
     logger.info("✅ Module PROFILE_POLICY disponible")
 else:
     logger.warning("⚠️ PROFILE_POLICY non disponible, fallback scoring uniforme")
+
 # ============= PHASE 1: KOREA TRACE DIAGNOSTIC =============
 
 def count_korea(items, step_name):
@@ -510,7 +512,9 @@ def print_tactical_context_diagnostic(market_context: Dict, mode: str = "radar")
         print(f"\n🔧 Méta: model={model}, fallback={is_fallback}")
     
     print("\n" + "=" * 80 + "\n")
- # ============= v4.13: SÉLECTION ÉQUITIES PAR PROFIL =============
+
+
+# ============= v4.13: SÉLECTION ÉQUITIES PAR PROFIL =============
 
 def select_equities_for_profile(
     eq_filtered: List[dict],
@@ -549,7 +553,7 @@ def select_equities_for_profile(
         )
     
     policy = get_profile_policy(profile)
-    logger.info(f"   [{profile}] Applying PROFILE_POLICY: min_buffett={policy['min_buffett_score']}, presets={policy['allowed_equity_presets']}")
+    logger.info(f"   [{profile}] Applying PROFILE_POLICY: min_buffett={policy.get('min_buffett_score', 'N/A')}, presets={policy.get('allowed_equity_presets', 'N/A')}")
     
     # 1. Filtrer par min_buffett_score
     min_buffett = policy.get("min_buffett_score", 0)
@@ -607,7 +611,7 @@ def select_equities_for_profile(
         "selected": len(equities),
     }
     
-    return equities, selection_meta   
+    return equities, selection_meta
 
 
 # ============= PIPELINE PRINCIPAL =============
@@ -750,7 +754,6 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
     
-
     # === PHASE 1: TRACE 1 - Initial ===
     count_korea(eq_rows, "1. Initial (après chargement)")
     
@@ -807,7 +810,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     all_funds_data.extend(bonds_data)
     
     logger.info(f"   Fonds combinés (ETF + Bonds): {len(all_funds_data)} ({len(etf_data)} ETF + {len(bonds_data)} Bonds)")
-    # 7. Construire le reste de l'univers
+    
+    # 7. Construire le reste de l'univers (ETF, Bonds, Crypto)
     universe_others = build_scored_universe(
         stocks_data=None,
         etf_data=all_funds_data,
@@ -817,9 +821,12 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         buffett_min_score=0,
     )
     
-    universe = equities + universe_others
+    # === v4.13: L'univers complet sera construit PAR PROFIL dans la boucle ===
+    # universe = equities + universe_others  # SUPPRIMÉ - equities n'existe plus ici
+    # Les équités sont maintenant sélectionnées par profil via select_equities_for_profile()
     
-    logger.info(f"   Univers final: {len(universe)} actifs total")
+    logger.info(f"   Univers ETF/Bonds/Crypto: {len(universe_others)} actifs")
+    logger.info(f"   Pool équités disponible: {len(eq_filtered)} (sélection par profil)")
     
     # 8. Optimiser pour chaque profil
     optimizer = PortfolioOptimizer()
@@ -828,8 +835,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     feasibility_reports = {}
     
-    # === v4.13: Sélection + optimisation par profil ===
-    equities_by_profile = {}  # Pour diagnostic overlap
+    # === v4.13: Dict pour stocker équités par profil (diagnostic overlap) ===
+    equities_by_profile = {}
     
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation profil {profile}...")
@@ -844,19 +851,16 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         
         equities_by_profile[profile] = profile_equities
         
-        # Log RADAR status
-        radar_info = profile_selection_meta.get("radar", {})
+        # Log sélection
         policy_info = profile_selection_meta.get("profile_policy", {})
-        if radar_info.get("enabled"):
-            logger.info(f"   [{profile}] TOP-N: {profile_selection_meta['selected']}/{profile_selection_meta['target_n']} (RADAR=ON, min_buffett={policy_info.get('min_buffett_score', 'N/A')})")
-        else:
-            logger.info(f"   [{profile}] TOP-N: {profile_selection_meta['selected']}/{profile_selection_meta['target_n']} (RADAR=OFF, min_buffett={policy_info.get('min_buffett_score', 'N/A')})")
+        radar_info = profile_selection_meta.get("radar", {})
+        logger.info(f"   [{profile}] Équités sélectionnées: {len(profile_equities)} (min_buffett={policy_info.get('min_buffett_score', 'N/A')})")
         
-        # Construire l'univers avec les équités de CE profil
+        # === v4.13: Construire l'univers POUR CE PROFIL ===
         profile_universe = profile_equities + universe_others
         
         scored_universe = rescore_universe_by_profile(
-            profile_universe, 
+            profile_universe,
             profile, 
             market_context=market_context
         )
@@ -928,6 +932,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             f"   → {len(allocation)} lignes, "
             f"vol={diagnostics.get('portfolio_vol', 'N/A'):.1f}%"
         )
+    
     # === v4.13: Diagnostic overlap entre profils ===
     if HAS_PROFILE_POLICY and len(equities_by_profile) == 3:
         agg_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile.get("Agressif", [])}
@@ -956,6 +961,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"   ⚠️ Overlap Agressif-Stable trop élevé: {overlap_agg_stb} > {target_overlap_agg_stb:.0f} (cible <30%)")
         else:
             logger.info(f"   ✅ Overlap Agressif-Stable OK: {overlap_agg_stb} <= {target_overlap_agg_stb:.0f}")
+    
     # === v4.12.2 FIX: Génération de l'audit de sélection avec extraction correcte ===
     if CONFIG.get("generate_selection_audit", False) and SELECTION_AUDIT_AVAILABLE:
         try:
@@ -965,8 +971,19 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 for asset_id in profile_data.get("allocation", {}).keys():
                     selected_tickers.add(asset_id)
             
-            # v4.12.2 FIX: Match equities correctement
-            equities_final = [e for e in equities if e.get("id") in selected_tickers or e.get("ticker") in selected_tickers or e.get("name") in selected_tickers]
+            # v4.13: Utiliser equities_by_profile pour l'audit
+            all_profile_equities = []
+            for profile_eqs in equities_by_profile.values():
+                all_profile_equities.extend(profile_eqs)
+            
+            # Dédupliquer par ID
+            seen_ids = set()
+            equities_final = []
+            for e in all_profile_equities:
+                eid = e.get("id") or e.get("ticker")
+                if eid not in seen_ids:
+                    seen_ids.add(eid)
+                    equities_final.append(e)
             
             # v4.12.2 FIX: Extraire ETF sélectionnés depuis all_funds_data (qui sont des dicts)
             # et pas depuis universe_others (qui sont des objets Asset)
@@ -1029,19 +1046,32 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                         if weight > 0:
                             allocated_ids.add(asset_id)
             
-            # Filtrer equities pour ne garder que les alloués
+            # v4.13: Filtrer les équités de tous les profils
+            all_profile_equities = []
+            for profile_eqs in equities_by_profile.values():
+                all_profile_equities.extend(profile_eqs)
+            
             equities_actually_allocated = [
-                e for e in equities 
+                e for e in all_profile_equities 
                 if e.get("id") in allocated_ids 
                 or e.get("ticker") in allocated_ids
                 or e.get("name") in allocated_ids
             ]
             
-            logger.info(f"   Selection explainer: {len(equities_actually_allocated)} equities réellement allouées (sur {len(equities)} pré-sélectionnées)")
+            # Dédupliquer
+            seen_ids = set()
+            equities_deduped = []
+            for e in equities_actually_allocated:
+                eid = e.get("id") or e.get("ticker")
+                if eid not in seen_ids:
+                    seen_ids.add(eid)
+                    equities_deduped.append(e)
+            
+            logger.info(f"   Selection explainer: {len(equities_deduped)} equities réellement allouées")
             
             explain_top_caps_selection(
                 eq_rows_initial=eq_rows_before_buffett,
-                equities_final=equities_actually_allocated,  # FIX: vrais alloués
+                equities_final=equities_deduped,
                 config=CONFIG,
                 market_context=market_context,
                 output_path=CONFIG.get("selection_explained_output", "data/selection_explained.json"),
@@ -1053,6 +1083,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             traceback.print_exc()
     
     return portfolios, all_assets
+
+
 def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     """
     Pipeline EU/US Focus : filtre géographique + optimisation.
@@ -1262,7 +1294,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.12.2"
+        merged[profile]["_compliance_audit"]["version"] = "v4.13.0"
         
         if report.removal_ratio > 0.5:
             logger.error(
@@ -1495,6 +1527,8 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
             for r in results if r.get("success")
         }
     }
+
+
 def run_backtest_euus_profiles(config: Dict) -> Dict:
     """
     Exécute le backtest pour les portefeuilles EU/US Focus.
@@ -1612,6 +1646,7 @@ def run_backtest_euus_profiles(config: Dict) -> Dict:
             for r in results if r.get("success")
         }
     }
+
 
 def print_comparison_table(results: List[dict]):
     """
@@ -2275,7 +2310,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.12.2",
+        "version": "v4.13.0",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -2284,6 +2319,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         "backtest_days": CONFIG["backtest_days"],
         "platform_fee_annual_bp": CONFIG.get("platform_fee_annual_bp", 0.0),
         "ter_handling": "embedded_in_etf_prices",
+        "profile_policy_enabled": HAS_PROFILE_POLICY,
         "optimization_modes": {
             profile: portfolios[profile].get("diagnostics", {}).get("optimization_mode", "unknown")
             for profile in ["Agressif", "Modéré", "Stable"]
@@ -2312,7 +2348,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.12.2",
+        "version": "v4.13.0",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -2329,6 +2365,7 @@ def save_portfolios(portfolios: Dict, assets: list):
             "platform_fee_annual_bp": CONFIG.get("platform_fee_annual_bp", 0.0),  # V4.8.7
             "ter_handling": "embedded_in_etf_prices",  # V4.8.7
         },
+        "profile_policy_enabled": HAS_PROFILE_POLICY,
         "portfolios": portfolios,
     }
     
@@ -2339,6 +2376,8 @@ def save_portfolios(portfolios: Dict, assets: list):
     for profile in ["Agressif", "Modéré", "Stable"]:
         n_assets = len(portfolios.get(profile, {}).get("allocation", {}))
         logger.info(f"   {profile}: {n_assets} lignes")
+
+
 def save_portfolios_euus(portfolios: Dict, assets: list):
     """Sauvegarde les portefeuilles EU/US Focus."""
     os.makedirs("data", exist_ok=True)
@@ -2391,7 +2430,7 @@ def save_backtest_results_euus(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.12.2 - Global + EU/US Focus + Asset Rationales")
+    logger.info("🚀 Portfolio Engine v4.13.0 - PROFILE_POLICY + Global + EU/US Focus")
     logger.info("=" * 60)
     
     brief_data = load_brief_data()
@@ -2500,13 +2539,13 @@ def main():
         if backtest_results.get("debug_file"):
             logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
     logger.info("")
-    logger.info("Fonctionnalités v4.12.2:")
-    logger.info("   • ✅ FIX: ETF sélectionnés avec tilts RADAR corrects dans selection_audit.json")
-    logger.info("   • ✅ NEW: Justifications LLM par actif avec contexte RADAR")
+    logger.info("Fonctionnalités v4.13.0:")
+    logger.info(f"   • ✅ PROFILE_POLICY: {'ACTIVÉ' if HAS_PROFILE_POLICY else 'DÉSACTIVÉ'}")
+    logger.info("   • ✅ Sélection d'équités DIFFÉRENTE par profil (Agressif ≠ Modéré ≠ Stable)")
+    logger.info("   • ✅ Scoring différencié: momentum/growth (Agressif), quality/value (Modéré), defensive/dividend (Stable)")
+    logger.info("   • ✅ Diagnostic overlap entre profils")
     logger.info("   • ✅ Portefeuilles EU/US Focus (Europe + USA uniquement)")
-    logger.info("   • ✅ Filtre géographique pour brokers européens")
     logger.info("   • ✅ backtest_debug.json avec prix réels et calculs")
-    logger.info("   • ✅ TER FIX: embedded in ETF prices, NOT deducted separately")
     tactical_mode = CONFIG.get("tactical_mode", "radar")
     if CONFIG.get("use_tactical_context", False):
         smoothing = CONFIG.get("tactical_rules", {}).get("smoothing_alpha", 0.3)
