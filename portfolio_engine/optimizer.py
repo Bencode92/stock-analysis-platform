@@ -578,16 +578,18 @@ def _is_valid_id(val) -> bool:
     return bool(val)
 
 
-# ============= PROFILE CONSTRAINTS v6.10 =============
+# ============= PROFILE CONSTRAINTS v6.11 (PROFILE_POLICY aligned) =============
 
 @dataclass
 class ProfileConstraints:
     """
     Contraintes par profil — vol_target est indicatif (pénalité douce).
     
+    v6.11: Alignement avec PROFILE_POLICY (preset_meta.py v2.3)
+           - min_stock_weight/max_stock_weight cohérents avec equity_min/max_weight
+           - min_stock_positions augmentés pour forcer diversification
     v6.10: Stable vol_target aligné sur réalité (6%), vol_tolerance réduit (3%)
     v6.9: Stable bonds_min réduit (35%), vol_tolerance augmenté (5%)
-    v6.8: Ajout vol_tolerance spécifique par profil (Stable = 4% au lieu de 3%)
     """
     name: str
     vol_target: float           # LEVIER 1: Volatilité cible (%)
@@ -599,18 +601,19 @@ class ProfileConstraints:
     max_region: float = 50.0
     min_assets: int = 10
     max_assets: int = 18
-   # v6.21 P0 PARTNER: Turnover control
+    # v6.21 P0 PARTNER: Turnover control
     max_turnover: float = 25.0       # Max turnover % par rebalancement
     turnover_penalty: float = 0.10   # Lambda pénalité dans objectif
     # === v2.2 EU/US Focus ===
     euus_mode: bool = False          # Si True, utilise caps EU/US
-    # === P1 FIX: Sleeve Actions ===
+    # === v6.11: Sleeve Actions (aligné PROFILE_POLICY) ===
     min_stock_weight: float = 0.0      # % minimum en Actions
+    max_stock_weight: float = 100.0    # % maximum en Actions (NOUVEAU)
     min_stock_positions: int = 0       # nb minimum de lignes Actions
     stock_pos_threshold: float = 1.0   # % min pour compter une ligne action
 
 
-# v6.10 FIX: vol_target Stable aligné sur réalité (6% au lieu de 8%)
+# v6.11: Alignement avec PROFILE_POLICY (preset_meta.py v2.3)
 PROFILES = {
     "Agressif": ProfileConstraints(
         name="Agressif", 
@@ -619,11 +622,12 @@ PROFILES = {
         crypto_max=10.0, 
         bonds_min=5.0,
         max_sector=35.0,
-        max_turnover=30.0,        # P0 PARTNER
-        turnover_penalty=0.05,    # P0 PARTNER
-        # P1 FIX: Sleeve Actions
-        min_stock_weight=45.0,
-        min_stock_positions=10,
+        max_turnover=30.0,
+        turnover_penalty=0.05,
+        # v6.11: Aligné avec PROFILE_POLICY["Agressif"]
+        min_stock_weight=50.0,      # equity_min_weight = 0.50
+        max_stock_weight=75.0,      # equity_max_weight = 0.75
+        min_stock_positions=12,     # min_equity_positions = 12
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -631,11 +635,12 @@ PROFILES = {
         vol_tolerance=3.0,
         crypto_max=5.0, 
         bonds_min=15.0,
-        max_turnover=25.0,        # P0 PARTNER
-        turnover_penalty=0.10,    # P0 PARTNER
-        # P1 FIX: Sleeve Actions
-        min_stock_weight=25.0,
-        min_stock_positions=6,
+        max_turnover=25.0,
+        turnover_penalty=0.10,
+        # v6.11: Aligné avec PROFILE_POLICY["Modéré"]
+        min_stock_weight=40.0,      # equity_min_weight = 0.40
+        max_stock_weight=60.0,      # equity_max_weight = 0.60
+        min_stock_positions=10,     # min_equity_positions = 10
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -643,13 +648,16 @@ PROFILES = {
         vol_tolerance=3.0,
         crypto_max=0.0, 
         bonds_min=35.0,
-        max_turnover=15.0,        # P0 PARTNER
-        turnover_penalty=0.20,    # P0 PARTNER
-        # P1 FIX: Sleeve Actions (pas de minimum pour Stable)
-        min_stock_weight=0.0,
-        min_stock_positions=0,
+        max_turnover=15.0,
+        turnover_penalty=0.20,
+        # v6.11: Aligné avec PROFILE_POLICY["Stable"]
+        min_stock_weight=25.0,      # equity_min_weight = 0.25
+        max_stock_weight=45.0,      # equity_max_weight = 0.45
+        min_stock_positions=8,      # min_equity_positions = 8
     ),
 }
+
+
 # === v2.2: PROFILES EU/US Focus ===
 PROFILES_EUUS = {
     "Agressif": ProfileConstraints(
@@ -662,6 +670,10 @@ PROFILES_EUUS = {
         max_turnover=30.0,
         turnover_penalty=0.05,
         euus_mode=True,
+        # v6.11: Aligné avec PROFILE_POLICY["Agressif"]
+        min_stock_weight=50.0,
+        max_stock_weight=75.0,
+        min_stock_positions=12,
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -672,6 +684,10 @@ PROFILES_EUUS = {
         max_turnover=25.0,
         turnover_penalty=0.10,
         euus_mode=True,
+        # v6.11: Aligné avec PROFILE_POLICY["Modéré"]
+        min_stock_weight=40.0,
+        max_stock_weight=60.0,
+        min_stock_positions=10,
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -682,6 +698,10 @@ PROFILES_EUUS = {
         max_turnover=15.0,
         turnover_penalty=0.20,
         euus_mode=True,
+        # v6.11: Aligné avec PROFILE_POLICY["Stable"]
+        min_stock_weight=25.0,
+        max_stock_weight=45.0,
+        min_stock_positions=8,
     ),
 }
 
@@ -1779,6 +1799,14 @@ class PortfolioOptimizer:
                 return np.sum(w[idx]) - mv
             constraints.append({"type": "ineq", "fun": min_stocks_constraint})
             logger.info(f"[P1 FIX] Added min_stock_weight >= {profile.min_stock_weight:.1f}%")
+        
+        # 11. v6.11: Contrainte maximum Actions (aligné PROFILE_POLICY)
+        if stocks_idx and hasattr(profile, 'max_stock_weight') and profile.max_stock_weight < 100.0:
+            max_val = profile.max_stock_weight / 100.0
+            def max_stocks_constraint(w, idx=stocks_idx, mv=max_val):
+                return mv - np.sum(w[idx])  # max - sum >= 0
+            constraints.append({"type": "ineq", "fun": max_stocks_constraint})
+            logger.info(f"[v6.11] Added max_stock_weight <= {profile.max_stock_weight:.1f}%")
         
         return constraints
     
