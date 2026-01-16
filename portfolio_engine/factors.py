@@ -1,7 +1,12 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v3.0.0 — SEUL MOTEUR D'ALPHA
+FactorScorer v3.0.1 — SEUL MOTEUR D'ALPHA
 =========================================
+
+v3.0.1 Changes (FIX STALE CONTEXT WARNING):
+- FIX: Warning "stale context" ne se déclenche plus si market_context est vide
+- NEW: _has_meaningful_context() helper pour vérifier si context a des données
+- Logique: warning SEULEMENT si context a des données ET loaded_at absent/ancien
 
 v3.0.0 Changes (RANK NORMALIZATION - Step 1.2):
 - NEW: USE_RANK_NORMALIZATION config flag (default: True)
@@ -712,6 +717,38 @@ def _build_country_lookup(indices_data: Dict) -> Dict:
     return lookup
 
 
+def _has_meaningful_context(market_context: Dict) -> bool:
+    """
+    v3.0.1: Vérifie si le market_context contient des données significatives.
+    
+    Retourne True si au moins un de ces éléments est présent et non-vide:
+    - sectors (dict non-vide)
+    - indices (dict non-vide)  
+    - macro_tilts différent du DEFAULT
+    
+    Utilisé pour éviter le warning "stale" sur un context vide.
+    """
+    if not market_context:
+        return False
+    
+    # Vérifier sectors
+    sectors = market_context.get("sectors", {})
+    if sectors and isinstance(sectors, dict) and len(sectors) > 0:
+        return True
+    
+    # Vérifier indices
+    indices = market_context.get("indices", {})
+    if indices and isinstance(indices, dict) and len(indices) > 0:
+        return True
+    
+    # Vérifier macro_tilts (différent du default)
+    macro_tilts = market_context.get("macro_tilts")
+    if macro_tilts and macro_tilts != DEFAULT_MACRO_TILTS:
+        return True
+    
+    return False
+
+
 def _get_market_context_age(loaded_at: Optional[str]) -> Tuple[Optional[float], bool]:
     """
     v2.4.4: Calcule l'âge du market context en jours.
@@ -1146,11 +1183,15 @@ def compute_buffett_quality_score(asset: dict) -> float:
     return round(weighted_score, 1)
 
 
-# ============= FACTOR SCORER v3.0.0 =============
+# ============= FACTOR SCORER v3.0.1 =============
 
 class FactorScorer:
     """
     Calcule des scores multi-facteur adaptés au profil.
+    
+    v3.0.1 — FIX STALE CONTEXT WARNING:
+    - Warning "stale context" ne se déclenche plus si market_context est vide
+    - Nouvelle méthode _has_meaningful_context() pour vérifier si context a des données
     
     v3.0.0 — RANK NORMALIZATION (Step 1.2):
     - Nouvelle méthode _rank_by_class() pour normalisation par rang
@@ -1234,15 +1275,24 @@ class FactorScorer:
             }
             logger.debug(f"v2.4.6: Normalized macro_tilts: {self._macro_tilts}")
         
-        # v2.4.4: Compute staleness
+        # v3.0.1 FIX: Compute staleness SEULEMENT si context a des données
         loaded_at = self.market_context.get("loaded_at")
         self._market_context_age_days, self._market_context_stale = _get_market_context_age(loaded_at)
         
-        if self._market_context_stale:
+        # v3.0.1 FIX: Ne warning QUE si le context contient des données significatives
+        # Un context vide n'est pas "stale", il est juste "not configured"
+        has_data = _has_meaningful_context(self.market_context)
+        
+        if has_data and self._market_context_stale:
             logger.warning(
                 f"Market context is stale: {self._market_context_age_days} days old "
                 f"(threshold: {MARKET_CONTEXT_STALE_DAYS} days)"
             )
+        elif not has_data:
+            # Context vide = pas de warning, juste debug
+            logger.debug("Market context is empty or default - no staleness check needed")
+            # Marquer comme non-stale pour éviter les faux positifs
+            self._market_context_stale = False
     
     def _track_missing(self, idx: int, field: str):
         """
@@ -1998,7 +2048,7 @@ class FactorScorer:
                 "category_original": asset.get("category", ""),
                 "fund_type": asset.get("fund_type", ""),
                 "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
-                "scoring_version": "v3.0.0",
+                "scoring_version": "v3.0.1",
                 "normalization_method": "rank" if USE_RANK_NORMALIZATION else "zscore",
                 "ter_confidence": self._ter_confidence.get(i),
                 "missing_critical_fields": missing_fields_list,
@@ -2056,7 +2106,7 @@ class FactorScorer:
         # v3.0.0: Log normalization method
         norm_method = "RANK" if USE_RANK_NORMALIZATION else "Z-SCORE"
         logger.info(
-            f"Scores v3.0.0 calculés: {n} actifs (profil {self.profile}, norm={norm_method}) | "
+            f"Scores v3.0.1 calculés: {n} actifs (profil {self.profile}, norm={norm_method}) | "
             f"Score moyen global: {composite.mean():.3f}"
         )
         
@@ -2117,9 +2167,9 @@ def get_factor_weights_summary() -> Dict[str, Dict[str, float]]:
 def compare_factor_profiles() -> str:
     """Génère une comparaison textuelle des profils."""
     lines = [
-        "Comparaison des poids factoriels par profil (v3.0.0):",
+        "Comparaison des poids factoriels par profil (v3.0.1):",
         "",
-        "v3.0.0: RANK NORMALIZATION (Step 1.2) - distribution uniforme des scores",
+        "v3.0.1: FIX stale context warning + RANK NORMALIZATION",
         ""
     ]
     
@@ -2245,7 +2295,18 @@ def compute_radar_bonus_from_matching(
 if __name__ == "__main__":
     print(compare_factor_profiles())
     print("\n" + "=" * 60)
-    print("Test v3.0.0: RANK NORMALIZATION...")
+    print("Test v3.0.1: STALE CONTEXT FIX + RANK NORMALIZATION...")
+    
+    # Test _has_meaningful_context
+    print("\n--- Test _has_meaningful_context() ---")
+    
+    empty_ctx = {}
+    default_ctx = {"macro_tilts": DEFAULT_MACRO_TILTS}
+    data_ctx = {"sectors": {"tech": [{"name": "Tech"}]}, "loaded_at": datetime.now().isoformat()}
+    
+    print(f"Empty context: {_has_meaningful_context(empty_ctx)}")  # False
+    print(f"Default tilts only: {_has_meaningful_context(default_ctx)}")  # False
+    print(f"With sectors data: {_has_meaningful_context(data_ctx)}")  # True
     
     # Test _rank_by_class
     print("\n--- Test _rank_by_class() ---")
@@ -2308,5 +2369,5 @@ if __name__ == "__main__":
         print(f"  {a['symbol']}: score={a['composite_score']:.3f} (norm={meta.get('normalization_method', 'unknown')})")
         print(f"    momentum={a['factor_scores']['momentum']:.2f}, low_vol={a['factor_scores']['low_vol']:.2f}")
     
-    print("\n✅ v3.0.0 RANK NORMALIZATION test completed!")
+    print("\n✅ v3.0.1 STALE CONTEXT FIX + RANK NORMALIZATION test completed!")
     print(f"   Normalization method: {'RANK' if USE_RANK_NORMALIZATION else 'Z-SCORE'}")
