@@ -1,10 +1,10 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une approche agressive, visant des rendements élevés à travers une allocation diversifiée dans des actifs à forte croissance. Toutefois, la forte exposition aux actions et aux cryptomonnaies peut entraîner une volatilité significative. De plus, les fluctuations des marchés émergents, comme le Brésil, peuvent accroître les risques. Il est important de considérer ces éléments avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive, visant à maximiser les rendements à travers une sélection d'actifs diversifiés. Toutefois, il est exposé à des risques de volatilité élevés, notamment en raison de la forte pondération dans les actions et les cryptomonnaies. De plus, l'exposition aux marchés émergents, comme le Brésil, peut accentuer les fluctuations. Il est important de garder à l'esprit que tout investissement comporte des risques de perte en capital. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "AMERICAN EXPRESS": "14%",
-      "JACK HENRY AND ASSOCIATES INC": "5%",
-      "ASSICURAZIONI GENERALI": "15%"
+      "CHUBB LTD": "15%",
+      "JACK HENRY AND ASSOCIATES INC": "5%"
     },
     "ETF": {
       "Avantis International Small Cap Value ETF": "15%",
@@ -18,29 +18,29 @@
       "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund": "5%"
     },
     "Crypto": {
-      "NFT/USD": "4%",
       "BTS/USD": "4%",
-      "GNO/USD": "3%"
+      "LAZIO/USD": "4%",
+      "NFT/USD": "3%"
     },
     "_tickers": {
       "AXP": 0.15,
+      "CB": 0.15,
       "AGG": 0.05,
       "AVDV": 0.15,
       "JKHY": 0.05,
       "AVIG": 0.05,
-      "G": 0.15,
       "BAB": 0.05,
       "AAAU": 0.15,
       "AGGY": 0.05,
       "BRZU": 0.05,
-      "NFT/USD": 0.035,
       "BTS/USD": 0.035,
-      "GNO/USD": 0.03
+      "LAZIO/USD": 0.035,
+      "NFT/USD": 0.03
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 12.42,
+      "vol_realized": 11.73,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -50,15 +50,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 12.42,
-          "slack": -2.58,
+          "observed": 11.73,
+          "slack": -3.27,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": -5.58
+            "diff_from_target": -6.27
           }
         },
         {
@@ -106,18 +106,18 @@
           "details": {
             "breakdown": [
               {
-                "id": "NFT/USD",
-                "name": "NFT/USD",
-                "weight": 3.5
-              },
-              {
                 "id": "BTS/USD",
                 "name": "BTS/USD",
                 "weight": 3.5
               },
               {
-                "id": "GNO/USD",
-                "name": "GNO/USD",
+                "id": "LAZIO/USD",
+                "name": "LAZIO/USD",
+                "weight": 3.5
+              },
+              {
+                "id": "NFT/USD",
+                "name": "NFT/USD",
                 "weight": 3.0
               }
             ]
@@ -143,11 +143,11 @@
                 "weight": 15.0
               },
               {
-                "id": "Avantis International Small Cap Value ETF",
+                "id": "EQ_93",
                 "weight": 15.0
               },
               {
-                "id": "EQ_610",
+                "id": "Avantis International Small Cap Value ETF",
                 "weight": 15.0
               },
               {
@@ -184,21 +184,19 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 20.0,
-          "slack": 30.0,
+          "observed": 35.0,
+          "slack": 15.0,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
-              "Etats-Unis": 20.0,
-              "Global": 20.0,
-              "Italie": 15.0
+              "Etats-Unis": 35.0,
+              "Global": 20.0
             },
             "all_regions": {
               "Global": 65.0,
-              "Etats-Unis": 20.0,
-              "Italie": 15.0
+              "Etats-Unis": 35.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -327,7 +325,7 @@
       },
       "quality_score": 87.1,
       "recommendations": [
-        "🟠 VIOLATED: volatility exceeded by 2.6% — reduce exposure",
+        "🟠 VIOLATED: volatility exceeded by 3.3% — reduce exposure",
         "🟡 BINDING: crypto_max at 10.0% (cap=10.0%) — monitor closely",
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
         "🟡 BINDING: max_sector at 35.0% (cap=35.0%) — monitor closely",
@@ -347,8 +345,7 @@
         },
         "by_region": {
           "Global": 65.0,
-          "Etats-Unis": 20.0,
-          "Italie": 15.0
+          "Etats-Unis": 35.0
         },
         "by_risk_bucket": {
           "equity_like": 50.0,
@@ -395,6 +392,17 @@
           "exchange": null
         },
         {
+          "id": "EQ_93",
+          "ticker": "CB",
+          "name": "CHUBB LTD",
+          "weight_pct": 15.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Finance",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
           "id": "Avantis International Small Cap Value ETF",
           "ticker": "AVDV",
           "name": "Avantis International Small Cap Value ETF",
@@ -403,17 +411,6 @@
           "risk_bucket": "equity_like",
           "sector": "Diversified",
           "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "EQ_610",
-          "ticker": "G",
-          "name": "ASSICURAZIONI GENERALI",
-          "weight_pct": 15.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Finance",
-          "region": "Italie",
           "exchange": null
         },
         {
@@ -494,17 +491,6 @@
           "exchange": null
         },
         {
-          "id": "NFT/USD",
-          "ticker": "NFT/USD",
-          "name": "NFT/USD",
-          "weight_pct": 3.5,
-          "category": "Crypto",
-          "risk_bucket": "crypto",
-          "sector": "Crypto",
-          "region": "Global",
-          "exchange": null
-        },
-        {
           "id": "BTS/USD",
           "ticker": "BTS/USD",
           "name": "BTS/USD",
@@ -516,9 +502,20 @@
           "exchange": null
         },
         {
-          "id": "GNO/USD",
-          "ticker": "GNO/USD",
-          "name": "GNO/USD",
+          "id": "LAZIO/USD",
+          "ticker": "LAZIO/USD",
+          "name": "LAZIO/USD",
+          "weight_pct": 3.5,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "NFT/USD",
+          "ticker": "NFT/USD",
+          "name": "NFT/USD",
           "weight_pct": 3.0,
           "category": "Crypto",
           "risk_bucket": "crypto",
@@ -554,8 +551,7 @@
       },
       "by_region": {
         "Global": 65.0,
-        "Etats-Unis": 20.0,
-        "Italie": 15.0
+        "Etats-Unis": 35.0
       },
       "by_risk_bucket": {
         "equity_like": 50.0,
@@ -603,15 +599,15 @@
       "ready_for_execution": true
     },
     "_limitations": [
-      "Volatilité réalisée (12.4%) éloignée de la cible (18.0%) - écart de 5.6%."
+      "Volatilité réalisée (11.7%) éloignée de la cible (18.0%) - écart de 6.3%."
     ],
     "_asset_details": [
       {
         "name": "AMERICAN EXPRESS",
         "ticker": "AXP",
-        "rationale": "American Express présente un ROE élevé de 33.47% et un score qualité Buffett de 80, ce qui indique une solide performance financière. Bien qu'il ait une performance YTD négative, cela peut représenter une opportunité d'achat dans un secteur financier qui pourrait rebondir.",
+        "rationale": "American Express présente un ROE élevé de 33.47% et un score qualité Buffett de 80.0, ce qui témoigne de sa solidité financière. Bien que sa performance YTD soit négative, son potentiel de reprise dans un régime 'risk-on' en fait un choix intéressant.",
         "role": "core",
-        "risk_note": "Volatilité élevée à 27.27%, ce qui peut affecter le portefeuille en période de turbulence.",
+        "risk_note": "Volatilité élevée (27.25%) et exposition au secteur financier en difficulté.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "Actions",
@@ -619,19 +615,39 @@
         "country": "Etats-Unis",
         "metrics": {
           "roe": 33.47,
-          "pe_ratio": 25.259583,
+          "pe_ratio": 24.099394,
           "dividend_yield": 0.91,
-          "ytd": "-3.53",
-          "volatility": "27.27",
+          "ytd": "-3.50",
+          "volatility": "27.25",
+          "buffett_score": 80.0
+        }
+      },
+      {
+        "name": "CHUBB LTD",
+        "ticker": "CB",
+        "rationale": "Chubb LTD affiche une valorisation attractive avec un P/E de 12.55, et son rendement dividende de 1.21% en fait un choix intéressant pour les investisseurs à la recherche de revenus. Sa performance YTD légèrement négative pourrait représenter une opportunité d'achat.",
+        "role": "income",
+        "risk_note": "Exposition au secteur financier, qui montre des signes de faiblesse.",
+        "market_context_link": null,
+        "weight_pct": 15.0,
+        "category": "Actions",
+        "sector": "Finance",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": 14.09,
+          "pe_ratio": 12.551839,
+          "dividend_yield": 1.21,
+          "ytd": "-2.70",
+          "volatility": "19.31",
           "buffett_score": 80.0
         }
       },
       {
         "name": "iShares Core U.S. Aggregate Bond ETF",
         "ticker": "AGG",
-        "rationale": "Cet ETF offre une exposition diversifiée aux obligations américaines, ce qui peut stabiliser le portefeuille face à la volatilité des actions. Bien qu'il ait une performance YTD modeste, il sert de protection contre les fluctuations du marché.",
+        "rationale": "Cet ETF offre une exposition diversifiée aux obligations américaines, ce qui peut stabiliser le portefeuille dans un environnement volatile. Sa faible volatilité de 5.95% en fait un bon choix pour la gestion des risques.",
         "role": "hedge",
-        "risk_note": "Faible rendement dans un environnement de taux d'intérêt croissants.",
+        "risk_note": "Risque de taux d'intérêt en hausse qui pourrait affecter les rendements obligataires.",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
@@ -641,7 +657,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.35,
+          "ytd": 0.5,
           "volatility": 5.95,
           "buffett_score": null
         }
@@ -649,9 +665,9 @@
       {
         "name": "Avantis International Small Cap Value ETF",
         "ticker": "AVDV",
-        "rationale": "Ce fonds investit dans des petites entreprises à valeur internationale, offrant un potentiel de croissance à long terme. Sa performance YTD positive de 2.9% et sa volatilité modérée en font un bon ajout pour diversifier le portefeuille.",
+        "rationale": "Cet ETF investit dans des petites capitalisations internationales, offrant un potentiel de croissance à long terme dans un contexte de 'risk-on'. Sa performance YTD positive de 3.78% indique un bon momentum.",
         "role": "satellite",
-        "risk_note": "Exposition aux fluctuations des devises et aux risques géopolitiques.",
+        "risk_note": "Exposition à la volatilité des marchés internationaux.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
@@ -661,7 +677,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 2.9,
+          "ytd": 3.78,
           "volatility": 15.47,
           "buffett_score": null
         }
@@ -669,9 +685,9 @@
       {
         "name": "JACK HENRY AND ASSOCIATES INC",
         "ticker": "JKHY",
-        "rationale": "Avec un ROE de 21.39% et une performance YTD de 6.68%, Jack Henry se distingue dans le secteur financier en offrant des solutions technologiques. Son score qualité Buffett de 80 indique une gestion solide.",
+        "rationale": "Jack Henry présente un ROE de 21.39% et une performance YTD de 7.54%, ce qui montre sa solidité et son potentiel de croissance. Bien que dans le secteur financier, son modèle d'affaires est moins sensible aux fluctuations économiques.",
         "role": "core",
-        "risk_note": "Concentration sectorielle dans le secteur financier, qui peut être volatile.",
+        "risk_note": "Volatilité de 22.94% et exposition au secteur financier.",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Actions",
@@ -679,19 +695,19 @@
         "country": "Etats-Unis",
         "metrics": {
           "roe": 21.39,
-          "pe_ratio": 28.74772,
-          "dividend_yield": 1.22,
-          "ytd": "6.68",
-          "volatility": "22.91",
+          "pe_ratio": 28.81915,
+          "dividend_yield": 1.21,
+          "ytd": "7.54",
+          "volatility": "22.94",
           "buffett_score": 80.0
         }
       },
       {
         "name": "Avantis Core Fixed Income ETF",
         "ticker": "AVIG",
-        "rationale": "Cet ETF offre une exposition diversifiée aux obligations, ce qui aide à équilibrer le risque global du portefeuille. Sa performance YTD est modeste, mais il joue un rôle crucial dans la réduction de la volatilité.",
+        "rationale": "Cet ETF offre une exposition diversifiée aux obligations, ce qui contribue à la stabilité du portefeuille. Sa performance YTD de 0.51% et sa faible volatilité sont des atouts en période d'incertitude.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt pouvant affecter la valeur des obligations.",
+        "risk_note": "Risque de taux d'intérêt et de crédit.",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
@@ -701,36 +717,16 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.36,
+          "ytd": 0.51,
           "volatility": 5.96,
           "buffett_score": null
         }
       },
       {
-        "name": "ASSICURAZIONI GENERALI",
-        "ticker": "G",
-        "rationale": "Avec un P/E attractif de 13.76 et un rendement dividende de 2.72%, Assicurazioni Generali représente une opportunité d'investissement solide dans le secteur financier européen. Sa performance YTD de 2.66% est prometteuse.",
-        "role": "core",
-        "risk_note": "Risque lié à la réglementation et aux conditions économiques en Europe.",
-        "market_context_link": null,
-        "weight_pct": 15.0,
-        "category": "Actions",
-        "sector": "Finance",
-        "country": "Italie",
-        "metrics": {
-          "roe": 21.5,
-          "pe_ratio": 13.762846,
-          "dividend_yield": 2.72,
-          "ytd": "2.66",
-          "volatility": "28.49",
-          "buffett_score": 80.0
-        }
-      },
-      {
         "name": "Invesco Taxable Municipal Bond ETF",
         "ticker": "BAB",
-        "rationale": "Cet ETF offre une exposition aux obligations municipales imposables, ce qui peut fournir un revenu stable. Sa performance YTD est modeste, mais il contribue à la diversification du portefeuille.",
-        "role": "hedge",
+        "rationale": "Cet ETF fournit une exposition aux obligations municipales imposables, offrant un rendement stable avec une volatilité modérée. Sa performance YTD de 0.81% est un bon complément à un portefeuille diversifié.",
+        "role": "income",
         "risk_note": "Risque de crédit associé aux obligations municipales.",
         "market_context_link": null,
         "weight_pct": 5.0,
@@ -741,7 +737,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.63,
+          "ytd": 0.81,
           "volatility": 8.11,
           "buffett_score": null
         }
@@ -749,9 +745,9 @@
       {
         "name": "Goldman Sachs Physical Gold ETF",
         "ticker": "AAAU",
-        "rationale": "L'or est traditionnellement considéré comme une valeur refuge en période d'incertitude économique. Avec une performance YTD de 5.92%, cet actif peut servir de couverture contre l'inflation et la volatilité du marché.",
+        "rationale": "L'or est traditionnellement considéré comme une valeur refuge, et cet ETF permet d'accéder facilement à l'or physique. Sa performance YTD de 6.97% en période d'incertitude économique est un atout.",
         "role": "hedge",
-        "risk_note": "Volatilité des prix de l'or en fonction des conditions économiques mondiales.",
+        "risk_note": "Volatilité liée aux fluctuations des prix de l'or.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
@@ -761,7 +757,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 5.92,
+          "ytd": 6.97,
           "volatility": 16.25,
           "buffett_score": null
         }
@@ -769,9 +765,9 @@
       {
         "name": "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund",
         "ticker": "AGGY",
-        "rationale": "Ce fonds vise à offrir un rendement amélioré par rapport aux obligations traditionnelles, ce qui peut être bénéfique dans un environnement de taux d'intérêt bas. Sa performance YTD est modeste mais stable.",
-        "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt pouvant affecter les rendements.",
+        "rationale": "Ce fonds offre une stratégie de rendement amélioré sur les obligations américaines, ce qui peut générer des revenus supplémentaires. Sa performance YTD de 0.62% est stable dans un environnement de taux bas.",
+        "role": "income",
+        "risk_note": "Risque de taux d'intérêt et de crédit.",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
@@ -781,7 +777,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.41,
+          "ytd": 0.62,
           "volatility": 5.88,
           "buffett_score": null
         }
@@ -789,9 +785,9 @@
       {
         "name": "Direxion Daily MSCI Brazil Bull 3X Shares",
         "ticker": "BRZU",
-        "rationale": "Ce fonds offre une exposition à un marché émergent avec un potentiel de croissance élevé, bien que très volatile. Sa nature à effet de levier peut offrir des rendements élevés en période de croissance.",
+        "rationale": "Ce fonds offre une exposition à la croissance potentielle du marché brésilien avec un effet de levier, ce qui peut générer des rendements élevés dans un contexte favorable. Sa performance YTD de 5.8% indique un bon momentum.",
         "role": "satellite",
-        "risk_note": "Risque de perte amplifiée en cas de retournement du marché.",
+        "risk_note": "Risque élevé en raison de l'effet de levier et de la volatilité du marché brésilien.",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "ETF",
@@ -801,19 +797,59 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 2.56,
+          "ytd": 5.8,
           "volatility": 46.93,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "BTS/USD",
+        "ticker": "BTS/USD",
+        "rationale": "BTS/USD représente une opportunité d'investissement dans le secteur des cryptomonnaies, qui peut offrir des rendements élevés. Sa performance YTD de 4.22% montre un potentiel de croissance dans un marché dynamique.",
+        "role": "satellite",
+        "risk_note": "Volatilité élevée et incertitudes réglementaires dans le secteur des cryptomonnaies.",
+        "market_context_link": null,
+        "weight_pct": 3.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 4.22,
+          "volatility": 39.87,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "LAZIO/USD",
+        "ticker": "LAZIO/USD",
+        "rationale": "LAZIO/USD offre une exposition à une cryptomonnaie avec une performance YTD de 9.36%, ce qui indique un bon potentiel de croissance. Cela diversifie le portefeuille avec des actifs numériques.",
+        "role": "satellite",
+        "risk_note": "Volatilité importante et risques associés au marché des cryptomonnaies.",
+        "market_context_link": null,
+        "weight_pct": 3.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 9.36,
+          "volatility": 42.82,
           "buffett_score": null
         }
       },
       {
         "name": "NFT/USD",
         "ticker": "NFT/USD",
-        "rationale": "Les NFTs représentent une classe d'actifs émergente avec un potentiel de croissance significatif. Leur inclusion dans le portefeuille peut offrir une diversification et un potentiel de rendement élevé.",
+        "rationale": "NFT/USD permet d'accéder à un marché émergent avec un potentiel de rendement élevé. Sa performance YTD de 2.86% montre une certaine résilience dans un environnement volatile.",
         "role": "satellite",
-        "risk_note": "Volatilité extrême et incertitude réglementaire dans le secteur des cryptomonnaies.",
+        "risk_note": "Risque de liquidité et volatilité élevée dans le marché des NFT.",
         "market_context_link": null,
-        "weight_pct": 3.5,
+        "weight_pct": 3.0,
         "category": "Crypto",
         "sector": "Crypto",
         "country": "Global",
@@ -825,54 +861,14 @@
           "volatility": 38.59,
           "buffett_score": null
         }
-      },
-      {
-        "name": "BTS/USD",
-        "ticker": "BTS/USD",
-        "rationale": "BTS/USD est une cryptomonnaie qui a montré une performance solide avec un rendement YTD de 6.12%. Son inclusion peut diversifier le portefeuille et capter la tendance croissante des actifs numériques.",
-        "role": "satellite",
-        "risk_note": "Risque de volatilité et de fluctuations de marché importantes.",
-        "market_context_link": null,
-        "weight_pct": 3.5,
-        "category": "Crypto",
-        "sector": "Crypto",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": 6.12,
-          "volatility": 37.39,
-          "buffett_score": null
-        }
-      },
-      {
-        "name": "GNO/USD",
-        "ticker": "GNO/USD",
-        "rationale": "Avec une performance YTD de 11.21%, GNO/USD représente une opportunité d'investissement dans le secteur des cryptomonnaies. Son potentiel de croissance est élevé, mais il est associé à des risques significatifs.",
-        "role": "satellite",
-        "risk_note": "Risque de volatilité extrême et d'incertitude réglementaire.",
-        "market_context_link": null,
-        "weight_pct": 3.0,
-        "category": "Crypto",
-        "sector": "Crypto",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": 11.21,
-          "volatility": 36.04,
-          "buffett_score": null
-        }
       }
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie modérée, équilibrant des actions et des obligations pour viser une croissance stable. L'exposition aux petites capitalisations et aux cryptomonnaies peut offrir des rendements intéressants, mais cela s'accompagne de risques de volatilité. De plus, la dépendance aux performances du secteur financier peut poser des défis en période d'incertitude économique. Il est essentiel de garder ces risques à l'esprit lors de l'évaluation de ce portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie modérée, équilibrant les actions et les obligations pour viser une croissance stable. Bien qu'il soit moins risqué que le portefeuille agressif, il reste exposé à des fluctuations du marché, notamment dans le secteur des actions. Les actifs cryptographiques, bien que minoritaires, peuvent également introduire une volatilité supplémentaire. Il est essentiel de considérer que tout investissement comporte des risques de perte en capital. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "AMERICAN EXPRESS": "16%",
-      "JACK HENRY AND ASSOCIATES INC": "15%"
+      "CHUBB LTD": "17%",
+      "AMERICAN EXPRESS": "15%"
     },
     "ETF": {
       "Avantis International Small Cap Value ETF": "15%",
@@ -883,29 +879,31 @@
       "Avantis Core Fixed Income ETF": "8%",
       "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund": "8%",
       "JPMorgan BetaBuilders U.S. Aggregate Bond ETF": "8%",
-      "Anfield Universal Fixed Income Fund": "7%"
+      "ActivePassive Core Bond ETF": "6%"
     },
     "Crypto": {
-      "NFT/USD": "0%",
-      "BTS/USD": "0%"
+      "BTS/USD": "0%",
+      "GNO/USD": "0%",
+      "NFT/USD": "0%"
     },
     "_tickers": {
+      "CB": 0.15,
       "AXP": 0.15,
-      "JKHY": 0.15,
       "AGG": 0.08,
       "AVDV": 0.15,
       "DFIV": 0.15,
       "AVIG": 0.08,
       "AGGY": 0.08,
       "BBAG": 0.08,
-      "AFIF": 0.07,
-      "NFT/USD": 0.005,
-      "BTS/USD": 0.005
+      "APCB": 0.065,
+      "BTS/USD": 0.005,
+      "GNO/USD": 0.005,
+      "NFT/USD": 0.005
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 7.34,
+      "vol_realized": 8.38,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -915,23 +913,23 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 7.34,
-          "slack": -1.66,
+          "observed": 8.38,
+          "slack": -0.62,
           "binding": false,
           "status": "VIOLATED",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -4.66
+            "diff_from_target": -3.62
           }
         },
         {
           "name": "bonds_min",
           "constraint_type": "min",
           "cap": 15.0,
-          "observed": 39.0,
-          "slack": 24.0,
+          "observed": 38.5,
+          "slack": 23.5,
           "binding": false,
           "status": "OK",
           "details": {
@@ -958,9 +956,9 @@
                 "weight": 8.0
               },
               {
-                "id": "Anfield Universal Fixed Income Fund",
-                "name": "Anfield Universal Fixed Income",
-                "weight": 7.0
+                "id": "ActivePassive Core Bond ETF",
+                "name": "ActivePassive Core Bond ETF",
+                "weight": 6.5
               }
             ]
           }
@@ -969,20 +967,25 @@
           "name": "crypto_max",
           "constraint_type": "max",
           "cap": 5.0,
-          "observed": 1.0,
-          "slack": 4.0,
+          "observed": 1.5,
+          "slack": 3.5,
           "binding": false,
           "status": "OK",
           "details": {
             "breakdown": [
               {
-                "id": "NFT/USD",
-                "name": "NFT/USD",
+                "id": "BTS/USD",
+                "name": "BTS/USD",
                 "weight": 0.5
               },
               {
-                "id": "BTS/USD",
-                "name": "BTS/USD",
+                "id": "GNO/USD",
+                "name": "GNO/USD",
+                "weight": 0.5
+              },
+              {
+                "id": "NFT/USD",
+                "name": "NFT/USD",
                 "weight": 0.5
               }
             ]
@@ -998,17 +1001,17 @@
           "status": "BINDING",
           "details": {
             "largest_position": {
-              "id": "EQ_45",
-              "name": "AMERICAN EXPRESS",
+              "id": "EQ_93",
+              "name": "CHUBB LTD",
               "weight": 15.0
             },
             "positions_above_10pct": [
               {
-                "id": "EQ_45",
+                "id": "EQ_93",
                 "weight": 15.0
               },
               {
-                "id": "EQ_480",
+                "id": "EQ_45",
                 "weight": 15.0
               },
               {
@@ -1037,10 +1040,10 @@
               "Diversified": 30.0
             },
             "all_sectors": {
-              "Bonds": 39.0,
+              "Bonds": 38.5,
               "Finance": 30.0,
               "Diversified": 30.0,
-              "Crypto": 1.0
+              "Crypto": 1.5
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
           }
@@ -1107,15 +1110,15 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 35.0,
-          "observed": 31.0,
-          "slack": 4.0,
+          "observed": 31.5,
+          "slack": 3.5,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 15.0,
             "range_max": 35.0,
-            "slack_from_min": 16.0,
-            "slack_from_max": 4.0,
+            "slack_from_min": 16.5,
+            "slack_from_max": 3.5,
             "outside_range": false,
             "is_indicator": true
           }
@@ -1124,15 +1127,15 @@
           "name": "bucket_defensive",
           "constraint_type": "range",
           "cap": 30.0,
-          "observed": 39.0,
-          "slack": -9.0,
+          "observed": 38.5,
+          "slack": -8.5,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 20.0,
             "range_max": 30.0,
-            "slack_from_min": 19.0,
-            "slack_from_max": -9.0,
+            "slack_from_min": 18.5,
+            "slack_from_max": -8.5,
             "outside_range": true,
             "is_indicator": true
           }
@@ -1180,7 +1183,7 @@
       },
       "quality_score": 81.5,
       "recommendations": [
-        "🟠 VIOLATED: volatility exceeded by 1.7% — reduce exposure",
+        "🟠 VIOLATED: volatility exceeded by 0.6% — reduce exposure",
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
         "🟡 BINDING: max_sector at 30.0% (cap=30.0%) — monitor closely",
         "🟠 VIOLATED: min_assets exceeded by 1.0% — reduce exposure"
@@ -1188,9 +1191,9 @@
       "exposures": {
         "by_category": {
           "Actions": 30.0,
-          "Obligations": 39.0,
+          "Obligations": 38.5,
           "ETF": 30.0,
-          "Crypto": 1.0
+          "Crypto": 1.5
         },
         "by_sector": {
           "Finance": 30.0,
@@ -1202,23 +1205,23 @@
         },
         "by_risk_bucket": {
           "equity_like": 60.0,
-          "bond_like": 39.0,
-          "crypto": 1.0
+          "bond_like": 38.5,
+          "crypto": 1.5
         },
         "by_role": {
           "core": 30.0,
-          "satellite": 31.0,
-          "defensive": 39.0,
+          "satellite": 31.5,
+          "defensive": 38.5,
           "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1206.0,
+          "hhi": 1199.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 8.3,
-          "n_positions": 11,
+          "effective_n": 8.34,
+          "n_positions": 12,
           "top_5_weight": 68.0,
-          "top_10_weight": 99.5,
+          "top_10_weight": 99.0,
           "largest_position": 15.0,
           "smallest_position": 0.5,
           "thresholds": {
@@ -1232,9 +1235,9 @@
       },
       "ticker_mapping": [
         {
-          "id": "EQ_45",
-          "ticker": "AXP",
-          "name": "AMERICAN EXPRESS",
+          "id": "EQ_93",
+          "ticker": "CB",
+          "name": "CHUBB LTD",
           "weight_pct": 15.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
@@ -1243,9 +1246,9 @@
           "exchange": null
         },
         {
-          "id": "EQ_480",
-          "ticker": "JKHY",
-          "name": "JACK HENRY AND ASSOCIATES INC",
+          "id": "EQ_45",
+          "ticker": "AXP",
+          "name": "AMERICAN EXPRESS",
           "weight_pct": 15.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
@@ -1320,24 +1323,13 @@
           "exchange": null
         },
         {
-          "id": "Anfield Universal Fixed Income Fund",
-          "ticker": "AFIF",
-          "name": "Anfield Universal Fixed Income Fund",
-          "weight_pct": 7.0,
+          "id": "ActivePassive Core Bond ETF",
+          "ticker": "APCB",
+          "name": "ActivePassive Core Bond ETF",
+          "weight_pct": 6.5,
           "category": "Obligations",
           "risk_bucket": "bond_like",
           "sector": "Bonds",
-          "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "NFT/USD",
-          "ticker": "NFT/USD",
-          "name": "NFT/USD",
-          "weight_pct": 0.5,
-          "category": "Crypto",
-          "risk_bucket": "crypto",
-          "sector": "Crypto",
           "region": "Global",
           "exchange": null
         },
@@ -1351,17 +1343,39 @@
           "sector": "Crypto",
           "region": "Global",
           "exchange": null
+        },
+        {
+          "id": "GNO/USD",
+          "ticker": "GNO/USD",
+          "name": "GNO/USD",
+          "weight_pct": 0.5,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "NFT/USD",
+          "ticker": "NFT/USD",
+          "name": "NFT/USD",
+          "weight_pct": 0.5,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
+          "exchange": null
         }
       ],
       "execution_summary": {
-        "n_positions": 11,
+        "n_positions": 12,
         "n_exchanges": 0,
         "exchanges": [],
         "total_weight": 100.0,
-        "missing_isin": 4,
+        "missing_isin": 5,
         "missing_ticker": 0,
         "data_quality": {
-          "isin_coverage": 63.6,
+          "isin_coverage": 58.3,
           "ticker_coverage": 100.0
         },
         "ready_for_execution": true
@@ -1370,9 +1384,9 @@
     "_exposures": {
       "by_category": {
         "Actions": 30.0,
-        "Obligations": 39.0,
+        "Obligations": 38.5,
         "ETF": 30.0,
-        "Crypto": 1.0
+        "Crypto": 1.5
       },
       "by_sector": {
         "Finance": 30.0,
@@ -1384,23 +1398,23 @@
       },
       "by_risk_bucket": {
         "equity_like": 60.0,
-        "bond_like": 39.0,
-        "crypto": 1.0
+        "bond_like": 38.5,
+        "crypto": 1.5
       },
       "by_role": {
         "core": 30.0,
-        "satellite": 31.0,
-        "defensive": 39.0,
+        "satellite": 31.5,
+        "defensive": 38.5,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1206.0,
+        "hhi": 1199.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.3,
-        "n_positions": 11,
+        "effective_n": 8.34,
+        "n_positions": 12,
         "top_5_weight": 68.0,
-        "top_10_weight": 99.5,
+        "top_10_weight": 99.0,
         "largest_position": 15.0,
         "smallest_position": 0.5,
         "thresholds": {
@@ -1413,28 +1427,48 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 11,
+      "n_positions": 12,
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 4,
+      "missing_isin": 5,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 63.6,
+        "isin_coverage": 58.3,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
     },
     "_limitations": [
-      "Volatilité réalisée (7.3%) éloignée de la cible (12.0%) - écart de 4.7%."
+      "Volatilité réalisée (8.4%) éloignée de la cible (12.0%) - écart de 3.6%."
     ],
     "_asset_details": [
       {
+        "name": "CHUBB LTD",
+        "ticker": "CB",
+        "rationale": "CHUBB LTD présente un ROE solide de 14.09% et un score qualité Buffett de 80, ce qui témoigne de sa robustesse financière. Bien que le secteur financier soit en difficulté, sa valorisation attractive (P/E de 12.55) et son rendement dividende de 1.21% en font un choix intéressant pour un investisseur modéré.",
+        "role": "core",
+        "risk_note": "Volatilité élevée à surveiller (19.31%) et performance YTD négative.",
+        "market_context_link": null,
+        "weight_pct": 15.0,
+        "category": "Actions",
+        "sector": "Finance",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": 14.09,
+          "pe_ratio": 12.551839,
+          "dividend_yield": 1.21,
+          "ytd": "-2.70",
+          "volatility": "19.31",
+          "buffett_score": 80.0
+        }
+      },
+      {
         "name": "AMERICAN EXPRESS",
         "ticker": "AXP",
-        "rationale": "American Express présente un ROE élevé de 33.47% et un score qualité Buffett de 80, ce qui indique une solide performance financière. Bien que le secteur financier soit en difficulté, la marque est bien positionnée pour bénéficier d'une reprise dans la consommation discrétionnaire.",
+        "rationale": "Avec un ROE impressionnant de 33.47%, American Express montre une forte capacité à générer des bénéfices. Son P/E élevé de 24.10 indique une valorisation premium, mais cela peut être justifié par sa position de leader dans le secteur des services financiers.",
         "role": "core",
-        "risk_note": "Volatilité élevée à surveiller, surtout dans un contexte de risque accru.",
+        "risk_note": "Volatilité significative (27.25%) et performance YTD négative à surveiller.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "Actions",
@@ -1442,39 +1476,19 @@
         "country": "Etats-Unis",
         "metrics": {
           "roe": 33.47,
-          "pe_ratio": 25.259583,
+          "pe_ratio": 24.099394,
           "dividend_yield": 0.91,
-          "ytd": "-3.53",
-          "volatility": "27.27",
-          "buffett_score": 80.0
-        }
-      },
-      {
-        "name": "JACK HENRY AND ASSOCIATES INC",
-        "ticker": "JKHY",
-        "rationale": "Avec un ROE de 21.39% et une performance YTD positive, Jack Henry se distingue dans le secteur financier. Son rôle en tant que fournisseur de solutions technologiques pour les institutions financières en fait un actif intéressant malgré les défis du secteur.",
-        "role": "core",
-        "risk_note": "Risque lié à la dépendance du secteur financier et à la concurrence technologique.",
-        "market_context_link": null,
-        "weight_pct": 15.0,
-        "category": "Actions",
-        "sector": "Finance",
-        "country": "Etats-Unis",
-        "metrics": {
-          "roe": 21.39,
-          "pe_ratio": 28.74772,
-          "dividend_yield": 1.22,
-          "ytd": "6.68",
-          "volatility": "22.91",
+          "ytd": "-3.50",
+          "volatility": "27.25",
           "buffett_score": 80.0
         }
       },
       {
         "name": "iShares Core U.S. Aggregate Bond ETF",
         "ticker": "AGG",
-        "rationale": "Cet ETF offre une exposition diversifiée aux obligations américaines, ce qui est essentiel pour équilibrer le risque du portefeuille. Sa faible volatilité de 5.95% en fait un choix prudent dans un environnement incertain.",
+        "rationale": "Cet ETF offre une exposition diversifiée aux obligations américaines, ce qui est essentiel pour équilibrer le risque dans un portefeuille modéré. Sa performance YTD positive de 0.5% et sa faible volatilité (5.95%) en font un choix prudent.",
         "role": "hedge",
-        "risk_note": "Sensibilité aux taux d'intérêt, surtout si les taux augmentent.",
+        "risk_note": "Risque de taux d'intérêt pouvant affecter la performance des obligations.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1484,7 +1498,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.35,
+          "ytd": 0.5,
           "volatility": 5.95,
           "buffett_score": null
         }
@@ -1492,10 +1506,10 @@
       {
         "name": "Avantis International Small Cap Value ETF",
         "ticker": "AVDV",
-        "rationale": "Cet ETF permet d'accéder à des actions de petites capitalisations à l'international, offrant une opportunité de croissance dans des marchés émergents. Sa performance YTD de 2.9% est encourageante dans un contexte de risque-on.",
+        "rationale": "Cet ETF cible les petites valeurs internationales, offrant une opportunité de croissance dans des marchés potentiellement sous-évalués. Sa performance YTD de 3.78% et sa volatilité modérée (15.47%) en font un ajout intéressant pour diversifier le portefeuille.",
         "role": "satellite",
-        "risk_note": "Risque de volatilité plus élevée associé aux petites capitalisations.",
-        "market_context_link": "secteurs favorisés",
+        "risk_note": "Exposition à des marchés internationaux pouvant être volatils.",
+        "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -1504,7 +1518,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 2.9,
+          "ytd": 3.78,
           "volatility": 15.47,
           "buffett_score": null
         }
@@ -1512,10 +1526,10 @@
       {
         "name": "Dimensional International Value ETF",
         "ticker": "DFIV",
-        "rationale": "Ce fonds investit dans des actions de valeur à l'international, ce qui peut générer des rendements intéressants dans un environnement de reprise économique. Sa performance YTD est modeste mais stable.",
+        "rationale": "DFIV se concentre sur les grandes valeurs internationales, ce qui permet de bénéficier d'une valorisation attractive dans un contexte de marché favorable. Sa performance YTD de 2.04% et sa volatilité raisonnable (14.51%) soutiennent son inclusion.",
         "role": "satellite",
-        "risk_note": "Risque de sous-performance par rapport aux actions de croissance.",
-        "market_context_link": "secteurs favorisés",
+        "risk_note": "Risque lié à la performance des marchés étrangers.",
+        "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -1524,7 +1538,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.99,
+          "ytd": 2.04,
           "volatility": 14.51,
           "buffett_score": null
         }
@@ -1532,9 +1546,9 @@
       {
         "name": "Avantis Core Fixed Income ETF",
         "ticker": "AVIG",
-        "rationale": "Ce fonds obligataire offre une exposition diversifiée et stable, ce qui est crucial pour un investisseur modéré. Sa faible volatilité contribue à réduire le risque global du portefeuille.",
+        "rationale": "Cet ETF d'obligations offre une exposition diversifiée avec une performance YTD de 0.51% et une faible volatilité (5.96%), ce qui est idéal pour stabiliser le portefeuille. Il complète les autres actifs à revenu fixe.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt, surtout dans un contexte de hausse des taux.",
+        "risk_note": "Risque de taux d'intérêt à surveiller.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1544,7 +1558,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.36,
+          "ytd": 0.51,
           "volatility": 5.96,
           "buffett_score": null
         }
@@ -1552,9 +1566,9 @@
       {
         "name": "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund",
         "ticker": "AGGY",
-        "rationale": "Ce fonds vise à améliorer le rendement des obligations américaines tout en maintenant une exposition diversifiée. Sa performance YTD est légèrement positive, ce qui est favorable dans un environnement de taux bas.",
-        "role": "hedge",
-        "risk_note": "Risque de fluctuation des taux d'intérêt.",
+        "rationale": "AGGY vise à améliorer le rendement des obligations américaines, offrant ainsi un potentiel de revenu supplémentaire. Sa performance YTD de 0.62% et sa faible volatilité (5.88%) en font un choix solide pour un investisseur modéré.",
+        "role": "income",
+        "risk_note": "Risque de taux d'intérêt pouvant affecter les rendements.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1564,7 +1578,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.41,
+          "ytd": 0.62,
           "volatility": 5.88,
           "buffett_score": null
         }
@@ -1572,9 +1586,9 @@
       {
         "name": "JPMorgan BetaBuilders U.S. Aggregate Bond ETF",
         "ticker": "BBAG",
-        "rationale": "Cet ETF offre une exposition large aux obligations américaines, ce qui est essentiel pour la diversification du portefeuille. Sa faible volatilité est un atout dans un environnement de marché incertain.",
+        "rationale": "BBAG offre une exposition diversifiée aux obligations américaines avec une performance YTD de 0.49% et une faible volatilité (5.93%). Cela contribue à la stabilité du portefeuille tout en générant des revenus.",
         "role": "hedge",
-        "risk_note": "Sensibilité aux variations des taux d'intérêt.",
+        "risk_note": "Risque de taux d'intérêt à surveiller.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1584,19 +1598,19 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.32,
-          "volatility": 5.94,
+          "ytd": 0.49,
+          "volatility": 5.93,
           "buffett_score": null
         }
       },
       {
-        "name": "Anfield Universal Fixed Income Fund",
-        "ticker": "AFIF",
-        "rationale": "Ce fonds obligataire vise à offrir une gestion active des obligations, ce qui peut améliorer le rendement dans un environnement de taux bas. Sa faible volatilité est un avantage pour un investisseur modéré.",
+        "name": "ActivePassive Core Bond ETF",
+        "ticker": "APCB",
+        "rationale": "APCB fournit une exposition diversifiée aux obligations avec une performance YTD de 0.47% et une volatilité très faible (5.13%), ce qui est essentiel pour maintenir l'équilibre du portefeuille.",
         "role": "hedge",
-        "risk_note": "Risque de performance inférieure en cas de hausse des taux.",
+        "risk_note": "Risque de taux d'intérêt à surveiller.",
         "market_context_link": null,
-        "weight_pct": 7.0,
+        "weight_pct": 6.5,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -1604,17 +1618,57 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.43,
-          "volatility": 4.01,
+          "ytd": 0.47,
+          "volatility": 5.13,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "BTS/USD",
+        "ticker": "BTS/USD",
+        "rationale": "BTS/USD offre une exposition à la crypto-monnaie avec une performance YTD de 4.22%, apportant un potentiel de croissance élevé. Sa volatilité de 39.87% indique un risque élevé, mais cela peut être compensé par son faible poids dans le portefeuille.",
+        "role": "satellite",
+        "risk_note": "Volatilité extrême et risque de marché crypto.",
+        "market_context_link": null,
+        "weight_pct": 0.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 4.22,
+          "volatility": 39.87,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "GNO/USD",
+        "ticker": "GNO/USD",
+        "rationale": "GNO/USD a affiché une performance YTD de 10.35%, ce qui en fait un actif attrayant pour les investisseurs cherchant à diversifier avec des actifs numériques. Sa volatilité de 34.39% souligne le risque associé à ce type d'investissement.",
+        "role": "satellite",
+        "risk_note": "Risque de marché crypto élevé et volatilité importante.",
+        "market_context_link": null,
+        "weight_pct": 0.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 10.35,
+          "volatility": 34.39,
           "buffett_score": null
         }
       },
       {
         "name": "NFT/USD",
         "ticker": "NFT/USD",
-        "rationale": "Cet actif crypto représente une opportunité d'investissement dans un secteur émergent et volatile. Bien qu'il ait une faible pondération, il peut offrir un potentiel de rendement élevé.",
+        "rationale": "NFT/USD présente une performance YTD de 2.86%, ajoutant une dimension unique au portefeuille avec des actifs numériques. Sa volatilité de 38.59% indique un risque élevé, mais son faible poids limite l'impact sur le portefeuille global.",
         "role": "satellite",
-        "risk_note": "Volatilité extrême et incertitude réglementaire.",
+        "risk_note": "Risque de marché crypto et volatilité élevée.",
         "market_context_link": null,
         "weight_pct": 0.5,
         "category": "Crypto",
@@ -1628,66 +1682,46 @@
           "volatility": 38.59,
           "buffett_score": null
         }
-      },
-      {
-        "name": "BTS/USD",
-        "ticker": "BTS/USD",
-        "rationale": "BTS/USD est un autre actif crypto qui peut diversifier le portefeuille avec un potentiel de rendement intéressant. Sa performance YTD est positive, ce qui est un bon signe dans un marché crypto volatil.",
-        "role": "satellite",
-        "risk_note": "Risque de volatilité élevée et fluctuations de marché importantes.",
-        "market_context_link": null,
-        "weight_pct": 0.5,
-        "category": "Crypto",
-        "sector": "Crypto",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": 6.12,
-          "volatility": 37.39,
-          "buffett_score": null
-        }
       }
     ]
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche stable, visant à minimiser la volatilité tout en générant des revenus. L'allocation à des obligations et des actifs à faible volatilité contribue à un profil défensif. Cependant, la dépendance à des secteurs spécifiques, comme l'immobilier commercial, peut introduire des risques en période de ralentissement économique. Il est essentiel de considérer ces éléments avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, visant à minimiser la volatilité tout en cherchant des rendements modérés. L'accent est mis sur les obligations et les actifs à faible risque, bien que cela puisse limiter le potentiel de croissance. De plus, la concentration dans possibles secteurs, comme l'immobilier, peut exposer le portefeuille à des risques spécifiques. Il est crucial de garder à l'esprit que tout investissement comporte des risques de perte en capital. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "TJX INC": "5%",
-      "JACK HENRY AND ASSOCIATES INC": "8%",
-      "AMERICAN EXPRESS": "2%"
+      "CHUBB LTD": "8%",
+      "AMERICAN EXPRESS": "3%"
     },
     "ETF": {
-      "Dimensional International Core Equity Market ETF": "10%",
+      "Dimensional International Core Equity Market ETF": "9%",
       "iShares MSCI ACWI ETF": "10%",
-      "FT Nasdaq Buffer ETF July.": "10%"
+      "Dimensional International Small Cap ETF": "10%"
     },
     "Obligations": {
-      "Neos Enhanced Income Cash Alternative ETF": "13%",
-      "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF": "12%",
+      "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF": "13%",
+      "Neos Enhanced Income Cash Alternative ETF": "12%",
       "Avantis Short-Term Fixed Income ETF": "12%",
       "Angel Oak Income ETF": "12%",
       "iShares Agency Bond ETF": "6%"
     },
     "Crypto": {},
     "_tickers": {
-      "CSHI": 0.1197,
       "DCMB": 0.1197,
+      "CSHI": 0.1197,
       "AVSF": 0.1197,
       "CARY": 0.1228,
       "AGZ": 0.0564,
-      "DFIC": 0.1026,
+      "DFIC": 0.0948,
       "ACWI": 0.1026,
-      "BUFQ": 0.1026,
+      "DFIS": 0.1026,
       "TJX": 0.0513,
-      "JKHY": 0.0821,
-      "AXP": 0.0205
+      "CB": 0.0821,
+      "AXP": 0.0283
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 5.36,
+      "vol_realized": 5.44,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -1723,15 +1757,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 6.0,
-          "observed": 5.36,
-          "slack": 2.36,
+          "observed": 5.44,
+          "slack": 2.44,
           "binding": false,
           "status": "OK",
           "details": {
             "tolerance": 3.0,
             "range_min": 3.0,
             "range_max": 9.0,
-            "diff_from_target": -0.64
+            "diff_from_target": -0.56
           }
         },
         {
@@ -1746,13 +1780,13 @@
             "count": 5,
             "breakdown": [
               {
-                "id": "Neos Enhanced Income Cash Alternative ETF",
-                "name": "Neos Enhanced Income Cash Alte",
+                "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+                "name": "DoubleLine ETF Trust DoubleLin",
                 "weight": 11.97
               },
               {
-                "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-                "name": "DoubleLine ETF Trust DoubleLin",
+                "id": "Neos Enhanced Income Cash Alternative ETF",
+                "name": "Neos Enhanced Income Cash Alte",
                 "weight": 11.97
               },
               {
@@ -1789,11 +1823,11 @@
             },
             "positions_above_10pct": [
               {
-                "id": "Neos Enhanced Income Cash Alternative ETF",
+                "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
                 "weight": 11.97
               },
               {
-                "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+                "id": "Neos Enhanced Income Cash Alternative ETF",
                 "weight": 11.97
               },
               {
@@ -1805,15 +1839,11 @@
                 "weight": 12.28
               },
               {
-                "id": "Dimensional International Core Equity Market ETF",
-                "weight": 10.26
-              },
-              {
                 "id": "iShares MSCI ACWI ETF",
                 "weight": 10.26
               },
               {
-                "id": "FT Nasdaq Buffer ETF July.",
+                "id": "Dimensional International Small Cap ETF",
                 "weight": 10.26
               }
             ]
@@ -1823,21 +1853,21 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 20.52,
-          "slack": 9.48,
-          "binding": false,
-          "status": "OK",
+          "observed": 30.0,
+          "slack": 0.0,
+          "binding": true,
+          "status": "BINDING",
           "details": {
             "most_concentrated": "Diversified",
             "counts_in_max_sector": {
-              "Diversified": 20.52,
-              "Finance": 10.26,
+              "Diversified": 30.0,
+              "Finance": 11.04,
               "Biens de consommation cycliques": 5.13
             },
             "all_sectors": {
               "Bonds": 53.83,
-              "Diversified": 30.78,
-              "Finance": 10.26,
+              "Diversified": 30.0,
+              "Finance": 11.04,
               "Biens de consommation cycliques": 5.13
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -1847,19 +1877,19 @@
           "name": "max_region",
           "constraint_type": "max",
           "cap": 50.0,
-          "observed": 20.52,
-          "slack": 29.48,
+          "observed": 30.0,
+          "slack": 20.0,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Global",
             "counts_in_max_region": {
-              "Global": 20.52,
-              "Etats-Unis": 15.39
+              "Global": 30.0,
+              "Etats-Unis": 16.17
             },
             "all_regions": {
-              "Global": 84.61,
-              "Etats-Unis": 15.39
+              "Global": 83.83,
+              "Etats-Unis": 16.17
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -1888,15 +1918,15 @@
           "name": "bucket_core",
           "constraint_type": "range",
           "cap": 40.0,
-          "observed": 35.91,
-          "slack": 4.09,
+          "observed": 35.13,
+          "slack": 4.87,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 30.0,
             "range_max": 40.0,
-            "slack_from_min": 5.91,
-            "slack_from_max": 4.09,
+            "slack_from_min": 5.13,
+            "slack_from_max": 4.87,
             "outside_range": false,
             "is_indicator": true
           }
@@ -1905,15 +1935,15 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 15.0,
-          "observed": 10.26,
-          "slack": 4.74,
+          "observed": 11.04,
+          "slack": 3.96,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 5.0,
             "range_max": 15.0,
-            "slack_from_min": 5.26,
-            "slack_from_max": 4.74,
+            "slack_from_min": 6.04,
+            "slack_from_max": 3.96,
             "outside_range": false,
             "is_indicator": true
           }
@@ -1956,10 +1986,10 @@
           "name": "alternative_cap",
           "constraint_type": "max",
           "cap": 5.0,
-          "observed": 10.26,
-          "slack": -5.26,
+          "observed": 0,
+          "slack": 5.0,
           "binding": false,
-          "status": "CRITICAL",
+          "status": "OK",
           "details": {
             "includes": [
               "Derivative Income",
@@ -1972,50 +2002,49 @@
       "summary": {
         "total": 12,
         "ok": 11,
-        "binding": 0,
+        "binding": 1,
         "violated": 0,
-        "critical": 1
+        "critical": 0
       },
-      "quality_score": 90.0,
+      "quality_score": 98.3,
       "recommendations": [
-        "🔴 CRITICAL: alternative_cap violated by 5.3% — immediate action required"
+        "🟡 BINDING: max_sector at 30.0% (cap=30.0%) — monitor closely"
       ],
       "exposures": {
         "by_category": {
           "Obligations": 53.83,
-          "ETF": 30.78,
-          "Actions": 15.39
+          "ETF": 30.0,
+          "Actions": 16.17
         },
         "by_sector": {
-          "Diversified": 30.78,
-          "Finance": 10.26,
+          "Diversified": 30.0,
+          "Finance": 11.04,
           "Biens de consommation cycliques": 5.13
         },
         "by_region": {
-          "Global": 84.61,
-          "Etats-Unis": 15.39
+          "Global": 83.83,
+          "Etats-Unis": 16.17
         },
         "by_risk_bucket": {
           "bond_like": 53.83,
-          "equity_like": 35.91,
-          "alternative": 10.26
+          "equity_like": 46.17
         },
         "by_role": {
-          "core": 35.91,
-          "satellite": 10.26,
+          "core": 35.13,
+          "satellite": 11.04,
           "defensive": 53.83,
           "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1026.0,
+          "hhi": 1015.0,
           "hhi_interpretation": "diversified",
-          "effective_n": 9.74,
+          "effective_n": 9.86,
           "n_positions": 11,
           "top_5_weight": 58.45,
-          "top_10_weight": 97.95,
+          "top_10_weight": 97.17,
           "largest_position": 12.28,
-          "smallest_position": 2.05,
+          "smallest_position": 2.83,
           "thresholds": {
             "well_diversified": "HHI < 1000",
             "diversified": "HHI 1000-1500",
@@ -2038,9 +2067,9 @@
           "exchange": null
         },
         {
-          "id": "Neos Enhanced Income Cash Alternative ETF",
-          "ticker": "CSHI",
-          "name": "Neos Enhanced Income Cash Alternative ETF",
+          "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+          "ticker": "DCMB",
+          "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
           "weight_pct": 11.97,
           "category": "Obligations",
           "risk_bucket": "bond_like",
@@ -2049,9 +2078,9 @@
           "exchange": null
         },
         {
-          "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-          "ticker": "DCMB",
-          "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+          "id": "Neos Enhanced Income Cash Alternative ETF",
+          "ticker": "CSHI",
+          "name": "Neos Enhanced Income Cash Alternative ETF",
           "weight_pct": 11.97,
           "category": "Obligations",
           "risk_bucket": "bond_like",
@@ -2071,17 +2100,6 @@
           "exchange": null
         },
         {
-          "id": "Dimensional International Core Equity Market ETF",
-          "ticker": "DFAI",
-          "name": "Dimensional International Core Equity Market ETF",
-          "weight_pct": 10.26,
-          "category": "ETF",
-          "risk_bucket": "equity_like",
-          "sector": "Diversified",
-          "region": "Global",
-          "exchange": null
-        },
-        {
           "id": "iShares MSCI ACWI ETF",
           "ticker": "ACWI",
           "name": "iShares MSCI ACWI ETF",
@@ -2093,20 +2111,31 @@
           "exchange": null
         },
         {
-          "id": "FT Nasdaq Buffer ETF July.",
-          "ticker": "BUFQ",
-          "name": "FT Nasdaq Buffer ETF July.",
+          "id": "Dimensional International Small Cap ETF",
+          "ticker": "DFIS",
+          "name": "Dimensional International Small Cap ETF",
           "weight_pct": 10.26,
           "category": "ETF",
-          "risk_bucket": "alternative",
+          "risk_bucket": "equity_like",
           "sector": "Diversified",
           "region": "Global",
           "exchange": null
         },
         {
-          "id": "EQ_480",
-          "ticker": "JKHY",
-          "name": "JACK HENRY AND ASSOCIATES INC",
+          "id": "Dimensional International Core Equity Market ETF",
+          "ticker": "DFAI",
+          "name": "Dimensional International Core Equity Market ETF",
+          "weight_pct": 9.48,
+          "category": "ETF",
+          "risk_bucket": "equity_like",
+          "sector": "Diversified",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "EQ_93",
+          "ticker": "CB",
+          "name": "CHUBB LTD",
           "weight_pct": 8.21,
           "category": "Actions",
           "risk_bucket": "equity_like",
@@ -2140,7 +2169,7 @@
           "id": "EQ_45",
           "ticker": "AXP",
           "name": "AMERICAN EXPRESS",
-          "weight_pct": 2.05,
+          "weight_pct": 2.83,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
@@ -2165,39 +2194,38 @@
     "_exposures": {
       "by_category": {
         "Obligations": 53.83,
-        "ETF": 30.78,
-        "Actions": 15.39
+        "ETF": 30.0,
+        "Actions": 16.17
       },
       "by_sector": {
-        "Diversified": 30.78,
-        "Finance": 10.26,
+        "Diversified": 30.0,
+        "Finance": 11.04,
         "Biens de consommation cycliques": 5.13
       },
       "by_region": {
-        "Global": 84.61,
-        "Etats-Unis": 15.39
+        "Global": 83.83,
+        "Etats-Unis": 16.17
       },
       "by_risk_bucket": {
         "bond_like": 53.83,
-        "equity_like": 35.91,
-        "alternative": 10.26
+        "equity_like": 46.17
       },
       "by_role": {
-        "core": 35.91,
-        "satellite": 10.26,
+        "core": 35.13,
+        "satellite": 11.04,
         "defensive": 53.83,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1026.0,
+        "hhi": 1015.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 9.74,
+        "effective_n": 9.86,
         "n_positions": 11,
         "top_5_weight": 58.45,
-        "top_10_weight": 97.95,
+        "top_10_weight": 97.17,
         "largest_position": 12.28,
-        "smallest_position": 2.05,
+        "smallest_position": 2.83,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -2225,9 +2253,29 @@
     ],
     "_asset_details": [
       {
+        "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+        "ticker": "DCMB",
+        "rationale": "Ce fonds offre une exposition à l'immobilier commercial, qui peut générer des revenus stables. Sa faible volatilité en fait un bon choix pour un investisseur stable cherchant à préserver son capital.",
+        "role": "income",
+        "risk_note": "Risque lié aux fluctuations du marché immobilier commercial.",
+        "market_context_link": null,
+        "weight_pct": 12.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 0.13,
+          "volatility": 2.1,
+          "buffett_score": null
+        }
+      },
+      {
         "name": "Neos Enhanced Income Cash Alternative ETF",
         "ticker": "CSHI",
-        "rationale": "Ce fonds ultracourt vise à générer des revenus stables avec une volatilité très faible, ce qui est idéal pour un investisseur cherchant à préserver son capital. Il joue un rôle d'income dans le portefeuille, offrant des rendements réguliers tout en maintenant une faible exposition au risque.",
+        "rationale": "Ce fonds ultracourt vise à offrir un rendement supérieur à celui des liquidités tout en maintenant une faible volatilité. Il est adapté pour générer des revenus réguliers avec un risque minimal.",
         "role": "income",
         "risk_note": "Risque de taux d'intérêt pouvant affecter les rendements.",
         "market_context_link": null,
@@ -2239,27 +2287,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.11,
-          "volatility": 2.09,
-          "buffett_score": null
-        }
-      },
-      {
-        "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-        "ticker": "DCMB",
-        "rationale": "Ce fonds investit dans des obligations liées à l'immobilier commercial, offrant un potentiel de rendement supérieur tout en maintenant une volatilité modérée. Il sert de satellite dans le portefeuille, diversifiant les sources de revenus.",
-        "role": "satellite",
-        "risk_note": "Risque lié à la performance du marché immobilier commercial.",
-        "market_context_link": null,
-        "weight_pct": 12.0,
-        "category": "Obligations",
-        "sector": "Bonds",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": 0.19,
+          "ytd": -0.25,
           "volatility": 2.1,
           "buffett_score": null
         }
@@ -2267,9 +2295,9 @@
       {
         "name": "Avantis Short-Term Fixed Income ETF",
         "ticker": "AVSF",
-        "rationale": "Ce fonds d'obligations à court terme est conçu pour minimiser le risque de taux d'intérêt tout en offrant des rendements compétitifs. Il contribue à la stabilité du portefeuille avec un rôle d'income.",
-        "role": "income",
-        "risk_note": "Risque de taux d'intérêt et de crédit.",
+        "rationale": "Ce fonds d'obligations à court terme offre une protection contre la volatilité tout en générant des revenus. Il est bien adapté pour un portefeuille stable avec un horizon à court-moyen terme.",
+        "role": "core",
+        "risk_note": "Risque de taux d'intérêt et de crédit à surveiller.",
         "market_context_link": null,
         "weight_pct": 12.0,
         "category": "Obligations",
@@ -2279,7 +2307,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.08,
+          "ytd": 0.12,
           "volatility": 2.65,
           "buffett_score": null
         }
@@ -2287,9 +2315,9 @@
       {
         "name": "Angel Oak Income ETF",
         "ticker": "CARY",
-        "rationale": "Ce fonds multisectoriel d'obligations offre une diversification au sein des revenus fixes, avec un rendement attractif. Il joue un rôle d'income, apportant des flux de trésorerie réguliers.",
+        "rationale": "Ce fonds multisectoriel d'obligations vise à maximiser les revenus tout en diversifiant les risques. Sa performance positive en fait un ajout intéressant pour un investisseur cherchant des revenus réguliers.",
         "role": "income",
-        "risk_note": "Risque de crédit et de volatilité du marché obligataire.",
+        "risk_note": "Risque de crédit et de taux d'intérêt.",
         "market_context_link": null,
         "weight_pct": 12.3,
         "category": "Obligations",
@@ -2299,7 +2327,7 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.26,
+          "ytd": 0.38,
           "volatility": 3.24,
           "buffett_score": null
         }
@@ -2307,9 +2335,9 @@
       {
         "name": "iShares Agency Bond ETF",
         "ticker": "AGZ",
-        "rationale": "Ce fonds investit dans des obligations d'agences gouvernementales, offrant une sécurité et un rendement stable, bien que légèrement négatif cette année. Il sert de core dans le portefeuille pour la préservation du capital.",
+        "rationale": "Ce fonds investit dans des obligations garanties par des agences gouvernementales, offrant une sécurité et un revenu stable. Sa faible volatilité est en ligne avec les objectifs de préservation du capital.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt pouvant affecter la performance.",
+        "risk_note": "Risque de taux d'intérêt pouvant affecter la valeur des obligations.",
         "market_context_link": null,
         "weight_pct": 5.6,
         "category": "Obligations",
@@ -2319,19 +2347,19 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": -0.05,
-          "volatility": 3.47,
+          "ytd": 0.03,
+          "volatility": 3.46,
           "buffett_score": null
         }
       },
       {
         "name": "Dimensional International Core Equity Market ETF",
         "ticker": "DFIC",
-        "rationale": "Ce fonds offre une exposition diversifiée aux actions internationales, avec un bon potentiel de croissance. Il joue un rôle de diversification dans le portefeuille, équilibrant les actifs à revenu fixe.",
-        "role": "diversification",
+        "rationale": "Ce fonds offre une exposition diversifiée aux actions internationales, ce qui peut améliorer le potentiel de rendement à long terme. Sa performance YTD positive est encourageante.",
+        "role": "satellite",
         "risk_note": "Risque de change et volatilité des marchés internationaux.",
         "market_context_link": null,
-        "weight_pct": 10.3,
+        "weight_pct": 9.5,
         "category": "ETF",
         "sector": "Diversified",
         "country": "Global",
@@ -2339,17 +2367,17 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 1.95,
-          "volatility": 13.79,
+          "ytd": 2.47,
+          "volatility": 13.78,
           "buffett_score": null
         }
       },
       {
         "name": "iShares MSCI ACWI ETF",
         "ticker": "ACWI",
-        "rationale": "Ce fonds fournit une exposition globale aux actions, permettant de capter la croissance des marchés développés et émergents. Il sert de diversification tout en offrant un potentiel de rendement à long terme.",
+        "rationale": "Ce fonds permet d'accéder à un large éventail d'actions mondiales, offrant ainsi une diversification essentielle. Son exposition globale est bénéfique dans un contexte de marché favorable.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité des marchés boursiers globaux.",
+        "risk_note": "Risque de volatilité des marchés boursiers mondiaux.",
         "market_context_link": null,
         "weight_pct": 10.3,
         "category": "ETF",
@@ -2359,17 +2387,17 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 1.68,
-          "volatility": 14.07,
+          "ytd": 1.56,
+          "volatility": 14.06,
           "buffett_score": null
         }
       },
       {
-        "name": "FT Nasdaq Buffer ETF July.",
-        "ticker": "BUFQ",
-        "rationale": "Ce fonds est conçu pour offrir une protection contre les baisses du marché tout en capturant une partie de la hausse, ce qui est idéal dans un environnement volatile. Il joue un rôle de hedge dans le portefeuille.",
-        "role": "hedge",
-        "risk_note": "Risque de performance limitée en cas de forte hausse du marché.",
+        "name": "Dimensional International Small Cap ETF",
+        "ticker": "DFIS",
+        "rationale": "Ce fonds investit dans des petites et moyennes entreprises internationales, qui peuvent offrir un potentiel de croissance supérieur. Sa performance YTD est solide, ce qui en fait un bon choix pour la diversification.",
+        "role": "satellite",
+        "risk_note": "Risque accru associé aux petites capitalisations.",
         "market_context_link": null,
         "weight_pct": 10.3,
         "category": "ETF",
@@ -2379,17 +2407,17 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 1.01,
-          "volatility": 11.62,
+          "ytd": 2.86,
+          "volatility": 14.6,
           "buffett_score": null
         }
       },
       {
         "name": "TJX INC",
         "ticker": "TJX",
-        "rationale": "Avec un ROE élevé et un score de qualité Buffett solide, TJX représente une opportunité d'investissement dans le secteur des biens de consommation cycliques. Son rôle est de fournir une croissance dans le portefeuille, en lien avec le secteur favorisé.",
+        "rationale": "TJX est un leader dans le secteur des biens de consommation cycliques, avec un ROE élevé et un score de qualité Buffett solide. Son positionnement dans un secteur favorisé en fait un choix stratégique.",
         "role": "core",
-        "risk_note": "Risque de ralentissement dans le secteur de la consommation.",
+        "risk_note": "Risque lié à la consommation discrétionnaire et à la volatilité du marché.",
         "market_context_link": "Secteur favorisé: consumer-discretionary",
         "weight_pct": 5.1,
         "category": "Actions",
@@ -2397,57 +2425,57 @@
         "country": "Etats-Unis",
         "metrics": {
           "roe": 57.95,
-          "pe_ratio": 34.836643,
-          "dividend_yield": 1.05,
-          "ytd": "1.83",
+          "pe_ratio": 34.82524,
+          "dividend_yield": 1.06,
+          "ytd": "0.86",
           "volatility": "16.89",
           "buffett_score": 80.0
         }
       },
       {
-        "name": "JACK HENRY AND ASSOCIATES INC",
-        "ticker": "JKHY",
-        "rationale": "Cette entreprise présente un ROE respectable et une performance solide, ce qui en fait un choix attrayant dans le secteur financier. Bien qu'il soit dans un secteur en difficulté, il peut offrir une résilience dans le portefeuille.",
-        "role": "core",
-        "risk_note": "Risque lié à la volatilité du secteur financier.",
+        "name": "CHUBB LTD",
+        "ticker": "CB",
+        "rationale": "Chubb présente une valorisation attractive avec un faible P/E et un ROE respectable, bien qu'il soit dans un secteur en difficulté. Cela peut offrir une opportunité d'achat à bas prix.",
+        "role": "satellite",
+        "risk_note": "Risque lié à la performance du secteur financier.",
         "market_context_link": "Secteur évité: financials",
         "weight_pct": 8.2,
         "category": "Actions",
         "sector": "Finance",
         "country": "Etats-Unis",
         "metrics": {
-          "roe": 21.39,
-          "pe_ratio": 28.74772,
-          "dividend_yield": 1.22,
-          "ytd": "6.68",
-          "volatility": "22.91",
+          "roe": 14.09,
+          "pe_ratio": 12.551839,
+          "dividend_yield": 1.21,
+          "ytd": "-2.70",
+          "volatility": "19.31",
           "buffett_score": 80.0
         }
       },
       {
         "name": "AMERICAN EXPRESS",
         "ticker": "AXP",
-        "rationale": "Malgré une performance YTD négative, American Express a un ROE élevé et un bon potentiel de reprise, ce qui en fait un choix intéressant. Son rôle est de fournir une exposition au secteur financier, bien que ce secteur soit actuellement en difficulté.",
+        "rationale": "American Express a un ROE élevé et un score de qualité solide, mais sa performance YTD est en déclin. Cela peut signaler une opportunité d'achat, mais nécessite une surveillance.",
         "role": "satellite",
-        "risk_note": "Risque de volatilité accrue dans le secteur financier.",
+        "risk_note": "Risque de volatilité dans le secteur financier.",
         "market_context_link": "Secteur évité: financials",
-        "weight_pct": 2.0,
+        "weight_pct": 2.8,
         "category": "Actions",
         "sector": "Finance",
         "country": "Etats-Unis",
         "metrics": {
           "roe": 33.47,
-          "pe_ratio": 25.259583,
+          "pe_ratio": 24.099394,
           "dividend_yield": 0.91,
-          "ytd": "-3.53",
-          "volatility": "27.27",
+          "ytd": "-3.50",
+          "volatility": "27.25",
           "buffett_score": 80.0
         }
       }
     ]
   },
   "_meta": {
-    "generated_at": "2026-01-15T08:57:59.289065",
+    "generated_at": "2026-01-16T08:17:19.803178",
     "version": "v4.12.2",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
