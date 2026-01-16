@@ -665,9 +665,22 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         assets=eq_filtered, 
         target_n=min(25, len(eq_filtered)),
         initial_max_per_sector=4,
-        score_field="composite_score"
+        score_field="composite_score",
+        enable_radar_tiebreaker=True,
+        radar_bonus_cap=0.03,
+        radar_min_coverage=0.40,
+        market_context=market_context,
     )
-    logger.info(f"   [TOP-N] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']})")
+    
+    # Log RADAR status
+    radar_info = selection_meta.get("radar", {})
+    if radar_info.get("enabled"):
+        cov = radar_info.get("coverage", {})
+        swaps = selection_meta.get("swaps", {}).get("count", 0)
+        logger.info(f"   [TOP-N] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']}, RADAR=ON, swaps={swaps})")
+        logger.info(f"   [RADAR] coverage_tilt={cov.get('coverage_tilt', 0):.1%}, coverage_mapping={cov.get('coverage_mapping', 0):.1%}")
+    else:
+        logger.info(f"   [TOP-N] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']}, RADAR=OFF: {radar_info.get('disable_reason', 'N/A')})")
     
     # === PHASE 1: TRACE 4 - After sector quota ===
     korea_count, korea_in_quota = count_korea(equities, "4. After sector_balanced_selection")
@@ -992,14 +1005,18 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
         )
         logger.info(f"   Equities EU/US après Buffett: {len(eq_rows)}")
     
-    # 4. Scoring et sélection
+   # 4. Scoring et sélection
     eq_rows = compute_scores(eq_rows, "equity", None)
     eq_filtered = filter_equities(eq_rows)
     equities, selection_meta = sector_balanced_selection(
         assets=eq_filtered, 
         target_n=min(25, len(eq_filtered)),
         initial_max_per_sector=4,
-        score_field="composite_score"
+        score_field="composite_score",
+        enable_radar_tiebreaker=True,
+        radar_bonus_cap=0.03,
+        radar_min_coverage=0.40,
+        market_context=None,
     )
     logger.info(f"   [TOP-N EU/US] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']})")
     
