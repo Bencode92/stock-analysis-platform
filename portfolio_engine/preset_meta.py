@@ -2,6 +2,7 @@
 """
 PRESET_META - Source unique de vérité pour les presets.
 
+v2.3 PROFILE_POLICY: Scoring et univers différenciés par profil (Claude + ChatGPT consensus)
 v2.2 EU/US Focus: Added region caps and filters for EU/US only portfolios
 v2.1 P0.5 FIX: Bucket targets relaxés pour réduire les violations
 - Modéré: CORE min 45→35%, SATELLITE max 25→35%
@@ -17,9 +18,13 @@ Définit pour chaque preset :
 
 Usage:
     from portfolio_engine.preset_meta import PRESET_META, PROFILE_BUCKET_TARGETS, Role
+    from portfolio_engine.preset_meta import PROFILE_POLICY, get_profile_policy
     
     config = PRESET_META["quality_premium"]
     print(config.role, config.risk, config.max_weight_pct)
+    
+    policy = get_profile_policy("Agressif")
+    print(policy["allowed_equity_presets"])
 """
 
 from enum import Enum
@@ -874,6 +879,326 @@ ETF_EXPOSURE_EQUIVALENTS: Dict[str, List[str]] = {
 }
 
 
+# ============ PROFILE_POLICY v2.3 (Claude + ChatGPT consensus) ============
+# Source unique pour : univers équities, scoring, contraintes optimizer par profil
+# Résout le problème "mêmes actions dans tous les profils"
+
+PROFILE_POLICY: Dict[str, Dict] = {
+    "Agressif": {
+        # === Univers équities autorisé ===
+        "allowed_equity_presets": {
+            "croissance",
+            "momentum_trend",
+            "agressif",
+            "recovery",
+        },
+        "min_buffett_score": 35,  # Garde-fou léger (tolère plus de risque)
+        
+        # === Contraintes optimizer ===
+        "equity_min_weight": 0.50,      # Min 50% en équities
+        "equity_max_weight": 0.75,      # Max 75%
+        "min_equity_positions": 12,     # Au moins 12 actions différentes
+        
+        # === Scoring percentile (poids) ===
+        # Favorise momentum court terme, tolère volatilité
+        "score_weights": {
+            "momentum_12m": 0.25,       # Fort poids momentum
+            "perf_3m": 0.15,            # Performance récente
+            "perf_ytd": 0.10,
+            "eps_growth_5y": 0.10,      # Croissance bénéfices
+            "roe": 0.05,                # Qualité (faible poids)
+            "vol_3y": -0.05,            # Pénalité volatilité faible
+            "max_dd_3y": -0.10,         # Pénalité drawdown modérée
+            "dividend_yield": 0.00,     # Ignore dividendes
+        },
+        
+        # === Description ===
+        "description": "Profil orienté croissance/momentum, tolère la volatilité",
+        "expected_vol_range": (15, 22),
+        "expected_equity_overlap_with_stable": 0.25,  # Max 25% overlap
+    },
+    
+    "Modéré": {
+        # === Univers équities autorisé ===
+        "allowed_equity_presets": {
+            "quality_premium",
+            "value_dividend",
+            "croissance",
+            "momentum_trend",
+            "defensif",
+        },
+        "min_buffett_score": 45,  # Score qualité intermédiaire
+        
+        # === Contraintes optimizer ===
+        "equity_min_weight": 0.40,      # Min 40% en équities
+        "equity_max_weight": 0.60,      # Max 60%
+        "min_equity_positions": 10,     # Au moins 10 actions différentes
+        
+        # === Scoring percentile (poids) ===
+        # Mix équilibré qualité + momentum
+        "score_weights": {
+            "momentum_12m": 0.10,
+            "perf_1y": 0.10,
+            "perf_3y": 0.05,
+            "eps_growth_5y": 0.10,
+            "roe": 0.15,                # Poids qualité plus élevé
+            "fcf_yield": 0.10,          # Free cash flow
+            "vol_3y": -0.15,            # Pénalité volatilité modérée
+            "max_dd_3y": -0.10,
+            "dividend_yield": 0.10,     # Dividendes comptent
+        },
+        
+        # === Description ===
+        "description": "Profil équilibré qualité/momentum, risque maîtrisé",
+        "expected_vol_range": (10, 15),
+        "expected_equity_overlap_with_stable": 0.45,
+    },
+    
+    "Stable": {
+        # === Univers équities autorisé ===
+        "allowed_equity_presets": {
+            "defensif",
+            "low_volatility",
+            "rendement",
+            "value_dividend",
+            "quality_premium",
+        },
+        "min_buffett_score": 55,  # Exige haute qualité
+        
+        # === Contraintes optimizer ===
+        "equity_min_weight": 0.25,      # Min 25% en équities
+        "equity_max_weight": 0.45,      # Max 45%
+        "min_equity_positions": 8,      # Au moins 8 actions différentes
+        
+        # === Scoring percentile (poids) ===
+        # Favorise faible vol, haut dividende, ignore momentum
+        "score_weights": {
+            "momentum_12m": 0.00,       # Ignore momentum
+            "perf_3y": 0.05,            # Faible poids perf
+            "roe": 0.15,                # Qualité importante
+            "fcf_yield": 0.10,
+            "vol_3y": -0.25,            # Forte pénalité volatilité
+            "max_dd_3y": -0.20,         # Forte pénalité drawdown
+            "dividend_yield": 0.20,     # Fort poids dividendes
+        },
+        
+        # === Description ===
+        "description": "Profil défensif, faible volatilité, haut dividende",
+        "expected_vol_range": (6, 10),
+        "expected_equity_overlap_with_agressif": 0.25,
+    },
+}
+
+
+def get_profile_policy(profile: str) -> Dict:
+    """
+    Retourne la policy complète d'un profil.
+    
+    Args:
+        profile: "Agressif", "Modéré", ou "Stable"
+    
+    Returns:
+        Dict avec allowed_equity_presets, score_weights, contraintes optimizer, etc.
+    
+    Example:
+        policy = get_profile_policy("Agressif")
+        allowed = policy["allowed_equity_presets"]  # {"croissance", "momentum_trend", ...}
+        eq_min = policy["equity_min_weight"]  # 0.50
+    """
+    return PROFILE_POLICY.get(profile, PROFILE_POLICY["Modéré"])
+
+
+def pct_rank(value: float, distribution: List[float]) -> float:
+    """
+    Calcule le rang percentile d'une valeur dans une distribution.
+    
+    Args:
+        value: Valeur à positionner
+        distribution: Liste des valeurs de référence
+    
+    Returns:
+        Percentile entre 0.0 et 1.0
+    
+    Example:
+        pct_rank(75, [50, 60, 70, 80, 90]) → 0.6 (75 est au 60ème percentile)
+    """
+    if not distribution or value is None:
+        return 0.5  # Default: médiane
+    
+    count_below = sum(1 for x in distribution if x is not None and x < value)
+    return count_below / max(len(distribution), 1)
+
+
+def safe_float(value, default: float = 0.0) -> float:
+    """Conversion sécurisée en float."""
+    if value is None:
+        return default
+    try:
+        if isinstance(value, str):
+            # Nettoie les suffixes comme "%" ou "M"
+            value = value.replace("%", "").replace(",", ".").strip()
+            if value.endswith("M"):
+                return float(value[:-1]) * 1_000_000
+            if value.endswith("B"):
+                return float(value[:-1]) * 1_000_000_000
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def score_equity_for_profile(
+    stock: Dict,
+    profile: str,
+    universe_stats: Dict[str, List[float]]
+) -> float:
+    """
+    Score une action selon le profil cible.
+    
+    Utilise les score_weights du PROFILE_POLICY pour calculer un score
+    basé sur les percentiles de chaque métrique dans l'univers.
+    
+    Args:
+        stock: Dict avec les métriques de l'action (perf_3y, vol_3y, roe, etc.)
+        profile: "Agressif", "Modéré", ou "Stable"
+        universe_stats: Dict des distributions par métrique
+            Ex: {"vol_3y": [15.2, 18.5, 22.1, ...], "roe": [8.5, 12.3, ...]}
+    
+    Returns:
+        Score entre 0.0 et 1.0
+    
+    Example:
+        stats = {"vol_3y": [15, 20, 25, 30], "roe": [5, 10, 15, 20]}
+        stock = {"vol_3y": 18, "roe": 12}
+        score = score_equity_for_profile(stock, "Stable", stats)
+    """
+    policy = get_profile_policy(profile)
+    weights = policy.get("score_weights", {})
+    
+    score = 0.0
+    
+    # Mapping des clés de stock vers les clés de weights
+    # (gère les variations de nommage dans les données)
+    key_mappings = {
+        "momentum_12m": ["momentum_12m", "momentum_12m_1m", "perf_12m"],
+        "perf_3m": ["perf_3m", "perf_3mo"],
+        "perf_ytd": ["perf_ytd", "ytd", "perf_ytd_pct"],
+        "perf_1y": ["perf_1y", "perf_12m", "return_1y"],
+        "perf_3y": ["perf_3y", "return_3y"],
+        "eps_growth_5y": ["eps_growth_5y", "eps_g_5y", "earnings_growth_5y"],
+        "roe": ["roe", "return_on_equity"],
+        "fcf_yield": ["fcf_yield", "free_cash_flow_yield"],
+        "vol_3y": ["vol_3y", "volatility_3y", "annualized_vol"],
+        "max_dd_3y": ["max_dd_3y", "max_drawdown_3y", "max_dd", "max_drawdown_ytd"],
+        "dividend_yield": ["dividend_yield", "div_yield", "yield"],
+    }
+    
+    for weight_key, weight_value in weights.items():
+        if weight_value == 0:
+            continue
+        
+        # Trouver la valeur dans stock
+        stock_value = None
+        possible_keys = key_mappings.get(weight_key, [weight_key])
+        
+        for key in possible_keys:
+            if key in stock and stock[key] is not None:
+                stock_value = safe_float(stock[key])
+                break
+        
+        if stock_value is None:
+            continue
+        
+        # Obtenir la distribution
+        dist = None
+        for key in possible_keys:
+            if key in universe_stats:
+                dist = universe_stats[key]
+                break
+        
+        if not dist:
+            continue
+        
+        # Calculer le percentile
+        percentile = pct_rank(stock_value, dist)
+        
+        # Pour les métriques de risque (poids négatifs), inverser
+        # Plus le percentile est élevé (= plus de vol/drawdown), plus le score baisse
+        if weight_value < 0:
+            contribution = abs(weight_value) * percentile
+        else:
+            contribution = weight_value * percentile
+        
+        score += contribution
+    
+    # Normaliser entre 0 et 1
+    return max(0.0, min(1.0, score))
+
+
+def filter_equities_by_profile(
+    equities: List[Dict],
+    profile: str,
+    preset_field: str = "_matched_preset"
+) -> List[Dict]:
+    """
+    Filtre les équities selon les presets autorisés pour un profil.
+    
+    Args:
+        equities: Liste d'équities avec un champ preset
+        profile: "Agressif", "Modéré", ou "Stable"
+        preset_field: Nom du champ contenant le preset matché
+    
+    Returns:
+        Liste filtrée des équities dont le preset est autorisé
+    
+    Example:
+        filtered = filter_equities_by_profile(equities, "Agressif")
+    """
+    policy = get_profile_policy(profile)
+    allowed_presets = policy.get("allowed_equity_presets", set())
+    
+    if not allowed_presets:
+        return equities
+    
+    return [
+        eq for eq in equities
+        if eq.get(preset_field) in allowed_presets
+    ]
+
+
+def compute_universe_stats(equities: List[Dict]) -> Dict[str, List[float]]:
+    """
+    Calcule les distributions de métriques pour le scoring percentile.
+    
+    Args:
+        equities: Liste d'équities avec leurs métriques
+    
+    Returns:
+        Dict {metric_name: [values...]} pour chaque métrique pertinente
+    
+    Example:
+        stats = compute_universe_stats(equities)
+        # stats["vol_3y"] = [15.2, 18.5, 22.1, ...]
+    """
+    metrics = [
+        "momentum_12m", "perf_3m", "perf_ytd", "perf_1y", "perf_3y",
+        "eps_growth_5y", "roe", "fcf_yield", "vol_3y", "max_dd_3y",
+        "dividend_yield", "buffett_score", "composite_score"
+    ]
+    
+    stats = {m: [] for m in metrics}
+    
+    for eq in equities:
+        for metric in metrics:
+            value = eq.get(metric)
+            if value is not None:
+                try:
+                    stats[metric].append(safe_float(value))
+                except (ValueError, TypeError):
+                    pass
+    
+    return stats
+
+
 # ============ HELPER FUNCTIONS ============
 
 def get_preset_config(preset_name: str) -> Optional[PresetConfig]:
@@ -1211,6 +1536,15 @@ if __name__ == "__main__":
         for role, (min_pct, max_pct) in targets.items():
             print(f"    {role.value}: {min_pct*100:.0f}%-{max_pct*100:.0f}%")
     
+    print("\n--- PROFILE_POLICY v2.3 (NEW) ---")
+    for profile, policy in PROFILE_POLICY.items():
+        print(f"\n  {profile}:")
+        print(f"    allowed_presets: {policy['allowed_equity_presets']}")
+        print(f"    min_buffett: {policy['min_buffett_score']}")
+        print(f"    equity_min_weight: {policy['equity_min_weight']*100:.0f}%")
+        print(f"    equity_max_weight: {policy['equity_max_weight']*100:.0f}%")
+        print(f"    min_equity_positions: {policy['min_equity_positions']}")
+    
     print("\n--- Corporate Groups ---")
     print(f"  Total groups: {len(CORPORATE_GROUPS)}")
     for group_id, patterns in list(CORPORATE_GROUPS.items())[:5]:
@@ -1255,3 +1589,23 @@ if __name__ == "__main__":
         region = get_region(country)
         allowed = is_region_allowed_euus(region)
         print(f"  {country} → {region} → {'✅ ALLOWED' if allowed else '❌ BLOCKED'}")
+    
+    print("\n--- Score Equity Test ---")
+    test_stock = {
+        "name": "TEST CORP",
+        "momentum_12m": 15.0,
+        "perf_3m": 8.0,
+        "roe": 18.0,
+        "vol_3y": 22.0,
+        "dividend_yield": 2.5,
+    }
+    test_universe_stats = {
+        "momentum_12m": [5, 10, 15, 20, 25],
+        "perf_3m": [2, 5, 8, 12, 15],
+        "roe": [8, 12, 15, 18, 22],
+        "vol_3y": [12, 18, 22, 28, 35],
+        "dividend_yield": [0, 1, 2, 3, 4],
+    }
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        score = score_equity_for_profile(test_stock, profile, test_universe_stats)
+        print(f"  {profile}: score = {score:.3f}")
