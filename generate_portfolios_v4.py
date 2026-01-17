@@ -9,7 +9,7 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
-V4.13.0: PROFILE_POLICY integration - stylistically differentiated portfolios per profile
+V4.13.2: PROFILE_POLICY FIX - hard_filters + assign_preset + robust normalization
 V4.12.2: FIX - ETF selection audit extraction from all_funds_data (dicts) not universe_others (Assets)
 V4.9.1: Backtest debug file generation - real prices and calculations export
 V4.9.0: RADAR tactical integration - deterministic data-driven tilts
@@ -69,7 +69,7 @@ except ImportError:
     BLOCKED_REGIONS_EUUS = {"IN", "ASIA_EX_IN", "LATAM"}
     def get_region(country): return "OTHER"
 
-# === v4.13: Import PROFILE_POLICY pour scoring différencié par profil ===
+# === v4.13.2: Import PROFILE_POLICY + select_equities_for_profile corrigé ===
 try:
     from portfolio_engine.preset_meta import (
         PROFILE_POLICY,
@@ -77,6 +77,8 @@ try:
         score_equity_for_profile,
         filter_equities_by_profile,
         compute_universe_stats,
+        select_equities_for_profile as select_equities_for_profile_v2,  # v4.13.2
+        diagnose_profile_overlap,  # v4.13.2
     )
     HAS_PROFILE_POLICY = True
 except ImportError:
@@ -514,7 +516,7 @@ def print_tactical_context_diagnostic(market_context: Dict, mode: str = "radar")
     print("\n" + "=" * 80 + "\n")
 
 
-# ============= v4.13: SÉLECTION ÉQUITIES PAR PROFIL =============
+# ============= v4.13.2: SÉLECTION ÉQUITIES PAR PROFIL (CORRIGÉ) =============
 
 def select_equities_for_profile(
     eq_filtered: List[dict],
@@ -523,12 +525,12 @@ def select_equities_for_profile(
     target_n: int = 25,
 ) -> Tuple[List[dict], Dict]:
     """
-    v4.13: Sélectionne les équités avec scoring différencié par profil.
+    v4.13.2: Sélection avec VRAIE différenciation via preset_meta.
     
-    Utilise PROFILE_POLICY pour:
-    1. Filtrer par allowed_equity_presets
-    2. Appliquer min_buffett_score par profil  
-    3. Scorer avec score_weights spécifiques au profil
+    Délègue à select_equities_for_profile_v2() de preset_meta.py qui:
+    1. Assigne automatiquement _matched_preset
+    2. Applique hard_filters (vol_min/vol_max) pour forcer divergence
+    3. Score avec normalisation robuste [-S,+S] → [0,1]
     
     Args:
         eq_filtered: Liste d'équités pré-filtrées
@@ -539,7 +541,7 @@ def select_equities_for_profile(
     Returns:
         (equities_selected, selection_meta)
     """
-    if not HAS_PROFILE_POLICY or profile not in PROFILE_POLICY:
+    if not HAS_PROFILE_POLICY:
         logger.warning(f"⚠️ PROFILE_POLICY non disponible pour {profile}, fallback uniforme")
         return sector_balanced_selection(
             assets=eq_filtered,
@@ -552,67 +554,36 @@ def select_equities_for_profile(
             market_context=market_context,
         )
     
-    policy = get_profile_policy(profile)
-    logger.info(f"   [{profile}] Applying PROFILE_POLICY: min_buffett={policy.get('min_buffett_score', 'N/A')}, presets={policy.get('allowed_equity_presets', 'N/A')}")
-    
-    # 1. Filtrer par min_buffett_score
-    min_buffett = policy.get("min_buffett_score", 0)
-    eq_buffett_filtered = [
-        e for e in eq_filtered
-        if (e.get("_buffett_score") or 0) >= min_buffett
-    ]
-    logger.info(f"   [{profile}] After min_buffett_score >= {min_buffett}: {len(eq_buffett_filtered)}/{len(eq_filtered)}")
-    
-    # 2. Filtrer par allowed_equity_presets (si implémenté)
-    allowed_presets = policy.get("allowed_equity_presets", set())
-    if allowed_presets:
-        eq_preset_filtered = filter_equities_by_profile(eq_buffett_filtered, profile)
-        if len(eq_preset_filtered) >= target_n // 2:
-            eq_buffett_filtered = eq_preset_filtered
-            logger.info(f"   [{profile}] After preset filter: {len(eq_buffett_filtered)}")
-        else:
-            logger.warning(f"   [{profile}] Preset filter too restrictive ({len(eq_preset_filtered)}), keeping all")
-    
-    # 3. Scorer avec les poids spécifiques au profil
-    universe_stats = compute_universe_stats(eq_buffett_filtered)
-    
-    for eq in eq_buffett_filtered:
-        profile_score = score_equity_for_profile(eq, profile, universe_stats)
-        eq["_profile_score"] = profile_score
-        # Combiner avec le composite_score existant (60% profile, 40% original)
-        original_score = eq.get("composite_score", 0) or 0
-        eq["composite_score"] = 0.6 * profile_score + 0.4 * original_score
-    
-    # 4. Log top 5 scores pour diagnostic
-    sorted_by_profile = sorted(eq_buffett_filtered, key=lambda x: x.get("_profile_score", 0), reverse=True)
-    top5 = sorted_by_profile[:5]
-    logger.info(f"   [{profile}] Top 5 by profile_score:")
-    for e in top5:
-        logger.info(f"      • {e.get('name', '?')[:25]}: profile_score={e.get('_profile_score', 0):.2f}, composite={e.get('composite_score', 0):.2f}")
-    
-    # 5. Sélection finale avec sector_balanced
-    equities, selection_meta = sector_balanced_selection(
-        assets=eq_buffett_filtered,
-        target_n=min(target_n, len(eq_buffett_filtered)),
-        initial_max_per_sector=4,
-        score_field="composite_score",
-        enable_radar_tiebreaker=True,
-        radar_bonus_cap=0.03,
-        radar_min_coverage=0.40,
-        market_context=market_context,
-    )
-    
-    # 6. Enrichir la meta avec les infos PROFILE_POLICY
-    selection_meta["profile_policy"] = {
-        "profile": profile,
-        "min_buffett_score": min_buffett,
-        "allowed_presets": list(allowed_presets) if allowed_presets else [],
-        "universe_after_buffett": len(eq_buffett_filtered),
-        "selected": len(equities),
-    }
-    
-    return equities, selection_meta
-
+    # v4.13.2: Utiliser la fonction corrigée de preset_meta.py
+    try:
+        equities, selection_meta = select_equities_for_profile_v2(
+            equities=eq_filtered,
+            profile=profile,
+            market_context=market_context,
+            target_n=target_n,
+        )
+        
+        # Enrichir la meta pour compatibilité avec le reste du pipeline
+        selection_meta["selected"] = len(equities)
+        selection_meta["target_n"] = target_n
+        selection_meta["pass_used"] = "PROFILE_POLICY_v4.13.2"
+        
+        return equities, selection_meta
+        
+    except Exception as e:
+        logger.error(f"❌ select_equities_for_profile_v2 failed: {e}, fallback sector_balanced")
+        import traceback
+        traceback.print_exc()
+        return sector_balanced_selection(
+            assets=eq_filtered,
+            target_n=min(target_n, len(eq_filtered)),
+            initial_max_per_sector=4,
+            score_field="composite_score",
+            enable_radar_tiebreaker=True,
+            radar_bonus_cap=0.03,
+            radar_min_coverage=0.40,
+            market_context=market_context,
+        )
 
 # ============= PIPELINE PRINCIPAL =============
 
