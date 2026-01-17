@@ -1967,6 +1967,18 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     logger.info(f"🔍 Sample ticker mapping: {ticker_debug}")
     if bond_symbol_debug:
         logger.info(f"🔍 V4.6 Bond symbols: {bond_symbol_debug[:5]}")
+    # v4.13.2 FIX: Enrichir asset_lookup avec les vrais noms depuis source_data
+    for a in assets:
+        aid = str(_safe_get_attr(a, 'id'))
+        if aid in asset_lookup:
+            current_name = asset_lookup[aid].get("name", "")
+            # Si le nom actuel est un ID interne, chercher le vrai nom
+            if current_name.startswith(("EQ_", "ETF_", "BOND_", "CR_")):
+                # Essayer source_data
+                if hasattr(a, 'source_data') and a.source_data:
+                    real_name = a.source_data.get('name')
+                    if real_name and not str(real_name).startswith(("EQ_", "ETF_", "BOND_", "CR_")):
+                        asset_lookup[aid]["name"] = real_name    
     
     def _category_v1(cat: str) -> str:
         cat = (cat or "").lower()
