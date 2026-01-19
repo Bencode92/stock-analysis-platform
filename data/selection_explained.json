@@ -1,22 +1,23 @@
 {
-  "generated_at": "2026-01-19T13:24:12.112588",
-  "version": "v1.2.0",
+  "generated_at": "2026-01-19T13:43:24.649190",
+  "version": "v1.3.0",
+  "preset_meta_version": "v4.15.2",
   "selection_pipeline": {
-    "version": "v4.12.2",
-    "description": "Pipeline de sélection des actions pour les portefeuilles",
+    "version": "v4.15.2",
+    "description": "Pipeline de sélection des actions par profil (preset_meta v4.15.2)",
     "steps": [
       {
         "step": 1,
         "name": "Chargement des données",
         "source": "data/stocks_us.json, data/stocks_europe.json, data/stocks_asia.json",
-        "description": "Charge toutes les actions avec leurs métriques fondamentales (ROE, D/E, PE, YTD, volatilité, market cap)",
+        "description": "Charge toutes les actions avec leurs métriques fondamentales",
         "output": "~450-500 actions brutes"
       },
       {
         "step": 2,
-        "name": "Filtre Buffett",
+        "name": "Filtre Buffett (global)",
         "mode": "soft (par défaut)",
-        "threshold": "score_min = 40",
+        "threshold": "score_min = 40-60 selon profil",
         "description": "Évalue la qualité fondamentale selon les critères Warren Buffett",
         "formula": {
           "ROE_score": "0-40 points (ROE >= 20% = 40pts, >= 15% = 30pts, >= 10% = 20pts)",
@@ -24,55 +25,98 @@
           "Stability_score": "0-30 points (basé sur volatilité et drawdown)",
           "Total": "ROE_score + DE_score + Stability_score (max 100)"
         },
-        "rejection_reasons": [
-          "ROE trop faible (< 10%)",
-          "Endettement excessif (D/E > 150%)",
-          "Données manquantes (ROE ou D/E non disponible)",
-          "Score total < 40"
-        ],
         "output": "~280-350 actions après filtre"
       },
       {
         "step": 3,
-        "name": "Scoring quantitatif",
-        "description": "Calcule un score composite pour chaque action",
-        "components": {
-          "momentum_score": "Performance YTD + 3M + 1M normalisée (0-1)",
-          "quality_score": "ROE + stabilité des fondamentaux (0-1)",
-          "risk_score": "Inverse de volatilité et drawdown (0-1)",
-          "composite_score": "0.4 * momentum + 0.3 * quality + 0.3 * risk"
+        "name": "Assignment des presets",
+        "function": "assign_preset_to_equity()",
+        "description": "Assigne chaque action à un preset selon ses caractéristiques",
+        "presets": {
+          "recovery": "vol >= 35% ET ytd < -10%",
+          "agressif": "vol >= 35%",
+          "defensif": "vol < 22% ET (div_yield > 1.5% OU buffett >= 75)",
+          "low_volatility": "vol < 20% ET buffett >= 70",
+          "quality_premium": "vol < 30% ET roe > 15% ET buffett >= 65",
+          "value_dividend": "vol < 28% ET div_yield > 1%",
+          "momentum_trend": "vol >= 28% ET (ytd > 5% OU perf_1y > 20%)",
+          "croissance": "vol >= 25% ET ytd > 0%"
         },
-        "output": "Actions scorées et classées"
+        "output": "Actions avec _matched_preset assigné"
       },
       {
         "step": 4,
-        "name": "Filtre volatilité/liquidité",
-        "thresholds": {
-          "max_volatility": "60% annualisée",
-          "min_market_cap": "Implicite (données disponibles = liquide)"
+        "name": "Hard filters par profil",
+        "function": "apply_hard_filters()",
+        "description": "Filtre strict par profil - données manquantes = REJET",
+        "profiles": {
+          "Agressif": {
+            "volatility_3y_min": 22.0,
+            "volatility_3y_max": 120.0,
+            "rejection_if_missing": [
+              "volatility_3y"
+            ]
+          },
+          "Modéré": {
+            "volatility_3y_min": 12.0,
+            "volatility_3y_max": 45.0,
+            "roe_min": 8.0,
+            "rejection_if_missing": [
+              "volatility_3y",
+              "roe"
+            ]
+          },
+          "Stable": {
+            "volatility_3y_max": 28.0,
+            "roe_min": 10.0,
+            "dividend_yield_min": 0.5,
+            "payout_ratio_max": 85.0,
+            "dividend_coverage_min": 1.2,
+            "rejection_if_missing": [
+              "volatility_3y",
+              "roe",
+              "dividend_yield",
+              "payout_ratio",
+              "dividend_coverage"
+            ],
+            "yield_trap_protection": "payout > 85% OU coverage < 1.2x = REJET"
+          }
         },
-        "description": "Élimine les actions trop volatiles ou illiquides",
-        "output": "~200-300 actions filtrées"
+        "v4.15.2_changes": [
+          "vol_missing = REJET (plus de default 25.0)",
+          "Tous les filtres appliqués (elif → if)",
+          "Anti yield-trap strict pour Stable"
+        ],
+        "output": "Actions filtrées par profil"
       },
       {
         "step": 5,
-        "name": "Sélection équilibrée par secteur",
-        "function": "sector_balanced_selection()",
-        "target": "25 actions maximum",
-        "logic": {
-          "diversification": "Max 3-4 actions par secteur",
-          "ranking": "Tri par composite_score décroissant dans chaque secteur",
-          "selection": "Prend les meilleurs de chaque secteur jusqu'à 25 total"
+        "name": "Scoring par profil",
+        "function": "score_equity_for_profile()",
+        "description": "Score pondéré selon le profil, avec pénalité missing data",
+        "weights_example": {
+          "Agressif": "perf_1y=0.20, perf_3m=0.10, eps_growth=0.15, max_dd=-0.05",
+          "Stable": "volatility=-0.25, max_dd=-0.15, div_yield=0.20, buffett=0.20"
         },
-        "rejection_reasons": [
-          "Quota sectoriel atteint (ex: déjà 4 actions Technologie)",
-          "Score composite insuffisant vs concurrents du secteur",
-          "Secteur surreprésenté dans l'univers"
+        "v4.15.2_changes": [
+          "Missing data penalty: poids négatif = percentile 1.0 (pire)",
+          "Missing data bonus: poids positif = percentile 0.5 (neutre)",
+          "Percentiles data-driven avec winsorization",
+          "pct_rank() O(log n) avec bisect"
         ],
-        "output": "25 actions finales pour les portefeuilles"
+        "output": "Actions scorées et classées par profil"
       },
       {
         "step": 6,
+        "name": "Sélection finale",
+        "function": "select_equities_for_profile()",
+        "target": "25 actions par profil",
+        "description": "Sélectionne les meilleures actions pour chaque profil",
+        "overlap_target": "< 30% entre Agressif et Stable",
+        "output": "25 actions finales par profil"
+      },
+      {
+        "step": 7,
         "name": "Tilts RADAR (optionnel)",
         "description": "Ajuste les scores selon le contexte marché",
         "adjustments": {
@@ -86,19 +130,23 @@
     ],
     "key_points": [
       "Les grandes capitalisations NE SONT PAS automatiquement sélectionnées",
-      "La qualité fondamentale (Buffett) prime sur la taille",
-      "La diversification sectorielle limite le nombre d'actions par secteur",
-      "Une action peut être rejetée même avec un bon score si son secteur est déjà plein",
-      "Les données manquantes (ROE, D/E) entraînent un rejet"
+      "La sélection est PROFILE-SPECIFIC (Agressif ≠ Stable)",
+      "Les données manquantes = REJET strict (vol_missing, roe_missing, etc.)",
+      "Anti yield-trap: payout > 85% ou coverage < 1.2x = REJET",
+      "Overlap Agressif/Stable < 30% (différenciation réelle)",
+      "Scoring avec pénalité missing data (pas d'avantage injuste)"
     ]
   },
   "config_used": {
     "buffett_mode": "soft",
     "buffett_min_score": 40,
+    "profile_analyzed": "Modéré",
     "max_equities": 25,
     "max_per_sector": 4,
     "tactical_context_enabled": true,
-    "volatility_sanity_check": true
+    "volatility_sanity_check": true,
+    "yield_trap_protection": true,
+    "missing_data_strict": true
   },
   "summary": {
     "total_universe": 1006,
@@ -212,9 +260,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.576,
+          "profile_score": 0.742,
+          "matched_preset": "agressif",
           "roe": 91.87,
           "de_ratio": 0.13,
-          "ytd": "0.55"
+          "ytd": "0.55",
+          "dividend_yield": 0.02,
+          "dividend_coverage": 101.25
         },
         {
           "rank": 2,
@@ -232,9 +284,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.674,
+          "profile_score": 0.665,
+          "matched_preset": "momentum_trend",
           "roe": 30.8,
           "de_ratio": 0.08,
-          "ytd": "5.37"
+          "ytd": "5.37",
+          "dividend_yield": 0.25,
+          "dividend_coverage": 12.19
         },
         {
           "rank": 3,
@@ -252,9 +308,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.675,
+          "profile_score": 0.666,
+          "matched_preset": "quality_premium",
           "roe": 30.8,
           "de_ratio": 0.08,
-          "ytd": "5.42"
+          "ytd": "5.42",
+          "dividend_yield": 0.25,
+          "dividend_coverage": 12.2
         },
         {
           "rank": 4,
@@ -281,9 +341,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.647,
+          "profile_score": 0.693,
+          "matched_preset": "quality_premium",
           "roe": 151.91,
           "de_ratio": 1.34,
-          "ytd": "-5.06"
+          "ytd": "-5.06",
+          "dividend_yield": 0.4,
+          "dividend_coverage": 7.24
         },
         {
           "rank": 5,
@@ -310,9 +374,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.646,
+          "profile_score": 0.536,
+          "matched_preset": "quality_premium",
           "roe": 29.65,
           "de_ratio": 0.18,
-          "ytd": "-3.09"
+          "ytd": "-3.09",
+          "dividend_yield": 0.74,
+          "dividend_coverage": 4.14
         },
         {
           "rank": 6,
@@ -339,9 +407,12 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.595,
+          "profile_score": 0.626,
+          "matched_preset": "croissance",
           "roe": 20.72,
           "de_ratio": 0.46,
-          "ytd": "5.00"
+          "ytd": "5.00",
+          "dividend_yield": 0.0
         },
         {
           "rank": 7,
@@ -352,25 +423,22 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.441 < seuil 0.534",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "5/4",
-            "your_score": 0.441,
-            "min_selected_score": 0.534,
-            "selected_in_sector": [
-              "NVIDIA CORP",
-              "ASML HOLDING NV",
-              "ASIA VITAL COMPONENT",
-              "SYNOPSYS INC",
-              "FORTINET INC"
-            ]
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 71.8,
           "composite_score": 0.441,
+          "profile_score": 0.671,
+          "matched_preset": "agressif",
           "roe": 8.71,
           "de_ratio": 1,
-          "ytd": "0.79"
+          "ytd": "0.79",
+          "dividend_yield": 0.69,
+          "dividend_coverage": 1.97
         },
         {
           "rank": 8,
@@ -388,9 +456,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.595,
+          "profile_score": 0.707,
+          "matched_preset": "agressif",
           "roe": 34.14,
           "de_ratio": 0.27,
-          "ytd": "-3.70"
+          "ytd": "-3.70",
+          "dividend_yield": 0.34,
+          "dividend_coverage": 10.76
         },
         {
           "rank": 9,
@@ -401,25 +473,21 @@
           "sector": "Biens de consommation cycliques",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 5/4), score 0.409 < seuil 0.582",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "sector": "Biens de consommation cycliques",
-            "sector_quota": "5/4",
-            "your_score": 0.409,
-            "min_selected_score": 0.582,
-            "selected_in_sector": [
-              "LULULEMON ATHLETICA ",
-              "EXPEDIA GROUP INC",
-              "ULTA BEAUTY INC",
-              "DECKERS OUTDOOR CORP",
-              "TJX INC"
-            ]
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 78.8,
           "composite_score": 0.409,
+          "profile_score": 0.712,
+          "matched_preset": "agressif",
           "roe": 9.71,
           "de_ratio": 0.18,
-          "ytd": "1.65"
+          "ytd": "1.65",
+          "dividend_yield": 0.0
         },
         {
           "rank": 10,
@@ -445,9 +513,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.635,
+          "profile_score": 0.519,
+          "matched_preset": "defensif",
           "roe": 20.63,
           "de_ratio": 0.62,
-          "ytd": "5.29"
+          "ytd": "5.29",
+          "dividend_yield": 0.79,
+          "dividend_coverage": 3.04
         },
         {
           "rank": 11,
@@ -465,9 +537,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.64,
+          "profile_score": 0.663,
+          "matched_preset": "quality_premium",
           "roe": 74.2,
           "de_ratio": 2.36,
-          "ytd": "-3.86"
+          "ytd": "-3.86",
+          "dividend_yield": 0.58,
+          "dividend_coverage": 3.4
         },
         {
           "rank": 12,
@@ -493,9 +569,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.58,
+          "profile_score": 0.544,
+          "matched_preset": "quality_premium",
           "roe": 16.96,
           "de_ratio": 1.32,
-          "ytd": "-4.48"
+          "ytd": "-4.48",
+          "dividend_yield": 1.87,
+          "dividend_coverage": 3.45
         },
         {
           "rank": 13,
@@ -521,9 +601,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.666,
+          "profile_score": 0.581,
+          "matched_preset": "defensif",
           "roe": 52.91,
           "de_ratio": 0.66,
-          "ytd": "-5.63"
+          "ytd": "-5.63",
+          "dividend_yield": 0.75,
+          "dividend_coverage": 4.18
         },
         {
           "rank": 14,
@@ -541,9 +625,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.588,
+          "profile_score": 0.515,
+          "matched_preset": "value_dividend",
           "roe": 12.96,
           "de_ratio": 0.15,
-          "ytd": "5.45"
+          "ytd": "5.45",
+          "dividend_yield": 3.09,
+          "dividend_coverage": 1.72
         },
         {
           "rank": 15,
@@ -570,9 +658,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.554,
+          "profile_score": 0.689,
+          "matched_preset": "agressif",
           "roe": 59.34,
           "de_ratio": 4.96,
-          "ytd": "-4.25"
+          "ytd": "-4.25",
+          "dividend_yield": 1.07,
+          "dividend_coverage": 2.66
         },
         {
           "rank": 16,
@@ -590,9 +682,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.644,
+          "profile_score": 0.587,
+          "matched_preset": "rendement",
           "roe": 19.68,
           "de_ratio": 0.51,
-          "ytd": "6.11"
+          "ytd": "6.11",
+          "dividend_yield": 2.34,
+          "dividend_coverage": 2.02
         },
         {
           "rank": 17,
@@ -618,9 +714,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.669,
+          "profile_score": 0.58,
+          "matched_preset": "defensif",
           "roe": 197.61,
           "de_ratio": 2.8,
-          "ytd": "-3.94"
+          "ytd": "-3.94",
+          "dividend_yield": 0.58,
+          "dividend_coverage": 4.97
         },
         {
           "rank": 18,
@@ -646,9 +746,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.685,
+          "profile_score": 0.507,
+          "matched_preset": "defensif",
           "roe": 27.77,
           "de_ratio": 0.28,
-          "ytd": "11.54"
+          "ytd": "11.54",
+          "dividend_yield": 0.53,
+          "dividend_coverage": 3.68
         },
         {
           "rank": 19,
@@ -659,15 +763,21 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Volatilité excessive (64.9% > 60%)",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "volatility": 64.86
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 70.6,
           "composite_score": 0.397,
+          "profile_score": 0.688,
+          "matched_preset": "agressif",
           "roe": 9.18,
           "de_ratio": 0.05,
-          "ytd": "5.34"
+          "ytd": "5.34",
+          "dividend_yield": 0.0
         },
         {
           "rank": 20,
@@ -693,9 +803,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.52,
+          "profile_score": 0.62,
+          "matched_preset": "value_dividend",
           "roe": 9.18,
           "de_ratio": 1.11,
-          "ytd": "-6.49"
+          "ytd": "-6.49",
+          "dividend_yield": 2.06,
+          "dividend_coverage": 3.53
         }
       ]
     },
@@ -721,9 +835,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.599,
+          "profile_score": 0.671,
+          "matched_preset": "quality_premium",
           "roe": 17.23,
           "de_ratio": 0.74,
-          "ytd": "3.58"
+          "ytd": "3.58",
+          "dividend_yield": 1.66,
+          "dividend_coverage": 0.02
         },
         {
           "rank": 2,
@@ -749,9 +867,13 @@
           },
           "buffett_score": 77.4,
           "composite_score": 0.585,
+          "profile_score": 0.681,
+          "matched_preset": "value_dividend",
           "roe": 13.0,
           "de_ratio": 1.26,
-          "ytd": "1.07"
+          "ytd": "1.07",
+          "dividend_yield": 4.12,
+          "dividend_coverage": 0.01
         },
         {
           "rank": 3,
@@ -769,9 +891,12 @@
           },
           "buffett_score": 77.5,
           "composite_score": 0.536,
+          "matched_preset": "rendement",
           "roe": 9.17,
           "de_ratio": 0.43,
-          "ytd": "-3.61"
+          "ytd": "-3.61",
+          "dividend_yield": 4.06,
+          "dividend_coverage": 0.02
         },
         {
           "rank": 4,
@@ -797,9 +922,12 @@
           },
           "buffett_score": 76.5,
           "composite_score": 0.67,
+          "matched_preset": "rendement",
           "roe": 28.24,
           "de_ratio": 1.36,
-          "ytd": "-1.21"
+          "ytd": "-1.21",
+          "dividend_yield": 3.25,
+          "dividend_coverage": 0.01
         },
         {
           "rank": 5,
@@ -817,9 +945,13 @@
           },
           "buffett_score": 76.0,
           "composite_score": 0.624,
+          "profile_score": 0.698,
+          "matched_preset": "quality_premium",
           "roe": 19.97,
           "de_ratio": 0.24,
-          "ytd": "2.04"
+          "ytd": "2.04",
+          "dividend_yield": 4.66,
+          "dividend_coverage": 0.02
         },
         {
           "rank": 6,
@@ -830,24 +962,21 @@
           "sector": "Biens de consommation de base",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation de base: 4/4), score 0.496 < seuil 0.646",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Biens de consommation de base",
-            "sector_quota": "4/4",
-            "your_score": 0.496,
-            "min_selected_score": 0.646,
-            "selected_in_sector": [
-              "COLGATE PALMOLIVE IN",
-              "NESTLE SA",
-              "COCA-COLA",
-              "PROCTER & GAMBLE"
-            ]
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 50.9,
           "composite_score": 0.496,
+          "matched_preset": "rendement",
           "roe": 6.36,
           "de_ratio": 0.74,
-          "ytd": "-1.91"
+          "ytd": "-1.91",
+          "dividend_yield": 5.85,
+          "dividend_coverage": 0.01
         },
         {
           "rank": 7,
@@ -867,7 +996,9 @@
           "composite_score": 0.583,
           "roe": 22.55,
           "de_ratio": 1.3,
-          "ytd": "2.32"
+          "ytd": "2.32",
+          "dividend_yield": 3.42,
+          "dividend_coverage": 0.02
         },
         {
           "rank": 8,
@@ -893,9 +1024,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.533,
+          "profile_score": 0.618,
+          "matched_preset": "value_dividend",
           "roe": 8.77,
           "de_ratio": 2.56,
-          "ytd": "-1.35"
+          "ytd": "-1.35",
+          "dividend_yield": 1.69,
+          "dividend_coverage": 0.05
         },
         {
           "rank": 9,
@@ -924,9 +1059,12 @@
           },
           "buffett_score": 76.7,
           "composite_score": 0.683,
+          "matched_preset": "rendement",
           "roe": 55.48,
           "de_ratio": 1.87,
-          "ytd": "5.97"
+          "ytd": "5.97",
+          "dividend_yield": 3.7,
+          "dividend_coverage": 0.02
         },
         {
           "rank": 10,
@@ -952,9 +1090,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.551,
+          "profile_score": 0.654,
+          "matched_preset": "value_dividend",
           "roe": 12.22,
           "de_ratio": 1.67,
-          "ytd": "-2.55"
+          "ytd": "-2.55",
+          "dividend_yield": 3.9,
+          "dividend_coverage": 0.03
         },
         {
           "rank": 11,
@@ -965,24 +1107,20 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.432 < seuil 0.586",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.432,
-            "min_selected_score": 0.586,
-            "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
-            ]
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 55.0,
           "composite_score": 0.432,
           "roe": 3.66,
           "de_ratio": 0.4,
-          "ytd": "2.79"
+          "ytd": "2.79",
+          "dividend_yield": 2.7,
+          "dividend_coverage": 0.01
         },
         {
           "rank": 12,
@@ -993,24 +1131,21 @@
           "sector": "Biens de consommation de base",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation de base: 4/4), score 0.512 < seuil 0.646",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Biens de consommation de base",
-            "sector_quota": "4/4",
-            "your_score": 0.512,
-            "min_selected_score": 0.646,
-            "selected_in_sector": [
-              "COLGATE PALMOLIVE IN",
-              "NESTLE SA",
-              "COCA-COLA",
-              "PROCTER & GAMBLE"
-            ]
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 57.2,
           "composite_score": 0.512,
+          "matched_preset": "value_dividend",
           "roe": 7.03,
           "de_ratio": 0.59,
-          "ytd": "3.91"
+          "ytd": "3.91",
+          "dividend_yield": 3.32,
+          "dividend_coverage": 0.01
         },
         {
           "rank": 13,
@@ -1021,24 +1156,21 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.527 < seuil 0.586",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.527,
-            "min_selected_score": 0.586,
-            "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
-            ]
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 79.4,
           "composite_score": 0.527,
+          "matched_preset": "value_dividend",
           "roe": 7.88,
           "de_ratio": 1.88,
-          "ytd": "-1.08"
+          "ytd": "-1.08",
+          "dividend_yield": 1.65,
+          "dividend_coverage": 0.05
         },
         {
           "rank": 14,
@@ -1065,9 +1197,12 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.621,
+          "matched_preset": "rendement",
           "roe": 20.47,
           "de_ratio": 0.86,
-          "ytd": "0.99"
+          "ytd": "0.99",
+          "dividend_yield": 2.04,
+          "dividend_coverage": 0.02
         },
         {
           "rank": 15,
@@ -1093,9 +1228,13 @@
           },
           "buffett_score": 72.8,
           "composite_score": 0.592,
+          "profile_score": 0.677,
+          "matched_preset": "quality_premium",
           "roe": 19.26,
           "de_ratio": 1.85,
-          "ytd": "3.86"
+          "ytd": "3.86",
+          "dividend_yield": 4.7,
+          "dividend_coverage": 0.01
         },
         {
           "rank": 16,
@@ -1106,16 +1245,20 @@
           "sector": "Matériaux",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score Buffett insuffisant (20 < 40)",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité manquante (donnée requise); ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "buffett_score": 20.0,
-            "roe": -21.27,
-            "de_ratio": -9.44
+            "hard_filter_reasons": [
+              "vol_missing",
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 20.0,
           "composite_score": 0.337,
           "roe": -21.27,
-          "de_ratio": -9.44
+          "de_ratio": -9.44,
+          "dividend_yield": 0.81,
+          "dividend_coverage": -0.04
         },
         {
           "rank": 17,
@@ -1133,9 +1276,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.544,
+          "profile_score": 0.696,
+          "matched_preset": "agressif",
           "roe": 10.16,
           "de_ratio": 0.41,
-          "ytd": "7.86"
+          "ytd": "7.86",
+          "dividend_yield": 0.85,
+          "dividend_coverage": 0.03
         },
         {
           "rank": 18,
@@ -1166,7 +1313,9 @@
           "composite_score": 0.57,
           "roe": 22.99,
           "de_ratio": 0.99,
-          "ytd": "2.07"
+          "ytd": "2.07",
+          "dividend_yield": 1.34,
+          "dividend_coverage": 0.02
         },
         {
           "rank": 19,
@@ -1177,24 +1326,21 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.491 < seuil 0.586",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité < 12.0% (trop défensif pour Agressif); ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.491,
-            "min_selected_score": 0.586,
-            "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
-            ]
+            "hard_filter_reasons": [
+              "vol<12.0",
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 54.8,
           "composite_score": 0.491,
           "roe": 2.95,
           "de_ratio": 0.67,
-          "ytd": "-2.34"
+          "ytd": "-2.34",
+          "dividend_yield": 2.52,
+          "dividend_coverage": 0.08
         },
         {
           "rank": 20,
@@ -1220,9 +1366,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.532,
+          "profile_score": 0.613,
+          "matched_preset": "croissance",
           "roe": 9.45,
           "de_ratio": 0.72,
-          "ytd": "0.69"
+          "ytd": "0.69",
+          "dividend_yield": 1.39,
+          "dividend_coverage": 0.05
         }
       ]
     },
@@ -1257,9 +1407,13 @@
           },
           "buffett_score": 71.4,
           "composite_score": 0.573,
+          "profile_score": 0.586,
+          "matched_preset": "momentum_trend",
           "roe": 8.57,
           "de_ratio": 0.05,
-          "ytd": "11.98"
+          "ytd": "11.98",
+          "dividend_yield": 0.77,
+          "dividend_coverage": 4.49
         },
         {
           "rank": 2,
@@ -1270,16 +1424,21 @@
           "sector": "Energie",
           "country": "Indonésie",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.551)",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "composite_score": 0.551,
-            "sector": "Energie"
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 80.0,
           "composite_score": 0.551,
+          "profile_score": 0.709,
+          "matched_preset": "agressif",
           "roe": 27.93,
           "de_ratio": 0.63,
-          "ytd": "12.75"
+          "ytd": "12.75",
+          "dividend_yield": 0.0
         },
         {
           "rank": 3,
@@ -1290,25 +1449,22 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.651 < seuil 0.534",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "5/4",
-            "your_score": 0.651,
-            "min_selected_score": 0.534,
-            "selected_in_sector": [
-              "NVIDIA CORP",
-              "ASML HOLDING NV",
-              "ASIA VITAL COMPONENT",
-              "SYNOPSYS INC",
-              "FORTINET INC"
-            ]
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 80.0,
           "composite_score": 0.651,
+          "profile_score": 0.74,
+          "matched_preset": "agressif",
           "roe": 26.78,
           "de_ratio": 0.34,
-          "ytd": "10.64"
+          "ytd": "10.64",
+          "dividend_yield": 0.32,
+          "dividend_coverage": 11.7
         },
         {
           "rank": 4,
@@ -1335,9 +1491,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.655,
+          "profile_score": 0.628,
+          "matched_preset": "momentum_trend",
           "roe": 11.0,
           "de_ratio": 1.31,
-          "ytd": "41.37"
+          "ytd": "41.37",
+          "dividend_yield": 3.2,
+          "dividend_coverage": 3.53
         },
         {
           "rank": 5,
@@ -1348,24 +1508,17 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.377 < seuil 0.568",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "7/4",
-            "your_score": 0.377,
-            "min_selected_score": 0.568,
-            "selected_in_sector": [
-              "UNITED AIRLINES HOLD",
-              "FERROVIAL",
-              "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BOEING",
-              "BROADRIDGE FINANCIAL",
-              "REPUBLIC SERVICES IN"
-            ]
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 44.4,
           "composite_score": 0.377,
+          "profile_score": 0.625,
+          "matched_preset": "agressif",
           "roe": 1.09,
           "de_ratio": 0.5,
           "ytd": "8.59"
@@ -1379,27 +1532,21 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.589 < seuil 0.568",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "7/4",
-            "your_score": 0.589,
-            "min_selected_score": 0.568,
-            "selected_in_sector": [
-              "UNITED AIRLINES HOLD",
-              "FERROVIAL",
-              "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BOEING",
-              "BROADRIDGE FINANCIAL",
-              "REPUBLIC SERVICES IN"
-            ]
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 80.0,
           "composite_score": 0.589,
+          "profile_score": 0.729,
+          "matched_preset": "agressif",
           "roe": 22.35,
           "de_ratio": 0.94,
-          "ytd": "36.79"
+          "ytd": "36.79",
+          "dividend_yield": 0.22
         },
         {
           "rank": 7,
@@ -1410,27 +1557,22 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.523 < seuil 0.568",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "7/4",
-            "your_score": 0.523,
-            "min_selected_score": 0.568,
-            "selected_in_sector": [
-              "UNITED AIRLINES HOLD",
-              "FERROVIAL",
-              "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BOEING",
-              "BROADRIDGE FINANCIAL",
-              "REPUBLIC SERVICES IN"
-            ]
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 80.0,
           "composite_score": 0.523,
+          "profile_score": 0.692,
+          "matched_preset": "agressif",
           "roe": 10.9,
           "de_ratio": 0.21,
-          "ytd": "25.20"
+          "ytd": "25.20",
+          "dividend_yield": 1.19,
+          "dividend_coverage": 1.86
         },
         {
           "rank": 8,
@@ -1441,27 +1583,22 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.415 < seuil 0.568",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif); ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "7/4",
-            "your_score": 0.415,
-            "min_selected_score": 0.568,
-            "selected_in_sector": [
-              "UNITED AIRLINES HOLD",
-              "FERROVIAL",
-              "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BOEING",
-              "BROADRIDGE FINANCIAL",
-              "REPUBLIC SERVICES IN"
-            ]
+            "hard_filter_reasons": [
+              "vol>45.0",
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 53.5,
           "composite_score": 0.415,
+          "profile_score": 0.641,
+          "matched_preset": "agressif",
           "roe": 3.38,
           "de_ratio": 0.55,
-          "ytd": "19.02"
+          "ytd": "19.02",
+          "dividend_yield": 1.88
         },
         {
           "rank": 9,
@@ -1472,24 +1609,17 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.583 < seuil 0.568",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "7/4",
-            "your_score": 0.583,
-            "min_selected_score": 0.568,
-            "selected_in_sector": [
-              "UNITED AIRLINES HOLD",
-              "FERROVIAL",
-              "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BOEING",
-              "BROADRIDGE FINANCIAL",
-              "REPUBLIC SERVICES IN"
-            ]
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 80.0,
           "composite_score": 0.583,
+          "profile_score": 0.717,
+          "matched_preset": "agressif",
           "roe": 18.64,
           "de_ratio": 0,
           "ytd": "9.57"
@@ -1503,23 +1633,20 @@
           "sector": "Finance",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.460 < seuil 0.586",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité manquante (donnée requise)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.46,
-            "min_selected_score": 0.586,
-            "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
-            ]
+            "hard_filter_reasons": [
+              "vol_missing"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 80.0,
           "composite_score": 0.46,
+          "matched_preset": "value_dividend",
           "roe": 8.41,
-          "de_ratio": 2.14
+          "de_ratio": 2.14,
+          "dividend_yield": 2.74,
+          "dividend_coverage": 3.57
         },
         {
           "rank": 11,
@@ -1530,27 +1657,22 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.505 < seuil 0.568",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "7/4",
-            "your_score": 0.505,
-            "min_selected_score": 0.568,
-            "selected_in_sector": [
-              "UNITED AIRLINES HOLD",
-              "FERROVIAL",
-              "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BOEING",
-              "BROADRIDGE FINANCIAL",
-              "REPUBLIC SERVICES IN"
-            ]
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 80.0,
           "composite_score": 0.505,
+          "profile_score": 0.706,
+          "matched_preset": "agressif",
           "roe": 10.86,
           "de_ratio": 1.11,
-          "ytd": "29.82"
+          "ytd": "29.82",
+          "dividend_yield": 0.89,
+          "dividend_coverage": 1.09
         },
         {
           "rank": 12,
@@ -1561,25 +1683,22 @@
           "sector": "Technologie de l'information",
           "country": "Taïwan",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.474 < seuil 0.534",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "5/4",
-            "your_score": 0.474,
-            "min_selected_score": 0.534,
-            "selected_in_sector": [
-              "NVIDIA CORP",
-              "ASML HOLDING NV",
-              "ASIA VITAL COMPONENT",
-              "SYNOPSYS INC",
-              "FORTINET INC"
-            ]
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 56.4,
           "composite_score": 0.474,
+          "profile_score": 0.644,
+          "matched_preset": "momentum_trend",
           "roe": 2.58,
           "de_ratio": 0.1,
-          "ytd": "6.62"
+          "ytd": "6.62",
+          "dividend_yield": 1.12,
+          "dividend_coverage": 3.19
         },
         {
           "rank": 13,
@@ -1590,24 +1709,20 @@
           "sector": "Biens de consommation cycliques",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 5/4), score 0.458 < seuil 0.582",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité manquante (donnée requise)",
           "details": {
-            "sector": "Biens de consommation cycliques",
-            "sector_quota": "5/4",
-            "your_score": 0.458,
-            "min_selected_score": 0.582,
-            "selected_in_sector": [
-              "LULULEMON ATHLETICA ",
-              "EXPEDIA GROUP INC",
-              "ULTA BEAUTY INC",
-              "DECKERS OUTDOOR CORP",
-              "TJX INC"
-            ]
+            "hard_filter_reasons": [
+              "vol_missing"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 76.4,
           "composite_score": 0.458,
+          "matched_preset": "value_dividend",
           "roe": 8.8,
-          "de_ratio": 0.08
+          "de_ratio": 0.08,
+          "dividend_yield": 1.44,
+          "dividend_coverage": 6.91
         },
         {
           "rank": 14,
@@ -1618,24 +1733,22 @@
           "sector": "Finance",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.513 < seuil 0.586",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.513,
-            "min_selected_score": 0.586,
-            "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
-            ]
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 78.8,
           "composite_score": 0.513,
+          "profile_score": 0.664,
+          "matched_preset": "croissance",
           "roe": 7.75,
           "de_ratio": 2.36,
-          "ytd": "3.66"
+          "ytd": "3.66",
+          "dividend_yield": 2.83,
+          "dividend_coverage": 3.75
         },
         {
           "rank": 15,
@@ -1646,15 +1759,21 @@
           "sector": "La communication",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.442)",
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité manquante (donnée requise); ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "composite_score": 0.442,
-            "sector": "La communication"
+            "hard_filter_reasons": [
+              "vol_missing",
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 71.5,
           "composite_score": 0.442,
+          "matched_preset": "quality_premium",
           "roe": 7.16,
-          "de_ratio": 0.14
+          "de_ratio": 0.14,
+          "dividend_yield": 0.46,
+          "dividend_coverage": 11.03
         },
         {
           "rank": 16,
@@ -1672,9 +1791,12 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.539,
+          "profile_score": 0.692,
+          "matched_preset": "agressif",
           "roe": 8.76,
           "de_ratio": 0.59,
-          "ytd": "15.70"
+          "ytd": "15.70",
+          "dividend_yield": 0.4
         },
         {
           "rank": 17,
@@ -1685,24 +1807,22 @@
           "sector": "Finance",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.477 < seuil 0.586",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.477,
-            "min_selected_score": 0.586,
-            "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
-            ]
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 74.5,
           "composite_score": 0.477,
+          "profile_score": 0.65,
+          "matched_preset": "agressif",
           "roe": 6.9,
           "de_ratio": 0.61,
-          "ytd": "3.13"
+          "ytd": "3.13",
+          "dividend_yield": 2.65,
+          "dividend_coverage": 2.75
         },
         {
           "rank": 18,
@@ -1713,17 +1833,20 @@
           "sector": "Matériaux",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score Buffett insuffisant (40 < 40)",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "buffett_score": 39.9,
-            "roe": 1.64,
-            "de_ratio": 0.44
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 39.9,
           "composite_score": 0.423,
           "roe": 1.64,
           "de_ratio": 0.44,
-          "ytd": "18.15"
+          "ytd": "18.15",
+          "dividend_yield": 2.84,
+          "dividend_coverage": 1.23
         },
         {
           "rank": 19,
@@ -1749,9 +1872,13 @@
           },
           "buffett_score": 80.0,
           "composite_score": 0.511,
+          "profile_score": 0.618,
+          "matched_preset": "croissance",
           "roe": 8.65,
           "de_ratio": 2.45,
-          "ytd": "3.00"
+          "ytd": "3.00",
+          "dividend_yield": 4.72,
+          "dividend_coverage": 2.78
         },
         {
           "rank": 20,
@@ -1762,16 +1889,22 @@
           "sector": "Matériaux",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.388)",
+          "status": "❌ Hard filters [Modéré]: ❌ ROE < 8.0% (qualité insuffisante)",
           "details": {
-            "composite_score": 0.388,
-            "sector": "Matériaux"
+            "hard_filter_reasons": [
+              "roe<8.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 44.3,
           "composite_score": 0.388,
+          "profile_score": 0.657,
+          "matched_preset": "agressif",
           "roe": 1.07,
           "de_ratio": 0.57,
-          "ytd": "4.19"
+          "ytd": "4.19",
+          "dividend_yield": 0.3,
+          "dividend_coverage": -8.83
         }
       ]
     }
