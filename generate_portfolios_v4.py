@@ -840,8 +840,11 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         
         # v4.13.2 FIX: Collecter TOUS les assets de TOUS les profils (union)
         for a in assets:
-            a_id = getattr(a, 'id', None) or getattr(a, 'name', None)
-            if a_id and a_id not in all_assets_ids:
+            a_id = getattr(a, 'id', None)
+            if a_id is None:
+                continue
+            a_id = str(a_id)
+            if a_id not in all_assets_ids:
                 all_assets.append(a)
                 all_assets_ids.add(a_id)
         profile_config = PROFILES.get(profile)
@@ -1009,7 +1012,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"⚠️ Erreur génération audit: {e}")
             import traceback
             traceback.print_exc()
-    # === v4.12.1: Génération de l'explication des sélections TOP caps ===
+# === v4.12.1: Génération de l'explication des sélections TOP caps ===
     if CONFIG.get("generate_selection_explained", False) and SELECTION_EXPLAINER_AVAILABLE:
         try:
             # === PHASE 2 FIX: Utiliser les vrais alloués, pas la pré-sélection ===
@@ -1056,6 +1059,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"⚠️ Erreur génération explication: {e}")
             import traceback
             traceback.print_exc()
+    
+    # v4.13.2 CHECK: Vérifier que tous les assets alloués sont dans all_assets
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        alloc_ids = set(map(str, portfolios[profile]["allocation"].keys()))
+        all_ids = set(map(lambda x: str(getattr(x, "id", "")), all_assets))
+        missing = alloc_ids - all_ids
+        logger.info(f"[CHECK] {profile} missing in all_assets: {len(missing)}")
+        if missing:
+            logger.warning(f"[CHECK] {profile} examples: {list(missing)[:10]}")
     
     return portfolios, all_assets
 
