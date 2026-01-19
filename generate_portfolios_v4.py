@@ -803,9 +803,9 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     optimizer = PortfolioOptimizer()
     portfolios = {}
     all_assets = []
+    all_assets_ids = set()  # v4.13.2 FIX: Track IDs pour union des 3 profils
     
     feasibility_reports = {}
-    
     # === v4.13: Dict pour stocker équités par profil (diagnostic overlap) ===
     equities_by_profile = {}
     
@@ -837,9 +837,13 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         )
         
         assets = convert_universe_to_assets(scored_universe)
-        if not all_assets:
-            all_assets = assets
         
+        # v4.13.2 FIX: Collecter TOUS les assets de TOUS les profils (union)
+        for a in assets:
+            a_id = getattr(a, 'id', None) or getattr(a, 'name', None)
+            if a_id and a_id not in all_assets_ids:
+                all_assets.append(a)
+                all_assets_ids.add(a_id)
         profile_config = PROFILES.get(profile)
         profile_constraints = {
             "bonds_min": getattr(profile_config, "bonds_min", 5.0),
@@ -2048,14 +2052,17 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         
         for asset_id, weight in allocation.items():
             asset_id_str = str(asset_id)
+            # v4.13.2 FIX: Fallback intelligent - EQ_ = Actions, pas ETF
+            default_cat = "equity" if asset_id_str.upper().startswith("EQ_") else "ETF"
             info = asset_lookup.get(asset_id_str, {
                 "name": asset_id_str, 
-                "category": "ETF", 
+                "category": default_cat, 
                 "ticker": asset_id_str, 
                 "symbol": None,
                 "isin": None, 
                 "id": asset_id_str
             })
+            
             name = info["name"]
             ticker = info["ticker"]
             symbol = info.get("symbol")
