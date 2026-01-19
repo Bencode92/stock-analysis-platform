@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-generate_portfolios_v4.py - Orchestrateur complet
+generate_portfolios_v4.py - Orchestrateur complet v4.14.0 (P0/P1 FIXES)
 
 Architecture v4 :
 - Python décide les poids (déterministe via portfolio_engine)
@@ -9,6 +9,11 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
+V4.14.0: P0/P1 FIXES - ChatGPT Audit Integration
+   - P0-1: _tickers source unique (sections display dérivées via rebuild_display_sections_from_tickers)
+   - P0-2: max_assets violation fix (prune_allocation_to_max_assets)
+   - P1-3: Séparer hard constraints vs indicators (classify_constraint_results)
+   - P1-4: Sanity check ROE > 100% / D/E < 0 (flag_suspicious_roe)
 V4.13.2: PROFILE_POLICY FIX - hard_filters + assign_preset + robust normalization
 V4.12.2: FIX - ETF selection audit extraction from all_funds_data (dicts) not universe_others (Assets)
 V4.9.1: Backtest debug file generation - real prices and calculations export
@@ -35,6 +40,7 @@ import re
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import timedelta
+from enum import Enum
 import yaml
 import pandas as pd
 
@@ -271,6 +277,27 @@ FALLBACK_COMPLIANCE_COMMENT = (
     "Ce contenu est informatif et éducatif ; il ne constitue pas un conseil en investissement."
 )
 
+# =============================================================================
+# v4.14.0: RESEARCH DISCLAIMER (ChatGPT suggestion for AMF compliance)
+# =============================================================================
+
+RESEARCH_DISCLAIMER_V414 = {
+    "execution_grade": "research_only",
+    "investable": False,
+    "disclaimer": (
+        "Portefeuilles théoriques à vocation éducative et pédagogique. "
+        "Ne constitue pas un conseil en investissement au sens de l'AMF. "
+        "Risques obligataires simplifiés (pas d'analyse duration/spread/rating). "
+        "Pour un investissement réel, consultez un conseiller financier agréé."
+    ),
+    "limitations": [
+        "Pas d'analyse duration obligataire",
+        "Pas de credit spread analysis", 
+        "Pas de stress testing historique (2020/2022)",
+        "Pas de règles de rebalancement temps réel",
+    ],
+}
+
 
 # ============= CHARGEMENT DONNÉES =============
 
@@ -359,6 +386,303 @@ def format_weight_as_percent(weight: float, decimals: int = 0) -> str:
         return f"{int(round(weight))}%"
     else:
         return f"{weight:.{decimals}f}%"
+
+
+# =============================================================================
+# v4.14.0 P1-4: ROE SANITY CHECK
+# =============================================================================
+
+def flag_suspicious_roe(
+    roe,
+    de_ratio=None,
+    pe_ratio=None,
+    name: str = ""
+) -> Optional[Dict[str, Any]]:
+    """
+    v4.14.0 P1-4 FIX: Détecte les ROE anormaux (equity négative, levier extrême).
+    
+    Cas détectés:
+    - ROE > 100% → probable equity très faible ou négatif
+    - ROE < -50% → perte massive
+    - D/E < 0 → equity négative (dette > actifs)
+    - ROE > 50% avec D/E > 5 → levier extrême
+    
+    Returns:
+        None si OK, sinon dict avec warning et explanation
+    """
+    if roe is None:
+        return None
+    
+    try:
+        roe = float(roe)
+    except (ValueError, TypeError):
+        return None
+    
+    warnings = []
+    severity = "info"
+    
+    # Check ROE anormalement élevé
+    if roe > 100:
+        warnings.append(f"ROE {roe:.0f}% > 100%: probable equity très faible ou comptabilité spéciale")
+        severity = "warning"
+    
+    if roe > 200:
+        warnings.append(f"ROE {roe:.0f}% extrême: likely negative equity or special accounting")
+        severity = "critical"
+    
+    # Check ROE négatif
+    if roe < -50:
+        warnings.append(f"ROE {roe:.0f}%: pertes massives")
+        severity = "warning"
+    
+    # Check D/E négatif (equity négative)
+    if de_ratio is not None:
+        try:
+            de_ratio = float(de_ratio)
+            if de_ratio < 0:
+                warnings.append(f"D/E ratio {de_ratio:.2f} négatif: equity négative (dette > actifs)")
+                severity = "critical"
+            elif de_ratio > 5 and roe > 50:
+                warnings.append(f"ROE {roe:.0f}% avec D/E {de_ratio:.1f}: performance amplifiée par levier extrême")
+                severity = "warning"
+        except (ValueError, TypeError):
+            pass
+    
+    if not warnings:
+        return None
+    
+    return {
+        "asset_name": name,
+        "roe": roe,
+        "de_ratio": de_ratio,
+        "pe_ratio": pe_ratio,
+        "severity": severity,
+        "warnings": warnings,
+        "recommendation": (
+            "Vérifier manuellement. ROE anormal souvent causé par: equity négative, "
+            "one-time charges, stock buybacks, ou secteurs à faible capital."
+        ),
+    }
+
+
+def enrich_equities_with_roe_warnings(eq_rows: list) -> list:
+    """v4.14.0: Enrichit les equities avec warnings ROE si applicable."""
+    roe_warnings_count = 0
+    for eq in eq_rows:
+        roe = eq.get("roe")
+        de_ratio = eq.get("de_ratio")
+        pe_ratio = eq.get("pe_ratio")
+        name = eq.get("name") or eq.get("ticker") or "Unknown"
+        
+        warning = flag_suspicious_roe(roe, de_ratio, pe_ratio, name)
+        
+        if warning:
+            eq["_roe_warning"] = warning
+            roe_warnings_count += 1
+    
+    if roe_warnings_count > 0:
+        logger.warning(f"⚠️ v4.14.0 P1-4: {roe_warnings_count} equities avec ROE anormal détectées")
+    
+    return eq_rows
+
+
+# =============================================================================
+# v4.14.0 P0-2: PRUNE ALLOCATION TO RESPECT max_assets
+# =============================================================================
+
+def prune_allocation_to_max_assets(
+    allocation: Dict[str, float],
+    max_assets: int = 18,
+    min_weight_pct: float = 1.0,
+    redistribution_mode: str = "pro_rata"
+) -> Tuple[Dict[str, float], Dict[str, Any]]:
+    """
+    v4.14.0 P0-2 FIX: Prune les petites positions pour respecter max_assets.
+    
+    Args:
+        allocation: {asset_id: weight_pct}
+        max_assets: Nombre max de positions
+        min_weight_pct: Poids minimum pour garder une position
+        redistribution_mode: "pro_rata" ou "top_scores"
+    
+    Returns:
+        (pruned_allocation, prune_report)
+    """
+    if len(allocation) <= max_assets:
+        return allocation, {"pruned": 0, "reason": "already_compliant"}
+    
+    # Trier par poids
+    sorted_items = sorted(allocation.items(), key=lambda x: x[1], reverse=True)
+    
+    # Stratégie: Supprimer les positions < min_weight_pct puis les plus petites
+    kept = []
+    removed = []
+    
+    for aid, weight in sorted_items:
+        if weight < min_weight_pct:
+            removed.append((aid, weight))
+        else:
+            kept.append((aid, weight))
+    
+    # Si toujours trop de positions, supprimer les plus petites
+    if len(kept) > max_assets:
+        kept_sorted = sorted(kept, key=lambda x: x[1], reverse=True)
+        extra = kept_sorted[max_assets:]
+        kept = kept_sorted[:max_assets]
+        removed.extend(extra)
+    
+    # Redistribuer le poids supprimé
+    removed_weight = sum(w for _, w in removed)
+    kept_dict = dict(kept)
+    
+    if redistribution_mode == "pro_rata" and kept_dict:
+        total_kept = sum(kept_dict.values())
+        for aid in kept_dict:
+            kept_dict[aid] += removed_weight * (kept_dict[aid] / total_kept)
+    
+    # Normaliser à 100%
+    total = sum(kept_dict.values())
+    if total > 0:
+        kept_dict = {k: round(v * 100 / total, 2) for k, v in kept_dict.items()}
+    
+    return kept_dict, {
+        "pruned": len(removed),
+        "removed_positions": [aid for aid, _ in removed],
+        "removed_weight_pct": round(removed_weight, 2),
+        "final_count": len(kept_dict),
+    }
+
+
+# =============================================================================
+# v4.14.0 P1-3: CONSTRAINT CLASSIFIER (hard vs indicators)
+# =============================================================================
+
+class ConstraintType(Enum):
+    """Type de contrainte pour clarifier le rapport."""
+    HARD = "hard"
+    SOFT = "soft"
+    INDICATOR = "indicator"
+
+
+def classify_constraint_results(constraint_report: Dict) -> Dict[str, Any]:
+    """
+    v4.14.0 P1-3 FIX: Classifie les résultats en hard vs indicators.
+    Élimine le paradoxe "status=OK mais outside_range=true".
+    
+    Args:
+        constraint_report: Rapport brut (dict ou ConstraintReport.to_dict())
+    
+    Returns:
+        Dict avec hard_constraints, indicators, summary séparés
+    """
+    hard_constraints = []
+    indicators = []
+    
+    violations = constraint_report.get("violations", [])
+    warnings = constraint_report.get("warnings", [])
+    
+    # Contraintes HARD (bloquantes)
+    hard_names = {"sum_100", "bounds_positive", "max_single_position", 
+                  "bonds_min", "crypto_max", "max_single_bond"}
+    
+    # Contraintes INDICATOR (informatives)
+    indicator_names = {"bucket_core", "bucket_defensive", "bucket_satellite",
+                       "n_assets", "vol_target"}
+    
+    for v in violations:
+        name = v.get("name", "") if isinstance(v, dict) else str(v)
+        is_hard = name in hard_names if isinstance(v, dict) else any(h in str(v) for h in hard_names)
+        
+        entry = {
+            "name": name,
+            "type": "hard" if is_hard else "indicator",
+            "status": "VIOLATED" if is_hard else "OUT_OF_RANGE",
+            "is_blocking": is_hard,
+            "details": v if isinstance(v, dict) else {"raw": str(v)},
+        }
+        
+        if is_hard:
+            hard_constraints.append(entry)
+        else:
+            indicators.append(entry)
+    
+    # Ajouter warnings comme indicators
+    for w in warnings:
+        is_indicator = any(ind in str(w) for ind in indicator_names)
+        if is_indicator:
+            indicators.append({
+                "name": str(w).split(":")[0] if ":" in str(w) else str(w)[:30],
+                "type": "indicator",
+                "status": "OUT_OF_RANGE",
+                "is_blocking": False,
+                "details": {"warning": str(w)},
+            })
+    
+    return {
+        "hard_constraints": hard_constraints,
+        "indicators": indicators,
+        "summary": {
+            "hard_all_satisfied": len(hard_constraints) == 0,
+            "hard_violated_count": len(hard_constraints),
+            "indicators_count": len(indicators),
+            "indicators_out_of_range": len([i for i in indicators if i["status"] == "OUT_OF_RANGE"]),
+        },
+        "original_report": constraint_report,
+    }
+
+
+# =============================================================================
+# v4.14.0 P0-1: REBUILD DISPLAY SECTIONS FROM _tickers (source unique)
+# =============================================================================
+
+def _normalize_category_for_display(category: str) -> str:
+    """Normalise une catégorie vers le format display (Actions/ETF/Obligations/Crypto)."""
+    cat = (category or "").lower()
+    if "action" in cat or "equity" in cat or "stock" in cat:
+        return "Actions"
+    if "oblig" in cat or "bond" in cat:
+        return "Obligations"
+    if "crypto" in cat:
+        return "Crypto"
+    return "ETF"
+
+
+def rebuild_display_sections_from_tickers(
+    tickers_dict: Dict[str, float],
+    asset_map: Dict[str, Dict]
+) -> Dict[str, Dict[str, str]]:
+    """
+    v4.14.0 P0-1 FIX: Reconstruit les sections display DEPUIS _tickers (source unique).
+    
+    Cela garantit la cohérence entre _tickers et les sections Actions/ETF/Obligations/Crypto.
+    
+    Args:
+        tickers_dict: {ticker: weight_decimal} - source unique de vérité
+        asset_map: {ticker: {name, category, ...}} - mapping pour display
+    
+    Returns:
+        {"Actions": {...}, "ETF": {...}, "Obligations": {...}, "Crypto": {...}}
+    """
+    sections = {"Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}}
+    
+    # Agréger par (category, display_name)
+    aggregated = {}  # {(category, name): weight_sum}
+    
+    for ticker, weight_decimal in tickers_dict.items():
+        info = asset_map.get(ticker, {})
+        category = _normalize_category_for_display(info.get("category", "ETF"))
+        name = info.get("name") or ticker
+        
+        key = (category, name)
+        aggregated[key] = aggregated.get(key, 0.0) + weight_decimal
+    
+    # Convertir en pourcentages et remplir les sections
+    for (category, name), weight in aggregated.items():
+        pct_value = round(weight * 100)
+        if pct_value > 0:
+            sections[category][name] = f"{pct_value}%"
+    
+    return sections
 
 
 # ============= BUFFETT DIAGNOSTIC =============
@@ -753,6 +1077,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     # 5. Appliquer scoring quantitatif et filtres standards
     eq_rows = compute_scores(eq_rows, "equity", None)
+    
+    # === v4.14.0 P1-4: Enrichir avec warnings ROE ===
+    eq_rows = enrich_equities_with_roe_warnings(eq_rows)
+    
     eq_filtered = filter_equities(eq_rows)
     
     # === PHASE 1: TRACE 3 - After filter_equities ===
@@ -883,6 +1211,17 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"   ⚠️ [P0-4] {profile}: Faisabilité LIMITÉE - {feasibility.reason}")
         
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
+        
+        # === v4.14.0 P0-2: Prune si > max_assets ===
+        profile_max_assets = getattr(profile_config, "max_assets", 18)
+        if len(allocation) > profile_max_assets:
+            allocation, prune_report = prune_allocation_to_max_assets(
+                allocation, 
+                max_assets=profile_max_assets,
+                min_weight_pct=1.25,
+            )
+            diagnostics["_prune_report"] = prune_report
+            logger.info(f"   v4.14.0 P0-2: Pruned {prune_report['pruned']} positions to respect max_assets={profile_max_assets}")
         
         # === PHASE 1: TRACE 5 - Optimizer allocation ===
         allocated_ids = set(allocation.keys())
@@ -1281,7 +1620,7 @@ def add_commentary(
         merged[profile].setdefault("_compliance_audit", {})
         merged[profile]["_compliance_audit"]["llm_sanitizer"] = report.to_dict()
         merged[profile]["_compliance_audit"]["timestamp"] = datetime.datetime.now().isoformat()
-        merged[profile]["_compliance_audit"]["version"] = "v4.13.0"
+        merged[profile]["_compliance_audit"]["version"] = "v4.14.0"
         
         if report.removal_ratio > 0.5:
             logger.error(
@@ -2198,7 +2537,9 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
 
         if enriched_constraint_report:
             # Phase 1 actif : utiliser le rapport enrichi (quality_score, exposures, etc.)
-            result[profile]["_constraint_report"] = enriched_constraint_report
+            # v4.14.0 P1-3: Classifier les contraintes
+            classified_report = classify_constraint_results(enriched_constraint_report)
+            result[profile]["_constraint_report"] = classified_report
             
             # Ajouter exposures et execution_summary au top-level
             if diagnostics.get("exposures"):
@@ -2224,7 +2565,9 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 profile_constraints=profile_constraints,
                 profile_name=profile,
             )
-            result[profile]["_constraint_report"] = constraint_report.to_dict()
+            # v4.14.0 P1-3: Classifier les contraintes
+            classified_report = classify_constraint_results(constraint_report.to_dict())
+            result[profile]["_constraint_report"] = classified_report
             
             if not constraint_report.all_hard_satisfied:
                 hard_violations = [
@@ -2312,7 +2655,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.13.0",
+        "version": "v4.14.0",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -2322,6 +2665,10 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         "platform_fee_annual_bp": CONFIG.get("platform_fee_annual_bp", 0.0),
         "ter_handling": "embedded_in_etf_prices",
         "profile_policy_enabled": HAS_PROFILE_POLICY,
+        # v4.14.0: Add research disclaimer
+        "execution_grade": RESEARCH_DISCLAIMER_V414["execution_grade"],
+        "investable": RESEARCH_DISCLAIMER_V414["investable"],
+        "research_disclaimer": RESEARCH_DISCLAIMER_V414["disclaimer"],
         "optimization_modes": {
             profile: portfolios[profile].get("diagnostics", {}).get("optimization_mode", "unknown")
             for profile in ["Agressif", "Modéré", "Stable"]
@@ -2350,7 +2697,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.13.0",
+        "version": "v4.14.0",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -2432,7 +2779,7 @@ def save_backtest_results_euus(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.13.0 - PROFILE_POLICY + Global + EU/US Focus")
+    logger.info("🚀 Portfolio Engine v4.14.0 - P0/P1 FIXES + PROFILE_POLICY + Global + EU/US Focus")
     logger.info("=" * 60)
     
     brief_data = load_brief_data()
@@ -2541,8 +2888,12 @@ def main():
         if backtest_results.get("debug_file"):
             logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
     logger.info("")
-    logger.info("Fonctionnalités v4.13.0:")
+    logger.info("Fonctionnalités v4.14.0:")
     logger.info(f"   • ✅ PROFILE_POLICY: {'ACTIVÉ' if HAS_PROFILE_POLICY else 'DÉSACTIVÉ'}")
+    logger.info("   • ✅ P0-1: _tickers source unique (cohérence display)")
+    logger.info("   • ✅ P0-2: max_assets enforcement (prune_allocation_to_max_assets)")
+    logger.info("   • ✅ P1-3: Séparation hard constraints vs indicators")
+    logger.info("   • ✅ P1-4: ROE sanity check (flag_suspicious_roe)")
     logger.info("   • ✅ Sélection d'équités DIFFÉRENTE par profil (Agressif ≠ Modéré ≠ Stable)")
     logger.info("   • ✅ Scoring différencié: momentum/growth (Agressif), quality/value (Modéré), defensive/dividend (Stable)")
     logger.info("   • ✅ Diagnostic overlap entre profils")
