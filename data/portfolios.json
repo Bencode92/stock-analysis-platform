@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle Agressif présente une allocation orientée croissance avec une volatilité cible élevée. La diversification sectorielle et géographique vise à capturer le potentiel de hausse des marchés actions. Toutefois, ce profil comporte un risque de perte en capital significatif en cas de correction des marchés. La volatilité historique peut entraîner des variations importantes de la valeur du portefeuille à court terme. Ce portefeuille compte 20 lignes avec une volatilité estimée de 21.0%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle Agressif présente une allocation orientée croissance avec une volatilité cible élevée. La diversification sectorielle et géographique vise à capturer le potentiel de hausse des marchés actions. Toutefois, ce profil comporte un risque de perte en capital significatif en cas de correction des marchés. La volatilité historique peut entraîner des variations importantes de la valeur du portefeuille à court terme. Ce portefeuille compte 20 lignes avec une volatilité estimée de 21.02%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "FORTUNE ELECTRIC LTD": "10%",
       "COMFORT SYSTEMS USA INC": "9%",
@@ -54,7 +54,7 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 21.0,
+      "vol_realized": 21.02,
       "vol_target": 18.0
     },
     "_constraint_report": {
@@ -64,15 +64,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 18.0,
-          "observed": 21.0,
-          "slack": 0.0,
-          "binding": true,
-          "status": "BINDING",
+          "observed": 21.02,
+          "slack": -0.02,
+          "binding": false,
+          "status": "VIOLATED",
           "details": {
             "tolerance": 3.0,
             "range_min": 15.0,
             "range_max": 21.0,
-            "diff_from_target": 3.0
+            "diff_from_target": 3.02
           }
         },
         {
@@ -332,12 +332,13 @@
       "summary": {
         "total": 14,
         "ok": 11,
-        "binding": 2,
-        "violated": 1,
+        "binding": 1,
+        "violated": 2,
         "critical": 0
       },
-      "quality_score": 90.0,
+      "quality_score": 84.3,
       "recommendations": [
+        "🟠 VIOLATED: volatility exceeded by 0.0% — reduce exposure",
         "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
         "🟠 VIOLATED: max_assets exceeded by 2.0% — reduce exposure"
       ],
@@ -690,15 +691,17 @@
       },
       "ready_for_execution": true
     },
-    "_limitations": [],
+    "_limitations": [
+      "Volatilité réalisée (21.0%) éloignée de la cible (18.0%) - écart de 3.0%."
+    ],
     "_asset_details": [
       {
         "name": "Avantis International Small Cap Value ETF",
         "ticker": "AVDV",
-        "rationale": "Cet ETF offre une exposition aux petites et moyennes entreprises internationales à valeur, qui ont historiquement surperformé en période de croissance économique. Il joue un rôle de diversification dans le portefeuille en ajoutant une exposition internationale.",
-        "role": "diversification",
-        "risk_note": "Volatilité potentiellement élevée en raison de l'exposition aux petites capitalisations.",
-        "market_context_link": "null",
+        "rationale": "Cet ETF offre une exposition à des actions de petite capitalisation à l'international, qui ont tendance à surperformer en période de croissance économique. Il joue un rôle de satellite dans le portefeuille, apportant diversification et potentiel de croissance. Bien qu'il soit diversifié géographiquement, il est important de surveiller la volatilité des marchés étrangers.",
+        "role": "satellite",
+        "risk_note": "Risque de volatilité des marchés étrangers",
+        "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -715,10 +718,10 @@
       {
         "name": "iShares Core U.S. Aggregate Bond ETF",
         "ticker": "AGG",
-        "rationale": "Bien que ce fonds ait une performance modeste, il apporte une stabilité au portefeuille avec des obligations diversifiées, réduisant le risque global. Son rôle est de servir de couverture contre la volatilité des actions.",
+        "rationale": "Ce fonds obligataire offre une exposition diversifiée aux obligations américaines, ce qui peut stabiliser le portefeuille en période de volatilité. Il est considéré comme un actif de couverture, réduisant le risque global du portefeuille. Cependant, dans un environnement de taux d'intérêt en hausse, la performance des obligations peut être affectée.",
         "role": "hedge",
-        "risk_note": "Sensibilité aux variations des taux d'intérêt.",
-        "market_context_link": "null",
+        "risk_note": "Risque de hausse des taux d'intérêt",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -735,10 +738,10 @@
       {
         "name": "Avantis Core Fixed Income ETF",
         "ticker": "AVIG",
-        "rationale": "Ce fonds d'obligations offre une exposition à des titres de créance diversifiés, ce qui contribue à la stabilité du portefeuille. Il est essentiel pour équilibrer le risque des actifs plus volatils.",
+        "rationale": "Ce fonds se concentre sur des obligations de qualité, offrant une stabilité et un revenu régulier, ce qui est essentiel pour équilibrer un portefeuille agressif. Il joue également un rôle de couverture contre la volatilité des actions. Les investisseurs doivent surveiller les fluctuations des taux d'intérêt qui pourraient affecter les rendements.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt et de crédit.",
-        "market_context_link": "null",
+        "risk_note": "Risque de hausse des taux d'intérêt",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -755,10 +758,10 @@
       {
         "name": "Invesco Taxable Municipal Bond ETF",
         "ticker": "BAB",
-        "rationale": "Ce fonds permet d'accéder à des obligations municipales imposables, offrant un rendement intéressant tout en maintenant une certaine sécurité. Il complète le portefeuille en ajoutant une source de revenus.",
+        "rationale": "Ce fonds permet d'accéder à des obligations municipales imposables, offrant un rendement intéressant tout en maintenant une certaine sécurité. Il est un bon complément de revenu dans un portefeuille agressif. Les investisseurs doivent être attentifs aux changements réglementaires qui pourraient affecter le marché des obligations municipales.",
         "role": "income",
-        "risk_note": "Risque de crédit associé aux émetteurs d'obligations.",
-        "market_context_link": "null",
+        "risk_note": "Risque de changements réglementaires",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -775,10 +778,10 @@
       {
         "name": "Goldman Sachs Physical Gold ETF",
         "ticker": "AAAU",
-        "rationale": "L'or est souvent considéré comme une valeur refuge, particulièrement en période d'incertitude économique, et ce fonds permet d'accéder facilement à cet actif. Il sert de couverture contre l'inflation et la volatilité des marchés.",
+        "rationale": "L'or est traditionnellement considéré comme une valeur refuge, ce qui en fait un bon actif pour diversifier le portefeuille et se protéger contre l'inflation. Il joue un rôle de couverture contre l'incertitude économique. Les fluctuations des prix de l'or peuvent être influencées par les mouvements du dollar et les taux d'intérêt.",
         "role": "hedge",
-        "risk_note": "Volatilité des prix de l'or influencée par les marchés globaux.",
-        "market_context_link": "null",
+        "risk_note": "Risque de fluctuations des prix de l'or",
+        "market_context_link": null,
         "weight_pct": 14.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -795,10 +798,10 @@
       {
         "name": "FORTUNE ELECTRIC LTD",
         "ticker": "1519",
-        "rationale": "Avec un ROE élevé et une performance YTD impressionnante, cette entreprise du secteur industriel présente un potentiel de croissance solide. Elle constitue un actif central dans le portefeuille en raison de sa qualité.",
+        "rationale": "Cette entreprise présente un ROE élevé et une solide performance YTD, indiquant une gestion efficace et un potentiel de croissance. Elle est intégrée comme un actif core dans le portefeuille, capitalisant sur la tendance favorable des industries. Les investisseurs doivent surveiller la volatilité élevée associée à ce titre.",
         "role": "core",
-        "risk_note": "Volatilité élevée due à la nature du secteur industriel.",
-        "market_context_link": "secteur favorisé",
+        "risk_note": "Risque de volatilité élevée",
+        "market_context_link": "secteur favorisé: industries",
         "weight_pct": 10.0,
         "category": "Actions",
         "sector": "Industries",
@@ -815,10 +818,10 @@
       {
         "name": "COMFORT SYSTEMS USA INC",
         "ticker": "FIX",
-        "rationale": "Cette entreprise affiche un ROE solide et une bonne performance, ce qui en fait un choix attrayant dans le secteur industriel. Elle contribue à la croissance du portefeuille avec son potentiel de rendement.",
+        "rationale": "Avec un ROE impressionnant et une performance solide, cette société est bien positionnée pour bénéficier de la croissance dans le secteur des industries. Elle est un actif core qui contribue à la performance globale du portefeuille. Les fluctuations économiques peuvent affecter la demande pour ses services.",
         "role": "core",
-        "risk_note": "Exposition à la volatilité du secteur industriel.",
-        "market_context_link": "secteur favorisé",
+        "risk_note": "Risque lié à la demande économique",
+        "market_context_link": "secteur favorisé: industries",
         "weight_pct": 9.0,
         "category": "Actions",
         "sector": "Industries",
@@ -835,10 +838,10 @@
       {
         "name": "WESTERN DIGITAL CORP",
         "ticker": "WDC",
-        "rationale": "Avec une performance solide et un ROE élevé, cette entreprise technologique est bien positionnée pour bénéficier de la demande croissante en solutions de stockage. Elle joue un rôle clé dans le portefeuille technologique.",
+        "rationale": "Cette entreprise technologique affiche une solide performance et un ROE élevé, ce qui en fait un choix attrayant pour un portefeuille agressif. Elle est intégrée comme un actif core, profitant de la croissance continue du secteur technologique. Les risques incluent la concurrence accrue dans le secteur.",
         "role": "core",
-        "risk_note": "Risque de concurrence accrue dans le secteur technologique.",
-        "market_context_link": "secteur favorisé",
+        "risk_note": "Risque de concurrence accrue",
+        "market_context_link": "secteur favorisé: technologie de l'information",
         "weight_pct": 14.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
@@ -855,10 +858,10 @@
       {
         "name": "KLA CORP",
         "ticker": "KLAC",
-        "rationale": "KLA Corp se distingue par son ROE exceptionnel et sa forte performance, ce qui en fait un leader dans le secteur technologique. Elle est essentielle pour capter la croissance dans ce secteur dynamique.",
+        "rationale": "Avec un ROE exceptionnel et une forte performance YTD, KLA Corp est bien positionnée pour capitaliser sur la demande croissante dans le secteur technologique. Elle est un actif core qui renforce le potentiel de croissance du portefeuille. Les investisseurs doivent surveiller les fluctuations du marché technologique.",
         "role": "core",
-        "risk_note": "Volatilité élevée due aux fluctuations du marché technologique.",
-        "market_context_link": "secteur favorisé",
+        "risk_note": "Risque de fluctuations du marché technologique",
+        "market_context_link": "secteur favorisé: technologie de l'information",
         "weight_pct": 5.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
@@ -875,10 +878,10 @@
       {
         "name": "BTS/USD",
         "ticker": "BTS/USD",
-        "rationale": "Ce crypto-actif présente un potentiel de croissance intéressant dans un marché en pleine expansion. Il ajoute une dimension spéculative au portefeuille, attirant les investisseurs à la recherche de rendements élevés.",
+        "rationale": "Cet actif crypto offre une exposition à un marché en pleine expansion, attirant les investisseurs à la recherche de rendements élevés. Il est considéré comme un actif satellite, ajoutant une couche de risque et de potentiel de rendement. Les fluctuations de prix peuvent être très volatiles et imprévisibles.",
         "role": "satellite",
-        "risk_note": "Volatilité extrême et incertitude réglementaire dans le secteur des cryptomonnaies.",
-        "market_context_link": "null",
+        "risk_note": "Risque de volatilité extrême",
+        "market_context_link": null,
         "weight_pct": 1.5,
         "category": "Crypto",
         "sector": "Crypto",
@@ -887,18 +890,18 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 4.35,
-          "volatility": 39.24,
+          "ytd": 1.71,
+          "volatility": 39.67,
           "buffett_score": null
         }
       },
       {
         "name": "PORTO/USD",
         "ticker": "PORTO/USD",
-        "rationale": "Avec une performance YTD solide, ce crypto-actif attire l'attention des investisseurs cherchant à diversifier leur exposition. Il représente une opportunité de croissance dans un marché volatil.",
+        "rationale": "PORTO/USD représente une opportunité d'investissement dans le secteur crypto, avec un potentiel de croissance significatif. Il est un actif satellite qui peut générer des rendements élevés. Les investisseurs doivent être conscients des risques de régulation et de volatilité.",
         "role": "satellite",
-        "risk_note": "Risque de liquidité et volatilité élevée.",
-        "market_context_link": "null",
+        "risk_note": "Risque de régulation et de volatilité",
+        "market_context_link": null,
         "weight_pct": 1.5,
         "category": "Crypto",
         "sector": "Crypto",
@@ -907,18 +910,18 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 11.68,
-          "volatility": 36.55,
+          "ytd": 7.14,
+          "volatility": 39.52,
           "buffett_score": null
         }
       },
       {
         "name": "NFT/USD",
         "ticker": "NFT/USD",
-        "rationale": "Ce crypto-actif est en phase avec la tendance croissante des actifs numériques, offrant un potentiel de rendement élevé. Il sert à diversifier le portefeuille avec des actifs alternatifs.",
+        "rationale": "Cet actif crypto permet d'accéder à un marché innovant et en pleine expansion, attirant les investisseurs à la recherche de nouvelles opportunités. Il est un actif satellite, augmentant le potentiel de rendement du portefeuille. Les risques incluent la volatilité du marché et l'incertitude réglementaire.",
         "role": "satellite",
-        "risk_note": "Volatilité importante et incertitudes réglementaires.",
-        "market_context_link": "null",
+        "risk_note": "Risque de volatilité et d'incertitude réglementaire",
+        "market_context_link": null,
         "weight_pct": 1.0,
         "category": "Crypto",
         "sector": "Crypto",
@@ -927,18 +930,18 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 2.86,
-          "volatility": 35.75,
+          "ytd": null,
+          "volatility": 35.67,
           "buffett_score": null
         }
       },
       {
         "name": "LS ELECTRIC LTD",
         "ticker": "010120",
-        "rationale": "Cette entreprise coréenne présente un ROE respectable et un potentiel de croissance dans le secteur industriel. Elle contribue à la diversification géographique du portefeuille.",
-        "role": "diversification",
-        "risk_note": "Volatilité élevée en raison de l'exposition au marché coréen.",
-        "market_context_link": "null",
+        "rationale": "Cette entreprise présente un ROE respectable et une performance stable, offrant une exposition au secteur industriel en croissance. Elle est intégrée comme un actif satellite, apportant diversification et potentiel de rendement. Les investisseurs doivent surveiller la volatilité du marché coréen.",
+        "role": "satellite",
+        "risk_note": "Risque de volatilité du marché coréen",
+        "market_context_link": "secteur favorisé: industries",
         "weight_pct": 1.0,
         "category": "Actions",
         "sector": "Industries",
@@ -955,10 +958,10 @@
       {
         "name": "SK HYNIX INC",
         "ticker": "000660",
-        "rationale": "Avec un ROE solide et une bonne performance, cette entreprise technologique est bien positionnée pour profiter de la demande croissante en semi-conducteurs. Elle est essentielle pour capter la croissance dans le secteur technologique.",
+        "rationale": "Avec un ROE solide et une performance YTD positive, SK Hynix est bien positionnée dans le secteur technologique. Elle est un actif core, capitalisant sur la demande croissante pour les semi-conducteurs. Les risques incluent la concurrence et la dépendance aux cycles économiques.",
         "role": "core",
-        "risk_note": "Volatilité due aux fluctuations du marché des semi-conducteurs.",
-        "market_context_link": "secteur favorisé",
+        "risk_note": "Risque de dépendance aux cycles économiques",
+        "market_context_link": "secteur favorisé: technologie de l'information",
         "weight_pct": 1.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
@@ -975,10 +978,10 @@
       {
         "name": "TERADYNE INC",
         "ticker": "TER",
-        "rationale": "Cette entreprise technologique affiche un ROE respectable et un potentiel de croissance dans le secteur des tests de semi-conducteurs. Elle est un ajout stratégique au portefeuille technologique.",
+        "rationale": "Cette société affiche un ROE solide et une performance compétitive, ce qui en fait un choix attrayant dans le secteur technologique. Elle est un actif core, contribuant à la croissance du portefeuille. Les investisseurs doivent surveiller la volatilité du secteur technologique.",
         "role": "core",
-        "risk_note": "Exposition à la volatilité du secteur technologique.",
-        "market_context_link": "secteur favorisé",
+        "risk_note": "Risque de volatilité du secteur technologique",
+        "market_context_link": "secteur favorisé: technologie de l'information",
         "weight_pct": 3.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
@@ -995,10 +998,10 @@
       {
         "name": "HANWHA AEROSPACE LTD",
         "ticker": "012450",
-        "rationale": "Avec une performance YTD impressionnante, cette entreprise du secteur aéronautique montre un potentiel de croissance solide. Elle contribue à la diversification sectorielle du portefeuille.",
-        "role": "diversification",
-        "risk_note": "Volatilité associée aux cycles économiques du secteur aéronautique.",
-        "market_context_link": "null",
+        "rationale": "Avec une performance YTD impressionnante et un ROE élevé, cette entreprise est bien positionnée pour bénéficier de la croissance dans le secteur des industries. Elle est un actif satellite, apportant diversification et potentiel de rendement. Les fluctuations économiques peuvent affecter la demande pour ses produits.",
+        "role": "satellite",
+        "risk_note": "Risque de fluctuations économiques",
+        "market_context_link": "secteur favorisé: industries",
         "weight_pct": 1.0,
         "category": "Actions",
         "sector": "Industries",
@@ -1015,10 +1018,10 @@
       {
         "name": "HD HYUNDAI LTD",
         "ticker": "267250",
-        "rationale": "Cette entreprise du secteur de l'énergie présente un rendement dividende attractif et une bonne performance YTD, ce qui en fait un choix intéressant pour les investisseurs. Elle diversifie l'exposition au secteur énergétique.",
-        "role": "income",
-        "risk_note": "Volatilité liée aux fluctuations des prix de l'énergie.",
-        "market_context_link": "secteur favorisé",
+        "rationale": "Cette entreprise du secteur de l'énergie montre une performance solide et un rendement dividende attractif, ce qui en fait un choix intéressant pour les investisseurs. Elle est intégrée comme un actif satellite, ajoutant une couche de diversification. Les risques incluent la volatilité des prix de l'énergie.",
+        "role": "satellite",
+        "risk_note": "Risque de volatilité des prix de l'énergie",
+        "market_context_link": "secteur favorisé: énergie",
         "weight_pct": 1.0,
         "category": "Actions",
         "sector": "Energie",
@@ -1035,10 +1038,10 @@
       {
         "name": "GOLD CIRCUIT ELECTRONICS LTD",
         "ticker": "2368",
-        "rationale": "Cette entreprise technologique offre un ROE respectable et un potentiel de croissance dans le secteur des composants électroniques. Elle contribue à la diversification géographique et sectorielle du portefeuille.",
-        "role": "diversification",
-        "risk_note": "Volatilité élevée en raison de l'exposition au marché taïwanais.",
-        "market_context_link": "null",
+        "rationale": "Cette entreprise technologique présente un ROE respectable et une performance stable, offrant une exposition au secteur en croissance. Elle est un actif satellite, apportant diversification et potentiel de rendement. Les investisseurs doivent surveiller la volatilité du marché technologique.",
+        "role": "satellite",
+        "risk_note": "Risque de volatilité du marché technologique",
+        "market_context_link": "secteur favorisé: technologie de l'information",
         "weight_pct": 1.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
@@ -1055,10 +1058,10 @@
       {
         "name": "APPLIED MATERIAL INC",
         "ticker": "AMAT",
-        "rationale": "Avec une performance solide et un ROE élevé, cette entreprise est bien positionnée pour bénéficier de la demande croissante en équipements de fabrication de semi-conducteurs. Elle joue un rôle clé dans le portefeuille technologique.",
+        "rationale": "Avec un ROE élevé et une solide performance YTD, Applied Materials est bien positionnée pour capitaliser sur la demande croissante dans le secteur technologique. Elle est un actif core, renforçant le potentiel de croissance du portefeuille. Les risques incluent la concurrence accrue dans le secteur.",
         "role": "core",
-        "risk_note": "Risque de concurrence accrue dans le secteur technologique.",
-        "market_context_link": "secteur favorisé",
+        "risk_note": "Risque de concurrence accrue",
+        "market_context_link": "secteur favorisé: technologie de l'information",
         "weight_pct": 3.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
@@ -1075,10 +1078,10 @@
       {
         "name": "LAM RESEARCH CORP",
         "ticker": "LRCX",
-        "rationale": "Cette entreprise affiche un ROE exceptionnel et une forte performance, ce qui en fait un leader dans le secteur des équipements de semi-conducteurs. Elle est essentielle pour capter la croissance dans ce secteur dynamique.",
+        "rationale": "Cette entreprise affiche un ROE impressionnant et une performance solide, ce qui en fait un choix attrayant pour un portefeuille agressif. Elle est intégrée comme un actif core, profitant de la croissance continue du secteur technologique. Les investisseurs doivent surveiller les fluctuations du marché technologique.",
         "role": "core",
-        "risk_note": "Volatilité élevée due aux fluctuations du marché technologique.",
-        "market_context_link": "secteur favorisé",
+        "risk_note": "Risque de fluctuations du marché technologique",
+        "market_context_link": "secteur favorisé: technologie de l'information",
         "weight_pct": 3.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
@@ -1095,19 +1098,19 @@
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle Modéré combine des actifs de croissance et des instruments à revenu fixe pour un équilibre rendement/risque. L'allocation vise une volatilité intermédiaire tout en maintenant un potentiel de performance. Le risque de perte en capital existe, notamment en période de stress de marché. La corrélation entre classes d'actifs peut augmenter en période de crise, réduisant les bénéfices de la diversification. Ce portefeuille compte 18 lignes avec une volatilité estimée de 9.91%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle Modéré combine des actifs de croissance et des instruments à revenu fixe pour un équilibre rendement/risque. L'allocation vise une volatilité intermédiaire tout en maintenant un potentiel de performance. Le risque de perte en capital existe, notamment en période de stress de marché. La corrélation entre classes d'actifs peut augmenter en période de crise, réduisant les bénéfices de la diversification. Ce portefeuille compte 19 lignes avec une volatilité estimée de 9.79%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {},
     "ETF": {
-      "EQ_15": "10%",
-      "Avantis International Small Cap Value ETF": "10%",
+      "EQ_15": "11%",
+      "Avantis International Small Cap Value ETF": "11%",
       "Dimensional International Core Equity Market ETF": "16%",
-      "EQ_258": "15%",
+      "EQ_258": "10%",
       "EQ_629": "14%",
+      "EQ_58": "5%",
       "EQ_239": "1%",
       "EQ_127": "1%",
-      "EQ_58": "1%",
       "EQ_971": "1%",
-      "EQ_784": "2%",
+      "EQ_784": "1%",
       "EQ_174": "1%",
       "EQ_74": "1%"
     },
@@ -1118,33 +1121,35 @@
       "ActivePassive Core Bond ETF": "3%"
     },
     "Crypto": {
-      "NFT/USD": "0%",
+      "GNO/USD": "0%",
+      "BTS/USD": "0%",
       "PORTO/USD": "0%"
     },
     "_tickers": {
-      "EQ_15": 0.1,
-      "AVDV": 0.1,
+      "EQ_15": 0.11,
+      "AVDV": 0.11,
       "AGG": 0.08,
       "DFIC": 0.15,
       "AVIG": 0.08,
-      "EQ_258": 0.15,
+      "EQ_258": 0.1,
       "AGGY": 0.08,
       "APCB": 0.03,
-      "EQ_629": 0.14,
-      "NFT/USD": 0.005,
+      "EQ_629": 0.135,
+      "EQ_58": 0.05,
+      "GNO/USD": 0.005,
+      "BTS/USD": 0.005,
       "PORTO/USD": 0.005,
       "EQ_239": 0.01,
       "EQ_127": 0.01,
-      "EQ_58": 0.01,
       "EQ_971": 0.01,
-      "EQ_784": 0.02,
+      "EQ_784": 0.01,
       "EQ_174": 0.01,
       "EQ_74": 0.01
     },
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 9.91,
+      "vol_realized": 9.79,
       "vol_target": 12.0
     },
     "_constraint_report": {
@@ -1154,15 +1159,15 @@
           "name": "volatility",
           "constraint_type": "target",
           "cap": 12.0,
-          "observed": 9.91,
-          "slack": 0.91,
+          "observed": 9.79,
+          "slack": 0.79,
           "binding": true,
           "status": "BINDING",
           "details": {
             "tolerance": 3.0,
             "range_min": 9.0,
             "range_max": 15.0,
-            "diff_from_target": -2.09
+            "diff_from_target": -2.21
           }
         },
         {
@@ -1203,15 +1208,20 @@
           "name": "crypto_max",
           "constraint_type": "max",
           "cap": 5.0,
-          "observed": 1.0,
-          "slack": 4.0,
+          "observed": 1.5,
+          "slack": 3.5,
           "binding": false,
           "status": "OK",
           "details": {
             "breakdown": [
               {
-                "id": "NFT/USD",
-                "name": "NFT/USD",
+                "id": "GNO/USD",
+                "name": "GNO/USD",
+                "weight": 0.5
+              },
+              {
+                "id": "BTS/USD",
+                "name": "BTS/USD",
                 "weight": 0.5
               },
               {
@@ -1238,16 +1248,20 @@
             },
             "positions_above_10pct": [
               {
+                "id": "EQ_15",
+                "weight": 11.0
+              },
+              {
+                "id": "Avantis International Small Cap Value ETF",
+                "weight": 11.0
+              },
+              {
                 "id": "Dimensional International Core Equity Market ETF",
                 "weight": 15.0
               },
               {
-                "id": "EQ_258",
-                "weight": 15.0
-              },
-              {
                 "id": "EQ_629",
-                "weight": 14.0
+                "weight": 13.5
               }
             ]
           }
@@ -1256,28 +1270,28 @@
           "name": "max_sector",
           "constraint_type": "max",
           "cap": 30.0,
-          "observed": 26.0,
-          "slack": 4.0,
+          "observed": 26.5,
+          "slack": 3.5,
           "binding": false,
           "status": "OK",
           "details": {
             "most_concentrated": "Finance",
             "counts_in_max_sector": {
-              "Finance": 26.0,
-              "Diversified": 25.0,
-              "Immobilier": 16.0,
-              "Industries": 3.0,
-              "Biens de consommation cycliques": 1.0,
+              "Finance": 26.5,
+              "Diversified": 26.0,
+              "Immobilier": 11.0,
+              "Biens de consommation cycliques": 5.0,
+              "Industries": 2.0,
               "Biens de consommation de base": 1.0
             },
             "all_sectors": {
               "Bonds": 27.0,
-              "Finance": 26.0,
-              "Diversified": 25.0,
-              "Immobilier": 16.0,
-              "Industries": 3.0,
-              "Crypto": 1.0,
-              "Biens de consommation cycliques": 1.0,
+              "Finance": 26.5,
+              "Diversified": 26.0,
+              "Immobilier": 11.0,
+              "Biens de consommation cycliques": 5.0,
+              "Industries": 2.0,
+              "Crypto": 1.5,
               "Biens de consommation de base": 1.0
             },
             "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -1295,17 +1309,17 @@
             "most_concentrated": "Etats-Unis",
             "counts_in_max_region": {
               "Etats-Unis": 30.0,
-              "Global": 25.0,
-              "Belgique": 14.0,
-              "France": 2.0,
-              "Inde": 1.0
+              "Global": 26.0,
+              "Belgique": 13.5,
+              "Inde": 1.0,
+              "France": 1.0
             },
             "all_regions": {
-              "Global": 53.0,
+              "Global": 54.5,
               "Etats-Unis": 30.0,
-              "Belgique": 14.0,
-              "France": 2.0,
-              "Inde": 1.0
+              "Belgique": 13.5,
+              "Inde": 1.0,
+              "France": 1.0
             },
             "scope": "EQUITY_LIKE + LEVERAGED only"
           }
@@ -1334,15 +1348,15 @@
           "name": "bucket_core",
           "constraint_type": "range",
           "cap": 55.0,
-          "observed": 26.0,
-          "slack": -9.0,
+          "observed": 31.0,
+          "slack": -4.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 35.0,
             "range_max": 55.0,
-            "slack_from_min": -9.0,
-            "slack_from_max": 29.0,
+            "slack_from_min": -4.0,
+            "slack_from_max": 24.0,
             "outside_range": true,
             "is_indicator": true
           }
@@ -1351,15 +1365,15 @@
           "name": "bucket_satellite",
           "constraint_type": "range",
           "cap": 35.0,
-          "observed": 47.0,
-          "slack": -12.0,
+          "observed": 42.0,
+          "slack": -7.0,
           "binding": false,
           "status": "OK",
           "details": {
             "range_min": 15.0,
             "range_max": 35.0,
-            "slack_from_min": 32.0,
-            "slack_from_max": -12.0,
+            "slack_from_min": 27.0,
+            "slack_from_max": -7.0,
             "outside_range": true,
             "is_indicator": true
           }
@@ -1424,50 +1438,49 @@
       },
       "quality_score": 96.9,
       "recommendations": [
-        "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
-        "ℹ️ INFO: bucket_satellite is 12.0% outside target range (indicator only)"
+        "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely"
       ],
       "exposures": {
         "by_category": {
-          "Actions": 47.0,
-          "ETF": 25.0,
+          "Actions": 45.5,
+          "ETF": 26.0,
           "Obligations": 27.0,
-          "Crypto": 1.0
+          "Crypto": 1.5
         },
         "by_sector": {
-          "Finance": 26.0,
-          "Diversified": 25.0,
-          "Immobilier": 16.0,
-          "Industries": 3.0,
-          "Biens de consommation cycliques": 1.0,
+          "Finance": 26.5,
+          "Diversified": 26.0,
+          "Immobilier": 11.0,
+          "Biens de consommation cycliques": 5.0,
+          "Industries": 2.0,
           "Biens de consommation de base": 1.0
         },
         "by_region": {
-          "Global": 53.0,
+          "Global": 54.5,
           "Etats-Unis": 30.0,
-          "Belgique": 14.0,
-          "France": 2.0,
-          "Inde": 1.0
+          "Belgique": 13.5,
+          "Inde": 1.0,
+          "France": 1.0
         },
         "by_risk_bucket": {
-          "equity_like": 72.0,
+          "equity_like": 71.5,
           "bond_like": 27.0,
-          "crypto": 1.0
+          "crypto": 1.5
         },
         "by_role": {
-          "core": 26.0,
-          "satellite": 47.0,
+          "core": 31.0,
+          "satellite": 42.0,
           "defensive": 27.0,
           "lottery": 0.0,
           "unknown": 0.0
         },
         "concentration": {
-          "hhi": 1058.0,
-          "hhi_interpretation": "diversified",
-          "effective_n": 9.46,
-          "n_positions": 18,
-          "top_5_weight": 64.0,
-          "top_10_weight": 93.0,
+          "hhi": 982.0,
+          "hhi_interpretation": "well_diversified",
+          "effective_n": 10.18,
+          "n_positions": 19,
+          "top_5_weight": 60.5,
+          "top_10_weight": 92.5,
           "largest_position": 15.0,
           "smallest_position": 0.5,
           "thresholds": {
@@ -1492,21 +1505,10 @@
           "exchange": null
         },
         {
-          "id": "EQ_258",
-          "ticker": "CCI",
-          "name": "CROWN CASTLE INC",
-          "weight_pct": 15.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Immobilier",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
           "id": "EQ_629",
           "ticker": "KBC",
           "name": "KBC GROEP",
-          "weight_pct": 14.0,
+          "weight_pct": 13.5,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
@@ -1517,7 +1519,7 @@
           "id": "EQ_15",
           "ticker": "MA",
           "name": "MASTERCARD INC CLASS A",
-          "weight_pct": 10.0,
+          "weight_pct": 11.0,
           "category": "Actions",
           "risk_bucket": "equity_like",
           "sector": "Finance",
@@ -1528,11 +1530,22 @@
           "id": "Avantis International Small Cap Value ETF",
           "ticker": "AVDV",
           "name": "Avantis International Small Cap Value ETF",
-          "weight_pct": 10.0,
+          "weight_pct": 11.0,
           "category": "ETF",
           "risk_bucket": "equity_like",
           "sector": "Diversified",
           "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "EQ_258",
+          "ticker": "CCI",
+          "name": "CROWN CASTLE INC",
+          "weight_pct": 10.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Immobilier",
+          "region": "Etats-Unis",
           "exchange": null
         },
         {
@@ -1569,6 +1582,17 @@
           "exchange": null
         },
         {
+          "id": "EQ_58",
+          "ticker": "TJX",
+          "name": "TJX INC",
+          "weight_pct": 5.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Biens de consommation cycliques",
+          "region": "Etats-Unis",
+          "exchange": null
+        },
+        {
           "id": "ActivePassive Core Bond ETF",
           "ticker": "APCB",
           "name": "ActivePassive Core Bond ETF",
@@ -1577,17 +1601,6 @@
           "risk_bucket": "bond_like",
           "sector": "Bonds",
           "region": "Global",
-          "exchange": null
-        },
-        {
-          "id": "EQ_784",
-          "ticker": "ADP",
-          "name": "AEROPORTS DE PARIS SA",
-          "weight_pct": 2.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Industries",
-          "region": "France",
           "exchange": null
         },
         {
@@ -1613,17 +1626,6 @@
           "exchange": null
         },
         {
-          "id": "EQ_58",
-          "ticker": "TJX",
-          "name": "TJX INC",
-          "weight_pct": 1.0,
-          "category": "Actions",
-          "risk_bucket": "equity_like",
-          "sector": "Biens de consommation cycliques",
-          "region": "Etats-Unis",
-          "exchange": null
-        },
-        {
           "id": "EQ_971",
           "ticker": "COLPAL",
           "name": "COLGATE PALMOLIVE INDIA LTD",
@@ -1632,6 +1634,17 @@
           "risk_bucket": "equity_like",
           "sector": "Biens de consommation de base",
           "region": "Inde",
+          "exchange": null
+        },
+        {
+          "id": "EQ_784",
+          "ticker": "ADP",
+          "name": "AEROPORTS DE PARIS SA",
+          "weight_pct": 1.0,
+          "category": "Actions",
+          "risk_bucket": "equity_like",
+          "sector": "Industries",
+          "region": "France",
           "exchange": null
         },
         {
@@ -1657,9 +1670,20 @@
           "exchange": null
         },
         {
-          "id": "NFT/USD",
-          "ticker": "NFT/USD",
-          "name": "NFT/USD",
+          "id": "GNO/USD",
+          "ticker": "GNO/USD",
+          "name": "GNO/USD",
+          "weight_pct": 0.5,
+          "category": "Crypto",
+          "risk_bucket": "crypto",
+          "sector": "Crypto",
+          "region": "Global",
+          "exchange": null
+        },
+        {
+          "id": "BTS/USD",
+          "ticker": "BTS/USD",
+          "name": "BTS/USD",
           "weight_pct": 0.5,
           "category": "Crypto",
           "risk_bucket": "crypto",
@@ -1680,14 +1704,14 @@
         }
       ],
       "execution_summary": {
-        "n_positions": 18,
+        "n_positions": 19,
         "n_exchanges": 0,
         "exchanges": [],
         "total_weight": 100.0,
-        "missing_isin": 12,
+        "missing_isin": 13,
         "missing_ticker": 0,
         "data_quality": {
-          "isin_coverage": 33.3,
+          "isin_coverage": 31.6,
           "ticker_coverage": 100.0
         },
         "ready_for_execution": true
@@ -1695,45 +1719,45 @@
     },
     "_exposures": {
       "by_category": {
-        "Actions": 47.0,
-        "ETF": 25.0,
+        "Actions": 45.5,
+        "ETF": 26.0,
         "Obligations": 27.0,
-        "Crypto": 1.0
+        "Crypto": 1.5
       },
       "by_sector": {
-        "Finance": 26.0,
-        "Diversified": 25.0,
-        "Immobilier": 16.0,
-        "Industries": 3.0,
-        "Biens de consommation cycliques": 1.0,
+        "Finance": 26.5,
+        "Diversified": 26.0,
+        "Immobilier": 11.0,
+        "Biens de consommation cycliques": 5.0,
+        "Industries": 2.0,
         "Biens de consommation de base": 1.0
       },
       "by_region": {
-        "Global": 53.0,
+        "Global": 54.5,
         "Etats-Unis": 30.0,
-        "Belgique": 14.0,
-        "France": 2.0,
-        "Inde": 1.0
+        "Belgique": 13.5,
+        "Inde": 1.0,
+        "France": 1.0
       },
       "by_risk_bucket": {
-        "equity_like": 72.0,
+        "equity_like": 71.5,
         "bond_like": 27.0,
-        "crypto": 1.0
+        "crypto": 1.5
       },
       "by_role": {
-        "core": 26.0,
-        "satellite": 47.0,
+        "core": 31.0,
+        "satellite": 42.0,
         "defensive": 27.0,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1058.0,
-        "hhi_interpretation": "diversified",
-        "effective_n": 9.46,
-        "n_positions": 18,
-        "top_5_weight": 64.0,
-        "top_10_weight": 93.0,
+        "hhi": 982.0,
+        "hhi_interpretation": "well_diversified",
+        "effective_n": 10.18,
+        "n_positions": 19,
+        "top_5_weight": 60.5,
+        "top_10_weight": 92.5,
         "largest_position": 15.0,
         "smallest_position": 0.5,
         "thresholds": {
@@ -1746,14 +1770,14 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 18,
+      "n_positions": 19,
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 12,
+      "missing_isin": 13,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 33.3,
+        "isin_coverage": 31.6,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
@@ -1763,11 +1787,11 @@
       {
         "name": "EQ_15",
         "ticker": "None",
-        "rationale": "Cet actif a été sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif a été sélectionné pour sa capacité à offrir une exposition diversifiée sur le marché global, ce qui peut profiter d'un régime 'risk-on'. Il joue un rôle de diversification dans le portefeuille, permettant de réduire la volatilité globale.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance de la volatilité potentielle des marchés globaux.",
         "market_context_link": null,
-        "weight_pct": 10.0,
+        "weight_pct": 11.0,
         "category": "ETF",
         "sector": "Non spécifié",
         "country": "Global",
@@ -1783,11 +1807,11 @@
       {
         "name": "Avantis International Small Cap Value ETF",
         "ticker": "AVDV",
-        "rationale": "Ce fonds investit dans des petites capitalisations à valeur, offrant un potentiel de croissance dans un environnement de marché favorable. Il joue un rôle de satellite, ajoutant une exposition à des segments de marché moins corrélés.",
+        "rationale": "Ce fonds investit dans des petites valeurs internationales, offrant un potentiel de croissance dans un contexte favorable aux actions discrétionnaires. Il sert de satellite dans le portefeuille, visant à capturer des rendements supérieurs.",
         "role": "satellite",
-        "risk_note": "Risque de volatilité plus élevé associé aux petites capitalisations.",
-        "market_context_link": null,
-        "weight_pct": 10.0,
+        "risk_note": "Risque de volatilité plus élevé en raison de la nature des petites capitalisations.",
+        "market_context_link": "Secteur favorisé: consumer-discretionary",
+        "weight_pct": 11.0,
         "category": "ETF",
         "sector": "Diversified",
         "country": "Global",
@@ -1803,9 +1827,9 @@
       {
         "name": "iShares Core U.S. Aggregate Bond ETF",
         "ticker": "AGG",
-        "rationale": "Ce fonds offre une exposition diversifiée aux obligations américaines, ce qui aide à stabiliser le portefeuille en période de volatilité. Il agit comme un élément central pour équilibrer le risque.",
+        "rationale": "Ce fonds obligataire offre une exposition diversifiée aux obligations américaines, servant de stabilisateur dans un portefeuille modéré. Son rôle est de fournir un revenu fixe et de réduire la volatilité.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt affectant les rendements obligataires.",
+        "risk_note": "Risque de taux d'intérêt pouvant affecter la performance des obligations.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1823,9 +1847,9 @@
       {
         "name": "Dimensional International Core Equity Market ETF",
         "ticker": "DFIC",
-        "rationale": "Ce fonds cible des actions internationales de grande qualité, ce qui peut bénéficier d'une rotation vers des marchés étrangers. Il sert de satellite pour diversifier davantage le portefeuille.",
-        "role": "satellite",
-        "risk_note": "Risque de change et de volatilité sur les marchés internationaux.",
+        "rationale": "Ce fonds investit dans des actions internationales de grande qualité, capturant des opportunités de croissance à l'échelle mondiale. Il est un élément central du portefeuille, visant à équilibrer le risque et le rendement.",
+        "role": "core",
+        "risk_note": "Exposition aux fluctuations des devises et des marchés étrangers.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
@@ -1843,9 +1867,9 @@
       {
         "name": "Avantis Core Fixed Income ETF",
         "ticker": "AVIG",
-        "rationale": "Ce fonds investit dans des obligations de qualité, offrant une source de revenu stable et une protection contre la volatilité du marché. Il complète le portefeuille en tant qu'élément central.",
+        "rationale": "Ce fonds fournit une exposition aux obligations de qualité, offrant un rendement stable dans un environnement de taux d'intérêt bas. Il joue un rôle de stabilisateur dans le portefeuille.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt pouvant affecter les rendements.",
+        "risk_note": "Risque de taux d'intérêt pouvant affecter la performance des obligations.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1863,11 +1887,11 @@
       {
         "name": "EQ_258",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif est conçu pour offrir une exposition diversifiée sur le marché global, ce qui est essentiel dans un environnement 'risk-on'. Il contribue à la diversification du portefeuille.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance des fluctuations du marché global.",
         "market_context_link": null,
-        "weight_pct": 15.0,
+        "weight_pct": 10.0,
         "category": "ETF",
         "sector": "Non spécifié",
         "country": "Global",
@@ -1883,9 +1907,9 @@
       {
         "name": "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund",
         "ticker": "AGGY",
-        "rationale": "Ce fonds vise à générer un revenu amélioré tout en maintenant une exposition aux obligations américaines. Il joue un rôle central en fournissant stabilité et revenu.",
+        "rationale": "Ce fonds vise à générer des rendements supérieurs par rapport aux obligations traditionnelles tout en offrant une protection contre la volatilité. Il sert de stabilisateur dans le portefeuille.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt affectant les rendements obligataires.",
+        "risk_note": "Risque de taux d'intérêt et de crédit.",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -1903,9 +1927,9 @@
       {
         "name": "ActivePassive Core Bond ETF",
         "ticker": "APCB",
-        "rationale": "Ce fonds combine des stratégies actives et passives pour investir dans des obligations, offrant ainsi une approche diversifiée. Il agit comme un élément de stabilisation dans le portefeuille.",
+        "rationale": "Ce fonds combine des stratégies actives et passives pour optimiser le rendement des obligations, ce qui est crucial dans un portefeuille modéré. Il joue un rôle de stabilisateur.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt pouvant affecter les rendements.",
+        "risk_note": "Risque de taux d'intérêt pouvant affecter la performance des obligations.",
         "market_context_link": null,
         "weight_pct": 3.0,
         "category": "Obligations",
@@ -1923,11 +1947,11 @@
       {
         "name": "EQ_629",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif offre une exposition diversifiée sur le marché global, ce qui est bénéfique dans un environnement 'risk-on'. Il contribue à la diversification du portefeuille.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance des fluctuations du marché global.",
         "market_context_link": null,
-        "weight_pct": 14.0,
+        "weight_pct": 13.5,
         "category": "ETF",
         "sector": "Non spécifié",
         "country": "Global",
@@ -1941,11 +1965,31 @@
         }
       },
       {
-        "name": "NFT/USD",
-        "ticker": "NFT/USD",
-        "rationale": "Ce crypto-actif a été choisi pour son potentiel de rendement élevé dans un environnement de risque accru. Il sert de satellite pour ajouter une exposition à un secteur innovant.",
+        "name": "EQ_58",
+        "ticker": "None",
+        "rationale": "Cet actif est sélectionné pour sa capacité à fournir une exposition diversifiée sur le marché global, essentielle dans un contexte favorable. Il joue un rôle de diversification.",
+        "role": "diversification",
+        "risk_note": "Surveillance des fluctuations du marché global.",
+        "market_context_link": null,
+        "weight_pct": 5.0,
+        "category": "ETF",
+        "sector": "Non spécifié",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": null,
+          "volatility": null,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "GNO/USD",
+        "ticker": "GNO/USD",
+        "rationale": "Ce crypto-actif présente un potentiel de rendement élevé, bien qu'il soit associé à une volatilité importante. Il sert de satellite dans le portefeuille, visant à capturer des gains rapides.",
         "role": "satellite",
-        "risk_note": "Risque élevé de volatilité et de réglementation dans le secteur des cryptomonnaies.",
+        "risk_note": "Volatilité élevée et risque de marché crypto.",
         "market_context_link": null,
         "weight_pct": 0.5,
         "category": "Crypto",
@@ -1955,17 +1999,37 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 2.86,
-          "volatility": 35.75,
+          "ytd": 9.74,
+          "volatility": 31.67,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "BTS/USD",
+        "ticker": "BTS/USD",
+        "rationale": "Ce crypto-actif offre une exposition à un marché en croissance, avec un potentiel de rendement attractif. Il joue un rôle de satellite, visant à diversifier le portefeuille.",
+        "role": "satellite",
+        "risk_note": "Volatilité élevée et risque de marché crypto.",
+        "market_context_link": null,
+        "weight_pct": 0.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 1.71,
+          "volatility": 39.67,
           "buffett_score": null
         }
       },
       {
         "name": "PORTO/USD",
         "ticker": "PORTO/USD",
-        "rationale": "Ce crypto-actif présente une performance solide et un potentiel de croissance dans un marché en évolution. Il agit comme un satellite pour diversifier le portefeuille avec des actifs numériques.",
+        "rationale": "Ce crypto-actif est sélectionné pour son potentiel de croissance dans un marché dynamique. Il sert de satellite, visant à augmenter le rendement global du portefeuille.",
         "role": "satellite",
-        "risk_note": "Risque élevé de volatilité et de réglementation dans le secteur des cryptomonnaies.",
+        "risk_note": "Volatilité élevée et risque de marché crypto.",
         "market_context_link": null,
         "weight_pct": 0.5,
         "category": "Crypto",
@@ -1975,17 +2039,17 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 11.68,
-          "volatility": 36.55,
+          "ytd": 7.14,
+          "volatility": 39.52,
           "buffett_score": null
         }
       },
       {
         "name": "EQ_239",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif est conçu pour offrir une exposition diversifiée sur le marché global, ce qui est essentiel dans un environnement 'risk-on'. Il contribue à la diversification du portefeuille.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance des fluctuations du marché global.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -2003,29 +2067,9 @@
       {
         "name": "EQ_127",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif est sélectionné pour sa capacité à fournir une exposition diversifiée sur le marché global, essentielle dans un contexte favorable. Il joue un rôle de diversification.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
-        "market_context_link": null,
-        "weight_pct": 1.0,
-        "category": "ETF",
-        "sector": "Non spécifié",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": null,
-          "volatility": null,
-          "buffett_score": null
-        }
-      },
-      {
-        "name": "EQ_58",
-        "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
-        "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance des fluctuations du marché global.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -2043,9 +2087,9 @@
       {
         "name": "EQ_971",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif offre une exposition diversifiée sur le marché global, ce qui est bénéfique dans un environnement 'risk-on'. Il contribue à la diversification du portefeuille.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance des fluctuations du marché global.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -2063,11 +2107,11 @@
       {
         "name": "EQ_784",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif est conçu pour offrir une exposition diversifiée sur le marché global, ce qui est essentiel dans un environnement 'risk-on'. Il contribue à la diversification du portefeuille.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance des fluctuations du marché global.",
         "market_context_link": null,
-        "weight_pct": 2.0,
+        "weight_pct": 1.0,
         "category": "ETF",
         "sector": "Non spécifié",
         "country": "Global",
@@ -2083,9 +2127,9 @@
       {
         "name": "EQ_174",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif est sélectionné pour sa capacité à fournir une exposition diversifiée sur le marché global, essentielle dans un contexte favorable. Il joue un rôle de diversification.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance des fluctuations du marché global.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -2103,9 +2147,9 @@
       {
         "name": "EQ_74",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à offrir une exposition diversifiée à des actifs globaux, ce qui peut profiter d'un régime de marché favorable. Son rôle est de servir de diversification dans le portefeuille.",
+        "rationale": "Cet actif offre une exposition diversifiée sur le marché global, ce qui est bénéfique dans un environnement 'risk-on'. Il contribue à la diversification du portefeuille.",
         "role": "diversification",
-        "risk_note": "Risque de volatilité due à l'exposition globale.",
+        "risk_note": "Surveillance des fluctuations du marché global.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -2766,9 +2810,9 @@
       {
         "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
         "ticker": "DCMB",
-        "rationale": "Cet actif a été sélectionné en raison de sa faible volatilité et de sa capacité à générer des revenus réguliers, ce qui est essentiel pour un investisseur stable. Il joue un rôle d'income dans le portefeuille, offrant une exposition aux obligations commerciales immobilières.",
+        "rationale": "Cet actif a été sélectionné pour sa qualité en tant qu'ETF axé sur l'immobilier commercial, offrant une exposition stable avec un faible niveau de volatilité. Il joue un rôle d'income dans le portefeuille, générant des revenus réguliers tout en préservant le capital.",
         "role": "income",
-        "risk_note": "Risque de taux d'intérêt pouvant affecter la performance des obligations.",
+        "risk_note": "Risque lié à la fluctuation des taux d'intérêt affectant les rendements des obligations.",
         "market_context_link": null,
         "weight_pct": 12.0,
         "category": "Obligations",
@@ -2786,9 +2830,9 @@
       {
         "name": "Neos Enhanced Income Cash Alternative ETF",
         "ticker": "CSHI",
-        "rationale": "Choisi pour sa stratégie de génération de revenus à court terme, cet actif vise à offrir une alternative de liquidité avec un risque limité. Il sert de core income dans le portefeuille, apportant stabilité et préservation du capital.",
+        "rationale": "Sélectionné pour sa capacité à offrir des rendements améliorés par rapport aux liquidités traditionnelles, cet ETF ultracourt vise à générer des revenus tout en maintenant une faible volatilité. Il sert de complément de revenu dans le portefeuille.",
         "role": "income",
-        "risk_note": "Risque de liquidité en période de volatilité du marché.",
+        "risk_note": "Risque de taux d'intérêt pouvant impacter les rendements.",
         "market_context_link": null,
         "weight_pct": 12.0,
         "category": "Obligations",
@@ -2806,9 +2850,9 @@
       {
         "name": "Avantis Short-Term Fixed Income ETF",
         "ticker": "AVSF",
-        "rationale": "Sélectionné pour sa capacité à offrir des rendements stables avec une faible volatilité, ce qui est en ligne avec le profil d'investisseur stable. Il contribue à la diversification des revenus fixes dans le portefeuille.",
-        "role": "income",
-        "risk_note": "Risque de taux d'intérêt et de crédit.",
+        "rationale": "Cet actif a été choisi pour sa stratégie d'investissement dans des obligations à court terme, offrant une protection contre la volatilité des taux d'intérêt. Il contribue à la stabilité du portefeuille en tant que composant core.",
+        "role": "core",
+        "risk_note": "Risque de crédit lié aux émetteurs d'obligations.",
         "market_context_link": null,
         "weight_pct": 12.0,
         "category": "Obligations",
@@ -2826,9 +2870,9 @@
       {
         "name": "Angel Oak Income ETF",
         "ticker": "CARY",
-        "rationale": "Cet actif est choisi pour sa diversification dans plusieurs secteurs obligataires, ce qui peut aider à atténuer les risques. Il joue un rôle d'income, apportant des rendements réguliers tout en maintenant une volatilité relativement faible.",
+        "rationale": "Sélectionné pour sa diversification dans plusieurs secteurs obligataires, cet ETF vise à générer des revenus tout en maintenant une volatilité modérée. Il joue un rôle d'income dans le portefeuille.",
         "role": "income",
-        "risk_note": "Risque de crédit lié aux obligations sous-jacentes.",
+        "risk_note": "Risque de concentration sectorielle pouvant affecter les rendements.",
         "market_context_link": null,
         "weight_pct": 12.3,
         "category": "Obligations",
@@ -2846,9 +2890,9 @@
       {
         "name": "iShares Agency Bond ETF",
         "ticker": "AGZ",
-        "rationale": "Sélectionné pour sa stabilité et son exposition aux obligations d'agence, qui sont généralement considérées comme sûres. Il contribue à la préservation du capital et à la génération de revenus dans le portefeuille.",
-        "role": "income",
-        "risk_note": "Risque de taux d'intérêt affectant la valeur des obligations.",
+        "rationale": "Cet actif a été choisi pour son exposition aux obligations d'agences, qui sont généralement considérées comme sûres et stables. Il sert de composant core, contribuant à la préservation du capital.",
+        "role": "core",
+        "risk_note": "Risque de taux d'intérêt pouvant affecter la valeur des obligations.",
         "market_context_link": null,
         "weight_pct": 5.6,
         "category": "Obligations",
@@ -2866,9 +2910,9 @@
       {
         "name": "Dimensional International Core Equity Market ETF",
         "ticker": "DFIC",
-        "rationale": "Choisi pour son exposition aux actions internationales de grande qualité, offrant un potentiel de croissance tout en diversifiant le portefeuille. Il joue un rôle de satellite, ajoutant une dimension de croissance.",
+        "rationale": "Sélectionné pour son exposition diversifiée aux actions internationales, cet ETF vise à capter la croissance des marchés étrangers. Il agit comme un satellite dans le portefeuille, ajoutant du potentiel de rendement.",
         "role": "satellite",
-        "risk_note": "Risque de change et volatilité des marchés internationaux.",
+        "risk_note": "Risque de change et volatilité accrue des marchés internationaux.",
         "market_context_link": null,
         "weight_pct": 9.5,
         "category": "ETF",
@@ -2886,9 +2930,9 @@
       {
         "name": "Dimensional International Small Cap ETF",
         "ticker": "DFIS",
-        "rationale": "Sélectionné pour son potentiel de croissance à long terme dans le segment des petites capitalisations internationales, qui peut offrir des rendements supérieurs. Il sert également de satellite dans le portefeuille.",
+        "rationale": "Cet actif a été choisi pour son potentiel de croissance dans le segment des petites capitalisations internationales, qui peut offrir des rendements supérieurs à long terme. Il joue un rôle de satellite dans le portefeuille.",
         "role": "satellite",
-        "risk_note": "Risque accru de volatilité et de liquidité dans les petites entreprises.",
+        "risk_note": "Risque accru de volatilité et de liquidité dans les petites capitalisations.",
         "market_context_link": null,
         "weight_pct": 5.3,
         "category": "ETF",
@@ -2906,9 +2950,9 @@
       {
         "name": "iShares MSCI ACWI ETF",
         "ticker": "ACWI",
-        "rationale": "Cet actif a été choisi pour sa large exposition aux marchés mondiaux, permettant une diversification géographique et sectorielle. Il joue un rôle de core dans le portefeuille, équilibrant les investissements en actions.",
+        "rationale": "Sélectionné pour sa large exposition aux actions mondiales, cet ETF permet de diversifier le portefeuille tout en capturant la performance des marchés développés et émergents. Il agit comme un core dans le portefeuille.",
         "role": "core",
-        "risk_note": "Risque de volatilité des marchés boursiers globaux.",
+        "risk_note": "Risque de marché global et volatilité associée.",
         "market_context_link": null,
         "weight_pct": 10.3,
         "category": "ETF",
@@ -2926,9 +2970,9 @@
       {
         "name": "EQ_164",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa capacité à diversifier davantage le portefeuille, bien que les détails spécifiques ne soient pas fournis. Il contribue à la diversification globale.",
+        "rationale": "Cet actif a été sélectionné pour sa capacité à diversifier le portefeuille, bien que les détails spécifiques ne soient pas fournis. Il joue un rôle de diversification.",
         "role": "diversification",
-        "risk_note": "Risque d'illiquidité si l'actif est moins connu.",
+        "risk_note": "Risque d'illiquidité si l'actif n'est pas facilement négociable.",
         "market_context_link": null,
         "weight_pct": 5.1,
         "category": "ETF",
@@ -2946,9 +2990,9 @@
       {
         "name": "EQ_79",
         "ticker": "None",
-        "rationale": "Choisi pour sa capacité à ajouter une couche de diversification, bien que les détails soient limités. Cela peut aider à réduire le risque global du portefeuille.",
+        "rationale": "Sélectionné pour sa contribution à la diversification du portefeuille, cet actif peut offrir des caractéristiques de rendement intéressantes. Il agit comme un élément de diversification.",
         "role": "diversification",
-        "risk_note": "Risque d'illiquidité et de manque de transparence.",
+        "risk_note": "Risque d'illiquidité si l'actif n'est pas facilement négociable.",
         "market_context_link": null,
         "weight_pct": 8.2,
         "category": "ETF",
@@ -2966,9 +3010,9 @@
       {
         "name": "EQ_101",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa contribution à la diversification du portefeuille, bien que les détails ne soient pas précisés. Cela permet de réduire la dépendance à un seul type d'actif.",
+        "rationale": "Cet actif a été choisi pour sa capacité à diversifier le portefeuille, bien que les détails spécifiques ne soient pas fournis. Il joue un rôle de diversification.",
         "role": "diversification",
-        "risk_note": "Risque d'illiquidité et de volatilité potentielle.",
+        "risk_note": "Risque d'illiquidité si l'actif n'est pas facilement négociable.",
         "market_context_link": null,
         "weight_pct": 2.8,
         "category": "ETF",
@@ -2986,9 +3030,9 @@
       {
         "name": "EQ_46",
         "ticker": "None",
-        "rationale": "Choisi pour sa capacité à diversifier le portefeuille, même si les spécificités sont absentes. Cela peut aider à équilibrer le risque global.",
+        "rationale": "Sélectionné pour sa contribution à la diversification du portefeuille, cet actif peut offrir des caractéristiques de rendement intéressantes. Il agit comme un élément de diversification.",
         "role": "diversification",
-        "risk_note": "Risque d'illiquidité et de manque de performance.",
+        "risk_note": "Risque d'illiquidité si l'actif n'est pas facilement négociable.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -3006,9 +3050,9 @@
       {
         "name": "EQ_567",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa contribution à la diversification, bien que les détails soient limités. Cela peut réduire le risque concentré dans d'autres actifs.",
+        "rationale": "Cet actif a été sélectionné pour sa capacité à diversifier le portefeuille, bien que les détails spécifiques ne soient pas fournis. Il joue un rôle de diversification.",
         "role": "diversification",
-        "risk_note": "Risque d'illiquidité et de volatilité.",
+        "risk_note": "Risque d'illiquidité si l'actif n'est pas facilement négociable.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -3026,9 +3070,9 @@
       {
         "name": "EQ_60",
         "ticker": "None",
-        "rationale": "Choisi pour sa capacité à diversifier le portefeuille, même si les détails ne sont pas fournis. Cela aide à réduire le risque global.",
+        "rationale": "Sélectionné pour sa contribution à la diversification du portefeuille, cet actif peut offrir des caractéristiques de rendement intéressantes. Il agit comme un élément de diversification.",
         "role": "diversification",
-        "risk_note": "Risque d'illiquidité et de manque de performance.",
+        "risk_note": "Risque d'illiquidité si l'actif n'est pas facilement négociable.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -3046,9 +3090,9 @@
       {
         "name": "EQ_258",
         "ticker": "None",
-        "rationale": "Sélectionné pour sa contribution à la diversification, bien que les spécificités soient absentes. Cela peut équilibrer le risque global du portefeuille.",
+        "rationale": "Cet actif a été choisi pour sa capacité à diversifier le portefeuille, bien que les détails spécifiques ne soient pas fournis. Il joue un rôle de diversification.",
         "role": "diversification",
-        "risk_note": "Risque d'illiquidité et de volatilité potentielle.",
+        "risk_note": "Risque d'illiquidité si l'actif n'est pas facilement négociable.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -3066,9 +3110,9 @@
       {
         "name": "EQ_268",
         "ticker": "None",
-        "rationale": "Choisi pour sa capacité à diversifier le portefeuille, même si les détails ne sont pas précisés. Cela peut aider à réduire le risque concentré dans d'autres actifs.",
+        "rationale": "Sélectionné pour sa contribution à la diversification du portefeuille, cet actif peut offrir des caractéristiques de rendement intéressantes. Il agit comme un élément de diversification.",
         "role": "diversification",
-        "risk_note": "Risque d'illiquidité et de volatilité.",
+        "risk_note": "Risque d'illiquidité si l'actif n'est pas facilement négociable.",
         "market_context_link": null,
         "weight_pct": 1.0,
         "category": "ETF",
@@ -3086,7 +3130,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2026-01-18T08:15:22.121548",
+    "generated_at": "2026-01-19T08:19:49.051862",
     "version": "v4.13.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
