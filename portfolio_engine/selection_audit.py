@@ -7,6 +7,7 @@ Generates a detailed JSON report explaining:
 - Which assets were rejected and why (filters, thresholds)
 - Filter statistics and thresholds used
 
+v1.3.0 - Aligned with preset_meta v4.15.2 (vol_missing, yield-trap filters, missing data penalty)
 v1.2.0 - Fixed ETF sector extraction from sector_top field
 v1.1.0 - Added RADAR tilts normalization (sector/region mapping)
 v1.0.0 - Initial version
@@ -20,6 +21,7 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field, asdict
 
 logger = logging.getLogger("selection-audit")
+
 
 # ============= PHASE 2: STABLE UID =============
 def get_stable_uid(item: dict) -> str:
@@ -38,8 +40,8 @@ def get_stable_uid(item: dict) -> str:
     name = item.get("name", "UNKNOWN") or "UNKNOWN"
     return name.upper().replace(" ", "_").replace(",", "")[:50]
 
+
 # ============= v1.2.0: NON-TILTABLE ETF BUCKETS =============
-# ETFs in these buckets should not receive RADAR sector tilts
 NON_TILTABLE_BUCKETS = {
     "ALT_ASSET_CRYPTO",
     "ALT_ASSET_COMMODITY",
@@ -51,57 +53,98 @@ NON_TILTABLE_BUCKETS = {
     "NON_STANDARD",
 }
 
-# ============= v1.1.0: RADAR TILTS NORMALIZATION =============
-# Imported from factors.py v2.4.5 for consistency
 
-# Mapping secteur → format RADAR (lowercase, hyphenated)
+# ============= v1.3.0: HARD FILTER REASONS (aligned with preset_meta v4.15.2) =============
+
+HARD_FILTER_EXPLANATIONS = {
+    "vol_missing": "Volatilité manquante (donnée non disponible)",
+    "vol_aberrant": "Volatilité aberrante (< 1% ou > 120%)",
+    "roe_missing": "ROE manquant (donnée non disponible)",
+    "div_yield_missing": "Dividend yield manquant (donnée non disponible)",
+    "payout_missing": "Payout ratio manquant (donnée non disponible)",
+    "coverage_missing": "Dividend coverage manquant (donnée non disponible)",
+}
+
+
+def explain_hard_filter_reason(reason: str) -> str:
+    """
+    v1.3.0: Génère une explication lisible pour un code de rejet.
+    
+    Examples:
+        "vol<22.0" → "Volatilité trop faible (< 22.0%)"
+        "payout>85.0" → "Payout ratio trop élevé (> 85.0%) - Yield trap suspect"
+        "coverage<1.2" → "Dividend coverage insuffisant (< 1.2x) - Yield trap suspect"
+    """
+    # Check mapping first
+    if reason in HARD_FILTER_EXPLANATIONS:
+        return HARD_FILTER_EXPLANATIONS[reason]
+    
+    # Parse dynamic reasons
+    if reason.startswith("vol<"):
+        threshold = reason.replace("vol<", "")
+        return f"Volatilité trop faible (< {threshold}%) - Profil trop défensif pour Agressif"
+    
+    if reason.startswith("vol>"):
+        threshold = reason.replace("vol>", "")
+        return f"Volatilité trop élevée (> {threshold}%) - Risque excessif"
+    
+    if reason.startswith("roe<"):
+        threshold = reason.replace("roe<", "")
+        return f"ROE insuffisant (< {threshold}%) - Qualité fondamentale faible"
+    
+    if reason.startswith("div<"):
+        threshold = reason.replace("div<", "")
+        return f"Dividend yield trop faible (< {threshold}%) - Profil rendement non atteint"
+    
+    if reason.startswith("payout>"):
+        threshold = reason.replace("payout>", "")
+        return f"Payout ratio excessif (> {threshold}%) - ⚠️ YIELD TRAP suspect"
+    
+    if reason.startswith("coverage<"):
+        threshold = reason.replace("coverage<", "")
+        return f"Dividend coverage insuffisant (< {threshold}x) - ⚠️ YIELD TRAP suspect"
+    
+    return reason
+
+
+# ============= v1.1.0: RADAR TILTS NORMALIZATION =============
+
 SECTOR_TO_RADAR = {
-    # === Depuis sectors.json (EN) ===
     "Technology": "information-technology",
     "Semiconductor": "information-technology",
     "Cybersecurity": "information-technology",
     "Internet": "communication-services",
     "Telecommunications": "communication-services",
-    
     "Health Care": "healthcare",
     "Healthcare": "healthcare",
     "Pharmaceuticals": "healthcare",
     "Biotechnology": "healthcare",
-    
     "Financial Services": "financials",
     "Financials": "financials",
     "Banks": "financials",
     "Insurance": "financials",
-    
     "Consumer Discretionary": "consumer-discretionary",
     "Retail": "consumer-discretionary",
     "Travel & Leisure": "consumer-discretionary",
     "Automobiles & Parts": "consumer-discretionary",
     "Personal & Household Goods": "consumer-discretionary",
-    
     "Food & Beverage": "consumer-staples",
     "Consumer Staples": "consumer-staples",
     "Consumer Defensive": "consumer-staples",
-    
     "Energy": "energy",
     "Oil & Gas": "energy",
-    
     "Industrials": "industrials",
     "Industrial": "industrials",
     "Transportation": "industrials",
     "Construction & Materials": "industrials",
-    
     "Materials": "materials",
     "Basic Materials": "materials",
     "Basic Resources": "materials",
     "Chemicals": "materials",
-    
     "Utilities": "utilities",
     "Smart Grid Infrastructure": "utilities",
-    
     "Real Estate": "real-estate",
-    
-    # === Depuis stocks (FR) ===
+    # FR mappings
     "Technologie de l'information": "information-technology",
     "Santé": "healthcare",
     "Finance": "financials",
@@ -114,271 +157,85 @@ SECTOR_TO_RADAR = {
     "Services publics": "utilities",
     "Immobilier": "real-estate",
     "Autres": "_other",
-    
-    # === Depuis sectors.json (FR) ===
-    "Pétrole & Gaz": "energy",
-    "Énergie": "energy",
-    "Ressources de base": "materials",
-    "Chimie": "materials",
-    "Construction & Matériaux": "industrials",
-    "Industriels": "industrials",
-    "Transports": "industrials",
-    "Automobiles & Équipementiers": "consumer-discretionary",
-    "Biens personnels & ménagers": "consumer-discretionary",
-    "Distribution": "consumer-discretionary",
-    "Voyages & Loisirs": "consumer-discretionary",
-    "Consommation discrétionnaire": "consumer-discretionary",
-    "Alimentation & Boissons": "consumer-staples",
-    "Pharmaceutiques": "healthcare",
-    "Biotechnologie": "healthcare",
-    "Banques": "financials",
-    "Services financiers": "financials",
-    "Assurances": "financials",
-    "Technologie": "information-technology",
-    "Semi-conducteurs": "information-technology",
-    "Télécommunications": "communication-services",
-    "Infrastructures réseaux intelligents": "utilities",
-    
-    # === Mappings additionnels (lowercase) ===
-    "healthcare": "healthcare",
-    "financials": "financials",
-    "information-technology": "information-technology",
-    "consumer-discretionary": "consumer-discretionary",
-    "consumer-staples": "consumer-staples",
-    "energy": "energy",
-    "industrials": "industrials",
-    "materials": "materials",
-    "communication-services": "communication-services",
-    "utilities": "utilities",
-    "real-estate": "real-estate",
 }
 
-# Mapping pays → format RADAR (lowercase, hyphenated)
 COUNTRY_TO_RADAR = {
-    # === Asie ===
-    "Corée du Sud": "south-korea",
-    "Corée": "south-korea",
-    "South Korea": "south-korea",
-    "Korea": "south-korea",
-    
-    "Chine": "china",
-    "China": "china",
-    
-    "Japon": "japan",
-    "Japan": "japan",
-    
-    "Inde": "india",
-    "India": "india",
-    
-    "Taiwan": "taiwan",
-    "Taïwan": "taiwan",
-    
+    "Corée du Sud": "south-korea", "Corée": "south-korea", "South Korea": "south-korea",
+    "Chine": "china", "China": "china",
+    "Japon": "japan", "Japan": "japan",
+    "Inde": "india", "India": "india",
+    "Taiwan": "taiwan", "Taïwan": "taiwan",
     "Hong Kong": "hong-kong",
-    
-    "Singapour": "singapore",
-    "Singapore": "singapore",
-    
-    "Indonésie": "indonesia",
-    "Indonesia": "indonesia",
-    
-    "Philippines": "philippines",
-    
-    "Thaïlande": "thailand",
-    "Thailand": "thailand",
-    
-    "Malaisie": "malaysia",
-    "Malaysia": "malaysia",
-    
-    # === Europe ===
-    "Allemagne": "germany",
-    "Germany": "germany",
-    
+    "Singapour": "singapore", "Singapore": "singapore",
+    "Allemagne": "germany", "Germany": "germany",
     "France": "france",
-    
-    "Royaume-Uni": "uk",
-    "Royaume Uni": "uk",
-    "United Kingdom": "uk",
-    "UK": "uk",
-    
-    "Italie": "italy",
-    "Italy": "italy",
-    
-    "Espagne": "spain",
-    "Spain": "spain",
-    
-    "Pays-Bas": "netherlands",
-    "Netherlands": "netherlands",
-    
-    "Suisse": "switzerland",
-    "Switzerland": "switzerland",
-    
-    "Belgique": "belgium",
-    "Belgium": "belgium",
-    
-    "Autriche": "austria",
-    "Austria": "austria",
-    
-    "Irlande": "ireland",
-    "Ireland": "ireland",
-    
-    "Portugal": "portugal",
-    
-    "Norvège": "norway",
-    "Norway": "norway",
-    
-    "Suède": "sweden",
-    "Sweden": "sweden",
-    
-    "Danemark": "denmark",
-    "Denmark": "denmark",
-    
-    "Finlande": "finland",
-    "Finland": "finland",
-    
-    # === Amériques ===
-    "Etats-Unis": "usa",
-    "États-Unis": "usa",
-    "United States": "usa",
-    "USA": "usa",
-    "US": "usa",
-    
+    "Royaume-Uni": "uk", "United Kingdom": "uk", "UK": "uk",
+    "Italie": "italy", "Italy": "italy",
+    "Espagne": "spain", "Spain": "spain",
+    "Pays-Bas": "netherlands", "Netherlands": "netherlands",
+    "Suisse": "switzerland", "Switzerland": "switzerland",
+    "Etats-Unis": "usa", "États-Unis": "usa", "United States": "usa", "USA": "usa", "US": "usa",
     "Canada": "canada",
-    
-    "Mexique": "mexico",
-    "Mexico": "mexico",
-    
-    "Brésil": "brazil",
-    "Brazil": "brazil",
-    
-    "Argentine": "argentina",
-    "Argentina": "argentina",
-    
-    "Chili": "chile",
-    "Chile": "chile",
-    
-    # === Autres ===
-    "Australie": "australia",
-    "Australia": "australia",
-    
-    "Israel": "israel",
-    "Israël": "israel",
-    
-    "Saudi Arabia": "saudi-arabia",
-    "Arabie Saoudite": "saudi-arabia",
-    
-    "South Africa": "south-africa",
-    "Afrique du Sud": "south-africa",
-    
-    "Turquie": "turkey",
-    "Turkey": "turkey",
-    
-    # === RÉGIONS À IGNORER (retournent chaîne vide) ===
-    "Asie": "",
-    "Europe": "",
-    "Zone Euro": "",
-    "Global": "",
+    "Brésil": "brazil", "Brazil": "brazil",
+    "Australie": "australia", "Australia": "australia",
+    "Israel": "israel", "Israël": "israel",
+    # Régions à ignorer
+    "Asie": "", "Europe": "", "Zone Euro": "", "Global": "",
 }
 
 
 def normalize_sector_for_tilts(sector: str) -> str:
-    """
-    v1.1.0: Normalise un secteur vers le format RADAR.
-    
-    Exemples:
-        "Healthcare" → "healthcare"
-        "Santé" → "healthcare"
-        "Financial Services" → "financials"
-        "Technologie de l'information" → "information-technology"
-    """
+    """v1.1.0: Normalise un secteur vers le format RADAR."""
     if not sector:
         return ""
-    
     sector_clean = sector.strip()
-    
-    # 1. Mapping direct
     if sector_clean in SECTOR_TO_RADAR:
         return SECTOR_TO_RADAR[sector_clean]
-    
-    # 2. Essayer en lowercase
     sector_lower = sector_clean.lower()
     for key, value in SECTOR_TO_RADAR.items():
         if key.lower() == sector_lower:
             return value
-    
-    # 3. Recherche partielle (contient)
     for key, value in SECTOR_TO_RADAR.items():
         if sector_lower in key.lower() or key.lower() in sector_lower:
             return value
-    
-    # 4. Fallback: convertir en lowercase hyphenated
     return sector_clean.lower().replace(" ", "-").replace("_", "-")
 
 
 def normalize_region_for_tilts(country: str) -> str:
-    """
-    v1.1.0: Normalise un pays vers le format RADAR.
-    
-    Exemples:
-        "Corée du Sud" → "south-korea"
-        "Corée" → "south-korea"
-        "Chine" → "china"
-        "Etats-Unis" → "usa"
-    """
+    """v1.1.0: Normalise un pays vers le format RADAR."""
     if not country:
         return ""
-    
     country_clean = country.strip()
-    
-    # 1. Mapping direct
     if country_clean in COUNTRY_TO_RADAR:
         return COUNTRY_TO_RADAR[country_clean]
-    
-    # 2. Essayer en lowercase
     country_lower = country_clean.lower()
     for key, value in COUNTRY_TO_RADAR.items():
         if key.lower() == country_lower:
             return value
-    
-    # 3. Fallback: convertir en lowercase hyphenated
     return country_clean.lower().replace(" ", "-").replace("_", "-")
 
 
 # ============= v1.2.0: ETF SECTOR EXTRACTION =============
 
 def extract_etf_sector(asset: Dict) -> str:
-    """
-    v1.2.0: Extract sector from ETF asset.
-    
-    ETFs have sector in 'sector_top' field which can be:
-    - A string: "Technology"
-    - A dict: {"sector": "Technology", "weight": 0.48}
-    - None/empty
-    
-    Also checks sector_signal_ok flag.
-    """
-    # Check if sector_signal_ok is set (ETF has reliable sector data)
+    """v1.2.0: Extract sector from ETF asset."""
     sector_signal_ok = asset.get("sector_signal_ok")
     if sector_signal_ok is not None:
-        # Convert to bool (could be int 0/1 from CSV)
         if not bool(int(sector_signal_ok) if isinstance(sector_signal_ok, (int, float, str)) else sector_signal_ok):
-            return ""  # Sector data not reliable
+            return ""
     
-    # Check if ETF is in a non-tiltable bucket
     bucket = asset.get("sector_bucket", "")
     if bucket in NON_TILTABLE_BUCKETS:
-        return ""  # ETF type doesn't support sector tilts
+        return ""
     
-    # Try sector_top first (ETF-specific)
     sector_top = asset.get("sector_top")
     if sector_top:
         if isinstance(sector_top, dict):
             return sector_top.get("sector", "")
         elif isinstance(sector_top, str):
-            # Could be "nan" from CSV
             if sector_top.lower() not in ["nan", "none", ""]:
                 return sector_top
     
-    # Fallback to regular sector field
     sector = asset.get("sector") or asset.get("_sector_key")
     if sector and str(sector).lower() not in ["nan", "none", ""]:
         return sector
@@ -397,6 +254,7 @@ class FilterStats:
     output_count: int
     rejected_count: int
     rejection_rate_pct: float = 0.0
+    rejection_reasons: Dict[str, int] = field(default_factory=dict)  # v1.3.0
     
     def __post_init__(self):
         if self.input_count > 0:
@@ -411,10 +269,13 @@ class AssetAuditEntry:
     name: str
     ticker: Optional[str] = None
     category: str = "equity"
+    profile: Optional[str] = None  # v1.3.0: Profile (Agressif, Modéré, Stable)
+    matched_preset: Optional[str] = None  # v1.3.0: Preset from preset_meta
     
     # Scores
     buffett_score: Optional[float] = None
     composite_score: Optional[float] = None
+    profile_score: Optional[float] = None  # v1.3.0
     momentum_score: Optional[float] = None
     quality_score: Optional[float] = None
     
@@ -427,6 +288,9 @@ class AssetAuditEntry:
     ytd: Optional[str] = None
     sector: Optional[str] = None
     country: Optional[str] = None
+    dividend_yield: Optional[float] = None  # v1.3.0
+    payout_ratio: Optional[float] = None  # v1.3.0
+    dividend_coverage: Optional[float] = None  # v1.3.0
     
     # Selection info
     selected: bool = False
@@ -434,9 +298,10 @@ class AssetAuditEntry:
     selection_reason: Optional[str] = None
     rejection_reason: Optional[str] = None
     rejection_filter: Optional[str] = None
+    rejection_details: List[str] = field(default_factory=list)  # v1.3.0: Multiple reasons
     
     # RADAR context
-    radar_tilt: Optional[str] = None  # "favored", "avoided", "neutral"
+    radar_tilt: Optional[str] = None
     
     def to_dict(self) -> Dict:
         """Convert to dict, excluding None values."""
@@ -447,13 +312,20 @@ class AssetAuditEntry:
 class SelectionAuditReport:
     """Complete audit report for asset selection."""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "v1.2.0"
+    version: str = "v1.3.0"
+    preset_meta_version: str = "v4.15.2"  # v1.3.0
     
     # Summary counts
     summary: Dict[str, int] = field(default_factory=dict)
     
+    # v1.3.0: Profile-specific stats
+    profile_stats: Dict[str, Dict] = field(default_factory=dict)
+    
     # Filter statistics
     filters_applied: List[Dict] = field(default_factory=list)
+    
+    # v1.3.0: Hard filter breakdown by profile
+    hard_filter_stats: Dict[str, Dict] = field(default_factory=dict)
     
     # Assets by category
     equities_selected: List[Dict] = field(default_factory=list)
@@ -482,22 +354,9 @@ class SelectionAuditor:
     """
     Tracks and records asset selection decisions throughout the pipeline.
     
+    v1.3.0: Aligned with preset_meta v4.15.2 - tracks vol_missing, yield-trap filters.
     v1.2.0: Fixed ETF sector extraction from sector_top field.
     v1.1.0: Added RADAR tilts normalization for correct sector/region matching.
-    
-    Usage:
-        auditor = SelectionAuditor(config)
-        
-        # Track at each filter stage
-        auditor.track_buffett_filter(before, after, rejected)
-        auditor.track_volatility_filter(before, after, rejected)
-        
-        # Record final selections
-        auditor.record_final_selection(selected_assets, all_candidates)
-        
-        # Generate report
-        report = auditor.generate_report()
-        auditor.save_report("data/selection_audit.json")
     """
     
     def __init__(self, config: Dict = None):
@@ -508,18 +367,15 @@ class SelectionAuditor:
             "buffett_min_score": self.config.get("buffett_min_score", 40),
             "tactical_mode": self.config.get("tactical_mode", "radar"),
             "use_tactical_context": self.config.get("use_tactical_context", False),
+            "preset_meta_version": "v4.15.2",  # v1.3.0
         }
         
-        # Track all assets through pipeline
         self._all_equities: List[Dict] = []
         self._all_etf: List[Dict] = []
         self._all_crypto: List[Dict] = []
         self._all_bonds: List[Dict] = []
         
-        # Track rejection reasons
-        self._rejections: Dict[str, Dict] = {}  # asset_id -> rejection info
-        
-        # Counts at each stage
+        self._rejections: Dict[str, Dict] = {}
         self._stage_counts: Dict[str, int] = {}
         
     def set_radar_context(self, market_context: Dict):
@@ -559,6 +415,7 @@ class SelectionAuditor:
         after_count: int,
         rejected_assets: List[Dict] = None,
         threshold: Any = None,
+        rejection_reasons: Dict[str, int] = None,  # v1.3.0
     ):
         """Track a filter application."""
         rejected_count = before_count - after_count
@@ -569,12 +426,12 @@ class SelectionAuditor:
             input_count=before_count,
             output_count=after_count,
             rejected_count=rejected_count,
+            rejection_reasons=rejection_reasons or {},
         )
         self.report.filters_applied.append(asdict(stats))
         
         self._stage_counts[f"{category}_after_{filter_name}"] = after_count
         
-        # Record rejection reasons
         if rejected_assets:
             for asset in rejected_assets:
                 asset_id = self._get_asset_id(asset)
@@ -589,6 +446,137 @@ class SelectionAuditor:
             f"{before_count} → {after_count} (-{rejected_count}, {stats.rejection_rate_pct}%)"
         )
     
+    def track_profile_hard_filters(
+        self,
+        profile: str,
+        before: List[Dict],
+        after: List[Dict],
+        filter_stats: Dict,
+    ):
+        """
+        v1.3.0: Track hard filters from preset_meta.apply_hard_filters().
+        
+        Args:
+            profile: "Agressif", "Modéré", or "Stable"
+            before: Assets before filtering
+            after: Assets after filtering
+            filter_stats: Stats dict from apply_hard_filters()
+        """
+        rejection_reasons = filter_stats.get("reasons", {})
+        
+        # Store in report
+        self.report.hard_filter_stats[profile] = {
+            "before": filter_stats.get("before", len(before)),
+            "after": filter_stats.get("after", len(after)),
+            "rejected": filter_stats.get("rejected", len(before) - len(after)),
+            "reasons": {
+                reason: {
+                    "count": count,
+                    "explanation": explain_hard_filter_reason(reason),
+                }
+                for reason, count in rejection_reasons.items()
+            },
+        }
+        
+        # Track rejected assets
+        after_ids = {self._get_asset_id(a) for a in after}
+        rejected = [a for a in before if self._get_asset_id(a) not in after_ids]
+        
+        for asset in rejected:
+            asset_id = self._get_asset_id(asset)
+            # Find which reasons apply to this asset
+            asset_reasons = self._determine_rejection_reasons(asset, profile)
+            self._rejections[asset_id] = {
+                "filter": f"hard_filters_{profile}",
+                "reason": "; ".join(asset_reasons),
+                "threshold": f"Profile={profile}",
+                "details": asset_reasons,
+            }
+        
+        self.track_filter(
+            filter_name=f"hard_filters_{profile}",
+            category="equity",
+            before_count=len(before),
+            after_count=len(after),
+            rejected_assets=rejected,
+            threshold=f"Profile={profile}",
+            rejection_reasons=rejection_reasons,
+        )
+        
+        # Log yield trap detections
+        yield_trap_count = (
+            rejection_reasons.get("payout_missing", 0) +
+            sum(v for k, v in rejection_reasons.items() if k.startswith("payout>")) +
+            rejection_reasons.get("coverage_missing", 0) +
+            sum(v for k, v in rejection_reasons.items() if k.startswith("coverage<"))
+        )
+        
+        if yield_trap_count > 0:
+            logger.warning(
+                f"⚠️ [{profile}] {yield_trap_count} yield traps détectés et filtrés"
+            )
+    
+    def _determine_rejection_reasons(self, asset: Dict, profile: str) -> List[str]:
+        """v1.3.0: Determine which hard filter reasons apply to an asset."""
+        reasons = []
+        
+        try:
+            from .preset_meta import get_profile_policy, get_metric_value
+            
+            policy = get_profile_policy(profile)
+            filters = policy.get("hard_filters", {})
+            
+            vol = get_metric_value(asset, "volatility_3y")
+            roe = get_metric_value(asset, "roe")
+            div_yield = get_metric_value(asset, "dividend_yield")
+            payout = get_metric_value(asset, "payout_ratio")
+            coverage = get_metric_value(asset, "dividend_coverage")
+            
+            # Vol checks
+            if "volatility_3y_min" in filters or "volatility_3y_max" in filters:
+                if vol is None:
+                    reasons.append("vol_missing")
+                else:
+                    if vol < 1 or vol > 120:
+                        reasons.append("vol_aberrant")
+                    if "volatility_3y_min" in filters and vol < filters["volatility_3y_min"]:
+                        reasons.append(f"vol<{filters['volatility_3y_min']}")
+                    if "volatility_3y_max" in filters and vol > filters["volatility_3y_max"]:
+                        reasons.append(f"vol>{filters['volatility_3y_max']}")
+            
+            # ROE check
+            if "roe_min" in filters:
+                if roe is None:
+                    reasons.append("roe_missing")
+                elif roe < filters["roe_min"]:
+                    reasons.append(f"roe<{filters['roe_min']}")
+            
+            # Dividend yield check
+            if "dividend_yield_min" in filters:
+                if div_yield is None:
+                    reasons.append("div_yield_missing")
+                elif div_yield < filters["dividend_yield_min"]:
+                    reasons.append(f"div<{filters['dividend_yield_min']}")
+            
+            # Payout ratio check (yield trap)
+            if "payout_ratio_max" in filters:
+                if payout is None:
+                    reasons.append("payout_missing")
+                elif payout > filters["payout_ratio_max"]:
+                    reasons.append(f"payout>{filters['payout_ratio_max']}")
+            
+            # Coverage check (yield trap)
+            if "dividend_coverage_min" in filters:
+                if coverage is None:
+                    reasons.append("coverage_missing")
+                elif coverage < filters["dividend_coverage_min"]:
+                    reasons.append(f"coverage<{filters['dividend_coverage_min']}")
+            
+        except ImportError:
+            reasons.append("preset_meta_unavailable")
+        
+        return reasons if reasons else ["score_insuffisant"]
+    
     def track_buffett_filter(
         self,
         before: List[Dict],
@@ -598,7 +586,6 @@ class SelectionAuditor:
         """Convenience method for Buffett filter tracking."""
         rejected = [a for a in before if a not in after]
         
-        # Enrich with rejection reasons
         for asset in rejected:
             score = asset.get("_buffett_score") or asset.get("buffett_score") or 0
             reason = asset.get("_buffett_reject_reason") or f"Score {score} < {min_score}"
@@ -659,6 +646,33 @@ class SelectionAuditor:
             threshold=f"min={min_value}",
         )
     
+    def record_profile_selection(
+        self,
+        profile: str,
+        selected: List[Dict],
+        all_candidates: List[Dict],
+        selection_meta: Dict,
+    ):
+        """
+        v1.3.0: Record selection for a specific profile.
+        
+        Args:
+            profile: "Agressif", "Modéré", or "Stable"
+            selected: Assets selected for this profile
+            all_candidates: All candidates before selection
+            selection_meta: Meta dict from select_equities_for_profile()
+        """
+        self.report.profile_stats[profile] = {
+            "selected_count": len(selected),
+            "candidates_count": len(all_candidates),
+            "stages": selection_meta.get("stages", {}),
+            "stats": selection_meta.get("stats", {}),
+        }
+        
+        logger.info(
+            f"📊 Audit: [{profile}] {len(selected)}/{len(all_candidates)} selected"
+        )
+    
     def record_final_selection(
         self,
         selected: List[Dict],
@@ -667,16 +681,7 @@ class SelectionAuditor:
         top_selected: int = 50,
         top_rejected: int = 50,
     ):
-        """
-        Record final selection with rankings.
-        
-        Args:
-            selected: Assets that made it to the portfolio
-            all_candidates: All assets that were candidates (after filters)
-            category: Asset category
-            top_selected: Max selected to include in report
-            top_rejected: Max rejected to include in report
-        """
+        """Record final selection with rankings."""
         selected_ids = {self._get_asset_id(a) for a in selected}
         
         # Build selected list with rankings
@@ -688,7 +693,7 @@ class SelectionAuditor:
             entry["selection_reason"] = self._get_selection_reason(asset, category)
             selected_entries.append(entry)
         
-        # Build rejected list (sorted by market cap / AUM for notability)
+        # Build rejected list
         rejected = [a for a in all_candidates if self._get_asset_id(a) not in selected_ids]
         rejected_sorted = self._sort_by_importance(rejected, category)
         
@@ -697,11 +702,15 @@ class SelectionAuditor:
             entry = self._create_audit_entry(asset, category)
             entry["selected"] = False
             
-            # Get rejection reason
             asset_id = self._get_asset_id(asset)
             if asset_id in self._rejections:
                 entry["rejection_reason"] = self._rejections[asset_id]["reason"]
                 entry["rejection_filter"] = self._rejections[asset_id]["filter"]
+                if "details" in self._rejections[asset_id]:
+                    entry["rejection_details"] = [
+                        explain_hard_filter_reason(r) 
+                        for r in self._rejections[asset_id]["details"]
+                    ]
             else:
                 entry["rejection_reason"] = "Non sélectionné (score insuffisant ou quota atteint)"
             
@@ -728,7 +737,6 @@ class SelectionAuditor:
     
     def generate_report(self) -> SelectionAuditReport:
         """Generate the final audit report."""
-        # Build summary
         self.report.summary = {
             "equities_initial": self._stage_counts.get("equity_initial", 0),
             "equities_selected": len(self.report.equities_selected),
@@ -777,18 +785,16 @@ class SelectionAuditor:
         return asset
     
     def _create_audit_entry(self, asset: Dict, category: str) -> Dict:
-        """
-        Create audit entry from raw asset data.
-        
-        v1.2.0: Uses extract_etf_sector() for ETF-specific sector handling.
-        v1.1.0: Uses normalize_sector_for_tilts() and normalize_region_for_tilts()
-        for correct RADAR tilt matching.
-        """
+        """Create audit entry from raw asset data."""
         entry = {
             "name": asset.get("name") or asset.get("ticker") or "Unknown",
             "ticker": asset.get("ticker") or asset.get("symbol"),
             "category": category,
         }
+        
+        # v1.3.0: Profile info
+        if asset.get("_matched_preset"):
+            entry["matched_preset"] = asset["_matched_preset"]
         
         # Scores
         if asset.get("_buffett_score") is not None:
@@ -798,6 +804,8 @@ class SelectionAuditor:
             
         if asset.get("_composite_score") is not None:
             entry["composite_score"] = round(asset["_composite_score"], 2)
+        if asset.get("_profile_score") is not None:
+            entry["profile_score"] = round(asset["_profile_score"], 3)
         if asset.get("_momentum_score") is not None:
             entry["momentum_score"] = round(asset["_momentum_score"], 2)
         if asset.get("_quality_score") is not None:
@@ -825,7 +833,15 @@ class SelectionAuditor:
             ytd = asset.get("ytd") or asset.get("perf_ytd")
             entry["ytd"] = f"{ytd}%" if isinstance(ytd, (int, float)) else str(ytd)
         
-        # v1.2.0 FIX: Get sector - handle ETF case where sector is in sector_top
+        # v1.3.0: Yield trap metrics
+        if asset.get("dividend_yield") is not None:
+            entry["dividend_yield"] = round(float(asset["dividend_yield"]), 2)
+        if asset.get("payout_ratio") is not None:
+            entry["payout_ratio"] = round(float(asset["payout_ratio"]), 1)
+        if asset.get("dividend_coverage") is not None:
+            entry["dividend_coverage"] = round(float(asset["dividend_coverage"]), 2)
+        
+        # Sector
         if category == "etf":
             sector_raw = extract_etf_sector(asset)
         else:
@@ -834,11 +850,9 @@ class SelectionAuditor:
         entry["sector"] = sector_raw if sector_raw else None
         entry["country"] = asset.get("country")
         
-        # v1.1.0 FIX: RADAR tilt with NORMALIZATION
+        # RADAR tilt
         if self.report.radar_context:
             region_raw = entry.get("country") or ""
-            
-            # Normalize to RADAR format
             sector_normalized = normalize_sector_for_tilts(sector_raw) if sector_raw else ""
             region_normalized = normalize_region_for_tilts(region_raw)
             
@@ -847,7 +861,6 @@ class SelectionAuditor:
             favored_regions = self.report.radar_context.get("favored_regions", [])
             avoided_regions = self.report.radar_context.get("avoided_regions", [])
             
-            # Determine tilt based on NORMALIZED values
             sector_tilt = "neutral"
             region_tilt = "neutral"
             
@@ -861,25 +874,13 @@ class SelectionAuditor:
             elif region_normalized and region_normalized in avoided_regions:
                 region_tilt = "avoided"
             
-            # Combined tilt: favored if either is favored, avoided only if one is avoided and none favored
             if sector_tilt == "favored" or region_tilt == "favored":
                 entry["radar_tilt"] = "favored"
             elif sector_tilt == "avoided" or region_tilt == "avoided":
                 entry["radar_tilt"] = "avoided"
             else:
                 entry["radar_tilt"] = "neutral"
-            
-            # v1.1.0: Store matching details for debugging
-            entry["_radar_matching"] = {
-                "sector_raw": sector_raw,
-                "sector_normalized": sector_normalized,
-                "sector_tilt": sector_tilt,
-                "region_raw": region_raw,
-                "region_normalized": region_normalized,
-                "region_tilt": region_tilt,
-            }
         
-        # Remove None values (but keep _radar_matching)
         return {k: v for k, v in entry.items() if v is not None}
     
     def _get_selection_reason(self, asset: Dict, category: str) -> str:
@@ -892,6 +893,16 @@ class SelectionAuditor:
         elif buffett and buffett >= 50:
             reasons.append(f"Qualité Buffett solide ({buffett:.0f})")
         
+        # v1.3.0: Profile score
+        profile_score = asset.get("_profile_score")
+        if profile_score and profile_score >= 0.7:
+            reasons.append(f"Score profil élevé ({profile_score:.2f})")
+        
+        # v1.3.0: Matched preset
+        preset = asset.get("_matched_preset")
+        if preset:
+            reasons.append(f"Preset: {preset}")
+        
         roe = asset.get("roe")
         if roe:
             try:
@@ -901,7 +912,6 @@ class SelectionAuditor:
             except:
                 pass
         
-        # v1.2.0: RADAR context with ETF-specific sector extraction
         if self.report.radar_context:
             if category == "etf":
                 sector_raw = extract_etf_sector(asset)
@@ -932,14 +942,12 @@ class SelectionAuditor:
     
     def _get_rejection_reason(self, asset: Dict, filter_name: str) -> str:
         """Get rejection reason for an asset."""
-        # Check if already has reason
         if asset.get("_rejection_reason"):
             return asset["_rejection_reason"]
         
         if asset.get("_buffett_reject_reason"):
             return asset["_buffett_reject_reason"]
         
-        # Build reason based on filter
         if filter_name == "buffett":
             score = asset.get("_buffett_score") or 0
             return f"Score Buffett insuffisant ({score:.0f})"
@@ -955,7 +963,7 @@ class SelectionAuditor:
         return f"Filtré par {filter_name}"
     
     def _sort_by_importance(self, assets: List[Dict], category: str) -> List[Dict]:
-        """Sort assets by importance (market cap for equities, AUM for ETF)."""
+        """Sort assets by importance."""
         def get_sort_key(asset):
             if category in ["equity", "crypto"]:
                 mcap = asset.get("market_cap") or "0"
@@ -977,12 +985,7 @@ class SelectionAuditor:
         
         value = value.upper().strip()
         
-        multipliers = {
-            "T": 1e12,
-            "B": 1e9,
-            "M": 1e6,
-            "K": 1e3,
-        }
+        multipliers = {"T": 1e12, "B": 1e9, "M": 1e6, "K": 1e3}
         
         for suffix, mult in multipliers.items():
             if suffix in value:
@@ -1029,17 +1032,19 @@ def create_selection_audit(
     bonds_data: List[Dict] = None,
     bonds_selected: List[Dict] = None,
     market_context: Dict = None,
+    profile_selections: Dict[str, Dict] = None,  # v1.3.0
     output_path: str = "data/selection_audit.json",
 ) -> str:
     """
     Convenience function to create audit report in one call.
+    
+    v1.3.0: Added profile_selections for per-profile tracking.
     
     Returns:
         Path to saved report
     """
     auditor = SelectionAuditor(config)
     
-    # Set RADAR context
     if market_context:
         auditor.set_radar_context(market_context)
     
@@ -1050,6 +1055,25 @@ def create_selection_audit(
         after=equities_after_buffett,
         min_score=config.get("buffett_min_score", 40),
     )
+    
+    # v1.3.0: Track profile-specific selections
+    if profile_selections:
+        for profile, data in profile_selections.items():
+            if "before" in data and "after" in data:
+                auditor.track_profile_hard_filters(
+                    profile=profile,
+                    before=data["before"],
+                    after=data["after"],
+                    filter_stats=data.get("stats", {}),
+                )
+            if "selected" in data and "meta" in data:
+                auditor.record_profile_selection(
+                    profile=profile,
+                    selected=data["selected"],
+                    all_candidates=data.get("candidates", []),
+                    selection_meta=data["meta"],
+                )
+    
     auditor.record_final_selection(
         selected=equities_final,
         all_candidates=equities_initial,
@@ -1058,7 +1082,6 @@ def create_selection_audit(
         top_rejected=50,
     )
     
-    # Track ETF
     if etf_data:
         auditor.track_initial_universe(etf_data, "etf")
         auditor.record_final_selection(
@@ -1069,7 +1092,6 @@ def create_selection_audit(
             top_rejected=20,
         )
     
-    # Track Crypto
     if crypto_data:
         auditor.track_initial_universe(crypto_data, "crypto")
         auditor.record_final_selection(
@@ -1080,7 +1102,6 @@ def create_selection_audit(
             top_rejected=10,
         )
     
-    # Track Bonds
     if bonds_data:
         auditor.track_initial_universe(bonds_data, "bond")
         auditor.record_final_selection(
