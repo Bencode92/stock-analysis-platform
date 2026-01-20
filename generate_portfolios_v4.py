@@ -340,6 +340,12 @@ FALLBACK_COMPLIANCE_COMMENT = (
     "Commentaire indisponible (filtrage conformité). "
     "Ce contenu est informatif et éducatif ; il ne constitue pas un conseil en investissement."
 )
+# v4.15.0: Nombre de candidats equities par profil pour l'optimiseur
+CANDIDATES_BY_PROFILE = {
+    "Agressif": 350,
+    "Modéré": 250,
+    "Stable": 200,
+}
 
 # =============================================================================
 # v4.14.0: RESEARCH DISCLAIMER (ChatGPT suggestion for AMF compliance)
@@ -1437,7 +1443,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             eq_filtered=eq_filtered,  # Pas de pré-filtre, PROFILE_POLICY gère
             profile=profile,
             market_context=market_context,
-            target_n=min(25, len(eq_filtered)),
+            CANDIDATES_BY_PROFILE = {"Agressif": 350, "Modéré": 250, "Stable": 200}
+            target_n=min(CANDIDATES_BY_PROFILE.get(profile, 250), len(eq_filtered)),
         )
         profile_selection_meta["buffett_threshold_policy"] = profile_buffett_min
         profile_selection_meta["buffett_missing_count"] = missing_buffett
@@ -1549,30 +1556,31 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         vol_str = f"{vol:.1f}%" if isinstance(vol, (int, float)) else "N/A"
         logger.info(f"   → {len(allocation)} lignes, vol={vol_str}")
     
-    # === v4.13: Diagnostic overlap entre profils ===
+    # === v4.15.0: Diagnostic overlap entre profils (fix: utiliser ticker, pas id) ===
     if HAS_PROFILE_POLICY and len(equities_by_profile) == 3:
-        agg_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile.get("Agressif", [])}
-        mod_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile.get("Modéré", [])}
-        stb_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile.get("Stable", [])}
+        # v4.15.0 FIX: Utiliser ticker uniquement (id=EQ_123 n'est pas stable)
+        agg_tickers = {e.get("ticker") for e in equities_by_profile.get("Agressif", []) if e.get("ticker")}
+        mod_tickers = {e.get("ticker") for e in equities_by_profile.get("Modéré", []) if e.get("ticker")}
+        stb_tickers = {e.get("ticker") for e in equities_by_profile.get("Stable", []) if e.get("ticker")}
         
-        overlap_agg_mod = len(agg_ids & mod_ids)
-        overlap_agg_stb = len(agg_ids & stb_ids)
-        overlap_mod_stb = len(mod_ids & stb_ids)
-        overlap_all = len(agg_ids & mod_ids & stb_ids)
+        overlap_agg_mod = len(agg_tickers & mod_tickers)
+        overlap_agg_stb = len(agg_tickers & stb_tickers)
+        overlap_mod_stb = len(mod_tickers & stb_tickers)
+        overlap_all = len(agg_tickers & mod_tickers & stb_tickers)
         
         logger.info("="*60)
-        logger.info("📊 DIAGNOSTIC OVERLAP ÉQUITIES (v4.13 PROFILE_POLICY)")
+        logger.info("📊 DIAGNOSTIC OVERLAP ÉQUITIES (v4.15.0 PROFILE_POLICY)")
         logger.info("="*60)
-        logger.info(f"   Agressif: {len(agg_ids)} équités")
-        logger.info(f"   Modéré:   {len(mod_ids)} équités")
-        logger.info(f"   Stable:   {len(stb_ids)} équités")
+        logger.info(f"   Agressif: {len(agg_tickers)} équités")
+        logger.info(f"   Modéré:   {len(mod_tickers)} équités")
+        logger.info(f"   Stable:   {len(stb_tickers)} équités")
         logger.info(f"   Overlap Agressif ∩ Modéré: {overlap_agg_mod}")
         logger.info(f"   Overlap Agressif ∩ Stable: {overlap_agg_stb}")
         logger.info(f"   Overlap Modéré ∩ Stable:   {overlap_mod_stb}")
         logger.info(f"   Overlap commun (3 profils): {overlap_all}")
         
         # Cibles attendues
-        target_overlap_agg_stb = len(agg_ids) * 0.30  # Max 30%
+        target_overlap_agg_stb = len(agg_tickers) * 0.30  # Max 30%
         if overlap_agg_stb > target_overlap_agg_stb:
             logger.warning(f"   ⚠️ Overlap Agressif-Stable trop élevé: {overlap_agg_stb} > {target_overlap_agg_stb:.0f} (cible <30%)")
         else:
@@ -1839,7 +1847,8 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
             eq_filtered=eq_filtered,
             profile=profile,
             market_context=None,  # Pas de RADAR pour EU/US actuellement
-            target_n=min(25, len(eq_filtered)),
+            CANDIDATES_BY_PROFILE = {"Agressif": 350, "Modéré": 250, "Stable": 200}
+            target_n=min(CANDIDATES_BY_PROFILE.get(profile, 250), len(eq_filtered)),
         )
         
         equities_by_profile_euus[profile] = profile_equities
@@ -1891,30 +1900,31 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 "diagnostics": {"error": str(e)},
                 "assets": [],
             }
-    
+   
     # v4.15.0: Diagnostic overlap EU/US (comme Global)
     if len(equities_by_profile_euus) == 3:
-        agg_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile_euus.get("Agressif", [])}
-        mod_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile_euus.get("Modéré", [])}
-        stb_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile_euus.get("Stable", [])}
+        # v4.15.0 FIX: Utiliser ticker (pas id) et la bonne variable
+        agg_tickers = {e.get("ticker") for e in equities_by_profile_euus.get("Agressif", []) if e.get("ticker")}
+        mod_tickers = {e.get("ticker") for e in equities_by_profile_euus.get("Modéré", []) if e.get("ticker")}
+        stb_tickers = {e.get("ticker") for e in equities_by_profile_euus.get("Stable", []) if e.get("ticker")}
         
-        overlap_agg_mod = len(agg_ids & mod_ids)
-        overlap_agg_stb = len(agg_ids & stb_ids)
-        overlap_mod_stb = len(mod_ids & stb_ids)
+        overlap_agg_mod = len(agg_tickers & mod_tickers)
+        overlap_agg_stb = len(agg_tickers & stb_tickers)
+        overlap_mod_stb = len(mod_tickers & stb_tickers)
         
         logger.info("="*60)
         logger.info("📊 DIAGNOSTIC OVERLAP EU/US ÉQUITIES (v4.15.0)")
         logger.info("="*60)
-        logger.info(f"   Agressif: {len(agg_ids)} équités")
-        logger.info(f"   Modéré:   {len(mod_ids)} équités")
-        logger.info(f"   Stable:   {len(stb_ids)} équités")
+        logger.info(f"   Agressif: {len(agg_tickers)} équités")
+        logger.info(f"   Modéré:   {len(mod_tickers)} équités")
+        logger.info(f"   Stable:   {len(stb_tickers)} équités")
         logger.info(f"   Overlap Agressif ∩ Modéré: {overlap_agg_mod}")
         logger.info(f"   Overlap Agressif ∩ Stable: {overlap_agg_stb}")
         logger.info(f"   Overlap Modéré ∩ Stable:   {overlap_mod_stb}")
         
         # Alerte si overlap trop élevé
-        if len(agg_ids) > 0:
-            overlap_pct = overlap_agg_stb / len(agg_ids) * 100
+        if len(agg_tickers) > 0:
+            overlap_pct = overlap_agg_stb / len(agg_tickers) * 100
             if overlap_pct > 50:
                 logger.warning(f"   ⚠️ Overlap Agressif-Stable élevé: {overlap_pct:.0f}% (cible <30%)")
             else:
