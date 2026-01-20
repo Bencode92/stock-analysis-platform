@@ -1440,10 +1440,9 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         # Passer TOUT eq_filtered à select_equities_for_profile_v2
         # Le filtrage Buffett se fait dans la fonction via PROFILE_POLICY (source unique)
         profile_equities, profile_selection_meta = select_equities_for_profile(
-            eq_filtered=eq_filtered,  # Pas de pré-filtre, PROFILE_POLICY gère
+            eq_filtered=eq_filtered,
             profile=profile,
             market_context=market_context,
-            CANDIDATES_BY_PROFILE = {"Agressif": 350, "Modéré": 250, "Stable": 200},
             target_n=min(CANDIDATES_BY_PROFILE.get(profile, 250), len(eq_filtered)),
         )
         profile_selection_meta["buffett_threshold_policy"] = profile_buffett_min
@@ -1847,7 +1846,6 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
             eq_filtered=eq_filtered,
             profile=profile,
             market_context=None,  # Pas de RADAR pour EU/US actuellement
-            CANDIDATES_BY_PROFILE = {"Agressif": 350, "Modéré": 250, "Stable": 200},
             target_n=min(CANDIDATES_BY_PROFILE.get(profile, 250), len(eq_filtered)),
         )
         
