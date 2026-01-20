@@ -3656,9 +3656,9 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 sector=item.get("sector") or item.get("sector_top") or "Unknown",
                 region=item.get("country") or item.get("country_top") or item.get("region") or "Global",
                 score=_clean_float(
-                    item.get("_profile_score") or item.get("score") or item.get("_score"), 
+                    item.get("_profile_score") or item.get("composite_score") or item.get("_composite_score") or item.get("score") or item.get("_score"), 
                     50.0, 0, 100
-                ),  # v6.26 FIX: _profile_score prioritaire (Option B)
+                ),  # v6.27 FIX: _profile_score > composite_score > score (ETF/Crypto support)
                 vol_annual=_clean_float(
                     item.get("vol") or item.get("volatility_3y") or item.get("vol_3y"),
                     default_vol, min_v, max_v
