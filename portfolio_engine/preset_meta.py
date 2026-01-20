@@ -2,6 +2,13 @@
 """
 PRESET_META - Source unique de vérité pour les presets.
 
+v5.0.0 (Architecture Option B - preset_meta = seul moteur equity):
+- NEW: normalize_profile_score() pour meilleure distribution [0,1]
+- NEW: apply_hard_filters_with_custom() pour relaxation
+- NEW: RELAX_STEPS config pour relaxation progressive
+- FIX: Relaxation progressive au lieu de skip brutal des hard filters
+- FIX: Normalisation score basée sur min/max théoriques
+
 v4.15.2 FINAL (Claude + ChatGPT 10/10):
 - FIX: vol_missing traité comme les autres métriques (plus de default 25.0)
 - FIX: Missing data scoring - percentile pénalisant si poids négatif
@@ -21,6 +28,7 @@ Usage:
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Set
+from copy import deepcopy
 import logging
 import re
 import bisect
@@ -506,7 +514,24 @@ METRIC_RANGES: Dict[str, Tuple[float, float]] = {
 }
 
 
-# ============ PROFILE POLICY v4.15.2 ============
+# ============ v5.0.0: RELAXATION PROGRESSIVE DES HARD FILTERS ============
+
+# Format: (filter_key, delta, limit)
+# - delta > 0 : on augmente la valeur (ex: vol_max)
+# - delta < 0 : on diminue la valeur (ex: roe_min)
+# - limit : valeur plancher/plafond à ne pas dépasser
+RELAX_STEPS: List[Tuple[str, float, float]] = [
+    ("volatility_3y_max", +10, 100.0),      # Étape 1: augmenter vol_max
+    ("volatility_3y_min", -5, 0.0),          # Étape 2: baisser vol_min
+    ("roe_min", -3, 0.0),                    # Étape 3: baisser roe_min
+    ("buffett_score_min", -10, 20.0),        # Étape 4: baisser buffett_min
+    ("dividend_coverage_min", -0.3, 0.8),    # Étape 5: baisser coverage_min
+    ("payout_ratio_max", +15, 100.0),        # Étape 6: augmenter payout_max
+    ("dividend_yield_min", -0.2, 0.0),       # Étape 7: baisser div_yield_min
+]
+
+
+# ============ PROFILE POLICY v5.0.0 ============
 
 PROFILE_POLICY: Dict[str, Dict] = {
     "Agressif": {
@@ -682,6 +707,42 @@ def compute_percentile_fallback(value: float, metric_key: str) -> float:
     return max(0.0, min(1.0, (value - min_val) / (max_val - min_val)))
 
 
+def normalize_profile_score(score_raw: float, weights: Dict[str, float]) -> float:
+    """
+    v5.0.0: Normalisation correcte du score [0, 1] basée sur min/max théoriques.
+    
+    Problème avec l'ancienne formule (score_raw + S) / (2 * S):
+    - Suppose que tous les poids sont positifs
+    - Compresse la distribution quand il y a des poids négatifs
+    
+    Nouvelle approche:
+    - raw_min = somme des poids négatifs (pire cas)
+    - raw_max = somme des poids positifs (meilleur cas)
+    - Normalise linéairement entre ces bornes
+    
+    Args:
+        score_raw: Score brut (somme pondérée des percentiles)
+        weights: Dictionnaire des poids par métrique
+    
+    Returns:
+        Score normalisé [0, 1]
+    """
+    # Calculer les bornes théoriques
+    raw_min = sum(w for w in weights.values() if w < 0)  # Pire: percentile=1 pour négatifs
+    raw_max = sum(w for w in weights.values() if w > 0)  # Meilleur: percentile=1 pour positifs
+    
+    denom = raw_max - raw_min
+    
+    if denom == 0:
+        return 0.5  # Tous les poids sont 0
+    
+    # Normalisation linéaire
+    normalized = (score_raw - raw_min) / denom
+    
+    # Clamp pour les outliers (valeurs hors distribution)
+    return max(0.0, min(1.0, normalized))
+
+
 def compute_universe_stats(equities: List[Dict]) -> Dict[str, List[float]]:
     all_keys = set()
     for aliases in FIELD_MAPPING.values():
@@ -740,7 +801,7 @@ def assign_preset_to_equity(eq: Dict) -> str:
     return "quality_premium"
 
 
-# ============ APPLY HARD FILTERS v4.15.2 (FIX: vol_missing strict) ============
+# ============ APPLY HARD FILTERS v5.0.0 ============
 
 def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], Dict]:
     """
@@ -823,7 +884,104 @@ def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], 
     return filtered, stats
 
 
-# ============ SCORING v4.15.2 (FIX: missing data penalty) ============
+def apply_hard_filters_with_custom(
+    equities: List[Dict], 
+    custom_filters: Dict[str, float]
+) -> Tuple[List[Dict], Dict]:
+    """
+    v5.0.0: Applique des hard filters avec des seuils personnalisés.
+    
+    Utilisé pour la relaxation progressive - permet de tester différents seuils
+    sans modifier PROFILE_POLICY.
+    
+    Args:
+        equities: Liste des actions à filtrer
+        custom_filters: Dictionnaire des filtres personnalisés
+    
+    Returns:
+        (filtered_equities, stats)
+    """
+    if not custom_filters:
+        return equities, {"skipped": True, "before": len(equities), "after": len(equities)}
+    
+    filtered = []
+    rejection_counts = {}
+    
+    for eq in equities:
+        reasons = []
+        
+        vol = get_metric_value(eq, "volatility_3y")
+        roe = get_metric_value(eq, "roe")
+        div_yield = get_metric_value(eq, "dividend_yield")
+        payout = get_metric_value(eq, "payout_ratio")
+        coverage = get_metric_value(eq, "dividend_coverage")
+        buffett = get_metric_value(eq, "buffett_score")
+        
+        # Volatility filters
+        if "volatility_3y_min" in custom_filters or "volatility_3y_max" in custom_filters:
+            if vol is None:
+                reasons.append("vol_missing")
+            else:
+                if vol < 1 or vol > 120:
+                    reasons.append("vol_aberrant")
+                if "volatility_3y_min" in custom_filters and vol < custom_filters["volatility_3y_min"]:
+                    reasons.append(f"vol<{custom_filters['volatility_3y_min']}")
+                if "volatility_3y_max" in custom_filters and vol > custom_filters["volatility_3y_max"]:
+                    reasons.append(f"vol>{custom_filters['volatility_3y_max']}")
+        
+        # ROE filter
+        if "roe_min" in custom_filters:
+            if roe is None:
+                reasons.append("roe_missing")
+            elif roe < custom_filters["roe_min"]:
+                reasons.append(f"roe<{custom_filters['roe_min']}")
+        
+        # Dividend yield filter
+        if "dividend_yield_min" in custom_filters:
+            if div_yield is None:
+                reasons.append("div_yield_missing")
+            elif div_yield < custom_filters["dividend_yield_min"]:
+                reasons.append(f"div<{custom_filters['dividend_yield_min']}")
+        
+        # Payout ratio filter
+        if "payout_ratio_max" in custom_filters:
+            if payout is None:
+                reasons.append("payout_missing")
+            elif payout > custom_filters["payout_ratio_max"]:
+                reasons.append(f"payout>{custom_filters['payout_ratio_max']}")
+        
+        # Dividend coverage filter
+        if "dividend_coverage_min" in custom_filters:
+            if coverage is None:
+                reasons.append("coverage_missing")
+            elif coverage < custom_filters["dividend_coverage_min"]:
+                reasons.append(f"coverage<{custom_filters['dividend_coverage_min']}")
+        
+        # Buffett score filter
+        if "buffett_score_min" in custom_filters:
+            if buffett is None:
+                reasons.append("buffett_missing")
+            elif buffett < custom_filters["buffett_score_min"]:
+                reasons.append(f"buffett<{custom_filters['buffett_score_min']}")
+        
+        if reasons:
+            for r in reasons:
+                rejection_counts[r] = rejection_counts.get(r, 0) + 1
+        else:
+            filtered.append(eq)
+    
+    stats = {
+        "before": len(equities),
+        "after": len(filtered),
+        "rejected": len(equities) - len(filtered),
+        "reasons": rejection_counts,
+        "custom_filters": custom_filters,
+    }
+    
+    return filtered, stats
+
+
+# ============ SCORING v5.0.0 ============
 
 def score_equity_for_profile(
     stock: Dict,
@@ -831,7 +989,11 @@ def score_equity_for_profile(
     universe_dists: Optional[Dict[str, List[float]]] = None,
 ) -> float:
     """
-    v4.15.2 FIX: Missing data = percentile pénalisant si poids négatif.
+    v5.0.0: Scoring avec normalize_profile_score() pour meilleure distribution.
+    
+    Changements vs v4.15.2:
+    - Utilise normalize_profile_score() au lieu de (score_raw + S) / (2 * S)
+    - Meilleure dispersion des scores [0, 1]
     
     Si valeur manquante:
     - poids > 0 (bonus): percentile = 0.5 (neutre)
@@ -839,7 +1001,6 @@ def score_equity_for_profile(
     """
     policy = get_profile_policy(profile)
     weights = policy.get("score_weights", {})
-    S = sum(abs(w) for w in weights.values() if w != 0) or 1.0
     score_raw = 0.0
     
     for metric_key, weight in weights.items():
@@ -848,10 +1009,8 @@ def score_equity_for_profile(
         
         value = get_metric_value(stock, metric_key)
         
-        # v4.15.2 FIX: missing data handling
+        # Missing data handling
         if value is None:
-            # Poids négatif = pénalité, on donne percentile max (1.0)
-            # Poids positif = bonus manqué, on donne percentile neutre (0.5)
             percentile = 1.0 if weight < 0 else 0.5
             score_raw += weight * percentile
             continue
@@ -868,7 +1027,8 @@ def score_equity_for_profile(
         
         score_raw += weight * percentile
     
-    return max(0.0, min(1.0, (score_raw + S) / (2 * S)))
+    # v5.0.0: Utilise normalize_profile_score() pour meilleure distribution
+    return normalize_profile_score(score_raw, weights)
 
 
 def filter_equities_by_profile(
@@ -886,7 +1046,7 @@ def filter_equities_by_profile(
     return [eq for eq in equities if eq.get(preset_field) in allowed_presets]
 
 
-# ============ MAIN SELECTION ============
+# ============ MAIN SELECTION v5.0.0 ============
 
 def select_equities_for_profile(
     equities: List[Dict],
@@ -894,7 +1054,7 @@ def select_equities_for_profile(
     market_context: Optional[Dict] = None,
     target_n: int = 25,
 ) -> Tuple[List[Dict], Dict]:
-    """v4.15.2: Sélection avec tous les fixes appliqués."""
+    """v5.0.0: Sélection avec relaxation progressive des hard filters."""
     logger.info(f"\n{'='*50}")
     logger.info(f"[{profile}] Sélection depuis {len(equities)} équités")
     
@@ -934,13 +1094,49 @@ def select_equities_for_profile(
     else:
         eq_preset = eq_buffett
     
-    # Hard filters
+    # Hard filters avec relaxation progressive v5.0.0
     eq_hard, hard_stats = apply_hard_filters(eq_preset, profile)
     meta["stages"]["hard_filters"] = hard_stats
     
+    # v5.0.0: Relaxation progressive au lieu de skip brutal
     if len(eq_hard) < target_n // 2:
-        eq_hard = eq_preset
-        meta["stages"]["hard_filters"]["skipped"] = True
+        filters = deepcopy(policy.get("hard_filters", {}))
+        relaxed_steps = []
+        
+        for filter_key, delta, limit in RELAX_STEPS:
+            if filter_key not in filters:
+                continue
+            
+            old_val = filters[filter_key]
+            # delta > 0 : on augmente (ex: vol_max), limité par limit
+            # delta < 0 : on diminue (ex: roe_min), limité par limit
+            if delta > 0:
+                new_val = min(old_val + delta, limit)
+            else:
+                new_val = max(old_val + delta, limit)
+            
+            filters[filter_key] = new_val
+            relaxed_steps.append(f"{filter_key}: {old_val} → {new_val}")
+            
+            # Tester avec les nouveaux filtres
+            eq_hard_relaxed, relax_stats = apply_hard_filters_with_custom(eq_preset, filters)
+            
+            logger.info(f"   [{profile}] Relaxation {filter_key}: {len(eq_hard_relaxed)} après relax")
+            
+            if len(eq_hard_relaxed) >= target_n // 2:
+                eq_hard = eq_hard_relaxed
+                meta["stages"]["hard_filters"]["relaxed"] = relaxed_steps
+                meta["stages"]["hard_filters"]["relaxed_stats"] = relax_stats
+                break
+        else:
+            # Fallback minimal: garder uniquement le filtre Buffett >= 20
+            eq_hard = [x for x in eq_preset if (get_metric_value(x, "buffett_score") or 0) >= 20]
+            if len(eq_hard) < 5:
+                eq_hard = eq_preset
+                meta["stages"]["hard_filters"]["fallback"] = "all_preset"
+            else:
+                meta["stages"]["hard_filters"]["fallback"] = "buffett_20_only"
+            meta["stages"]["hard_filters"]["relaxed"] = relaxed_steps
     
     # Build distributions
     score_weights = policy.get("score_weights", {})
@@ -1180,11 +1376,11 @@ def export_watchlist(
     return filepath
 
 
-# ============ MAIN TEST v4.15.2 ============
+# ============ MAIN TEST v5.0.0 ============
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("PRESET_META v4.15.2 FINAL - 10/10")
+    print("PRESET_META v5.0.0 - Architecture Option B")
     print("=" * 60)
     
     print(f"\nTotal presets: {len(PRESET_META)}")
@@ -1207,14 +1403,12 @@ if __name__ == "__main__":
     
     # TEST 3: Missing data scoring penalty
     print("\n--- TEST 3: Missing data scoring penalty ---")
-    # Action sans max_drawdown (poids négatif) devrait être pénalisée
     stock_complete = {"name": "COMPLETE", "volatility_3y": 30, "perf_1y": 20, "max_drawdown_3y": -15, "buffett_score": 70}
-    stock_missing_dd = {"name": "MISSING_DD", "volatility_3y": 30, "perf_1y": 20, "buffett_score": 70}  # pas de max_drawdown
+    stock_missing_dd = {"name": "MISSING_DD", "volatility_3y": 30, "perf_1y": 20, "buffett_score": 70}
     
     score_complete = score_equity_for_profile(stock_complete, "Agressif", {})
     score_missing = score_equity_for_profile(stock_missing_dd, "Agressif", {})
     
-    # L'action avec drawdown manquant devrait avoir un score inférieur car pénalité appliquée
     print(f"   Score complete: {score_complete:.3f}")
     print(f"   Score missing DD: {score_missing:.3f}")
     assert score_missing < score_complete, "Missing negative metric should penalize score"
@@ -1237,13 +1431,68 @@ if __name__ == "__main__":
     assert len(filtered) == 1 and filtered[0]["ticker"] == "QD"
     print(f"✅ Yield trap filtered. Reasons: {stats['reasons']}")
     
+    # TEST 5: normalize_profile_score()
+    print("\n--- TEST 5: normalize_profile_score() ---")
+    test_weights = {"perf_1y": 0.20, "roe": 0.15, "volatility_3y": -0.25, "max_drawdown_3y": -0.10}
+    
+    # Pire cas: percentile=0 pour positifs, percentile=1 pour négatifs
+    worst_raw = 0.20 * 0 + 0.15 * 0 + (-0.25) * 1 + (-0.10) * 1  # = -0.35
+    worst_score = normalize_profile_score(worst_raw, test_weights)
+    
+    # Meilleur cas: percentile=1 pour positifs, percentile=0 pour négatifs
+    best_raw = 0.20 * 1 + 0.15 * 1 + (-0.25) * 0 + (-0.10) * 0  # = 0.35
+    best_score = normalize_profile_score(best_raw, test_weights)
+    
+    # Cas médian
+    mid_raw = 0.20 * 0.5 + 0.15 * 0.5 + (-0.25) * 0.5 + (-0.10) * 0.5  # = 0
+    mid_score = normalize_profile_score(mid_raw, test_weights)
+    
+    print(f"   Worst score: {worst_score:.3f} (expected ~0)")
+    print(f"   Best score: {best_score:.3f} (expected ~1)")
+    print(f"   Mid score: {mid_score:.3f} (expected ~0.5)")
+    
+    assert worst_score < 0.1, "Worst score should be near 0"
+    assert best_score > 0.9, "Best score should be near 1"
+    assert 0.4 < mid_score < 0.6, "Mid score should be near 0.5"
+    print("✅ normalize_profile_score() OK")
+    
+    # TEST 6: apply_hard_filters_with_custom()
+    print("\n--- TEST 6: apply_hard_filters_with_custom() ---")
+    test_stocks = [
+        {"name": "LOW_VOL", "volatility_3y": 15.0, "roe": 20.0},
+        {"name": "MID_VOL", "volatility_3y": 30.0, "roe": 15.0},
+        {"name": "HIGH_VOL", "volatility_3y": 50.0, "roe": 10.0},
+    ]
+    
+    # Filtre strict
+    strict_filters = {"volatility_3y_max": 25.0, "roe_min": 12.0}
+    filtered_strict, _ = apply_hard_filters_with_custom(test_stocks, strict_filters)
+    assert len(filtered_strict) == 1 and filtered_strict[0]["name"] == "LOW_VOL"
+    
+    # Filtre relaxé
+    relaxed_filters = {"volatility_3y_max": 35.0, "roe_min": 10.0}
+    filtered_relaxed, _ = apply_hard_filters_with_custom(test_stocks, relaxed_filters)
+    assert len(filtered_relaxed) == 2
+    
+    print("✅ apply_hard_filters_with_custom() OK")
+    
+    # TEST 7: RELAX_STEPS config
+    print("\n--- TEST 7: RELAX_STEPS config ---")
+    assert len(RELAX_STEPS) >= 5, "Should have at least 5 relaxation steps"
+    for filter_key, delta, limit in RELAX_STEPS:
+        assert isinstance(filter_key, str)
+        assert isinstance(delta, (int, float))
+        assert isinstance(limit, (int, float))
+    print(f"✅ RELAX_STEPS OK ({len(RELAX_STEPS)} steps)")
+    
     print("\n" + "=" * 60)
-    print("v4.15.2 CHANGELOG:")
+    print("v5.0.0 CHANGELOG:")
+    print("  ✅ normalize_profile_score() pour meilleure distribution")
+    print("  ✅ apply_hard_filters_with_custom() pour relaxation")
+    print("  ✅ RELAX_STEPS config pour relaxation progressive")
+    print("  ✅ Relaxation progressive au lieu de skip brutal")
     print("  ✅ vol_missing strict (plus de default 25.0)")
     print("  ✅ Missing data scoring: penalty si poids négatif")
-    print("  ✅ Tous les hard filters appliqués (elif → if)")
     print("  ✅ pct_rank() O(log n) avec bisect")
-    print("  ✅ Percentiles data-driven + winsorization")
-    print("  ✅ Anti yield-trap strict")
     print("=" * 60)
-    print("\n🎯 NOTE FINALE: 10/10 (ChatGPT approved)")
+    print("\n🎯 Architecture Option B: preset_meta = seul moteur equity")
