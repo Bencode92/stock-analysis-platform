@@ -1,97 +1,100 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une allocation agressive avec une exposition significative aux actions, notamment dans les secteurs de l'énergie et de la santé. Bien que ces secteurs offrent des opportunités de croissance, ils sont également soumis à des fluctuations de marché importantes. De plus, la concentration sur un nombre limité d'actifs peut augmenter le risque de volatilité. Les investisseurs doivent être conscients des risques associés aux investissements dans des secteurs cycliques et des obligations. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive, visant à maximiser les rendements à travers une exposition significative aux actions et aux cryptomonnaies. Cependant, cette stratégie comporte des risques, notamment la volatilité des marchés et l'exposition aux fluctuations économiques. Les actifs technologiques et les cryptomonnaies peuvent être particulièrement sensibles aux changements de sentiment du marché. Une attention particulière doit être portée aux tendances économiques et sectorielles pour évaluer les performances futures. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "IPSEN SA (IPN)": "15.0%",
-      "DANAHER CORP (DHR)": "10.3%",
-      "SYENSQO NV (SYENS)": "5.2%",
-      "LEG IMMOBILIEN N (LEG)": "5.1%",
-      "P.I. INDUSTRIES LTD (PIIND)": "4.8%",
-      "ADVANTECH LTD (2395)": "4.6%",
-      "LUPIN LTD (LUPIN)": "4.2%",
-      "ANALOG DEVICES INC (ADI)": "4.2%",
-      "SHINHAN FINANCIAL GROUP LTD (055550)": "3.8%",
-      "CAPITAL ONE FINANCIAL CORP (COF)": "3.6%",
-      "LG ELECTRONICS INC (066570)": "3.6%",
-      "AVENUE SUPERMARTS LTD (DMART)": "3.4%",
-      "CONOCOPHILLIPS (COP)": "15.0%"
+      "JABIL INC (JBL)": "7.7%",
+      "KLA CORP (KLAC)": "7.1%",
+      "WESTERN DIGITAL CORP (WDC)": "4.6%",
+      "NEWMONT (NEM)": "3.8%",
+      "MONOLITHIC POWER SYSTEMS INC (MPWR)": "3.8%",
+      "MICRON TECHNOLOGY INC (MU)": "3.6%",
+      "CIENA CORP (CIEN)": "3.1%",
+      "COMFORT SYSTEMS USA INC (FIX)": "1.9%",
+      "HANWHA AEROSPACE LTD (012450)": "1.8%",
+      "KOREA ELECTRIC POWER CORP (015760)": "1.8%",
+      "FORTUNE ELECTRIC LTD (1519)": "15.2%"
     },
-    "ETF": {},
+    "ETF": {
+      "Avantis International Small Cap Value ETF (AVDV)": "15.0%"
+    },
     "Obligations": {
-      "iShares Agency Bond ETF (AGZ)": "3.5%",
-      "Angel Oak Income ETF (CARY)": "3.5%",
-      "Avantis Short-Term Fixed Income ETF (AVSF)": "3.4%",
-      "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": "3.4%",
-      "Neos Enhanced Income Cash Alternative ETF (CSHI)": "3.4%"
+      "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": "5.1%",
+      "Neos Enhanced Income Cash Alternative ETF (CSHI)": "5.1%",
+      "Avantis Short-Term Fixed Income ETF (AVSF)": "5.1%",
+      "Angel Oak Income ETF (CARY)": "5.1%"
     },
-    "Crypto": {},
+    "Crypto": {
+      "PAXG/USD": "7.5%",
+      "XAUT/USD": "2.7%"
+    },
     "_tickers": {
-      "IPN": 0.15,
-      "DHR": 0.1032,
-      "SYENS": 0.0516,
-      "LEG": 0.0506,
-      "PIIND": 0.0484,
-      "2395": 0.0461,
-      "LUPIN": 0.04190000000000001,
-      "ADI": 0.0417,
-      "055550": 0.038,
-      "COF": 0.0362,
-      "066570": 0.036000000000000004,
-      "AGZ": 0.0349,
-      "CARY": 0.0348,
-      "AVSF": 0.0344,
-      "DCMB": 0.0341,
-      "CSHI": 0.0341,
-      "DMART": 0.0339,
-      "COP": 0.1501
+      "1519": 0.15,
+      "JBL": 0.0768,
+      "PAXG/USD": 0.07519999999999999,
+      "KLAC": 0.07139999999999999,
+      "DCMB": 0.051100000000000007,
+      "CSHI": 0.051100000000000007,
+      "AVSF": 0.051100000000000007,
+      "CARY": 0.051100000000000007,
+      "WDC": 0.0464,
+      "NEM": 0.0384,
+      "MPWR": 0.0384,
+      "MU": 0.0363,
+      "CIEN": 0.030600000000000002,
+      "XAUT/USD": 0.027000000000000003,
+      "FIX": 0.0192,
+      "012450": 0.018000000000000002,
+      "015760": 0.018000000000000002,
+      "AVDV": 0.1499
     },
     "_optimization": {
-      "mode": "slsqp",
-      "is_heuristic": false,
-      "vol_realized": 12.86,
-      "vol_target": 18.0
+      "mode": "fallback_slsqp_failed",
+      "is_heuristic": true,
+      "vol_realized": 16.28,
+      "vol_target": 18.0,
+      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Agressif) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
     "_tickers_pricing": {
-      "IPN": 0.15,
-      "DHR": 0.1032,
-      "SYENS": 0.0516,
-      "LEG": 0.0506,
-      "PIIND": 0.0484,
-      "2395": 0.0461,
-      "LUPIN": 0.04190000000000001,
-      "ADI": 0.0417,
-      "055550": 0.038,
-      "COF": 0.0362,
-      "066570": 0.036000000000000004,
-      "AGZ": 0.0349,
-      "CARY": 0.0348,
-      "AVSF": 0.0344,
-      "DCMB": 0.0341,
-      "CSHI": 0.0341,
-      "DMART": 0.0339,
-      "COP": 0.1501
+      "1519": 0.15,
+      "JBL": 0.0768,
+      "PAXG/USD": 0.07519999999999999,
+      "KLAC": 0.07139999999999999,
+      "DCMB": 0.051100000000000007,
+      "CSHI": 0.051100000000000007,
+      "AVSF": 0.051100000000000007,
+      "CARY": 0.051100000000000007,
+      "WDC": 0.0464,
+      "NEM": 0.0384,
+      "MPWR": 0.0384,
+      "MU": 0.0363,
+      "CIEN": 0.030600000000000002,
+      "XAUT/USD": 0.027000000000000003,
+      "FIX": 0.0192,
+      "012450": 0.018000000000000002,
+      "015760": 0.018000000000000002,
+      "AVDV": 0.1499
     },
     "_unpriced_assets": [],
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
-      "Actions:IPSEN SA (IPN)": 15.0,
-      "Actions:DANAHER CORP (DHR)": 10.3,
-      "Actions:SYENSQO NV (SYENS)": 5.2,
-      "Actions:LEG IMMOBILIEN N (LEG)": 5.1,
-      "Actions:P.I. INDUSTRIES LTD (PIIND)": 4.8,
-      "Actions:ADVANTECH LTD (2395)": 4.6,
-      "Actions:LUPIN LTD (LUPIN)": 4.2,
-      "Actions:ANALOG DEVICES INC (ADI)": 4.2,
-      "Actions:SHINHAN FINANCIAL GROUP LTD (055550)": 3.8,
-      "Actions:CAPITAL ONE FINANCIAL CORP (COF)": 3.6,
-      "Actions:LG ELECTRONICS INC (066570)": 3.6,
-      "Obligations:iShares Agency Bond ETF (AGZ)": 3.5,
-      "Obligations:Angel Oak Income ETF (CARY)": 3.5,
-      "Obligations:Avantis Short-Term Fixed Income ETF (AVSF)": 3.4,
-      "Obligations:DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": 3.4,
-      "Obligations:Neos Enhanced Income Cash Alternative ETF (CSHI)": 3.4,
-      "Actions:AVENUE SUPERMARTS LTD (DMART)": 3.4,
-      "Actions:CONOCOPHILLIPS (COP)": 15.0
+      "ETF:Avantis International Small Cap Value ETF (AVDV)": 15.0,
+      "Actions:JABIL INC (JBL)": 7.7,
+      "Crypto:PAXG/USD": 7.5,
+      "Actions:KLA CORP (KLAC)": 7.1,
+      "Obligations:DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": 5.1,
+      "Obligations:Neos Enhanced Income Cash Alternative ETF (CSHI)": 5.1,
+      "Obligations:Avantis Short-Term Fixed Income ETF (AVSF)": 5.1,
+      "Obligations:Angel Oak Income ETF (CARY)": 5.1,
+      "Actions:WESTERN DIGITAL CORP (WDC)": 4.6,
+      "Actions:NEWMONT (NEM)": 3.8,
+      "Actions:MONOLITHIC POWER SYSTEMS INC (MPWR)": 3.8,
+      "Actions:MICRON TECHNOLOGY INC (MU)": 3.6,
+      "Actions:CIENA CORP (CIEN)": 3.1,
+      "Crypto:XAUT/USD": 2.7,
+      "Actions:COMFORT SYSTEMS USA INC (FIX)": 1.9,
+      "Actions:HANWHA AEROSPACE LTD (012450)": 1.8,
+      "Actions:KOREA ELECTRIC POWER CORP (015760)": 1.8,
+      "Actions:FORTUNE ELECTRIC LTD (1519)": 15.2
     },
     "_constraint_report": {
       "hard_constraints": [],
@@ -110,52 +113,47 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 18.0,
-            "observed": 12.86,
-            "slack": -2.14,
+            "observed": 16.28,
+            "slack": 1.28,
             "binding": false,
-            "status": "VIOLATED",
+            "status": "OK",
             "details": {
               "tolerance": 3.0,
               "range_min": 15.0,
               "range_max": 21.0,
-              "diff_from_target": -5.14
+              "diff_from_target": -1.72
             }
           },
           {
             "name": "bonds_min",
             "constraint_type": "min",
             "cap": 5.0,
-            "observed": 15.01,
-            "slack": 10.01,
+            "observed": 20.0,
+            "slack": 15.0,
             "binding": false,
             "status": "OK",
             "details": {
-              "count": 5,
+              "count": 4,
               "breakdown": [
                 {
                   "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
                   "name": "DoubleLine ETF Trust DoubleLin",
-                  "weight": 2.97
+                  "weight": 5.0
                 },
                 {
                   "id": "Neos Enhanced Income Cash Alternative ETF",
                   "name": "Neos Enhanced Income Cash Alte",
-                  "weight": 2.97
+                  "weight": 5.0
                 },
                 {
                   "id": "Avantis Short-Term Fixed Income ETF",
                   "name": "Avantis Short-Term Fixed Incom",
-                  "weight": 3.0
+                  "weight": 5.0
                 },
                 {
                   "id": "Angel Oak Income ETF",
                   "name": "Angel Oak Income ETF",
-                  "weight": 3.03
-                },
-                {
-                  "id": "iShares Agency Bond ETF",
-                  "name": "iShares Agency Bond ETF",
-                  "weight": 3.04
+                  "weight": 5.0
                 }
               ]
             }
@@ -164,36 +162,47 @@
             "name": "crypto_max",
             "constraint_type": "max",
             "cap": 10.0,
-            "observed": 0.0,
-            "slack": 10.0,
-            "binding": false,
-            "status": "OK",
+            "observed": 10.0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
             "details": {
-              "breakdown": []
+              "breakdown": [
+                {
+                  "id": "XAUT/USD",
+                  "name": "XAUT/USD",
+                  "weight": 2.64
+                },
+                {
+                  "id": "PAXG/USD",
+                  "name": "PAXG/USD",
+                  "weight": 7.36
+                }
+              ]
             }
           },
           {
             "name": "max_single_position",
             "constraint_type": "max",
             "cap": 15.0,
-            "observed": 14.87,
-            "slack": 0.13,
+            "observed": 15.0,
+            "slack": 0.0,
             "binding": true,
             "status": "BINDING",
             "details": {
               "largest_position": {
-                "id": "EQ_94",
-                "name": "CONOCOPHILLIPS",
-                "weight": 14.87
+                "id": "Avantis International Small Cap Value ETF",
+                "name": "Avantis International Small Cap Value ET",
+                "weight": 15.0
               },
               "positions_above_10pct": [
                 {
-                  "id": "EQ_94",
-                  "weight": 14.87
+                  "id": "Avantis International Small Cap Value ETF",
+                  "weight": 15.0
                 },
                 {
-                  "id": "EQ_765",
-                  "weight": 14.12
+                  "id": "EQ_969",
+                  "weight": 14.72
                 }
               ]
             }
@@ -202,34 +211,29 @@
             "name": "max_sector",
             "constraint_type": "max",
             "cap": 35.0,
-            "observed": 28.85,
-            "slack": 6.15,
+            "observed": 29.36,
+            "slack": 5.64,
             "binding": false,
             "status": "OK",
             "details": {
-              "most_concentrated": "Santé",
+              "most_concentrated": "Technologie de l'information",
               "counts_in_max_sector": {
-                "Santé": 28.85,
-                "Energie": 14.87,
-                "Matériaux": 9.25,
-                "Technologie de l'information": 8.9,
-                "Biens de consommation cycliques": 7.3,
-                "Finance": 6.46,
-                "Immobilier": 4.41,
-                "Biens de consommation de base": 2.95,
-                "Industries": 2.0
+                "Technologie de l'information": 29.36,
+                "Industries": 18.36,
+                "Diversified": 15.0,
+                "Matériaux": 3.76,
+                "Services publics": 1.76,
+                "Biens de consommation cycliques": 1.76
               },
               "all_sectors": {
-                "Santé": 28.85,
-                "Bonds": 15.01,
-                "Energie": 14.87,
-                "Matériaux": 9.25,
-                "Technologie de l'information": 8.9,
-                "Biens de consommation cycliques": 7.3,
-                "Finance": 6.46,
-                "Immobilier": 4.41,
-                "Biens de consommation de base": 2.95,
-                "Industries": 2.0
+                "Technologie de l'information": 29.36,
+                "Bonds": 20.0,
+                "Industries": 18.36,
+                "Diversified": 15.0,
+                "Crypto": 10.0,
+                "Matériaux": 3.76,
+                "Services publics": 1.76,
+                "Biens de consommation cycliques": 1.76
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
             }
@@ -238,30 +242,23 @@
             "name": "max_region",
             "constraint_type": "max",
             "cap": 50.0,
-            "observed": 30.64,
-            "slack": 19.36,
+            "observed": 35.0,
+            "slack": 15.0,
             "binding": false,
             "status": "OK",
             "details": {
               "most_concentrated": "Etats-Unis",
               "counts_in_max_region": {
-                "Etats-Unis": 30.64,
-                "Inde": 14.61,
-                "France": 14.12,
-                "Corée": 10.99,
-                "Allemagne": 6.12,
-                "Belgique": 4.5,
-                "Taïwan": 4.01
+                "Etats-Unis": 35.0,
+                "Global": 15.0,
+                "Taïwan": 14.72,
+                "Corée": 5.28
               },
               "all_regions": {
-                "Etats-Unis": 30.64,
-                "Global": 15.01,
-                "Inde": 14.61,
-                "France": 14.12,
-                "Corée": 10.99,
-                "Allemagne": 6.12,
-                "Belgique": 4.5,
-                "Taïwan": 4.01
+                "Global": 45.0,
+                "Etats-Unis": 35.0,
+                "Taïwan": 14.72,
+                "Corée": 5.28
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -270,8 +267,8 @@
             "name": "min_assets",
             "constraint_type": "min",
             "cap": 10,
-            "observed": 24,
-            "slack": 14,
+            "observed": 19,
+            "slack": 9,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -280,25 +277,25 @@
             "name": "max_assets",
             "constraint_type": "max",
             "cap": 18,
-            "observed": 24,
-            "slack": -6,
+            "observed": 19,
+            "slack": -1,
             "binding": false,
-            "status": "CRITICAL",
+            "status": "VIOLATED",
             "details": {}
           },
           {
             "name": "bucket_core",
             "constraint_type": "range",
             "cap": 45.0,
-            "observed": 55.34,
-            "slack": -10.34,
+            "observed": 15.0,
+            "slack": -15.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 30.0,
               "range_max": 45.0,
-              "slack_from_min": 25.34,
-              "slack_from_max": -10.34,
+              "slack_from_min": -15.0,
+              "slack_from_max": 30.0,
               "outside_range": true,
               "is_indicator": true
             }
@@ -307,15 +304,15 @@
             "name": "bucket_satellite",
             "constraint_type": "range",
             "cap": 60.0,
-            "observed": 29.65,
-            "slack": -5.35,
+            "observed": 65.0,
+            "slack": -5.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 35.0,
               "range_max": 60.0,
-              "slack_from_min": -5.35,
-              "slack_from_max": 30.35,
+              "slack_from_min": 30.0,
+              "slack_from_max": -5.0,
               "outside_range": true,
               "is_indicator": true
             }
@@ -324,15 +321,15 @@
             "name": "bucket_defensive",
             "constraint_type": "range",
             "cap": 15.0,
-            "observed": 15.01,
-            "slack": -0.01,
+            "observed": 20.0,
+            "slack": -5.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 5.0,
               "range_max": 15.0,
-              "slack_from_min": 10.01,
-              "slack_from_max": -0.01,
+              "slack_from_min": 15.0,
+              "slack_from_max": -5.0,
               "outside_range": true,
               "is_indicator": true
             }
@@ -384,63 +381,59 @@
         "summary": {
           "total": 14,
           "ok": 11,
-          "binding": 1,
+          "binding": 2,
           "violated": 1,
-          "critical": 1
+          "critical": 0
         },
-        "quality_score": 82.9,
+        "quality_score": 90.0,
         "recommendations": [
-          "🟠 VIOLATED: volatility exceeded by 2.1% — reduce exposure",
-          "🟡 BINDING: max_single_position at 14.9% (cap=15.0%) — monitor closely",
-          "🔴 CRITICAL: max_assets violated by 6.0% — immediate action required",
-          "ℹ️ INFO: bucket_core is 10.3% outside target range (indicator only)"
+          "🟡 BINDING: crypto_max at 10.0% (cap=10.0%) — monitor closely",
+          "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
+          "🟠 VIOLATED: max_assets exceeded by 1.0% — reduce exposure",
+          "ℹ️ INFO: bucket_core is 15.0% outside target range (indicator only)"
         ],
         "exposures": {
           "by_category": {
-            "Actions": 84.99,
-            "Obligations": 15.01
+            "Obligations": 20.0,
+            "ETF": 15.0,
+            "Actions": 55.0,
+            "Crypto": 10.0
           },
           "by_sector": {
-            "Santé": 28.85,
-            "Energie": 14.87,
-            "Matériaux": 9.25,
-            "Technologie de l'information": 8.9,
-            "Biens de consommation cycliques": 7.3,
-            "Finance": 6.46,
-            "Immobilier": 4.41,
-            "Biens de consommation de base": 2.95,
-            "Industries": 2.0
+            "Technologie de l'information": 29.36,
+            "Industries": 18.36,
+            "Diversified": 15.0,
+            "Matériaux": 3.76,
+            "Services publics": 1.76,
+            "Biens de consommation cycliques": 1.76
           },
           "by_region": {
-            "Etats-Unis": 30.64,
-            "Global": 15.01,
-            "Inde": 14.61,
-            "France": 14.12,
-            "Corée": 10.99,
-            "Allemagne": 6.12,
-            "Belgique": 4.5,
-            "Taïwan": 4.01
+            "Global": 45.0,
+            "Etats-Unis": 35.0,
+            "Taïwan": 14.72,
+            "Corée": 5.28
           },
           "by_risk_bucket": {
-            "equity_like": 84.99,
-            "bond_like": 15.01
+            "bond_like": 20.0,
+            "equity_like": 70.0,
+            "crypto": 10.0
           },
           "by_role": {
-            "core": 55.34,
-            "satellite": 29.65,
-            "defensive": 15.01,
+            "core": 15.0,
+            "satellite": 65.0,
+            "defensive": 20.0,
             "lottery": 0.0,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 705.0,
+            "hhi": 791.0,
             "hhi_interpretation": "well_diversified",
-            "effective_n": 14.18,
-            "n_positions": 24,
-            "top_5_weight": 46.89,
-            "top_10_weight": 65.71,
-            "largest_position": 14.87,
-            "smallest_position": 0.53,
+            "effective_n": 12.63,
+            "n_positions": 19,
+            "top_5_weight": 51.58,
+            "top_10_weight": 76.12,
+            "largest_position": 15.0,
+            "smallest_position": 1.76,
             "thresholds": {
               "well_diversified": "HHI < 1000",
               "diversified": "HHI 1000-1500",
@@ -452,98 +445,32 @@
         },
         "ticker_mapping": [
           {
-            "id": "EQ_94",
-            "ticker": "COP",
-            "name": "CONOCOPHILLIPS",
-            "weight_pct": 14.87,
-            "category": "Actions",
+            "id": "Avantis International Small Cap Value ETF",
+            "ticker": "AVDV",
+            "name": "Avantis International Small Cap Value ETF",
+            "weight_pct": 15.0,
+            "category": "ETF",
             "risk_bucket": "equity_like",
-            "sector": "Energie",
-            "region": "Etats-Unis",
+            "sector": "Diversified",
+            "region": "Global",
             "exchange": null
           },
           {
-            "id": "EQ_765",
-            "ticker": "IPN",
-            "name": "IPSEN SA",
-            "weight_pct": 14.12,
+            "id": "EQ_969",
+            "ticker": "1519",
+            "name": "FORTUNE ELECTRIC LTD",
+            "weight_pct": 14.72,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Santé",
-            "region": "France",
-            "exchange": null
-          },
-          {
-            "id": "EQ_72",
-            "ticker": "DHR",
-            "name": "DANAHER CORP",
-            "weight_pct": 8.99,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Santé",
-            "region": "Etats-Unis",
-            "exchange": null
-          },
-          {
-            "id": "EQ_763",
-            "ticker": "SYENS",
-            "name": "SYENSQO NV",
-            "weight_pct": 4.5,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Matériaux",
-            "region": "Belgique",
-            "exchange": null
-          },
-          {
-            "id": "EQ_772",
-            "ticker": "LEG",
-            "name": "LEG IMMOBILIEN N",
-            "weight_pct": 4.41,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Immobilier",
-            "region": "Allemagne",
-            "exchange": null
-          },
-          {
-            "id": "EQ_972",
-            "ticker": "PIIND",
-            "name": "P.I. INDUSTRIES LTD",
-            "weight_pct": 4.22,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Matériaux",
-            "region": "Inde",
-            "exchange": null
-          },
-          {
-            "id": "EQ_936",
-            "ticker": "2395",
-            "name": "ADVANTECH LTD",
-            "weight_pct": 4.01,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Technologie de l'information",
+            "sector": "Industries",
             "region": "Taïwan",
             "exchange": null
           },
           {
-            "id": "EQ_908",
-            "ticker": "LUPIN",
-            "name": "LUPIN LTD",
-            "weight_pct": 3.65,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Santé",
-            "region": "Inde",
-            "exchange": null
-          },
-          {
-            "id": "EQ_91",
-            "ticker": "ADI",
-            "name": "ANALOG DEVICES INC",
-            "weight_pct": 3.63,
+            "id": "EQ_410",
+            "ticker": "JBL",
+            "name": "JABIL INC",
+            "weight_pct": 7.52,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Technologie de l'information",
@@ -551,76 +478,32 @@
             "exchange": null
           },
           {
-            "id": "EQ_814",
-            "ticker": "055550",
-            "name": "SHINHAN FINANCIAL GROUP LTD",
-            "weight_pct": 3.31,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Finance",
-            "region": "Corée",
+            "id": "PAXG/USD",
+            "ticker": "PAXG/USD",
+            "name": "PAXG/USD",
+            "weight_pct": 7.36,
+            "category": "Crypto",
+            "risk_bucket": "crypto",
+            "sector": "Crypto",
+            "region": "Global",
             "exchange": null
           },
           {
-            "id": "EQ_82",
-            "ticker": "COF",
-            "name": "CAPITAL ONE FINANCIAL CORP",
-            "weight_pct": 3.15,
+            "id": "EQ_67",
+            "ticker": "KLAC",
+            "name": "KLA CORP",
+            "weight_pct": 6.98,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Finance",
+            "sector": "Technologie de l'information",
             "region": "Etats-Unis",
-            "exchange": null
-          },
-          {
-            "id": "EQ_899",
-            "ticker": "066570",
-            "name": "LG ELECTRONICS INC",
-            "weight_pct": 3.14,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Biens de consommation cycliques",
-            "region": "Corée",
-            "exchange": null
-          },
-          {
-            "id": "iShares Agency Bond ETF",
-            "ticker": "AGZ",
-            "name": "iShares Agency Bond ETF",
-            "weight_pct": 3.04,
-            "category": "Obligations",
-            "risk_bucket": "bond_like",
-            "sector": "Bonds",
-            "region": "Global",
-            "exchange": null
-          },
-          {
-            "id": "Angel Oak Income ETF",
-            "ticker": "CARY",
-            "name": "Angel Oak Income ETF",
-            "weight_pct": 3.03,
-            "category": "Obligations",
-            "risk_bucket": "bond_like",
-            "sector": "Bonds",
-            "region": "Global",
-            "exchange": null
-          },
-          {
-            "id": "Avantis Short-Term Fixed Income ETF",
-            "ticker": "AVSF",
-            "name": "Avantis Short-Term Fixed Income ETF",
-            "weight_pct": 3.0,
-            "category": "Obligations",
-            "risk_bucket": "bond_like",
-            "sector": "Bonds",
-            "region": "Global",
             "exchange": null
           },
           {
             "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
             "ticker": "DCMB",
             "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-            "weight_pct": 2.97,
+            "weight_pct": 5.0,
             "category": "Obligations",
             "risk_bucket": "bond_like",
             "sector": "Bonds",
@@ -631,7 +514,7 @@
             "id": "Neos Enhanced Income Cash Alternative ETF",
             "ticker": "CSHI",
             "name": "Neos Enhanced Income Cash Alternative ETF",
-            "weight_pct": 2.97,
+            "weight_pct": 5.0,
             "category": "Obligations",
             "risk_bucket": "bond_like",
             "sector": "Bonds",
@@ -639,92 +522,147 @@
             "exchange": null
           },
           {
-            "id": "EQ_882",
-            "ticker": "DMART",
-            "name": "AVENUE SUPERMARTS LTD",
-            "weight_pct": 2.95,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Biens de consommation de base",
-            "region": "Inde",
+            "id": "Avantis Short-Term Fixed Income ETF",
+            "ticker": "AVSF",
+            "name": "Avantis Short-Term Fixed Income ETF",
+            "weight_pct": 5.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
             "exchange": null
           },
           {
-            "id": "EQ_842",
-            "ticker": "012330",
-            "name": "HYUNDAI MOBIS LTD",
-            "weight_pct": 2.45,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Biens de consommation cycliques",
-            "region": "Corée",
+            "id": "Angel Oak Income ETF",
+            "ticker": "CARY",
+            "name": "Angel Oak Income ETF",
+            "weight_pct": 5.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
             "exchange": null
           },
           {
-            "id": "EQ_822",
-            "ticker": "068270",
-            "name": "CELLTRION INC",
-            "weight_pct": 2.09,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Santé",
-            "region": "Corée",
-            "exchange": null
-          },
-          {
-            "id": "EQ_999",
-            "ticker": "ASTRAL",
-            "name": "ASTRAL LTD",
-            "weight_pct": 2.0,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Industries",
-            "region": "Inde",
-            "exchange": null
-          },
-          {
-            "id": "EQ_737",
-            "ticker": "CON",
-            "name": "CONTINENTAL AG",
-            "weight_pct": 1.71,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Biens de consommation cycliques",
-            "region": "Allemagne",
-            "exchange": null
-          },
-          {
-            "id": "EQ_957",
-            "ticker": "MPHASIS",
-            "name": "MPHASIS LTD",
-            "weight_pct": 1.26,
+            "id": "EQ_198",
+            "ticker": "WDC",
+            "name": "WESTERN DIGITAL CORP",
+            "weight_pct": 4.54,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Technologie de l'information",
-            "region": "Inde",
+            "region": "Etats-Unis",
             "exchange": null
           },
           {
-            "id": "EQ_843",
-            "ticker": "HINDALCO",
-            "name": "HINDALCO INDUSTRIES LTD",
-            "weight_pct": 0.53,
+            "id": "EQ_108",
+            "ticker": "NEM",
+            "name": "NEWMONT",
+            "weight_pct": 3.76,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Matériaux",
-            "region": "Inde",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_221",
+            "ticker": "MPWR",
+            "name": "MONOLITHIC POWER SYSTEMS INC",
+            "weight_pct": 3.76,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Technologie de l'information",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_35",
+            "ticker": "MU",
+            "name": "MICRON TECHNOLOGY INC",
+            "weight_pct": 3.56,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Technologie de l'information",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_311",
+            "ticker": "CIEN",
+            "name": "CIENA CORP",
+            "weight_pct": 3.0,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Technologie de l'information",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "XAUT/USD",
+            "ticker": "XAUT/USD",
+            "name": "XAUT/USD",
+            "weight_pct": 2.64,
+            "category": "Crypto",
+            "risk_bucket": "crypto",
+            "sector": "Crypto",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_275",
+            "ticker": "FIX",
+            "name": "COMFORT SYSTEMS USA INC",
+            "weight_pct": 1.88,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Industries",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_819",
+            "ticker": "012450",
+            "name": "HANWHA AEROSPACE LTD",
+            "weight_pct": 1.76,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Industries",
+            "region": "Corée",
+            "exchange": null
+          },
+          {
+            "id": "EQ_868",
+            "ticker": "015760",
+            "name": "KOREA ELECTRIC POWER CORP",
+            "weight_pct": 1.76,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Services publics",
+            "region": "Corée",
+            "exchange": null
+          },
+          {
+            "id": "EQ_823",
+            "ticker": "000270",
+            "name": "KIA CORPORATION CORP",
+            "weight_pct": 1.76,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Biens de consommation cycliques",
+            "region": "Corée",
             "exchange": null
           }
         ],
         "execution_summary": {
-          "n_positions": 24,
+          "n_positions": 19,
           "n_exchanges": 0,
           "exchanges": [],
           "total_weight": 100.0,
-          "missing_isin": 19,
+          "missing_isin": 14,
           "missing_ticker": 0,
           "data_quality": {
-            "isin_coverage": 20.8,
+            "isin_coverage": 26.3,
             "ticker_coverage": 100.0
           },
           "ready_for_execution": true
@@ -733,50 +671,46 @@
     },
     "_exposures": {
       "by_category": {
-        "Actions": 84.99,
-        "Obligations": 15.01
+        "Obligations": 20.0,
+        "ETF": 15.0,
+        "Actions": 55.0,
+        "Crypto": 10.0
       },
       "by_sector": {
-        "Santé": 28.85,
-        "Energie": 14.87,
-        "Matériaux": 9.25,
-        "Technologie de l'information": 8.9,
-        "Biens de consommation cycliques": 7.3,
-        "Finance": 6.46,
-        "Immobilier": 4.41,
-        "Biens de consommation de base": 2.95,
-        "Industries": 2.0
+        "Technologie de l'information": 29.36,
+        "Industries": 18.36,
+        "Diversified": 15.0,
+        "Matériaux": 3.76,
+        "Services publics": 1.76,
+        "Biens de consommation cycliques": 1.76
       },
       "by_region": {
-        "Etats-Unis": 30.64,
-        "Global": 15.01,
-        "Inde": 14.61,
-        "France": 14.12,
-        "Corée": 10.99,
-        "Allemagne": 6.12,
-        "Belgique": 4.5,
-        "Taïwan": 4.01
+        "Global": 45.0,
+        "Etats-Unis": 35.0,
+        "Taïwan": 14.72,
+        "Corée": 5.28
       },
       "by_risk_bucket": {
-        "equity_like": 84.99,
-        "bond_like": 15.01
+        "bond_like": 20.0,
+        "equity_like": 70.0,
+        "crypto": 10.0
       },
       "by_role": {
-        "core": 55.34,
-        "satellite": 29.65,
-        "defensive": 15.01,
+        "core": 15.0,
+        "satellite": 65.0,
+        "defensive": 20.0,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 705.0,
+        "hhi": 791.0,
         "hhi_interpretation": "well_diversified",
-        "effective_n": 14.18,
-        "n_positions": 24,
-        "top_5_weight": 46.89,
-        "top_10_weight": 65.71,
-        "largest_position": 14.87,
-        "smallest_position": 0.53,
+        "effective_n": 12.63,
+        "n_positions": 19,
+        "top_5_weight": 51.58,
+        "top_10_weight": 76.12,
+        "largest_position": 15.0,
+        "smallest_position": 1.76,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -787,310 +721,110 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 24,
+      "n_positions": 19,
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 19,
+      "missing_isin": 14,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 20.8,
+        "isin_coverage": 26.3,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
     },
     "_limitations": [
-      "Volatilité réalisée (12.9%) éloignée de la cible (18.0%) - écart de 5.1%."
+      "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Agressif sont incompatibles avec l'optimisation Markowitz classique."
     ],
     "_asset_details": [
       {
-        "name": "IPSEN SA",
-        "ticker": "IPN",
-        "rationale": "IPSEN SA présente un score qualité Buffett élevé et une performance YTD solide, ce qui en fait un choix attrayant dans le secteur de la santé. Son rôle dans le portefeuille est celui d'un actif core, apportant stabilité et potentiel de croissance. Bien que le secteur de la santé soit en refroidissement, sa position de leader et son ROE respectable justifient sa présence.",
+        "name": "FORTUNE ELECTRIC LTD",
+        "ticker": "1519",
+        "rationale": "Fortune Electric présente un ROE élevé de 48.68% et une performance YTD de 35.08%, ce qui témoigne d'une forte rentabilité et d'un bon momentum. Son rôle dans le portefeuille est celui d'un actif core, renforçant l'exposition au secteur industriel favorisé par le contexte actuel.",
         "role": "core",
-        "risk_note": "Volatilité élevée à surveiller, surtout dans un contexte de rotation sectorielle.",
-        "market_context_link": null,
+        "risk_note": "Volatilité élevée à 60.9%, ce qui pourrait entraîner des fluctuations significatives.",
+        "market_context_link": "secteur favorisé",
         "weight_pct": 15.0,
         "category": "Actions",
-        "sector": "Santé",
-        "country": "France",
-        "metrics": {
-          "roe": 8.31,
-          "pe_ratio": 24.711359,
-          "dividend_yield": 0.9,
-          "ytd": 14.3,
-          "volatility": 23.98,
-          "buffett_score": 78.1
-        }
-      },
-      {
-        "name": "DANAHER CORP",
-        "ticker": "DHR",
-        "rationale": "Malgré une performance YTD modeste, Danaher Corp est un leader dans le secteur de la santé avec des perspectives de croissance à long terme. Son rôle est celui d'un actif satellite, ajoutant une exposition à un secteur favorable. La valorisation élevée (P/E) peut représenter un risque si les bénéfices ne répondent pas aux attentes.",
-        "role": "satellite",
-        "risk_note": "Risque de valorisation élevé, surtout dans un environnement de taux d'intérêt croissants.",
-        "market_context_link": null,
-        "weight_pct": 10.3,
-        "category": "Actions",
-        "sector": "Santé",
-        "country": "Etats-Unis",
-        "metrics": {
-          "roe": 7.87,
-          "pe_ratio": 48.557613,
-          "dividend_yield": 0.54,
-          "ytd": 2.0,
-          "volatility": 26.51,
-          "buffett_score": 47.2
-        }
-      },
-      {
-        "name": "SYENSQO NV",
-        "ticker": "SYENS",
-        "rationale": "SYENSQO NV présente une valorisation très élevée avec un ROE négatif, ce qui soulève des préoccupations quant à sa viabilité à long terme. Son rôle est celui d'un actif satellite, mais il est risqué en raison de sa performance YTD faible. Ce choix pourrait être influencé par des opportunités dans le secteur des matériaux, mais il nécessite une surveillance étroite.",
-        "role": "satellite",
-        "risk_note": "Risque de sous-performance en raison de la valorisation excessive et du ROE négatif.",
-        "market_context_link": null,
-        "weight_pct": 5.2,
-        "category": "Actions",
-        "sector": "Matériaux",
-        "country": "Belgique",
-        "metrics": {
-          "roe": -0.07,
-          "pe_ratio": 377.85715,
-          "dividend_yield": 2.28,
-          "ytd": 1.49,
-          "volatility": 31.71,
-          "buffett_score": 69.4
-        }
-      },
-      {
-        "name": "LEG IMMOBILIEN N",
-        "ticker": "LEG",
-        "rationale": "Avec un P/E très bas, LEG IMMOBILIEN N pourrait sembler attractif, mais son ROE extrêmement négatif soulève des inquiétudes sur sa rentabilité. Il joue un rôle de diversification dans le portefeuille, mais son risque est élevé. La performance dans le secteur immobilier doit être surveillée de près, surtout dans un environnement de taux d'intérêt changeants.",
-        "role": "diversification",
-        "risk_note": "Risque de rentabilité faible en raison d'un ROE négatif.",
-        "market_context_link": null,
-        "weight_pct": 5.1,
-        "category": "Actions",
-        "sector": "Immobilier",
-        "country": "Allemagne",
-        "metrics": {
-          "roe": -74.09,
-          "pe_ratio": 4.7740965,
-          "dividend_yield": 3.89,
-          "ytd": 3.83,
-          "volatility": 31.58,
-          "buffett_score": 84.0
-        }
-      },
-      {
-        "name": "P.I. INDUSTRIES LTD",
-        "ticker": "PIIND",
-        "rationale": "P.I. INDUSTRIES LTD affiche un ROE solide et une valorisation raisonnable, ce qui en fait un choix intéressant dans le secteur des matériaux. Son rôle est celui d'un actif satellite, apportant une exposition à un marché en croissance. Toutefois, la performance YTD faible indique un besoin de vigilance quant à sa dynamique de marché.",
-        "role": "satellite",
-        "risk_note": "Risque de performance faible dans un contexte de marché volatil.",
-        "market_context_link": null,
-        "weight_pct": 4.8,
-        "category": "Actions",
-        "sector": "Matériaux",
-        "country": "Inde",
-        "metrics": {
-          "roe": 16.35,
-          "pe_ratio": 32.316647,
-          "dividend_yield": 0.5,
-          "ytd": 0.06,
-          "volatility": 25.01,
-          "buffett_score": 61.0
-        }
-      },
-      {
-        "name": "ADVANTECH LTD",
-        "ticker": "2395",
-        "rationale": "ADVANTECH LTD présente un ROE respectable et un rendement dividende attractif, bien qu'il ait une performance YTD faible. Son rôle est celui d'un actif satellite, ajoutant de la diversification dans le secteur technologique. La volatilité élevée est un risque à surveiller, surtout dans un environnement économique incertain.",
-        "role": "satellite",
-        "risk_note": "Risque de volatilité élevé, particulièrement dans le secteur technologique.",
-        "market_context_link": null,
-        "weight_pct": 4.6,
-        "category": "Actions",
-        "sector": "Technologie de l'information",
+        "sector": "Industries",
         "country": "Taïwan",
         "metrics": {
-          "roe": 12.14,
-          "pe_ratio": 24.656357,
-          "dividend_yield": 3.17,
-          "ytd": 0.17,
-          "volatility": 28.53,
-          "buffett_score": 43.4
+          "roe": 48.68,
+          "pe_ratio": 70.91311,
+          "dividend_yield": 0.81,
+          "ytd": 35.08,
+          "volatility": 60.9,
+          "buffett_score": 64.8
         }
       },
       {
-        "name": "LUPIN LTD",
-        "ticker": "LUPIN",
-        "rationale": "LUPIN LTD affiche un ROE solide et une valorisation raisonnable, ce qui en fait un choix intéressant dans le secteur de la santé. Son rôle est celui d'un actif satellite, apportant une exposition à un marché en croissance. Cependant, la volatilité et les défis réglementaires dans le secteur pharmaceutique sont des risques à surveiller.",
+        "name": "JABIL INC",
+        "ticker": "JBL",
+        "rationale": "Avec un ROE de 43.31% et un score de qualité Buffett de 91.0/100, Jabil est un choix solide dans le secteur technologique. Il sert de satellite dans le portefeuille, offrant une exposition à un secteur en croissance tout en diversifiant les risques.",
         "role": "satellite",
-        "risk_note": "Risque réglementaire et de volatilité dans le secteur de la santé.",
-        "market_context_link": null,
-        "weight_pct": 4.2,
-        "category": "Actions",
-        "sector": "Santé",
-        "country": "Inde",
-        "metrics": {
-          "roe": 19.12,
-          "pe_ratio": 23.033222,
-          "dividend_yield": 0.37,
-          "ytd": 3.53,
-          "volatility": 25.74,
-          "buffett_score": 46.2
-        }
-      },
-      {
-        "name": "ANALOG DEVICES INC",
-        "ticker": "ADI",
-        "rationale": "ANALOG DEVICES INC présente une performance YTD solide et un score qualité Buffett respectable, ce qui en fait un choix intéressant dans le secteur technologique. Son rôle est celui d'un actif satellite, offrant une exposition à l'innovation technologique. Toutefois, la valorisation élevée pourrait poser un risque si la croissance des bénéfices ralentit.",
-        "role": "satellite",
-        "risk_note": "Risque de valorisation élevée dans un secteur technologique compétitif.",
-        "market_context_link": null,
-        "weight_pct": 4.2,
+        "risk_note": "Performance YTD relativement faible à 3.82%, indiquant un potentiel de sous-performance à court terme.",
+        "market_context_link": "null",
+        "weight_pct": 7.7,
         "category": "Actions",
         "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "metrics": {
-          "roe": 6.7,
-          "pe_ratio": 65.83136,
-          "dividend_yield": 1.33,
-          "ytd": 8.76,
-          "volatility": 32.55,
-          "buffett_score": 68.6
+          "roe": 43.31,
+          "pe_ratio": 39.387146,
+          "dividend_yield": 0.13,
+          "ytd": 3.82,
+          "volatility": 38.28,
+          "buffett_score": 91.0
         }
       },
       {
-        "name": "SHINHAN FINANCIAL GROUP LTD",
-        "ticker": "055550",
-        "rationale": "SHINHAN FINANCIAL GROUP LTD offre un rendement dividende attrayant et un P/E raisonnable, ce qui en fait un choix solide dans le secteur financier. Son rôle est celui d'un actif core, apportant stabilité et revenu. Cependant, les risques liés à la volatilité du marché coréen doivent être surveillés.",
-        "role": "core",
-        "risk_note": "Risque de volatilité lié à l'environnement économique en Corée.",
-        "market_context_link": "Secteur financier favorisé",
-        "weight_pct": 3.8,
-        "category": "Actions",
-        "sector": "Finance",
-        "country": "Corée",
+        "name": "PAXG/USD",
+        "ticker": "PAXG/USD",
+        "rationale": "PAXG/USD offre une exposition à l'or sous forme numérique, ce qui peut servir de couverture contre l'inflation et l'incertitude économique. Son rôle est celui d'un hedge dans le portefeuille, protégeant contre la volatilité des marchés.",
+        "role": "hedge",
+        "risk_note": "Volatilité modérée à 22.24%, mais dépendance aux fluctuations des prix de l'or.",
+        "market_context_link": "null",
+        "weight_pct": 7.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
         "metrics": {
-          "roe": 7.75,
-          "pe_ratio": 9.572325553844331,
-          "dividend_yield": 2.82,
-          "ytd": 4.05,
-          "volatility": 31.34,
-          "buffett_score": 59.2
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 9.15,
+          "volatility": 22.24,
+          "buffett_score": null
         }
       },
       {
-        "name": "CAPITAL ONE FINANCIAL CORP",
-        "ticker": "COF",
-        "rationale": "Bien que CAPITAL ONE présente un P/E élevé, son ROE est compétitif, ce qui peut justifier son inclusion dans le portefeuille. Son rôle est celui d'un actif satellite, ajoutant une exposition au secteur financier. Cependant, la performance YTD négative indique un risque de sous-performance à court terme.",
-        "role": "satellite",
-        "risk_note": "Risque de performance faible dans un environnement économique incertain.",
-        "market_context_link": "Secteur financier favorisé",
-        "weight_pct": 3.6,
+        "name": "KLA CORP",
+        "ticker": "KLAC",
+        "rationale": "KLA Corp affiche un ROE exceptionnel de 86.56% et une solide performance YTD de 21.72%, ce qui en fait un leader dans le secteur technologique. Il est positionné comme un actif core, renforçant l'exposition au secteur technologique en croissance.",
+        "role": "core",
+        "risk_note": "P/E élevé à 49.26, ce qui pourrait indiquer une surévaluation potentielle.",
+        "market_context_link": "null",
+        "weight_pct": 7.1,
         "category": "Actions",
-        "sector": "Finance",
+        "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "metrics": {
-          "roe": 7.81,
-          "pe_ratio": 81.897255,
-          "dividend_yield": 1.1,
-          "ytd": -5.05,
-          "volatility": 33.0,
-          "buffett_score": 43.8
-        }
-      },
-      {
-        "name": "LG ELECTRONICS INC",
-        "ticker": "066570",
-        "rationale": "LG ELECTRONICS INC a montré une performance YTD solide et un ROE modeste, ce qui en fait un choix intéressant dans le secteur des biens de consommation cycliques. Son rôle est celui d'un actif satellite, apportant une exposition à un marché en croissance. La volatilité dans le secteur des biens de consommation doit être surveillée.",
-        "role": "satellite",
-        "risk_note": "Risque de volatilité dans le secteur des biens de consommation.",
-        "market_context_link": "Secteur favorisé",
-        "weight_pct": 3.6,
-        "category": "Actions",
-        "sector": "Biens de consommation cycliques",
-        "country": "Corée",
-        "metrics": {
-          "roe": 2.35,
-          "pe_ratio": 50.785854616895875,
-          "dividend_yield": 0.94,
-          "ytd": 16.96,
-          "volatility": 31.58,
-          "buffett_score": 61.1
-        }
-      },
-      {
-        "name": "iShares Agency Bond ETF",
-        "ticker": "AGZ",
-        "rationale": "L'iShares Agency Bond ETF offre une faible volatilité et une stabilité dans un portefeuille d'actions agressif, servant de couverture contre la volatilité du marché. Son rôle est celui d'un actif hedge, apportant sécurité et diversification. Cependant, le rendement est faible, ce qui peut limiter la performance globale.",
-        "role": "hedge",
-        "risk_note": "Risque de rendement faible dans un environnement de taux d'intérêt croissants.",
-        "market_context_link": null,
-        "weight_pct": 3.5,
-        "category": "Obligations",
-        "sector": "Bonds",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": 0.02,
-          "volatility": 3.46,
-          "buffett_score": null
-        }
-      },
-      {
-        "name": "Angel Oak Income ETF",
-        "ticker": "CARY",
-        "rationale": "L'Angel Oak Income ETF offre une diversification dans le secteur obligataire avec un rendement modeste, ce qui peut équilibrer le risque du portefeuille. Son rôle est celui d'un actif hedge, apportant stabilité. Le risque principal est lié à la sensibilité aux taux d'intérêt.",
-        "role": "hedge",
-        "risk_note": "Risque de sensibilité aux taux d'intérêt dans un environnement de hausse des taux.",
-        "market_context_link": null,
-        "weight_pct": 3.5,
-        "category": "Obligations",
-        "sector": "Bonds",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": 0.36,
-          "volatility": 3.24,
-          "buffett_score": null
-        }
-      },
-      {
-        "name": "Avantis Short-Term Fixed Income ETF",
-        "ticker": "AVSF",
-        "rationale": "L'Avantis Short-Term Fixed Income ETF offre une faible volatilité et une protection contre la hausse des taux d'intérêt, ce qui est crucial dans un portefeuille agressif. Son rôle est celui d'un actif hedge, apportant sécurité. Le risque est limité à la performance des obligations à court terme.",
-        "role": "hedge",
-        "risk_note": "Risque de performance limitée dans un environnement de taux d'intérêt croissants.",
-        "market_context_link": null,
-        "weight_pct": 3.4,
-        "category": "Obligations",
-        "sector": "Bonds",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": NaN,
-          "volatility": 2.64,
-          "buffett_score": null
+          "roe": 86.56,
+          "pe_ratio": 49.256046,
+          "dividend_yield": 0.48,
+          "ytd": 21.72,
+          "volatility": 40.84,
+          "buffett_score": 78.1
         }
       },
       {
         "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
         "ticker": "DCMB",
-        "rationale": "Le DoubleLine Commercial Real Estate ETF offre une exposition au secteur immobilier avec un potentiel de revenu, ce qui peut diversifier le portefeuille. Son rôle est celui d'un actif hedge, apportant une certaine stabilité. Cependant, le risque est lié à la volatilité du marché immobilier.",
-        "role": "hedge",
-        "risk_note": "Risque de volatilité dans le secteur immobilier.",
-        "market_context_link": null,
-        "weight_pct": 3.4,
+        "rationale": "Ce fonds offre une exposition au secteur immobilier commercial, qui peut bénéficier de la reprise économique. Il joue un rôle d'income dans le portefeuille, générant des revenus stables malgré une performance YTD modeste.",
+        "role": "income",
+        "risk_note": "Performance YTD faible à 0.25%, ce qui pourrait affecter les rendements à court terme.",
+        "market_context_link": "null",
+        "weight_pct": 5.1,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -1106,11 +840,11 @@
       {
         "name": "Neos Enhanced Income Cash Alternative ETF",
         "ticker": "CSHI",
-        "rationale": "Le Neos Enhanced Income Cash Alternative ETF offre une faible volatilité et un rendement modeste, servant de couverture contre la volatilité du marché. Son rôle est celui d'un actif hedge, apportant sécurité au portefeuille. Le risque principal est lié à la performance des actifs de trésorerie.",
-        "role": "hedge",
-        "risk_note": "Risque de rendement faible dans un environnement de taux d'intérêt croissants.",
-        "market_context_link": null,
-        "weight_pct": 3.4,
+        "rationale": "Ce fonds ultrashort bond vise à fournir des rendements stables avec une volatilité minimale, idéal pour un investisseur cherchant à préserver le capital. Il sert de diversification dans le portefeuille.",
+        "role": "diversification",
+        "risk_note": "Performance YTD négative à -0.25%, ce qui pourrait indiquer des défis dans le marché obligataire.",
+        "market_context_link": "null",
+        "weight_pct": 5.1,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -1124,121 +858,321 @@
         }
       },
       {
-        "name": "AVENUE SUPERMARTS LTD",
-        "ticker": "DMART",
-        "rationale": "AVENUE SUPERMARTS LTD présente un ROE solide et une croissance modérée, ce qui en fait un choix intéressant dans le secteur des biens de consommation de base. Son rôle est celui d'un actif satellite, apportant une exposition à un marché stable. Toutefois, la valorisation élevée pourrait poser un risque si la croissance ralentit.",
-        "role": "satellite",
-        "risk_note": "Risque de valorisation élevée dans un secteur concurrentiel.",
-        "market_context_link": null,
-        "weight_pct": 3.4,
-        "category": "Actions",
-        "sector": "Biens de consommation de base",
-        "country": "Inde",
+        "name": "Avantis Short-Term Fixed Income ETF",
+        "ticker": "AVSF",
+        "rationale": "Ce fonds obligataire à court terme offre une stabilité et une protection contre la volatilité des marchés. Son rôle est de diversifier le portefeuille tout en maintenant une exposition à des actifs à faible risque.",
+        "role": "diversification",
+        "risk_note": "Performance YTD non disponible, ce qui rend difficile l'évaluation de sa performance récente.",
+        "market_context_link": "null",
+        "weight_pct": 5.1,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
         "metrics": {
-          "roe": 12.64,
-          "pe_ratio": 86.20319,
-          "dividend_yield": 0.0,
-          "ytd": 1.36,
-          "volatility": 25.58,
-          "buffett_score": 65.7
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": NaN,
+          "volatility": 2.64,
+          "buffett_score": null
         }
       },
       {
-        "name": "CONOCOPHILLIPS",
-        "ticker": "COP",
-        "rationale": "CONOCOPHILLIPS bénéficie d'un ROE solide et d'un rendement dividende attractif, ce qui en fait un choix stratégique dans le secteur de l'énergie. Son rôle est celui d'un actif core, apportant stabilité et potentiel de revenu. Le secteur de l'énergie est favorisé, ce qui renforce son attrait.",
-        "role": "core",
-        "risk_note": "Risque de volatilité des prix des matières premières dans le secteur énergétique.",
-        "market_context_link": "Secteur favorisé",
-        "weight_pct": 15.0,
+        "name": "Angel Oak Income ETF",
+        "ticker": "CARY",
+        "rationale": "Angel Oak Income ETF investit dans des obligations multisectorielles, offrant une opportunité de revenus diversifiés. Il joue un rôle d'income dans le portefeuille, visant à générer des flux de trésorerie réguliers.",
+        "role": "income",
+        "risk_note": "Performance YTD modeste à 0.36%, ce qui pourrait limiter les rendements.",
+        "market_context_link": "null",
+        "weight_pct": 5.1,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 0.36,
+          "volatility": 3.24,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "WESTERN DIGITAL CORP",
+        "ticker": "WDC",
+        "rationale": "Western Digital présente un ROE de 34.1% et une bonne performance YTD de 20.82%, ce qui en fait un choix solide dans le secteur technologique. Il est positionné comme un actif satellite, diversifiant l'exposition technologique.",
+        "role": "satellite",
+        "risk_note": "Volatilité à 45.91%, ce qui peut entraîner des fluctuations importantes.",
+        "market_context_link": "null",
+        "weight_pct": 4.6,
         "category": "Actions",
-        "sector": "Energie",
+        "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "metrics": {
-          "roe": 14.27,
-          "pe_ratio": 13.868645,
-          "dividend_yield": 3.26,
-          "ytd": 0.75,
-          "volatility": 29.03,
-          "buffett_score": 60.4
+          "roe": 34.1,
+          "pe_ratio": 31.15471,
+          "dividend_yield": 0.14,
+          "ytd": 20.82,
+          "volatility": 45.91,
+          "buffett_score": 93.0
+        }
+      },
+      {
+        "name": "NEWMONT",
+        "ticker": "NEM",
+        "rationale": "Newmont, avec un P/E de 17.78 et un rendement dividende de 0.85%, est un choix attractif dans le secteur des matériaux. Il joue un rôle d'income dans le portefeuille, offrant des rendements stables.",
+        "role": "income",
+        "risk_note": "Volatilité à 37.04%, ce qui pourrait affecter les rendements à court terme.",
+        "market_context_link": "null",
+        "weight_pct": 3.8,
+        "category": "Actions",
+        "sector": "Matériaux",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": 11.23,
+          "pe_ratio": 17.775702,
+          "dividend_yield": 0.85,
+          "ytd": 16.24,
+          "volatility": 37.04,
+          "buffett_score": 98.6
+        }
+      },
+      {
+        "name": "MONOLITHIC POWER SYSTEMS INC",
+        "ticker": "MPWR",
+        "rationale": "Avec un ROE de 56.8% et une performance YTD de 10.48%, Monolithic Power est un acteur clé dans le secteur technologique. Il sert de satellite dans le portefeuille, renforçant l'exposition à ce secteur dynamique.",
+        "role": "satellite",
+        "risk_note": "Volatilité à 53.41%, ce qui pourrait entraîner des fluctuations significatives.",
+        "market_context_link": "null",
+        "weight_pct": 3.8,
+        "category": "Actions",
+        "sector": "Technologie de l'information",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": 56.8,
+          "pe_ratio": 26.525547,
+          "dividend_yield": 0.6,
+          "ytd": 10.48,
+          "volatility": 53.41,
+          "buffett_score": 73.2
+        }
+      },
+      {
+        "name": "MICRON TECHNOLOGY INC",
+        "ticker": "MU",
+        "rationale": "Micron affiche un ROE de 15.76% et une performance YTD de 20.52%, ce qui en fait un choix solide dans le secteur technologique. Il est positionné comme un actif satellite, diversifiant l'exposition technologique.",
+        "role": "satellite",
+        "risk_note": "Volatilité à 51.94%, ce qui peut entraîner des fluctuations importantes.",
+        "market_context_link": "null",
+        "weight_pct": 3.6,
+        "category": "Actions",
+        "sector": "Technologie de l'information",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": 15.76,
+          "pe_ratio": 34.481937,
+          "dividend_yield": 0.12,
+          "ytd": 20.52,
+          "volatility": 51.94,
+          "buffett_score": 65.2
+        }
+      },
+      {
+        "name": "CIENA CORP",
+        "ticker": "CIEN",
+        "rationale": "Ciena a un P/E très élevé à 286.38, ce qui peut indiquer une valorisation excessive malgré un potentiel de croissance. Son rôle est celui d'un satellite, mais il nécessite une surveillance étroite en raison de sa performance YTD négative.",
+        "role": "satellite",
+        "risk_note": "Performance YTD négative à -1.45%, ce qui pourrait affecter la perception des investisseurs.",
+        "market_context_link": "null",
+        "weight_pct": 3.1,
+        "category": "Actions",
+        "sector": "Technologie de l'information",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": 286.37646,
+          "dividend_yield": 0.0,
+          "ytd": -1.45,
+          "volatility": 47.88,
+          "buffett_score": 78.4
+        }
+      },
+      {
+        "name": "XAUT/USD",
+        "ticker": "XAUT/USD",
+        "rationale": "XAUT/USD offre une exposition à l'or numérique, servant de couverture contre l'inflation et l'incertitude économique. Il joue un rôle de hedge dans le portefeuille, protégeant contre la volatilité des marchés.",
+        "role": "hedge",
+        "risk_note": "Volatilité à 21.03%, ce qui peut entraîner des fluctuations significatives.",
+        "market_context_link": "null",
+        "weight_pct": 2.7,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 8.92,
+          "volatility": 21.03,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "COMFORT SYSTEMS USA INC",
+        "ticker": "FIX",
+        "rationale": "Comfort Systems présente un ROE de 30.65% et une performance YTD de 11.16%, ce qui en fait un choix solide dans le secteur industriel. Il est positionné comme un actif satellite, diversifiant l'exposition industrielle.",
+        "role": "satellite",
+        "risk_note": "Volatilité à 48.57%, ce qui pourrait entraîner des fluctuations importantes.",
+        "market_context_link": "secteur favorisé",
+        "weight_pct": 1.9,
+        "category": "Actions",
+        "sector": "Industries",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": 30.65,
+          "pe_ratio": 47.39653,
+          "dividend_yield": 0.17,
+          "ytd": 11.16,
+          "volatility": 48.57,
+          "buffett_score": 76.3
+        }
+      },
+      {
+        "name": "HANWHA AEROSPACE LTD",
+        "ticker": "012450",
+        "rationale": "Avec une performance YTD de 38.37%, Hanwha Aerospace est un choix attrayant dans le secteur industriel. Son rôle est celui d'un satellite, renforçant l'exposition à un secteur en croissance.",
+        "role": "satellite",
+        "risk_note": "Volatilité à 57.36%, ce qui pourrait entraîner des fluctuations importantes.",
+        "market_context_link": "secteur favorisé",
+        "weight_pct": 1.8,
+        "category": "Actions",
+        "sector": "Industries",
+        "country": "Corée",
+        "metrics": {
+          "roe": 22.35,
+          "pe_ratio": 28.39452863573509,
+          "dividend_yield": 0.22,
+          "ytd": 38.37,
+          "volatility": 57.36,
+          "buffett_score": 64.0
+        }
+      },
+      {
+        "name": "KOREA ELECTRIC POWER CORP",
+        "ticker": "015760",
+        "rationale": "Korea Electric Power affiche un P/E attractif de 12.02 et une performance YTD de 40.65%, ce qui en fait un choix solide dans le secteur des services publics. Il joue un rôle d'income dans le portefeuille, offrant des rendements stables.",
+        "role": "income",
+        "risk_note": "ROE relativement bas à 8.76%, ce qui pourrait limiter la croissance future.",
+        "market_context_link": "null",
+        "weight_pct": 1.8,
+        "category": "Actions",
+        "sector": "Services publics",
+        "country": "Corée",
+        "metrics": {
+          "roe": 8.76,
+          "pe_ratio": 12.02426916712631,
+          "dividend_yield": 0.33,
+          "ytd": 40.65,
+          "volatility": 38.14,
+          "buffett_score": 85.6
+        }
+      },
+      {
+        "name": "Avantis International Small Cap Value ETF",
+        "ticker": "AVDV",
+        "rationale": "Cet ETF offre une exposition aux petites et moyennes entreprises à l'international, ce qui peut générer des rendements élevés à long terme. Il sert de core dans le portefeuille, diversifiant les investissements à l'échelle mondiale.",
+        "role": "core",
+        "risk_note": "Performance YTD à 4.39%, ce qui pourrait ne pas répondre aux attentes à court terme.",
+        "market_context_link": "null",
+        "weight_pct": 15.0,
+        "category": "ETF",
+        "sector": "Diversified",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 4.39,
+          "volatility": 15.46,
+          "buffett_score": null
         }
       }
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant les actions et les obligations pour réduire la volatilité. Les investissements dans des secteurs tels que les services publics et la technologie offrent un potentiel de croissance, mais sont également soumis à des risques de marché. La diversification est un atout, mais la concentration sur possibles actifs peut limiter la résilience face aux fluctuations économiques. Les investisseurs doivent être conscients des risques associés aux cycles économiques et aux régulations sectorielles. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant les actions et les obligations pour viser une croissance stable avec un risque contrôlé. Toutefois, il existe des risques liés à la volatilité des marchés et aux fluctuations des taux d'intérêt, qui peuvent affecter les rendements. Les actifs immobiliers et les obligations peuvent également être sensibles aux cycles économiques. Une attention continue aux tendances du marché est essentielle pour maintenir l'équilibre du portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "AMPHENOL CORP CLASS A (APH)": "10.5%",
-      "VERIZON COMMUNICATIONS INC (VZ)": "10.5%",
-      "RIO TINTO PLC (RIO)": "9.2%",
-      "ADOBE INC (ADBE)": "8.6%",
-      "REALTEK SEMICONDUCTOR CORP (2379)": "8.1%",
-      "UNIVERSAL MUSIC GROUP NV (UMG)": "5.3%",
-      "VEDANTA LTD (VEDL)": "3.0%",
-      "HYUNDAI MOBIS LTD (012330)": "1.9%",
-      "RWE AG (RWE)": "10.9%"
+      "MARSH & MCLENNAN INC (MMC)": "15.0%",
+      "UNIBAIL RODAMCO WE STAPLED UNITS (URW)": "13.5%",
+      "KBC GROEP (KBC)": "11.5%",
+      "KIA CORPORATION CORP (000270)": "6.5%",
+      "TJX INC (TJX)": "15.0%"
     },
     "ETF": {},
     "Obligations": {
-      "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": "8.0%",
-      "Neos Enhanced Income Cash Alternative ETF (CSHI)": "8.0%",
-      "Avantis Short-Term Fixed Income ETF (AVSF)": "8.0%",
-      "Angel Oak Income ETF (CARY)": "8.0%"
+      "iShares Agency Bond ETF (AGZ)": "8.0%",
+      "Anfield Universal Fixed Income Fund (AFIF)": "8.0%",
+      "ActivePassive Core Bond ETF (APCB)": "8.0%",
+      "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund (AGGY)": "8.0%",
+      "Avantis Short-Term Fixed Income ETF (AVSF)": "5.0%"
     },
-    "Crypto": {},
+    "Crypto": {
+      "XAUT/USD": "0.5%",
+      "PAXG/USD": "0.5%",
+      "TRX/USD": "0.5%"
+    },
     "_tickers": {
-      "APH": 0.10529999999999999,
-      "VZ": 0.10529999999999999,
-      "RIO": 0.09210000000000002,
-      "ADBE": 0.0858,
-      "2379": 0.08109999999999999,
-      "DCMB": 0.08,
-      "CSHI": 0.08,
-      "AVSF": 0.08,
-      "CARY": 0.08,
-      "UMG": 0.0526,
-      "VEDL": 0.0305,
-      "012330": 0.0189,
-      "RWE": 0.1084
+      "TJX": 0.15,
+      "URW": 0.135,
+      "KBC": 0.115,
+      "AGZ": 0.08,
+      "AFIF": 0.08,
+      "APCB": 0.08,
+      "AGGY": 0.08,
+      "000270": 0.065,
+      "AVSF": 0.05,
+      "XAUT/USD": 0.005,
+      "PAXG/USD": 0.005,
+      "TRX/USD": 0.005,
+      "MMC": 0.15
     },
     "_optimization": {
-      "mode": "fallback_slsqp_failed",
-      "is_heuristic": true,
-      "vol_realized": 12.66,
-      "vol_target": 12.0,
-      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Modéré) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
+      "mode": "slsqp",
+      "is_heuristic": false,
+      "vol_realized": 9.6,
+      "vol_target": 12.0
     },
     "_tickers_pricing": {
-      "APH": 0.10529999999999999,
-      "VZ": 0.10529999999999999,
-      "RIO": 0.09210000000000002,
-      "ADBE": 0.0858,
-      "2379": 0.08109999999999999,
-      "DCMB": 0.08,
-      "CSHI": 0.08,
-      "AVSF": 0.08,
-      "CARY": 0.08,
-      "UMG": 0.0526,
-      "VEDL": 0.0305,
-      "012330": 0.0189,
-      "RWE": 0.1084
+      "TJX": 0.15,
+      "URW": 0.135,
+      "KBC": 0.115,
+      "AGZ": 0.08,
+      "AFIF": 0.08,
+      "APCB": 0.08,
+      "AGGY": 0.08,
+      "000270": 0.065,
+      "AVSF": 0.05,
+      "XAUT/USD": 0.005,
+      "PAXG/USD": 0.005,
+      "TRX/USD": 0.005,
+      "MMC": 0.15
     },
     "_unpriced_assets": [],
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
-      "Actions:AMPHENOL CORP CLASS A (APH)": 10.5,
-      "Actions:VERIZON COMMUNICATIONS INC (VZ)": 10.5,
-      "Actions:RIO TINTO PLC (RIO)": 9.2,
-      "Actions:ADOBE INC (ADBE)": 8.6,
-      "Actions:REALTEK SEMICONDUCTOR CORP (2379)": 8.1,
-      "Obligations:DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": 8.0,
-      "Obligations:Neos Enhanced Income Cash Alternative ETF (CSHI)": 8.0,
-      "Obligations:Avantis Short-Term Fixed Income ETF (AVSF)": 8.0,
-      "Obligations:Angel Oak Income ETF (CARY)": 8.0,
-      "Actions:UNIVERSAL MUSIC GROUP NV (UMG)": 5.3,
-      "Actions:VEDANTA LTD (VEDL)": 3.0,
-      "Actions:HYUNDAI MOBIS LTD (012330)": 1.9,
-      "Actions:RWE AG (RWE)": 10.9
+      "Actions:MARSH & MCLENNAN INC (MMC)": 15.0,
+      "Actions:UNIBAIL RODAMCO WE STAPLED UNITS (URW)": 13.5,
+      "Actions:KBC GROEP (KBC)": 11.5,
+      "Obligations:iShares Agency Bond ETF (AGZ)": 8.0,
+      "Obligations:Anfield Universal Fixed Income Fund (AFIF)": 8.0,
+      "Obligations:ActivePassive Core Bond ETF (APCB)": 8.0,
+      "Obligations:WisdomTree Yield Enhanced U.S. Aggregate Bond Fund (AGGY)": 8.0,
+      "Actions:KIA CORPORATION CORP (000270)": 6.5,
+      "Obligations:Avantis Short-Term Fixed Income ETF (AVSF)": 5.0,
+      "Crypto:XAUT/USD": 0.5,
+      "Crypto:PAXG/USD": 0.5,
+      "Crypto:TRX/USD": 0.5,
+      "Actions:TJX INC (TJX)": 15.0
     },
     "_constraint_report": {
       "hard_constraints": [],
@@ -1257,46 +1191,51 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 12.0,
-            "observed": 12.66,
-            "slack": 2.34,
-            "binding": false,
-            "status": "OK",
+            "observed": 9.6,
+            "slack": 0.6,
+            "binding": true,
+            "status": "BINDING",
             "details": {
               "tolerance": 3.0,
               "range_min": 9.0,
               "range_max": 15.0,
-              "diff_from_target": 0.66
+              "diff_from_target": -2.4
             }
           },
           {
             "name": "bonds_min",
             "constraint_type": "min",
             "cap": 15.0,
-            "observed": 32.0,
-            "slack": 17.0,
+            "observed": 37.0,
+            "slack": 22.0,
             "binding": false,
             "status": "OK",
             "details": {
-              "count": 4,
+              "count": 5,
               "breakdown": [
-                {
-                  "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-                  "name": "DoubleLine ETF Trust DoubleLin",
-                  "weight": 8.0
-                },
-                {
-                  "id": "Neos Enhanced Income Cash Alternative ETF",
-                  "name": "Neos Enhanced Income Cash Alte",
-                  "weight": 8.0
-                },
                 {
                   "id": "Avantis Short-Term Fixed Income ETF",
                   "name": "Avantis Short-Term Fixed Incom",
+                  "weight": 5.0
+                },
+                {
+                  "id": "iShares Agency Bond ETF",
+                  "name": "iShares Agency Bond ETF",
                   "weight": 8.0
                 },
                 {
-                  "id": "Angel Oak Income ETF",
-                  "name": "Angel Oak Income ETF",
+                  "id": "Anfield Universal Fixed Income Fund",
+                  "name": "Anfield Universal Fixed Income",
+                  "weight": 8.0
+                },
+                {
+                  "id": "ActivePassive Core Bond ETF",
+                  "name": "ActivePassive Core Bond ETF",
+                  "weight": 8.0
+                },
+                {
+                  "id": "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund",
+                  "name": "WisdomTree Yield Enhanced U.S.",
                   "weight": 8.0
                 }
               ]
@@ -1306,40 +1245,60 @@
             "name": "crypto_max",
             "constraint_type": "max",
             "cap": 5.0,
-            "observed": 0.0,
-            "slack": 5.0,
+            "observed": 1.5,
+            "slack": 3.5,
             "binding": false,
             "status": "OK",
             "details": {
-              "breakdown": []
+              "breakdown": [
+                {
+                  "id": "XAUT/USD",
+                  "name": "XAUT/USD",
+                  "weight": 0.5
+                },
+                {
+                  "id": "PAXG/USD",
+                  "name": "PAXG/USD",
+                  "weight": 0.5
+                },
+                {
+                  "id": "TRX/USD",
+                  "name": "TRX/USD",
+                  "weight": 0.5
+                }
+              ]
             }
           },
           {
             "name": "max_single_position",
             "constraint_type": "max",
             "cap": 15.0,
-            "observed": 10.84,
-            "slack": 4.16,
-            "binding": false,
-            "status": "OK",
+            "observed": 15.0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
             "details": {
               "largest_position": {
-                "id": "EQ_611",
-                "name": "RWE AG",
-                "weight": 10.84
+                "id": "EQ_115",
+                "name": "MARSH & MCLENNAN INC",
+                "weight": 15.0
               },
               "positions_above_10pct": [
                 {
-                  "id": "EQ_57",
-                  "weight": 10.53
+                  "id": "EQ_629",
+                  "weight": 11.5
                 },
                 {
-                  "id": "EQ_60",
-                  "weight": 10.53
+                  "id": "EQ_676",
+                  "weight": 13.5
                 },
                 {
-                  "id": "EQ_611",
-                  "weight": 10.84
+                  "id": "EQ_115",
+                  "weight": 15.0
+                },
+                {
+                  "id": "EQ_58",
+                  "weight": 15.0
                 }
               ]
             }
@@ -1348,26 +1307,23 @@
             "name": "max_sector",
             "constraint_type": "max",
             "cap": 30.0,
-            "observed": 27.22,
-            "slack": 2.78,
+            "observed": 26.5,
+            "slack": 3.5,
             "binding": false,
             "status": "OK",
             "details": {
-              "most_concentrated": "Technologie de l'information",
+              "most_concentrated": "Finance",
               "counts_in_max_sector": {
-                "Technologie de l'information": 27.22,
-                "La communication": 15.79,
-                "Matériaux": 12.26,
-                "Services publics": 10.84,
-                "Biens de consommation cycliques": 1.89
+                "Finance": 26.5,
+                "Biens de consommation cycliques": 21.5,
+                "Immobilier": 13.5
               },
               "all_sectors": {
-                "Bonds": 32.0,
-                "Technologie de l'information": 27.22,
-                "La communication": 15.79,
-                "Matériaux": 12.26,
-                "Services publics": 10.84,
-                "Biens de consommation cycliques": 1.89
+                "Bonds": 37.0,
+                "Finance": 26.5,
+                "Biens de consommation cycliques": 21.5,
+                "Immobilier": 13.5,
+                "Crypto": 1.5
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
             }
@@ -1376,30 +1332,24 @@
             "name": "max_region",
             "constraint_type": "max",
             "cap": 50.0,
-            "observed": 29.64,
-            "slack": 20.36,
+            "observed": 30.0,
+            "slack": 20.0,
             "binding": false,
             "status": "OK",
             "details": {
               "most_concentrated": "Etats-Unis",
               "counts_in_max_region": {
-                "Etats-Unis": 29.64,
-                "Allemagne": 10.84,
-                "Royaume-Uni": 9.21,
-                "Taïwan": 8.11,
-                "Pays-Bas": 5.26,
-                "Inde": 3.05,
-                "Corée": 1.89
+                "Etats-Unis": 30.0,
+                "France": 13.5,
+                "Belgique": 11.5,
+                "Corée": 6.5
               },
               "all_regions": {
-                "Global": 32.0,
-                "Etats-Unis": 29.64,
-                "Allemagne": 10.84,
-                "Royaume-Uni": 9.21,
-                "Taïwan": 8.11,
-                "Pays-Bas": 5.26,
-                "Inde": 3.05,
-                "Corée": 1.89
+                "Global": 38.5,
+                "Etats-Unis": 30.0,
+                "France": 13.5,
+                "Belgique": 11.5,
+                "Corée": 6.5
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -1408,18 +1358,18 @@
             "name": "min_assets",
             "constraint_type": "min",
             "cap": 10,
-            "observed": 13,
-            "slack": 3,
-            "binding": false,
-            "status": "OK",
+            "observed": 10,
+            "slack": 0,
+            "binding": true,
+            "status": "BINDING",
             "details": {}
           },
           {
             "name": "max_assets",
             "constraint_type": "max",
             "cap": 18,
-            "observed": 13,
-            "slack": 5,
+            "observed": 10,
+            "slack": 8,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -1428,16 +1378,16 @@
             "name": "bucket_core",
             "constraint_type": "range",
             "cap": 55.0,
-            "observed": 46.37,
-            "slack": 8.63,
+            "observed": 30.0,
+            "slack": -5.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 35.0,
               "range_max": 55.0,
-              "slack_from_min": 11.37,
-              "slack_from_max": 8.63,
-              "outside_range": false,
+              "slack_from_min": -5.0,
+              "slack_from_max": 25.0,
+              "outside_range": true,
               "is_indicator": true
             }
           },
@@ -1445,15 +1395,15 @@
             "name": "bucket_satellite",
             "constraint_type": "range",
             "cap": 35.0,
-            "observed": 21.63,
-            "slack": 6.63,
+            "observed": 33.0,
+            "slack": 2.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 15.0,
               "range_max": 35.0,
-              "slack_from_min": 6.63,
-              "slack_from_max": 13.37,
+              "slack_from_min": 18.0,
+              "slack_from_max": 2.0,
               "outside_range": false,
               "is_indicator": true
             }
@@ -1462,15 +1412,15 @@
             "name": "bucket_defensive",
             "constraint_type": "range",
             "cap": 30.0,
-            "observed": 32.0,
-            "slack": -2.0,
+            "observed": 37.0,
+            "slack": -7.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 20.0,
               "range_max": 30.0,
-              "slack_from_min": 12.0,
-              "slack_from_max": -2.0,
+              "slack_from_min": 17.0,
+              "slack_from_max": -7.0,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1511,55 +1461,55 @@
         ],
         "summary": {
           "total": 13,
-          "ok": 13,
-          "binding": 0,
+          "ok": 10,
+          "binding": 3,
           "violated": 0,
           "critical": 0
         },
-        "quality_score": 100,
-        "recommendations": [],
+        "quality_score": 95.4,
+        "recommendations": [
+          "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
+          "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
+        ],
         "exposures": {
           "by_category": {
-            "Obligations": 32.0,
-            "Actions": 68.0
+            "Actions": 61.5,
+            "Obligations": 37.0,
+            "Crypto": 1.5
           },
           "by_sector": {
-            "Technologie de l'information": 27.22,
-            "La communication": 15.79,
-            "Matériaux": 12.26,
-            "Services publics": 10.84,
-            "Biens de consommation cycliques": 1.89
+            "Finance": 26.5,
+            "Biens de consommation cycliques": 21.5,
+            "Immobilier": 13.5
           },
           "by_region": {
-            "Global": 32.0,
-            "Etats-Unis": 29.64,
-            "Allemagne": 10.84,
-            "Royaume-Uni": 9.21,
-            "Taïwan": 8.11,
-            "Pays-Bas": 5.26,
-            "Inde": 3.05,
-            "Corée": 1.89
+            "Global": 38.5,
+            "Etats-Unis": 30.0,
+            "France": 13.5,
+            "Belgique": 11.5,
+            "Corée": 6.5
           },
           "by_risk_bucket": {
-            "bond_like": 32.0,
-            "equity_like": 68.0
+            "equity_like": 61.5,
+            "bond_like": 37.0,
+            "crypto": 1.5
           },
           "by_role": {
-            "core": 46.37,
-            "satellite": 21.63,
-            "defensive": 32.0,
+            "core": 30.0,
+            "satellite": 33.0,
+            "defensive": 37.0,
             "lottery": 0.0,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 860.0,
-            "hhi_interpretation": "well_diversified",
-            "effective_n": 11.63,
+            "hhi": 1088.0,
+            "hhi_interpretation": "diversified",
+            "effective_n": 9.19,
             "n_positions": 13,
-            "top_5_weight": 49.69,
-            "top_10_weight": 89.8,
-            "largest_position": 10.84,
-            "smallest_position": 1.89,
+            "top_5_weight": 63.0,
+            "top_10_weight": 98.5,
+            "largest_position": 15.0,
+            "smallest_position": 0.5,
             "thresholds": {
               "well_diversified": "HHI < 1000",
               "diversified": "HHI 1000-1500",
@@ -1571,75 +1521,53 @@
         },
         "ticker_mapping": [
           {
-            "id": "EQ_611",
-            "ticker": "RWE",
-            "name": "RWE AG",
-            "weight_pct": 10.84,
+            "id": "EQ_115",
+            "ticker": "MMC",
+            "name": "MARSH & MCLENNAN INC",
+            "weight_pct": 15.0,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Services publics",
-            "region": "Allemagne",
-            "exchange": null
-          },
-          {
-            "id": "EQ_57",
-            "ticker": "APH",
-            "name": "AMPHENOL CORP CLASS A",
-            "weight_pct": 10.53,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Technologie de l'information",
+            "sector": "Finance",
             "region": "Etats-Unis",
             "exchange": null
           },
           {
-            "id": "EQ_60",
-            "ticker": "VZ",
-            "name": "VERIZON COMMUNICATIONS INC",
-            "weight_pct": 10.53,
+            "id": "EQ_58",
+            "ticker": "TJX",
+            "name": "TJX INC",
+            "weight_pct": 15.0,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "La communication",
+            "sector": "Biens de consommation cycliques",
             "region": "Etats-Unis",
             "exchange": null
           },
           {
-            "id": "EQ_562",
-            "ticker": "RIO",
-            "name": "RIO TINTO PLC",
-            "weight_pct": 9.21,
+            "id": "EQ_676",
+            "ticker": "URW",
+            "name": "UNIBAIL RODAMCO WE STAPLED UNITS",
+            "weight_pct": 13.5,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Matériaux",
-            "region": "Royaume-Uni",
+            "sector": "Immobilier",
+            "region": "France",
             "exchange": null
           },
           {
-            "id": "EQ_75",
-            "ticker": "ADBE",
-            "name": "ADOBE INC",
-            "weight_pct": 8.58,
+            "id": "EQ_629",
+            "ticker": "KBC",
+            "name": "KBC GROEP",
+            "weight_pct": 11.5,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Technologie de l'information",
-            "region": "Etats-Unis",
+            "sector": "Finance",
+            "region": "Belgique",
             "exchange": null
           },
           {
-            "id": "EQ_877",
-            "ticker": "2379",
-            "name": "REALTEK SEMICONDUCTOR CORP",
-            "weight_pct": 8.11,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Technologie de l'information",
-            "region": "Taïwan",
-            "exchange": null
-          },
-          {
-            "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-            "ticker": "DCMB",
-            "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+            "id": "iShares Agency Bond ETF",
+            "ticker": "AGZ",
+            "name": "iShares Agency Bond ETF",
             "weight_pct": 8.0,
             "category": "Obligations",
             "risk_bucket": "bond_like",
@@ -1648,21 +1576,54 @@
             "exchange": null
           },
           {
-            "id": "Neos Enhanced Income Cash Alternative ETF",
-            "ticker": "CSHI",
-            "name": "Neos Enhanced Income Cash Alternative ETF",
+            "id": "Anfield Universal Fixed Income Fund",
+            "ticker": "AFIF",
+            "name": "Anfield Universal Fixed Income Fund",
             "weight_pct": 8.0,
             "category": "Obligations",
             "risk_bucket": "bond_like",
             "sector": "Bonds",
             "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "ActivePassive Core Bond ETF",
+            "ticker": "APCB",
+            "name": "ActivePassive Core Bond ETF",
+            "weight_pct": 8.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund",
+            "ticker": "AGGY",
+            "name": "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund",
+            "weight_pct": 8.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_823",
+            "ticker": "000270",
+            "name": "KIA CORPORATION CORP",
+            "weight_pct": 6.5,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Biens de consommation cycliques",
+            "region": "Corée",
             "exchange": null
           },
           {
             "id": "Avantis Short-Term Fixed Income ETF",
             "ticker": "AVSF",
             "name": "Avantis Short-Term Fixed Income ETF",
-            "weight_pct": 8.0,
+            "weight_pct": 5.0,
             "category": "Obligations",
             "risk_bucket": "bond_like",
             "sector": "Bonds",
@@ -1670,47 +1631,36 @@
             "exchange": null
           },
           {
-            "id": "Angel Oak Income ETF",
-            "ticker": "CARY",
-            "name": "Angel Oak Income ETF",
-            "weight_pct": 8.0,
-            "category": "Obligations",
-            "risk_bucket": "bond_like",
-            "sector": "Bonds",
+            "id": "XAUT/USD",
+            "ticker": "XAUT/USD",
+            "name": "XAUT/USD",
+            "weight_pct": 0.5,
+            "category": "Crypto",
+            "risk_bucket": "crypto",
+            "sector": "Crypto",
             "region": "Global",
             "exchange": null
           },
           {
-            "id": "EQ_621",
-            "ticker": "UMG",
-            "name": "UNIVERSAL MUSIC GROUP NV",
-            "weight_pct": 5.26,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "La communication",
-            "region": "Pays-Bas",
+            "id": "PAXG/USD",
+            "ticker": "PAXG/USD",
+            "name": "PAXG/USD",
+            "weight_pct": 0.5,
+            "category": "Crypto",
+            "risk_bucket": "crypto",
+            "sector": "Crypto",
+            "region": "Global",
             "exchange": null
           },
           {
-            "id": "EQ_878",
-            "ticker": "VEDL",
-            "name": "VEDANTA LTD",
-            "weight_pct": 3.05,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Matériaux",
-            "region": "Inde",
-            "exchange": null
-          },
-          {
-            "id": "EQ_842",
-            "ticker": "012330",
-            "name": "HYUNDAI MOBIS LTD",
-            "weight_pct": 1.89,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Biens de consommation cycliques",
-            "region": "Corée",
+            "id": "TRX/USD",
+            "ticker": "TRX/USD",
+            "name": "TRX/USD",
+            "weight_pct": 0.5,
+            "category": "Crypto",
+            "risk_bucket": "crypto",
+            "sector": "Crypto",
+            "region": "Global",
             "exchange": null
           }
         ],
@@ -1719,10 +1669,10 @@
           "n_exchanges": 0,
           "exchanges": [],
           "total_weight": 100.0,
-          "missing_isin": 9,
+          "missing_isin": 8,
           "missing_ticker": 0,
           "data_quality": {
-            "isin_coverage": 30.8,
+            "isin_coverage": 38.5,
             "ticker_coverage": 100.0
           },
           "ready_for_execution": true
@@ -1731,46 +1681,43 @@
     },
     "_exposures": {
       "by_category": {
-        "Obligations": 32.0,
-        "Actions": 68.0
+        "Actions": 61.5,
+        "Obligations": 37.0,
+        "Crypto": 1.5
       },
       "by_sector": {
-        "Technologie de l'information": 27.22,
-        "La communication": 15.79,
-        "Matériaux": 12.26,
-        "Services publics": 10.84,
-        "Biens de consommation cycliques": 1.89
+        "Finance": 26.5,
+        "Biens de consommation cycliques": 21.5,
+        "Immobilier": 13.5
       },
       "by_region": {
-        "Global": 32.0,
-        "Etats-Unis": 29.64,
-        "Allemagne": 10.84,
-        "Royaume-Uni": 9.21,
-        "Taïwan": 8.11,
-        "Pays-Bas": 5.26,
-        "Inde": 3.05,
-        "Corée": 1.89
+        "Global": 38.5,
+        "Etats-Unis": 30.0,
+        "France": 13.5,
+        "Belgique": 11.5,
+        "Corée": 6.5
       },
       "by_risk_bucket": {
-        "bond_like": 32.0,
-        "equity_like": 68.0
+        "equity_like": 61.5,
+        "bond_like": 37.0,
+        "crypto": 1.5
       },
       "by_role": {
-        "core": 46.37,
-        "satellite": 21.63,
-        "defensive": 32.0,
+        "core": 30.0,
+        "satellite": 33.0,
+        "defensive": 37.0,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 860.0,
-        "hhi_interpretation": "well_diversified",
-        "effective_n": 11.63,
+        "hhi": 1088.0,
+        "hhi_interpretation": "diversified",
+        "effective_n": 9.19,
         "n_positions": 13,
-        "top_5_weight": 49.69,
-        "top_10_weight": 89.8,
-        "largest_position": 10.84,
-        "smallest_position": 1.89,
+        "top_5_weight": 63.0,
+        "top_10_weight": 98.5,
+        "largest_position": 15.0,
+        "smallest_position": 0.5,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -1785,125 +1732,83 @@
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 9,
+      "missing_isin": 8,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 30.8,
+        "isin_coverage": 38.5,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
     },
-    "_limitations": [
-      "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Modéré sont incompatibles avec l'optimisation Markowitz classique."
-    ],
+    "_limitations": [],
     "_asset_details": [
       {
-        "name": "AMPHENOL CORP CLASS A",
-        "ticker": "APH",
-        "rationale": "Amphenol présente un ROE élevé de 24.77% et un score de qualité Buffett de 76.9, ce qui indique une solide performance financière et une gestion efficace. Son rôle dans le portefeuille est de servir de core, en raison de sa position dans le secteur technologique, qui est en croissance malgré une valorisation élevée.",
+        "name": "TJX INC",
+        "ticker": "TJX",
+        "rationale": "TJX présente un ROE élevé de 57.95% et un score qualité Buffett de 79.3, indiquant une solide rentabilité et une gestion efficace. En tant qu'action dans le secteur des biens de consommation cycliques, elle bénéficie d'un contexte favorable avec une surpondération de ce secteur dans le cadre actuel.",
         "role": "core",
-        "risk_note": "La volatilité élevée de 28.6% peut entraîner des fluctuations significatives.",
-        "market_context_link": "null",
-        "weight_pct": 10.5,
+        "risk_note": "La volatilité de 16.9% pourrait affecter la performance à court terme.",
+        "market_context_link": "Secteur favorisé",
+        "weight_pct": 15.0,
         "category": "Actions",
-        "sector": "Technologie de l'information",
+        "sector": "Biens de consommation cycliques",
         "country": "Etats-Unis",
         "metrics": {
-          "roe": 24.77,
-          "pe_ratio": 51.463333,
-          "dividend_yield": 0.49,
-          "ytd": 9.61,
-          "volatility": 28.6,
-          "buffett_score": 76.9
+          "roe": 57.95,
+          "pe_ratio": 34.741722,
+          "dividend_yield": 1.06,
+          "ytd": 1.33,
+          "volatility": 16.9,
+          "buffett_score": 79.3
         }
       },
       {
-        "name": "VERIZON COMMUNICATIONS INC",
-        "ticker": "VZ",
-        "rationale": "Bien que Verizon ait une performance YTD négative, son faible P/E de 8.30 et son rendement dividende attractif de 7.06% en font une option intéressante pour les investisseurs à la recherche de revenus. Son rôle est principalement income, offrant une stabilité dans un portefeuille diversifié.",
+        "name": "UNIBAIL RODAMCO WE STAPLED UNITS",
+        "ticker": "URW",
+        "rationale": "Avec un score qualité Buffett parfait de 100 et un rendement dividende attractif de 3.85%, URW est une option solide pour les investisseurs recherchant des revenus stables. Bien que sa performance YTD soit négative, la qualité de l'actif et son potentiel de rebond en font un ajout stratégique.",
         "role": "income",
-        "risk_note": "Le secteur des communications est en difficulté, ce qui pourrait affecter la performance future.",
-        "market_context_link": "null",
-        "weight_pct": 10.5,
+        "risk_note": "La volatilité élevée de 24.86% et la performance récente négative nécessitent une attention particulière.",
+        "market_context_link": null,
+        "weight_pct": 13.5,
         "category": "Actions",
-        "sector": "La communication",
-        "country": "Etats-Unis",
+        "sector": "Immobilier",
+        "country": "France",
         "metrics": {
-          "roe": 17.85,
-          "pe_ratio": 8.296375,
-          "dividend_yield": 7.06,
-          "ytd": -4.41,
-          "volatility": 22.04,
-          "buffett_score": 67.5
+          "roe": 33.08,
+          "pe_ratio": 17.01498,
+          "dividend_yield": 3.85,
+          "ytd": -1.79,
+          "volatility": 24.86,
+          "buffett_score": 100.0
         }
       },
       {
-        "name": "RIO TINTO PLC",
-        "ticker": "RIO",
-        "rationale": "Rio Tinto affiche un ROE de 19.97% et un P/E raisonnable de 13.52, ce qui en fait une action attrayante dans le secteur des matériaux. Son rôle dans le portefeuille est de servir de satellite, apportant une exposition à un secteur cyclique qui peut bénéficier de la reprise économique.",
-        "role": "satellite",
-        "risk_note": "Les fluctuations des prix des matières premières peuvent affecter la rentabilité.",
-        "market_context_link": "null",
-        "weight_pct": 9.2,
-        "category": "Actions",
-        "sector": "Matériaux",
-        "country": "Royaume-Uni",
-        "metrics": {
-          "roe": 19.97,
-          "pe_ratio": 13.515991,
-          "dividend_yield": 4.49,
-          "ytd": 5.78,
-          "volatility": 23.2,
-          "buffett_score": 62.1
-        }
-      },
-      {
-        "name": "ADOBE INC",
-        "ticker": "ADBE",
-        "rationale": "Avec un ROE exceptionnel de 39.42% et un score de qualité Buffett de 92.0, Adobe est un leader dans le secteur technologique, malgré une performance YTD négative. Son rôle est core, en raison de sa position dominante sur le marché des logiciels.",
+        "name": "KBC GROEP",
+        "ticker": "KBC",
+        "rationale": "KBC affiche un ROE de 62.62% et un P/E attractif de 12.97, ce qui en fait une action sous-évaluée dans le secteur financier. Son inclusion dans le portefeuille apporte une exposition à un secteur en croissance, renforçant la diversification.",
         "role": "core",
-        "risk_note": "La volatilité élevée de 33.71% peut poser des risques pour les investisseurs à court terme.",
-        "market_context_link": "null",
-        "weight_pct": 8.6,
+        "risk_note": "Les fluctuations du secteur financier peuvent impacter la performance.",
+        "market_context_link": null,
+        "weight_pct": 11.5,
         "category": "Actions",
-        "sector": "Technologie de l'information",
-        "country": "Etats-Unis",
+        "sector": "Finance",
+        "country": "Belgique",
         "metrics": {
-          "roe": 39.42,
-          "pe_ratio": 17.731735,
-          "dividend_yield": 0.01,
-          "ytd": -13.12,
-          "volatility": 33.71,
-          "buffett_score": 92.0
+          "roe": 62.62,
+          "pe_ratio": 12.966666,
+          "dividend_yield": 3.56,
+          "ytd": 2.82,
+          "volatility": 23.13,
+          "buffett_score": 98.0
         }
       },
       {
-        "name": "REALTEK SEMICONDUCTOR CORP",
-        "ticker": "2379",
-        "rationale": "Realtek présente un ROE de 24.7% et un P/E attractif de 17.32, ce qui en fait une option solide dans le secteur technologique. Son rôle est de diversifier le portefeuille tout en capitalisant sur la croissance continue de la technologie.",
-        "role": "diversification",
-        "risk_note": "La volatilité de 32.52% peut entraîner des fluctuations de prix importantes.",
-        "market_context_link": "null",
-        "weight_pct": 8.1,
-        "category": "Actions",
-        "sector": "Technologie de l'information",
-        "country": "Taïwan",
-        "metrics": {
-          "roe": 24.7,
-          "pe_ratio": 17.32257,
-          "dividend_yield": 4.95,
-          "ytd": 5.64,
-          "volatility": 32.52,
-          "buffett_score": 59.5
-        }
-      },
-      {
-        "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-        "ticker": "DCMB",
-        "rationale": "Ce fonds obligataire offre une exposition à l'immobilier commercial avec une volatilité faible de 2.09%, ce qui en fait un choix prudent pour les investisseurs modérés. Son rôle est de hedge, protégeant le portefeuille contre les fluctuations du marché.",
+        "name": "iShares Agency Bond ETF",
+        "ticker": "AGZ",
+        "rationale": "Cet ETF obligataire offre une volatilité faible de 3.46%, ce qui en fait un choix prudent pour équilibrer le risque dans le portefeuille. Il sert de stabilisateur face aux fluctuations des actions.",
         "role": "hedge",
-        "risk_note": "Les risques liés à l'immobilier commercial peuvent affecter la performance.",
-        "market_context_link": "null",
+        "risk_note": "Les taux d'intérêt en hausse peuvent affecter la performance des obligations.",
+        "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -1912,18 +1817,18 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.25,
-          "volatility": 2.09,
+          "ytd": 0.02,
+          "volatility": 3.46,
           "buffett_score": null
         }
       },
       {
-        "name": "Neos Enhanced Income Cash Alternative ETF",
-        "ticker": "CSHI",
-        "rationale": "Ce fonds ultracourt offre une faible volatilité et un rendement modeste, idéal pour les investisseurs cherchant à préserver le capital tout en générant des revenus. Son rôle est income, fournissant une alternative de liquidité.",
-        "role": "income",
-        "risk_note": "Les rendements peuvent être affectés par les taux d'intérêt bas.",
-        "market_context_link": "null",
+        "name": "Anfield Universal Fixed Income Fund",
+        "ticker": "AFIF",
+        "rationale": "AFIF propose un rendement stable avec une volatilité maîtrisée de 4.0%, ce qui le rend idéal pour les investisseurs cherchant à sécuriser leur capital. Il contribue à la diversification du portefeuille.",
+        "role": "hedge",
+        "risk_note": "Les conditions de marché peuvent influencer les rendements obligataires.",
+        "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -1932,19 +1837,79 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": -0.25,
-          "volatility": 2.1,
+          "ytd": 0.53,
+          "volatility": 4.0,
           "buffett_score": null
+        }
+      },
+      {
+        "name": "ActivePassive Core Bond ETF",
+        "ticker": "APCB",
+        "rationale": "APCB offre une exposition diversifiée aux obligations avec une faible volatilité de 5.12%, ce qui aide à stabiliser le portefeuille. C'est un choix judicieux pour un investisseur modéré.",
+        "role": "hedge",
+        "risk_note": "Les variations des taux d'intérêt peuvent affecter la performance.",
+        "market_context_link": null,
+        "weight_pct": 8.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 0.24,
+          "volatility": 5.12,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "WisdomTree Yield Enhanced U.S. Aggregate Bond Fund",
+        "ticker": "AGGY",
+        "rationale": "AGGY combine un rendement modeste avec une volatilité contrôlée de 5.85%, ce qui en fait un bon choix pour générer des revenus tout en maintenant une certaine sécurité. Il complète la stratégie obligataire du portefeuille.",
+        "role": "hedge",
+        "risk_note": "Les fluctuations des taux d'intérêt peuvent impacter les rendements.",
+        "market_context_link": null,
+        "weight_pct": 8.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 0.32,
+          "volatility": 5.85,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "KIA CORPORATION CORP",
+        "ticker": "000270",
+        "rationale": "KIA présente une performance YTD impressionnante de 35.9% et un P/E très attractif de 6.58, ce qui en fait une action à fort potentiel de croissance. Son inclusion dans le portefeuille renforce l'exposition à un secteur cyclique en plein essor.",
+        "role": "satellite",
+        "risk_note": "La volatilité élevée de 34.21% peut entraîner des fluctuations significatives.",
+        "market_context_link": "Secteur favorisé",
+        "weight_pct": 6.5,
+        "category": "Actions",
+        "sector": "Biens de consommation cycliques",
+        "country": "Corée",
+        "metrics": {
+          "roe": 17.51,
+          "pe_ratio": 6.584180291648255,
+          "dividend_yield": 3.69,
+          "ytd": 35.9,
+          "volatility": 34.21,
+          "buffett_score": 91.9
         }
       },
       {
         "name": "Avantis Short-Term Fixed Income ETF",
         "ticker": "AVSF",
-        "rationale": "Ce fonds obligataire à court terme vise à minimiser le risque tout en offrant des rendements stables, ce qui est essentiel pour un investisseur modéré. Son rôle est hedge, équilibrant le portefeuille contre la volatilité du marché.",
+        "rationale": "AVSF offre une faible volatilité de 2.64% et vise à générer des rendements sur des obligations à court terme, ce qui est adapté pour un investisseur modéré. Cela aide à équilibrer le portefeuille face aux actifs plus risqués.",
         "role": "hedge",
-        "risk_note": "Les fluctuations des taux d'intérêt peuvent affecter les rendements.",
-        "market_context_link": "null",
-        "weight_pct": 8.0,
+        "risk_note": "Les rendements peuvent être limités dans un environnement de taux bas.",
+        "market_context_link": null,
+        "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -1958,139 +1923,123 @@
         }
       },
       {
-        "name": "Angel Oak Income ETF",
-        "ticker": "CARY",
-        "rationale": "Avec une performance YTD positive et une volatilité modérée, ce fonds multisectoriel offre une diversification dans le segment obligataire. Son rôle est income, apportant des revenus stables au portefeuille.",
-        "role": "income",
-        "risk_note": "Les risques de crédit dans les obligations peuvent affecter la performance.",
-        "market_context_link": "null",
-        "weight_pct": 8.0,
-        "category": "Obligations",
-        "sector": "Bonds",
+        "name": "XAUT/USD",
+        "ticker": "XAUT/USD",
+        "rationale": "XAUT/USD offre une performance YTD de 8.92%, ce qui en fait un actif intéressant pour diversifier le portefeuille avec une exposition aux crypto-monnaies. Bien qu'il soit un actif spéculatif, il peut servir de couverture contre l'inflation.",
+        "role": "satellite",
+        "risk_note": "La volatilité de 21.03% expose l'investisseur à des fluctuations importantes.",
+        "market_context_link": null,
+        "weight_pct": 0.5,
+        "category": "Crypto",
+        "sector": "Crypto",
         "country": "Global",
         "metrics": {
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.36,
-          "volatility": 3.24,
+          "ytd": 8.92,
+          "volatility": 21.03,
           "buffett_score": null
         }
       },
       {
-        "name": "UNIVERSAL MUSIC GROUP NV",
-        "ticker": "UMG",
-        "rationale": "UMG présente un ROE élevé de 45.99% et un P/E raisonnable, ce qui en fait une option attrayante dans le secteur des communications. Son rôle est satellite, apportant une exposition à un secteur en difficulté mais avec un potentiel de rebond.",
+        "name": "PAXG/USD",
+        "ticker": "PAXG/USD",
+        "rationale": "PAXG/USD a montré une performance YTD de 9.15%, offrant une exposition à l'or sous forme de crypto-monnaie, ce qui peut servir de protection contre l'inflation. Cela diversifie davantage le portefeuille.",
         "role": "satellite",
-        "risk_note": "La performance peut être affectée par les tendances du marché de la musique.",
-        "market_context_link": "null",
-        "weight_pct": 5.3,
-        "category": "Actions",
-        "sector": "La communication",
-        "country": "Pays-Bas",
+        "risk_note": "La volatilité de 22.24% peut entraîner des variations de valeur significatives.",
+        "market_context_link": null,
+        "weight_pct": 0.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
         "metrics": {
-          "roe": 45.99,
-          "pe_ratio": 14.87234,
-          "dividend_yield": 2.48,
-          "ytd": -4.37,
-          "volatility": 28.92,
-          "buffett_score": 81.2
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 9.15,
+          "volatility": 22.24,
+          "buffett_score": null
         }
       },
       {
-        "name": "VEDANTA LTD",
-        "ticker": "VEDL",
-        "rationale": "Vedanta affiche un ROE de 38.2% et une performance YTD positive, ce qui en fait une option solide dans le secteur des matériaux. Son rôle est satellite, offrant une exposition à des marchés émergents avec un potentiel de croissance.",
+        "name": "TRX/USD",
+        "ticker": "TRX/USD",
+        "rationale": "TRX/USD a enregistré une performance YTD de 5.12%, ajoutant une dimension de croissance potentielle au portefeuille avec une exposition à la technologie blockchain. Cela peut offrir des opportunités de rendement à long terme.",
         "role": "satellite",
-        "risk_note": "Les risques géopolitiques en Inde peuvent affecter la performance.",
-        "market_context_link": "null",
-        "weight_pct": 3.0,
-        "category": "Actions",
-        "sector": "Matériaux",
-        "country": "Inde",
+        "risk_note": "La volatilité de 27.2% peut entraîner des risques élevés.",
+        "market_context_link": null,
+        "weight_pct": 0.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
         "metrics": {
-          "roe": 38.2,
-          "pe_ratio": 22.16092,
-          "dividend_yield": 5.78,
-          "ytd": 11.97,
-          "volatility": 32.32,
-          "buffett_score": 69.8
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 5.12,
+          "volatility": 27.2,
+          "buffett_score": null
         }
       },
       {
-        "name": "HYUNDAI MOBIS LTD",
-        "ticker": "012330",
-        "rationale": "Hyundai Mobis a une performance YTD impressionnante de 23.98% et un faible P/E, ce qui en fait une option attrayante dans le secteur des biens de consommation. Son rôle est satellite, apportant une exposition à un secteur cyclique en croissance.",
-        "role": "satellite",
-        "risk_note": "La volatilité élevée peut entraîner des fluctuations de prix importantes.",
-        "market_context_link": "south-korea",
-        "weight_pct": 1.9,
-        "category": "Actions",
-        "sector": "Biens de consommation cycliques",
-        "country": "Corée",
-        "metrics": {
-          "roe": 8.8,
-          "pe_ratio": 9.969069182669841,
-          "dividend_yield": 1.42,
-          "ytd": 23.98,
-          "volatility": 32.43,
-          "buffett_score": 85.1
-        }
-      },
-      {
-        "name": "RWE AG",
-        "ticker": "RWE",
-        "rationale": "RWE présente un ROE de 15.73% et une performance YTD positive, ce qui en fait une option solide dans le secteur des services publics. Son rôle est core, offrant une stabilité dans un portefeuille diversifié.",
+        "name": "MARSH & MCLENNAN INC",
+        "ticker": "MMC",
+        "rationale": "MMC présente un ROE de 30.42% et un score qualité Buffett de 93.2, ce qui indique une gestion solide et une rentabilité. En tant qu'action dans le secteur financier, elle contribue à diversifier le portefeuille tout en offrant un potentiel de croissance.",
         "role": "core",
-        "risk_note": "Les fluctuations des prix de l'énergie peuvent affecter la rentabilité.",
-        "market_context_link": "null",
-        "weight_pct": 10.8,
+        "risk_note": "La volatilité de 17.28% peut affecter la performance à court terme.",
+        "market_context_link": null,
+        "weight_pct": 15.0,
         "category": "Actions",
-        "sector": "Services publics",
-        "country": "Allemagne",
+        "sector": "Finance",
+        "country": "Etats-Unis",
         "metrics": {
-          "roe": 15.73,
-          "pe_ratio": 17.337837,
-          "dividend_yield": 1.94,
-          "ytd": 10.08,
-          "volatility": 22.77,
-          "buffett_score": 64.0
+          "roe": 30.42,
+          "pe_ratio": 21.932774,
+          "dividend_yield": 1.88,
+          "ytd": -0.04,
+          "volatility": 17.28,
+          "buffett_score": 93.2
         }
       }
     ]
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie stable, axée sur des actifs à faible volatilité, principalement des obligations et quelques actions. L'accent mis sur les obligations vise à réduire les fluctuations, mais peut également limiter le potentiel de rendement. Les investissements dans des secteurs comme la santé et les matériaux offrent une possiblee stabilité, mais sont toujours soumis à des risques de marché. Les investisseurs doivent être conscients des risques associés aux fluctuations des taux d'intérêt et aux conditions économiques. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, avec une forte concentration sur les obligations et des actions de consommation de base pour réduire la volatilité. Bien que ce portefeuille vise à offrir une croissance modérée, il existe des risques associés aux fluctuations des taux d'intérêt et aux performances des marchés immobiliers. Les actifs obligataires peuvent également être sensibles aux changements économiques. Une surveillance continue des conditions de marché est cruciale pour maintenir l'équilibre et la performance du portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "RELIANCE STEEL & ALUMINUM (RS)": "11.4%",
-      "FOX CORP CLASS A (FOXA)": "11.4%",
-      "NOVARTIS AG (NOVN)": "6.7%",
-      "ESSEX PROPERTY TRUST REIT INC (ESS)": "2.1%"
+      "COLGATE-PALMOLIVE (CL)": "10.3%",
+      "COCA-COLA (KO)": "10.3%",
+      "VINCI SA (DG)": "8.2%",
+      "ALLIANZ (ALV)": "5.1%",
+      "MARSH & MCLENNAN INC (MMC)": "4.5%",
+      "BUREAU VERITAS SA (BVI)": "2.0%"
     },
     "ETF": {},
     "Obligations": {
-      "Avantis Short-Term Fixed Income ETF (AVSF)": "15.0%",
-      "Angel Oak Income ETF (CARY)": "15.0%",
-      "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": "15.0%",
-      "iShares Agency Bond ETF (AGZ)": "8.3%",
-      "Neos Enhanced Income Cash Alternative ETF (CSHI)": "15.1%"
+      "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": "13.8%",
+      "Angel Oak Income ETF (CARY)": "12.3%",
+      "Neos Enhanced Income Cash Alternative ETF (CSHI)": "12.0%",
+      "iShares Agency Bond ETF (AGZ)": "7.6%",
+      "Avantis Short-Term Fixed Income ETF (AVSF)": "13.9%"
     },
     "Crypto": {},
     "_tickers": {
-      "CSHI": 0.15,
-      "AVSF": 0.15,
-      "CARY": 0.15,
-      "RS": 0.1143,
-      "FOXA": 0.1143,
-      "AGZ": 0.08289999999999999,
-      "NOVN": 0.06709999999999999,
-      "ESS": 0.021400000000000002,
-      "DCMB": 0.15
+      "DCMB": 0.1375,
+      "CARY": 0.12279999999999999,
+      "CSHI": 0.1197,
+      "CL": 0.1026,
+      "KO": 0.1026,
+      "DG": 0.0821,
+      "AGZ": 0.0764,
+      "ALV": 0.0513,
+      "MMC": 0.044800000000000006,
+      "BVI": 0.020499999999999997,
+      "AVSF": 0.13970000000000002
     },
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 5.86,
+      "vol_realized": 4.95,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -2120,28 +2069,32 @@
       "why_not_slsqp_details": "Le profil Stable requiert vol_target=6% ± 3% et >35% obligations. Ces contraintes sont mathématiquement incompatibles avec l'optimisation Markowitz mean-variance. L'univers d'actifs disponibles ne permet pas d'atteindre une volatilité si basse avec diversification suffisante. Fallback vers allocation heuristique (règles prédéfinies)."
     },
     "_tickers_pricing": {
-      "CSHI": 0.15,
-      "AVSF": 0.15,
-      "CARY": 0.15,
-      "RS": 0.1143,
-      "FOXA": 0.1143,
-      "AGZ": 0.08289999999999999,
-      "NOVN": 0.06709999999999999,
-      "ESS": 0.021400000000000002,
-      "DCMB": 0.15
+      "DCMB": 0.1375,
+      "CARY": 0.12279999999999999,
+      "CSHI": 0.1197,
+      "CL": 0.1026,
+      "KO": 0.1026,
+      "DG": 0.0821,
+      "AGZ": 0.0764,
+      "ALV": 0.0513,
+      "MMC": 0.044800000000000006,
+      "BVI": 0.020499999999999997,
+      "AVSF": 0.13970000000000002
     },
     "_unpriced_assets": [],
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
-      "Obligations:Avantis Short-Term Fixed Income ETF (AVSF)": 15.0,
-      "Obligations:Angel Oak Income ETF (CARY)": 15.0,
-      "Obligations:DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": 15.0,
-      "Actions:RELIANCE STEEL & ALUMINUM (RS)": 11.4,
-      "Actions:FOX CORP CLASS A (FOXA)": 11.4,
-      "Obligations:iShares Agency Bond ETF (AGZ)": 8.3,
-      "Actions:NOVARTIS AG (NOVN)": 6.7,
-      "Actions:ESSEX PROPERTY TRUST REIT INC (ESS)": 2.1,
-      "Obligations:Neos Enhanced Income Cash Alternative ETF (CSHI)": 15.1
+      "Obligations:DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF (DCMB)": 13.8,
+      "Obligations:Angel Oak Income ETF (CARY)": 12.3,
+      "Obligations:Neos Enhanced Income Cash Alternative ETF (CSHI)": 12.0,
+      "Actions:COLGATE-PALMOLIVE (CL)": 10.3,
+      "Actions:COCA-COLA (KO)": 10.3,
+      "Actions:VINCI SA (DG)": 8.2,
+      "Obligations:iShares Agency Bond ETF (AGZ)": 7.6,
+      "Actions:ALLIANZ (ALV)": 5.1,
+      "Actions:MARSH & MCLENNAN INC (MMC)": 4.5,
+      "Actions:BUREAU VERITAS SA (BVI)": 2.0,
+      "Obligations:Avantis Short-Term Fixed Income ETF (AVSF)": 13.9
     },
     "_constraint_report": {
       "hard_constraints": [],
@@ -2160,23 +2113,23 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 6.0,
-            "observed": 5.86,
-            "slack": 2.86,
+            "observed": 4.95,
+            "slack": 1.95,
             "binding": false,
             "status": "OK",
             "details": {
               "tolerance": 3.0,
               "range_min": 3.0,
               "range_max": 9.0,
-              "diff_from_target": -0.14
+              "diff_from_target": -1.05
             }
           },
           {
             "name": "bonds_min",
             "constraint_type": "min",
             "cap": 35.0,
-            "observed": 68.29,
-            "slack": 33.29,
+            "observed": 59.61,
+            "slack": 24.61,
             "binding": false,
             "status": "OK",
             "details": {
@@ -2185,27 +2138,27 @@
                 {
                   "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
                   "name": "DoubleLine ETF Trust DoubleLin",
-                  "weight": 15.0
+                  "weight": 13.75
                 },
                 {
                   "id": "Neos Enhanced Income Cash Alternative ETF",
                   "name": "Neos Enhanced Income Cash Alte",
-                  "weight": 15.0
+                  "weight": 11.97
                 },
                 {
                   "id": "Avantis Short-Term Fixed Income ETF",
                   "name": "Avantis Short-Term Fixed Incom",
-                  "weight": 15.0
+                  "weight": 13.97
                 },
                 {
                   "id": "Angel Oak Income ETF",
                   "name": "Angel Oak Income ETF",
-                  "weight": 15.0
+                  "weight": 12.28
                 },
                 {
                   "id": "iShares Agency Bond ETF",
                   "name": "iShares Agency Bond ETF",
-                  "weight": 8.29
+                  "weight": 7.64
                 }
               ]
             }
@@ -2214,40 +2167,40 @@
             "name": "max_single_position",
             "constraint_type": "max",
             "cap": 15.0,
-            "observed": 15.0,
-            "slack": 0.0,
-            "binding": true,
-            "status": "BINDING",
+            "observed": 13.97,
+            "slack": 1.03,
+            "binding": false,
+            "status": "OK",
             "details": {
               "largest_position": {
-                "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-                "name": "DoubleLine ETF Trust DoubleLine Commerci",
-                "weight": 15.0
+                "id": "Avantis Short-Term Fixed Income ETF",
+                "name": "Avantis Short-Term Fixed Income ETF",
+                "weight": 13.97
               },
               "positions_above_10pct": [
                 {
                   "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-                  "weight": 15.0
+                  "weight": 13.75
                 },
                 {
                   "id": "Neos Enhanced Income Cash Alternative ETF",
-                  "weight": 15.0
+                  "weight": 11.97
                 },
                 {
                   "id": "Avantis Short-Term Fixed Income ETF",
-                  "weight": 15.0
+                  "weight": 13.97
                 },
                 {
                   "id": "Angel Oak Income ETF",
-                  "weight": 15.0
+                  "weight": 12.28
                 },
                 {
-                  "id": "EQ_449",
-                  "weight": 11.43
+                  "id": "EQ_164",
+                  "weight": 10.26
                 },
                 {
-                  "id": "EQ_462",
-                  "weight": 11.43
+                  "id": "EQ_28",
+                  "weight": 10.26
                 }
               ]
             }
@@ -2256,24 +2209,22 @@
             "name": "max_sector",
             "constraint_type": "max",
             "cap": 30.0,
-            "observed": 11.43,
-            "slack": 18.57,
+            "observed": 20.52,
+            "slack": 9.48,
             "binding": false,
             "status": "OK",
             "details": {
-              "most_concentrated": "Matériaux",
+              "most_concentrated": "Biens de consommation de base",
               "counts_in_max_sector": {
-                "Matériaux": 11.43,
-                "La communication": 11.43,
-                "Santé": 6.71,
-                "Immobilier": 2.14
+                "Biens de consommation de base": 20.52,
+                "Industries": 10.26,
+                "Finance": 9.61
               },
               "all_sectors": {
-                "Bonds": 68.29,
-                "Matériaux": 11.43,
-                "La communication": 11.43,
-                "Santé": 6.71,
-                "Immobilier": 2.14
+                "Bonds": 59.61,
+                "Biens de consommation de base": 20.52,
+                "Industries": 10.26,
+                "Finance": 9.61
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
             }
@@ -2290,12 +2241,14 @@
               "most_concentrated": "Etats-Unis",
               "counts_in_max_region": {
                 "Etats-Unis": 25.0,
-                "Suisse": 6.71
+                "France": 10.26,
+                "Allemagne": 5.13
               },
               "all_regions": {
-                "Global": 68.29,
+                "Global": 59.61,
                 "Etats-Unis": 25.0,
-                "Suisse": 6.71
+                "France": 10.26,
+                "Allemagne": 5.13
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -2304,18 +2257,18 @@
             "name": "min_assets",
             "constraint_type": "min",
             "cap": 10,
-            "observed": 9,
-            "slack": -1,
+            "observed": 11,
+            "slack": 1,
             "binding": false,
-            "status": "VIOLATED",
+            "status": "OK",
             "details": {}
           },
           {
             "name": "max_assets",
             "constraint_type": "max",
             "cap": 18,
-            "observed": 9,
-            "slack": 9,
+            "observed": 11,
+            "slack": 7,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -2324,15 +2277,15 @@
             "name": "bucket_core",
             "constraint_type": "range",
             "cap": 40.0,
-            "observed": 31.71,
-            "slack": 1.71,
-            "binding": false,
-            "status": "OK",
+            "observed": 30.13,
+            "slack": 0.13,
+            "binding": true,
+            "status": "BINDING",
             "details": {
               "range_min": 30.0,
               "range_max": 40.0,
-              "slack_from_min": 1.71,
-              "slack_from_max": 8.29,
+              "slack_from_min": 0.13,
+              "slack_from_max": 9.87,
               "outside_range": false,
               "is_indicator": true
             }
@@ -2341,16 +2294,16 @@
             "name": "bucket_satellite",
             "constraint_type": "range",
             "cap": 15.0,
-            "observed": 0,
-            "slack": -5.0,
+            "observed": 10.26,
+            "slack": 4.74,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 5.0,
               "range_max": 15.0,
-              "slack_from_min": -5.0,
-              "slack_from_max": 15.0,
-              "outside_range": true,
+              "slack_from_min": 5.26,
+              "slack_from_max": 4.74,
+              "outside_range": false,
               "is_indicator": true
             }
           },
@@ -2358,16 +2311,16 @@
             "name": "bucket_defensive",
             "constraint_type": "range",
             "cap": 60.0,
-            "observed": 68.29,
-            "slack": -8.29,
-            "binding": false,
-            "status": "OK",
+            "observed": 59.61,
+            "slack": 0.39,
+            "binding": true,
+            "status": "BINDING",
             "details": {
               "range_min": 45.0,
               "range_max": 60.0,
-              "slack_from_min": 23.29,
-              "slack_from_max": -8.29,
-              "outside_range": true,
+              "slack_from_min": 14.61,
+              "slack_from_max": 0.39,
+              "outside_range": false,
               "is_indicator": true
             }
           },
@@ -2407,52 +2360,49 @@
         ],
         "summary": {
           "total": 12,
-          "ok": 10,
-          "binding": 1,
-          "violated": 1,
+          "ok": 12,
+          "binding": 0,
+          "violated": 0,
           "critical": 0
         },
-        "quality_score": 90.0,
-        "recommendations": [
-          "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
-          "🟠 VIOLATED: min_assets exceeded by 1.0% — reduce exposure"
-        ],
+        "quality_score": 100.0,
+        "recommendations": [],
         "exposures": {
           "by_category": {
-            "Obligations": 68.29,
-            "Actions": 31.71
+            "Obligations": 59.61,
+            "Actions": 40.39
           },
           "by_sector": {
-            "Matériaux": 11.43,
-            "La communication": 11.43,
-            "Santé": 6.71,
-            "Immobilier": 2.14
+            "Biens de consommation de base": 20.52,
+            "Industries": 10.26,
+            "Finance": 9.61
           },
           "by_region": {
-            "Global": 68.29,
+            "Global": 59.61,
             "Etats-Unis": 25.0,
-            "Suisse": 6.71
+            "France": 10.26,
+            "Allemagne": 5.13
           },
           "by_risk_bucket": {
-            "bond_like": 68.29,
-            "equity_like": 31.71
+            "bond_like": 59.61,
+            "equity_like": 40.39
           },
           "by_role": {
-            "core": 31.71,
-            "satellite": 0.0,
-            "defensive": 68.29,
+            "core": 30.13,
+            "satellite": 10.26,
+            "defensive": 59.61,
             "lottery": 0.0,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 1280.0,
+            "hhi": 1065.0,
             "hhi_interpretation": "diversified",
-            "effective_n": 7.81,
-            "n_positions": 9,
-            "top_5_weight": 71.43,
-            "top_10_weight": 100.0,
-            "largest_position": 15.0,
-            "smallest_position": 2.14,
+            "effective_n": 9.39,
+            "n_positions": 11,
+            "top_5_weight": 62.23,
+            "top_10_weight": 97.95,
+            "largest_position": 13.97,
+            "smallest_position": 2.05,
             "thresholds": {
               "well_diversified": "HHI < 1000",
               "diversified": "HHI 1000-1500",
@@ -2464,32 +2414,21 @@
         },
         "ticker_mapping": [
           {
-            "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-            "ticker": "DCMB",
-            "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-            "weight_pct": 15.0,
-            "category": "Obligations",
-            "risk_bucket": "bond_like",
-            "sector": "Bonds",
-            "region": "Global",
-            "exchange": null
-          },
-          {
-            "id": "Neos Enhanced Income Cash Alternative ETF",
-            "ticker": "CSHI",
-            "name": "Neos Enhanced Income Cash Alternative ETF",
-            "weight_pct": 15.0,
-            "category": "Obligations",
-            "risk_bucket": "bond_like",
-            "sector": "Bonds",
-            "region": "Global",
-            "exchange": null
-          },
-          {
             "id": "Avantis Short-Term Fixed Income ETF",
             "ticker": "AVSF",
             "name": "Avantis Short-Term Fixed Income ETF",
-            "weight_pct": 15.0,
+            "weight_pct": 13.97,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+            "ticker": "DCMB",
+            "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+            "weight_pct": 13.75,
             "category": "Obligations",
             "risk_bucket": "bond_like",
             "sector": "Bonds",
@@ -2500,7 +2439,7 @@
             "id": "Angel Oak Income ETF",
             "ticker": "CARY",
             "name": "Angel Oak Income ETF",
-            "weight_pct": 15.0,
+            "weight_pct": 12.28,
             "category": "Obligations",
             "risk_bucket": "bond_like",
             "sector": "Bonds",
@@ -2508,32 +2447,54 @@
             "exchange": null
           },
           {
-            "id": "EQ_449",
-            "ticker": "RS",
-            "name": "RELIANCE STEEL & ALUMINUM",
-            "weight_pct": 11.43,
+            "id": "Neos Enhanced Income Cash Alternative ETF",
+            "ticker": "CSHI",
+            "name": "Neos Enhanced Income Cash Alternative ETF",
+            "weight_pct": 11.97,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_164",
+            "ticker": "CL",
+            "name": "COLGATE-PALMOLIVE",
+            "weight_pct": 10.26,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Matériaux",
+            "sector": "Biens de consommation de base",
             "region": "Etats-Unis",
             "exchange": null
           },
           {
-            "id": "EQ_462",
-            "ticker": "FOXA",
-            "name": "FOX CORP CLASS A",
-            "weight_pct": 11.43,
+            "id": "EQ_28",
+            "ticker": "KO",
+            "name": "COCA-COLA",
+            "weight_pct": 10.26,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "La communication",
+            "sector": "Biens de consommation de base",
             "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_570",
+            "ticker": "DG",
+            "name": "VINCI SA",
+            "weight_pct": 8.21,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Industries",
+            "region": "France",
             "exchange": null
           },
           {
             "id": "iShares Agency Bond ETF",
             "ticker": "AGZ",
             "name": "iShares Agency Bond ETF",
-            "weight_pct": 8.29,
+            "weight_pct": 7.64,
             "category": "Obligations",
             "risk_bucket": "bond_like",
             "sector": "Bonds",
@@ -2541,37 +2502,48 @@
             "exchange": null
           },
           {
-            "id": "EQ_532",
-            "ticker": "NOVN",
-            "name": "NOVARTIS AG",
-            "weight_pct": 6.71,
+            "id": "EQ_537",
+            "ticker": "ALV",
+            "name": "ALLIANZ",
+            "weight_pct": 5.13,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Santé",
-            "region": "Suisse",
+            "sector": "Finance",
+            "region": "Allemagne",
             "exchange": null
           },
           {
-            "id": "EQ_424",
-            "ticker": "ESS",
-            "name": "ESSEX PROPERTY TRUST REIT INC",
-            "weight_pct": 2.14,
+            "id": "EQ_115",
+            "ticker": "MMC",
+            "name": "MARSH & MCLENNAN INC",
+            "weight_pct": 4.48,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Immobilier",
+            "sector": "Finance",
             "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_723",
+            "ticker": "BVI",
+            "name": "BUREAU VERITAS SA",
+            "weight_pct": 2.05,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Industries",
+            "region": "France",
             "exchange": null
           }
         ],
         "execution_summary": {
-          "n_positions": 9,
+          "n_positions": 11,
           "n_exchanges": 0,
           "exchanges": [],
           "total_weight": 100.0,
-          "missing_isin": 4,
+          "missing_isin": 6,
           "missing_ticker": 0,
           "data_quality": {
-            "isin_coverage": 55.6,
+            "isin_coverage": 45.5,
             "ticker_coverage": 100.0
           },
           "ready_for_execution": true
@@ -2580,40 +2552,40 @@
     },
     "_exposures": {
       "by_category": {
-        "Obligations": 68.29,
-        "Actions": 31.71
+        "Obligations": 59.61,
+        "Actions": 40.39
       },
       "by_sector": {
-        "Matériaux": 11.43,
-        "La communication": 11.43,
-        "Santé": 6.71,
-        "Immobilier": 2.14
+        "Biens de consommation de base": 20.52,
+        "Industries": 10.26,
+        "Finance": 9.61
       },
       "by_region": {
-        "Global": 68.29,
+        "Global": 59.61,
         "Etats-Unis": 25.0,
-        "Suisse": 6.71
+        "France": 10.26,
+        "Allemagne": 5.13
       },
       "by_risk_bucket": {
-        "bond_like": 68.29,
-        "equity_like": 31.71
+        "bond_like": 59.61,
+        "equity_like": 40.39
       },
       "by_role": {
-        "core": 31.71,
-        "satellite": 0.0,
-        "defensive": 68.29,
+        "core": 30.13,
+        "satellite": 10.26,
+        "defensive": 59.61,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1280.0,
+        "hhi": 1065.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 7.81,
-        "n_positions": 9,
-        "top_5_weight": 71.43,
-        "top_10_weight": 100.0,
-        "largest_position": 15.0,
-        "smallest_position": 2.14,
+        "effective_n": 9.39,
+        "n_positions": 11,
+        "top_5_weight": 62.23,
+        "top_10_weight": 97.95,
+        "largest_position": 13.97,
+        "smallest_position": 2.05,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -2624,14 +2596,14 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 9,
+      "n_positions": 11,
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 4,
+      "missing_isin": 6,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 55.6,
+        "isin_coverage": 45.5,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
@@ -2641,13 +2613,13 @@
     ],
     "_asset_details": [
       {
-        "name": "Neos Enhanced Income Cash Alternative ETF",
-        "ticker": "CSHI",
-        "rationale": "Ce fonds ultrashort bond offre une faible volatilité et un revenu régulier, ce qui est essentiel pour un investisseur stable. Son rendement légèrement négatif YTD est compensé par sa nature défensive, idéale pour la préservation du capital.",
+        "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
+        "ticker": "DCMB",
+        "rationale": "Ce fonds offre une exposition aux obligations à court terme, ce qui est idéal pour un investisseur cherchant à préserver son capital tout en générant des revenus réguliers. Sa faible volatilité de 2.09% en fait un choix sûr dans un environnement de marché favorable.",
         "role": "income",
-        "risk_note": "Risque de taux d'intérêt pouvant affecter la performance des obligations à court terme.",
+        "risk_note": "Sensibilité aux variations des taux d'intérêt.",
         "market_context_link": null,
-        "weight_pct": 15.0,
+        "weight_pct": 13.8,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -2655,39 +2627,19 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": -0.25,
-          "volatility": 2.1,
-          "buffett_score": null
-        }
-      },
-      {
-        "name": "Avantis Short-Term Fixed Income ETF",
-        "ticker": "AVSF",
-        "rationale": "Ce fonds de revenu fixe à court terme est conçu pour offrir une stabilité et des rendements réguliers, avec une volatilité modérée. Son absence de performance YTD peut être due à des conditions de marché volatiles, mais il reste un choix solide pour la préservation du capital.",
-        "role": "income",
-        "risk_note": "Risque de liquidité si les conditions de marché se détériorent.",
-        "market_context_link": null,
-        "weight_pct": 15.0,
-        "category": "Obligations",
-        "sector": "Bonds",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": NaN,
-          "volatility": 2.64,
+          "ytd": 0.25,
+          "volatility": 2.09,
           "buffett_score": null
         }
       },
       {
         "name": "Angel Oak Income ETF",
         "ticker": "CARY",
-        "rationale": "Avec une performance YTD positive et une diversification multisectorielle, ce fonds offre un bon potentiel de revenus tout en maintenant une volatilité raisonnable. Il est adapté à un investisseur cherchant à équilibrer risque et rendement.",
+        "rationale": "Ce fonds multisectoriel permet d'accéder à une diversité d'obligations, offrant ainsi un potentiel de rendement tout en maintenant une volatilité relativement faible. Sa performance YTD de 0.36% est satisfaisante dans le contexte actuel.",
         "role": "income",
-        "risk_note": "Risque de crédit lié aux obligations sous-jacentes.",
+        "risk_note": "Risque de crédit lié aux émetteurs des obligations.",
         "market_context_link": null,
-        "weight_pct": 15.0,
+        "weight_pct": 12.3,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -2701,53 +2653,93 @@
         }
       },
       {
-        "name": "RELIANCE STEEL & ALUMINUM",
-        "ticker": "RS",
-        "rationale": "Cette entreprise présente un ROE solide et une performance YTD positive, ce qui indique une bonne gestion et une croissance potentielle. Elle est bien positionnée dans le secteur des matériaux, qui est favorisé dans le contexte actuel.",
-        "role": "core",
-        "risk_note": "Risque de volatilité élevé en raison des fluctuations des prix des matières premières.",
-        "market_context_link": "Secteur favorisé: industrials",
-        "weight_pct": 11.4,
-        "category": "Actions",
-        "sector": "Matériaux",
-        "country": "Etats-Unis",
+        "name": "Neos Enhanced Income Cash Alternative ETF",
+        "ticker": "CSHI",
+        "rationale": "Ce fonds ultracourt terme vise à offrir des rendements supérieurs à ceux des liquidités tout en maintenant une faible volatilité. Bien que sa performance YTD soit légèrement négative, il reste un choix prudent pour la préservation du capital.",
+        "role": "income",
+        "risk_note": "Risque de liquidité dans des conditions de marché stressées.",
+        "market_context_link": null,
+        "weight_pct": 12.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
         "metrics": {
-          "roe": 12.14,
-          "pe_ratio": 23.58297,
-          "dividend_yield": 1.49,
-          "ytd": 8.82,
-          "volatility": 26.42,
-          "buffett_score": 83.5
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": -0.25,
+          "volatility": 2.1,
+          "buffett_score": null
         }
       },
       {
-        "name": "FOX CORP CLASS A",
-        "ticker": "FOXA",
-        "rationale": "Bien que la performance YTD soit négative, le ROE est attractif, ce qui pourrait indiquer un potentiel de reprise. Cependant, le secteur des services de communication est en difficulté, ce qui représente un risque pour cet actif.",
-        "role": "satellite",
-        "risk_note": "Risque lié à la performance du secteur de la communication, en difficulté actuellement.",
-        "market_context_link": "Secteur évité: communication-services",
-        "weight_pct": 11.4,
+        "name": "COLGATE-PALMOLIVE",
+        "ticker": "CL",
+        "rationale": "Avec un ROE exceptionnel de 560.48% et un rendement dividende de 2.44%, Colgate-Palmolive est un leader dans le secteur des biens de consommation de base, offrant stabilité et revenus. Sa performance YTD de 8.5% est également un bon signe de momentum.",
+        "role": "core",
+        "risk_note": "Risque de dépendance à la consommation des ménages.",
+        "market_context_link": null,
+        "weight_pct": 10.3,
         "category": "Actions",
-        "sector": "La communication",
+        "sector": "Biens de consommation de base",
         "country": "Etats-Unis",
         "metrics": {
-          "roe": 18.56,
-          "pe_ratio": 16.177528,
-          "dividend_yield": 0.76,
-          "ytd": -2.22,
-          "volatility": 24.71,
-          "buffett_score": 64.5
+          "roe": 560.48,
+          "pe_ratio": 23.67507,
+          "dividend_yield": 2.44,
+          "ytd": 8.5,
+          "volatility": 17.87,
+          "buffett_score": 78.0
+        }
+      },
+      {
+        "name": "COCA-COLA",
+        "ticker": "KO",
+        "rationale": "Coca-Cola présente un rendement dividende attractif de 2.91% et un ROE de 40.38%, ce qui en fait un choix solide pour les investisseurs à la recherche de revenus stables. Sa performance YTD de 1.43% montre une résilience dans un environnement de marché volatile.",
+        "role": "core",
+        "risk_note": "Risque lié à la concurrence accrue dans le secteur des boissons.",
+        "market_context_link": null,
+        "weight_pct": 10.3,
+        "category": "Actions",
+        "sector": "Biens de consommation de base",
+        "country": "Etats-Unis",
+        "metrics": {
+          "roe": 40.38,
+          "pe_ratio": 23.324505,
+          "dividend_yield": 2.91,
+          "ytd": 1.43,
+          "volatility": 14.8,
+          "buffett_score": 66.8
+        }
+      },
+      {
+        "name": "VINCI SA",
+        "ticker": "DG",
+        "rationale": "VINCI, avec un score de qualité Buffett de 98.6/100, représente une opportunité dans le secteur industriel, qui est actuellement favorisé. Bien que sa performance YTD soit négative, son potentiel de croissance à long terme reste prometteur.",
+        "role": "satellite",
+        "risk_note": "Risque de fluctuations économiques impactant les projets d'infrastructure.",
+        "market_context_link": "secteur favorisé",
+        "weight_pct": 8.2,
+        "category": "Actions",
+        "sector": "Industries",
+        "country": "France",
+        "metrics": {
+          "roe": 15.18,
+          "pe_ratio": 13.954328,
+          "dividend_yield": 4.09,
+          "ytd": -4.17,
+          "volatility": 19.07,
+          "buffett_score": 98.6
         }
       },
       {
         "name": "iShares Agency Bond ETF",
         "ticker": "AGZ",
-        "rationale": "Ce fonds d'obligations offre une stabilité et un faible risque, ce qui est essentiel pour un portefeuille axé sur la préservation du capital. Sa performance YTD légèrement positive renforce son attrait en tant qu'outil de diversification.",
+        "rationale": "Ce fonds offre une exposition aux obligations d'agence, ce qui est idéal pour les investisseurs cherchant à minimiser le risque tout en générant des revenus. Sa faible volatilité de 3.46% renforce son attrait dans un portefeuille stable.",
         "role": "income",
-        "risk_note": "Risque de taux d'intérêt pouvant affecter les rendements.",
+        "risk_note": "Risque de taux d'intérêt affectant les rendements.",
         "market_context_link": null,
-        "weight_pct": 8.3,
+        "weight_pct": 7.6,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -2761,53 +2753,73 @@
         }
       },
       {
-        "name": "NOVARTIS AG",
-        "ticker": "NOVN",
-        "rationale": "Avec un ROE élevé et un rendement dividende attractif, Novartis est une valeur refuge dans le secteur de la santé, qui a montré une forte performance sur 6 mois. Cela en fait un ajout solide pour la stabilité et le revenu.",
-        "role": "core",
-        "risk_note": "Risque lié aux régulations dans le secteur pharmaceutique.",
-        "market_context_link": "Secteur favorisé: healthcare",
-        "weight_pct": 6.7,
+        "name": "ALLIANZ",
+        "ticker": "ALV",
+        "rationale": "Allianz offre un rendement dividende de 3.64% et un ROE de 28.36%, ce qui en fait un choix attractif dans le secteur financier. Sa performance YTD négative nécessite une attention particulière, mais son potentiel de rebond est présent.",
+        "role": "satellite",
+        "risk_note": "Risque de volatilité lié aux marchés financiers.",
+        "market_context_link": null,
+        "weight_pct": 5.1,
         "category": "Actions",
-        "sector": "Santé",
-        "country": "Suisse",
+        "sector": "Finance",
+        "country": "Allemagne",
         "metrics": {
-          "roe": 27.06,
-          "pe_ratio": 19.753845,
-          "dividend_yield": 2.94,
-          "ytd": 6.51,
-          "volatility": 19.68,
-          "buffett_score": 64.3
+          "roe": 28.36,
+          "pe_ratio": 13.913364,
+          "dividend_yield": 3.64,
+          "ytd": -2.17,
+          "volatility": 17.71,
+          "buffett_score": 56.7
         }
       },
       {
-        "name": "ESSEX PROPERTY TRUST REIT INC",
-        "ticker": "ESS",
-        "rationale": "Ce REIT offre un rendement dividende élevé et une gestion solide, bien qu'il ait connu une légère baisse YTD. Son rôle dans le portefeuille est de fournir des revenus passifs tout en diversifiant les actifs.",
-        "role": "income",
-        "risk_note": "Risque lié aux fluctuations du marché immobilier.",
+        "name": "MARSH & MCLENNAN INC",
+        "ticker": "MMC",
+        "rationale": "Avec un ROE de 30.42% et un score de qualité Buffett élevé, Marsh & McLennan est bien positionné pour générer des revenus stables. Sa performance YTD proche de la neutralité indique une résilience dans un environnement de marché difficile.",
+        "role": "core",
+        "risk_note": "Risque de dépendance aux cycles économiques.",
         "market_context_link": null,
-        "weight_pct": 2.1,
+        "weight_pct": 4.5,
         "category": "Actions",
-        "sector": "Immobilier",
+        "sector": "Finance",
         "country": "Etats-Unis",
         "metrics": {
-          "roe": 14.11,
-          "pe_ratio": 19.640305,
-          "dividend_yield": 4.04,
-          "ytd": -0.89,
-          "volatility": 23.55,
-          "buffett_score": 87.4
+          "roe": 30.42,
+          "pe_ratio": 21.932774,
+          "dividend_yield": 1.88,
+          "ytd": -0.04,
+          "volatility": 17.28,
+          "buffett_score": 93.2
         }
       },
       {
-        "name": "DoubleLine ETF Trust DoubleLine Commercial Real Estate ETF",
-        "ticker": "DCMB",
-        "rationale": "Ce fonds d'obligations à court terme offre une performance positive YTD et une volatilité faible, ce qui le rend attrayant pour les investisseurs cherchant à minimiser le risque. Il contribue à la diversification du portefeuille.",
-        "role": "diversification",
-        "risk_note": "Risque de marché lié aux investissements immobiliers commerciaux.",
+        "name": "BUREAU VERITAS SA",
+        "ticker": "BVI",
+        "rationale": "Bureau Veritas, avec un score de qualité Buffett de 91.1/100, est bien placé dans le secteur industriel, offrant des services essentiels. Sa performance YTD positive, bien que modeste, montre une certaine stabilité.",
+        "role": "satellite",
+        "risk_note": "Risque lié à la demande pour les services de certification et d'inspection.",
+        "market_context_link": "secteur favorisé",
+        "weight_pct": 2.0,
+        "category": "Actions",
+        "sector": "Industries",
+        "country": "France",
+        "metrics": {
+          "roe": 28.94,
+          "pe_ratio": 18.648275,
+          "dividend_yield": 3.07,
+          "ytd": 0.75,
+          "volatility": 19.42,
+          "buffett_score": 91.1
+        }
+      },
+      {
+        "name": "Avantis Short-Term Fixed Income ETF",
+        "ticker": "AVSF",
+        "rationale": "Ce fonds obligataire à court terme est conçu pour offrir une préservation du capital tout en générant des revenus réguliers. Son faible niveau de volatilité est en ligne avec les objectifs d'un investisseur stable.",
+        "role": "income",
+        "risk_note": "Risque de taux d'intérêt affectant les rendements.",
         "market_context_link": null,
-        "weight_pct": 15.0,
+        "weight_pct": 14.0,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -2815,15 +2827,15 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 0.25,
-          "volatility": 2.09,
+          "ytd": NaN,
+          "volatility": 2.64,
           "buffett_score": null
         }
       }
     ]
   },
   "_meta": {
-    "generated_at": "2026-01-20T15:46:44.456345",
+    "generated_at": "2026-01-20T16:31:42.793332",
     "version": "v4.15.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
@@ -2848,8 +2860,8 @@
     "investable": false,
     "research_disclaimer": "Portefeuilles théoriques à vocation éducative et pédagogique. Ne constitue pas un conseil en investissement au sens de l'AMF. Risques obligataires simplifiés (pas d'analyse duration/spread/rating). Pour un investissement réel, consultez un conseiller financier agréé.",
     "optimization_modes": {
-      "Agressif": "slsqp",
-      "Modéré": "fallback_slsqp_failed",
+      "Agressif": "fallback_slsqp_failed",
+      "Modéré": "slsqp",
       "Stable": "fallback_heuristic"
     }
   }
