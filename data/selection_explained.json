@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-01-20T08:15:49.333046",
+  "generated_at": "2026-01-20T10:34:54.820381",
   "version": "v1.3.0",
   "preset_meta_version": "v4.15.2",
   "selection_pipeline": {
@@ -150,12 +150,12 @@
   },
   "summary": {
     "total_universe": 1006,
-    "total_selected": 25,
-    "selection_rate": "2.5%",
+    "total_selected": 23,
+    "selection_rate": "2.3%",
     "by_region": {
       "US": {
         "universe": 526,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 2
       },
       "Europe": {
         "universe": 268,
@@ -163,84 +163,57 @@
       },
       "Asia": {
         "universe": 210,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 0
       }
     }
   },
   "sectors_distribution": {
-    "Biens de consommation cycliques": {
-      "selected_count": 4,
+    "Finance": {
+      "selected_count": 13,
       "selected_names": [
-        "LULULEMON ATHLETICA INC",
-        "EXPEDIA GROUP INC",
-        "DECKERS OUTDOOR CORP",
-        "TJX INC"
+        "ROBINHOOD MARKETS INC CLA",
+        "APOLLO GLOBAL MANAGEMENT ",
+        "ARES MANAGEMENT CORP CLAS",
+        "WR BERKLEY CORP",
+        "HARTFORD INSURANCE GROUP ",
+        "MASTERCARD INC CLASS A",
+        "PROGRESSIVE CORP",
+        "VISA INC CLASS A",
+        "ARCH CAPITAL GROUP LTD",
+        "SWISS RE AG",
+        "DEUTSCHE BOERSE AG",
+        "KOTAK MAHINDRA BANK LTD",
+        "SBI CARDS & PAYMENT SERVI"
       ]
     },
     "Technologie de l'information": {
-      "selected_count": 3,
+      "selected_count": 1,
       "selected_names": [
-        "NVIDIA CORP",
-        "ASML HOLDING NV",
-        "FORTINET INC"
+        "DOCUSIGN INC"
+      ]
+    },
+    "Biens de consommation cycliques": {
+      "selected_count": 2,
+      "selected_names": [
+        "AIRBNB INC CLASS A",
+        "TJX INC"
       ]
     },
     "Industries": {
-      "selected_count": 6,
+      "selected_count": 5,
       "selected_names": [
-        "COMFORT SYSTEMS USA INC",
-        "FERROVIAL",
+        "EVERGREEN MARINE CORP (TA",
+        "ADANI PORTS AND SPECIAL E",
+        "INTERGLOBE AVIATION LTD",
         "WASTE MANAGEMENT INC",
-        "GEBERIT AG",
-        "BROADRIDGE FINANCIAL SOLU",
         "REPUBLIC SERVICES INC"
       ]
     },
-    "Energie": {
-      "selected_count": 1,
-      "selected_names": [
-        "DIAN SWASTATIKA SENTOSA"
-      ]
-    },
-    "Immobilier": {
-      "selected_count": 1,
-      "selected_names": [
-        "SIMON PROPERTY GROUP REIT"
-      ]
-    },
-    "Matériaux": {
-      "selected_count": 1,
-      "selected_names": [
-        "AVERY DENNISON CORP"
-      ]
-    },
-    "Santé": {
-      "selected_count": 1,
-      "selected_names": [
-        "CENCORA INC"
-      ]
-    },
     "La communication": {
-      "selected_count": 1,
+      "selected_count": 2,
       "selected_names": [
-        "AUTO TRADER GROUP PLC"
-      ]
-    },
-    "Finance": {
-      "selected_count": 4,
-      "selected_names": [
-        "AMERIPRISE FINANCE INC",
-        "ALLIANZ",
-        "AGEAS SA",
-        "DEUTSCHE BOERSE AG"
-      ]
-    },
-    "Biens de consommation de base": {
-      "selected_count": 3,
-      "selected_names": [
-        "NESTLE SA",
-        "COCA-COLA",
-        "PROCTER & GAMBLE"
+        "CTS EVENTIM AG",
+        "CHARTER COMMUNICATIONS IN"
       ]
     }
   },
@@ -248,8 +221,8 @@
     "US": {
       "total_in_universe": 526,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 2,
+      "rejection_rate_top_20": "90%",
       "stocks": [
         {
           "rank": 1,
@@ -259,18 +232,21 @@
           "market_cap_billions": 4554.1,
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "status": "selected"
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.576,
-          "profile_score": 0.743,
+          "buffett_score": 76.3,
+          "composite_score": 0.571,
+          "profile_score": 0.786,
           "matched_preset": "agressif",
           "roe": 91.87,
           "de_ratio": 0.13,
-          "ytd": "0.55",
+          "ytd": 0.55,
           "dividend_yield": 0.02,
           "dividend_coverage": 101.25
         },
@@ -283,18 +259,19 @@
           "sector": "La communication",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.674)",
+          "status": "❌ Score Buffett insuffisant (40 < 40)",
           "details": {
-            "composite_score": 0.674,
-            "sector": "La communication"
+            "buffett_score": 39.7,
+            "roe": 30.8,
+            "de_ratio": 0.08
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.674,
-          "profile_score": 0.666,
+          "buffett_score": 39.7,
+          "composite_score": 0.626,
+          "profile_score": 0.705,
           "matched_preset": "momentum_trend",
           "roe": 30.8,
           "de_ratio": 0.08,
-          "ytd": "5.37",
+          "ytd": 5.37,
           "dividend_yield": 0.25,
           "dividend_coverage": 12.19
         },
@@ -307,18 +284,18 @@
           "sector": "La communication",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.675)",
+          "status": "❌ Score composite insuffisant (0.665)",
           "details": {
-            "composite_score": 0.675,
+            "composite_score": 0.665,
             "sector": "La communication"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.675,
-          "profile_score": 0.667,
+          "buffett_score": 71.7,
+          "composite_score": 0.665,
+          "profile_score": 0.696,
           "matched_preset": "quality_premium",
           "roe": 30.8,
           "de_ratio": 0.08,
-          "ytd": "5.42",
+          "ytd": 5.42,
           "dividend_yield": 0.25,
           "dividend_coverage": 12.2
         },
@@ -331,18 +308,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.647)",
+          "status": "❌ Score composite insuffisant (0.615)",
           "details": {
-            "composite_score": 0.647,
+            "composite_score": 0.615,
             "sector": "Technologie de l'information"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.647,
-          "profile_score": 0.694,
+          "buffett_score": 53.2,
+          "composite_score": 0.615,
+          "profile_score": 0.637,
           "matched_preset": "quality_premium",
           "roe": 151.91,
           "de_ratio": 1.34,
-          "ytd": "-5.06",
+          "ytd": -5.06,
           "dividend_yield": 0.4,
           "dividend_coverage": 7.24
         },
@@ -355,18 +332,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.646)",
+          "status": "❌ Score composite insuffisant (0.644)",
           "details": {
-            "composite_score": 0.646,
+            "composite_score": 0.644,
             "sector": "Technologie de l'information"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.646,
-          "profile_score": 0.539,
+          "buffett_score": 78.2,
+          "composite_score": 0.644,
+          "profile_score": 0.5,
           "matched_preset": "quality_premium",
           "roe": 29.65,
           "de_ratio": 0.18,
-          "ytd": "-3.09",
+          "ytd": -3.09,
           "dividend_yield": 0.74,
           "dividend_coverage": 4.14
         },
@@ -379,26 +356,18 @@
           "sector": "Biens de consommation cycliques",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 4/4), score 0.595 < seuil 0.582",
+          "status": "❌ Score composite insuffisant (0.583)",
           "details": {
-            "sector": "Biens de consommation cycliques",
-            "sector_quota": "4/4",
-            "your_score": 0.595,
-            "min_selected_score": 0.582,
-            "selected_in_sector": [
-              "LULULEMON ATHLETICA ",
-              "EXPEDIA GROUP INC",
-              "DECKERS OUTDOOR CORP",
-              "TJX INC"
-            ]
+            "composite_score": 0.583,
+            "sector": "Biens de consommation cycliques"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.595,
-          "profile_score": 0.626,
+          "buffett_score": 70.4,
+          "composite_score": 0.583,
+          "profile_score": 0.635,
           "matched_preset": "croissance",
           "roe": 20.72,
           "de_ratio": 0.46,
-          "ytd": "5.00",
+          "ytd": 5.0,
           "dividend_yield": 0.0
         },
         {
@@ -417,13 +386,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 71.8,
-          "composite_score": 0.441,
-          "profile_score": 0.672,
+          "buffett_score": 75.8,
+          "composite_score": 0.446,
+          "profile_score": 0.726,
           "matched_preset": "agressif",
           "roe": 8.71,
-          "de_ratio": 1,
-          "ytd": "0.79",
+          "de_ratio": 1.0,
+          "ytd": 0.79,
           "dividend_yield": 0.69,
           "dividend_coverage": 1.97
         },
@@ -436,18 +405,18 @@
           "sector": "La communication",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.595)",
+          "status": "❌ Score composite insuffisant (0.549)",
           "details": {
-            "composite_score": 0.595,
+            "composite_score": 0.549,
             "sector": "La communication"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.595,
-          "profile_score": 0.708,
+          "buffett_score": 42.1,
+          "composite_score": 0.549,
+          "profile_score": 0.62,
           "matched_preset": "agressif",
           "roe": 34.14,
           "de_ratio": 0.27,
-          "ytd": "-3.70",
+          "ytd": -3.7,
           "dividend_yield": 0.34,
           "dividend_coverage": 10.76
         },
@@ -467,13 +436,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 78.8,
-          "composite_score": 0.409,
-          "profile_score": 0.713,
+          "buffett_score": 30.5,
+          "composite_score": 0.351,
+          "profile_score": 0.623,
           "matched_preset": "agressif",
           "roe": 9.71,
           "de_ratio": 0.18,
-          "ytd": "1.65",
+          "ytd": 1.65,
           "dividend_yield": 0.0
         },
         {
@@ -485,18 +454,18 @@
           "sector": "Biens de consommation de base",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.635)",
+          "status": "❌ Score composite insuffisant (0.625)",
           "details": {
-            "composite_score": 0.635,
+            "composite_score": 0.625,
             "sector": "Biens de consommation de base"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.635,
-          "profile_score": 0.521,
-          "matched_preset": "defensif",
+          "buffett_score": 71.1,
+          "composite_score": 0.625,
+          "profile_score": 0.509,
+          "matched_preset": "low_volatility",
           "roe": 20.63,
           "de_ratio": 0.62,
-          "ytd": "5.29",
+          "ytd": 5.29,
           "dividend_yield": 0.79,
           "dividend_coverage": 3.04
         },
@@ -509,18 +478,18 @@
           "sector": "Santé",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.640)",
+          "status": "❌ Score composite insuffisant (0.622)",
           "details": {
-            "composite_score": 0.64,
+            "composite_score": 0.622,
             "sector": "Santé"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.64,
-          "profile_score": 0.664,
-          "matched_preset": "quality_premium",
+          "buffett_score": 65.2,
+          "composite_score": 0.622,
+          "profile_score": 0.679,
+          "matched_preset": "momentum_trend",
           "roe": 74.2,
           "de_ratio": 2.36,
-          "ytd": "-3.86",
+          "ytd": -3.86,
           "dividend_yield": 0.58,
           "dividend_coverage": 3.4
         },
@@ -533,26 +502,35 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.580 < seuil 0.586",
+          "status": "❌ Quota sectoriel atteint (Finance: 13/4), score 0.532 < seuil 0.421",
           "details": {
             "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.58,
-            "min_selected_score": 0.586,
+            "sector_quota": "13/4",
+            "your_score": 0.532,
+            "min_selected_score": 0.421,
             "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
+              "ROBINHOOD MARKETS IN",
+              "APOLLO GLOBAL MANAGE",
+              "ARES MANAGEMENT CORP",
+              "WR BERKLEY CORP",
+              "HARTFORD INSURANCE G",
+              "MASTERCARD INC CLASS",
+              "PROGRESSIVE CORP",
+              "VISA INC CLASS A",
+              "ARCH CAPITAL GROUP L",
+              "SWISS RE AG",
+              "DEUTSCHE BOERSE AG",
+              "KOTAK MAHINDRA BANK ",
+              "SBI CARDS & PAYMENT "
             ]
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.58,
-          "profile_score": 0.546,
-          "matched_preset": "quality_premium",
+          "buffett_score": 40.0,
+          "composite_score": 0.532,
+          "profile_score": 0.605,
+          "matched_preset": "value_dividend",
           "roe": 16.96,
           "de_ratio": 1.32,
-          "ytd": "-4.48",
+          "ytd": -4.48,
           "dividend_yield": 1.87,
           "dividend_coverage": 3.45
         },
@@ -564,27 +542,18 @@
           "market_cap_billions": 632.5,
           "sector": "Finance",
           "country": "Etats-Unis",
-          "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.666 < seuil 0.586",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.666,
-            "min_selected_score": 0.586,
-            "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
-            ]
+            "status": "selected"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.666,
-          "profile_score": 0.582,
+          "buffett_score": 87.9,
+          "composite_score": 0.675,
+          "profile_score": 0.625,
           "matched_preset": "defensif",
           "roe": 52.91,
           "de_ratio": 0.66,
-          "ytd": "-5.63",
+          "ytd": -5.63,
           "dividend_yield": 0.75,
           "dividend_coverage": 4.18
         },
@@ -597,18 +566,18 @@
           "sector": "Energie",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.588)",
+          "status": "❌ Score composite insuffisant (0.559)",
           "details": {
-            "composite_score": 0.588,
+            "composite_score": 0.559,
             "sector": "Energie"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.588,
-          "profile_score": 0.517,
+          "buffett_score": 55.8,
+          "composite_score": 0.559,
+          "profile_score": 0.56,
           "matched_preset": "value_dividend",
           "roe": 12.96,
           "de_ratio": 0.15,
-          "ytd": "5.45",
+          "ytd": 5.45,
           "dividend_yield": 3.09,
           "dividend_coverage": 1.72
         },
@@ -621,18 +590,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.554)",
+          "status": "❌ Score composite insuffisant (0.532)",
           "details": {
-            "composite_score": 0.554,
+            "composite_score": 0.532,
             "sector": "Technologie de l'information"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.554,
-          "profile_score": 0.691,
+          "buffett_score": 62.2,
+          "composite_score": 0.532,
+          "profile_score": 0.687,
           "matched_preset": "agressif",
           "roe": 59.34,
           "de_ratio": 4.96,
-          "ytd": "-4.25",
+          "ytd": -4.25,
           "dividend_yield": 1.07,
           "dividend_coverage": 2.66
         },
@@ -645,18 +614,17 @@
           "sector": "Santé",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.644)",
+          "status": "❌ Score composite insuffisant (0.608)",
           "details": {
-            "composite_score": 0.644,
+            "composite_score": 0.608,
             "sector": "Santé"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.644,
-          "profile_score": 0.588,
+          "buffett_score": 49.8,
+          "composite_score": 0.608,
           "matched_preset": "rendement",
           "roe": 19.68,
           "de_ratio": 0.51,
-          "ytd": "6.11",
+          "ytd": 6.11,
           "dividend_yield": 2.34,
           "dividend_coverage": 2.02
         },
@@ -668,27 +636,18 @@
           "market_cap_billions": 490.6,
           "sector": "Finance",
           "country": "Etats-Unis",
-          "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.669 < seuil 0.586",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.669,
-            "min_selected_score": 0.586,
-            "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
-            ]
+            "status": "selected"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.669,
-          "profile_score": 0.581,
+          "buffett_score": 88.3,
+          "composite_score": 0.679,
+          "profile_score": 0.625,
           "matched_preset": "defensif",
           "roe": 197.61,
           "de_ratio": 2.8,
-          "ytd": "-3.94",
+          "ytd": -3.94,
           "dividend_yield": 0.58,
           "dividend_coverage": 4.97
         },
@@ -701,18 +660,18 @@
           "sector": "Biens de consommation de base",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.685)",
+          "status": "❌ Score composite insuffisant (0.673)",
           "details": {
-            "composite_score": 0.685,
+            "composite_score": 0.673,
             "sector": "Biens de consommation de base"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.685,
-          "profile_score": 0.508,
-          "matched_preset": "defensif",
+          "buffett_score": 70.7,
+          "composite_score": 0.673,
+          "profile_score": 0.516,
+          "matched_preset": "low_volatility",
           "roe": 27.77,
           "de_ratio": 0.28,
-          "ytd": "11.54",
+          "ytd": 11.54,
           "dividend_yield": 0.53,
           "dividend_coverage": 3.68
         },
@@ -732,13 +691,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 70.6,
-          "composite_score": 0.397,
-          "profile_score": 0.689,
+          "buffett_score": 55.9,
+          "composite_score": 0.379,
+          "profile_score": 0.72,
           "matched_preset": "agressif",
           "roe": 9.18,
           "de_ratio": 0.05,
-          "ytd": "5.34",
+          "ytd": 5.34,
           "dividend_yield": 0.0
         },
         {
@@ -750,26 +709,35 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.520 < seuil 0.586",
+          "status": "❌ Quota sectoriel atteint (Finance: 13/4), score 0.526 < seuil 0.421",
           "details": {
             "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.52,
-            "min_selected_score": 0.586,
+            "sector_quota": "13/4",
+            "your_score": 0.526,
+            "min_selected_score": 0.421,
             "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
+              "ROBINHOOD MARKETS IN",
+              "APOLLO GLOBAL MANAGE",
+              "ARES MANAGEMENT CORP",
+              "WR BERKLEY CORP",
+              "HARTFORD INSURANCE G",
+              "MASTERCARD INC CLASS",
+              "PROGRESSIVE CORP",
+              "VISA INC CLASS A",
+              "ARCH CAPITAL GROUP L",
+              "SWISS RE AG",
+              "DEUTSCHE BOERSE AG",
+              "KOTAK MAHINDRA BANK ",
+              "SBI CARDS & PAYMENT "
             ]
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.52,
-          "profile_score": 0.622,
+          "buffett_score": 84.8,
+          "composite_score": 0.526,
+          "profile_score": 0.617,
           "matched_preset": "value_dividend",
           "roe": 9.18,
           "de_ratio": 1.11,
-          "ytd": "-6.49",
+          "ytd": -6.49,
           "dividend_yield": 2.06,
           "dividend_coverage": 3.53
         }
@@ -790,18 +758,18 @@
           "sector": "Santé",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.599)",
+          "status": "❌ Score composite insuffisant (0.580)",
           "details": {
-            "composite_score": 0.599,
+            "composite_score": 0.58,
             "sector": "Santé"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.599,
-          "profile_score": 0.672,
-          "matched_preset": "quality_premium",
+          "buffett_score": 64.2,
+          "composite_score": 0.58,
+          "profile_score": 0.702,
+          "matched_preset": "value_dividend",
           "roe": 17.23,
           "de_ratio": 0.74,
-          "ytd": "3.58",
+          "ytd": 3.58,
           "dividend_yield": 1.66,
           "dividend_coverage": 0.02
         },
@@ -814,26 +782,35 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.585 < seuil 0.586",
+          "status": "❌ Quota sectoriel atteint (Finance: 13/4), score 0.587 < seuil 0.421",
           "details": {
             "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.585,
-            "min_selected_score": 0.586,
+            "sector_quota": "13/4",
+            "your_score": 0.587,
+            "min_selected_score": 0.421,
             "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
+              "ROBINHOOD MARKETS IN",
+              "APOLLO GLOBAL MANAGE",
+              "ARES MANAGEMENT CORP",
+              "WR BERKLEY CORP",
+              "HARTFORD INSURANCE G",
+              "MASTERCARD INC CLASS",
+              "PROGRESSIVE CORP",
+              "VISA INC CLASS A",
+              "ARCH CAPITAL GROUP L",
+              "SWISS RE AG",
+              "DEUTSCHE BOERSE AG",
+              "KOTAK MAHINDRA BANK ",
+              "SBI CARDS & PAYMENT "
             ]
           },
-          "buffett_score": 77.4,
-          "composite_score": 0.585,
-          "profile_score": 0.682,
+          "buffett_score": 78.5,
+          "composite_score": 0.587,
+          "profile_score": 0.709,
           "matched_preset": "value_dividend",
           "roe": 13.0,
           "de_ratio": 1.26,
-          "ytd": "1.07",
+          "ytd": 1.07,
           "dividend_yield": 4.12,
           "dividend_coverage": 0.01
         },
@@ -846,17 +823,17 @@
           "sector": "Energie",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.536)",
+          "status": "❌ Score composite insuffisant (0.519)",
           "details": {
-            "composite_score": 0.536,
+            "composite_score": 0.519,
             "sector": "Energie"
           },
-          "buffett_score": 77.5,
-          "composite_score": 0.536,
+          "buffett_score": 63.4,
+          "composite_score": 0.519,
           "matched_preset": "rendement",
           "roe": 9.17,
           "de_ratio": 0.43,
-          "ytd": "-3.61",
+          "ytd": -3.61,
           "dividend_yield": 4.06,
           "dividend_coverage": 0.02
         },
@@ -869,17 +846,17 @@
           "sector": "Biens de consommation de base",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.670)",
+          "status": "❌ Score composite insuffisant (0.653)",
           "details": {
-            "composite_score": 0.67,
+            "composite_score": 0.653,
             "sector": "Biens de consommation de base"
           },
-          "buffett_score": 76.5,
-          "composite_score": 0.67,
+          "buffett_score": 62.5,
+          "composite_score": 0.653,
           "matched_preset": "rendement",
           "roe": 28.24,
           "de_ratio": 1.36,
-          "ytd": "-1.21",
+          "ytd": -1.21,
           "dividend_yield": 3.25,
           "dividend_coverage": 0.01
         },
@@ -892,18 +869,18 @@
           "sector": "Matériaux",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.624)",
+          "status": "❌ Score composite insuffisant (0.607)",
           "details": {
-            "composite_score": 0.624,
+            "composite_score": 0.607,
             "sector": "Matériaux"
           },
-          "buffett_score": 76.0,
-          "composite_score": 0.624,
-          "profile_score": 0.699,
-          "matched_preset": "quality_premium",
+          "buffett_score": 62.1,
+          "composite_score": 0.607,
+          "profile_score": 0.727,
+          "matched_preset": "value_dividend",
           "roe": 19.97,
           "de_ratio": 0.24,
-          "ytd": "2.04",
+          "ytd": 2.04,
           "dividend_yield": 4.66,
           "dividend_coverage": 0.02
         },
@@ -923,12 +900,12 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 50.9,
-          "composite_score": 0.496,
+          "buffett_score": 49.1,
+          "composite_score": 0.494,
           "matched_preset": "rendement",
           "roe": 6.36,
           "de_ratio": 0.74,
-          "ytd": "-1.91",
+          "ytd": -1.91,
           "dividend_yield": 5.85,
           "dividend_coverage": 0.01
         },
@@ -941,16 +918,16 @@
           "sector": "Santé",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.583)",
+          "status": "❌ Score composite insuffisant (0.550)",
           "details": {
-            "composite_score": 0.583,
+            "composite_score": 0.55,
             "sector": "Santé"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.583,
+          "buffett_score": 52.6,
+          "composite_score": 0.55,
           "roe": 22.55,
           "de_ratio": 1.3,
-          "ytd": "2.32",
+          "ytd": 2.32,
           "dividend_yield": 3.42,
           "dividend_coverage": 0.02
         },
@@ -963,26 +940,35 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.533 < seuil 0.586",
+          "status": "❌ Quota sectoriel atteint (Finance: 13/4), score 0.485 < seuil 0.421",
           "details": {
             "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.533,
-            "min_selected_score": 0.586,
+            "sector_quota": "13/4",
+            "your_score": 0.485,
+            "min_selected_score": 0.421,
             "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
+              "ROBINHOOD MARKETS IN",
+              "APOLLO GLOBAL MANAGE",
+              "ARES MANAGEMENT CORP",
+              "WR BERKLEY CORP",
+              "HARTFORD INSURANCE G",
+              "MASTERCARD INC CLASS",
+              "PROGRESSIVE CORP",
+              "VISA INC CLASS A",
+              "ARCH CAPITAL GROUP L",
+              "SWISS RE AG",
+              "DEUTSCHE BOERSE AG",
+              "KOTAK MAHINDRA BANK ",
+              "SBI CARDS & PAYMENT "
             ]
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.533,
-          "profile_score": 0.618,
-          "matched_preset": "value_dividend",
+          "buffett_score": 40.2,
+          "composite_score": 0.485,
+          "profile_score": 0.553,
+          "matched_preset": "momentum_trend",
           "roe": 8.77,
           "de_ratio": 2.56,
-          "ytd": "-1.35",
+          "ytd": -1.35,
           "dividend_yield": 1.69,
           "dividend_coverage": 0.05
         },
@@ -995,27 +981,18 @@
           "sector": "Industries",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 6/4), score 0.683 < seuil 0.611",
+          "status": "❌ Score Buffett insuffisant (38 < 40)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "6/4",
-            "your_score": 0.683,
-            "min_selected_score": 0.611,
-            "selected_in_sector": [
-              "COMFORT SYSTEMS USA ",
-              "FERROVIAL",
-              "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BROADRIDGE FINANCIAL",
-              "REPUBLIC SERVICES IN"
-            ]
+            "buffett_score": 38.2,
+            "roe": 55.48,
+            "de_ratio": 1.87
           },
-          "buffett_score": 76.7,
-          "composite_score": 0.683,
+          "buffett_score": 38.2,
+          "composite_score": 0.636,
           "matched_preset": "rendement",
           "roe": 55.48,
           "de_ratio": 1.87,
-          "ytd": "5.97",
+          "ytd": 5.97,
           "dividend_yield": 3.7,
           "dividend_coverage": 0.02
         },
@@ -1028,26 +1005,35 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.551 < seuil 0.586",
+          "status": "❌ Quota sectoriel atteint (Finance: 13/4), score 0.503 < seuil 0.421",
           "details": {
             "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.551,
-            "min_selected_score": 0.586,
+            "sector_quota": "13/4",
+            "your_score": 0.503,
+            "min_selected_score": 0.421,
             "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
+              "ROBINHOOD MARKETS IN",
+              "APOLLO GLOBAL MANAGE",
+              "ARES MANAGEMENT CORP",
+              "WR BERKLEY CORP",
+              "HARTFORD INSURANCE G",
+              "MASTERCARD INC CLASS",
+              "PROGRESSIVE CORP",
+              "VISA INC CLASS A",
+              "ARCH CAPITAL GROUP L",
+              "SWISS RE AG",
+              "DEUTSCHE BOERSE AG",
+              "KOTAK MAHINDRA BANK ",
+              "SBI CARDS & PAYMENT "
             ]
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.551,
-          "profile_score": 0.655,
-          "matched_preset": "value_dividend",
+          "buffett_score": 40.2,
+          "composite_score": 0.503,
+          "profile_score": 0.591,
+          "matched_preset": "momentum_trend",
           "roe": 12.22,
           "de_ratio": 1.67,
-          "ytd": "-2.55",
+          "ytd": -2.55,
           "dividend_yield": 3.9,
           "dividend_coverage": 0.03
         },
@@ -1067,11 +1053,11 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 55.0,
-          "composite_score": 0.432,
+          "buffett_score": 35.3,
+          "composite_score": 0.408,
           "roe": 3.66,
           "de_ratio": 0.4,
-          "ytd": "2.79",
+          "ytd": 2.79,
           "dividend_yield": 2.7,
           "dividend_coverage": 0.01
         },
@@ -1091,12 +1077,12 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 57.2,
-          "composite_score": 0.512,
+          "buffett_score": 35.0,
+          "composite_score": 0.485,
           "matched_preset": "value_dividend",
           "roe": 7.03,
           "de_ratio": 0.59,
-          "ytd": "3.91",
+          "ytd": 3.91,
           "dividend_yield": 3.32,
           "dividend_coverage": 0.01
         },
@@ -1116,12 +1102,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 79.4,
+          "buffett_score": 79.8,
           "composite_score": 0.527,
-          "matched_preset": "value_dividend",
+          "profile_score": 0.748,
+          "matched_preset": "momentum_trend",
           "roe": 7.88,
           "de_ratio": 1.88,
-          "ytd": "-1.08",
+          "ytd": -1.08,
           "dividend_yield": 1.65,
           "dividend_coverage": 0.05
         },
@@ -1134,25 +1121,17 @@
           "sector": "Biens de consommation cycliques",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 4/4), score 0.621 < seuil 0.582",
+          "status": "❌ Score composite insuffisant (0.573)",
           "details": {
-            "sector": "Biens de consommation cycliques",
-            "sector_quota": "4/4",
-            "your_score": 0.621,
-            "min_selected_score": 0.582,
-            "selected_in_sector": [
-              "LULULEMON ATHLETICA ",
-              "EXPEDIA GROUP INC",
-              "DECKERS OUTDOOR CORP",
-              "TJX INC"
-            ]
+            "composite_score": 0.573,
+            "sector": "Biens de consommation cycliques"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.621,
+          "buffett_score": 40.4,
+          "composite_score": 0.573,
           "matched_preset": "rendement",
           "roe": 20.47,
           "de_ratio": 0.86,
-          "ytd": "0.99",
+          "ytd": 0.99,
           "dividend_yield": 2.04,
           "dividend_coverage": 0.02
         },
@@ -1165,18 +1144,18 @@
           "sector": "Biens de consommation de base",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.592)",
+          "status": "❌ Score Buffett insuffisant (36 < 40)",
           "details": {
-            "composite_score": 0.592,
-            "sector": "Biens de consommation de base"
+            "buffett_score": 35.5,
+            "roe": 19.26,
+            "de_ratio": 1.85
           },
-          "buffett_score": 72.8,
-          "composite_score": 0.592,
-          "profile_score": 0.678,
-          "matched_preset": "quality_premium",
+          "buffett_score": 35.5,
+          "composite_score": 0.547,
+          "matched_preset": "value_dividend",
           "roe": 19.26,
           "de_ratio": 1.85,
-          "ytd": "3.86",
+          "ytd": 3.86,
           "dividend_yield": 4.7,
           "dividend_coverage": 0.01
         },
@@ -1197,8 +1176,9 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 20.0,
-          "composite_score": 0.337,
+          "buffett_score": 33.8,
+          "composite_score": 0.354,
+          "matched_preset": "quality_premium",
           "roe": -21.27,
           "de_ratio": -9.44,
           "dividend_yield": 0.81,
@@ -1213,18 +1193,18 @@
           "sector": "Matériaux",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.544)",
+          "status": "❌ Score composite insuffisant (0.501)",
           "details": {
-            "composite_score": 0.544,
+            "composite_score": 0.501,
             "sector": "Matériaux"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.544,
-          "profile_score": 0.698,
+          "buffett_score": 43.6,
+          "composite_score": 0.501,
+          "profile_score": 0.677,
           "matched_preset": "agressif",
           "roe": 10.16,
           "de_ratio": 0.41,
-          "ytd": "7.86",
+          "ytd": 7.86,
           "dividend_yield": 0.85,
           "dividend_coverage": 0.03
         },
@@ -1237,26 +1217,25 @@
           "sector": "Industries",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 6/4), score 0.570 < seuil 0.611",
+          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.522 < seuil 0.493",
           "details": {
             "sector": "Industries",
-            "sector_quota": "6/4",
-            "your_score": 0.57,
-            "min_selected_score": 0.611,
+            "sector_quota": "5/4",
+            "your_score": 0.522,
+            "min_selected_score": 0.493,
             "selected_in_sector": [
-              "COMFORT SYSTEMS USA ",
-              "FERROVIAL",
+              "EVERGREEN MARINE COR",
+              "ADANI PORTS AND SPEC",
+              "INTERGLOBE AVIATION ",
               "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BROADRIDGE FINANCIAL",
               "REPUBLIC SERVICES IN"
             ]
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.57,
+          "buffett_score": 40.4,
+          "composite_score": 0.522,
           "roe": 22.99,
           "de_ratio": 0.99,
-          "ytd": "2.07",
+          "ytd": 2.07,
           "dividend_yield": 1.34,
           "dividend_coverage": 0.02
         },
@@ -1277,11 +1256,11 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 54.8,
-          "composite_score": 0.491,
+          "buffett_score": 35.4,
+          "composite_score": 0.468,
           "roe": 2.95,
           "de_ratio": 0.67,
-          "ytd": "-2.34",
+          "ytd": -2.34,
           "dividend_yield": 2.52,
           "dividend_coverage": 0.08
         },
@@ -1294,26 +1273,35 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.532 < seuil 0.586",
+          "status": "❌ Quota sectoriel atteint (Finance: 13/4), score 0.508 < seuil 0.421",
           "details": {
             "sector": "Finance",
-            "sector_quota": "4/4",
-            "your_score": 0.532,
-            "min_selected_score": 0.586,
+            "sector_quota": "13/4",
+            "your_score": 0.508,
+            "min_selected_score": 0.421,
             "selected_in_sector": [
-              "AMERIPRISE FINANCE I",
-              "ALLIANZ",
-              "AGEAS SA",
-              "DEUTSCHE BOERSE AG"
+              "ROBINHOOD MARKETS IN",
+              "APOLLO GLOBAL MANAGE",
+              "ARES MANAGEMENT CORP",
+              "WR BERKLEY CORP",
+              "HARTFORD INSURANCE G",
+              "MASTERCARD INC CLASS",
+              "PROGRESSIVE CORP",
+              "VISA INC CLASS A",
+              "ARCH CAPITAL GROUP L",
+              "SWISS RE AG",
+              "DEUTSCHE BOERSE AG",
+              "KOTAK MAHINDRA BANK ",
+              "SBI CARDS & PAYMENT "
             ]
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.532,
-          "profile_score": 0.615,
-          "matched_preset": "croissance",
+          "buffett_score": 60.3,
+          "composite_score": 0.508,
+          "profile_score": 0.612,
+          "matched_preset": "momentum_trend",
           "roe": 9.45,
           "de_ratio": 0.72,
-          "ytd": "0.69",
+          "ytd": 0.69,
           "dividend_yield": 1.39,
           "dividend_coverage": 0.05
         }
@@ -1322,8 +1310,8 @@
     "Asia": {
       "total_in_universe": 210,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
       "stocks": [
         {
           "rank": 1,
@@ -1334,18 +1322,19 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.586)",
+          "status": "❌ Score Buffett insuffisant (34 < 40)",
           "details": {
-            "composite_score": 0.586,
-            "sector": "Technologie de l'information"
+            "buffett_score": 34.5,
+            "roe": 8.57,
+            "de_ratio": 0.05
           },
-          "buffett_score": 71.4,
-          "composite_score": 0.586,
-          "profile_score": 0.585,
+          "buffett_score": 34.5,
+          "composite_score": 0.541,
+          "profile_score": 0.683,
           "matched_preset": "momentum_trend",
           "roe": 8.57,
           "de_ratio": 0.05,
-          "ytd": "16.19",
+          "ytd": 16.19,
           "dividend_yield": 0.74,
           "dividend_coverage": 4.49
         },
@@ -1357,18 +1346,21 @@
           "market_cap_billions": 706042.7,
           "sector": "Energie",
           "country": "Indonésie",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "status": "selected"
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.568,
-          "profile_score": 0.73,
+          "buffett_score": 36.0,
+          "composite_score": 0.516,
+          "profile_score": 0.746,
           "matched_preset": "agressif",
           "roe": 27.93,
           "de_ratio": 0.63,
-          "ytd": "15.87",
+          "ytd": 15.87,
           "dividend_yield": 0.0
         },
         {
@@ -1387,13 +1379,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.651,
-          "profile_score": 0.739,
+          "buffett_score": 53.2,
+          "composite_score": 0.619,
+          "profile_score": 0.753,
           "matched_preset": "agressif",
           "roe": 26.78,
           "de_ratio": 0.34,
-          "ytd": "12.85",
+          "ytd": 12.85,
           "dividend_yield": 0.32,
           "dividend_coverage": 11.7
         },
@@ -1413,8 +1405,8 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.475,
+          "buffett_score": 39.9,
+          "composite_score": 0.427,
           "matched_preset": "value_dividend",
           "roe": 11.0,
           "de_ratio": 1.31,
@@ -1437,13 +1429,12 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 44.4,
-          "composite_score": 0.376,
-          "profile_score": 0.612,
+          "buffett_score": 14.6,
+          "composite_score": 0.34,
           "matched_preset": "agressif",
           "roe": 1.09,
           "de_ratio": 0.5,
-          "ytd": "10.39"
+          "ytd": 10.39
         },
         {
           "rank": 6,
@@ -1461,13 +1452,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.612,
-          "profile_score": 0.732,
+          "buffett_score": 64.0,
+          "composite_score": 0.592,
+          "profile_score": 0.814,
           "matched_preset": "agressif",
           "roe": 22.35,
           "de_ratio": 0.94,
-          "ytd": "40.59",
+          "ytd": 40.59,
           "dividend_yield": 0.21
         },
         {
@@ -1486,13 +1477,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.536,
-          "profile_score": 0.695,
+          "buffett_score": 89.4,
+          "composite_score": 0.548,
+          "profile_score": 0.778,
           "matched_preset": "agressif",
           "roe": 10.9,
           "de_ratio": 0.21,
-          "ytd": "28.57",
+          "ytd": 28.57,
           "dividend_yield": 1.16,
           "dividend_coverage": 1.86
         },
@@ -1513,13 +1504,12 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 53.5,
-          "composite_score": 0.44,
-          "profile_score": 0.654,
+          "buffett_score": 16.0,
+          "composite_score": 0.395,
           "matched_preset": "agressif",
           "roe": 3.38,
           "de_ratio": 0.55,
-          "ytd": "26.86",
+          "ytd": 26.86,
           "dividend_yield": 1.86
         },
         {
@@ -1538,13 +1528,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 56.4,
-          "composite_score": 0.488,
-          "profile_score": 0.646,
+          "buffett_score": 65.7,
+          "composite_score": 0.499,
+          "profile_score": 0.722,
           "matched_preset": "momentum_trend",
           "roe": 2.58,
           "de_ratio": 0.1,
-          "ytd": "11.04",
+          "ytd": 11.04,
           "dividend_yield": 1.08,
           "dividend_coverage": 3.49
         },
@@ -1564,13 +1554,12 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.506,
-          "profile_score": 0.706,
+          "buffett_score": 27.7,
+          "composite_score": 0.443,
           "matched_preset": "agressif",
           "roe": 10.86,
           "de_ratio": 1.11,
-          "ytd": "29.73",
+          "ytd": 29.73,
           "dividend_yield": 0.88,
           "dividend_coverage": 1.11
         },
@@ -1583,26 +1572,18 @@
           "sector": "Biens de consommation cycliques",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Biens de consommation cycliques: 4/4), score 0.583 < seuil 0.582",
+          "status": "❌ Score composite insuffisant (0.593)",
           "details": {
-            "sector": "Biens de consommation cycliques",
-            "sector_quota": "4/4",
-            "your_score": 0.583,
-            "min_selected_score": 0.582,
-            "selected_in_sector": [
-              "LULULEMON ATHLETICA ",
-              "EXPEDIA GROUP INC",
-              "DECKERS OUTDOOR CORP",
-              "TJX INC"
-            ]
+            "composite_score": 0.593,
+            "sector": "Biens de consommation cycliques"
           },
-          "buffett_score": 76.4,
-          "composite_score": 0.583,
-          "profile_score": 0.597,
+          "buffett_score": 85.1,
+          "composite_score": 0.593,
+          "profile_score": 0.677,
           "matched_preset": "momentum_trend",
           "roe": 8.8,
           "de_ratio": 0.08,
-          "ytd": "23.98",
+          "ytd": 23.98,
           "dividend_yield": 1.42,
           "dividend_coverage": 6.91
         },
@@ -1622,13 +1603,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 78.8,
-          "composite_score": 0.513,
-          "profile_score": 0.663,
-          "matched_preset": "croissance",
+          "buffett_score": 59.2,
+          "composite_score": 0.489,
+          "profile_score": 0.675,
+          "matched_preset": "momentum_trend",
           "roe": 7.75,
           "de_ratio": 2.36,
-          "ytd": "4.05",
+          "ytd": 4.05,
           "dividend_yield": 2.82,
           "dividend_coverage": 3.75
         },
@@ -1641,18 +1622,18 @@
           "sector": "Services publics",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.544)",
+          "status": "❌ Score composite insuffisant (0.555)",
           "details": {
-            "composite_score": 0.544,
+            "composite_score": 0.555,
             "sector": "Services publics"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.544,
-          "profile_score": 0.692,
+          "buffett_score": 89.1,
+          "composite_score": 0.555,
+          "profile_score": 0.806,
           "matched_preset": "agressif",
           "roe": 8.76,
           "de_ratio": 0.59,
-          "ytd": "21.08",
+          "ytd": 21.08,
           "dividend_yield": 0.38
         },
         {
@@ -1671,13 +1652,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 71.5,
-          "composite_score": 0.46,
-          "profile_score": 0.653,
+          "buffett_score": 86.5,
+          "composite_score": 0.478,
+          "profile_score": 0.723,
           "matched_preset": "agressif",
           "roe": 7.16,
           "de_ratio": 0.14,
-          "ytd": "-3.64",
+          "ytd": -3.64,
           "dividend_yield": 0.33,
           "dividend_coverage": 11.11
         },
@@ -1690,28 +1671,27 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 6/4), score 0.499 < seuil 0.611",
+          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.484 < seuil 0.493",
           "details": {
             "sector": "Industries",
-            "sector_quota": "6/4",
-            "your_score": 0.499,
-            "min_selected_score": 0.611,
+            "sector_quota": "5/4",
+            "your_score": 0.484,
+            "min_selected_score": 0.493,
             "selected_in_sector": [
-              "COMFORT SYSTEMS USA ",
-              "FERROVIAL",
+              "EVERGREEN MARINE COR",
+              "ADANI PORTS AND SPEC",
+              "INTERGLOBE AVIATION ",
               "WASTE MANAGEMENT INC",
-              "GEBERIT AG",
-              "BROADRIDGE FINANCIAL",
               "REPUBLIC SERVICES IN"
             ]
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.499,
-          "profile_score": 0.667,
+          "buffett_score": 68.0,
+          "composite_score": 0.484,
+          "profile_score": 0.686,
           "matched_preset": "agressif",
           "roe": 10.28,
           "de_ratio": 0.13,
-          "ytd": "12.96",
+          "ytd": 12.96,
           "dividend_yield": 1.87,
           "dividend_coverage": 2.0
         },
@@ -1731,13 +1711,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 74.5,
-          "composite_score": 0.49,
-          "profile_score": 0.653,
+          "buffett_score": 36.3,
+          "composite_score": 0.445,
+          "profile_score": 0.632,
           "matched_preset": "agressif",
           "roe": 6.9,
           "de_ratio": 0.61,
-          "ytd": "6.85",
+          "ytd": 6.85,
           "dividend_yield": 2.59,
           "dividend_coverage": 2.71
         },
@@ -1757,13 +1737,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 45.8,
-          "composite_score": 0.472,
-          "profile_score": 0.66,
+          "buffett_score": 50.4,
+          "composite_score": 0.477,
+          "profile_score": 0.692,
           "matched_preset": "agressif",
           "roe": 1.44,
           "de_ratio": 0.95,
-          "ytd": "31.88",
+          "ytd": 31.88,
           "dividend_yield": 0.6,
           "dividend_coverage": 0.39
         },
@@ -1783,13 +1763,13 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.514,
-          "profile_score": 0.7,
+          "buffett_score": 31.6,
+          "composite_score": 0.456,
+          "profile_score": 0.644,
           "matched_preset": "agressif",
           "roe": 22.14,
           "de_ratio": 0.04,
-          "ytd": "8.53"
+          "ytd": 8.53
         },
         {
           "rank": 19,
@@ -1808,8 +1788,8 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 44.3,
-          "composite_score": 0.373,
+          "buffett_score": 11.2,
+          "composite_score": 0.333,
           "matched_preset": "quality_premium",
           "roe": 1.07,
           "de_ratio": 0.57,
@@ -1832,8 +1812,8 @@
             ],
             "profile": "Modéré"
           },
-          "buffett_score": 80.0,
-          "composite_score": 0.461,
+          "buffett_score": 94.7,
+          "composite_score": 0.479,
           "matched_preset": "value_dividend",
           "roe": 8.65,
           "de_ratio": 2.45,
