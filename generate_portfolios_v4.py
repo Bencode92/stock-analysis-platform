@@ -1443,7 +1443,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             eq_filtered=eq_filtered,  # Pas de pré-filtre, PROFILE_POLICY gère
             profile=profile,
             market_context=market_context,
-            CANDIDATES_BY_PROFILE = {"Agressif": 350, "Modéré": 250, "Stable": 200}
+            CANDIDATES_BY_PROFILE = {"Agressif": 350, "Modéré": 250, "Stable": 200},
             target_n=min(CANDIDATES_BY_PROFILE.get(profile, 250), len(eq_filtered)),
         )
         profile_selection_meta["buffett_threshold_policy"] = profile_buffett_min
@@ -1847,7 +1847,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
             eq_filtered=eq_filtered,
             profile=profile,
             market_context=None,  # Pas de RADAR pour EU/US actuellement
-            CANDIDATES_BY_PROFILE = {"Agressif": 350, "Modéré": 250, "Stable": 200}
+            CANDIDATES_BY_PROFILE = {"Agressif": 350, "Modéré": 250, "Stable": 200},
             target_n=min(CANDIDATES_BY_PROFILE.get(profile, 250), len(eq_filtered)),
         )
         
