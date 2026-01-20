@@ -1822,34 +1822,65 @@ class PortfolioOptimizer:
         candidates: List[Asset],
         profile: ProfileConstraints
     ) -> np.ndarray:
-        """Initialisation intelligente des poids pour SLSQP."""
+        """
+        v6.26: Initial weights that respect ALL constraints.
+        Génère un point de départ faisable pour SLSQP.
+        """
         n = len(candidates)
+        max_single = profile.max_single_position / 100
+        crypto_max = profile.crypto_max / 100
         
+        # Start with uniform, capped at 80% of max_single (leave slack)
+        base_weight = min(1.0 / n, max_single * 0.8)
+        weights = np.full(n, base_weight)
+        
+        # Identify indices by category
+        crypto_idx = [i for i, a in enumerate(candidates) if a.category == "Crypto"]
+        bonds_idx = [i for i, a in enumerate(candidates) if a.category == "Obligations"]
+        
+        # Scale down crypto if needed (respect crypto_max)
+        if crypto_idx and crypto_max < 1.0:
+            crypto_sum = weights[crypto_idx].sum()
+            if crypto_sum > crypto_max * 0.8:
+                scale = (crypto_max * 0.8) / crypto_sum
+                for i in crypto_idx:
+                    weights[i] *= scale
+        
+        # Profile-specific adjustments
         if profile.name == "Stable":
-            weights = np.zeros(n)
-            bonds_idx = [i for i, a in enumerate(candidates) if a.category == "Obligations"]
-            other_idx = [i for i in range(n) if i not in bonds_idx]
-            
-            bonds_init_weight = 0.45
-            
+            # Stable: bonds ~45%, rest distributed
             if bonds_idx:
-                bond_weight = bonds_init_weight / len(bonds_idx)
+                bonds_init = 0.45
+                bond_weight = bonds_init / len(bonds_idx)
                 for i in bonds_idx:
-                    weights[i] = bond_weight
-            
-            if other_idx:
-                other_weight = (1.0 - bonds_init_weight) / len(other_idx)
-                for i in other_idx:
-                    weights[i] = other_weight
-            
-            if weights.sum() > 0:
-                weights = weights / weights.sum()
-            else:
-                weights = np.ones(n) / n
-            
-            return weights
+                    weights[i] = min(bond_weight, max_single * 0.9)
+                
+                # Reduce non-bonds proportionally
+                other_idx = [i for i in range(n) if i not in bonds_idx]
+                if other_idx:
+                    remaining = 1.0 - sum(weights[bonds_idx])
+                    other_weight = remaining / len(other_idx)
+                    for i in other_idx:
+                        weights[i] = min(other_weight, max_single * 0.9)
+        
+        elif profile.name == "Agressif":
+            # Agressif: bonds ~10%, crypto capped
+            if bonds_idx:
+                bonds_target = 0.12
+                bonds_sum = weights[bonds_idx].sum()
+                if bonds_sum > bonds_target:
+                    scale = bonds_target / bonds_sum
+                    for i in bonds_idx:
+                        weights[i] *= scale
+        
+        # Normalize to 1
+        total = weights.sum()
+        if total > 0:
+            weights = weights / total
         else:
-            return np.ones(n) / n
+            weights = np.ones(n) / n
+        
+        return weights
     
     def _fallback_allocation(
         self,
@@ -2315,8 +2346,37 @@ class PortfolioOptimizer:
                 allocation = self._post_process_allocation(
                     allocation, candidates, profile, prev_weights
                 )
-               
+                # === v6.26: FINAL AUDIT (hard constraints) ===
+                audit_violations = []
+                asset_lookup = {c.id: c for c in candidates}
                 
+                # Check sum
+                total_weight = sum(allocation.values())
+                if abs(total_weight - 100.0) > 0.5:
+                    audit_violations.append(f"sum={total_weight:.1f}≠100")
+                
+                # Check max_single
+                if allocation:
+                    max_w = max(allocation.values())
+                    if max_w > profile.max_single_position + 0.1:
+                        audit_violations.append(f"max_single={max_w:.1f}>{profile.max_single_position}")
+                
+                # Check crypto
+                crypto_sum = sum(
+                    w for aid, w in allocation.items() 
+                    if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
+                )
+                if crypto_sum > profile.crypto_max + 0.1:
+                    audit_violations.append(f"crypto={crypto_sum:.1f}>{profile.crypto_max}")
+                
+                if audit_violations:
+                    logger.error(f"❌ AUDIT VIOLATIONS [{profile.name}]: {audit_violations}")
+                    # Force re-correction
+                    allocation = self._enforce_crypto_cap(allocation, candidates, profile)
+                    allocation = self._adjust_to_100(allocation, profile)
+                else:
+                    logger.info(f"✅ AUDIT OK [{profile.name}]: sum={total_weight:.1f}%, max={max(allocation.values()) if allocation else 0:.1f}%, crypto={crypto_sum:.1f}%")
+               
                 # === Vérifier diversification bonds POST-SLSQP ===
                 bonds_in_solution = sum(
                     1 for aid in allocation 
@@ -2970,6 +3030,31 @@ class PortfolioOptimizer:
                 for k in allocation:
                     allocation[k] = round(float(allocation[k] * 100 / total), 2)
         
+        # v6.26 FIX: Post-normalization cap check
+        max_single = profile.max_single_position
+        needs_rebalance = True
+        max_iterations = 5
+        
+        for _ in range(max_iterations):
+            if not needs_rebalance:
+                break
+            needs_rebalance = False
+            
+            for aid in list(allocation.keys()):
+                if allocation[aid] > max_single + 0.1:
+                    excess = allocation[aid] - max_single
+                    allocation[aid] = max_single
+                    needs_rebalance = True
+                    
+                    # Redistribuer l'excès
+                    others = [k for k in allocation if k != aid and allocation[k] < max_single - 0.5]
+                    if others:
+                        per_other = excess / len(others)
+                        for other_aid in others:
+                            headroom = max_single - allocation[other_aid]
+                            add = min(per_other, headroom)
+                            allocation[other_aid] = round(allocation[other_aid] + add, 2)
+        
         return allocation
     def _check_all_violations(
         self,
@@ -3175,33 +3260,46 @@ class PortfolioOptimizer:
                 freed_weight += w
                 del allocation[aid]
         
-        # Redistribuer freed_weight vers non-crypto (v6.23 P0 FIX: itératif avec headroom)
+        # Redistribuer freed_weight vers non-crypto (v6.26 FIX: respect max_single)
         if freed_weight > 0.1:
-            eligible = [
-                (aid, w) for aid, w in allocation.items()
-                if asset_lookup.get(aid) 
-                and asset_lookup[aid].category != "Crypto"
-                and w < profile.max_single_position - 1
-            ]
-            if eligible:
-                # Trier par poids croissant (remplir les plus petits d'abord)
-                eligible = sorted(eligible, key=lambda x: (x[1], x[0]))
-                remaining = freed_weight
+            max_single = profile.max_single_position
+            remaining = freed_weight
+            
+            # Itération jusqu'à épuisement
+            for _ in range(10):  # Max 10 passes
+                if remaining < 0.1:
+                    break
+                
+                eligible = [
+                    (aid, w) for aid, w in allocation.items()
+                    if asset_lookup.get(aid) 
+                    and asset_lookup[aid].category != "Crypto"
+                    and w < max_single - 0.5  # Marge de 0.5%
+                ]
+                
+                if not eligible:
+                    logger.warning(f"No eligible assets for redistribution, {remaining:.1f}% lost")
+                    break
+                
+                # Répartir équitablement avec cap
+                per_asset = remaining / len(eligible)
+                actually_distributed = 0
+                
                 for aid, w in eligible:
-                    if remaining < 0.1:
-                        break
-                    headroom = profile.max_single_position - w
-                    add = min(headroom, remaining, 3.0)  # Max 3% par itération
+                    headroom = max_single - w
+                    add = min(headroom, per_asset)
                     if add > 0.1:
                         allocation[aid] = round(allocation[aid] + add, 2)
-                        remaining -= add
+                        actually_distributed += add
+                
+                remaining -= actually_distributed
         
         # Log final
         crypto_final = sum(
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
         )
-        logger.info(f"P0 FIX v6.22: Crypto after enforcement = {crypto_final:.1f}%")
+        logger.info(f"P0 FIX v6.26: Crypto after enforcement = {crypto_final:.1f}%")
         
         return allocation
     def _enforce_single_bond_cap(
