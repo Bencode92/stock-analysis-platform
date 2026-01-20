@@ -2,6 +2,13 @@
 """
 Optimiseur de portefeuille v6.25 — PHASE 3: Raw weights diagnostic
 
+CHANGEMENTS v6.26 (P0 FIX - _profile_score propagation):
+1. FIX: convert_universe_to_assets() cherche _profile_score EN PRIORITÉ
+2. AVANT: score = item.get("score") or item.get("_score") or 50.0
+3. APRÈS: score = item.get("_profile_score") or item.get("score") or 50.0
+4. IMPACT: Le scoring de preset_meta.py est maintenant utilisé par l'optimizer
+5. ROOT CAUSE: Option B scoring était calculé mais jamais propagé
+
 CHANGEMENTS v6.22:
 1. NEW: _enforce_crypto_cap() force crypto <= crypto_max post-normalisation
 2. FIX: Appelé dans _fallback_allocation() après _enforce_bonds_minimum()
@@ -3648,7 +3655,10 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 category=cat_normalized,
                 sector=item.get("sector") or item.get("sector_top") or "Unknown",
                 region=item.get("country") or item.get("country_top") or item.get("region") or "Global",
-                score=_clean_float(item.get("score") or item.get("_score"), 50.0, 0, 100),
+                score=_clean_float(
+                    item.get("_profile_score") or item.get("score") or item.get("_score"), 
+                    50.0, 0, 100
+                ),  # v6.26 FIX: _profile_score prioritaire (Option B)
                 vol_annual=_clean_float(
                     item.get("vol") or item.get("volatility_3y") or item.get("vol_3y"),
                     default_vol, min_v, max_v
