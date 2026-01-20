@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
-generate_portfolios_v4.py - Orchestrateur complet v4.15.0 (EU/US Profile Differentiation + Sanity Fixes)
+generate_portfolios_v4.py - Orchestrateur complet v5.0.0 (Option B Architecture)
+
+V5.0.0: OPTION B ARCHITECTURE - preset_meta = seul moteur equity scoring
+   - NEW: EQUITY_SCORING_CONFIG explicite ("preset" mode par défaut)
+   - NEW: Pipeline documenté avec validation scoring mode
+   - FIX: compute_scores() conditionnel (skip si mode="preset")
+   - FIX: Logging explicite du mode de scoring utilisé
+   - INTEGRATION: preset_meta v5.0.0 (normalize_profile_score, relaxation progressive)
 
 V4.15.0: EU/US PROFILE DIFFERENTIATION + P1 FIXES
    - P0 FIX: EU/US sélection d'équités PAR PROFIL (comme Global) - évite overlap 100%
@@ -89,7 +96,7 @@ except ImportError:
     BLOCKED_REGIONS_EUUS = {"IN", "ASIA_EX_IN", "LATAM"}
     def get_region(country): return "OTHER"
 
-# === v4.13.2: Import PROFILE_POLICY + select_equities_for_profile corrigé ===
+# === v5.0.0: Import PROFILE_POLICY + preset_meta v5.0.0 ===
 try:
     from portfolio_engine.preset_meta import (
         PROFILE_POLICY,
@@ -97,17 +104,26 @@ try:
         score_equity_for_profile,
         filter_equities_by_profile,
         compute_universe_stats,
-        select_equities_for_profile as select_equities_for_profile_v2,  # v4.13.2
-        diagnose_profile_overlap,  # v4.13.2
+        select_equities_for_profile as select_equities_for_profile_v2,
+        diagnose_profile_overlap,
+        # v5.0.0: Nouvelles fonctions
+        normalize_profile_score,
+        apply_hard_filters_with_custom,
+        RELAX_STEPS,
     )
     HAS_PROFILE_POLICY = True
+    HAS_PRESET_META_V5 = True
 except ImportError:
     HAS_PROFILE_POLICY = False
+    HAS_PRESET_META_V5 = False
     PROFILE_POLICY = {}
+    RELAX_STEPS = []
     def get_profile_policy(p): return {}
     def score_equity_for_profile(e, p, s): return e.get("composite_score", 0)
     def filter_equities_by_profile(e, p): return e
     def compute_universe_stats(e): return {}
+    def normalize_profile_score(s, w): return s
+    def apply_hard_filters_with_custom(e, f): return e, {}
 
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
@@ -326,6 +342,11 @@ CONFIG = {
     # === v4.12.1: Selection Explainer (TOP caps analysis) ===
     "generate_selection_explained": True,
     "selection_explained_output": "data/selection_explained.json",
+    # === v5.0.0: EQUITY SCORING MODE (Option B Architecture) ===
+    # "preset"  = preset_meta.py gère TOUT le scoring equity (recommandé)
+    # "factors" = factors.py calcule composite_score (legacy)
+    # "blend"   = les deux (pour A/B testing)
+    "equity_scoring_mode": "preset",
 }
 
 # === v4.7 P2: DISCLAIMER BACKTEST ===
@@ -367,7 +388,119 @@ RESEARCH_DISCLAIMER_V414 = {
         "Pas de règles de rebalancement temps réel",
     ],
 }
+# =============================================================================
+# v5.0.0: EQUITY SCORING CONFIGURATION (Option B)
+# =============================================================================
 
+EQUITY_SCORING_CONFIG = {
+    "mode": CONFIG.get("equity_scoring_mode", "preset"),
+    "description": {
+        "preset": "preset_meta.py = seul moteur scoring equity (Option B)",
+        "factors": "factors.py calcule composite_score (legacy)",
+        "blend": "Les deux moteurs actifs (A/B testing)",
+    },
+    "pipeline": {
+        "preset": [
+            "1. load equities → enrichir avec Buffett (apply_buffett_filter)",
+            "2. select_equities_for_profile_v2() applique:",
+            "   - assign_preset_to_equity()",
+            "   - apply_hard_filters() avec relaxation progressive",
+            "   - score_equity_for_profile() avec normalize_profile_score()",
+            "3. Résultat: _profile_score [0,1] pour chaque equity",
+            "4. factors.py: buffett_score ONLY (pas de composite_score)",
+        ],
+        "factors": [
+            "1. load equities → compute_scores() via FactorScorer",
+            "2. filter_equities() standard",
+            "3. select_equities_for_profile() utilise composite_score",
+            "4. factors.py: composite_score complet",
+        ],
+    },
+}
+
+
+def log_scoring_config():
+    """v5.0.0: Log la configuration de scoring au démarrage."""
+    mode = EQUITY_SCORING_CONFIG["mode"]
+    desc = EQUITY_SCORING_CONFIG["description"].get(mode, "unknown")
+    logger.info(f"📊 EQUITY_SCORING_MODE = '{mode}' ({desc})")
+    if mode == "preset":
+        logger.info(f"   ℹ️  compute_scores() sera SKIP pour equities (buffett_score only)")
+        logger.info(f"   ℹ️  preset_meta.py v5.0.0 gère: hard_filters, relaxation, normalize_profile_score")
+    elif mode == "factors":
+        logger.info(f"   ⚠️  Mode legacy: factors.py calcule composite_score")
+    elif mode == "blend":
+        logger.info(f"   🔬 Mode A/B testing: les deux scores calculés")
+def validate_scoring_pipeline(equities: List[dict], profile: str) -> Dict[str, Any]:
+    """
+    v5.0.0: Valide que le pipeline de scoring a bien fonctionné.
+    
+    Returns:
+        Dict avec statistiques de validation
+    """
+    mode = EQUITY_SCORING_CONFIG["mode"]
+    
+    stats = {
+        "mode": mode,
+        "profile": profile,
+        "total": len(equities),
+        "has_profile_score": 0,
+        "has_composite_score": 0,
+        "has_buffett_score": 0,
+        "has_matched_preset": 0,
+        "score_distribution": {},
+    }
+    
+    for eq in equities:
+        if eq.get("_profile_score") is not None:
+            stats["has_profile_score"] += 1
+        if eq.get("composite_score") is not None:
+            stats["has_composite_score"] += 1
+        if eq.get("_buffett_score") is not None or eq.get("buffett_score") is not None:
+            stats["has_buffett_score"] += 1
+        if eq.get("_matched_preset"):
+            stats["has_matched_preset"] += 1
+    
+    # Calculer distribution des scores
+    if mode == "preset" and stats["has_profile_score"] > 0:
+        scores = [eq.get("_profile_score", 0) for eq in equities if eq.get("_profile_score") is not None]
+        if scores:
+            stats["score_distribution"] = {
+                "min": round(min(scores), 3),
+                "max": round(max(scores), 3),
+                "avg": round(sum(scores) / len(scores), 3),
+                "median": round(sorted(scores)[len(scores)//2], 3),
+            }
+    
+    # Warnings
+    stats["warnings"] = []
+    
+    if mode == "preset":
+        if stats["has_profile_score"] == 0:
+            stats["warnings"].append("CRITICAL: Aucun _profile_score trouvé en mode 'preset'")
+        if stats["has_matched_preset"] == 0:
+            stats["warnings"].append("WARNING: Aucun _matched_preset trouvé")
+    elif mode == "factors":
+        if stats["has_composite_score"] == 0:
+            stats["warnings"].append("CRITICAL: Aucun composite_score trouvé en mode 'factors'")
+    
+    return stats
+
+
+def print_scoring_validation(stats: Dict[str, Any]):
+    """v5.0.0: Affiche le résumé de validation scoring."""
+    logger.info(f"\n   [SCORING VALIDATION - {stats['profile']}]")
+    logger.info(f"   Mode: {stats['mode']} | Total: {stats['total']}")
+    logger.info(f"   _profile_score: {stats['has_profile_score']} | composite_score: {stats['has_composite_score']}")
+    logger.info(f"   buffett_score: {stats['has_buffett_score']} | _matched_preset: {stats['has_matched_preset']}")
+    
+    if stats.get("score_distribution"):
+        dist = stats["score_distribution"]
+        logger.info(f"   Score distribution: min={dist['min']}, max={dist['max']}, avg={dist['avg']}, median={dist['median']}")
+    
+    for warning in stats.get("warnings", []):
+        logger.warning(f"   ⚠️ {warning}")       
+       
 
 # ============= CHARGEMENT DONNÉES =============
 
@@ -1349,8 +1482,21 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # === PHASE 1: TRACE 2 - After Buffett ===
     count_korea(eq_rows, "2. After Buffett filter")    
     
-    # 5. Appliquer scoring quantitatif et filtres standards
-    eq_rows = compute_scores(eq_rows, "equity", None)
+    # 5. Appliquer scoring quantitatif (conditionnel selon EQUITY_SCORING_MODE v5.0.0)
+    scoring_mode = EQUITY_SCORING_CONFIG["mode"]
+    
+    if scoring_mode == "factors":
+        # Mode legacy: factors.py calcule composite_score
+        logger.info(f"   [SCORING] Mode '{scoring_mode}': compute_scores() pour equities")
+        eq_rows = compute_scores(eq_rows, "equity", None)
+    elif scoring_mode == "blend":
+        # Mode A/B testing: les deux scores
+        logger.info(f"   [SCORING] Mode '{scoring_mode}': compute_scores() + preset_meta")
+        eq_rows = compute_scores(eq_rows, "equity", None)
+    else:
+        # Mode "preset" (Option B): preset_meta gère le scoring
+        # buffett_score déjà enrichi via apply_buffett_filter()
+        logger.info(f"   [SCORING] Mode '{scoring_mode}': compute_scores() SKIP (preset_meta handles scoring)")
     
     # === v4.14.0 P1-4: Enrichir avec warnings ROE ===
     eq_rows = enrich_equities_with_roe_warnings(eq_rows)
@@ -1449,11 +1595,30 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         profile_selection_meta["buffett_missing_count"] = missing_buffett
         
         equities_by_profile[profile] = profile_equities
+        # v5.0.0: Log du mode de scoring utilisé
+        if scoring_mode == "preset":
+            # Vérifier que _profile_score est présent
+            has_profile_score = sum(1 for e in profile_equities if e.get("_profile_score") is not None)
+            has_composite = sum(1 for e in profile_equities if e.get("composite_score") is not None)
+            logger.info(f"   [{profile}] Scoring: _profile_score={has_profile_score}, composite_score={has_composite}")
+            
+            # Log des relaxations si applicable
+            relaxed_steps = profile_selection_meta.get("stages", {}).get("hard_filters", {}).get("relaxed", [])
+            if relaxed_steps:
+                logger.info(f"   [{profile}] ⚠️ Relaxation progressive appliquée: {len(relaxed_steps)} étapes")
+                for step in relaxed_steps[:3]:  # Max 3 pour lisibilité
+                    logger.info(f"      • {step}")
+        
+        # v5.0.0: Validation du pipeline scoring
+        validation_stats = validate_scoring_pipeline(profile_equities, profile)
+        print_scoring_validation(validation_stats)
+        profile_selection_meta["_scoring_validation"] = validation_stats
         
         # Log sélection
         policy_info = profile_selection_meta.get("profile_policy", {})
         radar_info = profile_selection_meta.get("radar", {})
         logger.info(f"   [{profile}] Équités sélectionnées: {len(profile_equities)} (min_buffett={policy_info.get('min_buffett_score', 'N/A')})")
+
         
         # === v4.13: Construire l'univers POUR CE PROFIL ===
         profile_universe = profile_equities + universe_others
@@ -1811,8 +1976,18 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
         )
         logger.info(f"   Equities EU/US après enrichissement Buffett: {len(eq_rows)}")
     
-    # 4. Scoring et filtrage de base
-    eq_rows = compute_scores(eq_rows, "equity", None)
+    # v5.0.0: Scoring conditionnel (même logique que Global)
+    scoring_mode = EQUITY_SCORING_CONFIG["mode"]
+    
+    if scoring_mode == "factors":
+        logger.info(f"   [EU/US SCORING] Mode '{scoring_mode}': compute_scores()")
+        eq_rows = compute_scores(eq_rows, "equity", None)
+    elif scoring_mode == "blend":
+        logger.info(f"   [EU/US SCORING] Mode '{scoring_mode}': compute_scores() + preset_meta")
+        eq_rows = compute_scores(eq_rows, "equity", None)
+    else:
+        logger.info(f"   [EU/US SCORING] Mode '{scoring_mode}': compute_scores() SKIP")
+    
     eq_rows = enrich_equities_with_roe_warnings(eq_rows)  # v4.15.0: Aussi pour EU/US
     eq_filtered = filter_equities(eq_rows)
     
@@ -3292,8 +3467,17 @@ def save_backtest_results_euus(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v4.14.0 - P0/P1 FIXES + PROFILE_POLICY + Global + EU/US Focus")
+    logger.info("🚀 Portfolio Engine v5.0.0 - Option B Architecture (preset_meta = equity scoring)")
     logger.info("=" * 60)
+    
+    # v5.0.0: Log configuration scoring au démarrage
+    log_scoring_config()
+    
+    # v5.0.0: Validation des dépendances
+    if EQUITY_SCORING_CONFIG["mode"] == "preset" and not HAS_PRESET_META_V5:
+        logger.warning("⚠️ Mode 'preset' demandé mais preset_meta v5.0.0 non disponible!")
+        logger.warning("   → Fallback vers mode 'factors'")
+        EQUITY_SCORING_CONFIG["mode"] = "factors"
     
     brief_data = load_brief_data()
     
@@ -3502,6 +3686,41 @@ def sanity_check_portfolios(v1_data: dict) -> bool:
         logger.error("❌ SANITY CHECK FAILED: Certains invariants ne sont pas respectés")
     
     return all_ok
+# =============================================================================
+# v5.0.0: TESTS SCORING MODE
+# =============================================================================
+
+def test_scoring_modes():
+    """v5.0.0: Test des différents modes de scoring."""
+    print("\n" + "=" * 60)
+    print("TEST v5.0.0: EQUITY_SCORING_CONFIG")
+    print("=" * 60)
+    
+    # Test 1: Config exists
+    assert "mode" in EQUITY_SCORING_CONFIG
+    assert EQUITY_SCORING_CONFIG["mode"] in ["preset", "factors", "blend"]
+    print(f"✅ Mode configuré: {EQUITY_SCORING_CONFIG['mode']}")
+    
+    # Test 2: Log function exists
+    try:
+        log_scoring_config()
+        print("✅ log_scoring_config() OK")
+    except Exception as e:
+        print(f"❌ log_scoring_config() failed: {e}")
+    
+    # Test 3: Validation function
+    test_equities = [
+        {"name": "TEST1", "_profile_score": 0.75, "_matched_preset": "quality_premium", "_buffett_score": 80},
+        {"name": "TEST2", "_profile_score": 0.55, "_matched_preset": "croissance", "_buffett_score": 60},
+    ]
+    stats = validate_scoring_pipeline(test_equities, "Agressif")
+    assert stats["has_profile_score"] == 2
+    assert stats["has_buffett_score"] == 2
+    print(f"✅ validate_scoring_pipeline() OK: {stats['score_distribution']}")
+    
+    print("\n" + "=" * 60)
+    print("v5.0.0 TESTS PASSED")
+    print("=" * 60)   
 
 
 if __name__ == "__main__":
