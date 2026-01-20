@@ -18,7 +18,7 @@ CHANGEMENTS v4.0 (RADAR Tie-Breaker v1.3):
 
 CHANGEMENTS v3.9 (Étape 1.3 - Top-N Garanti):
 - NOUVEAU: sector_balanced_selection() avec relaxation progressive
-- Garantit TOUJOURS 25 titres (sauf univers &lt; 25)
+- Garantit TOUJOURS 25 titres (sauf univers < 25)
 - Multi-passes: max=4 → max=6 → max=8 → illimité
 - Retourne métadonnées de sélection (pass utilisé, rejets, etc.)
 - Log clair des raisons de sélection/rejet
@@ -550,7 +550,7 @@ def sector_balanced_selection(
     actual_target = min(target_n, len(assets))
     
     # === STEP 1: Score helper ===
-     def get_score(asset: dict) -> float:
+    def get_score(asset: dict) -> float:
         # v4.1 FIX: Ajoute _profile_score en priorité (Option B scoring)
         for field in ["_profile_score", score_field, f"_{score_field}", "score", "_score"]:
             val = asset.get(field)
