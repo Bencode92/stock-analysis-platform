@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-generate_portfolios_v4.py - Orchestrateur complet v4.14.0 (P0/P1 FIXES)
+generate_portfolios_v4.py - Orchestrateur complet v4.14.0 (P0/P1 FIXES + Round 14 PARFAIT FINAL)
 
 Architecture v4 :
 - Python décide les poids (déterministe via portfolio_engine)
@@ -9,11 +9,17 @@ Architecture v4 :
 - Backtest 90j intégré avec comparaison des 3 profils
 - Filtre Buffett sectoriel intégré
 
-V4.14.0: P0/P1 FIXES - ChatGPT Audit Integration
+V4.14.0: P0/P1 FIXES - ChatGPT Audit Integration (10/10 PARFAIT FINAL)
    - P0-1: _tickers source unique (sections display dérivées via rebuild_display_sections_from_tickers)
-   - P0-2: max_assets violation fix (prune_allocation_to_max_assets)
+   - P0-2: max_assets violation fix (prune_allocation_to_max_assets + post-prune recheck)
    - P1-3: Séparer hard constraints vs indicators (classify_constraint_results)
    - P1-4: Sanity check ROE > 100% / D/E < 0 (flag_suspicious_roe)
+   Round 2-13: Tous fixes intégrés (champs, Buffett, mappings, precision, bucket "Autres",
+               _normalize_key, normalisation %, validation sum, boucle cap, EU/US _safe_float)
+   Round 14 PARFAIT FINAL (ChatGPT 10/10):
+   - FIX R14-1: display_name TOUJOURS unique avec ticker (évite collisions)
+   - FIX R14-2: ticker_to_asset_id sans name (évite collisions mapping)
+   - FIX R14-3: post_process_allocation() helper unifié (Global + EU/US)
 V4.13.2: PROFILE_POLICY FIX - hard_filters + assign_preset + robust normalization
 V4.12.2: FIX - ETF selection audit extraction from all_funds_data (dicts) not universe_others (Assets)
 V4.9.1: Backtest debug file generation - real prices and calculations export
@@ -128,6 +134,50 @@ logging.basicConfig(
 )
 logger = logging.getLogger("portfolio-v4")
 
+
+# =============================================================================
+# v4.14.0 FIX 1b: Helper _safe_float pour cast robuste
+# =============================================================================
+
+def _safe_float(value, default=None):
+    """Convertit une valeur en float de manière sûre (gère %, N/A, strings)."""
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        # Gérer les pourcentages "12.5%" et les strings "N/A"
+        s = value.strip().replace("%", "").replace(",", ".")
+        if not s or s.lower() in ("n/a", "nan", "-", ""):
+            return default
+        try:
+            return float(s)
+        except ValueError:
+            return default
+    return default
+
+
+def _parse_display_pct(s: str) -> float:
+    """
+    v4.14.0 FIX Round 5: Parse un pourcentage affiché (gère "<1%").
+    
+    Args:
+        s: String comme "12%", "<1%", "5.5%"
+    
+    Returns:
+        Valeur numérique (0.5 pour "<1%")
+    """
+    s = (s or "").strip()
+    if not s:
+        return 0.0
+    if s.startswith("<"):
+        # "<1%" → 0.5% (valeur conservative pour sommes)
+        return 0.5
+    try:
+        return float(s.replace("%", ""))
+    except ValueError:
+        return 0.0
+
 # === v4.13: Log disponibilité PROFILE_POLICY après logger init ===
 if HAS_PROFILE_POLICY:
     logger.info("✅ Module PROFILE_POLICY disponible")
@@ -236,6 +286,12 @@ CONFIG = {
     # === Buffett Filter Config ===
     "buffett_mode": "soft",
     "buffett_min_score": 40,
+    # v4.14.0: Seuils Buffett PAR PROFIL (permet divergence Agressif vs Stable)
+    "buffett_min_score_by_profile": {
+        "Agressif": 30,   # Plus permissif → autorise les "pépites" volatiles
+        "Modéré": 40,     # Seuil standard
+        "Stable": 50,     # Plus strict → qualité Buffett élevée requise
+    },
     # === v4.9.0: Tactical Context RADAR (data-driven) ===
     "use_tactical_context": True,
     "tactical_mode": "radar",  # "radar" (déterministe) ou "gpt" (ancien)
@@ -348,7 +404,10 @@ def load_stocks_data() -> list:
 # ============= v4.7 P0: ROUNDING INTELLIGENT =============
 
 def round_weights_to_100(weights: Dict[str, float], decimals: int = 0) -> Dict[str, float]:
-    """v4.7 P0 FIX: Arrondit les poids pour que la somme = exactement 100%."""
+    """
+    v4.7 P0 FIX: Arrondit les poids pour que la somme = exactement 100%.
+    v4.14.0 FIX R7-3: Garantit 100 exact même en fallback proportional.
+    """
     if not weights:
         return {}
     
@@ -374,7 +433,17 @@ def round_weights_to_100(weights: Dict[str, float], decimals: int = 0) -> Dict[s
     if abs(first_weight - original_first) > 3:
         logger.warning(f"Rounding adjustment too large ({original_first:.1f} → {first_weight:.1f}), using proportional")
         total = sum(weights.values())
-        return {k: round(v * 100 / total, decimals) for k, v in weights.items()}
+        proportional = {k: round(v * 100 / total, decimals) for k, v in weights.items()}
+        
+        # v4.14.0 FIX R7-3: Forcer sum=100 exact même en proportional
+        prop_sum = sum(proportional.values())
+        if prop_sum != 100.0:
+            # Ajuster la plus grande valeur pour compenser
+            sorted_prop = sorted(proportional.items(), key=lambda x: x[1], reverse=True)
+            largest_key = sorted_prop[0][0]
+            proportional[largest_key] = round(proportional[largest_key] + (100.0 - prop_sum), decimals)
+        
+        return proportional
     
     rounded[first_name] = first_weight
     return rounded
@@ -540,10 +609,12 @@ def prune_allocation_to_max_assets(
         for aid in kept_dict:
             kept_dict[aid] += removed_weight * (kept_dict[aid] / total_kept)
     
-    # Normaliser à 100%
+    # v4.14.0 FIX R10-2: Normaliser à 100% avec round_weights_to_100 (garantit somme exacte)
     total = sum(kept_dict.values())
     if total > 0:
-        kept_dict = {k: round(v * 100 / total, 2) for k, v in kept_dict.items()}
+        # Convertir en % puis forcer somme exacte
+        kept_dict_pct = {k: v * 100 / total for k, v in kept_dict.items()}
+        kept_dict = round_weights_to_100(kept_dict_pct, decimals=2)
     
     return kept_dict, {
         "pruned": len(removed),
@@ -551,6 +622,79 @@ def prune_allocation_to_max_assets(
         "removed_weight_pct": round(removed_weight, 2),
         "final_count": len(kept_dict),
     }
+
+
+# =============================================================================
+# v4.14.0 R14-3: POST-PROCESS ALLOCATION HELPER
+# =============================================================================
+
+def post_process_allocation(
+    allocation: Dict[str, float],
+    profile_config,
+    diagnostics: Dict,
+    profile_name: str = "Unknown"
+) -> Dict[str, float]:
+    """
+    v4.14.0 R14-3: Post-processing unifié pour Global et EU/US.
+    
+    Applique:
+    1. Prune si > max_assets
+    2. Cap max_single (boucle robuste)
+    3. round_weights_to_100
+    
+    Args:
+        allocation: {asset_id: weight_pct}
+        profile_config: Configuration du profil (PROFILES.get(profile))
+        diagnostics: Dict pour stocker les rapports
+        profile_name: Nom du profil pour les logs
+    
+    Returns:
+        allocation post-traitée
+    """
+    if not allocation:
+        return allocation
+    
+    # 1. Prune si > max_assets
+    profile_max_assets = getattr(profile_config, "max_assets", 18)
+    if len(allocation) > profile_max_assets:
+        allocation, prune_report = prune_allocation_to_max_assets(
+            allocation, 
+            max_assets=profile_max_assets,
+            min_weight_pct=1.25,
+        )
+        diagnostics["_prune_report"] = prune_report
+        logger.info(f"   [{profile_name}] v4.14.0 P0-2: Pruned {prune_report['pruned']} positions to respect max_assets={profile_max_assets}")
+    
+    # 2. Cap max_single (boucle robuste - jusqu'à 10 itérations pour cascades)
+    max_single = getattr(profile_config, "max_single_position", 15.0)
+    for iteration in range(10):
+        violators = [k for k, v in allocation.items() if v > max_single + 1e-9]
+        if not violators:
+            break
+        for aid in violators:
+            weight = allocation[aid]
+            logger.warning(f"   [{profile_name}] ⚠️ max_single violation (iter {iteration+1}): {aid}={weight:.1f}% > max_single={max_single}%")
+            excess = weight - max_single
+            allocation[aid] = max_single
+            # Redistribuer pro-rata aux autres
+            others = {k: v for k, v in allocation.items() if k != aid}
+            if others:
+                total_others = sum(others.values())
+                for k in others:
+                    allocation[k] += excess * (others[k] / total_others)
+            diagnostics.setdefault("_max_single_adjustments", []).append({
+                "asset": aid,
+                "original": weight,
+                "capped_to": max_single,
+                "excess_redistributed": excess,
+                "iteration": iteration + 1,
+            })
+    
+    # 3. Re-normaliser TOUJOURS pour éviter micro-erreurs flottantes
+    allocation = {k: float(v) for k, v in allocation.items()}
+    allocation = round_weights_to_100(allocation, decimals=2)
+    
+    return allocation
 
 
 # =============================================================================
@@ -569,6 +713,9 @@ def classify_constraint_results(constraint_report: Dict) -> Dict[str, Any]:
     v4.14.0 P1-3 FIX: Classifie les résultats en hard vs indicators.
     Élimine le paradoxe "status=OK mais outside_range=true".
     
+    v4.14.0 FIX R7: Utilise priority/is_indicator si présent, AVANT la whitelist.
+    v4.14.0 FIX R8: Plus robuste - gère details.priority, details.is_indicator, outside_range.
+    
     Args:
         constraint_report: Rapport brut (dict ou ConstraintReport.to_dict())
     
@@ -581,22 +728,77 @@ def classify_constraint_results(constraint_report: Dict) -> Dict[str, Any]:
     violations = constraint_report.get("violations", [])
     warnings = constraint_report.get("warnings", [])
     
-    # Contraintes HARD (bloquantes)
+    # Contraintes HARD (bloquantes) - whitelist de secours
     hard_names = {"sum_100", "bounds_positive", "max_single_position", 
                   "bonds_min", "crypto_max", "max_single_bond"}
     
-    # Contraintes INDICATOR (informatives)
+    # Contraintes INDICATOR (informatives) - whitelist de secours
     indicator_names = {"bucket_core", "bucket_defensive", "bucket_satellite",
                        "n_assets", "vol_target"}
     
+    def _determine_type(item: Any) -> Tuple[bool, str]:
+        """Détermine si c'est hard ou indicator, et le nom."""
+        if not isinstance(item, dict):
+            name = str(item)
+            is_hard = any(h in name for h in hard_names)
+            return is_hard, name
+        
+        name = item.get("name", "")
+        details = item.get("details", {}) if isinstance(item.get("details"), dict) else {}
+        
+        # v4.14.0 FIX R8: Ordre de priorité pour déterminer le type
+        # 1. priority au top-level
+        if item.get("priority") == "hard":
+            return True, name
+        if item.get("priority") == "indicator":
+            return False, name
+        
+        # 2. details.priority
+        if details.get("priority") == "hard":
+            return True, name
+        if details.get("priority") == "indicator":
+            return False, name
+        
+        # 3. is_indicator / is_blocking
+        if item.get("is_indicator") or details.get("is_indicator"):
+            return False, name
+        if item.get("is_blocking") is True or details.get("is_blocking") is True:
+            return True, name
+        if item.get("is_blocking") is False or details.get("is_blocking") is False:
+            return False, name
+        
+        # 4. Fallback sur whitelist de noms
+        return name in hard_names, name
+    
+    def _determine_status(item: Any, is_hard: bool) -> str:
+        """Détermine le status (VIOLATED/OUT_OF_RANGE/IN_RANGE)."""
+        if not isinstance(item, dict):
+            return "VIOLATED" if is_hard else "OUT_OF_RANGE"
+        
+        details = item.get("details", {}) if isinstance(item.get("details"), dict) else {}
+        
+        # v4.14.0 FIX R8: Utiliser outside_range si présent
+        outside_range = item.get("outside_range", details.get("outside_range"))
+        if outside_range is False:
+            return "IN_RANGE"
+        if outside_range is True:
+            return "OUT_OF_RANGE" if not is_hard else "VIOLATED"
+        
+        # Fallback
+        return "VIOLATED" if is_hard else "OUT_OF_RANGE"
+    
     for v in violations:
-        name = v.get("name", "") if isinstance(v, dict) else str(v)
-        is_hard = name in hard_names if isinstance(v, dict) else any(h in str(v) for h in hard_names)
+        is_hard, name = _determine_type(v)
+        status = _determine_status(v, is_hard)
+        
+        # v4.14.0 FIX R9-3: Garde-fou - un item dans violations ne peut pas être IN_RANGE
+        if status == "IN_RANGE":
+            status = "VIOLATED" if is_hard else "OUT_OF_RANGE"
         
         entry = {
             "name": name,
             "type": "hard" if is_hard else "indicator",
-            "status": "VIOLATED" if is_hard else "OUT_OF_RANGE",
+            "status": status,
             "is_blocking": is_hard,
             "details": v if isinstance(v, dict) else {"raw": str(v)},
         }
@@ -608,15 +810,17 @@ def classify_constraint_results(constraint_report: Dict) -> Dict[str, Any]:
     
     # Ajouter warnings comme indicators
     for w in warnings:
-        is_indicator = any(ind in str(w) for ind in indicator_names)
-        if is_indicator:
-            indicators.append({
-                "name": str(w).split(":")[0] if ":" in str(w) else str(w)[:30],
-                "type": "indicator",
-                "status": "OUT_OF_RANGE",
-                "is_blocking": False,
-                "details": {"warning": str(w)},
-            })
+        is_hard, w_name = _determine_type(w)
+        status = _determine_status(w, False)  # Warnings jamais hard
+        
+        # Forcer indicator pour les warnings
+        indicators.append({
+            "name": w_name[:50] if len(w_name) > 50 else w_name,
+            "type": "indicator",
+            "status": status,
+            "is_blocking": False,
+            "details": w if isinstance(w, dict) else {"warning": str(w)},
+        })
     
     return {
         "hard_constraints": hard_constraints,
@@ -626,6 +830,7 @@ def classify_constraint_results(constraint_report: Dict) -> Dict[str, Any]:
             "hard_violated_count": len(hard_constraints),
             "indicators_count": len(indicators),
             "indicators_out_of_range": len([i for i in indicators if i["status"] == "OUT_OF_RANGE"]),
+            "indicators_in_range": len([i for i in indicators if i["status"] == "IN_RANGE"]),
         },
         "original_report": constraint_report,
     }
@@ -650,39 +855,62 @@ def _normalize_category_for_display(category: str) -> str:
 def rebuild_display_sections_from_tickers(
     tickers_dict: Dict[str, float],
     asset_map: Dict[str, Dict]
-) -> Dict[str, Dict[str, str]]:
+) -> Tuple[Dict[str, Dict[str, str]], Dict[str, float]]:
     """
     v4.14.0 P0-1 FIX: Reconstruit les sections display DEPUIS _tickers (source unique).
     
-    Cela garantit la cohérence entre _tickers et les sections Actions/ETF/Obligations/Crypto.
+    v4.14.0 FIX R6: Agrège par TICKER (pas name) pour éviter collisions ADR/dual listing.
+    v4.14.0 FIX R8: Ne pas drop petites lignes avant round → fidélité à l'allocation réelle.
+    Retourne aussi les poids numériques pour calcul de somme fiable.
     
     Args:
         tickers_dict: {ticker: weight_decimal} - source unique de vérité
         asset_map: {ticker: {name, category, ...}} - mapping pour display
     
     Returns:
-        {"Actions": {...}, "ETF": {...}, "Obligations": {...}, "Crypto": {...}}
+        (sections_dict, numeric_weights)
+        - sections_dict: {"Actions": {...}, "ETF": {...}, ...} avec strings "X.X%"
+        - numeric_weights: {display_key: weight_pct} pour calculs
     """
     sections = {"Actions": {}, "ETF": {}, "Obligations": {}, "Crypto": {}}
+    numeric_weights = {}  # Pour calcul de somme fiable
     
-    # Agréger par (category, display_name)
-    aggregated = {}  # {(category, name): weight_sum}
+    # Agréger par (category, ticker) pour éviter collisions de noms
+    aggregated = {}  # {(category, ticker, display_name): weight_sum}
     
     for ticker, weight_decimal in tickers_dict.items():
-        info = asset_map.get(ticker, {})
+        # v4.14.0 FIX R10-1: Lookup avec clé normalisée (upper + strip)
+        ticker_norm = _normalize_key(ticker)
+        info = asset_map.get(ticker_norm) or asset_map.get(ticker, {})
         category = _normalize_category_for_display(info.get("category", "ETF"))
         name = info.get("name") or ticker
         
-        key = (category, name)
+        # v4.14.0 FIX R14-1: display_name TOUJOURS unique avec ticker
+        # Évite les collisions si deux actifs ont le même name
+        if name and name != ticker:
+            # Pour les ISIN longs, n'afficher que les 6 derniers caractères
+            ticker_short = ticker[-6:] if len(ticker) > 8 else ticker
+            display_name = f"{name} ({ticker_short})"
+        else:
+            display_name = str(ticker)
+        
+        key = (category, ticker, display_name)
         aggregated[key] = aggregated.get(key, 0.0) + weight_decimal
     
-    # Convertir en pourcentages et remplir les sections
-    for (category, name), weight in aggregated.items():
-        pct_value = round(weight * 100)
-        if pct_value > 0:
-            sections[category][name] = f"{pct_value}%"
+    # v4.14.0 FIX R8: Convertir TOUTES les lignes en pourcentages (pas de filtre)
+    # v4.14.0 FIX R14-1: Sommer au lieu d'écraser pour éviter collisions
+    for (category, ticker, display_name), weight in aggregated.items():
+        pct_value = weight * 100
+        if pct_value > 0:  # Garder tout ce qui est > 0 pour le round
+            nw_key = f"{category}:{display_name}"
+            numeric_weights[nw_key] = numeric_weights.get(nw_key, 0.0) + pct_value
     
-    return sections
+    # Remplir sections (sera écrasé après round_weights_to_100)
+    for key, pct in numeric_weights.items():
+        cat, name = key.split(":", 1)
+        sections[cat][name] = f"{pct:.1f}%"
+    
+    return sections, numeric_weights
 
 
 # ============= BUFFETT DIAGNOSTIC =============
@@ -1022,27 +1250,45 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 "id": f"EQ_{len(eq_rows)+1}",
                 "name": it.get("name") or it.get("ticker"),
                 "ticker": it.get("ticker"),
-                "perf_1m": it.get("perf_1m"),
-                "perf_3m": it.get("perf_3m"),
-                "ytd": it.get("perf_ytd") or it.get("ytd"),
-                "perf_24h": it.get("perf_1d"),
-                "vol_3y": it.get("volatility_3y") or it.get("vol"),
-                "vol": it.get("volatility_3y") or it.get("vol"),
-                "volatility_3y": it.get("volatility_3y"),
-                "max_dd": it.get("max_drawdown_ytd"),
-                "max_drawdown_ytd": it.get("max_drawdown_ytd"),
+                # === Performances (cast float via _safe_float) ===
+                "perf_1m": _safe_float(it.get("perf_1m")),
+                "perf_3m": _safe_float(it.get("perf_3m")),
+                "perf_1y": _safe_float(it.get("perf_1y")),
+                "perf_3y": _safe_float(it.get("perf_3y")),
+                "ytd": _safe_float(it.get("perf_ytd") or it.get("ytd")),
+                "perf_24h": _safe_float(it.get("perf_1d")),
+                # === Volatilité / Drawdown ===
+                "vol_3y": _safe_float(it.get("volatility_3y") or it.get("vol")),
+                "vol": _safe_float(it.get("volatility_3y") or it.get("vol")),
+                "volatility_3y": _safe_float(it.get("volatility_3y")),
+                "max_dd": _safe_float(it.get("max_drawdown_ytd")),
+                "max_drawdown_ytd": _safe_float(it.get("max_drawdown_ytd")),
+                "max_drawdown_3y": _safe_float(it.get("max_drawdown_3y")),
+                # === Fondamentaux (v4.14.0 FIX 1) ===
                 "liquidity": it.get("market_cap"),
                 "market_cap": it.get("market_cap"),
                 "sector": it.get("sector", "Unknown"),
                 "country": it.get("country", "Global"),
                 "category": "equity",
-                "roe": it.get("roe"),
-                "de_ratio": it.get("de_ratio"),
-                "payout_ratio_ttm": it.get("payout_ratio_ttm"),
-                "dividend_yield": it.get("dividend_yield"),
-                "dividend_coverage": it.get("dividend_coverage"),
-                "pe_ratio": it.get("pe_ratio"),
-                "eps_ttm": it.get("eps_ttm"),
+                "roe": _safe_float(it.get("roe")),
+                "de_ratio": _safe_float(it.get("de_ratio")),
+                "payout_ratio_ttm": _safe_float(it.get("payout_ratio_ttm")),
+                "dividend_yield": _safe_float(it.get("dividend_yield")),
+                "dividend_coverage": _safe_float(it.get("dividend_coverage")),
+                "pe_ratio": _safe_float(it.get("pe_ratio")),
+                "eps_ttm": _safe_float(it.get("eps_ttm")),
+                # === v4.14.0: Champs scoring avancés ===
+                "fcf_yield": _safe_float(it.get("fcf_yield")),
+                "eps_growth_5y": _safe_float(it.get("eps_growth_5y")),
+                "eps_growth_forecast_5y": _safe_float(it.get("eps_growth_forecast_5y")),
+                "revenue_growth_5y": _safe_float(it.get("revenue_growth_5y")),
+                "gross_margin": _safe_float(it.get("gross_margin")),
+                "operating_margin": _safe_float(it.get("operating_margin")),
+                "net_margin": _safe_float(it.get("net_margin")),
+                "current_ratio": _safe_float(it.get("current_ratio")),
+                "quick_ratio": _safe_float(it.get("quick_ratio")),
+                "beta": _safe_float(it.get("beta")),
+                # === Legacy ===
                 "sector_top": it.get("sector"),
                 "country_top": it.get("country"),
             })
@@ -1052,26 +1298,37 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # === PHASE 1: TRACE 1 - Initial ===
     count_korea(eq_rows, "1. Initial (après chargement)")
     
-    # 4. Appliquer le filtre Buffett
+    # 4. Appliquer le filtre Buffett EN MODE ENRICHISSEMENT (pas suppression)
     eq_rows_before_buffett = eq_rows.copy()  # v4.12.0: Garder pour audit
     
     if CONFIG["buffett_mode"] != "none" and eq_rows:
         logger.info(f"   Application filtre Buffett sur {len(eq_rows)} actions...")
         
-        eq_rows_filtered = apply_buffett_filter(
+        # v4.14.0 FIX Round 3: Mode "enrich" - ajoute _buffett_score sans supprimer
+        # La suppression se fait par profil dans select_equities_for_profile_v2
+        # qui peut avoir des seuils différents (Agressif plus permissif que Stable)
+        eq_rows_enriched = apply_buffett_filter(
             eq_rows,
             mode=CONFIG["buffett_mode"],
             strict=False,
-            min_score=CONFIG["buffett_min_score"],
+            min_score=0,  # Ne pas filtrer ici, juste enrichir avec scores
         )
+        
+        # Garder TOUS les equities avec leurs scores Buffett
+        # Le filtrage par seuil se fera dans select_equities_for_profile_v2
+        eq_rows = eq_rows_enriched
+        
+        # Diagnostic: combien seraient filtrés avec le seuil global?
+        global_threshold = CONFIG["buffett_min_score"]
+        would_be_filtered = sum(1 for e in eq_rows if (e.get("_buffett_score") or 0) < global_threshold)
         
         print_buffett_diagnostic(
-            eq_rows_filtered, 
-            f"QUALITÉ SECTORIELLE - {len(eq_rows_filtered)}/{len(eq_rows)} actions après filtre Buffett"
+            eq_rows, 
+            f"QUALITÉ SECTORIELLE - {len(eq_rows)} actions enrichies (Buffett min_score appliqué par profil)"
         )
         
-        logger.info(f"   Equities après filtre Buffett: {len(eq_rows_filtered)}")
-        eq_rows = eq_rows_filtered
+        logger.info(f"   Equities après enrichissement Buffett: {len(eq_rows)} (dont {would_be_filtered} sous seuil global {global_threshold})")
+        logger.info(f"   ℹ️  Le seuil Buffett sera appliqué PAR PROFIL dans select_equities_for_profile_v2")
     # === PHASE 1: TRACE 2 - After Buffett ===
     count_korea(eq_rows, "2. After Buffett filter")    
     
@@ -1137,16 +1394,42 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # === v4.13: Dict pour stocker équités par profil (diagnostic overlap) ===
     equities_by_profile = {}
     
+    # v4.14.0 FIX R5b: Synchroniser PROFILE_POLICY avec seuils Buffett CONFIG
+    # Évite le double filtre (CONFIG vs PROFILE_POLICY)
+    if HAS_PROFILE_POLICY:
+        buffett_thresholds = CONFIG.get("buffett_min_score_by_profile", {})
+        for profile_name, threshold in buffett_thresholds.items():
+            if profile_name in PROFILE_POLICY:
+                old_threshold = PROFILE_POLICY[profile_name].get("min_buffett_score")
+                PROFILE_POLICY[profile_name]["min_buffett_score"] = threshold
+                if old_threshold != threshold:
+                    logger.info(f"   🔄 PROFILE_POLICY[{profile_name}].min_buffett_score: {old_threshold} → {threshold}")
+    
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation profil {profile}...")
         
         # === v4.13: Sélection d'équités spécifique au profil ===
+        # v4.14.0 FIX R6: Une seule source de vérité pour Buffett = PROFILE_POLICY
+        # Le filtre Buffett est appliqué dans select_equities_for_profile_v2 via PROFILE_POLICY
+        # (synchronisé avec CONFIG["buffett_min_score_by_profile"] au début de la boucle)
+        
+        # Log pour diagnostic
+        buffett_thresholds = CONFIG.get("buffett_min_score_by_profile", {})
+        profile_buffett_min = buffett_thresholds.get(profile, CONFIG.get("buffett_min_score", 40))
+        missing_buffett = sum(1 for e in eq_filtered if e.get("_buffett_score") is None)
+        if missing_buffett > 0:
+            logger.warning(f"   [{profile}] ⚠️ {missing_buffett}/{len(eq_filtered)} equities sans score Buffett")
+        
+        # Passer TOUT eq_filtered à select_equities_for_profile_v2
+        # Le filtrage Buffett se fait dans la fonction via PROFILE_POLICY (source unique)
         profile_equities, profile_selection_meta = select_equities_for_profile(
-            eq_filtered=eq_filtered,
+            eq_filtered=eq_filtered,  # Pas de pré-filtre, PROFILE_POLICY gère
             profile=profile,
             market_context=market_context,
             target_n=min(25, len(eq_filtered)),
         )
+        profile_selection_meta["buffett_threshold_policy"] = profile_buffett_min
+        profile_selection_meta["buffett_missing_count"] = missing_buffett
         
         equities_by_profile[profile] = profile_equities
         
@@ -1212,16 +1495,21 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
         
-        # === v4.14.0 P0-2: Prune si > max_assets ===
-        profile_max_assets = getattr(profile_config, "max_assets", 18)
-        if len(allocation) > profile_max_assets:
-            allocation, prune_report = prune_allocation_to_max_assets(
-                allocation, 
-                max_assets=profile_max_assets,
-                min_weight_pct=1.25,
-            )
-            diagnostics["_prune_report"] = prune_report
-            logger.info(f"   v4.14.0 P0-2: Pruned {prune_report['pruned']} positions to respect max_assets={profile_max_assets}")
+        # v4.14.0 FIX R12: Normaliser allocation en % si retournée en décimal (somme ~1)
+        total_alloc = sum(allocation.values()) if allocation else 0.0
+        if 0.5 < total_alloc < 1.5:  # allocation en décimal, pas en %
+            logger.info(f"   [{profile}] Allocation en décimal (sum={total_alloc:.2f}), conversion en %")
+            allocation = {k: v * 100.0 for k, v in allocation.items()}
+        
+        # v4.14.0 FIX R12b: Log validation somme post-conversion
+        s = sum(allocation.values()) if allocation else 0.0
+        if not (98.0 <= s <= 102.0):
+            logger.warning(f"   [{profile}] ⚠️ allocation sum inattendue après R12: {s:.2f}")
+        else:
+            logger.info(f"   [{profile}] ✅ allocation sum OK après R12: {s:.2f}")
+        
+        # v4.14.0 R14-3: Post-processing unifié (prune + cap + round)
+        allocation = post_process_allocation(allocation, profile_config, diagnostics, profile)
         
         # === PHASE 1: TRACE 5 - Optimizer allocation ===
         allocated_ids = set(allocation.keys())
@@ -1245,10 +1533,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             "assets": assets,
         }
         
-        logger.info(
-            f"   → {len(allocation)} lignes, "
-            f"vol={diagnostics.get('portfolio_vol', 'N/A'):.1f}%"
-        )
+        # v4.14.0 FIX R8-4: Safe format pour vol (évite TypeError si None)
+        vol = diagnostics.get('portfolio_vol')
+        vol_str = f"{vol:.1f}%" if isinstance(vol, (int, float)) else "N/A"
+        logger.info(f"   → {len(allocation)} lignes, vol={vol_str}")
     
     # === v4.13: Diagnostic overlap entre profils ===
     if HAS_PROFILE_POLICY and len(equities_by_profile) == 3:
@@ -1455,29 +1743,36 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 eq_skipped += 1
                 continue
             
+            # v4.14.0 FIX R13-1: Appliquer _safe_float pour cohérence scoring
             eq_rows.append({
                 "id": f"EQ_{len(eq_rows)+1}",
                 "name": it.get("name") or it.get("ticker"),
                 "ticker": it.get("ticker"),
-                "perf_1m": it.get("perf_1m"),
-                "perf_3m": it.get("perf_3m"),
-                "ytd": it.get("perf_ytd") or it.get("ytd"),
-                "perf_24h": it.get("perf_1d"),
-                "vol_3y": it.get("volatility_3y") or it.get("vol"),
-                "vol": it.get("volatility_3y") or it.get("vol"),
-                "volatility_3y": it.get("volatility_3y"),
-                "max_dd": it.get("max_drawdown_ytd"),
-                "max_drawdown_ytd": it.get("max_drawdown_ytd"),
-                "liquidity": it.get("market_cap"),
-                "market_cap": it.get("market_cap"),
+                "perf_1m": _safe_float(it.get("perf_1m")),
+                "perf_3m": _safe_float(it.get("perf_3m")),
+                "ytd": _safe_float(it.get("perf_ytd") or it.get("ytd")),
+                "perf_24h": _safe_float(it.get("perf_1d")),
+                "vol_3y": _safe_float(it.get("volatility_3y") or it.get("vol")),
+                "vol": _safe_float(it.get("volatility_3y") or it.get("vol")),
+                "volatility_3y": _safe_float(it.get("volatility_3y")),
+                "max_dd": _safe_float(it.get("max_drawdown_ytd")),
+                "max_drawdown_ytd": _safe_float(it.get("max_drawdown_ytd")),
+                "liquidity": _safe_float(it.get("market_cap")),
+                "market_cap": _safe_float(it.get("market_cap")),
                 "sector": it.get("sector", "Unknown"),
                 "country": country,
                 "category": "equity",
-                "roe": it.get("roe"),
-                "de_ratio": it.get("de_ratio"),
-                "payout_ratio_ttm": it.get("payout_ratio_ttm"),
-                "dividend_yield": it.get("dividend_yield"),
-                "pe_ratio": it.get("pe_ratio"),
+                "roe": _safe_float(it.get("roe")),
+                "de_ratio": _safe_float(it.get("de_ratio")),
+                "payout_ratio_ttm": _safe_float(it.get("payout_ratio_ttm")),
+                "dividend_yield": _safe_float(it.get("dividend_yield")),
+                "pe_ratio": _safe_float(it.get("pe_ratio")),
+                "perf_1y": _safe_float(it.get("perf_1y")),
+                "perf_3y": _safe_float(it.get("perf_3y")),
+                "max_drawdown_3y": _safe_float(it.get("max_drawdown_3y")),
+                "fcf_yield": _safe_float(it.get("fcf_yield")),
+                "eps_growth_5y": _safe_float(it.get("eps_growth_5y")),
+                "beta": _safe_float(it.get("beta")),
                 "sector_top": it.get("sector"),
                 "country_top": it.get("country"),
             })
@@ -1542,16 +1837,34 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
         try:
             allocation, diagnostics = optimizer.build_portfolio_euus(assets, profile)
             
+            # v4.14.0 FIX R12: Normaliser allocation en % si retournée en décimal (somme ~1)
+            total_alloc = sum(allocation.values()) if allocation else 0.0
+            if 0.5 < total_alloc < 1.5:  # allocation en décimal, pas en %
+                logger.info(f"   [{profile}] EU/US Allocation en décimal (sum={total_alloc:.2f}), conversion en %")
+                allocation = {k: v * 100.0 for k, v in allocation.items()}
+            
+            # v4.14.0 FIX R12b: Log validation somme post-conversion
+            s = sum(allocation.values()) if allocation else 0.0
+            if not (98.0 <= s <= 102.0):
+                logger.warning(f"   [{profile}] EU/US ⚠️ allocation sum inattendue après R12: {s:.2f}")
+            else:
+                logger.info(f"   [{profile}] EU/US ✅ allocation sum OK après R12: {s:.2f}")
+            
+            # v4.14.0 R14-3: Post-processing unifié EU/US (prune + cap + round)
+            profile_config = PROFILES_EUUS.get(profile) if PROFILES_EUUS else PROFILES.get(profile)
+            if profile_config:
+                allocation = post_process_allocation(allocation, profile_config, diagnostics, f"{profile} EU/US")
+            
             portfolios[profile] = {
                 "allocation": allocation,
                 "diagnostics": diagnostics,
                 "assets": assets,
             }
             
-            logger.info(
-                f"   → {len(allocation)} lignes, "
-                f"vol={diagnostics.get('portfolio_vol', 'N/A'):.1f}%"
-            )
+            # v4.14.0 FIX R8-4: Safe format pour vol (évite TypeError si None)
+            vol = diagnostics.get('portfolio_vol')
+            vol_str = f"{vol:.1f}%" if isinstance(vol, (int, float)) else "N/A"
+            logger.info(f"   → {len(allocation)} lignes, vol={vol_str}")
         except ValueError as e:
             logger.error(f"❌ EU/US {profile} failed: {e}")
             portfolios[profile] = {
@@ -2138,6 +2451,17 @@ def _normalize_ticker_value(raw) -> Optional[str]:
     return s if s and s.lower() != "nan" else None
 
 
+def _normalize_key(x) -> Optional[str]:
+    """
+    v4.14.0 FIX R10-1: Normalise une clé pour lookup uniforme (upper + strip).
+    Garantit que BRK.B, brk.b, Brk.B matchent tous.
+    """
+    if x is None:
+        return None
+    s = str(x).strip().upper()
+    return s if s and s.lower() != "nan" else None
+
+
 def _safe_get_attr(obj, key, default=None):
     """Récupère un attribut d'un objet ou d'un dict de manière sûre."""
     val = None
@@ -2243,23 +2567,44 @@ def build_limitations(
                 f"({vol_target:.1f}%) - écart de {vol_diff:.1f}%."
             )
     
+    # v4.14.0 FIX R10-3: Utiliser hard_constraints du report classifié si disponible
     if constraint_report:
-        violations = constraint_report.get("violations", [])
-        hard_violations = [v for v in violations if v.get("priority") == "hard"]
-        if hard_violations:
+        # Priorité 1: Utiliser hard_constraints directement (report classifié)
+        if "hard_constraints" in constraint_report:
+            for v in constraint_report["hard_constraints"]:
+                name = v.get("name", "unknown")
+                details = v.get("details", {})
+                expected = details.get("expected", "?") if isinstance(details, dict) else "?"
+                actual = details.get("actual", 0) if isinstance(details, dict) else 0
+                try:
+                    actual_str = f"{float(actual):.1f}%"
+                except:
+                    actual_str = str(actual)
+                limitations.append(
+                    f"Contrainte HARD '{name}' violée: attendu {expected}, obtenu {actual_str}."
+                )
+        else:
+            # Fallback: original_report.violations avec priority == "hard"
+            raw = constraint_report.get("original_report", constraint_report)
+            violations = raw.get("violations", [])
+            
+            hard_violations = [v for v in violations if isinstance(v, dict) and v.get("priority") == "hard"]
             for v in hard_violations:
                 limitations.append(
-                    f"Contrainte '{v['name']}' violée: attendu {v['expected']}, "
-                    f"obtenu {v['actual']:.1f}%."
+                    f"Contrainte '{v.get('name', 'unknown')}' violée: attendu {v.get('expected', '?')}, "
+                    f"obtenu {v.get('actual', 0):.1f}%."
                 )
         
-        relaxed = constraint_report.get("relaxed_constraints", [])
+        # Relaxed constraints
+        raw = constraint_report.get("original_report", constraint_report)
+        relaxed = raw.get("relaxed_constraints", [])
         if relaxed:
             limitations.append(
                 f"Contraintes relâchées pour ce profil: {', '.join(relaxed)}."
             )
         
-        warnings = constraint_report.get("warnings", [])
+        # Warnings
+        warnings = raw.get("warnings", [])
         if warnings:
             for w in warnings:
                 limitations.append(f"Avertissement: {w}")
@@ -2447,9 +2792,13 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 else:
                     pricing_ticker = name
                 
+                # v4.14.0 FIX R11-1: Normaliser pour éviter doublons (BRK.B vs brk.b)
+                pricing_ticker = _normalize_key(pricing_ticker) or pricing_ticker
+                
                 tickers_dict = result[profile]["_tickers"]
                 prev_weight = tickers_dict.get(pricing_ticker, 0.0)
-                new_weight = round(prev_weight + weight / 100.0, 4)
+                # v4.14.0 FIX R9: Garder full precision, arrondir uniquement au rendu
+                new_weight = prev_weight + weight / 100.0
                 tickers_dict[pricing_ticker] = new_weight
                 
                 bond_symbols_used.append(f"{pricing_ticker}={weight}%")
@@ -2472,10 +2821,13 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 else:
                     ticker_key = name
                 ticker_key = _normalize_ticker_value(ticker_key) or name
+                # v4.14.0 FIX R11-1: Normaliser pour éviter doublons (BRK.B vs brk.b)
+                ticker_key = _normalize_key(ticker_key) or ticker_key
                 
                 tickers_dict = result[profile]["_tickers"]
                 prev_weight = tickers_dict.get(ticker_key, 0.0)
-                new_weight = round(prev_weight + weight / 100.0, 4)
+                # v4.14.0 FIX R9: Garder full precision, arrondir uniquement au rendu
+                new_weight = prev_weight + weight / 100.0
                 tickers_dict[ticker_key] = new_weight
                 
                 if prev_weight > 0:
@@ -2488,37 +2840,94 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 continue
             
             for name, weight in weights_dict.items():
-                result[profile][cat_v1][name] = format_weight_as_percent(weight, decimals=0)
+                result[profile][cat_v1][name] = format_weight_as_percent(weight, decimals=1)
         
-        all_readable_weights = {}
-        for cat_v1 in ["Actions", "ETF", "Obligations", "Crypto"]:
-            for name, pct_str in result[profile][cat_v1].items():
-                try:
-                    pct_val = float(pct_str.replace("%", ""))
-                    all_readable_weights[f"{cat_v1}:{name}"] = pct_val
-                except:
-                    pass
+        # Note: Le bloc ci-dessus est écrasé par rebuild_display_sections_from_tickers
+        # qui reconstruit les sections depuis _tickers (source unique)
         
-        if all_readable_weights:
-            rounded_weights = round_weights_to_100(all_readable_weights, decimals=0)
+        # === v4.14.0 FIX 2: Reconstruire sections DEPUIS _tickers (source unique) ===
+        # v4.14.0 FIX R10-1: Normaliser toutes les clés (upper + strip) pour lookup uniforme
+        # v4.14.0 FIX R13-3: Ne PAS inclure name comme clé (risque collisions)
+        ticker_to_asset_info = {}
+        for asset_id_str, info in asset_lookup.items():
+            # Ajouter seulement symbol/ticker/isin (PAS name - risque collisions)
+            for key in [info.get("symbol"), info.get("ticker"), info.get("isin")]:
+                if key:
+                    key_norm = _normalize_key(key)
+                    if key_norm and not _is_internal_id(key_norm):
+                        ticker_to_asset_info[key_norm] = info
+                    # Aussi garder version originale pour fallback
+                    if not _is_internal_id(str(key)):
+                        ticker_to_asset_info[key] = info
+        
+        # Rebuild sections depuis _tickers pour garantir cohérence
+        # v4.14.0 FIX R6: Retourne aussi les poids numériques
+        rebuilt_sections, rebuilt_numeric = rebuild_display_sections_from_tickers(
+            tickers_dict=result[profile]["_tickers"],
+            asset_map=ticker_to_asset_info,
+        )
+        
+        # v4.14.0 FIX R6: Appliquer round_weights_to_100 avec 1 décimale (pas 0)
+        # Cela évite les problèmes de précision et les faux warnings
+        if rebuilt_numeric:
+            rounded_rebuilt = round_weights_to_100(rebuilt_numeric, decimals=1)
+            # Reconstruire les sections avec les poids arrondis (1 décimale)
+            for cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+                rebuilt_sections[cat] = {}
             
-            for key, weight in rounded_weights.items():
-                cat_v1, name = key.split(":", 1)
-                result[profile][cat_v1][name] = format_weight_as_percent(weight, decimals=0)
+            # v4.14.0 FIX R9-2: Bucket "Autres" pour les petites lignes (garantit somme ~100%)
+            others_by_cat = {"Actions": 0.0, "ETF": 0.0, "Obligations": 0.0, "Crypto": 0.0}
+            
+            for key, weight in rounded_rebuilt.items():
+                cat, name = key.split(":", 1)
+                if weight >= 0.1:  # Afficher si >= 0.1%
+                    rebuilt_sections[cat][name] = f"{weight:.1f}%"
+                else:
+                    others_by_cat[cat] += weight
+            
+            # Ajouter bucket "Autres" par catégorie si significatif
+            for cat, others_weight in others_by_cat.items():
+                if others_weight >= 0.1:
+                    rebuilt_sections[cat]["Autres"] = f"{others_weight:.1f}%"
+            
+            # Stocker les poids numériques pour calcul de somme fiable (FIX R6)
+            result[profile]["_numeric_weights"] = rounded_rebuilt
         
+        # Écraser les sections avec les versions reconstruites (source unique = _tickers)
+        for cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+            if rebuilt_sections.get(cat):
+                result[profile][cat] = rebuilt_sections[cat]
+        
+        # v4.14.0 FIX R8-2: Construire allocation_rounded depuis asset_lookup (pas assets_metadata_for_check)
+        # car asset_lookup contient symbol/isin/ticker complets
         allocation_rounded = {}
-        for cat_v1 in ["Actions", "ETF", "Obligations", "Crypto"]:
-            for name, pct_str in result[profile][cat_v1].items():
-                try:
-                    pct_val = float(pct_str.replace("%", ""))
-                    for aid, meta in assets_metadata_for_check.items():
-                        if meta["name"] == name or name.startswith(meta["name"]):
-                            allocation_rounded[aid] = pct_val
-                            break
-                    else:
-                        allocation_rounded[name] = pct_val
-                except:
-                    pass
+        
+        # Créer mapping inverse: ticker/symbol/isin → asset_id depuis asset_lookup
+        # v4.14.0 FIX R14-2: Ne PAS inclure name (risque collisions)
+        ticker_to_asset_id = {}
+        for aid, info in asset_lookup.items():
+            for key in [info.get("symbol"), info.get("ticker"), info.get("isin")]:
+                if key:
+                    # Normaliser la clé
+                    key_norm = str(key).strip().upper() if key else None
+                    if key_norm and not _is_internal_id(key_norm) and key_norm not in ticker_to_asset_id:
+                        ticker_to_asset_id[key_norm] = aid
+                    # Aussi garder la version originale (case-sensitive)
+                    if key and key not in ticker_to_asset_id:
+                        ticker_to_asset_id[key] = aid
+        
+        # Utiliser _tickers directement (contient ticker → weight_decimal)
+        for ticker, weight_decimal in result[profile]["_tickers"].items():
+            weight_pct = float(weight_decimal) * 100
+            if weight_pct > 0:
+                # Trouver l'asset_id correspondant (essayer plusieurs variantes)
+                ticker_norm = str(ticker).strip().upper() if ticker else str(ticker)
+                asset_id = ticker_to_asset_id.get(ticker) or ticker_to_asset_id.get(ticker_norm) or ticker
+                allocation_rounded[asset_id] = allocation_rounded.get(asset_id, 0.0) + weight_pct
+        
+        # Appliquer round_weights_to_100 pour cohérence
+        if allocation_rounded:
+            allocation_rounded = round_weights_to_100(allocation_rounded, decimals=1)
         
         profile_config = PROFILES.get(profile)
         profile_constraints = {
@@ -2601,13 +3010,14 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 logger.info(f"   {i}. {lim[:80]}{'...' if len(lim) > 80 else ''}")
         
         n_bonds_readable = len(result[profile]["Obligations"])
+        # v4.14.0 FIX R6: Utiliser _numeric_weights pour calcul fiable
+        numeric_weights = result[profile].get("_numeric_weights", {})
         bonds_total_pct = sum(
-            int(v.replace("%", "")) 
-            for v in result[profile]["Obligations"].values()
-        ) if result[profile]["Obligations"] else 0
+            v for k, v in numeric_weights.items() if k.startswith("Obligations:")
+        )
         
         if n_bonds_readable > 0:
-            logger.info(f"   {profile}: {n_bonds_readable} bond(s) distincts, total={bonds_total_pct}%")
+            logger.info(f"   {profile}: {n_bonds_readable} bond(s) distincts, total={bonds_total_pct:.1f}%")
             if bond_symbols_used:
                 logger.info(f"   {profile} bond symbols: {bond_symbols_used[:6]}{'...' if len(bond_symbols_used) > 6 else ''}")
         
@@ -2618,32 +3028,28 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         
         total_tickers = sum(result[profile]["_tickers"].values())
         
-        total_readable = 0
-        for cat_v1 in ["Actions", "ETF", "Obligations", "Crypto"]:
-            for name, pct_str in result[profile][cat_v1].items():
-                try:
-                    pct_val = int(pct_str.replace("%", ""))
-                    total_readable += pct_val
-                except:
-                    pass
+        # v4.14.0 FIX R6: Utiliser _numeric_weights (source numérique) au lieu de parser strings
+        total_readable = sum(numeric_weights.values()) if numeric_weights else 0.0
         
         n_allocation = len(allocation)
         n_tickers = len(result[profile]["_tickers"])
         n_readable = sum(len(result[profile][c]) for c in ["Actions", "ETF", "Obligations", "Crypto"])
         
-        if abs(total_tickers - 1.0) > 0.02:
+        # v4.14.0 FIX R7: Resserrer tolérance de 2% à 0.5% pour détecter bugs tôt
+        if abs(total_tickers - 1.0) > 0.005:
             logger.warning(
-                f"⚠️ {profile}: _tickers sum = {total_tickers:.2%} (expected ~100%) "
+                f"⚠️ {profile}: _tickers sum = {total_tickers:.2%} (expected ~100%, tolerance 0.5%) "
                 f"→ {n_allocation} lignes allocation, {n_tickers} tickers uniques"
             )
         
-        if total_readable != 100:
+        # v4.14.0 FIX R6: Tolérance de 0.2% pour rounding 1 décimale
+        if abs(total_readable - 100.0) > 0.2:
             logger.warning(
-                f"⚠️ {profile}: readable sum = {total_readable}% (should be exactly 100%) "
+                f"⚠️ {profile}: readable sum = {total_readable:.1f}% (expected ~100%) "
                 f"→ {n_readable} items lisibles"
             )
         else:
-            logger.info(f"✅ {profile}: readable={total_readable}% (exact), _tickers={total_tickers:.2%} ({n_tickers} tickers, {n_readable} items)")
+            logger.info(f"✅ {profile}: readable={total_readable:.1f}% (OK), _tickers={total_tickers:.2%} ({n_tickers} tickers, {n_readable} items)")
         
         tickers_list = [t for t in list(result[profile]["_tickers"].keys())[:8] if t]
         logger.info(f"   {profile} _tickers sample: {tickers_list}")
@@ -2725,6 +3131,10 @@ def save_portfolios(portfolios: Dict, assets: list):
     for profile in ["Agressif", "Modéré", "Stable"]:
         n_assets = len(portfolios.get(profile, {}).get("allocation", {}))
         logger.info(f"   {profile}: {n_assets} lignes")
+    
+    # v4.14.0 R13: Sanity check automatique
+    logger.info("\n=== SANITY CHECK v4.14.0 ===")
+    sanity_check_portfolios(v1_data)
 
 
 def save_portfolios_euus(portfolios: Dict, assets: list):
@@ -2888,12 +3298,15 @@ def main():
         if backtest_results.get("debug_file"):
             logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
     logger.info("")
-    logger.info("Fonctionnalités v4.14.0:")
+    logger.info("Fonctionnalités v4.14.0 (Round 14 PARFAIT FINAL - 10/10):")
     logger.info(f"   • ✅ PROFILE_POLICY: {'ACTIVÉ' if HAS_PROFILE_POLICY else 'DÉSACTIVÉ'}")
     logger.info("   • ✅ P0-1: _tickers source unique (cohérence display)")
-    logger.info("   • ✅ P0-2: max_assets enforcement (prune_allocation_to_max_assets)")
-    logger.info("   • ✅ P1-3: Séparation hard constraints vs indicators")
-    logger.info("   • ✅ P1-4: ROE sanity check (flag_suspicious_roe)")
+    logger.info("   • ✅ P0-2: max_assets enforcement + prune")
+    logger.info("   • ✅ P1-3/4: hard vs indicators + ROE sanity check")
+    logger.info("   • ✅ Round 9-13: Full precision, bucket 'Autres', normalisation %, EU/US _safe_float")
+    logger.info("   • ✅ Round 14: display_name TOUJOURS unique avec ticker")
+    logger.info("   • ✅ Round 14: ticker_to_asset_id sans name (évite collisions)")
+    logger.info("   • ✅ Round 14: post_process_allocation() unifié Global + EU/US")
     logger.info("   • ✅ Sélection d'équités DIFFÉRENTE par profil (Agressif ≠ Modéré ≠ Stable)")
     logger.info("   • ✅ Scoring différencié: momentum/growth (Agressif), quality/value (Modéré), defensive/dividend (Stable)")
     logger.info("   • ✅ Diagnostic overlap entre profils")
@@ -2906,7 +3319,75 @@ def main():
     else:
         logger.info("   • Tilts tactiques DÉSACTIVÉS")
     logger.info(f"   • Platform fee: {CONFIG.get('platform_fee_annual_bp', 0)}bp/an")
-    logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, score_min={CONFIG['buffett_min_score']}")
+    buffett_by_profile = CONFIG.get("buffett_min_score_by_profile", {})
+    logger.info(f"   • Filtre Buffett: mode={CONFIG['buffett_mode']}, seuils par profil={buffett_by_profile}")
+
+
+# =============================================================================
+# v4.14.0 R13: SANITY CHECK AUTOMATIQUE
+# =============================================================================
+
+def sanity_check_portfolios(v1_data: dict) -> bool:
+    """
+    v4.14.0 R13: Vérifie les 4 invariants critiques après génération.
+    
+    Args:
+        v1_data: Données normalisées (output de normalize_to_frontend_v1)
+    
+    Returns:
+        True si tous les checks passent, False sinon
+    """
+    all_ok = True
+    
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        if profile not in v1_data:
+            logger.warning(f"   ⚠️ sanity_check: profil {profile} manquant")
+            continue
+        
+        p = v1_data[profile]
+        
+        # 1) _tickers somme ~ 1
+        tickers = p.get("_tickers", {})
+        s_t = sum(tickers.values()) if tickers else 0.0
+        if abs(s_t - 1.0) > 0.005:
+            logger.error(f"   ❌ {profile} _tickers sum={s_t:.4f} (expected ~1.0)")
+            all_ok = False
+        else:
+            logger.info(f"   ✅ {profile} _tickers sum={s_t:.4f} OK")
+        
+        # 2) readable somme ~ 100 (via _numeric_weights)
+        nw = p.get("_numeric_weights", {})
+        s_r = sum(nw.values()) if nw else 0.0
+        if abs(s_r - 100.0) > 0.2:
+            logger.error(f"   ❌ {profile} readable sum={s_r:.1f}% (expected ~100%)")
+            all_ok = False
+        else:
+            logger.info(f"   ✅ {profile} readable sum={s_r:.1f}% OK")
+        
+        # 3) max_single respecté (15% par défaut)
+        max_single_limit = 15.2  # 15% + tolérance
+        biggest = max(nw.values()) if nw else 0.0
+        if biggest > max_single_limit:
+            logger.error(f"   ❌ {profile} max position={biggest:.1f}% > {max_single_limit}%")
+            all_ok = False
+        else:
+            logger.info(f"   ✅ {profile} max position={biggest:.1f}% OK")
+        
+        # 4) hard constraints = 0 violation
+        cr = p.get("_constraint_report", {})
+        hard = cr.get("hard_constraints", [])
+        if len(hard) > 0:
+            logger.error(f"   ❌ {profile} hard violated: {[h.get('name') for h in hard]}")
+            all_ok = False
+        else:
+            logger.info(f"   ✅ {profile} hard constraints OK (0 violation)")
+    
+    if all_ok:
+        logger.info("✅ SANITY CHECK PASSED: Tous les invariants sont respectés")
+    else:
+        logger.error("❌ SANITY CHECK FAILED: Certains invariants ne sont pas respectés")
+    
+    return all_ok
 
 
 if __name__ == "__main__":
