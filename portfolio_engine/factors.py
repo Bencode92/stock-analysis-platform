@@ -1,7 +1,17 @@
 # portfolio_engine/factors.py
 """
-FactorScorer v3.0.1 — SEUL MOTEUR D'ALPHA
 =========================================
+FactorScorer v4.0.0 — MULTI-ASSET SCORING ENGINE
+=================================================
+
+v4.0.0 Changes (EQUITY SCORING MODE):
+- NEW: EQUITY_SCORING_MODE config ("preset" | "factors" | "blend")
+- NEW: Mode "preset" (default) → skip composite_score pour equities
+- NEW: preset_meta.py devient le seul moteur de scoring equity
+- NEW: buffett_score toujours calculé pour equities (input pour preset_meta)
+- FIX: Évite le double-scoring equity (factors + preset_meta)
+
+v3.0.1 Changes (FIX STALE CONTEXT WARNING):
 
 v3.0.1 Changes (FIX STALE CONTEXT WARNING):
 - FIX: Warning "stale context" ne se déclenche plus si market_context est vide
@@ -217,6 +227,11 @@ MAX_DQ_PENALTY = 0.6  # Cap total (évite sur-pénalisation)
 
 # v3.0.0: Configuration pour la normalisation par rang
 USE_RANK_NORMALIZATION = True  # Si False, utilise z-score classique
+# v4.0.0: Mode de scoring equity
+# "preset" = preset_meta.py gère le scoring equity (défaut)
+# "factors" = factors.py calcule composite_score pour equities
+# "blend" = les deux scores sont calculés (pour tests)
+EQUITY_SCORING_MODE = "preset"
 
 # v2.4.4: Staleness threshold pour market context
 MARKET_CONTEXT_STALE_DAYS = 7
@@ -1218,7 +1233,12 @@ class FactorScorer:
     - data_quality_penalty sur composite
     """
     
-    def __init__(self, profile: str = "Modéré", market_context: Optional[Dict] = None):
+    def __init__(
+        self, 
+        profile: str = "Modéré", 
+        market_context: Optional[Dict] = None,
+        config: Optional[Dict] = None
+    ):
         if profile not in PROFILE_WEIGHTS:
             raise ValueError(f"Profil inconnu: {profile}. Valides: {list(PROFILE_WEIGHTS.keys())}")
         self.profile = profile
@@ -1227,6 +1247,10 @@ class FactorScorer:
         self._sector_lookup = None
         self._country_lookup = None
         self._macro_tilts = None
+        
+        # v4.0.0: Configuration scoring
+        self.config = config or {}
+        self.equity_scoring_mode = self.config.get("equity_scoring_mode", EQUITY_SCORING_MODE)
         
         # v2.4.4: Staleness tracking
         self._market_context_age_days: Optional[float] = None
@@ -1955,11 +1979,12 @@ class FactorScorer:
                 scores.append(0.0)
         
         return np.array(scores)
-    
+     
     def compute_scores(self, assets: List[dict]) -> List[dict]:
         """
         Calcule le score composite pour chaque actif.
         
+        v4.0.0: Mode equity_scoring_mode pour déléguer scoring equity à preset_meta.
         v3.0.0: Rank normalization pour meilleure distribution des scores.
         v2.4.5: Fix RADAR tilts + tracking _radar_matching.
         v2.4.4: Fix doublons + cap pénalité + staleness.
@@ -1972,6 +1997,9 @@ class FactorScorer:
         self._ter_confidence = {}
         self._bond_quality_raw = {}
         self._bond_quality_meta = {}
+        
+        # v4.0.0: Log du mode equity
+        logger.info(f"[FactorScorer] equity_scoring_mode = {self.equity_scoring_mode}")
         
         n = len(assets)
         categories = [self._get_normalized_category(a) for a in assets]
@@ -1998,6 +2026,13 @@ class FactorScorer:
         
         for i, asset in enumerate(assets):
             cat = categories[i]
+            
+            # v4.0.0: Si mode="preset" et catégorie equity → skip composite_score
+            # preset_meta.py calculera _profile_score
+            if cat == "equity" and self.equity_scoring_mode == "preset":
+                # On garde composite[i] = 0, buffett_score sera calculé plus bas
+                continue
+            
             applicable_factors = FACTORS_BY_CATEGORY.get(cat, ["momentum", "low_vol", "liquidity"])
             
             total_weight = 0.0
@@ -2029,14 +2064,33 @@ class FactorScorer:
         
         # Enrichir les actifs
         for i, asset in enumerate(assets):
+            cat = categories[i]
+            
+            # v4.0.0: Toujours calculer buffett_score pour equity (utilisé par preset_meta)
+            if cat == "equity":
+                asset["buffett_score"] = compute_buffett_quality_score(asset)
+            
+            # v4.0.0: Si mode="preset" et equity → PAS de composite_score
+            if cat == "equity" and self.equity_scoring_mode == "preset":
+                asset["factor_scores"] = {}  # Vide car non calculé
+                asset["composite_score"] = None  # Explicitement None
+                asset["score"] = None
+                asset["_scoring_meta"] = {
+                    "category_normalized": cat,
+                    "scoring_version": "v4.0.0",
+                    "equity_scoring_mode": self.equity_scoring_mode,
+                    "note": "composite_score skipped - preset_meta handles equity scoring",
+                    "buffett_score_computed": True,
+                }
+                continue  # Passer à l'asset suivant
+            
+            # Comportement normal pour non-equity ou mode != "preset"
             asset["factor_scores"] = {
                 name: round(float(values[i]), 3)
                 for name, values in factors.items()
             }
             asset["composite_score"] = round(float(composite[i]), 3)
             asset["score"] = asset["composite_score"]
-            
-            cat = categories[i]
             
             # v2.4.4: Conversion set → sorted list pour JSON
             missing_fields_set = self._missing_critical_fields.get(i, set())
@@ -2048,8 +2102,9 @@ class FactorScorer:
                 "category_original": asset.get("category", ""),
                 "fund_type": asset.get("fund_type", ""),
                 "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
-                "scoring_version": "v3.0.1",
+                "scoring_version": "v4.0.0",
                 "normalization_method": "rank" if USE_RANK_NORMALIZATION else "zscore",
+                "equity_scoring_mode": self.equity_scoring_mode,
                 "ter_confidence": self._ter_confidence.get(i),
                 "missing_critical_fields": missing_fields_list,
                 "missing_fields_count": len(missing_fields_list),
@@ -2059,9 +2114,6 @@ class FactorScorer:
                 "market_context_age_days": self._market_context_age_days,
                 "market_context_stale": self._market_context_stale,
             }
-            
-            if cat == "equity":
-                asset["buffett_score"] = compute_buffett_quality_score(asset)
             
             # bond_risk_bucket basé sur RAW
             if cat == "bond":
@@ -2103,10 +2155,10 @@ class FactorScorer:
         if incomplete_count > 0:
             logger.warning(f"Data quality: {incomplete_count}/{n} assets have missing critical fields")
         
-        # v3.0.0: Log normalization method
+        # v4.0.0: Log avec mode equity
         norm_method = "RANK" if USE_RANK_NORMALIZATION else "Z-SCORE"
         logger.info(
-            f"Scores v3.0.1 calculés: {n} actifs (profil {self.profile}, norm={norm_method}) | "
+            f"Scores v4.0.0 calculés: {n} actifs (profil {self.profile}, norm={norm_method}, equity_mode={self.equity_scoring_mode}) | "
             f"Score moyen global: {composite.mean():.3f}"
         )
         
@@ -2293,6 +2345,40 @@ def compute_radar_bonus_from_matching(
 # ============= MAIN (pour test) =============
 
 if __name__ == "__main__":
+    # v4.0.0: Test EQUITY_SCORING_MODE
+    print("=" * 60)
+    print("Test v4.0.0: EQUITY_SCORING_MODE...")
+    print("=" * 60)
+    
+    test_equity = {"symbol": "TEST", "category": "equity", "roe": 20, "sector": "Technology"}
+    test_etf = {"symbol": "SPY", "category": "etf", "ytd": 15, "vol_3y": 18}
+    
+    # Mode preset (défaut)
+    scorer_preset = FactorScorer("Modéré", config={"equity_scoring_mode": "preset"})
+    result_preset = scorer_preset.compute_scores([test_equity, test_etf])
+    
+    print(f"\nMode 'preset':")
+    print(f"  Equity composite_score: {result_preset[0].get('composite_score')}")
+    print(f"  Equity buffett_score: {result_preset[0].get('buffett_score')}")
+    print(f"  ETF composite_score: {result_preset[1].get('composite_score')}")
+    
+    assert result_preset[0].get("composite_score") is None, "Equity should have no composite_score in preset mode"
+    assert result_preset[0].get("buffett_score") is not None, "Equity should have buffett_score"
+    assert result_preset[1].get("composite_score") is not None, "ETF should have composite_score"
+    
+    print("✅ Mode 'preset' OK")
+    
+    # Mode factors (ancien comportement)
+    scorer_factors = FactorScorer("Modéré", config={"equity_scoring_mode": "factors"})
+    result_factors = scorer_factors.compute_scores([test_equity.copy(), test_etf.copy()])
+    
+    print(f"\nMode 'factors':")
+    print(f"  Equity composite_score: {result_factors[0].get('composite_score')}")
+    
+    assert result_factors[0].get("composite_score") is not None, "Equity should have composite_score in factors mode"
+    
+    print("✅ Mode 'factors' OK")
+    print("\n" + "=" * 60)
     print(compare_factor_profiles())
     print("\n" + "=" * 60)
     print("Test v3.0.1: STALE CONTEXT FIX + RANK NORMALIZATION...")
