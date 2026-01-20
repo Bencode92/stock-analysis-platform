@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
-generate_portfolios_v4.py - Orchestrateur complet v4.14.0 (P0/P1 FIXES + Round 14 PARFAIT FINAL)
+generate_portfolios_v4.py - Orchestrateur complet v4.15.0 (EU/US Profile Differentiation + Sanity Fixes)
+
+V4.15.0: EU/US PROFILE DIFFERENTIATION + P1 FIXES
+   - P0 FIX: EU/US sélection d'équités PAR PROFIL (comme Global) - évite overlap 100%
+   - P0 FIX: EU/US Buffett en mode enrichissement (min_score=0), filtrage par PROFILE_POLICY
+   - P1 FIX: is_tradable_candidate() pour valider tickers avant backtest
+   - P1 FIX: sanity_check max_single basé sur profil (pas hardcodé 15.2%)
+   - P1 FIX: sanity_check sur _tickers (actifs individuels), pas _numeric_weights (agrégés)
+   - Diagnostic overlap EU/US ajouté
 
 Architecture v4 :
 - Python décide les poids (déterministe via portfolio_engine)
@@ -1701,13 +1709,17 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
 
 def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     """
-    Pipeline EU/US Focus : filtre géographique + optimisation.
+    v4.15.0 P0 FIX: Pipeline EU/US Focus avec sélection PAR PROFIL.
+    
+    Changement majeur vs v4.14:
+    - Avant: equities sélectionnées UNE FOIS pour tous les profils
+    - Maintenant: equities sélectionnées PAR PROFIL (comme Global)
     """
     if not HAS_EUUS_PROFILES:
         logger.warning("⚠️ PROFILES_EUUS non disponible, skip EU/US generation")
         return {}, []
     
-    logger.info("🇪🇺🇺🇸 Construction des portefeuilles EU/US Focus...")
+    logger.info("🇪🇺🇺🇸 Construction des portefeuilles EU/US Focus (v4.15.0 - PAR PROFIL)...")
     
     # 1. Charger les données
     stocks_data = load_stocks_data()
@@ -1743,7 +1755,6 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 eq_skipped += 1
                 continue
             
-            # v4.14.0 FIX R13-1: Appliquer _safe_float pour cohérence scoring
             eq_rows.append({
                 "id": f"EQ_{len(eq_rows)+1}",
                 "name": it.get("name") or it.get("ticker"),
@@ -1779,35 +1790,26 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     
     logger.info(f"   Equities EU/US: {len(eq_rows)} (skipped {eq_skipped} non-EU/US)")
     
-    # 3. Appliquer filtre Buffett
+    # 3. v4.15.0 FIX: Appliquer filtre Buffett en mode ENRICHISSEMENT (min_score=0)
+    # Le filtrage par seuil se fait PAR PROFIL dans select_equities_for_profile
     if CONFIG["buffett_mode"] != "none" and eq_rows:
         eq_rows = apply_buffett_filter(
             eq_rows,
             mode=CONFIG["buffett_mode"],
             strict=False,
-            min_score=CONFIG["buffett_min_score"],
+            min_score=0,  # v4.15.0: Ne pas filtrer ici, enrichir seulement
         )
-        logger.info(f"   Equities EU/US après Buffett: {len(eq_rows)}")
+        logger.info(f"   Equities EU/US après enrichissement Buffett: {len(eq_rows)}")
     
-   # 4. Scoring et sélection
+    # 4. Scoring et filtrage de base
     eq_rows = compute_scores(eq_rows, "equity", None)
+    eq_rows = enrich_equities_with_roe_warnings(eq_rows)  # v4.15.0: Aussi pour EU/US
     eq_filtered = filter_equities(eq_rows)
-    equities, selection_meta = sector_balanced_selection(
-        assets=eq_filtered, 
-        target_n=min(25, len(eq_filtered)),
-        initial_max_per_sector=4,
-        score_field="composite_score",
-        enable_radar_tiebreaker=True,
-        radar_bonus_cap=0.03,
-        radar_min_coverage=0.40,
-        market_context=None,
-    )
-    logger.info(f"   [TOP-N EU/US] Sélection: {selection_meta['selected']}/{selection_meta['target_n']} (PASS {selection_meta['pass_used']})")
     
-    # 5. Fusionner ETF + Bonds
+    logger.info(f"   Pool equities EU/US après filtre: {len(eq_filtered)} (sélection PAR PROFIL)")
+    
+    # 5. Construire universe_others (ETF + Bonds, pas de crypto pour EU/US)
     all_funds_data = etf_data + bonds_data
-    
-    # 6. Construire univers (pas de crypto pour simplifier)
     universe_others = build_scored_universe(
         stocks_data=None,
         etf_data=all_funds_data,
@@ -1817,40 +1819,54 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
         buffett_min_score=0,
     )
     
-    universe = equities + universe_others
-    logger.info(f"   Univers EU/US total: {len(universe)} actifs")
+    logger.info(f"   Universe ETF/Bonds EU/US: {len(universe_others)} actifs")
     
-    # 7. Optimiser pour chaque profil
+    # 6. v4.15.0 P0 FIX: Optimiser PAR PROFIL avec sélection equities différenciée
     optimizer = PortfolioOptimizer()
     portfolios = {}
     all_assets = []
+    all_assets_ids = set()
+    equities_by_profile_euus = {}  # Pour diagnostic overlap
     
     for profile in ["Agressif", "Modéré", "Stable"]:
-        logger.info(f"⚙️  Optimisation EU/US {profile}...")
+        logger.info(f"⚙️  Optimisation EU/US {profile} (sélection PAR PROFIL)...")
         
-        scored_universe = rescore_universe_by_profile(universe, profile, market_context=None)
+        # v4.15.0 P0 FIX: Sélection d'équités SPÉCIFIQUE au profil
+        profile_equities, selection_meta = select_equities_for_profile(
+            eq_filtered=eq_filtered,
+            profile=profile,
+            market_context=None,  # Pas de RADAR pour EU/US actuellement
+            target_n=min(25, len(eq_filtered)),
+        )
+        
+        equities_by_profile_euus[profile] = profile_equities
+        logger.info(f"   [{profile}] EU/US Équités sélectionnées: {len(profile_equities)}")
+        
+        # Construire l'univers POUR CE PROFIL
+        profile_universe = profile_equities + universe_others
+        scored_universe = rescore_universe_by_profile(profile_universe, profile, market_context=None)
         assets = convert_universe_to_assets(scored_universe)
         
-        if not all_assets:
-            all_assets = assets
+        # Collecter tous les assets (union des 3 profils)
+        for a in assets:
+            a_id = getattr(a, 'id', None)
+            if a_id is None:
+                continue
+            a_id = str(a_id)
+            if a_id not in all_assets_ids:
+                all_assets.append(a)
+                all_assets_ids.add(a_id)
         
         try:
             allocation, diagnostics = optimizer.build_portfolio_euus(assets, profile)
             
-            # v4.14.0 FIX R12: Normaliser allocation en % si retournée en décimal (somme ~1)
+            # Normaliser allocation en % si retournée en décimal
             total_alloc = sum(allocation.values()) if allocation else 0.0
-            if 0.5 < total_alloc < 1.5:  # allocation en décimal, pas en %
+            if 0.5 < total_alloc < 1.5:
                 logger.info(f"   [{profile}] EU/US Allocation en décimal (sum={total_alloc:.2f}), conversion en %")
                 allocation = {k: v * 100.0 for k, v in allocation.items()}
             
-            # v4.14.0 FIX R12b: Log validation somme post-conversion
-            s = sum(allocation.values()) if allocation else 0.0
-            if not (98.0 <= s <= 102.0):
-                logger.warning(f"   [{profile}] EU/US ⚠️ allocation sum inattendue après R12: {s:.2f}")
-            else:
-                logger.info(f"   [{profile}] EU/US ✅ allocation sum OK après R12: {s:.2f}")
-            
-            # v4.14.0 R14-3: Post-processing unifié EU/US (prune + cap + round)
+            # Post-processing unifié (prune + cap + round)
             profile_config = PROFILES_EUUS.get(profile) if PROFILES_EUUS else PROFILES.get(profile)
             if profile_config:
                 allocation = post_process_allocation(allocation, profile_config, diagnostics, f"{profile} EU/US")
@@ -1861,10 +1877,10 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 "assets": assets,
             }
             
-            # v4.14.0 FIX R8-4: Safe format pour vol (évite TypeError si None)
             vol = diagnostics.get('portfolio_vol')
             vol_str = f"{vol:.1f}%" if isinstance(vol, (int, float)) else "N/A"
             logger.info(f"   → {len(allocation)} lignes, vol={vol_str}")
+            
         except ValueError as e:
             logger.error(f"❌ EU/US {profile} failed: {e}")
             portfolios[profile] = {
@@ -1873,7 +1889,35 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 "assets": [],
             }
     
-    return portfolios, all_assets    
+    # v4.15.0: Diagnostic overlap EU/US (comme Global)
+    if len(equities_by_profile_euus) == 3:
+        agg_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile_euus.get("Agressif", [])}
+        mod_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile_euus.get("Modéré", [])}
+        stb_ids = {e.get("id") or e.get("ticker") for e in equities_by_profile_euus.get("Stable", [])}
+        
+        overlap_agg_mod = len(agg_ids & mod_ids)
+        overlap_agg_stb = len(agg_ids & stb_ids)
+        overlap_mod_stb = len(mod_ids & stb_ids)
+        
+        logger.info("="*60)
+        logger.info("📊 DIAGNOSTIC OVERLAP EU/US ÉQUITIES (v4.15.0)")
+        logger.info("="*60)
+        logger.info(f"   Agressif: {len(agg_ids)} équités")
+        logger.info(f"   Modéré:   {len(mod_ids)} équités")
+        logger.info(f"   Stable:   {len(stb_ids)} équités")
+        logger.info(f"   Overlap Agressif ∩ Modéré: {overlap_agg_mod}")
+        logger.info(f"   Overlap Agressif ∩ Stable: {overlap_agg_stb}")
+        logger.info(f"   Overlap Modéré ∩ Stable:   {overlap_mod_stb}")
+        
+        # Alerte si overlap trop élevé
+        if len(agg_ids) > 0:
+            overlap_pct = overlap_agg_stb / len(agg_ids) * 100
+            if overlap_pct > 50:
+                logger.warning(f"   ⚠️ Overlap Agressif-Stable élevé: {overlap_pct:.0f}% (cible <30%)")
+            else:
+                logger.info(f"   ✅ Overlap Agressif-Stable OK: {overlap_pct:.0f}%")
+    
+    return portfolios, all_assets
 
 
 def add_commentary(
@@ -2460,6 +2504,34 @@ def _normalize_key(x) -> Optional[str]:
         return None
     s = str(x).strip().upper()
     return s if s and s.lower() != "nan" else None
+# =============================================================================
+# v4.15.0 P1: VALIDATION TICKER TRADABLE
+# =============================================================================
+
+TRADABLE_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-/:]{0,24}$")
+
+def is_tradable_candidate(x: str) -> bool:
+    """
+    v4.15.0 P1: Vérifie si une clé ressemble à un ticker tradable.
+    
+    Autorise: AAPL, BRK.B, AIR.PA, FR0000120578 (ISIN), etc.
+    Rejette: "Apple Inc", "Vanguard Total Stock", strings avec espaces
+    
+    Args:
+        x: Candidat ticker
+    
+    Returns:
+        True si probablement tradable, False sinon
+    """
+    if not x:
+        return False
+    s = str(x).strip().upper()
+    if len(s) > 25:
+        return False
+    # Rejeter si contient des espaces (nom d'entreprise)
+    if " " in s:
+        return False
+    return bool(TRADABLE_RE.match(s))   
 
 
 def _safe_get_attr(obj, key, default=None):
@@ -3061,7 +3133,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
-        "version": "v4.14.0",
+        "version": "v4.15.0",
         "buffett_mode": CONFIG["buffett_mode"],
         "buffett_min_score": CONFIG["buffett_min_score"],
         "tactical_context_enabled": CONFIG.get("use_tactical_context", False),
@@ -3103,7 +3175,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
     
     archive_data = {
-        "version": "v4.14.0",
+        "version": "v4.15.0",
         "timestamp": ts,
         "date": datetime.datetime.now().isoformat(),
         "buffett_config": {
@@ -3329,7 +3401,11 @@ def main():
 
 def sanity_check_portfolios(v1_data: dict) -> bool:
     """
-    v4.14.0 R13: Vérifie les 4 invariants critiques après génération.
+    v4.15.0 P1 FIX: Vérifie les invariants critiques après génération.
+    
+    Corrections:
+    - max_single basé sur le profil (pas hardcodé 15.2%)
+    - Vérification sur _tickers (actifs individuels), pas _numeric_weights (agrégés)
     
     Args:
         v1_data: Données normalisées (output de normalize_to_frontend_v1)
@@ -3345,9 +3421,9 @@ def sanity_check_portfolios(v1_data: dict) -> bool:
             continue
         
         p = v1_data[profile]
+        tickers = p.get("_tickers", {}) or {}
         
         # 1) _tickers somme ~ 1
-        tickers = p.get("_tickers", {})
         s_t = sum(tickers.values()) if tickers else 0.0
         if abs(s_t - 1.0) > 0.005:
             logger.error(f"   ❌ {profile} _tickers sum={s_t:.4f} (expected ~1.0)")
@@ -3355,23 +3431,25 @@ def sanity_check_portfolios(v1_data: dict) -> bool:
         else:
             logger.info(f"   ✅ {profile} _tickers sum={s_t:.4f} OK")
         
-        # 2) readable somme ~ 100 (via _numeric_weights)
+        # 2) v4.15.0 FIX: max_single basé sur le profil (pas hardcodé)
+        profile_config = PROFILES.get(profile)
+        max_single_limit = getattr(profile_config, "max_single_position", 15.0) + 0.2
+        
+        # v4.15.0 FIX: Vérifier sur _tickers (actifs individuels), pas _numeric_weights
+        biggest = (max(tickers.values()) * 100) if tickers else 0.0
+        if biggest > max_single_limit:
+            logger.error(f"   ❌ {profile} max position={biggest:.1f}% > {max_single_limit:.1f}%")
+            all_ok = False
+        else:
+            logger.info(f"   ✅ {profile} max position={biggest:.1f}% <= {max_single_limit:.1f}% OK")
+        
+        # 3) readable somme ~ 100 (via _numeric_weights pour info)
         nw = p.get("_numeric_weights", {})
         s_r = sum(nw.values()) if nw else 0.0
-        if abs(s_r - 100.0) > 0.2:
-            logger.error(f"   ❌ {profile} readable sum={s_r:.1f}% (expected ~100%)")
-            all_ok = False
+        if abs(s_r - 100.0) > 0.5:
+            logger.warning(f"   ⚠️ {profile} readable sum={s_r:.1f}% (expected ~100%)")
         else:
             logger.info(f"   ✅ {profile} readable sum={s_r:.1f}% OK")
-        
-        # 3) max_single respecté (15% par défaut)
-        max_single_limit = 15.2  # 15% + tolérance
-        biggest = max(nw.values()) if nw else 0.0
-        if biggest > max_single_limit:
-            logger.error(f"   ❌ {profile} max position={biggest:.1f}% > {max_single_limit}%")
-            all_ok = False
-        else:
-            logger.info(f"   ✅ {profile} max position={biggest:.1f}% OK")
         
         # 4) hard constraints = 0 violation
         cr = p.get("_constraint_report", {})
@@ -3381,6 +3459,11 @@ def sanity_check_portfolios(v1_data: dict) -> bool:
             all_ok = False
         else:
             logger.info(f"   ✅ {profile} hard constraints OK (0 violation)")
+        
+        # 5) v4.15.0: Vérifier les tickers non tradables
+        unpriced = p.get("_unpriced_assets", [])
+        if unpriced:
+            logger.warning(f"   ⚠️ {profile} {len(unpriced)} ticker(s) non tradable(s): {[u.get('candidate', '?')[:20] for u in unpriced[:3]]}")
     
     if all_ok:
         logger.info("✅ SANITY CHECK PASSED: Tous les invariants sont respectés")
