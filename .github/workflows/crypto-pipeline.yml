@@ -252,7 +252,7 @@ jobs:
           DATA_DIR: data
           OUTPUT_DIR: data/filtered
           VOL_INTERVAL: ${{ github.event.inputs.vol_interval || '1day' }}
-          MIN_VOL_30D: ${{ github.event.inputs.min_vol_30d || '30' }}
+          MIN_VOL_30D: ${{ github.event.inputs.min_vol_30d || '10' }}
           MAX_VOL_30D: ${{ github.event.inputs.max_vol_30d || '500' }}
           MIN_RET_7D: ${{ github.event.inputs.min_ret_7d || '-50' }}
           LOOKBACK_DAYS: 120
