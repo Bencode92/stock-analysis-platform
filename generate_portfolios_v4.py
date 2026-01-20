@@ -893,12 +893,15 @@ def rebuild_display_sections_from_tickers(
         category = _normalize_category_for_display(info.get("category", "ETF"))
         name = info.get("name") or ticker
         
-        # v4.14.0 FIX R14-1: display_name TOUJOURS unique avec ticker
+        # v4.15.0 FIX B: Affichage robuste pour éviter collisions sur ISIN longs
         # Évite les collisions si deux actifs ont le même name
         if name and name != ticker:
-            # Pour les ISIN longs, n'afficher que les 6 derniers caractères
-            ticker_short = ticker[-6:] if len(ticker) > 8 else ticker
-            display_name = f"{name} ({ticker_short})"
+            # Pour les ISIN/identifiants longs (>12 chars), afficher début…fin
+            if len(ticker) > 12:
+                display_t = f"{ticker[:4]}…{ticker[-6:]}"
+            else:
+                display_t = ticker
+            display_name = f"{name} ({display_t})"
         else:
             display_name = str(ticker)
         
@@ -2732,7 +2735,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         if len(ticker_debug) < 5:
             ticker_debug.append(f"{aid} -> ticker={ticker}, symbol={symbol}")
         
-        if category and 'bond' in category.lower() or 'oblig' in category.lower():
+        if category and ('bond' in category.lower() or 'oblig' in category.lower()):
             if len(bond_symbol_debug) < 10:
                 bond_symbol_debug.append(f"{name[:30]} -> symbol={symbol}, ticker={ticker}")
     
@@ -2916,7 +2919,27 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         
         # Note: Le bloc ci-dessus est écrasé par rebuild_display_sections_from_tickers
         # qui reconstruit les sections depuis _tickers (source unique)
+        # === v4.15.0 P1: Séparer tickers tradables vs non-tradables ===
+        tickers_raw = result[profile]["_tickers"]
+        tickers_pricing = {}
+        unpriced_assets = []
         
+        for ticker_key, weight in tickers_raw.items():
+            if is_tradable_candidate(ticker_key):
+                tickers_pricing[ticker_key] = weight
+            else:
+                unpriced_assets.append({
+                    "candidate": ticker_key,
+                    "weight_pct": round(weight * 100, 2),
+                    "reason": "not_tradable_format"
+                })
+        
+        result[profile]["_tickers_pricing"] = tickers_pricing
+        result[profile]["_unpriced_assets"] = unpriced_assets
+        result[profile]["_pricing_coverage_pct"] = round(sum(tickers_pricing.values()) * 100, 2)
+        
+        if unpriced_assets:
+            logger.warning(f"   [{profile}] {len(unpriced_assets)} ticker(s) non tradable(s), coverage={result[profile]['_pricing_coverage_pct']:.1f}%")
         # === v4.14.0 FIX 2: Reconstruire sections DEPUIS _tickers (source unique) ===
         # v4.14.0 FIX R10-1: Normaliser toutes les clés (upper + strip) pour lookup uniforme
         # v4.14.0 FIX R13-3: Ne PAS inclure name comme clé (risque collisions)
