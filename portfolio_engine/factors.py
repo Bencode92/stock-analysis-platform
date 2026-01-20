@@ -1140,14 +1140,14 @@ def compute_buffett_quality_score(asset: dict) -> float:
         roic_score = min(100, (roic / roic_good) * 70)
         scores.append(roic_score)
         weights.append(0.30)
-    
+        
     fcf = fnum(asset.get("fcf_yield"))
-    fcf_good = thresholds.get("fcf_good", 3)
-    if fcf != 0:
+    fcf_good = thresholds.get("fcf_good") or 3  # v4.15.0 FIX: Handle None value
+    if fcf != 0 and fcf_good:  # v4.15.0 FIX: Double check fcf_good is not None
         if fcf < 0:
             fcf_score = max(0, 30 + fcf * 5)
         else:
-            fcf_score = min(100, 50 + (fcf / fcf_good) * 25)
+            fcf_score = min(100, 50 + (fcf / fcf_good) * 25)       
         scores.append(fcf_score)
         weights.append(0.20)
     
