@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://tradepulse.io/schemas/portfolio_output.json",
   "title": "TradePulse Portfolio Output Schema",
-  "description": "Schema for validating generated portfolio JSON files (v2.5.0 - Extended Roles)",
+  "description": "Schema for validating generated portfolio JSON files (v2.6.0 - Pricing Coverage)",
   "type": "object",
   "required": ["Agressif", "Modéré", "Stable", "_meta"],
   "additionalProperties": false,
@@ -99,6 +99,37 @@
         "_asset_details": {
           "$ref": "#/definitions/AssetDetailsList",
           "description": "v4.11.0: LLM-generated rationales for each asset with RADAR context"
+        },
+        "_numeric_weights": {
+          "type": "object",
+          "description": "v4.15.0: Numeric weights by category:name for sum validation",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "_tickers_pricing": {
+          "$ref": "#/definitions/TickerWeights",
+          "description": "v4.15.0: Tradable tickers only (filtered for backtest)"
+        },
+        "_unpriced_assets": {
+          "type": "array",
+          "description": "v4.15.0: Assets without tradable ticker",
+          "items": {
+            "type": "object",
+            "properties": {
+              "candidate": { "type": "string" },
+              "weight_pct": { "type": "number" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "_pricing_coverage_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "v4.15.0: Percentage of portfolio with tradable tickers"
         }
       }
     },
@@ -106,8 +137,8 @@
       "type": "object",
       "additionalProperties": {
         "type": "string",
-        "pattern": "^[0-9]{1,3}%$",
-        "description": "Percentage allocation (e.g., '15%')"
+        "pattern": "^(<1%|[0-9]{1,3}(\\.[0-9])?%)$",
+        "description": "Percentage allocation (e.g., '15%', '5.5%', '<1%')"
       },
       "description": "Map of asset names to percentage allocations"
     },
@@ -213,7 +244,7 @@
         },
         "buffett_mode": {
           "type": "string",
-          "enum": ["strict", "soft", "off"],
+          "enum": ["strict", "soft", "off", "none"],
           "description": "Buffett score filtering mode"
         },
         "buffett_min_score": {
