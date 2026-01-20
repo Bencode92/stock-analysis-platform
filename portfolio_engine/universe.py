@@ -2,6 +2,10 @@
 """
 Construction de l'univers d'actifs v4.0 — RADAR Tie-Breaker Integration.
 
+CHANGEMENTS v4.1 (P0 FIX - _profile_score propagation):
+- FIX: get_score() dans sector_balanced_selection() cherche _profile_score EN PRIORITÉ
+- Aligné avec optimizer.py v6.26 pour Option B scoring
+
 CHANGEMENTS v4.0 (RADAR Tie-Breaker v1.3):
 - NOUVEAU: has_meaningful_radar() - strict: tilt effectif seulement
 - NOUVEAU: _calibrate_eps() - calibration EPS data-driven
@@ -546,8 +550,9 @@ def sector_balanced_selection(
     actual_target = min(target_n, len(assets))
     
     # === STEP 1: Score helper ===
-    def get_score(asset: dict) -> float:
-        for field in [score_field, f"_{score_field}", "score", "_score"]:
+     def get_score(asset: dict) -> float:
+        # v4.1 FIX: Ajoute _profile_score en priorité (Option B scoring)
+        for field in ["_profile_score", score_field, f"_{score_field}", "score", "_score"]:
             val = asset.get(field)
             if val is not None:
                 return fnum(val)
