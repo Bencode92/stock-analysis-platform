@@ -3237,28 +3237,37 @@ class PortfolioOptimizer:
         )
         
         # Réduire les cryptos (plus gros poids d'abord)
-        crypto_assets = sorted(
-            [(aid, w) for aid, w in allocation.items()
-             if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"],
-            key=lambda x: (-x[1], x[0])
-        )
+        # v6.27 FIX: Réduction GARANTIE au cap exact
+        crypto_assets = [
+            (aid, w) for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
+        ]
+        
+        if not crypto_assets:
+            return allocation
+        
+        # Calculer le ratio de réduction nécessaire
+        target_ratio = profile.crypto_max / crypto_weight  # Ex: 5.0 / 7.8 = 0.64
         
         freed_weight = 0.0
         for aid, w in crypto_assets:
-            if excess <= 0.1:
-                break
-            # Réduction proportionnelle, garder minimum 0.5%
-            reduction = min(w - 0.5, excess * (w / crypto_weight))
-            if reduction > 0.1:
-                allocation[aid] = round(w - reduction, 2)
-                freed_weight += reduction
-                excess -= reduction
-        
-        # Retirer cryptos < 0.5%
-        for aid, w in list(allocation.items()):
-            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto" and w < 0.5:
+            new_weight = w * target_ratio
+            if new_weight < 0.5:
+                # Supprimer si trop petit après réduction
                 freed_weight += w
                 del allocation[aid]
+                logger.info(f"Crypto {aid} removed (would be {new_weight:.2f}% < 0.5%)")
+            else:
+                reduction = w - new_weight
+                freed_weight += reduction
+                allocation[aid] = round(new_weight, 2)
+        
+        # Retirer cryptos < 0.5% (sécurité supplémentaire)
+        for aid in list(allocation.keys()):
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto":
+                if allocation[aid] < 0.5:
+                    freed_weight += allocation[aid]
+                    del allocation[aid]
         
         # Redistribuer freed_weight vers non-crypto (v6.26 FIX: respect max_single)
         if freed_weight > 0.1:
@@ -3299,7 +3308,7 @@ class PortfolioOptimizer:
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
         )
-        logger.info(f"P0 FIX v6.26: Crypto after enforcement = {crypto_final:.1f}%")
+        logger.info(f"P0 FIX v6.27: Crypto after enforcement = {crypto_final:.1f}%")
         
         return allocation
     def _enforce_single_bond_cap(
