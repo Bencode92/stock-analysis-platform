@@ -118,17 +118,30 @@ function getNbParts() {
   return el ? (parseFloat(el.value) || 1) : 1;
 }
 // --- ACRE (micro) ---
+// --- ACRE 2026 (réforme janv. 2026 - urssaf.fr, service-public.gouv.fr) ---
 const MICRO_SOC_TAUX = { BIC_VENTE: 0.123, BIC_SERVICE: 0.212, BNC: 0.246 };
-const ACRE_REMISE = 0.50;   // ~50%
+const ACRE_REMISE_MAX = 0.25;  // 25% max (réforme 2026, était 50% avant)
 const ACRE_MOIS   = 12;
+const PASS_2026 = 48060;
+const ACRE_SEUIL_PLEIN = 36045;  // 75% PASS
+const ACRE_SEUIL_ZERO  = 48060;  // 100% PASS
 
-/** Taux de cotisations micro, avec ou sans ACRE (retour SANS arrondi !) */
-function microTauxCotisations(typeMicro='BIC_SERVICE', { acre=false, mois=12 } = {}) {
+function microTauxCotisations(typeMicro='BIC_SERVICE', { acre=false, mois=12, revenuPro=0 } = {}) {
   const base = MICRO_SOC_TAUX[typeMicro] ?? MICRO_SOC_TAUX.BIC_SERVICE;
   if (!acre) return base;
+  
+  // Dégressivité ACRE 2026
+  let tauxExo;
+  if (revenuPro <= ACRE_SEUIL_PLEIN) {
+    tauxExo = ACRE_REMISE_MAX;
+  } else if (revenuPro >= ACRE_SEUIL_ZERO) {
+    tauxExo = 0;
+  } else {
+    tauxExo = ACRE_REMISE_MAX * (ACRE_SEUIL_ZERO - revenuPro) / (ACRE_SEUIL_ZERO - ACRE_SEUIL_PLEIN);
+  }
+  
   const prorata = Math.max(0, Math.min(12, mois)) / 12;
-  // ❌ NE PAS arrondir ici : on garde toute la précision
-  return base * (1 - ACRE_REMISE * prorata);
+  return base * (1 - tauxExo * prorata);
 }
 document.addEventListener('DOMContentLoaded', function () {
   // --- Initialisation requise par les écouteurs (onglet + présence du simulateur) ---
@@ -909,12 +922,12 @@ function updateSimulatorInterface() {
   <div class="flex items-center">
     <input type="checkbox" id="micro-acre" class="mr-2 h-4 w-4">
     <label for="micro-acre" class="text-gray-300">
-      ACRE (taux sociaux réduits ~50% la 1ʳᵉ année)
+      ACRE 2026 (max 25%, éligibilité restreinte)
     </label>
     <span class="info-tooltip ml-2">
       <i class="fas fa-question-circle text-gray-400"></i>
       <span class="tooltiptext">
-        Réduction d’environ 50% des cotisations sociales pendant 12 mois (proratisable).
+        ⚠️ Réforme 2026 : max 25%, dégressive si revenu > 36 045 €. Éligibilité restreinte (demandeurs d'emploi, RSA, QPV...). Demande URSSAF obligatoire.
         N'affecte pas l'IR (barème ou versement libératoire).
       </span>
     </span>
@@ -1582,7 +1595,10 @@ function runComparison() {
 
     // 🔒 Patch ACRE (garanti même si le moteur ne le gère pas)
     if (acreEnabled && sim?.compatible) {
-      const txACRE = microTauxCotisations(type, { acre: true, mois: acreMois });
+      // Revenu pro estimé = CA × (1 - abattement)
+      const abattements = { BIC_VENTE: 0.71, BIC_SERVICE: 0.50, BNC: 0.34 };
+      const revenuProEstime = ca * (1 - (abattements[type] || 0.50));
+      const txACRE = microTauxCotisations(type, { acre: true, mois: acreMois, revenuPro: revenuProEstime });
       sim.cotisationsSociales = round2(ca * txACRE);
 
       const impots = Number(sim.impotRevenu) || 0;
