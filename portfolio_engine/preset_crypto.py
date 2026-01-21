@@ -1,10 +1,13 @@
 # portfolio_engine/preset_crypto.py
 """
 =========================================
-Crypto Preset Selector v1.0.0
+Crypto Preset Selector v1.1.0
 =========================================
 
 Sélection de cryptomonnaies par profil (Stable/Modéré/Agressif).
+
+v1.1.0: Alignement noms presets avec preset_meta.py
+- recovery → recovery_crypto
 
 Architecture 2 couches:
 1. Data QC + Hard constraints (quantiles adaptatifs)
@@ -14,7 +17,7 @@ Presets disponibles:
 - quality_risk: Low vol, low DD, sharpe élevé
 - trend3_12m: Tendance moyen/long terme
 - swing7_30: Swing trading court terme
-- recovery: Contrarian, rebond post-DD
+- recovery_crypto: Contrarian, rebond post-DD
 - momentum24h: Momentum très court terme
 - highvol_lottery: Haute vol, spéculatif
 
@@ -54,11 +57,11 @@ STABLECOINS = {
 MIN_COVERAGE_RATIO = 0.85
 MIN_DATA_POINTS = 60  # ~2 mois de données
 
-# Presets par profil (union)
+# Presets par profil (union) - v1.1.0: aligné avec preset_meta.py
 PROFILE_PRESETS = {
     "Stable": [],  # EXCLUSION TOTALE - crypto trop volatile
     "Modéré": ["quality_risk", "trend3_12m", "swing7_30"],
-    "Agressif": ["momentum24h", "recovery", "swing7_30", "highvol_lottery"],
+    "Agressif": ["momentum24h", "recovery_crypto", "swing7_30", "highvol_lottery"],
 }
 
 # Hard constraints par profil (quantiles)
@@ -362,9 +365,9 @@ def _preset_swing7_30(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
-def _preset_recovery(df: pd.DataFrame) -> pd.Series:
+def _preset_recovery_crypto(df: pd.DataFrame) -> pd.Series:
     """
-    Preset: Recovery / Contrarian
+    Preset: Recovery Crypto (v1.1.0: renommé depuis 'recovery')
     Rebond après gros DD, momentum récent positif.
     """
     mask = pd.Series(True, index=df.index)
@@ -433,12 +436,12 @@ def _preset_highvol_lottery(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
-# Mapping preset name → function
+# Mapping preset name → function (v1.1.0: aligné avec preset_meta.py)
 PRESET_FUNCTIONS = {
     "quality_risk": _preset_quality_risk,
     "trend3_12m": _preset_trend3_12m,
     "swing7_30": _preset_swing7_30,
-    "recovery": _preset_recovery,
+    "recovery_crypto": _preset_recovery_crypto,  # v1.1.0: renommé
     "momentum24h": _preset_momentum24h,
     "highvol_lottery": _preset_highvol_lottery,
 }
@@ -618,7 +621,7 @@ def get_crypto_preset_summary() -> Dict[str, Any]:
             }
             for profile, presets in PROFILE_PRESETS.items()
         },
-        "version": "1.0.0",
+        "version": "1.1.0",
     }
 
 
@@ -651,7 +654,7 @@ if __name__ == "__main__":
     })
     
     print("\n" + "=" * 60)
-    print("TEST PRESET CRYPTO")
+    print("TEST PRESET CRYPTO v1.1.0")
     print("=" * 60)
     
     for profile in ["Stable", "Modéré", "Agressif"]:
