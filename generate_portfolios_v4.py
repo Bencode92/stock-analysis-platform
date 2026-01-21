@@ -1561,7 +1561,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 category="equity",
                 scores=profile_scores,
                 top_k=[{"ticker": e.get("ticker"), "score": round(e.get("_profile_score", 0), 3)} for e in top_k],
-            )    
+            )
+    # === v5.1.2: TOP 10 BY PRESET DEBUG ===
+    if _collector:
+        _collector.record_top10_by_preset(
+            equities=eq_filtered,
+            etfs=etf_data,
+            cryptos=crypto_data,
+            bonds=bonds_data,
+        )      
     # === v4.13: Import get_stable_uid pour usage ultérieur dans l'audit ===
     try:
         from portfolio_engine.selection_audit import get_stable_uid
