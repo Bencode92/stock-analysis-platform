@@ -124,7 +124,19 @@ except ImportError:
     def compute_universe_stats(e): return {}
     def normalize_profile_score(s, w): return s
     def apply_hard_filters_with_custom(e, f): return e, {}
-
+# === v5.1.0: Import des sélecteurs modulaires ETF/Crypto/Bond ===
+try:
+    from portfolio_engine import (
+        select_etfs_for_profile,
+        select_crypto_for_profile,
+        select_bonds_for_profile,
+    )
+    HAS_MODULAR_SELECTORS = True
+except ImportError:
+    HAS_MODULAR_SELECTORS = False
+    def select_etfs_for_profile(df, profile, top_n=None): return df
+    def select_crypto_for_profile(df, profile, top_n=None): return df
+    def select_bonds_for_profile(df, profile, top_n=None): return df
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
 
@@ -1679,6 +1691,54 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 selected=profile_equities,
                 profile=profile,
             )
+         # === v5.1.0: Sélection ETF/Crypto/Bond par profil ===
+        if HAS_MODULAR_SELECTORS:
+            # --- ETF actions ---
+            if etf_data:
+                etf_df = pd.DataFrame(etf_data)
+                etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=50)
+                profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
+                logger.info(f"   [{profile}] ETF sélectionnés: {len(profile_etf_data)}/{len(etf_data)}")
+            else:
+                profile_etf_data = []
+            
+            # --- Bonds ---
+            if bonds_data:
+                bonds_df = pd.DataFrame(bonds_data)
+                bonds_selected_df = select_bonds_for_profile(bonds_df, profile, top_n=20)
+                profile_bonds_data = bonds_selected_df.to_dict('records') if not bonds_selected_df.empty else []
+                logger.info(f"   [{profile}] Bonds sélectionnés: {len(profile_bonds_data)}/{len(bonds_data)}")
+            else:
+                profile_bonds_data = []
+            
+            # --- Crypto ---
+            if crypto_data:
+                crypto_df = pd.DataFrame(crypto_data)
+                crypto_selected_df = select_crypto_for_profile(crypto_df, profile, top_n=30)
+                profile_crypto_data = crypto_selected_df.to_dict('records') if not crypto_selected_df.empty else []
+                logger.info(f"   [{profile}] Crypto sélectionnés: {len(profile_crypto_data)}/{len(crypto_data)}")
+            else:
+                profile_crypto_data = []
+            
+            # === v5.1.0: AUDIT HOOK - Sélection ETF/Crypto/Bond ===
+            if _collector:
+                _collector.record_final_selection(category="etf", selected=profile_etf_data, profile=profile)
+                _collector.record_final_selection(category="crypto", selected=profile_crypto_data, profile=profile)
+                _collector.record_final_selection(category="bond", selected=profile_bonds_data, profile=profile)
+            
+            # Construire universe_others PAR PROFIL
+            all_funds_profile = profile_etf_data + profile_bonds_data
+            profile_universe_others = build_scored_universe(
+                stocks_data=None,
+                etf_data=all_funds_profile,
+                crypto_data=profile_crypto_data,
+                returns_series=None,
+                buffett_mode="none",
+                buffett_min_score=0,
+            )
+        else:
+            # Fallback: utiliser universe_others global
+            profile_universe_others = universe_others  
         # v5.0.0: Log du mode de scoring utilisé
         if scoring_mode == "preset":
             # Vérifier que _profile_score est présent
@@ -1705,7 +1765,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
 
         
         # === v4.13: Construire l'univers POUR CE PROFIL ===
-        profile_universe = profile_equities + universe_others
+        profile_universe = profile_equities + profile_universe_others
         
         scored_universe = rescore_universe_by_profile(
             profile_universe,
@@ -2112,7 +2172,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
         logger.info(f"   [{profile}] EU/US Équités sélectionnées: {len(profile_equities)}")
         
         # Construire l'univers POUR CE PROFIL
-        profile_universe = profile_equities + universe_others
+        profile_universe = profile_equities + profile_universe_others
         scored_universe = rescore_universe_by_profile(profile_universe, profile, market_context=None)
         assets = convert_universe_to_assets(scored_universe)
         
