@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "run_id": "2026-01-21-11-34-47",
+    "git_sha": "b60fde728",
+    "git_sha_full": "b60fde728cfc95e4a23627c64aff675828a339f6",
+    "config_hash": "baba1527",
+    "universe_asof": "2026-01-21",
+    "timestamp_utc": "2026-01-21T11:34:47.656761+00:00",
+    "audit_level": "summary",
+    "total_duration_sec": 177.53
+  },
+  "config_snapshot": {
+    "buffett_mode": "soft",
+    "buffett_min_score": 40,
+    "use_tactical_context": true,
+    "tactical_mode": "radar"
+  },
+  "timings_sec": {
+    "hard_filters_equity": 0.0
+  },
+  "pipeline_stages": {
+    "1_initial": {
+      "name": "initial_universe",
+      "before": 1573,
+      "after": 1573,
+      "rejected": 0,
+      "equity": 1006,
+      "etf": 220,
+      "crypto": 335,
+      "bond": 12
+    },
+    "hard_filters_equity": {
+      "name": "hard_filters",
+      "before": 1006,
+      "after": 973,
+      "rejected": 33,
+      "category": "equity",
+      "reason_counts": {
+        "MISSING_DATA": 33
+      },
+      "duration_sec": 0.0
+    },
+    "5_selection_equity_Agressif": {
+      "name": "selection_equity",
+      "before": 320,
+      "after": 320,
+      "rejected": 0,
+      "category": "equity",
+      "profile": "Agressif",
+      "top_k": [
+        {
+          "ticker": "WDC",
+          "score": 0.8095
+        },
+        {
+          "ticker": "1519",
+          "score": 0.7597
+        },
+        {
+          "ticker": "NEM",
+          "score": 0.7443
+        },
+        {
+          "ticker": "JBL",
+          "score": 0.7425
+        },
+        {
+          "ticker": "KLAC",
+          "score": 0.7397
+        },
+        {
+          "ticker": "012450",
+          "score": 0.7369
+        },
+        {
+          "ticker": "MU",
+          "score": 0.733
+        },
+        {
+          "ticker": "FIX",
+          "score": 0.731
+        },
+        {
+          "ticker": "015760",
+          "score": 0.7273
+        },
+        {
+          "ticker": "2059",
+          "score": 0.7077
+        }
+      ]
+    },
+    "5_selection_equity_Modéré": {
+      "name": "selection_equity",
+      "before": 250,
+      "after": 250,
+      "rejected": 0,
+      "category": "equity",
+      "profile": "Modéré",
+      "top_k": [
+        {
+          "ticker": "KBC",
+          "score": 0.8485
+        },
+        {
+          "ticker": "COR",
+          "score": 0.7649
+        },
+        {
+          "ticker": "AMGN",
+          "score": 0.7351
+        },
+        {
+          "ticker": "MRK",
+          "score": 0.7299
+        },
+        {
+          "ticker": "DRI",
+          "score": 0.729
+        },
+        {
+          "ticker": "FDJU",
+          "score": 0.7269
+        },
+        {
+          "ticker": "URW",
+          "score": 0.7251
+        },
+        {
+          "ticker": "EXPD",
+          "score": 0.7171
+        },
+        {
+          "ticker": "BBVA",
+          "score": 0.7168
+        },
+        {
+          "ticker": "INGA",
+          "score": 0.7143
+        }
+      ]
+    },
+    "5_selection_equity_Stable": {
+      "name": "selection_equity",
+      "before": 178,
+      "after": 178,
+      "rejected": 0,
+      "category": "equity",
+      "profile": "Stable",
+      "top_k": [
+        {
+          "ticker": "DG",
+          "score": 0.811
+        },
+        {
+          "ticker": "BVI",
+          "score": 0.7924
+        },
+        {
+          "ticker": "MMC",
+          "score": 0.7566
+        },
+        {
+          "ticker": "GIS",
+          "score": 0.7472
+        },
+        {
+          "ticker": "FGR",
+          "score": 0.7406
+        },
+        {
+          "ticker": "ADP",
+          "score": 0.7388
+        },
+        {
+          "ticker": "VICI",
+          "score": 0.7372
+        },
+        {
+          "ticker": "LI",
+          "score": 0.7285
+        },
+        {
+          "ticker": "ITW",
+          "score": 0.728
+        },
+        {
+          "ticker": "CL",
+          "score": 0.7219
+        }
+      ]
+    }
+  }
+}
