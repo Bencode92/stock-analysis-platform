@@ -11,6 +11,7 @@ Features:
 - Drift detection vs previous run
 - Timing per stage
 - Filtering by ticker/profile/stage
+- v5.1.1: TOP 10 by preset breakdown
 
 Environment variables:
 - DEBUG_AUDIT: none | summary | full (default: none)
@@ -20,6 +21,7 @@ Environment variables:
 - DEBUG_AUDIT_AUTO_FULL_ON_DRIFT: true | false (default: true)
 - DEBUG_AUDIT_DRIFT_THRESHOLD: percentage threshold for auto-full (default: 20)
 
+v1.1.0 - Added record_top10_by_preset()
 v1.0.0 - Initial version
 """
 
@@ -429,6 +431,9 @@ class AuditCollector:
         self.timings: Dict[str, float] = {}
         self._stage_order: List[str] = []
         
+        # v5.1.1: Top 10 by preset storage
+        self._top10_by_preset: Dict[str, Dict] = {}
+        
         # Load previous summary for drift detection
         self.previous_summary: Optional[Dict] = None
         if previous_summary_path and Path(previous_summary_path).exists():
@@ -661,6 +666,127 @@ class AuditCollector:
         if key not in self._stage_order:
             self._stage_order.append(key)
     
+    def record_top10_by_preset(
+        self,
+        equities: List[Dict],
+        etfs: List[Dict] = None,
+        cryptos: List[Dict] = None,
+        bonds: List[Dict] = None,
+    ):
+        """
+        v5.1.1: Record TOP 10 assets for each preset.
+        
+        Output structure:
+        {
+            "equity": {
+                "quality_premium": {"count": 67, "top_10": [{"ticker": "AAPL", "score": 0.85, "vol": 25.2}, ...]},
+                "croissance": {...},
+                "defensif": {...},
+                ...
+            },
+            "etf": {"top_20": [...]},
+            "crypto": {"top_20": [...]},
+            "bond": {"top_20": [...]}
+        }
+        """
+        if not self.is_enabled:
+            return
+        
+        result = {"equity": {}, "etf": {}, "crypto": {}, "bond": {}}
+        
+        # === EQUITY: group by _matched_preset ===
+        preset_groups = {}
+        for eq in equities:
+            preset = eq.get("_matched_preset", "unknown")
+            preset_groups.setdefault(preset, []).append(eq)
+        
+        for preset_name, assets in sorted(preset_groups.items()):
+            # Sort by best score
+            sorted_assets = sorted(
+                assets,
+                key=lambda x: x.get("_profile_score") or x.get("_buffett_score") or x.get("composite_score") or 0,
+                reverse=True
+            )[:10]
+            
+            top_10 = []
+            for a in sorted_assets:
+                ticker = a.get("ticker") or a.get("symbol") or a.get("name", "?")
+                score = a.get("_profile_score") or a.get("_buffett_score") or a.get("composite_score")
+                vol = a.get("volatility_3y") or a.get("vol")
+                entry = {"ticker": ticker}
+                if score is not None:
+                    entry["score"] = round(float(score), 4)
+                if vol is not None:
+                    try:
+                        entry["vol"] = round(float(vol), 1)
+                    except (ValueError, TypeError):
+                        pass
+                top_10.append(entry)
+            
+            result["equity"][preset_name] = {
+                "count": len(assets),
+                "top_10": top_10
+            }
+        
+        # === ETF: top 20 by score ===
+        if etfs:
+            etf_sorted = sorted(
+                etfs,
+                key=lambda x: x.get("composite_score") or x.get("score") or 0,
+                reverse=True
+            )[:20]
+            
+            result["etf"]["top_20"] = [
+                {
+                    "ticker": e.get("ticker") or e.get("symbol", "?"),
+                    "name": (e.get("name") or "")[:35],
+                    "score": round(float(e.get("composite_score") or e.get("score") or 0), 4),
+                }
+                for e in etf_sorted
+            ]
+            result["etf"]["total_count"] = len(etfs)
+        
+        # === CRYPTO: top 20 by score ===
+        if cryptos:
+            crypto_sorted = sorted(
+                cryptos,
+                key=lambda x: x.get("composite_score") or x.get("score") or 0,
+                reverse=True
+            )[:20]
+            
+            result["crypto"]["top_20"] = [
+                {
+                    "ticker": c.get("ticker") or c.get("symbol", "?"),
+                    "name": (c.get("name") or "")[:25],
+                    "score": round(float(c.get("composite_score") or c.get("score") or 0), 4),
+                }
+                for c in crypto_sorted
+            ]
+            result["crypto"]["total_count"] = len(cryptos)
+        
+        # === BONDS: top 20 by score ===
+        if bonds:
+            bond_sorted = sorted(
+                bonds,
+                key=lambda x: x.get("composite_score") or x.get("score") or 0,
+                reverse=True
+            )[:20]
+            
+            result["bond"]["top_20"] = [
+                {
+                    "ticker": b.get("ticker") or b.get("symbol", "?"),
+                    "name": (b.get("name") or "")[:35],
+                    "score": round(float(b.get("composite_score") or b.get("score") or 0), 4),
+                }
+                for b in bond_sorted
+            ]
+            result["bond"]["total_count"] = len(bonds)
+        
+        # Store for later inclusion in summary
+        self._top10_by_preset = result
+        
+        logger.info(f"📊 Top10 by preset recorded: {len(result['equity'])} equity presets")
+    
     def build_summary(self) -> Dict:
         """Build the summary JSON structure."""
         total_duration = time.time() - self._start_time
@@ -690,6 +816,10 @@ class AuditCollector:
             "timings_sec": {k: round(v, 3) for k, v in self.timings.items()},
             "pipeline_stages": pipeline_stages,
         }
+        
+        # v5.1.1: Add top10 by preset if recorded
+        if self._top10_by_preset:
+            summary["top10_by_preset"] = self._top10_by_preset
         
         # Add drift report if previous summary available
         if self.previous_summary:
