@@ -1,19 +1,23 @@
 # portfolio_engine/preset_bond.py
 """
 =========================================
-Bond ETF Preset Selector v1.0.0
+Bond ETF Preset Selector v1.1.0
 =========================================
 
 Sélection d'ETF obligataires par profil (Stable/Modéré/Agressif).
+
+v1.1.0: Alignement avec preset_meta.py
+- Vérification cohérence noms (OK: defensif_oblig, cash_ultra_short)
+- high_yield: présent ici, à ajouter dans preset_meta.py ETF_PRESETS
 
 Architecture 2 couches:
 1. Data QC + Hard constraints (duration, crédit, vol)
 2. Presets (union simple) → _profile_score
 
-Presets disponibles:
+Presets disponibles (alignés avec preset_meta.py):
 - cash_ultra_short: Parking cash, duration très courte
 - defensif_oblig: Obligations IG, duration courte/moyenne
-- high_yield: Obligations High Yield (optionnel)
+- high_yield: Obligations High Yield (profil Agressif)
 
 Colonnes attendues (df):
 - symbol, name, isin, fund_type, etf_type
@@ -52,11 +56,11 @@ RATING_TO_SCORE = {
     "NR": 40, "N/R": 40, "Not Rated": 40,
 }
 
-# Presets par profil (union)
+# Presets par profil (union) - v1.1.0: aligné avec preset_meta.py
 PROFILE_PRESETS = {
     "Stable": ["cash_ultra_short", "defensif_oblig"],
     "Modéré": ["defensif_oblig"],
-    "Agressif": ["high_yield"],  # Optionnel, peut être vide
+    "Agressif": ["high_yield"],
 }
 
 # Hard constraints par profil
@@ -256,7 +260,7 @@ def apply_hard_constraints(df: pd.DataFrame, profile: str) -> pd.DataFrame:
 
 def _preset_cash_ultra_short(df: pd.DataFrame) -> pd.Series:
     """
-    Preset: Cash / Ultra Short
+    Preset: Cash / Ultra Short (aligné avec preset_meta.py)
     Duration très courte (< 2 ans), très faible vol.
     """
     mask = pd.Series(True, index=df.index)
@@ -291,7 +295,7 @@ def _preset_cash_ultra_short(df: pd.DataFrame) -> pd.Series:
 
 def _preset_defensif_oblig(df: pd.DataFrame) -> pd.Series:
     """
-    Preset: Défensif Obligataire
+    Preset: Défensif Obligataire (aligné avec preset_meta.py)
     Investment Grade, duration courte/moyenne.
     """
     mask = pd.Series(True, index=df.index)
@@ -327,6 +331,8 @@ def _preset_high_yield(df: pd.DataFrame) -> pd.Series:
     """
     Preset: High Yield
     Obligations à haut rendement.
+    
+    Note: Ce preset existe ici mais doit être ajouté à preset_meta.py ETF_PRESETS.
     """
     mask = pd.Series(False, index=df.index)
     
@@ -353,7 +359,7 @@ def _preset_high_yield(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
-# Mapping preset name → function
+# Mapping preset name → function (v1.1.0: aligné avec preset_meta.py)
 PRESET_FUNCTIONS = {
     "cash_ultra_short": _preset_cash_ultra_short,
     "defensif_oblig": _preset_defensif_oblig,
@@ -530,7 +536,7 @@ def get_bond_preset_summary() -> Dict[str, Any]:
             }
             for profile, presets in PROFILE_PRESETS.items()
         },
-        "version": "1.0.0",
+        "version": "1.1.0",
     }
 
 
@@ -559,7 +565,7 @@ if __name__ == "__main__":
     })
     
     print("\n" + "=" * 60)
-    print("TEST PRESET BOND")
+    print("TEST PRESET BOND v1.1.0")
     print("=" * 60)
     
     for profile in ["Stable", "Modéré", "Agressif"]:
