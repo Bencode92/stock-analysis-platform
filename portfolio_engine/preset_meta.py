@@ -2,6 +2,14 @@
 """
 PRESET_META - Source unique de vérité pour les presets.
 
+v5.1.0 (Option B - PRESET_RULES pour contraintes dures par preset):
+- NEW: PRESET_RULES dict avec contraintes dures par preset equity
+- NEW: _parse_rule_key() pour parser les clés de règles
+- NEW: check_preset_rules() valide une equity contre les règles du preset
+- NEW: assign_preset_to_equity_with_rules() avec fallback si règles échouent
+- FIX: Suppression buffett_score_min de RELAX_STEPS (doublon)
+- FIX: UNH/BIRG - presets croissance/momentum_trend ont des perf_min
+
 v5.0.0 (Architecture Option B - preset_meta = seul moteur equity):
 - NEW: normalize_profile_score() pour meilleure distribution [0,1]
 - NEW: apply_hard_filters_with_custom() pour relaxation
@@ -254,6 +262,83 @@ EQUITY_PRESETS: Dict[str, PresetConfig] = {
         description="Rebond post-chute, contrarian",
         turnover_tolerance=0.04,
     ),
+}
+
+
+# ============ v5.1.0: PRESET_RULES - CONTRAINTES DURES PAR PRESET ============
+# 
+# Format des clés: <metric>_min / <metric>_max
+# Métriques: celles de FIELD_MAPPING (perf_1y, volatility_3y, buffett_score, etc.)
+#
+# Architecture Buffett (2 niveaux):
+#   Niveau 1: PROFILE_POLICY["min_buffett_score"] = filtre global d'entrée
+#   Niveau 2: PRESET_RULES["buffett_score_min"] = optionnel, plus strict que profil
+#
+# Note: recovery/agressif ont volatility_3y_min (pas max) car assign_preset_to_equity()
+#       les crée quand vol >= 35
+
+PRESET_RULES: Dict[str, Dict[str, float]] = {
+    "defensif": {
+        "volatility_3y_max": 26.0,
+        "max_drawdown_3y_max": 35.0,
+        "dividend_yield_min": 2.0,
+        "payout_ratio_max": 80.0,
+        "buffett_score_min": 60.0,
+    },
+    "low_volatility": {
+        "volatility_3y_max": 22.0,
+        "max_drawdown_3y_max": 30.0,
+        "buffett_score_min": 65.0,
+    },
+    "rendement": {
+        "volatility_3y_max": 35.0,
+        "dividend_yield_min": 3.5,
+        "payout_ratio_max": 85.0,
+        "dividend_coverage_min": 1.0,
+        "perf_1y_min": -5.0,
+    },
+    "value_dividend": {
+        "volatility_3y_max": 32.0,
+        "dividend_yield_min": 3.0,
+        "roe_min": 8.0,
+        "perf_3y_min": 15.0,
+    },
+    "quality_premium": {
+        "volatility_3y_max": 36.0,
+        "roe_min": 15.0,
+        "perf_3y_min": 35.0,
+        "buffett_score_min": 65.0,
+    },
+    "croissance": {
+        "volatility_3y_max": 39.0,
+        "perf_1y_min": 4.0,       # Fix UNH (-33.8% 1Y)
+        "perf_3y_min": 25.0,
+        "payout_ratio_max": 60.0,
+    },
+    "momentum_trend": {
+        "volatility_3y_max": 40.0,
+        "perf_1y_min": 10.0,      # Fix BIRG et momentum "mou"
+        "perf_3m_min": 4.0,
+        "perf_1m_min": 0.0,
+    },
+    "agressif": {
+        "volatility_3y_min": 35.0,   # MIN pas MAX (cohérent avec assign)
+        "volatility_3y_max": 60.0,
+        "perf_1y_min": 12.0,
+        "perf_ytd_min": 10.0,
+    },
+    "recovery": {
+        "volatility_3y_min": 35.0,   # MIN pas MAX (cohérent avec assign)
+        "perf_1y_min": -30.0,        # Accepte les chutes
+        "perf_3m_min": 5.0,          # Mais rebond récent requis
+    },
+}
+
+# Optionnel: messages debug/alertes (non utilisés par le moteur)
+PRESET_ALERTS: Dict[str, str] = {
+    "rendement": "⚠️ Risque yield trap: vérifier payout + coverage + dette",
+    "recovery": "⚠️ Turnaround: catalyseur indispensable, sinon value trap",
+    "agressif": "⚠️ High beta: drawdowns rapides / turnover élevé",
 }
 
 
@@ -520,14 +605,15 @@ METRIC_RANGES: Dict[str, Tuple[float, float]] = {
 # - delta > 0 : on augmente la valeur (ex: vol_max)
 # - delta < 0 : on diminue la valeur (ex: roe_min)
 # - limit : valeur plancher/plafond à ne pas dépasser
+#
+# v5.1.0: Suppression de buffett_score_min (doublon avec PROFILE_POLICY)
 RELAX_STEPS: List[Tuple[str, float, float]] = [
     ("volatility_3y_max", +10, 100.0),      # Étape 1: augmenter vol_max
     ("volatility_3y_min", -5, 0.0),          # Étape 2: baisser vol_min
     ("roe_min", -3, 0.0),                    # Étape 3: baisser roe_min
-    ("buffett_score_min", -10, 20.0),        # Étape 4: baisser buffett_min
-    ("dividend_coverage_min", -0.3, 0.8),    # Étape 5: baisser coverage_min
-    ("payout_ratio_max", +15, 100.0),        # Étape 6: augmenter payout_max
-    ("dividend_yield_min", -0.2, 0.0),       # Étape 7: baisser div_yield_min
+    ("dividend_coverage_min", -0.3, 0.8),    # Étape 4: baisser coverage_min
+    ("payout_ratio_max", +15, 100.0),        # Étape 5: augmenter payout_max
+    ("dividend_yield_min", -0.2, 0.0),       # Étape 6: baisser div_yield_min
 ]
 
 
@@ -668,6 +754,65 @@ def get_metric_value(eq: Dict, metric_key: str) -> Optional[float]:
     return None
 
 
+# ============ v5.1.0: PRESET RULES VALIDATION ============
+
+_RULE_SUFFIXES = ("_min", "_max")
+
+
+def _parse_rule_key(rule_key: str) -> Optional[Tuple[str, str]]:
+    """Parse une clé de règle en (metric, op).
+    
+    Ex: "volatility_3y_max" -> ("volatility_3y", "max")
+        "perf_1y_min" -> ("perf_1y", "min")
+    """
+    for suf in _RULE_SUFFIXES:
+        if rule_key.endswith(suf):
+            return rule_key[: -len(suf)], suf[1:]  # metric, "min"/"max"
+    return None
+
+
+def check_preset_rules(eq: Dict, preset: str) -> Tuple[bool, List[str]]:
+    """Vérifie si une equity respecte les règles du preset.
+    
+    Args:
+        eq: Dictionnaire de l'equity avec ses métriques
+        preset: Nom du preset à vérifier
+    
+    Returns:
+        (passed, reasons) où passed=True si toutes les règles sont respectées,
+        et reasons contient la liste des violations
+    """
+    rules = PRESET_RULES.get(preset, {})
+    if not rules:
+        return True, []
+
+    reasons: List[str] = []
+    for rule_key, threshold in rules.items():
+        parsed = _parse_rule_key(rule_key)
+        if not parsed:
+            reasons.append(f"invalid_rule_key:{rule_key}")
+            continue
+
+        metric, op = parsed
+        v = get_metric_value(eq, metric)
+
+        # Hard rule: missing => fail (cohérent avec vol_missing strict)
+        if v is None:
+            reasons.append(f"{metric}_missing")
+            continue
+
+        # max_drawdown_3y est stocké en négatif, on compare en valeur absolue
+        if metric == "max_drawdown_3y":
+            v = abs(v)
+
+        if op == "min" and v < threshold:
+            reasons.append(f"{metric}<{threshold}")
+        elif op == "max" and v > threshold:
+            reasons.append(f"{metric}>{threshold}")
+
+    return (len(reasons) == 0), reasons
+
+
 # ============ DATA-DRIVEN PERCENTILES ============
 
 def build_metric_distributions(equities: List[Dict], metric_keys: List[str]) -> Dict[str, List[float]]:
@@ -799,6 +944,50 @@ def assign_preset_to_equity(eq: Dict) -> str:
     elif div_yield > 1.0:
         return "value_dividend"
     return "quality_premium"
+
+
+def assign_preset_to_equity_with_rules(eq: Dict) -> str:
+    """v5.1.0: Assigne un preset + vérifie les PRESET_RULES + fallback si échec.
+    
+    Workflow:
+    1. Assigne le preset de base via assign_preset_to_equity()
+    2. Vérifie si l'equity respecte les règles du preset (PRESET_RULES)
+    3. Si échec, essaie les autres presets dans EQUITY_PRESET_PRIORITY
+    4. Tag l'equity si fallback utilisé (_preset_rule_failed)
+    
+    Args:
+        eq: Dictionnaire de l'equity
+    
+    Returns:
+        Nom du preset assigné
+    """
+    base = assign_preset_to_equity(eq)
+    ok, reasons = check_preset_rules(eq, base)
+    
+    if ok:
+        # Preset de base respecte ses règles
+        eq.pop("_preset_rule_failed", None)
+        eq.pop("_preset_rule_fail_reasons", None)
+        return base
+
+    # Fallback: essayer d'autres presets (9 presets -> coût négligeable)
+    for p in EQUITY_PRESET_PRIORITY:
+        if p == base:
+            continue  # Déjà testé
+        ok2, _ = check_preset_rules(eq, p)
+        if ok2:
+            eq["_preset_rule_failed"] = True
+            eq["_preset_rule_fail_reasons"] = reasons
+            eq["_preset_original"] = base
+            logger.debug(f"   Preset fallback: {eq.get('ticker', '?')} {base} -> {p} (reasons: {reasons})")
+            return p
+
+    # Aucun preset ne passe: on garde base mais on tag (utile pour debug)
+    eq["_preset_rule_failed"] = True
+    eq["_preset_rule_fail_reasons"] = reasons
+    eq["_preset_no_fallback"] = True
+    logger.debug(f"   Preset no fallback: {eq.get('ticker', '?')} kept {base} (reasons: {reasons})")
+    return base
 
 
 # ============ APPLY HARD FILTERS v5.0.0 ============
@@ -1046,7 +1235,7 @@ def filter_equities_by_profile(
     return [eq for eq in equities if eq.get(preset_field) in allowed_presets]
 
 
-# ============ MAIN SELECTION v5.0.0 ============
+# ============ MAIN SELECTION v5.1.0 ============
 
 def select_equities_for_profile(
     equities: List[Dict],
@@ -1054,17 +1243,22 @@ def select_equities_for_profile(
     market_context: Optional[Dict] = None,
     target_n: int = 25,
 ) -> Tuple[List[Dict], Dict]:
-    """v5.0.0: Sélection avec relaxation progressive des hard filters."""
+    """v5.1.0: Sélection avec PRESET_RULES validation + relaxation progressive."""
     logger.info(f"\n{'='*50}")
     logger.info(f"[{profile}] Sélection depuis {len(equities)} équités")
     
     policy = get_profile_policy(profile)
     meta = {"profile": profile, "stages": {}}
     
-    # Assign presets
+    # v5.1.0: Assign presets avec validation des règles
+    rule_fail = 0
     for eq in equities:
         if not eq.get("_matched_preset"):
-            eq["_matched_preset"] = assign_preset_to_equity(eq)
+            eq["_matched_preset"] = assign_preset_to_equity_with_rules(eq)
+        if eq.get("_preset_rule_failed"):
+            rule_fail += 1
+    
+    meta["stages"]["preset_rules"] = {"failed": rule_fail, "total": len(equities)}
     
     preset_dist = {}
     for eq in equities:
@@ -1376,14 +1570,15 @@ def export_watchlist(
     return filepath
 
 
-# ============ MAIN TEST v5.0.0 ============
+# ============ MAIN TEST v5.1.0 ============
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("PRESET_META v5.0.0 - Architecture Option B")
+    print("PRESET_META v5.1.0 - Option B + PRESET_RULES")
     print("=" * 60)
     
     print(f"\nTotal presets: {len(PRESET_META)}")
+    print(f"PRESET_RULES defined for: {list(PRESET_RULES.keys())}")
     
     # TEST 1: pct_rank O(log n)
     print("\n--- TEST 1: pct_rank() O(log n) ---")
@@ -1476,23 +1671,110 @@ if __name__ == "__main__":
     
     print("✅ apply_hard_filters_with_custom() OK")
     
-    # TEST 7: RELAX_STEPS config
+    # TEST 7: RELAX_STEPS config (v5.1.0: buffett_score_min removed)
     print("\n--- TEST 7: RELAX_STEPS config ---")
     assert len(RELAX_STEPS) >= 5, "Should have at least 5 relaxation steps"
     for filter_key, delta, limit in RELAX_STEPS:
         assert isinstance(filter_key, str)
         assert isinstance(delta, (int, float))
         assert isinstance(limit, (int, float))
-    print(f"✅ RELAX_STEPS OK ({len(RELAX_STEPS)} steps)")
+        assert filter_key != "buffett_score_min", "buffett_score_min should be removed from RELAX_STEPS"
+    print(f"✅ RELAX_STEPS OK ({len(RELAX_STEPS)} steps, no buffett_score_min)")
+    
+    # TEST 8: check_preset_rules() - NEW v5.1.0
+    print("\n--- TEST 8: check_preset_rules() ---")
+    
+    # Stock qui passe croissance
+    good_growth = {
+        "ticker": "GOOD_GROWTH",
+        "volatility_3y": 30.0,
+        "perf_1y": 15.0,
+        "perf_3y": 40.0,
+        "payout_ratio": 40.0,
+    }
+    ok, reasons = check_preset_rules(good_growth, "croissance")
+    assert ok, f"Good growth should pass: {reasons}"
+    print(f"   Good growth passes croissance: ✅")
+    
+    # Stock qui échoue croissance (UNH-like: perf_1y négatif)
+    bad_growth = {
+        "ticker": "BAD_GROWTH",
+        "volatility_3y": 30.0,
+        "perf_1y": -33.8,  # UNH case
+        "perf_3y": 40.0,
+        "payout_ratio": 40.0,
+    }
+    ok, reasons = check_preset_rules(bad_growth, "croissance")
+    assert not ok, "Bad growth should fail"
+    assert any("perf_1y" in r for r in reasons), f"Should fail on perf_1y: {reasons}"
+    print(f"   Bad growth (UNH-like) fails croissance: ✅ ({reasons})")
+    
+    # Stock momentum qui échoue (BIRG-like)
+    bad_momentum = {
+        "ticker": "BAD_MOMENTUM",
+        "volatility_3y": 35.0,
+        "perf_1y": 5.0,  # < 10% required
+        "perf_3m": 6.0,
+        "perf_1m": 2.0,
+    }
+    ok, reasons = check_preset_rules(bad_momentum, "momentum_trend")
+    assert not ok, "Bad momentum should fail"
+    print(f"   Bad momentum fails: ✅ ({reasons})")
+    
+    print("✅ check_preset_rules() OK")
+    
+    # TEST 9: assign_preset_to_equity_with_rules() - NEW v5.1.0
+    print("\n--- TEST 9: assign_preset_to_equity_with_rules() ---")
+    
+    # Stock qui devrait être croissance mais échoue -> fallback
+    unh_like = {
+        "ticker": "UNH_LIKE",
+        "volatility_3y": 28.0,
+        "perf_ytd": 8.0,
+        "perf_1y": -33.8,
+        "perf_3y": 10.0,
+        "roe": 20.0,
+        "dividend_yield": 1.5,
+        "buffett_score": 70,
+        "payout_ratio": 30.0,
+    }
+    
+    # Sans rules: serait croissance (ytd > 5)
+    base_preset = assign_preset_to_equity(unh_like.copy())
+    print(f"   Base preset (no rules): {base_preset}")
+    
+    # Avec rules: devrait fallback
+    unh_copy = unh_like.copy()
+    final_preset = assign_preset_to_equity_with_rules(unh_copy)
+    print(f"   Final preset (with rules): {final_preset}")
+    
+    if unh_copy.get("_preset_rule_failed"):
+        print(f"   Fallback used: {unh_copy.get('_preset_original')} -> {final_preset}")
+        print(f"   Reasons: {unh_copy.get('_preset_rule_fail_reasons')}")
+    
+    print("✅ assign_preset_to_equity_with_rules() OK")
+    
+    # TEST 10: PRESET_RULES consistency with assign_preset_to_equity()
+    print("\n--- TEST 10: PRESET_RULES consistency ---")
+    
+    # recovery: vol >= 35 (min, pas max)
+    assert "volatility_3y_min" in PRESET_RULES["recovery"], "recovery should have vol_min"
+    assert "volatility_3y_max" not in PRESET_RULES["recovery"], "recovery should NOT have vol_max"
+    
+    # agressif: vol >= 35 (min)
+    assert "volatility_3y_min" in PRESET_RULES["agressif"], "agressif should have vol_min"
+    
+    print("✅ PRESET_RULES consistency OK")
     
     print("\n" + "=" * 60)
-    print("v5.0.0 CHANGELOG:")
-    print("  ✅ normalize_profile_score() pour meilleure distribution")
-    print("  ✅ apply_hard_filters_with_custom() pour relaxation")
-    print("  ✅ RELAX_STEPS config pour relaxation progressive")
-    print("  ✅ Relaxation progressive au lieu de skip brutal")
-    print("  ✅ vol_missing strict (plus de default 25.0)")
-    print("  ✅ Missing data scoring: penalty si poids négatif")
-    print("  ✅ pct_rank() O(log n) avec bisect")
+    print("v5.1.0 CHANGELOG:")
+    print("  ✅ PRESET_RULES dict avec contraintes dures par preset")
+    print("  ✅ _parse_rule_key() pour parser les clés")
+    print("  ✅ check_preset_rules() valide equity vs preset rules")
+    print("  ✅ assign_preset_to_equity_with_rules() avec fallback")
+    print("  ✅ Suppression buffett_score_min de RELAX_STEPS")
+    print("  ✅ select_equities_for_profile() utilise les nouvelles fonctions")
+    print("  ✅ Fix UNH (croissance perf_1y_min: 4%)")
+    print("  ✅ Fix BIRG (momentum_trend perf_1y_min: 10%)")
     print("=" * 60)
-    print("\n🎯 Architecture Option B: preset_meta = seul moteur equity")
+    print("\n🎯 Architecture Option B: preset_meta = seul moteur equity + PRESET_RULES")
