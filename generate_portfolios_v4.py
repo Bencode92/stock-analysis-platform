@@ -1699,6 +1699,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=50)
                 profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
                 logger.info(f"   [{profile}] ETF sélectionnés: {len(profile_etf_data)}/{len(etf_data)}")
+                # v5.1.2 FIX: Forcer category="etf" pour éviter reclassification dans build_raw_universe
+                for etf in profile_etf_data:
+                    etf["_force_category"] = "etf"
+                    etf["category"] = "etf"
             else:
                 profile_etf_data = []
             
@@ -1708,6 +1712,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 bonds_selected_df = select_bonds_for_profile(bonds_df, profile, top_n=20)
                 profile_bonds_data = bonds_selected_df.to_dict('records') if not bonds_selected_df.empty else []
                 logger.info(f"   [{profile}] Bonds sélectionnés: {len(profile_bonds_data)}/{len(bonds_data)}")
+                # v5.1.2 FIX: Forcer category="bond"
+                for bond in profile_bonds_data:
+                    bond["_force_category"] = "bond"
+                    bond["category"] = "bond"
             else:
                 profile_bonds_data = []
             
@@ -2177,6 +2185,10 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=50)
                 profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
                 logger.info(f"   [{profile}] EU/US ETF sélectionnés: {len(profile_etf_data)}/{len(etf_data)}")
+                # v5.1.2 FIX: Forcer category="etf" pour éviter reclassification
+                for etf in profile_etf_data:
+                    etf["_force_category"] = "etf"
+                    etf["category"] = "etf"
             else:
                 profile_etf_data = []
             
@@ -2185,6 +2197,10 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 bonds_selected_df = select_bonds_for_profile(bonds_df, profile, top_n=20)
                 profile_bonds_data = bonds_selected_df.to_dict('records') if not bonds_selected_df.empty else []
                 logger.info(f"   [{profile}] EU/US Bonds sélectionnés: {len(profile_bonds_data)}/{len(bonds_data)}")
+                # v5.1.2 FIX: Forcer category="bond" pour éviter reclassification
+                for bond in profile_bonds_data:
+                    bond["_force_category"] = "bond"
+                    bond["category"] = "bond"
             else:
                 profile_bonds_data = []
             
