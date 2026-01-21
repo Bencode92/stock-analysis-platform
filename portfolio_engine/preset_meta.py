@@ -287,6 +287,7 @@ PRESET_RULES: Dict[str, Dict[str, float]] = {
         "max_drawdown_3y_max": 35.0,
         "dividend_yield_min": 2.0,
         "payout_ratio_max": 80.0,
+        "perf_1y_min": 0.0,
         "buffett_score_min": 60.0,
     },
     "low_volatility": {
