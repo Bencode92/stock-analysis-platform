@@ -1,10 +1,15 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v1.0.0
+ETF Preset Selector v1.1.0
 =========================================
 
 Sélection d'ETF actions par profil (Stable/Modéré/Agressif).
+
+v1.1.0: Alignement noms presets avec preset_meta.py
+- rendement → rendement_etf
+- NEW: inflation_shield (TIPS, commodities, real assets)
+- NEW: or_physique (Gold physical ETF)
 
 Architecture 2 couches:
 1. Data QC + Hard constraints (quantiles adaptatifs)
@@ -13,11 +18,13 @@ Architecture 2 couches:
 Presets disponibles:
 - coeur_global: World core, TER bas, AUM élevé
 - min_vol_global: Low volatility blend
-- rendement: Dividendes élevés
+- rendement_etf: Dividendes élevés
 - qualite_value: Value/Quality proxy (via objective)
 - croissance_tech: Tech growth momentum
 - smid_quality: Small/Mid caps
 - emergents: Marchés émergents
+- inflation_shield: TIPS, commodities, real assets
+- or_physique: Gold physical ETF
 
 Colonnes attendues (df):
 - etfsymbol, name, isin, fund_type, etf_type
@@ -44,11 +51,11 @@ logger = logging.getLogger("portfolio_engine.preset_etf")
 MIN_DATA_QUALITY_SCORE = 0.6
 MIN_AUM_USD = 100_000_000  # 100M minimum
 
-# Presets par profil (union)
+# Presets par profil (union) - v1.1.0: aligné avec preset_meta.py
 PROFILE_PRESETS = {
-    "Stable": ["min_vol_global", "coeur_global"],
-    "Modéré": ["coeur_global", "rendement", "qualite_value", "emergents"],
-    "Agressif": ["croissance_tech", "smid_quality", "emergents", "rendement"],
+    "Stable": ["min_vol_global", "coeur_global", "or_physique"],
+    "Modéré": ["coeur_global", "rendement_etf", "qualite_value", "emergents", "inflation_shield"],
+    "Agressif": ["croissance_tech", "smid_quality", "emergents", "rendement_etf"],
 }
 
 # Hard constraints par profil (quantiles)
@@ -293,9 +300,9 @@ def _preset_min_vol_global(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
-def _preset_rendement(df: pd.DataFrame) -> pd.Series:
+def _preset_rendement_etf(df: pd.DataFrame) -> pd.Series:
     """
-    Preset: Rendement/Dividendes
+    Preset: Rendement ETF (v1.1.0: renommé depuis 'rendement')
     Yield élevé, vol contenue.
     """
     mask = pd.Series(True, index=df.index)
@@ -419,15 +426,77 @@ def _preset_emergents(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
-# Mapping preset name → function
+def _preset_inflation_shield(df: pd.DataFrame) -> pd.Series:
+    """
+    Preset: Inflation Shield (v1.1.0: NEW)
+    TIPS, commodities, real assets.
+    """
+    mask = pd.Series(False, index=df.index)
+    
+    # Via objective
+    if "objective" in df.columns:
+        obj_lower = df["objective"].fillna("").str.lower()
+        keywords = [
+            "tips", "inflation", "protected", "real", "commodity", "commodities",
+            "natural resources", "real assets", "real estate", "reit", "infrastructure"
+        ]
+        for kw in keywords:
+            mask |= obj_lower.str.contains(kw, regex=False)
+    
+    # Via fund_type
+    if "fund_type" in df.columns:
+        ft_lower = df["fund_type"].fillna("").str.lower()
+        mask |= ft_lower.str.contains("inflation|commodity|real estate|reit", regex=True)
+    
+    # Via sector_top
+    if "sector_top" in df.columns:
+        sector = df["sector_top"].fillna("").str.lower()
+        mask |= sector.str.contains("energy|materials|real estate|utilities", regex=True)
+    
+    return mask
+
+
+def _preset_or_physique(df: pd.DataFrame) -> pd.Series:
+    """
+    Preset: Or Physique (v1.1.0: NEW)
+    Gold physical ETF.
+    """
+    mask = pd.Series(False, index=df.index)
+    
+    # Via objective
+    if "objective" in df.columns:
+        obj_lower = df["objective"].fillna("").str.lower()
+        keywords = ["gold", "or ", "precious metal", "bullion", "physical gold"]
+        for kw in keywords:
+            mask |= obj_lower.str.contains(kw, regex=False)
+    
+    # Via name
+    if "name" in df.columns:
+        name_lower = df["name"].fillna("").str.lower()
+        gold_patterns = ["gold", "gld", "iau", "sgol", "gldm"]
+        for pattern in gold_patterns:
+            mask |= name_lower.str.contains(pattern, regex=False)
+    
+    # Via etfsymbol
+    if "etfsymbol" in df.columns:
+        symbol_upper = df["etfsymbol"].fillna("").str.upper()
+        gold_symbols = ["GLD", "IAU", "GLDM", "SGOL", "IAUM", "AAAU", "PHYS"]
+        mask |= symbol_upper.isin(gold_symbols)
+    
+    return mask
+
+
+# Mapping preset name → function (v1.1.0: aligné avec preset_meta.py)
 PRESET_FUNCTIONS = {
     "coeur_global": _preset_coeur_global,
     "min_vol_global": _preset_min_vol_global,
-    "rendement": _preset_rendement,
+    "rendement_etf": _preset_rendement_etf,  # v1.1.0: renommé
     "qualite_value": _preset_qualite_value,
     "croissance_tech": _preset_croissance_tech,
     "smid_quality": _preset_smid_quality,
     "emergents": _preset_emergents,
+    "inflation_shield": _preset_inflation_shield,  # v1.1.0: NEW
+    "or_physique": _preset_or_physique,  # v1.1.0: NEW
 }
 
 
@@ -609,7 +678,7 @@ def get_etf_preset_summary() -> Dict[str, Any]:
             }
             for profile, presets in PROFILE_PRESETS.items()
         },
-        "version": "1.0.0",
+        "version": "1.1.0",
     }
 
 
@@ -622,24 +691,24 @@ if __name__ == "__main__":
     
     # Test avec données fictives
     test_data = pd.DataFrame({
-        "etfsymbol": ["SPY", "QQQ", "VTI", "SCHD", "VWO", "IEMG", "XLK", "IJR"],
-        "name": ["S&P 500", "Nasdaq 100", "Total Market", "Dividend", "EM Vanguard", "EM iShares", "Tech Select", "Small Cap"],
-        "fund_type": ["Equity", "Equity", "Equity", "Equity", "Emerging", "Emerging", "Technology", "Small Blend"],
-        "aum_usd": [500e9, 200e9, 300e9, 50e9, 80e9, 70e9, 60e9, 40e9],
-        "total_expense_ratio": [0.09, 0.20, 0.03, 0.06, 0.10, 0.11, 0.10, 0.06],
-        "yield_ttm": [1.3, 0.5, 1.4, 3.5, 2.8, 2.5, 0.8, 1.2],
-        "vol_3y_pct": [18, 24, 19, 15, 22, 23, 26, 22],
-        "vol_pct": [17, 23, 18, 14, 21, 22, 25, 21],
-        "perf_1m_pct": [2.1, 3.5, 2.0, 1.5, -0.5, -0.8, 4.2, 1.8],
-        "perf_3m_pct": [5.2, 8.1, 5.0, 3.2, 2.1, 1.8, 9.5, 4.5],
-        "sector_top_weight": [25, 45, 22, 18, 28, 30, 95, 15],
-        "data_quality_score": [0.9, 0.9, 0.9, 0.85, 0.8, 0.8, 0.85, 0.8],
-        "leverage": [0, 0, 0, 0, 0, 0, 0, 0],
-        "objective": ["S&P 500 Index", "Nasdaq 100 Growth", "Total US Market", "High Dividend Yield", "Emerging Markets", "Emerging Markets", "Technology Select", "Small Cap Blend"],
+        "etfsymbol": ["SPY", "QQQ", "VTI", "SCHD", "VWO", "IEMG", "XLK", "IJR", "GLD", "TIP"],
+        "name": ["S&P 500", "Nasdaq 100", "Total Market", "Dividend", "EM Vanguard", "EM iShares", "Tech Select", "Small Cap", "Gold Trust", "TIPS Bond"],
+        "fund_type": ["Equity", "Equity", "Equity", "Equity", "Emerging", "Emerging", "Technology", "Small Blend", "Commodity", "Inflation"],
+        "aum_usd": [500e9, 200e9, 300e9, 50e9, 80e9, 70e9, 60e9, 40e9, 60e9, 30e9],
+        "total_expense_ratio": [0.09, 0.20, 0.03, 0.06, 0.10, 0.11, 0.10, 0.06, 0.40, 0.19],
+        "yield_ttm": [1.3, 0.5, 1.4, 3.5, 2.8, 2.5, 0.8, 1.2, 0.0, 4.5],
+        "vol_3y_pct": [18, 24, 19, 15, 22, 23, 26, 22, 15, 8],
+        "vol_pct": [17, 23, 18, 14, 21, 22, 25, 21, 14, 7],
+        "perf_1m_pct": [2.1, 3.5, 2.0, 1.5, -0.5, -0.8, 4.2, 1.8, 1.2, 0.5],
+        "perf_3m_pct": [5.2, 8.1, 5.0, 3.2, 2.1, 1.8, 9.5, 4.5, 3.5, 1.2],
+        "sector_top_weight": [25, 45, 22, 18, 28, 30, 95, 15, 100, 100],
+        "data_quality_score": [0.9, 0.9, 0.9, 0.85, 0.8, 0.8, 0.85, 0.8, 0.9, 0.85],
+        "leverage": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "objective": ["S&P 500 Index", "Nasdaq 100 Growth", "Total US Market", "High Dividend Yield", "Emerging Markets", "Emerging Markets", "Technology Select", "Small Cap Blend", "Physical Gold Bullion", "Treasury Inflation Protected"],
     })
     
     print("\n" + "=" * 60)
-    print("TEST PRESET ETF")
+    print("TEST PRESET ETF v1.1.0")
     print("=" * 60)
     
     for profile in ["Stable", "Modéré", "Agressif"]:
