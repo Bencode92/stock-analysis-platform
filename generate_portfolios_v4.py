@@ -2170,6 +2170,35 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
         
         equities_by_profile_euus[profile] = profile_equities
         logger.info(f"   [{profile}] EU/US Équités sélectionnées: {len(profile_equities)}")
+        # === v5.1.0: Sélection ETF/Bonds par profil (EU/US - pas de crypto) ===
+        if HAS_MODULAR_SELECTORS:
+            if etf_data:
+                etf_df = pd.DataFrame(etf_data)
+                etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=50)
+                profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
+                logger.info(f"   [{profile}] EU/US ETF sélectionnés: {len(profile_etf_data)}/{len(etf_data)}")
+            else:
+                profile_etf_data = []
+            
+            if bonds_data:
+                bonds_df = pd.DataFrame(bonds_data)
+                bonds_selected_df = select_bonds_for_profile(bonds_df, profile, top_n=20)
+                profile_bonds_data = bonds_selected_df.to_dict('records') if not bonds_selected_df.empty else []
+                logger.info(f"   [{profile}] EU/US Bonds sélectionnés: {len(profile_bonds_data)}/{len(bonds_data)}")
+            else:
+                profile_bonds_data = []
+            
+            all_funds_profile = profile_etf_data + profile_bonds_data
+            profile_universe_others = build_scored_universe(
+                stocks_data=None,
+                etf_data=all_funds_profile,
+                crypto_data=[],
+                returns_series=None,
+                buffett_mode="none",
+                buffett_min_score=0,
+            )
+        else:
+            profile_universe_others = universe_others
         
         # Construire l'univers POUR CE PROFIL
         profile_universe = profile_equities + profile_universe_others
