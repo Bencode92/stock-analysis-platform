@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles v4.12.1 + Selection Explained + Backtest + Debug + Validation
+name: Génération des Portefeuilles v5.1.0 + Audit Collector + Selection Explained + Backtest + Debug + Validation
 
 on:
   push:
@@ -20,6 +20,8 @@ jobs:
       API_CHAT: ${{ secrets.API_CHAT }}
       OPENAI_API_KEY: ${{ secrets.API_CHAT }}
       TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+      # v5.1.0: Audit collector (none | summary | full)
+      DEBUG_AUDIT: summary
 
     steps:
       - name: 📥 Checkout
@@ -48,7 +50,7 @@ jobs:
           echo ""
           echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
 
-      - name: 🚀 Exécuter le moteur v4.12.1 + Selection Explained + Backtest + Debug
+      - name: 🚀 Exécuter le moteur v5.1.0 + Audit Collector + Selection Explained + Backtest + Debug
         run: python generate_portfolios_v4.py
 
       # ============= v4.5 NEW: Schema Validation =============
@@ -223,6 +225,27 @@ jobs:
             echo "⚠️ backtest_debug.json ABSENT"
           fi
           
+          # v5.1.0: Selection Debug (audit_collector)
+          if [ -f data/selection_debug.json ]; then
+            echo "✅ selection_debug.json (v5.1.0)"
+            python3 << 'EOF'
+          import json
+          with open("data/selection_debug.json") as f:
+              data = json.load(f)
+          meta = data.get("_meta", {})
+          print(f"   Run ID: {meta.get('run_id', 'N/A')}")
+          print(f"   Git SHA: {meta.get('git_sha', 'N/A')[:8] if meta.get('git_sha') else 'N/A'}")
+          print(f"   Mode: {meta.get('mode', 'N/A')}")
+          stages = data.get("stages", {})
+          for stage_name, stage_data in stages.items():
+              before = stage_data.get("before_count", 0)
+              after = stage_data.get("after_count", 0)
+              print(f"   {stage_name}: {before} → {after}")
+          EOF
+          else
+            echo "⚠️ selection_debug.json ABSENT (DEBUG_AUDIT=none?)"
+          fi
+          
           echo "----"
           echo "== portfolio_history =="
           ls -lah data/portfolio_history || true
@@ -230,7 +253,7 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v4.12.1 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v5.1.0 Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Schema Validation Status
@@ -293,6 +316,33 @@ jobs:
           print(f"| ETF Selected | {summary.get('etf_selected', 0)} |")
           print(f"| Crypto Selected | {summary.get('crypto_selected', 0)} |")
           print(f"| Filters Applied | {len(filters)} |")
+          EOF
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # v5.1.0: Selection Debug Summary (audit_collector)
+          if [ -f data/selection_debug.json ]; then
+            echo "### 📊 Selection Debug (v5.1.0)" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("data/selection_debug.json") as f:
+              data = json.load(f)
+          meta = data.get("_meta", {})
+          print(f"| Metric | Value |")
+          print(f"|--------|-------|")
+          print(f"| Run ID | {meta.get('run_id', 'N/A')} |")
+          print(f"| Git SHA | {meta.get('git_sha', 'N/A')[:8] if meta.get('git_sha') else 'N/A'} |")
+          print(f"| Mode | {meta.get('mode', 'N/A')} |")
+          print(f"")
+          print(f"**Pipeline Stages:**")
+          print(f"| Stage | Before | After | Delta |")
+          print(f"|-------|--------|-------|-------|")
+          stages = data.get("stages", {})
+          for stage_name, stage_data in stages.items():
+              before = stage_data.get("before_count", 0)
+              after = stage_data.get("after_count", 0)
+              delta = after - before
+              print(f"| {stage_name} | {before} | {after} | {delta:+d} |")
           EOF
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
@@ -425,7 +475,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Ajouter les artefacts générés (v4.12.1 avec selection_explained.json)
+          # Ajouter les artefacts générés (v5.1.0 avec selection_debug.json)
           git add data/portfolios.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
@@ -434,6 +484,7 @@ jobs:
                   data/market_context.json \
                   data/selection_audit.json \
                   data/selection_explained.json \
+                  data/selection_debug.json \
                   data/portfolio_history/* || true
 
           # Si .gitignore les filtre, forcer l'ajout
@@ -461,11 +512,14 @@ jobs:
           if git check-ignore -q data/selection_explained.json; then
             git add -f data/selection_explained.json
           fi
+          if git check-ignore -q data/selection_debug.json; then
+            git add -f data/selection_debug.json
+          fi
           if git check-ignore -q data/portfolio_history; then
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v4.12.1 RADAR + Selection Explained + EU/US Focus + Backtest 90j ✓" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v5.1.0 RADAR + Audit Collector + Selection Explained + EU/US Focus + Backtest 90j ✓" || echo "rien à committer"
 
           git push || (git pull --rebase origin main && git push)
 
