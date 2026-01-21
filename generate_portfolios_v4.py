@@ -272,6 +272,23 @@ try:
 except ImportError:
     SELECTION_AUDIT_AVAILABLE = False
     logger.warning("⚠️ Module selection_audit non disponible")
+# === v5.1.0: Audit Collector (debug summary/full) ===
+try:
+    from portfolio_engine.audit_collector import (
+        init_audit, get_audit, audit_enabled,
+        ReasonCode, ScoreStats
+    )
+    AUDIT_COLLECTOR_AVAILABLE = True
+    logger.info("✅ Module audit_collector disponible")
+except ImportError:
+    AUDIT_COLLECTOR_AVAILABLE = False
+    logger.warning("⚠️ Module audit_collector non disponible")
+    def init_audit(*args, **kwargs): return None
+    def get_audit(): return None
+    def audit_enabled(): return False
+    class ReasonCode:
+        BUFFETT_SCORE_LOW = "BUFFETT_SCORE_LOW"
+        MISSING_DATA = "MISSING_DATA"   
 # v4.12.1: Import du module d'explication des sélections TOP caps
 try:
     from portfolio_engine.selection_explainer import explain_top_caps_selection
@@ -339,6 +356,9 @@ CONFIG = {
     # === v4.12.0: Selection Audit ===
     "generate_selection_audit": True,
     "selection_audit_output": "data/selection_audit.json",
+    # v5.1.0: Debug audit (summary/full)
+    "debug_audit_level": os.getenv("DEBUG_AUDIT", "summary"),
+    "debug_audit_output_dir": "data",
     # === v4.12.1: Selection Explainer (TOP caps analysis) ===
     "generate_selection_explained": True,
     "selection_explained_output": "data/selection_explained.json",
@@ -1443,7 +1463,17 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 "country_top": it.get("country"),
             })
     
-    logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
+   logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
+    
+    # === v5.1.0: AUDIT HOOK 1 - Initial universe ===
+    _collector = get_audit()
+    if _collector:
+        _collector.record_initial_universe(
+            equity_count=len(eq_rows),
+            etf_count=len(etf_data),
+            crypto_count=len(crypto_data),
+            bond_count=len(bonds_data),
+        )
     
     # === PHASE 1: TRACE 1 - Initial ===
     count_korea(eq_rows, "1. Initial (après chargement)")
@@ -1503,6 +1533,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     eq_filtered = filter_equities(eq_rows)
     
+    # === v5.1.0: AUDIT HOOK 3 - After hard filters ===
+    if _collector:
+        with _collector.stage("hard_filters", category="equity") as _stage:
+            _stage.before_count = len(eq_rows)
+            _stage.after_count = len(eq_filtered)
+            rejected = len(eq_rows) - len(eq_filtered)
+            if rejected > 0:
+                _stage.reason_counts = {ReasonCode.MISSING_DATA: rejected}
+    
     # === PHASE 1: TRACE 3 - After filter_equities ===
     count_korea(eq_filtered, "3. After filter_equities")
     
@@ -1512,7 +1551,17 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     
     # Log du pool global (remplace l'ancienne sélection unique)
     logger.info(f"   Pool équités post-filtre: {len(eq_filtered)} (sélection par profil dans la boucle)")
-    
+
+    # === v5.1.0: AUDIT HOOK 4 - Scoring stats ===
+    if _collector and eq_filtered:
+        profile_scores = [e.get("_profile_score") or 0 for e in eq_filtered if e.get("_profile_score")]
+        if profile_scores:
+            top_k = sorted(eq_filtered, key=lambda x: x.get("_profile_score") or 0, reverse=True)[:5]
+            _collector.record_scoring_stats(
+                category="equity",
+                scores=profile_scores,
+                top_k=[{"ticker": e.get("ticker"), "score": round(e.get("_profile_score", 0), 3)} for e in top_k],
+            )    
     # === v4.13: Import get_stable_uid pour usage ultérieur dans l'audit ===
     try:
         from portfolio_engine.selection_audit import get_stable_uid
@@ -1595,6 +1644,14 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         profile_selection_meta["buffett_missing_count"] = missing_buffett
         
         equities_by_profile[profile] = profile_equities
+        
+        # === v5.1.0: AUDIT HOOK 5 - Selection par profil ===
+        if _collector:
+            _collector.record_final_selection(
+                category="equity",
+                selected=profile_equities,
+                profile=profile,
+            )
         # v5.0.0: Log du mode de scoring utilisé
         if scoring_mode == "preset":
             # Vérifier que _profile_score est présent
@@ -3467,8 +3524,18 @@ def save_backtest_results_euus(backtest_data: Dict):
 def main():
     """Point d'entrée principal."""
     logger.info("=" * 60)
-    logger.info("🚀 Portfolio Engine v5.0.0 - Option B Architecture (preset_meta = equity scoring)")
+    logger.info("🚀 Portfolio Engine v5.1.0 - Option B Architecture (preset_meta = equity scoring)")
     logger.info("=" * 60)
+    
+    # v5.1.0: Initialiser audit collector
+    audit_collector = None
+    if AUDIT_COLLECTOR_AVAILABLE and CONFIG.get("debug_audit_level", "none") != "none":
+        audit_collector = init_audit(
+            config=CONFIG,
+            universe_asof=datetime.datetime.now().strftime("%Y-%m-%d"),
+            previous_summary_path="data/selection_debug.json",
+        )
+        logger.info(f"📊 Audit collector initialisé (level={CONFIG.get('debug_audit_level')})")
     
     # v5.0.0: Log configuration scoring au démarrage
     log_scoring_config()
@@ -3571,7 +3638,13 @@ def main():
         
         if not backtest_euus_results.get("skipped"):
             save_backtest_results_euus(backtest_euus_results)
-    
+    # === 4.5 DUMP AUDIT COLLECTOR ===
+    if audit_collector:
+        try:
+            audit_collector.dump(CONFIG.get("debug_audit_output_dir", "data"))
+            logger.info("📊 Audit debug exporté")
+        except Exception as e:
+            logger.error(f"❌ Erreur dump audit: {e}")
     # === 5. RÉSUMÉ FINAL ===
     logger.info("\n" + "=" * 60)
     logger.info("✨ Génération terminée avec succès!")
