@@ -1011,7 +1011,14 @@ def build_raw_universe(
     bond_rows = []
     if etf_data:
         for it in etf_data:
-            is_bond = "bond" in str(it.get("fund_type", "")).lower()
+            # v4.2 FIX: Respecter _force_category si présent
+            forced = it.get("_force_category")
+            if forced == "etf":
+                is_bond = False
+            elif forced == "bond":
+                is_bond = True
+            else:
+                is_bond = "bond" in str(it.get("fund_type", "")).lower()
             row = {
                 "id": it.get("isin") or it.get("ticker") or it.get("symbol") or it.get("name") or f"ETF_{len(etf_rows)+1}",
                 "name": it.get("name"),
