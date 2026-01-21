@@ -2,6 +2,10 @@
 """
 PRESET_META - Source unique de vérité pour les presets.
 
+v5.1.1 (Alignement presets inter-modules):
+- NEW: high_yield preset pour bonds HY (alignement avec preset_bond.py)
+- NEW: bonds_hy correlation group
+
 v5.1.0 (Option B - PRESET_RULES pour contraintes dures par preset):
 - NEW: PRESET_RULES dict avec contraintes dures par preset equity
 - NEW: _parse_rule_key() pour parser les clés de règles
@@ -385,6 +389,14 @@ ETF_PRESETS: Dict[str, PresetConfig] = {
         turnover_tolerance=0.15,
         exposures=["cash", "ultra_short"],
     ),
+    "high_yield": PresetConfig(
+        asset_class=AssetClass.BOND, role=Role.SATELLITE, risk=RiskLevel.HIGH,
+        max_weight_pct=10.0, max_bucket_pct=15.0, min_quality_score=0,
+        correlation_group="bonds_hy",
+        description="High Yield bonds (BB et moins)",
+        turnover_tolerance=0.06,
+        exposures=["bonds", "high_yield"],
+    ),
     "inflation_shield": PresetConfig(
         asset_class=AssetClass.ETF, role=Role.DEFENSIVE, risk=RiskLevel.MODERATE,
         max_weight_pct=10.0, max_bucket_pct=15.0, min_quality_score=0,
@@ -506,7 +518,7 @@ EQUITY_PRESET_PRIORITY = [
 ETF_PRESET_PRIORITY = [
     "coeur_global", "min_vol_global", "defensif_oblig", "cash_ultra_short",
     "qualite_value", "rendement_etf", "inflation_shield", "or_physique",
-    "croissance_tech", "smid_quality", "emergents",
+    "croissance_tech", "smid_quality", "emergents", "high_yield",
 ]
 
 CRYPTO_PRESET_PRIORITY = [
@@ -552,6 +564,7 @@ ETF_EXPOSURE_EQUIVALENTS: Dict[str, List[str]] = {
     "nasdaq": ["QQQ", "ONEQ"],
     "emerging_markets": ["EEM", "VWO", "IEMG"],
     "bonds_ig": ["LQD", "AGG", "BND"],
+    "bonds_hy": ["HYG", "JNK", "USHY", "SHYG"],
     "bonds_treasury": ["TLT", "IEF", "SHY"],
     "cash": ["BOXX", "BIL", "SHV"],
     "dividend": ["VIG", "SCHD", "DVY", "SDY", "BINC"],
@@ -1477,11 +1490,15 @@ CORRELATION_BY_GROUP: Dict[Tuple[str, str], float] = {
     ("equity_defensive", "equity_dividend"): 0.70,
     ("equity_developed", "equity_em"): 0.65,
     ("equity_developed", "bonds_ig"): 0.10,
+    ("equity_developed", "bonds_hy"): 0.45,
     ("equity_developed", "gold"): 0.05,
     ("equity_developed", "crypto_major"): 0.35,
+    ("bonds_ig", "bonds_hy"): 0.55,
     ("bonds_ig", "cash"): 0.40,
     ("bonds_ig", "gold"): 0.15,
     ("bonds_ig", "crypto_major"): -0.10,
+    ("bonds_hy", "cash"): 0.20,
+    ("bonds_hy", "equity_growth"): 0.50,
     ("gold", "commodities"): 0.50,
     ("gold", "crypto_major"): 0.20,
     ("crypto_major", "crypto_altcoin"): 0.75,
@@ -1570,11 +1587,11 @@ def export_watchlist(
     return filepath
 
 
-# ============ MAIN TEST v5.1.0 ============
+# ============ MAIN TEST v5.1.1 ============
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("PRESET_META v5.1.0 - Option B + PRESET_RULES")
+    print("PRESET_META v5.1.1 - Option B + PRESET_RULES + high_yield")
     print("=" * 60)
     
     print(f"\nTotal presets: {len(PRESET_META)}")
@@ -1766,15 +1783,29 @@ if __name__ == "__main__":
     
     print("✅ PRESET_RULES consistency OK")
     
+    # TEST 11: high_yield preset exists - NEW v5.1.1
+    print("\n--- TEST 11: high_yield preset ---")
+    assert "high_yield" in ETF_PRESETS, "high_yield should be in ETF_PRESETS"
+    assert "high_yield" in PRESET_META, "high_yield should be in PRESET_META"
+    assert "high_yield" in ETF_PRESET_PRIORITY, "high_yield should be in ETF_PRESET_PRIORITY"
+    hy_config = ETF_PRESETS["high_yield"]
+    assert hy_config.asset_class == AssetClass.BOND, "high_yield should be BOND"
+    assert hy_config.role == Role.SATELLITE, "high_yield should be SATELLITE"
+    assert hy_config.correlation_group == "bonds_hy", "high_yield should be bonds_hy"
+    print("✅ high_yield preset OK")
+    
+    # TEST 12: bonds_hy correlations - NEW v5.1.1
+    print("\n--- TEST 12: bonds_hy correlations ---")
+    assert ("bonds_ig", "bonds_hy") in CORRELATION_BY_GROUP, "bonds_ig/bonds_hy correlation should exist"
+    assert ("bonds_hy", "cash") in CORRELATION_BY_GROUP, "bonds_hy/cash correlation should exist"
+    assert ("bonds_hy", "equity_growth") in CORRELATION_BY_GROUP, "bonds_hy/equity_growth correlation should exist"
+    print("✅ bonds_hy correlations OK")
+    
     print("\n" + "=" * 60)
-    print("v5.1.0 CHANGELOG:")
-    print("  ✅ PRESET_RULES dict avec contraintes dures par preset")
-    print("  ✅ _parse_rule_key() pour parser les clés")
-    print("  ✅ check_preset_rules() valide equity vs preset rules")
-    print("  ✅ assign_preset_to_equity_with_rules() avec fallback")
-    print("  ✅ Suppression buffett_score_min de RELAX_STEPS")
-    print("  ✅ select_equities_for_profile() utilise les nouvelles fonctions")
-    print("  ✅ Fix UNH (croissance perf_1y_min: 4%)")
-    print("  ✅ Fix BIRG (momentum_trend perf_1y_min: 10%)")
+    print("v5.1.1 CHANGELOG:")
+    print("  ✅ high_yield preset (AssetClass.BOND, Role.SATELLITE)")
+    print("  ✅ bonds_hy correlation group")
+    print("  ✅ ETF_EXPOSURE_EQUIVALENTS includes bonds_hy ETFs")
+    print("  ✅ Alignement complet avec preset_bond.py")
     print("=" * 60)
     print("\n🎯 Architecture Option B: preset_meta = seul moteur equity + PRESET_RULES")
