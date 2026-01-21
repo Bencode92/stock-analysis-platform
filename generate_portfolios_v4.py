@@ -1569,7 +1569,26 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             etfs=etf_data,
             cryptos=crypto_data,
             bonds=bonds_data,
-        )      
+        )
+    # === v5.1.3: TOP 10 BY PRESET DEBUG ===
+    if _collector:
+        # Assigner les presets aux equities AVANT le hook
+        try:
+            from portfolio_engine.preset_meta import assign_preset_to_equity
+            for eq in eq_filtered:
+                if not eq.get("_matched_preset"):
+                    eq["_matched_preset"] = assign_preset_to_equity(eq)
+            logger.info(f"📊 Presets assignés à {len(eq_filtered)} equities")
+        except ImportError:
+            logger.warning("⚠️ assign_preset_to_equity non disponible")
+        
+        # Appeler le hook avec les bons noms de variables
+        _collector.record_top10_by_preset(
+            equities=eq_filtered,
+            etfs=etf_data,
+            cryptos=crypto_data,
+            bonds=bonds_data,
+        )   
     # === v4.13: Import get_stable_uid pour usage ultérieur dans l'audit ===
     try:
         from portfolio_engine.selection_audit import get_stable_uid
