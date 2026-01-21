@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-01-21-12-41-58",
-    "git_sha": "e200e01ae",
-    "git_sha_full": "e200e01ae8ae980f7831c98319e72b9e62c082ed",
+    "run_id": "2026-01-21-14-47-49",
+    "git_sha": "79faafeb3",
+    "git_sha_full": "79faafeb32ff32a24a5b9dca68699b31adcf1c4e",
     "config_hash": "baba1527",
     "universe_asof": "2026-01-21",
-    "timestamp_utc": "2026-01-21T12:41:58.073701+00:00",
+    "timestamp_utc": "2026-01-21T14:47:49.501071+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 199.96
+    "total_duration_sec": 334.9
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -22,13 +22,13 @@
   "pipeline_stages": {
     "1_initial": {
       "name": "initial_universe",
-      "before": 1573,
-      "after": 1573,
+      "before": 3107,
+      "after": 3107,
       "rejected": 0,
       "equity": 1006,
-      "etf": 220,
+      "etf": 1342,
       "crypto": 335,
-      "bond": 12
+      "bond": 424
     },
     "hard_filters_equity": {
       "name": "hard_filters",
@@ -91,6 +91,156 @@
         }
       ]
     },
+    "5_selection_etf_Agressif": {
+      "name": "selection_etf",
+      "before": 50,
+      "after": 50,
+      "rejected": 0,
+      "category": "etf",
+      "profile": "Agressif",
+      "top_k": [
+        {
+          "ticker": "SCHD",
+          "score": 100.0
+        },
+        {
+          "ticker": "VEA",
+          "score": 93.61
+        },
+        {
+          "ticker": "SCHF",
+          "score": 93.2
+        },
+        {
+          "ticker": "VPL",
+          "score": 91.86
+        },
+        {
+          "ticker": "IXUS",
+          "score": 91.44
+        },
+        {
+          "ticker": "SPDW",
+          "score": 91.26
+        },
+        {
+          "ticker": "VXUS",
+          "score": 91.01
+        },
+        {
+          "ticker": "IEMG",
+          "score": 90.99
+        },
+        {
+          "ticker": "DFIC",
+          "score": 90.94
+        },
+        {
+          "ticker": "DFAX",
+          "score": 90.64
+        }
+      ]
+    },
+    "5_selection_crypto_Agressif": {
+      "name": "selection_crypto",
+      "before": 30,
+      "after": 30,
+      "rejected": 0,
+      "category": "crypto",
+      "profile": "Agressif",
+      "top_k": [
+        {
+          "ticker": "AXS/USD",
+          "score": 100.0
+        },
+        {
+          "ticker": "DUSK/USD",
+          "score": 98.47
+        },
+        {
+          "ticker": "AXS/EUR",
+          "score": 98.23
+        },
+        {
+          "ticker": "ROSE/USD",
+          "score": 91.08
+        },
+        {
+          "ticker": "STG/USD",
+          "score": 89.73
+        },
+        {
+          "ticker": "XVS/USD",
+          "score": 87.41
+        },
+        {
+          "ticker": "ACH/USD",
+          "score": 86.37
+        },
+        {
+          "ticker": "FITFI/USD",
+          "score": 85.57
+        },
+        {
+          "ticker": "SANTOS/USD",
+          "score": 85.09
+        },
+        {
+          "ticker": "ARPA/USD",
+          "score": 84.9
+        }
+      ]
+    },
+    "5_selection_bond_Agressif": {
+      "name": "selection_bond",
+      "before": 20,
+      "after": 20,
+      "rejected": 0,
+      "category": "bond",
+      "profile": "Agressif",
+      "top_k": [
+        {
+          "ticker": "BUCK",
+          "score": 100.0
+        },
+        {
+          "ticker": "PSH",
+          "score": 96.93
+        },
+        {
+          "ticker": "SEIX",
+          "score": 94.84
+        },
+        {
+          "ticker": "NCLO",
+          "score": 91.31
+        },
+        {
+          "ticker": "FLRT",
+          "score": 90.61
+        },
+        {
+          "ticker": "CLOZ",
+          "score": 89.34
+        },
+        {
+          "ticker": "ICLO",
+          "score": 88.74
+        },
+        {
+          "ticker": "JBBB",
+          "score": 88.66
+        },
+        {
+          "ticker": "JAAA",
+          "score": 86.69
+        },
+        {
+          "ticker": "PAAA",
+          "score": 84.22
+        }
+      ]
+    },
     "5_selection_equity_Modéré": {
       "name": "selection_equity",
       "before": 250,
@@ -141,6 +291,156 @@
         }
       ]
     },
+    "5_selection_etf_Modéré": {
+      "name": "selection_etf",
+      "before": 50,
+      "after": 50,
+      "rejected": 0,
+      "category": "etf",
+      "profile": "Modéré",
+      "top_k": [
+        {
+          "ticker": "SCHD",
+          "score": 100.0
+        },
+        {
+          "ticker": "VEA",
+          "score": 90.26
+        },
+        {
+          "ticker": "SCHY",
+          "score": 90.05
+        },
+        {
+          "ticker": "VXUS",
+          "score": 89.35
+        },
+        {
+          "ticker": "SCHF",
+          "score": 89.34
+        },
+        {
+          "ticker": "SPDW",
+          "score": 88.49
+        },
+        {
+          "ticker": "IXUS",
+          "score": 87.29
+        },
+        {
+          "ticker": "VEU",
+          "score": 87.19
+        },
+        {
+          "ticker": "SCHV",
+          "score": 87.1
+        },
+        {
+          "ticker": "VYM",
+          "score": 86.91
+        }
+      ]
+    },
+    "5_selection_crypto_Modéré": {
+      "name": "selection_crypto",
+      "before": 20,
+      "after": 20,
+      "rejected": 0,
+      "category": "crypto",
+      "profile": "Modéré",
+      "top_k": [
+        {
+          "ticker": "XAUT/USD",
+          "score": 100.0
+        },
+        {
+          "ticker": "PAXG/USD",
+          "score": 98.2
+        },
+        {
+          "ticker": "STG/USD",
+          "score": 68.47
+        },
+        {
+          "ticker": "TRX/USD",
+          "score": 68.17
+        },
+        {
+          "ticker": "XVS/USD",
+          "score": 64.86
+        },
+        {
+          "ticker": "PORTO/USD",
+          "score": 64.56
+        },
+        {
+          "ticker": "LAZIO/USD",
+          "score": 62.16
+        },
+        {
+          "ticker": "GNO/EUR",
+          "score": 58.86
+        },
+        {
+          "ticker": "GNO/USD",
+          "score": 57.36
+        },
+        {
+          "ticker": "BCH/EUR",
+          "score": 57.06
+        }
+      ]
+    },
+    "5_selection_bond_Modéré": {
+      "name": "selection_bond",
+      "before": 20,
+      "after": 20,
+      "rejected": 0,
+      "category": "bond",
+      "profile": "Modéré",
+      "top_k": [
+        {
+          "ticker": "IBIC",
+          "score": 100.0
+        },
+        {
+          "ticker": "XTWO",
+          "score": 97.94
+        },
+        {
+          "ticker": "VGSH",
+          "score": 97.93
+        },
+        {
+          "ticker": "GBIL",
+          "score": 97.55
+        },
+        {
+          "ticker": "USFR",
+          "score": 97.36
+        },
+        {
+          "ticker": "SCHO",
+          "score": 96.5
+        },
+        {
+          "ticker": "STIP",
+          "score": 96.02
+        },
+        {
+          "ticker": "DFIP",
+          "score": 95.73
+        },
+        {
+          "ticker": "TDTT",
+          "score": 95.44
+        },
+        {
+          "ticker": "CLTL",
+          "score": 95.3
+        }
+      ]
+    },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
       "before": 178,
@@ -188,6 +488,114 @@
         {
           "ticker": "CL",
           "score": 0.7219
+        }
+      ]
+    },
+    "5_selection_etf_Stable": {
+      "name": "selection_etf",
+      "before": 50,
+      "after": 50,
+      "rejected": 0,
+      "category": "etf",
+      "profile": "Stable",
+      "top_k": [
+        {
+          "ticker": "VTV",
+          "score": 100.0
+        },
+        {
+          "ticker": "SCHV",
+          "score": 95.68
+        },
+        {
+          "ticker": "SCHD",
+          "score": 94.99
+        },
+        {
+          "ticker": "VYM",
+          "score": 94.94
+        },
+        {
+          "ticker": "SPYV",
+          "score": 92.04
+        },
+        {
+          "ticker": "SCHY",
+          "score": 90.33
+        },
+        {
+          "ticker": "DGRO",
+          "score": 90.31
+        },
+        {
+          "ticker": "IUSV",
+          "score": 88.83
+        },
+        {
+          "ticker": "VIG",
+          "score": 85.03
+        },
+        {
+          "ticker": "VXUS",
+          "score": 84.74
+        }
+      ]
+    },
+    "5_selection_crypto_Stable": {
+      "name": "selection_crypto",
+      "before": 0,
+      "after": 0,
+      "rejected": 0,
+      "category": "crypto",
+      "profile": "Stable"
+    },
+    "5_selection_bond_Stable": {
+      "name": "selection_bond",
+      "before": 20,
+      "after": 20,
+      "rejected": 0,
+      "category": "bond",
+      "profile": "Stable",
+      "top_k": [
+        {
+          "ticker": "CLTL",
+          "score": 100.0
+        },
+        {
+          "ticker": "GBIL",
+          "score": 97.25
+        },
+        {
+          "ticker": "USFR",
+          "score": 96.46
+        },
+        {
+          "ticker": "VGSH",
+          "score": 93.88
+        },
+        {
+          "ticker": "TFLO",
+          "score": 90.8
+        },
+        {
+          "ticker": "SCHO",
+          "score": 90.51
+        },
+        {
+          "ticker": "SPTS",
+          "score": 90.1
+        },
+        {
+          "ticker": "IBIC",
+          "score": 89.75
+        },
+        {
+          "ticker": "XTWO",
+          "score": 88.57
+        },
+        {
+          "ticker": "STIP",
+          "score": 88.27
         }
       ]
     }
@@ -1357,188 +1765,188 @@
         "ter_max": 1.0,
         "perf_1y_min": 0
       },
-      "total": 220,
-      "passed": 175,
+      "total": 1342,
+      "passed": 1092,
       "top_20": [
         {
-          "ticker": "CSTNL",
-          "name": "iShares Core S&P 500 Fund",
+          "ticker": "IEFA",
+          "name": "iShares Core MSCI EAFE ETF",
           "ter": 0.0,
-          "aum": "117.0B",
-          "perf_ytd": NaN,
-          "perf_1y": NaN,
+          "aum": "162.6B",
+          "perf_ytd": 1.2,
+          "perf_1y": 28.7,
+          "vol": 14.6
+        },
+        {
+          "ticker": "EZU",
+          "name": "iShares MSCI Eurozone ETF",
+          "ter": 0.01,
+          "aum": "8.9B",
+          "perf_ytd": -0.1,
+          "perf_1y": 33.3,
+          "vol": 16.6
+        },
+        {
+          "ticker": "FDVV",
+          "name": "Fidelity High Dividend ETF",
+          "ter": 0.0,
+          "aum": "8.0B",
+          "perf_ytd": -0.7,
+          "perf_1y": 12.2,
+          "vol": 13.0
+        },
+        {
+          "ticker": "FDN",
+          "name": "First Trust Dow Jones Internet Inde",
+          "ter": 0.0,
+          "aum": "6.6B",
+          "perf_ytd": -3.7,
+          "perf_1y": 3.6,
+          "vol": 22.3
+        },
+        {
+          "ticker": "FDL",
+          "name": "First Trust Morningstar Dividend Le",
+          "ter": 0.0,
+          "aum": "6.1B",
+          "perf_ytd": 2.4,
+          "perf_1y": 12.1,
+          "vol": 13.8
+        },
+        {
+          "ticker": "FELC",
+          "name": "Fidelity Enhanced Large Cap Core ET",
+          "ter": 0.0,
+          "aum": "6.1B",
+          "perf_ytd": -1.6,
+          "perf_1y": 13.1,
           "vol": NaN
         },
         {
-          "ticker": "DFAC",
-          "name": "Dimensional U.S. Core Equity 2 ETF",
+          "ticker": "FENI",
+          "name": "Fidelity Enhanced International ETF",
           "ter": 0.0,
-          "aum": "40.1B",
-          "perf_ytd": 2.3,
-          "perf_1y": 15.6,
-          "vol": 15.3
+          "aum": "5.9B",
+          "perf_ytd": 1.1,
+          "perf_1y": 34.5,
+          "vol": NaN
         },
         {
-          "ticker": "CGDV",
-          "name": "Capital Group Dividend Value ETF",
-          "ter": 0.0,
-          "aum": "26.6B",
-          "perf_ytd": 1.3,
-          "perf_1y": 25.4,
-          "vol": 13.4
-        },
-        {
-          "ticker": "ACWI",
-          "name": "iShares MSCI ACWI ETF",
-          "ter": 0.0,
-          "aum": "25.2B",
-          "perf_ytd": 1.8,
-          "perf_1y": 22.3,
-          "vol": 14.0
-        },
-        {
-          "ticker": "AVUV",
-          "name": "Avantis U.S. Small Cap Value ETF",
-          "ter": 0.0,
-          "aum": "20.0B",
-          "perf_ytd": 5.2,
-          "perf_1y": 9.7,
-          "vol": 21.9
-        },
-        {
-          "ticker": "CGGR",
-          "name": "Capital Group Growth ETF",
-          "ter": 0.0,
-          "aum": "19.0B",
-          "perf_ytd": 0.8,
-          "perf_1y": 17.8,
-          "vol": 18.9
-        },
-        {
-          "ticker": "COWZ",
-          "name": "Pacer US Cash Cows 100 ETF",
-          "ter": 0.0,
-          "aum": "18.0B",
-          "perf_ytd": 2.0,
-          "perf_1y": 6.5,
-          "vol": 16.0
-        },
-        {
-          "ticker": "AVEM",
-          "name": "Avantis Emerging Markets Equity ETF",
-          "ter": 0.0,
-          "aum": "16.0B",
-          "perf_ytd": 3.1,
-          "perf_1y": 39.2,
-          "vol": 16.3
-        },
-        {
-          "ticker": "DFIV",
-          "name": "Dimensional International Value ETF",
-          "ter": 0.0,
-          "aum": "15.8B",
-          "perf_ytd": 2.1,
-          "perf_1y": 43.0,
-          "vol": 14.5
-        },
-        {
-          "ticker": "AVDV",
-          "name": "Avantis International Small Cap Val",
-          "ter": 0.0,
-          "aum": "15.2B",
-          "perf_ytd": 4.4,
-          "perf_1y": 53.0,
-          "vol": 15.5
-        },
-        {
-          "ticker": "BINC",
-          "name": "iShares Flexible Income Active ETF",
-          "ter": 0.0,
-          "aum": "15.1B",
-          "perf_ytd": 0.4,
-          "perf_1y": 1.6,
-          "vol": 3.5
-        },
-        {
-          "ticker": "BBJP",
-          "name": "JPMorgan BetaBuilders Japan Fund",
-          "ter": 0.0,
-          "aum": "14.1B",
-          "perf_ytd": 5.1,
-          "perf_1y": 28.8,
-          "vol": 17.8
-        },
-        {
-          "ticker": "DFAI",
-          "name": "Dimensional International Core Equi",
-          "ter": 0.0,
-          "aum": "12.8B",
-          "perf_ytd": 2.7,
-          "perf_1y": 34.9,
-          "vol": 13.8
-        },
-        {
-          "ticker": "DFAS",
-          "name": "Dimensional U.S. Small Cap ETF",
-          "ter": 0.0,
-          "aum": "12.1B",
-          "perf_ytd": 5.9,
-          "perf_1y": 11.9,
-          "vol": 19.8
-        },
-        {
-          "ticker": "DFAT",
-          "name": "Dimensional US Targeted Value ETF",
-          "ter": 0.0,
-          "aum": "12.0B",
-          "perf_ytd": 5.3,
-          "perf_1y": 10.8,
-          "vol": 20.8
-        },
-        {
-          "ticker": "DFIC",
-          "name": "Dimensional International Core Equi",
-          "ter": 0.0,
-          "aum": "12.0B",
-          "perf_ytd": 2.8,
-          "perf_1y": 37.9,
-          "vol": 13.8
-        },
-        {
-          "ticker": "AVDE",
-          "name": "Avantis International Equity ETF",
-          "ter": 0.0,
-          "aum": "11.6B",
-          "perf_ytd": 2.9,
-          "perf_1y": 38.7,
-          "vol": 14.2
-        },
-        {
-          "ticker": "CIBR",
-          "name": "First Trust NASDAQ Cybersecurity ET",
+          "ticker": "FBCG",
+          "name": "Fidelity Blue Chip Growth Fund",
           "ter": 0.01,
-          "aum": "10.7B",
-          "perf_ytd": 1.7,
-          "perf_1y": 11.2,
-          "vol": 20.6
+          "aum": "5.3B",
+          "perf_ytd": -2.2,
+          "perf_1y": 15.1,
+          "vol": 22.8
         },
         {
-          "ticker": "AVUS",
-          "name": "Avantis U.S. Equity ETF",
+          "ticker": "FEZ",
+          "name": "SPDR Euro Stoxx 50 ETF",
           "ter": 0.0,
-          "aum": "10.5B",
-          "perf_ytd": 2.2,
-          "perf_1y": 16.2,
-          "vol": 15.5
+          "aum": "5.0B",
+          "perf_ytd": -0.1,
+          "perf_1y": 30.0,
+          "vol": 17.2
         },
         {
-          "ticker": "DFAU",
-          "name": "Dimensional US Core Equity Market E",
+          "ticker": "FELG",
+          "name": "Fidelity Enhanced Large Cap Growth ",
           "ter": 0.0,
-          "aum": "10.3B",
-          "perf_ytd": 1.7,
-          "perf_1y": 16.2,
-          "vol": 15.1
+          "aum": "4.7B",
+          "perf_ytd": -3.5,
+          "perf_1y": 13.3,
+          "vol": NaN
+        },
+        {
+          "ticker": "FESM",
+          "name": "Fidelity Enhanced Small Cap ETF",
+          "ter": 0.0,
+          "aum": "3.4B",
+          "perf_ytd": 4.8,
+          "perf_1y": 19.9,
+          "vol": NaN
+        },
+        {
+          "ticker": "FELV",
+          "name": "Fidelity Enhanced Large Cap Value E",
+          "ter": 0.0,
+          "aum": "2.5B",
+          "perf_ytd": 0.8,
+          "perf_1y": 12.7,
+          "vol": NaN
+        },
+        {
+          "ticker": "FDIS",
+          "name": "Fidelity MSCI Consumer Discretionar",
+          "ter": 0.0,
+          "aum": "2.0B",
+          "perf_ytd": 1.0,
+          "perf_1y": 4.1,
+          "vol": 21.1
+        },
+        {
+          "ticker": "FCOM",
+          "name": "Fidelity MSCI Communication Service",
+          "ter": 0.0,
+          "aum": "1.9B",
+          "perf_ytd": -2.2,
+          "perf_1y": 20.7,
+          "vol": 18.6
+        },
+        {
+          "ticker": "FDLO",
+          "name": "Fidelity Low Volatility Factor ETF",
+          "ter": 0.0,
+          "aum": "1.5B",
+          "perf_ytd": -0.1,
+          "perf_1y": 9.7,
+          "vol": 11.2
+        },
+        {
+          "ticker": "FBT",
+          "name": "First Trust NYSE Arca Biotechnology",
+          "ter": 0.01,
+          "aum": "1.3B",
+          "perf_ytd": 2.1,
+          "perf_1y": 21.7,
+          "vol": 19.7
+        },
+        {
+          "ticker": "FENY",
+          "name": "Fidelity MSCI Energy Index ETF",
+          "ter": 0.0,
+          "aum": "1.3B",
+          "perf_ytd": 4.3,
+          "perf_1y": 1.7,
+          "vol": 22.4
+        },
+        {
+          "ticker": "FDEC",
+          "name": "FT Cboe Vest U.S. Equity Buffer ETF",
+          "ter": 0.01,
+          "aum": "1.2B",
+          "perf_ytd": -0.5,
+          "perf_1y": 13.6,
+          "vol": 9.8
+        },
+        {
+          "ticker": "EXI",
+          "name": "iShares Global Industrials ETF",
+          "ter": 0.0,
+          "aum": "952.1M",
+          "perf_ytd": 3.6,
+          "perf_1y": 27.7,
+          "vol": 15.2
+        },
+        {
+          "ticker": "FEGE",
+          "name": "First Eagle Global Equity ETF",
+          "ter": 0.01,
+          "aum": "861.8M",
+          "perf_ytd": 2.8,
+          "perf_1y": 34.6,
+          "vol": NaN
         }
       ]
     },
@@ -1550,44 +1958,44 @@
       "passed": 318,
       "top_20": [
         {
-          "ticker": "STG/USD",
-          "name": "Stargate Finance",
-          "vol": 60.2,
-          "perf_1d": 9.2,
-          "perf_7d": 17.7,
-          "perf_30d": 52.6,
-          "perf_ytd": 52.0,
-          "sharpe": 8.46
-        },
-        {
           "ticker": "INK/USD",
           "name": "Ink",
-          "vol": 128.0,
-          "perf_1d": -1.0,
-          "perf_7d": 17.7,
-          "perf_30d": 130.2,
-          "perf_ytd": 56.4,
-          "sharpe": 7.95
+          "vol": 131.9,
+          "perf_1d": 12.8,
+          "perf_7d": 34.2,
+          "perf_30d": 162.6,
+          "perf_ytd": 78.3,
+          "sharpe": 9.0
+        },
+        {
+          "ticker": "STG/USD",
+          "name": "Stargate Finance",
+          "vol": 57.6,
+          "perf_1d": 7.5,
+          "perf_7d": 15.8,
+          "perf_30d": 50.1,
+          "perf_ytd": 49.6,
+          "sharpe": 8.48
         },
         {
           "ticker": "ACH/USD",
           "name": "Alchemy Pay",
-          "vol": 85.6,
-          "perf_1d": 2.8,
-          "perf_7d": 14.8,
-          "perf_30d": 56.6,
-          "perf_ytd": 54.2,
-          "sharpe": 7.0
+          "vol": 86.0,
+          "perf_1d": 4.3,
+          "perf_7d": 16.5,
+          "perf_30d": 59.0,
+          "perf_ytd": 56.5,
+          "sharpe": 7.18
         },
         {
           "ticker": "SOUL/USD",
           "name": "Phantasma",
-          "vol": 138.8,
-          "perf_1d": 2.5,
-          "perf_7d": 39.7,
-          "perf_30d": 98.7,
-          "perf_ytd": 42.2,
-          "sharpe": 6.28
+          "vol": 139.1,
+          "perf_1d": -0.0,
+          "perf_7d": 36.2,
+          "perf_30d": 93.7,
+          "perf_ytd": 38.7,
+          "sharpe": 6.05
         },
         {
           "ticker": "SCRTn/USD",
@@ -1600,154 +2008,154 @@
           "sharpe": 5.45
         },
         {
-          "ticker": "CHZ/USD",
-          "name": "Chiliz",
-          "vol": 94.0,
-          "perf_1d": 0.9,
-          "perf_7d": -7.2,
-          "perf_30d": 43.2,
-          "perf_ytd": 26.2,
-          "sharpe": 5.17
-        },
-        {
           "ticker": "GRIN/USD",
           "name": "Grin",
-          "vol": 57.8,
-          "perf_1d": -2.5,
-          "perf_7d": 12.2,
-          "perf_30d": 28.6,
-          "perf_ytd": 27.8,
-          "sharpe": 5.14
+          "vol": 57.3,
+          "perf_1d": -1.6,
+          "perf_7d": 13.2,
+          "perf_30d": 29.7,
+          "perf_ytd": 28.9,
+          "sharpe": 5.37
         },
         {
           "ticker": "XAUT/USD",
           "name": "Tether Gold",
-          "vol": 21.1,
-          "perf_1d": 1.7,
-          "perf_7d": 5.5,
-          "perf_30d": 11.7,
-          "perf_ytd": 11.7,
-          "sharpe": 4.97
+          "vol": 21.2,
+          "perf_1d": 1.9,
+          "perf_7d": 5.7,
+          "perf_30d": 11.8,
+          "perf_ytd": 11.9,
+          "sharpe": 5.03
         },
         {
-          "ticker": "XTZ/EUR",
-          "name": "Tezos",
-          "vol": 81.1,
-          "perf_1d": 8.1,
-          "perf_7d": 3.0,
-          "perf_30d": 36.3,
-          "perf_ytd": 18.1,
-          "sharpe": 4.95
-        },
-        {
-          "ticker": "XTZ/USD",
-          "name": "Tezos",
-          "vol": 79.2,
-          "perf_1d": 7.7,
-          "perf_7d": 3.3,
-          "perf_30d": 36.1,
-          "perf_ytd": 17.7,
-          "sharpe": 4.95
+          "ticker": "CHZ/USD",
+          "name": "Chiliz",
+          "vol": 94.1,
+          "perf_1d": -0.2,
+          "perf_7d": -8.2,
+          "perf_30d": 41.7,
+          "perf_ytd": 24.8,
+          "sharpe": 5.02
         },
         {
           "ticker": "PAXG/USD",
           "name": "PAX Gold",
-          "vol": 22.1,
-          "perf_1d": 1.6,
-          "perf_7d": 5.5,
-          "perf_30d": 11.8,
-          "perf_ytd": 11.9,
-          "sharpe": 4.71
+          "vol": 22.4,
+          "perf_1d": 1.9,
+          "perf_7d": 5.8,
+          "perf_30d": 12.2,
+          "perf_ytd": 12.3,
+          "sharpe": 4.83
+        },
+        {
+          "ticker": "SAFE/USD",
+          "name": "Safe",
+          "vol": 114.1,
+          "perf_1d": 12.8,
+          "perf_7d": 22.6,
+          "perf_30d": 50.2,
+          "perf_ytd": 39.0,
+          "sharpe": 4.83
+        },
+        {
+          "ticker": "XTZ/EUR",
+          "name": "Tezos",
+          "vol": 79.8,
+          "perf_1d": 6.8,
+          "perf_7d": 1.8,
+          "perf_30d": 34.7,
+          "perf_ytd": 16.7,
+          "sharpe": 4.83
+        },
+        {
+          "ticker": "XTZ/USD",
+          "name": "Tezos",
+          "vol": 77.5,
+          "perf_1d": 5.9,
+          "perf_7d": 1.5,
+          "perf_30d": 33.8,
+          "perf_ytd": 15.7,
+          "sharpe": 4.77
         },
         {
           "ticker": "ROSE/USD",
           "name": "Oasis Network",
-          "vol": 180.8,
-          "perf_1d": 10.1,
-          "perf_7d": 31.6,
-          "perf_30d": 80.1,
-          "perf_ytd": 63.9,
-          "sharpe": 4.59
+          "vol": 182.5,
+          "perf_1d": 12.8,
+          "perf_7d": 34.9,
+          "perf_30d": 84.5,
+          "perf_ytd": 67.9,
+          "sharpe": 4.73
+        },
+        {
+          "ticker": "XVS/USD",
+          "name": "Venus",
+          "vol": 75.4,
+          "perf_1d": 2.7,
+          "perf_7d": 2.9,
+          "perf_30d": 29.3,
+          "perf_ytd": 23.6,
+          "sharpe": 4.64
+        },
+        {
+          "ticker": "XVG/USD",
+          "name": "Verge",
+          "vol": 109.0,
+          "perf_1d": 3.7,
+          "perf_7d": -5.2,
+          "perf_30d": 46.1,
+          "perf_ytd": 20.1,
+          "sharpe": 4.56
         },
         {
           "ticker": "RENDER/USD",
           "name": "Render Token",
           "vol": 129.1,
-          "perf_1d": 2.8,
-          "perf_7d": -13.2,
-          "perf_30d": 53.9,
-          "perf_ytd": 41.5,
-          "sharpe": 4.56
-        },
-        {
-          "ticker": "XVS/USD",
-          "name": "Venus",
-          "vol": 75.2,
-          "perf_1d": 1.3,
-          "perf_7d": 1.5,
-          "perf_30d": 27.6,
-          "perf_ytd": 22.0,
-          "sharpe": 4.44
-        },
-        {
-          "ticker": "XVG/USD",
-          "name": "Verge",
-          "vol": 108.7,
-          "perf_1d": 2.1,
-          "perf_7d": -6.7,
-          "perf_30d": 43.8,
-          "perf_ytd": 18.2,
-          "sharpe": 4.39
-        },
-        {
-          "ticker": "SAFE/USD",
-          "name": "Safe",
-          "vol": 108.1,
-          "perf_1d": 6.3,
-          "perf_7d": 15.5,
-          "perf_30d": 41.5,
-          "perf_ytd": 31.0,
-          "sharpe": 4.37
+          "perf_1d": 0.5,
+          "perf_7d": -15.2,
+          "perf_30d": 50.4,
+          "perf_ytd": 38.3,
+          "sharpe": 4.34
         },
         {
           "ticker": "DBC/USD",
           "name": "DeepBrain Chain",
-          "vol": 138.5,
-          "perf_1d": -2.8,
-          "perf_7d": -3.1,
-          "perf_30d": 49.5,
-          "perf_ytd": 33.8,
-          "sharpe": 4.34
+          "vol": 139.4,
+          "perf_1d": -4.7,
+          "perf_7d": -5.0,
+          "perf_30d": 46.5,
+          "perf_ytd": 31.1,
+          "sharpe": 4.15
         },
         {
-          "ticker": "ATOM/USD",
-          "name": "Cosmos",
-          "vol": 72.0,
-          "perf_1d": 4.3,
-          "perf_7d": -7.3,
-          "perf_30d": 23.2,
-          "perf_ytd": 15.7,
-          "sharpe": 3.79
-        },
-        {
-          "ticker": "ATOM/EUR",
-          "name": "Cosmos",
-          "vol": 74.6,
-          "perf_1d": 4.1,
-          "perf_7d": -8.0,
-          "perf_30d": 23.2,
-          "perf_ytd": 16.3,
-          "sharpe": 3.77
-        },
-        {
-          "ticker": "SANTOS/USD",
-          "name": "Santos FC Fan Token",
-          "vol": 83.1,
-          "perf_1d": 4.1,
-          "perf_7d": 5.8,
-          "perf_30d": 27.7,
-          "perf_ytd": 24.9,
+          "ticker": "QSP/USD",
+          "name": "Quantstamp",
+          "vol": 173.2,
+          "perf_1d": 2.8,
+          "perf_7d": 12.9,
+          "perf_30d": 51.6,
+          "perf_ytd": 36.5,
           "sharpe": 3.7
+        },
+        {
+          "ticker": "MANA/USD",
+          "name": "Decentraland",
+          "vol": 84.1,
+          "perf_1d": 1.7,
+          "perf_7d": 2.5,
+          "perf_30d": 22.0,
+          "perf_ytd": 20.1,
+          "sharpe": 3.68
+        },
+        {
+          "ticker": "MANA/EUR",
+          "name": "Decentraland",
+          "vol": 86.2,
+          "perf_1d": 1.6,
+          "perf_7d": 0.8,
+          "perf_30d": 21.3,
+          "perf_ytd": 21.3,
+          "sharpe": 3.65
         }
       ]
     },
@@ -1755,8 +2163,18 @@
       "criteria": {
         "rating_min": "BBB"
       },
-      "total": 12,
+      "total": 424,
       "top_20": [
+        {
+          "ticker": "BUCK",
+          "name": "Simplify Treasury Option Income ETF",
+          "yield": 0.08,
+          "rating": "AA",
+          "duration": NaN,
+          "maturity": 10.0,
+          "aum": "353.9M",
+          "ter": 0.0
+        },
         {
           "ticker": "AGGH",
           "name": "Simplify Aggregate Bond ETF",
@@ -1768,6 +2186,26 @@
           "ter": 0.0
         },
         {
+          "ticker": "BKHY",
+          "name": "BNY Mellon High Yield ETF",
+          "yield": 0.07,
+          "rating": "BB",
+          "duration": 6.8,
+          "maturity": 10.0,
+          "aum": "389.3M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "EVLN",
+          "name": "Eaton Vance Floating-Rate ETF",
+          "yield": 0.07,
+          "rating": NaN,
+          "duration": NaN,
+          "maturity": NaN,
+          "aum": "1.3B",
+          "ter": 0.01
+        },
+        {
           "ticker": "BBHY",
           "name": "JPMorgan BetaBuilders U.S. High Yie",
           "yield": 0.07,
@@ -1775,6 +2213,126 @@
           "duration": 6.5,
           "maturity": 9.9,
           "aum": "696.5M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "FLBL",
+          "name": "Franklin Senior Loan ETF",
+          "yield": 0.07,
+          "rating": "B",
+          "duration": 7.0,
+          "maturity": NaN,
+          "aum": "939.5M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "BKLN",
+          "name": "Invesco Senior Loan ETF",
+          "yield": 0.07,
+          "rating": "B",
+          "duration": 6.7,
+          "maturity": NaN,
+          "aum": "6.9B",
+          "ter": 0.01
+        },
+        {
+          "ticker": "FLRT",
+          "name": "Pacer Pacific Asset Floating Rate H",
+          "yield": 0.07,
+          "rating": NaN,
+          "duration": 7.2,
+          "maturity": NaN,
+          "aum": "591.7M",
+          "ter": 0.01
+        },
+        {
+          "ticker": "BSJT",
+          "name": "Invesco BulletShares 2029 High Yiel",
+          "yield": 0.07,
+          "rating": "B",
+          "duration": 6.6,
+          "maturity": 9.9,
+          "aum": "404.1M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "FDHY",
+          "name": "Fidelity Enhanced High Yield ETF",
+          "yield": 0.07,
+          "rating": "B",
+          "duration": 6.8,
+          "maturity": 10.1,
+          "aum": "464.4M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "FTSL",
+          "name": "First Trust Senior Loan ETF",
+          "yield": 0.07,
+          "rating": "B",
+          "duration": 7.0,
+          "maturity": NaN,
+          "aum": "2.4B",
+          "ter": 0.01
+        },
+        {
+          "ticker": "BSJV",
+          "name": "Invesco BulletShares 2031 High Yiel",
+          "yield": 0.07,
+          "rating": "BB",
+          "duration": 6.7,
+          "maturity": 9.9,
+          "aum": "66.5M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "BSJU",
+          "name": "Invesco BulletShares 2030 High Yiel",
+          "yield": 0.07,
+          "rating": "BB",
+          "duration": 7.0,
+          "maturity": 10.0,
+          "aum": "216.5M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "FLHY",
+          "name": "Franklin High Yield Corporate Bond ",
+          "yield": 0.07,
+          "rating": "BB",
+          "duration": 7.1,
+          "maturity": 10.2,
+          "aum": "700.9M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "FSYD",
+          "name": "Fidelity Sustainable High Yield ETF",
+          "yield": 0.07,
+          "rating": "B",
+          "duration": 6.1,
+          "maturity": 9.7,
+          "aum": "85.7M",
+          "ter": 0.01
+        },
+        {
+          "ticker": "BSJS",
+          "name": "Invesco BulletShares 2028 High Yiel",
+          "yield": 0.06,
+          "rating": "BB",
+          "duration": 6.0,
+          "maturity": 9.9,
+          "aum": "585.2M",
+          "ter": 0.0
+        },
+        {
+          "ticker": "FALN",
+          "name": "iShares Fallen Angels USD Bond ETF",
+          "yield": 0.06,
+          "rating": "BB",
+          "duration": 5.6,
+          "maturity": 9.6,
+          "aum": "1.9B",
           "ter": 0.0
         },
         {
@@ -1788,101 +2346,50 @@
           "ter": 0.0
         },
         {
-          "ticker": "AGGY",
-          "name": "WisdomTree Yield Enhanced U.S. Aggr",
-          "yield": 0.04,
-          "rating": "U.S. Government",
-          "duration": 4.2,
-          "maturity": 9.6,
-          "aum": "819.2M",
+          "ticker": "BSJR",
+          "name": "Invesco Bulletshares 2027 High Yiel",
+          "yield": 0.06,
+          "rating": "BB",
+          "duration": 6.2,
+          "maturity": 10.1,
+          "aum": "730.8M",
           "ter": 0.0
         },
         {
-          "ticker": "AVIG",
-          "name": "Avantis Core Fixed Income ETF",
-          "yield": 0.04,
-          "rating": "AAA",
-          "duration": 4.5,
-          "maturity": 10.0,
-          "aum": "1.5B",
-          "ter": 0.0
-        },
-        {
-          "ticker": "AVSF",
-          "name": "Avantis Short-Term Fixed Income ETF",
-          "yield": 0.04,
-          "rating": "A",
-          "duration": 4.0,
-          "maturity": 10.0,
-          "aum": "680.2M",
-          "ter": 0.0
-        },
-        {
-          "ticker": "BBAG",
-          "name": "JPMorgan BetaBuilders U.S. Aggregat",
-          "yield": 0.04,
-          "rating": "AA",
-          "duration": 3.6,
-          "maturity": 9.5,
+          "ticker": "BSJQ",
+          "name": "Invesco BulletShares 2026 High Yiel",
+          "yield": 0.06,
+          "rating": "BB",
+          "duration": 7.7,
+          "maturity": 10.3,
           "aum": "1.2B",
           "ter": 0.0
-        },
-        {
-          "ticker": "APCB",
-          "name": "ActivePassive Core Bond ETF",
-          "yield": 0.04,
-          "rating": "U.S. Government",
-          "duration": 4.1,
-          "maturity": 9.6,
-          "aum": "894.7M",
-          "ter": 0.0
-        },
-        {
-          "ticker": "BAB",
-          "name": "Invesco Taxable Municipal Bond ETF",
-          "yield": 0.04,
-          "rating": "AA",
-          "duration": 4.5,
-          "maturity": 9.5,
-          "aum": "1.0B",
-          "ter": 0.0
-        },
-        {
-          "ticker": "AGG",
-          "name": "iShares Core U.S. Aggregate Bond ET",
-          "yield": 0.04,
-          "rating": "AA",
-          "duration": 3.8,
-          "maturity": 9.5,
-          "aum": "135.4B",
-          "ter": 0.0
-        },
-        {
-          "ticker": "AGZ",
-          "name": "iShares Agency Bond ETF",
-          "yield": 0.04,
-          "rating": "AA",
-          "duration": 3.8,
-          "maturity": 10.1,
-          "aum": "572.0M",
-          "ter": 0.0
-        },
-        {
-          "ticker": "AFIF",
-          "name": "Anfield Universal Fixed Income Fund",
-          "yield": 0.04,
-          "rating": "U.S. Government",
-          "duration": 5.5,
-          "maturity": 9.7,
-          "aum": "204.9M",
-          "ter": 0.01
         }
       ]
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "has_drift": true,
+    "drift_pct": 3433.33,
+    "details": {
+      "1_initial.after": {
+        "current": 3107,
+        "previous": 1573,
+        "delta": 1534,
+        "pct_change": 97.52
+      },
+      "1_initial.etf": {
+        "current": 1342,
+        "previous": 220,
+        "delta": 1122,
+        "pct_change": 510.0
+      },
+      "1_initial.bond": {
+        "current": 424,
+        "previous": 12,
+        "delta": 412,
+        "pct_change": 3433.33
+      }
+    }
   }
 }
