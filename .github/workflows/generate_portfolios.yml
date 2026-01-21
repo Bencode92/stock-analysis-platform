@@ -225,21 +225,22 @@ jobs:
             echo "⚠️ backtest_debug.json ABSENT"
           fi
           
-          # v5.1.0: Selection Debug (audit_collector)
+          # v5.1.0: Selection Debug (audit_collector) - FIXED KEYS
           if [ -f data/selection_debug.json ]; then
             echo "✅ selection_debug.json (v5.1.0)"
             python3 << 'EOF'
           import json
           with open("data/selection_debug.json") as f:
               data = json.load(f)
-          meta = data.get("_meta", {})
+          meta = data.get("meta", {})
           print(f"   Run ID: {meta.get('run_id', 'N/A')}")
-          print(f"   Git SHA: {meta.get('git_sha', 'N/A')[:8] if meta.get('git_sha') else 'N/A'}")
-          print(f"   Mode: {meta.get('mode', 'N/A')}")
-          stages = data.get("stages", {})
+          git_sha = meta.get('git_sha', '')
+          print(f"   Git SHA: {git_sha[:8] if git_sha else 'N/A'}")
+          print(f"   Mode: {meta.get('audit_level', 'N/A')}")
+          stages = data.get("pipeline_stages", {})
           for stage_name, stage_data in stages.items():
-              before = stage_data.get("before_count", 0)
-              after = stage_data.get("after_count", 0)
+              before = stage_data.get("before", 0)
+              after = stage_data.get("after", 0)
               print(f"   {stage_name}: {before} → {after}")
           EOF
           else
@@ -320,29 +321,31 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
           
-          # v5.1.0: Selection Debug Summary (audit_collector)
+          # v5.1.0: Selection Debug Summary (audit_collector) - FIXED KEYS
           if [ -f data/selection_debug.json ]; then
             echo "### 📊 Selection Debug (v5.1.0)" >> $GITHUB_STEP_SUMMARY
             python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
           import json
           with open("data/selection_debug.json") as f:
               data = json.load(f)
-          meta = data.get("_meta", {})
+          meta = data.get("meta", {})
+          git_sha = meta.get('git_sha', '')
           print(f"| Metric | Value |")
           print(f"|--------|-------|")
           print(f"| Run ID | {meta.get('run_id', 'N/A')} |")
-          print(f"| Git SHA | {meta.get('git_sha', 'N/A')[:8] if meta.get('git_sha') else 'N/A'} |")
-          print(f"| Mode | {meta.get('mode', 'N/A')} |")
+          print(f"| Git SHA | {git_sha[:8] if git_sha else 'N/A'} |")
+          print(f"| Mode | {meta.get('audit_level', 'N/A')} |")
+          print(f"| Duration | {meta.get('total_duration_sec', 'N/A')}s |")
           print(f"")
           print(f"**Pipeline Stages:**")
-          print(f"| Stage | Before | After | Delta |")
-          print(f"|-------|--------|-------|-------|")
-          stages = data.get("stages", {})
+          print(f"| Stage | Before | After | Rejected |")
+          print(f"|-------|--------|-------|----------|")
+          stages = data.get("pipeline_stages", {})
           for stage_name, stage_data in stages.items():
-              before = stage_data.get("before_count", 0)
-              after = stage_data.get("after_count", 0)
-              delta = after - before
-              print(f"| {stage_name} | {before} | {after} | {delta:+d} |")
+              before = stage_data.get("before", 0)
+              after = stage_data.get("after", 0)
+              rejected = stage_data.get("rejected", before - after)
+              print(f"| {stage_name} | {before} | {after} | {rejected} |")
           EOF
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
