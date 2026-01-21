@@ -1,6 +1,6 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.28 — FIX: vol_annual mapping + crypto pool
+Optimiseur de portefeuille v6.29 — FIX: crypto cap enforcement final
 
 CHANGEMENTS v6.28 (4 FIXES CRITIQUES):
 1. FIX A: vol_annual lit maintenant les vraies colonnes par catégorie:
@@ -3212,6 +3212,10 @@ class PortfolioOptimizer:
         
         if violations:
             logger.warning(f"Post-process: {len(violations)} violations after {max_iterations} iter: {violations}")
+        
+        # v6.29 FIX CRITIQUE: ENFORCE CRYPTO CAP EN DERNIER (après TOUTES les modifications)
+        allocation = self._enforce_crypto_cap(allocation, candidates, profile)
+        allocation = self._adjust_to_100(allocation, profile, candidates)
         
         return allocation
 
