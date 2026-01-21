@@ -806,7 +806,7 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
         if exposure == "min_vol" or "min vol" in name_lower or "low vol" in name_lower:
             return "min_vol_global", Role.DEFENSIVE
         if exposure == "dividend" or "dividend" in name_lower:
-            return "rendement", Role.CORE  # v6.28 FIX C: harmonisé avec preset_etf.py
+            return "rendement_etf", Role.CORE  # v6.29 FIX: aligné avec preset_etf.py v1.1.0
         if exposure in ["inflation", "commodities"]:
             return "inflation_shield", Role.DEFENSIVE
         return "coeur_global", Role.CORE
