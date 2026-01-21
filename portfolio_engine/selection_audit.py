@@ -7,6 +7,7 @@ Generates a detailed JSON report explaining:
 - Which assets were rejected and why (filters, thresholds)
 - Filter statistics and thresholds used
 
+v1.3.1 - FIX: Capture composite_score and factor_scores for ETF/bond/crypto
 v1.3.0 - Aligned with preset_meta v4.15.2 (vol_missing, yield-trap filters, missing data penalty)
 v1.2.0 - Fixed ETF sector extraction from sector_top field
 v1.1.0 - Added RADAR tilts normalization (sector/region mapping)
@@ -278,6 +279,7 @@ class AssetAuditEntry:
     profile_score: Optional[float] = None  # v1.3.0
     momentum_score: Optional[float] = None
     quality_score: Optional[float] = None
+    factor_scores: Optional[Dict[str, float]] = None  # v1.3.1
     
     # Metrics
     roe: Optional[str] = None
@@ -291,6 +293,16 @@ class AssetAuditEntry:
     dividend_yield: Optional[float] = None  # v1.3.0
     payout_ratio: Optional[float] = None  # v1.3.0
     dividend_coverage: Optional[float] = None  # v1.3.0
+    
+    # v1.3.1: Bond-specific
+    bond_quality_raw: Optional[float] = None
+    bond_risk_bucket: Optional[str] = None
+    
+    # v1.3.1: ETF-specific
+    ter: Optional[float] = None
+    
+    # v1.3.1: Crypto-specific
+    vol_30d_annual_pct: Optional[float] = None
     
     # Selection info
     selected: bool = False
@@ -312,7 +324,7 @@ class AssetAuditEntry:
 class SelectionAuditReport:
     """Complete audit report for asset selection."""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "v1.3.0"
+    version: str = "v1.3.1"
     preset_meta_version: str = "v4.15.2"  # v1.3.0
     
     # Summary counts
@@ -354,6 +366,7 @@ class SelectionAuditor:
     """
     Tracks and records asset selection decisions throughout the pipeline.
     
+    v1.3.1: FIX: Capture composite_score and factor_scores for ETF/bond/crypto.
     v1.3.0: Aligned with preset_meta v4.15.2 - tracks vol_missing, yield-trap filters.
     v1.2.0: Fixed ETF sector extraction from sector_top field.
     v1.1.0: Added RADAR tilts normalization for correct sector/region matching.
@@ -785,7 +798,11 @@ class SelectionAuditor:
         return asset
     
     def _create_audit_entry(self, asset: Dict, category: str) -> Dict:
-        """Create audit entry from raw asset data."""
+        """
+        Create audit entry from raw asset data.
+        
+        v1.3.1: Added composite_score fix and factor_scores for ETF/bond/crypto.
+        """
         entry = {
             "name": asset.get("name") or asset.get("ticker") or "Unknown",
             "ticker": asset.get("ticker") or asset.get("symbol"),
@@ -801,9 +818,16 @@ class SelectionAuditor:
             entry["buffett_score"] = round(asset["_buffett_score"], 1)
         elif asset.get("buffett_score") is not None:
             entry["buffett_score"] = round(asset["buffett_score"], 1)
-            
-        if asset.get("_composite_score") is not None:
-            entry["composite_score"] = round(asset["_composite_score"], 2)
+        
+        # v1.3.1 FIX: Check both composite_score and _composite_score
+        # factors.py writes "composite_score" (no underscore)
+        composite = asset.get("composite_score") or asset.get("_composite_score")
+        if composite is not None:
+            try:
+                entry["composite_score"] = round(float(composite), 3)
+            except (TypeError, ValueError):
+                pass
+        
         if asset.get("_profile_score") is not None:
             entry["profile_score"] = round(asset["_profile_score"], 3)
         if asset.get("_momentum_score") is not None:
@@ -811,23 +835,90 @@ class SelectionAuditor:
         if asset.get("_quality_score") is not None:
             entry["quality_score"] = round(asset["_quality_score"], 2)
         
-        # Metrics
+        # v1.3.1: Add factor_scores for ETF/Bond/Crypto
+        if category in ["etf", "bond", "crypto"]:
+            factor_scores = asset.get("factor_scores") or {}
+            if factor_scores and isinstance(factor_scores, dict):
+                entry["factor_scores"] = {
+                    k: round(float(v), 3) for k, v in factor_scores.items() 
+                    if v is not None and k not in ["_meta"]
+                }
+            
+            # v1.3.1: Bond-specific metrics
+            if category == "bond":
+                if asset.get("bond_quality_raw") is not None:
+                    try:
+                        entry["bond_quality_raw"] = round(float(asset["bond_quality_raw"]), 1)
+                    except (TypeError, ValueError):
+                        pass
+                if asset.get("bond_risk_bucket"):
+                    entry["bond_risk_bucket"] = str(asset["bond_risk_bucket"])
+                # Credit rating
+                if asset.get("credit_rating"):
+                    entry["credit_rating"] = str(asset["credit_rating"])
+                # Duration
+                if asset.get("duration") is not None:
+                    try:
+                        entry["duration"] = round(float(asset["duration"]), 2)
+                    except (TypeError, ValueError):
+                        pass
+            
+            # v1.3.1: ETF-specific metrics
+            if category == "etf":
+                if asset.get("ter") is not None:
+                    try:
+                        entry["ter"] = round(float(asset["ter"]), 3)
+                    except (TypeError, ValueError):
+                        pass
+                if asset.get("aum"):
+                    entry["aum"] = self._format_market_cap(asset["aum"])
+                # Tracking error if available
+                if asset.get("tracking_error") is not None:
+                    try:
+                        entry["tracking_error"] = round(float(asset["tracking_error"]), 3)
+                    except (TypeError, ValueError):
+                        pass
+            
+            # v1.3.1: Crypto-specific metrics
+            if category == "crypto":
+                for vol_key in ["vol_30d_annual_pct", "vol_7d_annual_pct", "vol_pct"]:
+                    if asset.get(vol_key) is not None:
+                        try:
+                            entry["volatility"] = round(float(asset[vol_key]), 1)
+                            break
+                        except (TypeError, ValueError):
+                            pass
+                # Market cap for crypto
+                if asset.get("market_cap"):
+                    entry["market_cap"] = self._format_market_cap(asset["market_cap"])
+        
+        # Metrics (for equities primarily, but also general)
         if asset.get("roe"):
             roe = asset["roe"]
             entry["roe"] = f"{roe}%" if isinstance(roe, (int, float)) else str(roe)
         
         if asset.get("de_ratio") is not None:
-            entry["de_ratio"] = round(float(asset["de_ratio"]), 2)
+            try:
+                entry["de_ratio"] = round(float(asset["de_ratio"]), 2)
+            except (TypeError, ValueError):
+                pass
         
-        if asset.get("market_cap"):
+        if asset.get("market_cap") and "market_cap" not in entry:
             entry["market_cap"] = self._format_market_cap(asset["market_cap"])
         
-        if asset.get("aum"):
+        if asset.get("aum") and "aum" not in entry:
             entry["aum"] = self._format_market_cap(asset["aum"])
         
-        if asset.get("vol") or asset.get("volatility_3y"):
-            vol = asset.get("vol") or asset.get("volatility_3y")
-            entry["volatility"] = round(float(vol), 1) if vol else None
+        # Volatility - check multiple fields
+        if "volatility" not in entry:
+            for vol_key in ["vol", "volatility_3y", "vol_3y", "vol_3y_pct", "vol_pct"]:
+                vol = asset.get(vol_key)
+                if vol is not None:
+                    try:
+                        entry["volatility"] = round(float(vol), 1)
+                        break
+                    except (TypeError, ValueError):
+                        pass
         
         if asset.get("ytd") or asset.get("perf_ytd"):
             ytd = asset.get("ytd") or asset.get("perf_ytd")
@@ -835,11 +926,20 @@ class SelectionAuditor:
         
         # v1.3.0: Yield trap metrics
         if asset.get("dividend_yield") is not None:
-            entry["dividend_yield"] = round(float(asset["dividend_yield"]), 2)
+            try:
+                entry["dividend_yield"] = round(float(asset["dividend_yield"]), 2)
+            except (TypeError, ValueError):
+                pass
         if asset.get("payout_ratio") is not None:
-            entry["payout_ratio"] = round(float(asset["payout_ratio"]), 1)
+            try:
+                entry["payout_ratio"] = round(float(asset["payout_ratio"]), 1)
+            except (TypeError, ValueError):
+                pass
         if asset.get("dividend_coverage") is not None:
-            entry["dividend_coverage"] = round(float(asset["dividend_coverage"]), 2)
+            try:
+                entry["dividend_coverage"] = round(float(asset["dividend_coverage"]), 2)
+            except (TypeError, ValueError):
+                pass
         
         # Sector
         if category == "etf":
@@ -902,6 +1002,29 @@ class SelectionAuditor:
         preset = asset.get("_matched_preset")
         if preset:
             reasons.append(f"Preset: {preset}")
+        
+        # v1.3.1: Composite score for ETF/bond/crypto
+        composite = asset.get("composite_score") or asset.get("_composite_score")
+        if composite is not None and category in ["etf", "bond", "crypto"]:
+            try:
+                composite_val = float(composite)
+                if composite_val >= 0.3:
+                    reasons.append(f"Score composite élevé ({composite_val:.2f})")
+                elif composite_val >= 0:
+                    reasons.append(f"Score composite positif ({composite_val:.2f})")
+            except (TypeError, ValueError):
+                pass
+        
+        # v1.3.1: Bond quality
+        if category == "bond" and asset.get("bond_quality_raw"):
+            try:
+                bq = float(asset["bond_quality_raw"])
+                if bq >= 70:
+                    reasons.append(f"Qualité obligataire excellente ({bq:.0f})")
+                elif bq >= 50:
+                    reasons.append(f"Qualité obligataire solide ({bq:.0f})")
+            except (TypeError, ValueError):
+                pass
         
         roe = asset.get("roe")
         if roe:
