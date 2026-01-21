@@ -1,8 +1,14 @@
 # portfolio_engine/factors.py
 """
 =========================================
-FactorScorer v4.0.0 — MULTI-ASSET SCORING ENGINE
+FactorScorer v4.1.0 — MULTI-ASSET SCORING ENGINE
 =================================================
+v4.1.0 Changes (VOL MAPPING ALIGNMENT):
+- NEW: _as_pct() helper for decimal vs % conversion
+- NEW: _get_vol_for_scoring() aligned with optimizer.py v6.28
+- FIX: compute_factor_low_vol() uses correct vol priority per category
+- FIX: compute_factor_bond_quality() uses _get_vol_for_scoring()
+- IMPACT: Reduces false "missing vol" penalties for ETF/Bond/Crypto
 
 v4.0.0 Changes (EQUITY SCORING MODE):
 - NEW: EQUITY_SCORING_MODE config ("preset" | "factors" | "blend")
@@ -989,6 +995,65 @@ def _is_missing_or_zero(value) -> bool:
         return num <= 0
     except (TypeError, ValueError):
         return True
+  # ============= v4.1.0 VOL MAPPING ALIGNED WITH OPTIMIZER =============
+
+def _as_pct(val: Any) -> Optional[float]:
+    """
+    v4.1.0: Convertit une valeur en % (gère décimal vs %).
+    Aligné avec optimizer.py v6.28.
+    """
+    if val is None:
+        return None
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(v):
+        return None
+    if v <= 0:
+        return None
+    if 0 < v < 1.5:
+        v *= 100.0
+    return v
+
+
+def _get_vol_for_scoring(asset: dict, cat: str) -> Optional[float]:
+    """
+    v4.1.0: Retourne vol annualisée en % selon la catégorie.
+    Aligné avec _get_vol_from_item() dans optimizer.py v6.28.
+    """
+    if cat == "crypto":
+        candidates = [
+            asset.get("vol_30d_annual_pct"),
+            asset.get("vol_7d_annual_pct"),
+            asset.get("vol_pct"),
+            asset.get("vol_annual"),
+            asset.get("vol"),
+        ]
+    elif cat == "bond":
+        candidates = [
+            asset.get("vol_pct"),
+            asset.get("vol_3y_pct"),
+            asset.get("vol_3y"),
+            asset.get("vol_annual"),
+            asset.get("vol"),
+        ]
+    else:
+        candidates = [
+            asset.get("vol_3y_pct"),
+            asset.get("vol_pct"),
+            asset.get("vol_3y"),
+            asset.get("vol_annual"),
+            asset.get("vol30"),
+            asset.get("vol"),
+        ]
+    
+    for val in candidates:
+        result = _as_pct(val)
+        if result is not None and result > 0:
+            return result
+    
+    return None      
 
 
 # ============= v2.4.2 TER VALIDATION STRICTE =============
@@ -1660,6 +1725,7 @@ class FactorScorer:
         """
         Facteur low volatility avec vol_30d_annual_pct pour crypto.
         
+        v4.1.0: Utilise _get_vol_for_scoring aligné avec optimizer v6.28
         v3.0.0: Utilise _normalize_by_class avec higher_is_better=False
         (volatilité basse = meilleur score)
         """
@@ -1671,24 +1737,20 @@ class FactorScorer:
             categories.append(cat)
             symbol = a.get("symbol", a.get("id", "?"))
             
-            vol = (
-                a.get("vol_3y") or 
-                a.get("vol30") or 
-                a.get("vol_annual") or 
-                a.get("vol") or 
-                a.get("vol_pct") or
-                a.get("vol_30d_annual_pct")
-            )
+            # v4.1.0 FIX: Utilise _get_vol_for_scoring aligné avec optimizer v6.28
+            vol = _get_vol_for_scoring(a, cat)
             
-            if _is_missing_or_zero(vol):
+            if vol is None or vol <= 0:
                 vol = MISSING_VOL_PENALTY.get(cat, 30.0)
-                logger.debug(f"low_vol: missing vol for {symbol} → penalty {vol}")
+                logger.debug(f"low_vol: missing vol for {symbol} ({cat}) → penalty {vol}")
                 # v2.4.4: Utilise _track_missing
                 self._track_missing(idx, "vol")
-            else:
-                vol = fnum(vol)
             
             raw_vol.append(vol)
+        
+        # v3.0.0: Utilise _normalize_by_class avec higher_is_better=False
+        # (volatilité basse = meilleur score)
+        return self._normalize_by_class(raw_vol, categories, higher_is_better=False)
         
         # v3.0.0: Utilise _normalize_by_class avec higher_is_better=False
         # (volatilité basse = meilleur score)
@@ -1788,7 +1850,8 @@ class FactorScorer:
                     self._track_missing(idx, "credit")
             
             dur = a.get("bond_avg_duration")
-            vol = a.get("vol_pct") or a.get("vol_3y")
+            # v4.1.0 FIX: Utilise _get_vol_for_scoring aligné avec optimizer v6.28
+            vol = _get_vol_for_scoring(a, "bond")
             
             quality_raw, metadata = _compute_bond_quality_raw(
                 credit_score=fnum(credit_raw),
@@ -2077,7 +2140,7 @@ class FactorScorer:
                 asset["score"] = None
                 asset["_scoring_meta"] = {
                     "category_normalized": cat,
-                    "scoring_version": "v4.0.0",
+                    "scoring_version": "v4.1.0",
                     "equity_scoring_mode": self.equity_scoring_mode,
                     "note": "composite_score skipped - preset_meta handles equity scoring",
                     "buffett_score_computed": True,
@@ -2102,7 +2165,7 @@ class FactorScorer:
                 "category_original": asset.get("category", ""),
                 "fund_type": asset.get("fund_type", ""),
                 "applicable_factors": FACTORS_BY_CATEGORY.get(cat, []),
-                "scoring_version": "v4.0.0",
+                "scoring_version": "v4.1.0",
                 "normalization_method": "rank" if USE_RANK_NORMALIZATION else "zscore",
                 "equity_scoring_mode": self.equity_scoring_mode,
                 "ter_confidence": self._ter_confidence.get(i),
