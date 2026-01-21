@@ -1463,7 +1463,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 "country_top": it.get("country"),
             })
     
-   logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
+    logger.info(f"   Equities brutes chargées: {len(eq_rows)}")
     
     # === v5.1.0: AUDIT HOOK 1 - Initial universe ===
     _collector = get_audit()
