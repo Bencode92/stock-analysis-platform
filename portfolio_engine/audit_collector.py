@@ -2,24 +2,11 @@
 """
 audit_collector.py - Debug audit system for portfolio generation pipeline
 
-Provides structured, diffable audit trails for debugging and compliance.
-
-Features:
-- Two audit levels: summary (~100KB) and full (gzip ~500KB)
-- Standardized reason codes for aggregation
-- Reproducibility metadata (git_sha, config_hash, universe_asof)
-- Drift detection vs previous run
-- Timing per stage
-- Filtering by ticker/profile/stage
-- v5.1.1: TOP 10 by preset breakdown
-
-Environment variables:
-- DEBUG_AUDIT: none | summary | full (default: none)
-- DEBUG_AUDIT_TICKERS: comma-separated list of tickers to trace (default: all)
-- DEBUG_AUDIT_PROFILES: comma-separated profiles to trace (default: all)
-- DEBUG_AUDIT_STAGES: comma-separated stages to trace (default: all)
-- DEBUG_AUDIT_AUTO_FULL_ON_DRIFT: true | false (default: true)
-- DEBUG_AUDIT_DRIFT_THRESHOLD: percentage threshold for auto-full (default: 20)
+v5.1.2: Detailed top10_by_preset with ALL filter metrics
+- EQUITY: buffett, vol, roe, div_yield, payout, perf_ytd, perf_1y, mcap, sector
+- ETF: ter, aum, perf_ytd, perf_1y, perf_3y, vol (filtered: TER<1%, perf_1y>0%)
+- CRYPTO: mcap, vol, perf_24h, perf_7d, perf_30d (filtered: mcap>100M, vol<200%)
+- BOND: yield, rating, duration, maturity
 
 v1.1.0 - Added record_top10_by_preset()
 v1.0.0 - Initial version
@@ -46,7 +33,6 @@ logger = logging.getLogger("audit-collector")
 class ReasonCode:
     """Standardized rejection reason codes for aggregation."""
     
-    # Data quality
     MISSING_DATA = "MISSING_DATA"
     MISSING_VOL = "MISSING_VOL"
     MISSING_ROE = "MISSING_ROE"
@@ -56,47 +42,37 @@ class ReasonCode:
     MISSING_CREDIT_RATING = "MISSING_CREDIT_RATING"
     MISSING_DURATION = "MISSING_DURATION"
     
-    # Volatility filters
     VOL_TOO_LOW = "VOL_TOO_LOW"
     VOL_TOO_HIGH = "VOL_TOO_HIGH"
     VOL_ABERRANT = "VOL_ABERRANT"
     
-    # Quality filters
     ROE_TOO_LOW = "ROE_TOO_LOW"
     BUFFETT_SCORE_LOW = "BUFFETT_SCORE_LOW"
     
-    # Dividend filters (yield trap detection)
     DIVIDEND_YIELD_LOW = "DIVIDEND_YIELD_LOW"
     PAYOUT_TOO_HIGH = "PAYOUT_TOO_HIGH"
     COVERAGE_TOO_LOW = "COVERAGE_TOO_LOW"
     
-    # Liquidity filters
     MARKET_CAP_LOW = "MARKET_CAP_LOW"
     AUM_LOW = "AUM_LOW"
     VOLUME_LOW = "VOLUME_LOW"
     
-    # Bond-specific
     CREDIT_RATING_LOW = "CREDIT_RATING_LOW"
     DURATION_MISMATCH = "DURATION_MISMATCH"
     
-    # ETF-specific
     TER_TOO_HIGH = "TER_TOO_HIGH"
     TRACKING_ERROR_HIGH = "TRACKING_ERROR_HIGH"
     
-    # Crypto-specific
     CRYPTO_VOL_EXTREME = "CRYPTO_VOL_EXTREME"
     
-    # Selection
     QUOTA_REACHED = "QUOTA_REACHED"
     SCORE_INSUFFICIENT = "SCORE_INSUFFICIENT"
     PROFILE_MISMATCH = "PROFILE_MISMATCH"
     
-    # RADAR
     SECTOR_AVOIDED = "SECTOR_AVOIDED"
     REGION_AVOIDED = "REGION_AVOIDED"
 
 
-# Mapping from legacy reasons to standard codes
 REASON_CODE_MAPPING = {
     "vol_missing": ReasonCode.MISSING_VOL,
     "vol_aberrant": ReasonCode.VOL_ABERRANT,
@@ -112,7 +88,6 @@ def normalize_reason_code(reason: str) -> str:
     if reason in REASON_CODE_MAPPING:
         return REASON_CODE_MAPPING[reason]
     
-    # Parse dynamic reasons
     if reason.startswith("vol<"):
         return ReasonCode.VOL_TOO_LOW
     if reason.startswith("vol>"):
@@ -126,19 +101,16 @@ def normalize_reason_code(reason: str) -> str:
     if reason.startswith("coverage<"):
         return ReasonCode.COVERAGE_TOO_LOW
     
-    # Return as-is if no mapping found (but uppercase for consistency)
     return reason.upper().replace(" ", "_").replace("-", "_")
 
 
 # ============= CONFIGURATION =============
 
 def get_audit_level() -> str:
-    """Get audit level from environment: none | summary | full"""
     return os.getenv("DEBUG_AUDIT", "none").lower()
 
 
 def should_trace_ticker(ticker: str) -> bool:
-    """Check if ticker should be traced based on DEBUG_AUDIT_TICKERS."""
     filter_str = os.getenv("DEBUG_AUDIT_TICKERS", "").strip()
     if not filter_str:
         return True
@@ -147,7 +119,6 @@ def should_trace_ticker(ticker: str) -> bool:
 
 
 def should_trace_profile(profile: str) -> bool:
-    """Check if profile should be traced based on DEBUG_AUDIT_PROFILES."""
     filter_str = os.getenv("DEBUG_AUDIT_PROFILES", "").strip()
     if not filter_str:
         return True
@@ -156,7 +127,6 @@ def should_trace_profile(profile: str) -> bool:
 
 
 def should_trace_stage(stage: str) -> bool:
-    """Check if stage should be traced based on DEBUG_AUDIT_STAGES."""
     filter_str = os.getenv("DEBUG_AUDIT_STAGES", "").strip()
     if not filter_str:
         return True
@@ -165,12 +135,10 @@ def should_trace_stage(stage: str) -> bool:
 
 
 def auto_full_on_drift() -> bool:
-    """Check if auto-full on drift is enabled."""
     return os.getenv("DEBUG_AUDIT_AUTO_FULL_ON_DRIFT", "true").lower() == "true"
 
 
 def drift_threshold() -> float:
-    """Get drift threshold percentage for auto-full trigger."""
     try:
         return float(os.getenv("DEBUG_AUDIT_DRIFT_THRESHOLD", "20"))
     except ValueError:
@@ -180,13 +148,10 @@ def drift_threshold() -> float:
 # ============= METADATA HELPERS =============
 
 def get_git_sha() -> str:
-    """Get current git commit SHA."""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            capture_output=True, text=True, timeout=5
         )
         return result.stdout.strip() if result.returncode == 0 else "unknown"
     except Exception:
@@ -194,13 +159,10 @@ def get_git_sha() -> str:
 
 
 def get_git_sha_full() -> str:
-    """Get full git commit SHA."""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            capture_output=True, text=True, timeout=5
         )
         return result.stdout.strip() if result.returncode == 0 else "unknown"
     except Exception:
@@ -208,13 +170,11 @@ def get_git_sha_full() -> str:
 
 
 def compute_config_hash(config: Dict) -> str:
-    """Compute a hash of the configuration for reproducibility."""
     config_str = json.dumps(config, sort_keys=True, default=str)
     return hashlib.md5(config_str.encode()).hexdigest()[:8]
 
 
 def generate_run_id() -> str:
-    """Generate a unique run ID."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M-%S")
 
 
@@ -222,7 +182,6 @@ def generate_run_id() -> str:
 
 @dataclass
 class ScoreStats:
-    """Statistics for a set of scores."""
     n: int = 0
     min: Optional[float] = None
     max: Optional[float] = None
@@ -232,7 +191,6 @@ class ScoreStats:
     
     @classmethod
     def from_values(cls, values: List[float]) -> "ScoreStats":
-        """Compute statistics from a list of values."""
         if not values:
             return cls(n=0)
         
@@ -257,7 +215,6 @@ class ScoreStats:
 
 @dataclass
 class StageData:
-    """Data for a single pipeline stage."""
     name: str
     category: Optional[str] = None
     profile: Optional[str] = None
@@ -300,11 +257,10 @@ class StageData:
 
 @dataclass
 class TraceRow:
-    """Single asset trace row for full audit."""
     ticker: str
     category: str
     last_stage: str
-    status: str  # "kept" | "rejected"
+    status: str
     reason_code: Optional[str] = None
     profile: Optional[str] = None
     scores_raw: Dict[str, float] = field(default_factory=dict)
@@ -335,7 +291,6 @@ class TraceRow:
 
 @dataclass
 class DriftReport:
-    """Drift detection report vs previous run."""
     has_drift: bool = False
     drift_percentage: float = 0.0
     details: Dict[str, Any] = field(default_factory=dict)
@@ -349,18 +304,12 @@ class DriftReport:
 
 
 def compute_drift(current: Dict, previous: Dict, threshold: float = 20.0) -> DriftReport:
-    """
-    Compute drift between current and previous run summaries.
-    
-    Returns DriftReport with has_drift=True if any metric exceeds threshold.
-    """
     if not previous:
         return DriftReport(has_drift=False, drift_percentage=0.0)
     
     details = {}
     max_drift = 0.0
     
-    # Compare stage counts
     curr_stages = current.get("pipeline_stages", {})
     prev_stages = previous.get("pipeline_stages", {})
     
@@ -370,7 +319,6 @@ def compute_drift(current: Dict, previous: Dict, threshold: float = 20.0) -> Dri
         
         prev_data = prev_stages[stage_name]
         
-        # Compare counts
         for key in ["after", "equity", "etf", "crypto", "bond"]:
             curr_val = curr_data.get(key)
             prev_val = prev_data.get(key)
@@ -396,21 +344,6 @@ def compute_drift(current: Dict, previous: Dict, threshold: float = 20.0) -> Dri
 # ============= MAIN AUDIT COLLECTOR =============
 
 class AuditCollector:
-    """
-    Main audit collector class.
-    
-    Usage:
-        collector = AuditCollector(config=my_config)
-        
-        with collector.stage("buffett_filter", category="equity") as stage:
-            stage.before_count = len(before)
-            # ... do filtering ...
-            stage.after_count = len(after)
-            stage.reason_counts = {"BUFFETT_SCORE_LOW": 15}
-        
-        collector.add_trace(TraceRow(...))
-        collector.dump("data/")
-    """
     
     def __init__(
         self,
@@ -430,11 +363,8 @@ class AuditCollector:
         self.trace_rows: List[TraceRow] = []
         self.timings: Dict[str, float] = {}
         self._stage_order: List[str] = []
-        
-        # v5.1.1: Top 10 by preset storage
         self._top10_by_preset: Dict[str, Dict] = {}
         
-        # Load previous summary for drift detection
         self.previous_summary: Optional[Dict] = None
         if previous_summary_path and Path(previous_summary_path).exists():
             try:
@@ -450,31 +380,14 @@ class AuditCollector:
     
     @property
     def is_enabled(self) -> bool:
-        """Check if audit collection is enabled."""
         return self._level in ("summary", "full")
     
     @property
     def is_full(self) -> bool:
-        """Check if full trace is enabled."""
         return self._level == "full"
     
     @contextmanager
-    def stage(
-        self,
-        name: str,
-        category: str = None,
-        profile: str = None,
-    ):
-        """
-        Context manager for tracking a pipeline stage.
-        
-        Usage:
-            with collector.stage("buffett_filter", category="equity") as s:
-                s.before_count = 1000
-                # ... processing ...
-                s.after_count = 800
-                s.reason_counts = {"BUFFETT_SCORE_LOW": 200}
-        """
+    def stage(self, name: str, category: str = None, profile: str = None):
         if not self.is_enabled:
             yield StageData(name=name)
             return
@@ -495,7 +408,6 @@ class AuditCollector:
         finally:
             stage_data.duration_sec = time.time() - start_time
             
-            # Generate unique key for stage
             key = name
             if profile:
                 key = f"{name}_{profile}"
@@ -507,23 +419,14 @@ class AuditCollector:
                 self._stage_order.append(key)
             
             self.timings[key] = stage_data.duration_sec
-            
-            logger.debug(
-                f"📊 Stage {key}: {stage_data.before_count} → {stage_data.after_count} "
-                f"({stage_data.duration_sec:.2f}s)"
-            )
     
     def add_trace(self, row: TraceRow):
-        """Add a trace row for full audit."""
         if not self.is_full:
             return
-        
         if not should_trace_ticker(row.ticker):
             return
-        
         if row.profile and not should_trace_profile(row.profile):
             return
-        
         self.trace_rows.append(row)
     
     def add_traces_batch(
@@ -535,7 +438,6 @@ class AuditCollector:
         reason_code: str = None,
         profile: str = None,
     ):
-        """Add trace rows for a batch of assets."""
         if not self.is_full:
             return
         
@@ -545,7 +447,6 @@ class AuditCollector:
             if not should_trace_ticker(ticker):
                 continue
             
-            # Extract scores
             scores_raw = {}
             scores_normalized = {}
             
@@ -560,7 +461,6 @@ class AuditCollector:
             if factor_scores:
                 scores_normalized = {k: round(float(v), 4) for k, v in factor_scores.items() if v is not None}
             
-            # Extract key metrics
             metrics = {}
             for key in ["volatility_3y", "vol", "roe", "market_cap", "aum", "ter", "dividend_yield"]:
                 val = asset.get(key)
@@ -587,7 +487,6 @@ class AuditCollector:
         crypto_count: int = 0,
         bond_count: int = 0,
     ):
-        """Record initial universe counts."""
         if not self.is_enabled:
             return
         
@@ -612,7 +511,6 @@ class AuditCollector:
         top_k: List[Dict] = None,
         bottom_k: List[Dict] = None,
     ):
-        """Record scoring statistics for a category."""
         if not self.is_enabled:
             return
         
@@ -637,7 +535,6 @@ class AuditCollector:
         selected: List[Dict],
         profile: str = None,
     ):
-        """Record final selection for a category/profile."""
         if not self.is_enabled:
             return
         
@@ -674,34 +571,64 @@ class AuditCollector:
         bonds: List[Dict] = None,
     ):
         """
-        v5.1.1: Record TOP 10 assets for each preset.
+        v5.1.2: Record TOP 10 assets for each preset WITH ALL FILTER METRICS.
         
-        Output structure:
-        {
-            "equity": {
-                "quality_premium": {"count": 67, "top_10": [{"ticker": "AAPL", "score": 0.85, "vol": 25.2}, ...]},
-                "croissance": {...},
-                "defensif": {...},
-                ...
-            },
-            "etf": {"top_20": [...]},
-            "crypto": {"top_20": [...]},
-            "bond": {"top_20": [...]}
-        }
+        Shows the actual values used for filtering decisions:
+        - EQUITY: buffett, vol, roe, div_yield, payout, perf_ytd, perf_1y, mcap, sector
+        - ETF: ter, aum, perf_ytd, perf_1y, perf_3y, vol (filtered: TER<1%, perf_1y>0%)
+        - CRYPTO: mcap, vol, perf_24h, perf_7d, perf_30d (filtered: mcap>100M, vol<200%)
+        - BOND: yield, rating, duration, maturity
         """
         if not self.is_enabled:
             return
         
+        def safe_float(val, decimals=2):
+            if val is None:
+                return None
+            try:
+                return round(float(val), decimals)
+            except (ValueError, TypeError):
+                return None
+        
+        def format_large_number(val):
+            if val is None:
+                return None
+            try:
+                n = float(val)
+                if n >= 1e12:
+                    return f"{n/1e12:.1f}T"
+                elif n >= 1e9:
+                    return f"{n/1e9:.1f}B"
+                elif n >= 1e6:
+                    return f"{n/1e6:.1f}M"
+                else:
+                    return f"{n:.0f}"
+            except (ValueError, TypeError):
+                return str(val) if val else None
+        
         result = {"equity": {}, "etf": {}, "crypto": {}, "bond": {}}
         
-        # === EQUITY: group by _matched_preset ===
+        # ============================================================
+        # EQUITY: group by _matched_preset with FULL METRICS
+        # ============================================================
+        PRESET_CRITERIA = {
+            "defensif": {"vol_max": 28, "roe_min": 10, "buffett_min": 60, "div_yield_min": 0.5},
+            "low_volatility": {"vol_max": 22, "buffett_min": 55},
+            "rendement": {"vol_max": 28, "div_yield_min": 1.5, "payout_max": 85},
+            "value_dividend": {"vol_max": 30, "roe_min": 8, "div_yield_min": 1.0},
+            "quality_premium": {"vol_max": 35, "roe_min": 15, "buffett_min": 65},
+            "croissance": {"vol_min": 20, "perf_1y_min": 10},
+            "momentum_trend": {"vol_min": 25, "perf_ytd_min": 5},
+            "agressif": {"vol_min": 35},
+            "recovery": {"vol_min": 35, "perf_ytd_max": -10},
+        }
+        
         preset_groups = {}
         for eq in equities:
             preset = eq.get("_matched_preset", "unknown")
             preset_groups.setdefault(preset, []).append(eq)
         
         for preset_name, assets in sorted(preset_groups.items()):
-            # Sort by best score
             sorted_assets = sorted(
                 assets,
                 key=lambda x: x.get("_profile_score") or x.get("_buffett_score") or x.get("composite_score") or 0,
@@ -710,88 +637,238 @@ class AuditCollector:
             
             top_10 = []
             for a in sorted_assets:
-                ticker = a.get("ticker") or a.get("symbol") or a.get("name", "?")
-                score = a.get("_profile_score") or a.get("_buffett_score") or a.get("composite_score")
+                entry = {
+                    "ticker": a.get("ticker") or a.get("symbol") or "?",
+                    "name": (a.get("name") or "")[:30],
+                }
+                
+                buffett = a.get("_buffett_score") or a.get("buffett_score")
+                if buffett is not None:
+                    entry["buffett"] = safe_float(buffett, 0)
+                
+                profile_score = a.get("_profile_score")
+                if profile_score is not None:
+                    entry["score"] = safe_float(profile_score, 3)
+                
                 vol = a.get("volatility_3y") or a.get("vol")
-                entry = {"ticker": ticker}
-                if score is not None:
-                    entry["score"] = round(float(score), 4)
                 if vol is not None:
-                    try:
-                        entry["vol"] = round(float(vol), 1)
-                    except (ValueError, TypeError):
-                        pass
+                    entry["vol"] = safe_float(vol, 1)
+                
+                roe = a.get("roe")
+                if roe is not None:
+                    entry["roe"] = safe_float(roe, 1)
+                
+                div_yield = a.get("dividend_yield")
+                if div_yield is not None:
+                    entry["div_yield"] = safe_float(div_yield, 2)
+                
+                payout = a.get("payout_ratio") or a.get("payout_ratio_ttm")
+                if payout is not None:
+                    entry["payout"] = safe_float(payout, 0)
+                
+                perf_ytd = a.get("perf_ytd") or a.get("ytd")
+                if perf_ytd is not None:
+                    entry["perf_ytd"] = safe_float(perf_ytd, 1)
+                
+                perf_1y = a.get("perf_1y") or a.get("perf_12m")
+                if perf_1y is not None:
+                    entry["perf_1y"] = safe_float(perf_1y, 1)
+                
+                market_cap = a.get("market_cap")
+                if market_cap:
+                    entry["mcap"] = format_large_number(market_cap)
+                
+                sector = a.get("sector") or a.get("sector_top")
+                if sector:
+                    entry["sector"] = sector[:20]
+                
                 top_10.append(entry)
             
             result["equity"][preset_name] = {
                 "count": len(assets),
+                "criteria": PRESET_CRITERIA.get(preset_name, {}),
                 "top_10": top_10
             }
         
-        # === ETF: top 20 by score ===
+        # ============================================================
+        # ETF: Filter TER < 1%, Perf 1Y > 0%, with FULL METRICS
+        # ============================================================
+        ETF_CRITERIA = {"ter_max": 1.0, "perf_1y_min": 0, "aum_min": "10M"}
+        
         if etfs:
+            etf_filtered = []
+            for e in etfs:
+                ter = safe_float(e.get("ter") or e.get("frais"))
+                perf_1y = safe_float(e.get("perf_1y") or e.get("perf_12m"))
+                
+                if ter is not None and ter > 1.0:
+                    continue
+                if perf_1y is not None and perf_1y < 0:
+                    continue
+                etf_filtered.append(e)
+            
             etf_sorted = sorted(
-                etfs,
-                key=lambda x: x.get("composite_score") or x.get("score") or 0,
+                etf_filtered,
+                key=lambda x: x.get("aum") or x.get("market_cap") or x.get("composite_score") or 0,
                 reverse=True
             )[:20]
             
-            result["etf"]["top_20"] = [
-                {
-                    "ticker": e.get("ticker") or e.get("symbol", "?"),
+            top_20 = []
+            for e in etf_sorted:
+                entry = {
+                    "ticker": e.get("ticker") or e.get("symbol") or "?",
                     "name": (e.get("name") or "")[:35],
-                    "score": round(float(e.get("composite_score") or e.get("score") or 0), 4),
                 }
-                for e in etf_sorted
-            ]
-            result["etf"]["total_count"] = len(etfs)
+                
+                ter = e.get("ter") or e.get("frais")
+                if ter is not None:
+                    entry["ter"] = safe_float(ter, 2)
+                
+                aum = e.get("aum") or e.get("market_cap")
+                if aum:
+                    entry["aum"] = format_large_number(aum)
+                
+                perf_ytd = e.get("perf_ytd")
+                if perf_ytd is not None:
+                    entry["perf_ytd"] = safe_float(perf_ytd, 1)
+                
+                perf_1y = e.get("perf_1y") or e.get("perf_12m")
+                if perf_1y is not None:
+                    entry["perf_1y"] = safe_float(perf_1y, 1)
+                
+                perf_3y = e.get("perf_3y")
+                if perf_3y is not None:
+                    entry["perf_3y"] = safe_float(perf_3y, 1)
+                
+                vol = e.get("volatility_3y") or e.get("vol")
+                if vol is not None:
+                    entry["vol"] = safe_float(vol, 1)
+                
+                top_20.append(entry)
+            
+            result["etf"] = {
+                "criteria": ETF_CRITERIA,
+                "total": len(etfs),
+                "passed": len(etf_filtered),
+                "top_20": top_20
+            }
         
-        # === CRYPTO: top 20 by score ===
+        # ============================================================
+        # CRYPTO: Market cap > 100M, Vol < 200%, with FULL METRICS
+        # ============================================================
+        CRYPTO_CRITERIA = {"market_cap_min": "100M", "vol_max": 200}
+        
         if cryptos:
+            crypto_filtered = []
+            for c in cryptos:
+                mcap = c.get("market_cap") or 0
+                vol = safe_float(c.get("volatility") or c.get("vol") or c.get("volatility_3y"))
+                
+                try:
+                    if float(mcap) < 100_000_000:
+                        continue
+                except (ValueError, TypeError):
+                    continue
+                
+                if vol is not None and vol > 200:
+                    continue
+                
+                crypto_filtered.append(c)
+            
             crypto_sorted = sorted(
-                cryptos,
-                key=lambda x: x.get("composite_score") or x.get("score") or 0,
+                crypto_filtered,
+                key=lambda x: x.get("market_cap") or 0,
                 reverse=True
             )[:20]
             
-            result["crypto"]["top_20"] = [
-                {
-                    "ticker": c.get("ticker") or c.get("symbol", "?"),
+            top_20 = []
+            for c in crypto_sorted:
+                entry = {
+                    "ticker": c.get("ticker") or c.get("symbol") or "?",
                     "name": (c.get("name") or "")[:25],
-                    "score": round(float(c.get("composite_score") or c.get("score") or 0), 4),
                 }
-                for c in crypto_sorted
-            ]
-            result["crypto"]["total_count"] = len(cryptos)
+                
+                mcap = c.get("market_cap")
+                if mcap:
+                    entry["mcap"] = format_large_number(mcap)
+                
+                vol = c.get("volatility") or c.get("vol") or c.get("volatility_3y")
+                if vol is not None:
+                    entry["vol"] = safe_float(vol, 1)
+                
+                perf_24h = c.get("perf_24h") or c.get("change_24h")
+                if perf_24h is not None:
+                    entry["perf_24h"] = safe_float(perf_24h, 1)
+                
+                perf_7d = c.get("perf_7d") or c.get("change_7d")
+                if perf_7d is not None:
+                    entry["perf_7d"] = safe_float(perf_7d, 1)
+                
+                perf_30d = c.get("perf_30d") or c.get("change_30d")
+                if perf_30d is not None:
+                    entry["perf_30d"] = safe_float(perf_30d, 1)
+                
+                top_20.append(entry)
+            
+            result["crypto"] = {
+                "criteria": CRYPTO_CRITERIA,
+                "total": len(cryptos),
+                "passed": len(crypto_filtered),
+                "top_20": top_20
+            }
         
-        # === BONDS: top 20 by score ===
+        # ============================================================
+        # BONDS: Rating >= BBB, Yield > 0, with FULL METRICS
+        # ============================================================
+        BOND_CRITERIA = {"rating_min": "BBB", "yield_min": 0}
+        
         if bonds:
             bond_sorted = sorted(
                 bonds,
-                key=lambda x: x.get("composite_score") or x.get("score") or 0,
+                key=lambda x: x.get("yield") or x.get("coupon") or 0,
                 reverse=True
             )[:20]
             
-            result["bond"]["top_20"] = [
-                {
-                    "ticker": b.get("ticker") or b.get("symbol", "?"),
+            top_20 = []
+            for b in bond_sorted:
+                entry = {
+                    "ticker": b.get("ticker") or b.get("isin") or b.get("symbol") or "?",
                     "name": (b.get("name") or "")[:35],
-                    "score": round(float(b.get("composite_score") or b.get("score") or 0), 4),
                 }
-                for b in bond_sorted
-            ]
-            result["bond"]["total_count"] = len(bonds)
+                
+                yld = b.get("yield") or b.get("coupon")
+                if yld is not None:
+                    entry["yield"] = safe_float(yld, 2)
+                
+                rating = b.get("rating") or b.get("credit_rating")
+                if rating:
+                    entry["rating"] = rating
+                
+                duration = b.get("duration")
+                if duration is not None:
+                    entry["duration"] = safe_float(duration, 1)
+                
+                maturity = b.get("maturity") or b.get("maturity_date")
+                if maturity:
+                    entry["maturity"] = str(maturity)[:10]
+                
+                top_20.append(entry)
+            
+            result["bond"] = {
+                "criteria": BOND_CRITERIA,
+                "total": len(bonds),
+                "top_20": top_20
+            }
         
-        # Store for later inclusion in summary
         self._top10_by_preset = result
         
-        logger.info(f"📊 Top10 by preset recorded: {len(result['equity'])} equity presets")
+        logger.info(f"📊 Top10 by preset recorded: {len(result['equity'])} equity presets, "
+                   f"{len(result.get('etf', {}).get('top_20', []))} ETFs, "
+                   f"{len(result.get('crypto', {}).get('top_20', []))} cryptos")
     
     def build_summary(self) -> Dict:
-        """Build the summary JSON structure."""
         total_duration = time.time() - self._start_time
         
-        # Organize stages
         pipeline_stages = {}
         for key in self._stage_order:
             if key in self.stages:
@@ -817,16 +894,13 @@ class AuditCollector:
             "pipeline_stages": pipeline_stages,
         }
         
-        # v5.1.1: Add top10 by preset if recorded
         if self._top10_by_preset:
             summary["top10_by_preset"] = self._top10_by_preset
         
-        # Add drift report if previous summary available
         if self.previous_summary:
             drift = compute_drift(summary, self.previous_summary, drift_threshold())
             summary["drift_vs_previous"] = drift.to_dict()
             
-            # Auto-upgrade to full if drift detected and enabled
             if drift.has_drift and auto_full_on_drift() and self._level == "summary":
                 logger.warning(
                     f"⚠️ Drift detected ({drift.drift_percentage:.1f}% > {drift_threshold()}%), "
@@ -837,13 +911,6 @@ class AuditCollector:
         return summary
     
     def dump(self, out_dir: str = "data"):
-        """
-        Dump audit files to output directory.
-        
-        Creates:
-        - selection_debug.json (summary, always if enabled)
-        - selection_trace.jsonl.gz (full trace, only if level=full)
-        """
         if not self.is_enabled:
             logger.info("📊 Audit disabled, skipping dump")
             return
@@ -851,7 +918,6 @@ class AuditCollector:
         out_path = Path(out_dir)
         out_path.mkdir(parents=True, exist_ok=True)
         
-        # Build and save summary
         summary = self.build_summary()
         
         summary_path = out_path / "selection_debug.json"
@@ -860,7 +926,6 @@ class AuditCollector:
         
         logger.info(f"✅ Audit summary saved: {summary_path} ({summary_path.stat().st_size / 1024:.1f} KB)")
         
-        # Save full trace if enabled
         if self.is_full and self.trace_rows:
             trace_path = out_path / "selection_trace.jsonl.gz"
             with gzip.open(trace_path, "wt", encoding="utf-8") as f:
@@ -873,18 +938,11 @@ class AuditCollector:
             )
     
     def dump_on_failure(self, out_dir: str = "data", error: Exception = None):
-        """
-        Dump full audit on pipeline failure.
-        
-        Always dumps full trace regardless of DEBUG_AUDIT level.
-        """
         logger.warning(f"🚨 Pipeline failure detected, dumping full audit trace")
         
-        # Force full level
         original_level = self._level
         self._level = "full"
         
-        # Add error info to summary
         summary = self.build_summary()
         summary["meta"]["failure"] = True
         if error:
@@ -894,12 +952,10 @@ class AuditCollector:
         out_path = Path(out_dir)
         out_path.mkdir(parents=True, exist_ok=True)
         
-        # Save summary with failure marker
         summary_path = out_path / "selection_debug_FAILURE.json"
         with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(summary, f, ensure_ascii=False, indent=2)
         
-        # Save trace
         if self.trace_rows:
             trace_path = out_path / "selection_trace_FAILURE.jsonl.gz"
             with gzip.open(trace_path, "wt", encoding="utf-8") as f:
@@ -908,7 +964,6 @@ class AuditCollector:
             
             logger.info(f"✅ Failure trace saved: {trace_path}")
         
-        # Restore original level
         self._level = original_level
 
 
@@ -922,11 +977,6 @@ def init_audit(
     universe_asof: str = None,
     previous_summary_path: str = "data/selection_debug.json",
 ) -> AuditCollector:
-    """
-    Initialize the global audit collector.
-    
-    Call this at the start of the pipeline.
-    """
     global _collector
     _collector = AuditCollector(
         config=config,
@@ -937,27 +987,14 @@ def init_audit(
 
 
 def get_audit() -> Optional[AuditCollector]:
-    """Get the global audit collector instance."""
     return _collector
 
 
 def audit_enabled() -> bool:
-    """Check if audit is enabled."""
     return _collector is not None and _collector.is_enabled
 
 
-# ============= CONVENIENCE DECORATORS =============
-
 def audit_stage(name: str, category: str = None, profile: str = None):
-    """
-    Decorator to automatically track a function as a pipeline stage.
-    
-    Usage:
-        @audit_stage("buffett_filter", category="equity")
-        def apply_buffett_filter(assets):
-            # ...
-            return filtered_assets
-    """
     def decorator(func):
         def wrapper(*args, **kwargs):
             collector = get_audit()
@@ -965,13 +1002,11 @@ def audit_stage(name: str, category: str = None, profile: str = None):
                 return func(*args, **kwargs)
             
             with collector.stage(name, category=category, profile=profile) as stage:
-                # Try to get before count from first argument
                 if args and hasattr(args[0], "__len__"):
                     stage.before_count = len(args[0])
                 
                 result = func(*args, **kwargs)
                 
-                # Try to get after count from result
                 if result is not None and hasattr(result, "__len__"):
                     stage.after_count = len(result)
                 
