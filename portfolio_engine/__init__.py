@@ -1,6 +1,6 @@
 # portfolio_engine/__init__.py
 """
-Portfolio Engine v4.1 - Modular Preset Selectors
+Portfolio Engine v4.0 - Phase 2.5 Refactoring
 
 Architecture:
 - universe.py       : Chargement et préparation des données (PAS de scoring)
@@ -8,10 +8,7 @@ Architecture:
 - optimizer.py      : Optimisation mean-variance + covariance hybride + hard filter Buffett
 - llm_commentary.py : Génération des commentaires via LLM
 - sector_quality.py : Métriques Buffett par secteur (utilisé par factors.py)
-- preset_meta.py    : Presets EQUITY, buckets, contraintes par profil
-- preset_etf.py     : Sélection ETF actions par profil (v1.0)
-- preset_crypto.py  : Sélection crypto par profil (v1.0)
-- preset_bond.py    : Sélection ETF obligations par profil (v1.0)
+- preset_meta.py    : Presets, buckets, contraintes par profil
 - etf_exposure.py   : Mapping ETF → exposure pour déduplication (v3.0)
 
 PARI CENTRAL:
@@ -112,7 +109,7 @@ from .sector_quality import (
     get_sector_key,
 )
 
-# Preset Meta (EQUITY presets)
+# Preset Meta
 from .preset_meta import (
     # Enums
     AssetClass,
@@ -147,37 +144,7 @@ from .preset_meta import (
     validate_portfolio_buckets,
 )
 
-# =============================================================================
-# NEW: Modular Preset Selectors (v1.0)
-# =============================================================================
-
-# Preset ETF (actions) - Sélection par profil
-from .preset_etf import (
-    select_etfs_for_profile,
-    get_etf_preset_summary,
-    PROFILE_PRESETS as ETF_PROFILE_PRESETS,
-    PROFILE_CONSTRAINTS as ETF_PROFILE_CONSTRAINTS,
-)
-
-# Preset Crypto - Sélection par profil
-from .preset_crypto import (
-    select_crypto_for_profile,
-    get_crypto_preset_summary,
-    PROFILE_PRESETS as CRYPTO_PROFILE_PRESETS,
-    PROFILE_CONSTRAINTS as CRYPTO_PROFILE_CONSTRAINTS,
-    STABLECOINS,
-)
-
-# Preset Bond (ETF obligations) - Sélection par profil
-from .preset_bond import (
-    select_bonds_for_profile,
-    get_bond_preset_summary,
-    PROFILE_PRESETS as BOND_PROFILE_PRESETS,
-    PROFILE_CONSTRAINTS as BOND_PROFILE_CONSTRAINTS,
-    RATING_TO_SCORE,
-)
-
-__version__ = "4.1.0"
+__version__ = "4.0.2"
 
 __all__ = [
     # Universe (v3.0)
@@ -245,7 +212,7 @@ __all__ = [
     "get_sector_summary",
     "get_profile",
     "get_sector_key",
-    # Preset Meta (EQUITY)
+    # Preset Meta
     "AssetClass",
     "Role",
     "RiskLevel",
@@ -270,21 +237,4 @@ __all__ = [
     "get_max_weight_for_preset",
     "get_correlation_groups",
     "validate_portfolio_buckets",
-    # NEW: Preset ETF (v1.0)
-    "select_etfs_for_profile",
-    "get_etf_preset_summary",
-    "ETF_PROFILE_PRESETS",
-    "ETF_PROFILE_CONSTRAINTS",
-    # NEW: Preset Crypto (v1.0)
-    "select_crypto_for_profile",
-    "get_crypto_preset_summary",
-    "CRYPTO_PROFILE_PRESETS",
-    "CRYPTO_PROFILE_CONSTRAINTS",
-    "STABLECOINS",
-    # NEW: Preset Bond (v1.0)
-    "select_bonds_for_profile",
-    "get_bond_preset_summary",
-    "BOND_PROFILE_PRESETS",
-    "BOND_PROFILE_CONSTRAINTS",
-    "RATING_TO_SCORE",
 ]
