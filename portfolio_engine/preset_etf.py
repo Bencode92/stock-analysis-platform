@@ -1,35 +1,30 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.6
+ETF Preset Selector v2.2.7
 =========================================
 
-CHANGEMENTS vs v2.2.5 (audit ChatGPT):
---------------------------------------
-1. NaN SCORING: Pénalisation selon le signe du poids
+CHANGEMENTS vs v2.2.6 (audit ChatGPT - VRAIS fixes):
+----------------------------------------------------
+1. NaN SCORING - FIX RÉEL:
+   v2.2.6 ne marchait pas car _rank_percentile avec penalize_missing=False
+   remplaçait les NaN par 0.5 AVANT le fillna dans la boucle.
+   
+   FIX: penalize_missing=None → garde les NaN → fillna selon signe du poids
    - Poids négatif (vol/ter): NaN → score=1 → (1-1)=0 (pas de bonus)
    - Poids positif: NaN → score=0 → 0*w=0 (pas de bonus)
-   AVANT: NaN avec penalize_missing=True donnait un BONUS maximal!
 
-2. INCOME_OPTIONS YIELD: Suppression du filtre hard-coded `yield >= 5.0`
-   - Le yield est maintenant vérifié uniquement par _check_preset_rules
-   - Avec normalisation des unités (décimal vs %)
+2. HEURISTIQUE TER - ROBUSTESSE:
+   Combinaison q95 + max au lieu de q95 seul:
+   - Si max > 1 → forcément points de % (TER > 100% impossible)
+   - Si q95 < 0.05 ET max < 0.20 → décimal
+   - Zone ambiguë → log warning
 
-3. HEURISTIQUE TER: q95 au lieu de median
-   - Si q95(TER) < 0.05 → décimal
-   - Plus robuste avec univers low-cost
-
-4. JSON WEIGHTS: Parsing JSON avant regex
-   - Tente json.loads si la string commence par [ ou {
-   - Filtre les valeurs > 100 (tickers numériques comme 2330, 0700)
-
-5. OR PHYSIQUE: Suppression du keyword "or" dangereux
-   - "or" matchait Corporate, World, Morgan...
-   - Remplacé par "lingot", "or physique"
-
-6. LEVERAGE QC: Utilise _is_leveraged_or_inverse
-   - Avant: lev <= 0 laissait passer les inverses (leverage = -1)
-   - Maintenant: ~_is_leveraged_or_inverse() attrape tout
+3. MÉTRIQUES REQUISES PAR PROFIL:
+   Nouveau paramètre strict_metrics (True par défaut):
+   - Stable: exige vol_pct et total_expense_ratio non-NaN
+   - Modéré: exige total_expense_ratio non-NaN
+   - Agressif: permissif (pas d'exigence)
 
 CHANGEMENTS vs v2.2.3:
 ----------------------
@@ -334,6 +329,14 @@ PROFILE_CONSTRAINTS: Dict[str, Dict[str, float]] = {
     },
 }
 
+# FIX v2.2.7: Métriques requises par profil (colonnes qui ne doivent pas être NaN)
+# Permet de filtrer les ETF mal renseignés selon le niveau d'exigence du profil
+PROFILE_REQUIRED_METRICS: Dict[str, List[str]] = {
+    "Stable": ["vol_pct", "total_expense_ratio"],  # Strict: vol et TER requis
+    "Modéré": ["total_expense_ratio"],              # Modéré: TER requis
+    "Agressif": [],                                  # Permissif
+}
+
 # Règles hard par preset (évite faux positifs)
 PRESET_RULES: Dict[str, Dict[str, float]] = {
     "coeur_global": {
@@ -466,12 +469,10 @@ def _detect_ter_is_decimal(df: pd.DataFrame) -> bool:
     """
     Détecte si les données TER sont en décimal (0.0072 = 0.72%) ou en % (0.72 = 0.72%).
     
-    FIX v2.2.6: Utilise q95 au lieu de median pour robustesse.
-    Heuristique: Si q95(TER) < 0.05, c'est du décimal.
-    - Décimal typique: 0.0003-0.03 (0.03%-3%)
-    - Points de % typique: 0.03-2.0 (0.03%-2%)
-    
-    Note: La médiane peut être trompeuse avec un univers low-cost.
+    FIX v2.2.7: Heuristique combinée q95 + max pour robustesse.
+    - Si max(TER) > 1 → probablement "points de %" (car TER > 100% impossible)
+    - Si q95 < 0.05 ET max < 0.20 → probablement décimal
+    - Zone ambiguë → log warning, assume décimal par défaut
     """
     if "total_expense_ratio" not in df.columns:
         return True  # Assume decimal by default
@@ -482,9 +483,26 @@ def _detect_ter_is_decimal(df: pd.DataFrame) -> bool:
         return True
     
     q95 = ter.quantile(0.95)
-    # Si q95 < 0.05, c'est presque certainement du décimal
-    # (car un TER de 5% en q95 serait aberrant pour un univers ETF)
-    return q95 < 0.05
+    ter_max = ter.max()
+    
+    # Règle 1: Si max > 1, c'est forcément des points de % (TER > 100% impossible)
+    if ter_max > 1.0:
+        return False  # Points de %
+    
+    # Règle 2: Si q95 < 0.05 ET max < 0.20, très probablement décimal
+    if q95 < 0.05 and ter_max < 0.20:
+        return True  # Décimal
+    
+    # Zone ambiguë: log warning et assume décimal
+    # (q95 entre 0.05 et max entre 0.20 et 1.0 = univers low-cost en points de %?)
+    if q95 < 0.10 and ter_max < 0.50:
+        logger.warning(
+            f"[ETF] TER units ambiguous: q95={q95:.4f}, max={ter_max:.4f}. "
+            f"Assuming decimal. Override with explicit unit conversion if needed."
+        )
+        return True  # Assume décimal par défaut
+    
+    return False  # Points de %
 
 
 def _detect_yield_is_decimal(df: pd.DataFrame) -> bool:
@@ -967,16 +985,22 @@ def _compute_momentum(df: pd.DataFrame) -> pd.Series:
 def _rank_percentile(
     series: pd.Series,
     higher_is_better: bool = True,
-    penalize_missing: bool = False
+    penalize_missing: Optional[bool] = None
 ) -> pd.Series:
     """
     Calcule le rang percentile [0, 1].
     - higher_is_better: True = valeur haute = bon score
-    - penalize_missing: True = NaN → 0, False = NaN → 0.5
+    - penalize_missing: 
+        - True = NaN → 0.0
+        - False = NaN → 0.5
+        - None = NaN reste NaN (FIX v2.2.7)
     """
     ranked = series.rank(pct=True, method="average")
     if not higher_is_better:
         ranked = 1 - ranked
+    
+    if penalize_missing is None:
+        return ranked  # Laisse les NaN pour traitement ultérieur
     return ranked.fillna(0.0 if penalize_missing else 0.5)
 
 
@@ -1743,38 +1767,39 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     # Le signe du poids dans SCORING_WEIGHTS fait l'inversion:
     #   - Poids négatif → "lower raw value is better" → on applique (1 - score)
     #   - Poids positif → "higher raw value is better" → on garde score tel quel
-    # FIX v2.2.6: NaN pénalisé SELON le signe du poids (pas avant)
+    # FIX v2.2.7: penalize_missing=None pour GARDER les NaN jusqu'au fill final
     scores = pd.DataFrame(index=df.index)
     
     # Vol: high vol → high score (le poids négatif inversera pour favoriser low vol)
-    # penalize_missing=False car on pénalise après selon le signe
-    scores["vol"] = _rank_percentile(vol, higher_is_better=True, penalize_missing=False)
+    # penalize_missing=None pour garder NaN jusqu'au fill selon signe
+    scores["vol"] = _rank_percentile(vol, higher_is_better=True, penalize_missing=None)
     
     # TER: high TER → high score (le poids négatif inversera pour favoriser low TER)
-    scores["ter"] = _rank_percentile(ter, higher_is_better=True, penalize_missing=False)
+    scores["ter"] = _rank_percentile(ter, higher_is_better=True, penalize_missing=None)
     
     # AUM: high AUM → high score (poids positif = on veut high AUM)
-    scores["aum"] = _rank_percentile(aum, higher_is_better=True, penalize_missing=False)
+    scores["aum"] = _rank_percentile(aum, higher_is_better=True, penalize_missing=None)
     
     # Yield: high yield → high score
-    scores["yield"] = _rank_percentile(yld, higher_is_better=True, penalize_missing=False)
+    scores["yield"] = _rank_percentile(yld, higher_is_better=True, penalize_missing=None)
     
     # Momentum: high momentum → high score
-    scores["momentum"] = _rank_percentile(momentum_raw, higher_is_better=True, penalize_missing=False)
+    scores["momentum"] = _rank_percentile(momentum_raw, higher_is_better=True, penalize_missing=None)
     
     # Diversif sector: high concentration → high score (poids négatif inversera)
     diversif_sector = secw.combine_first(hhi_sector)
-    scores["diversif_sector"] = _rank_percentile(diversif_sector, higher_is_better=True, penalize_missing=False)
+    scores["diversif_sector"] = _rank_percentile(diversif_sector, higher_is_better=True, penalize_missing=None)
     
     # Diversif holdings: high concentration → high score (poids négatif inversera)
     diversif_holdings = htop.combine_first(hhi_holdings)
-    scores["diversif_holdings"] = _rank_percentile(diversif_holdings, higher_is_better=True, penalize_missing=False)
+    scores["diversif_holdings"] = _rank_percentile(diversif_holdings, higher_is_better=True, penalize_missing=None)
     
     # Data quality: high quality → high score
-    scores["data_quality"] = _rank_percentile(dqs, higher_is_better=True, penalize_missing=False)
+    scores["data_quality"] = _rank_percentile(dqs, higher_is_better=True, penalize_missing=None)
     
     # Score pondéré
-    # FIX v2.2.6: Pénalisation NaN selon le signe du poids
+    # FIX v2.2.7: Pénalisation NaN selon le signe du poids
+    # Maintenant les NaN arrivent vraiment ici car penalize_missing=None
     #   - Poids < 0: "lower raw value is better" → NaN devient score=1 → (1-1)=0 (pas de bonus)
     #   - Poids > 0: "higher raw value is better" → NaN devient score=0 → 0*w=0 (pas de bonus)
     total = pd.Series(0.0, index=df.index)
@@ -1902,12 +1927,14 @@ def select_etfs_for_profile(
     profile: str,
     top_n: Optional[int] = None,
     return_meta: bool = False,
+    strict_metrics: bool = True,  # FIX v2.2.7: Exiger métriques non-NaN selon profil
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Dict[str, Any]]]:
     """
     Sélectionne les ETF pour un profil donné.
     
     Pipeline:
     1. Data QC (qualité, leverage, AUM, TER)
+    1b. FIX v2.2.7: Filtrage métriques requises (si strict_metrics=True)
     2. Métriques de diversification
     3. Hard constraints (avec relaxation)
     4. Presets union
@@ -1920,6 +1947,7 @@ def select_etfs_for_profile(
         profile: "Stable", "Modéré", ou "Agressif"
         top_n: Nombre max d'ETF à retourner
         return_meta: Si True, retourne aussi les métadonnées
+        strict_metrics: Si True, exclut les ETF avec métriques manquantes selon profil
     
     Returns:
         DataFrame filtré avec _profile_score (et meta si return_meta=True)
@@ -1933,6 +1961,26 @@ def select_etfs_for_profile(
     # Couche 0: Data QC
     d0 = apply_data_qc_filters(df)
     meta["stages"]["qc"] = {"before": len(df), "after": len(d0)}
+    
+    # FIX v2.2.7: Filtrage métriques requises (étape 0b)
+    if strict_metrics:
+        required = PROFILE_REQUIRED_METRICS.get(profile, [])
+        if required:
+            before = len(d0)
+            mask = pd.Series(True, index=d0.index)
+            for col in required:
+                if col in d0.columns:
+                    mask &= d0[col].notna()
+            d0 = d0[mask].copy()
+            removed = before - len(d0)
+            meta["stages"]["required_metrics"] = {
+                "required": required,
+                "before": before,
+                "after": len(d0),
+                "removed": removed
+            }
+            if removed > 0:
+                logger.info(f"[ETF {profile}] Métriques requises: {before} → {len(d0)} (-{removed} sans {required})")
     
     # Métriques de diversification
     d0 = _compute_diversification_metrics(d0)
@@ -1983,7 +2031,7 @@ def select_etfs_for_profile(
 def get_etf_preset_summary() -> Dict[str, Any]:
     """Retourne un résumé des presets ETF."""
     return {
-        "version": "2.2.6",
+        "version": "2.2.7",
         "profiles": {
             p: {
                 "presets": PROFILE_PRESETS[p],
