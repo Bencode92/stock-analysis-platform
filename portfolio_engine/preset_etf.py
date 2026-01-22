@@ -1,30 +1,23 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.7
+ETF Preset Selector v2.2.8
 =========================================
 
-CHANGEMENTS vs v2.2.6 (audit ChatGPT - VRAIS fixes):
-----------------------------------------------------
-1. NaN SCORING - FIX RÉEL:
-   v2.2.6 ne marchait pas car _rank_percentile avec penalize_missing=False
-   remplaçait les NaN par 0.5 AVANT le fillna dans la boucle.
-   
-   FIX: penalize_missing=None → garde les NaN → fillna selon signe du poids
-   - Poids négatif (vol/ter): NaN → score=1 → (1-1)=0 (pas de bonus)
-   - Poids positif: NaN → score=0 → 0*w=0 (pas de bonus)
+CHANGEMENTS vs v2.2.7 (audit ChatGPT):
+--------------------------------------
+1. REQUIRED_METRICS OR: Support tuples = "au moins une colonne"
+   - Stable exige maintenant (vol_3y_pct OR vol_pct) ET total_expense_ratio
+   - Avant: vol_pct seul → excluait les ETF avec seulement vol_3y_pct
 
-2. HEURISTIQUE TER - ROBUSTESSE:
-   Combinaison q95 + max au lieu de q95 seul:
-   - Si max > 1 → forcément points de % (TER > 100% impossible)
-   - Si q95 < 0.05 ET max < 0.20 → décimal
-   - Zone ambiguë → log warning
+2. WEIGHTS_TO_FRACTION: Heuristique sum + max
+   - Si max > 1.0 → forcément en % (fraction ne peut pas dépasser 1)
+   - Si sum > 1.2 → probablement en % (top10 fractions sument ~0.5-1.0)
+   - Avant: mx <= 1.5 cassait avec ETF très diversifiés (holdings < 1%)
 
-3. MÉTRIQUES REQUISES PAR PROFIL:
-   Nouveau paramètre strict_metrics (True par défaut):
-   - Stable: exige vol_pct et total_expense_ratio non-NaN
-   - Modéré: exige total_expense_ratio non-NaN
-   - Agressif: permissif (pas d'exigence)
+3. SCORE PERCENTILE: Au lieu de min-max
+   - Plus stable entre runs (moins sensible aux outliers)
+   - Interprétation: score 80 = meilleur que 80% de l'univers
 
 CHANGEMENTS vs v2.2.3:
 ----------------------
@@ -330,11 +323,12 @@ PROFILE_CONSTRAINTS: Dict[str, Dict[str, float]] = {
 }
 
 # FIX v2.2.7: Métriques requises par profil (colonnes qui ne doivent pas être NaN)
+# FIX v2.2.8: Support tuples = "au moins une des colonnes" (OR)
 # Permet de filtrer les ETF mal renseignés selon le niveau d'exigence du profil
-PROFILE_REQUIRED_METRICS: Dict[str, List[str]] = {
-    "Stable": ["vol_pct", "total_expense_ratio"],  # Strict: vol et TER requis
-    "Modéré": ["total_expense_ratio"],              # Modéré: TER requis
-    "Agressif": [],                                  # Permissif
+PROFILE_REQUIRED_METRICS: Dict[str, List[Union[str, Tuple[str, ...]]]] = {
+    "Stable": [("vol_3y_pct", "vol_pct"), "total_expense_ratio"],  # vol_3y OU vol_pct
+    "Modéré": ["total_expense_ratio"],
+    "Agressif": [],
 }
 
 # Règles hard par preset (évite faux positifs)
@@ -868,15 +862,37 @@ def _extract_weights(x: Any) -> List[float]:
 
 
 def _weights_to_fraction(weights: List[float]) -> List[float]:
-    """Convertit les poids en fractions [0, 1]."""
+    """
+    Convertit les poids en fractions [0, 1].
+    
+    FIX v2.2.8: Heuristique améliorée avec sum + max:
+    - Si max > 1.0 → forcément en % (une fraction ne peut pas dépasser 1)
+    - Si sum > 1.2 → probablement en % (top10 en fraction devrait sommer ~1)
+    - Sinon → fraction
+    
+    Gère le cas des ETF très diversifiés (top holdings < 1% chacun).
+    """
     if not weights:
         return []
-    mx = max(abs(w) for w in weights)
-    if mx <= 1.5:
-        # Déjà en fraction
-        return [max(0.0, min(1.0, float(w))) for w in weights]
-    # En pourcentage
-    return [max(0.0, min(1.0, float(w) / 100.0)) for w in weights]
+    
+    w = [float(x) for x in weights if x is not None and not (isinstance(x, float) and np.isnan(x))]
+    if not w:
+        return []
+    
+    mx = max(abs(x) for x in w)
+    sm = sum(abs(x) for x in w)
+    
+    # Règle 1: Si max > 1.0, c'est forcément du % (une fraction ne peut pas dépasser 1)
+    if mx > 1.0:
+        return [max(0.0, min(1.0, x / 100.0)) for x in w]
+    
+    # Règle 2: Si sum > 1.2, c'est probablement du %
+    # (top10 en fraction devrait sommer entre 0.5 et 1.0 typiquement)
+    if sm > 1.2:
+        return [max(0.0, min(1.0, x / 100.0)) for x in w]
+    
+    # Sinon: déjà en fraction
+    return [max(0.0, min(1.0, x)) for x in w]
 
 
 def _compute_hhi(weights: List[float]) -> Optional[float]:
@@ -1827,8 +1843,10 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     if total_weight > 0:
         total /= total_weight
     
-    # Normalisation 0-100
-    df["_profile_score"] = _normalize_0_100(total).round(2)
+    # FIX v2.2.8: Normalisation par PERCENTILE au lieu de min-max
+    # Plus stable et comparable entre runs (moins sensible aux outliers)
+    # Note: Les scores restent relatifs à l'univers filtré
+    df["_profile_score"] = (total.rank(pct=True) * 100).round(2)
     df["_preset_profile"] = profile
     df["_asset_class"] = "etf"
     
@@ -1963,24 +1981,34 @@ def select_etfs_for_profile(
     meta["stages"]["qc"] = {"before": len(df), "after": len(d0)}
     
     # FIX v2.2.7: Filtrage métriques requises (étape 0b)
+    # FIX v2.2.8: Support tuples = "au moins une des colonnes" (OR)
     if strict_metrics:
         required = PROFILE_REQUIRED_METRICS.get(profile, [])
         if required:
             before = len(d0)
             mask = pd.Series(True, index=d0.index)
-            for col in required:
-                if col in d0.columns:
-                    mask &= d0[col].notna()
+            
+            for req in required:
+                if isinstance(req, tuple):
+                    # Tuple = OR: au moins une des colonnes doit être non-NaN
+                    cols = [c for c in req if c in d0.columns]
+                    if cols:
+                        mask &= d0[cols].notna().any(axis=1)
+                else:
+                    # String = AND: la colonne doit être non-NaN
+                    if req in d0.columns:
+                        mask &= d0[req].notna()
+            
             d0 = d0[mask].copy()
             removed = before - len(d0)
             meta["stages"]["required_metrics"] = {
-                "required": required,
+                "required": [list(r) if isinstance(r, tuple) else r for r in required],
                 "before": before,
                 "after": len(d0),
                 "removed": removed
             }
             if removed > 0:
-                logger.info(f"[ETF {profile}] Métriques requises: {before} → {len(d0)} (-{removed} sans {required})")
+                logger.info(f"[ETF {profile}] Métriques requises: {before} → {len(d0)} (-{removed})")
     
     # Métriques de diversification
     d0 = _compute_diversification_metrics(d0)
@@ -2031,7 +2059,7 @@ def select_etfs_for_profile(
 def get_etf_preset_summary() -> Dict[str, Any]:
     """Retourne un résumé des presets ETF."""
     return {
-        "version": "2.2.7",
+        "version": "2.2.8",
         "profiles": {
             p: {
                 "presets": PROFILE_PRESETS[p],
