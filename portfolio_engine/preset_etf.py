@@ -1,8 +1,24 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.4
+ETF Preset Selector v2.2.5
 =========================================
+
+CHANGEMENTS vs v2.2.4 (fixes ChatGPT audit):
+--------------------------------------------
+1. DEDUP BUG CRITIQUE: Clé hybride row-by-row (underlying_ticker → isin → symbol)
+   AVANT: Si underlying_ticker vide pour 80% des ETF → tous écrasés en 1 seul
+   APRÈS: Fallback intelligent par ligne
+
+2. LEVERAGE: Déjà OK (ne(0) détecte les inverses comme -1)
+
+3. UNITÉS TER/YIELD: Auto-détection décimal vs %
+   - _detect_ter_is_decimal(): Si median(TER) < 0.10 → décimal
+   - _detect_yield_is_decimal(): Si median(yield) < 0.15 → décimal
+   - Seuils dans PRESET_RULES en points de % (ex: ter_max=0.35 = 0.35%)
+   - Normalisation automatique avant comparaison
+
+4. OPTIONS OVERLAY: Détection via name/objective/fund_type (déjà présent)
 
 CHANGEMENTS vs v2.2.3:
 ----------------------
@@ -433,6 +449,75 @@ SECTORS_GROWTH = {"technology", "information technology", "communication service
 def _to_numeric(series: pd.Series) -> pd.Series:
     """Conversion robuste vers numérique."""
     return pd.to_numeric(series, errors="coerce")
+
+
+def _detect_ter_is_decimal(df: pd.DataFrame) -> bool:
+    """
+    Détecte si les données TER sont en décimal (0.0072 = 0.72%) ou en % (0.72 = 0.72%).
+    
+    Heuristique: Si median(TER) < 0.10, c'est du décimal.
+    Typiquement: TER décimal ≈ 0.001-0.02, TER en % ≈ 0.1-2.0
+    """
+    if "total_expense_ratio" not in df.columns:
+        return True  # Assume decimal by default
+    
+    ter = _to_numeric(df["total_expense_ratio"]).dropna()
+    if len(ter) == 0:
+        return True
+    
+    median_ter = ter.median()
+    # Si median < 0.10, c'est presque certainement du décimal
+    # (car un TER de 10% serait aberrant)
+    return median_ter < 0.10
+
+
+def _detect_yield_is_decimal(df: pd.DataFrame) -> bool:
+    """
+    Détecte si les données yield sont en décimal (0.05 = 5%) ou en % (5.0 = 5%).
+    
+    Heuristique: Si median(yield) < 0.15, c'est du décimal.
+    """
+    if "yield_ttm" not in df.columns:
+        return True
+    
+    yld = _to_numeric(df["yield_ttm"]).dropna()
+    if len(yld) == 0:
+        return True
+    
+    median_yld = yld.median()
+    # Si median < 0.15, c'est du décimal (15% yield serait rare)
+    return median_yld < 0.15
+
+
+def _normalize_threshold_ter(threshold_pct: float, data_is_decimal: bool) -> float:
+    """
+    Convertit un seuil TER exprimé en % vers le format des données.
+    
+    Args:
+        threshold_pct: Seuil en points de % (ex: 0.35 = 0.35%)
+        data_is_decimal: True si données en décimal (0.0035), False si en % (0.35)
+    
+    Returns:
+        Seuil normalisé au format des données
+    """
+    if data_is_decimal:
+        return threshold_pct / 100.0  # 0.35% → 0.0035
+    else:
+        return threshold_pct  # 0.35% → 0.35
+
+
+def _normalize_threshold_yield(threshold_pct: float, data_is_decimal: bool) -> float:
+    """
+    Convertit un seuil yield exprimé en % vers le format des données.
+    
+    Args:
+        threshold_pct: Seuil en points de % (ex: 5.0 = 5%)
+        data_is_decimal: True si données en décimal (0.05), False si en % (5.0)
+    """
+    if data_is_decimal:
+        return threshold_pct / 100.0  # 5% → 0.05
+    else:
+        return threshold_pct  # 5% → 5.0
 
 
 def _safe_series(df: pd.DataFrame, col: str) -> pd.Series:
@@ -1070,29 +1155,39 @@ def apply_hard_constraints(
 # =============================================================================
 
 def _check_preset_rules(df: pd.DataFrame, preset: str) -> pd.Series:
-    """Vérifie les règles hard d'un preset."""
+    """Vérifie les règles hard d'un preset.
+    
+    FIX v2.2.5: Auto-détection des unités TER/yield (décimal vs %)
+    et normalisation des seuils pour correspondre au format des données.
+    """
     rules = PRESET_RULES.get(preset, {})
     if not rules:
         return pd.Series(True, index=df.index)
     
     mask = pd.Series(True, index=df.index)
     
-    # TER max
+    # === Auto-détection des unités ===
+    ter_is_decimal = _detect_ter_is_decimal(df)
+    yield_is_decimal = _detect_yield_is_decimal(df)
+    
+    # TER max (seuils exprimés en points de %, ex: 0.35 = 0.35%)
     if "ter_max" in rules and "total_expense_ratio" in df.columns:
         ter = _to_numeric(df["total_expense_ratio"])
-        mask &= (ter <= rules["ter_max"]) | ter.isna()
+        ter_threshold = _normalize_threshold_ter(rules["ter_max"], ter_is_decimal)
+        mask &= (ter <= ter_threshold) | ter.isna()
     
     # AUM min
     if "aum_min" in rules and "aum_usd" in df.columns:
         aum = _to_numeric(df["aum_usd"])
         mask &= (aum >= rules["aum_min"]) | aum.isna()
     
-    # Yield min
+    # Yield min (seuils exprimés en %, ex: 5.0 = 5%)
     if "yield_min" in rules and "yield_ttm" in df.columns:
         yld = _to_numeric(df["yield_ttm"])
-        mask &= (yld >= rules["yield_min"]) | yld.isna()
+        yield_threshold = _normalize_threshold_yield(rules["yield_min"], yield_is_decimal)
+        mask &= (yld >= yield_threshold) | yld.isna()
     
-    # Vol max
+    # Vol max (déjà en % dans les données, pas de conversion)
     if "vol_max" in rules:
         vol = _get_vol(df)
         mask &= (vol <= rules["vol_max"]) | vol.isna()
@@ -1708,25 +1803,31 @@ def deduplicate_underlying(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, An
     """
     Déduplique par underlying_ticker en favorisant le meilleur TER.
     
-    Score de dédup = 0.4 * (1 - TER_rank) + 0.4 * score_rank + 0.2 * AUM_rank
+    FIX v2.2.5: Clé HYBRIDE row-by-row pour éviter d'écraser les ETF
+    quand underlying_ticker est vide (cas fréquent).
+    
+    Priorité: underlying_ticker → isin → symbol
+    
+    Score de dédup = 0.4 * ter_rank + 0.4 * score_rank + 0.2 * AUM_rank
     """
-    meta = {"dedup_key": None, "before": len(df), "after": len(df), "removed": 0}
+    meta = {"dedup_key": "hybrid", "before": len(df), "after": len(df), "removed": 0}
     
     if df.empty:
         return df, meta
     
-    # Trouver la clé de dédup
-    key = None
-    for k in ["underlying_ticker", "isin"]:
-        if k in df.columns:
-            key = k
-            break
-    
-    if not key:
-        return df, meta
-    
-    meta["dedup_key"] = key
     d = df.copy()
+    
+    # === FIX: Clé hybride row-by-row ===
+    # Priorité: underlying_ticker (si non-vide) → isin (si non-vide) → symbol
+    sym = _get_symbol(d).fillna("").astype(str)
+    isin = _safe_series(d, "isin").fillna("").astype(str)
+    und = _safe_series(d, "underlying_ticker").fillna("").astype(str)
+    
+    # Construire la clé hybride ligne par ligne
+    dedup_key = und.where(und.str.len() > 0, isin)
+    dedup_key = dedup_key.where(dedup_key.str.len() > 0, sym)
+    
+    d["_dedup_key"] = dedup_key
     
     # Score de déduplication
     ter = _to_numeric(_safe_series(d, "total_expense_ratio"))
@@ -1741,14 +1842,14 @@ def deduplicate_underlying(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, An
     
     # Trier et dédupliquer
     d = d.sort_values("_dedup_score", ascending=False)
-    d = d.drop_duplicates(subset=[key], keep="first")
-    d = d.drop(columns=["_dedup_score"], errors="ignore")
+    d = d.drop_duplicates(subset=["_dedup_key"], keep="first")
+    d = d.drop(columns=["_dedup_key", "_dedup_score"], errors="ignore")
     
     meta["after"] = len(d)
     meta["removed"] = meta["before"] - meta["after"]
     
     if meta["removed"] > 0:
-        logger.info(f"[ETF] Dedup ({key}): {meta['before']} → {meta['after']} (-{meta['removed']})")
+        logger.info(f"[ETF] Dedup (hybrid): {meta['before']} → {meta['after']} (-{meta['removed']})")
     
     return d, meta
 
@@ -1843,7 +1944,7 @@ def select_etfs_for_profile(
 def get_etf_preset_summary() -> Dict[str, Any]:
     """Retourne un résumé des presets ETF."""
     return {
-        "version": "2.2.4",
+        "version": "2.2.5",
         "profiles": {
             p: {
                 "presets": PROFILE_PRESETS[p],
