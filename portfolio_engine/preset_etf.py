@@ -1,24 +1,35 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.5
+ETF Preset Selector v2.2.6
 =========================================
 
-CHANGEMENTS vs v2.2.4 (fixes ChatGPT audit):
---------------------------------------------
-1. DEDUP BUG CRITIQUE: Clé hybride row-by-row (underlying_ticker → isin → symbol)
-   AVANT: Si underlying_ticker vide pour 80% des ETF → tous écrasés en 1 seul
-   APRÈS: Fallback intelligent par ligne
+CHANGEMENTS vs v2.2.5 (audit ChatGPT):
+--------------------------------------
+1. NaN SCORING: Pénalisation selon le signe du poids
+   - Poids négatif (vol/ter): NaN → score=1 → (1-1)=0 (pas de bonus)
+   - Poids positif: NaN → score=0 → 0*w=0 (pas de bonus)
+   AVANT: NaN avec penalize_missing=True donnait un BONUS maximal!
 
-2. LEVERAGE: Déjà OK (ne(0) détecte les inverses comme -1)
+2. INCOME_OPTIONS YIELD: Suppression du filtre hard-coded `yield >= 5.0`
+   - Le yield est maintenant vérifié uniquement par _check_preset_rules
+   - Avec normalisation des unités (décimal vs %)
 
-3. UNITÉS TER/YIELD: Auto-détection décimal vs %
-   - _detect_ter_is_decimal(): Si median(TER) < 0.10 → décimal
-   - _detect_yield_is_decimal(): Si median(yield) < 0.15 → décimal
-   - Seuils dans PRESET_RULES en points de % (ex: ter_max=0.35 = 0.35%)
-   - Normalisation automatique avant comparaison
+3. HEURISTIQUE TER: q95 au lieu de median
+   - Si q95(TER) < 0.05 → décimal
+   - Plus robuste avec univers low-cost
 
-4. OPTIONS OVERLAY: Détection via name/objective/fund_type (déjà présent)
+4. JSON WEIGHTS: Parsing JSON avant regex
+   - Tente json.loads si la string commence par [ ou {
+   - Filtre les valeurs > 100 (tickers numériques comme 2330, 0700)
+
+5. OR PHYSIQUE: Suppression du keyword "or" dangereux
+   - "or" matchait Corporate, World, Morgan...
+   - Remplacé par "lingot", "or physique"
+
+6. LEVERAGE QC: Utilise _is_leveraged_or_inverse
+   - Avant: lev <= 0 laissait passer les inverses (leverage = -1)
+   - Maintenant: ~_is_leveraged_or_inverse() attrape tout
 
 CHANGEMENTS vs v2.2.3:
 ----------------------
@@ -455,20 +466,25 @@ def _detect_ter_is_decimal(df: pd.DataFrame) -> bool:
     """
     Détecte si les données TER sont en décimal (0.0072 = 0.72%) ou en % (0.72 = 0.72%).
     
-    Heuristique: Si median(TER) < 0.10, c'est du décimal.
-    Typiquement: TER décimal ≈ 0.001-0.02, TER en % ≈ 0.1-2.0
+    FIX v2.2.6: Utilise q95 au lieu de median pour robustesse.
+    Heuristique: Si q95(TER) < 0.05, c'est du décimal.
+    - Décimal typique: 0.0003-0.03 (0.03%-3%)
+    - Points de % typique: 0.03-2.0 (0.03%-2%)
+    
+    Note: La médiane peut être trompeuse avec un univers low-cost.
     """
     if "total_expense_ratio" not in df.columns:
         return True  # Assume decimal by default
     
     ter = _to_numeric(df["total_expense_ratio"]).dropna()
+    ter = ter[ter > 0]  # Ignorer les valeurs nulles/négatives
     if len(ter) == 0:
         return True
     
-    median_ter = ter.median()
-    # Si median < 0.10, c'est presque certainement du décimal
-    # (car un TER de 10% serait aberrant)
-    return median_ter < 0.10
+    q95 = ter.quantile(0.95)
+    # Si q95 < 0.05, c'est presque certainement du décimal
+    # (car un TER de 5% en q95 serait aberrant pour un univers ETF)
+    return q95 < 0.05
 
 
 def _detect_yield_is_decimal(df: pd.DataFrame) -> bool:
@@ -798,18 +814,30 @@ def _extract_weights(x: Any) -> List[float]:
                     continue
         return vals
     
-    # String: "Tech:25,Finance:20,..." ou "[25, 20, 15]"
+    # String: "Tech:25,Finance:20,..." ou "[25, 20, 15]" ou JSON
     if isinstance(x, str):
         s = x.strip()
         if not s:
             return []
-        # Parse JSON-like ou CSV
+        
+        # FIX v2.2.6: Tenter json.loads d'abord si ça ressemble à du JSON
+        if s.startswith("[") or s.startswith("{"):
+            try:
+                import json
+                obj = json.loads(s)
+                return _extract_weights(obj)  # Récursion vers dict/list
+            except Exception:
+                pass  # Fallback vers regex
+        
+        # Fallback regex avec filtre anti-tickers
         nums = re.findall(r"[-+]?\d*\.?\d+", s.replace(",", "."))
         vals = []
         for n in nums:
             try:
                 f = float(n)
-                if f > 0:  # Ignorer les valeurs négatives/nulles
+                # FIX v2.2.6: Filtre les valeurs aberrantes (tickers numériques)
+                # Les poids valides sont typiquement 0-100
+                if 0 < f <= 100:
                     vals.append(f)
             except Exception:
                 pass
@@ -1009,10 +1037,9 @@ def apply_data_qc_filters(df: pd.DataFrame) -> pd.DataFrame:
         dqs = _to_numeric(df["data_quality_score"])
         mask &= (dqs >= MIN_DATA_QUALITY_SCORE) | dqs.isna()
     
-    # Pas de levier
-    if "leverage" in df.columns:
-        lev = _to_numeric(df["leverage"]).fillna(0.0)
-        mask &= lev <= MAX_LEVERAGE_ALLOWED
+    # FIX v2.2.6: Pas de levier NI inverse (utilise _is_leveraged_or_inverse)
+    # Avant: lev <= 0 laissait passer les inverses (leverage = -1)
+    mask &= ~_is_leveraged_or_inverse(df)
     
     # AUM minimum
     if "aum_usd" in df.columns:
@@ -1306,6 +1333,9 @@ def _preset_income_options(df: pd.DataFrame) -> pd.Series:
     """
     Preset: Income Options
     Covered call, buywrite (JEPI, JEPQ, YieldMax, etc.).
+    
+    FIX v2.2.6: Suppression du filtre yield >= 5.0 hard-coded.
+    Le yield est déjà vérifié par _check_preset_rules avec normalisation des unités.
     """
     bucket = _get_bucket(df)
     reasons = _get_reasons(df)
@@ -1316,11 +1346,10 @@ def _preset_income_options(df: pd.DataFrame) -> pd.Series:
     # Pas structured/non-standard
     not_bad = ~_is_structured(bucket, reasons) & ~_is_non_standard(bucket, reasons)
     
-    # High yield attendu
-    yld = _to_numeric(_safe_series(df, "yield_ttm"))
-    high_yield = (yld >= 5.0) | yld.isna()
+    # FIX v2.2.6: yield vérifié par _check_preset_rules (avec normalisation)
+    # au lieu de high_yield = (yld >= 5.0) qui cassait si yield en décimal
     
-    return is_options & not_bad & high_yield & _check_preset_rules(df, "income_options")
+    return is_options & not_bad & _check_preset_rules(df, "income_options")
 
 
 def _preset_qualite_value(df: pd.DataFrame) -> pd.Series:
@@ -1554,7 +1583,9 @@ def _preset_or_physique(df: pd.DataFrame) -> pd.Series:
     name = _safe_series(df, "name").fillna("").astype(str).str.lower()
     
     gold_kw = pd.Series(False, index=df.index)
-    keywords = ["gold", "physical gold", "bullion", "or "]
+    # FIX v2.2.6: Suppression de "or " qui matchait trop large (Corporate, World, Morgan...)
+    # Les ETF or utilisent généralement "gold" ou sont dans la whitelist
+    keywords = ["gold", "physical gold", "bullion", "lingot", "or physique"]
     for kw in keywords:
         gold_kw |= obj.str.contains(kw.strip(), regex=False)
         gold_kw |= name.str.contains(kw.strip(), regex=False)
@@ -1712,13 +1743,15 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     # Le signe du poids dans SCORING_WEIGHTS fait l'inversion:
     #   - Poids négatif → "lower raw value is better" → on applique (1 - score)
     #   - Poids positif → "higher raw value is better" → on garde score tel quel
+    # FIX v2.2.6: NaN pénalisé SELON le signe du poids (pas avant)
     scores = pd.DataFrame(index=df.index)
     
     # Vol: high vol → high score (le poids négatif inversera pour favoriser low vol)
-    scores["vol"] = _rank_percentile(vol, higher_is_better=True, penalize_missing=True)
+    # penalize_missing=False car on pénalise après selon le signe
+    scores["vol"] = _rank_percentile(vol, higher_is_better=True, penalize_missing=False)
     
     # TER: high TER → high score (le poids négatif inversera pour favoriser low TER)
-    scores["ter"] = _rank_percentile(ter, higher_is_better=True, penalize_missing=True)
+    scores["ter"] = _rank_percentile(ter, higher_is_better=True, penalize_missing=False)
     
     # AUM: high AUM → high score (poids positif = on veut high AUM)
     scores["aum"] = _rank_percentile(aum, higher_is_better=True, penalize_missing=False)
@@ -1741,9 +1774,9 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     scores["data_quality"] = _rank_percentile(dqs, higher_is_better=True, penalize_missing=False)
     
     # Score pondéré
-    # Le signe du poids encode la direction souhaitée:
-    #   - Poids < 0: "lower raw value is better" → on fait (1 - score)
-    #   - Poids > 0: "higher raw value is better" → on garde score
+    # FIX v2.2.6: Pénalisation NaN selon le signe du poids
+    #   - Poids < 0: "lower raw value is better" → NaN devient score=1 → (1-1)=0 (pas de bonus)
+    #   - Poids > 0: "higher raw value is better" → NaN devient score=0 → 0*w=0 (pas de bonus)
     total = pd.Series(0.0, index=df.index)
     total_weight = 0.0
     
@@ -1751,13 +1784,19 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
         if component not in scores.columns:
             continue
         
+        s = scores[component].copy()
         w = abs(weight)
+        
         if weight < 0:
             # Lower raw value is better → inverser le score
-            total += (1 - scores[component]) * w
+            # NaN doit devenir 1.0 pour que (1-1)=0 (pas de bonus pour données manquantes)
+            s = s.fillna(1.0)
+            total += (1 - s) * w
         else:
             # Higher raw value is better → garder le score
-            total += scores[component] * w
+            # NaN doit devenir 0.0 pour que 0*w=0 (pas de bonus pour données manquantes)
+            s = s.fillna(0.0)
+            total += s * w
         total_weight += w
     
     if total_weight > 0:
@@ -1944,7 +1983,7 @@ def select_etfs_for_profile(
 def get_etf_preset_summary() -> Dict[str, Any]:
     """Retourne un résumé des presets ETF."""
     return {
-        "version": "2.2.5",
+        "version": "2.2.6",
         "profiles": {
             p: {
                 "presets": PROFILE_PRESETS[p],
