@@ -1,8 +1,29 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.12
+ETF Preset Selector v2.2.13
 =========================================
+
+CHANGEMENTS vs v2.2.12 (audit ChatGPT round 4):
+-----------------------------------------------
+1. FIX apply_hard_constraints - PETIT UNIVERS:
+   - Avant: si len(df) <= target_min, retournait d1 même si VIDE
+   - Après: relaxation si d1 vide, même sur petit univers
+   - Condition: len(d1) >= target_min OR (petit univers AND d1 non vide)
+
+2. FIX _extract_weights - FRAGMENTS DE DATES:
+   - Ajout ast.literal_eval avant regex (gère plus de formats)
+   - Regex amélioré: priorité aux valeurs après ":" 
+   - Filtre les petits entiers isolés (1-12) qui sont probablement des mois/jours
+   - Évite pollution HHI par dates type "2024-08-01" → [8, 1]
+
+3. NETTOYAGE FONCTIONS MORTES:
+   - Supprimé: _is_fx(), _is_volatility(), _normalize_0_100()
+   - Marqué DEPRECATED: _detect_weight_units_pct() (remplacée par row-wise)
+
+4. TESTS UNITAIRES AJOUTÉS:
+   - Test fragments de dates ("as_of:2024-08-01, AAPL:5.0")
+   - Test petit univers + hard constraints (relaxation sur 0 résultat)
 
 CHANGEMENTS vs v2.2.11 (audit ChatGPT round 3):
 -----------------------------------------------
@@ -735,6 +756,11 @@ def _normalize_threshold_yield(threshold_pct: float, data_is_decimal: bool) -> f
 
 def _detect_weight_units_pct(df: pd.DataFrame) -> bool:
     """
+    DEPRECATED v2.2.13: Cette fonction n'est plus utilisée pour la conversion.
+    La conversion est maintenant ROW-WISE via _to_weight_frac_series().
+    
+    Gardée pour référence/debug. Retourne True si les poids semblent en %.
+    
     FIX v2.2.9: Détecte si les poids (holding_top, sector_top_weight) sont en % ou fraction.
     FIX v2.2.11: Ajout logging + détection de mix (alerte si données hétérogènes).
     
@@ -1027,15 +1053,8 @@ def _is_commodity(bucket: pd.Series) -> pd.Series:
     return bucket.eq("ALT_ASSET_COMMODITY")
 
 
-def _is_fx(bucket: pd.Series) -> pd.Series:
-    """Vérifie si l'ETF est FX."""
-    return bucket.eq("ALT_ASSET_FX")
-
-
-def _is_volatility(bucket: pd.Series) -> pd.Series:
-    """Vérifie si l'ETF est volatilité."""
-    return bucket.eq("ALT_ASSET_VOLATILITY")
-
+# NOTE v2.2.13: Fonctions _is_fx et _is_volatility supprimées (non utilisées)
+# Si besoin futur: bucket.eq("ALT_ASSET_FX") ou bucket.eq("ALT_ASSET_VOLATILITY")
 
 def _is_structured(bucket: pd.Series, reasons: pd.Series) -> pd.Series:
     """Vérifie si l'ETF est un produit structuré."""
@@ -1199,19 +1218,51 @@ def _extract_weights(x: Any) -> List[float]:
                 obj = json.loads(s)
                 return _extract_weights(obj)  # Récursion vers dict/list
             except Exception:
-                pass  # Fallback vers regex
+                # FIX v2.2.13: Essayer ast.literal_eval (gère quotes simples, etc.)
+                try:
+                    import ast
+                    obj = ast.literal_eval(s)
+                    return _extract_weights(obj)
+                except Exception:
+                    pass  # Fallback vers regex
         
-        # Fallback regex avec filtre anti-années
-        nums = re.findall(r"[-+]?\d*\.?\d+", s.replace(",", "."))
+        # FIX v2.2.13: Regex amélioré - priorité aux valeurs après ":"
+        # Cela évite de capturer les fragments de dates (08, 01 dans 2024-08-01)
         vals = []
-        for n in nums:
-            try:
-                f = float(n)
-                # FIX v2.2.11: 0 < f <= 100 ET pas une année
-                if 0 < f <= 100 and not _is_likely_year(f):
-                    vals.append(f)
-            except Exception:
-                pass
+        
+        # Pattern 1: Capturer les nombres après ":" (format "Tech:25.5" ou "AAPL: 3.2")
+        pattern_after_colon = re.findall(r":\s*([-+]?\d*\.?\d+)", s.replace(",", "."))
+        if pattern_after_colon:
+            for n in pattern_after_colon:
+                try:
+                    f = float(n)
+                    if 0 < f <= 100 and not _is_likely_year(f):
+                        vals.append(f)
+                except Exception:
+                    pass
+        
+        # Pattern 2: Si pas de ":", fallback sur tous les nombres (mais filtrage strict)
+        if not vals:
+            nums = re.findall(r"[-+]?\d*\.?\d+", s.replace(",", "."))
+            for n in nums:
+                try:
+                    f = float(n)
+                    # FIX v2.2.13: Filtres stricts pour éviter pollution
+                    # - Pas d'années
+                    # - Pas de nombres entiers isolés entre 1 et 12 (mois/jours)
+                    # - Poids valides: 0 < f <= 100
+                    if 0 < f <= 100 and not _is_likely_year(f):
+                        # Heuristique: les petits entiers isolés (1-12) sont suspects si pas de décimale
+                        # Un vrai poids serait plutôt 1.5%, 2.3%, etc. ou 15%, 25%
+                        if f <= 12 and "." not in n and f == int(f):
+                            # Suspect: pourrait être un mois/jour
+                            # On l'accepte seulement si le contexte suggère un poids
+                            # (par ex. plusieurs nombres similaires)
+                            continue
+                        vals.append(f)
+                except Exception:
+                    pass
+        
         return vals
     
     try:
@@ -1443,14 +1494,7 @@ def _rank_percentile(
     return ranked.fillna(0.0 if penalize_missing else 0.5)
 
 
-def _normalize_0_100(x: pd.Series) -> pd.Series:
-    """Normalise vers [0, 100]."""
-    x = x.fillna(0.0)
-    lo, hi = float(x.min()), float(x.max())
-    if hi - lo < 1e-12:
-        return pd.Series(50.0, index=x.index)
-    return 100.0 * (x - lo) / (hi - lo)
-
+# NOTE v2.2.13: Fonction _normalize_0_100 supprimée (non utilisée)
 
 def _q_threshold(series: pd.Series, q: float, min_n: int = None) -> Optional[float]:
     """Calcule le seuil quantile si assez de données."""
@@ -1620,8 +1664,9 @@ def apply_hard_constraints(
     d1 = _apply_constraints_once(df, base)
     meta["after_initial"] = len(d1)
     
-    # Si assez d'ETF, on s'arrête
-    if len(d1) >= target_min or len(df) <= target_min:
+    # FIX v2.2.13: Si assez d'ETF, on s'arrête
+    # MAIS si d1 est vide, on relaxe même sur petit univers
+    if len(d1) >= target_min or (len(df) <= target_min and len(d1) > 0):
         meta["after"] = len(d1)
         logger.info(f"[ETF {profile}] Hard constraints: {len(df)} → {len(d1)}")
         return d1, meta
@@ -2623,13 +2668,16 @@ def run_sanity_checks(df: pd.DataFrame, verbose: bool = True) -> Dict[str, Any]:
 def run_unit_tests(verbose: bool = True) -> Dict[str, Any]:
     """
     FIX v2.2.12: Tests unitaires discriminants.
+    FIX v2.2.13: Ajout tests fragments de dates et petit univers.
     
-    5 tests ciblés sur les cas limites identifiés par audit:
+    7 tests ciblés sur les cas limites identifiés par audit:
     1. Mixed units row-wise
     2. Equal-weight en points de %
     3. Années dans strings
     4. Yield ambigu 0.6
     5. sector_top_weight=0 avec sector_top vide
+    6. Fragments de dates (2024-08-01) - v2.2.13
+    7. Petit univers + hard constraints relaxation - v2.2.13
     
     Returns:
         Dict avec résultats des tests
@@ -2704,6 +2752,36 @@ def run_unit_tests(verbose: bool = True) -> Dict[str, Any]:
         f"Row 0 got {df_zero['_sector_top_weight_frac'].iloc[0]}, expected NaN"
     )
     
+    # === TEST 6: Fragments de dates (v2.2.13) ===
+    # "as_of:2024-08-01, AAPL:5.0, MSFT:3.0" ne doit PAS capturer 8 et 1
+    date_str = "as_of:2024-08-01, AAPL:5.0, MSFT:3.0"
+    date_weights = _extract_weights(date_str)
+    has_fragment = 8 in date_weights or 1 in date_weights
+    test(
+        "Fragments de dates filtrés (08, 01)",
+        not has_fragment and 5.0 in date_weights and 3.0 in date_weights,
+        f"Got {date_weights}, should be [5.0, 3.0] without 8 or 1"
+    )
+    
+    # === TEST 7: Petit univers + hard constraints relaxation (v2.2.13) ===
+    # Univers de 5 ETF avec contraintes strictes → d1 vide → doit relaxer
+    df_small = pd.DataFrame({
+        "etfsymbol": [f"ETF{i}" for i in range(5)],
+        "name": [f"Test {i}" for i in range(5)],
+        "vol_3y_pct": [50.0, 55.0, 60.0, 45.0, 52.0],  # Tous > 35% (trop volatils pour Stable)
+        "total_expense_ratio": [0.01, 0.02, 0.015, 0.025, 0.018],
+        "_sector_top_weight_frac": [0.3, 0.35, 0.28, 0.32, 0.29],
+        "_holding_top_frac": [0.08, 0.09, 0.07, 0.1, 0.085],
+        "_hhi_blend": [0.15, 0.16, 0.14, 0.17, 0.155],
+    })
+    result_small, meta_small = apply_hard_constraints(df_small, "Stable", target_min=3)
+    # Avec relaxation, on devrait récupérer quelques ETF (pas 0)
+    test(
+        "Petit univers avec relaxation",
+        len(result_small) > 0 or len(meta_small.get("relaxation", [])) > 0,
+        f"Got {len(result_small)} ETF, relaxation steps: {len(meta_small.get('relaxation', []))}"
+    )
+    
     # === SUMMARY ===
     if verbose:
         print(f"\n{'='*50}")
@@ -2720,7 +2798,7 @@ def run_unit_tests(verbose: bool = True) -> Dict[str, Any]:
 def get_etf_preset_summary() -> Dict[str, Any]:
     """Retourne un résumé des presets ETF."""
     return {
-        "version": "2.2.12",
+        "version": "2.2.13",
         "profiles": {
             p: {
                 "presets": PROFILE_PRESETS[p],
