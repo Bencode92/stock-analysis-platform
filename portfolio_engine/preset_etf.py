@@ -1,8 +1,34 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.11
+ETF Preset Selector v2.2.12
 =========================================
+
+CHANGEMENTS vs v2.2.11 (audit ChatGPT round 3):
+-----------------------------------------------
+1. CONVERSION ROW-WISE RÉELLE:
+   - _to_weight_frac_series(): conversion ligne par ligne (si >1 → %, sinon fraction)
+   - _to_weight_frac_scalar(): version scalaire
+   - Remplace la détection globale dans _compute_diversification_metrics
+   - _get_sector_top_weight_frac() et _get_holding_top_frac() utilisent row-wise
+
+2. RÈGLE SUM > 1.05 RÉINTRODUITE (sécurisée):
+   - Dans _weights_to_fraction() pour les LISTES (len >= 5)
+   - Avec filtres anti-années, moins de faux positifs
+   - Gère le cas equal-weight [0.2, 0.2, ...] en points de %
+
+3. ZÉRO TRAITÉ COMME NaN:
+   - sector_top_weight=0 avec sector_top="" → NaN (pas bonus diversification)
+   - holding_top=0 → NaN (probablement inconnu)
+   - Évite les bonus artificiels de diversification
+
+4. TESTS UNITAIRES AJOUTÉS:
+   - run_unit_tests() avec 5 tests discriminants
+   - Mixed units row-wise
+   - Equal-weight en points de %
+   - Années dans strings
+   - Yield ambigu
+   - sector_top_weight=0 avec vide
 
 CHANGEMENTS vs v2.2.10 (audit ChatGPT round 2):
 -----------------------------------------------
@@ -763,6 +789,51 @@ def _is_weight_pct_row(value: float) -> bool:
     return float(value) > 1.0
 
 
+def _to_weight_frac_scalar(value: float) -> float:
+    """
+    FIX v2.2.12: Conversion ROW-WISE d'un poids scalaire vers fraction [0, 1].
+    
+    Règle: si value > 1.0, c'est du % → diviser par 100.
+    Sinon c'est déjà une fraction.
+    """
+    if pd.isna(value):
+        return np.nan
+    v = float(value)
+    if v > 1.0:
+        return max(0.0, min(1.0, v / 100.0))
+    return max(0.0, min(1.0, v))
+
+
+def _to_weight_frac_series(s: pd.Series, mask_zero_as_nan: bool = False) -> pd.Series:
+    """
+    FIX v2.2.12: Conversion ROW-WISE d'une série de poids vers fractions [0, 1].
+    
+    Chaque valeur est convertie indépendamment:
+    - Si > 1.0 → c'est du % → diviser par 100
+    - Si <= 1.0 → c'est déjà une fraction → garder tel quel
+    
+    Args:
+        s: Série de poids (peut être mix % et fraction)
+        mask_zero_as_nan: Si True, traite 0 comme NaN (utile si 0 = "inconnu")
+    
+    Returns:
+        Série de fractions [0, 1]
+    """
+    s = _to_numeric(s)
+    
+    # FIX v2.2.12: Traiter 0 comme NaN si demandé
+    if mask_zero_as_nan:
+        s = s.replace(0, np.nan)
+    
+    # Conversion row-wise: si > 1 → %, sinon fraction
+    result = pd.Series(
+        np.where(s > 1.0, s / 100.0, s),
+        index=s.index
+    )
+    
+    return result.clip(0, 1)
+
+
 def _safe_series(df: pd.DataFrame, col: str) -> pd.Series:
     """Récupère une colonne ou retourne NaN."""
     return df[col] if col in df.columns else pd.Series(np.nan, index=df.index)
@@ -887,9 +958,10 @@ def _get_sector_top(df: pd.DataFrame) -> pd.Series:
 def _get_sector_top_weight_frac(df: pd.DataFrame) -> pd.Series:
     """
     FIX v2.2.10: Récupère le poids du top secteur en FRACTION [0, 1].
+    FIX v2.2.12: Conversion ROW-WISE + 0→NaN si sector_top vide.
     
     Utilise _sector_top_weight_frac si disponible (calculé par _compute_diversification_metrics),
-    sinon calcule à la volée avec détection automatique des unités.
+    sinon calcule à la volée avec conversion row-wise.
     """
     # Priorité: colonne pré-calculée
     if "_sector_top_weight_frac" in df.columns:
@@ -897,24 +969,29 @@ def _get_sector_top_weight_frac(df: pd.DataFrame) -> pd.Series:
         if not frac.isna().all():
             return frac.clip(0, 1)
     
-    # Fallback: calcul à la volée
+    # Fallback: calcul à la volée avec ROW-WISE conversion
     secw = _get_sector_top_weight(df)
     if secw.isna().all():
         return secw
     
-    weights_pct = _detect_weight_units_pct(df)
-    if weights_pct:
-        return (secw / 100.0).clip(0, 1)
-    else:
-        return secw.clip(0, 1)
+    # FIX v2.2.12: Masquer 0 comme NaN si sector_top vide
+    sector_top = _get_sector_top(df)
+    secw_masked = secw.mask(
+        (secw == 0) & (sector_top.eq("") | sector_top.isna()),
+        np.nan
+    )
+    
+    # ROW-WISE conversion
+    return _to_weight_frac_series(secw_masked, mask_zero_as_nan=False)
 
 
 def _get_holding_top_frac(df: pd.DataFrame) -> pd.Series:
     """
     FIX v2.2.10: Récupère le poids du top holding en FRACTION [0, 1].
+    FIX v2.2.12: Conversion ROW-WISE.
     
     Utilise _holding_top_frac si disponible (calculé par _compute_diversification_metrics),
-    sinon calcule à la volée avec détection automatique des unités.
+    sinon calcule à la volée avec conversion row-wise.
     """
     # Priorité: colonne pré-calculée
     if "_holding_top_frac" in df.columns:
@@ -922,16 +999,13 @@ def _get_holding_top_frac(df: pd.DataFrame) -> pd.Series:
         if not frac.isna().all():
             return frac.clip(0, 1)
     
-    # Fallback: calcul à la volée
+    # Fallback: calcul à la volée avec ROW-WISE conversion
     htop = _to_numeric(_safe_series(df, "holding_top"))
     if htop.isna().all():
         return htop
     
-    weights_pct = _detect_weight_units_pct(df)
-    if weights_pct:
-        return (htop / 100.0).clip(0, 1)
-    else:
-        return htop.clip(0, 1)
+    # ROW-WISE conversion (traite 0 comme NaN car 0% holding = probablement inconnu)
+    return _to_weight_frac_series(htop, mask_zero_as_nan=True)
 
 
 # =============================================================================
@@ -1154,9 +1228,14 @@ def _weights_to_fraction(weights: List[float]) -> List[float]:
     Convertit les poids en fractions [0, 1].
     
     FIX v2.2.10: Retrait règle sum > 1.2 (faux positifs).
-    Seule règle fiable: max > 1.0 → données en %.
+    FIX v2.2.12: Réintroduction SÉCURISÉE de sum > 1.05 pour LISTES (len >= 5).
     
-    Si max <= 1.0, c'est forcément des fractions (même si sum > 1 avec beaucoup de holdings).
+    Avec les filtres anti-années (_is_likely_year), la règle sum est plus sûre.
+    
+    Règles:
+    1. Si max > 1.0 → données en % → diviser par 100
+    2. Si len >= 5 et sum > 1.05 → probablement % (equal-weight en points de %)
+    3. Sinon → déjà en fraction
     """
     if not weights:
         return []
@@ -1166,13 +1245,21 @@ def _weights_to_fraction(weights: List[float]) -> List[float]:
         return []
     
     mx = max(abs(x) for x in w)
+    sm = sum(abs(x) for x in w)
     
-    # FIX v2.2.10: Seule règle fiable
-    # Si max > 1.0, c'est forcément du % (une fraction ne peut pas dépasser 1)
+    # Règle 1: Si max > 1.0, c'est forcément du %
     if mx > 1.0:
         return [max(0.0, min(1.0, x / 100.0)) for x in w]
     
-    # Sinon: déjà en fraction (même si sum > 1)
+    # FIX v2.2.12: Règle 2 - Equal-weight en points de %
+    # Ex: 10 holdings à 0.2% chacun → [0.2, 0.2, ...] → sum = 2.0
+    # Avec au moins 5 éléments et sum > 1.05, c'est très probablement du %
+    # (Note: avec les filtres anti-années, les faux positifs sont limités)
+    if len(w) >= 5 and sm > 1.05:
+        logger.debug(f"[ETF] Equal-weight detection: {len(w)} items, sum={sm:.2f} → treating as percentage points")
+        return [max(0.0, min(1.0, x / 100.0)) for x in w]
+    
+    # Sinon: déjà en fraction
     return [max(0.0, min(1.0, x)) for x in w]
 
 
@@ -1204,6 +1291,7 @@ def _compute_diversification_metrics(df: pd.DataFrame) -> pd.DataFrame:
     - _sector_top_weight_frac: Poids du top secteur (fraction)
     
     FIX v2.2.10: holding_top_frac dérivé de holdings_top10 en priorité
+    FIX v2.2.12: Conversion ROW-WISE + 0 traité comme NaN si champ associé vide
     """
     out = df.copy()
     
@@ -1244,33 +1332,36 @@ def _compute_diversification_metrics(df: pd.DataFrame) -> pd.DataFrame:
     
     out["_hhi_blend"] = hhi_blend
     
-    # FIX v2.2.10: Holding top (fraction) - priorité holdings_top10
+    # === FIX v2.2.12: Holding top (fraction) - ROW-WISE ===
     holding_top_frac = pd.Series(np.nan, index=df.index)
     
     # Source 1: holdings_top10 (plus fiable car on a le contexte)
     if "holdings_top10" in df.columns:
         holding_top_frac = df["holdings_top10"].apply(_get_max_holding_from_top10)
     
-    # Source 2: fallback sur holding_top si NaN
+    # Source 2: fallback sur holding_top si NaN - CONVERSION ROW-WISE
     missing = holding_top_frac.isna()
     if missing.any() and "holding_top" in df.columns:
         ht = _to_numeric(df["holding_top"])
-        weights_pct = _detect_weight_units_pct(df)
-        if weights_pct:
-            fallback = (ht / 100.0).clip(0, 1)
-        else:
-            fallback = ht.clip(0, 1)
+        # FIX v2.2.12: ROW-WISE conversion (pas de détection globale)
+        fallback = _to_weight_frac_series(ht, mask_zero_as_nan=True)
         holding_top_frac = holding_top_frac.where(~missing, fallback)
     
     out["_holding_top_frac"] = holding_top_frac.clip(0, 1)
     
-    # Sector top weight (fraction)
-    weights_are_pct = _detect_weight_units_pct(df)
+    # === FIX v2.2.12: Sector top weight (fraction) - ROW-WISE + 0→NaN si vide ===
     secw = _get_sector_top_weight(df)
-    if weights_are_pct:
-        out["_sector_top_weight_frac"] = (secw / 100.0).clip(0, 1)
-    else:
-        out["_sector_top_weight_frac"] = secw.clip(0, 1)
+    sector_top = _get_sector_top(df)
+    
+    # FIX v2.2.12: Masquer 0 comme NaN si sector_top est vide
+    # (évite bonus diversification artificiel)
+    secw_masked = secw.mask(
+        (secw == 0) & (sector_top.eq("") | sector_top.isna()),
+        np.nan
+    )
+    
+    # Conversion ROW-WISE
+    out["_sector_top_weight_frac"] = _to_weight_frac_series(secw_masked, mask_zero_as_nan=False)
     
     # Top 10 sum (fraction)
     top10_frac = pd.Series(np.nan, index=df.index)
@@ -2529,6 +2620,99 @@ def run_sanity_checks(df: pd.DataFrame, verbose: bool = True) -> Dict[str, Any]:
     return report
 
 
+def run_unit_tests(verbose: bool = True) -> Dict[str, Any]:
+    """
+    FIX v2.2.12: Tests unitaires discriminants.
+    
+    5 tests ciblés sur les cas limites identifiés par audit:
+    1. Mixed units row-wise
+    2. Equal-weight en points de %
+    3. Années dans strings
+    4. Yield ambigu 0.6
+    5. sector_top_weight=0 avec sector_top vide
+    
+    Returns:
+        Dict avec résultats des tests
+    """
+    results = {"passed": 0, "failed": 0, "tests": []}
+    
+    def test(name: str, condition: bool, detail: str = ""):
+        passed = bool(condition)
+        results["tests"].append({"name": name, "passed": passed, "detail": detail})
+        if passed:
+            results["passed"] += 1
+            if verbose:
+                print(f"✓ {name}")
+        else:
+            results["failed"] += 1
+            if verbose:
+                print(f"✗ {name}: {detail}")
+    
+    # === TEST 1: Mixed units row-wise ===
+    # holding_top = [0.08, 8.0] doit donner [0.08, 0.08]
+    s = pd.Series([0.08, 8.0, 15.0, 0.5])
+    frac = _to_weight_frac_series(s)
+    test(
+        "Mixed units row-wise",
+        abs(frac.iloc[0] - 0.08) < 0.01 and abs(frac.iloc[1] - 0.08) < 0.01 and abs(frac.iloc[2] - 0.15) < 0.01,
+        f"Got {frac.tolist()}, expected [0.08, 0.08, 0.15, 0.5]"
+    )
+    
+    # === TEST 2: Equal-weight en points de % ===
+    # [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2] (sum=2.0) → fractions ~0.002
+    equal_weights = [0.2] * 10
+    fracs = _weights_to_fraction(equal_weights)
+    total = sum(fracs)
+    test(
+        "Equal-weight points de %",
+        total < 0.05,  # Devrait être ~0.02 (pas 2.0)
+        f"sum(fracs)={total:.4f}, expected < 0.05"
+    )
+    
+    # === TEST 3: Années dans strings ===
+    test_str = "AAPL:3.2, 2024, MSFT:2.9, 2023"
+    weights = _extract_weights(test_str)
+    has_year = any(1900 <= w <= 2100 for w in weights)
+    test(
+        "Années filtrées dans _extract_weights",
+        not has_year and len(weights) == 2,
+        f"Got {weights}, should not contain years"
+    )
+    
+    # === TEST 4: Yield ambigu détection ===
+    # Ce test vérifie que la détection fonctionne, pas qu'elle soit parfaite
+    df_yield = pd.DataFrame({"yield_ttm": [0.6, 0.8, 0.5, 0.7]})
+    is_decimal = _detect_yield_is_decimal(df_yield)
+    # Avec ces valeurs (max=0.8, q95~0.78), devrait être détecté comme points de %
+    test(
+        "Yield ambigu 0.6-0.8 détecté comme %",
+        is_decimal == False,  # Devrait être points de %, pas décimal
+        f"_detect_yield_is_decimal returned {is_decimal}, expected False"
+    )
+    
+    # === TEST 5: sector_top_weight=0 avec sector_top vide → NaN ===
+    df_zero = pd.DataFrame({
+        "sector_top_weight": [0.0, 25.0, 0.0],
+        "sector_top": ["", "Technology", "Financials"]
+    })
+    df_zero = _compute_diversification_metrics(df_zero)
+    # Ligne 0: sector_top="" et weight=0 → devrait être NaN
+    # Ligne 2: sector_top="Financials" et weight=0 → peut rester 0 (vraiment 0%)
+    test(
+        "sector_top_weight=0 avec vide → NaN",
+        pd.isna(df_zero["_sector_top_weight_frac"].iloc[0]),
+        f"Row 0 got {df_zero['_sector_top_weight_frac'].iloc[0]}, expected NaN"
+    )
+    
+    # === SUMMARY ===
+    if verbose:
+        print(f"\n{'='*50}")
+        print(f"UNIT TESTS: {results['passed']}/{results['passed']+results['failed']} passed")
+        print(f"{'='*50}")
+    
+    return results
+
+
 # =============================================================================
 # UTILITIES
 # =============================================================================
@@ -2536,7 +2720,7 @@ def run_sanity_checks(df: pd.DataFrame, verbose: bool = True) -> Dict[str, Any]:
 def get_etf_preset_summary() -> Dict[str, Any]:
     """Retourne un résumé des presets ETF."""
     return {
-        "version": "2.2.11",
+        "version": "2.2.12",
         "profiles": {
             p: {
                 "presets": PROFILE_PRESETS[p],
@@ -2620,7 +2804,7 @@ if __name__ == "__main__":
     })
     
     print("\n" + "=" * 70)
-    print("TEST PRESET ETF v2.2.11")
+    print("TEST PRESET ETF v2.2.12")
     print("=" * 70)
     
     for profile in ["Stable", "Modéré", "Agressif"]:
