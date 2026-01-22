@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-22T14:12:57.498548",
+  "timestamp": "2026-01-22T15:48:50.855847",
   "version": "v1.3.1",
   "preset_meta_version": "v4.15.2",
   "summary": {
@@ -7,10 +7,10 @@
     "equities_selected": 50,
     "equities_rejected_notable": 50,
     "etf_initial": 1766,
-    "etf_selected": 0,
+    "etf_selected": 5,
     "etf_rejected_notable": 20,
     "crypto_initial": 335,
-    "crypto_selected": 2,
+    "crypto_selected": 3,
     "crypto_rejected_notable": 10,
     "bonds_initial": 0,
     "bonds_selected": 0,
@@ -1988,7 +1988,63 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
   ],
-  "etf_selected": [],
+  "etf_selected": [
+    {
+      "name": "Avantis International Small Cap Value ETF",
+      "ticker": "AVDV",
+      "category": "etf",
+      "volatility": 15.5,
+      "sector": "Industrial",
+      "radar_tilt": "favored",
+      "selected": true,
+      "ranking": 1,
+      "selection_reason": "Secteur favorisé RADAR (industrials)"
+    },
+    {
+      "name": "iShares S&P Mid-Cap 400 Growth ETF",
+      "ticker": "IJK",
+      "category": "etf",
+      "volatility": 18.5,
+      "sector": "Industrial",
+      "radar_tilt": "favored",
+      "selected": true,
+      "ranking": 2,
+      "selection_reason": "Secteur favorisé RADAR (industrials)"
+    },
+    {
+      "name": "iShares Global Materials ETF",
+      "ticker": "MXI",
+      "category": "etf",
+      "volatility": 17.1,
+      "sector": "Basic Materials",
+      "radar_tilt": "favored",
+      "selected": true,
+      "ranking": 3,
+      "selection_reason": "Secteur favorisé RADAR (materials)"
+    },
+    {
+      "name": "Vanguard U.S. Multifactor ETF",
+      "ticker": "VFMF",
+      "category": "etf",
+      "volatility": 16.9,
+      "sector": "Financial Services",
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 4,
+      "selection_reason": "Score composite favorable"
+    },
+    {
+      "name": "Vanguard FTSE All-World ex-US Small-Cap ETF",
+      "ticker": "VSS",
+      "category": "etf",
+      "volatility": 14.2,
+      "sector": "Industrial",
+      "radar_tilt": "favored",
+      "selected": true,
+      "ranking": 5,
+      "selection_reason": "Secteur favorisé RADAR (industrials)"
+    }
+  ],
   "etf_rejected": [
     {
       "name": "Goldman Sachs Physical Gold ETF",
@@ -2185,12 +2241,22 @@
   "crypto_selected": [
     {
       "name": "Unknown",
+      "ticker": "BTC/USD",
+      "category": "crypto",
+      "volatility": 30.4,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 1,
+      "selection_reason": "Score composite favorable"
+    },
+    {
+      "name": "Unknown",
       "ticker": "PAXG/USD",
       "category": "crypto",
       "volatility": 21.6,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 1,
+      "ranking": 2,
       "selection_reason": "Score composite favorable"
     },
     {
@@ -2200,7 +2266,7 @@
       "volatility": 20.5,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 2,
+      "ranking": 3,
       "selection_reason": "Score composite favorable"
     }
   ],
