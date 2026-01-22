@@ -1,8 +1,72 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.9
+ETF Preset Selector v2.2.11
 =========================================
+
+CHANGEMENTS vs v2.2.10 (audit ChatGPT round 2):
+-----------------------------------------------
+1. DÉTECTION UNITÉS ROW-WISE:
+   - _detect_weight_units_pct() log les mix (certains % d'autres fractions)
+   - Nouvelle fonction _is_weight_pct_row() pour détection par ligne
+   - Alertes si données hétérogènes
+
+2. YIELD DETECTION AMÉLIORÉE:
+   - Meilleure gestion du cas 0.6 = 0.6% (pas 60%)
+   - Si max <= 1.0 mais q95 > 0.20, probablement des points de %
+   - Seuil q95 <= 0.12 pour décimal (au lieu de 0.50)
+
+3. FORCE_*_UNITS OPTIONS:
+   - FORCE_TER_UNITS, FORCE_YIELD_UNITS, FORCE_WEIGHT_UNITS
+   - Permet de bypasser la détection automatique si elle se trompe
+
+4. _extract_weights FILTRE ANTI-ANNÉES:
+   - _is_likely_year() exclut 1900-2100
+   - Permet les poids > 50% (gold physique, single-stock)
+
+5. PROFILE_PRESET_PRIORITY EXPLICITE:
+   - Ordre de priorité des presets documenté et explicite
+   - Plus de dépendance à l'ordre d'insertion dict
+
+6. run_sanity_checks() FONCTION:
+   - Rapport de qualité des données
+   - Détecte mix d'unités, données manquantes, coverage presets
+   - À appeler AVANT select_etfs_for_profile() en production
+
+CHANGEMENTS vs v2.2.9 (audit Claude + ChatGPT):
+-----------------------------------------------
+1. FIX SCORING sector_top_weight:
+   - compute_profile_score() utilise maintenant _sector_top_weight_frac
+   - Évite la double division /100 si déjà en fraction
+
+2. FIX _preset_coeur_global() seuil:
+   - Utilise _sector_top_weight_frac avec seuil 0.35 (fraction)
+   - Au lieu de secw <= 35 (incohérent si données en fraction)
+
+3. FIX _compute_diversification_metrics() holding_top:
+   - Priorité: dériver de holdings_top10 (plus fiable)
+   - Fallback sur holding_top si NaN
+   - Évite le bug 0.8% interprété comme 80%
+
+4. FIX _apply_constraints_once() quantiles:
+   - Utilise vol.notna().sum() >= MIN_N au lieu de len(df)
+   - Plus correct pour les univers avec beaucoup de NaN
+
+5. FIX _extract_weights() regex:
+   - Filtre f <= 50 pour exclure les années (2024, 2023...)
+   - Évite HHI faux avec holdings_top10 contenant des dates
+
+6. FIX _weights_to_fraction() heuristique:
+   - Retrait règle sum > 1.2 (faux positifs avec 5 holdings à 25%)
+   - Seule règle fiable: max > 1.0 → données en %
+
+7. FIX _preset_income_options():
+   - Ajout check ~_is_leveraged_or_inverse()
+   - Un ETF leveraged avec OPTIONS_OVERLAY était accepté
+
+8. FIX _q_ok() min_n:
+   - Utilise MIN_N_FOR_QUANTILE (30) au lieu de 20 hardcodé
+   - Cohérence avec _apply_constraints_once()
 
 CHANGEMENTS vs v2.2.8 (audit ChatGPT):
 --------------------------------------
@@ -163,6 +227,12 @@ class PresetConfig:
 # CONFIGURATION GLOBALE
 # =============================================================================
 
+# FIX v2.2.11: Options pour forcer les unités (si détection automatique échoue)
+# Mettre à "pct" ou "decimal" pour forcer, None pour auto-détection
+FORCE_TER_UNITS: Optional[str] = None      # "pct" | "decimal" | None
+FORCE_YIELD_UNITS: Optional[str] = None    # "pct" | "decimal" | None
+FORCE_WEIGHT_UNITS: Optional[str] = None   # "pct" | "decimal" | None
+
 # Seuils Data Quality
 MIN_DATA_QUALITY_SCORE = 0.60
 MIN_AUM_USD = 100_000_000  # 100M minimum
@@ -295,11 +365,40 @@ PRESET_CONFIGS: Dict[str, PresetConfig] = {
 }
 
 # Presets par profil (dérivé de PRESET_CONFIGS)
-PROFILE_PRESETS: Dict[str, List[str]] = {
-    "Stable": [p.name for p in PRESET_CONFIGS.values() if "Stable" in p.profiles],
-    "Modéré": [p.name for p in PRESET_CONFIGS.values() if "Modéré" in p.profiles],
-    "Agressif": [p.name for p in PRESET_CONFIGS.values() if "Agressif" in p.profiles],
+# FIX v2.2.11: Ordre EXPLICITE de priorité (premier match gagne)
+# Si tu changes l'ordre ici, ça change le matching!
+PROFILE_PRESET_PRIORITY: Dict[str, List[str]] = {
+    "Stable": [
+        "coeur_global",      # Priorité 1: cœur diversifié
+        "min_vol_global",    # Priorité 2: low vol
+        "rendement_etf",     # Priorité 3: dividendes
+        "sector_defensive",  # Priorité 4: secteurs défensifs
+        "or_physique",       # Priorité 5: gold
+    ],
+    "Modéré": [
+        "coeur_global",
+        "multi_factor",
+        "qualite_value",
+        "rendement_etf",
+        "croissance_tech",
+        "emergents",
+        "sector_defensive",
+        "inflation_shield",
+        "or_physique",
+    ],
+    "Agressif": [
+        "multi_factor",
+        "croissance_tech",
+        "smid_quality",
+        "emergents",
+        "income_options",
+        "sector_cyclical",
+        "commodities_broad",
+    ],
 }
+
+# Backward compat: PROFILE_PRESETS pointe vers PRIORITY
+PROFILE_PRESETS: Dict[str, List[str]] = PROFILE_PRESET_PRIORITY
 
 # Hard constraints par profil (SANS géographie)
 PROFILE_CONSTRAINTS: Dict[str, Dict[str, float]] = {
@@ -471,7 +570,16 @@ def _detect_ter_is_decimal(df: pd.DataFrame) -> bool:
     - Si max(TER) > 1 → probablement "points de %" (car TER > 100% impossible)
     - Si q95 < 0.05 ET max < 0.20 → probablement décimal
     - Zone ambiguë → log warning, assume décimal par défaut
+    
+    FIX v2.2.10: Ajout heuristique q25 pour zone grise 0.10-1.0
+    FIX v2.2.11: Option FORCE_TER_UNITS pour bypasser
     """
+    # Option pour forcer
+    if FORCE_TER_UNITS == "pct":
+        return False
+    if FORCE_TER_UNITS == "decimal":
+        return True
+    
     if "total_expense_ratio" not in df.columns:
         return True  # Assume decimal by default
     
@@ -481,6 +589,7 @@ def _detect_ter_is_decimal(df: pd.DataFrame) -> bool:
         return True
     
     q95 = ter.quantile(0.95)
+    q25 = ter.quantile(0.25)
     ter_max = ter.max()
     
     # Règle 1: Si max > 1, c'est forcément des points de % (TER > 100% impossible)
@@ -491,8 +600,15 @@ def _detect_ter_is_decimal(df: pd.DataFrame) -> bool:
     if q95 < 0.05 and ter_max < 0.20:
         return True  # Décimal
     
+    # FIX v2.2.10: Zone grise 0.10-1.0
+    # Si q25 > 0.05 et max < 1.0, probablement % (TER min réaliste ~0.03%)
+    if q25 > 0.05 and ter_max < 1.0:
+        logger.debug(
+            f"[ETF] TER detected as percentage points: q25={q25:.4f}, max={ter_max:.4f}"
+        )
+        return False  # Points de %
+    
     # Zone ambiguë: log warning et assume décimal
-    # (q95 entre 0.05 et max entre 0.20 et 1.0 = univers low-cost en points de %?)
     if q95 < 0.10 and ter_max < 0.50:
         logger.warning(
             f"[ETF] TER units ambiguous: q95={q95:.4f}, max={ter_max:.4f}. "
@@ -508,12 +624,17 @@ def _detect_yield_is_decimal(df: pd.DataFrame) -> bool:
     Détecte si les données yield sont en décimal (0.05 = 5%) ou en % (5.0 = 5%).
     
     FIX v2.2.9: Heuristique robuste avec q95 + max (comme TER).
-    - Si max > 1.0 → forcément en % (yield fraction ne peut pas dépasser 1)
-    - Si q95 <= 0.50 → probablement décimal
-    - Zone ambiguë → log warning, assume décimal
+    FIX v2.2.11: Meilleure gestion du cas ambigu (yields 0.2-1.0).
     
-    Important pour les ETF income/options overlay qui peuvent avoir des yields > 15%.
+    ATTENTION: Si yield_ttm max < 1.0 mais q95 > 0.2, c'est probablement des points de %
+    (yields réalistes en décimal: q95 typiquement < 0.10 soit 10%)
     """
+    # Option pour forcer
+    if FORCE_YIELD_UNITS == "pct":
+        return False
+    if FORCE_YIELD_UNITS == "decimal":
+        return True
+    
     if "yield_ttm" not in df.columns:
         return True
     
@@ -524,21 +645,34 @@ def _detect_yield_is_decimal(df: pd.DataFrame) -> bool:
     
     y_max = float(yld.max())
     q95 = float(yld.quantile(0.95))
+    q50 = float(yld.quantile(0.50))
     
     # Règle 1: Si max > 1.0, c'est forcément du % (yield fraction ne peut pas dépasser 1)
     if y_max > 1.0:
         return False  # Points de %
     
-    # Règle 2: Si q95 <= 0.50, très probablement décimal (50% yield en q95 serait aberrant)
-    if q95 <= 0.50:
+    # Règle 2: Si q95 <= 0.12, très probablement décimal (12% yield en q95 = high yield funds)
+    if q95 <= 0.12:
         return True  # Décimal
     
-    # Zone ambiguë (q95 entre 0.50 et 1.0, max <= 1.0)
-    # Peut être des yields très élevés en décimal (options overlay)
-    logger.warning(
-        f"[ETF] Yield units ambiguous: q95={q95:.4f}, max={y_max:.4f}. "
-        f"Assuming decimal. Override with explicit unit conversion if needed."
-    )
+    # FIX v2.2.11: Zone ambiguë améliorée
+    # Si max <= 1.0 MAIS q95 > 0.20, c'est suspect (20% yield en décimal = très rare)
+    # Probablement des points de % (0.6 = 0.6%)
+    if y_max <= 1.0 and q95 > 0.20:
+        logger.warning(
+            f"[ETF] Yield units LIKELY PERCENTAGE POINTS (not decimal): "
+            f"max={y_max:.4f}, q95={q95:.4f}, q50={q50:.4f}. "
+            f"If wrong, set FORCE_YIELD_UNITS='decimal'."
+        )
+        return False  # Probablement points de %
+    
+    # Zone vraiment ambiguë (q95 entre 0.12 et 0.20, max <= 1.0)
+    if q95 > 0.12:
+        logger.warning(
+            f"[ETF] Yield units ambiguous: max={y_max:.4f}, q95={q95:.4f}. "
+            f"Assuming decimal. Set FORCE_YIELD_UNITS to override."
+        )
+    
     return True  # Assume décimal par défaut
 
 
@@ -576,24 +710,57 @@ def _normalize_threshold_yield(threshold_pct: float, data_is_decimal: bool) -> f
 def _detect_weight_units_pct(df: pd.DataFrame) -> bool:
     """
     FIX v2.2.9: Détecte si les poids (holding_top, sector_top_weight) sont en % ou fraction.
+    FIX v2.2.11: Ajout logging + détection de mix (alerte si données hétérogènes).
     
     Heuristique: Si on voit un poids > 1.0, c'est forcément du % (une fraction ne peut pas dépasser 1).
     
     Returns:
         True si les poids sont en % (ex: 15.0 = 15%), False si en fraction (ex: 0.15 = 15%)
     """
+    # Option pour forcer
+    if FORCE_WEIGHT_UNITS == "pct":
+        return True
+    if FORCE_WEIGHT_UNITS == "decimal":
+        return False
+    
     candidates = []
+    col_stats = {}
+    
     for col in ["sector_top_weight_pct", "sector_top_weight", "holding_top"]:
         if col in df.columns:
             s = _to_numeric(df[col]).dropna()
             if len(s) > 0:
-                candidates.append(float(s.max()))
+                mx = float(s.max())
+                candidates.append(mx)
+                # FIX v2.2.11: Détecter les mix (certains > 1, d'autres < 1)
+                pct_above_1 = (s > 1.0).sum() / len(s) * 100
+                col_stats[col] = {"max": mx, "pct_above_1": pct_above_1}
     
     if not candidates:
         return True  # Assume % by default (plus courant)
     
+    # FIX v2.2.11: Log si mix détecté
+    for col, stats in col_stats.items():
+        if 5 < stats["pct_above_1"] < 95:
+            logger.warning(
+                f"[ETF] MIXED UNITS DETECTED in {col}: {stats['pct_above_1']:.1f}% rows > 1.0. "
+                f"Data may have inconsistent units. Set FORCE_WEIGHT_UNITS to override."
+            )
+    
     # Si max > 1.0, c'est forcément du %
     return max(candidates) > 1.0
+
+
+def _is_weight_pct_row(value: float) -> bool:
+    """
+    FIX v2.2.11: Détection row-wise si un poids est en % ou fraction.
+    Utile pour les cas où les données sont hétérogènes.
+    
+    Règle simple: si value > 1.0, c'est du %.
+    """
+    if pd.isna(value):
+        return True  # Default
+    return float(value) > 1.0
 
 
 def _safe_series(df: pd.DataFrame, col: str) -> pd.Series:
@@ -717,6 +884,56 @@ def _get_sector_top(df: pd.DataFrame) -> pd.Series:
     return pd.Series("", index=df.index)
 
 
+def _get_sector_top_weight_frac(df: pd.DataFrame) -> pd.Series:
+    """
+    FIX v2.2.10: Récupère le poids du top secteur en FRACTION [0, 1].
+    
+    Utilise _sector_top_weight_frac si disponible (calculé par _compute_diversification_metrics),
+    sinon calcule à la volée avec détection automatique des unités.
+    """
+    # Priorité: colonne pré-calculée
+    if "_sector_top_weight_frac" in df.columns:
+        frac = _to_numeric(df["_sector_top_weight_frac"])
+        if not frac.isna().all():
+            return frac.clip(0, 1)
+    
+    # Fallback: calcul à la volée
+    secw = _get_sector_top_weight(df)
+    if secw.isna().all():
+        return secw
+    
+    weights_pct = _detect_weight_units_pct(df)
+    if weights_pct:
+        return (secw / 100.0).clip(0, 1)
+    else:
+        return secw.clip(0, 1)
+
+
+def _get_holding_top_frac(df: pd.DataFrame) -> pd.Series:
+    """
+    FIX v2.2.10: Récupère le poids du top holding en FRACTION [0, 1].
+    
+    Utilise _holding_top_frac si disponible (calculé par _compute_diversification_metrics),
+    sinon calcule à la volée avec détection automatique des unités.
+    """
+    # Priorité: colonne pré-calculée
+    if "_holding_top_frac" in df.columns:
+        frac = _to_numeric(df["_holding_top_frac"])
+        if not frac.isna().all():
+            return frac.clip(0, 1)
+    
+    # Fallback: calcul à la volée
+    htop = _to_numeric(_safe_series(df, "holding_top"))
+    if htop.isna().all():
+        return htop
+    
+    weights_pct = _detect_weight_units_pct(df)
+    if weights_pct:
+        return (htop / 100.0).clip(0, 1)
+    else:
+        return htop.clip(0, 1)
+
+
 # =============================================================================
 # HELPERS - BUCKET GATES
 # =============================================================================
@@ -766,7 +983,7 @@ def _is_options_overlay(reasons: pd.Series) -> pd.Series:
 
 
 _LEVERAGED_PATTERN = re.compile(
-    r"(?:\b[2-9]x\b|\b-?[1-9]x\b|ultra|leveraged|inverse|short\b|\blong\b.*[2-9]x)",
+    r"(?:\b[2-9]x\b|\b-?[1-9]x\b|ultra|leveraged|inverse|short\b)",
     re.IGNORECASE
 )
 
@@ -778,6 +995,8 @@ def _is_leveraged_or_inverse(df: pd.DataFrame) -> pd.Series:
     1. Colonne leverage != 0
     2. Reasons: NON_STANDARD_LEVERAGED, NON_STANDARD_INVERSE
     3. Pattern dans le nom (TQQQ, SQQQ, 2x, 3x, Ultra, etc.)
+    
+    FIX v2.2.10: Pattern resserré (retiré "long" trop large)
     """
     # Source 1: Colonne leverage
     leverage = _to_numeric(_safe_series(df, "leverage")).fillna(0)
@@ -840,8 +1059,20 @@ def _equity_like_gate(df: pd.DataFrame, allow_data_missing: bool = True) -> pd.S
 # HELPERS - HHI & DIVERSIFICATION
 # =============================================================================
 
+def _is_likely_year(value: float) -> bool:
+    """
+    FIX v2.2.11: Détecte si une valeur numérique est probablement une année.
+    """
+    return 1900 <= value <= 2100
+
+
 def _extract_weights(x: Any) -> List[float]:
-    """Extrait les poids depuis différents formats (dict, list, string)."""
+    """
+    Extrait les poids depuis différents formats (dict, list, string).
+    
+    FIX v2.2.10: Filtre f <= 50 pour exclure les années (2024, 2023...)
+    FIX v2.2.11: Filtre "anti-année" explicite (1900-2100) + permet > 50% pour gold/single-stock
+    """
     if x is None or (isinstance(x, float) and np.isnan(x)):
         return []
     
@@ -850,7 +1081,10 @@ def _extract_weights(x: Any) -> List[float]:
         vals = []
         for v in x.values():
             try:
-                vals.append(float(v))
+                f = float(v)
+                # FIX v2.2.11: Exclure les années, mais permettre > 50%
+                if 0 < f <= 100 and not _is_likely_year(f):
+                    vals.append(f)
             except Exception:
                 pass
         return vals
@@ -863,13 +1097,17 @@ def _extract_weights(x: Any) -> List[float]:
                 for k in ("weight", "w", "pct", "percentage", "value"):
                     if k in it:
                         try:
-                            vals.append(float(it[k]))
+                            f = float(it[k])
+                            if 0 < f <= 100 and not _is_likely_year(f):
+                                vals.append(f)
                             break
                         except Exception:
                             continue
             else:
                 try:
-                    vals.append(float(it))
+                    f = float(it)
+                    if 0 < f <= 100 and not _is_likely_year(f):
+                        vals.append(f)
                 except Exception:
                     continue
         return vals
@@ -889,22 +1127,24 @@ def _extract_weights(x: Any) -> List[float]:
             except Exception:
                 pass  # Fallback vers regex
         
-        # Fallback regex avec filtre anti-tickers
+        # Fallback regex avec filtre anti-années
         nums = re.findall(r"[-+]?\d*\.?\d+", s.replace(",", "."))
         vals = []
         for n in nums:
             try:
                 f = float(n)
-                # FIX v2.2.6: Filtre les valeurs aberrantes (tickers numériques)
-                # Les poids valides sont typiquement 0-100
-                if 0 < f <= 100:
+                # FIX v2.2.11: 0 < f <= 100 ET pas une année
+                if 0 < f <= 100 and not _is_likely_year(f):
                     vals.append(f)
             except Exception:
                 pass
         return vals
     
     try:
-        return [float(x)]
+        f = float(x)
+        if 0 < f <= 100 and not _is_likely_year(f):
+            return [f]
+        return []
     except Exception:
         return []
 
@@ -913,12 +1153,10 @@ def _weights_to_fraction(weights: List[float]) -> List[float]:
     """
     Convertit les poids en fractions [0, 1].
     
-    FIX v2.2.8: Heuristique améliorée avec sum + max:
-    - Si max > 1.0 → forcément en % (une fraction ne peut pas dépasser 1)
-    - Si sum > 1.2 → probablement en % (top10 en fraction devrait sommer ~1)
-    - Sinon → fraction
+    FIX v2.2.10: Retrait règle sum > 1.2 (faux positifs).
+    Seule règle fiable: max > 1.0 → données en %.
     
-    Gère le cas des ETF très diversifiés (top holdings < 1% chacun).
+    Si max <= 1.0, c'est forcément des fractions (même si sum > 1 avec beaucoup de holdings).
     """
     if not weights:
         return []
@@ -928,18 +1166,13 @@ def _weights_to_fraction(weights: List[float]) -> List[float]:
         return []
     
     mx = max(abs(x) for x in w)
-    sm = sum(abs(x) for x in w)
     
-    # Règle 1: Si max > 1.0, c'est forcément du % (une fraction ne peut pas dépasser 1)
+    # FIX v2.2.10: Seule règle fiable
+    # Si max > 1.0, c'est forcément du % (une fraction ne peut pas dépasser 1)
     if mx > 1.0:
         return [max(0.0, min(1.0, x / 100.0)) for x in w]
     
-    # Règle 2: Si sum > 1.2, c'est probablement du %
-    # (top10 en fraction devrait sommer entre 0.5 et 1.0 typiquement)
-    if sm > 1.2:
-        return [max(0.0, min(1.0, x / 100.0)) for x in w]
-    
-    # Sinon: déjà en fraction
+    # Sinon: déjà en fraction (même si sum > 1)
     return [max(0.0, min(1.0, x)) for x in w]
 
 
@@ -951,6 +1184,15 @@ def _compute_hhi(weights: List[float]) -> Optional[float]:
     return float(sum(x * x for x in w))
 
 
+def _get_max_holding_from_top10(x: Any) -> float:
+    """
+    FIX v2.2.10: Extrait le max holding depuis holdings_top10.
+    Plus fiable que holding_top car on a le contexte des autres holdings.
+    """
+    w = _weights_to_fraction(_extract_weights(x))
+    return max(w) if w else np.nan
+
+
 def _compute_diversification_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
     Ajoute les métriques de diversification:
@@ -959,6 +1201,9 @@ def _compute_diversification_metrics(df: pd.DataFrame) -> pd.DataFrame:
     - _hhi_blend: Moyenne pondérée (40% sector, 60% holdings)
     - _holding_top_frac: Poids du top holding (fraction)
     - _top10_frac: Somme des poids top 10
+    - _sector_top_weight_frac: Poids du top secteur (fraction)
+    
+    FIX v2.2.10: holding_top_frac dérivé de holdings_top10 en priorité
     """
     out = df.copy()
     
@@ -999,19 +1244,28 @@ def _compute_diversification_metrics(df: pd.DataFrame) -> pd.DataFrame:
     
     out["_hhi_blend"] = hhi_blend
     
-    # FIX v2.2.9: Détection unifiée % vs fraction pour holding_top et sector_top_weight
+    # FIX v2.2.10: Holding top (fraction) - priorité holdings_top10
+    holding_top_frac = pd.Series(np.nan, index=df.index)
+    
+    # Source 1: holdings_top10 (plus fiable car on a le contexte)
+    if "holdings_top10" in df.columns:
+        holding_top_frac = df["holdings_top10"].apply(_get_max_holding_from_top10)
+    
+    # Source 2: fallback sur holding_top si NaN
+    missing = holding_top_frac.isna()
+    if missing.any() and "holding_top" in df.columns:
+        ht = _to_numeric(df["holding_top"])
+        weights_pct = _detect_weight_units_pct(df)
+        if weights_pct:
+            fallback = (ht / 100.0).clip(0, 1)
+        else:
+            fallback = ht.clip(0, 1)
+        holding_top_frac = holding_top_frac.where(~missing, fallback)
+    
+    out["_holding_top_frac"] = holding_top_frac.clip(0, 1)
+    
+    # Sector top weight (fraction)
     weights_are_pct = _detect_weight_units_pct(df)
-    
-    # Holding top (fraction)
-    holding_top = _to_numeric(_safe_series(df, "holding_top"))
-    if weights_are_pct:
-        # Données en % (ex: 15.0 = 15%) → diviser par 100
-        out["_holding_top_frac"] = (holding_top / 100.0).clip(0, 1)
-    else:
-        # Données en fraction (ex: 0.15 = 15%) → garder tel quel
-        out["_holding_top_frac"] = holding_top.clip(0, 1)
-    
-    # Sector top weight (fraction) - pour utilisation ultérieure
     secw = _get_sector_top_weight(df)
     if weights_are_pct:
         out["_sector_top_weight_frac"] = (secw / 100.0).clip(0, 1)
@@ -1038,20 +1292,38 @@ def _compute_momentum(df: pd.DataFrame) -> pd.Series:
     """
     Calcule le momentum composite (4 horizons).
     Pondérations: daily 5%, 1m 25%, 3m 35%, YTD 15%, 1Y 20%
-    """
-    daily = _to_numeric(_safe_series(df, "daily_change_pct")).fillna(0.0)
-    m1 = _to_numeric(_safe_series(df, "perf_1m_pct")).fillna(0.0)
-    m3 = _to_numeric(_safe_series(df, "perf_3m_pct")).fillna(0.0)
-    ytd = _to_numeric(_safe_series(df, "ytd_return_pct")).fillna(0.0)
-    y1 = _to_numeric(_safe_series(df, "one_year_return_pct")).fillna(0.0)
     
-    return (
-        0.05 * daily +
-        0.25 * m1 +
-        0.35 * m3 +
-        0.15 * ytd +
-        0.20 * y1
+    FIX v2.2.10: Retourne NaN si > 2 composantes manquantes
+    (évite de favoriser les ETF sans données vs ceux avec perf négative)
+    """
+    daily = _to_numeric(_safe_series(df, "daily_change_pct"))
+    m1 = _to_numeric(_safe_series(df, "perf_1m_pct"))
+    m3 = _to_numeric(_safe_series(df, "perf_3m_pct"))
+    ytd = _to_numeric(_safe_series(df, "ytd_return_pct"))
+    y1 = _to_numeric(_safe_series(df, "one_year_return_pct"))
+    
+    # Compter les NaN par ligne
+    n_missing = (
+        daily.isna().astype(int) +
+        m1.isna().astype(int) +
+        m3.isna().astype(int) +
+        ytd.isna().astype(int) +
+        y1.isna().astype(int)
     )
+    
+    # Calcul avec fillna(0) pour le calcul
+    result = (
+        0.05 * daily.fillna(0.0) +
+        0.25 * m1.fillna(0.0) +
+        0.35 * m3.fillna(0.0) +
+        0.15 * ytd.fillna(0.0) +
+        0.20 * y1.fillna(0.0)
+    )
+    
+    # FIX v2.2.10: Si > 2 composantes NaN, retourner NaN
+    result = result.where(n_missing <= 2, np.nan)
+    
+    return result
 
 
 # =============================================================================
@@ -1089,19 +1361,26 @@ def _normalize_0_100(x: pd.Series) -> pd.Series:
     return 100.0 * (x - lo) / (hi - lo)
 
 
-def _q_threshold(series: pd.Series, q: float, min_n: int = 20) -> Optional[float]:
+def _q_threshold(series: pd.Series, q: float, min_n: int = None) -> Optional[float]:
     """Calcule le seuil quantile si assez de données."""
+    if min_n is None:
+        min_n = MIN_N_FOR_QUANTILE  # FIX v2.2.10: Utiliser la constante globale
     if series.notna().sum() < min_n:
         return None
     return float(series.quantile(q))
 
 
-def _q_ok(series: pd.Series, q: float, op: str, min_n: int = 20) -> pd.Series:
+def _q_ok(series: pd.Series, q: float, op: str, min_n: int = None) -> pd.Series:
     """
     Vérifie si les valeurs respectent le quantile.
     - op: "<=" ou ">="
     - Si pas assez de données, retourne True pour tous
+    
+    FIX v2.2.10: min_n utilise MIN_N_FOR_QUANTILE par défaut
     """
+    if min_n is None:
+        min_n = MIN_N_FOR_QUANTILE
+    
     thr = _q_threshold(series, q, min_n)
     if thr is None:
         return pd.Series(True, index=series.index)
@@ -1171,48 +1450,39 @@ def _apply_constraints_once(df: pd.DataFrame, constraints: Dict[str, float]) -> 
     """
     Applique les contraintes hard une fois.
     
-    FIX v2.2.9: Les contraintes quantiles ne s'appliquent que si l'univers
-    est assez grand (>= MIN_N_FOR_QUANTILE) pour éviter le sur-filtrage.
+    FIX v2.2.10: Les contraintes quantiles utilisent notna().sum() >= MIN_N
+    au lieu de len(df) >= MIN_N (plus correct pour univers avec NaN).
     """
     if df.empty:
         return df
     
     mask = pd.Series(True, index=df.index)
-    n = len(df)
     
-    # Volatilité max (quantile) - seulement si univers assez grand
+    # Volatilité max (quantile) - seulement si assez de données non-NaN
     vol = _get_vol(df)
     vol_q = constraints.get("vol_max_quantile", 1.0)
-    if vol.notna().any() and vol_q < 1.0 and n >= MIN_N_FOR_QUANTILE:
+    n_vol = vol.notna().sum()  # FIX v2.2.10
+    if n_vol >= MIN_N_FOR_QUANTILE and vol_q < 1.0:
         thr = float(vol.quantile(vol_q))
         mask &= (vol <= thr) | vol.isna()
     
-    # TER max (quantile) - seulement si univers assez grand
+    # TER max (quantile) - seulement si assez de données non-NaN
     ter = _to_numeric(_safe_series(df, "total_expense_ratio"))
     ter_q = constraints.get("ter_max_quantile", 1.0)
-    if ter.notna().any() and ter_q < 1.0 and n >= MIN_N_FOR_QUANTILE:
+    n_ter = ter.notna().sum()  # FIX v2.2.10
+    if n_ter >= MIN_N_FOR_QUANTILE and ter_q < 1.0:
         thr = float(ter.quantile(ter_q))
         mask &= (ter <= thr) | ter.isna()
     
     # Concentration secteur (top sector weight fraction)
-    # FIX v2.2.9: Utilise _sector_top_weight_frac (calculé avec détection unités)
-    if "_sector_top_weight_frac" in df.columns:
-        secw_frac = _to_numeric(df["_sector_top_weight_frac"])
-    else:
-        # Fallback (si diversification_metrics pas encore calculé)
-        secw = _get_sector_top_weight(df)
-        weights_are_pct = _detect_weight_units_pct(df)
-        if weights_are_pct:
-            secw_frac = (secw / 100.0).clip(0, 1)
-        else:
-            secw_frac = secw.clip(0, 1)
-    
+    # FIX v2.2.10: Utilise _get_sector_top_weight_frac() helper
+    secw_frac = _get_sector_top_weight_frac(df)
     sec_max = float(constraints.get("sector_concentration_max", 1.0))
     if sec_max < 1.0:
         mask &= (secw_frac <= sec_max) | secw_frac.isna()
     
     # Holding top (fraction)
-    htop = _to_numeric(_safe_series(df, "_holding_top_frac"))
+    htop = _get_holding_top_frac(df)
     htop_max = float(constraints.get("holding_top_max", 1.0))
     if htop_max < 1.0:
         mask &= (htop <= htop_max) | htop.isna()
@@ -1335,9 +1605,9 @@ def _check_preset_rules(df: pd.DataFrame, preset: str) -> pd.Series:
         vol = _get_vol(df)
         mask &= (vol <= rules["vol_max"]) | vol.isna()
     
-    # Holding top max
-    if "holding_top_max" in rules and "_holding_top_frac" in df.columns:
-        htop = _to_numeric(df["_holding_top_frac"])
+    # Holding top max - FIX v2.2.10: utilise _get_holding_top_frac()
+    if "holding_top_max" in rules:
+        htop = _get_holding_top_frac(df)
         mask &= (htop <= rules["holding_top_max"]) | htop.isna()
     
     # Sector trust min
@@ -1361,6 +1631,8 @@ def _preset_coeur_global(df: pd.DataFrame) -> pd.Series:
     """
     Preset: Cœur Global
     World core UCITS, TER bas, AUM élevé, diversifié.
+    
+    FIX v2.2.10: Utilise _get_sector_top_weight_frac() avec seuil 0.35
     """
     mask = _equity_like_gate(df, allow_data_missing=True)
     
@@ -1373,11 +1645,13 @@ def _preset_coeur_global(df: pd.DataFrame) -> pd.Series:
     
     ter = _to_numeric(_safe_series(df, "total_expense_ratio"))
     aum = _to_numeric(_safe_series(df, "aum_usd"))
-    secw = _get_sector_top_weight(df)
+    
+    # FIX v2.2.10: Utilise fraction (0.35) au lieu de % (35)
+    secw_frac = _get_sector_top_weight_frac(df)
     
     mask &= _q_ok(ter, 0.40, "<=")
     mask &= _q_ok(aum, 0.60, ">=")
-    mask &= (secw <= 35) | secw.isna()
+    mask &= (secw_frac <= 0.35) | secw_frac.isna()
     
     return mask & _check_preset_rules(df, "coeur_global")
 
@@ -1450,8 +1724,7 @@ def _preset_income_options(df: pd.DataFrame) -> pd.Series:
     Preset: Income Options
     Covered call, buywrite (JEPI, JEPQ, YieldMax, etc.).
     
-    FIX v2.2.6: Suppression du filtre yield >= 5.0 hard-coded.
-    Le yield est déjà vérifié par _check_preset_rules avec normalisation des unités.
+    FIX v2.2.10: Ajout check ~_is_leveraged_or_inverse()
     """
     bucket = _get_bucket(df)
     reasons = _get_reasons(df)
@@ -1462,10 +1735,10 @@ def _preset_income_options(df: pd.DataFrame) -> pd.Series:
     # Pas structured/non-standard
     not_bad = ~_is_structured(bucket, reasons) & ~_is_non_standard(bucket, reasons)
     
-    # FIX v2.2.6: yield vérifié par _check_preset_rules (avec normalisation)
-    # au lieu de high_yield = (yld >= 5.0) qui cassait si yield en décimal
+    # FIX v2.2.10: Pas leveraged/inverse
+    not_leveraged = ~_is_leveraged_or_inverse(df)
     
-    return is_options & not_bad & _check_preset_rules(df, "income_options")
+    return is_options & not_bad & not_leveraged & _check_preset_rules(df, "income_options")
 
 
 def _preset_qualite_value(df: pd.DataFrame) -> pd.Series:
@@ -1835,6 +2108,8 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     Scoring à 8 composantes avec pondérations signées:
     - Poids positif = higher is better
     - Poids négatif = lower is better
+    
+    FIX v2.2.10: Utilise _sector_top_weight_frac et _holding_top_frac
     """
     if df.empty:
         return df
@@ -1848,10 +2123,13 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     aum = _to_numeric(_safe_series(df, "aum_usd"))
     yld = _to_numeric(_safe_series(df, "yield_ttm"))
     momentum_raw = _compute_momentum(df)
-    secw = _get_sector_top_weight(df) / 100.0  # En fraction
+    
+    # FIX v2.2.10: Utilise les colonnes pré-calculées (fraction)
+    secw_frac = _get_sector_top_weight_frac(df)
+    htop_frac = _get_holding_top_frac(df)
+    
     hhi_sector = _to_numeric(_safe_series(df, "_hhi_sector"))
     hhi_holdings = _to_numeric(_safe_series(df, "_hhi_holdings"))
-    htop = _to_numeric(_safe_series(df, "_holding_top_frac"))
     dqs = _to_numeric(_safe_series(df, "data_quality_score"))
     
     # Scores par composante
@@ -1878,12 +2156,12 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     # Momentum: high momentum → high score
     scores["momentum"] = _rank_percentile(momentum_raw, higher_is_better=True, penalize_missing=None)
     
-    # Diversif sector: high concentration → high score (poids négatif inversera)
-    diversif_sector = secw.combine_first(hhi_sector)
+    # FIX v2.2.10: Diversif sector: utilise secw_frac (déjà en fraction)
+    diversif_sector = secw_frac.combine_first(hhi_sector)
     scores["diversif_sector"] = _rank_percentile(diversif_sector, higher_is_better=True, penalize_missing=None)
     
-    # Diversif holdings: high concentration → high score (poids négatif inversera)
-    diversif_holdings = htop.combine_first(hhi_holdings)
+    # FIX v2.2.10: Diversif holdings: utilise htop_frac (déjà en fraction)
+    diversif_holdings = htop_frac.combine_first(hhi_holdings)
     scores["diversif_holdings"] = _rank_percentile(diversif_holdings, higher_is_better=True, penalize_missing=None)
     
     # Data quality: high quality → high score
@@ -1967,6 +2245,8 @@ def deduplicate_underlying(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, An
     Priorité: underlying_ticker → isin → symbol
     
     Score de dédup = 0.4 * ter_rank + 0.4 * score_rank + 0.2 * AUM_rank
+    
+    FIX v2.2.10: Check défensif si _profile_score absent
     """
     meta = {"dedup_key": "hybrid", "before": len(df), "after": len(df), "removed": 0}
     
@@ -1990,7 +2270,12 @@ def deduplicate_underlying(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, An
     # Score de déduplication
     ter = _to_numeric(_safe_series(d, "total_expense_ratio"))
     aum = _to_numeric(_safe_series(d, "aum_usd"))
-    score = _to_numeric(_safe_series(d, "_profile_score"))
+    
+    # FIX v2.2.10: Check défensif si _profile_score absent
+    if "_profile_score" in d.columns:
+        score = _to_numeric(d["_profile_score"])
+    else:
+        score = pd.Series(50.0, index=d.index)  # Score neutre par défaut
     
     ter_rank = _rank_percentile(ter, higher_is_better=False, penalize_missing=True)
     aum_rank = _rank_percentile(aum, higher_is_better=True, penalize_missing=False)
@@ -2129,13 +2414,129 @@ def select_etfs_for_profile(
 
 
 # =============================================================================
+# SANITY CHECKS (FIX v2.2.11)
+# =============================================================================
+
+def run_sanity_checks(df: pd.DataFrame, verbose: bool = True) -> Dict[str, Any]:
+    """
+    FIX v2.2.11: Rapport de qualité des données avant sélection.
+    
+    Détecte:
+    - Mix d'unités (% vs fraction)
+    - Données manquantes critiques
+    - Distributions suspectes
+    - Buckets/presets coverage
+    
+    Args:
+        df: DataFrame des ETF
+        verbose: Si True, affiche les alertes
+    
+    Returns:
+        Dict avec les alertes et stats
+    """
+    report: Dict[str, Any] = {
+        "n_total": len(df),
+        "alerts": [],
+        "unit_detection": {},
+        "coverage": {},
+        "missing": {},
+    }
+    
+    def alert(level: str, msg: str):
+        report["alerts"].append({"level": level, "message": msg})
+        if verbose:
+            icon = "🔴" if level == "ERROR" else "🟡" if level == "WARNING" else "ℹ️"
+            logger.warning(f"{icon} [{level}] {msg}")
+    
+    # === 1. Détection mix d'unités ===
+    for col in ["sector_top_weight", "holding_top", "yield_ttm", "total_expense_ratio"]:
+        if col not in df.columns:
+            continue
+        s = _to_numeric(df[col]).dropna()
+        if len(s) == 0:
+            continue
+        
+        n_above_1 = (s > 1.0).sum()
+        n_below_1 = (s <= 1.0).sum()
+        pct_above = n_above_1 / len(s) * 100
+        
+        report["unit_detection"][col] = {
+            "n_total": len(s),
+            "n_above_1": n_above_1,
+            "n_below_1": n_below_1,
+            "pct_above_1": pct_above,
+            "max": float(s.max()),
+            "min": float(s.min()),
+            "q50": float(s.quantile(0.50)),
+            "q95": float(s.quantile(0.95)),
+        }
+        
+        # Alerte si mix significatif
+        if 5 < pct_above < 95:
+            alert("ERROR", f"MIXED UNITS in '{col}': {pct_above:.1f}% > 1.0, {100-pct_above:.1f}% <= 1.0")
+    
+    # === 2. Yield suspect (0.2-1.0 = probablement %) ===
+    if "yield_ttm" in df.columns:
+        yld = _to_numeric(df["yield_ttm"]).dropna()
+        if len(yld) > 0:
+            y_max = float(yld.max())
+            q95 = float(yld.quantile(0.95))
+            if y_max <= 1.0 and q95 > 0.15:
+                alert("WARNING", f"Yield looks like PERCENTAGE POINTS (max={y_max:.3f}, q95={q95:.3f}). Check FORCE_YIELD_UNITS.")
+    
+    # === 3. Données manquantes critiques ===
+    critical_cols = ["aum_usd", "total_expense_ratio", "vol_3y_pct", "vol_pct"]
+    for col in critical_cols:
+        if col in df.columns:
+            pct_missing = df[col].isna().sum() / len(df) * 100
+            report["missing"][col] = pct_missing
+            if pct_missing > 30:
+                alert("WARNING", f"High missing rate for '{col}': {pct_missing:.1f}%")
+    
+    # === 4. Leveraged/Inverse non filtrés ===
+    n_leveraged = _is_leveraged_or_inverse(df).sum()
+    report["coverage"]["n_leveraged"] = n_leveraged
+    if n_leveraged > 0:
+        alert("INFO", f"{n_leveraged} leveraged/inverse ETF detected (will be filtered)")
+    
+    # === 5. Presets coverage ===
+    df_test = _compute_diversification_metrics(df.copy())
+    for profile in ["Stable", "Modéré", "Agressif"]:
+        presets = PROFILE_PRESETS.get(profile, [])
+        matched = pd.Series(False, index=df_test.index)
+        for p in presets:
+            fn = PRESET_FUNCTIONS.get(p)
+            if fn:
+                matched |= fn(df_test)
+        
+        pct_matched = matched.sum() / len(df_test) * 100 if len(df_test) > 0 else 0
+        report["coverage"][f"preset_match_{profile}"] = pct_matched
+        
+        if pct_matched < 10:
+            alert("WARNING", f"Low preset coverage for {profile}: only {pct_matched:.1f}% of ETF match any preset")
+    
+    # === 6. Summary ===
+    n_errors = sum(1 for a in report["alerts"] if a["level"] == "ERROR")
+    n_warnings = sum(1 for a in report["alerts"] if a["level"] == "WARNING")
+    
+    if verbose:
+        print(f"\n{'='*60}")
+        print(f"SANITY CHECK SUMMARY: {n_errors} errors, {n_warnings} warnings")
+        print(f"{'='*60}")
+    
+    report["summary"] = {"n_errors": n_errors, "n_warnings": n_warnings}
+    
+    return report
+
+
+# =============================================================================
 # UTILITIES
 # =============================================================================
 
 def get_etf_preset_summary() -> Dict[str, Any]:
     """Retourne un résumé des presets ETF."""
     return {
-        "version": "2.2.9",
+        "version": "2.2.11",
         "profiles": {
             p: {
                 "presets": PROFILE_PRESETS[p],
@@ -2219,7 +2620,7 @@ if __name__ == "__main__":
     })
     
     print("\n" + "=" * 70)
-    print("TEST PRESET ETF v2.2.0")
+    print("TEST PRESET ETF v2.2.11")
     print("=" * 70)
     
     for profile in ["Stable", "Modéré", "Agressif"]:
