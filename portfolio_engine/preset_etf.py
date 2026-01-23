@@ -933,7 +933,7 @@ def _get_sector_bucket(df: pd.DataFrame) -> pd.Series:
         unique_vals = set(series.unique())
         
         # Si c'est un asset bucket (mal nommé), ignorer et utiliser sector_top
-        if unique_vals &amp; ASSET_BUCKET_VALUES:
+        if unique_vals & ASSET_BUCKET_VALUES:
             pass  # Fallback sur sector_top
         else:
             # C'est un vrai secteur bucket
