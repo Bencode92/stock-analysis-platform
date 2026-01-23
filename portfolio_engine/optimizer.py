@@ -810,42 +810,45 @@ def select_etfs_via_preset_engine(
         meta["fallback_reason"] = "empty_input"
         return [], meta
     
-    # === Convertir List[Asset] → DataFrame ===
+# === Convertir List[Asset] → DataFrame ===
+    # FIX v6.31: Utiliser source_data pour préserver les métriques numériques
     records = []
-    asset_map = {}  # Pour reconversion
+    asset_map = {}
     
     for asset in etf_assets:
         sym = asset.ticker or asset.id
+        sd = asset.source_data if asset.source_data else {}
+        
         rec = {
             "etfsymbol": sym,
             "symbol": sym,
             "name": asset.name,
-            "isin": getattr(asset, "isin", ""),
+            "isin": sd.get("isin", ""),
             "category": asset.category,
             "sector": asset.sector,
             "region": asset.region,
             "score": asset.score,
             "vol_annual": asset.vol_annual,
-            "vol_3y_pct": asset.vol_annual,
-            "vol_pct": asset.vol_annual,
-            "aum_usd": getattr(asset, "aum_usd", None),
-            "total_expense_ratio": getattr(asset, "ter", None),
-            "yield_ttm": getattr(asset, "yield_ttm", None),
-            "data_quality_score": getattr(asset, "data_quality_score", 0.8),
-            "leverage": 0,
-            "perf_1m_pct": getattr(asset, "perf_1m", None),
-            "perf_3m_pct": getattr(asset, "perf_3m", None),
-            "ytd_return_pct": getattr(asset, "ytd_return", None),
-            "one_year_return_pct": getattr(asset, "perf_1y", None),
-            "daily_change_pct": getattr(asset, "daily_change", None),
-            "sector_top": getattr(asset, "sector_top", ""),
-            "sector_top_weight": getattr(asset, "sector_top_weight", None),
-            "holding_top": getattr(asset, "holding_top", None),
-            "holdings_top10": getattr(asset, "holdings_top10", None),
-            "bucket": getattr(asset, "bucket", "STANDARD"),
-            "reasons": getattr(asset, "reasons", ""),
-            "fund_type": "ETF",
-            "objective": getattr(asset, "objective", ""),
+            "vol_3y_pct": sd.get("vol_3y_pct", asset.vol_annual),
+            "vol_pct": sd.get("vol_pct", asset.vol_annual),
+            "aum_usd": sd.get("aum_usd"),
+            "total_expense_ratio": sd.get("total_expense_ratio"),
+            "yield_ttm": sd.get("yield_ttm"),
+            "data_quality_score": sd.get("data_quality_score", 0.8),
+            "leverage": sd.get("leverage", 0),
+            "perf_1m_pct": sd.get("perf_1m_pct"),
+            "perf_3m_pct": sd.get("perf_3m_pct"),
+            "ytd_return_pct": sd.get("ytd_return_pct"),
+            "one_year_return_pct": sd.get("one_year_return_pct"),
+            "daily_change_pct": sd.get("daily_change_pct"),
+            "sector_top": sd.get("sector_top", ""),
+            "sector_top_weight": sd.get("sector_top_weight"),
+            "holding_top": sd.get("holding_top"),
+            "holdings_top10": sd.get("holdings_top10"),
+            "bucket": sd.get("bucket", "STANDARD"),
+            "reasons": sd.get("reasons", ""),
+            "fund_type": sd.get("fund_type", "ETF"),
+            "objective": sd.get("objective", ""),
         }
         records.append(rec)
         asset_map[sym] = asset
