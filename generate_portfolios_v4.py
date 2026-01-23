@@ -1764,16 +1764,20 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             # --- ETF actions ---
             if not etf_df_master.empty:
                 etf_df = etf_df_master.copy()
-                etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=50)
+                etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=100)
                 profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
                 logger.info(f"   [{profile}] ETF sélectionnés: {len(profile_etf_data)}/{len(etf_df_master)}")
+                
                 # v5.1.3: Post-check scoring (détecte scores FLAT)
                 if "_profile_score" in etf_selected_df.columns and not etf_selected_df.empty:
                     scores = etf_selected_df["_profile_score"]
-                    if scores.nunique() <= 1:
+                    # === VÉRIFICATION DU FIX v2.2.14 ===
+                    print(f"[ETF {profile}] Min: {scores.min()}, Max: {scores.max()}, Std: {scores.std():.2f}")
+                    if scores.nunique() <= 1 or scores.std() < 1:
                         logger.error(f"   [{profile}] ⚠️ ETF SCORE FLAT: {scores.iloc[0] if len(scores) else 'N/A'}")
                     else:
                         logger.info(f"   [{profile}] ✅ ETF scores: [{scores.min():.1f}, {scores.max():.1f}]")
+                
                 # v5.1.2 FIX: Forcer category="etf" pour éviter reclassification dans build_raw_universe
                 for etf in profile_etf_data:
                     etf["_force_category"] = "etf"
@@ -2259,7 +2263,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
             # v5.1.3 FIX: Utilise etf_df_master_euus.copy() pour préserver types numériques
             if not etf_df_master_euus.empty:
                 etf_df = etf_df_master_euus.copy()
-                etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=50)
+                etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=100)
                 profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
                 logger.info(f"   [{profile}] EU/US ETF sélectionnés: {len(profile_etf_data)}/{len(etf_df_master_euus)}")
                 # v5.1.3: Post-check scoring (détecte scores FLAT)
