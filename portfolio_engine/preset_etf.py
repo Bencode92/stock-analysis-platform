@@ -906,7 +906,7 @@ def _get_asset_bucket(df: pd.DataFrame) -> pd.Series:
             series = df[col].fillna("").astype(str).str.upper()
             # Vérifier que c'est bien un asset bucket (pas un secteur)
             unique_vals = set(series.unique())
-            if unique_vals &amp; ASSET_BUCKET_VALUES:  # Au moins une valeur connue
+            if unique_vals & ASSET_BUCKET_VALUES:  # Au moins une valeur connue
                 return series
     
     return pd.Series("", index=df.index)
