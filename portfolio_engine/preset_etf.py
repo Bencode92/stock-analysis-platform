@@ -2243,7 +2243,7 @@ def assign_best_preset(df: pd.DataFrame, profile: str) -> pd.Series:
 
 
 # =============================================================================
-# SCORING (Couche 3)
+# SCORING (Couche 3) - VERSION DEBUG v2.2.15
 # =============================================================================
 
 def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
@@ -2256,11 +2256,52 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     
     FIX v2.2.10: Utilise _sector_top_weight_frac et _holding_top_frac
     FIX v2.2.14: Détection cas dégénéré (rank() → scores uniformes)
+    FIX v2.2.15: DEBUG - Diagnostic complet entrée DataFrame
     """
     if df.empty:
         return df
     
     df = df.copy()
+    
+    # =========================================================================
+    # DEBUG COMPLET: État du DataFrame d'entrée - À SUPPRIMER APRÈS DIAGNOSTIC
+    # =========================================================================
+    logger.warning(f"[DEBUG {profile}] === ENTRÉE compute_profile_score ===")
+    logger.warning(f"[DEBUG {profile}] Shape: {df.shape}")
+    logger.warning(f"[DEBUG {profile}] Colonnes: {df.columns.tolist()}")
+    
+    # Vérifier les colonnes critiques pour le scoring
+    critical_cols = [
+        "total_expense_ratio", "aum_usd", "yield_ttm",
+        "perf_1m_pct", "perf_3m_pct", "vol_pct", "data_quality_score"
+    ]
+    for col in critical_cols:
+        if col in df.columns:
+            n_valid = df[col].notna().sum()
+            sample = df[col].dropna().head(3).tolist() if n_valid > 0 else []
+            dtype = df[col].dtype
+            logger.warning(
+                f"[DEBUG {profile}] {col}: {n_valid}/{len(df)} non-NaN, "
+                f"dtype={dtype}, sample={sample}"
+            )
+        else:
+            logger.warning(f"[DEBUG {profile}] {col}: COLONNE ABSENTE!")
+    
+    # Vérifier aussi les colonnes de diversification
+    diversif_cols = ["sector_top_weight", "_sector_top_weight_frac", 
+                     "holdings_top10", "_holding_top_frac",
+                     "_hhi_sector", "_hhi_holdings"]
+    for col in diversif_cols:
+        if col in df.columns:
+            n_valid = df[col].notna().sum()
+            sample = df[col].dropna().head(3).tolist() if n_valid > 0 else []
+            logger.warning(f"[DEBUG {profile}] {col}: {n_valid}/{len(df)} non-NaN, sample={sample}")
+        else:
+            logger.warning(f"[DEBUG {profile}] {col}: absent")
+    # =========================================================================
+    # FIN DEBUG ENTRÉE
+    # =========================================================================
+    
     weights = SCORING_WEIGHTS.get(profile, SCORING_WEIGHTS["Modéré"])
     
     # Métriques brutes
@@ -2278,6 +2319,20 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     hhi_holdings = _to_numeric(_safe_series(df, "_hhi_holdings"))
     dqs = _to_numeric(_safe_series(df, "data_quality_score"))
     
+    # =========================================================================
+    # DEBUG: État des métriques brutes après extraction
+    # =========================================================================
+    logger.warning(f"[DEBUG {profile}] === MÉTRIQUES BRUTES ===")
+    logger.warning(f"[DEBUG {profile}] vol: {vol.notna().sum()}/{len(vol)} valid")
+    logger.warning(f"[DEBUG {profile}] ter: {ter.notna().sum()}/{len(ter)} valid")
+    logger.warning(f"[DEBUG {profile}] aum: {aum.notna().sum()}/{len(aum)} valid")
+    logger.warning(f"[DEBUG {profile}] yld: {yld.notna().sum()}/{len(yld)} valid")
+    logger.warning(f"[DEBUG {profile}] momentum: {momentum_raw.notna().sum()}/{len(momentum_raw)} valid")
+    logger.warning(f"[DEBUG {profile}] secw_frac: {secw_frac.notna().sum()}/{len(secw_frac)} valid")
+    logger.warning(f"[DEBUG {profile}] htop_frac: {htop_frac.notna().sum()}/{len(htop_frac)} valid")
+    logger.warning(f"[DEBUG {profile}] dqs: {dqs.notna().sum()}/{len(dqs)} valid")
+    # =========================================================================
+    
     # Scores par composante
     # CONVENTION: TOUS les scores sont calculés avec higher_is_better=True
     # Le signe du poids dans SCORING_WEIGHTS fait l'inversion:
@@ -2287,7 +2342,6 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     scores = pd.DataFrame(index=df.index)
     
     # Vol: high vol → high score (le poids négatif inversera pour favoriser low vol)
-    # penalize_missing=None pour garder NaN jusqu'au fill selon signe
     scores["vol"] = _rank_percentile(vol, higher_is_better=True, penalize_missing=None)
     
     # TER: high TER → high score (le poids négatif inversera pour favoriser low TER)
@@ -2315,9 +2369,6 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     
     # Score pondéré
     # FIX v2.2.7: Pénalisation NaN selon le signe du poids
-    # Maintenant les NaN arrivent vraiment ici car penalize_missing=None
-    #   - Poids < 0: "lower raw value is better" → NaN devient score=1 → (1-1)=0 (pas de bonus)
-    #   - Poids > 0: "higher raw value is better" → NaN devient score=0 → 0*w=0 (pas de bonus)
     total = pd.Series(0.0, index=df.index)
     total_weight = 0.0
     
@@ -2330,12 +2381,10 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
         
         if weight < 0:
             # Lower raw value is better → inverser le score
-            # NaN doit devenir 1.0 pour que (1-1)=0 (pas de bonus pour données manquantes)
             s = s.fillna(1.0)
             total += (1 - s) * w
         else:
             # Higher raw value is better → garder le score
-            # NaN doit devenir 0.0 pour que 0*w=0 (pas de bonus pour données manquantes)
             s = s.fillna(0.0)
             total += s * w
         total_weight += w
@@ -2343,15 +2392,19 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     if total_weight > 0:
         total /= total_weight
     
-# === DEBUG: Diagnostic des scores composants ===
-    # À SUPPRIMER après investigation
+    # =========================================================================
+    # DEBUG: Diagnostic des scores composants - À SUPPRIMER APRÈS INVESTIGATION
+    # =========================================================================
+    logger.warning(f"[DEBUG {profile}] === SCORES COMPOSANTS ===")
     for component in scores.columns:
         s = scores[component]
         n_nan = s.isna().sum()
         s_std = s.std() if s.notna().sum() > 1 else 0
+        s_min = s.min() if s.notna().sum() > 0 else float('nan')
+        s_max = s.max() if s.notna().sum() > 0 else float('nan')
         logger.warning(
             f"[DEBUG {profile}] {component}: n_nan={n_nan}/{len(s)}, "
-            f"std={s_std:.4f}, range=[{s.min():.2f}, {s.max():.2f}]"
+            f"std={s_std:.4f}, range=[{s_min:.2f}, {s_max:.2f}]"
         )
     
     # Diagnostic du total avant normalisation
@@ -2359,9 +2412,9 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
         f"[DEBUG {profile}] TOTAL: n_valid={len(total.dropna())}, "
         f"std={total.std():.6f}, range=[{total.min():.4f}, {total.max():.4f}]"
     )
+    # =========================================================================
 
     # FIX v2.2.14: Détection cas dégénéré (rank() → scores uniformes ~50.1)
-    # Si univers trop petit (<5) ou variance quasi-nulle → fallback min-max
     n_valid = len(total.dropna())
     total_std = total.std() if n_valid > 1 else 0.0
 
