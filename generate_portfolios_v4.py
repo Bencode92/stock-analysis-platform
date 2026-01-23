@@ -2226,7 +2226,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     logger.info(f"   Pool equities EU/US après filtre: {len(eq_filtered)} (sélection PAR PROFIL)")
     
     # 5. Construire universe_others (ETF + Bonds, pas de crypto pour EU/US)
-    all_funds_data = etf_data + bonds_data
+    all_funds_data = (etf_data or []) + (bonds_data or [])
     universe_others = build_scored_universe(
         stocks_data=None,
         etf_data=all_funds_data,
