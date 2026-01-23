@@ -2148,6 +2148,8 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
             bonds_data = df_b.to_dict("records")
         except Exception as e:
             logger.warning(f"Impossible de charger Bonds: {e}")
+    # v5.1.3: Créer etf_data (list de dicts) pour compatibilité
+    etf_data = etf_df_master_euus.to_dict('records') if not etf_df_master_euus.empty else []       
     
     # 2. Extraire equities et filtrer EU/US
     eq_rows = []
@@ -2226,6 +2228,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     logger.info(f"   Pool equities EU/US après filtre: {len(eq_filtered)} (sélection PAR PROFIL)")
     
     # 5. Construire universe_others (ETF + Bonds, pas de crypto pour EU/US)
+    etf_data = etf_df_master_euus.to_dict('records') if not etf_df_master_euus.empty else []
     all_funds_data = (etf_data or []) + (bonds_data or [])
     universe_others = build_scored_universe(
         stocks_data=None,
