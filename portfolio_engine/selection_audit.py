@@ -7,6 +7,7 @@ Generates a detailed JSON report explaining:
 - Which assets were rejected and why (filters, thresholds)
 - Filter statistics and thresholds used
 
+v1.4.0 - ADD: ETF scoring diagnostic for flat score debugging
 v1.3.1 - FIX: Capture composite_score and factor_scores for ETF/bond/crypto
 v1.3.0 - Aligned with preset_meta v4.15.2 (vol_missing, yield-trap filters, missing data penalty)
 v1.2.0 - Fixed ETF sector extraction from sector_top field
@@ -320,11 +321,45 @@ class AssetAuditEntry:
         return {k: v for k, v in asdict(self).items() if v is not None}
 
 
+# ============= v1.4.0: ETF SCORING DEBUG =============
+
+@dataclass
+class ETFScoringComponentStats:
+    """Stats for a single scoring component."""
+    name: str
+    n_valid: int = 0
+    n_nan: int = 0
+    pct_valid: float = 0.0
+    min_val: Optional[float] = None
+    max_val: Optional[float] = None
+    mean_val: Optional[float] = None
+    std_val: Optional[float] = None
+    is_constant: bool = False
+    
+    def to_dict(self) -> Dict:
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+@dataclass
+class ETFScoringDebug:
+    """v1.4.0: Debug info for ETF scoring diagnostic."""
+    profile: str
+    stage_counts: Dict[str, int] = field(default_factory=dict)
+    scoring_components: Dict[str, Dict] = field(default_factory=dict)
+    score_stats: Dict[str, float] = field(default_factory=dict)
+    is_flat: bool = False
+    scoring_method: str = "rank_percentile"
+    issues: List[str] = field(default_factory=list)
+    
+    def to_dict(self) -> Dict:
+        return asdict(self)
+
+
 @dataclass 
 class SelectionAuditReport:
     """Complete audit report for asset selection."""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "v1.3.1"
+    version: str = "v1.4.0"
     preset_meta_version: str = "v4.15.2"  # v1.3.0
     
     # Summary counts
@@ -338,6 +373,9 @@ class SelectionAuditReport:
     
     # v1.3.0: Hard filter breakdown by profile
     hard_filter_stats: Dict[str, Dict] = field(default_factory=dict)
+    
+    # v1.4.0: ETF scoring debug
+    etf_scoring_debug: Dict[str, Dict] = field(default_factory=dict)
     
     # Assets by category
     equities_selected: List[Dict] = field(default_factory=list)
@@ -366,6 +404,7 @@ class SelectionAuditor:
     """
     Tracks and records asset selection decisions throughout the pipeline.
     
+    v1.4.0: ADD: ETF scoring diagnostic for flat score debugging.
     v1.3.1: FIX: Capture composite_score and factor_scores for ETF/bond/crypto.
     v1.3.0: Aligned with preset_meta v4.15.2 - tracks vol_missing, yield-trap filters.
     v1.2.0: Fixed ETF sector extraction from sector_top field.
@@ -458,6 +497,128 @@ class SelectionAuditor:
             f"📊 Audit: {filter_name} on {category}: "
             f"{before_count} → {after_count} (-{rejected_count}, {stats.rejection_rate_pct}%)"
         )
+    
+    # ============= v1.4.0: ETF SCORING DIAGNOSTIC =============
+    
+    def track_etf_scoring_diagnostic(
+        self,
+        profile: str,
+        stage_counts: Dict[str, int],
+        scoring_components: Dict[str, Dict],
+        score_stats: Dict[str, float],
+        is_flat: bool,
+        scoring_method: str,
+    ):
+        """
+        v1.4.0: Track ETF scoring diagnostic for flat score debugging.
+        
+        Args:
+            profile: "Stable", "Modéré", or "Agressif"
+            stage_counts: {"initial": 1000, "qc": 200, "hard": 50, "presets": 5, "scoring": 5}
+            scoring_components: {
+                "vol": {"n_valid": 45, "n_nan": 5, "pct_valid": 90.0, "std": 12.3, "is_constant": False},
+                "ter": {"n_valid": 50, "n_nan": 0, "pct_valid": 100.0, "std": 0.0, "is_constant": True},
+                ...
+            }
+            score_stats: {"mean": 50.1, "std": 0.0, "min": 50.1, "max": 50.1}
+            is_flat: True if score has no variance
+            scoring_method: "rank_percentile" | "fallback" | "random_fallback"
+        """
+        issues = self._identify_etf_scoring_issues(scoring_components, stage_counts, is_flat)
+        
+        self.report.etf_scoring_debug[profile] = {
+            "stage_counts": stage_counts,
+            "scoring_components": scoring_components,
+            "score_stats": score_stats,
+            "is_flat": is_flat,
+            "scoring_method": scoring_method,
+            "issues": issues,
+            "root_cause": self._determine_root_cause(issues),
+        }
+        
+        # Log issues
+        if issues:
+            logger.warning(
+                f"⚠️ [ETF {profile}] Scoring issues detected:\n"
+                f"  Issues: {issues}\n"
+                f"  Stage counts: {stage_counts}\n"
+                f"  Score stats: {score_stats}"
+            )
+        else:
+            logger.info(f"✅ [ETF {profile}] Scoring OK: method={scoring_method}, stats={score_stats}")
+    
+    def _identify_etf_scoring_issues(
+        self, 
+        components: Dict[str, Dict], 
+        stages: Dict[str, int],
+        is_flat: bool,
+    ) -> List[str]:
+        """v1.4.0: Identify root causes of scoring issues."""
+        issues = []
+        
+        # Check if universe too small at each stage
+        if stages.get("presets", 0) == 0:
+            issues.append("PRESETS_VIDE: 0 ETF après filtrage presets")
+        elif stages.get("presets", 0) < 5:
+            issues.append(f"UNIVERS_TROP_PETIT: seulement {stages.get('presets', 0)} ETF après presets")
+        
+        if stages.get("hard", 0) == 0:
+            issues.append("HARD_CONSTRAINTS_TROP_STRICT: 0 ETF après hard constraints")
+        
+        if stages.get("qc", 0) == 0:
+            issues.append("QC_TROP_STRICT: 0 ETF après data quality check")
+        
+        # Check component issues
+        n_broken = 0
+        for name, stats in components.items():
+            pct_valid = stats.get("pct_valid", 0)
+            std_val = stats.get("std", 0)
+            
+            if pct_valid == 0:
+                issues.append(f"COLONNE_100%_NAN: {name}")
+                n_broken += 1
+            elif pct_valid < 20:
+                issues.append(f"COLONNE_SPARSE: {name} ({pct_valid:.1f}% valide)")
+            
+            if std_val is not None and std_val < 1e-6 and pct_valid > 0:
+                issues.append(f"VARIANCE_NULLE: {name} (toutes valeurs identiques)")
+                n_broken += 1
+        
+        # Check if too many components broken
+        total_components = len(components)
+        if total_components > 0 and n_broken >= total_components - 1:
+            issues.append(f"COMPOSANTES_CASSEES: {n_broken}/{total_components} composantes inutilisables")
+        
+        # Check if score is flat
+        if is_flat and "UNIVERS_TROP_PETIT" not in str(issues):
+            issues.append("SCORE_PLAT: variance=0 après calcul (toutes valeurs identiques)")
+        
+        return issues
+    
+    def _determine_root_cause(self, issues: List[str]) -> str:
+        """v1.4.0: Determine the most likely root cause."""
+        if not issues:
+            return "OK"
+        
+        # Priority order for root causes
+        if any("PRESETS_VIDE" in i for i in issues):
+            return "PRESETS_TROP_RESTRICTIFS"
+        if any("UNIVERS_TROP_PETIT" in i for i in issues):
+            return "FILTRAGE_EXCESSIF"
+        if any("HARD_CONSTRAINTS_TROP_STRICT" in i for i in issues):
+            return "HARD_CONSTRAINTS_TROP_STRICT"
+        if any("COLONNE_100%_NAN" in i for i in issues):
+            return "COLONNES_MANQUANTES_CSV"
+        if any("COMPOSANTES_CASSEES" in i for i in issues):
+            return "DONNEES_CORROMPUES"
+        if any("VARIANCE_NULLE" in i for i in issues):
+            return "DONNEES_UNIFORMES"
+        if any("SCORE_PLAT" in i for i in issues):
+            return "SCORING_DEGENERE"
+        
+        return "MULTIPLE_ISSUES"
+    
+    # ============= END v1.4.0 =============
     
     def track_profile_hard_filters(
         self,
@@ -763,6 +924,11 @@ class SelectionAuditor:
             "bonds_initial": self._stage_counts.get("bond_initial", 0),
             "bonds_selected": len(self.report.bonds_selected),
             "total_filters_applied": len(self.report.filters_applied),
+            # v1.4.0: Add ETF scoring issues count
+            "etf_scoring_issues": sum(
+                len(d.get("issues", [])) 
+                for d in self.report.etf_scoring_debug.values()
+            ),
         }
         
         return self.report
@@ -1156,11 +1322,13 @@ def create_selection_audit(
     bonds_selected: List[Dict] = None,
     market_context: Dict = None,
     profile_selections: Dict[str, Dict] = None,  # v1.3.0
+    etf_scoring_debug: Dict[str, Dict] = None,  # v1.4.0
     output_path: str = "data/selection_audit.json",
 ) -> str:
     """
     Convenience function to create audit report in one call.
     
+    v1.4.0: Added etf_scoring_debug for flat score debugging.
     v1.3.0: Added profile_selections for per-profile tracking.
     
     Returns:
@@ -1207,6 +1375,19 @@ def create_selection_audit(
     
     if etf_data:
         auditor.track_initial_universe(etf_data, "etf")
+        
+        # v1.4.0: Track ETF scoring debug
+        if etf_scoring_debug:
+            for profile, debug_data in etf_scoring_debug.items():
+                auditor.track_etf_scoring_diagnostic(
+                    profile=profile,
+                    stage_counts=debug_data.get("stage_counts", {}),
+                    scoring_components=debug_data.get("scoring_components", {}),
+                    score_stats=debug_data.get("score_stats", {}),
+                    is_flat=debug_data.get("is_flat", False),
+                    scoring_method=debug_data.get("scoring_method", "unknown"),
+                )
+        
         auditor.record_final_selection(
             selected=etf_selected or [],
             all_candidates=etf_data,
