@@ -9,7 +9,7 @@ CHANGEMENTS v6.28 (4 FIXES CRITIQUES):
    - ETF/Actions: vol_3y_pct > vol_pct > vol (legacy)
    + Helper _as_pct() pour gérer décimal vs pourcentage
 2. FIX B: MAX_SINGLE_BOND_WEIGHT["Stable"] aligné à 15% (cohérence bounds SLSQP)
-3. FIX C: Preset "rendement_etf" → "rendement" (harmonisé avec preset_etf.py)
+3. FIX C: Preset "rendement_etf" confirmé (aligné avec preset_etf.py v2.2.13)
 4. FIX D: Pool crypto élargi 3 → 8/10 selon profil (core/satellite fonctionnel)
 
 IMPACT: Covariance structurée, buckets/presets, fallback Stable corrigés.
@@ -195,6 +195,19 @@ except ImportError:
     
     def deduplicate_by_corporate_group(stocks, scores=None, max_per_group=1):
         return stocks, {}
+# === v6.30: Import preset_etf pour sélection ETF avancée ===
+try:
+    from portfolio_engine.preset_etf import (
+        select_etfs_for_profile,
+        get_etf_preset_summary,
+        PRESET_CONFIGS as ETF_PRESET_CONFIGS,
+        PROFILE_PRESETS as ETF_PROFILE_PRESETS,
+    )
+    HAS_PRESET_ETF = True
+except ImportError:
+    HAS_PRESET_ETF = False
+    select_etfs_for_profile = None
+    logger.warning("[optimizer] preset_etf.py non disponible, fallback sur deduplicate_etfs()")       
 
 # Phase 1: Import risk_buckets pour classification 6 buckets
 try:
@@ -758,6 +771,132 @@ def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: fl
         return max(min_val, min(v, max_val))
     except (TypeError, ValueError):
         return default
+ # =============================================================================
+# v6.30: WRAPPER PRESET_ETF POUR INTÉGRATION AVEC OPTIMIZER
+# =============================================================================
+
+def select_etfs_via_preset_engine(
+    etf_assets: List[Asset],
+    profile_name: str,
+    top_n: int = 30,
+    strict_metrics: bool = False,
+) -> Tuple[List[Asset], Dict[str, Any]]:
+    """
+    Wrapper pour appeler preset_etf.select_etfs_for_profile() depuis l'optimizer.
+    
+    Convertit List[Asset] → DataFrame → select_etfs_for_profile() → List[Asset]
+    
+    Args:
+        etf_assets: Liste d'objets Asset (category == "ETF")
+        profile_name: "Stable", "Modéré", ou "Agressif"
+        top_n: Nombre max d'ETF à retourner
+        strict_metrics: Si True, exige métriques non-NaN selon profil
+    
+    Returns:
+        (selected_assets, meta_dict)
+    """
+    import pandas as pd
+    
+    meta: Dict[str, Any] = {"source": "preset_etf", "fallback": False}
+    
+    if not HAS_PRESET_ETF or select_etfs_for_profile is None:
+        meta["fallback"] = True
+        meta["fallback_reason"] = "preset_etf module not available"
+        logger.warning("[preset_etf] Module non disponible, retour sans filtrage")
+        return etf_assets[:top_n], meta
+    
+    if not etf_assets:
+        meta["fallback"] = True
+        meta["fallback_reason"] = "empty_input"
+        return [], meta
+    
+    # === Convertir List[Asset] → DataFrame ===
+    records = []
+    asset_map = {}  # Pour reconversion
+    
+    for asset in etf_assets:
+        sym = asset.ticker or asset.id
+        rec = {
+            "etfsymbol": sym,
+            "symbol": sym,
+            "name": asset.name,
+            "isin": getattr(asset, "isin", ""),
+            "category": asset.category,
+            "sector": asset.sector,
+            "region": asset.region,
+            "score": asset.score,
+            "vol_annual": asset.vol_annual,
+            "vol_3y_pct": asset.vol_annual,
+            "vol_pct": asset.vol_annual,
+            "aum_usd": getattr(asset, "aum_usd", None),
+            "total_expense_ratio": getattr(asset, "ter", None),
+            "yield_ttm": getattr(asset, "yield_ttm", None),
+            "data_quality_score": getattr(asset, "data_quality_score", 0.8),
+            "leverage": 0,
+            "perf_1m_pct": getattr(asset, "perf_1m", None),
+            "perf_3m_pct": getattr(asset, "perf_3m", None),
+            "ytd_return_pct": getattr(asset, "ytd_return", None),
+            "one_year_return_pct": getattr(asset, "perf_1y", None),
+            "daily_change_pct": getattr(asset, "daily_change", None),
+            "sector_top": getattr(asset, "sector_top", ""),
+            "sector_top_weight": getattr(asset, "sector_top_weight", None),
+            "holding_top": getattr(asset, "holding_top", None),
+            "holdings_top10": getattr(asset, "holdings_top10", None),
+            "bucket": getattr(asset, "bucket", "STANDARD"),
+            "reasons": getattr(asset, "reasons", ""),
+            "fund_type": "ETF",
+            "objective": getattr(asset, "objective", ""),
+        }
+        records.append(rec)
+        asset_map[sym] = asset
+    
+    df = pd.DataFrame(records)
+    
+    # === Appeler preset_etf ===
+    try:
+        df_selected, etf_meta = select_etfs_for_profile(
+            df,
+            profile=profile_name,
+            top_n=top_n,
+            return_meta=True,
+            strict_metrics=strict_metrics,
+        )
+        meta.update(etf_meta)
+    except Exception as e:
+        logger.error(f"[preset_etf] Erreur: {e}")
+        meta["fallback"] = True
+        meta["fallback_reason"] = f"exception: {str(e)}"
+        return etf_assets[:top_n], meta
+    
+    if df_selected.empty:
+        meta["fallback"] = True
+        meta["fallback_reason"] = "empty_result"
+        logger.warning(f"[preset_etf] Résultat vide pour {profile_name}, fallback")
+        return etf_assets[:top_n], meta
+    
+    # === Reconvertir DataFrame → List[Asset] avec scores enrichis ===
+    selected_assets = []
+    for _, row in df_selected.iterrows():
+        sym = row.get("etfsymbol") or row.get("symbol")
+        original_asset = asset_map.get(sym)
+        
+        if original_asset:
+            # Mettre à jour le score avec _profile_score de preset_etf
+            if "_profile_score" in row and pd.notna(row["_profile_score"]):
+                original_asset.score = float(row["_profile_score"])
+            
+            # Enrichir avec les métadonnées preset_etf
+            if "_matched_preset" in row:
+                original_asset.preset = row["_matched_preset"]
+            if "_role" in row:
+                original_asset.role_str = row["_role"]
+            
+            selected_assets.append(original_asset)
+    
+    meta["selected_count"] = len(selected_assets)
+    logger.info(f"[preset_etf] {profile_name}: {len(etf_assets)} → {len(selected_assets)} ETF")
+    
+    return selected_assets, meta      
 
 
 # ============= BUCKET/PRESET ASSIGNMENT =============
@@ -1438,7 +1577,8 @@ class PortfolioOptimizer:
         deduplicate_corporate: bool = True,
         use_bucket_constraints: bool = True,
         buffett_hard_filter: bool = True,
-        buffett_min_score: float = BUFFETT_HARD_FILTER_MIN
+        buffett_min_score: float = BUFFETT_HARD_FILTER_MIN,
+        use_preset_etf: bool = True,  # v6.30: Utiliser preset_etf pour sélection ETF
     ):
         self.score_scale = score_scale
         self.deduplicate_etfs_enabled = deduplicate_etfs
@@ -1446,6 +1586,7 @@ class PortfolioOptimizer:
         self.use_bucket_constraints = use_bucket_constraints
         self.buffett_hard_filter_enabled = buffett_hard_filter
         self.buffett_min_score = buffett_min_score
+        self.use_preset_etf = use_preset_etf if HAS_PRESET_ETF else False  # v6.30
         self.covariance_estimator = HybridCovarianceEstimator()
     
     def select_candidates(
@@ -1471,10 +1612,29 @@ class PortfolioOptimizer:
                 f"(removed {universe_before - len(universe)} non-EU/US)"
             )
         
-        # === ÉTAPE 1: Déduplication ETF ===
-        if self.deduplicate_etfs_enabled:
+        # === ÉTAPE 1: Sélection ETF via preset_etf.py (v6.30) ===
+        if self.use_preset_etf and HAS_PRESET_ETF:
+            etf_assets = [a for a in universe if a.category == "ETF"]
+            non_etf_assets = [a for a in universe if a.category != "ETF"]
+            
+            selected_etfs, etf_meta = select_etfs_via_preset_engine(
+                etf_assets,
+                profile_name=profile.name,
+                top_n=min(30, profile.max_assets),
+                strict_metrics=False,  # False = évite résultats vides
+            )
+            
+            # Log diagnostic
+            if etf_meta.get("fallback"):
+                logger.warning(f"[preset_etf] Fallback: {etf_meta.get('fallback_reason')}")
+            
+            universe = non_etf_assets + selected_etfs
+            logger.info(f"Post-preset_etf: {len(universe)} assets ({len(selected_etfs)} ETF)")
+            
+        elif self.deduplicate_etfs_enabled:
+            # Fallback legacy si use_preset_etf=False ou module absent
             universe = deduplicate_etfs(universe, prefer_by="score")
-            logger.info(f"Post-ETF-dedup universe: {len(universe)} actifs")
+            logger.info(f"Post-ETF-dedup (legacy): {len(universe)} assets")
         
         # === ÉTAPE 2: Déduplication Corporate ===
         if self.deduplicate_corporate_enabled:
