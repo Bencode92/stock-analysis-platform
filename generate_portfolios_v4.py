@@ -191,6 +191,63 @@ def _safe_float(value, default=None):
         except ValueError:
             return default
     return default
+# =============================================================================
+# v5.1.3 FIX: Helpers pour chargement CSV robuste (évite perte types numériques)
+# =============================================================================
+
+NUMERIC_COLS_ETF = [
+    "vol_pct", "vol_3y_pct", "total_expense_ratio", "aum_usd",
+    "yield_ttm", "perf_1m_pct", "perf_3m_pct", "ytd_return_pct",
+    "one_year_return_pct", "daily_change_pct", "data_quality_score",
+    "sector_top_weight", "holding_top"
+]
+
+def load_csv_robust(path: str, numeric_cols: list = None) -> pd.DataFrame:
+    """Charge un CSV avec conversion numérique robuste + colonnes clean."""
+    last_exc = None
+    for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            df = pd.read_csv(path, encoding=enc, encoding_errors="replace", low_memory=False)
+            break
+        except Exception as e:
+            last_exc = e
+            continue
+    else:
+        raise RuntimeError(f"Impossible de lire {path} (dernier err: {last_exc})")
+
+    # v5.1.3: Nettoyer noms de colonnes (espaces invisibles)
+    df.columns = df.columns.str.strip()
+
+    if numeric_cols:
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = df[col].map(_safe_float)
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    return df
+
+def diag_etf_coverage(df: pd.DataFrame, label: str = "ETF") -> bool:
+    """Diagnostique couverture numérique + variance minimale."""
+    issues = []
+    for col in NUMERIC_COLS_ETF:
+        if col not in df.columns:
+            issues.append(f"{col}=MISSING")
+            continue
+        s = df[col]
+        n_valid = s.notna().sum()
+        n_unique = s.nunique(dropna=True)
+        if n_valid == 0:
+            issues.append(f"{col}=ALL_NAN")
+        elif n_unique <= 1:
+            issues.append(f"{col}=FLAT({n_unique})")
+
+    if issues:
+        logger.warning(f"[{label}] ⚠️ Colonnes problématiques: {', '.join(issues)}")
+        return False
+
+    logger.info(f"[{label}] ✅ Toutes colonnes numériques OK")
+    return True
+   
 
 
 def _parse_display_pct(s: str) -> float:
@@ -1390,15 +1447,16 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     stocks_data = load_stocks_data()
     
     # 2. Charger ETF, Bonds et Crypto
-    etf_data = []
+    # v5.1.3 FIX: DataFrame master (préserve types numériques, évite roundtrip dict)
+    etf_df_master = pd.DataFrame()
     bonds_data = []
     crypto_data = []
     
     if Path(CONFIG["etf_csv"]).exists():
         try:
-            df = pd.read_csv(CONFIG["etf_csv"])
-            etf_data = df.to_dict('records')
-            logger.info(f"ETF: {CONFIG['etf_csv']} ({len(etf_data)} entrées)")
+            etf_df_master = load_csv_robust(CONFIG["etf_csv"], numeric_cols=NUMERIC_COLS_ETF)
+            diag_etf_coverage(etf_df_master, "ETF_GLOBAL")
+            logger.info(f"ETF: {CONFIG['etf_csv']} ({len(etf_df_master)} entrées)")
         except Exception as e:
             logger.warning(f"Impossible de charger ETF: {e}")
     
@@ -1419,6 +1477,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.info(f"Crypto: {CONFIG['crypto_csv']} ({len(crypto_data)} entrées)")
         except Exception as e:
             logger.warning(f"Impossible de charger crypto: {e}")
+           
+    # v5.1.3: Créer etf_data (list de dicts) pour compatibilité audit/fusion
+    # Le scoring utilise etf_df_master.copy() pour préserver les types numériques
+    etf_data = etf_df_master.to_dict('records') if not etf_df_master.empty else []       
     
     # 3. Extraire les stocks bruts pour le filtre Buffett
     logger.info("📊 Construction de l'univers...")
@@ -1694,11 +1756,18 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
          # === v5.1.0: Sélection ETF/Crypto/Bond par profil ===
         if HAS_MODULAR_SELECTORS:
             # --- ETF actions ---
-            if etf_data:
-                etf_df = pd.DataFrame(etf_data)
+            if not etf_df_master.empty:
+                etf_df = etf_df_master.copy()
                 etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=50)
                 profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
-                logger.info(f"   [{profile}] ETF sélectionnés: {len(profile_etf_data)}/{len(etf_data)}")
+                logger.info(f"   [{profile}] ETF sélectionnés: {len(profile_etf_data)}/{len(etf_df_master)}")
+                # v5.1.3: Post-check scoring (détecte scores FLAT)
+                if "_profile_score" in etf_selected_df.columns and not etf_selected_df.empty:
+                    scores = etf_selected_df["_profile_score"]
+                    if scores.nunique() <= 1:
+                        logger.error(f"   [{profile}] ⚠️ ETF SCORE FLAT: {scores.iloc[0] if len(scores) else 'N/A'}")
+                    else:
+                        logger.info(f"   [{profile}] ✅ ETF scores: [{scores.min():.1f}, {scores.max():.1f}]")
                 # v5.1.2 FIX: Forcer category="etf" pour éviter reclassification dans build_raw_universe
                 for etf in profile_etf_data:
                     etf["_force_category"] = "etf"
@@ -2051,13 +2120,14 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     # 1. Charger les données
     stocks_data = load_stocks_data()
     
-    etf_data = []
+    # v5.1.3 FIX: DataFrame master EU/US (préserve types numériques)
+    etf_df_master_euus = pd.DataFrame()
     bonds_data = []
     
     if Path(CONFIG["etf_csv"]).exists():
         try:
-            df = pd.read_csv(CONFIG["etf_csv"])
-            etf_data = df.to_dict('records')
+            etf_df_master_euus = load_csv_robust(CONFIG["etf_csv"], numeric_cols=NUMERIC_COLS_ETF)
+            diag_etf_coverage(etf_df_master_euus, "ETF_EUUS")
         except Exception as e:
             logger.warning(f"Impossible de charger ETF: {e}")
     
@@ -2180,11 +2250,19 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
         logger.info(f"   [{profile}] EU/US Équités sélectionnées: {len(profile_equities)}")
         # === v5.1.0: Sélection ETF/Bonds par profil (EU/US - pas de crypto) ===
         if HAS_MODULAR_SELECTORS:
-            if etf_data:
-                etf_df = pd.DataFrame(etf_data)
+            # v5.1.3 FIX: Utilise etf_df_master_euus.copy() pour préserver types numériques
+            if not etf_df_master_euus.empty:
+                etf_df = etf_df_master_euus.copy()
                 etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=50)
                 profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
-                logger.info(f"   [{profile}] EU/US ETF sélectionnés: {len(profile_etf_data)}/{len(etf_data)}")
+                logger.info(f"   [{profile}] EU/US ETF sélectionnés: {len(profile_etf_data)}/{len(etf_df_master_euus)}")
+                # v5.1.3: Post-check scoring (détecte scores FLAT)
+                if "_profile_score" in etf_selected_df.columns and not etf_selected_df.empty:
+                    scores = etf_selected_df["_profile_score"]
+                    if scores.nunique() <= 1:
+                        logger.error(f"   [{profile}] ⚠️ EU/US ETF SCORE FLAT: {scores.iloc[0] if len(scores) else 'N/A'}")
+                    else:
+                        logger.info(f"   [{profile}] ✅ EU/US ETF scores: [{scores.min():.1f}, {scores.max():.1f}]")
                 # v5.1.2 FIX: Forcer category="etf" pour éviter reclassification
                 for etf in profile_etf_data:
                     etf["_force_category"] = "etf"
