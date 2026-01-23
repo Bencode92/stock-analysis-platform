@@ -1,6 +1,6 @@
 # portfolio_engine/__init__.py
 """
-Portfolio Engine v4.0 - Phase 2.5 Refactoring
+Portfolio Engine v4.1.0 - Phase 2.5 Refactoring + preset_etf integration
 
 Architecture:
 - universe.py       : Chargement et préparation des données (PAS de scoring)
@@ -9,6 +9,7 @@ Architecture:
 - llm_commentary.py : Génération des commentaires via LLM
 - sector_quality.py : Métriques Buffett par secteur (utilisé par factors.py)
 - preset_meta.py    : Presets, buckets, contraintes par profil
+- preset_etf.py     : Sélection ETF avancée avec scoring 8 composantes (v6.30)
 - etf_exposure.py   : Mapping ETF → exposure pour déduplication (v3.0)
 
 PARI CENTRAL:
@@ -144,7 +145,53 @@ from .preset_meta import (
     validate_portfolio_buckets,
 )
 
-__version__ = "4.0.2"
+# =============================================================================
+# Preset ETF (v6.30 - Sélection ETF avancée avec scoring 8 composantes)
+# =============================================================================
+try:
+    from .preset_etf import (
+        # Main function
+        select_etfs_for_profile,
+        # Summary & diagnostics
+        get_etf_preset_summary,
+        run_sanity_checks as etf_sanity_checks,
+        run_unit_tests as etf_unit_tests,
+        # Configs
+        PRESET_CONFIGS as ETF_PRESET_CONFIGS,
+        PROFILE_PRESETS as ETF_PROFILE_PRESETS,
+        PROFILE_CONSTRAINTS as ETF_PROFILE_CONSTRAINTS,
+        SCORING_WEIGHTS as ETF_SCORING_WEIGHTS,
+        # Enums
+        ETFRole,
+        ETFRiskLevel,
+        CorrelationGroup,
+        # Helpers
+        apply_data_qc_filters as etf_apply_data_qc_filters,
+        apply_hard_constraints as etf_apply_hard_constraints,
+        compute_profile_score as etf_compute_profile_score,
+        deduplicate_underlying as etf_deduplicate_underlying,
+    )
+    HAS_PRESET_ETF = True
+except ImportError as e:
+    HAS_PRESET_ETF = False
+    # Placeholders pour éviter ImportError si preset_etf n'est pas disponible
+    select_etfs_for_profile = None
+    get_etf_preset_summary = None
+    etf_sanity_checks = None
+    etf_unit_tests = None
+    ETF_PRESET_CONFIGS = {}
+    ETF_PROFILE_PRESETS = {}
+    ETF_PROFILE_CONSTRAINTS = {}
+    ETF_SCORING_WEIGHTS = {}
+    ETFRole = None
+    ETFRiskLevel = None
+    CorrelationGroup = None
+    etf_apply_data_qc_filters = None
+    etf_apply_hard_constraints = None
+    etf_compute_profile_score = None
+    etf_deduplicate_underlying = None
+
+__version__ = "4.1.0"
 
 __all__ = [
     # Universe (v3.0)
@@ -237,4 +284,21 @@ __all__ = [
     "get_max_weight_for_preset",
     "get_correlation_groups",
     "validate_portfolio_buckets",
+    # Preset ETF (v6.30 - Sélection ETF avancée)
+    "HAS_PRESET_ETF",
+    "select_etfs_for_profile",
+    "get_etf_preset_summary",
+    "etf_sanity_checks",
+    "etf_unit_tests",
+    "ETF_PRESET_CONFIGS",
+    "ETF_PROFILE_PRESETS",
+    "ETF_PROFILE_CONSTRAINTS",
+    "ETF_SCORING_WEIGHTS",
+    "ETFRole",
+    "ETFRiskLevel",
+    "CorrelationGroup",
+    "etf_apply_data_qc_filters",
+    "etf_apply_hard_constraints",
+    "etf_compute_profile_score",
+    "etf_deduplicate_underlying",
 ]
