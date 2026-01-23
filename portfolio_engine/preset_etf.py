@@ -2961,4 +2961,4 @@ if __name__ == "__main__":
     print("=" * 70)
     
     # Run unit tests first
-    print("\n--- UNIT TESTS ---
+    print("\n--- UNIT TESTS ---\n")
