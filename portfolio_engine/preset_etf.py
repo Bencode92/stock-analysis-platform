@@ -233,7 +233,7 @@ logger = logging.getLogger("portfolio_engine.preset_etf")
 
 
 # =============================================================================
-# ENUMS &amp; TYPES (NATIFS - pas d'import fragile)
+# ENUMS & TYPES (NATIFS - pas d'import fragile)
 # =============================================================================
 
 class ETFRole(Enum):
@@ -610,7 +610,7 @@ SECTORS_GROWTH = {"technology", "information technology", "communication service
 
 
 # =============================================================================
-# HELPERS - CONVERSION &amp; EXTRACTION
+# HELPERS - CONVERSION & EXTRACTION
 # =============================================================================
 
 def _to_numeric(series: pd.Series) -> pd.Series:
@@ -971,8 +971,8 @@ def _get_vol(df: pd.DataFrame) -> pd.Series:
     """Récupère la volatilité (priorité vol_3y > vol_pct)."""
     v3y = _to_numeric(_safe_series(df, "vol_3y_pct"))
     v = _to_numeric(_safe_series(df, "vol_pct"))
-    out = v3y.where((v3y.notna()) &amp; (v3y > 0), v)
-    return out.where((out.notna()) &amp; (out > 0), np.nan)
+    out = v3y.where((v3y.notna()) & (v3y > 0), v)
+    return out.where((out.notna()) & (out > 0), np.nan)
 
 
 def _get_sector_top_weight(df: pd.DataFrame) -> pd.Series:
@@ -1012,7 +1012,7 @@ def _get_sector_top_weight_frac(df: pd.DataFrame) -> pd.Series:
     # FIX v2.2.12: Masquer 0 comme NaN si sector_top vide
     sector_top = _get_sector_top(df)
     secw_masked = secw.mask(
-        (secw == 0) &amp; (sector_top.eq("") | sector_top.isna()),
+        (secw == 0) & (sector_top.eq("") | sector_top.isna()),
         np.nan
     )
     
@@ -1149,16 +1149,16 @@ def _equity_like_gate(df: pd.DataFrame, allow_data_missing: bool = True) -> pd.S
         _is_leveraged(df)
     )
     
-    ok = ~is_alt &amp; ~is_bad
+    ok = ~is_alt & ~is_bad
     
     if not allow_data_missing:
-        ok &amp;= ~bucket.isin(BUCKET_DATA_MISSING)
+        ok &= ~bucket.isin(BUCKET_DATA_MISSING)
     
     return ok
 
 
 # =============================================================================
-# HELPERS - HHI &amp; DIVERSIFICATION
+# HELPERS - HHI & DIVERSIFICATION
 # =============================================================================
 
 def _is_likely_year(value: float) -> bool:
@@ -1378,16 +1378,16 @@ def _compute_diversification_metrics(df: pd.DataFrame) -> pd.DataFrame:
     has_holdings = hhi_holdings.notna()
     
     # Les deux disponibles
-    both = has_sector &amp; has_holdings
+    both = has_sector & has_holdings
     hhi_blend = hhi_blend.where(
         ~both,
         0.4 * hhi_sector + 0.6 * hhi_holdings
     )
     # Seulement sector
-    only_sector = has_sector &amp; ~has_holdings
+    only_sector = has_sector & ~has_holdings
     hhi_blend = hhi_blend.where(~only_sector, hhi_sector)
     # Seulement holdings
-    only_holdings = has_holdings &amp; ~has_sector
+    only_holdings = has_holdings & ~has_sector
     hhi_blend = hhi_blend.where(~only_holdings, hhi_holdings)
     
     out["_hhi_blend"] = hhi_blend
@@ -1416,7 +1416,7 @@ def _compute_diversification_metrics(df: pd.DataFrame) -> pd.DataFrame:
     # FIX v2.2.12: Masquer 0 comme NaN si sector_top est vide
     # (évite bonus diversification artificiel)
     secw_masked = secw.mask(
-        (secw == 0) &amp; (sector_top.eq("") | sector_top.isna()),
+        (secw == 0) & (sector_top.eq("") | sector_top.isna()),
         np.nan
     )
     
@@ -1558,27 +1558,27 @@ def apply_data_qc_filters(df: pd.DataFrame) -> pd.DataFrame:
     # Data quality score
     if "data_quality_score" in df.columns:
         dqs = _to_numeric(df["data_quality_score"])
-        mask &amp;= (dqs >= MIN_DATA_QUALITY_SCORE) | dqs.isna()
+        mask &= (dqs >= MIN_DATA_QUALITY_SCORE) | dqs.isna()
     
     # FIX v2.2.6: Pas de levier NI inverse (utilise _is_leveraged_or_inverse)
     # Avant: lev <= 0 laissait passer les inverses (leverage = -1)
-    mask &amp;= ~_is_leveraged_or_inverse(df)
+    mask &= ~_is_leveraged_or_inverse(df)
     
     # AUM minimum
     if "aum_usd" in df.columns:
         aum = _to_numeric(df["aum_usd"])
-        mask &amp;= (aum >= MIN_AUM_USD) | aum.isna()
+        mask &= (aum >= MIN_AUM_USD) | aum.isna()
     
     # TER > 0
     if "total_expense_ratio" in df.columns:
         ter = _to_numeric(df["total_expense_ratio"])
-        mask &amp;= (ter > 0) | ter.isna()
+        mask &= (ter > 0) | ter.isna()
     
     # Exclure les bonds
     if "fund_type" in df.columns:
         ft = df["fund_type"].fillna("").str.lower()
         is_bond = ft.str.contains("bond|obligation|fixed income", regex=True)
-        mask &amp;= ~is_bond
+        mask &= ~is_bond
     
     out = df[mask].copy()
     logger.info(f"[ETF] Data QC: {len(df)} → {len(out)} ({len(df) - len(out)} exclus)")
@@ -1608,7 +1608,7 @@ def _apply_constraints_once(df: pd.DataFrame, constraints: Dict[str, float]) -> 
     n_vol = vol.notna().sum()  # FIX v2.2.10
     if n_vol >= MIN_N_FOR_QUANTILE and vol_q < 1.0:
         thr = float(vol.quantile(vol_q))
-        mask &amp;= (vol <= thr) | vol.isna()
+        mask &= (vol <= thr) | vol.isna()
     
     # TER max (quantile) - seulement si assez de données non-NaN
     ter = _to_numeric(_safe_series(df, "total_expense_ratio"))
@@ -1616,26 +1616,26 @@ def _apply_constraints_once(df: pd.DataFrame, constraints: Dict[str, float]) -> 
     n_ter = ter.notna().sum()  # FIX v2.2.10
     if n_ter >= MIN_N_FOR_QUANTILE and ter_q < 1.0:
         thr = float(ter.quantile(ter_q))
-        mask &amp;= (ter <= thr) | ter.isna()
+        mask &= (ter <= thr) | ter.isna()
     
     # Concentration secteur (top sector weight fraction)
     # FIX v2.2.10: Utilise _get_sector_top_weight_frac() helper
     secw_frac = _get_sector_top_weight_frac(df)
     sec_max = float(constraints.get("sector_concentration_max", 1.0))
     if sec_max < 1.0:
-        mask &amp;= (secw_frac <= sec_max) | secw_frac.isna()
+        mask &= (secw_frac <= sec_max) | secw_frac.isna()
     
     # Holding top (fraction)
     htop = _get_holding_top_frac(df)
     htop_max = float(constraints.get("holding_top_max", 1.0))
     if htop_max < 1.0:
-        mask &amp;= (htop <= htop_max) | htop.isna()
+        mask &= (htop <= htop_max) | htop.isna()
     
     # HHI blend
     hhi = _to_numeric(_safe_series(df, "_hhi_blend"))
     hhi_max = float(constraints.get("hhi_max", 1.0))
     if hhi_max < 1.0:
-        mask &amp;= (hhi <= hhi_max) | hhi.isna()
+        mask &= (hhi <= hhi_max) | hhi.isna()
     
     return df[mask].copy()
 
@@ -1732,38 +1732,38 @@ def _check_preset_rules(df: pd.DataFrame, preset: str) -> pd.Series:
     if "ter_max" in rules and "total_expense_ratio" in df.columns:
         ter = _to_numeric(df["total_expense_ratio"])
         ter_threshold = _normalize_threshold_ter(rules["ter_max"], ter_is_decimal)
-        mask &amp;= (ter <= ter_threshold) | ter.isna()
+        mask &= (ter <= ter_threshold) | ter.isna()
     
     # AUM min
     if "aum_min" in rules and "aum_usd" in df.columns:
         aum = _to_numeric(df["aum_usd"])
-        mask &amp;= (aum >= rules["aum_min"]) | aum.isna()
+        mask &= (aum >= rules["aum_min"]) | aum.isna()
     
     # Yield min (seuils exprimés en %, ex: 5.0 = 5%)
     if "yield_min" in rules and "yield_ttm" in df.columns:
         yld = _to_numeric(df["yield_ttm"])
         yield_threshold = _normalize_threshold_yield(rules["yield_min"], yield_is_decimal)
-        mask &amp;= (yld >= yield_threshold) | yld.isna()
+        mask &= (yld >= yield_threshold) | yld.isna()
     
     # Vol max (déjà en % dans les données, pas de conversion)
     if "vol_max" in rules:
         vol = _get_vol(df)
-        mask &amp;= (vol <= rules["vol_max"]) | vol.isna()
+        mask &= (vol <= rules["vol_max"]) | vol.isna()
     
     # Holding top max - FIX v2.2.10: utilise _get_holding_top_frac()
     if "holding_top_max" in rules:
         htop = _get_holding_top_frac(df)
-        mask &amp;= (htop <= rules["holding_top_max"]) | htop.isna()
+        mask &= (htop <= rules["holding_top_max"]) | htop.isna()
     
     # Sector trust min
     if "sector_trust_min" in rules and "sector_trust" in df.columns:
         st = _to_numeric(df["sector_trust"])
-        mask &amp;= (st >= rules["sector_trust_min"]) | st.isna()
+        mask &= (st >= rules["sector_trust_min"]) | st.isna()
     
     # Momentum 3m min
     if "momentum_3m_min" in rules and "perf_3m_pct" in df.columns:
         m3 = _to_numeric(df["perf_3m_pct"])
-        mask &amp;= (m3 >= rules["momentum_3m_min"]) | m3.isna()
+        mask &= (m3 >= rules["momentum_3m_min"]) | m3.isna()
     
     return mask
 
@@ -1783,10 +1783,10 @@ def _preset_coeur_global(df: pd.DataFrame) -> pd.Series:
     
     # Qualité sector data
     if "sector_signal_ok" in df.columns:
-        mask &amp;= df["sector_signal_ok"].fillna(True) == True
+        mask &= df["sector_signal_ok"].fillna(True) == True
     if "sector_trust" in df.columns:
         st = _to_numeric(df["sector_trust"])
-        mask &amp;= (st >= 0.30) | st.isna()
+        mask &= (st >= 0.30) | st.isna()
     
     ter = _to_numeric(_safe_series(df, "total_expense_ratio"))
     aum = _to_numeric(_safe_series(df, "aum_usd"))
@@ -1794,11 +1794,11 @@ def _preset_coeur_global(df: pd.DataFrame) -> pd.Series:
     # FIX v2.2.10: Utilise fraction (0.35) au lieu de % (35)
     secw_frac = _get_sector_top_weight_frac(df)
     
-    mask &amp;= _q_ok(ter, 0.40, "<=")
-    mask &amp;= _q_ok(aum, 0.60, ">=")
-    mask &amp;= (secw_frac <= 0.35) | secw_frac.isna()
+    mask &= _q_ok(ter, 0.40, "<=")
+    mask &= _q_ok(aum, 0.60, ">=")
+    mask &= (secw_frac <= 0.35) | secw_frac.isna()
     
-    return mask &amp; _check_preset_rules(df, "coeur_global")
+    return mask & _check_preset_rules(df, "coeur_global")
 
 
 def _preset_min_vol_global(df: pd.DataFrame) -> pd.Series:
@@ -1812,11 +1812,11 @@ def _preset_min_vol_global(df: pd.DataFrame) -> pd.Series:
     ter = _to_numeric(_safe_series(df, "total_expense_ratio"))
     aum = _to_numeric(_safe_series(df, "aum_usd"))
     
-    mask &amp;= _q_ok(vol, 0.25, "<=")
-    mask &amp;= _q_ok(ter, 0.50, "<=")
-    mask &amp;= _q_ok(aum, 0.40, ">=")
+    mask &= _q_ok(vol, 0.25, "<=")
+    mask &= _q_ok(ter, 0.50, "<=")
+    mask &= _q_ok(aum, 0.40, ">=")
     
-    return mask &amp; _check_preset_rules(df, "min_vol_global")
+    return mask & _check_preset_rules(df, "min_vol_global")
 
 
 def _preset_multi_factor(df: pd.DataFrame) -> pd.Series:
@@ -1839,7 +1839,7 @@ def _preset_multi_factor(df: pd.DataFrame) -> pd.Series:
         kw_mask |= obj.str.contains(kw, regex=False)
         kw_mask |= name.str.contains(kw, regex=False)
     
-    return mask &amp; kw_mask &amp; _check_preset_rules(df, "multi_factor")
+    return mask & kw_mask & _check_preset_rules(df, "multi_factor")
 
 
 def _preset_rendement_etf(df: pd.DataFrame) -> pd.Series:
@@ -1851,17 +1851,17 @@ def _preset_rendement_etf(df: pd.DataFrame) -> pd.Series:
     
     # Exclure options overlay (géré par income_options)
     reasons = _get_reasons(df)
-    mask &amp;= ~_is_options_overlay(reasons)
+    mask &= ~_is_options_overlay(reasons)
     
     yld = _to_numeric(_safe_series(df, "yield_ttm"))
     vol = _get_vol(df)
     ter = _to_numeric(_safe_series(df, "total_expense_ratio"))
     
-    mask &amp;= _q_ok(yld, 0.60, ">=")
-    mask &amp;= _q_ok(vol, 0.70, "<=")
-    mask &amp;= _q_ok(ter, 0.70, "<=")
+    mask &= _q_ok(yld, 0.60, ">=")
+    mask &= _q_ok(vol, 0.70, "<=")
+    mask &= _q_ok(ter, 0.70, "<=")
     
-    return mask &amp; _check_preset_rules(df, "rendement_etf")
+    return mask & _check_preset_rules(df, "rendement_etf")
 
 
 def _preset_income_options(df: pd.DataFrame) -> pd.Series:
@@ -1878,12 +1878,12 @@ def _preset_income_options(df: pd.DataFrame) -> pd.Series:
     is_options = _is_options_overlay(reasons)
     
     # Pas structured/non-standard
-    not_bad = ~_is_structured(bucket, reasons) &amp; ~_is_non_standard(bucket, reasons)
+    not_bad = ~_is_structured(bucket, reasons) & ~_is_non_standard(bucket, reasons)
     
     # FIX v2.2.10: Pas leveraged/inverse
     not_leveraged = ~_is_leveraged_or_inverse(df)
     
-    return is_options &amp; not_bad &amp; not_leveraged &amp; _check_preset_rules(df, "income_options")
+    return is_options & not_bad & not_leveraged & _check_preset_rules(df, "income_options")
 
 
 def _preset_qualite_value(df: pd.DataFrame) -> pd.Series:
@@ -1905,10 +1905,10 @@ def _preset_qualite_value(df: pd.DataFrame) -> pd.Series:
     # Fallback: yield + aum élevés
     yld = _to_numeric(_safe_series(df, "yield_ttm"))
     aum = _to_numeric(_safe_series(df, "aum_usd"))
-    fallback = _q_ok(yld, 0.50, ">=") &amp; _q_ok(aum, 0.60, ">=")
+    fallback = _q_ok(yld, 0.50, ">=") & _q_ok(aum, 0.60, ">=")
     kw_mask |= fallback
     
-    return mask &amp; kw_mask &amp; _check_preset_rules(df, "qualite_value")
+    return mask & kw_mask & _check_preset_rules(df, "qualite_value")
 
 
 def _preset_croissance_tech(df: pd.DataFrame) -> pd.Series:
@@ -1939,7 +1939,7 @@ def _preset_croissance_tech(df: pd.DataFrame) -> pd.Series:
     p3m = _to_numeric(_safe_series(df, "perf_3m_pct"))
     mom_ok = (p1m > 0) | (p3m > 0)
     
-    return mask &amp; kw_mask &amp; (mom_ok | mom_ok.isna()) &amp; _check_preset_rules(df, "croissance_tech")
+    return mask & kw_mask & (mom_ok | mom_ok.isna()) & _check_preset_rules(df, "croissance_tech")
 
 
 def _preset_smid_quality(df: pd.DataFrame) -> pd.Series:
@@ -1954,13 +1954,13 @@ def _preset_smid_quality(df: pd.DataFrame) -> pd.Series:
     ft = _safe_series(df, "fund_type").fillna("").astype(str).str.lower()
     
     kw_mask = pd.Series(False, index=df.index)
-    keywords = ["small", "mid", "smid", "micro", "russell 2000", "msci small", "s&amp;p 600", "s&amp;p 400"]
+    keywords = ["small", "mid", "smid", "micro", "russell 2000", "msci small", "s&p 600", "s&p 400"]
     for kw in keywords:
         kw_mask |= obj.str.contains(kw, regex=False)
         kw_mask |= name.str.contains(kw, regex=False)
     kw_mask |= ft.str.contains("small|mid|smid", regex=True)
     
-    return mask &amp; kw_mask &amp; _check_preset_rules(df, "smid_quality")
+    return mask & kw_mask & _check_preset_rules(df, "smid_quality")
 
 
 def _preset_emergents(df: pd.DataFrame) -> pd.Series:
@@ -2000,7 +2000,7 @@ def _preset_emergents(df: pd.DataFrame) -> pd.Series:
         kw_mask |= name.str.contains(kw, regex=False)
     kw_mask |= ft.str.contains("emerging|emerg|asia|pacific", regex=True)
     
-    return mask &amp; kw_mask &amp; _check_preset_rules(df, "emergents")
+    return mask & kw_mask & _check_preset_rules(df, "emergents")
 
 
 def _preset_sector_defensive(df: pd.DataFrame) -> pd.Series:
@@ -2030,7 +2030,7 @@ def _preset_sector_defensive(df: pd.DataFrame) -> pd.Series:
     vol = _get_vol(df)
     vol_ok = _q_ok(vol, 0.50, "<=")
     
-    return mask &amp; sector_ok &amp; vol_ok &amp; _check_preset_rules(df, "sector_defensive")
+    return mask & sector_ok & vol_ok & _check_preset_rules(df, "sector_defensive")
 
 
 def _preset_sector_cyclical(df: pd.DataFrame) -> pd.Series:
@@ -2055,7 +2055,7 @@ def _preset_sector_cyclical(df: pd.DataFrame) -> pd.Series:
         sector_ok |= obj.str.contains(s, regex=False)
         sector_ok |= name.str.contains(s, regex=False)
     
-    return mask &amp; sector_ok &amp; _check_preset_rules(df, "sector_cyclical")
+    return mask & sector_ok & _check_preset_rules(df, "sector_cyclical")
 
 
 def _preset_inflation_shield(df: pd.DataFrame) -> pd.Series:
@@ -2068,9 +2068,9 @@ def _preset_inflation_shield(df: pd.DataFrame) -> pd.Series:
     
     # Pas structured/non-standard/crypto
     not_bad = (
-        ~_is_structured(bucket, reasons) &amp;
-        ~_is_non_standard(bucket, reasons) &amp;
-        ~_is_crypto(bucket) &amp;
+        ~_is_structured(bucket, reasons) &
+        ~_is_non_standard(bucket, reasons) &
+        ~_is_crypto(bucket) &
         ~_is_options_overlay(reasons)
     )
     
@@ -2094,7 +2094,7 @@ def _preset_inflation_shield(df: pd.DataFrame) -> pd.Series:
         kw_mask |= obj.str.contains(kw, regex=False)
         kw_mask |= name.str.contains(kw, regex=False)
     
-    return not_bad &amp; (is_commodity | (eq_like &amp; (sector_ok | kw_mask))) &amp; _check_preset_rules(df, "inflation_shield")
+    return not_bad & (is_commodity | (eq_like & (sector_ok | kw_mask))) & _check_preset_rules(df, "inflation_shield")
 
 
 def _preset_or_physique(df: pd.DataFrame) -> pd.Series:
@@ -2107,8 +2107,8 @@ def _preset_or_physique(df: pd.DataFrame) -> pd.Series:
     
     # Commodity clean (pas options overlay, pas structured)
     base = (
-        _is_commodity(bucket) &amp;
-        ~_is_options_overlay(reasons) &amp;
+        _is_commodity(bucket) &
+        ~_is_options_overlay(reasons) &
         ~_is_structured(bucket, reasons)
     )
     
@@ -2131,7 +2131,7 @@ def _preset_or_physique(df: pd.DataFrame) -> pd.Series:
         "GOLD", "EGLN", "IGLN", "4GLD", "ZGLD"
     ])
     
-    return base &amp; (gold_kw | gold_whitelist) &amp; _check_preset_rules(df, "or_physique")
+    return base & (gold_kw | gold_whitelist) & _check_preset_rules(df, "or_physique")
 
 
 def _preset_commodities_broad(df: pd.DataFrame) -> pd.Series:
@@ -2144,8 +2144,8 @@ def _preset_commodities_broad(df: pd.DataFrame) -> pd.Series:
     
     # Commodity clean
     base = (
-        _is_commodity(bucket) &amp;
-        ~_is_options_overlay(reasons) &amp;
+        _is_commodity(bucket) &
+        ~_is_options_overlay(reasons) &
         ~_is_structured(bucket, reasons)
     )
     
@@ -2155,14 +2155,14 @@ def _preset_commodities_broad(df: pd.DataFrame) -> pd.Series:
     sym = _get_symbol(df).str.upper()
     
     gold_only = (
-        obj.str.contains("gold", regex=False) &amp;
+        obj.str.contains("gold", regex=False) &
         ~obj.str.contains("commodity|commodities|broad|diversified", regex=True)
     )
     gold_whitelist = sym.isin(["GLD", "IAU", "GLDM", "SGOL", "IAUM", "AAAU", "PHYS", "BAR", "OUNZ"])
     
-    not_gold_only = ~gold_only &amp; ~gold_whitelist
+    not_gold_only = ~gold_only & ~gold_whitelist
     
-    return base &amp; not_gold_only &amp; _check_preset_rules(df, "commodities_broad")
+    return base & not_gold_only & _check_preset_rules(df, "commodities_broad")
 
 
 # Mapping preset → fonction
@@ -2185,7 +2185,7 @@ PRESET_FUNCTIONS: Dict[str, Callable[[pd.DataFrame], pd.Series]] = {
 
 
 # =============================================================================
-# PRESET UNION &amp; ASSIGNMENT
+# PRESET UNION & ASSIGNMENT
 # =============================================================================
 
 def apply_presets_union(df: pd.DataFrame, profile: str) -> pd.DataFrame:
@@ -2237,7 +2237,7 @@ def assign_best_preset(df: pd.DataFrame, profile: str) -> pd.Series:
         m = preset_masks.get(p)
         if m is None:
             continue
-        assigned = assigned.mask((assigned == "") &amp; m, p)
+        assigned = assigned.mask((assigned == "") & m, p)
     
     return assigned
 
@@ -2536,11 +2536,11 @@ def select_etfs_for_profile(
                     # Tuple = OR: au moins une des colonnes doit être non-NaN
                     cols = [c for c in req if c in d0.columns]
                     if cols:
-                        mask &amp;= d0[cols].notna().any(axis=1)
+                        mask &= d0[cols].notna().any(axis=1)
                 else:
                     # String = AND: la colonne doit être non-NaN
                     if req in d0.columns:
-                        mask &amp;= d0[req].notna()
+                        mask &= d0[req].notna()
             
             d0 = d0[mask].copy()
             removed = before - len(d0)
@@ -2925,7 +2925,7 @@ if __name__ == "__main__":
     test_data = pd.DataFrame({
         "etfsymbol": ["SPY", "QQQ", "VTI", "SCHD", "VWO", "XLK", "IJR", "GLD", "JEPI", "DBC"],
         "name": [
-            "S&amp;P 500 ETF", "Nasdaq 100 Growth", "Total Market", "High Dividend",
+            "S&P 500 ETF", "Nasdaq 100 Growth", "Total Market", "High Dividend",
             "EM Vanguard", "Tech Select", "Small Cap", "Gold Trust",
             "JPMorgan Equity Premium Income", "Commodities Index"
         ],
@@ -2950,7 +2950,7 @@ if __name__ == "__main__":
         "sector_trust": [0.9, 0.85, 0.88, 0.82, 0.78, 0.95, 0.75, 0.5, 0.70, 0.6],
         "sector_signal_ok": [True, True, True, True, True, True, True, True, True, True],
         "objective": [
-            "S&amp;P 500 Index", "Nasdaq 100 Growth", "Total US Market", "High Dividend Yield",
+            "S&P 500 Index", "Nasdaq 100 Growth", "Total US Market", "High Dividend Yield",
             "Emerging Markets", "Technology Select", "Small Cap Blend", "Physical Gold Bullion",
             "Equity Premium Income Options Strategy", "Broad Commodities Index"
         ],
