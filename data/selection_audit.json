@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-23T14:20:41.486023",
+  "timestamp": "2026-01-23T14:30:00.776617",
   "version": "v1.4.0",
   "preset_meta_version": "v4.15.2",
   "summary": {
@@ -7,10 +7,10 @@
     "equities_selected": 50,
     "equities_rejected_notable": 50,
     "etf_initial": 1766,
-    "etf_selected": 8,
+    "etf_selected": 6,
     "etf_rejected_notable": 20,
     "crypto_initial": 335,
-    "crypto_selected": 0,
+    "crypto_selected": 3,
     "crypto_rejected_notable": 10,
     "bonds_initial": 0,
     "bonds_selected": 0,
@@ -1997,88 +1997,68 @@
   ],
   "etf_selected": [
     {
-      "name": "iShares MSCI All Country Asia ex Japan ETF",
-      "ticker": "AAXJ",
+      "name": "iShares iBonds Dec 2033 Term Treasury ETF",
+      "ticker": "IBTO",
       "category": "etf",
-      "volatility": 17.5,
-      "sector": "Technology",
+      "volatility": 6.9,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 1,
       "selection_reason": "Score composite favorable"
     },
     {
-      "name": "First Trust Active Factor Large Cap ETF",
-      "ticker": "AFLG",
+      "name": "Schwab U.S. Dividend Equity ETF",
+      "ticker": "SCHD",
       "category": "etf",
-      "volatility": 14.9,
-      "sector": "Technology",
-      "radar_tilt": "neutral",
+      "volatility": 13.6,
+      "sector": "Energy",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 2,
-      "selection_reason": "Score composite favorable"
+      "selection_reason": "Secteur favorisé RADAR (energy)"
     },
     {
-      "name": "Global X Adaptive U.S. Factor ETF",
-      "ticker": "AUSF",
+      "name": "Schwab International Equity ETF",
+      "ticker": "SCHF",
       "category": "etf",
-      "volatility": 13.3,
+      "volatility": 14.3,
+      "sector": "Financial Services",
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 3,
       "selection_reason": "Score composite favorable"
     },
     {
-      "name": "Inn Defined Wealth Shield Mutual Fund",
-      "ticker": "BALT",
+      "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
+      "ticker": "VEA",
       "category": "etf",
-      "volatility": 3.5,
+      "volatility": 14.4,
+      "sector": "Financial Services",
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 4,
       "selection_reason": "Score composite favorable"
     },
     {
-      "name": "BNY Mellon US Mid Cap Core Equity ETF",
-      "ticker": "BKMC",
+      "name": "Vanguard Dividend Appreciation ETF",
+      "ticker": "VIG",
       "category": "etf",
-      "volatility": 17.6,
-      "sector": "Industrial",
-      "radar_tilt": "favored",
-      "selected": true,
-      "ranking": 5,
-      "selection_reason": "Secteur favorisé RADAR (industrials)"
-    },
-    {
-      "name": "Alpha Architect Tail Risk ETF",
-      "ticker": "CAOS",
-      "category": "etf",
-      "volatility": 4.5,
+      "volatility": 12.4,
       "sector": "Technology",
       "radar_tilt": "neutral",
       "selected": true,
+      "ranking": 5,
+      "selection_reason": "Score composite favorable"
+    },
+    {
+      "name": "Vanguard Value ETF",
+      "ticker": "VTV",
+      "category": "etf",
+      "volatility": 12.6,
+      "sector": "Financial Services",
+      "radar_tilt": "neutral",
+      "selected": true,
       "ranking": 6,
-      "selection_reason": "Score composite favorable"
-    },
-    {
-      "name": "Hartford Municipal Opportunities ETF",
-      "ticker": "HMOP",
-      "category": "etf",
-      "volatility": 4.1,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 7,
-      "selection_reason": "Score composite favorable"
-    },
-    {
-      "name": "JPMorgan Global Bond Opportunities ETF",
-      "ticker": "JPGB",
-      "category": "etf",
-      "volatility": 4.1,
-      "sector": "Real Estate",
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 8,
       "selection_reason": "Score composite favorable"
     }
   ],
@@ -2120,6 +2100,16 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
+      "name": "iShares MSCI All Country Asia ex Japan ETF",
+      "ticker": "AAXJ",
+      "category": "etf",
+      "volatility": 17.5,
+      "sector": "Technology",
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
       "name": "Aptus Collared Investment Opportunity ETF",
       "ticker": "ACIO",
       "category": "etf",
@@ -2155,6 +2145,16 @@
       "volatility": 21.6,
       "sector": "Basic Materials",
       "radar_tilt": "favored",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "First Trust Active Factor Large Cap ETF",
+      "ticker": "AFLG",
+      "category": "etf",
+      "volatility": 14.9,
+      "sector": "Technology",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -2253,28 +2253,40 @@
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "JPMorgan Chase Financial Company LLC Alerian MLP Index ETNs due January 28, 2044",
-      "ticker": "AMJB",
-      "category": "etf",
-      "volatility": NaN,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Alerian MLP ETF",
-      "ticker": "AMLP",
-      "category": "etf",
-      "volatility": 16.0,
-      "sector": "Energy",
-      "radar_tilt": "favored",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
   ],
-  "crypto_selected": [],
+  "crypto_selected": [
+    {
+      "name": "Unknown",
+      "ticker": "BTC/USD",
+      "category": "crypto",
+      "volatility": 30.4,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 1,
+      "selection_reason": "Score composite favorable"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "NFT/USD",
+      "category": "crypto",
+      "volatility": 26.4,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 2,
+      "selection_reason": "Score composite favorable"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "PAXG/USD",
+      "category": "crypto",
+      "volatility": 24.5,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 3,
+      "selection_reason": "Score composite favorable"
+    }
+  ],
   "crypto_rejected": [
     {
       "name": "Unknown",
