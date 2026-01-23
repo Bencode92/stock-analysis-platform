@@ -1,10 +1,14 @@
 # portfolio_engine/preset_crypto.py
 """
 =========================================
-Crypto Preset Selector v1.1.0
+Crypto Preset Selector v1.2.0
 =========================================
 
 Sélection de cryptomonnaies par profil (Stable/Modéré/Agressif).
+
+v1.2.0: Ajout preset blue_chip (BTC/ETH)
+- NEW: _preset_blue_chip pour BTC/ETH
+- UPDATE: Modéré inclut blue_chip en priorité
 
 v1.1.0: Alignement noms presets avec preset_meta.py
 - recovery → recovery_crypto
@@ -14,6 +18,7 @@ Architecture 2 couches:
 2. Presets (union simple) → _profile_score
 
 Presets disponibles:
+- blue_chip: BTC/ETH uniquement (v1.2.0)
 - quality_risk: Low vol, low DD, sharpe élevé
 - trend3_12m: Tendance moyen/long terme
 - swing7_30: Swing trading court terme
@@ -53,14 +58,17 @@ STABLECOINS = {
     "USDP", "SUSD", "MIM", "DOLA", "cUSD", "OUSD", "HUSD"
 }
 
+# v1.2.0: Blue chip cryptos (established, high liquidity)
+BLUE_CHIP_CRYPTOS = {"BTC", "ETH"}
+
 # Seuils Data Quality
 MIN_COVERAGE_RATIO = 0.85
 MIN_DATA_POINTS = 60  # ~2 mois de données
 
-# Presets par profil (union) - v1.1.0: aligné avec preset_meta.py
+# Presets par profil (union) - v1.2.0: blue_chip ajouté pour Modéré
 PROFILE_PRESETS = {
     "Stable": [],  # EXCLUSION TOTALE - crypto trop volatile
-    "Modéré": ["quality_risk", "trend3_12m", "swing7_30"],
+    "Modéré": ["blue_chip", "quality_risk", "trend3_12m", "swing7_30"],  # v1.2.0: blue_chip prioritaire
     "Agressif": ["momentum24h", "recovery_crypto", "swing7_30", "highvol_lottery"],
 }
 
@@ -135,6 +143,21 @@ def _get_momentum_med(row: pd.Series) -> float:
     ret_30d = row.get("ret_30d_pct", 0) or 0
     ret_90d = row.get("ret_90d_pct", 0) or 0
     return 0.5 * float(ret_30d) + 0.5 * float(ret_90d)
+
+
+def _get_currency_base(row: pd.Series) -> str:
+    """Extrait la currency base (BTC de BTC/EUR)."""
+    # Priorité: currency_base > symbol split
+    base = row.get("currency_base")
+    if pd.notna(base) and base:
+        return str(base).upper().strip()
+    
+    symbol = row.get("symbol")
+    if pd.notna(symbol) and symbol:
+        # BTC/EUR → BTC
+        return str(symbol).split("/")[0].upper().strip()
+    
+    return ""
 
 
 def _rank_percentile(series: pd.Series, higher_is_better: bool = True) -> pd.Series:
@@ -276,6 +299,23 @@ def apply_hard_constraints(df: pd.DataFrame, profile: str) -> pd.DataFrame:
 # =============================================================================
 # PRESET FILTERS
 # =============================================================================
+
+def _preset_blue_chip(df: pd.DataFrame) -> pd.Series:
+    """
+    Preset: Blue Chip (v1.2.0)
+    Top cryptos établies (BTC, ETH uniquement).
+    Garantit leur inclusion même si autres filtres sont stricts.
+    """
+    # Extraire currency_base pour chaque row
+    bases = df.apply(_get_currency_base, axis=1)
+    mask = bases.isin(BLUE_CHIP_CRYPTOS)
+    
+    count = mask.sum()
+    if count > 0:
+        logger.debug(f"[Crypto] Preset blue_chip: {count} cryptos (BTC/ETH)")
+    
+    return mask
+
 
 def _preset_quality_risk(df: pd.DataFrame) -> pd.Series:
     """
@@ -436,12 +476,13 @@ def _preset_highvol_lottery(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
-# Mapping preset name → function (v1.1.0: aligné avec preset_meta.py)
+# Mapping preset name → function (v1.2.0: ajout blue_chip)
 PRESET_FUNCTIONS = {
+    "blue_chip": _preset_blue_chip,          # v1.2.0: NEW
     "quality_risk": _preset_quality_risk,
     "trend3_12m": _preset_trend3_12m,
     "swing7_30": _preset_swing7_30,
-    "recovery_crypto": _preset_recovery_crypto,  # v1.1.0: renommé
+    "recovery_crypto": _preset_recovery_crypto,
     "momentum24h": _preset_momentum24h,
     "highvol_lottery": _preset_highvol_lottery,
 }
@@ -520,6 +561,12 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     momentum_med = df.apply(_get_momentum_med, axis=1)
     scores["momentum_med"] = _rank_percentile(momentum_med, higher_is_better=True)
     
+    # v1.2.0: Bonus blue chip (stabilité)
+    if profile == "Modéré":
+        is_blue_chip = _preset_blue_chip(df)
+        # Blue chips get a small bonus in Modéré
+        scores["blue_chip_bonus"] = is_blue_chip.astype(float) * 0.1
+    
     # Score pondéré
     total_score = pd.Series(0.0, index=df.index)
     total_weight = 0.0
@@ -529,6 +576,10 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
             total_score += scores[component] * weight
             total_weight += weight
     
+    # Add blue chip bonus (not weighted, direct add)
+    if "blue_chip_bonus" in scores.columns:
+        total_score += scores["blue_chip_bonus"]
+    
     if total_weight > 0:
         total_score /= total_weight
     
@@ -537,9 +588,17 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     df["_preset_profile"] = profile
     df["_asset_class"] = "crypto"
     
+    # v1.2.0: Marquer les blue chips
+    df["_is_blue_chip"] = _preset_blue_chip(df)
+    
     logger.info(f"[Crypto {profile}] Scores: mean={df['_profile_score'].mean():.1f}, "
                 f"std={df['_profile_score'].std():.1f}, "
                 f"range=[{df['_profile_score'].min():.1f}, {df['_profile_score'].max():.1f}]")
+    
+    # v1.2.0: Log blue chips
+    n_blue = df["_is_blue_chip"].sum()
+    if n_blue > 0:
+        logger.info(f"[Crypto {profile}] Blue chips inclus: {n_blue} (BTC/ETH)")
     
     return df
 
@@ -613,6 +672,7 @@ def get_crypto_preset_summary() -> Dict[str, Any]:
     return {
         "presets": list(PRESET_FUNCTIONS.keys()),
         "stablecoins_excluded": list(STABLECOINS),
+        "blue_chips": list(BLUE_CHIP_CRYPTOS),
         "profiles": {
             profile: {
                 "presets": presets,
@@ -621,7 +681,7 @@ def get_crypto_preset_summary() -> Dict[str, Any]:
             }
             for profile, presets in PROFILE_PRESETS.items()
         },
-        "version": "1.1.0",
+        "version": "1.2.0",
     }
 
 
@@ -634,7 +694,7 @@ if __name__ == "__main__":
     
     # Test avec données fictives
     test_data = pd.DataFrame({
-        "symbol": ["BTC", "ETH", "SOL", "DOGE", "XRP", "ADA", "AVAX", "LINK", "USDT", "USDC"],
+        "symbol": ["BTC/EUR", "ETH/EUR", "SOL/EUR", "DOGE/EUR", "XRP/EUR", "ADA/EUR", "AVAX/EUR", "LINK/EUR", "USDT/EUR", "USDC/EUR"],
         "currency_base": ["BTC", "ETH", "SOL", "DOGE", "XRP", "ADA", "AVAX", "LINK", "USDT", "USDC"],
         "ret_1d_pct": [2.5, 3.2, 5.1, 8.2, 1.2, 2.1, 4.5, 3.8, 0.01, 0.0],
         "ret_7d_pct": [5.2, 7.1, 12.5, 15.2, 3.2, 4.5, 9.8, 8.2, 0.02, 0.0],
@@ -654,14 +714,14 @@ if __name__ == "__main__":
     })
     
     print("\n" + "=" * 60)
-    print("TEST PRESET CRYPTO v1.1.0")
+    print("TEST PRESET CRYPTO v1.2.0")
     print("=" * 60)
     
     for profile in ["Stable", "Modéré", "Agressif"]:
         print(f"\n--- Profil: {profile} ---")
         result = select_crypto_for_profile(test_data.copy(), profile)
         if not result.empty:
-            cols = ["symbol", "sharpe_ratio", "vol_30d_annual_pct", "ret_90d_pct", "_profile_score"]
+            cols = ["symbol", "sharpe_ratio", "vol_30d_annual_pct", "ret_90d_pct", "_profile_score", "_is_blue_chip"]
             cols = [c for c in cols if c in result.columns]
             print(result[cols].to_string(index=False))
         else:
