@@ -2366,7 +2366,7 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     else:
 # FIX v2.2.14: Fallback min-max si rank() dégénère (univers trop petit ou variance nulle)
     # Corrige le bug des scores uniformes à 50.1
-     if len(df) < 5 or total.std() < 1e-6:
+    if len(df) < 5 or total.std() < 1e-6:
         rng = total.max() - total.min()
         if rng < 1e-9:
             # Vraiment aucune variance → score neutre 50
@@ -2382,13 +2382,13 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     else:
         # Normalisation par PERCENTILE - stable et comparable entre runs
         df["_profile_score"] = (total.rank(pct=True) * 100).round(2)
-    
+
     df["_preset_profile"] = profile
     df["_asset_class"] = "etf"
-    
+
     # Assigner le meilleur preset
     df["_matched_preset"] = assign_best_preset(df, profile)
-    
+
     # Tags Role/Risk/Correlation
     def _get_config_field(preset_name: str, field: str) -> str:
         cfg = PRESET_CONFIGS.get(preset_name)
@@ -2398,18 +2398,18 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
         if val is None:
             return ""
         return val.value if hasattr(val, "value") else str(val)
-    
+
     df["_role"] = df["_matched_preset"].apply(lambda p: _get_config_field(p, "role"))
     df["_risk"] = df["_matched_preset"].apply(lambda p: _get_config_field(p, "risk"))
     df["_correlation_group"] = df["_matched_preset"].apply(lambda p: _get_config_field(p, "correlation_group"))
-    
+
     # Stats
     logger.info(
         f"[ETF {profile}] Scores: mean={df['_profile_score'].mean():.1f}, "
         f"std={df['_profile_score'].std():.1f}, "
         f"range=[{df['_profile_score'].min():.1f}, {df['_profile_score'].max():.1f}]"
     )
-    
+
     return df
 
 
