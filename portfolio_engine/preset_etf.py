@@ -2364,7 +2364,13 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
                 f"[ETF {profile}] Scoring fallback (min-max): n={n_valid}, std={total_std:.6f}"
             )
     else:
-        # Cas normal: rank percentile (FIX v2.2.8)
+# FIX v2.2.14: Fallback min-max si rank() dégénère (univers trop petit ou variance nulle)
+    # Corrige le bug des scores uniformes à 50.1
+    if len(df) < 5 or total.std() < 1e-6:
+        rng = total.max() - total.min()
+        df["_profile_score"] = ((total - total.min()) / (rng + 1e-9) * 100).round(2)
+    else:
+        # Normalisation par PERCENTILE - stable et comparable entre runs
         df["_profile_score"] = (total.rank(pct=True) * 100).round(2)
     
     df["_preset_profile"] = profile
