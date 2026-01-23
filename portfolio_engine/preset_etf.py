@@ -2368,7 +2368,17 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     # Corrige le bug des scores uniformes à 50.1
     if len(df) < 5 or total.std() < 1e-6:
         rng = total.max() - total.min()
-        df["_profile_score"] = ((total - total.min()) / (rng + 1e-9) * 100).round(2)
+        if rng < 1e-9:
+            # Vraiment aucune variance → score neutre 50
+            df["_profile_score"] = 50.0
+            logger.warning(
+                f"[ETF {profile}] Scoring fallback (neutral 50): n={len(df)}, all values identical"
+            )
+        else:
+            df["_profile_score"] = ((total - total.min()) / (rng + 1e-9) * 100).round(2)
+            logger.warning(
+                f"[ETF {profile}] Scoring fallback (min-max): n={len(df)}, std={total.std():.6f}"
+            )
     else:
         # Normalisation par PERCENTILE - stable et comparable entre runs
         df["_profile_score"] = (total.rank(pct=True) * 100).round(2)
