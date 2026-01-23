@@ -1028,22 +1028,25 @@ def build_raw_universe(
                 # Performance
                 "perf_24h": it.get("daily_change_pct"),
                 "ytd": it.get("ytd_return_pct") or it.get("ytd"),
-                "one_year_return_pct": it.get("one_year_return_pct"),  # v3.2
+                "one_year_return_pct": it.get("one_year_return_pct"),
                 # === v3.6: Nouvelles colonnes momentum ===
-                "perf_1m": it.get("perf_1m_pct"),  # Mappe perf_1m_pct → perf_1m
-                "perf_3m": it.get("perf_3m_pct"),  # Mappe perf_3m_pct → perf_3m
+                "perf_1m": it.get("perf_1m_pct"),
+                "perf_3m": it.get("perf_3m_pct"),
+                # === FIX v4.2: Garder noms originaux pour preset_etf ===
+                "perf_1m_pct": it.get("perf_1m_pct"),
+                "perf_3m_pct": it.get("perf_3m_pct"),
                 # Risque
                 "vol_3y": it.get("vol_3y_pct") or it.get("vol_pct") or it.get("vol"),
                 "vol30": it.get("vol_pct"),
                 "vol": it.get("vol_pct") or it.get("vol"),
-                "vol_pct": it.get("vol_pct"),  # v3.3: Garder pour bond enrichment
+                "vol_pct": it.get("vol_pct"),
                 # Méta
                 "liquidity": it.get("aum_usd"),
-                "aum_usd": it.get("aum_usd"),  # v3.2: Garder aussi le nom original
+                "aum_usd": it.get("aum_usd"),
                 "sector": "Bonds" if is_bond else it.get("sector", "Diversified"),
                 "country": it.get("domicile", "Global"),
                 "category": "bond" if is_bond else "etf",
-                "fund_type": it.get("fund_type"),  # v3.2: Pour distinguer bonds
+                "fund_type": it.get("fund_type"),
                 # ISIN pour référence
                 "isin": it.get("isin"),
                 # === v3.2: Nouvelles colonnes coût/rendement ===
@@ -1061,6 +1064,16 @@ def build_raw_universe(
                 "etf_type": it.get("etf_type"),
                 # Reconstruire sector_top comme dict pour factors.py
                 "sector_top": _build_sector_top_dict(it),
+                # === FIX v4.2: Colonnes manquantes pour preset_etf scoring ===
+                "sector_top_weight": it.get("sector_top_weight"),
+                "holdings_top10": it.get("holdings_top10"),
+                "holding_top": it.get("holding_top"),
+                "country_top": it.get("country_top"),
+                "country_top_weight": it.get("country_top_weight"),
+                "data_quality_score": it.get("data_quality_score"),
+                "leverage": it.get("leverage"),
+                "objective": it.get("objective"),
+                "daily_change_pct": it.get("daily_change_pct"),
             }
             if is_bond:
                 bond_rows.append(row)
