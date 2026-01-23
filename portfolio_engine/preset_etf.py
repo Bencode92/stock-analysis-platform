@@ -2343,7 +2343,24 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     if total_weight > 0:
         total /= total_weight
     
-# FIX v2.2.14: Détection cas dégénéré (rank() → scores uniformes ~50.1)
+# === DEBUG: Diagnostic des scores composants ===
+    # À SUPPRIMER après investigation
+    for component in scores.columns:
+        s = scores[component]
+        n_nan = s.isna().sum()
+        s_std = s.std() if s.notna().sum() > 1 else 0
+        logger.warning(
+            f"[DEBUG {profile}] {component}: n_nan={n_nan}/{len(s)}, "
+            f"std={s_std:.4f}, range=[{s.min():.2f}, {s.max():.2f}]"
+        )
+    
+    # Diagnostic du total avant normalisation
+    logger.warning(
+        f"[DEBUG {profile}] TOTAL: n_valid={len(total.dropna())}, "
+        f"std={total.std():.6f}, range=[{total.min():.4f}, {total.max():.4f}]"
+    )
+
+    # FIX v2.2.14: Détection cas dégénéré (rank() → scores uniformes ~50.1)
     # Si univers trop petit (<5) ou variance quasi-nulle → fallback min-max
     n_valid = len(total.dropna())
     total_std = total.std() if n_valid > 1 else 0.0
@@ -2395,7 +2412,6 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     )
 
     return df
-
 
 # =============================================================================
 # DEDUPLICATION (Couche 4) - TER-aware
