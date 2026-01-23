@@ -2343,27 +2343,6 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     if total_weight > 0:
         total /= total_weight
     
-    # FIX v2.2.14: Détection cas dégénéré (rank() → scores uniformes ~50.1)
-    # Si univers trop petit (<5) ou variance quasi-nulle → fallback min-max
-    n_valid = len(total.dropna())
-    total_std = total.std() if n_valid > 1 else 0.0
-    
-    if n_valid < 5 or total_std < 1e-6:
-        # Fallback min-max normalization
-        t_min, t_max = total.min(), total.max()
-        if t_max - t_min < 1e-9:
-            # Vraiment aucune variance → score neutre 50
-            df["_profile_score"] = 50.0
-            logger.warning(
-                f"[ETF {profile}] Scoring fallback (neutral 50): n={n_valid}, "
-                f"std={total_std:.6f}, all values identical"
-            )
-        else:
-            df["_profile_score"] = (((total - t_min) / (t_max - t_min)) * 100).round(2)
-            logger.warning(
-                f"[ETF {profile}] Scoring fallback (min-max): n={n_valid}, std={total_std:.6f}"
-            )
-    else:
 # FIX v2.2.14: Détection cas dégénéré (rank() → scores uniformes ~50.1)
     # Si univers trop petit (<5) ou variance quasi-nulle → fallback min-max
     n_valid = len(total.dropna())
