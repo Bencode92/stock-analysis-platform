@@ -1,6 +1,6 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.29 — FIX: crypto cap enforcement final
+Optimiseur de portefeuille v6.32 (P0 FIX role propagation)
 
 CHANGEMENTS v6.28 (4 FIXES CRITIQUES):
 1. FIX A: vol_annual lit maintenant les vraies colonnes par catégorie:
@@ -237,6 +237,36 @@ except ImportError:
     HAS_CRYPTO_UTILS = False
 
 logger = logging.getLogger("portfolio_engine.optimizer")
+# =============================================================================
+# P0 FIX v6.32: Mapping tolérant string → Role enum
+# =============================================================================
+
+ROLE_STRING_MAP = {
+    # Standard values
+    "core": Role.CORE,
+    "defensive": Role.DEFENSIVE,
+    "satellite": Role.SATELLITE,
+    "lottery": Role.LOTTERY,
+    # Aliases français
+    "defensif": Role.DEFENSIVE,
+    "défensif": Role.DEFENSIVE,
+    "coeur": Role.CORE,
+    "cœur": Role.CORE,
+}
+
+
+def _parse_role_string(role_str):
+    """
+    Parse une string de rôle en enum Role de manière tolérante.
+    Retourne None si non reconnu (jamais de crash).
+    """
+    if role_str is None:
+        return None
+    try:
+        normalized = str(role_str).strip().lower()
+    except Exception:
+        return None
+    return ROLE_STRING_MAP.get(normalized)   
 
 # ============= CONSTANTES v6.17 =============
 
@@ -891,15 +921,18 @@ def select_etfs_via_preset_engine(
             # Enrichir avec les métadonnées preset_etf
             if "_matched_preset" in row:
                 original_asset.preset = row["_matched_preset"]
+            # P0 FIX v6.32: Propagation correcte du rôle
             if "_role" in row:
-                original_asset.role_str = row["_role"]
+                parsed_role = _parse_role_string(row["_role"])
+                if parsed_role is not None:
+                    original_asset.role = parsed_role
             
             selected_assets.append(original_asset)
     
     meta["selected_count"] = len(selected_assets)
     logger.info(f"[preset_etf] {profile_name}: {len(etf_assets)} → {len(selected_assets)} ETF")
     
-    return selected_assets, meta      
+    return selected_assets, meta
 
 
 # ============= BUCKET/PRESET ASSIGNMENT =============
