@@ -2452,7 +2452,13 @@ def add_commentary(
     disclaimer = BACKTEST_DISCLAIMER.format(days=CONFIG["backtest_days"])
     
     merged = merge_commentary_into_portfolios(portfolios_for_prompt, commentary)
-    
+   
+    # === v5.2.1: Préserver risk_analysis (sinon perdu dans portfolios_for_prompt) ===
+    for profile in merged:
+        if profile in portfolios and portfolios[profile].get("risk_analysis"):
+            merged[profile]["risk_analysis"] = portfolios[profile]["risk_analysis"]
+        if profile in portfolios and portfolios[profile].get("assets"):
+            merged[profile]["assets"] = portfolios[profile]["assets"]    
     for profile in merged:
         raw_comment = merged[profile].get("comment", "") or ""
         
@@ -3639,6 +3645,9 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         if data.get("_asset_details"):
             result[profile]["_asset_details"] = data["_asset_details"]
             logger.info(f"   {profile}: {len(data['_asset_details'])} asset_details copiés")
+      # === v5.2.1: Exporter risk_analysis si présent ===
+        if data.get("risk_analysis"):
+            result[profile]["risk_analysis"] = data["risk_analysis"]     
     
     result["_meta"] = {
         "generated_at": datetime.datetime.now().isoformat(),
