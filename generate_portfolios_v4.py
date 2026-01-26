@@ -143,6 +143,16 @@ except ImportError:
     def select_etfs_for_profile(df, profile, top_n=None): return df
     def select_crypto_for_profile(df, profile, top_n=None): return df
     def select_bonds_for_profile(df, profile, top_n=None): return df
+       
+# === v5.2.0: Risk Analysis (post-optimization) ===
+try:
+    from portfolio_engine import (
+        HAS_RISK_ANALYSIS,
+        enrich_portfolio_with_risk_analysis,
+    )
+except ImportError:
+    HAS_RISK_ANALYSIS = False
+    enrich_portfolio_with_risk_analysis = None       
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
 
@@ -442,6 +452,8 @@ CONFIG = {
     # "factors" = factors.py calcule composite_score (legacy)
     # "blend"   = les deux (pour A/B testing)
     "equity_scoring_mode": "preset",
+    # === v5.2.0: Risk Analysis (post-optimization) ===
+    "enable_risk_analysis": True,
 }
 
 # === v4.7 P2: DISCLAIMER BACKTEST ===
@@ -1945,6 +1957,17 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             "diagnostics": diagnostics,
             "assets": assets,
         }
+        # === v5.2.0: Risk Analysis enrichment ===
+        if CONFIG.get("enable_risk_analysis", False) and HAS_RISK_ANALYSIS:
+            try:
+                enriched = enrich_portfolio_with_risk_analysis(
+                    portfolio_result=portfolios[profile],
+                    profile_name=profile,
+                )
+                portfolios[profile]["risk_analysis"] = enriched.get("risk_analysis", {})
+                logger.info(f"   ✅ [risk_analysis] Enrichissement OK pour {profile}")
+            except Exception as e:
+                logger.warning(f"   ⚠️ [risk_analysis] Erreur: {e}, continue sans enrichissement")
         
         # v4.14.0 FIX R8-4: Safe format pour vol (évite TypeError si None)
         vol = diagnostics.get('portfolio_vol')
