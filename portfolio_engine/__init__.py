@@ -1,6 +1,6 @@
 # portfolio_engine/__init__.py
 """
-Portfolio Engine v4.1.0 - Phase 2.5 Refactoring + preset_etf integration
+Portfolio Engine v4.2.0 - Phase 2.5 Refactoring + preset_etf + risk_analysis
 
 Architecture:
 - universe.py       : Chargement et préparation des données (PAS de scoring)
@@ -11,6 +11,7 @@ Architecture:
 - preset_meta.py    : Presets, buckets, contraintes par profil
 - preset_etf.py     : Sélection ETF avancée avec scoring 8 composantes (v6.30)
 - etf_exposure.py   : Mapping ETF → exposure pour déduplication (v3.0)
+- risk_analysis.py  : Analyse de risque post-optimisation (v1.0.0) [NEW]
 
 PARI CENTRAL:
 "Des entreprises de qualité fondamentale (ROIC > 10%, FCF positif)
@@ -191,7 +192,63 @@ except ImportError as e:
     etf_compute_profile_score = None
     etf_deduplicate_underlying = None
 
-__version__ = "4.1.0"
+# =============================================================================
+# Risk Analysis (v1.0.0 - Post-optimization risk enrichment)
+# =============================================================================
+try:
+    from .risk_analysis import (
+        # Main class
+        RiskAnalyzer,
+        # Convenience function
+        enrich_portfolio_with_risk_analysis,
+        # Detection functions
+        detect_leveraged_instruments,
+        detect_preferred_stocks,
+        detect_low_liquidity,
+        # Analysis functions
+        compute_leverage_stress_multiplier,
+        compute_preferred_dual_shock,
+        compute_tail_risk_metrics,
+        compute_liquidity_score,
+        # Alert generation
+        generate_alerts,
+        # Data classes
+        LeverageAnalysis,
+        PreferredStockAnalysis,
+        TailRiskMetrics,
+        LiquidityAnalysis,
+        RiskAlert,
+        RiskAnalysisResult,
+        # Constants
+        ALERT_THRESHOLDS,
+        LEVERAGE_TICKERS,
+        PREFERRED_TICKERS,
+    )
+    HAS_RISK_ANALYSIS = True
+except ImportError as e:
+    HAS_RISK_ANALYSIS = False
+    # Placeholders pour éviter ImportError si risk_analysis n'est pas disponible
+    RiskAnalyzer = None
+    enrich_portfolio_with_risk_analysis = None
+    detect_leveraged_instruments = None
+    detect_preferred_stocks = None
+    detect_low_liquidity = None
+    compute_leverage_stress_multiplier = None
+    compute_preferred_dual_shock = None
+    compute_tail_risk_metrics = None
+    compute_liquidity_score = None
+    generate_alerts = None
+    LeverageAnalysis = None
+    PreferredStockAnalysis = None
+    TailRiskMetrics = None
+    LiquidityAnalysis = None
+    RiskAlert = None
+    RiskAnalysisResult = None
+    ALERT_THRESHOLDS = {}
+    LEVERAGE_TICKERS = set()
+    PREFERRED_TICKERS = set()
+
+__version__ = "4.2.0"
 
 __all__ = [
     # Universe (v3.0)
@@ -301,4 +358,25 @@ __all__ = [
     "etf_apply_hard_constraints",
     "etf_compute_profile_score",
     "etf_deduplicate_underlying",
+    # Risk Analysis (v1.0.0 - Post-optimization risk enrichment)
+    "HAS_RISK_ANALYSIS",
+    "RiskAnalyzer",
+    "enrich_portfolio_with_risk_analysis",
+    "detect_leveraged_instruments",
+    "detect_preferred_stocks",
+    "detect_low_liquidity",
+    "compute_leverage_stress_multiplier",
+    "compute_preferred_dual_shock",
+    "compute_tail_risk_metrics",
+    "compute_liquidity_score",
+    "generate_alerts",
+    "LeverageAnalysis",
+    "PreferredStockAnalysis",
+    "TailRiskMetrics",
+    "LiquidityAnalysis",
+    "RiskAlert",
+    "RiskAnalysisResult",
+    "ALERT_THRESHOLDS",
+    "LEVERAGE_TICKERS",
+    "PREFERRED_TICKERS",
 ]
