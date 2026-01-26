@@ -1,6 +1,6 @@
 # portfolio_engine/risk_analysis.py
 """
-Risk Analysis Module v1.0.0
+Risk Analysis Module v1.0.1
 
 Module d'enrichissement post-optimisation qui:
 1. RÉUTILISE stress_testing.py (pas de duplication)
@@ -13,6 +13,11 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
+- v1.0.1: Fixes qualité
+  - FIX: Disclaimer data_limits dans output JSON
+  - FIX: compute_liquidity_score normalisation poids
+  - FIX: stress_multiplier règle unifiée
+  - FIX: Guardrails VaR99 fenêtre courte (<126 obs)
 - v1.0.0: Initial release
   - Wrapper stress_testing.py
   - Leverage/inverse ETF detection + stress multiplier
@@ -65,7 +70,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # === LEVERAGE DETECTION ===
 LEVERAGE_KEYWORDS = {
@@ -237,6 +242,8 @@ class TailRiskMetrics:
     skewness: float = 0.0
     kurtosis: float = 3.0  # Normal = 3
     fat_tails: bool = False
+    # v1.0.1: Flag confiance
+    var99_confidence: str = "adequate"  # "adequate" ou "low_sample_size"
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -248,6 +255,7 @@ class TailRiskMetrics:
             "skewness": round(self.skewness, 3),
             "kurtosis": round(self.kurtosis, 3),
             "fat_tails": self.fat_tails,
+            "var99_confidence": self.var99_confidence,  # v1.0.1
         }
 
 
@@ -307,12 +315,24 @@ class RiskAnalysisResult:
     tail_risk: TailRiskMetrics = field(default_factory=TailRiskMetrics)
     liquidity: LiquidityAnalysis = field(default_factory=LiquidityAnalysis)
     alerts: List[RiskAlert] = field(default_factory=list)
+    # v1.0.1: Metadata for data limits
+    data_points: int = 63  # Default ~3 months daily
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "version": self.version,
             "timestamp": self.timestamp.isoformat(),
             "profile": self.profile_name,
+            # === v1.0.1: Data limits disclaimer ===
+            "data_limits": {
+                "historical_backtest": "disabled",
+                "data_window": "3_months_daily",
+                "data_points_approx": self.data_points,
+                "stress_tests_calibration": "indicative_scenarios_not_historical",
+                "tail_risk_method": "parametric_normal_preferred",
+                "var99_confidence": self.tail_risk.var99_confidence,
+                "disclaimer": "Stress tests are indicative only, not calibrated on historical crises (2008/2020/2022). VaR99 reliability requires >126 daily observations.",
+            },
             "stress_tests": self.stress_tests,
             "leverage_analysis": self.leverage_analysis.to_dict(),
             "preferred_analysis": self.preferred_analysis.to_dict(),
@@ -343,6 +363,18 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
         return f
     except (TypeError, ValueError):
         return default
+
+
+def _normalize_weight(weight: float) -> float:
+    """
+    v1.0.1: Normalise un poids en fraction (0-1).
+    
+    Si weight > 1, on assume qu'il est en % et on divise par 100.
+    Sinon on le garde tel quel.
+    """
+    if weight > 1.0:
+        return weight / 100.0
+    return weight
 
 
 def _normalize_leverage(leverage_raw: Any) -> float:
@@ -419,9 +451,8 @@ def detect_leveraged_instruments(
         name = _extract_name(asset).lower()
         weight = _safe_float(asset.get("weight", asset.get("weight_pct", 0)))
         
-        # Normaliser weight si en pourcentage
-        if weight > 1.0:
-            weight = weight / 100.0
+        # v1.0.1: Utiliser helper pour normaliser
+        weight = _normalize_weight(weight)
         
         is_leveraged = False
         leverage_factor = 1.0
@@ -488,9 +519,9 @@ def detect_leveraged_instruments(
         non_leveraged_weight = 1.0 - total_leveraged_weight
         result.effective_leverage = non_leveraged_weight * 1.0 + weighted_leverage
         
-        # Stress multiplier: en stress, le leverage amplifie les pertes
-        # Approximation: multiplier = 1 + (effective_leverage - 1) * 0.5
-        result.stress_multiplier = 1.0 + (result.effective_leverage - 1.0) * 0.5
+        # v1.0.1: Stress multiplier - règle unifiée
+        # multiplier = min(3, effective_leverage) pour éviter valeurs extrêmes
+        result.stress_multiplier = min(3.0, result.effective_leverage)
     
     return result
 
@@ -516,8 +547,8 @@ def detect_preferred_stocks(
         name = _extract_name(asset).lower()
         weight = _safe_float(asset.get("weight", asset.get("weight_pct", 0)))
         
-        if weight > 1.0:
-            weight = weight / 100.0
+        # v1.0.1: Utiliser helper
+        weight = _normalize_weight(weight)
         
         is_preferred = False
         
@@ -578,8 +609,7 @@ def detect_low_liquidity(
         volume = _safe_float(source_data.get("avg_volume", source_data.get("volume")))
         
         weight = _safe_float(asset.get("weight", asset.get("weight_pct", 0)))
-        if weight > 1.0:
-            weight = weight / 100.0
+        weight = _normalize_weight(weight)
         
         is_illiquid = False
         reasons = []
@@ -616,7 +646,7 @@ def compute_leverage_stress_multiplier(
     """
     Calcule l'impact du stress ajusté pour le leverage.
     
-    En période de stress, le leverage amplifie les pertes non-linéairement.
+    v1.0.1: Utilise directement stress_multiplier calculé dans detect_leveraged_instruments.
     
     Args:
         leverage_analysis: Résultat de detect_leveraged_instruments()
@@ -628,20 +658,8 @@ def compute_leverage_stress_multiplier(
     if not leverage_analysis.has_leveraged:
         return base_stress_impact
     
-    # Ajustement non-linéaire: en stress, la corrélation augmente
-    # et le rebalancement journalier des ETF leveraged crée du "volatility decay"
-    effective_lev = leverage_analysis.effective_leverage
-    
-    # Pour les inverse ETFs, l'impact en stress haussier est amplifié
-    if leverage_analysis.has_inverse:
-        # Scenario crash: inverse performent bien mais ont leur propre vol decay
-        # On garde le multiplier mais avec un facteur réduit
-        multiplier = 1.0 + (effective_lev - 1.0) * 0.3
-    else:
-        # Leveraged long: amplifie les pertes
-        multiplier = effective_lev
-    
-    return base_stress_impact * multiplier
+    # v1.0.1: Utiliser directement le stress_multiplier unifié
+    return base_stress_impact * leverage_analysis.stress_multiplier
 
 
 def compute_preferred_dual_shock(
@@ -657,7 +675,10 @@ def compute_preferred_dual_shock(
     1. Equity (beta ~0.3-0.5)
     2. Taux d'intérêt (duration ~5-7 ans)
     
-    Impact = equity_beta * equity_shock + duration * rate_shock
+    v1.0.1: Formulation explicite
+    - delta_rate = +bps/10000 (hausse des taux)
+    - rate_pnl = -duration * delta_rate (hausse taux = perte)
+    - total = equity_beta * equity_shock + rate_pnl
     
     Args:
         preferred_analysis: Résultat de detect_preferred_stocks()
@@ -676,19 +697,21 @@ def compute_preferred_dual_shock(
     # Impact equity
     equity_impact = params["equity_beta"] * equity_shock
     
-    # Impact taux: duration * delta_rate
-    # 1bp = 0.0001 = 0.01%
-    rate_impact = params["duration"] * (rate_shock_bps / 10000.0)
+    # v1.0.1: Formulation explicite pour rate shock
+    # delta_rate positif = hausse des taux
+    delta_rate = rate_shock_bps / 10000.0
+    # rate_pnl négatif quand taux montent (bond perd de la valeur)
+    rate_pnl = -params["duration"] * delta_rate
     
-    # Total (les deux sont négatifs en stress)
-    total_impact = equity_impact - rate_impact  # Rate up = bond down
+    # Total impact
+    total_impact = equity_impact + rate_pnl
     
     # Stocker les détails
     preferred_analysis.equity_sensitivity = params["equity_beta"]
     preferred_analysis.rate_sensitivity = params["duration"]
     preferred_analysis.dual_shock_impact_pct = total_impact * 100
     preferred_analysis.details["equity_component_pct"] = equity_impact * 100
-    preferred_analysis.details["rate_component_pct"] = -rate_impact * 100
+    preferred_analysis.details["rate_component_pct"] = rate_pnl * 100
     
     return total_impact
 
@@ -702,9 +725,9 @@ def compute_tail_risk_metrics(
     """
     Calcule les métriques de tail risk.
     
-    Peut utiliser:
-    - returns: Série de returns historiques
-    - weights + cov_matrix: Approche paramétrique
+    v1.0.1: Guardrails pour fenêtre courte
+    - Si < 126 obs: VaR99 historique désactivé (non fiable)
+    - Préférence au paramétrique pour VaR99
     
     Args:
         returns: Array de returns (T,) ou (T, N) pour N assets
@@ -719,25 +742,28 @@ def compute_tail_risk_metrics(
     
     # === Approche paramétrique (si cov_matrix fournie) ===
     if weights is not None and cov_matrix is not None:
-        port_vol = np.sqrt(weights @ cov_matrix @ weights)
-        port_mean = 0.0  # Assume zero expected return for risk calc
-        
-        # VaR paramétrique (assume normal)
-        z_95 = 1.645
-        z_99 = 2.326
-        
-        result.var_95 = port_mean - z_95 * port_vol
-        result.var_99 = port_mean - z_99 * port_vol
-        
-        # CVaR (Expected Shortfall) pour normal
-        # ES = μ - σ * φ(z) / (1-α)
-        result.cvar_95 = port_mean - port_vol * 2.063
-        result.cvar_99 = port_mean - port_vol * 2.665
-        
-        # Max drawdown attendu (approximation)
-        # E[MDD] ≈ σ * sqrt(2 * ln(T)) pour T périodes
-        T = 252  # 1 an
-        result.max_drawdown_expected = -port_vol * np.sqrt(2 * np.log(T))
+        try:
+            port_vol = np.sqrt(weights @ cov_matrix @ weights)
+            port_mean = 0.0  # Assume zero expected return for risk calc
+            
+            # VaR paramétrique (assume normal)
+            z_95 = 1.645
+            z_99 = 2.326
+            
+            result.var_95 = port_mean - z_95 * port_vol
+            result.var_99 = port_mean - z_99 * port_vol
+            
+            # CVaR (Expected Shortfall) pour normal
+            # ES = μ - σ * φ(z) / (1-α)
+            result.cvar_95 = port_mean - port_vol * 2.063
+            result.cvar_99 = port_mean - port_vol * 2.665
+            
+            # Max drawdown attendu (approximation)
+            # E[MDD] ≈ σ * sqrt(2 * ln(T)) pour T périodes
+            T = 252  # 1 an
+            result.max_drawdown_expected = -port_vol * np.sqrt(2 * np.log(T))
+        except Exception as e:
+            logger.warning(f"[tail_risk] Erreur calcul paramétrique: {e}")
     
     # === Approche historique (si returns fournie) ===
     if returns is not None and len(returns) > 30:
@@ -747,17 +773,37 @@ def compute_tail_risk_metrics(
         else:
             port_returns = returns.flatten() if returns.ndim > 1 else returns
         
-        # Historical VaR
-        result.var_95 = float(np.percentile(port_returns, 5))
-        result.var_99 = float(np.percentile(port_returns, 1))
+        n_obs = len(port_returns)
         
-        # Historical CVaR (mean of worst α%)
-        sorted_returns = np.sort(port_returns)
-        n = len(sorted_returns)
-        result.cvar_95 = float(np.mean(sorted_returns[:int(n * 0.05)]))
-        result.cvar_99 = float(np.mean(sorted_returns[:int(n * 0.01)]))
+        # v1.0.1: Guardrails fenêtre courte
+        # VaR99 historique fiable seulement si >= 126 observations (~6 mois daily)
+        # Car 1% quantile sur 63 obs = 0.63 observation = non significatif
         
-        # Skewness et Kurtosis
+        MIN_OBS_FOR_VAR99 = 126
+        
+        if n_obs >= MIN_OBS_FOR_VAR99:
+            # Historical VaR (fiable)
+            result.var_95 = float(np.percentile(port_returns, 5))
+            result.var_99 = float(np.percentile(port_returns, 1))
+            
+            sorted_returns = np.sort(port_returns)
+            n_05 = max(1, int(n_obs * 0.05))
+            n_01 = max(1, int(n_obs * 0.01))
+            result.cvar_95 = float(np.mean(sorted_returns[:n_05]))
+            result.cvar_99 = float(np.mean(sorted_returns[:n_01]))
+            result.var99_confidence = "adequate"
+        else:
+            # Fenêtre courte: VaR95 historique OK, VaR99 reste paramétrique
+            result.var_95 = float(np.percentile(port_returns, 5))
+            # VaR99/CVaR99: on garde les valeurs paramétriques calculées plus haut
+            # Si pas de cov, fallback sur scaling de VaR95
+            if result.var_99 == 0.0:
+                result.var_99 = result.var_95 * 1.4  # Approx z99/z95 = 2.326/1.645
+                result.cvar_99 = result.var_99 * 1.15  # CVaR > VaR
+            result.var99_confidence = "low_sample_size"
+            logger.info(f"[tail_risk] {n_obs} obs < {MIN_OBS_FOR_VAR99}: VaR99 paramétrique utilisé")
+        
+        # Skewness et Kurtosis (toujours calculables)
         if HAS_SCIPY:
             result.skewness = float(scipy_stats.skew(port_returns))
             result.kurtosis = float(scipy_stats.kurtosis(port_returns, fisher=False))
@@ -788,6 +834,8 @@ def compute_liquidity_score(
     """
     Calcule un score de liquidité pour le portfolio.
     
+    v1.0.1: Fix normalisation des poids dans calcul total_aum
+    
     Score 0-100 basé sur:
     - AUM des instruments
     - Volume de trading
@@ -806,14 +854,14 @@ def compute_liquidity_score(
         return result
     
     scores = []
-    weights = []
+    weights_list = []
     illiquid_weight = 0.0
     
     for asset in allocation:
         source_data = asset.get("source_data", {})
         weight = _safe_float(asset.get("weight", asset.get("weight_pct", 0)))
-        if weight > 1.0:
-            weight = weight / 100.0
+        # v1.0.1: Utiliser helper
+        weight = _normalize_weight(weight)
         
         aum = _safe_float(source_data.get("aum_usd", source_data.get("aum")))
         volume = _safe_float(source_data.get("avg_volume", source_data.get("volume")))
@@ -839,16 +887,16 @@ def compute_liquidity_score(
             illiquid_weight += weight * 0.5  # Pénalité partielle
         
         scores.append(asset_score)
-        weights.append(weight)
+        weights_list.append(weight)
     
     # Score pondéré
-    if sum(weights) > 0:
-        result.portfolio_score = np.average(scores, weights=weights)
+    if sum(weights_list) > 0:
+        result.portfolio_score = np.average(scores, weights=weights_list)
     
     result.illiquid_weight_pct = min(illiquid_weight * 100, 100)
     
     # Concentration risk
-    weight_array = np.array(weights)
+    weight_array = np.array(weights_list)
     if len(weight_array) > 0:
         hhi = np.sum(weight_array ** 2)  # Herfindahl index
         if hhi > 0.15:
@@ -858,18 +906,22 @@ def compute_liquidity_score(
         else:
             result.concentration_risk = "low"
     
-    # Days to liquidate (rough estimate)
+    # v1.0.1: Fix calcul days to liquidate
     # Assume 10% of daily volume can be liquidated without impact
-    total_aum = sum(
-        _safe_float(a.get("source_data", {}).get("aum_usd", 0)) * 
-        _safe_float(a.get("weight", a.get("weight_pct", 0))) / 100
-        for a in allocation
-    )
-    total_volume = sum(
-        _safe_float(a.get("source_data", {}).get("avg_volume", 0)) *
-        _safe_float(a.get("source_data", {}).get("price", 100))
-        for a in allocation
-    )
+    total_aum = 0.0
+    total_volume = 0.0
+    
+    for a in allocation:
+        w = _safe_float(a.get("weight", a.get("weight_pct", 0)))
+        # v1.0.1: Normaliser correctement
+        w_frac = _normalize_weight(w)
+        
+        aum = _safe_float(a.get("source_data", {}).get("aum_usd", 0))
+        vol = _safe_float(a.get("source_data", {}).get("avg_volume", 0))
+        price = _safe_float(a.get("source_data", {}).get("price", 100))
+        
+        total_aum += aum * w_frac
+        total_volume += vol * price
     
     if total_volume > 0:
         # 95% of portfolio / (10% daily volume)
@@ -971,6 +1023,15 @@ def generate_alerts(
             message=f"Skewness négatif ({tail_risk.skewness:.2f}) - distribution asymétrique vers les pertes",
         ))
     
+    # v1.0.1: Alerte confiance VaR99
+    if tail_risk.var99_confidence == "low_sample_size":
+        alerts.append(RiskAlert(
+            level="info",
+            alert_type="tail_risk",
+            message="VaR99 basé sur approche paramétrique (fenêtre historique < 6 mois)",
+            recommendation="Interpréter avec prudence - idéalement attendre 6+ mois de données",
+        ))
+    
     # === LIQUIDITY ALERTS ===
     if liquidity.portfolio_score < thresholds["min_liquidity_score"]:
         alerts.append(RiskAlert(
@@ -1057,9 +1118,7 @@ class RiskAnalyzer:
         # Extract weights from allocation if not provided
         if self.weights is None and allocation:
             self.weights = np.array([
-                _safe_float(a.get("weight", a.get("weight_pct", 0))) / 100.0
-                if _safe_float(a.get("weight", a.get("weight_pct", 0))) > 1
-                else _safe_float(a.get("weight", a.get("weight_pct", 0)))
+                _normalize_weight(_safe_float(a.get("weight", a.get("weight_pct", 0))))
                 for a in allocation
             ])
     
@@ -1106,6 +1165,8 @@ class RiskAnalyzer:
         # 2. Résultats de base
         result = pack.to_dict()
         result["source"] = "stress_testing.py"
+        # v1.0.1: Disclaimer
+        result["calibration_note"] = "Indicative scenarios, not calibrated on historical crises"
         
         # 3. Ajustements leverage
         leverage_analysis = detect_leveraged_instruments(self.allocation)
@@ -1165,6 +1226,10 @@ class RiskAnalyzer:
             RiskAnalysisResult complet
         """
         result = RiskAnalysisResult(profile_name=profile_name)
+        
+        # v1.0.1: Track data points
+        if self.returns_history is not None:
+            result.data_points = len(self.returns_history)
         
         # 1. Stress tests
         if include_stress:
