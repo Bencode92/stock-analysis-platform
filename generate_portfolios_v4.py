@@ -144,15 +144,17 @@ except ImportError:
     def select_crypto_for_profile(df, profile, top_n=None): return df
     def select_bonds_for_profile(df, profile, top_n=None): return df
        
-# === v5.2.0: Risk Analysis (post-optimization) ===
+# === v5.2.1: Risk Analysis avec VaR hybride 5 ans ===
 try:
     from portfolio_engine import (
         HAS_RISK_ANALYSIS,
         enrich_portfolio_with_risk_analysis,
+        fetch_and_enrich_risk_analysis,
     )
 except ImportError:
     HAS_RISK_ANALYSIS = False
-    enrich_portfolio_with_risk_analysis = None       
+    enrich_portfolio_with_risk_analysis = None
+    fetch_and_enrich_risk_analysis = None     
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
 
@@ -1957,13 +1959,23 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             "diagnostics": diagnostics,
             "assets": assets,
         }
-        # === v5.2.0: Risk Analysis enrichment ===
+        # === v5.2.1: Risk Analysis avec VaR hybride 5 ans ===
         if CONFIG.get("enable_risk_analysis", False) and HAS_RISK_ANALYSIS:
             try:
-                enriched = enrich_portfolio_with_risk_analysis(
-                    portfolio_result=portfolios[profile],
-                    profile_name=profile,
-                )
+                # v5.2.1: Utiliser fetch_and_enrich pour VaR historique 5 ans
+                if fetch_and_enrich_risk_analysis is not None:
+                    enriched = fetch_and_enrich_risk_analysis(
+                        portfolio_result=portfolios[profile],
+                        profile_name=profile,
+                        lookback_years=5,
+                        use_cache=True,
+                    )
+                else:
+                    # Fallback: VaR paramétrique seulement
+                    enriched = enrich_portfolio_with_risk_analysis(
+                        portfolio_result=portfolios[profile],
+                        profile_name=profile,
+                    )
                 portfolios[profile]["risk_analysis"] = enriched.get("risk_analysis", {})
                 logger.info(f"   ✅ [risk_analysis] Enrichissement OK pour {profile}")
             except Exception as e:
