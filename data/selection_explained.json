@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-01-26T08:16:27.578672",
+  "generated_at": "2026-01-26T13:52:50.504181",
   "version": "v1.3.0",
   "preset_meta_version": "v4.15.2",
   "selection_pipeline": {
@@ -150,8 +150,8 @@
   },
   "summary": {
     "total_universe": 1006,
-    "total_selected": 29,
-    "selection_rate": "2.9%",
+    "total_selected": 24,
+    "selection_rate": "2.4%",
     "by_region": {
       "US": {
         "universe": 526,
@@ -163,29 +163,25 @@
       },
       "Asia": {
         "universe": 210,
-        "in_top_20_selected": 3
+        "in_top_20_selected": 1
       }
     }
   },
   "sectors_distribution": {
     "Technologie de l'information": {
-      "selected_count": 7,
+      "selected_count": 5,
       "selected_names": [
         "WESTERN DIGITAL CORP",
-        "ASIA VITAL COMPONENTS LTD",
         "KLA CORP",
         "ASML HOLDING NV",
         "MICRON TECHNOLOGY INC",
-        "JABIL INC",
-        "GLOBAL UNICHIP CORP"
+        "JABIL INC"
       ]
     },
     "Industries": {
-      "selected_count": 7,
+      "selected_count": 5,
       "selected_names": [
         "FORTUNE ELECTRIC LTD",
-        "SK SQUARE LTD",
-        "COMFORT SYSTEMS USA INC",
         "EXPEDITORS INTERNATIONAL ",
         "BUREAU VERITAS SA",
         "EIFFAGE SA",
@@ -196,12 +192,6 @@
       "selected_count": 1,
       "selected_names": [
         "NEWMONT"
-      ]
-    },
-    "Services publics": {
-      "selected_count": 1,
-      "selected_names": [
-        "KOREA ELECTRIC POWER CORP"
       ]
     },
     "Biens de consommation cycliques": {
@@ -334,20 +324,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 7/4), score 0.641 < seuil 0.523",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.641 < seuil 0.594",
           "details": {
             "sector": "Technologie de l'information",
-            "sector_quota": "7/4",
+            "sector_quota": "5/4",
             "your_score": 0.641,
-            "min_selected_score": 0.523,
+            "min_selected_score": 0.594,
             "selected_in_sector": [
               "WESTERN DIGITAL CORP",
-              "ASIA VITAL COMPONENT",
               "KLA CORP",
               "ASML HOLDING NV",
               "MICRON TECHNOLOGY IN",
-              "JABIL INC",
-              "GLOBAL UNICHIP CORP"
+              "JABIL INC"
             ]
           },
           "buffett_score": 85.4,
@@ -369,20 +357,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 7/4), score 0.647 < seuil 0.523",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.647 < seuil 0.594",
           "details": {
             "sector": "Technologie de l'information",
-            "sector_quota": "7/4",
+            "sector_quota": "5/4",
             "your_score": 0.647,
-            "min_selected_score": 0.523,
+            "min_selected_score": 0.594,
             "selected_in_sector": [
               "WESTERN DIGITAL CORP",
-              "ASIA VITAL COMPONENT",
               "KLA CORP",
               "ASML HOLDING NV",
               "MICRON TECHNOLOGY IN",
-              "JABIL INC",
-              "GLOBAL UNICHIP CORP"
+              "JABIL INC"
             ]
           },
           "buffett_score": 79.1,
@@ -662,20 +648,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 7/4), score 0.524 < seuil 0.523",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.524 < seuil 0.594",
           "details": {
             "sector": "Technologie de l'information",
-            "sector_quota": "7/4",
+            "sector_quota": "5/4",
             "your_score": 0.524,
-            "min_selected_score": 0.523,
+            "min_selected_score": 0.594,
             "selected_in_sector": [
               "WESTERN DIGITAL CORP",
-              "ASIA VITAL COMPONENT",
               "KLA CORP",
               "ASML HOLDING NV",
               "MICRON TECHNOLOGY IN",
-              "JABIL INC",
-              "GLOBAL UNICHIP CORP"
+              "JABIL INC"
             ]
           },
           "buffett_score": 62.2,
@@ -1296,8 +1280,8 @@
     "Asia": {
       "total_in_universe": 210,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 3,
-      "rejection_rate_top_20": "85%",
+      "selected_in_top_20": 1,
+      "rejection_rate_top_20": "95%",
       "stocks": [
         {
           "rank": 1,
@@ -1526,10 +1510,13 @@
           "market_cap_billions": 58750.9,
           "sector": "Industries",
           "country": "Corée",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "status": "selected"
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 100.0,
           "composite_score": 0.613,
@@ -1700,10 +1687,11 @@
           "market_cap_billions": 39288.2,
           "sector": "Services publics",
           "country": "Corée",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Score composite insuffisant (0.580)",
           "details": {
-            "status": "selected"
+            "composite_score": 0.58,
+            "sector": "Services publics"
           },
           "buffett_score": 87.1,
           "composite_score": 0.58,
@@ -1749,16 +1737,14 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.474 < seuil 0.613",
+          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.474 < seuil 0.626",
           "details": {
             "sector": "Industries",
-            "sector_quota": "7/4",
+            "sector_quota": "5/4",
             "your_score": 0.474,
-            "min_selected_score": 0.613,
+            "min_selected_score": 0.626,
             "selected_in_sector": [
               "FORTUNE ELECTRIC LTD",
-              "SK SQUARE LTD",
-              "COMFORT SYSTEMS USA ",
               "EXPEDITORS INTERNATI",
               "BUREAU VERITAS SA",
               "EIFFAGE SA",
@@ -1808,7 +1794,8 @@
     "favored_sectors": [
       "energy",
       "materials",
-      "industrials"
+      "utilities",
+      "consumer-discretionary"
     ],
     "avoided_sectors": [],
     "favored_regions": [
