@@ -1,6 +1,6 @@
 # portfolio_engine/risk_analysis.py
 """
-Risk Analysis Module v1.1.0
+Risk Analysis Module v1.1.1
 
 Module d'enrichissement post-optimisation qui:
 1. RÉUTILISE stress_testing.py (pas de duplication)
@@ -15,6 +15,9 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
+- v1.1.1: Fix extraction tickers
+  - FIX: Extract tickers from assets list (not allocation dict which is {id: weight})
+  - FIX: Version number updated to match code functionality
 - v1.1.0: Hybrid VaR mode + historical_data.py integration
   - NEW: Import historical_data.py pour fetch returns 5y
   - NEW: Mode hybride VaR95/VaR99 basé sur n_obs
@@ -90,7 +93,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
