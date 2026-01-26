@@ -1214,16 +1214,39 @@ def fetch_and_enrich_risk_analysis(
             include_liquidity=include_liquidity,
         )
     
-    # Extract tickers from allocation
-    allocation = portfolio_result.get("allocation", [])
+    # v1.1.1 FIX: Extract tickers from assets (allocation is {id: weight}, not list)
+    assets = portfolio_result.get("assets", [])
+    allocation_dict = portfolio_result.get("allocation", {})
+    
     tickers = []
-    for a in allocation:
-        ticker = _extract_ticker(a)
-        if ticker:
+    for asset in assets:
+        # Get asset ID
+        if hasattr(asset, 'id'):
+            asset_id = str(asset.id)
+        elif isinstance(asset, dict):
+            asset_id = str(asset.get("id", ""))
+        else:
+            continue
+        
+        # Only include assets that are in the final allocation
+        if asset_id not in allocation_dict:
+            continue
+        
+        # Extract ticker
+        if hasattr(asset, 'ticker') and asset.ticker:
+            ticker = str(asset.ticker).upper()
+        elif hasattr(asset, 'symbol') and asset.symbol:
+            ticker = str(asset.symbol).upper()
+        elif isinstance(asset, dict):
+            ticker = (asset.get("ticker") or asset.get("symbol") or "").upper()
+        else:
+            continue
+        
+        if ticker and ticker not in tickers:
             tickers.append(ticker)
     
     if not tickers:
-        logger.warning("[risk_analysis] No tickers found in allocation")
+        logger.warning("[risk_analysis] No tickers found in assets")
         return enrich_portfolio_with_risk_analysis(
             portfolio_result=portfolio_result,
             profile_name=profile_name,
