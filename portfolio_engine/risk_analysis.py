@@ -1,30 +1,33 @@
 # portfolio_engine/risk_analysis.py
 """
-Risk Analysis Module v1.0.1
+Risk Analysis Module v1.1.0
 
 Module d'enrichissement post-optimisation qui:
 1. RÉUTILISE stress_testing.py (pas de duplication)
 2. AJOUTE: leverage stress, preferred stock dual shock, tail risk, liquidity
+3. INTÈGRE: historical_data.py pour VaR sur 5 ans de données
 
 Architecture:
 - stress_testing.py = scénarios "legacy" (100% réutilisé)
+- historical_data.py = fetch returns 5y Twelve Data (v1.0.0)
 - risk_analysis.py = wrapper + enrichissements + normalisation outputs
 
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
+- v1.1.0: Hybrid VaR mode + historical_data.py integration
+  - NEW: Import historical_data.py pour fetch returns 5y
+  - NEW: Mode hybride VaR95/VaR99 basé sur n_obs
+  - NEW: TailRiskMetrics enrichi (method, n_obs, confidence_level)
+  - NEW: enrich_portfolio_with_risk_analysis() accepte returns_history + history_metadata
+  - NEW: Support leveraged_tickers warning dans tail_risk
+  - FIX: Seuils alignés sur TAIL_RISK_THRESHOLDS (252/1000 obs)
 - v1.0.1: Fixes qualité
   - FIX: Disclaimer data_limits dans output JSON
   - FIX: compute_liquidity_score normalisation poids
   - FIX: stress_multiplier règle unifiée
   - FIX: Guardrails VaR99 fenêtre courte (<126 obs)
 - v1.0.0: Initial release
-  - Wrapper stress_testing.py
-  - Leverage/inverse ETF detection + stress multiplier
-  - Preferred stock dual shock (equity + rate)
-  - Tail risk metrics (VaR99, CVaR99, skew, kurtosis)
-  - Liquidity scoring
-  - Alert generation
 """
 
 import logging
@@ -60,13 +63,43 @@ try:
 except ImportError:
     HAS_SCIPY = False
 
+# v1.1.0: Import historical_data for 5y returns
+try:
+    from portfolio_engine.historical_data import (
+        fetch_portfolio_returns,
+        fetch_single_ticker_returns,
+        compute_portfolio_returns,
+        TAIL_RISK_THRESHOLDS as HIST_THRESHOLDS,
+        LEVERAGED_TICKERS as HIST_LEVERAGED_TICKERS,
+    )
+    HAS_HISTORICAL_DATA = True
+except ImportError:
+    HAS_HISTORICAL_DATA = False
+    HIST_THRESHOLDS = {
+        "var_95_min_obs": 252,
+        "var_99_min_obs": 1000,
+        "moments_min_obs": 252,
+        "confidence_high": 1000,
+        "confidence_medium": 252,
+    }
+    HIST_LEVERAGED_TICKERS = set()
+
 logger = logging.getLogger("portfolio_engine.risk_analysis")
 
 # =============================================================================
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.0.1"
+VERSION = "1.1.0"
+
+# v1.1.0: Tail risk thresholds (aligned with historical_data.py)
+TAIL_RISK_THRESHOLDS = {
+    "var_95_min_obs": 252,      # 1 year daily → historical VaR95
+    "var_99_min_obs": 1000,     # 4 years daily → historical VaR99
+    "moments_min_obs": 252,     # 1 year for skew/kurtosis
+    "confidence_high": 1000,    # >= 1000 obs
+    "confidence_medium": 252,   # >= 252 obs
+}
 
 LEVERAGE_KEYWORDS = {
     "2x", "3x", "-1x", "-2x", "-3x",
@@ -200,6 +233,9 @@ class PreferredStockAnalysis:
 
 @dataclass
 class TailRiskMetrics:
+    """
+    v1.1.0: Enriched with method/n_obs/confidence_level for hybrid VaR.
+    """
     var_95: float = 0.0
     var_99: float = 0.0
     cvar_95: float = 0.0
@@ -208,10 +244,18 @@ class TailRiskMetrics:
     skewness: float = 0.0
     kurtosis: float = 3.0
     fat_tails: bool = False
-    var99_confidence: str = "adequate"
+    # v1.1.0: Method tracking
+    var_95_method: str = "parametric"  # "historical" or "parametric"
+    var_99_method: str = "parametric"  # "historical" or "parametric"
+    n_obs: int = 0
+    confidence_level: str = "low"  # "high", "medium", "low"
+    data_start_date: Optional[str] = None
+    data_end_date: Optional[str] = None
+    leveraged_tickers: List[str] = field(default_factory=list)
+    leveraged_warning: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             "var_95_pct": round(self.var_95 * 100, 2),
             "var_99_pct": round(self.var_99 * 100, 2),
             "cvar_95_pct": round(self.cvar_95 * 100, 2),
@@ -220,8 +264,26 @@ class TailRiskMetrics:
             "skewness": round(self.skewness, 3),
             "kurtosis": round(self.kurtosis, 3),
             "fat_tails": self.fat_tails,
-            "var99_confidence": self.var99_confidence,
+            # v1.1.0: Method metadata
+            "method": {
+                "var_95": self.var_95_method,
+                "var_99": self.var_99_method,
+            },
+            "n_obs": self.n_obs,
+            "confidence_level": self.confidence_level,
         }
+        if self.data_start_date:
+            d["data_period"] = {
+                "start": self.data_start_date,
+                "end": self.data_end_date,
+            }
+        if self.leveraged_tickers:
+            d["leveraged_tickers"] = self.leveraged_tickers
+            d["leveraged_warning"] = self.leveraged_warning or (
+                "Portfolio contains leveraged/inverse ETFs. Long-term historical VaR "
+                "may be unreliable due to volatility decay."
+            )
+        return d
 
 
 @dataclass
@@ -273,21 +335,41 @@ class RiskAnalysisResult:
     tail_risk: TailRiskMetrics = field(default_factory=TailRiskMetrics)
     liquidity: LiquidityAnalysis = field(default_factory=LiquidityAnalysis)
     alerts: List[RiskAlert] = field(default_factory=list)
-    data_points: int = 63
+    # v1.1.0: History metadata
+    history_metadata: Dict[str, Any] = field(default_factory=dict)
     
     def to_dict(self) -> Dict[str, Any]:
+        # v1.1.0: Dynamic data_limits based on actual data
+        n_obs = self.tail_risk.n_obs
+        if n_obs >= TAIL_RISK_THRESHOLDS["var_99_min_obs"]:
+            data_window = "5_years_daily"
+            var99_confidence = "high"
+        elif n_obs >= TAIL_RISK_THRESHOLDS["var_95_min_obs"]:
+            data_window = "1_year_daily"
+            var99_confidence = "medium_parametric_var99"
+        else:
+            data_window = "short_window"
+            var99_confidence = "low_parametric"
+        
         return {
             "version": self.version,
             "timestamp": self.timestamp.isoformat(),
             "profile": self.profile_name,
             "data_limits": {
-                "historical_backtest": "disabled",
-                "data_window": "3_months_daily",
-                "data_points_approx": self.data_points,
+                "data_window": data_window,
+                "data_points": n_obs,
+                "var_95_method": self.tail_risk.var_95_method,
+                "var_99_method": self.tail_risk.var_99_method,
+                "var99_confidence": var99_confidence,
+                "confidence_level": self.tail_risk.confidence_level,
                 "stress_tests_calibration": "indicative_scenarios_not_historical",
-                "tail_risk_method": "parametric_normal_preferred",
-                "var99_confidence": self.tail_risk.var99_confidence,
-                "disclaimer": "Stress tests are indicative only. VaR99 requires >126 daily observations.",
+                "thresholds": TAIL_RISK_THRESHOLDS,
+                "disclaimer": (
+                    f"VaR95 method: {self.tail_risk.var_95_method}. "
+                    f"VaR99 method: {self.tail_risk.var_99_method}. "
+                    f"Based on {n_obs} observations. "
+                    "Historical VaR requires >=252 obs (VaR95) or >=1000 obs (VaR99)."
+                ),
             },
             "stress_tests": self.stress_tests,
             "leverage_analysis": self.leverage_analysis.to_dict(),
@@ -301,6 +383,7 @@ class RiskAnalysisResult:
                 "warning": sum(1 for a in self.alerts if a.level == "warning"),
                 "info": sum(1 for a in self.alerts if a.level == "info"),
             },
+            "history_metadata": self.history_metadata,
         }
 
 
@@ -321,7 +404,7 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
 
 
 def _normalize_weight(weight: float) -> float:
-    """v1.0.1: Normalise un poids en fraction (0-1)."""
+    """Normalise un poids en fraction (0-1)."""
     if weight > 1.0:
         return weight / 100.0
     return weight
@@ -357,6 +440,25 @@ def _extract_ticker(asset: Dict[str, Any]) -> Optional[str]:
 
 def _extract_name(asset: Dict[str, Any]) -> str:
     return str(asset.get("name", asset.get("id", "Unknown")))
+
+
+def _determine_confidence_level(n_obs: int) -> str:
+    """v1.1.0: Determine confidence level based on observation count."""
+    if n_obs >= TAIL_RISK_THRESHOLDS["confidence_high"]:
+        return "high"
+    elif n_obs >= TAIL_RISK_THRESHOLDS["confidence_medium"]:
+        return "medium"
+    return "low"
+
+
+def _determine_var_method(n_obs: int, var_level: str = "95") -> str:
+    """v1.1.0: Determine VaR method based on observation count."""
+    if var_level == "99":
+        threshold = TAIL_RISK_THRESHOLDS["var_99_min_obs"]
+    else:
+        threshold = TAIL_RISK_THRESHOLDS["var_95_min_obs"]
+    
+    return "historical" if n_obs >= threshold else "parametric"
 
 
 # =============================================================================
@@ -476,7 +578,10 @@ def detect_preferred_stocks(allocation: List[Dict[str, Any]]) -> PreferredStockA
     return result
 
 
-def detect_low_liquidity(allocation: List[Dict[str, Any]], aum_threshold: float = LIQUIDITY_AUM_THRESHOLDS["low"]) -> List[Dict[str, Any]]:
+def detect_low_liquidity(
+    allocation: List[Dict[str, Any]], 
+    aum_threshold: float = LIQUIDITY_AUM_THRESHOLDS["low"]
+) -> List[Dict[str, Any]]:
     illiquid = []
     for asset in allocation:
         source_data = asset.get("source_data", {})
@@ -510,13 +615,21 @@ def detect_low_liquidity(allocation: List[Dict[str, Any]], aum_threshold: float 
 # ANALYSIS FUNCTIONS
 # =============================================================================
 
-def compute_leverage_stress_multiplier(leverage_analysis: LeverageAnalysis, base_stress_impact: float) -> float:
+def compute_leverage_stress_multiplier(
+    leverage_analysis: LeverageAnalysis, 
+    base_stress_impact: float
+) -> float:
     if not leverage_analysis.has_leveraged:
         return base_stress_impact
     return base_stress_impact * leverage_analysis.stress_multiplier
 
 
-def compute_preferred_dual_shock(preferred_analysis: PreferredStockAnalysis, equity_shock: float, rate_shock_bps: float, profile_name: str = "Modere") -> float:
+def compute_preferred_dual_shock(
+    preferred_analysis: PreferredStockAnalysis, 
+    equity_shock: float, 
+    rate_shock_bps: float, 
+    profile_name: str = "Modere"
+) -> float:
     if not preferred_analysis.has_preferred:
         return 0.0
     params = PREFERRED_STRESS_PARAMS.get(profile_name, PREFERRED_STRESS_PARAMS["Modere"])
@@ -532,69 +645,134 @@ def compute_preferred_dual_shock(preferred_analysis: PreferredStockAnalysis, equ
     return total_impact
 
 
-def compute_tail_risk_metrics(returns: np.ndarray, weights: Optional[np.ndarray] = None, cov_matrix: Optional[np.ndarray] = None, confidence_levels: Tuple[float, float] = (0.95, 0.99)) -> TailRiskMetrics:
+def compute_tail_risk_metrics(
+    returns: Optional[np.ndarray] = None,
+    weights: Optional[np.ndarray] = None,
+    cov_matrix: Optional[np.ndarray] = None,
+    confidence_levels: Tuple[float, float] = (0.95, 0.99),
+    history_metadata: Optional[Dict[str, Any]] = None,
+) -> TailRiskMetrics:
+    """
+    v1.1.0: Hybrid VaR calculation.
+    
+    - VaR95: historical if n_obs >= 252, else parametric
+    - VaR99: historical if n_obs >= 1000, else parametric
+    - Skew/Kurtosis: only if n_obs >= 252
+    
+    Args:
+        returns: Historical returns array (T,) or (T, N)
+        weights: Portfolio weights (N,)
+        cov_matrix: Covariance matrix (N x N) for parametric
+        confidence_levels: VaR levels (default: 95%, 99%)
+        history_metadata: Metadata from fetch_portfolio_returns()
+    
+    Returns:
+        TailRiskMetrics with method tracking
+    """
     result = TailRiskMetrics()
     
+    # Extract metadata if provided
+    if history_metadata:
+        result.n_obs = history_metadata.get("n_obs", 0)
+        result.data_start_date = history_metadata.get("first_date")
+        result.data_end_date = history_metadata.get("last_date")
+        result.leveraged_tickers = history_metadata.get("leveraged_tickers", [])
+        result.leveraged_warning = history_metadata.get("leveraged_warning")
+        result.confidence_level = history_metadata.get("confidence_level", "low")
+        result.var_95_method = history_metadata.get("var_95_method", "parametric")
+        result.var_99_method = history_metadata.get("var_99_method", "parametric")
+    
+    # === PARAMETRIC VaR (always computed as baseline/fallback) ===
     if weights is not None and cov_matrix is not None:
         try:
             port_vol = np.sqrt(weights @ cov_matrix @ weights)
             port_mean = 0.0
             z_95, z_99 = 1.645, 2.326
-            result.var_95 = port_mean - z_95 * port_vol
-            result.var_99 = port_mean - z_99 * port_vol
-            result.cvar_95 = port_mean - port_vol * 2.063
-            result.cvar_99 = port_mean - port_vol * 2.665
+            
+            # Parametric VaR
+            param_var_95 = port_mean - z_95 * port_vol
+            param_var_99 = port_mean - z_99 * port_vol
+            param_cvar_95 = port_mean - port_vol * 2.063
+            param_cvar_99 = port_mean - port_vol * 2.665
+            
+            # Set as default (may be overwritten by historical)
+            result.var_95 = param_var_95
+            result.var_99 = param_var_99
+            result.cvar_95 = param_cvar_95
+            result.cvar_99 = param_cvar_99
+            
             T = 252
             result.max_drawdown_expected = -port_vol * np.sqrt(2 * np.log(T))
         except Exception as e:
-            logger.warning(f"[tail_risk] Erreur calcul parametrique: {e}")
+            logger.warning(f"[tail_risk] Parametric calculation error: {e}")
     
+    # === HISTORICAL VaR (if returns provided and sufficient) ===
     if returns is not None and len(returns) > 30:
+        # Compute portfolio returns
         if weights is not None and returns.ndim == 2:
             port_returns = returns @ weights
         else:
             port_returns = returns.flatten() if returns.ndim > 1 else returns
         
         n_obs = len(port_returns)
-        MIN_OBS_FOR_VAR99 = 126
+        result.n_obs = n_obs
+        result.confidence_level = _determine_confidence_level(n_obs)
+        result.var_95_method = _determine_var_method(n_obs, "95")
+        result.var_99_method = _determine_var_method(n_obs, "99")
         
-        if n_obs >= MIN_OBS_FOR_VAR99:
+        # === VaR 95%: historical if n_obs >= 252 ===
+        if n_obs >= TAIL_RISK_THRESHOLDS["var_95_min_obs"]:
             result.var_95 = float(np.percentile(port_returns, 5))
-            result.var_99 = float(np.percentile(port_returns, 1))
             sorted_returns = np.sort(port_returns)
             n_05 = max(1, int(n_obs * 0.05))
-            n_01 = max(1, int(n_obs * 0.01))
             result.cvar_95 = float(np.mean(sorted_returns[:n_05]))
+            logger.debug(f"[tail_risk] VaR95 historical: {result.var_95*100:.2f}%")
+        
+        # === VaR 99%: historical if n_obs >= 1000 ===
+        if n_obs >= TAIL_RISK_THRESHOLDS["var_99_min_obs"]:
+            result.var_99 = float(np.percentile(port_returns, 1))
+            sorted_returns = np.sort(port_returns)
+            n_01 = max(1, int(n_obs * 0.01))
             result.cvar_99 = float(np.mean(sorted_returns[:n_01]))
-            result.var99_confidence = "adequate"
+            logger.debug(f"[tail_risk] VaR99 historical: {result.var_99*100:.2f}%")
         else:
-            result.var_95 = float(np.percentile(port_returns, 5))
-            if result.var_99 == 0.0:
-                result.var_99 = result.var_95 * 1.4
-                result.cvar_99 = result.var_99 * 1.15
-            result.var99_confidence = "low_sample_size"
-            logger.info(f"[tail_risk] {n_obs} obs < {MIN_OBS_FOR_VAR99}: VaR99 parametrique utilise")
+            # Keep parametric VaR99 (already set above)
+            logger.info(f"[tail_risk] VaR99 parametric (n_obs={n_obs} < 1000)")
         
-        if HAS_SCIPY:
-            result.skewness = float(scipy_stats.skew(port_returns))
-            result.kurtosis = float(scipy_stats.kurtosis(port_returns, fisher=False))
+        # === Skewness & Kurtosis: only if n_obs >= 252 ===
+        if n_obs >= TAIL_RISK_THRESHOLDS["moments_min_obs"]:
+            if HAS_SCIPY:
+                result.skewness = float(scipy_stats.skew(port_returns))
+                result.kurtosis = float(scipy_stats.kurtosis(port_returns, fisher=False))
+            else:
+                mean = np.mean(port_returns)
+                std = np.std(port_returns)
+                if std > 0:
+                    result.skewness = float(np.mean(((port_returns - mean) / std) ** 3))
+                    result.kurtosis = float(np.mean(((port_returns - mean) / std) ** 4))
+            
+            result.fat_tails = result.kurtosis > 4.0
         else:
-            mean = np.mean(port_returns)
-            std = np.std(port_returns)
-            if std > 0:
-                result.skewness = float(np.mean(((port_returns - mean) / std) ** 3))
-                result.kurtosis = float(np.mean(((port_returns - mean) / std) ** 4))
+            # Not enough data for reliable moments
+            result.skewness = 0.0
+            result.kurtosis = 3.0  # Normal assumption
+            result.fat_tails = False
+            logger.info(f"[tail_risk] Skew/Kurt skipped (n_obs={n_obs} < 252)")
         
-        result.fat_tails = result.kurtosis > 4.0
-        cumulative = np.cumprod(1 + port_returns)
-        running_max = np.maximum.accumulate(cumulative)
-        drawdowns = (cumulative - running_max) / running_max
-        result.max_drawdown_expected = float(np.min(drawdowns))
+        # Max drawdown from historical
+        if n_obs >= TAIL_RISK_THRESHOLDS["var_95_min_obs"]:
+            cumulative = np.cumprod(1 + port_returns)
+            running_max = np.maximum.accumulate(cumulative)
+            drawdowns = (cumulative - running_max) / running_max
+            result.max_drawdown_expected = float(np.min(drawdowns))
     
     return result
 
 
-def compute_liquidity_score(allocation: List[Dict[str, Any]], profile_name: str = "Modere") -> LiquidityAnalysis:
+def compute_liquidity_score(
+    allocation: List[Dict[str, Any]], 
+    profile_name: str = "Modere"
+) -> LiquidityAnalysis:
     result = LiquidityAnalysis()
     if not allocation:
         return result
@@ -664,37 +842,117 @@ def compute_liquidity_score(allocation: List[Dict[str, Any]], profile_name: str 
 # ALERT GENERATION
 # =============================================================================
 
-def generate_alerts(leverage_analysis: LeverageAnalysis, preferred_analysis: PreferredStockAnalysis, tail_risk: TailRiskMetrics, liquidity: LiquidityAnalysis, profile_name: str) -> List[RiskAlert]:
+def generate_alerts(
+    leverage_analysis: LeverageAnalysis, 
+    preferred_analysis: PreferredStockAnalysis, 
+    tail_risk: TailRiskMetrics, 
+    liquidity: LiquidityAnalysis, 
+    profile_name: str
+) -> List[RiskAlert]:
     alerts = []
     thresholds = ALERT_THRESHOLDS.get(profile_name, ALERT_THRESHOLDS["Modere"])
     
+    # === LEVERAGE ALERTS ===
     if leverage_analysis.has_leveraged:
         if leverage_analysis.effective_leverage > thresholds["max_leverage"]:
             level = "warning" if leverage_analysis.effective_leverage < thresholds["max_leverage"] * 1.5 else "critical"
-            alerts.append(RiskAlert(level=level, alert_type="leverage", message=f"Leverage effectif ({leverage_analysis.effective_leverage:.1f}x) > seuil {profile_name}", recommendation=f"Reduire positions leveraged", value=leverage_analysis.effective_leverage, threshold=thresholds["max_leverage"]))
+            alerts.append(RiskAlert(
+                level=level, 
+                alert_type="leverage", 
+                message=f"Leverage effectif ({leverage_analysis.effective_leverage:.1f}x) > seuil {profile_name}", 
+                recommendation="Reduire positions leveraged", 
+                value=leverage_analysis.effective_leverage, 
+                threshold=thresholds["max_leverage"]
+            ))
         if leverage_analysis.total_weight_pct > thresholds["max_leveraged_weight"]:
-            alerts.append(RiskAlert(level="warning", alert_type="leverage", message=f"Poids leveraged ({leverage_analysis.total_weight_pct:.1f}%) > seuil", value=leverage_analysis.total_weight_pct, threshold=thresholds["max_leveraged_weight"]))
+            alerts.append(RiskAlert(
+                level="warning", 
+                alert_type="leverage", 
+                message=f"Poids leveraged ({leverage_analysis.total_weight_pct:.1f}%) > seuil", 
+                value=leverage_analysis.total_weight_pct, 
+                threshold=thresholds["max_leveraged_weight"]
+            ))
         if leverage_analysis.has_inverse:
-            alerts.append(RiskAlert(level="info", alert_type="leverage", message="Portfolio contient des ETF inverse"))
+            alerts.append(RiskAlert(
+                level="info", 
+                alert_type="leverage", 
+                message="Portfolio contient des ETF inverse"
+            ))
     
+    # === PREFERRED ALERTS ===
     if preferred_analysis.has_preferred and abs(preferred_analysis.dual_shock_impact_pct) > 15:
-        alerts.append(RiskAlert(level="warning", alert_type="preferred", message=f"Impact dual shock preferred eleve ({preferred_analysis.dual_shock_impact_pct:.1f}%)", recommendation="Reduire exposition preferred", value=preferred_analysis.dual_shock_impact_pct))
+        alerts.append(RiskAlert(
+            level="warning", 
+            alert_type="preferred", 
+            message=f"Impact dual shock preferred eleve ({preferred_analysis.dual_shock_impact_pct:.1f}%)", 
+            recommendation="Reduire exposition preferred", 
+            value=preferred_analysis.dual_shock_impact_pct
+        ))
     
+    # === TAIL RISK ALERTS ===
     if tail_risk.var_99 * 100 < thresholds["max_var_99"]:
-        alerts.append(RiskAlert(level="warning", alert_type="tail_risk", message=f"VaR 99% ({tail_risk.var_99*100:.1f}%) depasse seuil", value=tail_risk.var_99 * 100, threshold=thresholds["max_var_99"]))
+        alerts.append(RiskAlert(
+            level="warning", 
+            alert_type="tail_risk", 
+            message=f"VaR 99% ({tail_risk.var_99*100:.1f}%) depasse seuil", 
+            value=tail_risk.var_99 * 100, 
+            threshold=thresholds["max_var_99"]
+        ))
     if tail_risk.fat_tails:
-        alerts.append(RiskAlert(level="info", alert_type="tail_risk", message=f"Kurtosis eleve ({tail_risk.kurtosis:.1f}) - fat tails"))
+        alerts.append(RiskAlert(
+            level="info", 
+            alert_type="tail_risk", 
+            message=f"Kurtosis eleve ({tail_risk.kurtosis:.1f}) - fat tails"
+        ))
     if tail_risk.skewness < -0.5:
-        alerts.append(RiskAlert(level="info", alert_type="tail_risk", message=f"Skewness negatif ({tail_risk.skewness:.2f})"))
-    if tail_risk.var99_confidence == "low_sample_size":
-        alerts.append(RiskAlert(level="info", alert_type="tail_risk", message="VaR99 base sur approche parametrique (fenetre < 6 mois)", recommendation="Interpreter avec prudence"))
+        alerts.append(RiskAlert(
+            level="info", 
+            alert_type="tail_risk", 
+            message=f"Skewness negatif ({tail_risk.skewness:.2f})"
+        ))
     
+    # v1.1.0: Alert if VaR99 is parametric
+    if tail_risk.var_99_method == "parametric" and tail_risk.n_obs > 0:
+        alerts.append(RiskAlert(
+            level="info", 
+            alert_type="tail_risk", 
+            message=f"VaR99 parametrique (n_obs={tail_risk.n_obs} < 1000)", 
+            recommendation="Interpreter avec prudence - VaR99 historique requiert 4+ ans de donnees"
+        ))
+    
+    # v1.1.0: Alert if leveraged tickers in portfolio
+    if tail_risk.leveraged_tickers:
+        alerts.append(RiskAlert(
+            level="warning", 
+            alert_type="tail_risk", 
+            message=f"ETF leveraged detectes: {', '.join(tail_risk.leveraged_tickers[:3])}", 
+            recommendation="VaR historique peu fiable pour ETF leveraged (volatility decay)"
+        ))
+    
+    # === LIQUIDITY ALERTS ===
     if liquidity.portfolio_score < thresholds["min_liquidity_score"]:
-        alerts.append(RiskAlert(level="warning", alert_type="liquidity", message=f"Score liquidite ({liquidity.portfolio_score:.0f}) < seuil", value=liquidity.portfolio_score, threshold=thresholds["min_liquidity_score"]))
+        alerts.append(RiskAlert(
+            level="warning", 
+            alert_type="liquidity", 
+            message=f"Score liquidite ({liquidity.portfolio_score:.0f}) < seuil", 
+            value=liquidity.portfolio_score, 
+            threshold=thresholds["min_liquidity_score"]
+        ))
     if liquidity.illiquid_weight_pct > thresholds["max_illiquid_weight"]:
-        alerts.append(RiskAlert(level="warning", alert_type="liquidity", message=f"Poids illiquide ({liquidity.illiquid_weight_pct:.1f}%) > seuil", value=liquidity.illiquid_weight_pct, threshold=thresholds["max_illiquid_weight"]))
+        alerts.append(RiskAlert(
+            level="warning", 
+            alert_type="liquidity", 
+            message=f"Poids illiquide ({liquidity.illiquid_weight_pct:.1f}%) > seuil", 
+            value=liquidity.illiquid_weight_pct, 
+            threshold=thresholds["max_illiquid_weight"]
+        ))
     if liquidity.concentration_risk == "high":
-        alerts.append(RiskAlert(level="warning", alert_type="liquidity", message="Concentration elevee", recommendation="Diversifier"))
+        alerts.append(RiskAlert(
+            level="warning", 
+            alert_type="liquidity", 
+            message="Concentration elevee", 
+            recommendation="Diversifier"
+        ))
     
     severity_order = {"critical": 0, "warning": 1, "info": 2}
     alerts.sort(key=lambda a: severity_order.get(a.level, 3))
@@ -706,25 +964,69 @@ def generate_alerts(leverage_analysis: LeverageAnalysis, preferred_analysis: Pre
 # =============================================================================
 
 class RiskAnalyzer:
-    def __init__(self, allocation: List[Dict[str, Any]], cov_matrix: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None, expected_returns: Optional[np.ndarray] = None, returns_history: Optional[np.ndarray] = None, sectors: Optional[List[str]] = None, asset_classes: Optional[List[str]] = None):
+    """
+    v1.1.0: Enhanced with historical_data.py integration.
+    
+    Usage:
+        analyzer = RiskAnalyzer(
+            allocation=allocation,
+            cov_matrix=cov_matrix,
+            weights=weights,
+            returns_history=returns_matrix,  # From fetch_portfolio_returns()
+            history_metadata=metadata,       # From fetch_portfolio_returns()
+        )
+        result = analyzer.run_full_analysis("Modere")
+    """
+    
+    def __init__(
+        self, 
+        allocation: List[Dict[str, Any]], 
+        cov_matrix: Optional[np.ndarray] = None, 
+        weights: Optional[np.ndarray] = None, 
+        expected_returns: Optional[np.ndarray] = None, 
+        returns_history: Optional[np.ndarray] = None, 
+        sectors: Optional[List[str]] = None, 
+        asset_classes: Optional[List[str]] = None,
+        history_metadata: Optional[Dict[str, Any]] = None,  # v1.1.0
+    ):
         self.allocation = allocation
         self.cov_matrix = cov_matrix
         self.weights = weights
-        self.expected_returns = expected_returns if expected_returns is not None else (np.zeros(len(allocation)) if allocation else np.array([]))
+        self.expected_returns = expected_returns if expected_returns is not None else (
+            np.zeros(len(allocation)) if allocation else np.array([])
+        )
         self.returns_history = returns_history
         self.sectors = sectors
         self.asset_classes = asset_classes
+        self.history_metadata = history_metadata or {}  # v1.1.0
+        
         if self.weights is None and allocation:
-            self.weights = np.array([_normalize_weight(_safe_float(a.get("weight", a.get("weight_pct", 0)))) for a in allocation])
+            self.weights = np.array([
+                _normalize_weight(_safe_float(a.get("weight", a.get("weight_pct", 0)))) 
+                for a in allocation
+            ])
     
-    def run_stress_scenarios(self, profile_name: str = "Modere", scenarios = None) -> Dict[str, Any]:
+    def run_stress_scenarios(self, profile_name: str = "Modere", scenarios=None) -> Dict[str, Any]:
         if not HAS_STRESS_TESTING:
             return {"error": "stress_testing module not available"}
         if self.cov_matrix is None or self.weights is None:
             return {"error": "cov_matrix and weights required"}
         
-        default_scenarios = [StressScenario.CORRELATION_SPIKE, StressScenario.VOLATILITY_SHOCK, StressScenario.LIQUIDITY_CRISIS, StressScenario.RATE_SHOCK, StressScenario.MARKET_CRASH]
-        pack = run_stress_test_pack(weights=self.weights, expected_returns=self.expected_returns, cov_matrix=self.cov_matrix, scenarios=scenarios or default_scenarios, sectors=self.sectors, asset_classes=self.asset_classes)
+        default_scenarios = [
+            StressScenario.CORRELATION_SPIKE, 
+            StressScenario.VOLATILITY_SHOCK, 
+            StressScenario.LIQUIDITY_CRISIS, 
+            StressScenario.RATE_SHOCK, 
+            StressScenario.MARKET_CRASH
+        ]
+        pack = run_stress_test_pack(
+            weights=self.weights, 
+            expected_returns=self.expected_returns, 
+            cov_matrix=self.cov_matrix, 
+            scenarios=scenarios or default_scenarios, 
+            sectors=self.sectors, 
+            asset_classes=self.asset_classes
+        )
         
         result = pack.to_dict()
         result["source"] = "stress_testing.py"
@@ -735,47 +1037,114 @@ class RiskAnalyzer:
             result["adjustments_applied"] = result.get("adjustments_applied", {})
             result["adjustments_applied"]["leverage_multiplier"] = leverage_analysis.stress_multiplier
             if pack.worst_case:
-                adjusted_loss = compute_leverage_stress_multiplier(leverage_analysis, pack.worst_case.expected_loss)
-                result["worst_case_adjusted"] = {"scenario": pack.worst_case.scenario, "original_loss_pct": pack.worst_case.expected_loss * 100, "adjusted_loss_pct": adjusted_loss * 100}
+                adjusted_loss = compute_leverage_stress_multiplier(
+                    leverage_analysis, 
+                    pack.worst_case.expected_loss
+                )
+                result["worst_case_adjusted"] = {
+                    "scenario": pack.worst_case.scenario, 
+                    "original_loss_pct": pack.worst_case.expected_loss * 100, 
+                    "adjusted_loss_pct": adjusted_loss * 100
+                }
         
         preferred_analysis = detect_preferred_stocks(self.allocation)
         if preferred_analysis.has_preferred:
             crash_params = get_scenario_parameters(StressScenario.MARKET_CRASH)
-            dual_shock = compute_preferred_dual_shock(preferred_analysis, equity_shock=crash_params.return_shock, rate_shock_bps=PREFERRED_STRESS_PARAMS.get(profile_name, PREFERRED_STRESS_PARAMS["Modere"])["rate_shock_bps"], profile_name=profile_name)
+            dual_shock = compute_preferred_dual_shock(
+                preferred_analysis, 
+                equity_shock=crash_params.return_shock, 
+                rate_shock_bps=PREFERRED_STRESS_PARAMS.get(profile_name, PREFERRED_STRESS_PARAMS["Modere"])["rate_shock_bps"], 
+                profile_name=profile_name
+            )
             result["adjustments_applied"] = result.get("adjustments_applied", {})
             result["adjustments_applied"]["preferred_dual_shock"] = True
             result["adjustments_applied"]["preferred_impact_pct"] = dual_shock * 100
         
         return result
     
-    def run_full_analysis(self, profile_name: str = "Modere", include_stress: bool = True, include_leverage: bool = True, include_preferred: bool = True, include_tail_risk: bool = True, include_liquidity: bool = True) -> RiskAnalysisResult:
+    def run_full_analysis(
+        self, 
+        profile_name: str = "Modere", 
+        include_stress: bool = True, 
+        include_leverage: bool = True, 
+        include_preferred: bool = True, 
+        include_tail_risk: bool = True, 
+        include_liquidity: bool = True
+    ) -> RiskAnalysisResult:
         result = RiskAnalysisResult(profile_name=profile_name)
-        if self.returns_history is not None:
-            result.data_points = len(self.returns_history)
+        result.history_metadata = self.history_metadata  # v1.1.0
         
         if include_stress:
             result.stress_tests = self.run_stress_scenarios(profile_name)
+        
         if include_leverage:
             result.leverage_analysis = detect_leveraged_instruments(self.allocation)
+        
         if include_preferred:
             result.preferred_analysis = detect_preferred_stocks(self.allocation)
             if result.preferred_analysis.has_preferred:
-                compute_preferred_dual_shock(result.preferred_analysis, equity_shock=-0.30, rate_shock_bps=PREFERRED_STRESS_PARAMS.get(profile_name, PREFERRED_STRESS_PARAMS["Modere"])["rate_shock_bps"], profile_name=profile_name)
+                compute_preferred_dual_shock(
+                    result.preferred_analysis, 
+                    equity_shock=-0.30, 
+                    rate_shock_bps=PREFERRED_STRESS_PARAMS.get(profile_name, PREFERRED_STRESS_PARAMS["Modere"])["rate_shock_bps"], 
+                    profile_name=profile_name
+                )
+        
         if include_tail_risk:
-            result.tail_risk = compute_tail_risk_metrics(returns=self.returns_history, weights=self.weights, cov_matrix=self.cov_matrix)
+            result.tail_risk = compute_tail_risk_metrics(
+                returns=self.returns_history, 
+                weights=self.weights, 
+                cov_matrix=self.cov_matrix,
+                history_metadata=self.history_metadata,  # v1.1.0
+            )
+        
         if include_liquidity:
             result.liquidity = compute_liquidity_score(self.allocation, profile_name)
         
-        result.alerts = generate_alerts(result.leverage_analysis, result.preferred_analysis, result.tail_risk, result.liquidity, profile_name)
-        logger.info(f"[risk_analysis] {profile_name}: {len(result.alerts)} alerts")
+        result.alerts = generate_alerts(
+            result.leverage_analysis, 
+            result.preferred_analysis, 
+            result.tail_risk, 
+            result.liquidity, 
+            profile_name
+        )
+        
+        logger.info(
+            f"[risk_analysis] {profile_name}: {len(result.alerts)} alerts, "
+            f"VaR95={result.tail_risk.var_95_method}, VaR99={result.tail_risk.var_99_method}, "
+            f"n_obs={result.tail_risk.n_obs}"
+        )
         return result
 
 
 # =============================================================================
-# CONVENIENCE FUNCTION
+# CONVENIENCE FUNCTIONS
 # =============================================================================
 
-def enrich_portfolio_with_risk_analysis(portfolio_result: Dict[str, Any], profile_name: str, include_stress: bool = True, include_tail_risk: bool = True, include_liquidity: bool = True) -> Dict[str, Any]:
+def enrich_portfolio_with_risk_analysis(
+    portfolio_result: Dict[str, Any], 
+    profile_name: str, 
+    include_stress: bool = True, 
+    include_tail_risk: bool = True, 
+    include_liquidity: bool = True,
+    returns_history: Optional[np.ndarray] = None,  # v1.1.0
+    history_metadata: Optional[Dict[str, Any]] = None,  # v1.1.0
+) -> Dict[str, Any]:
+    """
+    Enrichit un résultat de portfolio avec l'analyse de risque.
+    
+    v1.1.0: Accepts returns_history and history_metadata from fetch_portfolio_returns().
+    
+    Args:
+        portfolio_result: Résultat de optimizer.build_portfolio()
+        profile_name: Profil ("Stable", "Modere", "Agressif")
+        include_*: Flags pour analyses
+        returns_history: (T x N) matrix from fetch_portfolio_returns()
+        history_metadata: Metadata dict from fetch_portfolio_returns()
+    
+    Returns:
+        portfolio_result enrichi avec clé "risk_analysis"
+    """
     allocation = portfolio_result.get("allocation", [])
     cov_matrix = portfolio_result.get("cov_matrix")
     weights = portfolio_result.get("weights")
@@ -788,10 +1157,159 @@ def enrich_portfolio_with_risk_analysis(portfolio_result: Dict[str, Any], profil
     sectors = [a.get("sector") for a in allocation] if allocation else None
     asset_classes = [a.get("category", a.get("asset_class")) for a in allocation] if allocation else None
     
-    analyzer = RiskAnalyzer(allocation=allocation, cov_matrix=cov_matrix, weights=weights, sectors=sectors, asset_classes=asset_classes)
-    result = analyzer.run_full_analysis(profile_name=profile_name, include_stress=include_stress, include_tail_risk=include_tail_risk, include_liquidity=include_liquidity)
+    analyzer = RiskAnalyzer(
+        allocation=allocation, 
+        cov_matrix=cov_matrix, 
+        weights=weights, 
+        sectors=sectors, 
+        asset_classes=asset_classes,
+        returns_history=returns_history,  # v1.1.0
+        history_metadata=history_metadata,  # v1.1.0
+    )
+    
+    result = analyzer.run_full_analysis(
+        profile_name=profile_name, 
+        include_stress=include_stress, 
+        include_tail_risk=include_tail_risk, 
+        include_liquidity=include_liquidity
+    )
+    
     portfolio_result["risk_analysis"] = result.to_dict()
     return portfolio_result
 
 
-__all__ = ["RiskAnalyzer", "enrich_portfolio_with_risk_analysis", "detect_leveraged_instruments", "detect_preferred_stocks", "detect_low_liquidity", "compute_leverage_stress_multiplier", "compute_preferred_dual_shock", "compute_tail_risk_metrics", "compute_liquidity_score", "generate_alerts", "LeverageAnalysis", "PreferredStockAnalysis", "TailRiskMetrics", "LiquidityAnalysis", "RiskAlert", "RiskAnalysisResult", "VERSION", "LEVERAGE_TICKERS", "PREFERRED_TICKERS", "ALERT_THRESHOLDS"]
+def fetch_and_enrich_risk_analysis(
+    portfolio_result: Dict[str, Any],
+    profile_name: str,
+    lookback_years: int = 5,
+    use_cache: bool = True,
+    include_stress: bool = True,
+    include_tail_risk: bool = True,
+    include_liquidity: bool = True,
+) -> Dict[str, Any]:
+    """
+    v1.1.0: Convenience function that fetches historical data and enriches risk analysis.
+    
+    Combines:
+    1. fetch_portfolio_returns() from historical_data.py
+    2. enrich_portfolio_with_risk_analysis()
+    
+    Args:
+        portfolio_result: Résultat de optimizer.build_portfolio()
+        profile_name: Profil ("Stable", "Modere", "Agressif")
+        lookback_years: Years of historical data (default: 5)
+        use_cache: Whether to use cached returns (default: True)
+        include_*: Flags for analyses
+    
+    Returns:
+        portfolio_result enrichi avec "risk_analysis" (hybrid VaR)
+    """
+    if not HAS_HISTORICAL_DATA:
+        logger.warning("[risk_analysis] historical_data.py not available, using parametric only")
+        return enrich_portfolio_with_risk_analysis(
+            portfolio_result=portfolio_result,
+            profile_name=profile_name,
+            include_stress=include_stress,
+            include_tail_risk=include_tail_risk,
+            include_liquidity=include_liquidity,
+        )
+    
+    # Extract tickers from allocation
+    allocation = portfolio_result.get("allocation", [])
+    tickers = []
+    for a in allocation:
+        ticker = _extract_ticker(a)
+        if ticker:
+            tickers.append(ticker)
+    
+    if not tickers:
+        logger.warning("[risk_analysis] No tickers found in allocation")
+        return enrich_portfolio_with_risk_analysis(
+            portfolio_result=portfolio_result,
+            profile_name=profile_name,
+            include_stress=include_stress,
+            include_tail_risk=include_tail_risk,
+            include_liquidity=include_liquidity,
+        )
+    
+    # Fetch historical returns
+    logger.info(f"[risk_analysis] Fetching {lookback_years}y returns for {len(tickers)} tickers...")
+    returns_matrix, history_metadata = fetch_portfolio_returns(
+        tickers=tickers,
+        lookback_years=lookback_years,
+        use_cache=use_cache,
+    )
+    
+    if returns_matrix is None:
+        logger.warning(f"[risk_analysis] Failed to fetch returns: {history_metadata.get('error')}")
+        return enrich_portfolio_with_risk_analysis(
+            portfolio_result=portfolio_result,
+            profile_name=profile_name,
+            include_stress=include_stress,
+            include_tail_risk=include_tail_risk,
+            include_liquidity=include_liquidity,
+        )
+    
+    logger.info(
+        f"[risk_analysis] Fetched {history_metadata.get('n_obs', 0)} obs, "
+        f"confidence: {history_metadata.get('confidence_level', 'unknown')}"
+    )
+    
+    # Enrich with risk analysis
+    return enrich_portfolio_with_risk_analysis(
+        portfolio_result=portfolio_result,
+        profile_name=profile_name,
+        include_stress=include_stress,
+        include_tail_risk=include_tail_risk,
+        include_liquidity=include_liquidity,
+        returns_history=returns_matrix,
+        history_metadata=history_metadata,
+    )
+
+
+# =============================================================================
+# MODULE EXPORTS
+# =============================================================================
+
+__all__ = [
+    # Main class
+    "RiskAnalyzer",
+    
+    # Convenience functions
+    "enrich_portfolio_with_risk_analysis",
+    "fetch_and_enrich_risk_analysis",  # v1.1.0
+    
+    # Detection functions
+    "detect_leveraged_instruments",
+    "detect_preferred_stocks",
+    "detect_low_liquidity",
+    
+    # Analysis functions
+    "compute_leverage_stress_multiplier",
+    "compute_preferred_dual_shock",
+    "compute_tail_risk_metrics",
+    "compute_liquidity_score",
+    
+    # Alert generation
+    "generate_alerts",
+    
+    # Data classes
+    "LeverageAnalysis",
+    "PreferredStockAnalysis",
+    "TailRiskMetrics",
+    "LiquidityAnalysis",
+    "RiskAlert",
+    "RiskAnalysisResult",
+    
+    # Constants
+    "VERSION",
+    "LEVERAGE_TICKERS",
+    "PREFERRED_TICKERS",
+    "ALERT_THRESHOLDS",
+    "TAIL_RISK_THRESHOLDS",  # v1.1.0
+    
+    # Flags
+    "HAS_HISTORICAL_DATA",  # v1.1.0
+    "HAS_STRESS_TESTING",
+    "HAS_SCIPY",
+]
