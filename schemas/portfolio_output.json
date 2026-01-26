@@ -100,6 +100,11 @@
           "$ref": "#/definitions/AssetDetailsList",
           "description": "v4.11.0: LLM-generated rationales for each asset with RADAR context"
         },
+        "risk_analysis": {
+          "type": ["object", "null"],
+          "description": "v5.2.1: Export risk analysis (may evolve)",
+          "additionalProperties": true
+        },
         "_numeric_weights": {
           "type": "object",
           "description": "v4.15.0: Numeric weights by category:name for sum validation",
