@@ -1,6 +1,6 @@
 # portfolio_engine/risk_analysis.py
 """
-Risk Analysis Module v1.1.2
+Risk Analysis Module v1.2.0
 
 Module d'enrichissement post-optimisation qui:
 1. RÉUTILISE stress_testing.py (pas de duplication)
@@ -12,29 +12,20 @@ Architecture:
 - historical_data.py = fetch returns 5y Twelve Data (v1.0.0)
 - risk_analysis.py = wrapper + enrichissements + normalisation outputs
 
-Design validé par ChatGPT (2026-01-26).
-
 Changelog:
+- v1.2.0: P0 Bug Fixes (Code Review 2026-01-27)
+  - FIX: Alignment weights ↔ returns par ticker (évite VaR fausse)
+  - FIX: VaR99 fallback historique si parametric impossible (plus de 0.0)
+  - FIX: Convention signe VaR (perte positive)
+  - FIX: Fallback cov_matrix depuis returns_history si None
+  - FIX: Leveraged detection "short" avec regex (évite faux positifs)
+  - NEW: _align_weights_to_tickers() avec report détaillé
+  - NEW: _historical_var_cvar() avec convention perte positive
+  - NEW: LEVERAGE_FALSE_POSITIVES pour "short-term", etc.
 - v1.1.2: Fix allocation format mismatch
-  - FIX: enrich_portfolio_with_risk_analysis() now handles allocation as dict {id: weight}
-  - FIX: Build allocation_list from assets + allocation dict for RiskAnalyzer
-  - FIX: fetch_and_enrich_risk_analysis() passes assets to enrich function
-  - Root cause: generate_portfolios_v4.py passes allocation={id: weight_pct} not list
 - v1.1.1: Fix extraction tickers
-  - FIX: Extract tickers from assets list (not allocation dict which is {id: weight})
-  - FIX: Version number updated to match code functionality
 - v1.1.0: Hybrid VaR mode + historical_data.py integration
-  - NEW: Import historical_data.py pour fetch returns 5y
-  - NEW: Mode hybride VaR95/VaR99 basé sur n_obs
-  - NEW: TailRiskMetrics enrichi (method, n_obs, confidence_level)
-  - NEW: enrich_portfolio_with_risk_analysis() accepte returns_history + history_metadata
-  - NEW: Support leveraged_tickers warning dans tail_risk
-  - FIX: Seuils alignés sur TAIL_RISK_THRESHOLDS (252/1000 obs)
 - v1.0.1: Fixes qualité
-  - FIX: Disclaimer data_limits dans output JSON
-  - FIX: compute_liquidity_score normalisation poids
-  - FIX: stress_multiplier règle unifiée
-  - FIX: Guardrails VaR99 fenêtre courte (<126 obs)
 - v1.0.0: Initial release
 """
 
@@ -98,7 +89,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.1.2"
+VERSION = "1.2.0"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
@@ -109,12 +100,25 @@ TAIL_RISK_THRESHOLDS = {
     "confidence_medium": 252,   # >= 252 obs
 }
 
+# v1.2.0: Leveraged detection refactored
+# Removed "short" from keywords - now handled by regex
 LEVERAGE_KEYWORDS = {
     "2x", "3x", "-1x", "-2x", "-3x",
     "ultra", "ultrapro", "ultrashort",
-    "leveraged", "inverse", "short",
+    "leveraged", "inverse",
     "bull", "bear",
 }
+
+# v1.2.0: False positives for "short" detection
+LEVERAGE_FALSE_POSITIVES = [
+    "short-term", "short term", "short duration", 
+    "ultra short", "ultrashort bond", "short maturity",
+    "short-dated", "short dated",
+]
+
+# v1.2.0: Regex for "short" as standalone word (not "short-term")
+SHORT_WORD_RE = re.compile(r"\bshort\b(?!\s*-?\s*term|\s*duration|\s*maturity|\s*dated)", re.IGNORECASE)
+LEVERAGE_FACTOR_RE = re.compile(r"(?<!\d)(-?[23]x)\b", re.IGNORECASE)
 
 LEVERAGE_TICKERS = {
     "TQQQ", "SOXL", "UPRO", "SPXL", "TECL", "FAS", "LABU", "NUGT",
@@ -242,10 +246,11 @@ class PreferredStockAnalysis:
 @dataclass
 class TailRiskMetrics:
     """
+    v1.2.0: VaR expressed as positive loss (e.g., 0.03 = 3% loss).
     v1.1.0: Enriched with method/n_obs/confidence_level for hybrid VaR.
     """
-    var_95: float = 0.0
-    var_99: float = 0.0
+    var_95: float = 0.0  # Positive = loss
+    var_99: float = 0.0  # Positive = loss
     cvar_95: float = 0.0
     cvar_99: float = 0.0
     max_drawdown_expected: float = 0.0
@@ -254,20 +259,23 @@ class TailRiskMetrics:
     fat_tails: bool = False
     # v1.1.0: Method tracking
     var_95_method: str = "parametric"  # "historical" or "parametric"
-    var_99_method: str = "parametric"  # "historical" or "parametric"
+    var_99_method: str = "parametric"  # "historical", "parametric", "historical_low_confidence"
     n_obs: int = 0
     confidence_level: str = "low"  # "high", "medium", "low"
     data_start_date: Optional[str] = None
     data_end_date: Optional[str] = None
     leveraged_tickers: List[str] = field(default_factory=list)
     leveraged_warning: Optional[str] = None
+    # v1.2.0: Alignment report
+    weight_alignment_report: Optional[Dict[str, Any]] = None
     
     def to_dict(self) -> Dict[str, Any]:
+        # v1.2.0: VaR as negative percentage for display (convention: loss shown as negative)
         d = {
-            "var_95_pct": round(self.var_95 * 100, 2),
-            "var_99_pct": round(self.var_99 * 100, 2),
-            "cvar_95_pct": round(self.cvar_95 * 100, 2),
-            "cvar_99_pct": round(self.cvar_99 * 100, 2),
+            "var_95_pct": round(-self.var_95 * 100, 2),  # -3% displayed
+            "var_99_pct": round(-self.var_99 * 100, 2),
+            "cvar_95_pct": round(-self.cvar_95 * 100, 2),
+            "cvar_99_pct": round(-self.cvar_99 * 100, 2),
             "max_drawdown_expected_pct": round(self.max_drawdown_expected * 100, 2),
             "skewness": round(self.skewness, 3),
             "kurtosis": round(self.kurtosis, 3),
@@ -291,6 +299,8 @@ class TailRiskMetrics:
                 "Portfolio contains leveraged/inverse ETFs. Long-term historical VaR "
                 "may be unreliable due to volatility decay."
             )
+        if self.weight_alignment_report:
+            d["weight_alignment_report"] = self.weight_alignment_report
         return d
 
 
@@ -502,6 +512,213 @@ def _determine_var_method(n_obs: int, var_level: str = "95") -> str:
     return "historical" if n_obs >= threshold else "parametric"
 
 
+# =============================================================================
+# v1.2.0: WEIGHT ALIGNMENT FUNCTIONS
+# =============================================================================
+
+def _align_weights_to_tickers(
+    allocation: List[Dict[str, Any]],
+    history_tickers: List[str],
+    *,
+    allow_shorts: bool = False,
+    strict: bool = False,
+) -> Tuple[np.ndarray, Dict[str, List[str]]]:
+    """
+    v1.2.0: Aligne les poids dans l'ordre exact de history_tickers.
+    
+    Args:
+        allocation: Liste de dicts avec {ticker, weight, ...}
+        history_tickers: Liste ordonnée des tickers de l'historique
+        allow_shorts: Autorise les poids négatifs
+        strict: Raise si problème critique
+    
+    Returns:
+        (weights_aligned, report) où report contient:
+          - missing_in_allocation: tickers présents en historique mais absents en allocation
+          - extra_in_allocation: tickers présents en allocation mais absents de l'historique
+          - duplicates_in_allocation: tickers dupliqués (si détectables)
+    """
+    # 1) Map poids par ticker (somme si doublons)
+    w_by_ticker: Dict[str, float] = {}
+    duplicates: List[str] = []
+
+    for a in allocation:
+        ticker = (a.get("ticker") or a.get("symbol") or a.get("id") or "")
+        ticker = ticker.upper().strip() if isinstance(ticker, str) else ""
+        if not ticker:
+            continue
+
+        raw = a.get("weight", a.get("weight_pct", a.get("percentage", 0)))
+        w = _safe_float(raw)
+        w = _normalize_weight(w)
+
+        if ticker in w_by_ticker:
+            duplicates.append(ticker)
+            w_by_ticker[ticker] += w
+        else:
+            w_by_ticker[ticker] = w
+
+    hist = [t.upper().strip() for t in history_tickers]
+
+    missing_in_alloc = [t for t in hist if t not in w_by_ticker]
+    extra_in_alloc = [t for t in w_by_ticker.keys() if t not in set(hist)]
+
+    # 2) Build vecteur aligné
+    weights = np.array([w_by_ticker.get(t, 0.0) for t in hist], dtype=float)
+
+    # 3) Validations
+    if not allow_shorts and np.any(weights < -1e-12):
+        msg = f"[align] Poids négatifs détectés alors que allow_shorts=False: {weights[weights<0]}"
+        logger.error(msg)
+        if strict:
+            raise ValueError(msg)
+
+    s = float(np.sum(weights))
+    if abs(s) < 1e-12:
+        msg = f"[align] Somme des poids ~0. history_tickers={hist}"
+        logger.error(msg)
+        if strict:
+            raise ValueError(msg)
+        # Fallback: vecteur zéro
+        return np.zeros_like(weights), {
+            "missing_in_allocation": missing_in_alloc,
+            "extra_in_allocation": extra_in_alloc,
+            "duplicates_in_allocation": sorted(set(duplicates)),
+            "error": "sum_weights_zero",
+        }
+
+    # 4) Normalisation
+    if allow_shorts:
+        gross = float(np.sum(np.abs(weights)))
+        if gross > 1e-12:
+            weights = weights / gross
+    else:
+        weights = weights / s
+
+    # 5) Logs utiles
+    if missing_in_alloc:
+        logger.warning(f"[align] Tickers présents dans l'historique mais absents en allocation: {missing_in_alloc}")
+    if extra_in_alloc:
+        logger.warning(f"[align] Tickers présents en allocation mais absents de l'historique: {extra_in_alloc}")
+    if duplicates:
+        logger.info(f"[align] Doublons allocation (sommés): {sorted(set(duplicates))}")
+
+    return weights, {
+        "missing_in_allocation": missing_in_alloc,
+        "extra_in_allocation": extra_in_alloc,
+        "duplicates_in_allocation": sorted(set(duplicates)),
+    }
+
+
+# =============================================================================
+# v1.2.0: HISTORICAL VAR/CVAR FUNCTIONS
+# =============================================================================
+
+def _historical_var_cvar(port_returns: np.ndarray, alpha: float = 0.01) -> Tuple[float, float]:
+    """
+    v1.2.0: Calcule VaR et CVaR historiques en convention 'perte positive'.
+    
+    Args:
+        port_returns: Array des rendements du portefeuille (négatif = perte)
+        alpha: Niveau de confiance (0.01 = 99%, 0.05 = 95%)
+    
+    Returns:
+        (VaR, CVaR) en perte positive (e.g., 0.03 = 3% de perte max)
+    """
+    if port_returns is None or len(port_returns) == 0:
+        return 0.0, 0.0
+    
+    q = float(np.quantile(port_returns, alpha))  # quantile alpha (souvent négatif)
+    var = -q  # Convention: perte positive
+    
+    tail = port_returns[port_returns <= q]
+    cvar = -float(np.mean(tail)) if tail.size > 0 else var
+    
+    return var, cvar
+
+
+def _estimate_cov_from_returns(returns_history: np.ndarray) -> Optional[np.ndarray]:
+    """
+    v1.2.0: Estime la matrice de covariance depuis l'historique des rendements.
+    
+    Args:
+        returns_history: Array (T, N) des rendements
+    
+    Returns:
+        Matrice de covariance (N, N) ou None si impossible
+    """
+    if returns_history is None:
+        return None
+    if returns_history.ndim != 2:
+        return None
+    if returns_history.shape[1] < 2:
+        return None
+    if returns_history.shape[0] < 30:
+        logger.warning(f"[cov_fallback] Trop peu d'observations: {returns_history.shape[0]}")
+        return None
+    
+    try:
+        cov = np.cov(returns_history, rowvar=False)
+        logger.info(f"[cov_fallback] Matrice estimée depuis historique: {cov.shape}")
+        return cov
+    except Exception as e:
+        logger.error(f"[cov_fallback] Erreur: {e}")
+        return None
+
+
+# =============================================================================
+# v1.2.0: LEVERAGED DETECTION (IMPROVED)
+# =============================================================================
+
+def _is_leveraged_or_inverse(name: str, ticker: str) -> Tuple[bool, float, str]:
+    """
+    v1.2.0: Détection leveraged/inverse avec regex améliorée.
+    
+    Retourne (is_leveraged, leverage_factor, classification)
+    classification ∈ {"standard", "leveraged", "inverse"}
+    """
+    s = (name or "").lower()
+    ticker_up = (ticker or "").upper()
+    
+    # 0) Check ticker connu
+    if ticker_up in LEVERAGE_TICKERS:
+        factor = LEVERAGE_FACTORS.get(ticker_up, 2.0)
+        return True, factor, "inverse" if factor < 0 else "leveraged"
+    
+    # 1) Check faux positifs d'abord
+    for fp in LEVERAGE_FALSE_POSITIVES:
+        if fp in s:
+            return False, 1.0, "standard"
+    
+    # 2) Facteur explicite 2x/3x/-2x/-3x
+    m = LEVERAGE_FACTOR_RE.search(s)
+    if m:
+        token = m.group(0).lower()
+        if token.startswith("-"):
+            factor = float(token.replace("x", ""))
+            return True, factor, "inverse"
+        factor = float(token.replace("x", ""))
+        return True, factor, "leveraged"
+    
+    # 3) Mots clés inverse/leveraged
+    if "inverse" in s:
+        return True, -1.0, "inverse"
+    if "leveraged" in s or "ultra" in s:
+        return True, 2.0, "leveraged"
+    
+    # 4) "short" seulement si mot isolé (et pas faux positif - déjà filtré)
+    if SHORT_WORD_RE.search(s):
+        return True, -1.0, "inverse"
+    
+    # 5) Bear/Bull
+    if "bear" in s:
+        return True, -1.0, "inverse"
+    if "bull" in s and ("3x" in s or "2x" in s):
+        return True, 2.0, "leveraged"
+    
+    return False, 1.0, "standard"
+
+
 def _build_allocation_list(
     allocation: Any,
     assets: Optional[List[Any]] = None,
@@ -590,6 +807,7 @@ def _build_allocation_list(
 # =============================================================================
 
 def detect_leveraged_instruments(allocation: List[Dict[str, Any]]) -> LeverageAnalysis:
+    """v1.2.0: Detection avec regex améliorée pour 'short'."""
     result = LeverageAnalysis()
     leveraged_items = []
     total_leveraged_weight = 0.0
@@ -597,33 +815,14 @@ def detect_leveraged_instruments(allocation: List[Dict[str, Any]]) -> LeverageAn
     
     for asset in allocation:
         ticker = _extract_ticker(asset)
-        name = _extract_name(asset).lower()
+        name = _extract_name(asset)
         weight = _safe_float(asset.get("weight", asset.get("weight_pct", 0)))
         weight = _normalize_weight(weight)
         
-        is_leveraged = False
-        leverage_factor = 1.0
+        # v1.2.0: Use improved detection function
+        is_leveraged, leverage_factor, classification = _is_leveraged_or_inverse(name, ticker or "")
         
-        if ticker and ticker in LEVERAGE_TICKERS:
-            is_leveraged = True
-            leverage_factor = LEVERAGE_FACTORS.get(ticker, 2.0)
-        
-        if not is_leveraged:
-            for kw in LEVERAGE_KEYWORDS:
-                if kw in name:
-                    is_leveraged = True
-                    if "3x" in name or "triple" in name:
-                        leverage_factor = 3.0
-                    elif "2x" in name or "double" in name or "ultra" in name:
-                        leverage_factor = 2.0
-                    elif "-3x" in name:
-                        leverage_factor = -3.0
-                    elif "-2x" in name or "ultrashort" in name:
-                        leverage_factor = -2.0
-                    elif "short" in name or "inverse" in name or "bear" in name:
-                        leverage_factor = -1.0
-                    break
-        
+        # Fallback: check source_data
         if not is_leveraged:
             source_data = asset.get("source_data", {})
             raw_lev = source_data.get("leverage", source_data.get("leveraged"))
@@ -632,13 +831,15 @@ def detect_leveraged_instruments(allocation: List[Dict[str, Any]]) -> LeverageAn
                 if abs(norm_lev) > 1.0:
                     is_leveraged = True
                     leverage_factor = norm_lev
+                    classification = "inverse" if norm_lev < 0 else "leveraged"
         
         if is_leveraged:
             leveraged_items.append({
                 "ticker": ticker or name[:20],
-                "name": _extract_name(asset),
+                "name": name,
                 "weight_pct": weight * 100,
                 "leverage_factor": leverage_factor,
+                "classification": classification,
             })
             total_leveraged_weight += weight
             weighted_leverage += weight * abs(leverage_factor)
@@ -777,11 +978,12 @@ def compute_tail_risk_metrics(
     history_metadata: Optional[Dict[str, Any]] = None,
 ) -> TailRiskMetrics:
     """
-    v1.1.0: Hybrid VaR calculation.
+    v1.2.0: Hybrid VaR calculation with fallbacks.
     
     - VaR95: historical if n_obs >= 252, else parametric
-    - VaR99: historical if n_obs >= 1000, else parametric
+    - VaR99: historical if n_obs >= 1000, else fallback historical_low_confidence
     - Skew/Kurtosis: only if n_obs >= 252
+    - Convention: VaR/CVaR as positive loss values
     
     Args:
         returns: Historical returns array (T,) or (T, N)
@@ -806,18 +1008,24 @@ def compute_tail_risk_metrics(
         result.var_95_method = history_metadata.get("var_95_method", "parametric")
         result.var_99_method = history_metadata.get("var_99_method", "parametric")
     
+    # v1.2.0: Fallback cov_matrix from returns if not provided
+    if cov_matrix is None and returns is not None:
+        cov_matrix = _estimate_cov_from_returns(returns)
+    
     # === PARAMETRIC VaR (always computed as baseline/fallback) ===
+    param_var_95 = None
+    param_var_99 = None
     if weights is not None and cov_matrix is not None:
         try:
             port_vol = np.sqrt(weights @ cov_matrix @ weights)
             port_mean = 0.0
             z_95, z_99 = 1.645, 2.326
             
-            # Parametric VaR
-            param_var_95 = port_mean - z_95 * port_vol
-            param_var_99 = port_mean - z_99 * port_vol
-            param_cvar_95 = port_mean - port_vol * 2.063
-            param_cvar_99 = port_mean - port_vol * 2.665
+            # Parametric VaR (as positive loss)
+            param_var_95 = z_95 * port_vol  # ~1.645 * vol
+            param_var_99 = z_99 * port_vol  # ~2.326 * vol
+            param_cvar_95 = port_vol * 2.063
+            param_cvar_99 = port_vol * 2.665
             
             # Set as default (may be overwritten by historical)
             result.var_95 = param_var_95
@@ -831,6 +1039,7 @@ def compute_tail_risk_metrics(
             logger.warning(f"[tail_risk] Parametric calculation error: {e}")
     
     # === HISTORICAL VaR (if returns provided and sufficient) ===
+    port_returns = None
     if returns is not None and len(returns) > 30:
         # Compute portfolio returns
         if weights is not None and returns.ndim == 2:
@@ -846,22 +1055,21 @@ def compute_tail_risk_metrics(
         
         # === VaR 95%: historical if n_obs >= 252 ===
         if n_obs >= TAIL_RISK_THRESHOLDS["var_95_min_obs"]:
-            result.var_95 = float(np.percentile(port_returns, 5))
-            sorted_returns = np.sort(port_returns)
-            n_05 = max(1, int(n_obs * 0.05))
-            result.cvar_95 = float(np.mean(sorted_returns[:n_05]))
-            logger.debug(f"[tail_risk] VaR95 historical: {result.var_95*100:.2f}%")
+            var_95, cvar_95 = _historical_var_cvar(port_returns, alpha=0.05)
+            result.var_95 = var_95
+            result.cvar_95 = cvar_95
+            logger.debug(f"[tail_risk] VaR95 historical: {var_95*100:.2f}%")
         
         # === VaR 99%: historical if n_obs >= 1000 ===
         if n_obs >= TAIL_RISK_THRESHOLDS["var_99_min_obs"]:
-            result.var_99 = float(np.percentile(port_returns, 1))
-            sorted_returns = np.sort(port_returns)
-            n_01 = max(1, int(n_obs * 0.01))
-            result.cvar_99 = float(np.mean(sorted_returns[:n_01]))
-            logger.debug(f"[tail_risk] VaR99 historical: {result.var_99*100:.2f}%")
+            var_99, cvar_99 = _historical_var_cvar(port_returns, alpha=0.01)
+            result.var_99 = var_99
+            result.cvar_99 = cvar_99
+            logger.debug(f"[tail_risk] VaR99 historical: {var_99*100:.2f}%")
         else:
-            # Keep parametric VaR99 (already set above)
-            logger.info(f"[tail_risk] VaR99 parametric (n_obs={n_obs} < 1000)")
+            # v1.2.0: Fallback historique si parametric impossible ou = 0
+            # Mieux qu'un 0.0 silencieux
+            logger.info(f"[tail_risk] VaR99 fallback check (n_obs={n_obs})")
         
         # === Skewness & Kurtosis: only if n_obs >= 252 ===
         if n_obs >= TAIL_RISK_THRESHOLDS["moments_min_obs"]:
@@ -889,6 +1097,31 @@ def compute_tail_risk_metrics(
             running_max = np.maximum.accumulate(cumulative)
             drawdowns = (cumulative - running_max) / running_max
             result.max_drawdown_expected = float(np.min(drawdowns))
+    
+    # === v1.2.0: FALLBACK VaR99 si toujours 0 ou None ===
+    # Condition: parametric n'a pas marché ET on a des returns
+    param_failed = (
+        result.var_99 == 0.0 or 
+        result.var_99 is None or 
+        (isinstance(result.var_99, float) and np.isnan(result.var_99))
+    )
+    
+    if param_failed and port_returns is not None:
+        n = len(port_returns)
+        if n >= 250:
+            var_99, cvar_99 = _historical_var_cvar(port_returns, alpha=0.01)
+            result.var_99 = var_99
+            result.cvar_99 = cvar_99
+            result.var_99_method = "historical"
+            logger.warning(f"[tail_risk] VaR99 fallback historique (n={n}): VaR={var_99:.4f}")
+        elif n >= 100:
+            var_99, cvar_99 = _historical_var_cvar(port_returns, alpha=0.01)
+            result.var_99 = var_99
+            result.cvar_99 = cvar_99
+            result.var_99_method = "historical_low_confidence"
+            logger.warning(f"[tail_risk] VaR99 fallback LOW CONF (n={n}): VaR={var_99:.4f}")
+        else:
+            logger.error(f"[tail_risk] VaR99 impossible: n={n} < 100, pas de cov_matrix")
     
     return result
 
@@ -1014,12 +1247,13 @@ def generate_alerts(
         ))
     
     # === TAIL RISK ALERTS ===
-    if tail_risk.var_99 * 100 < thresholds["max_var_99"]:
+    # v1.2.0: VaR now positive, threshold negative → compare -var_99 < threshold
+    if -tail_risk.var_99 * 100 < thresholds["max_var_99"]:
         alerts.append(RiskAlert(
             level="warning", 
             alert_type="tail_risk", 
-            message=f"VaR 99% ({tail_risk.var_99*100:.1f}%) depasse seuil", 
-            value=tail_risk.var_99 * 100, 
+            message=f"VaR 99% ({-tail_risk.var_99*100:.1f}%) depasse seuil", 
+            value=-tail_risk.var_99 * 100, 
             threshold=thresholds["max_var_99"]
         ))
     if tail_risk.fat_tails:
@@ -1044,6 +1278,15 @@ def generate_alerts(
             recommendation="Interpreter avec prudence - VaR99 historique requiert 4+ ans de donnees"
         ))
     
+    # v1.2.0: Alert if VaR99 low confidence
+    if tail_risk.var_99_method == "historical_low_confidence":
+        alerts.append(RiskAlert(
+            level="warning", 
+            alert_type="tail_risk", 
+            message=f"VaR99 historique LOW CONFIDENCE (n_obs={tail_risk.n_obs})", 
+            recommendation="Historique insuffisant (<250 obs) - VaR99 peu fiable"
+        ))
+    
     # v1.1.0: Alert if leveraged tickers in portfolio
     if tail_risk.leveraged_tickers:
         alerts.append(RiskAlert(
@@ -1052,6 +1295,24 @@ def generate_alerts(
             message=f"ETF leveraged detectes: {', '.join(tail_risk.leveraged_tickers[:3])}", 
             recommendation="VaR historique peu fiable pour ETF leveraged (volatility decay)"
         ))
+    
+    # v1.2.0: Alert if weight alignment issues
+    if tail_risk.weight_alignment_report:
+        report = tail_risk.weight_alignment_report
+        if report.get("extra_in_allocation"):
+            alerts.append(RiskAlert(
+                level="warning",
+                alert_type="data_quality",
+                message=f"Tickers sans historique: {report['extra_in_allocation'][:3]}",
+                recommendation="Ces positions sont ignorées dans le calcul VaR"
+            ))
+        if report.get("error"):
+            alerts.append(RiskAlert(
+                level="critical",
+                alert_type="data_quality",
+                message=f"Erreur alignment poids: {report['error']}",
+                recommendation="Vérifier la cohérence allocation/historique"
+            ))
     
     # === LIQUIDITY ALERTS ===
     if liquidity.portfolio_score < thresholds["min_liquidity_score"]:
@@ -1089,6 +1350,7 @@ def generate_alerts(
 
 class RiskAnalyzer:
     """
+    v1.2.0: Enhanced with weight alignment and VaR fallbacks.
     v1.1.2: Enhanced with historical_data.py integration and dict allocation support.
     
     Usage:
@@ -1115,7 +1377,6 @@ class RiskAnalyzer:
     ):
         self.allocation = allocation
         self.cov_matrix = cov_matrix
-        self.weights = weights
         self.expected_returns = expected_returns if expected_returns is not None else (
             np.zeros(len(allocation)) if allocation else np.array([])
         )
@@ -1123,12 +1384,28 @@ class RiskAnalyzer:
         self.sectors = sectors
         self.asset_classes = asset_classes
         self.history_metadata = history_metadata or {}  # v1.1.0
+        self._weight_alignment_report: Optional[Dict[str, Any]] = None  # v1.2.0
         
-        if self.weights is None and allocation:
+        # v1.2.0: Align weights to history tickers if metadata available
+        if weights is not None:
+            self.weights = weights
+        elif history_metadata and "tickers" in history_metadata and allocation:
+            self.weights, self._weight_alignment_report = _align_weights_to_tickers(
+                allocation,
+                history_metadata["tickers"],
+                allow_shorts=False,
+                strict=False,
+            )
+            logger.info(f"[RiskAnalyzer] Weights aligned to {len(history_metadata['tickers'])} tickers")
+        elif allocation:
+            # Fallback: extract weights from allocation (original behavior)
             self.weights = np.array([
                 _normalize_weight(_safe_float(a.get("weight", a.get("weight_pct", 0)))) 
                 for a in allocation
             ])
+            logger.warning("[RiskAnalyzer] Pas de metadata tickers - alignment non garanti")
+        else:
+            self.weights = np.array([])
     
     def run_stress_scenarios(self, profile_name: str = "Modere", scenarios=None) -> Dict[str, Any]:
         if not HAS_STRESS_TESTING:
@@ -1221,6 +1498,8 @@ class RiskAnalyzer:
                 cov_matrix=self.cov_matrix,
                 history_metadata=self.history_metadata,  # v1.1.0
             )
+            # v1.2.0: Include alignment report
+            result.tail_risk.weight_alignment_report = self._weight_alignment_report
         
         if include_liquidity:
             result.liquidity = compute_liquidity_score(self.allocation, profile_name)
@@ -1257,6 +1536,7 @@ def enrich_portfolio_with_risk_analysis(
     """
     Enrichit un résultat de portfolio avec l'analyse de risque.
     
+    v1.2.0: Auto-alignment weights to history tickers.
     v1.1.2: Handles allocation as dict {id: weight_pct} or list of dicts.
     v1.1.0: Accepts returns_history and history_metadata from fetch_portfolio_returns().
     
@@ -1301,10 +1581,11 @@ def enrich_portfolio_with_risk_analysis(
     sectors = [a.get("sector") for a in allocation_list] if allocation_list else None
     asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list] if allocation_list else None
     
+    # v1.2.0: Pass weights=None to let RiskAnalyzer align from history_metadata
     analyzer = RiskAnalyzer(
         allocation=allocation_list,  # v1.1.2: Use built list
         cov_matrix=cov_matrix, 
-        weights=weights, 
+        weights=None if history_metadata else weights,  # v1.2.0: Let align if metadata
         sectors=sectors, 
         asset_classes=asset_classes,
         returns_history=returns_history,  # v1.1.0
@@ -1332,7 +1613,7 @@ def fetch_and_enrich_risk_analysis(
     include_liquidity: bool = True,
 ) -> Dict[str, Any]:
     """
-    v1.1.2: Convenience function that fetches historical data and enriches risk analysis.
+    v1.2.0: Convenience function that fetches historical data and enriches risk analysis.
     
     Combines:
     1. fetch_portfolio_returns() from historical_data.py
@@ -1458,6 +1739,11 @@ __all__ = [
     "compute_tail_risk_metrics",
     "compute_liquidity_score",
     
+    # v1.2.0: New helpers
+    "_align_weights_to_tickers",
+    "_historical_var_cvar",
+    "_is_leveraged_or_inverse",
+    
     # Alert generation
     "generate_alerts",
     
@@ -1475,6 +1761,7 @@ __all__ = [
     "PREFERRED_TICKERS",
     "ALERT_THRESHOLDS",
     "TAIL_RISK_THRESHOLDS",  # v1.1.0
+    "LEVERAGE_FALSE_POSITIVES",  # v1.2.0
     
     # Flags
     "HAS_HISTORICAL_DATA",  # v1.1.0
