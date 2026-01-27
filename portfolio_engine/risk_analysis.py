@@ -15,9 +15,10 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
-- v1.2.1: Fix stress tests cov_matrix (2026-01-27)
+- v1.2.1: Fix stress tests cov_matrix + asset_names (2026-01-27)
   - FIX: Estimate cov_matrix BEFORE run_stress_scenarios() (was after)
   - FIX: Support _tickers_pricing from generate_portfolios_v4.py
+  - NEW: Pass asset_names to stress_testing for ETF type detection
   - Root cause: cov fallback was in compute_tail_risk_metrics() called AFTER stress tests
 - v1.2.0: P0 Bug Fixes (Code Review 2026-01-27)
   - FIX: Alignment weights ↔ returns par ticker (évite VaR fausse)
@@ -1456,6 +1457,7 @@ class RiskAnalyzer:
         returns_history: Optional[np.ndarray] = None, 
         sectors: Optional[List[str]] = None, 
         asset_classes: Optional[List[str]] = None,
+        asset_names: Optional[List[str]] = None,  # v1.2.1: For ETF type detection
         history_metadata: Optional[Dict[str, Any]] = None,  # v1.1.0
     ):
         self.allocation = allocation
@@ -1467,11 +1469,16 @@ class RiskAnalyzer:
         self.returns_history = returns_history
         self.sectors = sectors
         self.asset_classes = asset_classes
+        self.asset_names = asset_names  # v1.2.1
         self.history_metadata = history_metadata or {}  # v1.1.0
         
         # v1.2.0: Store allocation in history_metadata for alignment
         if allocation and "allocation" not in self.history_metadata:
             self.history_metadata["allocation"] = allocation
+        
+        # v1.2.1: Extract asset_names from allocation if not provided
+        if self.asset_names is None and allocation:
+            self.asset_names = [_extract_name(a) for a in allocation]
         
         if self.weights is None and allocation:
             self.weights = np.array([
@@ -1498,7 +1505,8 @@ class RiskAnalyzer:
             cov_matrix=self.cov_matrix, 
             scenarios=scenarios or default_scenarios, 
             sectors=self.sectors, 
-            asset_classes=self.asset_classes
+            asset_classes=self.asset_classes,
+            asset_names=self.asset_names,  # v1.2.1: For ETF type detection
         )
         
         result = pack.to_dict()
@@ -1657,6 +1665,7 @@ def enrich_portfolio_with_risk_analysis(
     
     sectors = [a.get("sector") for a in allocation_list] if allocation_list else None
     asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list] if allocation_list else None
+    asset_names = [_extract_name(a) for a in allocation_list] if allocation_list else None  # v1.2.1
     
     # v1.2.0: Ensure allocation is in history_metadata for alignment
     if history_metadata is None:
@@ -1670,6 +1679,7 @@ def enrich_portfolio_with_risk_analysis(
         weights=weights, 
         sectors=sectors, 
         asset_classes=asset_classes,
+        asset_names=asset_names,  # v1.2.1: For ETF type detection
         returns_history=returns_history,  # v1.1.0
         history_metadata=history_metadata,  # v1.1.0
     )
