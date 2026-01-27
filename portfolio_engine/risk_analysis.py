@@ -1,6 +1,6 @@
 # portfolio_engine/risk_analysis.py
 """
-Risk Analysis Module v1.1.1
+Risk Analysis Module v1.1.2
 
 Module d'enrichissement post-optimisation qui:
 1. RÉUTILISE stress_testing.py (pas de duplication)
@@ -15,6 +15,11 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
+- v1.1.2: Fix allocation format mismatch
+  - FIX: enrich_portfolio_with_risk_analysis() now handles allocation as dict {id: weight}
+  - FIX: Build allocation_list from assets + allocation dict for RiskAnalyzer
+  - FIX: fetch_and_enrich_risk_analysis() passes assets to enrich function
+  - Root cause: generate_portfolios_v4.py passes allocation={id: weight_pct} not list
 - v1.1.1: Fix extraction tickers
   - FIX: Extract tickers from assets list (not allocation dict which is {id: weight})
   - FIX: Version number updated to match code functionality
@@ -93,7 +98,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
@@ -433,16 +438,49 @@ def _normalize_leverage(leverage_raw: Any) -> float:
         return 1.0
 
 
-def _extract_ticker(asset: Dict[str, Any]) -> Optional[str]:
-    for key in ["ticker", "symbol", "etfsymbol", "id"]:
-        val = asset.get(key)
+def _extract_ticker(asset: Any) -> Optional[str]:
+    """
+    v1.1.2: Extract ticker from asset (handles dict, object, or string).
+    """
+    # If asset is already a string (e.g., from dict keys), return it
+    if isinstance(asset, str):
+        return asset.upper() if asset else None
+    
+    # If asset is a dict
+    if isinstance(asset, dict):
+        for key in ["ticker", "symbol", "etfsymbol", "id"]:
+            val = asset.get(key)
+            if val and isinstance(val, str):
+                return val.upper()
+        return None
+    
+    # If asset is an object with attributes
+    for attr in ["ticker", "symbol", "id"]:
+        val = getattr(asset, attr, None)
         if val and isinstance(val, str):
             return val.upper()
+    
+    # Try source_data
+    source_data = getattr(asset, "source_data", None)
+    if source_data and isinstance(source_data, dict):
+        for key in ["ticker", "symbol"]:
+            val = source_data.get(key)
+            if val and isinstance(val, str):
+                return val.upper()
+    
     return None
 
 
-def _extract_name(asset: Dict[str, Any]) -> str:
-    return str(asset.get("name", asset.get("id", "Unknown")))
+def _extract_name(asset: Any) -> str:
+    """v1.1.2: Extract name from asset (handles dict, object, or string)."""
+    if isinstance(asset, str):
+        return asset
+    if isinstance(asset, dict):
+        return str(asset.get("name", asset.get("id", "Unknown")))
+    name = getattr(asset, "name", None)
+    if name:
+        return str(name)
+    return str(getattr(asset, "id", "Unknown"))
 
 
 def _determine_confidence_level(n_obs: int) -> str:
@@ -462,6 +500,89 @@ def _determine_var_method(n_obs: int, var_level: str = "95") -> str:
         threshold = TAIL_RISK_THRESHOLDS["var_95_min_obs"]
     
     return "historical" if n_obs >= threshold else "parametric"
+
+
+def _build_allocation_list(
+    allocation: Any,
+    assets: Optional[List[Any]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    v1.1.2: Build a list of allocation dicts from various input formats.
+    
+    Handles:
+    - allocation as list of dicts (original format) → return as-is
+    - allocation as dict {asset_id: weight_pct} + assets list → build list
+    - allocation as dict without assets → minimal list from keys
+    
+    Returns:
+        List of dicts with at least {"id", "weight", "ticker", "name", ...}
+    """
+    # Case 1: allocation is already a list
+    if isinstance(allocation, list):
+        return allocation
+    
+    # Case 2: allocation is a dict {asset_id: weight_pct}
+    if isinstance(allocation, dict):
+        result = []
+        
+        # Build asset lookup from assets list
+        asset_lookup = {}
+        if assets:
+            for asset in assets:
+                # Get asset ID
+                if hasattr(asset, "id"):
+                    aid = str(asset.id)
+                elif isinstance(asset, dict):
+                    aid = str(asset.get("id", ""))
+                else:
+                    continue
+                asset_lookup[aid] = asset
+        
+        # Build allocation list
+        for asset_id, weight in allocation.items():
+            asset_id_str = str(asset_id)
+            
+            # Try to find asset in lookup
+            asset = asset_lookup.get(asset_id_str)
+            
+            if asset:
+                # Build dict from asset object/dict
+                if isinstance(asset, dict):
+                    entry = dict(asset)  # Copy
+                    entry["weight"] = weight
+                    entry["weight_pct"] = weight
+                else:
+                    # Asset is an object
+                    entry = {
+                        "id": asset_id_str,
+                        "weight": weight,
+                        "weight_pct": weight,
+                        "ticker": getattr(asset, "ticker", None) or getattr(asset, "symbol", None),
+                        "name": getattr(asset, "name", asset_id_str),
+                        "category": getattr(asset, "category", "unknown"),
+                        "sector": getattr(asset, "sector", None),
+                    }
+                    # Include source_data if available
+                    if hasattr(asset, "source_data") and asset.source_data:
+                        entry["source_data"] = asset.source_data
+            else:
+                # No asset found, create minimal entry
+                entry = {
+                    "id": asset_id_str,
+                    "weight": weight,
+                    "weight_pct": weight,
+                    "ticker": asset_id_str if not asset_id_str.startswith(("EQ_", "ETF_", "BOND_", "CR_")) else None,
+                    "name": asset_id_str,
+                }
+            
+            result.append(entry)
+        
+        logger.debug(f"[risk_analysis] Built allocation_list: {len(result)} items from dict")
+        return result
+    
+    # Case 3: Unknown format
+    logger.warning(f"[risk_analysis] Unknown allocation format: {type(allocation)}")
+    return []
 
 
 # =============================================================================
@@ -968,11 +1089,11 @@ def generate_alerts(
 
 class RiskAnalyzer:
     """
-    v1.1.0: Enhanced with historical_data.py integration.
+    v1.1.2: Enhanced with historical_data.py integration and dict allocation support.
     
     Usage:
         analyzer = RiskAnalyzer(
-            allocation=allocation,
+            allocation=allocation_list,  # List of dicts with weight, ticker, etc.
             cov_matrix=cov_matrix,
             weights=weights,
             returns_history=returns_matrix,  # From fetch_portfolio_returns()
@@ -1136,10 +1257,13 @@ def enrich_portfolio_with_risk_analysis(
     """
     Enrichit un résultat de portfolio avec l'analyse de risque.
     
+    v1.1.2: Handles allocation as dict {id: weight_pct} or list of dicts.
     v1.1.0: Accepts returns_history and history_metadata from fetch_portfolio_returns().
     
     Args:
         portfolio_result: Résultat de optimizer.build_portfolio()
+            Expected keys: "allocation" (dict or list), "assets" (list), 
+                          "cov_matrix", "weights"
         profile_name: Profil ("Stable", "Modere", "Agressif")
         include_*: Flags pour analyses
         returns_history: (T x N) matrix from fetch_portfolio_returns()
@@ -1148,7 +1272,24 @@ def enrich_portfolio_with_risk_analysis(
     Returns:
         portfolio_result enrichi avec clé "risk_analysis"
     """
-    allocation = portfolio_result.get("allocation", [])
+    # v1.1.2: Get allocation and assets
+    allocation_raw = portfolio_result.get("allocation", [])
+    assets = portfolio_result.get("assets", [])
+    
+    # v1.1.2: Build allocation list from dict + assets if needed
+    allocation_list = _build_allocation_list(allocation_raw, assets)
+    
+    if not allocation_list:
+        logger.warning("[risk_analysis] Empty allocation, returning minimal risk_analysis")
+        portfolio_result["risk_analysis"] = {
+            "version": VERSION,
+            "error": "Empty allocation",
+            "profile": profile_name,
+        }
+        return portfolio_result
+    
+    logger.info(f"[risk_analysis] Processing {len(allocation_list)} positions for {profile_name}")
+    
     cov_matrix = portfolio_result.get("cov_matrix")
     weights = portfolio_result.get("weights")
     
@@ -1157,11 +1298,11 @@ def enrich_portfolio_with_risk_analysis(
     if cov_matrix is not None and not isinstance(cov_matrix, np.ndarray):
         cov_matrix = np.array(cov_matrix)
     
-    sectors = [a.get("sector") for a in allocation] if allocation else None
-    asset_classes = [a.get("category", a.get("asset_class")) for a in allocation] if allocation else None
+    sectors = [a.get("sector") for a in allocation_list] if allocation_list else None
+    asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list] if allocation_list else None
     
     analyzer = RiskAnalyzer(
-        allocation=allocation, 
+        allocation=allocation_list,  # v1.1.2: Use built list
         cov_matrix=cov_matrix, 
         weights=weights, 
         sectors=sectors, 
@@ -1191,7 +1332,7 @@ def fetch_and_enrich_risk_analysis(
     include_liquidity: bool = True,
 ) -> Dict[str, Any]:
     """
-    v1.1.0: Convenience function that fetches historical data and enriches risk analysis.
+    v1.1.2: Convenience function that fetches historical data and enriches risk analysis.
     
     Combines:
     1. fetch_portfolio_returns() from historical_data.py
@@ -1199,6 +1340,7 @@ def fetch_and_enrich_risk_analysis(
     
     Args:
         portfolio_result: Résultat de optimizer.build_portfolio()
+            Expected keys: "allocation" (dict {id: weight_pct}), "assets" (list)
         profile_name: Profil ("Stable", "Modere", "Agressif")
         lookback_years: Years of historical data (default: 5)
         use_cache: Whether to use cached returns (default: True)
@@ -1217,7 +1359,7 @@ def fetch_and_enrich_risk_analysis(
             include_liquidity=include_liquidity,
         )
     
-    # v1.1.1 FIX: Extract tickers from assets (allocation is {id: weight}, not list)
+    # v1.1.2: Extract tickers from assets (allocation is {id: weight}, not list)
     assets = portfolio_result.get("assets", [])
     allocation_dict = portfolio_result.get("allocation", {})
     
