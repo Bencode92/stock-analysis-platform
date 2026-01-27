@@ -1,6 +1,6 @@
 # portfolio_engine/risk_analysis.py
 """
-Risk Analysis Module v1.2.0
+Risk Analysis Module v1.2.1
 
 Module d'enrichissement post-optimisation qui:
 1. RÉUTILISE stress_testing.py (pas de duplication)
@@ -15,6 +15,10 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
+- v1.2.1: Fix stress tests cov_matrix (2026-01-27)
+  - FIX: Estimate cov_matrix BEFORE run_stress_scenarios() (was after)
+  - FIX: Support _tickers_pricing from generate_portfolios_v4.py
+  - Root cause: cov fallback was in compute_tail_risk_metrics() called AFTER stress tests
 - v1.2.0: P0 Bug Fixes (Code Review 2026-01-27)
   - FIX: Alignment weights ↔ returns par ticker (évite VaR fausse)
   - FIX: VaR99 fallback historique si parametric impossible (plus de 0.0)
@@ -109,7 +113,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
@@ -1543,6 +1547,13 @@ class RiskAnalyzer:
         result = RiskAnalysisResult(profile_name=profile_name)
         result.history_metadata = self.history_metadata  # v1.1.0
         
+        # v1.2.1: Estimate cov_matrix BEFORE stress tests if not provided
+        if self.cov_matrix is None and self.returns_history is not None:
+            estimated_cov = _estimate_cov_from_returns(self.returns_history)
+            if estimated_cov is not None:
+                self.cov_matrix = estimated_cov
+                logger.info("[run_full_analysis] Estimated cov_matrix from returns_history")
+        
         if include_stress:
             result.stress_tests = self.run_stress_scenarios(profile_name)
         
@@ -1712,35 +1723,46 @@ def fetch_and_enrich_risk_analysis(
         )
     
     # v1.1.2: Extract tickers from assets (allocation is {id: weight}, not list)
+    # v1.2.1: Prioritize _tickers_pricing if available (from generate_portfolios_v4.py)
     assets = portfolio_result.get("assets", [])
     allocation_dict = portfolio_result.get("allocation", {})
+    tickers_pricing = portfolio_result.get("_tickers_pricing", {})
     
     tickers = []
-    for asset in assets:
-        # Get asset ID
-        if hasattr(asset, 'id'):
-            asset_id = str(asset.id)
-        elif isinstance(asset, dict):
-            asset_id = str(asset.get("id", ""))
-        else:
-            continue
-        
-        # Only include assets that are in the final allocation
-        if asset_id not in allocation_dict:
-            continue
-        
-        # Extract ticker
-        if hasattr(asset, 'ticker') and asset.ticker:
-            ticker = str(asset.ticker).upper()
-        elif hasattr(asset, 'symbol') and asset.symbol:
-            ticker = str(asset.symbol).upper()
-        elif isinstance(asset, dict):
-            ticker = (asset.get("ticker") or asset.get("symbol") or "").upper()
-        else:
-            continue
-        
-        if ticker and ticker not in tickers:
-            tickers.append(ticker)
+    weights_by_ticker = {}
+    
+    # v1.2.1: Use _tickers_pricing if available (already contains tradable tickers)
+    if tickers_pricing:
+        tickers = list(tickers_pricing.keys())
+        weights_by_ticker = {t: w for t, w in tickers_pricing.items() if w > 0}
+        logger.info(f"[risk_analysis] Using _tickers_pricing: {len(tickers)} tickers")
+    else:
+        # Fallback: extract from assets
+        for asset in assets:
+            # Get asset ID
+            if hasattr(asset, 'id'):
+                asset_id = str(asset.id)
+            elif isinstance(asset, dict):
+                asset_id = str(asset.get("id", ""))
+            else:
+                continue
+            
+            # Only include assets that are in the final allocation
+            if asset_id not in allocation_dict:
+                continue
+            
+            # Extract ticker
+            if hasattr(asset, 'ticker') and asset.ticker:
+                ticker = str(asset.ticker).upper()
+            elif hasattr(asset, 'symbol') and asset.symbol:
+                ticker = str(asset.symbol).upper()
+            elif isinstance(asset, dict):
+                ticker = (asset.get("ticker") or asset.get("symbol") or "").upper()
+            else:
+                continue
+            
+            if ticker and ticker not in tickers:
+                tickers.append(ticker)
     
     if not tickers:
         logger.warning("[risk_analysis] No tickers found in assets")
