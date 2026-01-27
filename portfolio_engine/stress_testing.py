@@ -3,6 +3,7 @@
 Stress Testing Pack for Portfolio Engine.
 
 P2-12 - 2025-12-18
+v1.1.0 - 2026-01-27: Enhanced asset class mapping for French categories
 
 Implements parameterized stress scenarios to test portfolio robustness.
 
@@ -12,6 +13,10 @@ Scenarios:
 3. LIQUIDITY_CRISIS: Spreads widen, small caps -30%
 4. RATE_SHOCK: Interest rate spike affecting duration-sensitive assets
 5. MARKET_CRASH: 2008-style crash (-40% equities, correlation→1)
+
+Changelog:
+- v1.1.0: Asset class mapping for French categories (Actions, ETF, Obligations, Crypto)
+- v1.0.0: Initial release
 
 Design rationale:
 - Each scenario modifies covariance matrix and/or expected returns
@@ -26,6 +31,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import warnings
+import re
 
 # Try to import structured logging
 try:
@@ -44,6 +50,7 @@ except ImportError:
 
 logger = get_structured_logger("portfolio_engine.stress_testing")
 
+VERSION = "1.1.0"
 
 # ============================================================
 # ENUMS & CONSTANTS
@@ -58,6 +65,239 @@ class StressScenario(Enum):
     MARKET_CRASH = "market_crash"
     STAGFLATION = "stagflation"
     CUSTOM = "custom"
+
+
+# ============================================================
+# v1.1.0: ASSET CLASS MAPPING
+# ============================================================
+
+# Map various category names to standardized asset classes
+ASSET_CLASS_MAPPING = {
+    # French categories
+    "actions": "equity",
+    "action": "equity",
+    "etf": "equity",  # Default, will be refined by ETF type
+    "obligations": "bond",
+    "obligation": "bond",
+    "crypto": "crypto",
+    "cryptomonnaie": "crypto",
+    "cryptomonnaies": "crypto",
+    "or": "commodity",
+    "gold": "commodity",
+    "matières premières": "commodity",
+    "commodities": "commodity",
+    "commodity": "commodity",
+    "immobilier": "real_estate",
+    "real estate": "real_estate",
+    "reit": "real_estate",
+    "cash": "cash",
+    "liquidités": "cash",
+    "monétaire": "cash",
+    
+    # English categories
+    "equity": "equity",
+    "stock": "equity",
+    "stocks": "equity",
+    "bond": "bond",
+    "bonds": "bond",
+    "fixed income": "bond",
+    "fixed_income": "bond",
+    
+    # Specific bond types
+    "treasury": "bond_gov",
+    "government": "bond_gov",
+    "corporate": "bond_corp",
+    "high yield": "bond_hy",
+    "high_yield": "bond_hy",
+    "investment grade": "bond_ig",
+    "investment_grade": "bond_ig",
+    "municipal": "bond_muni",
+    "tips": "bond_tips",
+    "inflation": "bond_tips",
+    
+    # Specific equity types
+    "small cap": "equity_small",
+    "small_cap": "equity_small",
+    "emerging": "equity_em",
+    "emerging markets": "equity_em",
+    "emerging_markets": "equity_em",
+    "growth": "equity_growth",
+    "value": "equity_value",
+    "dividend": "equity_dividend",
+    "tech": "equity_tech",
+    "technology": "equity_tech",
+    "financials": "equity_fin",
+    "healthcare": "equity_health",
+    "energy": "equity_energy",
+    "utilities": "equity_util",
+    "consumer": "equity_consumer",
+    "industrial": "equity_industrial",
+}
+
+# Sector name normalization
+SECTOR_MAPPING = {
+    # Technology
+    "technology": "Technology",
+    "tech": "Technology",
+    "information technology": "Technology",
+    "software": "Technology",
+    "semiconductors": "Technology",
+    "semi-conducteurs": "Technology",
+    
+    # Financials
+    "financials": "Financials",
+    "financial": "Financials",
+    "finance": "Financials",
+    "banks": "Financials",
+    "banking": "Financials",
+    "insurance": "Financials",
+    
+    # Healthcare
+    "healthcare": "Healthcare",
+    "health care": "Healthcare",
+    "santé": "Healthcare",
+    "pharma": "Healthcare",
+    "biotech": "Healthcare",
+    
+    # Consumer
+    "consumer discretionary": "Consumer Discretionary",
+    "consumer_discretionary": "Consumer Discretionary",
+    "retail": "Consumer Discretionary",
+    "consumer staples": "Consumer Staples",
+    "consumer_staples": "Consumer Staples",
+    "food": "Consumer Staples",
+    "beverage": "Consumer Staples",
+    
+    # Energy & Utilities
+    "energy": "Energy",
+    "oil": "Energy",
+    "gas": "Energy",
+    "utilities": "Utilities",
+    "utility": "Utilities",
+    
+    # Industrials
+    "industrials": "Industrials",
+    "industrial": "Industrials",
+    "manufacturing": "Industrials",
+    "aerospace": "Industrials",
+    "defense": "Industrials",
+    
+    # Real Estate
+    "real estate": "Real Estate",
+    "real_estate": "Real Estate",
+    "reit": "Real Estate",
+    "immobilier": "Real Estate",
+    
+    # Materials
+    "materials": "Materials",
+    "basic materials": "Materials",
+    "mining": "Materials",
+    "metals": "Materials",
+    "gold": "Materials",
+    "or": "Materials",
+    
+    # Communication
+    "communication": "Communication Services",
+    "communication services": "Communication Services",
+    "telecom": "Communication Services",
+    "media": "Communication Services",
+    
+    # Small/Mid Cap
+    "small cap": "Small Cap",
+    "small_cap": "Small Cap",
+    "mid cap": "Mid Cap",
+    "mid_cap": "Mid Cap",
+    
+    # Emerging
+    "emerging": "Emerging Markets",
+    "emerging markets": "Emerging Markets",
+    "emerging_markets": "Emerging Markets",
+    "em": "Emerging Markets",
+}
+
+
+def normalize_asset_class(category: Optional[str]) -> str:
+    """
+    v1.1.0: Normalize asset class name to standard format.
+    
+    Args:
+        category: Raw category name (e.g., "Actions", "ETF", "Obligations")
+    
+    Returns:
+        Normalized asset class (e.g., "equity", "bond", "crypto")
+    """
+    if not category:
+        return "unknown"
+    
+    key = category.lower().strip()
+    return ASSET_CLASS_MAPPING.get(key, "unknown")
+
+
+def normalize_sector(sector: Optional[str]) -> str:
+    """
+    v1.1.0: Normalize sector name to standard format.
+    
+    Args:
+        sector: Raw sector name
+    
+    Returns:
+        Normalized sector (e.g., "Technology", "Financials")
+    """
+    if not sector:
+        return "Unknown"
+    
+    key = sector.lower().strip()
+    return SECTOR_MAPPING.get(key, sector.title())
+
+
+def detect_etf_type(name: str) -> str:
+    """
+    v1.1.0: Detect ETF type from name for better stress classification.
+    
+    Args:
+        name: ETF name
+    
+    Returns:
+        Specific asset class (e.g., "bond_gov", "equity_small")
+    """
+    name_lower = name.lower()
+    
+    # Bond ETFs
+    if any(kw in name_lower for kw in ["treasury", "government", "govt"]):
+        return "bond_gov"
+    if any(kw in name_lower for kw in ["corporate", "corp"]):
+        return "bond_corp"
+    if any(kw in name_lower for kw in ["high yield", "high-yield", "junk"]):
+        return "bond_hy"
+    if any(kw in name_lower for kw in ["municipal", "muni"]):
+        return "bond_muni"
+    if any(kw in name_lower for kw in ["tips", "inflation"]):
+        return "bond_tips"
+    if any(kw in name_lower for kw in ["bond", "fixed income", "aggregate"]):
+        return "bond_ig"
+    
+    # Equity ETFs
+    if any(kw in name_lower for kw in ["small cap", "small-cap", "smallcap"]):
+        return "equity_small"
+    if any(kw in name_lower for kw in ["emerging", "em market"]):
+        return "equity_em"
+    if any(kw in name_lower for kw in ["growth"]):
+        return "equity_growth"
+    if any(kw in name_lower for kw in ["value"]):
+        return "equity_value"
+    if any(kw in name_lower for kw in ["dividend", "income"]):
+        return "equity_dividend"
+    if any(kw in name_lower for kw in ["tech", "nasdaq", "semiconductor"]):
+        return "equity_tech"
+    if any(kw in name_lower for kw in ["international", "developed", "world", "global"]):
+        return "equity_intl"
+    if any(kw in name_lower for kw in ["real estate", "reit"]):
+        return "real_estate"
+    if any(kw in name_lower for kw in ["gold", "precious", "commodity"]):
+        return "commodity"
+    
+    # Default to broad equity
+    return "equity"
 
 
 # Historical reference events for calibration
@@ -153,6 +393,8 @@ def get_scenario_parameters(scenario: StressScenario) -> ScenarioParameters:
     """
     Get parameters for a pre-defined stress scenario.
     
+    v1.1.0: Enhanced with more asset class shocks for better differentiation.
+    
     Args:
         scenario: StressScenario enum value
     
@@ -167,6 +409,21 @@ def get_scenario_parameters(scenario: StressScenario) -> ScenarioParameters:
             volatility_multiplier=1.5,
             return_shock=-0.05,
             probability=0.10,
+            # v1.1.0: Enhanced asset class shocks
+            asset_class_shocks={
+                "equity": -0.08,
+                "equity_small": -0.12,
+                "equity_em": -0.15,
+                "equity_tech": -0.10,
+                "equity_intl": -0.09,
+                "bond": -0.02,
+                "bond_gov": 0.01,  # Flight to quality
+                "bond_corp": -0.04,
+                "bond_hy": -0.08,
+                "crypto": -0.15,
+                "commodity": -0.05,
+                "real_estate": -0.07,
+            },
         ),
         
         StressScenario.VOLATILITY_SHOCK: ScenarioParameters(
@@ -176,6 +433,22 @@ def get_scenario_parameters(scenario: StressScenario) -> ScenarioParameters:
             volatility_multiplier=3.0,
             return_shock=-0.10,
             probability=0.05,
+            # v1.1.0: Enhanced asset class shocks
+            asset_class_shocks={
+                "equity": -0.15,
+                "equity_small": -0.22,
+                "equity_em": -0.25,
+                "equity_tech": -0.20,
+                "equity_growth": -0.18,
+                "equity_intl": -0.16,
+                "bond": -0.03,
+                "bond_gov": 0.02,  # Safe haven
+                "bond_corp": -0.06,
+                "bond_hy": -0.12,
+                "crypto": -0.30,
+                "commodity": -0.10,
+                "real_estate": -0.12,
+            },
         ),
         
         StressScenario.LIQUIDITY_CRISIS: ScenarioParameters(
@@ -188,11 +461,23 @@ def get_scenario_parameters(scenario: StressScenario) -> ScenarioParameters:
                 "Small Cap": -0.30,
                 "Emerging Markets": -0.25,
                 "High Yield": -0.20,
+                "Real Estate": -0.18,
+                "Financials": -0.15,
             },
             asset_class_shocks={
-                "equity_small": -0.30,
-                "equity_em": -0.25,
-                "bond_hy": -0.20,
+                "equity": -0.18,
+                "equity_small": -0.35,
+                "equity_em": -0.30,
+                "equity_tech": -0.20,
+                "equity_intl": -0.20,
+                "bond": -0.05,
+                "bond_gov": 0.03,
+                "bond_corp": -0.10,
+                "bond_hy": -0.25,
+                "bond_muni": -0.08,
+                "crypto": -0.40,
+                "commodity": -0.15,
+                "real_estate": -0.22,
             },
             liquidity_impact=3.0,
             probability=0.05,
@@ -208,11 +493,25 @@ def get_scenario_parameters(scenario: StressScenario) -> ScenarioParameters:
                 "Technology": -0.15,
                 "Real Estate": -0.20,
                 "Utilities": -0.12,
+                "Financials": 0.05,  # Banks benefit from higher rates
+                "Consumer Discretionary": -0.10,
             },
             asset_class_shocks={
-                "bond_long": -0.15,
-                "bond_ig": -0.08,
-                "equity_growth": -0.12,
+                "equity": -0.10,
+                "equity_growth": -0.18,
+                "equity_tech": -0.16,
+                "equity_value": -0.05,
+                "equity_dividend": -0.08,
+                "equity_intl": -0.12,
+                "bond": -0.08,
+                "bond_gov": -0.10,
+                "bond_corp": -0.12,
+                "bond_ig": -0.10,
+                "bond_hy": -0.08,
+                "bond_tips": -0.03,  # Inflation-protected
+                "crypto": -0.20,
+                "commodity": 0.05,  # Inflation hedge
+                "real_estate": -0.15,
             },
             probability=0.08,
         ),
@@ -227,11 +526,32 @@ def get_scenario_parameters(scenario: StressScenario) -> ScenarioParameters:
                 "Financials": -0.60,
                 "Real Estate": -0.50,
                 "Consumer Discretionary": -0.45,
+                "Technology": -0.42,
+                "Industrials": -0.40,
+                "Materials": -0.38,
+                "Energy": -0.35,
+                "Healthcare": -0.25,
+                "Consumer Staples": -0.20,
+                "Utilities": -0.18,
             },
             asset_class_shocks={
-                "equity": -0.40,
-                "bond_hy": -0.25,
-                "commodity": -0.30,
+                "equity": -0.45,
+                "equity_small": -0.55,
+                "equity_em": -0.55,
+                "equity_tech": -0.50,
+                "equity_growth": -0.48,
+                "equity_value": -0.40,
+                "equity_fin": -0.60,
+                "equity_intl": -0.45,
+                "bond": -0.05,
+                "bond_gov": 0.08,  # Flight to safety
+                "bond_corp": -0.15,
+                "bond_ig": -0.10,
+                "bond_hy": -0.30,
+                "crypto": -0.60,
+                "commodity": -0.25,
+                "real_estate": -0.45,
+                "cash": 0.01,
             },
             liquidity_impact=5.0,
             duration_days=252,  # 1 year
@@ -248,12 +568,26 @@ def get_scenario_parameters(scenario: StressScenario) -> ScenarioParameters:
                 "Technology": -0.20,
                 "Consumer Discretionary": -0.18,
                 "Real Estate": -0.15,
+                "Financials": -0.12,
+                "Energy": 0.10,  # Benefits from inflation
+                "Materials": 0.05,
             },
             asset_class_shocks={
-                "equity": -0.15,
-                "bond_long": -0.12,
-                "bond_tips": 0.05,  # TIPS benefit
-                "commodity": 0.10,  # Commodities benefit
+                "equity": -0.18,
+                "equity_growth": -0.25,
+                "equity_tech": -0.22,
+                "equity_value": -0.12,
+                "equity_dividend": -0.10,
+                "equity_intl": -0.16,
+                "bond": -0.10,
+                "bond_gov": -0.12,
+                "bond_corp": -0.15,
+                "bond_ig": -0.12,
+                "bond_hy": -0.18,
+                "bond_tips": 0.02,  # TIPS benefit
+                "crypto": -0.25,
+                "commodity": 0.15,  # Commodities benefit
+                "real_estate": -0.08,
             },
             probability=0.05,
         ),
@@ -331,15 +665,19 @@ def stress_returns(
     params: ScenarioParameters,
     sectors: Optional[List[str]] = None,
     asset_classes: Optional[List[str]] = None,
+    asset_names: Optional[List[str]] = None,
 ) -> np.ndarray:
     """
     Apply stress scenario to expected returns.
+    
+    v1.1.0: Enhanced with asset class normalization and ETF type detection.
     
     Args:
         returns: Expected returns array (n,)
         params: Scenario parameters
         sectors: Optional sector labels for each asset
         asset_classes: Optional asset class labels
+        asset_names: Optional asset names (for ETF type detection)
     
     Returns:
         Stressed returns array
@@ -353,14 +691,37 @@ def stress_returns(
     # Apply sector-specific shocks
     if sectors is not None and params.sector_shocks:
         for i, sector in enumerate(sectors):
-            if sector in params.sector_shocks:
-                stressed[i] += params.sector_shocks[sector]
+            if sector is None:
+                continue
+            # v1.1.0: Normalize sector name
+            norm_sector = normalize_sector(sector)
+            if norm_sector in params.sector_shocks:
+                stressed[i] += params.sector_shocks[norm_sector]
     
     # Apply asset class shocks
     if asset_classes is not None and params.asset_class_shocks:
         for i, ac in enumerate(asset_classes):
-            if ac in params.asset_class_shocks:
-                stressed[i] += params.asset_class_shocks[ac]
+            if ac is None:
+                continue
+            
+            # v1.1.0: Normalize asset class
+            norm_ac = normalize_asset_class(ac)
+            
+            # v1.1.0: If ETF, try to detect specific type from name
+            if norm_ac == "equity" and asset_names and i < len(asset_names):
+                detected_type = detect_etf_type(asset_names[i])
+                if detected_type in params.asset_class_shocks:
+                    norm_ac = detected_type
+            
+            # Apply shock if exists
+            if norm_ac in params.asset_class_shocks:
+                stressed[i] += params.asset_class_shocks[norm_ac]
+            elif norm_ac.startswith("equity") and "equity" in params.asset_class_shocks:
+                # Fallback to general equity shock
+                stressed[i] += params.asset_class_shocks["equity"]
+            elif norm_ac.startswith("bond") and "bond" in params.asset_class_shocks:
+                # Fallback to general bond shock
+                stressed[i] += params.asset_class_shocks["bond"]
     
     return stressed
 
@@ -428,6 +789,7 @@ class StressTestResult:
     impact: Dict[str, float]
     var_impact: float
     expected_loss: float
+    vol_after: float = 0.0  # v1.1.0: Volatility after stress
     warnings: List[str] = field(default_factory=list)
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     
@@ -447,6 +809,7 @@ class StressTestResult:
             "impact": self.impact,
             "var_impact_pct": self.var_impact * 100,
             "expected_loss_pct": self.expected_loss * 100,
+            "vol_after_pct": self.vol_after * 100,  # v1.1.0
             "warnings": self.warnings,
             "timestamp": self.timestamp.isoformat(),
         }
@@ -475,7 +838,7 @@ def calculate_portfolio_metrics(
     
     # Portfolio volatility
     port_var = weights @ cov_matrix @ weights
-    port_vol = np.sqrt(port_var)
+    port_vol = np.sqrt(max(port_var, 0))
     
     # Sharpe ratio
     sharpe = (port_return - risk_free_rate) / port_vol if port_vol > 0 else 0
@@ -512,10 +875,13 @@ def run_stress_test(
     scenario: StressScenario,
     sectors: Optional[List[str]] = None,
     asset_classes: Optional[List[str]] = None,
+    asset_names: Optional[List[str]] = None,
     custom_params: Optional[ScenarioParameters] = None,
 ) -> StressTestResult:
     """
     Run a single stress test on a portfolio.
+    
+    v1.1.0: Added asset_names parameter for ETF type detection.
     
     Args:
         weights: Portfolio weights
@@ -524,6 +890,7 @@ def run_stress_test(
         scenario: Stress scenario to apply
         sectors: Optional sector labels
         asset_classes: Optional asset class labels
+        asset_names: Optional asset names (for ETF type detection)
         custom_params: Custom parameters (for CUSTOM scenario)
     
     Returns:
@@ -549,7 +916,7 @@ def run_stress_test(
     
     # Apply stress to returns
     stressed_returns = stress_returns(
-        expected_returns, params, sectors, asset_classes
+        expected_returns, params, sectors, asset_classes, asset_names
     )
     
     # Calculate stressed metrics
@@ -564,13 +931,44 @@ def run_stress_test(
     # VaR impact
     var_impact = stressed_metrics["var_95"] - base_metrics["var_95"]
     
-    # Expected loss under scenario
-    expected_loss = params.return_shock
+    # v1.1.0: Calculate expected loss based on weights and asset class shocks
+    expected_loss = 0.0
+    if asset_classes is not None and params.asset_class_shocks:
+        for i, ac in enumerate(asset_classes or []):
+            if ac is None:
+                # Apply general shock if no class specified
+                expected_loss += weights[i] * params.return_shock
+                continue
+            
+            norm_ac = normalize_asset_class(ac)
+            
+            # Detect ETF type if available
+            if norm_ac == "equity" and asset_names and i < len(asset_names):
+                detected_type = detect_etf_type(asset_names[i])
+                if detected_type in params.asset_class_shocks:
+                    norm_ac = detected_type
+            
+            # Get shock for this asset class
+            if norm_ac in params.asset_class_shocks:
+                expected_loss += weights[i] * params.asset_class_shocks[norm_ac]
+            elif norm_ac.startswith("equity") and "equity" in params.asset_class_shocks:
+                expected_loss += weights[i] * params.asset_class_shocks["equity"]
+            elif norm_ac.startswith("bond") and "bond" in params.asset_class_shocks:
+                expected_loss += weights[i] * params.asset_class_shocks["bond"]
+            else:
+                expected_loss += weights[i] * params.return_shock
+    else:
+        # Fallback: use general shock weighted by equity/bond composition
+        expected_loss = params.return_shock
+    
+    # Add sector-specific shocks
     if sectors is not None and params.sector_shocks:
-        # Weight by portfolio exposure
-        for i, sector in enumerate(sectors):
-            if sector in params.sector_shocks:
-                expected_loss += weights[i] * params.sector_shocks[sector]
+        for i, sector in enumerate(sectors or []):
+            if sector is None:
+                continue
+            norm_sector = normalize_sector(sector)
+            if norm_sector in params.sector_shocks:
+                expected_loss += weights[i] * params.sector_shocks[norm_sector]
     
     # Add warnings for severe impacts
     if impact["volatility"] > 0.10:
@@ -590,6 +988,7 @@ def run_stress_test(
         impact=impact,
         var_impact=var_impact,
         expected_loss=expected_loss,
+        vol_after=stressed_metrics["volatility"],  # v1.1.0
         warnings=warnings_list,
     )
     
@@ -629,12 +1028,16 @@ class StressTestPack:
         """Convert to dictionary for JSON serialization."""
         return {
             "stress_test_pack": {
-                "version": "1.0",
+                "version": VERSION,
                 "n_scenarios": len(self.results),
                 "timestamp": self.timestamp.isoformat(),
             },
             "summary": self.summary,
-            "worst_case_scenario": self.worst_case.scenario if self.worst_case else None,
+            "worst_case": {
+                "scenario": self.worst_case.scenario if self.worst_case else None,
+                "expected_loss_pct": self.worst_case.expected_loss * 100 if self.worst_case else 0,
+                "vol_after_pct": self.worst_case.vol_after * 100 if self.worst_case else 0,
+            },
             "risk_budget_impact": self.risk_budget_impact,
             "scenarios": [r.to_dict() for r in self.results],
         }
@@ -647,9 +1050,12 @@ def run_stress_test_pack(
     scenarios: Optional[List[StressScenario]] = None,
     sectors: Optional[List[str]] = None,
     asset_classes: Optional[List[str]] = None,
+    asset_names: Optional[List[str]] = None,
 ) -> StressTestPack:
     """
     Run a pack of stress tests.
+    
+    v1.1.0: Added asset_names parameter for ETF type detection.
     
     Args:
         weights: Portfolio weights
@@ -658,6 +1064,7 @@ def run_stress_test_pack(
         scenarios: List of scenarios to run (default: all standard)
         sectors: Optional sector labels
         asset_classes: Optional asset class labels
+        asset_names: Optional asset names (for ETF type detection)
     
     Returns:
         StressTestPack with all results
@@ -681,6 +1088,7 @@ def run_stress_test_pack(
                 scenario=scenario,
                 sectors=sectors,
                 asset_classes=asset_classes,
+                asset_names=asset_names,
             )
             results.append(result)
         except Exception as e:
@@ -909,7 +1317,7 @@ def get_manifest_entry(pack: StressTestPack) -> Dict[str, Any]:
     """
     return {
         "stress_tests": {
-            "version": "1.0",
+            "version": VERSION,
             "n_scenarios": len(pack.results),
             "timestamp": pack.timestamp.isoformat(),
             "summary": {
@@ -922,3 +1330,48 @@ def get_manifest_entry(pack: StressTestPack) -> Dict[str, Any]:
             "status": "fail" if pack.summary["total_warnings"] > 5 else "pass",
         }
     }
+
+
+# ============================================================
+# MODULE EXPORTS
+# ============================================================
+
+__all__ = [
+    # Version
+    "VERSION",
+    
+    # Enums
+    "StressScenario",
+    
+    # Data classes
+    "ScenarioParameters",
+    "StressTestResult",
+    "StressTestPack",
+    
+    # Core functions
+    "get_scenario_parameters",
+    "run_stress_test",
+    "run_stress_test_pack",
+    
+    # Transformations
+    "stress_covariance_matrix",
+    "stress_returns",
+    "stress_weights",
+    
+    # Utilities
+    "calculate_portfolio_metrics",
+    "quick_stress_check",
+    "replay_historical_event",
+    "reverse_stress_test",
+    "get_manifest_entry",
+    
+    # v1.1.0: Mapping functions
+    "normalize_asset_class",
+    "normalize_sector",
+    "detect_etf_type",
+    
+    # Constants
+    "HISTORICAL_EVENTS",
+    "ASSET_CLASS_MAPPING",
+    "SECTOR_MAPPING",
+]
