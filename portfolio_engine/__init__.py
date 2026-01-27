@@ -1,6 +1,6 @@
 # portfolio_engine/__init__.py
 """
-Portfolio Engine v4.2.0 - Phase 2.5 Refactoring + preset_etf + risk_analysis
+Portfolio Engine v4.2.1 - Phase 2.5 Refactoring + preset_etf + risk_analysis
 
 Architecture:
 - universe.py       : Chargement et préparation des données (PAS de scoring)
@@ -11,13 +11,17 @@ Architecture:
 - preset_meta.py    : Presets, buckets, contraintes par profil
 - preset_etf.py     : Sélection ETF avancée avec scoring 8 composantes (v6.30)
 - etf_exposure.py   : Mapping ETF → exposure pour déduplication (v3.0)
-- risk_analysis.py  : Analyse de risque post-optimisation (v1.0.0) [NEW]
+- risk_analysis.py  : Analyse de risque post-optimisation (v1.1.1) + VaR hybride 5y
+- historical_data.py: Fetch returns 5y via Twelve Data (v1.0.0)
 
 PARI CENTRAL:
 "Des entreprises de qualité fondamentale (ROIC > 10%, FCF positif)
 avec un momentum positif sur 3-12 mois surperforment à horizon 1-3 ans."
 
 Le LLM n'intervient PAS sur les poids - uniquement sur les justifications.
+
+Changelog:
+- v4.2.1: Export fetch_and_enrich_risk_analysis for hybrid VaR 5y
 """
 
 # Universe (chargement données - PAS de scoring)
@@ -193,14 +197,15 @@ except ImportError as e:
     etf_deduplicate_underlying = None
 
 # =============================================================================
-# Risk Analysis (v1.0.0 - Post-optimization risk enrichment)
+# Risk Analysis (v1.1.1 - Post-optimization risk enrichment + VaR hybride 5y)
 # =============================================================================
 try:
     from .risk_analysis import (
         # Main class
         RiskAnalyzer,
-        # Convenience function
+        # Convenience functions
         enrich_portfolio_with_risk_analysis,
+        fetch_and_enrich_risk_analysis,  # v1.1.0: VaR hybride avec données 5y
         # Detection functions
         detect_leveraged_instruments,
         detect_preferred_stocks,
@@ -223,6 +228,10 @@ try:
         ALERT_THRESHOLDS,
         LEVERAGE_TICKERS,
         PREFERRED_TICKERS,
+        TAIL_RISK_THRESHOLDS,  # v1.1.0
+        # Flags
+        HAS_HISTORICAL_DATA,  # v1.1.0
+        HAS_STRESS_TESTING,
     )
     HAS_RISK_ANALYSIS = True
 except ImportError as e:
@@ -230,6 +239,7 @@ except ImportError as e:
     # Placeholders pour éviter ImportError si risk_analysis n'est pas disponible
     RiskAnalyzer = None
     enrich_portfolio_with_risk_analysis = None
+    fetch_and_enrich_risk_analysis = None  # v1.1.0
     detect_leveraged_instruments = None
     detect_preferred_stocks = None
     detect_low_liquidity = None
@@ -247,8 +257,11 @@ except ImportError as e:
     ALERT_THRESHOLDS = {}
     LEVERAGE_TICKERS = set()
     PREFERRED_TICKERS = set()
+    TAIL_RISK_THRESHOLDS = {}  # v1.1.0
+    HAS_HISTORICAL_DATA = False  # v1.1.0
+    HAS_STRESS_TESTING = False
 
-__version__ = "4.2.0"
+__version__ = "4.2.1"
 
 __all__ = [
     # Universe (v3.0)
@@ -358,10 +371,11 @@ __all__ = [
     "etf_apply_hard_constraints",
     "etf_compute_profile_score",
     "etf_deduplicate_underlying",
-    # Risk Analysis (v1.0.0 - Post-optimization risk enrichment)
+    # Risk Analysis (v1.1.1 - Post-optimization risk enrichment + VaR hybride)
     "HAS_RISK_ANALYSIS",
     "RiskAnalyzer",
     "enrich_portfolio_with_risk_analysis",
+    "fetch_and_enrich_risk_analysis",  # v1.1.0: VaR hybride 5y
     "detect_leveraged_instruments",
     "detect_preferred_stocks",
     "detect_low_liquidity",
@@ -379,4 +393,7 @@ __all__ = [
     "ALERT_THRESHOLDS",
     "LEVERAGE_TICKERS",
     "PREFERRED_TICKERS",
+    "TAIL_RISK_THRESHOLDS",  # v1.1.0
+    "HAS_HISTORICAL_DATA",  # v1.1.0
+    "HAS_STRESS_TESTING",
 ]
