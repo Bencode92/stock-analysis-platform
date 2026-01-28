@@ -1,6 +1,6 @@
 # portfolio_engine/risk_analysis.py
 """
-Risk Analysis Module v1.2.1
+Risk Analysis Module v1.2.4
 
 Module d'enrichissement post-optimisation qui:
 1. RÉUTILISE stress_testing.py (pas de duplication)
@@ -1886,7 +1886,7 @@ def enrich_portfolio_with_risk_analysis(
     )
     
     portfolio_result["risk_analysis"] = result.to_dict()
-    return portfolio_resultv
+    return portfolio_result
 
 
 def fetch_and_enrich_risk_analysis(
