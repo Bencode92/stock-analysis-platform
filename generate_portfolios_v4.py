@@ -1818,6 +1818,11 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 crypto_selected_df = select_crypto_for_profile(crypto_df, profile, top_n=30)
                 profile_crypto_data = crypto_selected_df.to_dict('records') if not crypto_selected_df.empty else []
                 logger.info(f"   [{profile}] Crypto sélectionnés: {len(profile_crypto_data)}/{len(crypto_data)}")
+                 # v5.2.0 FIX: Forcer category="crypto" pour éviter reclassification
+                for cr in profile_crypto_data:
+                cr["_force_category"] = "crypto"
+                cr["category"] = "crypto"
+               
             else:
                 profile_crypto_data = []
             
@@ -3283,6 +3288,7 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "Obligations": {},
             "Crypto": {},
             "_tickers": {},
+            "_tickers_meta": {},  # v5.2.0: category pour stress test
         }
         
         optimization_mode = diagnostics.get("optimization_mode", "slsqp")
@@ -3379,6 +3385,17 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 # v4.14.0 FIX R9: Garder full precision, arrondir uniquement au rendu
                 new_weight = prev_weight + weight / 100.0
                 tickers_dict[pricing_ticker] = new_weight
+               
+                # v5.2.0: Alimenter _tickers_meta pour stress test (catégorie garantie)
+                meta = result[profile]["_tickers_meta"].setdefault(pricing_ticker, {
+                    "weight": 0.0,
+                    "category": cat_v1,     # "Obligations"
+                    "name": name,
+                    "asset_ids": [],
+                })
+                meta["weight"] += weight / 100.0
+                if str(original_id) not in meta["asset_ids"]:
+                    meta["asset_ids"].append(str(original_id))
                 
                 bond_symbols_used.append(f"{pricing_ticker}={weight}%")
                 
@@ -3408,7 +3425,18 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 # v4.14.0 FIX R9: Garder full precision, arrondir uniquement au rendu
                 new_weight = prev_weight + weight / 100.0
                 tickers_dict[ticker_key] = new_weight
-                
+
+                # v5.2.0: Alimenter _tickers_meta pour stress test (catégorie garantie)
+                meta = result[profile]["_tickers_meta"].setdefault(ticker_key, {
+                    "weight": 0.0,
+                    "category": cat_v1,     # "Actions"/"ETF"/"Crypto"
+                    "name": name,
+                    "asset_ids": [],
+                })
+                meta["weight"] += weight / 100.0
+                if str(original_id) not in meta["asset_ids"]:
+                    meta["asset_ids"].append(str(original_id))
+                   
                 if prev_weight > 0:
                     if ticker_key not in ticker_collisions:
                         ticker_collisions[ticker_key] = prev_weight
