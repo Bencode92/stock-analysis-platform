@@ -131,7 +131,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.2.6"
+VERSION = "1.2.7"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
@@ -1925,36 +1925,41 @@ def enrich_portfolio_with_risk_analysis(
         include_tail_risk=include_tail_risk, 
         include_liquidity=include_liquidity
     )
-    # v1.2.6: Inject allocation_breakdown into stress_tests for transparency
+    # v1.2.7 FIX: Inject allocation_breakdown into stress_tests for transparency
+    # Use weight_pct directly (already in percent), do NOT use _normalize_weight
     if result.stress_tests and isinstance(result.stress_tests, dict):
         allocation_by_category = {}
         for item in allocation_list:
             cat = item.get("category", "unknown")
-            w = _safe_float(item.get("weight", item.get("weight_pct", 0)))
-            w = _normalize_weight(w)
-            allocation_by_category[cat] = allocation_by_category.get(cat, 0.0) + w
-        
-        # Round for clean output
-        allocation_by_category = {k: round(v, 4) for k, v in allocation_by_category.items()}
-        
-        # Top positions sorted by weight
+            # weight_pct is in percent (e.g., 14.44 = 14.44%)
+            w_pct = _safe_float(item.get("weight_pct", 0))
+            allocation_by_category[cat] = allocation_by_category.get(cat, 0.0) + w_pct
+
+        # Round for clean output (values are in percent)
+        allocation_by_category = {k: round(v, 2) for k, v in allocation_by_category.items()}
+
+        # Top positions sorted by weight_pct (descending)
         top_positions = [
             {
                 "ticker": _extract_ticker(a) or a.get("name", "?")[:10],
                 "category": a.get("category", "unknown"),
-                "weight_pct": round(_normalize_weight(_safe_float(a.get("weight", a.get("weight_pct", 0)))) * 100, 2),
+                "weight_pct": round(_safe_float(a.get("weight_pct", 0)), 2),
             }
-            for a in sorted(allocation_list, key=lambda x: _safe_float(x.get("weight", x.get("weight_pct", 0))), reverse=True)[:20]
+            for a in sorted(allocation_list, key=lambda x: _safe_float(x.get("weight_pct", 0)), reverse=True)[:20]
         ]
-        
+
+        # Determine source
+        source = "tickers_meta" if (tickers_meta and len(tickers_meta) > 0) else "fallback"
+
         result.stress_tests["allocation_breakdown"] = {
             "by_category": allocation_by_category,
-            "total_weight": round(sum(allocation_by_category.values()), 4),
+            "total_weight_pct": round(sum(allocation_by_category.values()), 2),
             "n_positions": len(allocation_list),
             "top_positions": top_positions,
-            "source": "tickers_meta" if tickers_meta else "fallback",
+            "source": source,
         }
-        logger.info(f"[risk_analysis v1.2.6] allocation_breakdown: {allocation_by_category}")    
+        logger.info(f"[risk_analysis v1.2.7] allocation_breakdown: {allocation_by_category}, source={source}")
+
     portfolio_result["risk_analysis"] = result.to_dict()
     return portfolio_result
 
