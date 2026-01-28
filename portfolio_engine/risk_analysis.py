@@ -2020,6 +2020,14 @@ def fetch_and_enrich_risk_analysis(
     
     # Enrich with risk analysis
     return enrich_portfolio_with_risk_analysis(
+        portfolio_result=portfolio_result,
+        profile_name=profile_name,
+        include_stress=include_stress,
+        include_tail_risk=include_tail_risk,
+        include_liquidity=include_liquidity,
+        returns_history=returns_matrix,
+        history_metadata=history_metadata,
+    )
 
 
 # =============================================================================
