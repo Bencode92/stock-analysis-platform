@@ -15,6 +15,10 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
+- v1.2.4: Fix weights alignment bug in stress testing (2026-01-28)
+  - FIX: Recalculate weights from aligned allocation_list
+  - Root cause: weights in original order, asset_classes in history_tickers order
+  - Impact: Stable market_crash was -314% instead of -24%
 - v1.2.1: Fix stress tests cov_matrix + asset_names + annualization + asset_classes (2026-01-28)
   - FIX: Estimate cov_matrix BEFORE run_stress_scenarios() (was after)
   - FIX: Support _tickers_pricing from generate_portfolios_v4.py
@@ -117,7 +121,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.2.3"
+VERSION = "1.2.4"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
@@ -1754,6 +1758,7 @@ def enrich_portfolio_with_risk_analysis(
     """
     Enrichit un résultat de portfolio avec l'analyse de risque.
     
+    v1.2.4: FIX - Recalculate weights from ALIGNED allocation_list.
     v1.2.3: FIX - Extract asset_classes ONLY AFTER alignment to history_tickers.
     v1.2.0: Passes allocation to history_metadata for weight alignment.
     v1.1.2: Handles allocation as dict {id: weight_pct} or list of dicts.
@@ -1833,23 +1838,39 @@ def enrich_portfolio_with_risk_analysis(
         asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list]
         asset_names = [_extract_name(a) for a in allocation_list]
         
-        # v1.2.3: Verify alignment (first 3 items)
-        for i in range(min(3, len(history_metadata["tickers"]))):
+        # v1.2.4 FIX: Recalculate weights from ALIGNED allocation_list
+        # This ensures weights[i] and asset_classes[i] refer to the same asset
+        aligned_weights = np.array([
+            _normalize_weight(_safe_float(a.get("weight", a.get("weight_pct", 0)))) 
+            for a in allocation_list
+        ])
+        # Normalize to sum to 1
+        if aligned_weights.sum() > 1e-12:
+            aligned_weights = aligned_weights / aligned_weights.sum()
+        else:
+            logger.warning("[risk_analysis v1.2.4] Sum of aligned weights ~0, using uniform weights")
+            aligned_weights = np.ones(len(allocation_list)) / len(allocation_list)
+
+        # v1.2.4: Verify alignment (first 5 items for debugging)
+        logger.info(f"[risk_analysis v1.2.4] Alignment verification:")
+        for i in range(min(5, len(history_metadata.get("tickers", [])))):
             ht = history_metadata["tickers"][i]
             at = _extract_ticker(allocation_list[i]) if i < len(allocation_list) else "?"
             ac = asset_classes[i] if i < len(asset_classes) else "?"
+            wt = aligned_weights[i] * 100 if i < len(aligned_weights) else 0
             match = "✓" if ht.upper() == (at or "").upper() else "❌ MISMATCH"
-            logger.info(f"[risk_analysis v1.2.3] [{i}] {ht} -> {at} ({ac}) {match}")
+            logger.info(f"  [{i}] {ht} -> {at} ({ac}, {wt:.1f}%) {match}")
     else:
         logger.warning("[risk_analysis v1.2.3] No history_tickers - using original order")
         sectors = [a.get("sector") for a in allocation_list] if allocation_list else None
         asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list] if allocation_list else None
         asset_names = [_extract_name(a) for a in allocation_list] if allocation_list else None
+        aligned_weights = weights  # v1.2.4: Fallback to original weights
     
     analyzer = RiskAnalyzer(
         allocation=allocation_list,  # v1.1.2: Use built list
         cov_matrix=cov_matrix, 
-        weights=weights, 
+        weights=aligned_weights,  # v1.2.4 FIX: Use ALIGNED weights
         sectors=sectors, 
         asset_classes=asset_classes,
         asset_names=asset_names,  # v1.2.1: For ETF type detection
@@ -1865,7 +1886,7 @@ def enrich_portfolio_with_risk_analysis(
     )
     
     portfolio_result["risk_analysis"] = result.to_dict()
-    return portfolio_result
+    return portfolio_resultv
 
 
 def fetch_and_enrich_risk_analysis(
