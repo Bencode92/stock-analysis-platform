@@ -1107,7 +1107,52 @@ def _normalize_category_for_display(category: str) -> str:
         return "Crypto"
     return "ETF"
 
+# =============================================================================
+# v5.2.1 FIX: Build _tickers_meta BEFORE risk_analysis
+# =============================================================================
 
+def build_tickers_meta_for_risk(
+    allocation_pct: Dict[str, float], 
+    assets: list
+) -> Dict[str, Dict[str, Any]]:
+    """
+    v5.2.1: Construit _tickers_meta AVANT risk_analysis.
+    
+    Root cause fix: évite le fallback dans _build_allocation_list().
+    """
+    assets_by_id = {}
+    for a in (assets or []):
+        aid = _safe_get_attr(a, "id")
+        if aid:
+            assets_by_id[str(aid)] = a
+
+    meta: Dict[str, Dict[str, Any]] = {}
+    
+    for aid, w_pct in (allocation_pct or {}).items():
+        a = assets_by_id.get(str(aid))
+        if not a:
+            continue
+
+        ticker = _extract_symbol_from_asset(a) or _extract_ticker_from_asset(a, str(aid))
+        ticker = _normalize_key(ticker) or ticker
+        if not ticker:
+            continue
+
+        category_raw = _safe_get_attr(a, "category") or "ETF"
+        category = _normalize_category_for_display(category_raw)
+        name = _safe_get_attr(a, "name") or ticker
+
+        entry = meta.setdefault(ticker, {
+            "weight": 0.0, 
+            "category": category,
+            "name": name,
+            "asset_ids": [],
+        })
+        entry["weight"] += float(w_pct) / 100.0
+        entry["asset_ids"].append(str(aid))
+
+    return meta
+   
 def rebuild_display_sections_from_tickers(
     tickers_dict: Dict[str, float],
     asset_map: Dict[str, Dict]
@@ -1963,6 +2008,19 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             "diagnostics": diagnostics,
             "assets": assets,
         }
+        # === v5.2.1 FIX: Build _tickers_meta BEFORE risk_analysis ===
+        try:
+            tm = build_tickers_meta_for_risk(allocation, assets)
+            portfolios[profile]["_tickers_meta"] = tm
+            portfolios[profile]["_tickers"] = {k: v["weight"] for k, v in tm.items()}
+            
+            s = sum(portfolios[profile]["_tickers"].values())
+            if abs(s - 1.0) > 0.01:
+                logger.warning(f"   [{profile}] _tickers sum={s:.4f} (expected ~1.0)")
+            else:
+                logger.info(f"   [{profile}] ✅ _tickers_meta built: {len(tm)} tickers, sum={s:.4f}")
+        except Exception as e:
+            logger.warning(f"   [{profile}] Cannot build _tickers_meta: {e}")
         # === v5.2.1: Risk Analysis avec VaR hybride 5 ans ===
         if CONFIG.get("enable_risk_analysis", False) and HAS_RISK_ANALYSIS:
             try:
@@ -1972,7 +2030,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                         portfolio_result=portfolios[profile],
                         profile_name=profile,
                         lookback_years=5,
-                        use_cache=True,
+                        use_cache=False,
                     )
                 else:
                     # Fallback: VaR paramétrique seulement
@@ -2380,6 +2438,19 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 "diagnostics": diagnostics,
                 "assets": assets,
             }
+            # === v5.2.1 FIX: Build _tickers_meta BEFORE risk_analysis ===
+            try:
+                tm = build_tickers_meta_for_risk(allocation, assets)
+                portfolios[profile]["_tickers_meta"] = tm
+                portfolios[profile]["_tickers"] = {k: v["weight"] for k, v in tm.items()}
+                
+                s = sum(portfolios[profile]["_tickers"].values())
+                if abs(s - 1.0) > 0.01:
+                    logger.warning(f"   [{profile}] EU/US _tickers sum={s:.4f} (expected ~1.0)")
+                else:
+                    logger.info(f"   [{profile}] EU/US ✅ _tickers_meta built: {len(tm)} tickers")
+            except Exception as e:
+                logger.warning(f"   [{profile}] EU/US Cannot build _tickers_meta: {e}")
             
             vol = diagnostics.get('portfolio_vol')
             vol_str = f"{vol:.1f}%" if isinstance(vol, (int, float)) else "N/A"
