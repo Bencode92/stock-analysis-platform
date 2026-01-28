@@ -15,6 +15,12 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
+- v1.2.5: Consume _tickers_meta for guaranteed category (2026-01-28)
+  - NEW: _build_allocation_list() priority 0 = _tickers_meta
+  - NEW: enrich_portfolio_with_risk_analysis() passes tickers_meta
+  - FIX: Stress test now uses category from source (not heuristic guessing)
+  - Root cause: _tickers only had {ticker: weight}, category was lost
+- v1.2.4: Fix weights alignment bug in stress testing (2026-01-28)
 - v1.2.4: Fix weights alignment bug in stress testing (2026-01-28)
   - FIX: Recalculate weights from aligned allocation_list
   - Root cause: weights in original order, asset_classes in history_tickers order
@@ -121,7 +127,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.2.4"
+VERSION = "1.2.5"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
@@ -566,12 +572,14 @@ def _build_allocation_list(
     assets: Optional[List[Any]] = None,
     asset_details: Optional[List[Dict]] = None,
     portfolio_categories: Optional[Dict[str, Dict]] = None,
+    tickers_meta: Optional[Dict[str, Dict]] = None,  # v5.2.0: NEW
 ) -> List[Dict[str, Any]]:
     """
-    v1.2.1: Build a list of allocation dicts from various input formats.
+    v5.2.0: Build a list of allocation dicts from various input formats.
     
     Priority order:
-    1. asset_details (_asset_details from portfolios.json) - BEST
+    0. tickers_meta (_tickers_meta from portfolios.json) - BEST (guaranteed category)
+    1. asset_details (_asset_details from portfolios.json)
     2. allocation as list of dicts (original format)
     3. allocation as dict {asset_id: weight_pct} + assets list
     4. portfolio_categories (Actions/ETF/Obligations/Crypto dicts)
@@ -579,6 +587,31 @@ def _build_allocation_list(
     Returns:
         List of dicts with at least {"id", "weight", "ticker", "name", "category", ...}
     """
+      # v5.2.0: PRIORITY 0 - Use _tickers_meta (source of truth, guaranteed category)
+    if tickers_meta and isinstance(tickers_meta, dict) and len(tickers_meta) > 0:
+        result = []
+        for ticker, meta in tickers_meta.items():
+            if not isinstance(meta, dict):
+                continue
+            w = meta.get("weight", 0.0)
+            entry = {
+                "ticker": ticker,
+                "name": meta.get("name", ticker),
+                "category": meta.get("category", "unknown"),  # ← GUARANTEED
+                "weight": w,
+                "weight_pct": w * 100,
+                "asset_ids": meta.get("asset_ids", []),
+            }
+            result.append(entry)
+        if result:
+            logger.info(f"[risk_analysis] Built allocation_list from _tickers_meta: {len(result)} items")
+            # Log category distribution
+            cats = {}
+            for r in result:
+                c = r.get("category", "unknown")
+                cats[c] = cats.get(c, 0) + 1
+            logger.info(f"[risk_analysis] Categories from _tickers_meta: {cats}")
+            return result
     # v1.2.1: PRIORITY 1 - Use _asset_details if available (has category!)
     if asset_details and isinstance(asset_details, list) and len(asset_details) > 0:
         result = []
@@ -1780,19 +1813,23 @@ def enrich_portfolio_with_risk_analysis(
     allocation_raw = portfolio_result.get("allocation", [])
     assets = portfolio_result.get("assets", [])
     
-    # v1.2.1: Get _asset_details (has category!) and portfolio categories
+   # v1.2.1: Get _asset_details (has category!) and portfolio categories
     asset_details = portfolio_result.get("_asset_details", [])
     portfolio_categories = {
         k: v for k, v in portfolio_result.items() 
         if k in ["Actions", "ETF", "Obligations", "Crypto"] and isinstance(v, dict)
     }
     
-    # v1.2.1: Build allocation list with category support
+    # v5.2.0: Get _tickers_meta (guaranteed category from generate_portfolios_v4.py)
+    tickers_meta = portfolio_result.get("_tickers_meta", {})
+    
+    # v5.2.0: Build allocation list with category support (priority: _tickers_meta)
     allocation_list = _build_allocation_list(
         allocation_raw, 
         assets,
         asset_details=asset_details,
         portfolio_categories=portfolio_categories,
+        tickers_meta=tickers_meta,  # v5.2.0: NEW
     )
     
     if not allocation_list:
