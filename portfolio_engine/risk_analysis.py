@@ -15,12 +15,14 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
-- v1.2.1: Fix stress tests cov_matrix + asset_names + annualization (2026-01-28)
+- v1.2.1: Fix stress tests cov_matrix + asset_names + annualization + asset_classes (2026-01-28)
   - FIX: Estimate cov_matrix BEFORE run_stress_scenarios() (was after)
   - FIX: Support _tickers_pricing from generate_portfolios_v4.py
   - NEW: Pass asset_names to stress_testing for ETF type detection
   - CRITICAL FIX: Annualize covariance (× 252) - returns are daily, shocks are annual
-  - Root cause: cov fallback was in compute_tail_risk_metrics() called AFTER stress tests
+  - CRITICAL FIX: Use _asset_details for allocation_list (has category!)
+  - CRITICAL FIX: Reconstruct from Actions/ETF/Obligations/Crypto if no _asset_details
+  - Root cause: asset_classes was None → all assets got return_shock → cumulation
 - v1.2.0: P0 Bug Fixes (Code Review 2026-01-27)
   - FIX: Alignment weights ↔ returns par ticker (évite VaR fausse)
   - FIX: VaR99 fallback historique si parametric impossible (plus de 0.0)
@@ -558,23 +560,78 @@ def _determine_var_method(n_obs: int, var_level: str = "95") -> str:
 def _build_allocation_list(
     allocation: Any,
     assets: Optional[List[Any]] = None,
+    asset_details: Optional[List[Dict]] = None,
+    portfolio_categories: Optional[Dict[str, Dict]] = None,
 ) -> List[Dict[str, Any]]:
     """
-    v1.1.2: Build a list of allocation dicts from various input formats.
+    v1.2.1: Build a list of allocation dicts from various input formats.
     
-    Handles:
-    - allocation as list of dicts (original format) → return as-is
-    - allocation as dict {asset_id: weight_pct} + assets list → build list
-    - allocation as dict without assets → minimal list from keys
+    Priority order:
+    1. asset_details (_asset_details from portfolios.json) - BEST
+    2. allocation as list of dicts (original format)
+    3. allocation as dict {asset_id: weight_pct} + assets list
+    4. portfolio_categories (Actions/ETF/Obligations/Crypto dicts)
     
     Returns:
-        List of dicts with at least {"id", "weight", "ticker", "name", ...}
+        List of dicts with at least {"id", "weight", "ticker", "name", "category", ...}
     """
-    # Case 1: allocation is already a list
+    # v1.2.1: PRIORITY 1 - Use _asset_details if available (has category!)
+    if asset_details and isinstance(asset_details, list) and len(asset_details) > 0:
+        result = []
+        for ad in asset_details:
+            if not isinstance(ad, dict):
+                continue
+            entry = {
+                "name": ad.get("name", ""),
+                "ticker": ad.get("ticker", ""),
+                "category": ad.get("category", "unknown"),  # ← CRITICAL for stress tests
+                "weight": ad.get("weight_pct", ad.get("weight", 0)) / 100 if ad.get("weight_pct", 0) > 1 else ad.get("weight_pct", ad.get("weight", 0)),
+                "weight_pct": ad.get("weight_pct", ad.get("weight", 0)),
+                "sector": ad.get("sector"),
+                "role": ad.get("role"),
+            }
+            result.append(entry)
+        if result:
+            logger.info(f"[risk_analysis] Built allocation_list from _asset_details: {len(result)} items")
+            return result
+    
+    # v1.2.1: PRIORITY 2 - Reconstruct from portfolio categories (Actions, ETF, etc.)
+    if portfolio_categories:
+        result = []
+        for category, items in portfolio_categories.items():
+            if category.startswith("_") or not isinstance(items, dict):
+                continue
+            if category not in ["Actions", "ETF", "Obligations", "Crypto"]:
+                continue
+            for name, weight_val in items.items():
+                # Parse weight (can be "13.6%" or 0.136)
+                if isinstance(weight_val, str):
+                    w = float(weight_val.replace("%", "").replace(",", ".")) / 100
+                else:
+                    w = float(weight_val)
+                
+                # Extract ticker from name if format is "NAME (TICKER)"
+                ticker = None
+                if "(" in name and ")" in name:
+                    ticker = name.split("(")[-1].replace(")", "").strip()
+                
+                entry = {
+                    "name": name,
+                    "ticker": ticker,
+                    "category": category,
+                    "weight": w,
+                    "weight_pct": w * 100,
+                }
+                result.append(entry)
+        if result:
+            logger.info(f"[risk_analysis] Built allocation_list from categories: {len(result)} items")
+            return result
+    
+    # Case 3: allocation is already a list
     if isinstance(allocation, list):
         return allocation
     
-    # Case 2: allocation is a dict {asset_id: weight_pct}
+    # Case 4: allocation is a dict {asset_id: weight_pct}
     if isinstance(allocation, dict):
         result = []
         
@@ -633,7 +690,7 @@ def _build_allocation_list(
         logger.debug(f"[risk_analysis] Built allocation_list: {len(result)} items from dict")
         return result
     
-    # Case 3: Unknown format
+    # Case 5: Unknown format
     logger.warning(f"[risk_analysis] Unknown allocation format: {type(allocation)}")
     return []
 
@@ -1661,8 +1718,20 @@ def enrich_portfolio_with_risk_analysis(
     allocation_raw = portfolio_result.get("allocation", [])
     assets = portfolio_result.get("assets", [])
     
-    # v1.1.2: Build allocation list from dict + assets if needed
-    allocation_list = _build_allocation_list(allocation_raw, assets)
+    # v1.2.1: Get _asset_details (has category!) and portfolio categories
+    asset_details = portfolio_result.get("_asset_details", [])
+    portfolio_categories = {
+        k: v for k, v in portfolio_result.items() 
+        if k in ["Actions", "ETF", "Obligations", "Crypto"] and isinstance(v, dict)
+    }
+    
+    # v1.2.1: Build allocation list with category support
+    allocation_list = _build_allocation_list(
+        allocation_raw, 
+        assets,
+        asset_details=asset_details,
+        portfolio_categories=portfolio_categories,
+    )
     
     if not allocation_list:
         logger.warning("[risk_analysis] Empty allocation, returning minimal risk_analysis")
