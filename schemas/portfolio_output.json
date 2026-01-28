@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://tradepulse.io/schemas/portfolio_output.json",
   "title": "TradePulse Portfolio Output Schema",
-  "description": "Schema for validating generated portfolio JSON files (v2.6.0 - Pricing Coverage)",
+  "description": "Schema for validating generated portfolio JSON files (v2.7.0 - Tickers Meta)",
   "type": "object",
   "required": ["Agressif", "Modéré", "Stable", "_meta"],
   "additionalProperties": false,
@@ -67,6 +67,10 @@
         "_tickers": {
           "$ref": "#/definitions/TickerWeights",
           "description": "Ticker symbols with decimal weights"
+        },
+        "_tickers_meta": {
+          "$ref": "#/definitions/TickersMeta",
+          "description": "v5.2.0: Ticker metadata with guaranteed category for stress test"
         },
         "_backtest": {
           "$ref": "#/definitions/BacktestResults",
@@ -156,6 +160,36 @@
         "description": "Decimal weight (0.0 to 1.0)"
       },
       "description": "Map of ticker symbols to decimal weights"
+    },
+    "TickersMeta": {
+      "type": "object",
+      "description": "v5.2.0: Map of ticker symbols to metadata with guaranteed category",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Decimal weight (0.0 to 1.0)"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["Actions", "ETF", "Obligations", "Crypto"],
+            "description": "Asset category (guaranteed)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Asset display name"
+          },
+          "asset_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Original asset IDs"
+          }
+        },
+        "required": ["weight", "category"]
+      }
     },
     "AssetDetailsList": {
       "type": "array",
