@@ -1818,11 +1818,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 crypto_selected_df = select_crypto_for_profile(crypto_df, profile, top_n=30)
                 profile_crypto_data = crypto_selected_df.to_dict('records') if not crypto_selected_df.empty else []
                 logger.info(f"   [{profile}] Crypto sélectionnés: {len(profile_crypto_data)}/{len(crypto_data)}")
-                 # v5.2.0 FIX: Forcer category="crypto" pour éviter reclassification
+                # v5.2.0 FIX: Forcer category="crypto" pour éviter reclassification
                 for cr in profile_crypto_data:
-                cr["_force_category"] = "crypto"
-                cr["category"] = "crypto"
-               
+                    cr["_force_category"] = "crypto"
+                    cr["category"] = "crypto"
             else:
                 profile_crypto_data = []
             
