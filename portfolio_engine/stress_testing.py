@@ -3,7 +3,7 @@
 Stress Testing Pack for Portfolio Engine.
 
 P2-12 - 2025-12-18
-v1.1.0 - 2026-01-27: Enhanced asset class mapping for French categories
+v1.1.1 - 2026-01-28: Fixed shock cumulation bug
 
 Implements parameterized stress scenarios to test portfolio robustness.
 
@@ -15,6 +15,10 @@ Scenarios:
 5. MARKET_CRASH: 2008-style crash (-40% equities, correlation→1)
 
 Changelog:
+- v1.1.1: Fixed shock cumulation bug (2026-01-28)
+  - FIX: Asset class shock now REPLACES return_shock (not adds)
+  - FIX: Sector shock is now a capped adjustment (max 50% of base shock)
+  - Root cause: Shocks were adding up causing >100% losses
 - v1.1.0: Asset class mapping for French categories (Actions, ETF, Obligations, Crypto)
 - v1.0.0: Initial release
 
@@ -50,7 +54,7 @@ except ImportError:
 
 logger = get_structured_logger("portfolio_engine.stress_testing")
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 # ============================================================
 # ENUMS & CONSTANTS
@@ -670,7 +674,13 @@ def stress_returns(
     """
     Apply stress scenario to expected returns.
     
+    v1.1.1: Fixed shock cumulation bug - shocks now substitute instead of adding.
     v1.1.0: Enhanced with asset class normalization and ETF type detection.
+    
+    Logic:
+    - If asset_class_shock exists for asset → use it (NOT return_shock)
+    - If sector_shock exists → add it as adjustment (max 50% of base shock)
+    - Otherwise → use return_shock
     
     Args:
         returns: Expected returns array (n,)
@@ -685,43 +695,43 @@ def stress_returns(
     stressed = returns.copy()
     n = len(returns)
     
-    # Apply general shock
-    stressed += params.return_shock
-    
-    # Apply sector-specific shocks
-    if sectors is not None and params.sector_shocks:
-        for i, sector in enumerate(sectors):
-            if sector is None:
-                continue
-            # v1.1.0: Normalize sector name
-            norm_sector = normalize_sector(sector)
-            if norm_sector in params.sector_shocks:
-                stressed[i] += params.sector_shocks[norm_sector]
-    
-    # Apply asset class shocks
-    if asset_classes is not None and params.asset_class_shocks:
-        for i, ac in enumerate(asset_classes):
-            if ac is None:
-                continue
-            
-            # v1.1.0: Normalize asset class
-            norm_ac = normalize_asset_class(ac)
-            
-            # v1.1.0: If ETF, try to detect specific type from name
-            if norm_ac == "equity" and asset_names and i < len(asset_names):
-                detected_type = detect_etf_type(asset_names[i])
-                if detected_type in params.asset_class_shocks:
-                    norm_ac = detected_type
-            
-            # Apply shock if exists
-            if norm_ac in params.asset_class_shocks:
-                stressed[i] += params.asset_class_shocks[norm_ac]
-            elif norm_ac.startswith("equity") and "equity" in params.asset_class_shocks:
-                # Fallback to general equity shock
-                stressed[i] += params.asset_class_shocks["equity"]
-            elif norm_ac.startswith("bond") and "bond" in params.asset_class_shocks:
-                # Fallback to general bond shock
-                stressed[i] += params.asset_class_shocks["bond"]
+    for i in range(n):
+        base_shock = params.return_shock  # Default shock
+        
+        # v1.1.1: Asset class shock REPLACES return_shock (not adds)
+        if asset_classes is not None and i < len(asset_classes) and params.asset_class_shocks:
+            ac = asset_classes[i]
+            if ac is not None:
+                norm_ac = normalize_asset_class(ac)
+                
+                # Detect ETF type if available
+                if norm_ac == "equity" and asset_names and i < len(asset_names):
+                    detected_type = detect_etf_type(asset_names[i])
+                    if detected_type in params.asset_class_shocks:
+                        norm_ac = detected_type
+                
+                # Use asset class shock if available
+                if norm_ac in params.asset_class_shocks:
+                    base_shock = params.asset_class_shocks[norm_ac]
+                elif norm_ac.startswith("equity") and "equity" in params.asset_class_shocks:
+                    base_shock = params.asset_class_shocks["equity"]
+                elif norm_ac.startswith("bond") and "bond" in params.asset_class_shocks:
+                    base_shock = params.asset_class_shocks["bond"]
+        
+        # v1.1.1: Sector shock is an ADJUSTMENT (capped at 50% of base_shock magnitude)
+        sector_adjustment = 0.0
+        if sectors is not None and i < len(sectors) and params.sector_shocks:
+            sector = sectors[i]
+            if sector is not None:
+                norm_sector = normalize_sector(sector)
+                if norm_sector in params.sector_shocks:
+                    raw_sector_shock = params.sector_shocks[norm_sector]
+                    # Cap sector adjustment to avoid double-counting
+                    max_adjustment = abs(base_shock) * 0.5
+                    sector_adjustment = max(-max_adjustment, min(max_adjustment, raw_sector_shock))
+        
+        # Apply total shock
+        stressed[i] += base_shock + sector_adjustment
     
     return stressed
 
@@ -931,44 +941,46 @@ def run_stress_test(
     # VaR impact
     var_impact = stressed_metrics["var_95"] - base_metrics["var_95"]
     
-    # v1.1.0: Calculate expected loss based on weights and asset class shocks
+    # v1.1.1: Calculate expected loss - consistent with stress_returns() logic
+    # Asset class shock REPLACES return_shock, sector shock is capped adjustment
     expected_loss = 0.0
-    if asset_classes is not None and params.asset_class_shocks:
-        for i, ac in enumerate(asset_classes or []):
-            if ac is None:
-                # Apply general shock if no class specified
-                expected_loss += weights[i] * params.return_shock
-                continue
-            
-            norm_ac = normalize_asset_class(ac)
-            
-            # Detect ETF type if available
-            if norm_ac == "equity" and asset_names and i < len(asset_names):
-                detected_type = detect_etf_type(asset_names[i])
-                if detected_type in params.asset_class_shocks:
-                    norm_ac = detected_type
-            
-            # Get shock for this asset class
-            if norm_ac in params.asset_class_shocks:
-                expected_loss += weights[i] * params.asset_class_shocks[norm_ac]
-            elif norm_ac.startswith("equity") and "equity" in params.asset_class_shocks:
-                expected_loss += weights[i] * params.asset_class_shocks["equity"]
-            elif norm_ac.startswith("bond") and "bond" in params.asset_class_shocks:
-                expected_loss += weights[i] * params.asset_class_shocks["bond"]
-            else:
-                expected_loss += weights[i] * params.return_shock
-    else:
-        # Fallback: use general shock weighted by equity/bond composition
-        expected_loss = params.return_shock
+    n_assets = len(weights)
     
-    # Add sector-specific shocks
-    if sectors is not None and params.sector_shocks:
-        for i, sector in enumerate(sectors or []):
-            if sector is None:
-                continue
-            norm_sector = normalize_sector(sector)
-            if norm_sector in params.sector_shocks:
-                expected_loss += weights[i] * params.sector_shocks[norm_sector]
+    for i in range(n_assets):
+        base_shock = params.return_shock  # Default
+        
+        # Get asset class shock if available
+        if asset_classes is not None and i < len(asset_classes) and params.asset_class_shocks:
+            ac = asset_classes[i]
+            if ac is not None:
+                norm_ac = normalize_asset_class(ac)
+                
+                # Detect ETF type if available
+                if norm_ac == "equity" and asset_names and i < len(asset_names):
+                    detected_type = detect_etf_type(asset_names[i])
+                    if detected_type in params.asset_class_shocks:
+                        norm_ac = detected_type
+                
+                # Use asset class shock if available
+                if norm_ac in params.asset_class_shocks:
+                    base_shock = params.asset_class_shocks[norm_ac]
+                elif norm_ac.startswith("equity") and "equity" in params.asset_class_shocks:
+                    base_shock = params.asset_class_shocks["equity"]
+                elif norm_ac.startswith("bond") and "bond" in params.asset_class_shocks:
+                    base_shock = params.asset_class_shocks["bond"]
+        
+        # Sector adjustment (capped at 50% of base shock)
+        sector_adjustment = 0.0
+        if sectors is not None and i < len(sectors) and params.sector_shocks:
+            sector = sectors[i]
+            if sector is not None:
+                norm_sector = normalize_sector(sector)
+                if norm_sector in params.sector_shocks:
+                    raw_sector_shock = params.sector_shocks[norm_sector]
+                    max_adjustment = abs(base_shock) * 0.5
+                    sector_adjustment = max(-max_adjustment, min(max_adjustment, raw_sector_shock))
+        
+        expected_loss += weights[i] * (base_shock + sector_adjustment)
     
     # Add warnings for severe impacts
     if impact["volatility"] > 0.10:
