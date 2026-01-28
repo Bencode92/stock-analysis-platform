@@ -117,7 +117,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
@@ -792,6 +792,48 @@ def _align_weights_to_tickers(
         logger.info(f"[align_weights] Report: {report}")
     
     return weights, report
+  
+def _align_allocation_to_tickers(
+    allocation_list: List[Dict[str, Any]],
+    history_tickers: List[str],
+) -> List[Dict[str, Any]]:
+    """
+    v1.2.2: Reorder allocation_list to match history_tickers order.
+    
+    CRITICAL: This ensures asset_classes extracted from allocation_list
+    are in the same order as weights aligned to history_tickers.
+    
+    Without this, asset_classes[i] would correspond to _asset_details[i],
+    while weights[i] corresponds to history_tickers[i]. These orders
+    can be different, causing wrong shocks to be applied to wrong weights.
+    """
+    if not allocation_list or not history_tickers:
+        return allocation_list
+    
+    # Build lookup by ticker (case-insensitive)
+    alloc_by_ticker = {}
+    for a in allocation_list:
+        ticker = _extract_ticker(a)
+        if ticker:
+            alloc_by_ticker[ticker.upper()] = a
+    
+    # Reorder to match history_tickers
+    result = []
+    for t in history_tickers:
+        t_upper = t.upper().strip()
+        if t_upper in alloc_by_ticker:
+            result.append(alloc_by_ticker[t_upper])
+        else:
+            logger.warning(f"[align_alloc] Ticker {t_upper} in history but not in allocation")
+            result.append({
+                "ticker": t_upper,
+                "name": t_upper,
+                "category": "unknown",
+                "weight": 0.0,
+            })
+    
+    logger.debug(f"[align_alloc] Reordered {len(result)} allocations to match history order")
+    return result  
 
 
 def _historical_var_cvar(
@@ -1762,6 +1804,19 @@ def enrich_portfolio_with_risk_analysis(
     if "allocation" not in history_metadata:
         history_metadata["allocation"] = allocation_list
     
+    # v1.2.2: CRITICAL - Align allocation_list to history_tickers order
+    # This ensures asset_classes[i] matches weights[i]
+    if history_metadata and "tickers" in history_metadata:
+        allocation_list = _align_allocation_to_tickers(
+            allocation_list, 
+            history_metadata["tickers"]
+        )
+        # Rebuild sectors/asset_classes/asset_names in correct order
+        sectors = [a.get("sector") for a in allocation_list]
+        asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list]
+        asset_names = [_extract_name(a) for a in allocation_list]
+        logger.info(f"[risk_analysis] Aligned allocation_list to {len(history_metadata['tickers'])} history tickers")
+    
     analyzer = RiskAnalyzer(
         allocation=allocation_list,  # v1.1.2: Use built list
         cov_matrix=cov_matrix, 
@@ -1936,6 +1991,7 @@ __all__ = [
     
     # v1.2.0: New helper functions
     "_align_weights_to_tickers",
+    "_align_allocation_to_tickers",  # v1.2.2
     "_historical_var_cvar",
     "_estimate_cov_from_returns",
     "_is_leveraged_or_inverse",
