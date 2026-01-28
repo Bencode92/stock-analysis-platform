@@ -15,10 +15,12 @@ Scenarios:
 5. MARKET_CRASH: 2008-style crash (-40% equities, correlation→1)
 
 Changelog:
-- v1.1.1: Fixed shock cumulation bug (2026-01-28)
+- v1.1.1: Fixed shock cumulation + correlation direction (2026-01-28)
   - FIX: Asset class shock now REPLACES return_shock (not adds)
   - FIX: Sector shock is now a capped adjustment (max 50% of base shock)
+  - FIX: Correlation stress now pushes toward +1 (crisis-like), not toward magnitude
   - Root cause: Shocks were adding up causing >100% losses
+  - Root cause: Negative correlations were becoming more negative (wrong crisis behavior)
 - v1.1.0: Asset class mapping for French categories (Actions, ETF, Obligations, Crypto)
 - v1.0.0: Initial release
 
@@ -614,6 +616,9 @@ def stress_covariance_matrix(
     """
     Apply stress scenario to covariance matrix.
     
+    v1.1.1: Fixed correlation stress to push toward +1 (crisis-like behavior).
+    In crises, correlations typically converge toward +1 as diversification breaks down.
+    
     Args:
         cov: Original covariance matrix (n x n)
         params: Scenario parameters
@@ -637,10 +642,11 @@ def stress_covariance_matrix(
     np.clip(corr, -1, 1, out=corr)
     np.fill_diagonal(corr, 1.0)
     
-    # Apply correlation stress (increase correlations toward 1)
+    # Apply correlation stress: push correlations toward +1 (crisis-like)
+    # v1.1.1 FIX: In crises, all correlations tend toward +1, not toward their magnitude
+    # Example: corr=-0.3 with delta=0.5 -> 0.35 (hedge becomes less effective)
     if params.correlation_delta != 0:
-        # Shift correlations toward 1 (or -1 for negative corrs)
-        stressed_corr = corr + params.correlation_delta * (1 - np.abs(corr)) * np.sign(corr + 0.001)
+        stressed_corr = corr + params.correlation_delta * (1.0 - corr)
         np.clip(stressed_corr, -1, 1, out=stressed_corr)
         np.fill_diagonal(stressed_corr, 1.0)
     else:
