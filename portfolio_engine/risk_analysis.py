@@ -15,10 +15,11 @@ Architecture:
 Design validé par ChatGPT (2026-01-26).
 
 Changelog:
-- v1.2.1: Fix stress tests cov_matrix + asset_names (2026-01-27)
+- v1.2.1: Fix stress tests cov_matrix + asset_names + annualization (2026-01-28)
   - FIX: Estimate cov_matrix BEFORE run_stress_scenarios() (was after)
   - FIX: Support _tickers_pricing from generate_portfolios_v4.py
   - NEW: Pass asset_names to stress_testing for ETF type detection
+  - CRITICAL FIX: Annualize covariance (× 252) - returns are daily, shocks are annual
   - Root cause: cov fallback was in compute_tail_risk_metrics() called AFTER stress tests
 - v1.2.0: P0 Bug Fixes (Code Review 2026-01-27)
   - FIX: Alignment weights ↔ returns par ticker (évite VaR fausse)
@@ -772,18 +773,27 @@ def _historical_var_cvar(
 def _estimate_cov_from_returns(
     returns_history: np.ndarray,
     min_obs: int = 60,
+    annualize: bool = True,
+    trading_days_per_year: int = 252,
 ) -> Optional[np.ndarray]:
     """
-    v1.2.0: Estime la matrice de covariance depuis l'historique des returns.
+    v1.2.1: Estime la matrice de covariance depuis l'historique des returns.
     
     Fallback utilisé quand cov_matrix n'est pas fournie.
     
     Args:
-        returns_history: Matrice (T x N) des rendements
+        returns_history: Matrice (T x N) des rendements journaliers
         min_obs: Minimum d'observations requis
+        annualize: Si True, annualise la covariance (× 252)
+        trading_days_per_year: Nombre de jours de trading par an
     
     Returns:
-        Matrice de covariance (N x N) ou None si impossible
+        Matrice de covariance (N x N) annualisée ou None si impossible
+    
+    Note:
+        v1.2.1: CRITICAL FIX - Returns are daily from historical_data.py
+        Stress shocks (-40%) are total crisis drawdowns (annual scale).
+        Must annualize cov to match shock horizon.
     """
     if returns_history is None:
         return None
@@ -802,6 +812,7 @@ def _estimate_cov_from_returns(
     
     try:
         cov = np.cov(returns_history, rowvar=False)
+        
         # Sanity check
         if np.any(np.isnan(cov)) or np.any(np.isinf(cov)):
             logger.warning("[estimate_cov] NaN/Inf in covariance matrix")
@@ -809,6 +820,15 @@ def _estimate_cov_from_returns(
         if np.any(np.diag(cov) <= 0):
             logger.warning("[estimate_cov] Non-positive variance on diagonal")
             return None
+        
+        # v1.2.1: Annualize covariance (daily → annual)
+        # Var(annual) = Var(daily) × 252 (assuming i.i.d. returns)
+        if annualize:
+            cov = cov * trading_days_per_year
+            daily_vols = np.sqrt(np.diag(cov) / trading_days_per_year)
+            annual_vols = np.sqrt(np.diag(cov))
+            logger.info(f"[estimate_cov] Annualized: daily vol ~{daily_vols.mean()*100:.2f}% → annual vol ~{annual_vols.mean()*100:.1f}%")
+        
         return cov
     except Exception as e:
         logger.warning(f"[estimate_cov] Error: {e}")
