@@ -2001,19 +2001,25 @@ def fetch_and_enrich_risk_analysis(
         f"confidence: {history_metadata.get('confidence_level', 'unknown')}"
     )
     
-    # v1.2.0: Add tickers to history_metadata for alignment
-    history_metadata["tickers"] = tickers
+# v1.2.5 FIX: Ne pas écraser metadata["tickers"]!
+    # history_metadata["tickers"] contient DÉJÀ les tickers valides
+    # retournés par fetch_portfolio_returns().
+    # L'écrasement avec `tickers` (liste originale) causait un désalignement
+    # entre weights (N original) et cov_matrix (M valide × M valide).
+    valid_tickers = history_metadata.get("tickers", [])
+    tickers_with_errors = history_metadata.get("tickers_with_errors", [])
+    
+    if tickers_with_errors:
+        logger.warning(
+            f"[risk_analysis v1.2.5] {len(tickers_with_errors)} tickers exclus "
+            f"(pas de données historiques): {tickers_with_errors[:5]}"
+            f"{'...' if len(tickers_with_errors) > 5 else ''}"
+        )
+    
+    # SUPPRIMÉ (bug v1.2.0-v1.2.4): history_metadata["tickers"] = tickers
     
     # Enrich with risk analysis
     return enrich_portfolio_with_risk_analysis(
-        portfolio_result=portfolio_result,
-        profile_name=profile_name,
-        include_stress=include_stress,
-        include_tail_risk=include_tail_risk,
-        include_liquidity=include_liquidity,
-        returns_history=returns_matrix,
-        history_metadata=history_metadata,
-    )
 
 
 # =============================================================================
