@@ -117,7 +117,7 @@ logger = logging.getLogger("portfolio_engine.risk_analysis")
 # CONSTANTS
 # =============================================================================
 
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 
 # v1.1.0: Tail risk thresholds (aligned with historical_data.py)
 TAIL_RISK_THRESHOLDS = {
@@ -798,14 +798,12 @@ def _align_allocation_to_tickers(
     history_tickers: List[str],
 ) -> List[Dict[str, Any]]:
     """
-    v1.2.2: Reorder allocation_list to match history_tickers order.
+    v1.2.3 FIX: Reorder allocation_list to match history_tickers order.
     
     CRITICAL: This ensures asset_classes extracted from allocation_list
     are in the same order as weights aligned to history_tickers.
     
-    Without this, asset_classes[i] would correspond to _asset_details[i],
-    while weights[i] corresponds to history_tickers[i]. These orders
-    can be different, causing wrong shocks to be applied to wrong weights.
+    v1.2.3: Added detailed logging to debug alignment issues.
     """
     if not allocation_list or not history_tickers:
         return allocation_list
@@ -817,14 +815,21 @@ def _align_allocation_to_tickers(
         if ticker:
             alloc_by_ticker[ticker.upper()] = a
     
+    logger.info(f"[align_alloc v1.2.3] {len(alloc_by_ticker)} tickers in allocation, {len(history_tickers)} in history")
+    
     # Reorder to match history_tickers
     result = []
+    matched = 0
+    unmatched = []
+    
     for t in history_tickers:
         t_upper = t.upper().strip()
         if t_upper in alloc_by_ticker:
             result.append(alloc_by_ticker[t_upper])
+            matched += 1
         else:
-            logger.warning(f"[align_alloc] Ticker {t_upper} in history but not in allocation")
+            logger.warning(f"[align_alloc v1.2.3] Ticker {t_upper} not found in allocation")
+            unmatched.append(t_upper)
             result.append({
                 "ticker": t_upper,
                 "name": t_upper,
@@ -832,8 +837,17 @@ def _align_allocation_to_tickers(
                 "weight": 0.0,
             })
     
-    logger.debug(f"[align_alloc] Reordered {len(result)} allocations to match history order")
-    return result  
+    # Log category distribution after alignment
+    cats = {}
+    for a in result:
+        cat = a.get("category", "unknown")
+        cats[cat] = cats.get(cat, 0) + 1
+    logger.info(f"[align_alloc v1.2.3] Aligned {matched}/{len(history_tickers)}, categories: {cats}")
+    
+    if unmatched:
+        logger.warning(f"[align_alloc v1.2.3] Unmatched: {unmatched[:5]}")
+    
+    return result
 
 
 def _historical_var_cvar(
@@ -1740,6 +1754,7 @@ def enrich_portfolio_with_risk_analysis(
     """
     Enrichit un résultat de portfolio avec l'analyse de risque.
     
+    v1.2.3: FIX - Extract asset_classes ONLY AFTER alignment to history_tickers.
     v1.2.0: Passes allocation to history_metadata for weight alignment.
     v1.1.2: Handles allocation as dict {id: weight_pct} or list of dicts.
     v1.1.0: Accepts returns_history and history_metadata from fetch_portfolio_returns().
@@ -1794,28 +1809,42 @@ def enrich_portfolio_with_risk_analysis(
     if cov_matrix is not None and not isinstance(cov_matrix, np.ndarray):
         cov_matrix = np.array(cov_matrix)
     
-    sectors = [a.get("sector") for a in allocation_list] if allocation_list else None
-    asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list] if allocation_list else None
-    asset_names = [_extract_name(a) for a in allocation_list] if allocation_list else None  # v1.2.1
+    # v1.2.3 FIX: Do NOT extract asset_classes before alignment!
+    # The bug was that asset_classes came from _asset_details order,
+    # while weights came from history_tickers order.
     
-    # v1.2.0: Ensure allocation is in history_metadata for alignment
     if history_metadata is None:
         history_metadata = {}
     if "allocation" not in history_metadata:
         history_metadata["allocation"] = allocation_list
     
-    # v1.2.2: CRITICAL - Align allocation_list to history_tickers order
-    # This ensures asset_classes[i] matches weights[i]
+    # v1.2.3: CRITICAL - Align FIRST, then extract asset_classes
     if history_metadata and "tickers" in history_metadata:
+        logger.info(f"[risk_analysis v1.2.3] Aligning to {len(history_metadata['tickers'])} history tickers")
+        
+        # Align allocation_list to history_tickers order
         allocation_list = _align_allocation_to_tickers(
             allocation_list, 
             history_metadata["tickers"]
         )
-        # Rebuild sectors/asset_classes/asset_names in correct order
+        
+        # v1.2.3: Extract ONLY AFTER alignment
         sectors = [a.get("sector") for a in allocation_list]
         asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list]
         asset_names = [_extract_name(a) for a in allocation_list]
-        logger.info(f"[risk_analysis] Aligned allocation_list to {len(history_metadata['tickers'])} history tickers")
+        
+        # v1.2.3: Verify alignment (first 3 items)
+        for i in range(min(3, len(history_metadata["tickers"]))):
+            ht = history_metadata["tickers"][i]
+            at = _extract_ticker(allocation_list[i]) if i < len(allocation_list) else "?"
+            ac = asset_classes[i] if i < len(asset_classes) else "?"
+            match = "✓" if ht.upper() == (at or "").upper() else "❌ MISMATCH"
+            logger.info(f"[risk_analysis v1.2.3] [{i}] {ht} -> {at} ({ac}) {match}")
+    else:
+        logger.warning("[risk_analysis v1.2.3] No history_tickers - using original order")
+        sectors = [a.get("sector") for a in allocation_list] if allocation_list else None
+        asset_classes = [a.get("category", a.get("asset_class")) for a in allocation_list] if allocation_list else None
+        asset_names = [_extract_name(a) for a in allocation_list] if allocation_list else None
     
     analyzer = RiskAnalyzer(
         allocation=allocation_list,  # v1.1.2: Use built list
