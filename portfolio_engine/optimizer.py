@@ -3673,13 +3673,12 @@ class PortfolioOptimizer:
         profile: ProfileConstraints
     ) -> Dict[str, float]:
         """
-        P1 FIX v6.33: Force minimum de lignes Actions ET min_stock_weight.
+        P1 FIX v6.34: Force minimum de lignes Actions ET min_stock_weight.
         
-        Changements v6.33:
-        - Calcul dynamique du déficit vs min_stock_weight
-        - Poids par action entre 2-5% (pas fixe 1%)
-        - Top-up des actions existantes si déficit persiste
-        - Garde-fou bonds_min dans extract_funding
+        Changements v6.34:
+        - MIN_KEEP dépendants du profil (Agressif plus agressif)
+        - Garde-fou: min_keep bond < cap bond (sinon aucun bond finançable)
+        - Last resort: Agressif peut descendre ETF jusqu'à 0.5%
         """
         asset_lookup = {c.id: c for c in candidates}
         
@@ -3710,7 +3709,7 @@ class PortfolioOptimizer:
             return allocation
         
         logger.warning(
-            f"[P1 FIX v6.33] {profile.name}: "
+            f"[P1 FIX v6.34] {profile.name}: "
             f"stocks={current_stock_weight:.1f}% (min={min_required}%, deficit={stock_deficit:.1f}%), "
             f"lines={n_stocks}/{profile.min_stock_positions} (missing={missing_lines})"
         )
@@ -3725,9 +3724,18 @@ class PortfolioOptimizer:
             per_stock_weight = max(thr, 1.5)
         
         # === 4. SOURCES DE FINANCEMENT (priorité: ETF > Bonds) ===
-        # FIX ChatGPT #2: Uniformiser min ETF à 3%
-        MIN_ETF_KEEP = 3.0
-        MIN_BOND_KEEP = 5.0
+        # v6.34 PATCH: min_keep dépendants du profil
+        MIN_KEEP_BY_PROFILE = {
+            "Agressif": {"ETF": 1.0, "Obligations": 1.0},
+            "Modéré":   {"ETF": 2.0, "Obligations": 2.0},
+            "Stable":   {"ETF": 3.0, "Obligations": 5.0},
+        }
+        MIN_ETF_KEEP = MIN_KEEP_BY_PROFILE.get(profile.name, {}).get("ETF", 3.0)
+        MIN_BOND_KEEP = MIN_KEEP_BY_PROFILE.get(profile.name, {}).get("Obligations", 5.0)
+        
+        # Garde-fou : ne jamais fixer un min_keep bond >= cap bond
+        max_single_bond_cap = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25.0)
+        MIN_BOND_KEEP = min(MIN_BOND_KEEP, max(0.5, max_single_bond_cap - 0.5))
         
         etf_ids = sorted(
             [aid for aid, w in allocation.items()
@@ -3745,12 +3753,13 @@ class PortfolioOptimizer:
         
         funding_sources = etf_ids + bond_ids
         
-        # FIX ChatGPT #1: Garde-fou bonds_min
-        bonds_floor_total = profile.bonds_min + 1.0  # +1% buffer sécurité
+        # Garde-fou bonds_min (total)
+        bonds_floor_total = profile.bonds_min + 1.0
         bonds_total = sum(
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
         )
+        
         def extract_funding(needed: float) -> float:
             """Extrait du poids depuis ETF/Bonds, respecte bonds_min."""
             nonlocal bonds_total
@@ -3775,7 +3784,7 @@ class PortfolioOptimizer:
                 
                 take = min(available, needed)
                 
-                # FIX ChatGPT #1: Garde-fou bonds_min (total)
+                # Garde-fou bonds_min (total)
                 if asset and asset.category == "Obligations":
                     max_take_allowed = max(0.0, bonds_total - bonds_floor_total)
                     take = min(take, max_take_allowed)
@@ -3786,6 +3795,28 @@ class PortfolioOptimizer:
                 allocation[fid] = round(current_w - take, 2)
                 extracted += take
                 needed -= take
+            
+            # v6.34 PATCH: "last resort" Agressif
+            # Si on n'a pas assez extrait, on autorise à descendre les ETF jusqu'à 0.5%
+            if needed > 0.5 and profile.name == "Agressif":
+                etf_sources_looser = sorted(
+                    [aid for aid, w in allocation.items()
+                     if asset_lookup.get(aid)
+                     and asset_lookup[aid].category == "ETF"
+                     and w > 0.5],
+                    key=lambda aid: (-allocation[aid], aid)
+                )
+                for fid in etf_sources_looser:
+                    if needed <= 0.01:
+                        break
+                    current_w = allocation.get(fid, 0)
+                    available = current_w - 0.5
+                    if available <= 0.1:
+                        continue
+                    take = min(available, needed)
+                    allocation[fid] = round(current_w - take, 2)
+                    extracted += take
+                    needed -= take
             
             return extracted
         
@@ -3807,11 +3838,11 @@ class PortfolioOptimizer:
                 weight_to_add = per_stock_weight
                 funded = extract_funding(weight_to_add)
                 
-                if funded >= weight_to_add * 0.7:  # Au moins 70% du souhaité
+                if funded >= weight_to_add * 0.7:
                     allocation[stock.id] = round(funded, 2)
                     stocks_added += 1
                     logger.info(
-                        f"[P1 FIX v6.33] Added {stock.id} ({stock.name[:25]}) = {funded:.2f}%"
+                        f"[P1 FIX v6.34] Added {stock.id} ({stock.name[:25]}) = {funded:.2f}%"
                     )
         
         # === 6. TOP-UP ACTIONS EXISTANTES (si déficit % persiste) ===
@@ -3823,7 +3854,7 @@ class PortfolioOptimizer:
         
         if remaining_deficit > 0.5:
             logger.info(
-                f"[P1 FIX v6.33] Top-up needed: {remaining_deficit:.1f}% to reach {min_required}%"
+                f"[P1 FIX v6.34] Top-up needed: {remaining_deficit:.1f}% to reach {min_required}%"
             )
             
             existing_stocks = sorted(
@@ -3846,7 +3877,7 @@ class PortfolioOptimizer:
                         allocation[aid] = round(current_w + funded, 2)
                         remaining_deficit -= funded
                         logger.info(
-                            f"[P1 FIX v6.33] Top-up {aid}: {current_w:.1f}% → {allocation[aid]:.1f}%"
+                            f"[P1 FIX v6.34] Top-up {aid}: {current_w:.1f}% → {allocation[aid]:.1f}%"
                         )
         
         # === 7. LOG FINAL ===
@@ -3861,7 +3892,7 @@ class PortfolioOptimizer:
         
         status = "✅" if final_stock_weight >= min_required - 0.5 else "⚠️"
         logger.info(
-            f"[P1 FIX v6.33] {status} Final: stocks={final_stock_weight:.1f}% "
+            f"[P1 FIX v6.34] {status} Final: stocks={final_stock_weight:.1f}% "
             f"(target≥{min_required}%), lines={final_n_stocks}"
         )
         
