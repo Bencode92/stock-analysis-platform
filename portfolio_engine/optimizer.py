@@ -3301,7 +3301,11 @@ class PortfolioOptimizer:
         profile: ProfileConstraints
     ) -> List[str]:
         """
-        v6.24 + v2.1 FIX: Vérifie toutes les contraintes, retourne liste de violations.
+        v6.33: Vérifie toutes les contraintes, retourne liste de violations.
+        
+        Changements v6.33:
+        - FIX EU/US mode pour region caps
+        - Ajout checks stock sleeve (min/max weight, min positions)
         """
         asset_lookup = {c.id: c for c in candidates}
         violations = []
@@ -3327,12 +3331,13 @@ class PortfolioOptimizer:
                          if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto")
         if crypto_pct > profile.crypto_max + 0.5:
             violations.append(f"crypto={crypto_pct:.1f}%>{profile.crypto_max}%")
+        
         # 5. v6.26: Single bond cap
         max_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 25.0)
         for aid, w in allocation.items():
             asset = asset_lookup.get(aid)
             if asset and _is_bond_like(asset) and w > max_bond + 0.5:
-                violations.append(f"bond_cap:{aid}={w:.1f}%>{max_bond}%")   
+                violations.append(f"bond_cap:{aid}={w:.1f}%>{max_bond}%")
         
         # 6. Sector caps (equity-like only)
         sector_weights = defaultdict(float)
@@ -3345,7 +3350,7 @@ class PortfolioOptimizer:
             if w > profile.max_sector + 0.5:
                 violations.append(f"sector:{sector}={w:.1f}%")
         
-        # 7. v2.1 FIX: Region caps (actions seulement)
+        # 7. v6.33 FIX EU/US: Region caps (actions seulement)
         region_weights = defaultdict(float)
         for aid, w in allocation.items():
             asset = asset_lookup.get(aid)
@@ -3354,9 +3359,37 @@ class PortfolioOptimizer:
                 region_weights[region] += w
         
         for region, w in region_weights.items():
-            cap = get_stock_region_cap(profile.name, region) * 100
-            if w > cap + 0.1:  # Tolérance stricte
+            # FIX v6.33: Utiliser le bon cap selon le mode EU/US
+            if getattr(profile, 'euus_mode', False):
+                cap = get_stock_region_cap_euus(profile.name, region) * 100
+            else:
+                cap = get_stock_region_cap(profile.name, region) * 100
+            if w > cap + 0.1:
                 violations.append(f"region:{region}={w:.1f}%>{cap:.0f}%")
+        
+        # 8. P1 FIX v6.33: Stock sleeve minimum weight
+        stocks_pct = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+        )
+        min_stock_w = getattr(profile, 'min_stock_weight', 0.0)
+        if stocks_pct < min_stock_w - 0.5:
+            violations.append(f"stocks={stocks_pct:.1f}%<{min_stock_w}%")
+        
+        # 9. P1 FIX v6.33: Stock sleeve maximum weight
+        max_stock_w = getattr(profile, 'max_stock_weight', 100.0)
+        if stocks_pct > max_stock_w + 0.5:
+            violations.append(f"stocks={stocks_pct:.1f}%>{max_stock_w}%")
+        
+        # 10. P1 FIX v6.33: Minimum stock positions (lignes)
+        min_positions = getattr(profile, 'min_stock_positions', 0)
+        thr = getattr(profile, 'stock_pos_threshold', 1.0)
+        n_stock_lines = sum(
+            1 for aid, w in allocation.items()
+            if w >= thr and asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+        )
+        if n_stock_lines < min_positions:
+            violations.append(f"stock_lines={n_stock_lines}<{min_positions}")
         
         return violations
     def _post_process_allocation(
@@ -3369,7 +3402,14 @@ class PortfolioOptimizer:
         epsilon: float = 0.1
     ) -> Dict[str, float]:
         """
-        v2.1 FIX: Post-processor avec region caps EN DERNIER après normalisation.
+        v6.33 FIX: Post-processor avec ordre corrigé (ChatGPT review).
+        
+        Changements v6.33:
+        - Stock sleeve (min/max) déplacé APRÈS region caps et turnover
+        - Ajout _enforce_max_stock_weight()
+        - Ordre optimisé pour éviter oscillations
+        
+        Ordre: crypto/bonds/sector → region → turnover → STOCK SLEEVE → normalize
         """
         prev_alloc = allocation.copy()
         
@@ -3379,12 +3419,10 @@ class PortfolioOptimizer:
                 if w > profile.max_single_position:
                     allocation[aid] = profile.max_single_position
             
-            # 2. Enforce contraintes catégorie
+            # 2. Enforce contraintes catégorie (SAUF stocks - déplacé plus bas)
             allocation = self._enforce_crypto_cap(allocation, candidates, profile)
             allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
             allocation = self._enforce_sector_caps(allocation, candidates, profile)
-            # P1 FIX: Enforce min stock positions
-            allocation = self._enforce_min_stock_positions(allocation, candidates, profile)
             
             # 3. Normaliser à 100% (avec respect cap bond)
             allocation = self._adjust_to_100(allocation, profile, candidates)
@@ -3401,22 +3439,31 @@ class PortfolioOptimizer:
             
             # 6. v6.26 FIX: CAP BOND FINAL (après toutes redistributions)
             allocation = self._enforce_single_bond_cap(allocation, candidates, profile)
-            
-            # 7. Ajustement final à 100%
             allocation = self._adjust_to_100(allocation, profile, candidates)
             
-            # 8. Turnover check
+            # 7. Turnover check
             if prev_weights is not None:
-                allocation = self._clip_turnover(allocation, prev_weights, profile.max_turnover, candidates)
-
+                allocation = self._clip_turnover(
+                    allocation, prev_weights, profile.max_turnover, candidates
+                )
                 # IMPORTANT: turnover peut casser le cap bond (et crypto aussi)
                 allocation = self._enforce_single_bond_cap(allocation, candidates, profile)
                 allocation = self._adjust_to_100(allocation, profile, candidates)
             
-            # 9. Check violations
+            # === v6.33 FIX ChatGPT #3: STOCK SLEEVE APRÈS region+turnover ===
+            # 8. Min stock positions + min stock weight
+            allocation = self._enforce_min_stock_positions(allocation, candidates, profile)
+            
+            # 9. Max stock weight (nouveau v6.33)
+            allocation = self._enforce_max_stock_weight(allocation, candidates, profile)
+            
+            # 10. Ajustement final à 100%
+            allocation = self._adjust_to_100(allocation, profile, candidates)
+            
+            # 11. Check violations
             violations = self._check_all_violations(allocation, candidates, profile)
             
-            # 10. Delta convergence
+            # 12. Delta convergence
             delta = sum(abs(allocation.get(k, 0) - prev_alloc.get(k, 0)) 
                         for k in set(allocation.keys()) | set(prev_alloc.keys()))
             
@@ -3427,7 +3474,9 @@ class PortfolioOptimizer:
             prev_alloc = allocation.copy()
         
         if violations:
-            logger.warning(f"Post-process: {len(violations)} violations after {max_iterations} iter: {violations}")
+            logger.warning(
+                f"Post-process: {len(violations)} violations after {max_iterations} iter: {violations}"
+            )
         
         # v6.29 FIX CRITIQUE: ENFORCE CRYPTO CAP EN DERNIER (après TOUTES les modifications)
         allocation = self._enforce_crypto_cap(allocation, candidates, profile)
@@ -3617,78 +3666,274 @@ class PortfolioOptimizer:
                         freed_weight -= add
         
         return allocation  
-    def _enforce_min_stock_positions(
+def _enforce_min_stock_positions(
+    self,
+    allocation: Dict[str, float],
+    candidates: List[Asset],
+    profile: ProfileConstraints
+) -> Dict[str, float]:
+    """
+    P1 FIX v6.33: Force minimum de lignes Actions ET min_stock_weight.
+    
+    Changements v6.33:
+    - Calcul dynamique du déficit vs min_stock_weight
+    - Poids par action entre 2-5% (pas fixe 1%)
+    - Top-up des actions existantes si déficit persiste
+    - Garde-fou bonds_min dans extract_funding
+    """
+    asset_lookup = {c.id: c for c in candidates}
+    
+    # === 1. CHECK min_stock_positions (nombre de lignes) ===
+    thr = profile.stock_pos_threshold
+    
+    stock_ids_in_alloc = [
+        aid for aid, w in allocation.items()
+        if w >= thr 
+        and asset_lookup.get(aid) 
+        and asset_lookup[aid].category == "Actions"
+    ]
+    
+    n_stocks = len(stock_ids_in_alloc)
+    missing_lines = max(0, profile.min_stock_positions - n_stocks)
+    
+    # === 2. CHECK min_stock_weight (% total) ===
+    current_stock_weight = sum(
+        w for aid, w in allocation.items()
+        if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+    )
+    
+    min_required = getattr(profile, 'min_stock_weight', 0.0)
+    stock_deficit = max(0.0, min_required - current_stock_weight)
+    
+    # Si tout est OK, on sort
+    if missing_lines <= 0 and stock_deficit < 0.5:
+        return allocation
+    
+    logger.warning(
+        f"[P1 FIX v6.33] {profile.name}: "
+        f"stocks={current_stock_weight:.1f}% (min={min_required}%, deficit={stock_deficit:.1f}%), "
+        f"lines={n_stocks}/{profile.min_stock_positions} (missing={missing_lines})"
+    )
+    
+    # === 3. CALCUL POIDS DYNAMIQUE PAR ACTION ===
+    if stock_deficit > 0.5 and missing_lines > 0:
+        avg_weight_needed = stock_deficit / missing_lines
+        per_stock_weight = max(2.0, min(5.0, avg_weight_needed))
+    elif stock_deficit > 0.5:
+        per_stock_weight = 3.0
+    else:
+        per_stock_weight = max(thr, 1.5)
+    
+    # === 4. SOURCES DE FINANCEMENT (priorité: ETF > Bonds) ===
+    # FIX ChatGPT #2: Uniformiser min ETF à 3%
+    MIN_ETF_KEEP = 3.0
+    MIN_BOND_KEEP = 5.0
+    
+    etf_ids = sorted(
+        [aid for aid, w in allocation.items()
+         if asset_lookup.get(aid) and asset_lookup[aid].category == "ETF"
+         and w > MIN_ETF_KEEP],
+        key=lambda aid: (-allocation[aid], aid)
+    )
+    
+    bond_ids = sorted(
+        [aid for aid, w in allocation.items()
+         if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
+         and w > MIN_BOND_KEEP],
+        key=lambda aid: (-allocation[aid], aid)
+    )
+    
+    funding_sources = etf_ids + bond_ids
+    
+    # FIX ChatGPT #1: Garde-fou bonds_min
+    bonds_floor_total = profile.bonds_min + 1.0  # +1% buffer sécurité
+    bonds_total = sum(
+        w for aid, w in allocation.items()
+        if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
+    )
+    
+    def extract_funding(needed: float) -> float:
+        """Extrait du poids depuis ETF/Bonds, respecte bonds_min."""
+        nonlocal bonds_total
+        extracted = 0.0
+        
+        for fid in funding_sources:
+            if needed <= 0.01:
+                break
+            
+            asset = asset_lookup.get(fid)
+            current_w = allocation.get(fid, 0)
+            
+            # Min à conserver par position
+            if asset and asset.category == "Obligations":
+                min_keep = MIN_BOND_KEEP
+            else:
+                min_keep = MIN_ETF_KEEP
+            
+            available = current_w - min_keep
+            if available <= 0.5:
+                continue
+            
+            take = min(available, needed)
+            
+            # FIX ChatGPT #1: Garde-fou bonds_min (total)
+            if asset and asset.category == "Obligations":
+                max_take_allowed = max(0.0, bonds_total - bonds_floor_total)
+                take = min(take, max_take_allowed)
+                if take <= 0.01:
+                    continue
+                bonds_total -= take
+            
+            allocation[fid] = round(current_w - take, 2)
+            extracted += take
+            needed -= take
+        
+        return extracted
+    
+    # === 5. AJOUTER NOUVELLES ACTIONS (si lignes manquantes) ===
+    if missing_lines > 0:
+        available_stocks = sorted(
+            [c for c in candidates 
+             if c.category == "Actions" 
+             and c.id not in allocation
+             and c.score >= 40],
+            key=lambda x: (-x.score, x.id)
+        )
+        
+        stocks_added = 0
+        for stock in available_stocks[:missing_lines + 5]:
+            if stocks_added >= missing_lines:
+                break
+            
+            weight_to_add = per_stock_weight
+            funded = extract_funding(weight_to_add)
+            
+            if funded >= weight_to_add * 0.7:  # Au moins 70% du souhaité
+                allocation[stock.id] = round(funded, 2)
+                stocks_added += 1
+                logger.info(
+                    f"[P1 FIX v6.33] Added {stock.id} ({stock.name[:25]}) = {funded:.2f}%"
+                )
+    
+    # === 6. TOP-UP ACTIONS EXISTANTES (si déficit % persiste) ===
+    current_stock_weight = sum(
+        w for aid, w in allocation.items()
+        if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+    )
+    remaining_deficit = max(0.0, min_required - current_stock_weight)
+    
+    if remaining_deficit > 0.5:
+        logger.info(
+            f"[P1 FIX v6.33] Top-up needed: {remaining_deficit:.1f}% to reach {min_required}%"
+        )
+        
+        existing_stocks = sorted(
+            [(aid, w) for aid, w in allocation.items()
+             if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"],
+            key=lambda x: (x[1], x[0])
+        )
+        
+        max_single = profile.max_single_position
+        
+        for aid, current_w in existing_stocks:
+            if remaining_deficit < 0.1:
+                break
+            
+            headroom = max_single - current_w
+            if headroom > 0.5:
+                add_amount = min(headroom, remaining_deficit, 3.0)
+                funded = extract_funding(add_amount)
+                if funded > 0.1:
+                    allocation[aid] = round(current_w + funded, 2)
+                    remaining_deficit -= funded
+                    logger.info(
+                        f"[P1 FIX v6.33] Top-up {aid}: {current_w:.1f}% → {allocation[aid]:.1f}%"
+                    )
+    
+    # === 7. LOG FINAL ===
+    final_stock_weight = sum(
+        w for aid, w in allocation.items()
+        if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+    )
+    final_n_stocks = sum(
+        1 for aid, w in allocation.items()
+        if w >= thr and asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+    )
+    
+    status = "✅" if final_stock_weight >= min_required - 0.5 else "⚠️"
+    logger.info(
+        f"[P1 FIX v6.33] {status} Final: stocks={final_stock_weight:.1f}% "
+        f"(target≥{min_required}%), lines={final_n_stocks}"
+    )
+    
+    allocation = {k: v for k, v in allocation.items() if v >= 0.5}
+    
+    return allocation
+   
+    def _enforce_max_stock_weight(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
         profile: ProfileConstraints
     ) -> Dict[str, float]:
         """
-        P1 FIX: Force minimum de lignes Actions dans l'allocation.
-        Post-process car SLSQP ne gère pas l'optimisation entière.
+        P1 FIX v6.33: Force maximum de poids Actions (vend vers ETF/Bonds si excès).
         """
-        if profile.min_stock_positions <= 0:
+        max_stock_w = getattr(profile, 'max_stock_weight', 100.0)
+        if max_stock_w >= 100.0:
             return allocation
         
         asset_lookup = {c.id: c for c in candidates}
-        thr = profile.stock_pos_threshold
         
-        # Compter actions actuelles >= threshold
-        stock_ids = [
-            aid for aid, w in allocation.items()
-            if w >= thr 
-            and asset_lookup.get(aid) 
-            and asset_lookup[aid].category == "Actions"
-        ]
+        current_stock_weight = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+        )
         
-        missing = profile.min_stock_positions - len(stock_ids)
-        if missing <= 0:
+        excess = current_stock_weight - max_stock_w
+        if excess <= 0.5:
             return allocation
         
         logger.warning(
-            f"[P1 FIX] min_stock_positions: {len(stock_ids)}/{profile.min_stock_positions}, "
-            f"need to add {missing} stocks"
+            f"[P1 FIX v6.33] {profile.name}: stocks={current_stock_weight:.1f}% > "
+            f"max={max_stock_w}%, reducing {excess:.1f}%"
         )
         
-        # Candidats actions à ajouter (meilleur score d'abord)
-        available_stocks = sorted(
-            [c for c in candidates 
-             if c.category == "Actions" 
-             and c.id not in allocation],
-            key=lambda x: (-x.score, x.id)
+        # Réduire les actions (plus petits scores d'abord)
+        stocks_sorted = sorted(
+            [(aid, w) for aid, w in allocation.items()
+             if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"],
+            key=lambda x: (asset_lookup[x[0]].score, x[0])  # Score croissant
         )
         
-        # Financer depuis ETF (réduire les plus gros ETF)
-        etf_ids = sorted(
-            [aid for aid, w in allocation.items()
-             if asset_lookup.get(aid) and asset_lookup[aid].category == "ETF"],
-            key=lambda aid: (-allocation[aid], aid)
-        )
-        
-        add_w = max(thr, 1.0)  # 1% par action ajoutée
-        MAX_ITER = 20
-        iterations = 0
-        
-        for c in available_stocks[:missing]:
-            if iterations >= MAX_ITER:
-                logger.warning("[P1 FIX] Max iterations reached in _enforce_min_stock_positions")
+        freed_weight = 0.0
+        for aid, w in stocks_sorted:
+            if excess <= 0.1:
                 break
-            iterations += 1
-            
-            need = add_w
-            for eid in list(etf_ids):
-                if need <= 0.01:
-                    break
-                if allocation.get(eid, 0) > (2.0 + need):
-                    cut = min(need, allocation[eid] - 2.0)
-                    allocation[eid] = round(allocation[eid] - cut, 2)
-                    need -= cut
-            
-            if need <= 0.01:
-                allocation[c.id] = round(add_w, 2)
-                logger.info(f"[P1 FIX] Added stock {c.id} ({c.name[:30]}) = {add_w}%")
+            reduction = min(w - 1.0, excess)  # Garder min 1%
+            if reduction > 0.1:
+                allocation[aid] = round(w - reduction, 2)
+                freed_weight += reduction
+                excess -= reduction
         
-        # Nettoyer + normaliser
+        # Redistribuer vers ETF/Bonds
+        if freed_weight > 0.1:
+            etf_bonds = [
+                (aid, w) for aid, w in allocation.items()
+                if asset_lookup.get(aid) and asset_lookup[aid].category in ["ETF", "Obligations"]
+                and w < profile.max_single_position - 1
+            ]
+            etf_bonds = sorted(etf_bonds, key=lambda x: (x[1], x[0]))
+            
+            for aid, w in etf_bonds:
+                if freed_weight < 0.1:
+                    break
+                headroom = profile.max_single_position - w
+                add = min(headroom, freed_weight, 2.0)
+                if add > 0.1:
+                    allocation[aid] = round(w + add, 2)
+                    freed_weight -= add
+        
         allocation = {k: v for k, v in allocation.items() if v >= 0.5}
         
         return allocation   
