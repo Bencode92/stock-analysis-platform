@@ -3666,91 +3666,91 @@ class PortfolioOptimizer:
                         freed_weight -= add
         
         return allocation  
-def _enforce_min_stock_positions(
-    self,
-    allocation: Dict[str, float],
-    candidates: List[Asset],
-    profile: ProfileConstraints
-) -> Dict[str, float]:
-    """
-    P1 FIX v6.33: Force minimum de lignes Actions ET min_stock_weight.
-    
-    Changements v6.33:
-    - Calcul dynamique du déficit vs min_stock_weight
-    - Poids par action entre 2-5% (pas fixe 1%)
-    - Top-up des actions existantes si déficit persiste
-    - Garde-fou bonds_min dans extract_funding
-    """
-    asset_lookup = {c.id: c for c in candidates}
-    
-    # === 1. CHECK min_stock_positions (nombre de lignes) ===
-    thr = profile.stock_pos_threshold
-    
-    stock_ids_in_alloc = [
-        aid for aid, w in allocation.items()
-        if w >= thr 
-        and asset_lookup.get(aid) 
-        and asset_lookup[aid].category == "Actions"
-    ]
-    
-    n_stocks = len(stock_ids_in_alloc)
-    missing_lines = max(0, profile.min_stock_positions - n_stocks)
-    
-    # === 2. CHECK min_stock_weight (% total) ===
-    current_stock_weight = sum(
-        w for aid, w in allocation.items()
-        if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
-    )
-    
-    min_required = getattr(profile, 'min_stock_weight', 0.0)
-    stock_deficit = max(0.0, min_required - current_stock_weight)
-    
-    # Si tout est OK, on sort
-    if missing_lines <= 0 and stock_deficit < 0.5:
-        return allocation
-    
-    logger.warning(
-        f"[P1 FIX v6.33] {profile.name}: "
-        f"stocks={current_stock_weight:.1f}% (min={min_required}%, deficit={stock_deficit:.1f}%), "
-        f"lines={n_stocks}/{profile.min_stock_positions} (missing={missing_lines})"
-    )
-    
-    # === 3. CALCUL POIDS DYNAMIQUE PAR ACTION ===
-    if stock_deficit > 0.5 and missing_lines > 0:
-        avg_weight_needed = stock_deficit / missing_lines
-        per_stock_weight = max(2.0, min(5.0, avg_weight_needed))
-    elif stock_deficit > 0.5:
-        per_stock_weight = 3.0
-    else:
-        per_stock_weight = max(thr, 1.5)
-    
-    # === 4. SOURCES DE FINANCEMENT (priorité: ETF > Bonds) ===
-    # FIX ChatGPT #2: Uniformiser min ETF à 3%
-    MIN_ETF_KEEP = 3.0
-    MIN_BOND_KEEP = 5.0
-    
-    etf_ids = sorted(
-        [aid for aid, w in allocation.items()
-         if asset_lookup.get(aid) and asset_lookup[aid].category == "ETF"
-         and w > MIN_ETF_KEEP],
-        key=lambda aid: (-allocation[aid], aid)
-    )
-    
-    bond_ids = sorted(
-        [aid for aid, w in allocation.items()
-         if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
-         and w > MIN_BOND_KEEP],
-        key=lambda aid: (-allocation[aid], aid)
-    )
-    
-    funding_sources = etf_ids + bond_ids
-    
-    # FIX ChatGPT #1: Garde-fou bonds_min
-    bonds_floor_total = profile.bonds_min + 1.0  # +1% buffer sécurité
-    bonds_total = sum(
-        w for aid, w in allocation.items()
-        if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
-    )
+    def _enforce_min_stock_positions(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """
+        P1 FIX v6.33: Force minimum de lignes Actions ET min_stock_weight.
+        
+        Changements v6.33:
+        - Calcul dynamique du déficit vs min_stock_weight
+        - Poids par action entre 2-5% (pas fixe 1%)
+        - Top-up des actions existantes si déficit persiste
+        - Garde-fou bonds_min dans extract_funding
+        """
+        asset_lookup = {c.id: c for c in candidates}
+        
+        # === 1. CHECK min_stock_positions (nombre de lignes) ===
+        thr = profile.stock_pos_threshold
+        
+        stock_ids_in_alloc = [
+            aid for aid, w in allocation.items()
+            if w >= thr 
+            and asset_lookup.get(aid) 
+            and asset_lookup[aid].category == "Actions"
+        ]
+        
+        n_stocks = len(stock_ids_in_alloc)
+        missing_lines = max(0, profile.min_stock_positions - n_stocks)
+        
+        # === 2. CHECK min_stock_weight (% total) ===
+        current_stock_weight = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+        )
+        
+        min_required = getattr(profile, 'min_stock_weight', 0.0)
+        stock_deficit = max(0.0, min_required - current_stock_weight)
+        
+        # Si tout est OK, on sort
+        if missing_lines <= 0 and stock_deficit < 0.5:
+            return allocation
+        
+        logger.warning(
+            f"[P1 FIX v6.33] {profile.name}: "
+            f"stocks={current_stock_weight:.1f}% (min={min_required}%, deficit={stock_deficit:.1f}%), "
+            f"lines={n_stocks}/{profile.min_stock_positions} (missing={missing_lines})"
+        )
+        
+        # === 3. CALCUL POIDS DYNAMIQUE PAR ACTION ===
+        if stock_deficit > 0.5 and missing_lines > 0:
+            avg_weight_needed = stock_deficit / missing_lines
+            per_stock_weight = max(2.0, min(5.0, avg_weight_needed))
+        elif stock_deficit > 0.5:
+            per_stock_weight = 3.0
+        else:
+            per_stock_weight = max(thr, 1.5)
+        
+        # === 4. SOURCES DE FINANCEMENT (priorité: ETF > Bonds) ===
+        # FIX ChatGPT #2: Uniformiser min ETF à 3%
+        MIN_ETF_KEEP = 3.0
+        MIN_BOND_KEEP = 5.0
+        
+        etf_ids = sorted(
+            [aid for aid, w in allocation.items()
+             if asset_lookup.get(aid) and asset_lookup[aid].category == "ETF"
+             and w > MIN_ETF_KEEP],
+            key=lambda aid: (-allocation[aid], aid)
+        )
+        
+        bond_ids = sorted(
+            [aid for aid, w in allocation.items()
+             if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
+             and w > MIN_BOND_KEEP],
+            key=lambda aid: (-allocation[aid], aid)
+        )
+        
+        funding_sources = etf_ids + bond_ids
+        
+        # FIX ChatGPT #1: Garde-fou bonds_min
+        bonds_floor_total = profile.bonds_min + 1.0  # +1% buffer sécurité
+        bonds_total = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
+        )
     
     def extract_funding(needed: float) -> float:
         """Extrait du poids depuis ETF/Bonds, respecte bonds_min."""
