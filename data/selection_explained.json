@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-01-29T08:25:19.297460",
+  "generated_at": "2026-01-29T13:22:46.186855",
   "version": "v1.3.0",
   "preset_meta_version": "v4.15.2",
   "selection_pipeline": {
@@ -150,8 +150,8 @@
   },
   "summary": {
     "total_universe": 1006,
-    "total_selected": 25,
-    "selection_rate": "2.5%",
+    "total_selected": 24,
+    "selection_rate": "2.4%",
     "by_region": {
       "US": {
         "universe": 526,
@@ -163,7 +163,7 @@
       },
       "Asia": {
         "universe": 210,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 0
       }
     }
   },
@@ -181,7 +181,7 @@
       "selected_count": 7,
       "selected_names": [
         "FORTUNE ELECTRIC LTD",
-        "HANWHA AEROSPACE LTD",
+        "COMFORT SYSTEMS USA INC",
         "EXPEDITORS INTERNATIONAL ",
         "VINCI SA",
         "BUREAU VERITAS SA",
@@ -203,10 +203,9 @@
       ]
     },
     "Finance": {
-      "selected_count": 3,
+      "selected_count": 2,
       "selected_names": [
         "KBC GROEP",
-        "BANCO BILBAO VIZCAYA ARGE",
         "MARSH & MCLENNAN INC"
       ]
     },
@@ -1254,8 +1253,8 @@
     "Asia": {
       "total_in_universe": 210,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
       "stocks": [
         {
           "rank": 1,
@@ -1389,10 +1388,13 @@
           "market_cap_billions": 66266.0,
           "sector": "Industries",
           "country": "Corée",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "status": "selected"
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 64.0,
           "composite_score": 0.567,
@@ -1714,15 +1716,15 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.464 < seuil 0.567",
+          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.464 < seuil 0.610",
           "details": {
             "sector": "Industries",
             "sector_quota": "7/4",
             "your_score": 0.464,
-            "min_selected_score": 0.567,
+            "min_selected_score": 0.61,
             "selected_in_sector": [
               "FORTUNE ELECTRIC LTD",
-              "HANWHA AEROSPACE LTD",
+              "COMFORT SYSTEMS USA ",
               "EXPEDITORS INTERNATI",
               "VINCI SA",
               "BUREAU VERITAS SA",
