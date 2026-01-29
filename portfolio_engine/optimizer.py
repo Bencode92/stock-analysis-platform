@@ -3752,43 +3752,43 @@ class PortfolioOptimizer:
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
         )
     
-    def extract_funding(needed: float) -> float:
-        """Extrait du poids depuis ETF/Bonds, respecte bonds_min."""
-        nonlocal bonds_total
-        extracted = 0.0
-        
-        for fid in funding_sources:
-            if needed <= 0.01:
-                break
+        def extract_funding(needed: float) -> float:
+            """Extrait du poids depuis ETF/Bonds, respecte bonds_min."""
+            nonlocal bonds_total
+            extracted = 0.0
             
-            asset = asset_lookup.get(fid)
-            current_w = allocation.get(fid, 0)
-            
-            # Min à conserver par position
-            if asset and asset.category == "Obligations":
-                min_keep = MIN_BOND_KEEP
-            else:
-                min_keep = MIN_ETF_KEEP
-            
-            available = current_w - min_keep
-            if available <= 0.5:
-                continue
-            
-            take = min(available, needed)
-            
-            # FIX ChatGPT #1: Garde-fou bonds_min (total)
-            if asset and asset.category == "Obligations":
-                max_take_allowed = max(0.0, bonds_total - bonds_floor_total)
-                take = min(take, max_take_allowed)
-                if take <= 0.01:
+            for fid in funding_sources:
+                if needed <= 0.01:
+                    break
+                
+                asset = asset_lookup.get(fid)
+                current_w = allocation.get(fid, 0)
+                
+                # Min à conserver par position
+                if asset and asset.category == "Obligations":
+                    min_keep = MIN_BOND_KEEP
+                else:
+                    min_keep = MIN_ETF_KEEP
+                
+                available = current_w - min_keep
+                if available <= 0.5:
                     continue
-                bonds_total -= take
+                
+                take = min(available, needed)
+                
+                # FIX ChatGPT #1: Garde-fou bonds_min (total)
+                if asset and asset.category == "Obligations":
+                    max_take_allowed = max(0.0, bonds_total - bonds_floor_total)
+                    take = min(take, max_take_allowed)
+                    if take <= 0.01:
+                        continue
+                    bonds_total -= take
+                
+                allocation[fid] = round(current_w - take, 2)
+                extracted += take
+                needed -= take
             
-            allocation[fid] = round(current_w - take, 2)
-            extracted += take
-            needed -= take
-        
-        return extracted
+            return extracted
     
     # === 5. AJOUTER NOUVELLES ACTIONS (si lignes manquantes) ===
     if missing_lines > 0:
