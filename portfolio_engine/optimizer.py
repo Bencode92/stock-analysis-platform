@@ -3751,7 +3751,6 @@ class PortfolioOptimizer:
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations"
         )
-    
         def extract_funding(needed: float) -> float:
             """Extrait du poids depuis ETF/Bonds, respecte bonds_min."""
             nonlocal bonds_total
@@ -3789,86 +3788,86 @@ class PortfolioOptimizer:
                 needed -= take
             
             return extracted
-    
-    # === 5. AJOUTER NOUVELLES ACTIONS (si lignes manquantes) ===
-    if missing_lines > 0:
-        available_stocks = sorted(
-            [c for c in candidates 
-             if c.category == "Actions" 
-             and c.id not in allocation
-             and c.score >= 40],
-            key=lambda x: (-x.score, x.id)
-        )
         
-        stocks_added = 0
-        for stock in available_stocks[:missing_lines + 5]:
-            if stocks_added >= missing_lines:
-                break
+        # === 5. AJOUTER NOUVELLES ACTIONS (si lignes manquantes) ===
+        if missing_lines > 0:
+            available_stocks = sorted(
+                [c for c in candidates 
+                 if c.category == "Actions" 
+                 and c.id not in allocation
+                 and c.score >= 40],
+                key=lambda x: (-x.score, x.id)
+            )
             
-            weight_to_add = per_stock_weight
-            funded = extract_funding(weight_to_add)
-            
-            if funded >= weight_to_add * 0.7:  # Au moins 70% du souhaité
-                allocation[stock.id] = round(funded, 2)
-                stocks_added += 1
-                logger.info(
-                    f"[P1 FIX v6.33] Added {stock.id} ({stock.name[:25]}) = {funded:.2f}%"
-                )
-    
-    # === 6. TOP-UP ACTIONS EXISTANTES (si déficit % persiste) ===
-    current_stock_weight = sum(
-        w for aid, w in allocation.items()
-        if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
-    )
-    remaining_deficit = max(0.0, min_required - current_stock_weight)
-    
-    if remaining_deficit > 0.5:
-        logger.info(
-            f"[P1 FIX v6.33] Top-up needed: {remaining_deficit:.1f}% to reach {min_required}%"
-        )
-        
-        existing_stocks = sorted(
-            [(aid, w) for aid, w in allocation.items()
-             if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"],
-            key=lambda x: (x[1], x[0])
-        )
-        
-        max_single = profile.max_single_position
-        
-        for aid, current_w in existing_stocks:
-            if remaining_deficit < 0.1:
-                break
-            
-            headroom = max_single - current_w
-            if headroom > 0.5:
-                add_amount = min(headroom, remaining_deficit, 3.0)
-                funded = extract_funding(add_amount)
-                if funded > 0.1:
-                    allocation[aid] = round(current_w + funded, 2)
-                    remaining_deficit -= funded
+            stocks_added = 0
+            for stock in available_stocks[:missing_lines + 5]:
+                if stocks_added >= missing_lines:
+                    break
+                
+                weight_to_add = per_stock_weight
+                funded = extract_funding(weight_to_add)
+                
+                if funded >= weight_to_add * 0.7:  # Au moins 70% du souhaité
+                    allocation[stock.id] = round(funded, 2)
+                    stocks_added += 1
                     logger.info(
-                        f"[P1 FIX v6.33] Top-up {aid}: {current_w:.1f}% → {allocation[aid]:.1f}%"
+                        f"[P1 FIX v6.33] Added {stock.id} ({stock.name[:25]}) = {funded:.2f}%"
                     )
-    
-    # === 7. LOG FINAL ===
-    final_stock_weight = sum(
-        w for aid, w in allocation.items()
-        if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
-    )
-    final_n_stocks = sum(
-        1 for aid, w in allocation.items()
-        if w >= thr and asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
-    )
-    
-    status = "✅" if final_stock_weight >= min_required - 0.5 else "⚠️"
-    logger.info(
-        f"[P1 FIX v6.33] {status} Final: stocks={final_stock_weight:.1f}% "
-        f"(target≥{min_required}%), lines={final_n_stocks}"
-    )
-    
-    allocation = {k: v for k, v in allocation.items() if v >= 0.5}
-    
-    return allocation
+        
+        # === 6. TOP-UP ACTIONS EXISTANTES (si déficit % persiste) ===
+        current_stock_weight = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+        )
+        remaining_deficit = max(0.0, min_required - current_stock_weight)
+        
+        if remaining_deficit > 0.5:
+            logger.info(
+                f"[P1 FIX v6.33] Top-up needed: {remaining_deficit:.1f}% to reach {min_required}%"
+            )
+            
+            existing_stocks = sorted(
+                [(aid, w) for aid, w in allocation.items()
+                 if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"],
+                key=lambda x: (x[1], x[0])
+            )
+            
+            max_single = profile.max_single_position
+            
+            for aid, current_w in existing_stocks:
+                if remaining_deficit < 0.1:
+                    break
+                
+                headroom = max_single - current_w
+                if headroom > 0.5:
+                    add_amount = min(headroom, remaining_deficit, 3.0)
+                    funded = extract_funding(add_amount)
+                    if funded > 0.1:
+                        allocation[aid] = round(current_w + funded, 2)
+                        remaining_deficit -= funded
+                        logger.info(
+                            f"[P1 FIX v6.33] Top-up {aid}: {current_w:.1f}% → {allocation[aid]:.1f}%"
+                        )
+        
+        # === 7. LOG FINAL ===
+        final_stock_weight = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+        )
+        final_n_stocks = sum(
+            1 for aid, w in allocation.items()
+            if w >= thr and asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
+        )
+        
+        status = "✅" if final_stock_weight >= min_required - 0.5 else "⚠️"
+        logger.info(
+            f"[P1 FIX v6.33] {status} Final: stocks={final_stock_weight:.1f}% "
+            f"(target≥{min_required}%), lines={final_n_stocks}"
+        )
+        
+        allocation = {k: v for k, v in allocation.items() if v >= 0.5}
+        
+        return allocation
    
     def _enforce_max_stock_weight(
         self,
