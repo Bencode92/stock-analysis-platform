@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-01-29T13:41:50.563832",
+  "generated_at": "2026-01-29T14:50:44.800802",
   "version": "v1.3.0",
   "preset_meta_version": "v4.15.2",
   "selection_pipeline": {
@@ -150,12 +150,12 @@
   },
   "summary": {
     "total_universe": 1006,
-    "total_selected": 24,
-    "selection_rate": "2.4%",
+    "total_selected": 9,
+    "selection_rate": "0.9%",
     "by_region": {
       "US": {
         "universe": 526,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 0
       },
       "Europe": {
         "universe": 268,
@@ -169,37 +169,22 @@
   },
   "sectors_distribution": {
     "Technologie de l'information": {
-      "selected_count": 4,
+      "selected_count": 1,
       "selected_names": [
-        "WESTERN DIGITAL CORP",
-        "KLA CORP",
-        "MICRON TECHNOLOGY INC",
-        "JABIL INC"
+        "WESTERN DIGITAL CORP"
       ]
     },
     "Industries": {
-      "selected_count": 7,
+      "selected_count": 2,
       "selected_names": [
         "FORTUNE ELECTRIC LTD",
-        "COMFORT SYSTEMS USA INC",
-        "EXPEDITORS INTERNATIONAL ",
-        "VINCI SA",
-        "BUREAU VERITAS SA",
-        "AUTOMATIC DATA PROCESSING",
-        "ILLINOIS TOOL INC"
-      ]
-    },
-    "Matériaux": {
-      "selected_count": 1,
-      "selected_names": [
-        "NEWMONT"
+        "VINCI SA"
       ]
     },
     "Energie": {
-      "selected_count": 2,
+      "selected_count": 1,
       "selected_names": [
-        "EQUINOR",
-        "TOTALENERGIES"
+        "EQUINOR"
       ]
     },
     "Finance": {
@@ -210,25 +195,10 @@
       ]
     },
     "Santé": {
-      "selected_count": 3,
+      "selected_count": 2,
       "selected_names": [
         "CENCORA INC",
-        "AMGEN INC",
-        "MERCK & CO INC"
-      ]
-    },
-    "Immobilier": {
-      "selected_count": 2,
-      "selected_names": [
-        "UNIBAIL RODAMCO WE STAPLE",
-        "VICI PPTYS INC"
-      ]
-    },
-    "Biens de consommation cycliques": {
-      "selected_count": 2,
-      "selected_names": [
-        "DARDEN RESTAURANTS INC",
-        "FDJ UNITED"
+        "AMGEN INC"
       ]
     },
     "Biens de consommation de base": {
@@ -242,8 +212,8 @@
     "US": {
       "total_in_universe": 526,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
       "stocks": [
         {
           "rank": 1,
@@ -329,18 +299,10 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.641 < seuil 0.594",
+          "status": "❌ Score composite insuffisant (0.641)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "4/4",
-            "your_score": 0.641,
-            "min_selected_score": 0.594,
-            "selected_in_sector": [
-              "WESTERN DIGITAL CORP",
-              "KLA CORP",
-              "MICRON TECHNOLOGY IN",
-              "JABIL INC"
-            ]
+            "composite_score": 0.641,
+            "sector": "Technologie de l'information"
           },
           "buffett_score": 85.4,
           "composite_score": 0.641,
@@ -361,18 +323,10 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.647 < seuil 0.594",
+          "status": "❌ Score composite insuffisant (0.647)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "4/4",
-            "your_score": 0.647,
-            "min_selected_score": 0.594,
-            "selected_in_sector": [
-              "WESTERN DIGITAL CORP",
-              "KLA CORP",
-              "MICRON TECHNOLOGY IN",
-              "JABIL INC"
-            ]
+            "composite_score": 0.647,
+            "sector": "Technologie de l'information"
           },
           "buffett_score": 79.1,
           "composite_score": 0.647,
@@ -635,18 +589,10 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.524 < seuil 0.594",
+          "status": "❌ Score composite insuffisant (0.524)",
           "details": {
-            "sector": "Technologie de l'information",
-            "sector_quota": "4/4",
-            "your_score": 0.524,
-            "min_selected_score": 0.594,
-            "selected_in_sector": [
-              "WESTERN DIGITAL CORP",
-              "KLA CORP",
-              "MICRON TECHNOLOGY IN",
-              "JABIL INC"
-            ]
+            "composite_score": 0.524,
+            "sector": "Technologie de l'information"
           },
           "buffett_score": 62.2,
           "composite_score": 0.524,
@@ -690,10 +636,13 @@
           "market_cap_billions": 449.8,
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "status": "selected"
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 65.0,
           "composite_score": 0.594,
@@ -1716,21 +1665,10 @@
           "sector": "Industries",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 7/4), score 0.464 < seuil 0.610",
+          "status": "❌ Score composite insuffisant (0.464)",
           "details": {
-            "sector": "Industries",
-            "sector_quota": "7/4",
-            "your_score": 0.464,
-            "min_selected_score": 0.61,
-            "selected_in_sector": [
-              "FORTUNE ELECTRIC LTD",
-              "COMFORT SYSTEMS USA ",
-              "EXPEDITORS INTERNATI",
-              "VINCI SA",
-              "BUREAU VERITAS SA",
-              "AUTOMATIC DATA PROCE",
-              "ILLINOIS TOOL INC"
-            ]
+            "composite_score": 0.464,
+            "sector": "Industries"
           },
           "buffett_score": 68.0,
           "composite_score": 0.464,
