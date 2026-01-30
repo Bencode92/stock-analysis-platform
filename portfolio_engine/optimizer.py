@@ -274,25 +274,30 @@ def _to_0_100(x, *, default=None, unit_interval=False, strict=None):
 
 
 def _get_score_with_scaling(item, *, default=50.0):
-    """v4.2.1b: Récupère score avec scaling et source."""
-    # 1. score (supposé [0,100])
+    """v4.2.1b FIX: Priorité _profile_score sur score pour equities."""
+    
+    # 1. _profile_score EN PRIORITÉ (supposé [0,1])
+    profile_raw = item.get("_profile_score")
+    if profile_raw is not None:
+        scaled = _to_0_100(profile_raw, unit_interval=True)
+        if scaled is not None:
+            # Garde-fou : log si divergence avec score existant
+            score_raw = item.get("score")
+            if score_raw is not None:
+                s1 = _to_0_100(score_raw, unit_interval=False)
+                if s1 is not None and abs(s1 - scaled) > 5:
+                    logger.debug(f"[SCORE MISMATCH] {item.get('symbol','?')}: score={s1:.1f} vs profile={scaled:.1f}")
+            return (scaled, "profile_score")
+    
+    # 2. score (fallback, supposé [0,100])
     score_raw = item.get("score")
     if score_raw is not None:
         scaled = _to_0_100(score_raw, unit_interval=False)
         if scaled is not None:
             return (scaled, "score")
     
-    # 2. _profile_score (supposé [0,1])
-    profile_raw = item.get("_profile_score")
-    if profile_raw is not None:
-        scaled = _to_0_100(profile_raw, unit_interval=True)
-        if scaled is not None:
-            return (scaled, "profile_score")
-    
-    # 3. composite_score (supposé [0,100])
-    composite_raw = item.get("composite_score")
-    if composite_raw is None:
-        composite_raw = item.get("_composite_score")
+    # 3. composite_score (fallback)
+    composite_raw = item.get("composite_score") or item.get("_composite_score")
     if composite_raw is not None:
         scaled = _to_0_100(composite_raw, unit_interval=False)
         if scaled is not None:
@@ -978,7 +983,7 @@ def select_etfs_via_preset_engine(
         if original_asset:
             # Mettre à jour le score avec _profile_score de preset_etf
             if "_profile_score" in row and pd.notna(row["_profile_score"]):
-                original_asset.score = float(row["_profile_score"])
+               original_asset.score = float(_to_0_100(row["_profile_score"], unit_interval=True) or original_asset.score)
             
             # Enrichir avec les métadonnées preset_etf
             if "_matched_preset" in row:
