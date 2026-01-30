@@ -997,10 +997,35 @@ def _is_missing_or_zero(value) -> bool:
         return num <= 0
     except (TypeError, ValueError):
         return True
+def _zlike_to_0_100(v: float, k: float = 1.5) -> float:
+    """
+    v4.2.1c: Convertit un z-score [-inf, +inf] vers [0, 100] en préservant l'ordre.
+    
+    Utilise tanh pour mapper de manière monotone.
+    k=1.5 → ±3 sigma couvre ~[5, 95]
+    
+    Args:
+        v: z-score (peut être négatif)
+        k: facteur d'échelle (défaut 1.5)
+    
+    Returns:
+        Score dans [0, 100]
+    """
+    return 50.0 * (math.tanh(v / k) + 1.0)        
         
 def _to_0_100(x, *, default=None, unit_interval=False, strict=None):
     """
-    v4.2.1b: Convertit un score vers [0, 100] avec distinction de source.
+    v4.2.1c: Convertit un score vers [0, 100] avec distinction de source.
+    
+    Args:
+        x: Valeur à convertir
+        default: Valeur par défaut si x est None/invalid
+        unit_interval: True si source est [0,1] (_profile_score)
+                      False si source est [0,100] (score, composite_score)
+        strict: Mode strict (log warnings pour cas ambigus)
+    
+    Returns:
+        Score dans [0, 100] ou default si invalide
     """
     if x is None:
         return default
@@ -1025,18 +1050,29 @@ def _to_0_100(x, *, default=None, unit_interval=False, strict=None):
                 logger.warning(f"[STRICT] score={v} < 1.0 non converti")
                 return v
             return v * 100.0
+        # FIX v4.2.1c: 1.0 = 100%, pas 1%
         if abs(v - 1.0) < FLOAT_EPSILON:
-            return 1.0
-        if 1.0 <= v <= 100.0:
+            return 100.0
+        if 1.0 < v <= 100.0:
             return v
-        return max(0.0, min(100.0, v))      
+        return max(0.0, min(100.0, v))
         
   # ============= v4.1.0 VOL MAPPING ALIGNED WITH OPTIMIZER =============
 
-def _as_pct(val: Any) -> Optional[float]:
+def _as_pct(val: Any, *, cat: Optional[str] = None) -> Optional[float]:
     """
-    v4.1.0: Convertit une valeur en % (gère décimal vs %).
-    Aligné avec optimizer.py v6.28.
+    v4.2.1c: Convertit une valeur en % (gère décimal vs %).
+    
+    Heuristique par catégorie:
+    - crypto: décimaux jusqu'à 2.0 (vol peut dépasser 100%)
+    - autres: décimaux < 1.0 seulement (1.2% reste 1.2%)
+    
+    Args:
+        val: Valeur brute
+        cat: Catégorie d'actif (crypto, equity, bond, etf)
+    
+    Returns:
+        Valeur en % ou None si invalide
     """
     if val is None:
         return None
@@ -1048,8 +1084,19 @@ def _as_pct(val: Any) -> Optional[float]:
         return None
     if v <= 0:
         return None
-    if 0 < v < 1.5:
-        v *= 100.0
+    
+    # Heuristique par catégorie
+    if cat == "crypto":
+        # Crypto: vol peut être > 100%, décimaux probables si < 2
+        if 0 < v < 2.0:
+            v *= 100.0
+    else:
+        # ETF/Bonds/Actions: vol rarement > 50%
+        # Si v < 1.0, c'est probablement un décimal
+        if 0 < v < 1.0:
+            v *= 100.0
+        # Si 1.0 <= v < 1.5, ambigu → on garde tel quel (1.2% = 1.2%)
+    
     return v
 
 
@@ -1085,9 +1132,9 @@ def _get_vol_for_scoring(asset: dict, cat: str) -> Optional[float]:
         ]
     
     for val in candidates:
-        result = _as_pct(val)
+        result = _as_pct(val, cat=cat)
         if result is not None and result > 0:
-            return result
+            return result        
     
     return None      
 
@@ -1783,10 +1830,6 @@ class FactorScorer:
                 self._track_missing(idx, "vol")
             
             raw_vol.append(vol)
-        
-        # v3.0.0: Utilise _normalize_by_class avec higher_is_better=False
-        # (volatilité basse = meilleur score)
-        return self._normalize_by_class(raw_vol, categories, higher_is_better=False)
         
         # v3.0.0: Utilise _normalize_by_class avec higher_is_better=False
         # (volatilité basse = meilleur score)
