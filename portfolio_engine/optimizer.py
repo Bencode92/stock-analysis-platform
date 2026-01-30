@@ -237,6 +237,68 @@ except ImportError:
     HAS_CRYPTO_UTILS = False
 
 logger = logging.getLogger("portfolio_engine.optimizer")
+
+# ============= v4.2.1b SCORING CONSTANTS & HELPERS =============
+FLOAT_EPSILON = 1e-9
+STRICT_MODE = False  # True en CI/staging
+
+
+def _to_0_100(x, *, default=None, unit_interval=False, strict=None):
+    """v4.2.1b: Convertit un score vers [0, 100]."""
+    if x is None:
+        return default
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return default
+    if math.isnan(v) or math.isinf(v):
+        return default
+    
+    use_strict = strict if strict is not None else STRICT_MODE
+    
+    if unit_interval:
+        if 0.0 <= v <= (1.0 + FLOAT_EPSILON):
+            return min(v, 1.0) * 100.0
+        return max(0.0, min(100.0, v))
+    else:
+        if 0.0 <= v < (1.0 - FLOAT_EPSILON):
+            if use_strict:
+                logger.warning(f"[STRICT] score={v} < 1.0 non converti")
+                return v
+            return v * 100.0
+        if abs(v - 1.0) < FLOAT_EPSILON:
+            return 1.0
+        if 1.0 <= v <= 100.0:
+            return v
+        return max(0.0, min(100.0, v))
+
+
+def _get_score_with_scaling(item, *, default=50.0):
+    """v4.2.1b: Récupère score avec scaling et source."""
+    # 1. score (supposé [0,100])
+    score_raw = item.get("score")
+    if score_raw is not None:
+        scaled = _to_0_100(score_raw, unit_interval=False)
+        if scaled is not None:
+            return (scaled, "score")
+    
+    # 2. _profile_score (supposé [0,1])
+    profile_raw = item.get("_profile_score")
+    if profile_raw is not None:
+        scaled = _to_0_100(profile_raw, unit_interval=True)
+        if scaled is not None:
+            return (scaled, "profile_score")
+    
+    # 3. composite_score (supposé [0,100])
+    composite_raw = item.get("composite_score")
+    if composite_raw is None:
+        composite_raw = item.get("_composite_score")
+    if composite_raw is not None:
+        scaled = _to_0_100(composite_raw, unit_interval=False)
+        if scaled is not None:
+            return (scaled, "composite_score")
+    
+    return (default, "default")
 # =============================================================================
 # P0 FIX v6.32: Mapping tolérant string → Role enum
 # =============================================================================
@@ -4217,16 +4279,17 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             # v6.28 FIX A: Utiliser helper pour mapper vol selon catégorie
             raw_vol = _get_vol_from_item(item, cat_normalized, default_vol)
             
+            # v4.2.1b: Score avec scaling adapté à la source
+            score_value, score_source = _get_score_with_scaling(item, default=50.0)
+            item["_score_source"] = score_source  # Audit trail
+            
             asset = Asset(
                 id=str(raw_id),
                 name=item.get("name") or str(raw_id),
                 category=cat_normalized,
                 sector=item.get("sector") or item.get("sector_top") or "Unknown",
                 region=item.get("country") or item.get("country_top") or item.get("region") or "Global",
-                score=_clean_float(
-                    item.get("_profile_score") or item.get("composite_score") or item.get("_composite_score") or item.get("score") or item.get("_score"), 
-                    50.0, 0, 100
-                ),  # v6.27 FIX: _profile_score > composite_score > score (ETF/Crypto support)
+                score=score_value,  # v4.2.1b: Utilise helper avec scaling
                 vol_annual=_clean_float(raw_vol, default_vol, min_v, max_v),  # v6.28 FIX A
                 returns_series=item.get("returns_series"),
                 source_data=item,
