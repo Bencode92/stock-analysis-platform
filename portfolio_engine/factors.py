@@ -146,7 +146,9 @@ except ImportError:
         else:
             return inv + 1
 
-
+# ============= v4.2.1b SCORING CONSTANTS =============
+FLOAT_EPSILON = 1e-9
+STRICT_MODE = False  # True en CI/staging
 # ============= v2.4 CATEGORY NORMALIZATION =============
 
 CATEGORY_NORMALIZE = {
@@ -995,6 +997,40 @@ def _is_missing_or_zero(value) -> bool:
         return num <= 0
     except (TypeError, ValueError):
         return True
+        
+def _to_0_100(x, *, default=None, unit_interval=False, strict=None):
+    """
+    v4.2.1b: Convertit un score vers [0, 100] avec distinction de source.
+    """
+    if x is None:
+        return default
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return default
+    if math.isnan(v) or math.isinf(v):
+        return default
+    
+    use_strict = strict if strict is not None else STRICT_MODE
+    
+    if unit_interval:
+        # Source [0,1] — _profile_score
+        if 0.0 <= v <= (1.0 + FLOAT_EPSILON):
+            return min(v, 1.0) * 100.0
+        return max(0.0, min(100.0, v))
+    else:
+        # Source [0,100] — score, composite_score
+        if 0.0 <= v < (1.0 - FLOAT_EPSILON):
+            if use_strict:
+                logger.warning(f"[STRICT] score={v} < 1.0 non converti")
+                return v
+            return v * 100.0
+        if abs(v - 1.0) < FLOAT_EPSILON:
+            return 1.0
+        if 1.0 <= v <= 100.0:
+            return v
+        return max(0.0, min(100.0, v))      
+        
   # ============= v4.1.0 VOL MAPPING ALIGNED WITH OPTIMIZER =============
 
 def _as_pct(val: Any) -> Optional[float]:
@@ -2129,7 +2165,7 @@ class FactorScorer:
         for i, asset in enumerate(assets):
             cat = categories[i]
             
-            # v4.0.0: Toujours calculer buffett_score pour equity (utilisé par preset_meta)
+        # v4.0.0: Toujours calculer buffett_score pour equity (utilisé par preset_meta)
             if cat == "equity":
                 asset["buffett_score"] = compute_buffett_quality_score(asset)
             
@@ -2137,11 +2173,28 @@ class FactorScorer:
             if cat == "equity" and self.equity_scoring_mode == "preset":
                 asset["factor_scores"] = {}  # Vide car non calculé
                 asset["composite_score"] = None  # Explicitement None
-                asset["score"] = None
+                
+                # v4.2.1b: Ne pas écraser score existant
+                existing_score = asset.get("score")
+                score_source = "preserved"
+                
+                if existing_score is None:
+                    profile_score = asset.get("_profile_score")
+                    if profile_score is not None:
+                        scaled = _to_0_100(profile_score, unit_interval=True)
+                        if scaled is not None:
+                            asset["score"] = scaled
+                            score_source = "profile_score_scaled"
+                        else:
+                            score_source = "profile_score_invalid"
+                    else:
+                        score_source = "none"
+                
                 asset["_scoring_meta"] = {
                     "category_normalized": cat,
-                    "scoring_version": "v4.1.0",
+                    "scoring_version": "v4.2.1b",
                     "equity_scoring_mode": self.equity_scoring_mode,
+                    "score_source": score_source,
                     "note": "composite_score skipped - preset_meta handles equity scoring",
                     "buffett_score_computed": True,
                 }
