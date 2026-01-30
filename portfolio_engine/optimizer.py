@@ -267,14 +267,26 @@ def _to_0_100(x, *, default=None, unit_interval=False, strict=None):
                 return v
             return v * 100.0
         if abs(v - 1.0) < FLOAT_EPSILON:
-            return 1.0
+            return 100.0  # v4.2.1c FIX: 1.0 = 100%, pas 1%
         if 1.0 <= v <= 100.0:
             return v
         return max(0.0, min(100.0, v))
+def _zlike_to_0_100(v: float, k: float = 1.5) -> float:
+    """
+    v4.2.1c: Convertit un z-score [-inf, +inf] vers [0, 100] en préservant l'ordre.
+    
+    k=1.5 → ±3 sigma couvre ~[5, 95]
+    
+    Exemples:
+    - composite_score=-1.5 → 26.2 (mauvais)
+    - composite_score=0.0 → 50.0 (neutre)
+    - composite_score=+1.5 → 73.8 (bon)
+    """
+    return 50.0 * (math.tanh(v / k) + 1.0)       
 
 
 def _get_score_with_scaling(item, *, default=50.0):
-    """v4.2.1b FIX: Priorité _profile_score sur score pour equities."""
+    """v4.2.1c FIX: Priorité _profile_score sur score pour equities."""
     
     # 1. _profile_score EN PRIORITÉ (supposé [0,1])
     profile_raw = item.get("_profile_score")
@@ -296,12 +308,21 @@ def _get_score_with_scaling(item, *, default=50.0):
         if scaled is not None:
             return (scaled, "score")
     
-    # 3. composite_score (fallback)
+    # 3. composite_score (fallback) — v4.2.1c: traité comme z-score
     composite_raw = item.get("composite_score") or item.get("_composite_score")
     if composite_raw is not None:
-        scaled = _to_0_100(composite_raw, unit_interval=False)
-        if scaled is not None:
-            return (scaled, "composite_score")
+        try:
+            v = float(composite_raw)
+            if not (math.isnan(v) or math.isinf(v)):
+                # v4.2.1c: Si valeur dans range z-score typique [-10, +10], utiliser tanh
+                if -10.0 <= v <= 10.0:
+                    scaled = _zlike_to_0_100(v)
+                    return (scaled, "composite_score_zscore")
+                # Sinon, clamp classique
+                scaled = max(0.0, min(100.0, v))
+                return (scaled, "composite_score_clamped")
+        except (TypeError, ValueError):
+            pass
     
     return (default, "default")
 # =============================================================================
@@ -680,7 +701,7 @@ def to_python_native(obj: Any) -> Any:
         return float(obj)
     if isinstance(obj, (np.integer, np.int64, np.int32)):
         return int(obj)
-    if isinstance(obj, (np.bool_, np.bool)):
+   if isinstance(obj, (np.bool_, bool)):  # v4.2.1c FIX: np.bool deprecated in NumPy 2.x
         return bool(obj)
     if isinstance(obj, np.ndarray):
         return obj.tolist()
