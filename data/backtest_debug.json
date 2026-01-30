@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-01-30T10:40:22.450153",
+    "generated_at": "2026-01-30T15:03:44.584342",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -1066,7 +1066,7 @@
       "total_return_pct": 23.31,
       "volatility_annual_pct": 26.31,
       "weights_by_profile": {
-        "Agressif": 10.1
+        "Agressif": 9.7
       },
       "price_samples": [
         {
@@ -1409,7 +1409,7 @@
       "total_return_pct": 46.13,
       "volatility_annual_pct": 47.34,
       "weights_by_profile": {
-        "Agressif": 9.7
+        "Agressif": 10.1
       },
       "price_samples": [
         {
@@ -1463,8 +1463,8 @@
       "last_date": "2026-01-30",
       "first_price": 0.0,
       "last_price": 0.0,
-      "total_return_pct": -18.6,
-      "volatility_annual_pct": 43.02,
+      "total_return_pct": -20.93,
+      "volatility_annual_pct": 43.77,
       "weights_by_profile": {
         "Agressif": 4.75,
         "Modéré": 1.7
@@ -1507,7 +1507,7 @@
           "close": 0.0,
           "prev_date": "2026-01-29",
           "prev_close": 0.0,
-          "daily_return_pct": -2.7778,
+          "daily_return_pct": -5.5556,
           "formula": "(0.0000 / 0.0000) - 1"
         }
       ],
@@ -2655,9 +2655,9 @@
       "first_date": "2025-10-03",
       "last_date": "2026-01-30",
       "first_price": 3883.8,
-      "last_price": 5086.3,
-      "total_return_pct": 30.96,
-      "volatility_annual_pct": 29.49,
+      "last_price": 5032.6,
+      "total_return_pct": 29.58,
+      "volatility_annual_pct": 30.23,
       "weights_by_profile": {
         "Agressif": 3.54,
         "Modéré": 0.5
@@ -2697,11 +2697,11 @@
         },
         {
           "date": "2026-01-30",
-          "close": 5086.3,
+          "close": 5032.6,
           "prev_date": "2026-01-29",
           "prev_close": 5447.5,
-          "daily_return_pct": -6.6306,
-          "formula": "(5086.3000 / 5447.5000) - 1"
+          "daily_return_pct": -7.6163,
+          "formula": "(5032.6000 / 5447.5000) - 1"
         }
       ],
       "is_benchmark": false
@@ -2741,22 +2741,22 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "HINDALCO",
-          "type": "Action",
-          "weight_pct": 10.1,
-          "price_prev": 1024.8001,
-          "price_today": 962.1,
-          "return_pct": -6.1183,
-          "contribution_pct": -0.6179
-        },
-        {
           "ticker": "NEM",
           "type": "Action",
-          "weight_pct": 9.7,
+          "weight_pct": 10.1,
           "price_prev": 126.93,
           "price_today": 126.93,
           "return_pct": 0.0,
           "contribution_pct": 0.0
+        },
+        {
+          "ticker": "HINDALCO",
+          "type": "Action",
+          "weight_pct": 9.7,
+          "price_prev": 1024.8001,
+          "price_today": 962.1,
+          "return_pct": -6.1183,
+          "contribution_pct": -0.5935
         },
         {
           "ticker": "SCHC",
@@ -2782,8 +2782,8 @@
           "weight_pct": 4.75,
           "price_prev": 0.0,
           "price_today": 0.0,
-          "return_pct": -2.7778,
-          "contribution_pct": -0.1319
+          "return_pct": -5.5556,
+          "contribution_pct": -0.2639
         },
         {
           "ticker": "SPDW",
@@ -2799,12 +2799,12 @@
           "type": "Action",
           "weight_pct": 3.54,
           "price_prev": 5447.5,
-          "price_today": 5086.3,
-          "return_pct": -6.6306,
-          "contribution_pct": -0.2347
+          "price_today": 5032.6,
+          "return_pct": -7.6163,
+          "contribution_pct": -0.2696
         }
       ],
-      "total_portfolio_return_pct": -0.9846,
+      "total_portfolio_return_pct": -1.127,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -2886,11 +2886,11 @@
           11.11
         ],
         [
-          "HINDALCO",
+          "NEM",
           10.1
         ],
         [
-          "NEM",
+          "HINDALCO",
           9.7
         ]
       ]
@@ -2962,22 +2962,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 26.06,
-      "net_return_pct": 26.06,
-      "volatility_pct": 21.75,
-      "max_drawdown_pct": -7.54,
+      "gross_return_pct": 26.01,
+      "net_return_pct": 26.01,
+      "volatility_pct": 21.87,
+      "max_drawdown_pct": -7.59,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": -0.42,
-      "excess_return_pct": 26.48
+      "excess_return_pct": 26.43
     },
     "Modéré": {
-      "gross_return_pct": -0.68,
-      "net_return_pct": -0.68,
+      "gross_return_pct": -0.73,
+      "net_return_pct": -0.73,
       "volatility_pct": 12.89,
       "max_drawdown_pct": -4.45,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 2.93,
-      "excess_return_pct": -3.61
+      "excess_return_pct": -3.66
     },
     "Stable": {
       "gross_return_pct": 3.74,
