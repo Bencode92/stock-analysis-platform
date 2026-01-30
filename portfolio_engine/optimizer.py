@@ -4283,6 +4283,11 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             score_value, score_source = _get_score_with_scaling(item, default=50.0)
             item["_score_source"] = score_source  # Audit trail
             
+            # === DEBUG TEMPORAIRE v4.2.1b ===
+            if cat_normalized == "Actions" and score_source != "default":
+                logger.info(f"[v4.2.1b] {item.get('symbol') or item.get('ticker')}: score={score_value}, source={score_source}, raw_profile={item.get('_profile_score')}")
+            # === FIN DEBUG ===
+            
             asset = Asset(
                 id=str(raw_id),
                 name=item.get("name") or str(raw_id),
