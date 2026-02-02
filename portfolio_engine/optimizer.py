@@ -4309,7 +4309,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             score_value, score_source = _get_score_with_scaling(item, default=50.0)
             item["_score_source"] = score_source  # Audit trail
             
-            # === DEBUG TEMPORAIRE v4.2.1b ===
+            # === DEBUG TEMPORAIRE v4.2.1c ===
             if cat_normalized == "Actions" and score_source != "default":
                 logger.info(f"[v4.2.1c] {item.get('symbol') or item.get('ticker')}: score={score_value}, source={score_source}, raw_profile={item.get('_profile_score')}")   
             # === FIN DEBUG ===
@@ -4337,11 +4337,26 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             for item in items:
                 item["category"] = cat_key
                 assets.extend(convert_universe_to_assets([item]))
+
     # v4.2.1c: Compteur de sources pour validation
     source_counts = defaultdict(int)
     for a in assets:
         src = a.source_data.get("_score_source", "unknown") if a.source_data else "unknown"
         source_counts[src] += 1
-    logger.info(f"[v4.2.1c SCORE SOURCES] {dict(source_counts)}")           
-    
+    logger.info(f"[v4.2.1c SCORE SOURCES] {dict(source_counts)}")
+
+    # v4.2.1c DIAGNOSTIC: Score distribution par catégorie
+    cat_scores = defaultdict(list)
+    for a in assets:
+        cat_scores[a.category].append(a.score)
+    for cat, scores_list in cat_scores.items():
+        if scores_list:
+            arr = np.array(scores_list)
+            logger.info(
+                f"[v4.2.1c SCORE DIST] {cat}: "
+                f"n={len(scores_list)}, mean={arr.mean():.1f}, "
+                f"std={arr.std():.1f}, "
+                f"min={arr.min():.1f}, max={arr.max():.1f}"
+            )
+
     return assets
