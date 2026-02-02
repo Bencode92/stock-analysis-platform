@@ -701,7 +701,7 @@ def to_python_native(obj: Any) -> Any:
         return float(obj)
     if isinstance(obj, (np.integer, np.int64, np.int32)):
         return int(obj)
-   if isinstance(obj, (np.bool_, bool)):  # v4.2.1c FIX: np.bool deprecated in NumPy 2.x
+    if isinstance(obj, (np.bool_, bool)):  # v4.2.1c FIX: np.bool deprecated in NumPy 2.x
         return bool(obj)
     if isinstance(obj, np.ndarray):
         return obj.tolist()
