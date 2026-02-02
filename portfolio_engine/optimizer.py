@@ -1,6 +1,6 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.32 (P0 FIX role propagation)
+Optimiseur de portefeuille v6.32.1c (P0 FIX scoring + z-score)
 
 CHANGEMENTS v6.28 (4 FIXES CRITIQUES):
 1. FIX A: vol_annual lit maintenant les vraies colonnes par catégorie:
@@ -4311,7 +4311,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             
             # === DEBUG TEMPORAIRE v4.2.1b ===
             if cat_normalized == "Actions" and score_source != "default":
-                logger.info(f"[v4.2.1b] {item.get('symbol') or item.get('ticker')}: score={score_value}, source={score_source}, raw_profile={item.get('_profile_score')}")
+                logger.info(f"[v4.2.1c] {item.get('symbol') or item.get('ticker')}: score={score_value}, source={score_source}, raw_profile={item.get('_profile_score')}")   
             # === FIN DEBUG ===
             
             asset = Asset(
@@ -4337,5 +4337,11 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             for item in items:
                 item["category"] = cat_key
                 assets.extend(convert_universe_to_assets([item]))
+    # v4.2.1c: Compteur de sources pour validation
+    source_counts = defaultdict(int)
+    for a in assets:
+        src = a.source_data.get("_score_source", "unknown") if a.source_data else "unknown"
+        source_counts[src] += 1
+    logger.info(f"[v4.2.1c SCORE SOURCES] {dict(source_counts)}")           
     
     return assets
