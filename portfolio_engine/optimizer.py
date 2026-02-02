@@ -4331,7 +4331,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 symbol=item.get("symbol") or item.get("ticker"),   # v6.18.3: alias
             )
             assets.append(asset)
-    
+
     elif isinstance(universe, dict):
         for cat_key, items in universe.items():
             for item in items:
@@ -4345,7 +4345,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
         source_counts[src] += 1
     logger.info(f"[v4.2.1c SCORE SOURCES] {dict(source_counts)}")
 
-    # v4.2.1c DIAGNOSTIC: Score distribution par catégorie
+    # v4.2.1c DIAGNOSTIC: Score distribution par catégorie (AVANT normalisation)
     cat_scores = defaultdict(list)
     for a in assets:
         cat_scores[a.category].append(a.score)
@@ -4353,10 +4353,42 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
         if scores_list:
             arr = np.array(scores_list)
             logger.info(
-                f"[v4.2.1c SCORE DIST] {cat}: "
+                f"[v4.2.1c SCORE DIST BEFORE] {cat}: "
                 f"n={len(scores_list)}, mean={arr.mean():.1f}, "
                 f"std={arr.std():.1f}, "
                 f"min={arr.min():.1f}, max={arr.max():.1f}"
             )
+
+    # v4.2.1c FIX CRITICAL: Normalisation scores par catégorie
+    # Corrige le mismatch Actions(mean=56) vs ETF/Bonds/Crypto(mean=12)
+    # L'ordre intra-catégorie est préservé, seule l'échelle change
+    TARGET_MEAN = 50.0
+    TARGET_STD = 15.0
+    MIN_STD_FOR_RESCALE = 2.0
+
+    for cat, scores_list in cat_scores.items():
+        if len(scores_list) < 5:
+            continue
+        arr = np.array(scores_list)
+        cat_mean = arr.mean()
+        cat_std = arr.std()
+
+        if cat_std < MIN_STD_FOR_RESCALE:
+            logger.warning(f"[v4.2.1c NORM] {cat}: std={cat_std:.2f} trop faible, skip")
+            continue
+
+        cat_assets = [a for a in assets if a.category == cat]
+        for a in cat_assets:
+            z = (a.score - cat_mean) / cat_std
+            new_score = TARGET_MEAN + z * TARGET_STD
+            new_score = max(5.0, min(95.0, new_score))
+            a.score = round(new_score, 2)
+
+        new_scores = np.array([a.score for a in cat_assets])
+        logger.info(
+            f"[v4.2.1c NORM] {cat}: "
+            f"BEFORE mean={cat_mean:.1f} std={cat_std:.1f} → "
+            f"AFTER mean={new_scores.mean():.1f} std={new_scores.std():.1f}"
+        )
 
     return assets
