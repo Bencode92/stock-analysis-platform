@@ -1409,7 +1409,7 @@ def select_equities_for_profile(
             market_context=market_context,
         )
     
-    # v4.13.2: Utiliser la fonction corrigée de preset_meta.py
+# v4.13.2: Utiliser la fonction corrigée de preset_meta.py
     try:
         equities, selection_meta = select_equities_for_profile_v2(
             equities=eq_filtered,
@@ -1432,6 +1432,21 @@ def select_equities_for_profile(
             print(json.dumps(preset_counts, indent=2, sort_keys=True))
             print("="*70 + "\n")
         # ================================================
+        
+        # ========== DEBUG MISSING PRESETS ==========
+        if profile == "Agressif":
+            all_presets_in_final = set()
+            for eq in equities:
+                preset = eq.get("_matched_preset", "UNKNOWN")
+                all_presets_in_final.add(preset)
+            
+            print("\n" + "="*70)
+            print(f"DEBUG MISSING PRESETS - {profile}")
+            print("="*70)
+            print(f"Total equities after hard_filters: {len(equities)}")
+            print(f"All presets in final selection: {sorted(all_presets_in_final)}")
+            print("="*70 + "\n")
+        # ============================================
         
         # Enrichir la meta pour compatibilité avec le reste du pipeline
         selection_meta["selected"] = len(equities)
