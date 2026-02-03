@@ -1978,9 +1978,9 @@ class PortfolioOptimizer:
             if a.role:
                 bucket_dist[a.role.value] += 1
         logger.info(f"Buckets pool: {dict(bucket_dist)}")
+   
        # ========== DEBUG COMPLET POOL - AGRESSIF ==========
         if profile.name == "Agressif":
-            
             logger.info(f"\n{'='*70}")
             logger.info(f"DEBUG COMPLET POOL - {profile.name}")
             logger.info(f"{'='*70}")
@@ -1988,7 +1988,8 @@ class PortfolioOptimizer:
             # 1. Analyser par catégorie + bucket
             by_cat_bucket = defaultdict(lambda: defaultdict(list))
             for asset in selected:
-                by_cat_bucket[asset.category][asset.bucket].append(asset)
+                bucket = getattr(asset, 'bucket', 'unknown')  # Sécurisé
+                by_cat_bucket[asset.category][bucket].append(asset)
             
             logger.info(f"\n--- DISTRIBUTION PAR CATÉGORIE ET BUCKET ---")
             for category in ["Actions", "ETF", "Obligations", "Crypto"]:
@@ -1998,7 +1999,7 @@ class PortfolioOptimizer:
                 
                 logger.info(f"\n{category}: {len(cat_assets)} actifs")
                 
-                for bucket in ["core", "defensive", "satellite", "lottery"]:
+                for bucket in ["core", "defensive", "satellite", "lottery", "unknown"]:
                     assets = by_cat_bucket[category].get(bucket, [])
                     if not assets:
                         continue
@@ -2034,7 +2035,8 @@ class PortfolioOptimizer:
                 
                 bonds_by_bucket = defaultdict(list)
                 for b in bonds:
-                    bonds_by_bucket[b.bucket].append(b)
+                    bucket = getattr(b, 'bucket', 'unknown')  # Sécurisé
+                    bonds_by_bucket[bucket].append(b)
                 
                 for bucket, bond_list in bonds_by_bucket.items():
                     logger.info(f"\n  Bucket {bucket}: {len(bond_list)} bonds")
@@ -2043,6 +2045,7 @@ class PortfolioOptimizer:
                         logger.info(f"    {ticker}: score={b.score:.1f}")
             
             logger.info(f"\n{'='*70}\n")
+        # ==================================================
         # ==================================================
         
         # Log bonds count
