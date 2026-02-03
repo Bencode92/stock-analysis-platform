@@ -310,26 +310,26 @@ PRESET_RULES: Dict[str, Dict[str, float]] = {
     },
     "quality_premium": {
         "volatility_3y_max": 36.0,
-        "roe_min": 15.0,
-        "perf_3y_min": 35.0,
+        "roe_min": 12.0,
+        "perf_3y_min": 30.0,
         "buffett_score_min": 65.0,
     },
     "croissance": {
         "volatility_3y_max": 39.0,
-        "perf_1y_min": 4.0,       # Fix UNH (-33.8% 1Y)
-        "perf_3y_min": 25.0,
+        "perf_1y_min": 2.0,       # Fix UNH (-33.8% 1Y)
+        "perf_3y_min": 15.0,
         "payout_ratio_max": 60.0,
     },
     "momentum_trend": {
         "volatility_3y_max": 40.0,
-        "perf_1y_min": 10.0,      # Fix BIRG et momentum "mou"
+        "perf_1y_min": 6.0,      # Fix BIRG et momentum "mou"
         "perf_3m_min": 4.0,
         "perf_1m_min": 0.0,
     },
     "agressif": {
         "volatility_3y_min": 35.0,   # MIN pas MAX (cohérent avec assign)
         "volatility_3y_max": 60.0,
-        "perf_1y_min": 12.0,
+        "perf_1y_min": 5.0,
         "perf_ytd_min": 10.0,
     },
     "recovery": {
