@@ -128,6 +128,7 @@ try:
         PRESET_META,
         PROFILE_BUCKET_TARGETS,
         EQUITY_PRESETS,
+        select_equities_for_profile,  # ← NOUVELLE LIGNE
         ETF_PRESETS,
         CRYPTO_PRESETS,
         Role,
@@ -1781,7 +1782,69 @@ class PortfolioOptimizer:
             min_score = BUFFETT_MIN_BY_PROFILE.get(profile.name, self.buffett_min_score)
             universe = apply_buffett_hard_filter(universe, min_score=min_score)
             logger.info(f"Post-Buffett-filter universe: {len(universe)} actifs (min={min_score})")
-        
+           
+        # === PATCH v8.0 ÉTAPE 4: Brancher preset_meta pour Actions ===
+        if HAS_PRESET_META:
+            equity_assets = [a for a in universe if a.category == "Actions"]
+            
+            if equity_assets:
+                # Convertir Asset → Dict via source_data
+                equity_dicts = []
+                asset_by_id = {}
+                
+                for asset in equity_assets:
+                    if asset.source_data:
+                        # Enrichir avec les champs de base si manquants
+                        eq_dict = asset.source_data.copy()
+                        eq_dict.setdefault("ticker", asset.ticker or asset.id)
+                        eq_dict.setdefault("symbol", asset.ticker or asset.id)
+                        eq_dict.setdefault("name", asset.name)
+                        
+                        equity_dicts.append(eq_dict)
+                        # Index par ticker ET par id (fallback)
+                        asset_by_id[asset.id] = asset
+                        if asset.ticker:
+                            asset_by_id[asset.ticker] = asset
+                
+                if equity_dicts:
+                    try:
+                        selected_dicts, equity_meta = select_equities_for_profile(
+                            equities=equity_dicts,
+                            profile=profile.name,
+                            target_n=min(25, profile.max_assets)
+                        )
+                        
+                        # Enrichir les objets Asset originaux
+                        enriched_count = 0
+                        for eq_dict in selected_dicts:
+                            # Trouver l'asset correspondant
+                            ticker = eq_dict.get("ticker") or eq_dict.get("symbol")
+                            asset = asset_by_id.get(ticker)
+                            
+                            if asset:
+                                # Injecter preset
+                                preset_name = eq_dict.get("_matched_preset")
+                                if preset_name:
+                                    asset.preset = preset_name
+                                    # Déduire role depuis EQUITY_PRESETS
+                                    if preset_name in EQUITY_PRESETS:
+                                        asset.role = EQUITY_PRESETS[preset_name].role
+                                        enriched_count += 1
+                                
+                                # Mettre à jour score si _profile_score disponible
+                                if "_profile_score" in eq_dict:
+                                    # Convertir [0,1] → [0,100]
+                                    profile_score = eq_dict["_profile_score"]
+                                    asset.score = round(float(profile_score * 100), 2)
+                        
+                        rule_failed = equity_meta.get("stages", {}).get("preset_rules", {}).get("failed", 0)
+                        logger.info(
+                            f"[PATCH v8.0 EQUITY] {enriched_count}/{len(equity_assets)} equities enriched via preset_meta, "
+                            f"preset_rule_failed={rule_failed}"
+                        )
+                    
+                    except Exception as e:
+                        logger.error(f"[PATCH v8.0 EQUITY] preset_meta failed: {e}, fallback to heuristic")
         # === ÉTAPE 4: Enrichir avec buckets ===
         universe = enrich_assets_with_buckets(universe)
         
