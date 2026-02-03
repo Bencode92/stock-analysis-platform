@@ -1980,7 +1980,6 @@ class PortfolioOptimizer:
         logger.info(f"Buckets pool: {dict(bucket_dist)}")
        # ========== DEBUG COMPLET POOL - AGRESSIF ==========
         if profile.name == "Agressif":
-            from collections import defaultdict
             
             logger.info(f"\n{'='*70}")
             logger.info(f"DEBUG COMPLET POOL - {profile.name}")
