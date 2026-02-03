@@ -1978,6 +1978,73 @@ class PortfolioOptimizer:
             if a.role:
                 bucket_dist[a.role.value] += 1
         logger.info(f"Buckets pool: {dict(bucket_dist)}")
+       # ========== DEBUG COMPLET POOL - AGRESSIF ==========
+        if profile.name == "Agressif":
+            from collections import defaultdict
+            
+            logger.info(f"\n{'='*70}")
+            logger.info(f"DEBUG COMPLET POOL - {profile.name}")
+            logger.info(f"{'='*70}")
+            
+            # 1. Analyser par catégorie + bucket
+            by_cat_bucket = defaultdict(lambda: defaultdict(list))
+            for asset in selected:
+                by_cat_bucket[asset.category][asset.bucket].append(asset)
+            
+            logger.info(f"\n--- DISTRIBUTION PAR CATÉGORIE ET BUCKET ---")
+            for category in ["Actions", "ETF", "Obligations", "Crypto"]:
+                cat_assets = [a for a in selected if a.category == category]
+                if not cat_assets:
+                    continue
+                
+                logger.info(f"\n{category}: {len(cat_assets)} actifs")
+                
+                for bucket in ["core", "defensive", "satellite", "lottery"]:
+                    assets = by_cat_bucket[category].get(bucket, [])
+                    if not assets:
+                        continue
+                    
+                    scores = [a.score for a in assets]
+                    avg_score = sum(scores) / len(scores)
+                    logger.info(f"  [{bucket}]: {len(assets)} actifs, avg_score={avg_score:.1f}")
+                    
+                    # Top 2 de ce bucket
+                    top2 = sorted(assets, key=lambda a: a.score, reverse=True)[:2]
+                    for a in top2:
+                        ticker = a.ticker or a.id
+                        logger.info(f"      {ticker}: score={a.score:.1f}")
+            
+            # 2. Vérifier contraintes vs réalité
+            logger.info(f"\n--- VÉRIFICATION CONTRAINTES ---")
+            logger.info(f"Contraintes Agressif:")
+            logger.info(f"  DEFENSIVE: 5%-15% (max 15%)")
+            logger.info(f"  SATELLITE: 35%-60%")
+            logger.info(f"  CORE: 30%-45%")
+            
+            logger.info(f"\nPool disponible:")
+            logger.info(f"  defensive: {bucket_dist.get('defensive', 0)} actifs")
+            logger.info(f"  satellite: {bucket_dist.get('satellite', 0)} actifs")
+            logger.info(f"  core: {bucket_dist.get('core', 0)} actifs")
+            logger.info(f"  lottery: {bucket_dist.get('lottery', 0)} actifs")
+            
+            # 3. Analyser les bonds spécifiquement
+            bonds = [a for a in selected if a.category == "Obligations"]
+            if bonds:
+                logger.info(f"\n--- ANALYSE DÉTAILLÉE OBLIGATIONS ---")
+                logger.info(f"Total obligations: {len(bonds)}")
+                
+                bonds_by_bucket = defaultdict(list)
+                for b in bonds:
+                    bonds_by_bucket[b.bucket].append(b)
+                
+                for bucket, bond_list in bonds_by_bucket.items():
+                    logger.info(f"\n  Bucket {bucket}: {len(bond_list)} bonds")
+                    for b in sorted(bond_list, key=lambda x: x.score, reverse=True):
+                        ticker = b.ticker or b.id
+                        logger.info(f"    {ticker}: score={b.score:.1f}")
+            
+            logger.info(f"\n{'='*70}\n")
+        # ==================================================
         
         # Log bonds count
         bonds_count = sum(1 for a in selected if a.category == "Obligations")
