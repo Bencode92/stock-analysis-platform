@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-03T15:55:16.925931",
+    "generated_at": "2026-02-03T16:05:36.738563",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -20,23 +20,21 @@
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 33,
-    "tickers_with_data": 33,
+    "total_tickers_requested": 32,
+    "tickers_with_data": 32,
     "tickers_missing": []
   },
   "assets_by_type": {
     "Action": [
-      "CLX",
       "DGRO",
       "GBIL",
       "GSST",
       "GSY",
-      "HCA",
+      "ICVT",
       "IEI",
       "IGIB",
+      "KBC",
       "MBB",
-      "MRK",
-      "NEM",
       "PAXG/USD",
       "SCHC",
       "SCHI",
@@ -48,6 +46,7 @@
       "VTV",
       "VUSB",
       "VXUS",
+      "WDC",
       "XAUT/USD"
     ],
     "ETF": [
@@ -193,7 +192,7 @@
       "total_return_pct": -0.23,
       "volatility_annual_pct": 1.73,
       "weights_by_profile": {
-        "Modéré": 8.0
+        "Modéré": 6.0
       },
       "price_samples": [
         {
@@ -235,63 +234,6 @@
           "prev_close": 78.62,
           "daily_return_pct": 0.0,
           "formula": "(78.6200 / 78.6200) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "CLX": {
-      "ticker": "CLX",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-10-07",
-      "last_date": "2026-02-03",
-      "first_price": 120.49,
-      "last_price": 113.29,
-      "total_return_pct": -5.98,
-      "volatility_annual_pct": 23.06,
-      "weights_by_profile": {
-        "Stable": 10.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-10-07",
-          "close": 120.49,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-11-05",
-          "close": 108.92,
-          "prev_date": "2025-11-04",
-          "prev_close": 110.42,
-          "daily_return_pct": -1.3584,
-          "formula": "(108.9200 / 110.4200) - 1"
-        },
-        {
-          "date": "2025-12-05",
-          "close": 104.9,
-          "prev_date": "2025-12-04",
-          "prev_close": 105.1,
-          "daily_return_pct": -0.1903,
-          "formula": "(104.9000 / 105.1000) - 1"
-        },
-        {
-          "date": "2026-01-05",
-          "close": 101.28,
-          "prev_date": "2026-01-02",
-          "prev_close": 100.85,
-          "daily_return_pct": 0.4264,
-          "formula": "(101.2800 / 100.8500) - 1"
-        },
-        {
-          "date": "2026-02-03",
-          "close": 113.29,
-          "prev_date": "2026-02-02",
-          "prev_close": 113.29,
-          "daily_return_pct": 0.0,
-          "formula": "(113.2900 / 113.2900) - 1"
         }
       ],
       "is_benchmark": false
@@ -524,23 +466,23 @@
       ],
       "is_benchmark": false
     },
-    "HCA": {
-      "ticker": "HCA",
+    "ICVT": {
+      "ticker": "ICVT",
       "type": "Action",
       "n_days_data": 86,
       "first_date": "2025-10-07",
       "last_date": "2026-02-03",
-      "first_price": 437.57,
-      "last_price": 496.85,
-      "total_return_pct": 13.55,
-      "volatility_annual_pct": 27.08,
+      "first_price": 101.78,
+      "last_price": 103.98,
+      "total_return_pct": 2.16,
+      "volatility_annual_pct": 14.46,
       "weights_by_profile": {
-        "Agressif": 14.64
+        "Agressif": 5.0
       },
       "price_samples": [
         {
           "date": "2025-10-07",
-          "close": 437.57,
+          "close": 101.78,
           "prev_date": null,
           "prev_close": null,
           "daily_return_pct": null,
@@ -548,35 +490,35 @@
         },
         {
           "date": "2025-11-05",
-          "close": 473.2,
+          "close": 102.86,
           "prev_date": "2025-11-04",
-          "prev_close": 471.68,
-          "daily_return_pct": 0.3223,
-          "formula": "(473.2000 / 471.6800) - 1"
+          "prev_close": 101.47,
+          "daily_return_pct": 1.3699,
+          "formula": "(102.8600 / 101.4700) - 1"
         },
         {
           "date": "2025-12-05",
-          "close": 486.7,
+          "close": 99.995,
           "prev_date": "2025-12-04",
-          "prev_close": 487.66,
-          "daily_return_pct": -0.1969,
-          "formula": "(486.7000 / 487.6600) - 1"
+          "prev_close": 100.3,
+          "daily_return_pct": -0.3041,
+          "formula": "(99.9950 / 100.3000) - 1"
         },
         {
           "date": "2026-01-05",
-          "close": 477.83,
+          "close": 100.93,
           "prev_date": "2026-01-02",
-          "prev_close": 470.39,
-          "daily_return_pct": 1.5817,
-          "formula": "(477.8300 / 470.3900) - 1"
+          "prev_close": 100.03,
+          "daily_return_pct": 0.8997,
+          "formula": "(100.9300 / 100.0300) - 1"
         },
         {
           "date": "2026-02-03",
-          "close": 496.85,
+          "close": 103.98,
           "prev_date": "2026-02-02",
-          "prev_close": 496.85,
+          "prev_close": 103.98,
           "daily_return_pct": 0.0,
-          "formula": "(496.8500 / 496.8500) - 1"
+          "formula": "(103.9800 / 103.9800) - 1"
         }
       ],
       "is_benchmark": false
@@ -695,6 +637,64 @@
       ],
       "is_benchmark": false
     },
+    "KBC": {
+      "ticker": "KBC",
+      "type": "Action",
+      "n_days_data": 86,
+      "first_date": "2025-10-07",
+      "last_date": "2026-02-03",
+      "first_price": 99.78,
+      "last_price": 122.35,
+      "total_return_pct": 22.62,
+      "volatility_annual_pct": 16.5,
+      "weights_by_profile": {
+        "Modéré": 15.0,
+        "Stable": 10.0
+      },
+      "price_samples": [
+        {
+          "date": "2025-10-07",
+          "close": 99.78,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-11-05",
+          "close": 104.45,
+          "prev_date": "2025-11-04",
+          "prev_close": 104.65,
+          "daily_return_pct": -0.1911,
+          "formula": "(104.4500 / 104.6500) - 1"
+        },
+        {
+          "date": "2025-12-05",
+          "close": 106.6,
+          "prev_date": "2025-12-04",
+          "prev_close": 106.55,
+          "daily_return_pct": 0.0469,
+          "formula": "(106.6000 / 106.5500) - 1"
+        },
+        {
+          "date": "2026-01-05",
+          "close": 113.95,
+          "prev_date": "2026-01-02",
+          "prev_close": 113.5,
+          "daily_return_pct": 0.3965,
+          "formula": "(113.9500 / 113.5000) - 1"
+        },
+        {
+          "date": "2026-02-03",
+          "close": 122.35,
+          "prev_date": "2026-02-02",
+          "prev_close": 122.35,
+          "daily_return_pct": 0.0,
+          "formula": "(122.3500 / 122.3500) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
     "MBB": {
       "ticker": "MBB",
       "type": "Action",
@@ -706,7 +706,7 @@
       "total_return_pct": 0.14,
       "volatility_annual_pct": 3.81,
       "weights_by_profile": {
-        "Agressif": 2.36
+        "Agressif": 5.0
       },
       "price_samples": [
         {
@@ -752,120 +752,6 @@
       ],
       "is_benchmark": false
     },
-    "MRK": {
-      "ticker": "MRK",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-10-07",
-      "last_date": "2026-02-03",
-      "first_price": 87.61,
-      "last_price": 113.37,
-      "total_return_pct": 29.4,
-      "volatility_annual_pct": 24.96,
-      "weights_by_profile": {
-        "Modéré": 13.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-10-07",
-          "close": 87.61,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-11-05",
-          "close": 84.39,
-          "prev_date": "2025-11-04",
-          "prev_close": 83.86,
-          "daily_return_pct": 0.632,
-          "formula": "(84.3900 / 83.8600) - 1"
-        },
-        {
-          "date": "2025-12-05",
-          "close": 99.72,
-          "prev_date": "2025-12-04",
-          "prev_close": 100.89,
-          "daily_return_pct": -1.1597,
-          "formula": "(99.7200 / 100.8900) - 1"
-        },
-        {
-          "date": "2026-01-05",
-          "close": 107.44,
-          "prev_date": "2026-01-02",
-          "prev_close": 106.45,
-          "daily_return_pct": 0.93,
-          "formula": "(107.4400 / 106.4500) - 1"
-        },
-        {
-          "date": "2026-02-03",
-          "close": 113.37,
-          "prev_date": "2026-02-02",
-          "prev_close": 113.37,
-          "daily_return_pct": 0.0,
-          "formula": "(113.3700 / 113.3700) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "NEM": {
-      "ticker": "NEM",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-10-07",
-      "last_date": "2026-02-03",
-      "first_price": 86.95,
-      "last_price": 112.85,
-      "total_return_pct": 29.79,
-      "volatility_annual_pct": 51.44,
-      "weights_by_profile": {
-        "Agressif": 15.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-10-07",
-          "close": 86.95,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-11-05",
-          "close": 81.63,
-          "prev_date": "2025-11-04",
-          "prev_close": 78.9,
-          "daily_return_pct": 3.4601,
-          "formula": "(81.6300 / 78.9000) - 1"
-        },
-        {
-          "date": "2025-12-05",
-          "close": 89.76,
-          "prev_date": "2025-12-04",
-          "prev_close": 90.72,
-          "daily_return_pct": -1.0582,
-          "formula": "(89.7600 / 90.7200) - 1"
-        },
-        {
-          "date": "2026-01-05",
-          "close": 103.53,
-          "prev_date": "2026-01-02",
-          "prev_close": 101.22,
-          "daily_return_pct": 2.2822,
-          "formula": "(103.5300 / 101.2200) - 1"
-        },
-        {
-          "date": "2026-02-03",
-          "close": 112.85,
-          "prev_date": "2026-02-02",
-          "prev_close": 112.85,
-          "daily_return_pct": 0.0,
-          "formula": "(112.8500 / 112.8500) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "PAXG/USD": {
       "ticker": "PAXG/USD",
       "type": "Action",
@@ -877,7 +763,7 @@
       "total_return_pct": 23.44,
       "volatility_annual_pct": 34.56,
       "weights_by_profile": {
-        "Agressif": 1.5,
+        "Agressif": 6.5,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -990,7 +876,7 @@
       "total_return_pct": 6.72,
       "volatility_annual_pct": 13.49,
       "weights_by_profile": {
-        "Agressif": 5.0
+        "Agressif": 8.0
       },
       "price_samples": [
         {
@@ -1499,7 +1385,7 @@
       "total_return_pct": 9.58,
       "volatility_annual_pct": 11.55,
       "weights_by_profile": {
-        "Agressif": 15.0,
+        "Agressif": 12.0,
         "Modéré": 15.0
       },
       "price_samples": [
@@ -1890,6 +1776,63 @@
       ],
       "is_benchmark": false
     },
+    "WDC": {
+      "ticker": "WDC",
+      "type": "Action",
+      "n_days_data": 86,
+      "first_date": "2025-10-07",
+      "last_date": "2026-02-03",
+      "first_price": 119.93,
+      "last_price": 270.23,
+      "total_return_pct": 125.32,
+      "volatility_annual_pct": 75.27,
+      "weights_by_profile": {
+        "Agressif": 15.0
+      },
+      "price_samples": [
+        {
+          "date": "2025-10-07",
+          "close": 119.93,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-11-05",
+          "close": 160.1,
+          "prev_date": "2025-11-04",
+          "prev_close": 152.18,
+          "daily_return_pct": 5.2044,
+          "formula": "(160.1000 / 152.1800) - 1"
+        },
+        {
+          "date": "2025-12-05",
+          "close": 168.89,
+          "prev_date": "2025-12-04",
+          "prev_close": 161.0,
+          "daily_return_pct": 4.9006,
+          "formula": "(168.8900 / 161.0000) - 1"
+        },
+        {
+          "date": "2026-01-05",
+          "close": 187.88,
+          "prev_date": "2026-01-02",
+          "prev_close": 187.7,
+          "daily_return_pct": 0.0959,
+          "formula": "(187.8800 / 187.7000) - 1"
+        },
+        {
+          "date": "2026-02-03",
+          "close": 270.23,
+          "prev_date": "2026-02-02",
+          "prev_close": 270.23,
+          "daily_return_pct": 0.0,
+          "formula": "(270.2300 / 270.2300) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
     "XAUT/USD": {
       "ticker": "XAUT/USD",
       "type": "Action",
@@ -1897,11 +1840,11 @@
       "first_date": "2025-10-07",
       "last_date": "2026-02-03",
       "first_price": 3997.0,
-      "last_price": 4933.1,
-      "total_return_pct": 23.42,
-      "volatility_annual_pct": 33.03,
+      "last_price": 4943.3,
+      "total_return_pct": 23.68,
+      "volatility_annual_pct": 33.09,
       "weights_by_profile": {
-        "Agressif": 1.5,
+        "Agressif": 3.5,
         "Modéré": 0.5
       },
       "price_samples": [
@@ -1939,11 +1882,11 @@
         },
         {
           "date": "2026-02-03",
-          "close": 4933.1,
+          "close": 4943.3,
           "prev_date": "2026-02-02",
           "prev_close": 4773.3,
-          "daily_return_pct": 3.3478,
-          "formula": "(4933.1000 / 4773.3000) - 1"
+          "daily_return_pct": 3.5615,
+          "formula": "(4943.3000 / 4773.3000) - 1"
         }
       ],
       "is_benchmark": false
@@ -1956,20 +1899,11 @@
       "profile": "Agressif",
       "assets": [
         {
-          "ticker": "VEA",
-          "type": "ETF",
-          "weight_pct": 15.0,
-          "price_prev": 66.46,
-          "price_today": 66.46,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
-        },
-        {
-          "ticker": "NEM",
+          "ticker": "WDC",
           "type": "Action",
           "weight_pct": 15.0,
-          "price_prev": 112.85,
-          "price_today": 112.85,
+          "price_prev": 270.23,
+          "price_today": 270.23,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1983,22 +1917,31 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "HCA",
-          "type": "Action",
-          "weight_pct": 14.64,
-          "price_prev": 496.85,
-          "price_today": 496.85,
+          "ticker": "VEA",
+          "type": "ETF",
+          "weight_pct": 12.0,
+          "price_prev": 66.46,
+          "price_today": 66.46,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
         {
           "ticker": "SCHC",
           "type": "Action",
-          "weight_pct": 5.0,
+          "weight_pct": 8.0,
           "price_prev": 48.75,
           "price_today": 48.75,
           "return_pct": 0.0,
           "contribution_pct": 0.0
+        },
+        {
+          "ticker": "PAXG/USD",
+          "type": "Action",
+          "weight_pct": 6.5,
+          "price_prev": 4794.4199,
+          "price_today": 4938.75,
+          "return_pct": 3.0104,
+          "contribution_pct": 0.1957
         },
         {
           "ticker": "VCIT",
@@ -2046,23 +1989,23 @@
           "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": 0.0,
+      "total_portfolio_return_pct": 0.1957,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
   "calculation_examples": [
     {
       "asset_type": "Action",
-      "ticker": "CLX",
+      "ticker": "DGRO",
       "date": "2025-11-05",
       "prev_date": "2025-11-04",
-      "close_J": 108.92,
-      "close_J_minus_1": 110.42,
-      "formula": "(108.9200 / 110.4200) - 1",
-      "daily_return_pct": -1.3584,
-      "weight_pct": 10.0,
-      "contribution_pct": -0.1358,
-      "explanation": "Le 2025-11-05, CLX (Action) a clôturé à 108.92 vs 110.42 le 2025-11-04, soit un rendement de -1.36%"
+      "close_J": 67.72,
+      "close_J_minus_1": 67.54,
+      "formula": "(67.7200 / 67.5400) - 1",
+      "daily_return_pct": 0.2665,
+      "weight_pct": 11.43,
+      "contribution_pct": 0.0305,
+      "explanation": "Le 2025-11-05, DGRO (Action) a clôturé à 67.72 vs 67.54 le 2025-11-04, soit un rendement de 0.27%"
     },
     {
       "asset_type": "ETF",
@@ -2073,8 +2016,8 @@
       "close_J_minus_1": 60.32,
       "formula": "(60.7000 / 60.3200) - 1",
       "daily_return_pct": 0.63,
-      "weight_pct": 15.0,
-      "contribution_pct": 0.0945,
+      "weight_pct": 12.0,
+      "contribution_pct": 0.0756,
       "explanation": "Le 2025-11-05, VEA (ETF) a clôturé à 60.7 vs 60.32 le 2025-11-04, soit un rendement de 0.63%"
     },
     {
@@ -2109,18 +2052,14 @@
       "n_assets": 14,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
-        "Action": 70.0,
-        "ETF": 15.0,
+        "Action": 73.0,
+        "ETF": 12.0,
         "Bond_ETF": 15.0,
         "Crypto": 0
       },
       "top_5_holdings": [
         [
-          "VEA",
-          15.0
-        ],
-        [
-          "NEM",
+          "WDC",
           15.0
         ],
         [
@@ -2128,12 +2067,16 @@
           15.0
         ],
         [
-          "HCA",
-          14.64
+          "VEA",
+          12.0
         ],
         [
           "SCHC",
-          5.0
+          8.0
+        ],
+        [
+          "PAXG/USD",
+          6.5
         ]
       ]
     },
@@ -2141,9 +2084,9 @@
       "n_assets": 12,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
-        "Action": 53.0,
+        "Action": 55.0,
         "ETF": 15.0,
-        "Bond_ETF": 32.0,
+        "Bond_ETF": 30.0,
         "Crypto": 0
       },
       "top_5_holdings": [
@@ -2152,12 +2095,12 @@
           15.0
         ],
         [
-          "VXUS",
+          "KBC",
           15.0
         ],
         [
-          "MRK",
-          13.0
+          "VXUS",
+          15.0
         ],
         [
           "VGIT",
@@ -2204,31 +2147,31 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 10.09,
-      "net_return_pct": 10.09,
-      "volatility_pct": 11.32,
-      "max_drawdown_pct": -3.6,
+      "gross_return_pct": 15.0,
+      "net_return_pct": 15.0,
+      "volatility_pct": 16.0,
+      "max_drawdown_pct": -4.83,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 0.46,
-      "excess_return_pct": 9.63
+      "excess_return_pct": 14.54
     },
     "Modéré": {
-      "gross_return_pct": 6.7,
-      "net_return_pct": 6.7,
-      "volatility_pct": 5.71,
-      "max_drawdown_pct": -1.39,
+      "gross_return_pct": 5.1,
+      "net_return_pct": 5.1,
+      "volatility_pct": 5.02,
+      "max_drawdown_pct": -2.18,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 3.67,
-      "excess_return_pct": 3.03
+      "excess_return_pct": 1.43
     },
     "Stable": {
-      "gross_return_pct": 2.86,
-      "net_return_pct": 2.86,
-      "volatility_pct": 4.38,
-      "max_drawdown_pct": -1.4,
+      "gross_return_pct": 4.06,
+      "net_return_pct": 4.06,
+      "volatility_pct": 3.85,
+      "max_drawdown_pct": -1.39,
       "benchmark_symbol": "AGG",
       "benchmark_return_pct": -0.18,
-      "excess_return_pct": 3.04
+      "excess_return_pct": 4.24
     }
   },
   "uniformity_proof": {
