@@ -1838,6 +1838,39 @@ class PortfolioOptimizer:
                                     asset.score = round(float(profile_score * 100), 2)
                         
                         rule_failed = equity_meta.get("stages", {}).get("preset_rules", {}).get("failed", 0)
+                        
+                        # ========== DEBUG ENRICHISSEMENT ==========
+                        logger.info(f"\n{'='*70}")
+                        logger.info(f"DEBUG ENRICHISSEMENT - {profile.name}")
+                        logger.info(f"{'='*70}")
+                        logger.info(f"Equity assets AVANT: {len(equity_assets)}")
+                        logger.info(f"Selected dicts retournés: {len(selected_dicts)}")
+                        logger.info(f"Enriched count: {enriched_count}")
+                        
+                        # Compter les presets dans selected_dicts
+                        preset_dist = {}
+                        for eq in selected_dicts:
+                            preset = eq.get("_matched_preset", "NONE")
+                            preset_dist[preset] = preset_dist.get(preset, 0) + 1
+                        
+                        logger.info(f"Preset distribution in selected_dicts: {preset_dist}")
+                        logger.info(f"EQUITY_PRESETS keys: {list(EQUITY_PRESETS.keys())}")
+                        
+                        # Vérifier le matching
+                        matched = 0
+                        unmatched_presets = set()
+                        for eq in selected_dicts:
+                            preset = eq.get("_matched_preset")
+                            if preset and preset in EQUITY_PRESETS:
+                                matched += 1
+                            elif preset:
+                                unmatched_presets.add(preset)
+                        
+                        logger.info(f"Matched presets: {matched}/{len(selected_dicts)}")
+                        logger.info(f"Unmatched presets: {unmatched_presets}")
+                        logger.info(f"{'='*70}\n")
+                        # ==========================================
+                        
                         logger.info(
                             f"[PATCH v8.0 EQUITY] {enriched_count}/{len(equity_assets)} equities enriched via preset_meta, "
                             f"preset_rule_failed={rule_failed}"
@@ -1845,6 +1878,7 @@ class PortfolioOptimizer:
                     
                     except Exception as e:
                         logger.error(f"[PATCH v8.0 EQUITY] preset_meta failed: {e}, fallback to heuristic")
+
         # === ÉTAPE 4: Enrichir avec buckets ===
         universe = enrich_assets_with_buckets(universe)
         
