@@ -1934,18 +1934,11 @@ class PortfolioOptimizer:
         logger.info(f"[POOL DIAG {profile.name}] Breakdown: "
                     f"Stocks={len(pool_stocks)}, ETF={len(pool_etf)}, "
                     f"Bonds={len(pool_bonds)}, Crypto={len(pool_crypto)}")
-        # Feasibility check pour min_stock_weight
-        max_single = getattr(profile, 'max_single_position', 15.0)
-        min_stock_w = getattr(profile, 'min_stock_weight', 0.0)
-        max_possible_stock = len(pool_stocks) * max_single
-        logger.info(f"[FEASIBILITY {profile.name}] "
-                    f"max_possible_stock={max_possible_stock:.1f}% "
-                    f"(={len(pool_stocks)} stocks × {max_single}%) "
-                    f"vs min_required={min_stock_w}%")
-        if max_possible_stock < min_stock_w:
-            logger.error(f"[INFEASIBLE {profile.name}] "
-                         f"Cannot reach min_stock_weight! "
-                         f"Need {min_stock_w}% but max possible is {max_possible_stock:.1f}%")
+        # v7.0: Pool diagnostic (stock sleeve supprimé)
+        logger.info(f"[v7.0 POOL {profile.name}] "
+                    f"Stocks={len(pool_stocks)}, ETF={len(pool_etf)}, "
+                    f"Bonds={len(pool_bonds)}, Crypto={len(pool_crypto)}, "
+                    f"max_any_category={getattr(profile, 'max_any_category', 100)}%")
         
         # Log bucket distribution
         bucket_dist = defaultdict(int)
@@ -2088,7 +2081,7 @@ class PortfolioOptimizer:
         # Les bucket targets (CORE/DEFENSIVE/SATELLITE) sont maintenant une pénalité
         # dans objective() pour éviter l'infaisabilité SLSQP.
  
-      # 9. P0 PARTNER: Contrainte turnover max
+        # 9. P0 PARTNER: Contrainte turnover max
         # Note: prev_weights_array doit être passé via closure ou attribut
         # Ici on utilise une approche simplifiée via self._prev_weights_array
         if hasattr(self, '_prev_weights_array') and self._prev_weights_array is not None:
