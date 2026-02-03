@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-03T16:05:36.738563",
+    "generated_at": "2026-02-03T16:44:43.177794",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -20,8 +20,8 @@
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 32,
-    "tickers_with_data": 32,
+    "total_tickers_requested": 30,
+    "tickers_with_data": 30,
     "tickers_missing": []
   },
   "assets_by_type": {
@@ -42,9 +42,7 @@
       "SCHV",
       "SPMB",
       "SPTI",
-      "VNLA",
       "VTV",
-      "VUSB",
       "VXUS",
       "WDC",
       "XAUT/USD"
@@ -249,7 +247,7 @@
       "total_return_pct": 5.64,
       "volatility_annual_pct": 9.85,
       "weights_by_profile": {
-        "Stable": 11.43
+        "Stable": 13.79
       },
       "price_samples": [
         {
@@ -306,7 +304,7 @@
       "total_return_pct": -0.04,
       "volatility_annual_pct": 1.06,
       "weights_by_profile": {
-        "Stable": 13.33
+        "Stable": 15.0
       },
       "price_samples": [
         {
@@ -363,7 +361,7 @@
       "total_return_pct": 0.02,
       "volatility_annual_pct": 1.24,
       "weights_by_profile": {
-        "Stable": 13.33
+        "Stable": 15.0
       },
       "price_samples": [
         {
@@ -420,7 +418,7 @@
       "total_return_pct": -0.02,
       "volatility_annual_pct": 1.2,
       "weights_by_profile": {
-        "Stable": 13.33
+        "Stable": 15.0
       },
       "price_samples": [
         {
@@ -649,7 +647,7 @@
       "volatility_annual_pct": 16.5,
       "weights_by_profile": {
         "Modéré": 15.0,
-        "Stable": 10.0
+        "Stable": 15.0
       },
       "price_samples": [
         {
@@ -759,9 +757,9 @@
       "first_date": "2025-10-07",
       "last_date": "2026-02-03",
       "first_price": 4000.8799,
-      "last_price": 4938.75,
-      "total_return_pct": 23.44,
-      "volatility_annual_pct": 34.56,
+      "last_price": 5006.75,
+      "total_return_pct": 25.14,
+      "volatility_annual_pct": 34.98,
       "weights_by_profile": {
         "Agressif": 6.5,
         "Modéré": 0.5
@@ -801,11 +799,11 @@
         },
         {
           "date": "2026-02-03",
-          "close": 4938.75,
+          "close": 5006.75,
           "prev_date": "2026-02-02",
           "prev_close": 4794.4199,
-          "daily_return_pct": 3.0104,
-          "formula": "(4938.7500 / 4794.4199) - 1"
+          "daily_return_pct": 4.4287,
+          "formula": "(5006.7500 / 4794.4199) - 1"
         }
       ],
       "is_benchmark": false
@@ -1047,7 +1045,7 @@
       "total_return_pct": 7.65,
       "volatility_annual_pct": 10.36,
       "weights_by_profile": {
-        "Stable": 7.14
+        "Stable": 13.0
       },
       "price_samples": [
         {
@@ -1490,63 +1488,6 @@
       ],
       "is_benchmark": false
     },
-    "VNLA": {
-      "ticker": "VNLA",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-10-07",
-      "last_date": "2026-02-03",
-      "first_price": 49.16,
-      "last_price": 49.14,
-      "total_return_pct": -0.04,
-      "volatility_annual_pct": 1.44,
-      "weights_by_profile": {
-        "Stable": 6.29
-      },
-      "price_samples": [
-        {
-          "date": "2025-10-07",
-          "close": 49.16,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-11-05",
-          "close": 49.14,
-          "prev_date": "2025-11-04",
-          "prev_close": 49.14,
-          "daily_return_pct": 0.0,
-          "formula": "(49.1400 / 49.1400) - 1"
-        },
-        {
-          "date": "2025-12-05",
-          "close": 49.14,
-          "prev_date": "2025-12-04",
-          "prev_close": 49.14,
-          "daily_return_pct": 0.0,
-          "formula": "(49.1400 / 49.1400) - 1"
-        },
-        {
-          "date": "2026-01-05",
-          "close": 49.17,
-          "prev_date": "2026-01-02",
-          "prev_close": 49.15,
-          "daily_return_pct": 0.0407,
-          "formula": "(49.1700 / 49.1500) - 1"
-        },
-        {
-          "date": "2026-02-03",
-          "close": 49.14,
-          "prev_date": "2026-02-02",
-          "prev_close": 49.14,
-          "daily_return_pct": 0.0,
-          "formula": "(49.1400 / 49.1400) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "VTIP": {
       "ticker": "VTIP",
       "type": "Bond_ETF",
@@ -1615,7 +1556,7 @@
       "total_return_pct": 7.64,
       "volatility_annual_pct": 10.27,
       "weights_by_profile": {
-        "Stable": 11.43
+        "Stable": 13.21
       },
       "price_samples": [
         {
@@ -1657,63 +1598,6 @@
           "prev_close": 201.45,
           "daily_return_pct": 0.0,
           "formula": "(201.4500 / 201.4500) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "VUSB": {
-      "ticker": "VUSB",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-10-07",
-      "last_date": "2026-02-03",
-      "first_price": 49.865,
-      "last_price": 49.84,
-      "total_return_pct": -0.05,
-      "volatility_annual_pct": 1.32,
-      "weights_by_profile": {
-        "Stable": 13.72
-      },
-      "price_samples": [
-        {
-          "date": "2025-10-07",
-          "close": 49.865,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-11-05",
-          "close": 49.8,
-          "prev_date": "2025-11-04",
-          "prev_close": 49.81,
-          "daily_return_pct": -0.0201,
-          "formula": "(49.8000 / 49.8100) - 1"
-        },
-        {
-          "date": "2025-12-05",
-          "close": 49.82,
-          "prev_date": "2025-12-04",
-          "prev_close": 49.83,
-          "daily_return_pct": -0.0201,
-          "formula": "(49.8200 / 49.8300) - 1"
-        },
-        {
-          "date": "2026-01-05",
-          "close": 49.875,
-          "prev_date": "2026-01-02",
-          "prev_close": 49.85,
-          "daily_return_pct": 0.0502,
-          "formula": "(49.8750 / 49.8500) - 1"
-        },
-        {
-          "date": "2026-02-03",
-          "close": 49.84,
-          "prev_date": "2026-02-02",
-          "prev_close": 49.84,
-          "daily_return_pct": 0.0,
-          "formula": "(49.8400 / 49.8400) - 1"
         }
       ],
       "is_benchmark": false
@@ -1840,9 +1724,9 @@
       "first_date": "2025-10-07",
       "last_date": "2026-02-03",
       "first_price": 3997.0,
-      "last_price": 4943.3,
-      "total_return_pct": 23.68,
-      "volatility_annual_pct": 33.09,
+      "last_price": 4979.9,
+      "total_return_pct": 24.59,
+      "volatility_annual_pct": 33.35,
       "weights_by_profile": {
         "Agressif": 3.5,
         "Modéré": 0.5
@@ -1882,11 +1766,11 @@
         },
         {
           "date": "2026-02-03",
-          "close": 4943.3,
+          "close": 4979.9,
           "prev_date": "2026-02-02",
           "prev_close": 4773.3,
-          "daily_return_pct": 3.5615,
-          "formula": "(4943.3000 / 4773.3000) - 1"
+          "daily_return_pct": 4.3282,
+          "formula": "(4979.9000 / 4773.3000) - 1"
         }
       ],
       "is_benchmark": false
@@ -1939,9 +1823,9 @@
           "type": "Action",
           "weight_pct": 6.5,
           "price_prev": 4794.4199,
-          "price_today": 4938.75,
-          "return_pct": 3.0104,
-          "contribution_pct": 0.1957
+          "price_today": 5006.75,
+          "return_pct": 4.4287,
+          "contribution_pct": 0.2879
         },
         {
           "ticker": "VCIT",
@@ -1989,7 +1873,7 @@
           "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": 0.1957,
+      "total_portfolio_return_pct": 0.2879,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -2003,8 +1887,8 @@
       "close_J_minus_1": 67.54,
       "formula": "(67.7200 / 67.5400) - 1",
       "daily_return_pct": 0.2665,
-      "weight_pct": 11.43,
-      "contribution_pct": 0.0305,
+      "weight_pct": 13.79,
+      "contribution_pct": 0.0368,
       "explanation": "Le 2025-11-05, DGRO (Action) a clôturé à 67.72 vs 67.54 le 2025-11-04, soit un rendement de 0.27%"
     },
     {
@@ -2113,7 +1997,7 @@
       ]
     },
     "Stable": {
-      "n_assets": 9,
+      "n_assets": 7,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
         "Action": 100.0,
@@ -2123,55 +2007,55 @@
       },
       "top_5_holdings": [
         [
-          "VUSB",
-          13.72
-        ],
-        [
-          "GBIL",
-          13.33
-        ],
-        [
           "GSST",
-          13.33
+          15.0
         ],
         [
           "GSY",
-          13.33
+          15.0
+        ],
+        [
+          "KBC",
+          15.0
+        ],
+        [
+          "GBIL",
+          15.0
         ],
         [
           "DGRO",
-          11.43
+          13.79
         ]
       ]
     }
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 15.0,
-      "net_return_pct": 15.0,
-      "volatility_pct": 16.0,
+      "gross_return_pct": 15.13,
+      "net_return_pct": 15.13,
+      "volatility_pct": 16.01,
       "max_drawdown_pct": -4.83,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 0.46,
-      "excess_return_pct": 14.54
+      "excess_return_pct": 14.68
     },
     "Modéré": {
-      "gross_return_pct": 5.1,
-      "net_return_pct": 5.1,
+      "gross_return_pct": 5.11,
+      "net_return_pct": 5.11,
       "volatility_pct": 5.02,
       "max_drawdown_pct": -2.18,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 3.67,
-      "excess_return_pct": 1.43
+      "excess_return_pct": 1.44
     },
     "Stable": {
-      "gross_return_pct": 4.06,
-      "net_return_pct": 4.06,
-      "volatility_pct": 3.85,
-      "max_drawdown_pct": -1.39,
+      "gross_return_pct": 5.73,
+      "net_return_pct": 5.73,
+      "volatility_pct": 5.28,
+      "max_drawdown_pct": -1.96,
       "benchmark_symbol": "AGG",
       "benchmark_return_pct": -0.18,
-      "excess_return_pct": 4.24
+      "excess_return_pct": 5.91
     }
   },
   "uniformity_proof": {
