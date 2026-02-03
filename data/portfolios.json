@@ -1,71 +1,67 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une allocation agressive, avec une forte exposition aux actions technologiques et aux ETF diversifiés. Bien qu'il vise à générer des rendements élevés, il comporte des risques significatifs liés à la volatilité des marchés et à la concentration sectorielle. De plus, l'exposition aux cryptomonnaies peut augmenter la sensibilité aux fluctuations du marché. Les investisseurs doivent être conscients des risques associés à ce type de portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec une forte exposition aux actions et aux cryptomonnaies, ce qui peut offrir un potentiel de rendement élevé. Cependant, cette stratégie comporte des risques de volatilité significatifs, surtout dans un environnement de marché mixte. De plus, l'exposition à des actifs comme les obligations peut atténuer les fluctuations, mais reste sensible aux variations des taux d'intérêt. Il est important de considérer ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "WESTERN DIGITAL CORP (WDC)": "13.0%",
-      "SK HYNIX INC (000660)": "7.0%",
-      "LAM RESEARCH CORP (LRCX)": "15.0%"
+      "WESTERN DIGITAL CORP (WDC)": "15.0%"
     },
     "ETF": {
       "Vanguard Total International Stock Index Fund (VXUS)": "15.0%",
-      "VANGUARD FTSE DEVELOPED MARKETS ETF (VEA)": "14.0%",
-      "Schwab International Small-Cap Equity ETF (SCHC)": "6.0%"
+      "VANGUARD FTSE DEVELOPED MARKETS ETF (VEA)": "12.0%",
+      "Schwab International Small-Cap Equity ETF (SCHC)": "8.0%"
     },
     "Obligations": {
       "Vanguard Intermediate-Term Corporate Bond Fund (VCIT)": "5.0%",
       "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L) (BIV)": "5.0%",
       "iShares 5-10 Year Investment Grade Corporate Bond ETF (IGIB)": "5.0%",
-      "Schwab 5-10 Year Corporate Bond ETF (SCHI)": "5.0%"
+      "Schwab 5-10 Year Corporate Bond ETF (SCHI)": "5.0%",
+      "Vanguard Intermediate-Term Treasury Fund (VGIT)": "5.0%",
+      "SPDR Portfolio Mortgage Backed Bond ETF (SPMB)": "5.0%",
+      "iShares MBS ETF (MBB)": "5.0%",
+      "iShares Convertible Bond ETF (ICVT)": "5.0%"
     },
     "Crypto": {
       "PAXG/USD": "6.5%",
       "XAUT/USD": "3.5%"
     },
     "_tickers": {
-      "LRCX": 0.15,
-      "VEA": 0.14,
-      "WDC": 0.13,
-      "000660": 0.07,
+      "WDC": 0.15,
+      "VEA": 0.12,
+      "SCHC": 0.08,
       "PAXG/USD": 0.065,
-      "SCHC": 0.06,
       "VCIT": 0.05,
       "BIV": 0.05,
       "IGIB": 0.05,
       "SCHI": 0.05,
+      "VGIT": 0.05,
+      "SPMB": 0.05,
+      "MBB": 0.05,
+      "ICVT": 0.05,
       "XAUT/USD": 0.035,
       "VXUS": 0.15
     },
     "_tickers_meta": {
-      "LRCX": {
-        "weight": 0.15,
-        "category": "Actions",
-        "name": "LAM RESEARCH CORP",
-        "asset_ids": [
-          "EQ_48"
-        ]
-      },
-      "VEA": {
-        "weight": 0.14,
-        "category": "ETF",
-        "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
-        "asset_ids": [
-          "VANGUARD FTSE DEVELOPED MARKETS ETF"
-        ]
-      },
       "WDC": {
-        "weight": 0.13,
+        "weight": 0.15,
         "category": "Actions",
         "name": "WESTERN DIGITAL CORP",
         "asset_ids": [
           "EQ_198"
         ]
       },
-      "000660": {
-        "weight": 0.07,
-        "category": "Actions",
-        "name": "SK HYNIX INC",
+      "VEA": {
+        "weight": 0.12,
+        "category": "ETF",
+        "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
         "asset_ids": [
-          "EQ_797"
+          "VANGUARD FTSE DEVELOPED MARKETS ETF"
+        ]
+      },
+      "SCHC": {
+        "weight": 0.08,
+        "category": "ETF",
+        "name": "Schwab International Small-Cap Equity ETF",
+        "asset_ids": [
+          "Schwab International Small-Cap Equity ETF"
         ]
       },
       "PAXG/USD": {
@@ -74,14 +70,6 @@
         "name": "PAXG/USD",
         "asset_ids": [
           "PAXG/USD"
-        ]
-      },
-      "SCHC": {
-        "weight": 0.06,
-        "category": "ETF",
-        "name": "Schwab International Small-Cap Equity ETF",
-        "asset_ids": [
-          "Schwab International Small-Cap Equity ETF"
         ]
       },
       "VCIT": {
@@ -116,6 +104,38 @@
           "Schwab 5-10 Year Corporate Bond ETF"
         ]
       },
+      "VGIT": {
+        "weight": 0.05,
+        "category": "Obligations",
+        "name": "Vanguard Intermediate-Term Treasury Fund",
+        "asset_ids": [
+          "Vanguard Intermediate-Term Treasury Fund"
+        ]
+      },
+      "SPMB": {
+        "weight": 0.05,
+        "category": "Obligations",
+        "name": "SPDR Portfolio Mortgage Backed Bond ETF",
+        "asset_ids": [
+          "SPDR Portfolio Mortgage Backed Bond ETF"
+        ]
+      },
+      "MBB": {
+        "weight": 0.05,
+        "category": "Obligations",
+        "name": "iShares MBS ETF",
+        "asset_ids": [
+          "iShares MBS ETF"
+        ]
+      },
+      "ICVT": {
+        "weight": 0.05,
+        "category": "Obligations",
+        "name": "iShares Convertible Bond ETF",
+        "asset_ids": [
+          "iShares Convertible Bond ETF"
+        ]
+      },
       "XAUT/USD": {
         "weight": 0.035,
         "category": "Crypto",
@@ -136,20 +156,22 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 19.99,
+      "vol_realized": 14.41,
       "vol_target": 18.0
     },
     "_tickers_pricing": {
-      "LRCX": 0.15,
-      "VEA": 0.14,
-      "WDC": 0.13,
-      "000660": 0.07,
+      "WDC": 0.15,
+      "VEA": 0.12,
+      "SCHC": 0.08,
       "PAXG/USD": 0.065,
-      "SCHC": 0.06,
       "VCIT": 0.05,
       "BIV": 0.05,
       "IGIB": 0.05,
       "SCHI": 0.05,
+      "VGIT": 0.05,
+      "SPMB": 0.05,
+      "MBB": 0.05,
+      "ICVT": 0.05,
       "XAUT/USD": 0.035,
       "VXUS": 0.15
     },
@@ -157,17 +179,19 @@
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
       "ETF:Vanguard Total International Stock Index Fund (VXUS)": 15.0,
-      "ETF:VANGUARD FTSE DEVELOPED MARKETS ETF (VEA)": 14.0,
-      "Actions:WESTERN DIGITAL CORP (WDC)": 13.0,
-      "Actions:SK HYNIX INC (000660)": 7.0,
+      "ETF:VANGUARD FTSE DEVELOPED MARKETS ETF (VEA)": 12.0,
+      "ETF:Schwab International Small-Cap Equity ETF (SCHC)": 8.0,
       "Crypto:PAXG/USD": 6.5,
-      "ETF:Schwab International Small-Cap Equity ETF (SCHC)": 6.0,
       "Obligations:Vanguard Intermediate-Term Corporate Bond Fund (VCIT)": 5.0,
       "Obligations:Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L) (BIV)": 5.0,
       "Obligations:iShares 5-10 Year Investment Grade Corporate Bond ETF (IGIB)": 5.0,
       "Obligations:Schwab 5-10 Year Corporate Bond ETF (SCHI)": 5.0,
+      "Obligations:Vanguard Intermediate-Term Treasury Fund (VGIT)": 5.0,
+      "Obligations:SPDR Portfolio Mortgage Backed Bond ETF (SPMB)": 5.0,
+      "Obligations:iShares MBS ETF (MBB)": 5.0,
+      "Obligations:iShares Convertible Bond ETF (ICVT)": 5.0,
       "Crypto:XAUT/USD": 3.5,
-      "Actions:LAM RESEARCH CORP (LRCX)": 15.0
+      "Actions:WESTERN DIGITAL CORP (WDC)": 15.0
     },
     "_constraint_report": {
       "hard_constraints": [],
@@ -186,27 +210,27 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 18.0,
-            "observed": 19.99,
-            "slack": 1.01,
+            "observed": 14.41,
+            "slack": -0.59,
             "binding": false,
-            "status": "OK",
+            "status": "VIOLATED",
             "details": {
               "tolerance": 3.0,
               "range_min": 15.0,
               "range_max": 21.0,
-              "diff_from_target": 1.99
+              "diff_from_target": -3.59
             }
           },
           {
             "name": "bonds_min",
             "constraint_type": "min",
             "cap": 5.0,
-            "observed": 20.0,
-            "slack": 15.0,
+            "observed": 40.0,
+            "slack": 35.0,
             "binding": false,
             "status": "OK",
             "details": {
-              "count": 4,
+              "count": 8,
               "breakdown": [
                 {
                   "id": "Vanguard Intermediate-Term Corporate Bond Fund",
@@ -227,6 +251,26 @@
                   "id": "Schwab 5-10 Year Corporate Bond ETF",
                   "name": "Schwab 5-10 Year Corporate Bon",
                   "weight": 5.0
+                },
+                {
+                  "id": "Vanguard Intermediate-Term Treasury Fund",
+                  "name": "Vanguard Intermediate-Term Tre",
+                  "weight": 5.0
+                },
+                {
+                  "id": "SPDR Portfolio Mortgage Backed Bond ETF",
+                  "name": "SPDR Portfolio Mortgage Backed",
+                  "weight": 5.0
+                },
+                {
+                  "id": "iShares MBS ETF",
+                  "name": "iShares MBS ETF",
+                  "weight": 5.0
+                },
+                {
+                  "id": "iShares Convertible Bond ETF",
+                  "name": "iShares Convertible Bond ETF",
+                  "weight": 5.0
                 }
               ]
             }
@@ -242,14 +286,14 @@
             "details": {
               "breakdown": [
                 {
-                  "id": "PAXG/USD",
-                  "name": "PAXG/USD",
-                  "weight": 6.5
-                },
-                {
                   "id": "XAUT/USD",
                   "name": "XAUT/USD",
                   "weight": 3.5
+                },
+                {
+                  "id": "PAXG/USD",
+                  "name": "PAXG/USD",
+                  "weight": 6.5
                 }
               ]
             }
@@ -275,14 +319,10 @@
                 },
                 {
                   "id": "VANGUARD FTSE DEVELOPED MARKETS ETF",
-                  "weight": 14.0
+                  "weight": 12.0
                 },
                 {
                   "id": "EQ_198",
-                  "weight": 13.0
-                },
-                {
-                  "id": "EQ_48",
                   "weight": 15.0
                 }
               ]
@@ -300,12 +340,12 @@
               "most_concentrated": "Diversified",
               "counts_in_max_sector": {
                 "Diversified": 35.0,
-                "Technologie de l'information": 35.0
+                "Technologie de l'information": 15.0
               },
               "all_sectors": {
+                "Bonds": 40.0,
                 "Diversified": 35.0,
-                "Technologie de l'information": 35.0,
-                "Bonds": 20.0,
+                "Technologie de l'information": 15.0,
                 "Crypto": 10.0
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -323,13 +363,11 @@
               "most_concentrated": "Global",
               "counts_in_max_region": {
                 "Global": 35.0,
-                "Etats-Unis": 28.0,
-                "Corée": 7.0
+                "Etats-Unis": 15.0
               },
               "all_regions": {
-                "Global": 65.0,
-                "Etats-Unis": 28.0,
-                "Corée": 7.0
+                "Global": 85.0,
+                "Etats-Unis": 15.0
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -338,8 +376,8 @@
             "name": "min_assets",
             "constraint_type": "min",
             "cap": 10,
-            "observed": 12,
-            "slack": 2,
+            "observed": 14,
+            "slack": 4,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -348,8 +386,8 @@
             "name": "max_assets",
             "constraint_type": "max",
             "cap": 18,
-            "observed": 12,
-            "slack": 6,
+            "observed": 14,
+            "slack": 4,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -375,16 +413,16 @@
             "name": "bucket_satellite",
             "constraint_type": "range",
             "cap": 60.0,
-            "observed": 70.0,
-            "slack": -10.0,
+            "observed": 50.0,
+            "slack": 10.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 35.0,
               "range_max": 60.0,
-              "slack_from_min": 35.0,
-              "slack_from_max": -10.0,
-              "outside_range": true,
+              "slack_from_min": 15.0,
+              "slack_from_max": 10.0,
+              "outside_range": false,
               "is_indicator": true
             }
           },
@@ -392,15 +430,15 @@
             "name": "bucket_defensive",
             "constraint_type": "range",
             "cap": 15.0,
-            "observed": 20.0,
-            "slack": -5.0,
+            "observed": 40.0,
+            "slack": -25.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 5.0,
               "range_max": 15.0,
-              "slack_from_min": 15.0,
-              "slack_from_max": -5.0,
+              "slack_from_min": 35.0,
+              "slack_from_max": -25.0,
               "outside_range": true,
               "is_indicator": true
             }
@@ -451,54 +489,55 @@
         ],
         "summary": {
           "total": 14,
-          "ok": 11,
+          "ok": 10,
           "binding": 3,
-          "violated": 0,
+          "violated": 1,
           "critical": 0
         },
-        "quality_score": 95.7,
+        "quality_score": 88.6,
         "recommendations": [
+          "🟠 VIOLATED: volatility exceeded by 0.6% — reduce exposure",
           "🟡 BINDING: crypto_max at 10.0% (cap=10.0%) — monitor closely",
           "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
           "🟡 BINDING: max_sector at 35.0% (cap=35.0%) — monitor closely",
           "ℹ️ INFO: bucket_core is 30.0% outside target range (indicator only)",
+          "ℹ️ INFO: bucket_defensive is 25.0% outside target range (indicator only)",
           "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
         ],
         "exposures": {
           "by_category": {
             "ETF": 35.0,
-            "Obligations": 20.0,
-            "Actions": 35.0,
+            "Obligations": 40.0,
+            "Actions": 15.0,
             "Crypto": 10.0
           },
           "by_sector": {
             "Diversified": 35.0,
-            "Technologie de l'information": 35.0
+            "Technologie de l'information": 15.0
           },
           "by_region": {
-            "Global": 65.0,
-            "Etats-Unis": 28.0,
-            "Corée": 7.0
+            "Global": 85.0,
+            "Etats-Unis": 15.0
           },
           "by_risk_bucket": {
-            "equity_like": 70.0,
-            "bond_like": 20.0,
+            "equity_like": 50.0,
+            "bond_like": 40.0,
             "crypto": 10.0
           },
           "by_role": {
             "core": 0.0,
-            "satellite": 70.0,
-            "defensive": 20.0,
+            "satellite": 50.0,
+            "defensive": 40.0,
             "lottery": 10.0,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 1054.0,
-            "hhi_interpretation": "diversified",
-            "effective_n": 9.48,
-            "n_positions": 12,
-            "top_5_weight": 64.0,
-            "top_10_weight": 91.5,
+            "hhi": 912.0,
+            "hhi_interpretation": "well_diversified",
+            "effective_n": 10.96,
+            "n_positions": 14,
+            "top_5_weight": 56.5,
+            "top_10_weight": 81.5,
             "largest_position": 15.0,
             "smallest_position": 3.5,
             "thresholds": {
@@ -523,9 +562,9 @@
             "exchange": null
           },
           {
-            "id": "EQ_48",
-            "ticker": "LRCX",
-            "name": "LAM RESEARCH CORP",
+            "id": "EQ_198",
+            "ticker": "WDC",
+            "name": "WESTERN DIGITAL CORP",
             "weight_pct": 15.0,
             "category": "Actions",
             "risk_bucket": "equity_like",
@@ -537,7 +576,7 @@
             "id": "VANGUARD FTSE DEVELOPED MARKETS ETF",
             "ticker": "VEA",
             "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
-            "weight_pct": 14.0,
+            "weight_pct": 12.0,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -545,25 +584,14 @@
             "exchange": null
           },
           {
-            "id": "EQ_198",
-            "ticker": "WDC",
-            "name": "WESTERN DIGITAL CORP",
-            "weight_pct": 13.0,
-            "category": "Actions",
+            "id": "Schwab International Small-Cap Equity ETF",
+            "ticker": "SCHC",
+            "name": "Schwab International Small-Cap Equity ETF",
+            "weight_pct": 8.0,
+            "category": "ETF",
             "risk_bucket": "equity_like",
-            "sector": "Technologie de l'information",
-            "region": "Etats-Unis",
-            "exchange": null
-          },
-          {
-            "id": "EQ_797",
-            "ticker": "000660",
-            "name": "SK HYNIX INC",
-            "weight_pct": 7.0,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Technologie de l'information",
-            "region": "Corée",
+            "sector": "Diversified",
+            "region": "Global",
             "exchange": null
           },
           {
@@ -574,17 +602,6 @@
             "category": "Crypto",
             "risk_bucket": "crypto",
             "sector": "Crypto",
-            "region": "Global",
-            "exchange": null
-          },
-          {
-            "id": "Schwab International Small-Cap Equity ETF",
-            "ticker": "SCHC",
-            "name": "Schwab International Small-Cap Equity ETF",
-            "weight_pct": 6.0,
-            "category": "ETF",
-            "risk_bucket": "equity_like",
-            "sector": "Diversified",
             "region": "Global",
             "exchange": null
           },
@@ -633,6 +650,50 @@
             "exchange": null
           },
           {
+            "id": "Vanguard Intermediate-Term Treasury Fund",
+            "ticker": "VGIT",
+            "name": "Vanguard Intermediate-Term Treasury Fund",
+            "weight_pct": 5.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "SPDR Portfolio Mortgage Backed Bond ETF",
+            "ticker": "SPMB",
+            "name": "SPDR Portfolio Mortgage Backed Bond ETF",
+            "weight_pct": 5.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "iShares MBS ETF",
+            "ticker": "MBB",
+            "name": "iShares MBS ETF",
+            "weight_pct": 5.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "iShares Convertible Bond ETF",
+            "ticker": "ICVT",
+            "name": "iShares Convertible Bond ETF",
+            "weight_pct": 5.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
             "id": "XAUT/USD",
             "ticker": "XAUT/USD",
             "name": "XAUT/USD",
@@ -645,14 +706,14 @@
           }
         ],
         "execution_summary": {
-          "n_positions": 12,
+          "n_positions": 14,
           "n_exchanges": 0,
           "exchanges": [],
           "total_weight": 100.0,
-          "missing_isin": 5,
+          "missing_isin": 3,
           "missing_ticker": 0,
           "data_quality": {
-            "isin_coverage": 58.3,
+            "isin_coverage": 78.6,
             "ticker_coverage": 100.0
           },
           "ready_for_execution": true
@@ -662,38 +723,37 @@
     "_exposures": {
       "by_category": {
         "ETF": 35.0,
-        "Obligations": 20.0,
-        "Actions": 35.0,
+        "Obligations": 40.0,
+        "Actions": 15.0,
         "Crypto": 10.0
       },
       "by_sector": {
         "Diversified": 35.0,
-        "Technologie de l'information": 35.0
+        "Technologie de l'information": 15.0
       },
       "by_region": {
-        "Global": 65.0,
-        "Etats-Unis": 28.0,
-        "Corée": 7.0
+        "Global": 85.0,
+        "Etats-Unis": 15.0
       },
       "by_risk_bucket": {
-        "equity_like": 70.0,
-        "bond_like": 20.0,
+        "equity_like": 50.0,
+        "bond_like": 40.0,
         "crypto": 10.0
       },
       "by_role": {
         "core": 0.0,
-        "satellite": 70.0,
-        "defensive": 20.0,
+        "satellite": 50.0,
+        "defensive": 40.0,
         "lottery": 10.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1054.0,
-        "hhi_interpretation": "diversified",
-        "effective_n": 9.48,
-        "n_positions": 12,
-        "top_5_weight": 64.0,
-        "top_10_weight": 91.5,
+        "hhi": 912.0,
+        "hhi_interpretation": "well_diversified",
+        "effective_n": 10.96,
+        "n_positions": 14,
+        "top_5_weight": 56.5,
+        "top_10_weight": 81.5,
         "largest_position": 15.0,
         "smallest_position": 3.5,
         "thresholds": {
@@ -706,68 +766,30 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 12,
+      "n_positions": 14,
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 5,
+      "missing_isin": 3,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 58.3,
+        "isin_coverage": 78.6,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
     },
-    "_limitations": [],
+    "_limitations": [
+      "Volatilité réalisée (14.4%) éloignée de la cible (18.0%) - écart de 3.6%."
+    ],
     "_asset_details": [
-      {
-        "name": "LAM RESEARCH CORP",
-        "ticker": "LRCX",
-        "rationale": "LAM Research Corp présente un ROE élevé de 54.33% et une performance YTD de 26.15%, ce qui indique une forte rentabilité et un bon momentum. Cet actif joue un rôle central dans le portefeuille en raison de sa position dans le secteur technologique, qui est en croissance malgré la volatilité. Les risques à surveiller incluent la forte volatilité de l'action à 43.66%, ce qui pourrait affecter la performance à court terme.",
-        "role": "core",
-        "risk_note": "Volatilité élevée à 43.66%",
-        "market_context_link": "null",
-        "weight_pct": 15.0,
-        "category": "Actions",
-        "sector": "Technologie de l'information",
-        "country": "Etats-Unis",
-        "metrics": {
-          "roe": 54.33,
-          "pe_ratio": 47.840164,
-          "dividend_yield": 0.42,
-          "ytd": 26.15,
-          "volatility": 43.66,
-          "buffett_score": 81.2
-        }
-      },
-      {
-        "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
-        "ticker": "VEA",
-        "rationale": "Cet ETF offre une exposition diversifiée aux marchés développés, ce qui est essentiel pour équilibrer le risque dans un portefeuille agressif. Son rôle est de fournir une diversification géographique et sectorielle, réduisant ainsi la concentration. Bien que sa performance YTD soit modeste à 4.56%, il reste un choix solide pour une approche à long terme.",
-        "role": "diversification",
-        "risk_note": "Performance modérée par rapport à d'autres actifs",
-        "market_context_link": "null",
-        "weight_pct": 14.0,
-        "category": "ETF",
-        "sector": "Diversified",
-        "country": "Global",
-        "metrics": {
-          "roe": null,
-          "pe_ratio": null,
-          "dividend_yield": null,
-          "ytd": 4.56,
-          "volatility": 14.38,
-          "buffett_score": null
-        }
-      },
       {
         "name": "WESTERN DIGITAL CORP",
         "ticker": "WDC",
-        "rationale": "Avec un ROE de 34.1% et une performance YTD de 33.31%, Western Digital montre une forte capacité à générer des bénéfices. Cet actif est un satellite dans le portefeuille, renforçant l'exposition au secteur technologique. Les risques incluent une volatilité de 46.66%, ce qui peut entraîner des fluctuations de prix importantes.",
+        "rationale": "Western Digital présente un ROE élevé de 34.1% et une performance YTD impressionnante de 33.31%, ce qui indique une forte dynamique de croissance. Cet actif est un satellite dans le portefeuille, apportant une exposition au secteur technologique, bien que ce secteur soit actuellement sous pression. Les risques incluent la volatilité élevée de 46.66% et la dépendance aux cycles de demande du marché technologique.",
         "role": "satellite",
-        "risk_note": "Volatilité élevée à 46.66%",
-        "market_context_link": "null",
-        "weight_pct": 13.0,
+        "risk_note": "Volatilité élevée et dépendance aux cycles technologiques",
+        "market_context_link": null,
+        "weight_pct": 15.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
         "country": "Etats-Unis",
@@ -781,53 +803,33 @@
         }
       },
       {
-        "name": "SK HYNIX INC",
-        "ticker": "000660",
-        "rationale": "SK Hynix affiche une performance YTD de 33.83% et un ROE de 26.78%, ce qui témoigne d'une solide dynamique de croissance. Cet actif est également un satellite, ajoutant une exposition au secteur technologique coréen, qui est en plein essor. Les risques à surveiller incluent une volatilité de 47.49%, qui pourrait affecter la stabilité des rendements.",
-        "role": "satellite",
-        "risk_note": "Volatilité élevée à 47.49%",
-        "market_context_link": "secteur favorisé: technologie",
-        "weight_pct": 7.0,
-        "category": "Actions",
-        "sector": "Technologie de l'information",
-        "country": "Corée",
-        "metrics": {
-          "roe": 26.78,
-          "pe_ratio": 31.532785744118055,
-          "dividend_yield": 0.27,
-          "ytd": 33.83,
-          "volatility": 47.49,
-          "buffett_score": 84.3
-        }
-      },
-      {
-        "name": "PAXG/USD",
-        "ticker": "PAXG/USD",
-        "rationale": "PAXG/USD est une crypto-monnaie adossée à l'or, offrant une protection contre l'inflation et une diversification dans le portefeuille. Son rôle est de servir de couverture contre la volatilité des marchés traditionnels. Cependant, la volatilité de 50.25% est un risque significatif à surveiller.",
-        "role": "hedge",
-        "risk_note": "Volatilité très élevée à 50.25%",
-        "market_context_link": "null",
-        "weight_pct": 6.5,
-        "category": "Crypto",
-        "sector": "Crypto",
+        "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
+        "ticker": "VEA",
+        "rationale": "Cet ETF offre une exposition diversifiée aux marchés développés, ce qui est essentiel pour équilibrer le risque dans un portefeuille agressif. Il joue un rôle de core en fournissant une base solide d'investissement dans des actions établies. Le contexte du marché favorise l'exposition internationale, bien que la performance YTD soit modeste.",
+        "role": "core",
+        "risk_note": "Risque de performance limitée dans un marché en rotation",
+        "market_context_link": null,
+        "weight_pct": 12.0,
+        "category": "ETF",
+        "sector": "Diversified",
         "country": "Global",
         "metrics": {
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 12.79,
-          "volatility": 50.25,
+          "ytd": 4.56,
+          "volatility": 14.38,
           "buffett_score": null
         }
       },
       {
         "name": "Schwab International Small-Cap Equity ETF",
         "ticker": "SCHC",
-        "rationale": "Cet ETF permet d'accéder à des petites capitalisations internationales, offrant un potentiel de croissance significatif. Son rôle est de diversifier le portefeuille en ajoutant des actions de petites entreprises. La performance YTD de 7.38% est raisonnable, mais il faut surveiller la volatilité de 15.23%.",
-        "role": "diversification",
-        "risk_note": "Volatilité à surveiller à 15.23%",
-        "market_context_link": "null",
-        "weight_pct": 6.0,
+        "rationale": "Cet ETF cible les petites capitalisations internationales, offrant un potentiel de croissance supérieur dans un environnement de marché favorable. Il agit comme un satellite, ajoutant une dimension de diversification au portefeuille. Les petites capitalisations peuvent être plus volatiles, mais elles bénéficient d'une dynamique de croissance dans les régions favorisées.",
+        "role": "satellite",
+        "risk_note": "Volatilité accrue des petites capitalisations",
+        "market_context_link": null,
+        "weight_pct": 8.0,
         "category": "ETF",
         "sector": "Diversified",
         "country": "Global",
@@ -841,12 +843,32 @@
         }
       },
       {
+        "name": "PAXG/USD",
+        "ticker": "PAXG/USD",
+        "rationale": "PAXG est un actif crypto adossé à l'or, offrant une protection contre l'inflation et une diversification dans un portefeuille agressif. Son rôle est de servir de hedge contre la volatilité des marchés traditionnels. La volatilité de 50.49% est un risque important à surveiller, surtout dans un contexte de marché incertain.",
+        "role": "hedge",
+        "risk_note": "Volatilité extrême et risques réglementaires",
+        "market_context_link": null,
+        "weight_pct": 6.5,
+        "category": "Crypto",
+        "sector": "Crypto",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 13.23,
+          "volatility": 50.49,
+          "buffett_score": null
+        }
+      },
+      {
         "name": "Vanguard Intermediate-Term Corporate Bond Fund",
         "ticker": "VCIT",
-        "rationale": "Ce fonds obligataire offre une exposition aux obligations d'entreprises de qualité, ce qui est essentiel pour équilibrer le risque dans un portefeuille agressif. Son rôle est de fournir des revenus fixes tout en réduisant la volatilité globale. La performance YTD est faible à 0.27%, mais cela est attendu dans un environnement de taux d'intérêt bas.",
-        "role": "income",
-        "risk_note": "Performance faible à 0.27%",
-        "market_context_link": "null",
+        "rationale": "Ce fonds obligataire offre une exposition à des titres de créance de qualité, ce qui peut stabiliser le portefeuille tout en générant un revenu. Il est considéré comme un core dans le portefeuille, équilibrant le risque des actifs plus volatils. Cependant, le faible rendement et les taux d'intérêt en hausse représentent des risques à surveiller.",
+        "role": "core",
+        "risk_note": "Risque de taux d'intérêt et rendement faible",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -863,10 +885,10 @@
       {
         "name": "Vanguard Intermediate-Term Bond ETF",
         "ticker": "BIV",
-        "rationale": "Cet ETF offre une exposition diversifiée aux obligations intermédiaires, ce qui aide à stabiliser le portefeuille. Son rôle est de fournir des revenus et de réduire la volatilité. La performance YTD de 0.05% est faible, mais cela est typique pour les obligations dans un environnement de taux bas.",
-        "role": "income",
-        "risk_note": "Performance très faible à 0.05%",
-        "market_context_link": "null",
+        "rationale": "Ce fonds offre une exposition diversifiée aux obligations à moyen terme, ce qui aide à réduire la volatilité globale du portefeuille. Il joue également un rôle de core, apportant stabilité et revenu. Les risques incluent les fluctuations des taux d'intérêt qui peuvent affecter la valeur des obligations.",
+        "role": "core",
+        "risk_note": "Sensibilité aux taux d'intérêt",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -883,10 +905,10 @@
       {
         "name": "iShares 5-10 Year Investment Grade Corporate Bond ETF",
         "ticker": "IGIB",
-        "rationale": "IGIB offre une exposition aux obligations d'entreprises de qualité sur une durée intermédiaire, ce qui est crucial pour la stabilité du portefeuille. Son rôle est d'apporter des revenus fixes et de réduire la volatilité. La performance YTD de 0.3% est modeste, mais attendue dans le contexte actuel.",
-        "role": "income",
-        "risk_note": "Performance modeste à 0.3%",
-        "market_context_link": "null",
+        "rationale": "Cet ETF investit dans des obligations de qualité, offrant un revenu stable tout en réduisant le risque global du portefeuille. Son rôle est de servir de core, apportant une protection contre la volatilité des actions. Les risques incluent la sensibilité aux variations des taux d'intérêt.",
+        "role": "core",
+        "risk_note": "Risque de taux d'intérêt",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -903,10 +925,10 @@
       {
         "name": "Schwab 5-10 Year Corporate Bond ETF",
         "ticker": "SCHI",
-        "rationale": "Cet ETF fournit une exposition aux obligations d'entreprises de qualité à moyen terme, contribuant à la stabilité du portefeuille. Son rôle est de générer des revenus fixes tout en réduisant la volatilité. La performance YTD de 0.3% est faible, mais cela est courant pour les obligations dans le contexte actuel.",
-        "role": "income",
-        "risk_note": "Performance faible à 0.3%",
-        "market_context_link": "null",
+        "rationale": "Ce fonds obligataire offre une exposition à des obligations de sociétés à moyen terme, contribuant à la stabilité du portefeuille. Il est classé comme core, équilibrant les actifs plus risqués. Les variations des taux d'intérêt représentent un risque à surveiller.",
+        "role": "core",
+        "risk_note": "Sensibilité aux taux d'intérêt",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -921,12 +943,92 @@
         }
       },
       {
+        "name": "Vanguard Intermediate-Term Treasury Fund",
+        "ticker": "VGIT",
+        "rationale": "Ce fonds investit dans des obligations du Trésor américain, offrant une sécurité et une protection contre la volatilité du marché. Il joue un rôle de core, stabilisant le portefeuille. Cependant, le rendement négatif YTD indique un risque de perte de capital dans un environnement de hausse des taux.",
+        "role": "core",
+        "risk_note": "Risque de taux d'intérêt et rendement négatif",
+        "market_context_link": null,
+        "weight_pct": 5.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": -0.1,
+          "volatility": 5.27,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "SPDR Portfolio Mortgage Backed Bond ETF",
+        "ticker": "SPMB",
+        "rationale": "Cet ETF investit dans des titres adossés à des hypothèques, offrant un revenu régulier et une certaine protection contre l'inflation. Son rôle est de servir de core, ajoutant de la diversification. Les risques incluent la sensibilité aux fluctuations des taux d'intérêt et aux conditions du marché immobilier.",
+        "role": "core",
+        "risk_note": "Risque lié aux taux d'intérêt et au marché immobilier",
+        "market_context_link": null,
+        "weight_pct": 5.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 0.67,
+          "volatility": 6.85,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "iShares MBS ETF",
+        "ticker": "MBB",
+        "rationale": "Cet ETF investit dans des titres adossés à des hypothèques, offrant un revenu stable et une diversification. Il est considéré comme core, équilibrant les actifs plus volatils. Les risques incluent la sensibilité aux taux d'intérêt et aux conditions économiques.",
+        "role": "core",
+        "risk_note": "Risque de taux d'intérêt et conditions économiques",
+        "market_context_link": null,
+        "weight_pct": 5.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 0.64,
+          "volatility": 6.84,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "iShares Convertible Bond ETF",
+        "ticker": "ICVT",
+        "rationale": "Ce fonds investit dans des obligations convertibles, offrant un potentiel de croissance tout en fournissant un revenu. Il agit comme un satellite, ajoutant une exposition aux obligations tout en profitant de la hausse des actions. Les risques incluent la volatilité des actions sous-jacentes.",
+        "role": "satellite",
+        "risk_note": "Volatilité des actions sous-jacentes",
+        "market_context_link": null,
+        "weight_pct": 5.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 3.61,
+          "volatility": 10.09,
+          "buffett_score": null
+        }
+      },
+      {
         "name": "XAUT/USD",
         "ticker": "XAUT/USD",
-        "rationale": "XAUT/USD est une crypto-monnaie adossée à l'or, offrant une protection contre l'inflation et une diversification dans le portefeuille. Son rôle est de servir de couverture contre la volatilité des marchés traditionnels. La volatilité de 49.9% est un risque significatif à surveiller.",
+        "rationale": "XAUT est une crypto-monnaie adossée à l'or, offrant une protection contre l'inflation et une diversification dans un portefeuille agressif. Son rôle est de servir de hedge contre la volatilité des marchés traditionnels. Les risques incluent la volatilité extrême et les incertitudes réglementaires.",
         "role": "hedge",
-        "risk_note": "Volatilité très élevée à 49.9%",
-        "market_context_link": "null",
+        "risk_note": "Volatilité élevée et risques réglementaires",
+        "market_context_link": null,
         "weight_pct": 3.5,
         "category": "Crypto",
         "sector": "Crypto",
@@ -935,18 +1037,18 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 13.01,
-          "volatility": 49.9,
+          "ytd": 12.67,
+          "volatility": 49.7,
           "buffett_score": null
         }
       },
       {
         "name": "Vanguard Total International Stock Index Fund",
         "ticker": "VXUS",
-        "rationale": "VXUS offre une exposition diversifiée aux actions internationales, ce qui est essentiel pour équilibrer le risque dans un portefeuille agressif. Son rôle est de fournir une diversification géographique et sectorielle. La performance YTD de 4.34% est raisonnable, mais il faut surveiller la volatilité de 14.02%.",
-        "role": "diversification",
-        "risk_note": "Volatilité à surveiller à 14.02%",
-        "market_context_link": "null",
+        "rationale": "Ce fonds offre une exposition diversifiée aux actions internationales, ce qui est essentiel pour équilibrer le risque dans un portefeuille agressif. Il joue un rôle de core en fournissant une base solide d'investissement dans des marchés étrangers. Les risques incluent la performance limitée dans un marché en rotation.",
+        "role": "core",
+        "risk_note": "Risque de performance limitée dans un marché en rotation",
+        "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -963,11 +1065,11 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-02-03T09:41:06.364923+00:00",
+      "timestamp": "2026-02-03T13:47:18.211803+00:00",
       "profile": "Agressif",
       "data_limits": {
         "data_window": "short_window",
-        "data_points": 166,
+        "data_points": 175,
         "var_95_method": "parametric",
         "var_99_method": "parametric",
         "var99_confidence": "low_parametric",
@@ -981,32 +1083,32 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "disclaimer": "VaR95 method: parametric. VaR99 method: parametric. Based on 166 observations. Historical VaR requires >=252 obs (VaR95) or >=1000 obs (VaR99)."
+        "disclaimer": "VaR95 method: parametric. VaR99 method: parametric. Based on 175 observations. Historical VaR requires >=252 obs (VaR95) or >=1000 obs (VaR99)."
       },
       "stress_tests": {
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-02-03T09:41:06.367742+00:00"
+          "timestamp": "2026-02-03T13:47:18.214264+00:00"
         },
         "summary": {
           "n_scenarios": 5,
-          "avg_var_impact": -0.6828642615013221,
-          "max_var_impact": -1.4502097548542476,
-          "avg_expected_loss": -0.1572,
-          "worst_expected_loss": -0.30700000000000005,
-          "total_warnings": 10
+          "avg_var_impact": -0.5066780477266175,
+          "max_var_impact": -1.0534103321182267,
+          "avg_expected_loss": -0.14202,
+          "worst_expected_loss": -0.268,
+          "total_warnings": 9
         },
         "worst_case": {
           "scenario": "market_crash",
-          "expected_loss_pct": -30.700000000000006,
-          "vol_after_pct": 86.35774478226642
+          "expected_loss_pct": -26.8,
+          "vol_after_pct": 60.145697315233285
         },
         "risk_budget_impact": {
-          "base_volatility": 0.16861711052524914,
-          "avg_stressed_volatility": 0.4881698530792443,
-          "max_stressed_volatility": 0.8635774478226642,
-          "vol_budget_breach_scenarios": 4
+          "base_volatility": 0.12400388371876049,
+          "avg_stressed_volatility": 0.34568050847658266,
+          "max_stressed_volatility": 0.6014569731523328,
+          "vol_budget_breach_scenarios": 3
         },
         "scenarios": [
           {
@@ -1020,39 +1122,38 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.16861711052524914,
-              "sharpe_ratio": -0.11861192460064812,
-              "var_95": -0.27737514681403486,
-              "var_99": -0.3922033990817295,
-              "cvar_95": -0.347857099013589,
-              "diversification_ratio": 1.5095554353780698
+              "volatility": 0.12400388371876049,
+              "sharpe_ratio": -0.16128527107553978,
+              "var_95": -0.20398638871736102,
+              "var_99": -0.2884330335298369,
+              "cvar_95": -0.2558200121118029,
+              "diversification_ratio": 1.3930848550892472
             },
             "stressed_metrics": {
-              "expected_return": -0.06910000000000001,
-              "volatility": 0.29751061144676033,
-              "sharpe_ratio": -0.29948511606600126,
-              "var_95": -0.5585049558299208,
-              "var_99": -0.7611096822251646,
-              "cvar_95": -0.6828643914146667,
-              "diversification_ratio": 1.283333430293548
+              "expected_return": -0.06290000000000001,
+              "volatility": 0.21062280147234644,
+              "sharpe_ratio": -0.393594612836276,
+              "var_95": -0.4093745084220099,
+              "var_99": -0.5528086362246778,
+              "cvar_95": -0.49741483943745074,
+              "diversification_ratio": 1.2302651790779706
             },
             "impact": {
-              "expected_return": -0.06910000000000001,
-              "volatility": 0.1288935009215112,
-              "sharpe_ratio": -0.18087319146535313,
-              "var_95": -0.2811298090158859,
-              "var_99": -0.3689062831434351,
-              "cvar_95": -0.3350072924010777,
-              "diversification_ratio": -0.22622200508452184
+              "expected_return": -0.06290000000000001,
+              "volatility": 0.08661891775358595,
+              "sharpe_ratio": -0.23230934176073623,
+              "var_95": -0.20538811970464887,
+              "var_99": -0.2643756026948409,
+              "cvar_95": -0.24159482732564785,
+              "diversification_ratio": -0.16281967601127656
             },
-            "var_impact_pct": -28.112980901588593,
-            "expected_loss_pct": -6.910000000000001,
-            "vol_after_pct": 29.751061144676033,
+            "var_impact_pct": -20.538811970464888,
+            "expected_loss_pct": -6.290000000000001,
+            "vol_after_pct": 21.062280147234645,
             "warnings": [
-              "Severe volatility increase: +12.9%",
-              "Severe VaR deterioration: -28.1%"
+              "Severe VaR deterioration: -20.5%"
             ],
-            "timestamp": "2026-02-03T09:41:06.365800+00:00"
+            "timestamp": "2026-02-03T13:47:18.212680+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -1065,39 +1166,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.16861711052524914,
-              "sharpe_ratio": -0.11861192460064812,
-              "var_95": -0.27737514681403486,
-              "var_99": -0.3922033990817295,
-              "cvar_95": -0.347857099013589,
-              "diversification_ratio": 1.5095554353780698
+              "volatility": 0.12400388371876049,
+              "sharpe_ratio": -0.16128527107553978,
+              "var_95": -0.20398638871736102,
+              "var_99": -0.2884330335298369,
+              "cvar_95": -0.2558200121118029,
+              "diversification_ratio": 1.3930848550892472
             },
             "stressed_metrics": {
-              "expected_return": -0.12290000000000001,
-              "volatility": 0.5522389995964873,
-              "sharpe_ratio": -0.2587647741365874,
-              "var_95": -1.0313331543362216,
-              "var_99": -1.4074079130614294,
-              "cvar_95": -1.2621690561675534,
-              "diversification_ratio": 1.3827538939324509
+              "expected_return": -0.11180000000000001,
+              "volatility": 0.3973918259075422,
+              "sharpe_ratio": -0.3316625844001754,
+              "var_95": -0.765509553617907,
+              "var_99": -1.0361333870609433,
+              "cvar_95": -0.9316193368472596,
+              "diversification_ratio": 1.3041128764010752
             },
             "impact": {
-              "expected_return": -0.12290000000000001,
-              "volatility": 0.3836218890712381,
-              "sharpe_ratio": -0.14015284953593926,
-              "var_95": -0.7539580075221868,
-              "var_99": -1.0152045139797,
-              "cvar_95": -0.9143119571539644,
-              "diversification_ratio": -0.12680154144561895
+              "expected_return": -0.11180000000000001,
+              "volatility": 0.2733879421887817,
+              "sharpe_ratio": -0.1703773133246356,
+              "var_95": -0.5615231649005459,
+              "var_99": -0.7477003535311064,
+              "cvar_95": -0.6757993247354568,
+              "diversification_ratio": -0.08897197868817197
             },
-            "var_impact_pct": -75.39580075221868,
-            "expected_loss_pct": -12.290000000000001,
-            "vol_after_pct": 55.223899959648726,
+            "var_impact_pct": -56.15231649005459,
+            "expected_loss_pct": -11.180000000000001,
+            "vol_after_pct": 39.73918259075422,
             "warnings": [
-              "Severe volatility increase: +38.4%",
-              "Severe VaR deterioration: -75.4%"
+              "Severe volatility increase: +27.3%",
+              "Severe VaR deterioration: -56.2%"
             ],
-            "timestamp": "2026-02-03T09:41:06.366313+00:00"
+            "timestamp": "2026-02-03T13:47:18.213080+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -1110,39 +1211,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.16861711052524914,
-              "sharpe_ratio": -0.11861192460064812,
-              "var_95": -0.27737514681403486,
-              "var_99": -0.3922033990817295,
-              "cvar_95": -0.347857099013589,
-              "diversification_ratio": 1.5095554353780698
+              "volatility": 0.12400388371876049,
+              "sharpe_ratio": -0.16128527107553978,
+              "var_95": -0.20398638871736102,
+              "var_99": -0.2884330335298369,
+              "cvar_95": -0.2558200121118029,
+              "diversification_ratio": 1.3930848550892472
             },
             "stressed_metrics": {
-              "expected_return": -0.1696,
-              "volatility": 0.38740703526427656,
-              "sharpe_ratio": -0.4894077358989131,
-              "var_95": -0.8068845730097349,
-              "var_99": -1.0707087640247073,
-              "cvar_95": -0.9688207137502026,
-              "diversification_ratio": 1.3140539666116173
+              "expected_return": -0.15700000000000003,
+              "volatility": 0.27563152518147765,
+              "sharpe_ratio": -0.6421616681308934,
+              "var_95": -0.6104138589235308,
+              "var_99": -0.7981189275721171,
+              "cvar_95": -0.7256278364493884,
+              "diversification_ratio": 1.253470061286458
             },
             "impact": {
-              "expected_return": -0.1696,
-              "volatility": 0.21878992473902742,
-              "sharpe_ratio": -0.370795811298265,
-              "var_95": -0.5295094261957001,
-              "var_99": -0.6785053649429778,
-              "cvar_95": -0.6209636147366135,
-              "diversification_ratio": -0.19550146876645247
+              "expected_return": -0.15700000000000003,
+              "volatility": 0.15162764146271718,
+              "sharpe_ratio": -0.48087639705535357,
+              "var_95": -0.4064274702061698,
+              "var_99": -0.5096858940422802,
+              "cvar_95": -0.46980782433758556,
+              "diversification_ratio": -0.13961479380278918
             },
-            "var_impact_pct": -52.95094261957001,
-            "expected_loss_pct": -16.96,
-            "vol_after_pct": 38.74070352642766,
+            "var_impact_pct": -40.64274702061698,
+            "expected_loss_pct": -15.700000000000003,
+            "vol_after_pct": 27.563152518147767,
             "warnings": [
-              "Severe volatility increase: +21.9%",
-              "Severe VaR deterioration: -53.0%"
+              "Severe volatility increase: +15.2%",
+              "Severe VaR deterioration: -40.6%"
             ],
-            "timestamp": "2026-02-03T09:41:06.366737+00:00"
+            "timestamp": "2026-02-03T13:47:18.213472+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -1155,39 +1256,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.16861711052524914,
-              "sharpe_ratio": -0.11861192460064812,
-              "var_95": -0.27737514681403486,
-              "var_99": -0.3922033990817295,
-              "cvar_95": -0.347857099013589,
-              "diversification_ratio": 1.5095554353780698
+              "volatility": 0.12400388371876049,
+              "sharpe_ratio": -0.16128527107553978,
+              "var_95": -0.20398638871736102,
+              "var_99": -0.2884330335298369,
+              "cvar_95": -0.2558200121118029,
+              "diversification_ratio": 1.3930848550892472
             },
             "stressed_metrics": {
-              "expected_return": -0.11740000000000002,
-              "volatility": 0.34011517126603313,
-              "sharpe_ratio": -0.40398080299842826,
-              "var_95": -0.6768894567326246,
-              "var_99": -0.9085078883647931,
-              "cvar_95": -0.8190575983218265,
-              "diversification_ratio": 1.3470918528526072
+              "expected_return": -0.11040000000000003,
+              "volatility": 0.24329941666921404,
+              "sharpe_ratio": -0.5359651156800337,
+              "var_95": -0.5106275404208571,
+              "var_99": -0.6763144431725919,
+              "cvar_95": -0.6123266965885886,
+              "diversification_ratio": 1.278039555303553
             },
             "impact": {
-              "expected_return": -0.11740000000000002,
-              "volatility": 0.171498060740784,
-              "sharpe_ratio": -0.28536887839778013,
-              "var_95": -0.3995143099185897,
-              "var_99": -0.5163044892830636,
-              "cvar_95": -0.47120049930823743,
-              "diversification_ratio": -0.16246358252546256
+              "expected_return": -0.11040000000000003,
+              "volatility": 0.11929553295045354,
+              "sharpe_ratio": -0.3746798446044939,
+              "var_95": -0.3066411517034961,
+              "var_99": -0.387881409642755,
+              "cvar_95": -0.35650668447678574,
+              "diversification_ratio": -0.11504529978569411
             },
-            "var_impact_pct": -39.95143099185897,
-            "expected_loss_pct": -11.740000000000002,
-            "vol_after_pct": 34.011517126603316,
+            "var_impact_pct": -30.66411517034961,
+            "expected_loss_pct": -11.040000000000003,
+            "vol_after_pct": 24.329941666921403,
             "warnings": [
-              "Severe volatility increase: +17.1%",
-              "Severe VaR deterioration: -40.0%"
+              "Severe volatility increase: +11.9%",
+              "Severe VaR deterioration: -30.7%"
             ],
-            "timestamp": "2026-02-03T09:41:06.367179+00:00"
+            "timestamp": "2026-02-03T13:47:18.213809+00:00"
           },
           {
             "scenario": "market_crash",
@@ -1200,55 +1301,59 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.16861711052524914,
-              "sharpe_ratio": -0.11861192460064812,
-              "var_95": -0.27737514681403486,
-              "var_99": -0.3922033990817295,
-              "cvar_95": -0.347857099013589,
-              "diversification_ratio": 1.5095554353780698
+              "volatility": 0.12400388371876049,
+              "sharpe_ratio": -0.16128527107553978,
+              "var_95": -0.20398638871736102,
+              "var_99": -0.2884330335298369,
+              "cvar_95": -0.2558200121118029,
+              "diversification_ratio": 1.3930848550892472
             },
             "stressed_metrics": {
-              "expected_return": -0.30700000000000005,
-              "volatility": 0.8635774478226642,
-              "sharpe_ratio": -0.3786574103161962,
-              "var_95": -1.7275849016682825,
-              "var_99": -2.315681143635517,
-              "cvar_95": -2.0885602748581564,
-              "diversification_ratio": 1.1789880633538912
+              "expected_return": -0.268,
+              "volatility": 0.6014569731523328,
+              "sharpe_ratio": -0.4788372449828716,
+              "var_95": -1.2573967208355876,
+              "var_99": -1.6669889195523262,
+              "cvar_95": -1.5088057356132627,
+              "diversification_ratio": 1.1488631113574341
             },
             "impact": {
-              "expected_return": -0.30700000000000005,
-              "volatility": 0.6949603372974151,
-              "sharpe_ratio": -0.2600454857155481,
-              "var_95": -1.4502097548542476,
-              "var_99": -1.9234777445537874,
-              "cvar_95": -1.7407031758445675,
-              "diversification_ratio": -0.33056737202417863
+              "expected_return": -0.268,
+              "volatility": 0.47745308943357234,
+              "sharpe_ratio": -0.3175519739073318,
+              "var_95": -1.0534103321182267,
+              "var_99": -1.3785558860224894,
+              "cvar_95": -1.2529857235014599,
+              "diversification_ratio": -0.24422174373181305
             },
-            "var_impact_pct": -145.02097548542477,
-            "expected_loss_pct": -30.700000000000006,
-            "vol_after_pct": 86.35774478226642,
+            "var_impact_pct": -105.34103321182266,
+            "expected_loss_pct": -26.8,
+            "vol_after_pct": 60.145697315233285,
             "warnings": [
-              "Severe volatility increase: +69.5%",
-              "Severe VaR deterioration: -145.0%"
+              "Severe volatility increase: +47.7%",
+              "Severe VaR deterioration: -105.3%"
             ],
-            "timestamp": "2026-02-03T09:41:06.367586+00:00"
+            "timestamp": "2026-02-03T13:47:18.214123+00:00"
           }
         ],
         "source": "stress_testing.py",
         "calibration_note": "Indicative scenarios, not calibrated on historical crises",
+        "adjustments_applied": {
+          "preferred_dual_shock": true,
+          "preferred_impact_pct": -34.0
+        },
         "allocation_breakdown": {
           "by_category": {
-            "Actions": 35.0,
+            "Actions": 15.0,
             "ETF": 35.0,
-            "Obligations": 20.0,
+            "Obligations": 40.0,
             "Crypto": 10.0
           },
           "total_weight_pct": 100.0,
-          "n_positions": 12,
+          "n_positions": 14,
           "top_positions": [
             {
-              "ticker": "LRCX",
+              "ticker": "WDC",
               "category": "Actions",
               "weight_pct": 15.0
             },
@@ -1260,17 +1365,12 @@
             {
               "ticker": "VEA",
               "category": "ETF",
-              "weight_pct": 14.0
+              "weight_pct": 12.0
             },
             {
-              "ticker": "WDC",
-              "category": "Actions",
-              "weight_pct": 13.0
-            },
-            {
-              "ticker": "000660",
-              "category": "Actions",
-              "weight_pct": 7.0
+              "ticker": "SCHC",
+              "category": "ETF",
+              "weight_pct": 8.0
             },
             {
               "ticker": "PAXG/USD",
@@ -1278,12 +1378,12 @@
               "weight_pct": 6.5
             },
             {
-              "ticker": "SCHC",
-              "category": "ETF",
-              "weight_pct": 6.0
+              "ticker": "BIV",
+              "category": "Obligations",
+              "weight_pct": 5.0
             },
             {
-              "ticker": "BIV",
+              "ticker": "ICVT",
               "category": "Obligations",
               "weight_pct": 5.0
             },
@@ -1293,12 +1393,27 @@
               "weight_pct": 5.0
             },
             {
+              "ticker": "MBB",
+              "category": "Obligations",
+              "weight_pct": 5.0
+            },
+            {
               "ticker": "SCHI",
               "category": "Obligations",
               "weight_pct": 5.0
             },
             {
+              "ticker": "SPMB",
+              "category": "Obligations",
+              "weight_pct": 5.0
+            },
+            {
               "ticker": "VCIT",
+              "category": "Obligations",
+              "weight_pct": 5.0
+            },
+            {
+              "ticker": "VGIT",
               "category": "Obligations",
               "weight_pct": 5.0
             },
@@ -1321,20 +1436,32 @@
         "details": {}
       },
       "preferred_analysis": {
-        "has_preferred": false,
-        "instruments": [],
-        "total_weight_pct": 0.0,
-        "equity_sensitivity": 0.0,
-        "rate_sensitivity": 0.0,
-        "dual_shock_impact_pct": 0.0,
-        "details": {}
+        "has_preferred": true,
+        "instruments": [
+          "ICVT"
+        ],
+        "total_weight_pct": 5.0,
+        "equity_sensitivity": 0.5,
+        "rate_sensitivity": 7.0,
+        "dual_shock_impact_pct": -29.0,
+        "details": {
+          "items": [
+            {
+              "ticker": "ICVT",
+              "name": "iShares Convertible Bond ETF",
+              "weight_pct": 5.0
+            }
+          ],
+          "equity_component_pct": -15.0,
+          "rate_component_pct": -14.000000000000002
+        }
       },
       "tail_risk": {
-        "var_95_pct": -27.74,
-        "var_99_pct": -39.22,
-        "cvar_95_pct": -34.79,
-        "cvar_99_pct": -44.94,
-        "max_drawdown_expected_pct": 56.07,
+        "var_95_pct": -20.4,
+        "var_99_pct": -28.84,
+        "cvar_95_pct": -25.58,
+        "cvar_99_pct": -33.05,
+        "max_drawdown_expected_pct": 41.24,
         "skewness": 0.0,
         "kurtosis": 3.0,
         "fat_tails": false,
@@ -1342,7 +1469,7 @@
           "var_95": "parametric",
           "var_99": "parametric"
         },
-        "n_obs": 166,
+        "n_obs": 175,
         "confidence_level": "low",
         "data_period": {
           "start": "2025-05-22",
@@ -1359,15 +1486,15 @@
       "alerts": [
         {
           "level": "warning",
-          "type": "tail_risk",
-          "message": "VaR 99% (-39.2%) depasse seuil",
-          "value": -39.22033990817295,
-          "threshold": -30.0
+          "type": "preferred",
+          "message": "Impact dual shock preferred eleve (-29.0%)",
+          "recommendation": "Reduire exposition preferred",
+          "value": -29.000000000000004
         },
         {
           "level": "info",
           "type": "tail_risk",
-          "message": "VaR99 parametrique (n_obs=166 < 1000)",
+          "message": "VaR99 parametrique (n_obs=175 < 1000)",
           "recommendation": "Interpreter avec prudence - VaR99 historique requiert 4+ ans de donnees"
         }
       ],
@@ -1379,25 +1506,27 @@
       },
       "history_metadata": {
         "version": "1.0.0",
-        "n_obs": 166,
-        "n_tickers": 12,
+        "n_obs": 175,
+        "n_tickers": 14,
         "tickers": [
           "WDC",
-          "LRCX",
-          "000660",
           "SCHC",
           "VEA",
           "VXUS",
           "BIV",
+          "ICVT",
           "IGIB",
+          "MBB",
           "SCHI",
+          "SPMB",
           "VCIT",
+          "VGIT",
           "PAXG/USD",
           "XAUT/USD"
         ],
         "first_date": "2025-05-22",
         "last_date": "2026-02-02",
-        "date_coverage_pct": 10.6,
+        "date_coverage_pct": 11.2,
         "tickers_with_short_history": [],
         "tickers_with_errors": [],
         "leveraged_tickers": [],
@@ -1412,46 +1541,36 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-02-03T09:41:06.363627Z",
+        "fetch_timestamp": "2026-02-03T13:47:18.210470Z",
         "allocation": [
           {
-            "ticker": "LRCX",
-            "name": "LAM RESEARCH CORP",
+            "ticker": "WDC",
+            "name": "WESTERN DIGITAL CORP",
             "category": "Actions",
             "weight": 0.15,
             "weight_pct": 15.0,
             "asset_ids": [
-              "EQ_48"
+              "EQ_198"
             ]
           },
           {
             "ticker": "VEA",
             "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
             "category": "ETF",
-            "weight": 0.14,
-            "weight_pct": 14.000000000000002,
+            "weight": 0.12,
+            "weight_pct": 12.0,
             "asset_ids": [
               "VANGUARD FTSE DEVELOPED MARKETS ETF"
             ]
           },
           {
-            "ticker": "WDC",
-            "name": "WESTERN DIGITAL CORP",
-            "category": "Actions",
-            "weight": 0.13,
-            "weight_pct": 13.0,
+            "ticker": "SCHC",
+            "name": "Schwab International Small-Cap Equity ETF",
+            "category": "ETF",
+            "weight": 0.08,
+            "weight_pct": 8.0,
             "asset_ids": [
-              "EQ_198"
-            ]
-          },
-          {
-            "ticker": "000660",
-            "name": "SK HYNIX INC",
-            "category": "Actions",
-            "weight": 0.07,
-            "weight_pct": 7.000000000000001,
-            "asset_ids": [
-              "EQ_797"
+              "Schwab International Small-Cap Equity ETF"
             ]
           },
           {
@@ -1462,16 +1581,6 @@
             "weight_pct": 6.5,
             "asset_ids": [
               "PAXG/USD"
-            ]
-          },
-          {
-            "ticker": "SCHC",
-            "name": "Schwab International Small-Cap Equity ETF",
-            "category": "ETF",
-            "weight": 0.06,
-            "weight_pct": 6.0,
-            "asset_ids": [
-              "Schwab International Small-Cap Equity ETF"
             ]
           },
           {
@@ -1515,6 +1624,46 @@
             ]
           },
           {
+            "ticker": "VGIT",
+            "name": "Vanguard Intermediate-Term Treasury Fund",
+            "category": "Obligations",
+            "weight": 0.05,
+            "weight_pct": 5.0,
+            "asset_ids": [
+              "Vanguard Intermediate-Term Treasury Fund"
+            ]
+          },
+          {
+            "ticker": "SPMB",
+            "name": "SPDR Portfolio Mortgage Backed Bond ETF",
+            "category": "Obligations",
+            "weight": 0.05,
+            "weight_pct": 5.0,
+            "asset_ids": [
+              "SPDR Portfolio Mortgage Backed Bond ETF"
+            ]
+          },
+          {
+            "ticker": "MBB",
+            "name": "iShares MBS ETF",
+            "category": "Obligations",
+            "weight": 0.05,
+            "weight_pct": 5.0,
+            "asset_ids": [
+              "iShares MBS ETF"
+            ]
+          },
+          {
+            "ticker": "ICVT",
+            "name": "iShares Convertible Bond ETF",
+            "category": "Obligations",
+            "weight": 0.05,
+            "weight_pct": 5.0,
+            "asset_ids": [
+              "iShares Convertible Bond ETF"
+            ]
+          },
+          {
             "ticker": "XAUT/USD",
             "name": "XAUT/USD",
             "category": "Crypto",
@@ -1539,11 +1688,9 @@
     }
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, avec une répartition équilibrée entre actions et obligations. Bien qu'il vise à générer des rendements stables, il est exposé à des risques liés aux fluctuations des taux d'intérêt et à la performance des marchés boursiers. De plus, la présence de cryptomonnaies peut accroître la volatilité du portefeuille. Les investisseurs doivent être conscients des risques associés à cette stratégie d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, combinant des actions et des obligations pour équilibrer le risque et le rendement. Bien que l'exposition aux ETF internationaux puisse offrir des opportunités de croissance, il existe des risques liés aux fluctuations des devises et aux conditions de marché. De plus, la part d'actifs à revenu fixe peut atténuer la volatilité, mais reste sensible aux variations des taux d'intérêt. Il est essentiel de prendre en compte ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "KBC GROEP (KBC)": "15.0%",
-      "CENCORA INC (COR)": "15.0%",
-      "VEDANTA LTD (VEDL)": "2.0%"
+      "KBC GROEP (KBC)": "13.0%"
     },
     "ETF": {
       "Vanguard Total International Stock Index Fund (VXUS)": "15.0%",
@@ -1554,7 +1701,9 @@
       "SPDR Portfolio Intermediate Term Treasury ETF (SPTI)": "8.0%",
       "Schwab Intermediate-Term U.S. Treasury ETF (SCHR)": "8.0%",
       "iShares 3-7 Year Treasury Bond ETF (IEI)": "8.0%",
-      "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L) (BIV)": "5.0%"
+      "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L) (BIV)": "8.0%",
+      "Vanguard Short-Term Inflation-Protected Securities Index Fund (VTIP)": "8.0%",
+      "Vanguard Short-Term Bond ETF (BSV)": "8.0%"
     },
     "Crypto": {
       "PAXG/USD": "0.5%",
@@ -1562,14 +1711,14 @@
     },
     "_tickers": {
       "VEA": 0.15,
-      "KBC": 0.15,
-      "COR": 0.15,
+      "KBC": 0.13,
       "VGIT": 0.08,
       "SPTI": 0.08,
       "SCHR": 0.08,
       "IEI": 0.08,
-      "BIV": 0.050199999999999995,
-      "VEDL": 0.019799999999999998,
+      "BIV": 0.08,
+      "VTIP": 0.08,
+      "BSV": 0.08,
       "PAXG/USD": 0.005,
       "XAUT/USD": 0.005,
       "VXUS": 0.15
@@ -1584,19 +1733,11 @@
         ]
       },
       "KBC": {
-        "weight": 0.15,
+        "weight": 0.13,
         "category": "Actions",
         "name": "KBC GROEP",
         "asset_ids": [
           "EQ_629"
-        ]
-      },
-      "COR": {
-        "weight": 0.15,
-        "category": "Actions",
-        "name": "CENCORA INC",
-        "asset_ids": [
-          "EQ_149"
         ]
       },
       "VGIT": {
@@ -1632,19 +1773,27 @@
         ]
       },
       "BIV": {
-        "weight": 0.050199999999999995,
+        "weight": 0.08,
         "category": "Obligations",
         "name": "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L)",
         "asset_ids": [
           "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L)"
         ]
       },
-      "VEDL": {
-        "weight": 0.019799999999999998,
-        "category": "Actions",
-        "name": "VEDANTA LTD",
+      "VTIP": {
+        "weight": 0.08,
+        "category": "Obligations",
+        "name": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
         "asset_ids": [
-          "EQ_878"
+          "Vanguard Short-Term Inflation-Protected Securities Index Fund"
+        ]
+      },
+      "BSV": {
+        "weight": 0.08,
+        "category": "Obligations",
+        "name": "Vanguard Short-Term Bond ETF",
+        "asset_ids": [
+          "Vanguard Short-Term Bond ETF"
         ]
       },
       "PAXG/USD": {
@@ -1675,19 +1824,19 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 8.71,
+      "vol_realized": 6.38,
       "vol_target": 12.0
     },
     "_tickers_pricing": {
       "VEA": 0.15,
-      "KBC": 0.15,
-      "COR": 0.15,
+      "KBC": 0.13,
       "VGIT": 0.08,
       "SPTI": 0.08,
       "SCHR": 0.08,
       "IEI": 0.08,
-      "BIV": 0.050199999999999995,
-      "VEDL": 0.019799999999999998,
+      "BIV": 0.08,
+      "VTIP": 0.08,
+      "BSV": 0.08,
       "PAXG/USD": 0.005,
       "XAUT/USD": 0.005,
       "VXUS": 0.15
@@ -1695,15 +1844,15 @@
     "_unpriced_assets": [],
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
-      "Actions:KBC GROEP (KBC)": 15.0,
-      "Actions:CENCORA INC (COR)": 15.0,
       "ETF:Vanguard Total International Stock Index Fund (VXUS)": 15.0,
+      "Actions:KBC GROEP (KBC)": 13.0,
       "Obligations:Vanguard Intermediate-Term Treasury Fund (VGIT)": 8.0,
       "Obligations:SPDR Portfolio Intermediate Term Treasury ETF (SPTI)": 8.0,
       "Obligations:Schwab Intermediate-Term U.S. Treasury ETF (SCHR)": 8.0,
       "Obligations:iShares 3-7 Year Treasury Bond ETF (IEI)": 8.0,
-      "Obligations:Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L) (BIV)": 5.0,
-      "Actions:VEDANTA LTD (VEDL)": 2.0,
+      "Obligations:Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L) (BIV)": 8.0,
+      "Obligations:Vanguard Short-Term Inflation-Protected Securities Index Fund (VTIP)": 8.0,
+      "Obligations:Vanguard Short-Term Bond ETF (BSV)": 8.0,
       "Crypto:PAXG/USD": 0.5,
       "Crypto:XAUT/USD": 0.5,
       "ETF:VANGUARD FTSE DEVELOPED MARKETS ETF (VEA)": 15.0
@@ -1725,27 +1874,27 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 12.0,
-            "observed": 8.71,
-            "slack": -0.29,
+            "observed": 6.38,
+            "slack": -2.62,
             "binding": false,
             "status": "VIOLATED",
             "details": {
               "tolerance": 3.0,
               "range_min": 9.0,
               "range_max": 15.0,
-              "diff_from_target": -3.29
+              "diff_from_target": -5.62
             }
           },
           {
             "name": "bonds_min",
             "constraint_type": "min",
             "cap": 15.0,
-            "observed": 37.02,
-            "slack": 22.02,
+            "observed": 56.0,
+            "slack": 41.0,
             "binding": false,
             "status": "OK",
             "details": {
-              "count": 5,
+              "count": 7,
               "breakdown": [
                 {
                   "id": "Vanguard Intermediate-Term Treasury Fund",
@@ -1770,7 +1919,17 @@
                 {
                   "id": "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L)",
                   "name": "Vanguard Intermediate-Term Bon",
-                  "weight": 5.02
+                  "weight": 8.0
+                },
+                {
+                  "id": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
+                  "name": "Vanguard Short-Term Inflation-",
+                  "weight": 8.0
+                },
+                {
+                  "id": "Vanguard Short-Term Bond ETF",
+                  "name": "Vanguard Short-Term Bond ETF",
+                  "weight": 8.0
                 }
               ]
             }
@@ -1823,11 +1982,7 @@
                 },
                 {
                   "id": "EQ_629",
-                  "weight": 15.0
-                },
-                {
-                  "id": "EQ_149",
-                  "weight": 15.0
+                  "weight": 13.0
                 }
               ]
             }
@@ -1844,16 +1999,12 @@
               "most_concentrated": "Diversified",
               "counts_in_max_sector": {
                 "Diversified": 30.0,
-                "Finance": 15.0,
-                "Santé": 15.0,
-                "Matériaux": 1.98
+                "Finance": 13.0
               },
               "all_sectors": {
-                "Bonds": 37.02,
+                "Bonds": 56.0,
                 "Diversified": 30.0,
-                "Finance": 15.0,
-                "Santé": 15.0,
-                "Matériaux": 1.98,
+                "Finance": 13.0,
                 "Crypto": 1.0
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -1871,15 +2022,11 @@
               "most_concentrated": "Global",
               "counts_in_max_region": {
                 "Global": 30.0,
-                "Belgique": 15.0,
-                "Etats-Unis": 15.0,
-                "Inde": 1.98
+                "Belgique": 13.0
               },
               "all_regions": {
-                "Global": 68.02,
-                "Belgique": 15.0,
-                "Etats-Unis": 15.0,
-                "Inde": 1.98
+                "Global": 87.0,
+                "Belgique": 13.0
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -1908,16 +2055,16 @@
             "name": "bucket_core",
             "constraint_type": "range",
             "cap": 55.0,
-            "observed": 60.0,
-            "slack": -5.0,
+            "observed": 43.0,
+            "slack": 8.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 35.0,
               "range_max": 55.0,
-              "slack_from_min": 25.0,
-              "slack_from_max": -5.0,
-              "outside_range": true,
+              "slack_from_min": 8.0,
+              "slack_from_max": 12.0,
+              "outside_range": false,
               "is_indicator": true
             }
           },
@@ -1925,15 +2072,15 @@
             "name": "bucket_satellite",
             "constraint_type": "range",
             "cap": 35.0,
-            "observed": 1.98,
-            "slack": -13.02,
+            "observed": 0,
+            "slack": -15.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 15.0,
               "range_max": 35.0,
-              "slack_from_min": -13.02,
-              "slack_from_max": 33.02,
+              "slack_from_min": -15.0,
+              "slack_from_max": 35.0,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1942,15 +2089,15 @@
             "name": "bucket_defensive",
             "constraint_type": "range",
             "cap": 30.0,
-            "observed": 37.02,
-            "slack": -7.02,
+            "observed": 56.0,
+            "slack": -26.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 20.0,
               "range_max": 30.0,
-              "slack_from_min": 17.02,
-              "slack_from_max": -7.02,
+              "slack_from_min": 36.0,
+              "slack_from_max": -26.0,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1998,49 +2145,46 @@
         },
         "quality_score": 87.7,
         "recommendations": [
-          "🟠 VIOLATED: volatility exceeded by 0.3% — reduce exposure",
+          "🟠 VIOLATED: volatility exceeded by 2.6% — reduce exposure",
           "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
           "🟡 BINDING: max_sector at 30.0% (cap=30.0%) — monitor closely",
-          "ℹ️ INFO: bucket_satellite is 13.0% outside target range (indicator only)",
+          "ℹ️ INFO: bucket_satellite is 15.0% outside target range (indicator only)",
+          "ℹ️ INFO: bucket_defensive is 26.0% outside target range (indicator only)",
           "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
         ],
         "exposures": {
           "by_category": {
             "ETF": 30.0,
-            "Actions": 31.98,
-            "Obligations": 37.02,
+            "Obligations": 56.0,
+            "Actions": 13.0,
             "Crypto": 1.0
           },
           "by_sector": {
             "Diversified": 30.0,
-            "Finance": 15.0,
-            "Santé": 15.0,
-            "Matériaux": 1.98
+            "Finance": 13.0
           },
           "by_region": {
-            "Global": 68.02,
-            "Belgique": 15.0,
-            "Etats-Unis": 15.0,
-            "Inde": 1.98
+            "Global": 87.0,
+            "Belgique": 13.0
           },
           "by_risk_bucket": {
-            "equity_like": 61.98,
-            "bond_like": 37.02,
+            "equity_like": 43.0,
+            "bond_like": 56.0,
             "crypto": 1.0
           },
           "by_role": {
-            "core": 60.0,
-            "satellite": 1.98,
-            "defensive": 37.02,
+            "core": 43.0,
+            "satellite": 0.0,
+            "defensive": 56.0,
             "lottery": 1.0,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 1186.0,
+            "hhi": 1068.0,
             "hhi_interpretation": "diversified",
-            "effective_n": 8.43,
+            "effective_n": 9.37,
             "n_positions": 12,
-            "top_5_weight": 68.0,
+            "top_5_weight": 59.0,
             "top_10_weight": 99.0,
             "largest_position": 15.0,
             "smallest_position": 0.5,
@@ -2080,22 +2224,11 @@
             "id": "EQ_629",
             "ticker": "KBC",
             "name": "KBC GROEP",
-            "weight_pct": 15.0,
+            "weight_pct": 13.0,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Finance",
             "region": "Belgique",
-            "exchange": null
-          },
-          {
-            "id": "EQ_149",
-            "ticker": "COR",
-            "name": "CENCORA INC",
-            "weight_pct": 15.0,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Santé",
-            "region": "Etats-Unis",
             "exchange": null
           },
           {
@@ -2146,7 +2279,7 @@
             "id": "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L)",
             "ticker": "BIV",
             "name": "Vanguard Intermediate-Term Bond ETF (likely mapping for tick",
-            "weight_pct": 5.02,
+            "weight_pct": 8.0,
             "category": "Obligations",
             "risk_bucket": "bond_like",
             "sector": "Bonds",
@@ -2154,14 +2287,25 @@
             "exchange": null
           },
           {
-            "id": "EQ_878",
-            "ticker": "VEDL",
-            "name": "VEDANTA LTD",
-            "weight_pct": 1.98,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Matériaux",
-            "region": "Inde",
+            "id": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
+            "ticker": "VTIP",
+            "name": "Vanguard Short-Term Inflation-Protected Securities Index Fun",
+            "weight_pct": 8.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "Vanguard Short-Term Bond ETF",
+            "ticker": "BSV",
+            "name": "Vanguard Short-Term Bond ETF",
+            "weight_pct": 8.0,
+            "category": "Obligations",
+            "risk_bucket": "bond_like",
+            "sector": "Bonds",
+            "region": "Global",
             "exchange": null
           },
           {
@@ -2192,10 +2336,10 @@
           "n_exchanges": 0,
           "exchanges": [],
           "total_weight": 100.0,
-          "missing_isin": 5,
+          "missing_isin": 3,
           "missing_ticker": 0,
           "data_quality": {
-            "isin_coverage": 58.3,
+            "isin_coverage": 75.0,
             "ticker_coverage": 100.0
           },
           "ready_for_execution": true
@@ -2205,40 +2349,36 @@
     "_exposures": {
       "by_category": {
         "ETF": 30.0,
-        "Actions": 31.98,
-        "Obligations": 37.02,
+        "Obligations": 56.0,
+        "Actions": 13.0,
         "Crypto": 1.0
       },
       "by_sector": {
         "Diversified": 30.0,
-        "Finance": 15.0,
-        "Santé": 15.0,
-        "Matériaux": 1.98
+        "Finance": 13.0
       },
       "by_region": {
-        "Global": 68.02,
-        "Belgique": 15.0,
-        "Etats-Unis": 15.0,
-        "Inde": 1.98
+        "Global": 87.0,
+        "Belgique": 13.0
       },
       "by_risk_bucket": {
-        "equity_like": 61.98,
-        "bond_like": 37.02,
+        "equity_like": 43.0,
+        "bond_like": 56.0,
         "crypto": 1.0
       },
       "by_role": {
-        "core": 60.0,
-        "satellite": 1.98,
-        "defensive": 37.02,
+        "core": 43.0,
+        "satellite": 0.0,
+        "defensive": 56.0,
         "lottery": 1.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1186.0,
+        "hhi": 1068.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 8.43,
+        "effective_n": 9.37,
         "n_positions": 12,
-        "top_5_weight": 68.0,
+        "top_5_weight": 59.0,
         "top_10_weight": 99.0,
         "largest_position": 15.0,
         "smallest_position": 0.5,
@@ -2256,25 +2396,25 @@
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 5,
+      "missing_isin": 3,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 58.3,
+        "isin_coverage": 75.0,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
     },
     "_limitations": [
-      "Volatilité réalisée (8.7%) éloignée de la cible (12.0%) - écart de 3.3%."
+      "Volatilité réalisée (6.4%) éloignée de la cible (12.0%) - écart de 5.6%."
     ],
     "_asset_details": [
       {
         "name": "Vanguard FTSE Developed Markets ETF",
         "ticker": "VEA",
-        "rationale": "Cet ETF offre une exposition diversifiée aux marchés développés, ce qui permet de bénéficier d'une croissance stable. Son rôle principal est de servir de base solide au portefeuille, tout en diversifiant les risques géographiques.",
+        "rationale": "Cet ETF offre une exposition diversifiée aux marchés développés, ce qui permet de bénéficier de la croissance économique globale. Il joue un rôle central dans le portefeuille en tant qu'actif de base, apportant stabilité et diversification.",
         "role": "core",
         "risk_note": "Volatilité relativement élevée par rapport à l'objectif de volatilité du portefeuille.",
-        "market_context_link": null,
+        "market_context_link": "null",
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -2291,11 +2431,11 @@
       {
         "name": "KBC GROEP",
         "ticker": "KBC",
-        "rationale": "Avec un ROE élevé et un rendement dividende attractif, KBC représente une opportunité d'investissement solide dans le secteur financier. Son rôle est d'apporter des revenus passifs tout en diversifiant le portefeuille.",
-        "role": "income",
-        "risk_note": "Risques liés à la volatilité du secteur financier, notamment en période de ralentissement économique.",
-        "market_context_link": null,
-        "weight_pct": 15.0,
+        "rationale": "KBC présente un ROE élevé et un faible ratio P/E, ce qui indique une valorisation attractive et une bonne rentabilité. Cet actif est un satellite qui vise à générer des revenus tout en profitant de la croissance potentielle du secteur financier.",
+        "role": "satellite",
+        "risk_note": "Exposition aux risques du secteur financier, qui est actuellement en difficulté.",
+        "market_context_link": "null",
+        "weight_pct": 13.0,
         "category": "Actions",
         "sector": "Finance",
         "country": "Belgique",
@@ -2309,32 +2449,12 @@
         }
       },
       {
-        "name": "CENCORA INC",
-        "ticker": "COR",
-        "rationale": "Cencora affiche un ROE impressionnant, bien que son P/E soit élevé, ce qui indique une forte croissance anticipée. Ce titre est un satellite qui vise à capter la croissance dans le secteur de la santé, malgré les risques associés.",
-        "role": "satellite",
-        "risk_note": "Exposition aux défis du secteur de la santé, qui est actuellement en difficulté.",
-        "market_context_link": null,
-        "weight_pct": 15.0,
-        "category": "Actions",
-        "sector": "Santé",
-        "country": "Etats-Unis",
-        "metrics": {
-          "roe": 89.74,
-          "pe_ratio": 44.23892,
-          "dividend_yield": 0.63,
-          "ytd": 6.01,
-          "volatility": 19.0,
-          "buffett_score": 91.8
-        }
-      },
-      {
         "name": "Vanguard Intermediate-Term Treasury Fund",
         "ticker": "VGIT",
-        "rationale": "Ce fonds obligataire offre une protection contre la volatilité du marché tout en fournissant un revenu stable. Il joue un rôle de couverture dans le portefeuille, équilibrant les actifs plus risqués.",
+        "rationale": "Ce fonds obligataire offre une protection contre la volatilité des marchés grâce à des titres du Trésor à moyen terme, ce qui est essentiel pour un investisseur modéré. Il sert de couverture dans le portefeuille, réduisant le risque global.",
         "role": "hedge",
-        "risk_note": "Sensibilité aux variations des taux d'intérêt, ce qui peut affecter la performance.",
-        "market_context_link": null,
+        "risk_note": "Risque de taux d'intérêt, surtout en période de hausse des taux.",
+        "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -2351,10 +2471,10 @@
       {
         "name": "SPDR Portfolio Intermediate Term Treasury ETF",
         "ticker": "SPTI",
-        "rationale": "Cet ETF obligataire permet d'accéder à des titres de créance à moyen terme, offrant une stabilité dans un environnement incertain. Il sert également de couverture contre la volatilité des actions.",
+        "rationale": "Similaire à VGIT, cet ETF investit dans des obligations d'État à moyen terme, offrant sécurité et prévisibilité des rendements. Il agit également comme un actif de couverture dans le portefeuille.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt et faible rendement dans un contexte de hausse des taux.",
-        "market_context_link": null,
+        "risk_note": "Sensibilité aux variations des taux d'intérêt.",
+        "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -2371,10 +2491,10 @@
       {
         "name": "Schwab Intermediate-Term U.S. Treasury ETF",
         "ticker": "SCHR",
-        "rationale": "Ce fonds offre une exposition à des obligations d'État à moyen terme, ce qui contribue à la stabilité du portefeuille. Il joue un rôle de couverture contre la volatilité des marchés actions.",
+        "rationale": "Cet ETF fournit une exposition aux obligations du Trésor américain, ce qui contribue à la stabilité du portefeuille. Il est utilisé comme un actif de couverture pour atténuer les fluctuations du marché.",
         "role": "hedge",
-        "risk_note": "Risque de baisse de la valeur des obligations si les taux d'intérêt augmentent.",
-        "market_context_link": null,
+        "risk_note": "Risque de taux d'intérêt, en particulier si les taux augmentent.",
+        "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -2391,10 +2511,10 @@
       {
         "name": "iShares 3-7 Year Treasury Bond ETF",
         "ticker": "IEI",
-        "rationale": "Cet ETF fournit une exposition à des obligations à moyen terme, offrant une protection contre la volatilité du marché. Il complète le portefeuille en diversifiant les actifs obligataires.",
+        "rationale": "Cet ETF se concentre sur les obligations du Trésor à court terme, offrant une protection contre l'inflation et une volatilité réduite. Il joue un rôle de couverture dans le portefeuille.",
         "role": "hedge",
-        "risk_note": "Sensibilité aux fluctuations des taux d'intérêt.",
-        "market_context_link": null,
+        "risk_note": "Risque de taux d'intérêt, bien que plus faible que les obligations à long terme.",
+        "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
         "sector": "Bonds",
@@ -2411,11 +2531,11 @@
       {
         "name": "Vanguard Intermediate-Term Bond ETF",
         "ticker": "BIV",
-        "rationale": "Ce fonds offre une exposition diversifiée aux obligations à moyen terme, ce qui aide à stabiliser le portefeuille. Il sert de couverture contre la volatilité des actions.",
+        "rationale": "BIV offre une exposition à un large éventail d'obligations à moyen terme, ce qui contribue à la diversification et à la stabilité du portefeuille. Il sert de couverture contre la volatilité du marché.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt, surtout en période de hausse des taux.",
-        "market_context_link": null,
-        "weight_pct": 5.0,
+        "risk_note": "Risque de taux d'intérêt et de crédit.",
+        "market_context_link": "null",
+        "weight_pct": 8.0,
         "category": "Obligations",
         "sector": "Bonds",
         "country": "Global",
@@ -2429,32 +2549,52 @@
         }
       },
       {
-        "name": "VEDANTA LTD",
-        "ticker": "VEDL",
-        "rationale": "Vedanta présente un bon ROE et un rendement dividende attractif, ce qui en fait un choix intéressant dans le secteur des matériaux. Son rôle est de diversifier le portefeuille avec une exposition à un secteur favorisé.",
-        "role": "satellite",
-        "risk_note": "Volatilité élevée due aux fluctuations des prix des matières premières.",
-        "market_context_link": "Secteur favorisé: materials",
-        "weight_pct": 2.0,
-        "category": "Actions",
-        "sector": "Matériaux",
-        "country": "Inde",
+        "name": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
+        "ticker": "VTIP",
+        "rationale": "Ce fonds investit dans des titres protégés contre l'inflation, offrant une sécurité supplémentaire en période d'inflation croissante. Il joue un rôle de couverture contre l'inflation dans le portefeuille.",
+        "role": "hedge",
+        "risk_note": "Risque de taux d'intérêt, bien que moins exposé que les obligations traditionnelles.",
+        "market_context_link": "null",
+        "weight_pct": 8.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
         "metrics": {
-          "roe": 38.2,
-          "pe_ratio": 18.34258,
-          "dividend_yield": 5.9,
-          "ytd": 9.7,
-          "volatility": 33.23,
-          "buffett_score": 92.3
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 0.16,
+          "volatility": 2.95,
+          "buffett_score": null
+        }
+      },
+      {
+        "name": "Vanguard Short-Term Bond ETF",
+        "ticker": "BSV",
+        "rationale": "BSV investit dans des obligations à court terme, offrant une liquidité et une stabilité accrues. Il est utilisé comme un actif de couverture pour réduire la volatilité du portefeuille.",
+        "role": "hedge",
+        "risk_note": "Risque de taux d'intérêt, mais généralement plus faible que les obligations à long terme.",
+        "market_context_link": "null",
+        "weight_pct": 8.0,
+        "category": "Obligations",
+        "sector": "Bonds",
+        "country": "Global",
+        "metrics": {
+          "roe": null,
+          "pe_ratio": null,
+          "dividend_yield": null,
+          "ytd": 0.03,
+          "volatility": 2.79,
+          "buffett_score": null
         }
       },
       {
         "name": "PAXG/USD",
         "ticker": "PAXG/USD",
-        "rationale": "PAXG offre une exposition à l'or, ce qui peut servir de protection contre l'inflation et l'incertitude économique. Il agit comme un actif de couverture dans le portefeuille.",
-        "role": "hedge",
-        "risk_note": "Volatilité élevée et dépendance aux fluctuations des prix de l'or.",
-        "market_context_link": null,
+        "rationale": "PAXG est une cryptomonnaie adossée à l'or, offrant une protection contre l'inflation et une diversification dans le portefeuille. Il représente un actif satellite à haut risque et à haut rendement.",
+        "role": "satellite",
+        "risk_note": "Volatilité élevée et incertitudes réglementaires dans le secteur des cryptomonnaies.",
+        "market_context_link": "null",
         "weight_pct": 0.5,
         "category": "Crypto",
         "sector": "Crypto",
@@ -2463,18 +2603,18 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 12.79,
-          "volatility": 50.25,
+          "ytd": 13.23,
+          "volatility": 50.49,
           "buffett_score": null
         }
       },
       {
         "name": "XAUT/USD",
         "ticker": "XAUT/USD",
-        "rationale": "XAUT, similaire à PAXG, fournit une exposition à l'or, offrant une protection contre les risques économiques. Il complète le portefeuille en tant qu'actif de couverture.",
-        "role": "hedge",
-        "risk_note": "Volatilité importante et dépendance aux prix de l'or.",
-        "market_context_link": null,
+        "rationale": "XAUT, similaire à PAXG, est une cryptomonnaie adossée à l'or, apportant une diversification et une protection contre l'inflation. Il est également considéré comme un actif satellite avec un potentiel de rendement élevé.",
+        "role": "satellite",
+        "risk_note": "Volatilité significative et risques associés aux cryptomonnaies.",
+        "market_context_link": "null",
         "weight_pct": 0.5,
         "category": "Crypto",
         "sector": "Crypto",
@@ -2483,18 +2623,18 @@
           "roe": null,
           "pe_ratio": null,
           "dividend_yield": null,
-          "ytd": 13.01,
-          "volatility": 49.9,
+          "ytd": 12.67,
+          "volatility": 49.7,
           "buffett_score": null
         }
       },
       {
         "name": "Vanguard Total International Stock Index Fund",
         "ticker": "VXUS",
-        "rationale": "Cet ETF permet d'accéder à une large gamme d'actions internationales, diversifiant ainsi le portefeuille. Il joue un rôle central en offrant une exposition globale aux marchés développés et émergents.",
+        "rationale": "VXUS offre une exposition diversifiée aux marchés internationaux, ce qui est essentiel pour capter la croissance mondiale. Il agit comme un actif de base dans le portefeuille, complétant l'exposition aux marchés développés.",
         "role": "core",
-        "risk_note": "Volatilité potentielle due aux fluctuations des marchés internationaux.",
-        "market_context_link": null,
+        "risk_note": "Exposition aux fluctuations des devises et aux risques géopolitiques.",
+        "market_context_link": "null",
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Diversified",
@@ -2511,11 +2651,11 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-02-03T09:41:19.731086+00:00",
+      "timestamp": "2026-02-03T13:47:33.419900+00:00",
       "profile": "Modéré",
       "data_limits": {
         "data_window": "short_window",
-        "data_points": 167,
+        "data_points": 174,
         "var_95_method": "parametric",
         "var_99_method": "parametric",
         "var99_confidence": "low_parametric",
@@ -2529,31 +2669,31 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "disclaimer": "VaR95 method: parametric. VaR99 method: parametric. Based on 167 observations. Historical VaR requires >=252 obs (VaR95) or >=1000 obs (VaR99)."
+        "disclaimer": "VaR95 method: parametric. VaR99 method: parametric. Based on 174 observations. Historical VaR requires >=252 obs (VaR95) or >=1000 obs (VaR99)."
       },
       "stress_tests": {
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-02-03T09:41:19.733367+00:00"
+          "timestamp": "2026-02-03T13:47:33.422510+00:00"
         },
         "summary": {
           "n_scenarios": 5,
-          "avg_var_impact": -0.3721078580779919,
-          "max_var_impact": -0.8106705924783832,
-          "avg_expected_loss": -0.14293080000000002,
-          "worst_expected_loss": -0.3034200000000001,
-          "total_warnings": 10
+          "avg_var_impact": -0.2762435357500877,
+          "max_var_impact": -0.5783796611941554,
+          "avg_expected_loss": -0.11522000000000002,
+          "worst_expected_loss": -0.22750000000000004,
+          "total_warnings": 9
         },
         "worst_case": {
           "scenario": "market_crash",
-          "expected_loss_pct": -30.34200000000001,
-          "vol_after_pct": 37.24317928559037
+          "expected_loss_pct": -22.750000000000004,
+          "vol_after_pct": 26.42854312290734
         },
         "risk_budget_impact": {
-          "base_volatility": 0.06407277007269203,
-          "avg_stressed_volatility": 0.20339013060642572,
-          "max_stressed_volatility": 0.3724317928559037,
+          "base_volatility": 0.050984725335969795,
+          "avg_stressed_volatility": 0.14887137320836352,
+          "max_stressed_volatility": 0.2642854312290734,
           "vol_budget_breach_scenarios": 4
         },
         "scenarios": [
@@ -2568,38 +2708,36 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06407277007269203,
-              "sharpe_ratio": -0.3121450809339059,
-              "var_95": -0.1053997067695784,
-              "var_99": -0.14903326318908167,
-              "cvar_95": -0.13218212465996368,
-              "diversification_ratio": 1.7953675090577488
+              "volatility": 0.050984725335969795,
+              "sharpe_ratio": -0.3922743501746389,
+              "var_95": -0.08386987317767032,
+              "var_99": -0.11859047113146574,
+              "cvar_95": -0.1051814883681057,
+              "diversification_ratio": 1.5358187606782772
             },
             "stressed_metrics": {
-              "expected_return": -0.061487999999999994,
-              "volatility": 0.12408891733809843,
-              "sharpe_ratio": -0.6566903938566407,
-              "var_95": -0.2656142690211719,
-              "var_99": -0.35011882172841696,
-              "cvar_95": -0.3174834364684971,
-              "diversification_ratio": 1.3905452485786238
+              "expected_return": -0.050099999999999985,
+              "volatility": 0.09073489312935547,
+              "sharpe_ratio": -0.7725803996932303,
+              "var_95": -0.19935889919778974,
+              "var_99": -0.26114936141888084,
+              "cvar_95": -0.23728608452586034,
+              "diversification_ratio": 1.2944848720003288
             },
             "impact": {
-              "expected_return": -0.061487999999999994,
-              "volatility": 0.0600161472654064,
-              "sharpe_ratio": -0.3445453129227348,
-              "var_95": -0.16021456225159353,
-              "var_99": -0.2010855585393353,
-              "cvar_95": -0.1853013118085334,
-              "diversification_ratio": -0.40482226047912495
+              "expected_return": -0.050099999999999985,
+              "volatility": 0.03975016779338567,
+              "sharpe_ratio": -0.3803060495185914,
+              "var_95": -0.11548902602011941,
+              "var_99": -0.14255889028741509,
+              "cvar_95": -0.13210459615775463,
+              "diversification_ratio": -0.24133388867794836
             },
-            "var_impact_pct": -16.02145622515935,
-            "expected_loss_pct": -6.1488,
-            "vol_after_pct": 12.408891733809844,
-            "warnings": [
-              "Severe VaR deterioration: -16.0%"
-            ],
-            "timestamp": "2026-02-03T09:41:19.731798+00:00"
+            "var_impact_pct": -11.54890260201194,
+            "expected_loss_pct": -5.009999999999999,
+            "vol_after_pct": 9.073489312935546,
+            "warnings": [],
+            "timestamp": "2026-02-03T13:47:33.420709+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -2612,39 +2750,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06407277007269203,
-              "sharpe_ratio": -0.3121450809339059,
-              "var_95": -0.1053997067695784,
-              "var_99": -0.14903326318908167,
-              "cvar_95": -0.13218212465996368,
-              "diversification_ratio": 1.7953675090577488
+              "volatility": 0.050984725335969795,
+              "sharpe_ratio": -0.3922743501746389,
+              "var_95": -0.08386987317767032,
+              "var_99": -0.11859047113146574,
+              "cvar_95": -0.1051814883681057,
+              "diversification_ratio": 1.5358187606782772
             },
             "stressed_metrics": {
-              "expected_return": -0.11007600000000001,
-              "volatility": 0.22196859733716634,
-              "sharpe_ratio": -0.5860108211722259,
-              "var_95": -0.47521434261963863,
-              "var_99": -0.6263749574062489,
-              "cvar_95": -0.5679972163065742,
-              "diversification_ratio": 1.554735728168396
+              "expected_return": -0.0873,
+              "volatility": 0.16781874639479458,
+              "sharpe_ratio": -0.6393802975239496,
+              "var_95": -0.3633618378194371,
+              "var_99": -0.4776464041142922,
+              "cvar_95": -0.4335100738124612,
+              "diversification_ratio": 1.3997833858465818
             },
             "impact": {
-              "expected_return": -0.11007600000000001,
-              "volatility": 0.15789582726447432,
-              "sharpe_ratio": -0.27386574023832,
-              "var_95": -0.36981463585006025,
-              "var_99": -0.47734169421716727,
-              "cvar_95": -0.4358150916466105,
-              "diversification_ratio": -0.24063178088935278
+              "expected_return": -0.0873,
+              "volatility": 0.11683402105882479,
+              "sharpe_ratio": -0.24710594734931074,
+              "var_95": -0.2794919646417668,
+              "var_99": -0.35905593298282645,
+              "cvar_95": -0.3283285854443555,
+              "diversification_ratio": -0.13603537483169537
             },
-            "var_impact_pct": -36.981463585006026,
-            "expected_loss_pct": -11.0076,
-            "vol_after_pct": 22.196859733716636,
+            "var_impact_pct": -27.94919646417668,
+            "expected_loss_pct": -8.73,
+            "vol_after_pct": 16.781874639479458,
             "warnings": [
-              "Severe volatility increase: +15.8%",
-              "Severe VaR deterioration: -37.0%"
+              "Severe volatility increase: +11.7%",
+              "Severe VaR deterioration: -27.9%"
             ],
-            "timestamp": "2026-02-03T09:41:19.732192+00:00"
+            "timestamp": "2026-02-03T13:47:33.421162+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -2657,39 +2795,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06407277007269203,
-              "sharpe_ratio": -0.3121450809339059,
-              "var_95": -0.1053997067695784,
-              "var_99": -0.14903326318908167,
-              "cvar_95": -0.13218212465996368,
-              "diversification_ratio": 1.7953675090577488
+              "volatility": 0.050984725335969795,
+              "sharpe_ratio": -0.3922743501746389,
+              "var_95": -0.08386987317767032,
+              "var_99": -0.11859047113146574,
+              "cvar_95": -0.1051814883681057,
+              "diversification_ratio": 1.5358187606782772
             },
             "stressed_metrics": {
-              "expected_return": -0.140074,
-              "volatility": 0.1598399817655425,
-              "sharpe_ratio": -1.0014640782104238,
-              "var_95": -0.4030107700043174,
-              "var_99": -0.5118617975866518,
-              "cvar_95": -0.4698238823823142,
-              "diversification_ratio": 1.4393666507366614
+              "expected_return": -0.11540000000000003,
+              "volatility": 0.11802429021248441,
+              "sharpe_ratio": -1.14722147242939,
+              "var_95": -0.3095499573995369,
+              "var_99": -0.38992449903423876,
+              "cvar_95": -0.35888411070835535,
+              "diversification_ratio": 1.3269013952642899
             },
             "impact": {
-              "expected_return": -0.140074,
-              "volatility": 0.09576721169285048,
-              "sharpe_ratio": -0.6893189972765179,
-              "var_95": -0.297611063234739,
-              "var_99": -0.3628285343975702,
-              "cvar_95": -0.3376417577223505,
-              "diversification_ratio": -0.3560008583210874
+              "expected_return": -0.11540000000000003,
+              "volatility": 0.0670395648765146,
+              "sharpe_ratio": -0.7549471222547512,
+              "var_95": -0.22568008422186658,
+              "var_99": -0.271334027902773,
+              "cvar_95": -0.25370262234024965,
+              "diversification_ratio": -0.2089173654139873
             },
-            "var_impact_pct": -29.7611063234739,
-            "expected_loss_pct": -14.0074,
-            "vol_after_pct": 15.983998176554252,
+            "var_impact_pct": -22.568008422186658,
+            "expected_loss_pct": -11.540000000000003,
+            "vol_after_pct": 11.802429021248441,
             "warnings": [
-              "Severe VaR deterioration: -29.8%",
-              "Sharpe ratio collapse: -0.69"
+              "Severe VaR deterioration: -22.6%",
+              "Sharpe ratio collapse: -0.75"
             ],
-            "timestamp": "2026-02-03T09:41:19.732545+00:00"
+            "timestamp": "2026-02-03T13:47:33.421604+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -2702,39 +2840,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06407277007269203,
-              "sharpe_ratio": -0.3121450809339059,
-              "var_95": -0.1053997067695784,
-              "var_99": -0.14903326318908167,
-              "cvar_95": -0.13218212465996368,
-              "diversification_ratio": 1.7953675090577488
+              "volatility": 0.050984725335969795,
+              "sharpe_ratio": -0.3922743501746389,
+              "var_95": -0.08386987317767032,
+              "var_99": -0.11859047113146574,
+              "cvar_95": -0.1051814883681057,
+              "diversification_ratio": 1.5358187606782772
             },
             "stressed_metrics": {
-              "expected_return": -0.09959600000000003,
-              "volatility": 0.1386213637354175,
-              "sharpe_ratio": -0.8627530185626321,
-              "var_95": -0.3276281433447618,
-              "var_99": -0.42202929204858114,
-              "cvar_95": -0.38557187338616633,
-              "diversification_ratio": 1.493720013331585
+              "expected_return": -0.09580000000000002,
+              "volatility": 0.10349350507610981,
+              "sharpe_ratio": -1.1189107945937278,
+              "var_95": -0.2660468158502007,
+              "var_99": -0.3365258928070315,
+              "cvar_95": -0.3093071009720146,
+              "diversification_ratio": 1.361881943398942
             },
             "impact": {
-              "expected_return": -0.09959600000000003,
-              "volatility": 0.07454859366272547,
-              "sharpe_ratio": -0.5506079376287262,
-              "var_95": -0.22222843657518343,
-              "var_99": -0.2729960288594995,
-              "cvar_95": -0.2533897487262027,
-              "diversification_ratio": -0.3016474957261637
+              "expected_return": -0.09580000000000002,
+              "volatility": 0.05250877974014002,
+              "sharpe_ratio": -0.7266364444190889,
+              "var_95": -0.18217694267253037,
+              "var_99": -0.21793542167556573,
+              "cvar_95": -0.20412561260390888,
+              "diversification_ratio": -0.1739368172793352
             },
-            "var_impact_pct": -22.222843657518343,
-            "expected_loss_pct": -9.959600000000004,
-            "vol_after_pct": 13.86213637354175,
+            "var_impact_pct": -18.217694267253037,
+            "expected_loss_pct": -9.580000000000002,
+            "vol_after_pct": 10.349350507610982,
             "warnings": [
-              "Severe VaR deterioration: -22.2%",
-              "Sharpe ratio collapse: -0.55"
+              "Severe VaR deterioration: -18.2%",
+              "Sharpe ratio collapse: -0.73"
             ],
-            "timestamp": "2026-02-03T09:41:19.732878+00:00"
+            "timestamp": "2026-02-03T13:47:33.421952+00:00"
           },
           {
             "scenario": "market_crash",
@@ -2747,64 +2885,54 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06407277007269203,
-              "sharpe_ratio": -0.3121450809339059,
-              "var_95": -0.1053997067695784,
-              "var_99": -0.14903326318908167,
-              "cvar_95": -0.13218212465996368,
-              "diversification_ratio": 1.7953675090577488
+              "volatility": 0.050984725335969795,
+              "sharpe_ratio": -0.3922743501746389,
+              "var_95": -0.08386987317767032,
+              "var_99": -0.11859047113146574,
+              "cvar_95": -0.1051814883681057,
+              "diversification_ratio": 1.5358187606782772
             },
             "stressed_metrics": {
-              "expected_return": -0.3034200000000001,
-              "volatility": 0.3724317928559037,
-              "sharpe_ratio": -0.8684006204731651,
-              "var_95": -0.9160702992479617,
-              "var_99": -1.1696963501828321,
-              "cvar_95": -1.0717467886617296,
-              "diversification_ratio": 1.2354924773927283
+              "expected_return": -0.22750000000000004,
+              "volatility": 0.2642854312290734,
+              "sharpe_ratio": -0.9364874894881197,
+              "var_95": -0.6622495343718258,
+              "var_99": -0.8422279130388247,
+              "cvar_95": -0.7727208446255784,
+              "diversification_ratio": 1.1851322612049833
             },
             "impact": {
-              "expected_return": -0.3034200000000001,
-              "volatility": 0.3083590227832117,
-              "sharpe_ratio": -0.5562555395392592,
-              "var_95": -0.8106705924783832,
-              "var_99": -1.0206630869937505,
-              "cvar_95": -0.9395646640017659,
-              "diversification_ratio": -0.5598750316650205
+              "expected_return": -0.22750000000000004,
+              "volatility": 0.2133007058931036,
+              "sharpe_ratio": -0.5442131393134808,
+              "var_95": -0.5783796611941554,
+              "var_99": -0.723637441907359,
+              "cvar_95": -0.6675393562574727,
+              "diversification_ratio": -0.3506864994732939
             },
-            "var_impact_pct": -81.06705924783833,
-            "expected_loss_pct": -30.34200000000001,
-            "vol_after_pct": 37.24317928559037,
+            "var_impact_pct": -57.83796611941554,
+            "expected_loss_pct": -22.750000000000004,
+            "vol_after_pct": 26.42854312290734,
             "warnings": [
-              "Severe volatility increase: +30.8%",
-              "Severe VaR deterioration: -81.1%",
-              "Sharpe ratio collapse: -0.56"
+              "Severe volatility increase: +21.3%",
+              "Severe VaR deterioration: -57.8%",
+              "Sharpe ratio collapse: -0.54"
             ],
-            "timestamp": "2026-02-03T09:41:19.733221+00:00"
+            "timestamp": "2026-02-03T13:47:33.422346+00:00"
           }
         ],
         "source": "stress_testing.py",
         "calibration_note": "Indicative scenarios, not calibrated on historical crises",
         "allocation_breakdown": {
           "by_category": {
-            "Actions": 31.98,
+            "Actions": 13.0,
             "ETF": 30.0,
-            "Obligations": 37.02,
+            "Obligations": 56.0,
             "Crypto": 1.0
           },
           "total_weight_pct": 100.0,
           "n_positions": 12,
           "top_positions": [
-            {
-              "ticker": "KBC",
-              "category": "Actions",
-              "weight_pct": 15.0
-            },
-            {
-              "ticker": "COR",
-              "category": "Actions",
-              "weight_pct": 15.0
-            },
             {
               "ticker": "VEA",
               "category": "ETF",
@@ -2814,6 +2942,21 @@
               "ticker": "VXUS",
               "category": "ETF",
               "weight_pct": 15.0
+            },
+            {
+              "ticker": "KBC",
+              "category": "Actions",
+              "weight_pct": 13.0
+            },
+            {
+              "ticker": "BIV",
+              "category": "Obligations",
+              "weight_pct": 8.0
+            },
+            {
+              "ticker": "BSV",
+              "category": "Obligations",
+              "weight_pct": 8.0
             },
             {
               "ticker": "IEI",
@@ -2836,14 +2979,9 @@
               "weight_pct": 8.0
             },
             {
-              "ticker": "BIV",
+              "ticker": "VTIP",
               "category": "Obligations",
-              "weight_pct": 5.02
-            },
-            {
-              "ticker": "VEDL",
-              "category": "Actions",
-              "weight_pct": 1.98
+              "weight_pct": 8.0
             },
             {
               "ticker": "PAXG/USD",
@@ -2878,11 +3016,11 @@
         "details": {}
       },
       "tail_risk": {
-        "var_95_pct": -10.54,
-        "var_99_pct": -14.9,
-        "cvar_95_pct": -13.22,
-        "cvar_99_pct": -17.08,
-        "max_drawdown_expected_pct": 21.31,
+        "var_95_pct": -8.39,
+        "var_99_pct": -11.86,
+        "cvar_95_pct": -10.52,
+        "cvar_99_pct": -13.59,
+        "max_drawdown_expected_pct": 16.95,
         "skewness": 0.0,
         "kurtosis": 3.0,
         "fat_tails": false,
@@ -2890,7 +3028,7 @@
           "var_95": "parametric",
           "var_99": "parametric"
         },
-        "n_obs": 167,
+        "n_obs": 174,
         "confidence_level": "low",
         "data_period": {
           "start": "2025-05-22",
@@ -2909,13 +3047,13 @@
           "level": "warning",
           "type": "liquidity",
           "message": "Score liquidite (50) < seuil",
-          "value": 50.00000000000001,
+          "value": 50.0,
           "threshold": 60.0
         },
         {
           "level": "info",
           "type": "tail_risk",
-          "message": "VaR99 parametrique (n_obs=167 < 1000)",
+          "message": "VaR99 parametrique (n_obs=174 < 1000)",
           "recommendation": "Interpreter avec prudence - VaR99 historique requiert 4+ ans de donnees"
         }
       ],
@@ -2927,25 +3065,25 @@
       },
       "history_metadata": {
         "version": "1.0.0",
-        "n_obs": 167,
+        "n_obs": 174,
         "n_tickers": 12,
         "tickers": [
           "KBC",
-          "COR",
-          "VEDL",
           "VEA",
           "VXUS",
           "BIV",
+          "BSV",
           "IEI",
           "SCHR",
           "SPTI",
           "VGIT",
+          "VTIP",
           "PAXG/USD",
           "XAUT/USD"
         ],
         "first_date": "2025-05-22",
         "last_date": "2026-02-02",
-        "date_coverage_pct": 10.7,
+        "date_coverage_pct": 11.1,
         "tickers_with_short_history": [],
         "tickers_with_errors": [],
         "leveraged_tickers": [],
@@ -2960,7 +3098,7 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-02-03T09:41:19.729918Z",
+        "fetch_timestamp": "2026-02-03T13:47:33.418629Z",
         "allocation": [
           {
             "ticker": "VEA",
@@ -2976,20 +3114,10 @@
             "ticker": "KBC",
             "name": "KBC GROEP",
             "category": "Actions",
-            "weight": 0.15,
-            "weight_pct": 15.0,
+            "weight": 0.13,
+            "weight_pct": 13.0,
             "asset_ids": [
               "EQ_629"
-            ]
-          },
-          {
-            "ticker": "COR",
-            "name": "CENCORA INC",
-            "category": "Actions",
-            "weight": 0.15,
-            "weight_pct": 15.0,
-            "asset_ids": [
-              "EQ_149"
             ]
           },
           {
@@ -3036,20 +3164,30 @@
             "ticker": "BIV",
             "name": "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L)",
             "category": "Obligations",
-            "weight": 0.050199999999999995,
-            "weight_pct": 5.02,
+            "weight": 0.08,
+            "weight_pct": 8.0,
             "asset_ids": [
               "Vanguard Intermediate-Term Bond ETF (likely mapping for ticker 0V1L)"
             ]
           },
           {
-            "ticker": "VEDL",
-            "name": "VEDANTA LTD",
-            "category": "Actions",
-            "weight": 0.019799999999999998,
-            "weight_pct": 1.9799999999999998,
+            "ticker": "VTIP",
+            "name": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
+            "category": "Obligations",
+            "weight": 0.08,
+            "weight_pct": 8.0,
             "asset_ids": [
-              "EQ_878"
+              "Vanguard Short-Term Inflation-Protected Securities Index Fund"
+            ]
+          },
+          {
+            "ticker": "BSV",
+            "name": "Vanguard Short-Term Bond ETF",
+            "category": "Obligations",
+            "weight": 0.08,
+            "weight_pct": 8.0,
+            "asset_ids": [
+              "Vanguard Short-Term Bond ETF"
             ]
           },
           {
@@ -3087,9 +3225,9 @@
     }
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche stable, axée sur des obligations à court terme et des actions à dividende. Bien qu'il vise à minimiser la volatilité, il est exposé à des risques liés aux fluctuations des taux d'intérêt et à la performance des marchés boursiers. De plus, la concentration sur des actifs à faible rendement peut limiter le potentiel de croissance. Les investisseurs doivent être conscients des risques associés à ce type de portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, privilégiant des actifs à faible volatilité comme les obligations et les actions de valeur. Bien que cette stratégie vise à minimiser les fluctuations, il existe des risques liés à la performance des obligations dans un environnement de taux d'intérêt changeants. De plus, l'exposition aux actions peut offrir un potentiel de croissance, mais reste soumise aux cycles économiques. Il est important de considérer ces risques avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "VINCI SA (DG)": "10.0%"
+      "CLOROX (CLX)": "10.0%"
     },
     "ETF": {
       "iShares Core Dividend Growth ETF (DGRO)": "11.4%",
@@ -3110,7 +3248,7 @@
       "GSY": 0.1333,
       "DGRO": 0.1143,
       "VTV": 0.1143,
-      "DG": 0.1,
+      "CLX": 0.1,
       "SCHV": 0.07139999999999999,
       "VNLA": 0.0629,
       "VUSB": 0.13720000000000002
@@ -3156,12 +3294,12 @@
           "Vanguard Value ETF"
         ]
       },
-      "DG": {
+      "CLX": {
         "weight": 0.1,
         "category": "Actions",
-        "name": "VINCI SA",
+        "name": "CLOROX",
         "asset_ids": [
-          "EQ_570"
+          "EQ_478"
         ]
       },
       "SCHV": {
@@ -3192,7 +3330,7 @@
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 4.55,
+      "vol_realized": 5.1,
       "vol_target": 6.0,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
       "heuristic_name": "stable_rules_v1",
@@ -3227,7 +3365,7 @@
       "GSY": 0.1333,
       "DGRO": 0.1143,
       "VTV": 0.1143,
-      "DG": 0.1,
+      "CLX": 0.1,
       "SCHV": 0.07139999999999999,
       "VNLA": 0.0629,
       "VUSB": 0.13720000000000002
@@ -3240,7 +3378,7 @@
       "Obligations:Invesco Ultra Short Duration ETF (GSY)": 13.3,
       "ETF:iShares Core Dividend Growth ETF (DGRO)": 11.4,
       "ETF:Vanguard Value ETF (VTV)": 11.4,
-      "Actions:VINCI SA (DG)": 10.0,
+      "Actions:CLOROX (CLX)": 10.0,
       "ETF:Schwab U.S. Large-Cap Value ETF (SCHV)": 7.1,
       "Obligations:Janus Henderson Short Duration Income ETF (VNLA)": 6.3,
       "Obligations:Vanguard Ultra-Short Bond ETF (VUSB)": 13.9
@@ -3262,15 +3400,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 6.0,
-            "observed": 4.55,
-            "slack": 1.55,
+            "observed": 5.1,
+            "slack": 2.1,
             "binding": false,
             "status": "OK",
             "details": {
               "tolerance": 3.0,
               "range_min": 3.0,
               "range_max": 9.0,
-              "diff_from_target": -1.45
+              "diff_from_target": -0.9
             }
           },
           {
@@ -3366,12 +3504,12 @@
               "most_concentrated": "Diversified",
               "counts_in_max_sector": {
                 "Diversified": 30.0,
-                "Industries": 10.0
+                "Biens de consommation de base": 10.0
               },
               "all_sectors": {
                 "Bonds": 60.0,
                 "Diversified": 30.0,
-                "Industries": 10.0
+                "Biens de consommation de base": 10.0
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
             }
@@ -3388,11 +3526,11 @@
               "most_concentrated": "Global",
               "counts_in_max_region": {
                 "Global": 30.0,
-                "France": 10.0
+                "Etats-Unis": 10.0
               },
               "all_regions": {
                 "Global": 90.0,
-                "France": 10.0
+                "Etats-Unis": 10.0
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -3522,11 +3660,11 @@
           },
           "by_sector": {
             "Diversified": 30.0,
-            "Industries": 10.0
+            "Biens de consommation de base": 10.0
           },
           "by_region": {
             "Global": 90.0,
-            "France": 10.0
+            "Etats-Unis": 10.0
           },
           "by_risk_bucket": {
             "bond_like": 60.0,
@@ -3625,14 +3763,14 @@
             "exchange": null
           },
           {
-            "id": "EQ_570",
-            "ticker": "DG",
-            "name": "VINCI SA",
+            "id": "EQ_478",
+            "ticker": "CLX",
+            "name": "CLOROX",
             "weight_pct": 10.0,
             "category": "Actions",
             "risk_bucket": "equity_like",
-            "sector": "Industries",
-            "region": "France",
+            "sector": "Biens de consommation de base",
+            "region": "Etats-Unis",
             "exchange": null
           },
           {
@@ -3681,11 +3819,11 @@
       },
       "by_sector": {
         "Diversified": 30.0,
-        "Industries": 10.0
+        "Biens de consommation de base": 10.0
       },
       "by_region": {
         "Global": 90.0,
-        "France": 10.0
+        "Etats-Unis": 10.0
       },
       "by_risk_bucket": {
         "bond_like": 60.0,
@@ -3736,9 +3874,9 @@
       {
         "name": "Goldman Sachs Access Treasury 0-1 Year ETF",
         "ticker": "GBIL",
-        "rationale": "Cet actif a été sélectionné pour sa qualité en tant que fonds obligataire à court terme, offrant une préservation du capital avec une faible volatilité. Il joue un rôle essentiel dans le portefeuille en tant que composant de base, garantissant des revenus stables tout en minimisant le risque.",
+        "rationale": "Ce fonds offre une exposition à des obligations à court terme, ce qui permet de préserver le capital tout en générant des revenus réguliers. Sa faible volatilité de 1.53% en fait un choix idéal pour un investisseur stable.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt à surveiller, surtout si les taux augmentent.",
+        "risk_note": "Risque de taux d'intérêt, bien que limité en raison de la courte durée.",
         "market_context_link": null,
         "weight_pct": 13.3,
         "category": "Obligations",
@@ -3756,9 +3894,9 @@
       {
         "name": "Goldman Sachs Access Ultra Short Bond Fund",
         "ticker": "GSST",
-        "rationale": "Ce fonds est choisi pour sa capacité à générer des rendements légèrement supérieurs tout en maintenant une faible volatilité, ce qui est crucial pour un investisseur stable. Il sert également de composant de base, offrant des revenus réguliers.",
+        "rationale": "Avec une performance légèrement supérieure à celle de GBIL, ce fonds d'obligations ultra-courtes contribue également à la préservation du capital tout en offrant des rendements stables. Sa volatilité est également très faible, ce qui convient au profil d'investisseur stable.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt et de crédit à surveiller.",
+        "risk_note": "Risque de taux d'intérêt, bien que limité en raison de la courte durée.",
         "market_context_link": null,
         "weight_pct": 13.3,
         "category": "Obligations",
@@ -3776,9 +3914,9 @@
       {
         "name": "Invesco Ultra Short Duration ETF",
         "ticker": "GSY",
-        "rationale": "Bien que sa performance YTD soit légèrement négative, cet actif est sélectionné pour sa stratégie de duration courte, offrant une protection contre la volatilité des taux d'intérêt. Il complète le portefeuille en tant que composant de base.",
-        "role": "core",
-        "risk_note": "Risque de taux d'intérêt à surveiller, surtout dans un environnement de hausse des taux.",
+        "rationale": "Bien que sa performance YTD soit négative, ce fonds permet d'accéder à des obligations à très court terme, offrant une protection contre la volatilité du marché. Il complète le portefeuille en diversifiant les sources de revenus.",
+        "role": "satellite",
+        "risk_note": "Risque de taux d'intérêt et de performance, surtout en période de hausse des taux.",
         "market_context_link": null,
         "weight_pct": 13.3,
         "category": "Obligations",
@@ -3796,9 +3934,9 @@
       {
         "name": "iShares Core Dividend Growth ETF",
         "ticker": "DGRO",
-        "rationale": "Sélectionné pour son potentiel de croissance des dividendes, cet ETF offre une exposition à des entreprises solides avec un historique de versement de dividendes. Il joue un rôle de satellite, ajoutant une dimension de revenu au portefeuille.",
-        "role": "satellite",
-        "risk_note": "Risque de volatilité des marchés actions à surveiller.",
+        "rationale": "Ce fonds investit dans des entreprises à forte croissance de dividendes, offrant une combinaison de croissance et de revenus. Sa performance YTD de 2.54% et son rôle dans la diversification en font un actif attrayant.",
+        "role": "income",
+        "risk_note": "Risque de volatilité plus élevée par rapport aux obligations, surtout en période de correction du marché.",
         "market_context_link": null,
         "weight_pct": 11.4,
         "category": "ETF",
@@ -3816,9 +3954,9 @@
       {
         "name": "Vanguard Value ETF",
         "ticker": "VTV",
-        "rationale": "Ce fonds est choisi pour son exposition à des actions de valeur qui sont souvent moins volatiles et offrent des rendements attractifs. Il agit comme un actif satellite, renforçant la diversification du portefeuille.",
+        "rationale": "Ce fonds cible des actions sous-évaluées avec un potentiel de croissance, ce qui est en ligne avec la tendance actuelle des valeurs. Sa performance de 2.83% YTD et son faible coût en font un choix judicieux.",
         "role": "satellite",
-        "risk_note": "Risque de performance sous-optimale dans un marché en croissance rapide.",
+        "risk_note": "Risque de volatilité sur le marché des actions, en particulier dans un environnement économique incertain.",
         "market_context_link": null,
         "weight_pct": 11.4,
         "category": "ETF",
@@ -3834,31 +3972,31 @@
         }
       },
       {
-        "name": "VINCI SA",
-        "ticker": "DG",
-        "rationale": "Sélectionné pour son ROE élevé et son rendement en dividende attractif, cet actif offre une combinaison de croissance et de revenu. Il agit comme un actif de base, apportant stabilité et potentiel de rendement.",
-        "role": "core",
-        "risk_note": "Risque lié à la performance sectorielle et économique en France.",
-        "market_context_link": null,
+        "name": "CLOROX",
+        "ticker": "CLX",
+        "rationale": "CLOROX présente un ROE élevé de 170.95% et un rendement de dividende attractif de 4.37%, ce qui en fait une option solide pour les revenus. Son secteur de biens de consommation de base est favorisé dans le contexte actuel.",
+        "role": "income",
+        "risk_note": "Risque de dépendance à la consommation, surtout en période de ralentissement économique.",
+        "market_context_link": "Secteur favorisé: consumer-staples",
         "weight_pct": 10.0,
         "category": "Actions",
-        "sector": "Industries",
-        "country": "France",
+        "sector": "Biens de consommation de base",
+        "country": "Etats-Unis",
         "metrics": {
-          "roe": 15.18,
-          "pe_ratio": 14.651022,
-          "dividend_yield": 3.9,
-          "ytd": 0.5,
-          "volatility": 19.03,
-          "buffett_score": 98.6
+          "roe": 170.95,
+          "pe_ratio": 17.706436,
+          "dividend_yield": 4.37,
+          "ytd": 12.02,
+          "volatility": 22.77,
+          "buffett_score": 62.2
         }
       },
       {
         "name": "Schwab U.S. Large-Cap Value ETF",
         "ticker": "SCHV",
-        "rationale": "Cet ETF est choisi pour son exposition à des entreprises de grande capitalisation avec des valorisations attractives, offrant un potentiel de rendement stable. Il joue un rôle de satellite, diversifiant le portefeuille avec des actions de valeur.",
+        "rationale": "Ce fonds investit dans des actions de grande capitalisation à valeur, offrant une exposition à des entreprises solides. Sa performance de 3.31% YTD et sa diversification en font un ajout précieux au portefeuille.",
         "role": "satellite",
-        "risk_note": "Risque de volatilité des marchés actions à surveiller.",
+        "risk_note": "Risque de volatilité sur le marché des actions, en particulier dans un environnement économique incertain.",
         "market_context_link": null,
         "weight_pct": 7.1,
         "category": "ETF",
@@ -3876,9 +4014,9 @@
       {
         "name": "Janus Henderson Short Duration Income ETF",
         "ticker": "VNLA",
-        "rationale": "Sélectionné pour sa stratégie de revenu à court terme, cet actif vise à générer des rendements tout en minimisant le risque de taux d'intérêt. Il complète le portefeuille en tant que composant de base.",
+        "rationale": "Ce fonds d'obligations à courte durée offre une protection contre la volatilité tout en générant des revenus. Sa performance YTD de 0.33% et sa faible volatilité le rendent adapté au profil d'investisseur stable.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt à surveiller.",
+        "risk_note": "Risque de taux d'intérêt, bien que limité en raison de la courte durée.",
         "market_context_link": null,
         "weight_pct": 6.3,
         "category": "Obligations",
@@ -3896,9 +4034,9 @@
       {
         "name": "Vanguard Ultra-Short Bond ETF",
         "ticker": "VUSB",
-        "rationale": "Ce fonds est choisi pour sa capacité à offrir des rendements stables avec une faible volatilité, ce qui est essentiel pour un investisseur cherchant à préserver le capital. Il joue un rôle de base dans le portefeuille.",
+        "rationale": "Ce fonds permet d'accéder à des obligations à très court terme avec un rendement stable, ce qui est essentiel pour la préservation du capital. Sa performance YTD de 0.26% et sa faible volatilité en font un choix judicieux.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt à surveiller.",
+        "risk_note": "Risque de taux d'intérêt, bien que limité en raison de la courte durée.",
         "market_context_link": null,
         "weight_pct": 13.7,
         "category": "Obligations",
@@ -3916,7 +4054,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-02-03T09:41:29.272598+00:00",
+      "timestamp": "2026-02-03T13:47:44.477884+00:00",
       "profile": "Stable",
       "data_limits": {
         "data_window": "5_years_daily",
@@ -3940,12 +4078,12 @@
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-02-03T09:41:29.275133+00:00"
+          "timestamp": "2026-02-03T13:47:44.480058+00:00"
         },
         "summary": {
           "n_scenarios": 5,
-          "avg_var_impact": -0.28902551167859125,
-          "max_var_impact": -0.6029861722930958,
+          "avg_var_impact": -0.2653533640871685,
+          "max_var_impact": -0.5506077863317758,
           "avg_expected_loss": -0.10388640000000002,
           "worst_expected_loss": -0.20414400000000005,
           "total_warnings": 8
@@ -3953,12 +4091,12 @@
         "worst_case": {
           "scenario": "market_crash",
           "expected_loss_pct": -20.414400000000004,
-          "vol_after_pct": 30.534003750427
+          "vol_after_pct": 26.66628276960248
         },
         "risk_budget_impact": {
-          "base_volatility": 0.06288278990968288,
-          "avg_stressed_volatility": 0.17542936235867454,
-          "max_stressed_volatility": 0.30534003750427,
+          "base_volatility": 0.05604654421166266,
+          "avg_stressed_volatility": 0.1542027533831936,
+          "max_stressed_volatility": 0.2666628276960248,
           "vol_budget_breach_scenarios": 3
         },
         "scenarios": [
@@ -3973,36 +4111,36 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06288278990968288,
-              "sharpe_ratio": -0.3180520461755203,
-              "var_95": -0.10344218940142834,
-              "var_99": -0.14626536932992237,
-              "cvar_95": -0.1297271955836758,
-              "diversification_ratio": 1.3954315641439181
+              "volatility": 0.05604654421166266,
+              "sharpe_ratio": -0.35684626556936266,
+              "var_95": -0.09219656522818508,
+              "var_99": -0.13036426183632735,
+              "cvar_95": -0.11562402070866008,
+              "diversification_ratio": 1.3526565704376357
             },
             "stressed_metrics": {
               "expected_return": -0.04400000000000001,
-              "volatility": 0.10688927063247555,
-              "sharpe_ratio": -0.598750460371794,
-              "var_95": -0.21983285019042229,
-              "var_99": -0.29262444349113814,
-              "cvar_95": -0.26451256531479705,
-              "diversification_ratio": 1.231395293870712
+              "volatility": 0.0939516942573548,
+              "sharpe_ratio": -0.6812011268757925,
+              "var_95": -0.19855053705334866,
+              "var_99": -0.2625316408426073,
+              "cvar_95": -0.237822345252923,
+              "diversification_ratio": 1.2103835946358286
             },
             "impact": {
               "expected_return": -0.04400000000000001,
-              "volatility": 0.044006480722792674,
-              "sharpe_ratio": -0.2806984141962737,
-              "var_95": -0.11639066078899395,
-              "var_99": -0.14635907416121577,
-              "cvar_95": -0.13478536973112126,
-              "diversification_ratio": -0.1640362702732061
+              "volatility": 0.03790515004569214,
+              "sharpe_ratio": -0.3243548613064298,
+              "var_95": -0.10635397182516358,
+              "var_99": -0.13216737900627992,
+              "cvar_95": -0.12219832454426292,
+              "diversification_ratio": -0.1422729758018071
             },
-            "var_impact_pct": -11.639066078899395,
+            "var_impact_pct": -10.635397182516359,
             "expected_loss_pct": -4.400000000000001,
-            "vol_after_pct": 10.688927063247554,
+            "vol_after_pct": 9.39516942573548,
             "warnings": [],
-            "timestamp": "2026-02-03T09:41:29.273401+00:00"
+            "timestamp": "2026-02-03T13:47:44.478609+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -4015,39 +4153,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06288278990968288,
-              "sharpe_ratio": -0.3180520461755203,
-              "var_95": -0.10344218940142834,
-              "var_99": -0.14626536932992237,
-              "cvar_95": -0.1297271955836758,
-              "diversification_ratio": 1.3954315641439181
+              "volatility": 0.05604654421166266,
+              "sharpe_ratio": -0.35684626556936266,
+              "var_95": -0.09219656522818508,
+              "var_99": -0.13036426183632735,
+              "cvar_95": -0.11562402070866008,
+              "diversification_ratio": 1.3526565704376357
             },
             "stressed_metrics": {
               "expected_return": -0.08142899999999999,
-              "volatility": 0.20160539688559714,
-              "sharpe_ratio": -0.5031065713858683,
-              "var_95": -0.41306987787680727,
-              "var_99": -0.550363153155899,
-              "cvar_95": -0.4973409337749869,
-              "diversification_ratio": 1.3057482275317656
+              "volatility": 0.17829556847821343,
+              "sharpe_ratio": -0.5688812171032392,
+              "var_95": -0.37472521014666105,
+              "var_99": -0.4961444922803244,
+              "cvar_95": -0.4492527577705543,
+              "diversification_ratio": 1.275607581141188
             },
             "impact": {
               "expected_return": -0.08142899999999999,
-              "volatility": 0.13872260697591426,
-              "sharpe_ratio": -0.18505452521034804,
-              "var_95": -0.3096276884753789,
-              "var_99": -0.4040977838259766,
-              "cvar_95": -0.3676137381913111,
-              "diversification_ratio": -0.08968333661215255
+              "volatility": 0.12224902426655077,
+              "sharpe_ratio": -0.21203495153387658,
+              "var_95": -0.28252864491847596,
+              "var_99": -0.3657802304439971,
+              "cvar_95": -0.3336287370618942,
+              "diversification_ratio": -0.07704898929644766
             },
-            "var_impact_pct": -30.96276884753789,
+            "var_impact_pct": -28.252864491847596,
             "expected_loss_pct": -8.1429,
-            "vol_after_pct": 20.160539688559716,
+            "vol_after_pct": 17.829556847821344,
             "warnings": [
-              "Severe volatility increase: +13.9%",
-              "Severe VaR deterioration: -31.0%"
+              "Severe volatility increase: +12.2%",
+              "Severe VaR deterioration: -28.3%"
             ],
-            "timestamp": "2026-02-03T09:41:29.273805+00:00"
+            "timestamp": "2026-02-03T13:47:44.478956+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -4060,39 +4198,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06288278990968288,
-              "sharpe_ratio": -0.3180520461755203,
-              "var_95": -0.10344218940142834,
-              "var_99": -0.14626536932992237,
-              "cvar_95": -0.1297271955836758,
-              "diversification_ratio": 1.3954315641439181
+              "volatility": 0.05604654421166266,
+              "sharpe_ratio": -0.35684626556936266,
+              "var_95": -0.09219656522818508,
+              "var_99": -0.13036426183632735,
+              "cvar_95": -0.11562402070866008,
+              "diversification_ratio": 1.3526565704376357
             },
             "stressed_metrics": {
               "expected_return": -0.10200000000000001,
-              "volatility": 0.13986621409954322,
-              "sharpe_ratio": -0.8722621169482162,
-              "var_95": -0.3320799221937486,
-              "var_99": -0.42732881399553757,
-              "cvar_95": -0.39054399968735765,
-              "diversification_ratio": 1.2547509124534
+              "volatility": 0.1231708699145,
+              "sharpe_ratio": -0.9904939380933758,
+              "var_95": -0.30461608100935256,
+              "var_99": -0.3884954434211271,
+              "cvar_95": -0.35610150463361356,
+              "diversification_ratio": 1.2310009068029515
             },
             "impact": {
               "expected_return": -0.10200000000000001,
-              "volatility": 0.07698342418986034,
-              "sharpe_ratio": -0.5542100707726959,
-              "var_95": -0.22863773279232025,
-              "var_99": -0.28106344466561517,
-              "cvar_95": -0.26081680410368185,
-              "diversification_ratio": -0.14068065169051813
+              "volatility": 0.06712432570283734,
+              "sharpe_ratio": -0.6336476725240132,
+              "var_95": -0.21241951578116747,
+              "var_99": -0.25813118158479975,
+              "cvar_95": -0.2404774839249535,
+              "diversification_ratio": -0.12165566363468416
             },
-            "var_impact_pct": -22.863773279232024,
+            "var_impact_pct": -21.241951578116748,
             "expected_loss_pct": -10.200000000000001,
-            "vol_after_pct": 13.986621409954322,
+            "vol_after_pct": 12.317086991450001,
             "warnings": [
-              "Severe VaR deterioration: -22.9%",
-              "Sharpe ratio collapse: -0.55"
+              "Severe VaR deterioration: -21.2%",
+              "Sharpe ratio collapse: -0.63"
             ],
-            "timestamp": "2026-02-03T09:41:29.274211+00:00"
+            "timestamp": "2026-02-03T13:47:44.479277+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -4105,39 +4243,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06288278990968288,
-              "sharpe_ratio": -0.3180520461755203,
-              "var_95": -0.10344218940142834,
-              "var_99": -0.14626536932992237,
-              "cvar_95": -0.1297271955836758,
-              "diversification_ratio": 1.3954315641439181
+              "volatility": 0.05604654421166266,
+              "sharpe_ratio": -0.35684626556936266,
+              "var_95": -0.09219656522818508,
+              "var_99": -0.13036426183632735,
+              "cvar_95": -0.11562402070866008,
+              "diversification_ratio": 1.3526565704376357
             },
             "stressed_metrics": {
               "expected_return": -0.08785899999999999,
-              "volatility": 0.12344589267148683,
-              "sharpe_ratio": -0.8737350240322168,
-              "var_95": -0.2909274934445958,
-              "var_99": -0.3749941463538784,
-              "cvar_95": -0.34252787658127737,
-              "diversification_ratio": 1.2794879632557123
+              "volatility": 0.10893280656987514,
+              "sharpe_ratio": -0.9901424868807879,
+              "var_95": -0.2670534668074446,
+              "var_99": -0.3412367080815296,
+              "cvar_95": -0.31258737995365243,
+              "diversification_ratio": 1.2527090010600157
             },
             "impact": {
               "expected_return": -0.08785899999999999,
-              "volatility": 0.06056310276180395,
-              "sharpe_ratio": -0.5556829778566965,
-              "var_95": -0.18748530404316743,
-              "var_99": -0.22872877702395603,
-              "cvar_95": -0.21280068099760158,
-              "diversification_ratio": -0.11594360088820577
+              "volatility": 0.05288626235821248,
+              "sharpe_ratio": -0.6332962213114253,
+              "var_95": -0.17485690157925948,
+              "var_99": -0.21087244624520227,
+              "cvar_95": -0.19696335924499236,
+              "diversification_ratio": -0.09994756937761995
             },
-            "var_impact_pct": -18.748530404316742,
+            "var_impact_pct": -17.485690157925948,
             "expected_loss_pct": -8.7859,
-            "vol_after_pct": 12.344589267148683,
+            "vol_after_pct": 10.893280656987514,
             "warnings": [
-              "Severe VaR deterioration: -18.7%",
-              "Sharpe ratio collapse: -0.56"
+              "Severe VaR deterioration: -17.5%",
+              "Sharpe ratio collapse: -0.63"
             ],
-            "timestamp": "2026-02-03T09:41:29.274592+00:00"
+            "timestamp": "2026-02-03T13:47:44.479601+00:00"
           },
           {
             "scenario": "market_crash",
@@ -4150,39 +4288,39 @@
             },
             "base_metrics": {
               "expected_return": 0.0,
-              "volatility": 0.06288278990968288,
-              "sharpe_ratio": -0.3180520461755203,
-              "var_95": -0.10344218940142834,
-              "var_99": -0.14626536932992237,
-              "cvar_95": -0.1297271955836758,
-              "diversification_ratio": 1.3954315641439181
+              "volatility": 0.05604654421166266,
+              "sharpe_ratio": -0.35684626556936266,
+              "var_95": -0.09219656522818508,
+              "var_99": -0.13036426183632735,
+              "cvar_95": -0.11562402070866008,
+              "diversification_ratio": 1.3526565704376357
             },
             "stressed_metrics": {
               "expected_return": -0.20414400000000005,
-              "volatility": 0.30534003750427,
-              "sharpe_ratio": -0.7340799517549856,
-              "var_95": -0.7064283616945242,
-              "var_99": -0.9143649272349321,
-              "cvar_95": -0.834060497371309,
-              "diversification_ratio": 1.1495201297363444
+              "volatility": 0.2666628276960248,
+              "sharpe_ratio": -0.8405521007056411,
+              "var_95": -0.6428043515599609,
+              "var_99": -0.8244017372209538,
+              "cvar_95": -0.7542694135368992,
+              "diversification_ratio": 1.1371922653523876
             },
             "impact": {
               "expected_return": -0.20414400000000005,
-              "volatility": 0.24245724759458714,
-              "sharpe_ratio": -0.41602790557946534,
-              "var_95": -0.6029861722930958,
-              "var_99": -0.7680995579050097,
-              "cvar_95": -0.7043333017876332,
-              "diversification_ratio": -0.24591143440757368
+              "volatility": 0.21061628348436212,
+              "sharpe_ratio": -0.48370583513627846,
+              "var_95": -0.5506077863317758,
+              "var_99": -0.6940374753846265,
+              "cvar_95": -0.6386453928282392,
+              "diversification_ratio": -0.21546430508524805
             },
-            "var_impact_pct": -60.298617229309585,
+            "var_impact_pct": -55.06077863317758,
             "expected_loss_pct": -20.414400000000004,
-            "vol_after_pct": 30.534003750427,
+            "vol_after_pct": 26.66628276960248,
             "warnings": [
-              "Severe volatility increase: +24.2%",
-              "Severe VaR deterioration: -60.3%"
+              "Severe volatility increase: +21.1%",
+              "Severe VaR deterioration: -55.1%"
             ],
-            "timestamp": "2026-02-03T09:41:29.274984+00:00"
+            "timestamp": "2026-02-03T13:47:44.479911+00:00"
           }
         ],
         "source": "stress_testing.py",
@@ -4235,7 +4373,7 @@
               "weight_pct": 11.43
             },
             {
-              "ticker": "DG",
+              "ticker": "CLX",
               "category": "Actions",
               "weight_pct": 10.0
             },
@@ -4284,13 +4422,13 @@
         "details": {}
       },
       "tail_risk": {
-        "var_95_pct": -0.6,
-        "var_99_pct": -0.97,
-        "cvar_95_pct": -0.91,
-        "cvar_99_pct": -1.6,
-        "max_drawdown_expected_pct": 12.39,
-        "skewness": -0.921,
-        "kurtosis": 12.58,
+        "var_95_pct": -0.59,
+        "var_99_pct": -0.9,
+        "cvar_95_pct": -0.82,
+        "cvar_99_pct": -1.28,
+        "max_drawdown_expected_pct": 10.56,
+        "skewness": -0.296,
+        "kurtosis": 6.891,
         "fat_tails": true,
         "method": {
           "var_95": "historical",
@@ -4336,26 +4474,21 @@
         {
           "level": "info",
           "type": "tail_risk",
-          "message": "Kurtosis eleve (12.6) - fat tails"
-        },
-        {
-          "level": "info",
-          "type": "tail_risk",
-          "message": "Skewness negatif (-0.92)"
+          "message": "Kurtosis eleve (6.9) - fat tails"
         }
       ],
       "alert_summary": {
-        "total": 5,
+        "total": 4,
         "critical": 0,
         "warning": 3,
-        "info": 2
+        "info": 1
       },
       "history_metadata": {
         "version": "1.0.0",
         "n_obs": 1211,
         "n_tickers": 9,
         "tickers": [
-          "DG",
+          "CLX",
           "DGRO",
           "SCHV",
           "VTV",
@@ -4382,7 +4515,7 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-02-03T09:41:29.271586Z",
+        "fetch_timestamp": "2026-02-03T13:47:44.476785Z",
         "allocation": [
           {
             "ticker": "GBIL",
@@ -4435,13 +4568,13 @@
             ]
           },
           {
-            "ticker": "DG",
-            "name": "VINCI SA",
+            "ticker": "CLX",
+            "name": "CLOROX",
             "category": "Actions",
             "weight": 0.1,
             "weight_pct": 10.0,
             "asset_ids": [
-              "EQ_570"
+              "EQ_478"
             ]
           },
           {
@@ -4479,7 +4612,7 @@
     }
   },
   "_meta": {
-    "generated_at": "2026-02-03T09:43:12.640864",
+    "generated_at": "2026-02-03T13:50:18.025689",
     "version": "v4.15.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,

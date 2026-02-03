@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-03T09:41:29.312098",
+  "generated_at": "2026-02-03T13:47:44.518738",
   "version": "v1.3.0",
   "preset_meta_version": "v4.15.2",
   "selection_pipeline": {
@@ -150,8 +150,8 @@
   },
   "summary": {
     "total_universe": 1006,
-    "total_selected": 7,
-    "selection_rate": "0.7%",
+    "total_selected": 3,
+    "selection_rate": "0.3%",
     "by_region": {
       "US": {
         "universe": 526,
@@ -163,23 +163,15 @@
       },
       "Asia": {
         "universe": 210,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 0
       }
     }
   },
   "sectors_distribution": {
     "Technologie de l'information": {
-      "selected_count": 3,
-      "selected_names": [
-        "WESTERN DIGITAL CORP",
-        "LAM RESEARCH CORP",
-        "SK HYNIX INC"
-      ]
-    },
-    "Matériaux": {
       "selected_count": 1,
       "selected_names": [
-        "VEDANTA LTD"
+        "WESTERN DIGITAL CORP"
       ]
     },
     "Finance": {
@@ -188,16 +180,10 @@
         "KBC GROEP"
       ]
     },
-    "Santé": {
+    "Biens de consommation de base": {
       "selected_count": 1,
       "selected_names": [
-        "CENCORA INC"
-      ]
-    },
-    "Industries": {
-      "selected_count": 1,
-      "selected_names": [
-        "VINCI SA"
+        "CLOROX"
       ]
     }
   },
@@ -1190,8 +1176,8 @@
     "Asia": {
       "total_in_universe": 210,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
       "stocks": [
         {
           "rank": 1,
@@ -1225,10 +1211,13 @@
           "market_cap_billions": 573077.9,
           "sector": "Technologie de l'information",
           "country": "Corée",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
           "details": {
-            "status": "selected"
+            "hard_filter_reasons": [
+              "vol>45.0"
+            ],
+            "profile": "Modéré"
           },
           "buffett_score": 84.3,
           "composite_score": 0.658,
@@ -1692,11 +1681,14 @@
   "radar_context": {
     "regime": "risk-on",
     "favored_sectors": [
+      "materials",
       "utilities",
-      "energy",
-      "materials"
+      "industrials",
+      "consumer-staples"
     ],
-    "avoided_sectors": [],
+    "avoided_sectors": [
+      "communication-services"
+    ],
     "favored_regions": [
       "south-korea",
       "chile",
