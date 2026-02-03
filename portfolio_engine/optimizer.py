@@ -1783,101 +1783,36 @@ class PortfolioOptimizer:
             universe = apply_buffett_hard_filter(universe, min_score=min_score)
             logger.info(f"Post-Buffett-filter universe: {len(universe)} actifs (min={min_score})")
            
-        # === PATCH v8.0 ÉTAPE 4: Brancher preset_meta pour Actions ===
+        # === PATCH v8.1 ÉTAPE 4: Enrichir Assets depuis source_data ===
         if HAS_PRESET_META:
             equity_assets = [a for a in universe if a.category == "Actions"]
             
             if equity_assets:
-                # Convertir Asset → Dict via source_data
-                equity_dicts = []
-                asset_by_id = {}
+                enriched_count = 0
                 
                 for asset in equity_assets:
+                    # Les équities ont déjà été filtrées par select_equities_for_profile_v2
+                    # On récupère juste le preset depuis source_data
                     if asset.source_data:
-                        # Enrichir avec les champs de base si manquants
-                        eq_dict = asset.source_data.copy()
-                        eq_dict.setdefault("ticker", asset.ticker or asset.id)
-                        eq_dict.setdefault("symbol", asset.ticker or asset.id)
-                        eq_dict.setdefault("name", asset.name)
+                        preset_name = asset.source_data.get("_matched_preset")
                         
-                        equity_dicts.append(eq_dict)
-                        # Index par ticker ET par id (fallback)
-                        asset_by_id[asset.id] = asset
-                        if asset.ticker:
-                            asset_by_id[asset.ticker] = asset
-                
-                if equity_dicts:
-                    try:
-                        selected_dicts, equity_meta = select_equities_for_profile(
-                            equities=equity_dicts,
-                            profile=profile.name,
-                            target_n=min(25, profile.max_assets)
-                        )
-                        
-                        # Enrichir les objets Asset originaux
-                        enriched_count = 0
-                        for eq_dict in selected_dicts:
-                            # Trouver l'asset correspondant
-                            ticker = eq_dict.get("ticker") or eq_dict.get("symbol")
-                            asset = asset_by_id.get(ticker)
+                        if preset_name:
+                            asset.preset = preset_name
                             
-                            if asset:
-                                # Injecter preset
-                                preset_name = eq_dict.get("_matched_preset")
-                                if preset_name:
-                                    asset.preset = preset_name
-                                    # Déduire role depuis EQUITY_PRESETS
-                                    if preset_name in EQUITY_PRESETS:
-                                        asset.role = EQUITY_PRESETS[preset_name].role
-                                        enriched_count += 1
-                                
-                                # Mettre à jour score si _profile_score disponible
-                                if "_profile_score" in eq_dict:
-                                    # Convertir [0,1] → [0,100]
-                                    profile_score = eq_dict["_profile_score"]
-                                    asset.score = round(float(profile_score * 100), 2)
-                        
-                        rule_failed = equity_meta.get("stages", {}).get("preset_rules", {}).get("failed", 0)
-                        
-                        # ========== DEBUG ENRICHISSEMENT ==========
-                        logger.info(f"\n{'='*70}")
-                        logger.info(f"DEBUG ENRICHISSEMENT - {profile.name}")
-                        logger.info(f"{'='*70}")
-                        logger.info(f"Equity assets AVANT: {len(equity_assets)}")
-                        logger.info(f"Selected dicts retournés: {len(selected_dicts)}")
-                        logger.info(f"Enriched count: {enriched_count}")
-                        
-                        # Compter les presets dans selected_dicts
-                        preset_dist = {}
-                        for eq in selected_dicts:
-                            preset = eq.get("_matched_preset", "NONE")
-                            preset_dist[preset] = preset_dist.get(preset, 0) + 1
-                        
-                        logger.info(f"Preset distribution in selected_dicts: {preset_dist}")
-                        logger.info(f"EQUITY_PRESETS keys: {list(EQUITY_PRESETS.keys())}")
-                        
-                        # Vérifier le matching
-                        matched = 0
-                        unmatched_presets = set()
-                        for eq in selected_dicts:
-                            preset = eq.get("_matched_preset")
-                            if preset and preset in EQUITY_PRESETS:
-                                matched += 1
-                            elif preset:
-                                unmatched_presets.add(preset)
-                        
-                        logger.info(f"Matched presets: {matched}/{len(selected_dicts)}")
-                        logger.info(f"Unmatched presets: {unmatched_presets}")
-                        logger.info(f"{'='*70}\n")
-                        # ==========================================
-                        
-                        logger.info(
-                            f"[PATCH v8.0 EQUITY] {enriched_count}/{len(equity_assets)} equities enriched via preset_meta, "
-                            f"preset_rule_failed={rule_failed}"
-                        )
-                    
-                    except Exception as e:
-                        logger.error(f"[PATCH v8.0 EQUITY] preset_meta failed: {e}, fallback to heuristic")
+                            # Déduire role depuis EQUITY_PRESETS
+                            if preset_name in EQUITY_PRESETS:
+                                asset.role = EQUITY_PRESETS[preset_name].role
+                                enriched_count += 1
+                            
+                            # Mettre à jour score si _profile_score disponible
+                            if "_profile_score" in asset.source_data:
+                                profile_score = asset.source_data["_profile_score"]
+                                asset.score = round(float(profile_score * 100), 2)
+                
+                logger.info(
+                    f"[PATCH v8.1 EQUITY] {enriched_count}/{len(equity_assets)} equities enriched "
+                    f"from source_data (no re-filtering)"
+                )
 
         # === ÉTAPE 4: Enrichir avec buckets ===
         universe = enrich_assets_with_buckets(universe)
