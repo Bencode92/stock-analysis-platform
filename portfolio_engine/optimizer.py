@@ -1816,7 +1816,49 @@ class PortfolioOptimizer:
 
         # === ÉTAPE 4: Enrichir avec buckets ===
         universe = enrich_assets_with_buckets(universe)
+       
+        # ========== DIAGNOSTIC SCORES / DISTRIBUTION (UNIVERSE, PRE-SORT) ==========
+        logger.info("=" * 70)
+        logger.info(f"DIAGNOSTIC UNIVERSE SCORES (pre-sort) | profile={profile.name} | n={len(universe)}")
+        logger.info("=" * 70)
         
+        score_by_cat = defaultdict(list)
+        src_by_cat = defaultdict(lambda: defaultdict(int))
+        
+        for a in universe:
+            score_by_cat[a.category].append(a.score)
+            
+            # Heuristique "source" (approx) via source_data
+            sd = getattr(a, "source_data", None) or {}
+            if "_profile_score" in sd and sd.get("_profile_score") is not None:
+                src = "profile_score"
+            elif "score" in sd and sd.get("score") is not None:
+                src = "score"
+            elif "composite_score" in sd or "_composite_score" in sd:
+                src = "composite_score"
+            else:
+                src = "unknown"
+            src_by_cat[a.category][src] += 1
+        
+        for cat in sorted(score_by_cat.keys()):
+            scores = np.array(score_by_cat[cat], dtype=float)
+            if scores.size == 0:
+                continue
+            p0, p25, p50, p75, p100 = np.percentile(scores, [0, 25, 50, 75, 100])
+            
+            # mean/std robustes si n>=2
+            mean = float(np.mean(scores))
+            std = float(np.std(scores, ddof=1)) if scores.size >= 2 else 0.0
+            
+            src_breakdown = ", ".join(f"{k}={v}" for k, v in sorted(src_by_cat[cat].items()))
+            
+            logger.info(
+                f"{cat}: n={scores.size:3d} | "
+                f"min={p0:5.1f} q25={p25:5.1f} med={p50:5.1f} q75={p75:5.1f} max={p100:5.1f} | "
+                f"mean={mean:5.1f} std={std:5.1f} | src: {src_breakdown}"
+            )
+        
+        logger.info("=" * 70) 
         # === ÉTAPE 5: Tri par score avec tie-breaker par ID ===
         # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
         sorted_assets = sorted(universe, key=lambda x: (x.score, x.id), reverse=True)
@@ -1988,7 +2030,9 @@ class PortfolioOptimizer:
             # 1. Analyser par catégorie + bucket
             by_cat_bucket = defaultdict(lambda: defaultdict(list))
             for asset in selected:
-                bucket = getattr(asset, 'bucket', 'unknown')  # Sécurisé
+                role = getattr(asset, "role", None)
+                bucket = getattr(role, "value", role) if role is not None else "unknown"
+                bucket = str(bucket)
                 by_cat_bucket[asset.category][bucket].append(asset)
             
             logger.info(f"\n--- DISTRIBUTION PAR CATÉGORIE ET BUCKET ---")
@@ -2035,7 +2079,9 @@ class PortfolioOptimizer:
                 
                 bonds_by_bucket = defaultdict(list)
                 for b in bonds:
-                    bucket = getattr(b, 'bucket', 'unknown')  # Sécurisé
+                    role = getattr(b, "role", None)
+                    bucket = getattr(role, "value", role) if role is not None else "unknown"
+                    bucket = str(bucket)
                     bonds_by_bucket[bucket].append(b)
                 
                 for bucket, bond_list in bonds_by_bucket.items():
