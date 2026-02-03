@@ -635,7 +635,7 @@ RELAX_STEPS: List[Tuple[str, float, float]] = [
 
 PROFILE_POLICY: Dict[str, Dict] = {
     "Agressif": {
-        "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery"},
+        "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium"},
         "min_buffett_score": 40,
         "hard_filters": {
             "volatility_3y_min": 22.0,
