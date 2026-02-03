@@ -757,11 +757,16 @@ class ProfileConstraints:
     turnover_penalty: float = 0.10   # Lambda pénalité dans objectif
     # === v2.2 EU/US Focus ===
     euus_mode: bool = False          # Si True, utilise caps EU/US
-    # === v6.11: Sleeve Actions (aligné PROFILE_POLICY) ===
-    min_stock_weight: float = 0.0      # % minimum en Actions
-    max_stock_weight: float = 100.0    # % maximum en Actions (NOUVEAU)
-    min_stock_positions: int = 0       # nb minimum de lignes Actions
-    stock_pos_threshold: float = 1.0   # % min pour compter une ligne action
+    # === v7.0: Sleeve Actions DÉPRÉCIÉ (ignoré par optimizer) ===
+    min_stock_weight: float = 0.0      # DÉPRÉCIÉ - ignoré
+    max_stock_weight: float = 100.0    # DÉPRÉCIÉ - ignoré
+    min_stock_positions: int = 0       # DÉPRÉCIÉ - ignoré
+    stock_pos_threshold: float = 1.0   # DÉPRÉCIÉ - ignoré
+
+    # === v7.0: Nouveaux leviers ===
+    score_scale: float = 4.0           # Poids du score dans l'objectif (3.0-5.0)
+    bucket_penalty_lambda: float = 2.0 # Intensité pénalité soft buckets
+    max_any_category: float = 70.0     # % max dans une seule catégorie (garde-fou)
 
 
 # v6.11: Alignement avec PROFILE_POLICY (preset_meta.py v2.3)
@@ -775,10 +780,10 @@ PROFILES = {
         max_sector=35.0,
         max_turnover=30.0,
         turnover_penalty=0.05,
-        # v6.11: Aligné avec PROFILE_POLICY["Agressif"]
-        min_stock_weight=50.0,      # equity_min_weight = 0.50
-        max_stock_weight=75.0,      # equity_max_weight = 0.75
-        min_stock_positions=12,     # min_equity_positions = 12
+        # v7.0: stock sleeve supprimé → vol cible suffit
+        score_scale=4.0,
+        bucket_penalty_lambda=2.0,
+        max_any_category=70.0,
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -788,10 +793,10 @@ PROFILES = {
         bonds_min=15.0,
         max_turnover=25.0,
         turnover_penalty=0.10,
-        # v6.11: Aligné avec PROFILE_POLICY["Modéré"]
-        min_stock_weight=40.0,      # equity_min_weight = 0.40
-        max_stock_weight=60.0,      # equity_max_weight = 0.60
-        min_stock_positions=10,     # min_equity_positions = 10
+        # v7.0: stock sleeve supprimé → vol cible suffit
+        score_scale=4.0,
+        bucket_penalty_lambda=2.0,
+        max_any_category=65.0,
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -801,10 +806,10 @@ PROFILES = {
         bonds_min=35.0,
         max_turnover=15.0,
         turnover_penalty=0.20,
-        # v6.11: Aligné avec PROFILE_POLICY["Stable"]
-        min_stock_weight=25.0,      # equity_min_weight = 0.25
-        max_stock_weight=45.0,      # equity_max_weight = 0.45
-        min_stock_positions=8,      # min_equity_positions = 8
+        # v7.0: stock sleeve supprimé → vol cible suffit
+        score_scale=3.0,            # Stable = scores comptent moins
+        bucket_penalty_lambda=2.0,
+        max_any_category=70.0,
     ),
 }
 
@@ -821,10 +826,10 @@ PROFILES_EUUS = {
         max_turnover=30.0,
         turnover_penalty=0.05,
         euus_mode=True,
-        # v6.11: Aligné avec PROFILE_POLICY["Agressif"]
-        min_stock_weight=50.0,
-        max_stock_weight=75.0,
-        min_stock_positions=12,
+        # v7.0: stock sleeve supprimé → vol cible suffit
+        score_scale=4.0,
+        bucket_penalty_lambda=2.0,
+        max_any_category=70.0,
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -835,10 +840,10 @@ PROFILES_EUUS = {
         max_turnover=25.0,
         turnover_penalty=0.10,
         euus_mode=True,
-        # v6.11: Aligné avec PROFILE_POLICY["Modéré"]
-        min_stock_weight=40.0,
-        max_stock_weight=60.0,
-        min_stock_positions=10,
+        # v7.0: stock sleeve supprimé → vol cible suffit
+        score_scale=4.0,
+        bucket_penalty_lambda=2.0,
+        max_any_category=65.0,
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -849,10 +854,10 @@ PROFILES_EUUS = {
         max_turnover=15.0,
         turnover_penalty=0.20,
         euus_mode=True,
-        # v6.11: Aligné avec PROFILE_POLICY["Stable"]
-        min_stock_weight=25.0,
-        max_stock_weight=45.0,
-        min_stock_positions=8,
+       # v7.0: stock sleeve supprimé → vol cible suffit
+        score_scale=3.0,            # Stable = scores comptent moins
+        bucket_penalty_lambda=2.0,
+        max_any_category=70.0,
     ),
 }
 
@@ -2079,30 +2084,10 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
         
-        # 8. Contraintes par BUCKET
-        if self.use_bucket_constraints:
-            bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
-            relaxation = BUCKET_CONSTRAINT_RELAXATION.get(profile.name, 0.05)
-            
-            for role in Role:
-                if role not in bucket_targets:
-                    continue
-                min_pct, max_pct = bucket_targets[role]
-                role_idx = [i for i, a in enumerate(candidates) if a.role == role]
-                if not role_idx:
-                    continue
-                
-                if min_pct > 0:
-                    adjusted_min = max(0, min_pct - relaxation)
-                    def bucket_min(w, idx=role_idx, min_val=adjusted_min):
-                        return np.sum(w[idx]) - min_val
-                    constraints.append({"type": "ineq", "fun": bucket_min})
-                
-                if max_pct < 1.0:
-                    adjusted_max = min(1.0, max_pct + relaxation)
-                    def bucket_max(w, idx=role_idx, max_val=adjusted_max):
-                        return max_val - np.sum(w[idx])
-                    constraints.append({"type": "ineq", "fun": bucket_max})
+        # 8. v7.0: Bucket targets → SOFT CONSTRAINT dans l'objectif (plus de hard ici)
+        # Les bucket targets (CORE/DEFENSIVE/SATELLITE) sont maintenant une pénalité
+        # dans objective() pour éviter l'infaisabilité SLSQP.
+ 
       # 9. P0 PARTNER: Contrainte turnover max
         # Note: prev_weights_array doit être passé via closure ou attribut
         # Ici on utilise une approche simplifiée via self._prev_weights_array
@@ -2117,23 +2102,23 @@ class PortfolioOptimizer:
             constraints.append({"type": "ineq", "fun": turnover_constraint})
             logger.info(f"P0 PARTNER: Added turnover constraint <= {profile.max_turnover}%")
         
-        # 10. P1 FIX: Contrainte minimum Actions (sleeve)
-        stocks_idx = [i for i, a in enumerate(candidates) if a.category == "Actions"]
-        if stocks_idx and profile.min_stock_weight > 0:
-            min_val = profile.min_stock_weight / 100.0
-            def min_stocks_constraint(w, idx=stocks_idx, mv=min_val):
-                return np.sum(w[idx]) - mv
-            constraints.append({"type": "ineq", "fun": min_stocks_constraint})
-            logger.info(f"[P1 FIX] Added min_stock_weight >= {profile.min_stock_weight:.1f}%")
+        # 10. v7.0: DÉPRÉCIÉ — min_stock_weight supprimé
         
-        # 11. v6.11: Contrainte maximum Actions (aligné PROFILE_POLICY)
-        if stocks_idx and hasattr(profile, 'max_stock_weight') and profile.max_stock_weight < 100.0:
-            max_val = profile.max_stock_weight / 100.0
-            def max_stocks_constraint(w, idx=stocks_idx, mv=max_val):
-                return mv - np.sum(w[idx])  # max - sum >= 0
-            constraints.append({"type": "ineq", "fun": max_stocks_constraint})
-            logger.info(f"[v6.11] Added max_stock_weight <= {profile.max_stock_weight:.1f}%")
-        
+        # 11. v7.0: DÉPRÉCIÉ — max_stock_weight supprimé
+        # 12. v7.0: Garde-fou max_any_category
+        if hasattr(profile, 'max_any_category') and profile.max_any_category < 100.0:
+            max_cat = profile.max_any_category / 100.0
+            cat_groups = defaultdict(list)
+            for i, a in enumerate(candidates):
+                cat_groups[a.category].append(i)
+
+            for cat, cat_idx in cat_groups.items():
+                if len(cat_idx) > 1:
+                    def cat_cap(w, idx=cat_idx, mv=max_cat):
+                        return mv - np.sum(w[idx])
+                    constraints.append({"type": "ineq", "fun": cat_cap})
+
+            logger.info(f"[v7.0] max_any_category <= {profile.max_any_category:.0f}%")
         return constraints
     
     def _normalize_scores(self, scores: np.ndarray) -> np.ndarray:
@@ -2544,7 +2529,9 @@ class PortfolioOptimizer:
             has_prev_weights = False
         
         raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
-        scores = self._normalize_scores(raw_scores) * self.score_scale
+        # v7.0: score_scale par profil
+        _scale = getattr(profile, 'score_scale', self.score_scale)
+        scores = self._normalize_scores(raw_scores) * _scale
         
         cov, cov_diagnostics = self.compute_covariance(candidates)
         # PR3: Initialiser heuristic_metadata (vide par défaut, rempli si Stable)
@@ -2575,7 +2562,6 @@ class PortfolioOptimizer:
                 "why_not_slsqp": STABLE_HEURISTIC_RULES["why_not_slsqp"],
                 "why_not_slsqp_details": STABLE_HEURISTIC_RULES["why_not_slsqp_details"],
             }
-            
         else:
             # === SLSQP pour Agressif et Modéré ===
             vol_target = profile.vol_target / 100
@@ -2583,12 +2569,21 @@ class PortfolioOptimizer:
             # P0 PARTNER: Stocker pour _build_constraints()
             self._prev_weights_array = prev_weights_array if has_prev_weights else None
             
+            # v7.0: Pré-calcul indices bucket pour soft penalty
+            _bucket_targets = PROFILE_BUCKET_TARGETS.get(profile.name, {})
+            _bucket_lambda = getattr(profile, 'bucket_penalty_lambda', 2.0)
+            _role_idx = {}
+            for _role in Role:
+                _ridx = [i for i, a in enumerate(candidates) if a.role == _role]
+                if _ridx:
+                    _role_idx[_role] = np.array(_ridx)
+            
             def objective(w):
                 port_score = np.dot(w, scores)
                 port_var = np.dot(w, np.dot(cov, w))
                 port_vol = np.sqrt(max(port_var, 0))
                 
-                # Pénalité vol asymétrique
+                # Pénalité vol asymétrique (inchangée)
                 vol_diff = port_vol - vol_target
                 if vol_diff < 0:  # Sous la cible
                     vol_penalty = 8.0 * vol_diff ** 2
@@ -2602,7 +2597,19 @@ class PortfolioOptimizer:
                 else:
                     turnover_penalty = 0.0
                 
-                return -(port_score - vol_penalty - turnover_penalty)
+                # v7.0: Bucket penalty soft (CORE / DEFENSIVE / SATELLITE)
+                bucket_penalty = 0.0
+                if _bucket_targets and _bucket_lambda > 0:
+                    for _role, (_mn, _mx) in _bucket_targets.items():
+                        _ridx = _role_idx.get(_role)
+                        if _ridx is None or len(_ridx) == 0:
+                            continue
+                        role_w = float(np.sum(w[_ridx]))
+                        below = max(0.0, _mn - role_w)
+                        above = max(0.0, role_w - _mx)
+                        bucket_penalty += _bucket_lambda * (below ** 2 + above ** 2)
+                
+                return -(port_score - vol_penalty - turnover_penalty - bucket_penalty)
             
             constraints = self._build_constraints(candidates, profile, cov)
             bounds = [(0, profile.max_single_position / 100) for _ in range(n)]
@@ -3455,30 +3462,12 @@ class PortfolioOptimizer:
             if w > cap + 0.1:
                 violations.append(f"region:{region}={w:.1f}%>{cap:.0f}%")
         
-        # 8. P1 FIX v6.33: Stock sleeve minimum weight
+         # 8-10. v7.0: Stock sleeve checks déprécés → diagnostic uniquement
         stocks_pct = sum(
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
         )
-        min_stock_w = getattr(profile, 'min_stock_weight', 0.0)
-        if stocks_pct < min_stock_w - 0.5:
-            violations.append(f"stocks={stocks_pct:.1f}%<{min_stock_w}%")
-        
-        # 9. P1 FIX v6.33: Stock sleeve maximum weight
-        max_stock_w = getattr(profile, 'max_stock_weight', 100.0)
-        if stocks_pct > max_stock_w + 0.5:
-            violations.append(f"stocks={stocks_pct:.1f}%>{max_stock_w}%")
-        
-        # 10. P1 FIX v6.33: Minimum stock positions (lignes)
-        min_positions = getattr(profile, 'min_stock_positions', 0)
-        thr = getattr(profile, 'stock_pos_threshold', 1.0)
-        n_stock_lines = sum(
-            1 for aid, w in allocation.items()
-            if w >= thr and asset_lookup.get(aid) and asset_lookup[aid].category == "Actions"
-        )
-        if n_stock_lines < min_positions:
-            violations.append(f"stock_lines={n_stock_lines}<{min_positions}")
-        
+        logger.info(f"[v7.0 DIAG] {profile.name}: stocks={stocks_pct:.1f}%")
         return violations
     def _post_process_allocation(
         self,
@@ -3539,11 +3528,7 @@ class PortfolioOptimizer:
                 allocation = self._adjust_to_100(allocation, profile, candidates)
             
             # === v6.33 FIX ChatGPT #3: STOCK SLEEVE APRÈS region+turnover ===
-            # 8. Min stock positions + min stock weight
-            allocation = self._enforce_min_stock_positions(allocation, candidates, profile)
-            
-            # 9. Max stock weight (nouveau v6.33)
-            allocation = self._enforce_max_stock_weight(allocation, candidates, profile)
+            # 8-9. v7.0: SUPPRIMÉ — stock sleeve enforcement déprécié
             
             # 10. Ajustement final à 100%
             allocation = self._adjust_to_100(allocation, profile, candidates)
