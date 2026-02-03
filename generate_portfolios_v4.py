@@ -1809,6 +1809,16 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         profile_selection_meta["buffett_threshold_policy"] = profile_buffett_min
         profile_selection_meta["buffett_missing_count"] = missing_buffett
         
+        # ========== DEBUG META STAGES ==========
+        if profile == "Agressif":
+            import json
+            print("\n" + "="*70)
+            print(f"DEBUG META STAGES - {profile}")
+            print("="*70)
+            print(json.dumps(profile_selection_meta.get("stages", {}), indent=2, default=str))
+            print("="*70 + "\n")
+        # =======================================
+        
         equities_by_profile[profile] = profile_equities
         
         # === v5.1.0: AUDIT HOOK 5 - Selection par profil ===
