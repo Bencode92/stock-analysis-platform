@@ -1373,7 +1373,6 @@ def print_tactical_context_diagnostic(market_context: Dict, mode: str = "radar")
 
 
 # ============= v4.13.2: SÉLECTION ÉQUITIES PAR PROFIL (CORRIGÉ) =============
-
 def select_equities_for_profile(
     eq_filtered: List[dict],
     profile: str,
@@ -1419,6 +1418,21 @@ def select_equities_for_profile(
             target_n=target_n,
         )
         
+        # ========== DEBUG PRESETS DISTRIBUTION ==========
+        if profile == "Agressif":
+            import json
+            preset_counts = {}
+            for eq in equities:
+                preset = eq.get("_matched_preset", "UNKNOWN")
+                preset_counts[preset] = preset_counts.get(preset, 0) + 1
+            
+            print("\n" + "="*70)
+            print(f"DEBUG PRESETS DISTRIBUTION - {profile}")
+            print("="*70)
+            print(json.dumps(preset_counts, indent=2, sort_keys=True))
+            print("="*70 + "\n")
+        # ================================================
+        
         # Enrichir la meta pour compatibilité avec le reste du pipeline
         selection_meta["selected"] = len(equities)
         selection_meta["target_n"] = target_n
@@ -1440,7 +1454,6 @@ def select_equities_for_profile(
             radar_min_coverage=0.40,
             market_context=market_context,
         )
-
 # ============= PIPELINE PRINCIPAL =============
 
 def build_portfolios_deterministic() -> Dict[str, Dict]:
