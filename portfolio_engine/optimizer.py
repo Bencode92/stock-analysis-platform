@@ -1865,7 +1865,8 @@ class PortfolioOptimizer:
                 f"mean={mean:5.1f} std={std:5.1f} | src: {src_breakdown}"
             )
         
-        logger.info("=" * 70) 
+        logger.info("=" * 70)
+        
         # === CALIBRATION SCORE DE SÉLECTION PAR CATÉGORIE ===
         # Ramène les moyennes de chaque catégorie sur la baseline (Actions)
         score_by_cat = defaultdict(list)
@@ -1893,14 +1894,19 @@ class PortfolioOptimizer:
         
         for a in universe:
             off = cat_offsets.get(a.category, 0.0)
-            a._select_score = max(0.0, min(100.0, float(a.score) + off))   
+            a._select_score = max(0.0, min(100.0, float(a.score) + off))
+        
         # === ÉTAPE 5: Tri par score avec tie-breaker par ID ===
         # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
         # P0 CALIBRATION: Trie sur _select_score calibré, avec fallback sur score brut
         sorted_assets = sorted(
-        universe,
-        key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
-        ) 
+            universe,
+            key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
+        )
+        
+        # === ÉTAPE 5b: Définir taille du pool ===
+        target_pool = profile.max_assets * 3
+        
         # === DIAGNOSTIC TRI ETF ===
         top_preview = sorted_assets[:target_pool]
         cat_preview = [a.category for a in top_preview]
@@ -1916,6 +1922,7 @@ class PortfolioOptimizer:
                 f"score_brut={etf.score:.1f}, "
                 f"select_score={getattr(etf, '_select_score', etf.score):.1f}"
             )
+        
         # === ÉTAPE 6: Sélection diversifiée ===
         selected = []
         sector_count = defaultdict(int)
@@ -1923,8 +1930,6 @@ class PortfolioOptimizer:
         exposure_count = defaultdict(int)
         bucket_count = defaultdict(int)
         corporate_group_count = defaultdict(int)
-        
-        target_pool = profile.max_assets * 3
         
         crypto_pool_count = 0
         crypto_scores = []
