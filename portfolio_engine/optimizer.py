@@ -1859,9 +1859,42 @@ class PortfolioOptimizer:
             )
         
         logger.info("=" * 70) 
+        # === CALIBRATION SCORE DE SÉLECTION PAR CATÉGORIE ===
+        # Ramène les moyennes de chaque catégorie sur la baseline (Actions)
+        score_by_cat = defaultdict(list)
+        for a in universe:
+            score_by_cat[a.category].append(float(a.score))
+        
+        # Baseline: Actions si dispo, sinon moyenne globale
+        if score_by_cat.get("Actions"):
+            baseline_mean = float(np.mean(score_by_cat["Actions"]))
+        else:
+            all_scores = [s for arr in score_by_cat.values() for s in arr]
+            baseline_mean = float(np.mean(all_scores)) if all_scores else 50.0
+        
+        cat_offsets = {}
+        for cat, arr in score_by_cat.items():
+            mu = float(np.mean(arr)) if arr else baseline_mean
+            cat_offsets[cat] = baseline_mean - mu  # Offset pour ramener sur baseline
+        
+        logger.info("=" * 70)
+        logger.info("CALIBRATION OFFSET PAR CATÉGORIE")
+        for cat, offset in sorted(cat_offsets.items()):
+            mu = float(np.mean(score_by_cat[cat]))
+            logger.info(f"  {cat}: mean={mu:.1f} → offset={offset:.1f} → calibré={mu+offset:.1f}")
+        logger.info("=" * 70)
+        
+        for a in universe:
+            off = cat_offsets.get(a.category, 0.0)
+            a._select_score = max(0.0, min(100.0, float(a.score) + off))   
         # === ÉTAPE 5: Tri par score avec tie-breaker par ID ===
         # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
-        sorted_assets = sorted(universe, key=lambda x: (x.score, x.id), reverse=True)
+        # P0 CALIBRATION: Trie sur _select_score calibré, avec fallback sur score brut
+        sorted_assets = sorted(
+            universe,
+            key=lambda x: (getattr(x, "_select_score", x.score), x.score, x.id),
+            reverse=True
+        )
         
         # === ÉTAPE 6: Sélection diversifiée ===
         selected = []
