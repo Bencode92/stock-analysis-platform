@@ -564,13 +564,13 @@ def _is_bond_like(asset: "Asset") -> bool:
     return False
 
 # Volatilités par défaut par catégorie
-DEFAULT_VOLS = {"Actions": 25.0, "ETF": 15.0, "Obligations": 5.0, "Crypto": 80.0}
+DEFAULT_VOLS = {"Actions": 25.0, "ETF": 20.0, "Obligations": 5.0, "Crypto": 80.0}
 
 # P1 FIX v6.2: Minimum bonds dans le pool par profil (AUGMENTÉ)
 MIN_BONDS_IN_POOL = {
-    "Stable": 15,    # Était 8
-    "Modéré": 10,    # Était 5
-    "Agressif": 5,   # Était 2
+    "Stable": 5,    # Était 8
+    "Modéré": 5,    # Était 5
+    "Agressif": 3,   # Était 2
 }
 
 # P1 FIX v6.2: Minimum defensive assets dans le pool par profil (AUGMENTÉ)
@@ -578,6 +578,13 @@ MIN_DEFENSIVE_IN_POOL = {
     "Stable": 12,    # Était 10
     "Modéré": 8,     # Était 6
     "Agressif": 5,   # Était 3
+}
+
+# PATCH v8.2: Minimum ETF dans le pool par profil (NOUVEAU)
+MIN_ETF_IN_POOL = {
+    "Stable": 6,
+    "Modéré": 6,
+    "Agressif": 6,
 }
 
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
@@ -1891,11 +1898,24 @@ class PortfolioOptimizer:
         # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
         # P0 CALIBRATION: Trie sur _select_score calibré, avec fallback sur score brut
         sorted_assets = sorted(
-            universe,
-            key=lambda x: (getattr(x, "_select_score", x.score), x.score, x.id),
-            reverse=True
-        )
+        universe,
+        key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
+        ) 
+        # === DIAGNOSTIC TRI ETF ===
+        top_preview = sorted_assets[:target_pool]
+        cat_preview = [a.category for a in top_preview]
+        logger.info(f"[TOP {target_pool} PREVIEW] " + ", ".join(cat_preview))
         
+        first_etf_idx = next((i for i, a in enumerate(sorted_assets) if a.category == "ETF"), None)
+        logger.info(f"[ETF RANK] First ETF at position: {first_etf_idx}/{len(sorted_assets)}")
+        
+        if first_etf_idx is not None and first_etf_idx < len(sorted_assets):
+            etf = sorted_assets[first_etf_idx]
+            logger.info(
+                f"[ETF DETAILS] id={etf.id}, "
+                f"score_brut={etf.score:.1f}, "
+                f"select_score={getattr(etf, '_select_score', etf.score):.1f}"
+            )
         # === ÉTAPE 6: Sélection diversifiée ===
         selected = []
         sector_count = defaultdict(int)
