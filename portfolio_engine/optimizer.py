@@ -755,6 +755,7 @@ class ProfileConstraints:
     vol_tolerance: float = 3.0  # v6.10: Tolérance autour de la cible
     crypto_max: float = 10.0    # LEVIER 4: Crypto maximum
     bonds_min: float = 5.0      # LEVIER 4: Bonds minimum
+    bonds_max: float = 100.0    # LEVIER 4b: Bonds maximum (garde-fou)
     max_single_position: float = 15.0
     max_sector: float = 30.0
     max_region: float = 50.0
@@ -784,11 +785,11 @@ PROFILES = {
         vol_target=18.0, 
         vol_tolerance=3.0,
         crypto_max=10.0, 
-        bonds_min=5.0,
+        bonds_min=10.0,           # PATCH v8.4: 5→10%
+        bonds_max=20.0,           # PATCH v8.4: cap obligations
         max_sector=35.0,
         max_turnover=30.0,
         turnover_penalty=0.05,
-        # v7.0: stock sleeve supprimé → vol cible suffit
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
@@ -799,9 +800,9 @@ PROFILES = {
         vol_tolerance=3.0,
         crypto_max=5.0, 
         bonds_min=15.0,
+        bonds_max=40.0,           # PATCH v8.4: cap obligations
         max_turnover=25.0,
         turnover_penalty=0.10,
-        # v7.0: stock sleeve supprimé → vol cible suffit
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=65.0,
@@ -812,10 +813,10 @@ PROFILES = {
         vol_tolerance=3.0,
         crypto_max=0.0, 
         bonds_min=35.0,
+        bonds_max=60.0,           # PATCH v8.4: cap obligations
         max_turnover=15.0,
         turnover_penalty=0.20,
-        # v7.0: stock sleeve supprimé → vol cible suffit
-        score_scale=3.0,            # Stable = scores comptent moins
+        score_scale=3.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
     ),
@@ -829,12 +830,12 @@ PROFILES_EUUS = {
         vol_target=18.0, 
         vol_tolerance=3.0,
         crypto_max=10.0, 
-        bonds_min=5.0,
+        bonds_min=10.0,           # PATCH v8.4: 5→10%
+        bonds_max=20.0,           # PATCH v8.4: cap obligations
         max_sector=35.0,
         max_turnover=30.0,
         turnover_penalty=0.05,
         euus_mode=True,
-        # v7.0: stock sleeve supprimé → vol cible suffit
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
@@ -845,10 +846,10 @@ PROFILES_EUUS = {
         vol_tolerance=3.0,
         crypto_max=5.0, 
         bonds_min=15.0,
+        bonds_max=40.0,           # PATCH v8.4: cap obligations
         max_turnover=25.0,
         turnover_penalty=0.10,
         euus_mode=True,
-        # v7.0: stock sleeve supprimé → vol cible suffit
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=65.0,
@@ -859,11 +860,11 @@ PROFILES_EUUS = {
         vol_tolerance=3.0,
         crypto_max=0.0, 
         bonds_min=35.0,
+        bonds_max=60.0,           # PATCH v8.4: cap obligations
         max_turnover=15.0,
         turnover_penalty=0.20,
         euus_mode=True,
-       # v7.0: stock sleeve supprimé → vol cible suffit
-        score_scale=3.0,            # Stable = scores comptent moins
+        score_scale=3.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
     ),
@@ -2239,6 +2240,13 @@ class PortfolioOptimizer:
                 return np.sum(w[idx]) - min_val
             constraints.append({"type": "ineq", "fun": bonds_constraint})
         
+        # PATCH v8.4: Bonds MAXIMUM
+        bonds_max = getattr(profile, 'bonds_max', 100.0)
+        if bonds_idx and bonds_max < 100.0:
+            def bonds_max_constraint(w, idx=bonds_idx, max_val=bonds_max/100):
+                return max_val - np.sum(w[idx])
+            constraints.append({"type": "ineq", "fun": bonds_max_constraint})
+        
         # 3. MAX WEIGHT PAR BOND
         max_bond_weight = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0) / 100
         for i in bonds_idx:
@@ -3558,6 +3566,87 @@ class PortfolioOptimizer:
         logger.info(f"P1 FIX v6.21: Bonds after enforcement = {bonds_final:.1f}%")
         
         return allocation
+    def _enforce_bonds_maximum(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints
+    ) -> Dict[str, float]:
+        """
+        PATCH v8.4: Force bonds <= bonds_max pour Agressif/Modéré.
+        Symétrique de _enforce_bonds_minimum.
+        """
+        bonds_max = getattr(profile, 'bonds_max', 100.0)
+        if bonds_max >= 100.0:
+            return allocation
+
+        asset_lookup = {c.id: c for c in candidates}
+
+        bonds_current = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and _is_bond_like(asset_lookup[aid])
+        )
+
+        if bonds_current <= bonds_max + 0.1:
+            return allocation
+
+        excess = bonds_current - bonds_max
+        logger.warning(
+            f"PATCH v8.4: Bonds {bonds_current:.1f}% > {bonds_max}% max for "
+            f"{profile.name}, reducing {excess:.1f}%"
+        )
+
+        # Réduire les bonds (plus petits scores d'abord)
+        bond_assets = sorted(
+            [(aid, w) for aid, w in allocation.items()
+             if asset_lookup.get(aid) and _is_bond_like(asset_lookup[aid])],
+            key=lambda x: (asset_lookup[x[0]].score, x[0])
+        )
+
+        freed_weight = 0.0
+        for aid, w in bond_assets:
+            if excess <= 0.1:
+                break
+            reduction = min(w - 0.5, excess)  # Garder min 0.5% ou supprimer
+            if reduction > 0.1:
+                allocation[aid] = round(w - reduction, 2)
+                freed_weight += reduction
+                excess -= reduction
+
+        # Supprimer bonds < 0.5%
+        for aid in list(allocation.keys()):
+            if asset_lookup.get(aid) and _is_bond_like(asset_lookup[aid]):
+                if allocation[aid] < 0.5:
+                    freed_weight += allocation[aid]
+                    del allocation[aid]
+
+        # Redistribuer vers Actions et ETF (score décroissant)
+        if freed_weight > 0.1:
+            non_bonds = sorted(
+                [(aid, w) for aid, w in allocation.items()
+                 if asset_lookup.get(aid)
+                 and not _is_bond_like(asset_lookup[aid])
+                 and asset_lookup[aid].category != "Crypto"
+                 and w < profile.max_single_position - 0.5],
+                key=lambda x: (-asset_lookup[x[0]].score, x[0])
+            )
+
+            for aid, w in non_bonds:
+                if freed_weight < 0.1:
+                    break
+                headroom = profile.max_single_position - w
+                add = min(headroom, freed_weight, 3.0)
+                if add > 0.1:
+                    allocation[aid] = round(allocation[aid] + add, 2)
+                    freed_weight -= add
+
+        bonds_final = sum(
+            w for aid, w in allocation.items()
+            if asset_lookup.get(aid) and _is_bond_like(asset_lookup[aid])
+        )
+        logger.info(f"PATCH v8.4: Bonds after cap enforcement = {bonds_final:.1f}%")
+
+        return allocation   
     def _adjust_to_100(
         self, 
         allocation: Dict[str, float], 
@@ -3730,10 +3819,12 @@ class PortfolioOptimizer:
                 if w > profile.max_single_position:
                     allocation[aid] = profile.max_single_position
             
-            # 2. Enforce contraintes catégorie (SAUF stocks - déplacé plus bas)
+           # 2. Enforce contraintes catégorie (SAUF stocks - déplacé plus bas)
             allocation = self._enforce_crypto_cap(allocation, candidates, profile)
             allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
+            allocation = self._enforce_bonds_maximum(allocation, candidates, profile)  # PATCH v8.4
             allocation = self._enforce_sector_caps(allocation, candidates, profile)
+           
             
             # 3. Normaliser à 100% (avec respect cap bond)
             allocation = self._adjust_to_100(allocation, profile, candidates)
