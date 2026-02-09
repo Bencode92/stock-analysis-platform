@@ -6,8 +6,10 @@ Generates a detailed JSON report explaining:
 - Which assets were selected and why (scores, rankings)
 - Which assets were rejected and why (filters, thresholds)
 - Filter statistics and thresholds used
+- v1.5.1: FIX: Robust rejection reasons + sort_score_source diagnostic
 - v1.5.0: FULL per-category rankings (ETF, equity, bond, crypto) for debugging
 
+v1.5.1 - FIX: Robust rejection reason lookup + sort_score_source + deduced reasons
 v1.5.0 - ADD: category_rankings – classement complet par catégorie (ETF, Actions, Obligations, Crypto)
 v1.4.0 - ADD: ETF scoring diagnostic for flat score debugging
 v1.3.1 - FIX: Capture composite_score and factor_scores for ETF/bond/crypto
@@ -327,16 +329,19 @@ class AssetAuditEntry:
 
 @dataclass
 class CategoryRankingEntry:
-    """v1.5.0: Single entry in a per-category final ranking."""
+    """v1.5.1: Single entry in a per-category final ranking."""
     rank: int
     name: str
     ticker: Optional[str] = None
+    sort_score: Optional[float] = None          # v1.5.1: actual score used for ranking
+    sort_score_source: Optional[str] = None     # v1.5.1: which field was used (e.g. "composite_score", "buffett_score")
     composite_score: Optional[float] = None
     profile_score: Optional[float] = None
     buffett_score: Optional[float] = None
     factor_scores: Optional[Dict[str, float]] = None
     selected: bool = False
     rejection_reason: Optional[str] = None
+    rejection_filter: Optional[str] = None      # v1.5.1: which filter caused rejection
     sector: Optional[str] = None
     country: Optional[str] = None
     volatility: Optional[float] = None
@@ -393,7 +398,7 @@ class ETFScoringDebug:
 class SelectionAuditReport:
     """Complete audit report for asset selection."""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "v1.5.0"
+    version: str = "v1.5.1"
     preset_meta_version: str = "v4.15.2"  # v1.3.0
     
     # Summary counts
@@ -441,6 +446,7 @@ class SelectionAuditor:
     """
     Tracks and records asset selection decisions throughout the pipeline.
     
+    v1.5.1: FIX: Robust rejection lookup + sort_score diagnostic.
     v1.5.0: ADD: category_rankings – classement complet par catégorie.
     v1.4.0: ADD: ETF scoring diagnostic for flat score debugging.
     v1.3.1: FIX: Capture composite_score and factor_scores for ETF/bond/crypto.
@@ -857,17 +863,17 @@ class SelectionAuditor:
         max_entries: int = 100,
     ):
         """
-        v1.5.0: Record the FULL ranked list for a category.
+        v1.5.1: Record the FULL ranked list for a category.
         
         Produces a sorted list of ALL candidates with their rank, score,
-        selection status and rejection reason so you can audit why certain
-        assets always (or never) appear.
+        selection status and **precise** rejection reason so you can audit
+        why certain assets always (or never) appear.
         
-        Args:
-            category: "equity" | "etf" | "bond" | "crypto"
-            all_candidates: Every candidate that entered scoring
-            selected: The subset that was ultimately selected
-            max_entries: Cap output length (default 100)
+        v1.5.1 fixes:
+        - Robust rejection lookup (tries id, ticker, symbol, name)
+        - Deduces rejection reason from missing data if not tracked
+        - Adds sort_score + sort_score_source to show which metric drives ranking
+        - Adds rejection_filter to show which pipeline stage caused rejection
         """
         selected_ids = set()
         for s in selected:
@@ -879,9 +885,9 @@ class SelectionAuditor:
             if s.get("name"):
                 selected_ids.add(s["name"])
 
-        # --- score key for sorting ---
-        def _score_key(asset: Dict) -> float:
-            """Return the best available score for ranking."""
+        # --- score key for sorting: returns (score, source_field_name) ---
+        def _score_key_with_source(asset: Dict):
+            """Return (score, source_field) for ranking."""
             for key in [
                 "composite_score", "_composite_score",
                 "_profile_score",
@@ -891,13 +897,17 @@ class SelectionAuditor:
                 val = asset.get(key)
                 if val is not None:
                     try:
-                        return float(val)
+                        return float(val), key
                     except (TypeError, ValueError):
                         pass
-            return 0.0
+            return 0.0, "none"
 
         # Sort all candidates descending by score
-        sorted_candidates = sorted(all_candidates, key=_score_key, reverse=True)
+        sorted_candidates = sorted(
+            all_candidates,
+            key=lambda a: _score_key_with_source(a)[0],
+            reverse=True,
+        )
 
         ranking_entries: List[Dict] = []
         for rank_idx, asset in enumerate(sorted_candidates[:max_entries], 1):
@@ -908,10 +918,14 @@ class SelectionAuditor:
                 or asset.get("name") in selected_ids
             )
 
+            sort_score, sort_source = _score_key_with_source(asset)
+
             entry = CategoryRankingEntry(
                 rank=rank_idx,
                 name=asset.get("name") or asset.get("ticker") or "Unknown",
                 ticker=asset.get("ticker") or asset.get("symbol"),
+                sort_score=self._safe_round(sort_score, 4),
+                sort_score_source=sort_source,
                 composite_score=self._safe_round(
                     asset.get("composite_score") or asset.get("_composite_score"), 4
                 ),
@@ -932,12 +946,15 @@ class SelectionAuditor:
                     if v is not None and k != "_meta"
                 }
 
-            # Rejection reason
+            # ============= v1.5.1: ROBUST REJECTION LOOKUP =============
             if not is_selected:
-                if asset_id in self._rejections:
-                    entry.rejection_reason = self._rejections[asset_id].get("reason", "")
+                rejection_info = self._find_rejection(asset)
+                if rejection_info:
+                    entry.rejection_reason = rejection_info.get("reason", "")
+                    entry.rejection_filter = rejection_info.get("filter", None)
                 else:
-                    entry.rejection_reason = "Score insuffisant ou quota atteint"
+                    # Deduce reason from missing data
+                    entry.rejection_reason = self._deduce_rejection_reason(asset, category, sort_source)
 
             # Sector / country
             if category == "etf":
@@ -991,10 +1008,99 @@ class SelectionAuditor:
         self.report.category_rankings[category] = ranking_entries
 
         n_sel = sum(1 for e in ranking_entries if e.get("selected"))
-        logger.info(
-            f"📊 Audit v1.5.0: {category} ranking recorded – "
-            f"{len(ranking_entries)} entries, {n_sel} selected"
+        n_no_composite = sum(
+            1 for e in ranking_entries
+            if not e.get("selected") and e.get("sort_score_source", "").endswith("buffett_score")
         )
+        logger.info(
+            f"📊 Audit v1.5.1: {category} ranking – "
+            f"{len(ranking_entries)} entries, {n_sel} selected, "
+            f"{n_no_composite} ranked by buffett_score only (no composite)"
+        )
+
+    def _find_rejection(self, asset: Dict) -> Optional[Dict]:
+        """
+        v1.5.1: Look up rejection info trying ALL possible identifiers.
+        Returns the rejection dict or None.
+        """
+        for key in ["id", "ticker", "symbol", "name"]:
+            val = asset.get(key)
+            if val and val in self._rejections:
+                return self._rejections[val]
+        # Also try the standard _get_asset_id
+        asset_id = self._get_asset_id(asset)
+        if asset_id in self._rejections:
+            return self._rejections[asset_id]
+        return None
+
+    def _deduce_rejection_reason(self, asset: Dict, category: str, sort_source: str) -> str:
+        """
+        v1.5.1: Deduce the most likely rejection reason when not explicitly tracked.
+        Checks for missing data, out-of-range metrics, etc.
+        """
+        reasons = []
+
+        # 1. No composite/profile score → filtered BEFORE scoring stage
+        has_composite = (
+            asset.get("composite_score") is not None
+            or asset.get("_composite_score") is not None
+        )
+        has_profile = asset.get("_profile_score") is not None
+
+        if category == "equity" and not has_composite and not has_profile:
+            # Check what data is missing
+            vol = asset.get("vol") or asset.get("volatility_3y") or asset.get("vol_3y")
+            roe = asset.get("roe")
+            
+            if vol is None:
+                reasons.append("Volatilité manquante → rejeté par hard filters")
+            else:
+                try:
+                    vol_f = float(str(vol).replace("%", ""))
+                    if vol_f < 1 or vol_f > 120:
+                        reasons.append(f"Volatilité aberrante ({vol_f}%)")
+                except (TypeError, ValueError):
+                    reasons.append("Volatilité non parsable")
+
+            if roe is None or str(roe).upper() in ["N/A", "NAN", "NONE", ""]:
+                reasons.append("ROE manquant → rejeté par hard filters")
+
+            div_yield = asset.get("dividend_yield")
+            payout = asset.get("payout_ratio")
+            coverage = asset.get("dividend_coverage")
+            if div_yield is None:
+                reasons.append("Dividend yield manquant")
+            if payout is None:
+                reasons.append("Payout ratio manquant")
+            if coverage is None:
+                reasons.append("Dividend coverage manquant")
+
+            if reasons:
+                return "Hard filter (données manquantes): " + "; ".join(reasons[:3])
+            else:
+                return "Éjecté par hard filters du profil (hors range vol/ROE pour ce profil)"
+
+        if category in ["etf", "bond", "crypto"] and not has_composite:
+            return "Pas de composite_score → non scoré (filtré avant scoring)"
+
+        # 2. Has composite but not selected → quota or score rank
+        if has_composite or has_profile:
+            score = asset.get("_profile_score") or asset.get("composite_score") or asset.get("_composite_score")
+            if score is not None:
+                try:
+                    score_f = float(score)
+                    return f"Score composite ({score_f:.3f}) insuffisant pour entrer dans le quota de sélection"
+                except (TypeError, ValueError):
+                    pass
+
+        # 3. Fallback with sort_source info
+        if sort_source and "buffett" in sort_source:
+            return (
+                f"Classé par {sort_source} uniquement (pas de composite_score) → "
+                f"probablement filtré par hard filters avant le scoring"
+            )
+
+        return "Non sélectionné (raison non tracée)"
 
     @staticmethod
     def _safe_round(value, decimals: int = 2) -> Optional[float]:
