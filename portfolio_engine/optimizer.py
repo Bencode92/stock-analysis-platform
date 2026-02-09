@@ -1867,34 +1867,54 @@ class PortfolioOptimizer:
         
         logger.info("=" * 70)
         
-        # === CALIBRATION SCORE DE SÉLECTION PAR CATÉGORIE ===
-        # Ramène les moyennes de chaque catégorie sur la baseline (Actions)
+        # === FIX C v8.3: Z-SCORE PAR CATÉGORIE (remplace offset plat) ===
+        ZSCORE_TARGET_MEAN = 50.0
+        ZSCORE_TARGET_STD = 15.0
+        ZSCORE_MIN_N = 3
+        ZSCORE_MIN_STD = 0.1
+
         score_by_cat = defaultdict(list)
         for a in universe:
             score_by_cat[a.category].append(float(a.score))
-        
-        # Baseline: Actions si dispo, sinon moyenne globale
+
         if score_by_cat.get("Actions"):
             baseline_mean = float(np.mean(score_by_cat["Actions"]))
         else:
             all_scores = [s for arr in score_by_cat.values() for s in arr]
             baseline_mean = float(np.mean(all_scores)) if all_scores else 50.0
-        
-        cat_offsets = {}
-        for cat, arr in score_by_cat.items():
-            mu = float(np.mean(arr)) if arr else baseline_mean
-            cat_offsets[cat] = baseline_mean - mu  # Offset pour ramener sur baseline
-        
+
         logger.info("=" * 70)
-        logger.info("CALIBRATION OFFSET PAR CATÉGORIE")
-        for cat, offset in sorted(cat_offsets.items()):
-            mu = float(np.mean(score_by_cat[cat]))
-            logger.info(f"  {cat}: mean={mu:.1f} → offset={offset:.1f} → calibré={mu+offset:.1f}")
+        logger.info("FIX C v8.3: Z-SCORE CALIBRATION PAR CATÉGORIE")
+
+        for cat, arr in sorted(score_by_cat.items()):
+            scores_np = np.array(arr, dtype=float)
+            n_cat = len(scores_np)
+            mu_cat = float(scores_np.mean())
+            sigma_cat = float(scores_np.std(ddof=1)) if n_cat >= 2 else 0.0
+
+            cat_assets = [a for a in universe if a.category == cat]
+
+            if n_cat >= ZSCORE_MIN_N and sigma_cat >= ZSCORE_MIN_STD:
+                for a in cat_assets:
+                    z = (float(a.score) - mu_cat) / sigma_cat
+                    a._select_score = max(0.0, min(100.0,
+                        ZSCORE_TARGET_MEAN + ZSCORE_TARGET_STD * z))
+                new_scores = [a._select_score for a in cat_assets]
+                logger.info(
+                    f"  {cat}: n={n_cat} | μ={mu_cat:.1f} σ={sigma_cat:.1f} → "
+                    f"z-score → [{min(new_scores):.1f}, {max(new_scores):.1f}] "
+                    f"mean={np.mean(new_scores):.1f} std={np.std(new_scores):.1f}"
+                )
+            else:
+                offset = baseline_mean - mu_cat
+                for a in cat_assets:
+                    a._select_score = max(0.0, min(100.0, float(a.score) + offset))
+                logger.info(
+                    f"  {cat}: n={n_cat} | σ={sigma_cat:.2f} < {ZSCORE_MIN_STD} → "
+                    f"FALLBACK offset={offset:.1f}"
+                )
+
         logger.info("=" * 70)
-        
-        for a in universe:
-            off = cat_offsets.get(a.category, 0.0)
-            a._select_score = max(0.0, min(100.0, float(a.score) + off))
         
         # === ÉTAPE 5: Tri par score avec tie-breaker par ID ===
         # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
@@ -2005,6 +2025,22 @@ class PortfolioOptimizer:
             defensive_to_add = defensive_candidates[:defensive_needed]
             selected.extend(defensive_to_add)
             logger.info(f"P1 FIX v6.2: Added {len(defensive_to_add)} defensive assets to pool for {profile.name}")
+        # === PATCH v8.2 FIX A: GARANTIR MINIMUM ETF DANS LE POOL ===
+        min_etf = MIN_ETF_IN_POOL.get(profile.name, 6)
+        etf_in_pool = [a for a in selected if a.category == "ETF"]
+
+        if len(etf_in_pool) < min_etf:
+            etf_candidates = sorted(
+                [a for a in universe if a.category == "ETF" and a not in selected],
+                key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
+            )
+            etf_needed = min_etf - len(etf_in_pool)
+            etf_to_add = etf_candidates[:etf_needed]
+            selected.extend(etf_to_add)
+            logger.info(
+                f"PATCH v8.2 FIX A: Added {len(etf_to_add)} ETF to pool for "
+                f"{profile.name} (had {len(etf_in_pool)}, minimum {min_etf})"
+            )   
         
         # === v3.9: TOP-N GUARANTEED SELECTION ===
         # Garantit TOUJOURS 25 actifs minimum (sauf univers < 25)
