@@ -1,7 +1,7 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.14
+ETF Preset Selector v2.2.15
 =========================================
 
 CHANGEMENTS vs v2.2.13 (fix scoring flat 50.1):
@@ -2189,7 +2189,12 @@ PRESET_FUNCTIONS: Dict[str, Callable[[pd.DataFrame], pd.Series]] = {
 # =============================================================================
 
 def apply_presets_union(df: pd.DataFrame, profile: str) -> pd.DataFrame:
-    """Couche 2: Union des presets pour le profil."""
+    """Couche 2: Union des presets pour le profil.
+    
+    FIX v2.2.15: Assigne _matched_preset ICI sur l'univers complet (d1),
+    AVANT le filtrage par les masques preset. Cela garantit que les quantiles
+    dans assign_best_preset() sont calculés sur la distribution complète.
+    """
     if df.empty:
         return df
     
@@ -2197,6 +2202,18 @@ def apply_presets_union(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     if not presets:
         logger.warning(f"[ETF] Aucun preset défini pour profil {profile}")
         return df
+    
+    # FIX v2.2.15: Assigner _matched_preset SUR L'UNIVERS COMPLET (d1)
+    # AVANT le filtrage. assign_best_preset() utilise _q_ok() qui calcule
+    # les quantiles sur le DataFrame courant. Si on attend après le filtrage
+    # (d2), les quantiles sont décalés et les ETF ne matchent plus.
+    df = df.copy()
+    df["_matched_preset"] = assign_best_preset(df, profile)
+    n_matched = (df["_matched_preset"] != "").sum()
+    logger.info(
+        f"[ETF {profile}] Preset assignment (pre-filter): "
+        f"{n_matched}/{len(df)} matched"
+    )
     
     mask = pd.Series(False, index=df.index)
     preset_counts = {}
@@ -2440,10 +2457,22 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     df["_preset_profile"] = profile
     df["_asset_class"] = "etf"
 
-    # Assigner le meilleur preset
-    df["_matched_preset"] = assign_best_preset(df, profile)
-
-    # Tags Role/Risk/Correlation
+    # FIX v2.2.15: Ne PAS réassigner _matched_preset si déjà peuplé
+    # par apply_presets_union() sur l'univers complet (d1).
+    # Le recalcul ici serait sur le sous-ensemble filtré (d2)
+    # → quantiles décalés → 0 match → tout "non_classé" dans l'audit.
+    if "_matched_preset" not in df.columns or (df["_matched_preset"] == "").all():
+        df["_matched_preset"] = assign_best_preset(df, profile)
+        logger.info(
+            f"[ETF {profile}] _matched_preset computed in scoring "
+            f"(no pre-assignment found)"
+        )
+    else:
+        n_preset = (df["_matched_preset"] != "").sum()
+        logger.info(
+            f"[ETF {profile}] Keeping pre-assigned _matched_preset: "
+            f"{n_preset}/{len(df)} matched"
+        )
     def _get_config_field(preset_name: str, field: str) -> str:
         cfg = PRESET_CONFIGS.get(preset_name)
         if not cfg:
