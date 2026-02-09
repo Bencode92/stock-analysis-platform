@@ -1799,6 +1799,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     feasibility_reports = {}
     # === v4.13: Dict pour stocker équités par profil (diagnostic overlap) ===
     equities_by_profile = {}
+   # === v1.5.3 FIX: Collect SCORED ETF/crypto/bonds for audit ===
+    all_scored_etfs = {}
+    all_scored_cryptos = {}
+    all_scored_bonds = {}   
     
     # v4.14.0 FIX R5b: Synchroniser PROFILE_POLICY avec seuils Buffett CONFIG
     # Évite le double filtre (CONFIG vs PROFILE_POLICY)
@@ -2116,21 +2120,18 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         else:
             logger.info(f"   ✅ Overlap Agressif-Stable OK: {overlap_agg_stb} <= {target_overlap_agg_stb:.0f}")
     
-    # === v4.12.2 FIX: Génération de l'audit de sélection avec extraction correcte ===
+    # === v1.5.3 FIX: Génération de l'audit avec données SCORÉES ===
     if CONFIG.get("generate_selection_audit", False) and SELECTION_AUDIT_AVAILABLE:
         try:
-            # Extraire les actifs sélectionnés depuis les allocations (union des 3 profils)
             selected_tickers = set()
             for profile_data in portfolios.values():
                 for asset_id in profile_data.get("allocation", {}).keys():
                     selected_tickers.add(asset_id)
             
-            # v4.13: Utiliser equities_by_profile pour l'audit
             all_profile_equities = []
             for profile_eqs in equities_by_profile.values():
                 all_profile_equities.extend(profile_eqs)
             
-            # Dédupliquer par ID
             seen_ids = set()
             equities_final = []
             for e in all_profile_equities:
@@ -2139,51 +2140,52 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     seen_ids.add(eid)
                     equities_final.append(e)
             
-            # v4.12.2 FIX: Extraire ETF sélectionnés depuis all_funds_data (qui sont des dicts)
-            # et pas depuis universe_others (qui sont des objets Asset)
-            etf_selected = []
-            for etf in all_funds_data:
-                # all_funds_data contient ETF + bonds, filtrer sur category
-                cat = str(etf.get("category", "") or etf.get("fund_type", "") or "").lower()
-                if "bond" in cat:
-                    continue  # Skip bonds
-                
-                # Vérifier si cet ETF est dans les allocations
-                etf_id = etf.get("id") or etf.get("ticker") or etf.get("symbol") or etf.get("name")
-                etf_ticker = etf.get("ticker") or etf.get("symbol")
-                etf_name = etf.get("name")
-                
-                if etf_id in selected_tickers or etf_ticker in selected_tickers or etf_name in selected_tickers:
-                    # Marquer comme ETF pour l'audit
+            # v1.5.3 FIX: Use SCORED data (has _matched_preset, _profile_score)
+            scored_etf_list = list(all_scored_etfs.values()) if all_scored_etfs else etf_data
+            scored_crypto_list = list(all_scored_cryptos.values()) if all_scored_cryptos else crypto_data
+            scored_bonds_list = list(all_scored_bonds.values()) if all_scored_bonds else []
+            
+            n_with_preset = sum(1 for e in scored_etf_list if e.get("_matched_preset"))
+            n_with_score = sum(1 for e in scored_etf_list if e.get("_profile_score") is not None)
+            logger.info(f"   📊 Audit v1.5.3: scored ETFs={len(scored_etf_list)}, _matched_preset={n_with_preset}, _profile_score={n_with_score}")
+            
+            etf_selected_audit = []
+            for etf in scored_etf_list:
+                identifiers = set()
+                for key in ["id", "ticker", "symbol", "name", "etfsymbol", "isin"]:
+                    val = etf.get(key)
+                    if val:
+                        identifiers.add(str(val))
+                if identifiers & selected_tickers:
                     etf_copy = etf.copy()
                     etf_copy["category"] = "etf"
-                    etf_selected.append(etf_copy)
+                    etf_selected_audit.append(etf_copy)
             
-            # v4.12.2 FIX: Extraire crypto sélectionnées depuis crypto_data (dicts)
-            crypto_selected = []
-            for cr in crypto_data:
-                cr_id = cr.get("id") or cr.get("ticker") or cr.get("symbol") or cr.get("name")
-                cr_ticker = cr.get("ticker") or cr.get("symbol")
-                cr_name = cr.get("name")
-                
-                if cr_id in selected_tickers or cr_ticker in selected_tickers or cr_name in selected_tickers:
-                    crypto_selected.append(cr)
+            crypto_selected_audit = []
+            for cr in scored_crypto_list:
+                identifiers = set()
+                for key in ["id", "ticker", "symbol", "name"]:
+                    val = cr.get(key)
+                    if val:
+                        identifiers.add(str(val))
+                if identifiers & selected_tickers:
+                    crypto_selected_audit.append(cr)
             
-            logger.info(f"   📊 Audit: {len(equities_final)} equities, {len(etf_selected)} ETF, {len(crypto_selected)} crypto sélectionnés")
+            logger.info(f"   📊 Audit: {len(equities_final)} equities, {len(etf_selected_audit)} ETF, {len(crypto_selected_audit)} crypto sélectionnés")
             
             create_selection_audit(
                 config=CONFIG,
                 equities_initial=eq_rows_before_buffett,
                 equities_after_buffett=eq_rows,
                 equities_final=equities_final,
-                etf_data=all_funds_data,
-                etf_selected=etf_selected,
-                crypto_data=crypto_data,
-                crypto_selected=crypto_selected,
+                etf_data=scored_etf_list,
+                etf_selected=etf_selected_audit,
+                crypto_data=scored_crypto_list,
+                crypto_selected=crypto_selected_audit,
                 market_context=market_context,
                 output_path=CONFIG.get("selection_audit_output", "data/selection_audit.json"),
             )
-            logger.info("✅ Audit de sélection généré")
+            logger.info("✅ Audit de sélection généré (v1.5.3 - scored data)")
         except Exception as e:
             logger.warning(f"⚠️ Erreur génération audit: {e}")
             import traceback
@@ -2411,10 +2413,19 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                         logger.error(f"   [{profile}] ⚠️ EU/US ETF SCORE FLAT: {scores.iloc[0] if len(scores) else 'N/A'}")
                     else:
                         logger.info(f"   [{profile}] ✅ EU/US ETF scores: [{scores.min():.1f}, {scores.max():.1f}]")
-                # v5.1.2 FIX: Forcer category="etf" pour éviter reclassification
+                # v5.1.2 FIX: Forcer category="etf" pour éviter reclassification dans build_raw_universe
                 for etf in profile_etf_data:
                     etf["_force_category"] = "etf"
                     etf["category"] = "etf"
+                # v1.5.3 FIX: Collect scored ETFs for audit
+                for _etf in profile_etf_data:
+                    _uid = _etf.get("etfsymbol") or _etf.get("ticker") or _etf.get("name") or ""
+                    if _uid:
+                        _existing = all_scored_etfs.get(_uid)
+                        _new_s = _etf.get("_profile_score") or 0
+                        _old_s = (_existing or {}).get("_profile_score") or 0
+                        if _existing is None or _new_s > _old_s:
+                            all_scored_etfs[_uid] = _etf.copy()
             else:
                 profile_etf_data = []
             
@@ -2427,6 +2438,15 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 for bond in profile_bonds_data:
                     bond["_force_category"] = "bond"
                     bond["category"] = "bond"
+                # v1.5.3 FIX: Collect scored bonds for audit
+                for _bond in profile_bonds_data:
+                    _uid = _bond.get("isin") or _bond.get("name") or ""
+                    if _uid:
+                        _existing = all_scored_bonds.get(_uid)
+                        _new_s = _bond.get("bond_quality_raw") or _bond.get("composite_score") or 0
+                        _old_s = (_existing or {}).get("bond_quality_raw") or (_existing or {}).get("composite_score") or 0
+                        if _existing is None or _new_s > _old_s:
+                            all_scored_bonds[_uid] = _bond.copy()
             else:
                 profile_bonds_data = []
             
