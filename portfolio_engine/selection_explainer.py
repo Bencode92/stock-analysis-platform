@@ -8,6 +8,7 @@ Génère un fichier JSON documentant:
 3. Les raisons précises de sélection/rejet
 4. v1.4.0: Classement final complet par catégorie (ETF, Obligations, Crypto)
 
+v1.4.1 - FIX: Robust rejection reasons + sort_score_source diagnostic in category rankings
 v1.4.0 - ADD: Classement final ETF / Obligations / Crypto + explain_top_caps_selection étendu
 v1.3.0 - Aligned with preset_meta v4.15.2 (profile-based selection, yield-trap, missing data)
 v1.2.0 - FIX: Intégration du sanity check volatilité (corrige LSEG 376% → 3.76%)
@@ -498,8 +499,8 @@ def analyze_rejection_reason(
 
 # ============= v1.4.0: CATEGORY RANKING BUILDER =============
 
-def _get_best_score(asset: Dict) -> float:
-    """v1.4.0: Extract the best available score from any asset type."""
+def _get_best_score_with_source(asset: Dict):
+    """v1.4.1: Extract the best available score AND its source field name."""
     for key in [
         "composite_score", "_composite_score",
         "_profile_score",
@@ -509,10 +510,70 @@ def _get_best_score(asset: Dict) -> float:
         val = asset.get(key)
         if val is not None:
             try:
-                return float(val)
+                return float(val), key
             except (TypeError, ValueError):
                 pass
-    return 0.0
+    return 0.0, "none"
+
+
+def _get_best_score(asset: Dict) -> float:
+    """v1.4.0: Extract the best available score from any asset type."""
+    return _get_best_score_with_source(asset)[0]
+
+
+def _deduce_rejection_reason_standalone(asset: Dict, category: str, sort_source: str) -> str:
+    """
+    v1.4.1: Deduce rejection reason when not explicitly tracked.
+    Standalone version for selection_explainer (no auditor instance).
+    """
+    has_composite = (
+        asset.get("composite_score") is not None
+        or asset.get("_composite_score") is not None
+    )
+    has_profile = asset.get("_profile_score") is not None
+
+    if category == "equity" and not has_composite and not has_profile:
+        reasons = []
+        vol = asset.get("vol") or asset.get("volatility_3y") or asset.get("vol_3y")
+        roe = asset.get("roe")
+
+        if vol is None:
+            reasons.append("Volatilité manquante")
+        else:
+            try:
+                vol_f = float(str(vol).replace("%", ""))
+                if vol_f < 1 or vol_f > 120:
+                    reasons.append(f"Volatilité aberrante ({vol_f}%)")
+            except (TypeError, ValueError):
+                pass
+
+        if roe is None or str(roe).upper() in ["N/A", "NAN", "NONE", ""]:
+            reasons.append("ROE manquant")
+
+        if asset.get("dividend_yield") is None:
+            reasons.append("Dividend yield manquant")
+        if asset.get("payout_ratio") is None:
+            reasons.append("Payout ratio manquant")
+
+        if reasons:
+            return "Hard filter (données manquantes): " + "; ".join(reasons[:3])
+        return "Éjecté par hard filters du profil (hors range vol/ROE)"
+
+    if category in ["etf", "bond", "crypto"] and not has_composite:
+        return "Pas de composite_score → non scoré (filtré avant scoring)"
+
+    if has_composite or has_profile:
+        score = asset.get("_profile_score") or asset.get("composite_score") or asset.get("_composite_score")
+        if score is not None:
+            try:
+                return f"Score composite ({float(score):.3f}) insuffisant pour le quota"
+            except (TypeError, ValueError):
+                pass
+
+    if sort_source and "buffett" in sort_source:
+        return f"Classé par {sort_source} uniquement (pas de composite) → filtré avant scoring"
+
+    return "Non sélectionné (raison non tracée)"
 
 
 def build_category_ranking(
@@ -522,11 +583,14 @@ def build_category_ranking(
     max_entries: int = 100,
 ) -> List[Dict]:
     """
-    v1.4.0: Build a complete sorted ranking for a category.
+    v1.4.1: Build a complete sorted ranking for a category.
     
     Returns a list of dicts sorted by score descending with:
     - rank, name, ticker, score, selected, rejection_reason
+    - sort_score_source: which field was used for ranking
     - category-specific metrics (TER for ETF, credit_rating for bonds, etc.)
+    
+    v1.4.1 fixes: robust rejection reasons, sort_score_source diagnostic
     """
     # Build selected IDs
     selected_ids = set()
@@ -549,11 +613,14 @@ def build_category_ranking(
             for k in ["id", "ticker", "symbol", "name"]
         )
 
+        sort_score, sort_source = _get_best_score_with_source(asset)
+
         entry = {
             "rank": rank_idx,
             "name": name,
             "ticker": ticker,
-            "score": round(_get_best_score(asset), 4),
+            "sort_score": round(sort_score, 4),
+            "sort_score_source": sort_source,
             "selected": is_selected,
         }
 
@@ -569,6 +636,14 @@ def build_category_ranking(
         if ps is not None:
             try:
                 entry["profile_score"] = round(float(ps), 4)
+            except (TypeError, ValueError):
+                pass
+
+        # Buffett score (always show for equity)
+        bs = asset.get("_buffett_score") or asset.get("buffett_score")
+        if bs is not None:
+            try:
+                entry["buffett_score"] = round(float(bs), 1)
             except (TypeError, ValueError):
                 pass
 
@@ -599,7 +674,6 @@ def build_category_ranking(
 
         # Sector
         if category == "etf":
-            # Try sector_top
             sector_top = asset.get("sector_top")
             if sector_top:
                 if isinstance(sector_top, dict):
@@ -617,9 +691,11 @@ def build_category_ranking(
         if asset.get("_matched_preset"):
             entry["matched_preset"] = asset["_matched_preset"]
 
-        # Rejection reason (if not selected)
+        # v1.4.1: Robust rejection reason
         if not is_selected:
-            entry["rejection_reason"] = "Score insuffisant ou quota atteint"
+            entry["rejection_reason"] = _deduce_rejection_reason_standalone(
+                asset, category, sort_source
+            )
 
         # === CATEGORY-SPECIFIC FIELDS ===
         if category == "etf":
