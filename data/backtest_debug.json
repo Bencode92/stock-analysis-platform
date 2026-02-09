@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-09T12:35:12.606861",
+    "generated_at": "2026-02-09T13:59:00.093408",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -20,8 +20,8 @@
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 32,
-    "tickers_with_data": 32,
+    "total_tickers_requested": 31,
+    "tickers_with_data": 31,
     "tickers_missing": []
   },
   "assets_by_type": {
@@ -34,7 +34,6 @@
       "IEI",
       "IGIB",
       "KBC",
-      "LAZIO/USD",
       "PAXG/USD",
       "SCHI",
       "SCHR",
@@ -693,63 +692,6 @@
       ],
       "is_benchmark": false
     },
-    "LAZIO/USD": {
-      "ticker": "LAZIO/USD",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2025-10-13",
-      "last_date": "2026-02-09",
-      "first_price": 0.965,
-      "last_price": 0.811,
-      "total_return_pct": -15.96,
-      "volatility_annual_pct": 59.67,
-      "weights_by_profile": {
-        "Modéré": 0.5
-      },
-      "price_samples": [
-        {
-          "date": "2025-10-13",
-          "close": 0.965,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-11-11",
-          "close": 0.965,
-          "prev_date": "2025-11-10",
-          "prev_close": 0.945,
-          "daily_return_pct": 2.1164,
-          "formula": "(0.9650 / 0.9450) - 1"
-        },
-        {
-          "date": "2025-12-11",
-          "close": 1.054,
-          "prev_date": "2025-12-10",
-          "prev_close": 1.08,
-          "daily_return_pct": -2.4074,
-          "formula": "(1.0540 / 1.0800) - 1"
-        },
-        {
-          "date": "2026-01-09",
-          "close": 1.042,
-          "prev_date": "2026-01-08",
-          "prev_close": 1.057,
-          "daily_return_pct": -1.4191,
-          "formula": "(1.0420 / 1.0570) - 1"
-        },
-        {
-          "date": "2026-02-09",
-          "close": 0.811,
-          "prev_date": "2026-02-06",
-          "prev_close": 0.888,
-          "daily_return_pct": -8.6712,
-          "formula": "(0.8110 / 0.8880) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "PAXG/USD": {
       "ticker": "PAXG/USD",
       "type": "Action",
@@ -757,9 +699,9 @@
       "first_date": "2025-10-13",
       "last_date": "2026-02-09",
       "first_price": 4141.6899,
-      "last_price": 5021.98,
-      "total_return_pct": 21.25,
-      "volatility_annual_pct": 37.1,
+      "last_price": 5014.7798,
+      "total_return_pct": 21.08,
+      "volatility_annual_pct": 37.09,
       "weights_by_profile": {
         "Agressif": 4.5,
         "Modéré": 0.5
@@ -799,11 +741,11 @@
         },
         {
           "date": "2026-02-09",
-          "close": 5021.98,
+          "close": 5014.7798,
           "prev_date": "2026-02-06",
           "prev_close": 4942.27,
-          "daily_return_pct": 1.6128,
-          "formula": "(5021.9800 / 4942.2700) - 1"
+          "daily_return_pct": 1.4671,
+          "formula": "(5014.7798 / 4942.2700) - 1"
         }
       ],
       "is_benchmark": false
@@ -1836,11 +1778,12 @@
       "first_date": "2025-10-13",
       "last_date": "2026-02-09",
       "first_price": 4131.4,
-      "last_price": 4989.3,
-      "total_return_pct": 20.77,
-      "volatility_annual_pct": 35.92,
+      "last_price": 4985.4,
+      "total_return_pct": 20.67,
+      "volatility_annual_pct": 35.91,
       "weights_by_profile": {
-        "Agressif": 3.5
+        "Agressif": 3.5,
+        "Modéré": 0.5
       },
       "price_samples": [
         {
@@ -1877,11 +1820,11 @@
         },
         {
           "date": "2026-02-09",
-          "close": 4989.3,
+          "close": 4985.4,
           "prev_date": "2026-02-06",
           "prev_close": 4906.8,
-          "daily_return_pct": 1.6813,
-          "formula": "(4989.3000 / 4906.8000) - 1"
+          "daily_return_pct": 1.6019,
+          "formula": "(4985.4000 / 4906.8000) - 1"
         }
       ],
       "is_benchmark": false
@@ -2142,22 +2085,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 15.68,
-      "net_return_pct": 15.68,
+      "gross_return_pct": 15.67,
+      "net_return_pct": 15.67,
       "volatility_pct": 18.68,
       "max_drawdown_pct": -8.79,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": -1.92,
-      "excess_return_pct": 17.6
+      "excess_return_pct": 17.59
     },
     "Modéré": {
-      "gross_return_pct": 7.28,
-      "net_return_pct": 7.28,
-      "volatility_pct": 6.9,
-      "max_drawdown_pct": -2.16,
+      "gross_return_pct": 7.46,
+      "net_return_pct": 7.46,
+      "volatility_pct": 6.85,
+      "max_drawdown_pct": -2.18,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 2.41,
-      "excess_return_pct": 4.87
+      "excess_return_pct": 5.05
     },
     "Stable": {
       "gross_return_pct": 7.87,
