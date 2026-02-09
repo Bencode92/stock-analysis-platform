@@ -1883,6 +1883,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 for etf in profile_etf_data:
                     etf["_force_category"] = "etf"
                     etf["category"] = "etf"
+                # v1.5.3 FIX: Collect scored ETFs for audit
+                for _etf in profile_etf_data:
+                    _uid = _etf.get("etfsymbol") or _etf.get("ticker") or _etf.get("name") or ""
+                    if _uid:
+                        _existing = all_scored_etfs.get(_uid)
+                        _new_s = _etf.get("_profile_score") or 0
+                        _old_s = (_existing or {}).get("_profile_score") or 0
+                        if _existing is None or _new_s > _old_s:
+                            all_scored_etfs[_uid] = _etf.copy()
             else:
                 profile_etf_data = []
             
@@ -1896,6 +1905,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 for bond in profile_bonds_data:
                     bond["_force_category"] = "bond"
                     bond["category"] = "bond"
+                # v1.5.3 FIX: Collect scored bonds for audit
+                for _bond in profile_bonds_data:
+                    _uid = _bond.get("isin") or _bond.get("name") or ""
+                    if _uid:
+                        _existing = all_scored_bonds.get(_uid)
+                        _new_s = _bond.get("bond_quality_raw") or _bond.get("composite_score") or 0
+                        _old_s = (_existing or {}).get("bond_quality_raw") or (_existing or {}).get("composite_score") or 0
+                        if _existing is None or _new_s > _old_s:
+                            all_scored_bonds[_uid] = _bond.copy()
             else:
                 profile_bonds_data = []
             
