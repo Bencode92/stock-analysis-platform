@@ -1024,9 +1024,10 @@ class SelectionAuditor:
             f"{n_no_composite} ranked by buffett_score only (no composite)"
         )
 
-        # v1.5.2: Also build per-preset rankings for equity
-        if category == "equity":
+        # v1.5.2: Also build per-preset rankings for equity and ETF
+        if category in ("equity", "etf"):
             self.record_preset_rankings(
+                category=category,
                 all_candidates=all_candidates,
                 selected=selected,
             )
@@ -1129,28 +1130,36 @@ class SelectionAuditor:
 
     def record_preset_rankings(
         self,
+        category: str,
         all_candidates: List[Dict],
         selected: List[Dict],
         top_n: int = 10,
     ):
         """
-        v1.5.2: Build a TOP N ranking per preset (equity only).
+        v1.5.2: Build a TOP N ranking per preset for any category.
         
         Groups all candidates by _matched_preset, sorts each group
         by best available score, and records top_n per preset.
         
+        Supports: equity (value_dividend, quality_premium, etc.)
+                  etf (coeur_global, croissance_tech, etc.)
+        
         Output in self.report.preset_rankings:
         {
-            "value_dividend": [ {rank, name, ticker, sort_score, ...}, ... ],
-            "quality_premium": [ ... ],
-            "defensif": [ ... ],
-            ...
+            "equity": {
+                "value_dividend": [ {rank, name, ticker, sort_score, ...}, ... ],
+                "quality_premium": [ ... ],
+            },
+            "etf": {
+                "coeur_global": [ ... ],
+                "croissance_tech": [ ... ],
+            }
         }
         """
         # Build selected IDs for matching
         selected_ids = set()
         for s in selected:
-            for key in ["id", "ticker", "symbol", "name"]:
+            for key in ["id", "ticker", "symbol", "name", "etfsymbol"]:
                 val = s.get(key)
                 if val:
                     selected_ids.add(str(val))
@@ -1165,6 +1174,7 @@ class SelectionAuditor:
             for key in [
                 "composite_score", "_composite_score",
                 "_profile_score",
+                "bond_quality_raw",
                 "_buffett_score", "buffett_score",
             ]:
                 val = asset.get(key)
@@ -1191,13 +1201,19 @@ class SelectionAuditor:
 
                 is_selected = any(
                     str(asset.get(k, "")) in selected_ids
-                    for k in ["id", "ticker", "symbol", "name"]
+                    for k in ["id", "ticker", "symbol", "name", "etfsymbol"]
+                )
+
+                # Ticker: ETF uses etfsymbol, equity uses ticker
+                ticker = (
+                    asset.get("etfsymbol") or asset.get("ticker")
+                    or asset.get("symbol") or ""
                 )
 
                 entry = {
                     "rank": rank_idx,
-                    "name": asset.get("name") or asset.get("ticker") or "Unknown",
-                    "ticker": asset.get("ticker") or asset.get("symbol") or "",
+                    "name": asset.get("name") or ticker or "Unknown",
+                    "ticker": ticker,
                     "sort_score": self._safe_round(sort_score, 4),
                     "sort_score_source": sort_source,
                     "selected": is_selected,
@@ -1219,13 +1235,14 @@ class SelectionAuditor:
                     except (TypeError, ValueError):
                         pass
 
-                # Buffett
-                bs = asset.get("_buffett_score") or asset.get("buffett_score")
-                if bs is not None:
-                    try:
-                        entry["buffett_score"] = round(float(bs), 1)
-                    except (TypeError, ValueError):
-                        pass
+                # Buffett (equity only)
+                if category == "equity":
+                    bs = asset.get("_buffett_score") or asset.get("buffett_score")
+                    if bs is not None:
+                        try:
+                            entry["buffett_score"] = round(float(bs), 1)
+                        except (TypeError, ValueError):
+                            pass
 
                 # Rejection reason
                 if not is_selected:
@@ -1234,24 +1251,21 @@ class SelectionAuditor:
                         entry["rejection_reason"] = rejection_info.get("reason", "")
                     else:
                         entry["rejection_reason"] = self._deduce_rejection_reason(
-                            asset, "equity", sort_source
+                            asset, category, sort_source
                         )
 
-                # Key metrics
-                entry["sector"] = asset.get("sector") or asset.get("_sector_key") or ""
+                # === COMMON FIELDS ===
+                # Sector
+                if category == "etf":
+                    entry["sector"] = extract_etf_sector(asset) or ""
+                else:
+                    entry["sector"] = asset.get("sector") or asset.get("_sector_key") or ""
                 entry["country"] = asset.get("country") or ""
-
-                mcap = asset.get("market_cap")
-                if mcap:
-                    entry["market_cap"] = self._format_market_cap(mcap)
-
-                roe = asset.get("roe")
-                if roe is not None:
-                    entry["roe"] = f"{roe}%" if isinstance(roe, (int, float)) else str(roe)
 
                 # Volatility
                 for vk in ["vol", "volatility_3y", "vol_3y", "vol_pct",
-                            "vol_30d_annual_pct", "vol_7d_annual_pct"]:
+                            "vol_30d_annual_pct", "vol_7d_annual_pct",
+                            "vol_3y_pct"]:
                     v = asset.get(vk)
                     if v is not None:
                         try:
@@ -1261,32 +1275,81 @@ class SelectionAuditor:
                             pass
 
                 # YTD
-                ytd_val = asset.get("ytd") or asset.get("perf_ytd")
+                ytd_val = (asset.get("ytd") or asset.get("perf_ytd")
+                           or asset.get("ytd_return_pct"))
                 if ytd_val is not None:
                     entry["ytd"] = f"{ytd_val}%" if isinstance(ytd_val, (int, float)) else str(ytd_val)
 
-                # Dividend yield
-                dy = asset.get("dividend_yield")
-                if dy is not None:
-                    try:
-                        entry["dividend_yield"] = f"{float(dy):.2f}%"
-                    except (TypeError, ValueError):
-                        entry["dividend_yield"] = str(dy)
+                # === CATEGORY-SPECIFIC FIELDS ===
+                if category == "equity":
+                    mcap = asset.get("market_cap")
+                    if mcap:
+                        entry["market_cap"] = self._format_market_cap(mcap)
+                    roe = asset.get("roe")
+                    if roe is not None:
+                        entry["roe"] = f"{roe}%" if isinstance(roe, (int, float)) else str(roe)
+                    dy = asset.get("dividend_yield")
+                    if dy is not None:
+                        try:
+                            entry["dividend_yield"] = f"{float(dy):.2f}%"
+                        except (TypeError, ValueError):
+                            entry["dividend_yield"] = str(dy)
+
+                elif category == "etf":
+                    # TER
+                    ter = asset.get("total_expense_ratio") or asset.get("ter")
+                    if ter is not None:
+                        try:
+                            entry["ter"] = round(float(ter), 4)
+                        except (TypeError, ValueError):
+                            pass
+                    # AUM
+                    aum = asset.get("aum_usd") or asset.get("aum")
+                    if aum is not None:
+                        entry["aum"] = self._format_market_cap(aum)
+                    # Yield
+                    yld = asset.get("yield_ttm")
+                    if yld is not None:
+                        try:
+                            entry["yield_ttm"] = round(float(yld), 2)
+                        except (TypeError, ValueError):
+                            pass
+                    # Role / Risk / Correlation group (from preset_etf.py)
+                    role = asset.get("_role")
+                    if role:
+                        entry["role"] = str(role)
+                    risk = asset.get("_risk")
+                    if risk:
+                        entry["risk"] = str(risk)
+                    corr = asset.get("_correlation_group")
+                    if corr:
+                        entry["correlation_group"] = str(corr)
+                    # Momentum
+                    for mk in ["perf_3m_pct", "perf_1m_pct"]:
+                        mv = asset.get(mk)
+                        if mv is not None:
+                            try:
+                                entry["momentum_3m" if "3m" in mk else "momentum_1m"] = round(float(mv), 2)
+                            except (TypeError, ValueError):
+                                pass
 
                 entries.append(entry)
 
             preset_rankings[preset_name] = entries
 
-        self.report.preset_rankings = preset_rankings
+        # Store per-category (nested dict)
+        if not isinstance(self.report.preset_rankings, dict):
+            self.report.preset_rankings = {}
+        self.report.preset_rankings[category] = preset_rankings
 
         # Log summary
         summary_parts = []
         for pname, pentries in sorted(preset_rankings.items()):
             n_sel = sum(1 for e in pentries if e.get("selected"))
-            summary_parts.append(f"{pname}: {len(pentries)} entries ({n_sel} selected)")
+            summary_parts.append(f"{pname}: {len(pentries)} ({n_sel} sel)")
         logger.info(
-            f"📊 Audit v1.5.2: preset_rankings – {len(preset_rankings)} presets: "
-            + ", ".join(summary_parts)
+            f"📊 Audit v1.5.2: {category} preset_rankings – "
+            f"{len(preset_rankings)} presets: " + ", ".join(summary_parts)
         )
 
     # ============= END v1.5.2 =============
@@ -1385,13 +1448,17 @@ class SelectionAuditor:
                 cat: len(entries) 
                 for cat, entries in self.report.category_rankings.items()
             },
-            # v1.5.2: Preset rankings summary
+            # v1.5.2: Preset rankings summary (nested by category)
             "preset_rankings_sizes": {
-                preset: {
-                    "total": len(entries),
-                    "selected": sum(1 for e in entries if e.get("selected")),
+                cat: {
+                    preset: {
+                        "total": len(entries),
+                        "selected": sum(1 for e in entries if e.get("selected")),
+                    }
+                    for preset, entries in presets.items()
                 }
-                for preset, entries in self.report.preset_rankings.items()
+                for cat, presets in self.report.preset_rankings.items()
+                if isinstance(presets, dict)
             },
         }
         
