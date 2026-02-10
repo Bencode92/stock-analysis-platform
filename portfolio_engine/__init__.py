@@ -1,6 +1,6 @@
 # portfolio_engine/__init__.py
 """
-Portfolio Engine v4.2.1 - Phase 2.5 Refactoring + preset_etf + risk_analysis
+Portfolio Engine v4.2.2 - Phase 2.5 Refactoring + preset_etf/bond/crypto + risk_analysis
 
 Architecture:
 - universe.py       : Chargement et préparation des données (PAS de scoring)
@@ -10,6 +10,8 @@ Architecture:
 - sector_quality.py : Métriques Buffett par secteur (utilisé par factors.py)
 - preset_meta.py    : Presets, buckets, contraintes par profil
 - preset_etf.py     : Sélection ETF avancée avec scoring 8 composantes (v6.30)
+- preset_bond.py    : Sélection Bond ETF par profil (v1.1.0)
+- preset_crypto.py  : Sélection Crypto par profil (v1.2.0)
 - etf_exposure.py   : Mapping ETF → exposure pour déduplication (v3.0)
 - risk_analysis.py  : Analyse de risque post-optimisation (v1.1.1) + VaR hybride 5y
 - historical_data.py: Fetch returns 5y via Twelve Data (v1.0.0)
@@ -21,6 +23,7 @@ avec un momentum positif sur 3-12 mois surperforment à horizon 1-3 ans."
 Le LLM n'intervient PAS sur les poids - uniquement sur les justifications.
 
 Changelog:
+- v4.2.2: Export select_bonds_for_profile + select_crypto_for_profile (fix HAS_MODULAR_SELECTORS)
 - v4.2.1: Export fetch_and_enrich_risk_analysis for hybrid VaR 5y
 """
 
@@ -197,6 +200,34 @@ except ImportError as e:
     etf_deduplicate_underlying = None
 
 # =============================================================================
+# Preset Bond (v1.1.0 - Sélection Bond ETF par profil)
+# =============================================================================
+try:
+    from .preset_bond import (
+        select_bonds_for_profile,
+        get_bond_preset_summary,
+    )
+    HAS_PRESET_BOND = True
+except ImportError as e:
+    HAS_PRESET_BOND = False
+    select_bonds_for_profile = None
+    get_bond_preset_summary = None
+
+# =============================================================================
+# Preset Crypto (v1.2.0 - Sélection Crypto par profil)
+# =============================================================================
+try:
+    from .preset_crypto import (
+        select_crypto_for_profile,
+        get_crypto_preset_summary,
+    )
+    HAS_PRESET_CRYPTO = True
+except ImportError as e:
+    HAS_PRESET_CRYPTO = False
+    select_crypto_for_profile = None
+    get_crypto_preset_summary = None
+
+# =============================================================================
 # Risk Analysis (v1.1.1 - Post-optimization risk enrichment + VaR hybride 5y)
 # =============================================================================
 try:
@@ -261,7 +292,7 @@ except ImportError as e:
     HAS_HISTORICAL_DATA = False  # v1.1.0
     HAS_STRESS_TESTING = False
 
-__version__ = "4.2.1"
+__version__ = "4.2.2"
 
 __all__ = [
     # Universe (v3.0)
@@ -371,6 +402,14 @@ __all__ = [
     "etf_apply_hard_constraints",
     "etf_compute_profile_score",
     "etf_deduplicate_underlying",
+    # Preset Bond (v1.1.0)
+    "HAS_PRESET_BOND",
+    "select_bonds_for_profile",
+    "get_bond_preset_summary",
+    # Preset Crypto (v1.2.0)
+    "HAS_PRESET_CRYPTO",
+    "select_crypto_for_profile",
+    "get_crypto_preset_summary",
     # Risk Analysis (v1.1.1 - Post-optimization risk enrichment + VaR hybride)
     "HAS_RISK_ANALYSIS",
     "RiskAnalyzer",
