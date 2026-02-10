@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-10T08:59:26.991673",
+    "generated_at": "2026-02-10T09:21:53.822105",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -698,8 +698,8 @@
       "first_date": "2025-10-14",
       "last_date": "2026-02-10",
       "first_price": 4176.9399,
-      "last_price": 5044.8599,
-      "total_return_pct": 20.78,
+      "last_price": 5049.77,
+      "total_return_pct": 20.9,
       "volatility_annual_pct": 37.13,
       "weights_by_profile": {
         "Modéré": 0.5
@@ -739,11 +739,11 @@
         },
         {
           "date": "2026-02-10",
-          "close": 5044.8599,
+          "close": 5049.77,
           "prev_date": "2026-02-09",
           "prev_close": 5036.7002,
-          "daily_return_pct": 0.162,
-          "formula": "(5044.8599 / 5036.7002) - 1"
+          "daily_return_pct": 0.2595,
+          "formula": "(5049.7700 / 5036.7002) - 1"
         }
       ],
       "is_benchmark": false
@@ -1663,8 +1663,8 @@
       "first_date": "2025-10-14",
       "last_date": "2026-02-10",
       "first_price": 4167.4,
-      "last_price": 5022.3,
-      "total_return_pct": 20.51,
+      "last_price": 5029.6,
+      "total_return_pct": 20.69,
       "volatility_annual_pct": 35.98,
       "weights_by_profile": {
         "Agressif": 8.0,
@@ -1705,11 +1705,11 @@
         },
         {
           "date": "2026-02-10",
-          "close": 5022.3,
+          "close": 5029.6,
           "prev_date": "2026-02-09",
           "prev_close": 5014.1,
-          "daily_return_pct": 0.1635,
-          "formula": "(5022.3000 / 5014.1000) - 1"
+          "daily_return_pct": 0.3091,
+          "formula": "(5029.6000 / 5014.1000) - 1"
         }
       ],
       "is_benchmark": false
@@ -1771,9 +1771,9 @@
           "type": "Action",
           "weight_pct": 8.0,
           "price_prev": 5014.1,
-          "price_today": 5022.3,
-          "return_pct": 0.1635,
-          "contribution_pct": 0.0131
+          "price_today": 5029.6,
+          "return_pct": 0.3091,
+          "contribution_pct": 0.0247
         },
         {
           "ticker": "WDC",
@@ -1812,7 +1812,7 @@
           "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": -0.1729,
+      "total_portfolio_return_pct": -0.1613,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1970,13 +1970,13 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 20.69,
-      "net_return_pct": 20.69,
+      "gross_return_pct": 20.7,
+      "net_return_pct": 20.7,
       "volatility_pct": 18.79,
       "max_drawdown_pct": -5.82,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": -1.09,
-      "excess_return_pct": 21.78
+      "excess_return_pct": 21.79
     },
     "Modéré": {
       "gross_return_pct": 6.58,
@@ -1985,7 +1985,7 @@
       "max_drawdown_pct": -2.83,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 3.01,
-      "excess_return_pct": 3.57
+      "excess_return_pct": 3.58
     },
     "Stable": {
       "gross_return_pct": 6.16,
