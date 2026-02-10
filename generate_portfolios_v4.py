@@ -2215,6 +2215,28 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         f"avec _profile_score (max des 3 profils), "
         f"{len(eq_filtered) - _enriched_count} sans score (rejetées par hard filters des 3 profils)"
     )
+    # === DEBUG LOG 1: Vérifier le merge _profile_score ===
+    logger.info(f"🔍 DEBUG-1A: equities_by_profile sizes = { {p: len(e) for p, e in equities_by_profile.items()} }")
+    logger.info(f"🔍 DEBUG-1B: _profile_scores_by_ticker has {len(_profile_scores_by_ticker)} entries")
+    if _profile_scores_by_ticker:
+        _sample_tickers = list(_profile_scores_by_ticker.items())[:3]
+        logger.info(f"🔍 DEBUG-1C: sample scores = {_sample_tickers}")
+    else:
+        logger.info("🔍 DEBUG-1C: ⚠️ _profile_scores_by_ticker est VIDE!")
+    _has_ps = sum(1 for e in eq_filtered if e.get("_profile_score") is not None)
+    _has_tk = sum(1 for e in eq_filtered if e.get("ticker") is not None)
+    logger.info(f"🔍 DEBUG-1D: eq_filtered: {len(eq_filtered)} total, {_has_tk} avec ticker, {_has_ps} avec _profile_score")
+    if eq_filtered:
+        _sample = eq_filtered[0]
+        logger.info(f"🔍 DEBUG-1E: eq_filtered[0] keys = {sorted(_sample.keys())[:15]}")
+        logger.info(f"🔍 DEBUG-1E: eq_filtered[0] ticker={_sample.get('ticker')}, _profile_score={_sample.get('_profile_score')}, _buffett_score={_sample.get('_buffett_score')}")
+    for _pn, _peqs in equities_by_profile.items():
+        if _peqs:
+            _p0 = _peqs[0]
+            _p_has_tk = sum(1 for e in _peqs if e.get("ticker"))
+            _p_has_ps = sum(1 for e in _peqs if e.get("_profile_score") is not None)
+            logger.info(f"🔍 DEBUG-1F: equities_by_profile[{_pn}]: {len(_peqs)} items, {_p_has_tk} avec ticker, {_p_has_ps} avec _profile_score")
+            logger.info(f"🔍 DEBUG-1F: [{_pn}][0] ticker={_p0.get('ticker')}, _profile_score={_p0.get('_profile_score')}")
     # === v1.5.3 FIX: Génération de l'audit avec données SCORÉES ===
     if CONFIG.get("generate_selection_audit", False) and SELECTION_AUDIT_AVAILABLE:
         try:
@@ -2267,6 +2289,19 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     crypto_selected_audit.append(cr)
             
             logger.info(f"   📊 Audit: {len(equities_final)} equities, {len(etf_selected_audit)} ETF, {len(crypto_selected_audit)} crypto sélectionnés")
+           # === DEBUG LOG 2: Vérifier les données envoyées à l'audit ===
+            _eq_f_ps = sum(1 for e in eq_filtered if e.get("_profile_score") is not None)
+            _eq_f_bs = sum(1 for e in eq_filtered if e.get("_buffett_score") is not None)
+            _ef_ps = sum(1 for e in equities_final if e.get("_profile_score") is not None)
+            logger.info(f"🔍 DEBUG-2A: eq_filtered → audit: {len(eq_filtered)} items, {_eq_f_ps} _profile_score, {_eq_f_bs} _buffett_score")
+            logger.info(f"🔍 DEBUG-2B: equities_final → audit: {len(equities_final)} items, {_ef_ps} _profile_score")
+            if eq_filtered:
+                _scores = [e.get("_profile_score") for e in eq_filtered if e.get("_profile_score") is not None]
+                if _scores:
+                    logger.info(f"🔍 DEBUG-2C: eq_filtered _profile_score range: min={min(_scores):.4f}, max={max(_scores):.4f}")
+                else:
+                    logger.info("🔍 DEBUG-2C: ⚠️ AUCUN _profile_score dans eq_filtered → ranking sera 100% _buffett_score!")
+            # === FIN DEBUG LOG 2 ===
             
             create_selection_audit(
                 config=CONFIG,
