@@ -1860,7 +1860,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 selected=profile_equities,
                 profile=profile,
             )
-         # === v5.1.0: Sélection ETF/Crypto/Bond par profil ===
+# === v5.1.0: Sélection ETF/Crypto/Bond par profil ===
         if HAS_MODULAR_SELECTORS:
             # --- ETF actions ---
             if not etf_df_master.empty:
@@ -1868,7 +1868,46 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 etf_selected_df = select_etfs_for_profile(etf_df, profile, top_n=100)
                 profile_etf_data = etf_selected_df.to_dict('records') if not etf_selected_df.empty else []
                 logger.info(f"   [{profile}] ETF sélectionnés: {len(profile_etf_data)}/{len(etf_df_master)}")
-                
+
+                # ============================================================
+                # DEBUG v2.2.15: Vérifier _matched_preset dans ETFs scorés
+                # ============================================================
+                if profile == "Agressif":
+                    _has_col = "_matched_preset" in etf_selected_df.columns
+                    _n_preset = 0
+                    _preset_vals = set()
+                    _sample_empty = 0
+                    _sample_nan = 0
+                    if _has_col:
+                        _vals = etf_selected_df["_matched_preset"]
+                        _n_preset = (_vals.notna() & (_vals != "")).sum()
+                        _sample_empty = (_vals == "").sum()
+                        _sample_nan = _vals.isna().sum()
+                        _preset_vals = set(_vals.dropna().unique()[:15])
+                    print(f"\n{'='*70}")
+                    print(f"DEBUG ETF PRESET [{profile}]")
+                    print(f"  _matched_preset column exists: {_has_col}")
+                    print(f"  Non-empty values: {_n_preset}/{len(etf_selected_df)}")
+                    print(f"  Empty string count: {_sample_empty}")
+                    print(f"  NaN count: {_sample_nan}")
+                    print(f"  Unique preset values: {_preset_vals}")
+                    print(f"  DataFrame columns (first 20): {list(etf_selected_df.columns[:20])}")
+                    # Vérifier aussi dans les dicts convertis
+                    _dict_presets = set()
+                    _dict_missing = 0
+                    for _d in profile_etf_data[:20]:
+                        _mp = _d.get("_matched_preset")
+                        if _mp and str(_mp) not in ["", "nan"]:
+                            _dict_presets.add(str(_mp))
+                        else:
+                            _dict_missing += 1
+                    print(f"  Dict presets (first 20 records): {_dict_presets}")
+                    print(f"  Dict missing/empty preset: {_dict_missing}/20")
+                    print(f"{'='*70}\n")
+                # ============================================================
+                # FIN DEBUG
+                # ============================================================
+
                 # v5.1.3: Post-check scoring (détecte scores FLAT)
                 if "_profile_score" in etf_selected_df.columns and not etf_selected_df.empty:
                     scores = etf_selected_df["_profile_score"]
