@@ -744,13 +744,20 @@ class SelectionAuditor:
     # ============= CATEGORY + PRESET RANKINGS =============
 
     def record_category_ranking(self, category, all_candidates, selected, max_entries=100):
-        """v1.6.0: Refactored with _build_ranking_entry."""
+        """v1.6.2: Two-tier sort for equity to fix _buffett_score scale mismatch."""
         selected_ids = self._uid_set(selected, category)
-        sorted_cands = sorted(all_candidates, key=lambda a: _score_with_source(a)[0], reverse=True)
+        # v1.6.2 FIX: Two-tier sort pour equity — _profile_score (0-1) first, puis _buffett_score normalisé
+        if category == "equity":
+            sorted_cands = sorted(all_candidates, key=lambda a: (
+                1 if a.get("_profile_score") is not None else 0,
+                a.get("_profile_score") or (a.get("_buffett_score") or 0) / 100.0
+            ), reverse=True)
+        else:
+            sorted_cands = sorted(all_candidates, key=lambda a: _score_with_source(a)[0], reverse=True)
         entries = [self._build_ranking_entry(i, a, category, selected_ids) for i, a in enumerate(sorted_cands[:max_entries], 1)]
         self.report.category_rankings[category] = entries
         n_sel = sum(1 for e in entries if e.get("selected"))
-        logger.info(f"📊 Audit v1.6.0: {category} ranking – {len(entries)} entries, {n_sel} selected")
+        logger.info(f"📊 Audit v1.6.2: {category} ranking – {len(entries)} entries, {n_sel} selected")
         if category in ("equity", "etf"):
             self.record_preset_rankings(category, all_candidates, selected)
 
