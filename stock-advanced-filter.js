@@ -1,5 +1,9 @@
 // stock-advanced-filter.js
-// Version 3.23 - Ajout FCF Yield + EPS Growth 5Y
+// Version 3.25 - Fix résolution tickers ambigus Euronext (CAP, BNP, OR...)
+// Changements v3.25:
+// - Ajout 'EURONEXT' générique dans les variantes exchange pour tous les marchés Euronext
+// - Ajout trials combinés exchange+mic_code pour désambiguïser les tickers courts (CAP, BNP, OR...)
+// - Déplacement du fallback symbole nu en dernière position (évite résolutions sur le mauvais marché)
 // Changements v3.23:
 // - Ajout fcf_ttm dans getStatisticsData() depuis financials.cash_flow
 // - Nouvelle fonction getGrowthEstimates() pour EPS Growth 5Y via /growth_estimates
@@ -216,6 +220,7 @@ function micForRegion(stock) {
 }
 
 // ✅ CORRECTION v3.14: Priorisation MIC pour Europe
+// ✅ FIX v3.25: Ajout EURONEXT générique + trials combinés exchange+mic_code + bare symbol en dernier
 // Construit la liste d'essais de paramètres selon la région
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     // si resolvedSym = "SYM:MIC", on récupère aussi le MIC
@@ -239,7 +244,6 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
             trials.push({ symbol: `${base}:${mic}` });         // PRIORITÉ 1: suffixe SYM:MIC
             trials.push({ symbol: base, mic_code: mic });      // PRIORITÉ 2: mic_code=
         }
-        trials.push({ symbol: base });                        // fallback final
         
         // variantes exchange= pour Europe/Asie (utiles sur /quote et /statistics)
         const exLabel = normalize(stock.exchange);
@@ -252,13 +256,25 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         if (/euronext.*amsterdam/.test(exLabel))            exVar.push('Euronext Amsterdam');
         if (/euronext.*brussels/.test(exLabel))             exVar.push('Euronext Brussels');
         if (/euronext.*milan/.test(exLabel))                exVar.push('Euronext Milan');
+        // ✅ v3.25: Generic EURONEXT for all Euronext markets (fixes CAP, BNP, OR...)
+        if (/euronext/i.test(exLabel))                      exVar.push('EURONEXT');
         if (/london stock exchange/.test(exLabel))          exVar.push('London Stock Exchange','LSE');
         if (/nasdaq stockholm/.test(exLabel))               exVar.push('NASDAQ Stockholm');
         if (/nasdaq copenhagen/.test(exLabel))              exVar.push('NASDAQ Copenhagen');
         if (/nasdaq helsinki/.test(exLabel))                exVar.push('NASDAQ Helsinki');
         if (/taiwan/.test(exLabel))                         exVar.push('Taiwan Stock Exchange');
         
+        // ✅ v3.25: Combinaisons exchange + mic_code (haute priorité pour tickers ambigus: CAP, BNP, OR...)
+        if (mic) {
+            for (const ex of exVar) {
+                trials.push({ symbol: base, exchange: ex, mic_code: mic });
+            }
+        }
+        
         for (const ex of exVar) trials.push({ symbol: base, exchange: ex });
+        
+        // ✅ v3.25: fallback nu EN DERNIER (risque de mauvaise résolution pour tickers ambigus)
+        trials.push({ symbol: base });
     }
     
     return trials;
@@ -333,7 +349,7 @@ const EX2MIC_PATTERNS = [
     ['euronext milan',                  'XMIL'],
     ['nasdaq stockholm',                'XSTO'],
     ['nasdaq copenhagen',               'XCSE'],
-    ['nasdaq helsinki',                 'XHEL'],
+    ['nasdaq helsinki',                  'XHEL'],
 
     // USA
     ['nasdaq',                          'XNAS'],
@@ -1643,7 +1659,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.24 - Intégration ROE/D/E/ROIC + Score Buffett)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.25 - Fix tickers ambigus Euronext + ROE/D/E/ROIC)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
