@@ -6,47 +6,72 @@ Generates a detailed JSON report explaining:
 - Which assets were selected and why (scores, rankings)
 - Which assets were rejected and why (filters, thresholds)
 - Filter statistics and thresholds used
+- v1.6.0: REFACTOR – factored _build_ranking_entry, use get_stable_uid, anomaly guard-rails
 - v1.5.2: ADD: preset_rankings – top 10 per preset (value_dividend, quality_premium, etc.)
 - v1.5.1: FIX: Robust rejection reasons + sort_score_source diagnostic
 - v1.5.0: FULL per-category rankings (ETF, equity, bond, crypto) for debugging
 
-v1.5.2 - ADD: preset_rankings – top 10 par preset (value_dividend, quality_premium, etc.)
+v1.6.0 - REFACTOR:
+  1. Guard-rail: warn when >80% assets are non_classé (detects HAS_MODULAR_SELECTORS=False)
+  2. Use get_stable_uid() everywhere instead of fragile _get_asset_id()
+  3. Factor _build_ranking_entry() shared by record_category_ranking + record_preset_rankings
+  4. Move preset_meta import to module level with fallback
+  5. Fix _format_market_cap suffix detection (avoid "BANK" → "B" false positive)
+v1.5.2 - ADD: preset_rankings – top 10 par preset
 v1.5.1 - FIX: Robust rejection reason lookup + sort_score_source + deduced reasons
-v1.5.0 - ADD: category_rankings – classement complet par catégorie (ETF, Actions, Obligations, Crypto)
+v1.5.0 - ADD: category_rankings – classement complet par catégorie
 v1.4.0 - ADD: ETF scoring diagnostic for flat score debugging
 v1.3.1 - FIX: Capture composite_score and factor_scores for ETF/bond/crypto
-v1.3.0 - Aligned with preset_meta v4.15.2 (vol_missing, yield-trap filters, missing data penalty)
+v1.3.0 - Aligned with preset_meta v4.15.2
 v1.2.0 - Fixed ETF sector extraction from sector_top field
-v1.1.0 - Added RADAR tilts normalization (sector/region mapping)
+v1.1.0 - Added RADAR tilts normalization
 v1.0.0 - Initial version
 """
 
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field, asdict
 
 logger = logging.getLogger("selection-audit")
 
 
+# ============= v1.6.0: MODULE-LEVEL PRESET_META IMPORT =============
+# Moved from _determine_rejection_reasons() inner import to avoid
+# repeated import overhead inside loops (~3000 calls per run).
+try:
+    from .preset_meta import get_profile_policy, get_metric_value
+    HAS_PRESET_META = True
+except ImportError:
+    HAS_PRESET_META = False
+    get_profile_policy = None
+    get_metric_value = None
+
+
 # ============= PHASE 2: STABLE UID =============
-def get_stable_uid(item: dict) -> str:
+def get_stable_uid(item: dict, category: str = "") -> str:
     """
     Génère un UID stable pour traçabilité cross-runs.
-    Priorité: ISIN > ticker > symbol > name normalisé
+    Priorité: ISIN > ticker > symbol > name normalisé.
+    
+    v1.6.0: Added optional category prefix to avoid cross-category collisions
+    (e.g. ticker "BTC" in crypto vs ETF crypto tracker).
     """
+    prefix = f"{category}:" if category else ""
+    
     for key in ["isin", "ticker", "symbol"]:
         val = item.get(key)
         if val is not None:
             val_str = str(val).strip()
             if val_str and val_str.lower() not in ["nan", "none", "", "null"]:
-                return val_str
+                return f"{prefix}{val_str}"
     
     # Fallback: name normalisé
     name = item.get("name", "UNKNOWN") or "UNKNOWN"
-    return name.upper().replace(" ", "_").replace(",", "")[:50]
+    return f"{prefix}{name.upper().replace(' ', '_').replace(',', '')[:50]}"
 
 
 # ============= v1.2.0: NON-TILTABLE ETF BUCKETS =============
@@ -62,7 +87,7 @@ NON_TILTABLE_BUCKETS = {
 }
 
 
-# ============= v1.3.0: HARD FILTER REASONS (aligned with preset_meta v4.15.2) =============
+# ============= v1.3.0: HARD FILTER REASONS =============
 
 HARD_FILTER_EXPLANATIONS = {
     "vol_missing": "Volatilité manquante (donnée non disponible)",
@@ -75,42 +100,22 @@ HARD_FILTER_EXPLANATIONS = {
 
 
 def explain_hard_filter_reason(reason: str) -> str:
-    """
-    v1.3.0: Génère une explication lisible pour un code de rejet.
-    
-    Examples:
-        "vol<22.0" → "Volatilité trop faible (< 22.0%)"
-        "payout>85.0" → "Payout ratio trop élevé (> 85.0%) - Yield trap suspect"
-        "coverage<1.2" → "Dividend coverage insuffisant (< 1.2x) - Yield trap suspect"
-    """
-    # Check mapping first
+    """v1.3.0: Génère une explication lisible pour un code de rejet."""
     if reason in HARD_FILTER_EXPLANATIONS:
         return HARD_FILTER_EXPLANATIONS[reason]
     
-    # Parse dynamic reasons
-    if reason.startswith("vol<"):
-        threshold = reason.replace("vol<", "")
-        return f"Volatilité trop faible (< {threshold}%) - Profil trop défensif pour Agressif"
+    _DYNAMIC_PATTERNS = [
+        ("vol<",     lambda t: f"Volatilité trop faible (< {t}%) - Profil trop défensif pour Agressif"),
+        ("vol>",     lambda t: f"Volatilité trop élevée (> {t}%) - Risque excessif"),
+        ("roe<",     lambda t: f"ROE insuffisant (< {t}%) - Qualité fondamentale faible"),
+        ("div<",     lambda t: f"Dividend yield trop faible (< {t}%) - Profil rendement non atteint"),
+        ("payout>",  lambda t: f"Payout ratio excessif (> {t}%) - ⚠️ YIELD TRAP suspect"),
+        ("coverage<", lambda t: f"Dividend coverage insuffisant (< {t}x) - ⚠️ YIELD TRAP suspect"),
+    ]
     
-    if reason.startswith("vol>"):
-        threshold = reason.replace("vol>", "")
-        return f"Volatilité trop élevée (> {threshold}%) - Risque excessif"
-    
-    if reason.startswith("roe<"):
-        threshold = reason.replace("roe<", "")
-        return f"ROE insuffisant (< {threshold}%) - Qualité fondamentale faible"
-    
-    if reason.startswith("div<"):
-        threshold = reason.replace("div<", "")
-        return f"Dividend yield trop faible (< {threshold}%) - Profil rendement non atteint"
-    
-    if reason.startswith("payout>"):
-        threshold = reason.replace("payout>", "")
-        return f"Payout ratio excessif (> {threshold}%) - ⚠️ YIELD TRAP suspect"
-    
-    if reason.startswith("coverage<"):
-        threshold = reason.replace("coverage<", "")
-        return f"Dividend coverage insuffisant (< {threshold}x) - ⚠️ YIELD TRAP suspect"
+    for prefix, formatter in _DYNAMIC_PATTERNS:
+        if reason.startswith(prefix):
+            return formatter(reason[len(prefix):])
     
     return reason
 
@@ -187,7 +192,6 @@ COUNTRY_TO_RADAR = {
     "Brésil": "brazil", "Brazil": "brazil",
     "Australie": "australia", "Australia": "australia",
     "Israel": "israel", "Israël": "israel",
-    # Régions à ignorer
     "Asie": "", "Europe": "", "Zone Euro": "", "Global": "",
 }
 
@@ -231,11 +235,9 @@ def extract_etf_sector(asset: Dict) -> str:
     if sector_signal_ok is not None:
         if not bool(int(sector_signal_ok) if isinstance(sector_signal_ok, (int, float, str)) else sector_signal_ok):
             return ""
-    
     bucket = asset.get("sector_bucket", "")
     if bucket in NON_TILTABLE_BUCKETS:
         return ""
-    
     sector_top = asset.get("sector_top")
     if sector_top:
         if isinstance(sector_top, dict):
@@ -243,52 +245,113 @@ def extract_etf_sector(asset: Dict) -> str:
         elif isinstance(sector_top, str):
             if sector_top.lower() not in ["nan", "none", ""]:
                 return sector_top
-    
     sector = asset.get("sector") or asset.get("_sector_key")
     if sector and str(sector).lower() not in ["nan", "none", ""]:
         return sector
-    
     return ""
+
+
+# ============= v1.6.0: SHARED UTILITIES =============
+
+_SCORE_PRIORITY_KEYS = [
+    "composite_score", "_composite_score",
+    "_profile_score",
+    "bond_quality_raw",
+    "_buffett_score", "buffett_score",
+]
+
+
+def _score_with_source(asset: Dict) -> Tuple[float, str]:
+    """v1.6.0: Extract best available score + its source field name."""
+    for key in _SCORE_PRIORITY_KEYS:
+        val = asset.get(key)
+        if val is not None:
+            try:
+                return float(val), key
+            except (TypeError, ValueError):
+                pass
+    return 0.0, "none"
+
+
+# v1.6.0 FIX: regex anchored to end-of-string to avoid "BANK" → "B" false positive
+_MCAP_PATTERN = re.compile(r'^[\$\s]*([\d,.]+)\s*([TBMK])\s*$', re.IGNORECASE)
+_MCAP_MULTIPLIERS = {"T": 1e12, "B": 1e9, "M": 1e6, "K": 1e3}
+
+
+def _parse_market_cap(value) -> float:
+    """Parse market cap string to float. v1.6.0: fixed suffix detection."""
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not isinstance(value, str):
+        return 0.0
+    m = _MCAP_PATTERN.match(value.strip())
+    if m:
+        try:
+            return float(m.group(1).replace(",", "")) * _MCAP_MULTIPLIERS[m.group(2).upper()]
+        except (ValueError, KeyError):
+            return 0.0
+    try:
+        return float(value.replace("$", "").replace(",", "").strip())
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def _format_market_cap(value) -> str:
+    """Format market cap for display."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (int, float)):
+        if value >= 1e12:
+            return f"{value/1e12:.1f}T"
+        elif value >= 1e9:
+            return f"{value/1e9:.1f}B"
+        elif value >= 1e6:
+            return f"{value/1e6:.1f}M"
+        else:
+            return f"{value:.0f}"
+    return str(value)
+
+
+def _safe_round(value, decimals: int = 2) -> Optional[float]:
+    """Round a value safely, returning None if not a number."""
+    if value is None:
+        return None
+    try:
+        return round(float(value), decimals)
+    except (TypeError, ValueError):
+        return None
 
 
 # ============= DATACLASSES =============
 
 @dataclass
 class FilterStats:
-    """Statistics for a single filter."""
     name: str
     threshold: Any
     input_count: int
     output_count: int
     rejected_count: int
     rejection_rate_pct: float = 0.0
-    rejection_reasons: Dict[str, int] = field(default_factory=dict)  # v1.3.0
+    rejection_reasons: Dict[str, int] = field(default_factory=dict)
     
     def __post_init__(self):
         if self.input_count > 0:
-            self.rejection_rate_pct = round(
-                100 * self.rejected_count / self.input_count, 1
-            )
+            self.rejection_rate_pct = round(100 * self.rejected_count / self.input_count, 1)
 
 
 @dataclass
 class AssetAuditEntry:
-    """Audit entry for a single asset."""
     name: str
     ticker: Optional[str] = None
     category: str = "equity"
-    profile: Optional[str] = None  # v1.3.0: Profile (Agressif, Modéré, Stable)
-    matched_preset: Optional[str] = None  # v1.3.0: Preset from preset_meta
-    
-    # Scores
+    profile: Optional[str] = None
+    matched_preset: Optional[str] = None
     buffett_score: Optional[float] = None
     composite_score: Optional[float] = None
-    profile_score: Optional[float] = None  # v1.3.0
+    profile_score: Optional[float] = None
     momentum_score: Optional[float] = None
     quality_score: Optional[float] = None
-    factor_scores: Optional[Dict[str, float]] = None  # v1.3.1
-    
-    # Metrics
+    factor_scores: Optional[Dict[str, float]] = None
     roe: Optional[str] = None
     de_ratio: Optional[float] = None
     market_cap: Optional[str] = None
@@ -297,76 +360,57 @@ class AssetAuditEntry:
     ytd: Optional[str] = None
     sector: Optional[str] = None
     country: Optional[str] = None
-    dividend_yield: Optional[float] = None  # v1.3.0
-    payout_ratio: Optional[float] = None  # v1.3.0
-    dividend_coverage: Optional[float] = None  # v1.3.0
-    
-    # v1.3.1: Bond-specific
+    dividend_yield: Optional[float] = None
+    payout_ratio: Optional[float] = None
+    dividend_coverage: Optional[float] = None
     bond_quality_raw: Optional[float] = None
     bond_risk_bucket: Optional[str] = None
-    
-    # v1.3.1: ETF-specific
     ter: Optional[float] = None
-    
-    # v1.3.1: Crypto-specific
     vol_30d_annual_pct: Optional[float] = None
-    
-    # Selection info
     selected: bool = False
     ranking: Optional[int] = None
     selection_reason: Optional[str] = None
     rejection_reason: Optional[str] = None
     rejection_filter: Optional[str] = None
-    rejection_details: List[str] = field(default_factory=list)  # v1.3.0: Multiple reasons
-    
-    # RADAR context
+    rejection_details: List[str] = field(default_factory=list)
     radar_tilt: Optional[str] = None
     
     def to_dict(self) -> Dict:
-        """Convert to dict, excluding None values."""
         return {k: v for k, v in asdict(self).items() if v is not None}
 
 
-# ============= v1.5.0: CATEGORY RANKING ENTRY =============
-
 @dataclass
 class CategoryRankingEntry:
-    """v1.5.1: Single entry in a per-category final ranking."""
     rank: int
     name: str
     ticker: Optional[str] = None
-    sort_score: Optional[float] = None          # v1.5.1: actual score used for ranking
-    sort_score_source: Optional[str] = None     # v1.5.1: which field was used (e.g. "composite_score", "buffett_score")
+    sort_score: Optional[float] = None
+    sort_score_source: Optional[str] = None
     composite_score: Optional[float] = None
     profile_score: Optional[float] = None
     buffett_score: Optional[float] = None
     factor_scores: Optional[Dict[str, float]] = None
     selected: bool = False
     rejection_reason: Optional[str] = None
-    rejection_filter: Optional[str] = None      # v1.5.1: which filter caused rejection
+    rejection_filter: Optional[str] = None
     sector: Optional[str] = None
     country: Optional[str] = None
     volatility: Optional[float] = None
-    # Category-specific
-    ter: Optional[float] = None          # ETF
-    aum: Optional[str] = None            # ETF / Bond
-    credit_rating: Optional[str] = None  # Bond
-    duration: Optional[float] = None     # Bond
-    market_cap: Optional[str] = None     # Equity / Crypto
-    roe: Optional[str] = None            # Equity
+    ter: Optional[float] = None
+    aum: Optional[str] = None
+    credit_rating: Optional[str] = None
+    duration: Optional[float] = None
+    market_cap: Optional[str] = None
+    roe: Optional[str] = None
     matched_preset: Optional[str] = None
     ytd: Optional[str] = None
 
     def to_dict(self) -> Dict:
-        """Convert to dict, excluding None values."""
         return {k: v for k, v in asdict(self).items() if v is not None}
 
 
-# ============= v1.4.0: ETF SCORING DEBUG =============
-
 @dataclass
 class ETFScoringComponentStats:
-    """Stats for a single scoring component."""
     name: str
     n_valid: int = 0
     n_nan: int = 0
@@ -376,14 +420,12 @@ class ETFScoringComponentStats:
     mean_val: Optional[float] = None
     std_val: Optional[float] = None
     is_constant: bool = False
-    
     def to_dict(self) -> Dict:
         return {k: v for k, v in asdict(self).items() if v is not None}
 
 
 @dataclass
 class ETFScoringDebug:
-    """v1.4.0: Debug info for ETF scoring diagnostic."""
     profile: str
     stage_counts: Dict[str, int] = field(default_factory=dict)
     scoring_components: Dict[str, Dict] = field(default_factory=dict)
@@ -391,58 +433,33 @@ class ETFScoringDebug:
     is_flat: bool = False
     scoring_method: str = "rank_percentile"
     issues: List[str] = field(default_factory=list)
-    
     def to_dict(self) -> Dict:
         return asdict(self)
 
 
 @dataclass 
 class SelectionAuditReport:
-    """Complete audit report for asset selection."""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "v1.5.2"
-    preset_meta_version: str = "v4.15.2"  # v1.3.0
-    
-    # Summary counts
+    version: str = "v1.6.0"
+    preset_meta_version: str = "v4.15.2"
     summary: Dict[str, int] = field(default_factory=dict)
-    
-    # v1.3.0: Profile-specific stats
     profile_stats: Dict[str, Dict] = field(default_factory=dict)
-    
-    # Filter statistics
     filters_applied: List[Dict] = field(default_factory=list)
-    
-    # v1.3.0: Hard filter breakdown by profile
     hard_filter_stats: Dict[str, Dict] = field(default_factory=dict)
-    
-    # v1.4.0: ETF scoring debug
     etf_scoring_debug: Dict[str, Dict] = field(default_factory=dict)
-    
-    # v1.5.0: FULL category rankings (sorted by score, all candidates)
     category_rankings: Dict[str, List[Dict]] = field(default_factory=dict)
-    
-    # v1.5.2: TOP 10 per preset (grouped by _matched_preset)
     preset_rankings: Dict[str, List[Dict]] = field(default_factory=dict)
-    
-    # Assets by category
+    anomaly_warnings: List[str] = field(default_factory=list)
     equities_selected: List[Dict] = field(default_factory=list)
     equities_rejected: List[Dict] = field(default_factory=list)
-    
     etf_selected: List[Dict] = field(default_factory=list)
     etf_rejected: List[Dict] = field(default_factory=list)
-    
     crypto_selected: List[Dict] = field(default_factory=list)
     crypto_rejected: List[Dict] = field(default_factory=list)
-    
     bonds_selected: List[Dict] = field(default_factory=list)
     bonds_rejected: List[Dict] = field(default_factory=list)
-    
-    # RADAR context used
     radar_context: Optional[Dict] = None
-    
-    # Config used
     config: Dict = field(default_factory=dict)
-    
     def to_dict(self) -> Dict:
         return asdict(self)
 
@@ -451,14 +468,7 @@ class SelectionAuditor:
     """
     Tracks and records asset selection decisions throughout the pipeline.
     
-    v1.5.2: ADD: preset_rankings – top 10 per preset for equity.
-    v1.5.1: FIX: Robust rejection lookup + sort_score diagnostic.
-    v1.5.0: ADD: category_rankings – classement complet par catégorie.
-    v1.4.0: ADD: ETF scoring diagnostic for flat score debugging.
-    v1.3.1: FIX: Capture composite_score and factor_scores for ETF/bond/crypto.
-    v1.3.0: Aligned with preset_meta v4.15.2 - tracks vol_missing, yield-trap filters.
-    v1.2.0: Fixed ETF sector extraction from sector_top field.
-    v1.1.0: Added RADAR tilts normalization for correct sector/region matching.
+    v1.6.0: REFACTOR – get_stable_uid, _build_ranking_entry, anomaly guard-rails.
     """
     
     def __init__(self, config: Dict = None):
@@ -469,19 +479,33 @@ class SelectionAuditor:
             "buffett_min_score": self.config.get("buffett_min_score", 40),
             "tactical_mode": self.config.get("tactical_mode", "radar"),
             "use_tactical_context": self.config.get("use_tactical_context", False),
-            "preset_meta_version": "v4.15.2",  # v1.3.0
+            "preset_meta_version": "v4.15.2",
         }
-        
         self._all_equities: List[Dict] = []
         self._all_etf: List[Dict] = []
         self._all_crypto: List[Dict] = []
         self._all_bonds: List[Dict] = []
-        
         self._rejections: Dict[str, Dict] = {}
         self._stage_counts: Dict[str, int] = {}
-        
+
+    # ============= v1.6.0: STABLE UID =============
+
+    def _uid(self, asset: Dict, category: str = "") -> str:
+        """v1.6.0: Stable UID with category prefix. Replaces _get_asset_id."""
+        return get_stable_uid(asset, category)
+    
+    def _uid_set(self, assets: List[Dict], category: str = "") -> set:
+        """v1.6.0: Build set of UIDs + raw identifiers for matching."""
+        ids = set()
+        for a in assets:
+            ids.add(self._uid(a, category))
+            for key in ["ticker", "symbol", "name", "etfsymbol"]:
+                val = a.get(key)
+                if val:
+                    ids.add(str(val))
+        return ids
+
     def set_radar_context(self, market_context: Dict):
-        """Store RADAR context for the report."""
         if market_context:
             self.report.radar_context = {
                 "regime": market_context.get("market_regime"),
@@ -492,939 +516,346 @@ class SelectionAuditor:
                 "favored_regions": market_context.get("macro_tilts", {}).get("favored_regions", []),
                 "avoided_regions": market_context.get("macro_tilts", {}).get("avoided_regions", []),
             }
-    
+
     def track_initial_universe(self, assets: List[Dict], category: str = "equity"):
-        """Track the initial universe before any filters."""
         count = len(assets)
         self._stage_counts[f"{category}_initial"] = count
-        
-        if category == "equity":
-            self._all_equities = [self._enrich_asset(a, category) for a in assets]
-        elif category == "etf":
-            self._all_etf = [self._enrich_asset(a, category) for a in assets]
-        elif category == "crypto":
-            self._all_crypto = [self._enrich_asset(a, category) for a in assets]
-        elif category == "bond":
-            self._all_bonds = [self._enrich_asset(a, category) for a in assets]
-            
+        store = {"equity": "_all_equities", "etf": "_all_etf", "crypto": "_all_crypto", "bond": "_all_bonds"}
+        attr = store.get(category)
+        if attr:
+            setattr(self, attr, [self._enrich_asset(a, category) for a in assets])
         logger.info(f"📊 Audit: {category} initial universe = {count}")
-    
-    def track_filter(
-        self,
-        filter_name: str,
-        category: str,
-        before_count: int,
-        after_count: int,
-        rejected_assets: List[Dict] = None,
-        threshold: Any = None,
-        rejection_reasons: Dict[str, int] = None,  # v1.3.0
-    ):
-        """Track a filter application."""
+
+    def track_filter(self, filter_name, category, before_count, after_count, rejected_assets=None, threshold=None, rejection_reasons=None):
         rejected_count = before_count - after_count
-        
-        stats = FilterStats(
-            name=filter_name,
-            threshold=threshold,
-            input_count=before_count,
-            output_count=after_count,
-            rejected_count=rejected_count,
-            rejection_reasons=rejection_reasons or {},
-        )
+        stats = FilterStats(name=filter_name, threshold=threshold, input_count=before_count, output_count=after_count, rejected_count=rejected_count, rejection_reasons=rejection_reasons or {})
         self.report.filters_applied.append(asdict(stats))
-        
         self._stage_counts[f"{category}_after_{filter_name}"] = after_count
-        
         if rejected_assets:
             for asset in rejected_assets:
-                asset_id = self._get_asset_id(asset)
-                self._rejections[asset_id] = {
-                    "filter": filter_name,
-                    "reason": self._get_rejection_reason(asset, filter_name),
-                    "threshold": threshold,
-                }
-        
-        logger.info(
-            f"📊 Audit: {filter_name} on {category}: "
-            f"{before_count} → {after_count} (-{rejected_count}, {stats.rejection_rate_pct}%)"
-        )
-    
-    # ============= v1.4.0: ETF SCORING DIAGNOSTIC =============
-    
-    def track_etf_scoring_diagnostic(
-        self,
-        profile: str,
-        stage_counts: Dict[str, int],
-        scoring_components: Dict[str, Dict],
-        score_stats: Dict[str, float],
-        is_flat: bool,
-        scoring_method: str,
-    ):
-        """
-        v1.4.0: Track ETF scoring diagnostic for flat score debugging.
-        """
+                uid = self._uid(asset, category)
+                self._rejections[uid] = {"filter": filter_name, "reason": self._get_rejection_reason(asset, filter_name), "threshold": threshold}
+        logger.info(f"📊 Audit: {filter_name} on {category}: {before_count} → {after_count} (-{rejected_count}, {stats.rejection_rate_pct}%)")
+
+    # ============= ETF SCORING DIAGNOSTIC =============
+
+    def track_etf_scoring_diagnostic(self, profile, stage_counts, scoring_components, score_stats, is_flat, scoring_method):
         issues = self._identify_etf_scoring_issues(scoring_components, stage_counts, is_flat)
-        
         self.report.etf_scoring_debug[profile] = {
-            "stage_counts": stage_counts,
-            "scoring_components": scoring_components,
-            "score_stats": score_stats,
-            "is_flat": is_flat,
-            "scoring_method": scoring_method,
-            "issues": issues,
-            "root_cause": self._determine_root_cause(issues),
+            "stage_counts": stage_counts, "scoring_components": scoring_components,
+            "score_stats": score_stats, "is_flat": is_flat, "scoring_method": scoring_method,
+            "issues": issues, "root_cause": self._determine_root_cause(issues),
         }
-        
-        # Log issues
         if issues:
-            logger.warning(
-                f"⚠️ [ETF {profile}] Scoring issues detected:\n"
-                f"  Issues: {issues}\n"
-                f"  Stage counts: {stage_counts}\n"
-                f"  Score stats: {score_stats}"
-            )
+            logger.warning(f"⚠️ [ETF {profile}] Scoring issues: {issues}")
         else:
-            logger.info(f"✅ [ETF {profile}] Scoring OK: method={scoring_method}, stats={score_stats}")
-    
-    def _identify_etf_scoring_issues(
-        self, 
-        components: Dict[str, Dict], 
-        stages: Dict[str, int],
-        is_flat: bool,
-    ) -> List[str]:
-        """v1.4.0: Identify root causes of scoring issues."""
+            logger.info(f"✅ [ETF {profile}] Scoring OK: method={scoring_method}")
+
+    def _identify_etf_scoring_issues(self, components, stages, is_flat):
         issues = []
-        
         if stages.get("presets", 0) == 0:
             issues.append("PRESETS_VIDE: 0 ETF après filtrage presets")
         elif stages.get("presets", 0) < 5:
             issues.append(f"UNIVERS_TROP_PETIT: seulement {stages.get('presets', 0)} ETF après presets")
-        
         if stages.get("hard", 0) == 0:
             issues.append("HARD_CONSTRAINTS_TROP_STRICT: 0 ETF après hard constraints")
-        
         if stages.get("qc", 0) == 0:
             issues.append("QC_TROP_STRICT: 0 ETF après data quality check")
-        
         n_broken = 0
         for name, stats in components.items():
             pct_valid = stats.get("pct_valid", 0)
             std_val = stats.get("std", 0)
-            
             if pct_valid == 0:
                 issues.append(f"COLONNE_100%_NAN: {name}")
                 n_broken += 1
             elif pct_valid < 20:
                 issues.append(f"COLONNE_SPARSE: {name} ({pct_valid:.1f}% valide)")
-            
             if std_val is not None and std_val < 1e-6 and pct_valid > 0:
                 issues.append(f"VARIANCE_NULLE: {name} (toutes valeurs identiques)")
                 n_broken += 1
-        
-        total_components = len(components)
-        if total_components > 0 and n_broken >= total_components - 1:
-            issues.append(f"COMPOSANTES_CASSEES: {n_broken}/{total_components} composantes inutilisables")
-        
+        if len(components) > 0 and n_broken >= len(components) - 1:
+            issues.append(f"COMPOSANTES_CASSEES: {n_broken}/{len(components)} composantes inutilisables")
         if is_flat and "UNIVERS_TROP_PETIT" not in str(issues):
-            issues.append("SCORE_PLAT: variance=0 après calcul (toutes valeurs identiques)")
-        
+            issues.append("SCORE_PLAT: variance=0 après calcul")
         return issues
-    
-    def _determine_root_cause(self, issues: List[str]) -> str:
-        """v1.4.0: Determine the most likely root cause."""
+
+    def _determine_root_cause(self, issues):
         if not issues:
             return "OK"
-        
-        if any("PRESETS_VIDE" in i for i in issues):
-            return "PRESETS_TROP_RESTRICTIFS"
-        if any("UNIVERS_TROP_PETIT" in i for i in issues):
-            return "FILTRAGE_EXCESSIF"
-        if any("HARD_CONSTRAINTS_TROP_STRICT" in i for i in issues):
-            return "HARD_CONSTRAINTS_TROP_STRICT"
-        if any("COLONNE_100%_NAN" in i for i in issues):
-            return "COLONNES_MANQUANTES_CSV"
-        if any("COMPOSANTES_CASSEES" in i for i in issues):
-            return "DONNEES_CORROMPUES"
-        if any("VARIANCE_NULLE" in i for i in issues):
-            return "DONNEES_UNIFORMES"
-        if any("SCORE_PLAT" in i for i in issues):
-            return "SCORING_DEGENERE"
-        
+        for pattern, cause in [("PRESETS_VIDE","PRESETS_TROP_RESTRICTIFS"),("UNIVERS_TROP_PETIT","FILTRAGE_EXCESSIF"),("HARD_CONSTRAINTS","HARD_CONSTRAINTS_TROP_STRICT"),("COLONNE_100%","COLONNES_MANQUANTES_CSV"),("COMPOSANTES_CASSEES","DONNEES_CORROMPUES"),("VARIANCE_NULLE","DONNEES_UNIFORMES"),("SCORE_PLAT","SCORING_DEGENERE")]:
+            if pattern in str(issues):
+                return cause
         return "MULTIPLE_ISSUES"
-    
-    # ============= END v1.4.0 =============
-    
-    def track_profile_hard_filters(
-        self,
-        profile: str,
-        before: List[Dict],
-        after: List[Dict],
-        filter_stats: Dict,
-    ):
-        """
-        v1.3.0: Track hard filters from preset_meta.apply_hard_filters().
-        """
+
+    # ============= HARD FILTERS =============
+
+    def track_profile_hard_filters(self, profile, before, after, filter_stats):
         rejection_reasons = filter_stats.get("reasons", {})
-        
         self.report.hard_filter_stats[profile] = {
             "before": filter_stats.get("before", len(before)),
             "after": filter_stats.get("after", len(after)),
             "rejected": filter_stats.get("rejected", len(before) - len(after)),
-            "reasons": {
-                reason: {
-                    "count": count,
-                    "explanation": explain_hard_filter_reason(reason),
-                }
-                for reason, count in rejection_reasons.items()
-            },
+            "reasons": {r: {"count": c, "explanation": explain_hard_filter_reason(r)} for r, c in rejection_reasons.items()},
         }
-        
-        after_ids = {self._get_asset_id(a) for a in after}
-        rejected = [a for a in before if self._get_asset_id(a) not in after_ids]
-        
+        after_ids = {self._uid(a, "equity") for a in after}
+        rejected = [a for a in before if self._uid(a, "equity") not in after_ids]
         for asset in rejected:
-            asset_id = self._get_asset_id(asset)
-            asset_reasons = self._determine_rejection_reasons(asset, profile)
-            self._rejections[asset_id] = {
-                "filter": f"hard_filters_{profile}",
-                "reason": "; ".join(asset_reasons),
-                "threshold": f"Profile={profile}",
-                "details": asset_reasons,
-            }
-        
-        self.track_filter(
-            filter_name=f"hard_filters_{profile}",
-            category="equity",
-            before_count=len(before),
-            after_count=len(after),
-            rejected_assets=rejected,
-            threshold=f"Profile={profile}",
-            rejection_reasons=rejection_reasons,
-        )
-        
-        yield_trap_count = (
-            rejection_reasons.get("payout_missing", 0) +
-            sum(v for k, v in rejection_reasons.items() if k.startswith("payout>")) +
-            rejection_reasons.get("coverage_missing", 0) +
-            sum(v for k, v in rejection_reasons.items() if k.startswith("coverage<"))
-        )
-        
-        if yield_trap_count > 0:
-            logger.warning(
-                f"⚠️ [{profile}] {yield_trap_count} yield traps détectés et filtrés"
-            )
-    
-    def _determine_rejection_reasons(self, asset: Dict, profile: str) -> List[str]:
-        """v1.3.0: Determine which hard filter reasons apply to an asset."""
+            uid = self._uid(asset, "equity")
+            reasons = self._determine_rejection_reasons(asset, profile)
+            self._rejections[uid] = {"filter": f"hard_filters_{profile}", "reason": "; ".join(reasons), "threshold": f"Profile={profile}", "details": reasons}
+        self.track_filter(f"hard_filters_{profile}", "equity", len(before), len(after), rejected, f"Profile={profile}", rejection_reasons)
+        yt = rejection_reasons.get("payout_missing", 0) + sum(v for k, v in rejection_reasons.items() if k.startswith("payout>")) + rejection_reasons.get("coverage_missing", 0) + sum(v for k, v in rejection_reasons.items() if k.startswith("coverage<"))
+        if yt > 0:
+            logger.warning(f"⚠️ [{profile}] {yt} yield traps détectés et filtrés")
+
+    def _determine_rejection_reasons(self, asset, profile):
+        if not HAS_PRESET_META:
+            return ["preset_meta_unavailable"]
         reasons = []
-        
-        try:
-            from .preset_meta import get_profile_policy, get_metric_value
-            
-            policy = get_profile_policy(profile)
-            filters = policy.get("hard_filters", {})
-            
-            vol = get_metric_value(asset, "volatility_3y")
-            roe = get_metric_value(asset, "roe")
-            div_yield = get_metric_value(asset, "dividend_yield")
-            payout = get_metric_value(asset, "payout_ratio")
-            coverage = get_metric_value(asset, "dividend_coverage")
-            
-            if "volatility_3y_min" in filters or "volatility_3y_max" in filters:
-                if vol is None:
-                    reasons.append("vol_missing")
-                else:
-                    if vol < 1 or vol > 120:
-                        reasons.append("vol_aberrant")
-                    if "volatility_3y_min" in filters and vol < filters["volatility_3y_min"]:
-                        reasons.append(f"vol<{filters['volatility_3y_min']}")
-                    if "volatility_3y_max" in filters and vol > filters["volatility_3y_max"]:
-                        reasons.append(f"vol>{filters['volatility_3y_max']}")
-            
-            if "roe_min" in filters:
-                if roe is None:
-                    reasons.append("roe_missing")
-                elif roe < filters["roe_min"]:
-                    reasons.append(f"roe<{filters['roe_min']}")
-            
-            if "dividend_yield_min" in filters:
-                if div_yield is None:
-                    reasons.append("div_yield_missing")
-                elif div_yield < filters["dividend_yield_min"]:
-                    reasons.append(f"div<{filters['dividend_yield_min']}")
-            
-            if "payout_ratio_max" in filters:
-                if payout is None:
-                    reasons.append("payout_missing")
-                elif payout > filters["payout_ratio_max"]:
-                    reasons.append(f"payout>{filters['payout_ratio_max']}")
-            
-            if "dividend_coverage_min" in filters:
-                if coverage is None:
-                    reasons.append("coverage_missing")
-                elif coverage < filters["dividend_coverage_min"]:
-                    reasons.append(f"coverage<{filters['dividend_coverage_min']}")
-            
-        except ImportError:
-            reasons.append("preset_meta_unavailable")
-        
+        policy = get_profile_policy(profile)
+        filters = policy.get("hard_filters", {})
+        vol = get_metric_value(asset, "volatility_3y")
+        roe = get_metric_value(asset, "roe")
+        div_yield = get_metric_value(asset, "dividend_yield")
+        payout = get_metric_value(asset, "payout_ratio")
+        coverage = get_metric_value(asset, "dividend_coverage")
+        if "volatility_3y_min" in filters or "volatility_3y_max" in filters:
+            if vol is None:
+                reasons.append("vol_missing")
+            else:
+                if vol < 1 or vol > 120:
+                    reasons.append("vol_aberrant")
+                if "volatility_3y_min" in filters and vol < filters["volatility_3y_min"]:
+                    reasons.append(f"vol<{filters['volatility_3y_min']}")
+                if "volatility_3y_max" in filters and vol > filters["volatility_3y_max"]:
+                    reasons.append(f"vol>{filters['volatility_3y_max']}")
+        if "roe_min" in filters:
+            if roe is None: reasons.append("roe_missing")
+            elif roe < filters["roe_min"]: reasons.append(f"roe<{filters['roe_min']}")
+        if "dividend_yield_min" in filters:
+            if div_yield is None: reasons.append("div_yield_missing")
+            elif div_yield < filters["dividend_yield_min"]: reasons.append(f"div<{filters['dividend_yield_min']}")
+        if "payout_ratio_max" in filters:
+            if payout is None: reasons.append("payout_missing")
+            elif payout > filters["payout_ratio_max"]: reasons.append(f"payout>{filters['payout_ratio_max']}")
+        if "dividend_coverage_min" in filters:
+            if coverage is None: reasons.append("coverage_missing")
+            elif coverage < filters["dividend_coverage_min"]: reasons.append(f"coverage<{filters['dividend_coverage_min']}")
         return reasons if reasons else ["score_insuffisant"]
-    
-    def track_buffett_filter(
-        self,
-        before: List[Dict],
-        after: List[Dict],
-        min_score: int = 40,
-    ):
-        """Convenience method for Buffett filter tracking."""
+
+    def track_buffett_filter(self, before, after, min_score=40):
         rejected = [a for a in before if a not in after]
-        
         for asset in rejected:
             score = asset.get("_buffett_score") or asset.get("buffett_score") or 0
-            reason = asset.get("_buffett_reject_reason") or f"Score {score} < {min_score}"
-            asset["_rejection_reason"] = reason
-        
-        self.track_filter(
-            filter_name="buffett",
-            category="equity",
-            before_count=len(before),
-            after_count=len(after),
-            rejected_assets=rejected,
-            threshold=f"min_score={min_score}",
-        )
-    
-    def track_volatility_filter(
-        self,
-        category: str,
-        before: List[Dict],
-        after: List[Dict],
-        max_vol: float = 60.0,
-    ):
-        """Track volatility filter."""
+            asset["_rejection_reason"] = asset.get("_buffett_reject_reason") or f"Score {score} < {min_score}"
+        self.track_filter("buffett", "equity", len(before), len(after), rejected, f"min_score={min_score}")
+
+    def track_volatility_filter(self, category, before, after, max_vol=60.0):
         rejected = [a for a in before if a not in after]
-        
-        for asset in rejected:
-            vol = asset.get("vol") or asset.get("volatility_3y") or 0
-            asset["_rejection_reason"] = f"Volatilité {vol}% > {max_vol}%"
-        
-        self.track_filter(
-            filter_name="volatility",
-            category=category,
-            before_count=len(before),
-            after_count=len(after),
-            rejected_assets=rejected,
-            threshold=f"max_vol={max_vol}%",
-        )
-    
-    def track_liquidity_filter(
-        self,
-        category: str,
-        before: List[Dict],
-        after: List[Dict],
-        min_value: str = "1B",
-    ):
-        """Track liquidity/market cap filter."""
+        for a in rejected:
+            a["_rejection_reason"] = f"Volatilité {a.get('vol') or a.get('volatility_3y', 0)}% > {max_vol}%"
+        self.track_filter("volatility", category, len(before), len(after), rejected, f"max_vol={max_vol}%")
+
+    def track_liquidity_filter(self, category, before, after, min_value="1B"):
         rejected = [a for a in before if a not in after]
-        
-        for asset in rejected:
-            mcap = asset.get("market_cap") or asset.get("aum") or "N/A"
-            asset["_rejection_reason"] = f"Market cap/AUM {mcap} < {min_value}"
-        
-        self.track_filter(
-            filter_name="liquidity",
-            category=category,
-            before_count=len(before),
-            after_count=len(after),
-            rejected_assets=rejected,
-            threshold=f"min={min_value}",
-        )
-    
-    def record_profile_selection(
-        self,
-        profile: str,
-        selected: List[Dict],
-        all_candidates: List[Dict],
-        selection_meta: Dict,
-    ):
-        """
-        v1.3.0: Record selection for a specific profile.
-        """
-        self.report.profile_stats[profile] = {
-            "selected_count": len(selected),
-            "candidates_count": len(all_candidates),
-            "stages": selection_meta.get("stages", {}),
-            "stats": selection_meta.get("stats", {}),
-        }
-        
-        logger.info(
-            f"📊 Audit: [{profile}] {len(selected)}/{len(all_candidates)} selected"
-        )
-    
-    # ============= v1.5.0: CATEGORY RANKINGS =============
+        for a in rejected:
+            a["_rejection_reason"] = f"Market cap/AUM {a.get('market_cap') or a.get('aum', 'N/A')} < {min_value}"
+        self.track_filter("liquidity", category, len(before), len(after), rejected, f"min={min_value}")
 
-    def record_category_ranking(
-        self,
-        category: str,
-        all_candidates: List[Dict],
-        selected: List[Dict],
-        max_entries: int = 100,
-    ):
-        """
-        v1.5.1: Record the FULL ranked list for a category.
-        
-        Produces a sorted list of ALL candidates with their rank, score,
-        selection status and **precise** rejection reason so you can audit
-        why certain assets always (or never) appear.
-        
-        v1.5.1 fixes:
-        - Robust rejection lookup (tries id, ticker, symbol, name)
-        - Deduces rejection reason from missing data if not tracked
-        - Adds sort_score + sort_score_source to show which metric drives ranking
-        - Adds rejection_filter to show which pipeline stage caused rejection
-        """
-        selected_ids = set()
-        for s in selected:
-            sid = self._get_asset_id(s)
-            selected_ids.add(sid)
-            # Also add ticker and name for fuzzy matching
-            if s.get("ticker"):
-                selected_ids.add(s["ticker"])
-            if s.get("name"):
-                selected_ids.add(s["name"])
+    def record_profile_selection(self, profile, selected, all_candidates, selection_meta):
+        self.report.profile_stats[profile] = {"selected_count": len(selected), "candidates_count": len(all_candidates), "stages": selection_meta.get("stages", {}), "stats": selection_meta.get("stats", {})}
+        logger.info(f"📊 Audit: [{profile}] {len(selected)}/{len(all_candidates)} selected")
 
-        # --- score key for sorting: returns (score, source_field_name) ---
-        def _score_key_with_source(asset: Dict):
-            """Return (score, source_field) for ranking."""
-            for key in [
-                "composite_score", "_composite_score",
-                "_profile_score",
-                "bond_quality_raw",
-                "_buffett_score", "buffett_score",
-            ]:
-                val = asset.get(key)
-                if val is not None:
-                    try:
-                        return float(val), key
-                    except (TypeError, ValueError):
-                        pass
-            return 0.0, "none"
+    # ============= v1.6.0: FACTORED RANKING BUILDER =============
 
-        # Sort all candidates descending by score
-        sorted_candidates = sorted(
-            all_candidates,
-            key=lambda a: _score_key_with_source(a)[0],
-            reverse=True,
-        )
-
-        ranking_entries: List[Dict] = []
-        for rank_idx, asset in enumerate(sorted_candidates[:max_entries], 1):
-            asset_id = self._get_asset_id(asset)
-            is_selected = (
-                asset_id in selected_ids
-                or asset.get("ticker") in selected_ids
-                or asset.get("name") in selected_ids
-            )
-
-            sort_score, sort_source = _score_key_with_source(asset)
-
-            entry = CategoryRankingEntry(
-                rank=rank_idx,
-                name=asset.get("name") or asset.get("ticker") or "Unknown",
-                ticker=asset.get("ticker") or asset.get("symbol"),
-                sort_score=self._safe_round(sort_score, 4),
-                sort_score_source=sort_source,
-                composite_score=self._safe_round(
-                    asset.get("composite_score") or asset.get("_composite_score"), 4
-                ),
-                profile_score=self._safe_round(asset.get("_profile_score"), 4),
-                buffett_score=self._safe_round(
-                    asset.get("_buffett_score") or asset.get("buffett_score"), 1
-                ),
-                selected=is_selected,
-                matched_preset=asset.get("_matched_preset"),
-            )
-
-            # Factor scores
-            fs = asset.get("factor_scores")
-            if fs and isinstance(fs, dict):
-                entry.factor_scores = {
-                    k: round(float(v), 3)
-                    for k, v in fs.items()
-                    if v is not None and k != "_meta"
-                }
-
-            # ============= v1.5.1: ROBUST REJECTION LOOKUP =============
-            if not is_selected:
-                rejection_info = self._find_rejection(asset)
-                if rejection_info:
-                    entry.rejection_reason = rejection_info.get("reason", "")
-                    entry.rejection_filter = rejection_info.get("filter", None)
-                else:
-                    # Deduce reason from missing data
-                    entry.rejection_reason = self._deduce_rejection_reason(asset, category, sort_source)
-
-            # Sector / country
-            if category == "etf":
-                entry.sector = extract_etf_sector(asset) or None
+    def _build_ranking_entry(self, rank, asset, category, selected_ids, *, include_etf_extras=False):
+        """v1.6.0: Single builder for ranking entries. Used by record_category_ranking + record_preset_rankings."""
+        sort_score, sort_source = _score_with_source(asset)
+        is_selected = any(str(asset.get(k, "")) in selected_ids for k in ["id", "isin", "ticker", "symbol", "name", "etfsymbol"])
+        ticker = asset.get("etfsymbol") or asset.get("ticker") or asset.get("symbol") or ""
+        entry: Dict[str, Any] = {"rank": rank, "name": asset.get("name") or ticker or "Unknown", "ticker": ticker or None, "sort_score": _safe_round(sort_score, 4), "sort_score_source": sort_source, "selected": is_selected, "matched_preset": asset.get("_matched_preset")}
+        # Scores
+        cs = asset.get("composite_score") or asset.get("_composite_score")
+        if cs is not None: entry["composite_score"] = _safe_round(cs, 4)
+        ps = asset.get("_profile_score")
+        if ps is not None: entry["profile_score"] = _safe_round(ps, 4)
+        bs = asset.get("_buffett_score") or asset.get("buffett_score")
+        if bs is not None: entry["buffett_score"] = _safe_round(bs, 1)
+        fs = asset.get("factor_scores")
+        if fs and isinstance(fs, dict):
+            entry["factor_scores"] = {k: round(float(v), 3) for k, v in fs.items() if v is not None and k != "_meta"}
+        # Rejection
+        if not is_selected:
+            rej = self._find_rejection(asset, category)
+            if rej:
+                entry["rejection_reason"] = rej.get("reason", "")
+                entry["rejection_filter"] = rej.get("filter")
             else:
-                entry.sector = asset.get("sector") or asset.get("_sector_key") or None
-            entry.country = asset.get("country") or None
-
-            # Volatility
-            for vk in ["vol", "volatility_3y", "vol_3y", "vol_pct",
-                        "vol_30d_annual_pct", "vol_7d_annual_pct"]:
-                v = asset.get(vk)
-                if v is not None:
-                    try:
-                        entry.volatility = round(float(v), 1)
-                        break
-                    except (TypeError, ValueError):
-                        pass
-
-            # YTD
-            ytd_val = asset.get("ytd") or asset.get("perf_ytd")
-            if ytd_val is not None:
-                entry.ytd = f"{ytd_val}%" if isinstance(ytd_val, (int, float)) else str(ytd_val)
-
-            # Category-specific fields
-            if category == "etf":
-                entry.ter = self._safe_round(asset.get("ter"), 3)
-                aum = asset.get("aum")
-                if aum:
-                    entry.aum = self._format_market_cap(aum)
-            elif category == "bond":
-                entry.credit_rating = asset.get("credit_rating") or None
-                entry.duration = self._safe_round(asset.get("duration"), 2)
-                aum = asset.get("aum") or asset.get("market_cap")
-                if aum:
-                    entry.aum = self._format_market_cap(aum)
-            elif category == "equity":
-                roe = asset.get("roe")
-                if roe is not None:
-                    entry.roe = f"{roe}%" if isinstance(roe, (int, float)) else str(roe)
-                mcap = asset.get("market_cap")
-                if mcap:
-                    entry.market_cap = self._format_market_cap(mcap)
-            elif category == "crypto":
-                mcap = asset.get("market_cap")
-                if mcap:
-                    entry.market_cap = self._format_market_cap(mcap)
-
-            ranking_entries.append(entry.to_dict())
-
-        self.report.category_rankings[category] = ranking_entries
-
-        n_sel = sum(1 for e in ranking_entries if e.get("selected"))
-        n_no_composite = sum(
-            1 for e in ranking_entries
-            if not e.get("selected") and e.get("sort_score_source", "").endswith("buffett_score")
-        )
-        logger.info(
-            f"📊 Audit v1.5.1: {category} ranking – "
-            f"{len(ranking_entries)} entries, {n_sel} selected, "
-            f"{n_no_composite} ranked by buffett_score only (no composite)"
-        )
-
-        # v1.5.2: Also build per-preset rankings for equity and ETF
-        if category in ("equity", "etf"):
-            self.record_preset_rankings(
-                category=category,
-                all_candidates=all_candidates,
-                selected=selected,
-            )
-
-    def _find_rejection(self, asset: Dict) -> Optional[Dict]:
-        """
-        v1.5.1: Look up rejection info trying ALL possible identifiers.
-        Returns the rejection dict or None.
-        """
-        for key in ["id", "ticker", "symbol", "name"]:
-            val = asset.get(key)
-            if val and val in self._rejections:
-                return self._rejections[val]
-        # Also try the standard _get_asset_id
-        asset_id = self._get_asset_id(asset)
-        if asset_id in self._rejections:
-            return self._rejections[asset_id]
-        return None
-
-    def _deduce_rejection_reason(self, asset: Dict, category: str, sort_source: str) -> str:
-        """
-        v1.5.1: Deduce the most likely rejection reason when not explicitly tracked.
-        Checks for missing data, out-of-range metrics, etc.
-        """
-        reasons = []
-
-        # 1. No composite/profile score → filtered BEFORE scoring stage
-        has_composite = (
-            asset.get("composite_score") is not None
-            or asset.get("_composite_score") is not None
-        )
-        has_profile = asset.get("_profile_score") is not None
-
-        if category == "equity" and not has_composite and not has_profile:
-            # Check what data is missing
-            vol = asset.get("vol") or asset.get("volatility_3y") or asset.get("vol_3y")
+                entry["rejection_reason"] = self._deduce_rejection_reason(asset, category, sort_source)
+        # Sector / Country
+        entry["sector"] = extract_etf_sector(asset) or None if category == "etf" else asset.get("sector") or asset.get("_sector_key") or None
+        entry["country"] = asset.get("country") or None
+        # Volatility
+        for vk in ["vol", "volatility_3y", "vol_3y", "vol_pct", "vol_30d_annual_pct", "vol_7d_annual_pct", "vol_3y_pct"]:
+            v = asset.get(vk)
+            if v is not None:
+                r = _safe_round(v, 1)
+                if r is not None:
+                    entry["volatility"] = r
+                    break
+        # YTD
+        ytd_val = asset.get("ytd") or asset.get("perf_ytd") or asset.get("ytd_return_pct")
+        if ytd_val is not None:
+            entry["ytd"] = f"{ytd_val}%" if isinstance(ytd_val, (int, float)) else str(ytd_val)
+        # Category-specific
+        if category == "etf":
+            ter = asset.get("total_expense_ratio") or asset.get("ter")
+            if ter is not None: entry["ter"] = _safe_round(ter, 4)
+            aum = asset.get("aum_usd") or asset.get("aum")
+            if aum is not None: entry["aum"] = _format_market_cap(aum)
+            yld = asset.get("yield_ttm")
+            if yld is not None: entry["yield_ttm"] = _safe_round(yld, 2)
+            if include_etf_extras:
+                for fk, ek in [("_role","role"),("_risk","risk"),("_correlation_group","correlation_group")]:
+                    val = asset.get(fk)
+                    if val: entry[ek] = str(val)
+                for mk in ["perf_3m_pct", "perf_1m_pct"]:
+                    mv = asset.get(mk)
+                    if mv is not None: entry["momentum_3m" if "3m" in mk else "momentum_1m"] = _safe_round(mv, 2)
+        elif category == "bond":
+            entry["credit_rating"] = asset.get("credit_rating") or None
+            entry["duration"] = _safe_round(asset.get("duration"), 2)
+            aum = asset.get("aum") or asset.get("market_cap")
+            if aum: entry["aum"] = _format_market_cap(aum)
+        elif category == "equity":
             roe = asset.get("roe")
-            
-            if vol is None:
-                reasons.append("Volatilité manquante → rejeté par hard filters")
-            else:
-                try:
-                    vol_f = float(str(vol).replace("%", ""))
-                    if vol_f < 1 or vol_f > 120:
-                        reasons.append(f"Volatilité aberrante ({vol_f}%)")
-                except (TypeError, ValueError):
-                    reasons.append("Volatilité non parsable")
+            if roe is not None: entry["roe"] = f"{roe}%" if isinstance(roe, (int, float)) else str(roe)
+            mcap = asset.get("market_cap")
+            if mcap: entry["market_cap"] = _format_market_cap(mcap)
+            dy = asset.get("dividend_yield")
+            if dy is not None:
+                try: entry["dividend_yield"] = f"{float(dy):.2f}%"
+                except (TypeError, ValueError): entry["dividend_yield"] = str(dy)
+        elif category == "crypto":
+            mcap = asset.get("market_cap")
+            if mcap: entry["market_cap"] = _format_market_cap(mcap)
+        return {k: v for k, v in entry.items() if v is not None}
 
-            if roe is None or str(roe).upper() in ["N/A", "NAN", "NONE", ""]:
-                reasons.append("ROE manquant → rejeté par hard filters")
+    # ============= CATEGORY + PRESET RANKINGS =============
 
-            div_yield = asset.get("dividend_yield")
-            payout = asset.get("payout_ratio")
-            coverage = asset.get("dividend_coverage")
-            if div_yield is None:
-                reasons.append("Dividend yield manquant")
-            if payout is None:
-                reasons.append("Payout ratio manquant")
-            if coverage is None:
-                reasons.append("Dividend coverage manquant")
+    def record_category_ranking(self, category, all_candidates, selected, max_entries=100):
+        """v1.6.0: Refactored with _build_ranking_entry."""
+        selected_ids = self._uid_set(selected, category)
+        sorted_cands = sorted(all_candidates, key=lambda a: _score_with_source(a)[0], reverse=True)
+        entries = [self._build_ranking_entry(i, a, category, selected_ids) for i, a in enumerate(sorted_cands[:max_entries], 1)]
+        self.report.category_rankings[category] = entries
+        n_sel = sum(1 for e in entries if e.get("selected"))
+        logger.info(f"📊 Audit v1.6.0: {category} ranking – {len(entries)} entries, {n_sel} selected")
+        if category in ("equity", "etf"):
+            self.record_preset_rankings(category, all_candidates, selected)
 
-            if reasons:
-                return "Hard filter (données manquantes): " + "; ".join(reasons[:3])
-            else:
-                return "Éjecté par hard filters du profil (hors range vol/ROE pour ce profil)"
-
-        if category in ["etf", "bond", "crypto"] and not has_composite:
-            return "Pas de composite_score → non scoré (filtré avant scoring)"
-
-        # 2. Has composite but not selected → quota or score rank
-        if has_composite or has_profile:
-            score = asset.get("_profile_score") or asset.get("composite_score") or asset.get("_composite_score")
-            if score is not None:
-                try:
-                    score_f = float(score)
-                    return f"Score composite ({score_f:.3f}) insuffisant pour entrer dans le quota de sélection"
-                except (TypeError, ValueError):
-                    pass
-
-        # 3. Fallback with sort_source info
-        if sort_source and "buffett" in sort_source:
-            return (
-                f"Classé par {sort_source} uniquement (pas de composite_score) → "
-                f"probablement filtré par hard filters avant le scoring"
-            )
-
-        return "Non sélectionné (raison non tracée)"
-
-    @staticmethod
-    def _safe_round(value, decimals: int = 2) -> Optional[float]:
-        """Round a value safely, returning None if not a number."""
-        if value is None:
-            return None
-        try:
-            return round(float(value), decimals)
-        except (TypeError, ValueError):
-            return None
-
-    # ============= v1.5.2: PRESET RANKINGS =============
-
-    def record_preset_rankings(
-        self,
-        category: str,
-        all_candidates: List[Dict],
-        selected: List[Dict],
-        top_n: int = 10,
-    ):
-        """
-        v1.5.2: Build a TOP N ranking per preset for any category.
-        
-        Groups all candidates by _matched_preset, sorts each group
-        by best available score, and records top_n per preset.
-        
-        Supports: equity (value_dividend, quality_premium, etc.)
-                  etf (coeur_global, croissance_tech, etc.)
-        
-        Output in self.report.preset_rankings:
-        {
-            "equity": {
-                "value_dividend": [ {rank, name, ticker, sort_score, ...}, ... ],
-                "quality_premium": [ ... ],
-            },
-            "etf": {
-                "coeur_global": [ ... ],
-                "croissance_tech": [ ... ],
-            }
-        }
-        """
-        # Build selected IDs for matching
-        selected_ids = set()
-        for s in selected:
-            for key in ["id", "ticker", "symbol", "name", "etfsymbol"]:
-                val = s.get(key)
-                if val:
-                    selected_ids.add(str(val))
-
-        # Group by preset
+    def record_preset_rankings(self, category, all_candidates, selected, top_n=10):
+        """v1.6.0: Refactored with _build_ranking_entry + anomaly guard-rail."""
+        selected_ids = self._uid_set(selected, category)
         by_preset: Dict[str, List[Dict]] = {}
         for asset in all_candidates:
             preset = asset.get("_matched_preset") or "non_classé"
             by_preset.setdefault(preset, []).append(asset)
-
-        def _score_with_source(asset: Dict):
-            for key in [
-                "composite_score", "_composite_score",
-                "_profile_score",
-                "bond_quality_raw",
-                "_buffett_score", "buffett_score",
-            ]:
-                val = asset.get(key)
-                if val is not None:
-                    try:
-                        return float(val), key
-                    except (TypeError, ValueError):
-                        pass
-            return 0.0, "none"
-
-        preset_rankings: Dict[str, List[Dict]] = {}
-
-        for preset_name, candidates in sorted(by_preset.items()):
-            # Sort descending by score
-            sorted_cands = sorted(
-                candidates,
-                key=lambda a: _score_with_source(a)[0],
-                reverse=True,
-            )
-
-            entries = []
-            for rank_idx, asset in enumerate(sorted_cands[:top_n], 1):
-                sort_score, sort_source = _score_with_source(asset)
-
-                is_selected = any(
-                    str(asset.get(k, "")) in selected_ids
-                    for k in ["id", "ticker", "symbol", "name", "etfsymbol"]
-                )
-
-                # Ticker: ETF uses etfsymbol, equity uses ticker
-                ticker = (
-                    asset.get("etfsymbol") or asset.get("ticker")
-                    or asset.get("symbol") or ""
-                )
-
-                entry = {
-                    "rank": rank_idx,
-                    "name": asset.get("name") or ticker or "Unknown",
-                    "ticker": ticker,
-                    "sort_score": self._safe_round(sort_score, 4),
-                    "sort_score_source": sort_source,
-                    "selected": is_selected,
-                }
-
-                # Composite
-                cs = asset.get("composite_score") or asset.get("_composite_score")
-                if cs is not None:
-                    try:
-                        entry["composite_score"] = round(float(cs), 4)
-                    except (TypeError, ValueError):
-                        pass
-
-                # Profile score
-                ps = asset.get("_profile_score")
-                if ps is not None:
-                    try:
-                        entry["profile_score"] = round(float(ps), 4)
-                    except (TypeError, ValueError):
-                        pass
-
-                # Buffett (equity only)
-                if category == "equity":
-                    bs = asset.get("_buffett_score") or asset.get("buffett_score")
-                    if bs is not None:
-                        try:
-                            entry["buffett_score"] = round(float(bs), 1)
-                        except (TypeError, ValueError):
-                            pass
-
-                # Rejection reason
-                if not is_selected:
-                    rejection_info = self._find_rejection(asset)
-                    if rejection_info:
-                        entry["rejection_reason"] = rejection_info.get("reason", "")
-                    else:
-                        entry["rejection_reason"] = self._deduce_rejection_reason(
-                            asset, category, sort_source
-                        )
-
-                # === COMMON FIELDS ===
-                # Sector
-                if category == "etf":
-                    entry["sector"] = extract_etf_sector(asset) or ""
-                else:
-                    entry["sector"] = asset.get("sector") or asset.get("_sector_key") or ""
-                entry["country"] = asset.get("country") or ""
-
-                # Volatility
-                for vk in ["vol", "volatility_3y", "vol_3y", "vol_pct",
-                            "vol_30d_annual_pct", "vol_7d_annual_pct",
-                            "vol_3y_pct"]:
-                    v = asset.get(vk)
-                    if v is not None:
-                        try:
-                            entry["volatility"] = round(float(v), 1)
-                            break
-                        except (TypeError, ValueError):
-                            pass
-
-                # YTD
-                ytd_val = (asset.get("ytd") or asset.get("perf_ytd")
-                           or asset.get("ytd_return_pct"))
-                if ytd_val is not None:
-                    entry["ytd"] = f"{ytd_val}%" if isinstance(ytd_val, (int, float)) else str(ytd_val)
-
-                # === CATEGORY-SPECIFIC FIELDS ===
-                if category == "equity":
-                    mcap = asset.get("market_cap")
-                    if mcap:
-                        entry["market_cap"] = self._format_market_cap(mcap)
-                    roe = asset.get("roe")
-                    if roe is not None:
-                        entry["roe"] = f"{roe}%" if isinstance(roe, (int, float)) else str(roe)
-                    dy = asset.get("dividend_yield")
-                    if dy is not None:
-                        try:
-                            entry["dividend_yield"] = f"{float(dy):.2f}%"
-                        except (TypeError, ValueError):
-                            entry["dividend_yield"] = str(dy)
-
-                elif category == "etf":
-                    # TER
-                    ter = asset.get("total_expense_ratio") or asset.get("ter")
-                    if ter is not None:
-                        try:
-                            entry["ter"] = round(float(ter), 4)
-                        except (TypeError, ValueError):
-                            pass
-                    # AUM
-                    aum = asset.get("aum_usd") or asset.get("aum")
-                    if aum is not None:
-                        entry["aum"] = self._format_market_cap(aum)
-                    # Yield
-                    yld = asset.get("yield_ttm")
-                    if yld is not None:
-                        try:
-                            entry["yield_ttm"] = round(float(yld), 2)
-                        except (TypeError, ValueError):
-                            pass
-                    # Role / Risk / Correlation group (from preset_etf.py)
-                    role = asset.get("_role")
-                    if role:
-                        entry["role"] = str(role)
-                    risk = asset.get("_risk")
-                    if risk:
-                        entry["risk"] = str(risk)
-                    corr = asset.get("_correlation_group")
-                    if corr:
-                        entry["correlation_group"] = str(corr)
-                    # Momentum
-                    for mk in ["perf_3m_pct", "perf_1m_pct"]:
-                        mv = asset.get(mk)
-                        if mv is not None:
-                            try:
-                                entry["momentum_3m" if "3m" in mk else "momentum_1m"] = round(float(mv), 2)
-                            except (TypeError, ValueError):
-                                pass
-
-                entries.append(entry)
-
-            preset_rankings[preset_name] = entries
-
-        # Store per-category (nested dict)
+        # Guard-rail
+        total = len(all_candidates)
+        nc = len(by_preset.get("non_classé", []))
+        if total > 0 and nc / total > 0.8:
+            w = f"🚨 [{category}] {nc/total:.0%} des assets ({nc}/{total}) sont non_classé – probable HAS_MODULAR_SELECTORS=False ou import manquant dans portfolio_engine/__init__.py"
+            logger.warning(w)
+            self.report.anomaly_warnings.append(w)
+        preset_rankings = {}
+        for pname, cands in sorted(by_preset.items()):
+            sc = sorted(cands, key=lambda a: _score_with_source(a)[0], reverse=True)
+            preset_rankings[pname] = [self._build_ranking_entry(i, a, category, selected_ids, include_etf_extras=(category == "etf")) for i, a in enumerate(sc[:top_n], 1)]
         if not isinstance(self.report.preset_rankings, dict):
             self.report.preset_rankings = {}
         self.report.preset_rankings[category] = preset_rankings
+        parts = [f"{p}: {len(e)} ({sum(1 for x in e if x.get('selected'))} sel)" for p, e in sorted(preset_rankings.items())]
+        logger.info(f"📊 Audit v1.6.0: {category} preset_rankings – {len(preset_rankings)} presets: " + ", ".join(parts))
 
-        # Log summary
-        summary_parts = []
-        for pname, pentries in sorted(preset_rankings.items()):
-            n_sel = sum(1 for e in pentries if e.get("selected"))
-            summary_parts.append(f"{pname}: {len(pentries)} ({n_sel} sel)")
-        logger.info(
-            f"📊 Audit v1.5.2: {category} preset_rankings – "
-            f"{len(preset_rankings)} presets: " + ", ".join(summary_parts)
-        )
+    # ============= REJECTION LOOKUP =============
 
-    # ============= END v1.5.2 =============
-    
-    def record_final_selection(
-        self,
-        selected: List[Dict],
-        all_candidates: List[Dict],
-        category: str = "equity",
-        top_selected: int = 50,
-        top_rejected: int = 50,
-    ):
-        """Record final selection with rankings."""
-        selected_ids = {self._get_asset_id(a) for a in selected}
-        
-        # Build selected list with rankings
-        selected_entries = []
+    def _find_rejection(self, asset, category=""):
+        for cat in [category, ""]:
+            uid = self._uid(asset, cat)
+            if uid in self._rejections:
+                return self._rejections[uid]
+        for key in ["id", "ticker", "symbol", "name"]:
+            val = asset.get(key)
+            if val and val in self._rejections:
+                return self._rejections[val]
+        return None
+
+    def _deduce_rejection_reason(self, asset, category, sort_source):
+        has_composite = asset.get("composite_score") is not None or asset.get("_composite_score") is not None
+        has_profile = asset.get("_profile_score") is not None
+        if category == "equity" and not has_composite and not has_profile:
+            reasons = []
+            vol = asset.get("vol") or asset.get("volatility_3y") or asset.get("vol_3y")
+            if vol is None:
+                reasons.append("Volatilité manquante → rejeté par hard filters")
+            else:
+                try:
+                    vf = float(str(vol).replace("%", ""))
+                    if vf < 1 or vf > 120: reasons.append(f"Volatilité aberrante ({vf}%)")
+                except (TypeError, ValueError): reasons.append("Volatilité non parsable")
+            roe = asset.get("roe")
+            if roe is None or str(roe).upper() in ["N/A", "NAN", "NONE", ""]:
+                reasons.append("ROE manquant → rejeté par hard filters")
+            for label, key in [("Dividend yield","dividend_yield"),("Payout ratio","payout_ratio"),("Dividend coverage","dividend_coverage")]:
+                if asset.get(key) is None: reasons.append(f"{label} manquant")
+            if reasons: return "Hard filter (données manquantes): " + "; ".join(reasons[:3])
+            return "Éjecté par hard filters du profil (hors range vol/ROE)"
+        if category in ["etf", "bond", "crypto"] and not has_composite:
+            return "Pas de composite_score → non scoré (filtré avant scoring)"
+        if has_composite or has_profile:
+            score = asset.get("_profile_score") or asset.get("composite_score") or asset.get("_composite_score")
+            if score is not None:
+                try: return f"Score composite ({float(score):.3f}) insuffisant pour le quota"
+                except (TypeError, ValueError): pass
+        if sort_source and "buffett" in sort_source:
+            return f"Classé par {sort_source} uniquement → probablement filtré par hard filters"
+        return "Non sélectionné (raison non tracée)"
+
+    # ============= FINAL SELECTION + REPORT =============
+
+    def record_final_selection(self, selected, all_candidates, category="equity", top_selected=50, top_rejected=50):
+        selected_ids = {self._uid(a, category) for a in selected}
+        sel_entries = []
         for i, asset in enumerate(selected[:top_selected], 1):
             entry = self._create_audit_entry(asset, category)
             entry["selected"] = True
             entry["ranking"] = i
             entry["selection_reason"] = self._get_selection_reason(asset, category)
-            selected_entries.append(entry)
-        
-        # Build rejected list
-        rejected = [a for a in all_candidates if self._get_asset_id(a) not in selected_ids]
+            sel_entries.append(entry)
+        rejected = [a for a in all_candidates if self._uid(a, category) not in selected_ids]
         rejected_sorted = self._sort_by_importance(rejected, category)
-        
-        rejected_entries = []
+        rej_entries = []
         for asset in rejected_sorted[:top_rejected]:
             entry = self._create_audit_entry(asset, category)
             entry["selected"] = False
-            
-            asset_id = self._get_asset_id(asset)
-            if asset_id in self._rejections:
-                entry["rejection_reason"] = self._rejections[asset_id]["reason"]
-                entry["rejection_filter"] = self._rejections[asset_id]["filter"]
-                if "details" in self._rejections[asset_id]:
-                    entry["rejection_details"] = [
-                        explain_hard_filter_reason(r) 
-                        for r in self._rejections[asset_id]["details"]
-                    ]
+            uid = self._uid(asset, category)
+            if uid in self._rejections:
+                entry["rejection_reason"] = self._rejections[uid]["reason"]
+                entry["rejection_filter"] = self._rejections[uid]["filter"]
+                if "details" in self._rejections[uid]:
+                    entry["rejection_details"] = [explain_hard_filter_reason(r) for r in self._rejections[uid]["details"]]
             else:
                 entry["rejection_reason"] = "Non sélectionné (score insuffisant ou quota atteint)"
-            
-            rejected_entries.append(entry)
-        
-        # Store in report
-        if category == "equity":
-            self.report.equities_selected = selected_entries
-            self.report.equities_rejected = rejected_entries
-        elif category == "etf":
-            self.report.etf_selected = selected_entries
-            self.report.etf_rejected = rejected_entries
-        elif category == "crypto":
-            self.report.crypto_selected = selected_entries
-            self.report.crypto_rejected = rejected_entries
-        elif category == "bond":
-            self.report.bonds_selected = selected_entries
-            self.report.bonds_rejected = rejected_entries
-        
-        # v1.5.0: Also record the full category ranking
-        self.record_category_ranking(
-            category=category,
-            all_candidates=all_candidates,
-            selected=selected,
-        )
-        
-        logger.info(
-            f"📊 Audit: {category} final - "
-            f"{len(selected_entries)} selected, {len(rejected_entries)} notable rejected"
-        )
-    
-    def generate_report(self) -> SelectionAuditReport:
-        """Generate the final audit report."""
+            rej_entries.append(entry)
+        _MAP = {"equity":("equities_selected","equities_rejected"),"etf":("etf_selected","etf_rejected"),"crypto":("crypto_selected","crypto_rejected"),"bond":("bonds_selected","bonds_rejected")}
+        sa, ra = _MAP.get(category, ("equities_selected","equities_rejected"))
+        setattr(self.report, sa, sel_entries)
+        setattr(self.report, ra, rej_entries)
+        self.record_category_ranking(category, all_candidates, selected)
+        logger.info(f"📊 Audit: {category} final - {len(sel_entries)} selected, {len(rej_entries)} notable rejected")
+
+    def generate_report(self):
         self.report.summary = {
             "equities_initial": self._stage_counts.get("equity_initial", 0),
             "equities_selected": len(self.report.equities_selected),
@@ -1438,507 +869,163 @@ class SelectionAuditor:
             "bonds_initial": self._stage_counts.get("bond_initial", 0),
             "bonds_selected": len(self.report.bonds_selected),
             "total_filters_applied": len(self.report.filters_applied),
-            # v1.4.0: Add ETF scoring issues count
-            "etf_scoring_issues": sum(
-                len(d.get("issues", [])) 
-                for d in self.report.etf_scoring_debug.values()
-            ),
-            # v1.5.0: Category rankings summary
-            "category_rankings_sizes": {
-                cat: len(entries) 
-                for cat, entries in self.report.category_rankings.items()
-            },
-            # v1.5.2: Preset rankings summary (nested by category)
-            "preset_rankings_sizes": {
-                cat: {
-                    preset: {
-                        "total": len(entries),
-                        "selected": sum(1 for e in entries if e.get("selected")),
-                    }
-                    for preset, entries in presets.items()
-                }
-                for cat, presets in self.report.preset_rankings.items()
-                if isinstance(presets, dict)
-            },
+            "etf_scoring_issues": sum(len(d.get("issues",[])) for d in self.report.etf_scoring_debug.values()),
+            "category_rankings_sizes": {c: len(e) for c, e in self.report.category_rankings.items()},
+            "preset_rankings_sizes": {c: {p: {"total": len(e), "selected": sum(1 for x in e if x.get("selected"))} for p, e in ps.items()} for c, ps in self.report.preset_rankings.items() if isinstance(ps, dict)},
+            "anomaly_warnings_count": len(self.report.anomaly_warnings),
         }
-        
         return self.report
-    
-    def save_report(self, output_path: str = "data/selection_audit.json"):
-        """Save the report to JSON file."""
+
+    def save_report(self, output_path="data/selection_audit.json"):
         report = self.generate_report()
-        
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(report.to_dict(), f, ensure_ascii=False, indent=2)
-        
         logger.info(f"✅ Selection audit saved: {output_path}")
         return output_path
-    
+
     # === Private helpers ===
-    
-    def _get_asset_id(self, asset: Dict) -> str:
-        """Get unique identifier for an asset."""
-        return (
-            asset.get("id") or 
-            asset.get("ticker") or 
-            asset.get("symbol") or 
-            asset.get("name") or 
-            str(id(asset))
-        )
-    
-    def _enrich_asset(self, asset: Dict, category: str) -> Dict:
-        """Enrich asset with category info."""
-        asset = asset.copy()
-        asset["_category"] = category
-        return asset
-    
-    def _create_audit_entry(self, asset: Dict, category: str) -> Dict:
-        """
-        Create audit entry from raw asset data.
-        
-        v1.3.1: Added composite_score fix and factor_scores for ETF/bond/crypto.
-        """
-        entry = {
-            "name": asset.get("name") or asset.get("ticker") or "Unknown",
-            "ticker": asset.get("ticker") or asset.get("symbol"),
-            "category": category,
-        }
-        
-        # v1.3.0: Profile info
-        if asset.get("_matched_preset"):
-            entry["matched_preset"] = asset["_matched_preset"]
-        
-        # Scores
-        if asset.get("_buffett_score") is not None:
-            entry["buffett_score"] = round(asset["_buffett_score"], 1)
-        elif asset.get("buffett_score") is not None:
-            entry["buffett_score"] = round(asset["buffett_score"], 1)
-        
-        # v1.3.1 FIX: Check both composite_score and _composite_score
+
+    def _enrich_asset(self, asset, category):
+        a = asset.copy()
+        a["_category"] = category
+        return a
+
+    def _create_audit_entry(self, asset, category):
+        entry = {"name": asset.get("name") or asset.get("ticker") or "Unknown", "ticker": asset.get("ticker") or asset.get("symbol"), "category": category}
+        if asset.get("_matched_preset"): entry["matched_preset"] = asset["_matched_preset"]
+        if asset.get("_buffett_score") is not None: entry["buffett_score"] = round(asset["_buffett_score"], 1)
+        elif asset.get("buffett_score") is not None: entry["buffett_score"] = round(asset["buffett_score"], 1)
         composite = asset.get("composite_score") or asset.get("_composite_score")
         if composite is not None:
-            try:
-                entry["composite_score"] = round(float(composite), 3)
-            except (TypeError, ValueError):
-                pass
-        
-        if asset.get("_profile_score") is not None:
-            entry["profile_score"] = round(asset["_profile_score"], 3)
-        if asset.get("_momentum_score") is not None:
-            entry["momentum_score"] = round(asset["_momentum_score"], 2)
-        if asset.get("_quality_score") is not None:
-            entry["quality_score"] = round(asset["_quality_score"], 2)
-        
-        # v1.3.1: Add factor_scores for ETF/Bond/Crypto
+            try: entry["composite_score"] = round(float(composite), 3)
+            except (TypeError, ValueError): pass
+        if asset.get("_profile_score") is not None: entry["profile_score"] = round(asset["_profile_score"], 3)
+        if asset.get("_momentum_score") is not None: entry["momentum_score"] = round(asset["_momentum_score"], 2)
+        if asset.get("_quality_score") is not None: entry["quality_score"] = round(asset["_quality_score"], 2)
         if category in ["etf", "bond", "crypto"]:
-            factor_scores = asset.get("factor_scores") or {}
-            if factor_scores and isinstance(factor_scores, dict):
-                entry["factor_scores"] = {
-                    k: round(float(v), 3) for k, v in factor_scores.items() 
-                    if v is not None and k not in ["_meta"]
-                }
-            
-            # v1.3.1: Bond-specific metrics
+            fs = asset.get("factor_scores") or {}
+            if fs and isinstance(fs, dict): entry["factor_scores"] = {k: round(float(v), 3) for k, v in fs.items() if v is not None and k != "_meta"}
             if category == "bond":
-                if asset.get("bond_quality_raw") is not None:
-                    try:
-                        entry["bond_quality_raw"] = round(float(asset["bond_quality_raw"]), 1)
-                    except (TypeError, ValueError):
-                        pass
-                if asset.get("bond_risk_bucket"):
-                    entry["bond_risk_bucket"] = str(asset["bond_risk_bucket"])
-                # Credit rating
-                if asset.get("credit_rating"):
-                    entry["credit_rating"] = str(asset["credit_rating"])
-                # Duration
-                if asset.get("duration") is not None:
-                    try:
-                        entry["duration"] = round(float(asset["duration"]), 2)
-                    except (TypeError, ValueError):
-                        pass
-            
-            # v1.3.1: ETF-specific metrics
+                if asset.get("bond_quality_raw") is not None: entry["bond_quality_raw"] = _safe_round(asset["bond_quality_raw"], 1)
+                if asset.get("bond_risk_bucket"): entry["bond_risk_bucket"] = str(asset["bond_risk_bucket"])
+                if asset.get("credit_rating"): entry["credit_rating"] = str(asset["credit_rating"])
+                if asset.get("duration") is not None: entry["duration"] = _safe_round(asset["duration"], 2)
             if category == "etf":
-                if asset.get("ter") is not None:
-                    try:
-                        entry["ter"] = round(float(asset["ter"]), 3)
-                    except (TypeError, ValueError):
-                        pass
-                if asset.get("aum"):
-                    entry["aum"] = self._format_market_cap(asset["aum"])
-                if asset.get("tracking_error") is not None:
-                    try:
-                        entry["tracking_error"] = round(float(asset["tracking_error"]), 3)
-                    except (TypeError, ValueError):
-                        pass
-            
-            # v1.3.1: Crypto-specific metrics
+                if asset.get("ter") is not None: entry["ter"] = _safe_round(asset["ter"], 3)
+                if asset.get("aum"): entry["aum"] = _format_market_cap(asset["aum"])
+                if asset.get("tracking_error") is not None: entry["tracking_error"] = _safe_round(asset["tracking_error"], 3)
             if category == "crypto":
-                for vol_key in ["vol_30d_annual_pct", "vol_7d_annual_pct", "vol_pct"]:
-                    if asset.get(vol_key) is not None:
-                        try:
-                            entry["volatility"] = round(float(asset[vol_key]), 1)
-                            break
-                        except (TypeError, ValueError):
-                            pass
-                if asset.get("market_cap"):
-                    entry["market_cap"] = self._format_market_cap(asset["market_cap"])
-        
-        # Metrics (for equities primarily, but also general)
+                for vk in ["vol_30d_annual_pct", "vol_7d_annual_pct", "vol_pct"]:
+                    if asset.get(vk) is not None: entry["volatility"] = _safe_round(asset[vk], 1); break
+                if asset.get("market_cap"): entry["market_cap"] = _format_market_cap(asset["market_cap"])
         if asset.get("roe"):
             roe = asset["roe"]
             entry["roe"] = f"{roe}%" if isinstance(roe, (int, float)) else str(roe)
-        
-        if asset.get("de_ratio") is not None:
-            try:
-                entry["de_ratio"] = round(float(asset["de_ratio"]), 2)
-            except (TypeError, ValueError):
-                pass
-        
-        if asset.get("market_cap") and "market_cap" not in entry:
-            entry["market_cap"] = self._format_market_cap(asset["market_cap"])
-        
-        if asset.get("aum") and "aum" not in entry:
-            entry["aum"] = self._format_market_cap(asset["aum"])
-        
-        # Volatility - check multiple fields
+        if asset.get("de_ratio") is not None: entry["de_ratio"] = _safe_round(asset["de_ratio"], 2)
+        if asset.get("market_cap") and "market_cap" not in entry: entry["market_cap"] = _format_market_cap(asset["market_cap"])
+        if asset.get("aum") and "aum" not in entry: entry["aum"] = _format_market_cap(asset["aum"])
         if "volatility" not in entry:
-            for vol_key in ["vol", "volatility_3y", "vol_3y", "vol_3y_pct", "vol_pct"]:
-                vol = asset.get(vol_key)
-                if vol is not None:
-                    try:
-                        entry["volatility"] = round(float(vol), 1)
-                        break
-                    except (TypeError, ValueError):
-                        pass
-        
+            for vk in ["vol", "volatility_3y", "vol_3y", "vol_3y_pct", "vol_pct"]:
+                if asset.get(vk) is not None: entry["volatility"] = _safe_round(asset[vk], 1); break
         if asset.get("ytd") or asset.get("perf_ytd"):
             ytd = asset.get("ytd") or asset.get("perf_ytd")
             entry["ytd"] = f"{ytd}%" if isinstance(ytd, (int, float)) else str(ytd)
-        
-        # v1.3.0: Yield trap metrics
-        if asset.get("dividend_yield") is not None:
-            try:
-                entry["dividend_yield"] = round(float(asset["dividend_yield"]), 2)
-            except (TypeError, ValueError):
-                pass
-        if asset.get("payout_ratio") is not None:
-            try:
-                entry["payout_ratio"] = round(float(asset["payout_ratio"]), 1)
-            except (TypeError, ValueError):
-                pass
-        if asset.get("dividend_coverage") is not None:
-            try:
-                entry["dividend_coverage"] = round(float(asset["dividend_coverage"]), 2)
-            except (TypeError, ValueError):
-                pass
-        
-        # Sector
-        if category == "etf":
-            sector_raw = extract_etf_sector(asset)
-        else:
-            sector_raw = asset.get("sector") or asset.get("_sector_key") or ""
-        
+        for mk in ["dividend_yield", "payout_ratio", "dividend_coverage"]:
+            val = asset.get(mk)
+            if val is not None: entry[mk] = _safe_round(val, 2 if mk != "payout_ratio" else 1)
+        sector_raw = extract_etf_sector(asset) if category == "etf" else asset.get("sector") or asset.get("_sector_key") or ""
         entry["sector"] = sector_raw if sector_raw else None
         entry["country"] = asset.get("country")
-        
-        # RADAR tilt
         if self.report.radar_context:
-            region_raw = entry.get("country") or ""
-            sector_normalized = normalize_sector_for_tilts(sector_raw) if sector_raw else ""
-            region_normalized = normalize_region_for_tilts(region_raw)
-            
-            favored_sectors = self.report.radar_context.get("favored_sectors", [])
-            avoided_sectors = self.report.radar_context.get("avoided_sectors", [])
-            favored_regions = self.report.radar_context.get("favored_regions", [])
-            avoided_regions = self.report.radar_context.get("avoided_regions", [])
-            
-            sector_tilt = "neutral"
-            region_tilt = "neutral"
-            
-            if sector_normalized and sector_normalized in favored_sectors:
-                sector_tilt = "favored"
-            elif sector_normalized and sector_normalized in avoided_sectors:
-                sector_tilt = "avoided"
-            
-            if region_normalized and region_normalized in favored_regions:
-                region_tilt = "favored"
-            elif region_normalized and region_normalized in avoided_regions:
-                region_tilt = "avoided"
-            
-            if sector_tilt == "favored" or region_tilt == "favored":
-                entry["radar_tilt"] = "favored"
-            elif sector_tilt == "avoided" or region_tilt == "avoided":
-                entry["radar_tilt"] = "avoided"
-            else:
-                entry["radar_tilt"] = "neutral"
-        
+            sn = normalize_sector_for_tilts(sector_raw) if sector_raw else ""
+            rn = normalize_region_for_tilts(entry.get("country") or "")
+            fs_list = self.report.radar_context.get("favored_sectors", [])
+            as_list = self.report.radar_context.get("avoided_sectors", [])
+            fr_list = self.report.radar_context.get("favored_regions", [])
+            ar_list = self.report.radar_context.get("avoided_regions", [])
+            st = "favored" if sn in fs_list else ("avoided" if sn in as_list else "neutral")
+            rt = "favored" if rn in fr_list else ("avoided" if rn in ar_list else "neutral")
+            entry["radar_tilt"] = "favored" if "favored" in (st,rt) else ("avoided" if "avoided" in (st,rt) else "neutral")
         return {k: v for k, v in entry.items() if v is not None}
-    
-    def _get_selection_reason(self, asset: Dict, category: str) -> str:
-        """Generate selection reason based on scores."""
+
+    def _get_selection_reason(self, asset, category):
         reasons = []
-        
-        buffett = asset.get("_buffett_score") or asset.get("buffett_score")
-        if buffett and buffett >= 70:
-            reasons.append(f"Qualité Buffett excellente ({buffett:.0f})")
-        elif buffett and buffett >= 50:
-            reasons.append(f"Qualité Buffett solide ({buffett:.0f})")
-        
-        profile_score = asset.get("_profile_score")
-        if profile_score and profile_score >= 0.7:
-            reasons.append(f"Score profil élevé ({profile_score:.2f})")
-        
+        b = asset.get("_buffett_score") or asset.get("buffett_score")
+        if b and b >= 70: reasons.append(f"Qualité Buffett excellente ({b:.0f})")
+        elif b and b >= 50: reasons.append(f"Qualité Buffett solide ({b:.0f})")
+        ps = asset.get("_profile_score")
+        if ps and ps >= 0.7: reasons.append(f"Score profil élevé ({ps:.2f})")
         preset = asset.get("_matched_preset")
-        if preset:
-            reasons.append(f"Preset: {preset}")
-        
-        composite = asset.get("composite_score") or asset.get("_composite_score")
-        if composite is not None and category in ["etf", "bond", "crypto"]:
+        if preset: reasons.append(f"Preset: {preset}")
+        c = asset.get("composite_score") or asset.get("_composite_score")
+        if c is not None and category in ["etf","bond","crypto"]:
             try:
-                composite_val = float(composite)
-                if composite_val >= 0.3:
-                    reasons.append(f"Score composite élevé ({composite_val:.2f})")
-                elif composite_val >= 0:
-                    reasons.append(f"Score composite positif ({composite_val:.2f})")
-            except (TypeError, ValueError):
-                pass
-        
+                cv = float(c)
+                if cv >= 0.3: reasons.append(f"Score composite élevé ({cv:.2f})")
+                elif cv >= 0: reasons.append(f"Score composite positif ({cv:.2f})")
+            except (TypeError, ValueError): pass
         if category == "bond" and asset.get("bond_quality_raw"):
             try:
                 bq = float(asset["bond_quality_raw"])
-                if bq >= 70:
-                    reasons.append(f"Qualité obligataire excellente ({bq:.0f})")
-                elif bq >= 50:
-                    reasons.append(f"Qualité obligataire solide ({bq:.0f})")
-            except (TypeError, ValueError):
-                pass
-        
+                if bq >= 70: reasons.append(f"Qualité obligataire excellente ({bq:.0f})")
+                elif bq >= 50: reasons.append(f"Qualité obligataire solide ({bq:.0f})")
+            except (TypeError, ValueError): pass
         roe = asset.get("roe")
         if roe:
             try:
-                roe_val = float(str(roe).replace("%", ""))
-                if roe_val >= 20:
-                    reasons.append(f"ROE élevé ({roe_val:.0f}%)")
-            except:
-                pass
-        
+                rv = float(str(roe).replace("%",""))
+                if rv >= 20: reasons.append(f"ROE élevé ({rv:.0f}%)")
+            except (TypeError, ValueError): pass
         if self.report.radar_context:
-            if category == "etf":
-                sector_raw = extract_etf_sector(asset)
-            else:
-                sector_raw = asset.get("sector") or asset.get("_sector_key") or ""
-            
-            region_raw = asset.get("country") or ""
-            
-            sector_normalized = normalize_sector_for_tilts(sector_raw) if sector_raw else ""
-            region_normalized = normalize_region_for_tilts(region_raw)
-            
-            favored_sectors = self.report.radar_context.get("favored_sectors", [])
-            favored_regions = self.report.radar_context.get("favored_regions", [])
-            
-            if sector_normalized in favored_sectors:
-                reasons.append(f"Secteur favorisé RADAR ({sector_normalized})")
-            if region_normalized in favored_regions:
-                reasons.append(f"Région favorisée RADAR ({region_normalized})")
-        
-        momentum = asset.get("_momentum_score")
-        if momentum and momentum > 0.7:
-            reasons.append("Momentum fort")
-        
-        if not reasons:
-            reasons.append("Score composite favorable")
-        
-        return "; ".join(reasons)
-    
-    def _get_rejection_reason(self, asset: Dict, filter_name: str) -> str:
-        """Get rejection reason for an asset."""
-        if asset.get("_rejection_reason"):
-            return asset["_rejection_reason"]
-        
-        if asset.get("_buffett_reject_reason"):
-            return asset["_buffett_reject_reason"]
-        
-        if filter_name == "buffett":
-            score = asset.get("_buffett_score") or 0
-            return f"Score Buffett insuffisant ({score:.0f})"
-        
-        if filter_name == "volatility":
-            vol = asset.get("vol") or asset.get("volatility_3y") or 0
-            return f"Volatilité trop élevée ({vol}%)"
-        
-        if filter_name == "liquidity":
-            mcap = asset.get("market_cap") or "N/A"
-            return f"Liquidité insuffisante (Market cap: {mcap})"
-        
-        return f"Filtré par {filter_name}"
-    
-    def _sort_by_importance(self, assets: List[Dict], category: str) -> List[Dict]:
-        """Sort assets by importance."""
-        def get_sort_key(asset):
-            if category in ["equity", "crypto"]:
-                mcap = asset.get("market_cap") or "0"
-                return self._parse_market_cap(mcap)
-            elif category in ["etf", "bond"]:
-                aum = asset.get("aum") or asset.get("market_cap") or "0"
-                return self._parse_market_cap(aum)
-            return 0
-        
-        return sorted(assets, key=get_sort_key, reverse=True)
-    
-    def _parse_market_cap(self, value) -> float:
-        """Parse market cap string to float for sorting."""
-        if isinstance(value, (int, float)):
-            return float(value)
-        
-        if not isinstance(value, str):
-            return 0
-        
-        value = value.upper().strip()
-        
-        multipliers = {"T": 1e12, "B": 1e9, "M": 1e6, "K": 1e3}
-        
-        for suffix, mult in multipliers.items():
-            if suffix in value:
-                try:
-                    num = float(value.replace(suffix, "").replace("$", "").replace(",", "").strip())
-                    return num * mult
-                except:
-                    return 0
-        
-        try:
-            return float(value.replace("$", "").replace(",", ""))
-        except:
-            return 0
-    
-    def _format_market_cap(self, value) -> str:
-        """Format market cap for display."""
-        if isinstance(value, str):
-            return value
-        
-        if isinstance(value, (int, float)):
-            if value >= 1e12:
-                return f"{value/1e12:.1f}T"
-            elif value >= 1e9:
-                return f"{value/1e9:.1f}B"
-            elif value >= 1e6:
-                return f"{value/1e6:.1f}M"
-            else:
-                return f"{value:.0f}"
-        
-        return str(value)
+            sr = extract_etf_sector(asset) if category == "etf" else asset.get("sector") or asset.get("_sector_key") or ""
+            rr = asset.get("country") or ""
+            sn = normalize_sector_for_tilts(sr) if sr else ""
+            rn = normalize_region_for_tilts(rr)
+            if sn in self.report.radar_context.get("favored_sectors",[]): reasons.append(f"Secteur favorisé RADAR ({sn})")
+            if rn in self.report.radar_context.get("favored_regions",[]): reasons.append(f"Région favorisée RADAR ({rn})")
+        m = asset.get("_momentum_score")
+        if m and m > 0.7: reasons.append("Momentum fort")
+        return "; ".join(reasons) if reasons else "Score composite favorable"
+
+    def _get_rejection_reason(self, asset, filter_name):
+        if asset.get("_rejection_reason"): return asset["_rejection_reason"]
+        if asset.get("_buffett_reject_reason"): return asset["_buffett_reject_reason"]
+        m = {"buffett": lambda a: f"Score Buffett insuffisant ({a.get('_buffett_score',0):.0f})", "volatility": lambda a: f"Volatilité trop élevée ({a.get('vol') or a.get('volatility_3y',0)}%)", "liquidity": lambda a: f"Liquidité insuffisante (Market cap: {a.get('market_cap','N/A')})"}
+        return m[filter_name](asset) if filter_name in m else f"Filtré par {filter_name}"
+
+    def _sort_by_importance(self, assets, category):
+        def key(a):
+            if category in ["equity","crypto"]: return _parse_market_cap(a.get("market_cap") or "0")
+            return _parse_market_cap(a.get("aum") or a.get("market_cap") or "0")
+        return sorted(assets, key=key, reverse=True)
 
 
-# === Convenience function for integration ===
+# === Convenience function ===
 
-def create_selection_audit(
-    config: Dict,
-    equities_initial: List[Dict],
-    equities_after_buffett: List[Dict],
-    equities_final: List[Dict],
-    etf_data: List[Dict] = None,
-    etf_selected: List[Dict] = None,
-    crypto_data: List[Dict] = None,
-    crypto_selected: List[Dict] = None,
-    bonds_data: List[Dict] = None,
-    bonds_selected: List[Dict] = None,
-    market_context: Dict = None,
-    profile_selections: Dict[str, Dict] = None,  # v1.3.0
-    etf_scoring_debug: Dict[str, Dict] = None,  # v1.4.0
-    output_path: str = "data/selection_audit.json",
-) -> str:
-    """
-    Convenience function to create audit report in one call.
-    
-    v1.5.0: category_rankings auto-generated for every category.
-    v1.4.0: Added etf_scoring_debug for flat score debugging.
-    v1.3.0: Added profile_selections for per-profile tracking.
-    
-    Returns:
-        Path to saved report
-    """
+def create_selection_audit(config, equities_initial, equities_after_buffett, equities_final, etf_data=None, etf_selected=None, crypto_data=None, crypto_selected=None, bonds_data=None, bonds_selected=None, market_context=None, profile_selections=None, etf_scoring_debug=None, output_path="data/selection_audit.json"):
+    """Convenience function to create audit report. v1.6.0: anomaly_warnings."""
     auditor = SelectionAuditor(config)
-    
-    if market_context:
-        auditor.set_radar_context(market_context)
-    
-    # Track equities
+    if market_context: auditor.set_radar_context(market_context)
     auditor.track_initial_universe(equities_initial, "equity")
-    auditor.track_buffett_filter(
-        before=equities_initial,
-        after=equities_after_buffett,
-        min_score=config.get("buffett_min_score", 40),
-    )
-    
-    # v1.3.0: Track profile-specific selections
+    auditor.track_buffett_filter(equities_initial, equities_after_buffett, config.get("buffett_min_score", 40))
     if profile_selections:
         for profile, data in profile_selections.items():
             if "before" in data and "after" in data:
-                auditor.track_profile_hard_filters(
-                    profile=profile,
-                    before=data["before"],
-                    after=data["after"],
-                    filter_stats=data.get("stats", {}),
-                )
+                auditor.track_profile_hard_filters(profile, data["before"], data["after"], data.get("stats", {}))
             if "selected" in data and "meta" in data:
-                auditor.record_profile_selection(
-                    profile=profile,
-                    selected=data["selected"],
-                    all_candidates=data.get("candidates", []),
-                    selection_meta=data["meta"],
-                )
-    
-    auditor.record_final_selection(
-        selected=equities_final,
-        all_candidates=equities_initial,
-        category="equity",
-        top_selected=50,
-        top_rejected=50,
-    )
-    
+                auditor.record_profile_selection(profile, data["selected"], data.get("candidates", []), data["meta"])
+    auditor.record_final_selection(equities_final, equities_initial, "equity", 50, 50)
     if etf_data:
         auditor.track_initial_universe(etf_data, "etf")
-        
-        # v1.4.0: Track ETF scoring debug
         if etf_scoring_debug:
-            for profile, debug_data in etf_scoring_debug.items():
-                auditor.track_etf_scoring_diagnostic(
-                    profile=profile,
-                    stage_counts=debug_data.get("stage_counts", {}),
-                    scoring_components=debug_data.get("scoring_components", {}),
-                    score_stats=debug_data.get("score_stats", {}),
-                    is_flat=debug_data.get("is_flat", False),
-                    scoring_method=debug_data.get("scoring_method", "unknown"),
-                )
-        
-        auditor.record_final_selection(
-            selected=etf_selected or [],
-            all_candidates=etf_data,
-            category="etf",
-            top_selected=30,
-            top_rejected=20,
-        )
-    
+            for p, d in etf_scoring_debug.items():
+                auditor.track_etf_scoring_diagnostic(p, d.get("stage_counts",{}), d.get("scoring_components",{}), d.get("score_stats",{}), d.get("is_flat",False), d.get("scoring_method","unknown"))
+        auditor.record_final_selection(etf_selected or [], etf_data, "etf", 30, 20)
     if crypto_data:
         auditor.track_initial_universe(crypto_data, "crypto")
-        auditor.record_final_selection(
-            selected=crypto_selected or [],
-            all_candidates=crypto_data,
-            category="crypto",
-            top_selected=10,
-            top_rejected=10,
-        )
-    
+        auditor.record_final_selection(crypto_selected or [], crypto_data, "crypto", 10, 10)
     if bonds_data:
         auditor.track_initial_universe(bonds_data, "bond")
-        auditor.record_final_selection(
-            selected=bonds_selected or [],
-            all_candidates=bonds_data,
-            category="bond",
-            top_selected=20,
-            top_rejected=10,
-        )
-    
+        auditor.record_final_selection(bonds_selected or [], bonds_data, "bond", 20, 10)
     return auditor.save_report(output_path)
