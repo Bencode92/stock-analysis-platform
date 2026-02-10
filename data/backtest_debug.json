@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-10T13:23:51.919951",
+    "generated_at": "2026-02-10T14:03:46.900901",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -753,8 +753,8 @@
       "first_date": "2025-10-14",
       "last_date": "2026-02-10",
       "first_price": 4176.9399,
-      "last_price": 5050.7798,
-      "total_return_pct": 20.92,
+      "last_price": 5056.2598,
+      "total_return_pct": 21.05,
       "volatility_annual_pct": 37.13,
       "weights_by_profile": {
         "Agressif": 8.5,
@@ -795,11 +795,11 @@
         },
         {
           "date": "2026-02-10",
-          "close": 5050.7798,
+          "close": 5056.2598,
           "prev_date": "2026-02-09",
           "prev_close": 5036.7002,
-          "daily_return_pct": 0.2795,
-          "formula": "(5050.7798 / 5036.7002) - 1"
+          "daily_return_pct": 0.3883,
+          "formula": "(5056.2598 / 5036.7002) - 1"
         }
       ],
       "is_benchmark": false
@@ -1549,8 +1549,8 @@
       "first_date": "2025-10-14",
       "last_date": "2026-02-10",
       "first_price": 4167.4,
-      "last_price": 5020.2,
-      "total_return_pct": 20.46,
+      "last_price": 5030.9,
+      "total_return_pct": 20.72,
       "volatility_annual_pct": 35.98,
       "weights_by_profile": {
         "Agressif": 1.5,
@@ -1591,11 +1591,11 @@
         },
         {
           "date": "2026-02-10",
-          "close": 5020.2,
+          "close": 5030.9,
           "prev_date": "2026-02-09",
           "prev_close": 5014.1,
-          "daily_return_pct": 0.1217,
-          "formula": "(5020.2000 / 5014.1000) - 1"
+          "daily_return_pct": 0.3351,
+          "formula": "(5030.9000 / 5014.1000) - 1"
         }
       ],
       "is_benchmark": false
@@ -1657,9 +1657,9 @@
           "type": "Action",
           "weight_pct": 8.5,
           "price_prev": 5036.7002,
-          "price_today": 5050.7798,
-          "return_pct": 0.2795,
-          "contribution_pct": 0.0238
+          "price_today": 5056.2598,
+          "return_pct": 0.3883,
+          "contribution_pct": 0.033
         },
         {
           "ticker": "VPL",
@@ -1698,7 +1698,7 @@
           "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": -0.1623,
+      "total_portfolio_return_pct": -0.153,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1856,22 +1856,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 25.78,
-      "net_return_pct": 25.78,
+      "gross_return_pct": 25.8,
+      "net_return_pct": 25.8,
       "volatility_pct": 22.79,
       "max_drawdown_pct": -6.55,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": -1.09,
-      "excess_return_pct": 26.87
+      "excess_return_pct": 26.89
     },
     "Modéré": {
-      "gross_return_pct": 12.79,
-      "net_return_pct": 12.79,
+      "gross_return_pct": 12.8,
+      "net_return_pct": 12.8,
       "volatility_pct": 10.46,
       "max_drawdown_pct": -3.43,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 3.01,
-      "excess_return_pct": 9.78
+      "excess_return_pct": 9.79
     },
     "Stable": {
       "gross_return_pct": 5.86,
