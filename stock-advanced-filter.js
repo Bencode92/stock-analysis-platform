@@ -1,5 +1,9 @@
 // stock-advanced-filter.js
-// Version 3.25 - Fix résolution tickers ambigus Euronext (CAP, BNP, OR...)
+// Version 3.25.1 - Fix résolution tickers ambigus Euronext + ajout country param
+// Changements v3.25.1:
+// - Ajout paramètre country dans tous les trials non-US (fix /quote, /time_series, /dividends pour CAP)
+// - Trials combinés exchange+mic_code+country pour désambiguïsation maximale
+// - Nouveau trial mic_code+country sans exchange (fallback intermédiaire)
 // Changements v3.25:
 // - Ajout 'EURONEXT' générique dans les variantes exchange pour tous les marchés Euronext
 // - Ajout trials combinés exchange+mic_code pour désambiguïser les tickers courts (CAP, BNP, OR...)
@@ -220,7 +224,7 @@ function micForRegion(stock) {
 }
 
 // ✅ CORRECTION v3.14: Priorisation MIC pour Europe
-// ✅ FIX v3.25: Ajout EURONEXT générique + trials combinés exchange+mic_code + bare symbol en dernier
+// ✅ FIX v3.25.1: Ajout EURONEXT générique + trials combinés exchange+mic_code+country + bare symbol en dernier
 // Construit la liste d'essais de paramètres selon la région
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     // si resolvedSym = "SYM:MIC", on récupère aussi le MIC
@@ -240,9 +244,11 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         if (mic) trials.push({ symbol: `${base}:${mic}` });  // dernier recours
     } else {
         // 🚀 PRIORITÉ MIC pour Europe/Asie (v3.14)
+        // ✅ v3.25.1: Ajout country pour désambiguïsation sur /quote, /time_series, /dividends
+        const country = stock?.country || null;
         if (mic) {
             trials.push({ symbol: `${base}:${mic}` });         // PRIORITÉ 1: suffixe SYM:MIC
-            trials.push({ symbol: base, mic_code: mic });      // PRIORITÉ 2: mic_code=
+            trials.push({ symbol: base, mic_code: mic, ...(country && { country }) });  // PRIORITÉ 2: mic_code + country
         }
         
         // variantes exchange= pour Europe/Asie (utiles sur /quote et /statistics)
@@ -264,14 +270,20 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         if (/nasdaq helsinki/.test(exLabel))                exVar.push('NASDAQ Helsinki');
         if (/taiwan/.test(exLabel))                         exVar.push('Taiwan Stock Exchange');
         
-        // ✅ v3.25: Combinaisons exchange + mic_code (haute priorité pour tickers ambigus: CAP, BNP, OR...)
+        // ✅ v3.25.1: Combinaisons exchange + mic_code + country (haute priorité pour tickers ambigus)
         if (mic) {
             for (const ex of exVar) {
-                trials.push({ symbol: base, exchange: ex, mic_code: mic });
+                trials.push({ symbol: base, exchange: ex, mic_code: mic, ...(country && { country }) });
             }
         }
         
         for (const ex of exVar) trials.push({ symbol: base, exchange: ex });
+        
+        // ✅ v3.25.1: Trial avec country seul (aide /quote et /time_series pour tickers ambigus)
+        if (country) {
+            trials.push({ symbol: base, country });
+            if (mic) trials.push({ symbol: base, mic_code: mic, country }); // mic + country sans exchange
+        }
         
         // ✅ v3.25: fallback nu EN DERNIER (risque de mauvaise résolution pour tickers ambigus)
         trials.push({ symbol: base });
@@ -1473,11 +1485,11 @@ async function enrichStock(stock) {
         perf_3y: perf.performances?.year_3 || null,
         
         // ✅ v3.22: Fondamentaux Buffett depuis CSV
-   roe: stock.roe,
-    de_ratio: stock.de_ratio,
-    roic: stock.roic,
-    buffett_score,
-    buffett_grade,
+        roe: stock.roe,
+        de_ratio: stock.de_ratio,
+        roic: stock.roic,
+        buffett_score,
+        buffett_grade,
         
         // ✅ v3.23: NOUVELLES MÉTRIQUES
         fcf_yield,                                        // FCF Yield en %
@@ -1659,7 +1671,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.25 - Fix tickers ambigus Euronext + ROE/D/E/ROIC)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.25.1 - Fix tickers ambigus Euronext + country param + ROE/D/E/ROIC)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
