@@ -825,6 +825,15 @@ class SelectionAuditor:
     # ============= FINAL SELECTION + REPORT =============
 
     def record_final_selection(self, selected, all_candidates, category="equity", top_selected=50, top_rejected=50):
+        # === DEBUG LOG 3: Vérifier ce que reçoit record_final_selection ===
+        if category == "equity":
+            _ac_ps = sum(1 for a in all_candidates if a.get("_profile_score") is not None)
+            _ac_bs = sum(1 for a in all_candidates if a.get("_buffett_score") is not None)
+            logger.info(f"🔍 DEBUG-3A: record_final_selection(equity): {len(selected)} selected, {len(all_candidates)} all_candidates")
+            logger.info(f"🔍 DEBUG-3B: all_candidates: {_ac_ps} _profile_score, {_ac_bs} _buffett_score")
+            if all_candidates:
+                _sc, _src = _score_with_source(all_candidates[0])
+                logger.info(f"🔍 DEBUG-3C: all_candidates[0] score={_sc:.4f}, source={_src}, name={all_candidates[0].get('name','?')[:30]}")
         selected_ids = {self._uid(a, category) for a in selected}
         sel_entries = []
         for i, asset in enumerate(selected[:top_selected], 1):
