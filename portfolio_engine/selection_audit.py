@@ -1015,7 +1015,7 @@ def create_selection_audit(config, equities_initial, equities_after_buffett, equ
                 auditor.track_profile_hard_filters(profile, data["before"], data["after"], data.get("stats", {}))
             if "selected" in data and "meta" in data:
                 auditor.record_profile_selection(profile, data["selected"], data.get("candidates", []), data["meta"])
-    auditor.record_final_selection(equities_final, equities_initial, "equity", 50, 50)
+    auditor.record_final_selection(equities_final, equities_after_buffett, "equity", 50, 50)
     if etf_data:
         auditor.track_initial_universe(etf_data, "etf")
         if etf_scoring_debug:
