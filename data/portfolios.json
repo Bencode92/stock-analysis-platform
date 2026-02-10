@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement agressive, avec une forte exposition aux actions et aux ETF diversifiés. Bien qu'il vise à générer des rendements élevés, il comporte des risques significatifs liés à la volatilité des marchés technologiques et aux fluctuations des devises. L'inclusion de crypto-monnaies ajoute également un niveau de risque supplémentaire. Il est essentiel de rester conscient des risques de perte en capital associés à cette approche. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive, avec une forte exposition aux actions et aux ETF diversifiés. Bien qu'il vise des rendements élevés, il est important de noter que l'exposition aux cryptomonnaies peut entraîner une volatilité significative. De plus, la concentration dans le secteur technologique peut accroître le risque en période de ralentissement économique. Les investisseurs doivent être conscients des fluctuations potentielles des taux d'intérêt sur les obligations. Ces éléments doivent être pris en compte avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "KELLANOVA (K)": "15.0%",
       "WESTERN DIGITAL CORP (WDC)": "7.0%",
@@ -699,10 +699,10 @@
       {
         "name": "SK HYNIX INC",
         "ticker": "000660",
-        "rationale": "SK HYNIX INC présente un ROE élevé de 26.78% et une performance YTD de 29.39%, ce qui indique une forte dynamique de croissance. Cet actif joue un rôle de core dans le portefeuille, étant donné son potentiel de rendement élevé dans le secteur technologique. Il est lié au contexte marché RADAR, car la Corée du Sud est une région favorisée.",
+        "rationale": "SK HYNIX présente un ROE élevé de 26.78% et une performance YTD de 29.39%, ce qui témoigne d'une forte dynamique de croissance dans le secteur technologique. Cet actif joue un rôle de core dans le portefeuille, offrant une exposition à la technologie en Corée, un marché favorisé. Toutefois, la volatilité élevée de 47.61% et la valorisation relativement élevée (P/E de 30.59) sont des risques à surveiller.",
         "role": "core",
-        "risk_note": "Volatilité élevée à surveiller (47.61%)",
-        "market_context_link": "secteur/région favorisé",
+        "risk_note": "Volatilité élevée et valorisation élevée",
+        "market_context_link": "secteur évité",
         "weight_pct": 15.0,
         "category": "Actions",
         "sector": "Technologie de l'information",
@@ -719,9 +719,9 @@
       {
         "name": "Vanguard Total International Stock Index Fund",
         "ticker": "VXUS",
-        "rationale": "Ce fonds ETF offre une exposition diversifiée aux marchés internationaux, ce qui aide à équilibrer le risque global du portefeuille. Il sert de diversification, permettant d'atténuer les risques spécifiques à certaines régions ou secteurs. Bien que la performance YTD soit modeste, il reste un choix solide dans un contexte de risque-on.",
-        "role": "diversification",
-        "risk_note": "Risque de performance relativement faible par rapport aux actifs plus volatils",
+        "rationale": "Ce fonds ETF offre une diversification globale avec une performance YTD de 6.87%, ce qui est raisonnable dans le contexte actuel. Il sert de satellite pour équilibrer le portefeuille avec une exposition internationale, bien que sa performance soit inférieure à celle des secteurs favorisés. Les fluctuations des devises et la performance des marchés internationaux sont des risques à surveiller.",
+        "role": "satellite",
+        "risk_note": "Fluctuations des devises et performance des marchés internationaux",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "ETF",
@@ -739,10 +739,10 @@
       {
         "name": "Vanguard FTSE Pacific ETF",
         "ticker": "VPL",
-        "rationale": "Avec une performance YTD de 12.31%, ce fonds ETF permet d'accéder à des marchés asiatiques en croissance, en particulier dans le secteur diversifié. Il joue un rôle de satellite, ajoutant une exposition géographique supplémentaire au portefeuille. Cela s'aligne avec la tendance favorable pour la région Pacifique.",
+        "rationale": "Avec une performance YTD de 12.31%, ce fonds ETF permet d'accéder aux marchés asiatiques, en particulier ceux favorisés comme la Corée. Il joue un rôle de satellite, renforçant l'exposition à des régions en croissance. Les risques incluent la volatilité des marchés asiatiques et les tensions géopolitiques.",
         "role": "satellite",
-        "risk_note": "Volatilité modérée à surveiller (15.94%)",
-        "market_context_link": "secteur/région favorisé",
+        "risk_note": "Volatilité des marchés asiatiques et tensions géopolitiques",
+        "market_context_link": "région favorisée",
         "weight_pct": 10.5,
         "category": "ETF",
         "sector": "Diversified",
@@ -759,9 +759,9 @@
       {
         "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
         "ticker": "VEA",
-        "rationale": "Ce fonds ETF offre une exposition aux marchés développés, avec une performance YTD de 7.57%, ce qui contribue à la stabilité du portefeuille. Il est considéré comme un actif core, apportant une diversification géographique. Bien que la performance soit inférieure à celle des secteurs favorisés, il reste un choix prudent.",
-        "role": "core",
-        "risk_note": "Risque de croissance limitée par rapport aux secteurs en forte hausse",
+        "rationale": "Ce fonds offre une exposition aux marchés développés avec une performance YTD de 7.57%, ce qui est solide dans le contexte actuel. Il sert de satellite pour diversifier le portefeuille tout en maintenant une exposition à des économies stables. Les risques incluent la performance des marchés développés et les fluctuations économiques.",
+        "role": "satellite",
+        "risk_note": "Performance des marchés développés et fluctuations économiques",
         "market_context_link": null,
         "weight_pct": 9.5,
         "category": "ETF",
@@ -779,9 +779,9 @@
       {
         "name": "XAUT/USD",
         "ticker": "XAUT/USD",
-        "rationale": "XAUT/USD représente une opportunité d'investissement dans le secteur crypto, avec une performance YTD de 14.96%. Cet actif agit comme un hedge contre l'inflation et la volatilité des marchés traditionnels. Cependant, il est important de surveiller les fluctuations de prix importantes dans le secteur crypto.",
-        "role": "hedge",
-        "risk_note": "Volatilité très élevée (58.59%)",
+        "rationale": "XAUT/USD, en tant que crypto actif, a montré une performance YTD de 14.96%, attirant les investisseurs cherchant des rendements élevés. Il est considéré comme un actif de diversification, apportant une exposition à un secteur émergent. Les risques incluent la volatilité extrême des cryptomonnaies et les régulations potentielles.",
+        "role": "diversification",
+        "risk_note": "Volatilité extrême et régulations potentielles",
         "market_context_link": null,
         "weight_pct": 8.0,
         "category": "Crypto",
@@ -799,9 +799,9 @@
       {
         "name": "WESTERN DIGITAL CORP",
         "ticker": "WDC",
-        "rationale": "Avec un ROE de 34.1% et une performance YTD de 52.37%, Western Digital se distingue par sa forte rentabilité et son potentiel de croissance. Cet actif est classé comme core, renforçant l'exposition au secteur technologique. Il est important de surveiller les risques liés à la concurrence dans le secteur.",
+        "rationale": "Avec une performance YTD impressionnante de 52.37% et un ROE de 34.1%, Western Digital est bien positionnée dans le secteur technologique. Cet actif est un core dans le portefeuille, offrant une forte exposition à la technologie aux États-Unis. Les risques incluent la concurrence accrue et la dépendance à l'innovation technologique.",
         "role": "core",
-        "risk_note": "Risque de concurrence accrue dans le secteur technologique",
+        "risk_note": "Concurrence accrue et dépendance à l'innovation",
         "market_context_link": null,
         "weight_pct": 7.0,
         "category": "Actions",
@@ -819,9 +819,9 @@
       {
         "name": "Vanguard Intermediate-Term Corporate Bond Fund",
         "ticker": "VCIT",
-        "rationale": "Ce fonds obligataire offre une stabilité et un revenu fixe, bien que la performance YTD soit faible à 0.12%. Il sert de diversification dans le portefeuille, équilibrant les actifs plus volatils. Le risque de taux d'intérêt est à surveiller dans un environnement de hausse des taux.",
-        "role": "diversification",
-        "risk_note": "Risque de taux d'intérêt",
+        "rationale": "Ce fonds obligataire offre une stabilité avec une faible volatilité de 6.01%, bien que sa performance YTD soit modeste à 0.12%. Il sert d'élément de hedge dans le portefeuille, équilibrant le risque des actifs plus volatils. Les risques incluent la hausse des taux d'intérêt qui pourrait affecter la valeur des obligations.",
+        "role": "hedge",
+        "risk_note": "Hausse des taux d'intérêt",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
@@ -839,9 +839,9 @@
       {
         "name": "Vanguard Intermediate-Term Bond ETF",
         "ticker": "BIV",
-        "rationale": "Similaire à VCIT, ce fonds ETF offre une exposition aux obligations à moyen terme, apportant stabilité au portefeuille. Il joue également un rôle de diversification, bien que la performance soit limitée. Les investisseurs doivent surveiller les fluctuations des taux d'intérêt.",
-        "role": "diversification",
-        "risk_note": "Risque de taux d'intérêt",
+        "rationale": "Avec une performance YTD de 0.01% et une volatilité de 6.06%, ce fonds offre une stabilité dans un portefeuille agressif. Il joue également un rôle de hedge, permettant de compenser la volatilité des actions. Les risques incluent les fluctuations des taux d'intérêt qui peuvent affecter la performance des obligations.",
+        "role": "hedge",
+        "risk_note": "Fluctuations des taux d'intérêt",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
@@ -859,9 +859,9 @@
       {
         "name": "iShares 5-10 Year Investment Grade Corporate Bond ETF",
         "ticker": "IGIB",
-        "rationale": "Ce fonds ETF permet d'accéder à des obligations de qualité, offrant une sécurité dans un portefeuille agressif. Il joue un rôle de diversification, bien que la performance soit faible. Les risques liés aux taux d'intérêt doivent être surveillés.",
-        "role": "diversification",
-        "risk_note": "Risque de taux d'intérêt",
+        "rationale": "Ce fonds obligataire présente une performance YTD de 0.13% et une faible volatilité, ce qui le rend attrayant pour les investisseurs cherchant à réduire le risque. Il sert de hedge dans le portefeuille, offrant une protection contre la volatilité des actions. Les risques incluent la sensibilité aux variations des taux d'intérêt.",
+        "role": "hedge",
+        "risk_note": "Sensibilité aux variations des taux d'intérêt",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
@@ -879,9 +879,9 @@
       {
         "name": "Schwab 5-10 Year Corporate Bond ETF",
         "ticker": "SCHI",
-        "rationale": "Ce fonds offre une exposition aux obligations d'entreprises à moyen terme, contribuant à la stabilité du portefeuille. Il est classé comme un actif de diversification, bien que la performance soit faible. Les fluctuations des taux d'intérêt représentent un risque à surveiller.",
-        "role": "diversification",
-        "risk_note": "Risque de taux d'intérêt",
+        "rationale": "Avec une performance YTD de 0.09% et une volatilité de 6.13%, ce fonds offre une stabilité dans un portefeuille diversifié. Il joue un rôle de hedge, permettant de compenser les fluctuations des actifs risqués. Les risques incluent les variations des taux d'intérêt qui peuvent affecter la valeur des obligations.",
+        "role": "hedge",
+        "risk_note": "Variations des taux d'intérêt",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "Obligations",
@@ -899,9 +899,9 @@
       {
         "name": "KELLANOVA",
         "ticker": "K",
-        "rationale": "KELLANOVA affiche un ROE de 34.93% et une performance YTD de 18.46%, ce qui en fait un choix solide dans le secteur des biens de consommation. Cet actif est considéré comme core, apportant une stabilité et un potentiel de croissance. Les risques liés à la demande des consommateurs doivent être surveillés.",
+        "rationale": "Kellanova affiche un ROE de 34.93% et une performance YTD de 18.46%, ce qui en fait un choix solide dans le secteur des biens de consommation. Cet actif est un core dans le portefeuille, apportant une exposition à un secteur stable et en croissance. Les risques incluent la dépendance à la consommation et les fluctuations des prix des matières premières.",
         "role": "core",
-        "risk_note": "Risque de demande des consommateurs",
+        "risk_note": "Dépendance à la consommation et fluctuations des prix des matières premières",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "Actions",
@@ -919,7 +919,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-02-10T08:24:33.100123+00:00",
+      "timestamp": "2026-02-10T08:36:12.363858+00:00",
       "profile": "Agressif",
       "data_limits": {
         "data_window": "short_window",
@@ -943,7 +943,7 @@
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-02-10T08:24:33.102677+00:00"
+          "timestamp": "2026-02-10T08:36:12.366790+00:00"
         },
         "summary": {
           "n_scenarios": 5,
@@ -1008,7 +1008,7 @@
               "Severe volatility increase: +14.2%",
               "Severe VaR deterioration: -30.6%"
             ],
-            "timestamp": "2026-02-10T08:24:33.100894+00:00"
+            "timestamp": "2026-02-10T08:36:12.364783+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -1053,7 +1053,7 @@
               "Severe volatility increase: +38.9%",
               "Severe VaR deterioration: -77.4%"
             ],
-            "timestamp": "2026-02-10T08:24:33.101309+00:00"
+            "timestamp": "2026-02-10T08:36:12.365282+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -1098,7 +1098,7 @@
               "Severe volatility increase: +23.1%",
               "Severe VaR deterioration: -55.1%"
             ],
-            "timestamp": "2026-02-10T08:24:33.101706+00:00"
+            "timestamp": "2026-02-10T08:36:12.365739+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -1143,7 +1143,7 @@
               "Severe volatility increase: +18.0%",
               "Severe VaR deterioration: -40.7%"
             ],
-            "timestamp": "2026-02-10T08:24:33.102093+00:00"
+            "timestamp": "2026-02-10T08:36:12.366178+00:00"
           },
           {
             "scenario": "market_crash",
@@ -1188,7 +1188,7 @@
               "Severe volatility increase: +74.0%",
               "Severe VaR deterioration: -157.9%"
             ],
-            "timestamp": "2026-02-10T08:24:33.102511+00:00"
+            "timestamp": "2026-02-10T08:36:12.366632+00:00"
           }
         ],
         "source": "stress_testing.py",
@@ -1362,7 +1362,7 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-02-10T08:24:33.098880Z",
+        "fetch_timestamp": "2026-02-10T08:36:12.362476Z",
         "allocation": [
           {
             "ticker": "000660",
@@ -1479,7 +1479,7 @@
     }
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant actions et obligations pour réduire la volatilité. Bien qu'il vise à offrir une croissance stable, il est exposé à des risques liés aux fluctuations des marchés financiers et aux variations des taux d'intérêt. L'inclusion de crypto-monnaies, bien que minime, ajoute également un niveau de risque supplémentaire. Il est important de garder à l'esprit les risques de perte en capital associés à cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant actions et obligations pour viser une volatilité réduite. Bien qu'il offre une diversification, la dépendance à des secteurs spécifiques comme la finance peut accroître le risque en période de turbulence économique. De plus, l'exposition limitée aux cryptomonnaies, bien que potentiellement bénéfique, peut également introduire des fluctuations imprévues. Les investisseurs doivent être conscients des impacts des taux d'intérêt sur les obligations. Ces éléments doivent être pris en compte avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "KBC GROEP (KBC)": "15.0%",
       "CLOROX (CLX)": "14.0%"
@@ -2176,9 +2176,9 @@
     "_limitations": [],
     "_asset_details": [
       {
-        "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
+        "name": "Vanguard FTSE Developed Markets ETF",
         "ticker": "VEA",
-        "rationale": "Cet ETF offre une exposition diversifiée aux marchés développés, ce qui permet de capter le momentum positif observé dans les marchés globaux. Il joue un rôle de core dans le portefeuille, en fournissant une base solide d'investissement à long terme.",
+        "rationale": "Cet ETF offre une exposition diversifiée aux marchés développés, ce qui est essentiel pour un investisseur modéré cherchant à équilibrer risque et rendement. Son rôle dans le portefeuille est de fournir une base solide et diversifiée, tout en profitant d'une performance positive sur l'année.",
         "role": "core",
         "risk_note": "Volatilité relativement élevée par rapport à l'objectif de 9.1%.",
         "market_context_link": "null",
@@ -2198,9 +2198,9 @@
       {
         "name": "Vanguard Total International Stock Index Fund",
         "ticker": "VXUS",
-        "rationale": "Ce fonds permet d'accéder à une large exposition internationale, ce qui est crucial pour la diversification. Il est également un core dans le portefeuille, équilibrant le risque et le rendement.",
+        "rationale": "Ce fonds permet d'accéder à une large gamme d'actions internationales, renforçant la diversification géographique du portefeuille. Il joue un rôle similaire à celui de VEA, en offrant une exposition supplémentaire aux marchés étrangers.",
         "role": "core",
-        "risk_note": "Volatilité similaire à celle de l'ETF VEA.",
+        "risk_note": "Volatilité modérée, mais attention à la performance des marchés internationaux.",
         "market_context_link": "null",
         "weight_pct": 15.0,
         "category": "ETF",
@@ -2218,9 +2218,9 @@
       {
         "name": "CLOROX",
         "ticker": "CLX",
-        "rationale": "Avec un ROE élevé et un rendement dividende attractif, Clorox représente une opportunité de valeur dans le secteur des biens de consommation de base. Son rôle est d'apporter un revenu stable et de la qualité au portefeuille.",
+        "rationale": "Avec un ROE élevé et un rendement dividende attractif, Clorox représente une option solide pour les investisseurs cherchant à générer des revenus tout en maintenant une qualité d'actif élevée. Son rôle est de fournir des revenus stables et de la croissance dans le secteur des biens de consommation.",
         "role": "income",
-        "risk_note": "Exposition à la volatilité du secteur des biens de consommation.",
+        "risk_note": "Exposition aux fluctuations des coûts des matières premières et à la concurrence.",
         "market_context_link": "null",
         "weight_pct": 14.0,
         "category": "Actions",
@@ -2238,9 +2238,9 @@
       {
         "name": "Vanguard Intermediate-Term Treasury Fund",
         "ticker": "VGIT",
-        "rationale": "Ce fonds obligataire offre une protection contre la volatilité du marché tout en fournissant un revenu fixe. Il sert de hedge dans le portefeuille, équilibrant les actifs plus risqués.",
+        "rationale": "Ce fonds obligataire offre une protection contre la volatilité du marché tout en fournissant un revenu fixe. Il agit comme un élément de stabilisation dans le portefeuille, surtout en période d'incertitude économique.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt, surtout dans un environnement de hausse des taux.",
+        "risk_note": "Risque de taux d'intérêt, surtout si les taux augmentent.",
         "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -2258,9 +2258,9 @@
       {
         "name": "Vanguard Short-Term Bond ETF",
         "ticker": "BSV",
-        "rationale": "Avec une faible volatilité, ce fonds obligataire est idéal pour stabiliser le portefeuille tout en générant un revenu. Il joue également un rôle de hedge contre la volatilité des actions.",
+        "rationale": "Avec une faible volatilité et une exposition à des obligations à court terme, ce fonds aide à réduire le risque global du portefeuille. Il sert de tampon contre la volatilité des actions.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt à court terme.",
+        "risk_note": "Risque de taux d'intérêt, bien que limité par la durée courte.",
         "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -2278,9 +2278,9 @@
       {
         "name": "Schwab Intermediate-Term U.S. Treasury ETF",
         "ticker": "SCHR",
-        "rationale": "Offrant une exposition aux obligations d'État à moyen terme, ce fonds contribue à la stabilité du portefeuille. Il est essentiel pour la gestion du risque global.",
+        "rationale": "Ce fonds fournit une exposition aux obligations d'État américaines, offrant sécurité et stabilité. Son rôle est similaire à celui de VGIT, renforçant la protection contre les fluctuations du marché.",
         "role": "hedge",
-        "risk_note": "Sensibilité aux variations des taux d'intérêt.",
+        "risk_note": "Risque de taux d'intérêt, surtout en cas de hausse des taux.",
         "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -2298,9 +2298,9 @@
       {
         "name": "iShares 3-7 Year Treasury Bond ETF",
         "ticker": "IEI",
-        "rationale": "Ce fonds fournit une exposition aux obligations à moyen terme, offrant un bon compromis entre rendement et risque. Il aide à diversifier les risques de taux d'intérêt.",
+        "rationale": "Ce fonds permet d'accéder à des obligations à moyen terme, offrant un équilibre entre rendement et risque. Il contribue à la stabilité du portefeuille tout en générant des revenus fixes.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt modéré.",
+        "risk_note": "Risque de taux d'intérêt, bien que modéré.",
         "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -2318,9 +2318,9 @@
       {
         "name": "SPDR Portfolio Intermediate Term Treasury ETF",
         "ticker": "SPTI",
-        "rationale": "Ce fonds permet d'accéder à des obligations à moyen terme, offrant une protection contre la volatilité des marchés. Il complète les autres fonds obligataires du portefeuille.",
+        "rationale": "En investissant dans des obligations à moyen terme, ce fonds aide à diversifier la composante obligataire du portefeuille. Il joue un rôle de stabilisateur en période de volatilité.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt à surveiller.",
+        "risk_note": "Risque de taux d'intérêt, similaire aux autres fonds obligataires.",
         "market_context_link": "null",
         "weight_pct": 8.0,
         "category": "Obligations",
@@ -2338,9 +2338,9 @@
       {
         "name": "PAXG/USD",
         "ticker": "PAXG/USD",
-        "rationale": "En tant que crypto-monnaie adossée à l'or, PAXG offre une protection contre l'inflation et la volatilité des marchés. Il agit comme un actif satellite pour diversifier davantage le portefeuille.",
+        "rationale": "En tant que crypto-monnaie adossée à l'or, PAXG offre une protection contre l'inflation et une diversification dans le portefeuille. Son rôle est d'ajouter un actif alternatif avec un potentiel de rendement élevé.",
         "role": "satellite",
-        "risk_note": "Volatilité très élevée, ce qui peut affecter le portefeuille global.",
+        "risk_note": "Volatilité très élevée et incertitude réglementaire.",
         "market_context_link": "null",
         "weight_pct": 0.5,
         "category": "Crypto",
@@ -2358,9 +2358,9 @@
       {
         "name": "XAUT/USD",
         "ticker": "XAUT/USD",
-        "rationale": "Similaire à PAXG, XAUT est également adossé à l'or, offrant une couverture contre l'inflation. Il sert de satellite pour diversifier le portefeuille avec des actifs alternatifs.",
+        "rationale": "Similaire à PAXG, XAUT est une crypto-monnaie adossée à l'or, offrant une couverture contre l'inflation et une diversification. Il représente une opportunité de rendement dans un marché alternatif.",
         "role": "satellite",
-        "risk_note": "Volatilité élevée, à surveiller de près.",
+        "risk_note": "Volatilité très élevée et risques liés à la réglementation.",
         "market_context_link": "null",
         "weight_pct": 0.5,
         "category": "Crypto",
@@ -2378,10 +2378,10 @@
       {
         "name": "KBC GROEP",
         "ticker": "KBC",
-        "rationale": "Avec un ROE élevé et un bon rendement dividende, KBC représente une opportunité solide dans le secteur financier. Il contribue à l'équilibre du portefeuille avec des actions de qualité.",
+        "rationale": "Avec un ROE élevé et un P/E attractif, KBC GROEP est bien positionné dans le secteur financier, offrant un potentiel de croissance. Son rôle est de contribuer à la croissance du portefeuille tout en fournissant des revenus.",
         "role": "core",
-        "risk_note": "Exposition aux risques du secteur financier, en difficulté actuellement.",
-        "market_context_link": "secteur évité",
+        "risk_note": "Exposition aux risques du secteur financier, notamment en période de ralentissement économique.",
+        "market_context_link": "null",
         "weight_pct": 15.0,
         "category": "Actions",
         "sector": "Finance",
@@ -2398,7 +2398,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-02-10T08:24:45.906940+00:00",
+      "timestamp": "2026-02-10T08:36:25.462545+00:00",
       "profile": "Modéré",
       "data_limits": {
         "data_window": "short_window",
@@ -2422,7 +2422,7 @@
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-02-10T08:24:45.909193+00:00"
+          "timestamp": "2026-02-10T08:36:25.464860+00:00"
         },
         "summary": {
           "n_scenarios": 5,
@@ -2486,7 +2486,7 @@
             "warnings": [
               "Severe VaR deterioration: -15.2%"
             ],
-            "timestamp": "2026-02-10T08:24:45.907606+00:00"
+            "timestamp": "2026-02-10T08:36:25.463205+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -2531,7 +2531,7 @@
               "Severe volatility increase: +15.6%",
               "Severe VaR deterioration: -36.3%"
             ],
-            "timestamp": "2026-02-10T08:24:45.907972+00:00"
+            "timestamp": "2026-02-10T08:36:25.463603+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -2576,7 +2576,7 @@
               "Severe VaR deterioration: -28.7%",
               "Sharpe ratio collapse: -0.69"
             ],
-            "timestamp": "2026-02-10T08:24:45.908332+00:00"
+            "timestamp": "2026-02-10T08:36:25.463989+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -2621,7 +2621,7 @@
               "Severe VaR deterioration: -21.7%",
               "Sharpe ratio collapse: -0.56"
             ],
-            "timestamp": "2026-02-10T08:24:45.908688+00:00"
+            "timestamp": "2026-02-10T08:36:25.464329+00:00"
           },
           {
             "scenario": "market_crash",
@@ -2667,7 +2667,7 @@
               "Severe VaR deterioration: -77.6%",
               "Sharpe ratio collapse: -0.56"
             ],
-            "timestamp": "2026-02-10T08:24:45.909033+00:00"
+            "timestamp": "2026-02-10T08:36:25.464705+00:00"
           }
         ],
         "source": "stress_testing.py",
@@ -2841,7 +2841,7 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-02-10T08:24:45.905787Z",
+        "fetch_timestamp": "2026-02-10T08:36:25.461328Z",
         "allocation": [
           {
             "ticker": "VEA",
@@ -2958,7 +2958,7 @@
     }
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie d'investissement stable, axée sur des obligations et des actions à dividende. Bien qu'il vise à réduire la volatilité, il est exposé à des risques liés aux fluctuations des taux d'intérêt et aux variations des coûts des matières premières. L'accent mis sur les dividendes peut également être affecté par des performances d'entreprises sous-jacentes. Il est crucial de rester conscient des risques de perte en capital associés à cette approche. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, avec une forte concentration sur les obligations et les actions à dividende. Bien qu'il vise à minimiser la volatilité, la dépendance aux obligations à court terme peut limiter le potentiel de rendement en période de hausse des taux d'intérêt. De plus, la concentration dans des secteurs spécifiques comme les biens de consommation peut exposer le portefeuille à des risques économiques. Les investisseurs doivent être conscients des fluctuations potentielles des marchés obligataires. Ces éléments doivent être pris en compte avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "CLOROX (CLX)": "15.0%"
     },
@@ -3558,9 +3558,9 @@
       {
         "name": "Vanguard Short-Term Treasury Fund",
         "ticker": "VGSH",
-        "rationale": "Ce fonds offre une exposition à des obligations à court terme, ce qui permet de préserver le capital tout en générant des revenus stables. Sa faible volatilité de 2.26% correspond bien à l'objectif de faible volatilité du portefeuille.",
+        "rationale": "Ce fonds offre une exposition aux obligations à court terme, ce qui est idéal pour un investisseur cherchant à préserver son capital avec une volatilité faible. Il joue un rôle de core dans le portefeuille, fournissant une stabilité et des revenus réguliers.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt à surveiller, surtout si les taux augmentent.",
+        "risk_note": "Risque de taux d'intérêt, surtout si les taux augmentent rapidement.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "Obligations",
@@ -3578,9 +3578,9 @@
       {
         "name": "SPDR Portfolio Short Term Treasury ETF",
         "ticker": "SPTS",
-        "rationale": "Similaire au VGSH, ce fonds investit dans des obligations à court terme, offrant une sécurité et une liquidité. Sa performance légèrement inférieure est compensée par une volatilité comparable, ce qui le rend adapté au profil d'investisseur stable.",
+        "rationale": "Similaire à VGSH, ce fonds investit dans des obligations à court terme, offrant une protection contre la volatilité du marché tout en générant des rendements modestes. Il contribue également à la stabilité du portefeuille.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt à surveiller, surtout si les taux augmentent.",
+        "risk_note": "Risque de taux d'intérêt, en particulier dans un environnement de hausse des taux.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "Obligations",
@@ -3598,9 +3598,9 @@
       {
         "name": "CLOROX",
         "ticker": "CLX",
-        "rationale": "CLOROX présente un ROE élevé de 170.95% et un rendement dividende attractif de 4.13%, ce qui en fait un choix solide pour les revenus. Bien que son secteur ne soit pas favorisé, sa stabilité et son score qualité élevé en font un actif de choix.",
+        "rationale": "Avec un ROE élevé et un rendement dividende attractif, CLOROX représente une opportunité d'investissement solide dans le secteur des biens de consommation de base. Son rôle est de fournir des revenus réguliers tout en offrant une certaine croissance.",
         "role": "income",
-        "risk_note": "Risque de volatilité plus élevé par rapport aux obligations, en raison de son secteur.",
+        "risk_note": "Risque lié à la demande des consommateurs et à la concurrence dans le secteur.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "Actions",
@@ -3618,9 +3618,9 @@
       {
         "name": "iShares Core Dividend Growth ETF",
         "ticker": "DGRO",
-        "rationale": "Ce fonds investit dans des entreprises à dividende croissant, ce qui correspond à l'objectif de revenus réguliers. Sa performance YTD de 5.56% et sa volatilité modérée en font un bon complément au portefeuille.",
-        "role": "income",
-        "risk_note": "Risque de fluctuations de dividendes en période de ralentissement économique.",
+        "rationale": "Ce fonds se concentre sur les actions à dividende croissant, ce qui est aligné avec l'objectif de revenus réguliers du portefeuille. Il offre également une diversification dans le secteur des actions.",
+        "role": "diversification",
+        "risk_note": "Risque de marché lié aux fluctuations des actions.",
         "market_context_link": null,
         "weight_pct": 13.8,
         "category": "ETF",
@@ -3638,9 +3638,9 @@
       {
         "name": "Vanguard Value ETF",
         "ticker": "VTV",
-        "rationale": "VTV se concentre sur des actions de valeur qui ont tendance à être moins volatiles et offrent un potentiel de croissance stable. Sa performance YTD de 6.8% et sa faible volatilité en font un ajout judicieux pour diversifier le portefeuille.",
-        "role": "diversification",
-        "risk_note": "Risque de sous-performance en période de forte croissance des actions de croissance.",
+        "rationale": "VTV investit dans des actions sous-évaluées, ce qui peut offrir un potentiel de croissance à long terme tout en maintenant une volatilité relativement faible. Il sert de satellite pour diversifier le portefeuille.",
+        "role": "satellite",
+        "risk_note": "Risque de valorisation si le marché ne reconnaît pas la valeur des actions.",
         "market_context_link": null,
         "weight_pct": 13.2,
         "category": "ETF",
@@ -3658,9 +3658,9 @@
       {
         "name": "Schwab U.S. Dividend Equity ETF",
         "ticker": "SCHD",
-        "rationale": "SCHD investit dans des sociétés américaines offrant des dividendes élevés, ce qui répond à l'objectif de revenus réguliers. Sa performance YTD de 12.93% et sa volatilité raisonnable en font un bon choix pour le portefeuille.",
+        "rationale": "SCHD se concentre sur des entreprises offrant des dividendes élevés et durables, ce qui correspond à la recherche de revenus réguliers. Il contribue également à la diversification du portefeuille.",
         "role": "income",
-        "risk_note": "Risque de dépendance aux dividendes, qui peuvent être réduits en période de crise.",
+        "risk_note": "Risque de baisse des dividendes si les entreprises sous-jacentes rencontrent des difficultés.",
         "market_context_link": null,
         "weight_pct": 13.0,
         "category": "ETF",
@@ -3678,9 +3678,9 @@
       {
         "name": "Goldman Sachs Access Treasury 0-1 Year ETF",
         "ticker": "GBIL",
-        "rationale": "GBIL offre une exposition à des obligations d'État à très court terme, garantissant la préservation du capital avec une volatilité très faible de 1.53%. Cela complète bien les autres actifs obligataires du portefeuille.",
+        "rationale": "Ce fonds investit dans des obligations d'État à très court terme, offrant une sécurité et une faible volatilité, ce qui est essentiel pour un investisseur stable. Il joue un rôle de core dans le portefeuille.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt à surveiller, surtout si les taux augmentent.",
+        "risk_note": "Risque de taux d'intérêt, bien que minimisé par la courte durée.",
         "market_context_link": null,
         "weight_pct": 15.0,
         "category": "Obligations",
@@ -3698,7 +3698,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-02-10T08:24:53.741679+00:00",
+      "timestamp": "2026-02-10T08:36:33.618014+00:00",
       "profile": "Stable",
       "data_limits": {
         "data_window": "5_years_daily",
@@ -3722,7 +3722,7 @@
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-02-10T08:24:53.743900+00:00"
+          "timestamp": "2026-02-10T08:36:33.620123+00:00"
         },
         "summary": {
           "n_scenarios": 5,
@@ -3786,7 +3786,7 @@
             "warnings": [
               "Severe VaR deterioration: -15.5%"
             ],
-            "timestamp": "2026-02-10T08:24:53.742477+00:00"
+            "timestamp": "2026-02-10T08:36:33.618717+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -3831,7 +3831,7 @@
               "Severe volatility increase: +20.4%",
               "Severe VaR deterioration: -43.5%"
             ],
-            "timestamp": "2026-02-10T08:24:53.742830+00:00"
+            "timestamp": "2026-02-10T08:36:33.619055+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -3876,7 +3876,7 @@
               "Severe volatility increase: +11.1%",
               "Severe VaR deterioration: -30.4%"
             ],
-            "timestamp": "2026-02-10T08:24:53.743140+00:00"
+            "timestamp": "2026-02-10T08:36:33.619358+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -3920,7 +3920,7 @@
             "warnings": [
               "Severe VaR deterioration: -23.7%"
             ],
-            "timestamp": "2026-02-10T08:24:53.743440+00:00"
+            "timestamp": "2026-02-10T08:36:33.619682+00:00"
           },
           {
             "scenario": "market_crash",
@@ -3965,7 +3965,7 @@
               "Severe volatility increase: +34.6%",
               "Severe VaR deterioration: -83.7%"
             ],
-            "timestamp": "2026-02-10T08:24:53.743760+00:00"
+            "timestamp": "2026-02-10T08:36:33.619972+00:00"
           }
         ],
         "source": "stress_testing.py",
@@ -4113,7 +4113,7 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-02-10T08:24:53.740725Z",
+        "fetch_timestamp": "2026-02-10T08:36:33.616934Z",
         "allocation": [
           {
             "ticker": "VGSH",
@@ -4190,7 +4190,7 @@
     }
   },
   "_meta": {
-    "generated_at": "2026-02-10T08:27:09.838540",
+    "generated_at": "2026-02-10T08:38:12.846041",
     "version": "v4.15.0",
     "buffett_mode": "soft",
     "buffett_min_score": 40,
