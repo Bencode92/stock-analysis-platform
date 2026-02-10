@@ -761,8 +761,7 @@ class SelectionAuditor:
         if category in ("equity", "etf"):
             self.record_preset_rankings(category, all_candidates, selected)
 
-    def record_preset_rankings(self, category, all_candidates, selected, top_n=10):
-        """v1.6.0: Refactored with _build_ranking_entry + anomaly guard-rail."""
+        """v1.6.2: Two-tier sort for equity presets + anomaly guard-rail."""
         selected_ids = self._uid_set(selected, category)
         by_preset: Dict[str, List[Dict]] = {}
         for asset in all_candidates:
@@ -777,13 +776,20 @@ class SelectionAuditor:
             self.report.anomaly_warnings.append(w)
         preset_rankings = {}
         for pname, cands in sorted(by_preset.items()):
-            sc = sorted(cands, key=lambda a: _score_with_source(a)[0], reverse=True)
+            # v1.6.2 FIX: Two-tier sort pour equity presets (même fix que record_category_ranking)
+            if category == "equity":
+                sc = sorted(cands, key=lambda a: (
+                    1 if a.get("_profile_score") is not None else 0,
+                    a.get("_profile_score") or (a.get("_buffett_score") or 0) / 100.0
+                ), reverse=True)
+            else:
+                sc = sorted(cands, key=lambda a: _score_with_source(a)[0], reverse=True)
             preset_rankings[pname] = [self._build_ranking_entry(i, a, category, selected_ids, include_etf_extras=(category == "etf")) for i, a in enumerate(sc[:top_n], 1)]
         if not isinstance(self.report.preset_rankings, dict):
             self.report.preset_rankings = {}
         self.report.preset_rankings[category] = preset_rankings
         parts = [f"{p}: {len(e)} ({sum(1 for x in e if x.get('selected'))} sel)" for p, e in sorted(preset_rankings.items())]
-        logger.info(f"📊 Audit v1.6.0: {category} preset_rankings – {len(preset_rankings)} presets: " + ", ".join(parts))
+        logger.info(f"📊 Audit v1.6.2: {category} preset_rankings – {len(preset_rankings)} presets: " + ", ".join(parts))
 
     # ============= REJECTION LOOKUP =============
 
