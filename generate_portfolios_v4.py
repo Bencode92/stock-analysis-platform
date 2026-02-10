@@ -2185,7 +2185,36 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"   ⚠️ Overlap Agressif-Stable trop élevé: {overlap_agg_stb} > {target_overlap_agg_stb:.0f} (cible <30%)")
         else:
             logger.info(f"   ✅ Overlap Agressif-Stable OK: {overlap_agg_stb} <= {target_overlap_agg_stb:.0f}")
+    # === v1.6.1 FIX: Enrichir eq_filtered avec max _profile_score des 3 profils ===
+    # Problème: eq_filtered a _buffett_score + _matched_preset mais PAS _profile_score
+    # Les _profile_score sont calculés PAR PROFIL dans select_equities_for_profile_v2()
+    # et stockés dans equities_by_profile[profile]. On merge le MAX ici pour l'audit.
+    _profile_scores_by_ticker = {}  # {ticker: max_profile_score}
+    _profile_best_by_ticker = {}    # {ticker: best_profile_name}
+    for _prof_name, _prof_eqs in equities_by_profile.items():
+        for _eq in _prof_eqs:
+            _tk = _eq.get("ticker")
+            if not _tk:
+                continue
+            _ps = _eq.get("_profile_score")
+            if _ps is not None:
+                if _tk not in _profile_scores_by_ticker or _ps > _profile_scores_by_ticker[_tk]:
+                    _profile_scores_by_ticker[_tk] = _ps
+                    _profile_best_by_ticker[_tk] = _prof_name
     
+    _enriched_count = 0
+    for _eq in eq_filtered:
+        _tk = _eq.get("ticker")
+        if _tk and _tk in _profile_scores_by_ticker:
+            _eq["_profile_score"] = _profile_scores_by_ticker[_tk]
+            _eq["_best_profile"] = _profile_best_by_ticker[_tk]
+            _enriched_count += 1
+    
+    logger.info(
+        f"📊 Audit v1.6.1: {_enriched_count}/{len(eq_filtered)} equities enrichies "
+        f"avec _profile_score (max des 3 profils), "
+        f"{len(eq_filtered) - _enriched_count} sans score (rejetées par hard filters des 3 profils)"
+    )
     # === v1.5.3 FIX: Génération de l'audit avec données SCORÉES ===
     if CONFIG.get("generate_selection_audit", False) and SELECTION_AUDIT_AVAILABLE:
         try:
@@ -2242,7 +2271,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             create_selection_audit(
                 config=CONFIG,
                 equities_initial=eq_rows_before_buffett,
-                equities_after_buffett=eq_rows,
+                equities_after_buffett=eq_filtered,
                 equities_final=equities_final,
                 etf_data=scored_etf_list,
                 etf_selected=etf_selected_audit,
