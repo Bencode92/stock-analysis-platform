@@ -1,5 +1,9 @@
 // stock-advanced-filter.js
-// Version 3.27.1 - Fix STATISTICS cost 50, 429 retry, D/E path fix
+// Version 3.27.2 - Fix deterministic fallback + Euronext variants
+// Changements v3.27.2:
+// - tdParamTrials: ajout variantes 'Euronext' + format SYM:Euronext pour Paris/Amsterdam/Brussels/Milan
+//   (doc TD utilise ALMIL:Euronext, pas ALMIL:XPAR)
+// - enrichStock: si résolution déterministe échoue (price=null), retry avec resolveSymbolSmart
 // Changements v3.27.1:
 // - STATISTICS credit cost: 25 → 50 (doc Twelve Data: 50/symbole)
 // - fetchTD: retry explicite sur 429 (HTTP + body code) avec backoff 1.2s
@@ -55,7 +59,7 @@ const CONFIG = {
     CREDITS: {
         QUOTE: 1,
         TIME_SERIES: 5,
-        STATISTICS: 50,      // ✅ v3.27.1: doc Twelve Data = 50 crédits/symbole
+        STATISTICS: 50,
         DIVIDENDS: 10,
         MARKET_CAP: 1,
         GROWTH_ESTIMATES: 10
@@ -154,7 +158,7 @@ function micForRegion(stock) {
     return mic;
 }
 
-// ✅ v3.27: REBASE sur tdParamTrials v3.23 (4 trials max pour non-US, pas 8-10)
+// ✅ v3.27.2: tdParamTrials avec variantes Euronext (SYM:Euronext + exchange=Euronext)
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     let base = symbol, micFromResolved = null;
     if (resolvedSym && resolvedSym.includes(':')) {
@@ -171,16 +175,19 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         trials.push({ symbol: base });
         if (mic) trials.push({ symbol: `${base}:${mic}` });
     } else {
-        // ✅ v3.23 ORIGINAL: Simple et efficace - 4 trials max
         if (mic) {
-            trials.push({ symbol: `${base}:${mic}` });        // PRIORITÉ 1: SYM:MIC
-            trials.push({ symbol: base, mic_code: mic });     // PRIORITÉ 2: mic_code=
+            trials.push({ symbol: `${base}:${mic}` });
+            trials.push({ symbol: base, mic_code: mic });
         }
-        trials.push({ symbol: base });                        // fallback
+        trials.push({ symbol: base });
         
-        // Variantes exchange= (sans surcharge country/mic combinée)
         const exLabel = normalize(stock.exchange);
         const exVar = [];
+        
+        // ✅ v3.27.2: Euronext — ajouter 'Euronext' générique + format SYM:Euronext
+        // Doc TD: symbol=ALMIL:Euronext (pas ALMIL:XPAR)
+        const isEuronext = /euronext/.test(exLabel);
+        
         if (/six swiss|^six$/.test(exLabel))                exVar.push('SIX','SIX Swiss Exchange');
         if (/bolsa.*madrid|bme/.test(exLabel) || /espagn/.test(normalize(stock.country)))
                                                             exVar.push('BME','BME Spanish Exchanges','Bolsa De Madrid');
@@ -195,7 +202,17 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         if (/nasdaq helsinki/.test(exLabel))                 exVar.push('NASDAQ Helsinki');
         if (/taiwan/.test(exLabel))                         exVar.push('Taiwan Stock Exchange');
         
+        // ✅ v3.27.2: Ajouter 'Euronext' générique pour tous les marchés Euronext
+        if (isEuronext && !exVar.includes('Euronext')) {
+            exVar.push('Euronext');
+        }
+        
         for (const ex of exVar) trials.push({ symbol: base, exchange: ex });
+        
+        // ✅ v3.27.2: Format SYM:Euronext (doc TD officielle)
+        if (isEuronext) {
+            trials.push({ symbol: `${base}:Euronext` });
+        }
     }
     
     return trials;
@@ -222,7 +239,6 @@ async function fetchTD(endpoint, trials, extraParams = {}) {
 
                 const data = res.data;
 
-                // ✅ v3.27.1: Log headers crédits en DEBUG
                 const used = res.headers?.['api-credits-used'];
                 const left = res.headers?.['api-credits-left'];
                 if (CONFIG.DEBUG && (used || left)) {
@@ -235,23 +251,21 @@ async function fetchTD(endpoint, trials, extraParams = {}) {
                     return data;
                 }
 
-                // ✅ v3.27.1: Détection 429 dans le body (erreur "soft")
                 const code = data?.code;
                 if (code === 429) {
                     if (CONFIG.DEBUG) console.warn(`[TD 429 BODY ${endpoint}] wait 1200ms`, p, data?.message);
                     await wait(1200);
-                    continue;   // retry même trial
+                    continue;
                 }
 
                 if (CONFIG.DEBUG) console.warn(`[TD FAIL ${endpoint}]`, p, data?.message || data?.status);
-                break;  // pas la peine de retry si ce n'est pas 429
+                break;
             } catch (e) {
-                // ✅ v3.27.1: Détection HTTP 429
                 const http = e.response?.status;
                 if (http === 429) {
                     if (CONFIG.DEBUG) console.warn(`[HTTP 429 ${endpoint}] wait 1200ms`, p);
                     await wait(1200);
-                    continue;   // retry même trial
+                    continue;
                 }
                 if (CONFIG.DEBUG && http !== 404) {
                     console.warn(`[TD EXC ${endpoint}]`, p, e.message);
@@ -467,7 +481,7 @@ async function loadStockCSV(filepath) {
     }
 }
 
-// ───────── Data fetchers (identiques v3.23) ─────────
+// ───────── Data fetchers ─────────
 
 async function getQuoteData(symbol, stock) {
     try {
@@ -618,7 +632,6 @@ async function getDividendData(symbol, stock) {
     }
 }
 
-// ✅ v3.27.1: getStatisticsData avec D/E path fix (total_debt_to_equity_mrq)
 async function getStatisticsData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.STATISTICS);
@@ -655,13 +668,11 @@ async function getStatisticsData(symbol, stock) {
             'cash_flow.free_cash_flow_ttm', 'free_cash_flow_ttm', 'fcf_ttm'
         ]);
 
-        // ✅ v3.27.1: ROE, D/E, ROIC depuis /statistics API (paths corrigés)
         const roe_api_raw = pickNumDeep(root, [
             'financials.return_on_equity_ttm',
             'financials.income_statement.return_on_equity',
             'return_on_equity_ttm', 'return_on_equity'
         ]);
-        // ✅ v3.27.1: ajout total_debt_to_equity_mrq (champ exact de la doc)
         const de_ratio_api_raw = pickNumDeep(root, [
             'financials.balance_sheet.total_debt_to_equity_mrq',
             'financials.balance_sheet.total_debt_to_equity_ratio',
@@ -877,11 +888,10 @@ function getBuffettGrade(score) {
     return 'D';
 }
 
-// ✅ v3.27: enrichStock = v3.23 base + résolution déterministe non-US + ROE/DE/ROIC API fallback
+// ✅ v3.27.2: enrichStock avec retry resolveSymbolSmart si déterministe échoue
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
     
-    // ✅ v3.27: Résolution déterministe pour non-US (0 appel API), smart pour US uniquement
     const mic = toMIC(stock.exchange, stock.country);
     const isNonUSWithMIC = !isUS(stock.exchange, stock.country) && mic && !isUSMic(mic);
     
@@ -905,9 +915,10 @@ async function enrichStock(stock) {
         stock.is_adr = true;
     }
     
-    const sym = resolved || stock.symbol;
+    let sym = resolved || stock.symbol;
     const ctx = stock;
-    const [perf, quote, dividends, stats, mcDirect, growth] = await Promise.all([
+    // ✅ v3.27.2: let (pas const) pour permettre retry
+    let [perf, quote, dividends, stats, mcDirect, growth] = await Promise.all([
         getPerformanceData(sym, ctx),
         getQuoteData(sym, ctx),
         getDividendData(sym, ctx),
@@ -930,7 +941,7 @@ async function enrichStock(stock) {
         }
     }
     
-    const usedCurrency = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
+    let usedCurrency = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
     if (usedCurrency === 'GBX' && Number.isFinite(price)) {
         price = price / 100;
         if (CONFIG.DEBUG) console.log(`[GBX→GBP] ${stock.symbol}: price converted from GBX to GBP`);
@@ -941,6 +952,45 @@ async function enrichStock(stock) {
             price = stats.market_cap / stats.shares_outstanding;
             if (CONFIG.DEBUG) console.log(`[FALLBACK PRICE] ${stock.symbol}: price = ${price} from market_cap/shares`);
             change_percent = null;
+        }
+    }
+    
+    // ✅ v3.27.2: Si résolution déterministe échoue → retry avec resolveSymbolSmart
+    if (!price && isNonUSWithMIC) {
+        console.log(`  ⚠️ ${stock.symbol}: ${resolved} échoué, retry resolveSymbolSmart...`);
+        const smartResolved = await resolveSymbolSmart(stock.symbol, stock);
+        if (smartResolved && smartResolved !== resolved) {
+            resolved = smartResolved;
+            sym = resolved;
+            console.log(`  🔄 ${stock.symbol} → ${resolved}`);
+            
+            [perf, quote, dividends, stats, mcDirect, growth] = await Promise.all([
+                getPerformanceData(sym, ctx),
+                getQuoteData(sym, ctx),
+                getDividendData(sym, ctx),
+                getStatisticsData(sym, ctx),
+                getMarketCapDirect(sym, ctx),
+                getGrowthEstimates(sym, ctx)
+            ]);
+            
+            price = quote?.price ?? null;
+            change_percent = quote?.percent_change ?? null;
+            range_52w = quote?.fifty_two_week?.range ?? null;
+            
+            if (!quote && perf && Number.isFinite(perf.__last_close)) {
+                price = perf.__last_close;
+                change_percent = perf.__prev_close ? ((price - perf.__prev_close) / perf.__prev_close * 100) : null;
+                if (!range_52w && perf.__hi52 && perf.__lo52) {
+                    range_52w = `${Number(perf.__lo52).toFixed(6)} - ${Number(perf.__hi52).toFixed(6)}`;
+                }
+            }
+            usedCurrency = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
+            if (usedCurrency === 'GBX' && Number.isFinite(price)) price = price / 100;
+            
+            if (!price && Number.isFinite(stats?.market_cap) && Number.isFinite(stats?.shares_outstanding) && stats.shares_outstanding > 0) {
+                price = stats.market_cap / stats.shares_outstanding;
+                change_percent = null;
+            }
         }
     }
     
@@ -1092,7 +1142,6 @@ async function enrichStock(stock) {
     const usedTz  = perf?._series_meta?.timezone ?? null;
     const symUsed = quote?._meta?.symbol_used || perf?._series_meta?.symbol_used || (resolved || stock.symbol);
     
-    // ✅ v3.27: ROE/D-E/ROIC: CSV prioritaire, fallback API /statistics
     const finalROE = stock.roe ?? stats?.roe_api ?? null;
     const finalDE = stock.de_ratio ?? stats?.de_ratio_api ?? null;
     const finalROIC = stock.roic ?? stats?.roic_api ?? null;
@@ -1289,7 +1338,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.27.1 - Fix STATISTICS=50, 429 retry, D/E path)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.27.2 - Euronext variants + deterministic fallback)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
