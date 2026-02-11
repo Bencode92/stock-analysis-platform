@@ -1,5 +1,10 @@
 // stock-advanced-filter.js
-// Version 3.26 - Extraction ROE/D-E/ROIC depuis /statistics API + fallback CSV→API
+// Version 3.26.1 - Fix CREDIT_LIMIT + skip resolveSymbolSmart pour non-US
+// Changements v3.26.1:
+// - CREDIT_LIMIT 800 → 2584 (limite réelle du plan)
+// - Skip resolveSymbolSmart pour non-US avec MIC connu (résolution déterministe symbol:MIC)
+// - Économie ~300-600 crédits/minute en éliminant les appels /quote non trackés
+// - resolveSymbolSmart conservé uniquement pour US (désambiguïsation exchange nécessaire)
 // Changements v3.26:
 // - Extraction ROE (return_on_equity_ttm), D/E (total_debt_to_equity_ratio), ROIC depuis /statistics
 // - Fallback automatique: CSV prioritaire → API si CSV manquant
@@ -105,7 +110,7 @@ const CONFIG = {
     API_KEY: process.env.TWELVE_DATA_API_KEY,
     DEBUG: process.env.DEBUG === '1',
     CHUNK_SIZE: 5,
-    CREDIT_LIMIT: 800,
+    CREDIT_LIMIT: 2584,
     CREDITS: {
         QUOTE: 1,
         TIME_SERIES: 5,
@@ -920,12 +925,25 @@ function getBuffettGrade(score) {
     return 'D';
 }
 
-// ✅ v3.26: enrichStock avec fallback API pour ROE/D-E/ROIC
+// ✅ v3.26.1: enrichStock avec résolution déterministe pour non-US
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
     
-    const resolved = await resolveSymbolSmart(stock.symbol, stock);
-    if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
+    // ✅ v3.26.1: Skip resolveSymbolSmart pour non-US avec MIC connu
+    // Économise 2-10 appels /quote non trackés par stock
+    const mic = toMIC(stock.exchange, stock.country);
+    const isNonUSWithMIC = !isUS(stock.exchange, stock.country) && mic && !isUSMic(mic);
+    
+    let resolved;
+    if (isNonUSWithMIC) {
+        // Résolution déterministe: 0 appel API
+        resolved = `${stock.symbol}:${mic}`;
+        if (CONFIG.DEBUG) console.log(`[DETERMINISTIC] ${stock.symbol} → ${resolved} (${stock.country}, skip smart resolve)`);
+    } else {
+        // US stocks: smart resolve nécessaire pour disambiguation exchange
+        resolved = await resolveSymbolSmart(stock.symbol, stock);
+        if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
+    }
     
     const wasADR = isADRLike(stock);
     if (CONFIG.DEBUG && resolved) {
@@ -1365,7 +1383,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.26 - ROE/DE/ROIC API fallback + Fix tickers ambigus Euronext)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.26.1 - CREDIT_LIMIT 2584 + résolution déterministe non-US)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
@@ -1456,9 +1474,6 @@ async function main() {
     const withFCFYield = allStocks.filter(s => s.fcf_yield !== null).length;
     const withEPSGrowth = allStocks.filter(s => s.eps_growth_5y !== null).length;
     const withPEG = allStocks.filter(s => s.peg_ratio !== null).length;
-    
-    // ✅ v3.26: Stats API fallback
-    const roeFromAPI = allStocks.filter(s => s.roe !== null && s.roe === (stats => stats)/* logged above */).length;
     
     console.log('\n📊 Statistiques des métriques:');
     console.log(`  - Actions avec P/E ratio: ${withPE.length}/${allStocks.length}`);
