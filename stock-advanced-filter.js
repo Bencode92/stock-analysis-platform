@@ -1,23 +1,11 @@
 // stock-advanced-filter.js
-// Version 3.26.1 - Fix CREDIT_LIMIT + skip resolveSymbolSmart pour non-US
-// Changements v3.26.1:
+// Version 3.27 - Rebase sur v3.23 (stable) + ROE/DE/ROIC API fallback + résolution déterministe
+// Changements v3.27:
+// - REBASE sur v3.23 (tdParamTrials simple, 4 trials max non-US) qui fonctionnait
 // - CREDIT_LIMIT 800 → 2584 (limite réelle du plan)
-// - Skip resolveSymbolSmart pour non-US avec MIC connu (résolution déterministe symbol:MIC)
-// - Économie ~300-600 crédits/minute en éliminant les appels /quote non trackés
-// - resolveSymbolSmart conservé uniquement pour US (désambiguïsation exchange nécessaire)
-// Changements v3.26:
-// - Extraction ROE (return_on_equity_ttm), D/E (total_debt_to_equity_ratio), ROIC depuis /statistics
-// - Fallback automatique: CSV prioritaire → API si CSV manquant
-// - Conversion: ROE/ROIC décimal→%, D/E percentage→ratio
+// - Skip resolveSymbolSmart pour non-US avec MIC connu (résolution déterministe)
+// - Extraction ROE/D-E/ROIC depuis /statistics API avec fallback CSV→API (v3.26)
 // - Score Buffett calculé avec données API quand CSV incomplet
-// Changements v3.25.1:
-// - Ajout paramètre country dans tous les trials non-US (fix /quote, /time_series, /dividends pour CAP)
-// - Trials combinés exchange+mic_code+country pour désambiguïsation maximale
-// - Nouveau trial mic_code+country sans exchange (fallback intermédiaire)
-// Changements v3.25:
-// - Ajout 'EURONEXT' générique dans les variantes exchange pour tous les marchés Euronext
-// - Ajout trials combinés exchange+mic_code pour désambiguïser les tickers courts (CAP, BNP, OR...)
-// - Déplacement du fallback symbole nu en dernière position (évite résolutions sur le mauvais marché)
 // Changements v3.23:
 // - Ajout fcf_ttm dans getStatisticsData() depuis financials.cash_flow
 // - Nouvelle fonction getGrowthEstimates() pour EPS Growth 5Y via /growth_estimates
@@ -30,58 +18,6 @@
 // - Ajout getBuffettGrade() : grades A/B/C/D selon score
 // - enrichStock() retourne roe, de_ratio, buffett_score, buffett_grade
 // - buildOverview() inclut les métriques Buffett dans les tops
-// Changements v3.21:
-// - Ajout support REGIONS env (all, us, europe, asia, us-europe, us-asia, europe-asia)
-// - Chargement conditionnel des CSV selon régions sélectionnées
-// - tops_overview.json généré uniquement avec les régions traitées
-// Corrections v3.20:
-// - Blocage de l'override API après split récent (évite l'écrasement du calcul correct)
-// - Run-rate robuste même sans dividendes post-split dans le feed
-// - Utilisation du dernier dividende connu (déjà ajusté) × fréquence
-// - ETR: yield corrigé à ~2.71% au lieu de 5.19% (API incorrecte après split)
-// - Amélioration du logging pour debug des splits
-// Corrections v3.19:
-// - Ajout du run-rate post-split quand TTM incomplet après split
-// - ETR: utilise dernier dividende post-split (0.60) × fréquence (4) = 2.40$ 
-// - Yield corrigé à ~2.71% au lieu de 0.68%
-// - Amélioration calcul médiane sur montants post-split uniquement si disponibles
-// Corrections v3.18:
-// - Resserre la détection "déjà ajusté" à r≈1 (±15%) au lieu de 0.5-2.0
-// - Corrige ETR: rendement ~2.76% au lieu de ~5.3%
-// - Passe le facteur à splitSeriesAlreadyAdjusted pour détection précise
-// - Priorise calc sur API après split récent
-// - Logging amélioré pour debug des ajustements de splits
-// Corrections v3.17.4:
-// - Désactivation du réordonnancement cache pour endpoints sensibles (dividends, time_series)
-// - Clé de cache précise incluant exchange et mic_code
-// - Correction des étiquettes de source pour refléter la vraie origine (API vs calc)
-// - Ajout de logs debug pour la fenêtre TTM
-// Corrections v3.17.3:
-// - Fix regex cassée avec parenthèses non fermées dans resolveSymbolSmart
-// - Utilisation directe du Set US_MICS pour éviter les erreurs de regex
-// Corrections v3.17.2:
-// - Fix parseSplitFactor pour accepter "2:1", "2/1", "2-1", "2 for 1", etc.
-// - Résolution du bug ETR (split 2:1 non reconnu → dividendes mal ajustés)
-// Corrections v3.17.1:
-// - Ajout garde-fou pour conflits de rendements (écart >40% sans split ni spéciaux)
-// - Résolution conservatrice privilégiant REG ou valeur minimale
-// - Objet debug_dividends pour traçabilité complète
-// Corrections v3.17:
-// - Détection intelligente des splits déjà ajustés par l'API
-// - Estimation dynamique de la fréquence des dividendes (annuel/semestriel/trimestriel)
-// - Harmonisation REG/TTM pour éviter les incohérences visuelles
-// - Fix HDFCBANK/ICICIBANK (cadence annuelle, pas ×4)
-// - Fix AVGO (évite double ajustement de split)
-// Améliorations v3.16:
-// - Garde le contexte complet (exchange/country) dans tous les appels
-// - Amélioration détection pays US avec fonction dédiée
-// - Correction ADR pour Euronext Paris sans casser US
-// - Sécurisation fallback prix depuis time_series
-// Améliorations v3.15:
-// - Détection et ajustement automatique des splits d'actions
-// - Identification des dividendes spéciaux via médiane
-// - Yield régulier vs TTM avec sélection intelligente
-// - Support ETR (split 2-for-1) et AFG (spéciaux fréquents)
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -213,6 +149,7 @@ function micForRegion(stock) {
     return mic;
 }
 
+// ✅ v3.27: REBASE sur tdParamTrials v3.23 (4 trials max pour non-US, pas 8-10)
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     let base = symbol, micFromResolved = null;
     if (resolvedSym && resolvedSym.includes(':')) {
@@ -229,12 +166,14 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         trials.push({ symbol: base });
         if (mic) trials.push({ symbol: `${base}:${mic}` });
     } else {
-        const country = stock?.country || null;
+        // ✅ v3.23 ORIGINAL: Simple et efficace - 4 trials max
         if (mic) {
-            trials.push({ symbol: `${base}:${mic}` });
-            trials.push({ symbol: base, mic_code: mic, ...(country && { country }) });
+            trials.push({ symbol: `${base}:${mic}` });        // PRIORITÉ 1: SYM:MIC
+            trials.push({ symbol: base, mic_code: mic });     // PRIORITÉ 2: mic_code=
         }
+        trials.push({ symbol: base });                        // fallback
         
+        // Variantes exchange= (sans surcharge country/mic combinée)
         const exLabel = normalize(stock.exchange);
         const exVar = [];
         if (/six swiss|^six$/.test(exLabel))                exVar.push('SIX','SIX Swiss Exchange');
@@ -245,27 +184,13 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         if (/euronext.*amsterdam/.test(exLabel))            exVar.push('Euronext Amsterdam');
         if (/euronext.*brussels/.test(exLabel))             exVar.push('Euronext Brussels');
         if (/euronext.*milan/.test(exLabel))                exVar.push('Euronext Milan');
-        if (/euronext/i.test(exLabel))                      exVar.push('EURONEXT');
         if (/london stock exchange/.test(exLabel))          exVar.push('London Stock Exchange','LSE');
         if (/nasdaq stockholm/.test(exLabel))               exVar.push('NASDAQ Stockholm');
         if (/nasdaq copenhagen/.test(exLabel))              exVar.push('NASDAQ Copenhagen');
-        if (/nasdaq helsinki/.test(exLabel))                exVar.push('NASDAQ Helsinki');
+        if (/nasdaq helsinki/.test(exLabel))                 exVar.push('NASDAQ Helsinki');
         if (/taiwan/.test(exLabel))                         exVar.push('Taiwan Stock Exchange');
         
-        if (mic) {
-            for (const ex of exVar) {
-                trials.push({ symbol: base, exchange: ex, mic_code: mic, ...(country && { country }) });
-            }
-        }
-        
         for (const ex of exVar) trials.push({ symbol: base, exchange: ex });
-        
-        if (country) {
-            trials.push({ symbol: base, country });
-            if (mic) trials.push({ symbol: base, mic_code: mic, country });
-        }
-        
-        trials.push({ symbol: base });
     }
     
     return trials;
@@ -506,7 +431,7 @@ async function loadStockCSV(filepath) {
     }
 }
 
-// ───────── Data fetchers ─────────
+// ───────── Data fetchers (identiques v3.23) ─────────
 
 async function getQuoteData(symbol, stock) {
     try {
@@ -657,7 +582,7 @@ async function getDividendData(symbol, stock) {
     }
 }
 
-// ✅ v3.26: getStatisticsData avec extraction ROE/D-E/ROIC
+// ✅ v3.27: getStatisticsData avec extraction ROE/D-E/ROIC (de v3.26)
 async function getStatisticsData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.STATISTICS);
@@ -688,33 +613,27 @@ async function getStatisticsData(symbol, stock) {
         ]);
         const last_split_factor = root?.dividends_and_splits?.last_split_factor ?? null;
         const last_split_date   = root?.dividends_and_splits?.last_split_date   ?? null;
-
         const fcf_ttm = pickNumDeep(root, [
             'financials.cash_flow.levered_free_cash_flow_ttm', 'financials.cash_flow.free_cash_flow_ttm',
             'financials.cash_flow.levered_free_cash_flow', 'financials.cash_flow.free_cash_flow',
             'cash_flow.free_cash_flow_ttm', 'free_cash_flow_ttm', 'fcf_ttm'
         ]);
 
-        // ✅ v3.26: NOUVEAU - Extraction ROE, D/E, ROIC depuis /statistics API
+        // ✅ v3.27 (from v3.26): ROE, D/E, ROIC depuis /statistics API
         const roe_api_raw = pickNumDeep(root, [
             'financials.return_on_equity_ttm',
             'financials.income_statement.return_on_equity',
-            'return_on_equity_ttm',
-            'return_on_equity'
+            'return_on_equity_ttm', 'return_on_equity'
         ]);
-
         const de_ratio_api_raw = pickNumDeep(root, [
             'financials.balance_sheet.total_debt_to_equity_ratio',
             'financials.balance_sheet.debt_to_equity',
-            'total_debt_to_equity_ratio',
-            'debt_to_equity'
+            'total_debt_to_equity_ratio', 'debt_to_equity'
         ]);
-
         const roic_api_raw = pickNumDeep(root, [
             'financials.return_on_invested_capital_ttm',
             'financials.income_statement.return_on_invested_capital',
-            'return_on_invested_capital_ttm',
-            'return_on_invested_capital'
+            'return_on_invested_capital_ttm', 'return_on_invested_capital'
         ]);
 
         return {
@@ -726,15 +645,10 @@ async function getStatisticsData(symbol, stock) {
             dividend_yield_forward_pct: Number.isFinite(forward_yield) ? forward_yield * 100 : null,
             beta: Number.isFinite(beta) ? beta : null,
             shares_outstanding: Number.isFinite(shares_outstanding) ? shares_outstanding : null,
-            last_split_factor,
-            last_split_date,
+            last_split_factor, last_split_date,
             fcf_ttm: Number.isFinite(fcf_ttm) ? fcf_ttm : null,
-            // ✅ v3.26: ROE/D-E/ROIC from API
-            // ROE: API returns decimal (0.14318 = 14.3%) → ×100
             roe_api: Number.isFinite(roe_api_raw) ? +(roe_api_raw * 100).toFixed(2) : null,
-            // D/E: API returns percentage-like (55.225 → 0.55225 ratio) → ÷100
             de_ratio_api: Number.isFinite(de_ratio_api_raw) ? +(de_ratio_api_raw / 100).toFixed(4) : null,
-            // ROIC: API returns decimal like ROE → ×100
             roic_api: Number.isFinite(roic_api_raw) ? +(roic_api_raw * 100).toFixed(2) : null
         };
     } catch (error) {
@@ -925,22 +839,19 @@ function getBuffettGrade(score) {
     return 'D';
 }
 
-// ✅ v3.26.1: enrichStock avec résolution déterministe pour non-US
+// ✅ v3.27: enrichStock = v3.23 base + résolution déterministe non-US + ROE/DE/ROIC API fallback
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
     
-    // ✅ v3.26.1: Skip resolveSymbolSmart pour non-US avec MIC connu
-    // Économise 2-10 appels /quote non trackés par stock
+    // ✅ v3.27: Résolution déterministe pour non-US (0 appel API), smart pour US uniquement
     const mic = toMIC(stock.exchange, stock.country);
     const isNonUSWithMIC = !isUS(stock.exchange, stock.country) && mic && !isUSMic(mic);
     
     let resolved;
     if (isNonUSWithMIC) {
-        // Résolution déterministe: 0 appel API
         resolved = `${stock.symbol}:${mic}`;
-        if (CONFIG.DEBUG) console.log(`[DETERMINISTIC] ${stock.symbol} → ${resolved} (${stock.country}, skip smart resolve)`);
+        if (CONFIG.DEBUG) console.log(`[DETERMINISTIC] ${stock.symbol} → ${resolved} (${stock.country})`);
     } else {
-        // US stocks: smart resolve nécessaire pour disambiguation exchange
         resolved = await resolveSymbolSmart(stock.symbol, stock);
         if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
     }
@@ -949,9 +860,6 @@ async function enrichStock(stock) {
     if (CONFIG.DEBUG && resolved) {
         console.log(`[RESOLVE] ${stock.symbol} | Exchange: "${stock.exchange}" | Country: ${stock.country}`);
         console.log(`  → Resolved: ${resolved} | ADR? ${wasADR}`);
-        if (wasADR && stock.country === 'France') {
-            console.warn(`  ⚠️ French stock marked as ADR - CHECK THIS!`);
-        }
     }
     
     if (!resolved && isUS(stock.exchange, stock.country) && !isUSCountry(stock.country)) {
@@ -1011,9 +919,6 @@ async function enrichStock(stock) {
     let fcf_yield = null;
     if (Number.isFinite(stats?.fcf_ttm) && Number.isFinite(market_cap) && market_cap > 0) {
         fcf_yield = +((stats.fcf_ttm / market_cap) * 100).toFixed(2);
-        if (CONFIG.DEBUG) {
-            console.log(`[FCF YIELD] ${stock.symbol}: FCF=${(stats.fcf_ttm/1e9).toFixed(2)}B, MC=${(market_cap/1e9).toFixed(2)}B => Yield=${fcf_yield}%`);
-        }
     }
     
     // ---- Dividend yields (split-aware + specials) ----
@@ -1025,10 +930,6 @@ async function enrichStock(stock) {
       .sort((a,b)=>b.ex_date.localeCompare(a.ex_date));
     const oneYearAgo = new Date(); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const last12m = fullDivs.filter(d => new Date(d.ex_date) > oneYearAgo);
-    if (CONFIG.DEBUG && last12m.length > 0) {
-        const windowDbg = last12m.map(d => `${d.ex_date}:${d.amount.toFixed(4)}`).join(', ');
-        console.log(`[TTM WINDOW ${stock.symbol}]`, windowDbg, '| sum =', last12m.reduce((s, d) => s + d.amount, 0).toFixed(3));
-    }
     const postSplitDivs = splitD ? fullDivs.filter(d => new Date(d.ex_date) >= splitD) : [];
     const recentAmtsAll = fullDivs.slice(0, 8).map(d => d.amount).filter(a => a > 0);
     const recentAmtsPost = postSplitDivs.slice(0, 8).map(d => d.amount).filter(a => a > 0);
@@ -1039,9 +940,6 @@ async function enrichStock(stock) {
     const ttmSpecial = last12m.filter(d => isSpecial(d.amount)).reduce((s, d) => s + (d.amount || 0), 0);
     const specialShare = ttmSumCalc > 0 ? (ttmSpecial / ttmSumCalc * 100) : 0;
     const freq = estimateFrequency(fullDivs, isSpecial);
-    if (CONFIG.DEBUG && freq !== 4) {
-        console.log(`[FREQ] ${stock.symbol}: Fréquence détectée = ${freq} (pas 4)`);
-    }
     const nonSpecCount12m = last12m.filter(d => !isSpecial(d.amount)).length;
     const expectedMin = Math.max(1, Math.floor(freq * 0.6));
     const lastKnownAmt = 
@@ -1052,9 +950,6 @@ async function enrichStock(stock) {
     if (recentSplit && nonSpecCount12m < expectedMin && Number.isFinite(lastKnownAmt) && freq) {
         ttmSumCalc = lastKnownAmt * freq;
         usedRunRate = true;
-        if (CONFIG.DEBUG) {
-            console.log(`[RUN-RATE ${stock.symbol}] TTM incomplet (${nonSpecCount12m}/${expectedMin}), using ${lastKnownAmt.toFixed(4)} × ${freq} = ${ttmSumCalc.toFixed(2)}`);
-        }
     }
     const regularQ = median(baseAmts.filter(a => !isSpecial(a)));
     const annualRegular = regularQ ? regularQ * freq : null;
@@ -1074,16 +969,6 @@ async function enrichStock(stock) {
     const refForClamp = (usedTtmSource === 'api' && recentSplit) ? null : dividend_yield_ttm;
     yield_regular = clampRegToTTM(yield_regular, refForClamp ?? yield_regular, specialShare >= 20);
 
-    if (CONFIG.DEBUG) {
-        console.log(`[DIVY GUARD] ${stock.symbol}: recentSplit=${recentSplit}, nonSpecCount12m=${nonSpecCount12m}, expectedMin=${expectedMin}, usedRunRate=${usedRunRate}, usedTtmSource=${usedTtmSource}, api=${yield_ttm_api}%`);
-        if (usedRunRate) {
-            console.log(`[RUN-RATE DETAIL] base=${lastKnownAmt?.toFixed(4)} × freq=${freq} => TTM=${ttmSumCalc.toFixed(2)} => yield=${yield_ttm_calc}%`);
-        }
-        if (recentSplit && yield_ttm_api && Math.abs(yield_ttm_api - (yield_ttm_calc || 0)) > 1) {
-            console.warn(`[SPLIT WARNING] ${stock.symbol}: API yield (${yield_ttm_api}%) diverge from calc (${yield_ttm_calc}%) after recent split`);
-        }
-    }
-
     let dividendYield, dividend_yield_src;
     let debug_dividends = null;
     dividendYield = dividend_yield_ttm ?? yield_regular ?? yield_fwd ?? null;
@@ -1102,9 +987,6 @@ async function enrichStock(stock) {
         const conflict = (maxv / minv) > 1.4;
         if (conflict) {
           dividend_consistency = 'conflict';
-          if (CONFIG.DEBUG) {
-            console.log(`[YIELD CONFLICT] ${stock.symbol}: FWD=${yield_fwd}% vs TTM_CALC=${yield_ttm_calc}% (ratio=${(maxv/minv).toFixed(2)}) → Using ${dividend_yield_src}`);
-          }
           if (Number.isFinite(yield_regular)) {
             dividendYield = yield_regular;
             dividend_yield_src = 'REG';
@@ -1127,7 +1009,7 @@ async function enrichStock(stock) {
         recent_split: recentSplit,
         split_date: stats?.last_split_date || null,
         split_factor: splitF !== 1 ? splitF : null,
-        dividend_yield_src: dividend_yield_src,
+        dividend_yield_src,
         ttm_source: usedTtmSource,
         ttm_window_count: last12m.length,
         used_run_rate: usedRunRate,
@@ -1165,42 +1047,29 @@ async function enrichStock(stock) {
         dividend_coverage = Number((eps_ttm / dps_ttm_used).toFixed(2));
       }
     }
-    if (CONFIG.DEBUG && (ttmSumCalc !== null || eps_ttm !== null)) {
-        console.log(`[PAYOUT] ${stock.symbol}: DPS=${ttmSumCalc?.toFixed(4) || 'N/A'}, EPS=${eps_ttm?.toFixed(4) || 'N/A'}, P/E=${stats?.pe_ratio || 'N/A'}, Payout=${payout_ratio_ttm || 'N/A'}% (${payout_status || 'N/A'}), Source: ${stats?.payout_ratio_api_pct ? 'API' : eps_ttm ? 'DPS/EPS' : 'yield×P/E'}`);
-    }
     
     const usedEx =  quote?._meta?.exchange ?? perf?._series_meta?.exchange ?? null;
     const usedMic = quote?._meta?.mic_code ?? null;
     const usedCur = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
     const usedTz  = perf?._series_meta?.timezone ?? null;
     const symUsed = quote?._meta?.symbol_used || perf?._series_meta?.symbol_used || (resolved || stock.symbol);
-    if (CONFIG.DEBUG) {
-        console.log(`[DATA CTX] ${stock.symbol} -> ${symUsed} | ${usedEx} (${usedMic}) | ${usedCur} | ${usedTz || 'tz?'}`);
-    }
     
-    // ✅ v3.26: ROE/D-E/ROIC: CSV prioritaire, fallback API /statistics
+    // ✅ v3.27: ROE/D-E/ROIC: CSV prioritaire, fallback API /statistics
     const finalROE = stock.roe ?? stats?.roe_api ?? null;
     const finalDE = stock.de_ratio ?? stats?.de_ratio_api ?? null;
     const finalROIC = stock.roic ?? stats?.roic_api ?? null;
     
     if (CONFIG.DEBUG) {
-        if (stats?.roe_api != null || stats?.de_ratio_api != null || stats?.roic_api != null) {
-            console.log(`[FUNDAMENTALS API] ${stock.symbol}: ROE_api=${stats.roe_api}%, DE_api=${stats.de_ratio_api}, ROIC_api=${stats.roic_api}%`);
-        }
         if (stock.roe == null && stats?.roe_api != null) {
-            console.log(`[FALLBACK] ${stock.symbol}: ROE CSV=null → using API=${stats.roe_api}%`);
+            console.log(`[FALLBACK] ${stock.symbol}: ROE CSV=null → API=${stats.roe_api}%`);
         }
         if (stock.de_ratio == null && stats?.de_ratio_api != null) {
-            console.log(`[FALLBACK] ${stock.symbol}: D/E CSV=null → using API=${stats.de_ratio_api}`);
+            console.log(`[FALLBACK] ${stock.symbol}: D/E CSV=null → API=${stats.de_ratio_api}`);
         }
     }
     
     const buffett_score = calculateBuffettScore(finalROE, finalDE, finalROIC);
     const buffett_grade = getBuffettGrade(buffett_score);
-    
-    if (CONFIG.DEBUG && (finalROE !== null || finalDE !== null || finalROIC !== null)) {
-        console.log(`[BUFFETT] ${stock.symbol}: ROE=${finalROE}%, D/E=${finalDE}, ROIC=${finalROIC}% → Score=${buffett_score}, Grade=${buffett_grade}`);
-    }
 
     return {
         ticker: stock.symbol,
@@ -1225,7 +1094,6 @@ async function enrichStock(stock) {
         perf_ytd: perf.performances?.ytd || null,
         perf_1y: perf.performances?.year_1 || null,
         perf_3y: perf.performances?.year_3 || null,
-        // ✅ v3.26: Fondamentaux Buffett (CSV prioritaire, fallback API)
         roe: finalROE,
         de_ratio: finalDE,
         roic: finalROIC,
@@ -1383,7 +1251,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.26.1 - CREDIT_LIMIT 2584 + résolution déterministe non-US)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.27 - Rebase v3.23 stable + ROE/DE/ROIC API fallback)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
