@@ -1,5 +1,10 @@
 // stock-advanced-filter.js
-// Version 3.27 - Rebase sur v3.23 (stable) + ROE/DE/ROIC API fallback + résolution déterministe
+// Version 3.27.1 - Fix STATISTICS cost 50, 429 retry, D/E path fix
+// Changements v3.27.1:
+// - STATISTICS credit cost: 25 → 50 (doc Twelve Data: 50/symbole)
+// - fetchTD: retry explicite sur 429 (HTTP + body code) avec backoff 1.2s
+// - D/E extraction: ajout chemin total_debt_to_equity_mrq (doc officielle)
+// - Log headers api-credits-used/left en DEBUG
 // Changements v3.27:
 // - REBASE sur v3.23 (tdParamTrials simple, 4 trials max non-US) qui fonctionnait
 // - CREDIT_LIMIT 800 → 2584 (limite réelle du plan)
@@ -50,7 +55,7 @@ const CONFIG = {
     CREDITS: {
         QUOTE: 1,
         TIME_SERIES: 5,
-        STATISTICS: 25,
+        STATISTICS: 50,      // ✅ v3.27.1: doc Twelve Data = 50 crédits/symbole
         DIVIDENDS: 10,
         MARKET_CAP: 1,
         GROWTH_ESTIMATES: 10
@@ -196,6 +201,7 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
     return trials;
 }
 
+// ✅ v3.27.1: fetchTD avec retry 429 explicite + log headers crédits
 async function fetchTD(endpoint, trials, extraParams = {}) {
     const makeKey = (t) => `${endpoint}:${t.symbol || ''}:${t.exchange || ''}:${t.mic_code || ''}`;
     const CACHE_REORDER_UNSAFE = ['dividends', 'time_series', 'splits'];
@@ -207,20 +213,50 @@ async function fetchTD(endpoint, trials, extraParams = {}) {
     }
 
     for (const p of trials) {
-        try {
-            const { data } = await axios.get(`https://api.twelvedata.com/${endpoint}`, {
-                params: { ...p, ...extraParams, apikey: CONFIG.API_KEY },
-                timeout: 15000
-            });
-            if (data && data.status !== 'error') {
-                successCache.set(makeKey(p), p);
-                if (CONFIG.DEBUG) console.log(`[TD OK ${endpoint}]`, p);
-                return data;
-            }
-            if (CONFIG.DEBUG) console.warn(`[TD FAIL ${endpoint}]`, p, data?.message || data?.status);
-        } catch (e) {
-            if (CONFIG.DEBUG && e.response?.status !== 404) {
-                console.warn(`[TD EXC ${endpoint}]`, p, e.message);
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const res = await axios.get(`https://api.twelvedata.com/${endpoint}`, {
+                    params: { ...p, ...extraParams, apikey: CONFIG.API_KEY },
+                    timeout: 15000
+                });
+
+                const data = res.data;
+
+                // ✅ v3.27.1: Log headers crédits en DEBUG
+                const used = res.headers?.['api-credits-used'];
+                const left = res.headers?.['api-credits-left'];
+                if (CONFIG.DEBUG && (used || left)) {
+                    console.log(`[CREDITS] ${endpoint} used=${used ?? '?'} left=${left ?? '?'}`);
+                }
+
+                if (data && data.status !== 'error') {
+                    successCache.set(makeKey(p), p);
+                    if (CONFIG.DEBUG) console.log(`[TD OK ${endpoint}]`, p);
+                    return data;
+                }
+
+                // ✅ v3.27.1: Détection 429 dans le body (erreur "soft")
+                const code = data?.code;
+                if (code === 429) {
+                    if (CONFIG.DEBUG) console.warn(`[TD 429 BODY ${endpoint}] wait 1200ms`, p, data?.message);
+                    await wait(1200);
+                    continue;   // retry même trial
+                }
+
+                if (CONFIG.DEBUG) console.warn(`[TD FAIL ${endpoint}]`, p, data?.message || data?.status);
+                break;  // pas la peine de retry si ce n'est pas 429
+            } catch (e) {
+                // ✅ v3.27.1: Détection HTTP 429
+                const http = e.response?.status;
+                if (http === 429) {
+                    if (CONFIG.DEBUG) console.warn(`[HTTP 429 ${endpoint}] wait 1200ms`, p);
+                    await wait(1200);
+                    continue;   // retry même trial
+                }
+                if (CONFIG.DEBUG && http !== 404) {
+                    console.warn(`[TD EXC ${endpoint}]`, p, e.message);
+                }
+                break;
             }
         }
     }
@@ -582,7 +618,7 @@ async function getDividendData(symbol, stock) {
     }
 }
 
-// ✅ v3.27: getStatisticsData avec extraction ROE/D-E/ROIC (de v3.26)
+// ✅ v3.27.1: getStatisticsData avec D/E path fix (total_debt_to_equity_mrq)
 async function getStatisticsData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.STATISTICS);
@@ -619,16 +655,18 @@ async function getStatisticsData(symbol, stock) {
             'cash_flow.free_cash_flow_ttm', 'free_cash_flow_ttm', 'fcf_ttm'
         ]);
 
-        // ✅ v3.27 (from v3.26): ROE, D/E, ROIC depuis /statistics API
+        // ✅ v3.27.1: ROE, D/E, ROIC depuis /statistics API (paths corrigés)
         const roe_api_raw = pickNumDeep(root, [
             'financials.return_on_equity_ttm',
             'financials.income_statement.return_on_equity',
             'return_on_equity_ttm', 'return_on_equity'
         ]);
+        // ✅ v3.27.1: ajout total_debt_to_equity_mrq (champ exact de la doc)
         const de_ratio_api_raw = pickNumDeep(root, [
+            'financials.balance_sheet.total_debt_to_equity_mrq',
             'financials.balance_sheet.total_debt_to_equity_ratio',
             'financials.balance_sheet.debt_to_equity',
-            'total_debt_to_equity_ratio', 'debt_to_equity'
+            'total_debt_to_equity_mrq', 'total_debt_to_equity_ratio', 'debt_to_equity'
         ]);
         const roic_api_raw = pickNumDeep(root, [
             'financials.return_on_invested_capital_ttm',
@@ -1251,7 +1289,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.27 - Rebase v3.23 stable + ROE/DE/ROIC API fallback)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.27.1 - Fix STATISTICS=50, 429 retry, D/E path)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
