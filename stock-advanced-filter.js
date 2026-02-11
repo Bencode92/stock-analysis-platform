@@ -69,6 +69,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const csv = require('csv-parse/sync');
+const generateDiagnostic = require('./generate-diagnostic');
 
 const OUT_DIR = process.env.OUT_DIR || 'data';
 const KEEP_ADR = process.env.KEEP_ADR === '1'; // v3.13: toggle pour garder ou non les ADR
@@ -1796,6 +1797,8 @@ async function main() {
         console.log(`  - Non soutenable (>100%): ${withPayout.filter(s => s.payout_status === 'unsustainable').length}`);
     }
     
+    // ✅ Diagnostic: génère data/diagnostic_missing.json
+    await generateDiagnostic(byRegion, OUT_DIR, path, fs);
     console.log(`\n📊 Cache hits: ${successCache.size} symboles optimisés`);
 }
 
