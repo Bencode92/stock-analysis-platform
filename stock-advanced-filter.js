@@ -1,5 +1,13 @@
 // stock-advanced-filter.js
-// Version 3.25c - Fix BMPS + LDO cross-listings
+// Version 3.26 - Fix performances: adjust param, drawdown forward, YTD/3Y basis, 52w intraday, currency guard
+// Changements v3.26:
+// - Fix adjust param: 'adjusted' (ignoré par TD) → 'adjust' (param correct)
+// - Fix drawdown: scan forward (pic→creux) au lieu de reverse (DD sous-estimés)
+// - Fix YTD basis: dernier close année précédente (pas 1er jour trading)
+// - Fix ancre 3Y: dernier bar ≤ date cible (évite biais court systématique)
+// - Fix 52w: basé sur high/low intraday + 365j calendrier (pas 252 closes)
+// - Parse high/low depuis time_series pour calculs 52w robustes
+// - Garde-fou currency mismatch quote vs time_series
 // Changements v3.25c:
 // - BMPS: ajout MPI0 sur XETR (Germany)
 // - LDO: correction FMNB:XETR → LDO:XWBO (Austria)
@@ -626,8 +634,6 @@ async function resolveSymbolSmart(symbol, stock) {
     const fallback = resolveSymbol(symbol, stock);
     
     // ✅ v3.17.3: Variante robuste sans regex pour éviter les erreurs de syntaxe
-    // Si le fallback atterrit sur un MIC US alors que le country n'est pas US → refuse (évite ADR)
-    // extrait le MIC s'il y en a un : "SYM:MIC"
     const micInFallback = fallback && fallback.includes(':') ? fallback.split(':')[1] : null;
     
     if (!isUSCountry(stock.country) && micInFallback && US_MICS.has(micInFallback)) {
@@ -711,33 +717,40 @@ async function getQuoteData(symbol, stock) {
     }
 }
 
-// ✅ v3.25b: Ajout fallback adjusted=false dans getPerformanceData
+// ✅ v3.26: Fix adjust param + parse high/low + YTD basis + 3Y anchor + 52w intraday
 async function getPerformanceData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.TIME_SERIES);
         const resolved = resolveSymbol(symbol, stock);
         const trials = tdParamTrials(symbol, stock, resolved);
 
+        // ✅ v3.26: 'adjust' (pas 'adjusted') — param correct pour Twelve Data API
         let data = await fetchTD('time_series', trials, {
-            interval: '1day', outputsize: 900, order: 'ASC', adjusted: true
+            interval: '1day', outputsize: 900, order: 'ASC', adjust: 'splits'
         });
         
-        // ✅ v3.25b: Fallback adjusted=false si adjusted=true échoue
+        // ✅ v3.26: Fallback adjust='none' si adjust='splits' échoue
         if (!data || data.status === 'error' || !data.values) {
-            if (CONFIG.DEBUG) console.log(`[TIME_SERIES] ${symbol}: adjusted=true failed, trying adjusted=false`);
+            if (CONFIG.DEBUG) console.log(`[TIME_SERIES] ${symbol}: adjust=splits failed, trying adjust=none`);
             await pay(CONFIG.CREDITS.TIME_SERIES);
             data = await fetchTD('time_series', trials, {
-                interval: '1day', outputsize: 900, order: 'ASC', adjusted: false
+                interval: '1day', outputsize: 900, order: 'ASC', adjust: 'none'
             });
             if (CONFIG.DEBUG && data?.values) {
-                console.log(`[TIME_SERIES] ${symbol}: adjusted=false fallback OK (${data.values.length} bars)`);
+                console.log(`[TIME_SERIES] ${symbol}: adjust=none fallback OK (${data.values.length} bars)`);
             }
         }
         
         if (!data || data.status === 'error' || !data.values) return {};
 
         const meta = data.meta || {};
-        const prices = (data.values || []).map(v => ({ date: v.datetime.slice(0,10), close: Number(v.close) }));
+        // ✅ v3.26: Parse high/low pour 52w intraday
+        const prices = (data.values || []).map(v => ({
+            date: v.datetime.slice(0,10),
+            close: Number(v.close),
+            high: Number(v.high) || Number(v.close),
+            low: Number(v.low) || Number(v.close)
+        }));
         if (!prices.length) return {};
 
         const current = prices.at(-1)?.close || 0;
@@ -754,23 +767,25 @@ async function getPerformanceData(symbol, stock) {
 
         const now = new Date();
         const y3ISO = new Date(now.getFullYear()-3, now.getMonth(), now.getDate()).toISOString().slice(0,10);
-        const y3Bar = prices.find(p => p.date >= y3ISO);
+        // ✅ v3.26: Ancre 3Y = dernier bar ≤ date cible (évite biais court systématique)
+        const y3Bar = [...prices].reverse().find(p => p.date <= y3ISO) || prices.find(p => p.date >= y3ISO);
         if (y3Bar && y3Bar.close !== current) perf.year_3 = ((current - y3Bar.close)/y3Bar.close*100).toFixed(2);
 
         const yearStart = `${new Date().getFullYear()}-01-01`;
         const ytdIdx = prices.findIndex(p => p.date >= yearStart);
         const ytdBar = ytdIdx !== -1 ? prices[ytdIdx] : null;
         
-        if (CONFIG.DEBUG && ytdBar) {
-            const prev = ytdIdx > 0 ? prices[ytdIdx - 1] : null;
+        // ✅ v3.26: YTD basis = dernier close de l'année précédente
+        const ytdBase = (ytdIdx > 0) ? prices[ytdIdx - 1] : ytdBar;
+        
+        if (CONFIG.DEBUG && ytdBase) {
             console.log(
-                `[YTD] ${resolved} | yearStart=${yearStart} | basis=${ytdBar?.date ?? 'N/A'} close=${ytdBar?.close ?? 'N/A'} | ` +
-                `prev=${prev?.date ?? 'N/A'} closePrev=${prev?.close ?? 'N/A'} | current=${current}`
+                `[YTD] ${resolved} | yearStart=${yearStart} | basis=${ytdBase?.date ?? 'N/A'} close=${ytdBase?.close ?? 'N/A'} | current=${current}`
             );
         }
         
-        if (ytdBar && ytdBar.close !== current) {
-            perf.ytd = ((current - ytdBar.close)/ytdBar.close*100).toFixed(2);
+        if (ytdBase && ytdBase.close !== current) {
+            perf.ytd = ((current - ytdBase.close)/ytdBase.close*100).toFixed(2);
         }
 
         const tail = prices.slice(-Math.min(252*3, prices.length)).map(p => p.close);
@@ -778,9 +793,11 @@ async function getPerformanceData(symbol, stock) {
         for (let i=1; i<tail.length; i++) rets.push(Math.log(tail[i]/tail[i-1]));
         const vol = Math.sqrt(252) * standardDeviation(rets) * 100;
 
-        const last252 = prices.slice(-252);
-        const high52 = last252.length ? Math.max(...last252.map(p=>p.close)) : null;
-        const low52 = last252.length ? Math.min(...last252.map(p=>p.close)) : null;
+        // ✅ v3.26: 52w basé sur high/low intraday + 365 jours calendrier
+        const oneYearAgoISO = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
+        const last52w = prices.filter(p => p.date >= oneYearAgoISO);
+        const high52 = last52w.length ? Math.max(...last52w.map(p => p.high || p.close)) : null;
+        const low52 = last52w.length ? Math.min(...last52w.map(p => p.low || p.close)) : null;
 
         const drawdowns = calculateDrawdowns(prices);
 
@@ -793,8 +810,8 @@ async function getPerformanceData(symbol, stock) {
             distance_52w_low: low52 ? ((current - low52)/low52*100).toFixed(2) : null,
             ytd_meta: { 
                 year_start: yearStart, 
-                basis_date: ytdBar?.date ?? null, 
-                basis_close: ytdBar?.close ?? null 
+                basis_date: ytdBase?.date ?? null, 
+                basis_close: ytdBase?.close ?? null 
             },
             _series_meta: {
                 symbol_used: data.symbol || trials[0]?.symbol || resolved,
@@ -1284,6 +1301,21 @@ async function enrichStock(stock) {
         if (CONFIG.DEBUG) console.log(`[GBX→GBP] ${stock.symbol}: price converted from ${usedCurrency} to GBP`);
     }
     
+    // ✅ v3.26: Garde-fou — si quote et series sont sur des listings/devises différents, préférer series
+    if (quote && perf?._series_meta) {
+        const qCur = quote._meta?.currency;
+        const sCur = perf._series_meta?.currency;
+        if (qCur && sCur && qCur !== sCur && Number.isFinite(perf.__last_close)) {
+            if (CONFIG.DEBUG) {
+                console.warn(`[CURRENCY MISMATCH] ${stock.symbol}: quote=${qCur} vs series=${sCur} → using series price`);
+            }
+            price = perf.__last_close;
+            change_percent = (perf.__last_close && perf.__prev_close)
+                ? ((perf.__last_close - perf.__prev_close) / perf.__prev_close * 100)
+                : null;
+        }
+    }
+
     // Fallback prix via market_cap / shares_outstanding
     if (!price) {
         // Essai de reconstitution du prix via statistics (market_cap / shares)
@@ -1366,7 +1398,6 @@ async function enrichStock(stock) {
     const expectedMin = Math.max(1, Math.floor(freq * 0.6));
 
     // ✅ v3.20: NEW - Run-rate robuste même sans dividendes post-split
-    // Priorité : 1) premier post-split, 2) dernier dans TTM, 3) médiane régulière
     const lastKnownAmt = 
         (postSplitDivs.length > 0 ? postSplitDivs[0].amount : null) ??
         (last12m.length > 0 ? last12m[0].amount : null) ??
@@ -1374,8 +1405,7 @@ async function enrichStock(stock) {
     
     let usedRunRate = false;
     if (recentSplit && nonSpecCount12m < expectedMin && Number.isFinite(lastKnownAmt) && freq) {
-        // Utiliser le run-rate basé sur le dernier dividende connu
-        ttmSumCalc = lastKnownAmt * freq;  // ex: 0.60 × 4 = 2.40 pour ETR
+        ttmSumCalc = lastKnownAmt * freq;
         usedRunRate = true;
         
         if (CONFIG.DEBUG) {
@@ -1404,7 +1434,6 @@ async function enrichStock(stock) {
     let usedTtmSource = usedRunRate ? 'calc-runrate' : 'calc';
 
     // ✅ v3.20: BLOCAGE de l'override API si split récent
-    // Ne jamais faire confiance à l'API juste après un split (souvent incorrecte)
     if (!usedRunRate && !recentSplit && yield_ttm_api != null && (
         dividend_yield_ttm == null ||
         nonSpecCount12m < expectedMin ||
@@ -1504,7 +1533,6 @@ async function enrichStock(stock) {
     }
 
     // EPS & Payout (multi-source)
-    // 1) EPS : prends stats.eps_ttm si dispo, sinon fallback via P/E
     let eps_ttm = Number.isFinite(stats?.eps_ttm) ? stats.eps_ttm : null;
     if (!Number.isFinite(eps_ttm) && Number.isFinite(stats?.pe_ratio) && stats.pe_ratio > 0 && Number.isFinite(price) && price > 0) {
         eps_ttm = price / stats.pe_ratio;
@@ -1519,7 +1547,7 @@ async function enrichStock(stock) {
       ? annualRegular
       : (Number.isFinite(yield_regular) && price > 0 ? (yield_regular/100)*price : null);
 
-    // Payout TTM (priorité API déjà gérée dans stats.payout_ratio_api_pct)
+    // Payout TTM
     let payout_ratio_ttm = null;
     if (Number.isFinite(stats?.payout_ratio_api_pct)) {
       payout_ratio_ttm = Math.min(200, +stats.payout_ratio_api_pct.toFixed(1));
@@ -1529,7 +1557,7 @@ async function enrichStock(stock) {
       payout_ratio_ttm = Math.min(200, +((dividend_yield_ttm * stats.pe_ratio)).toFixed(1));
     }
 
-    // Payout régulier (cohérent avec REG recalé)
+    // Payout régulier
     const payout_ratio_regular = (Number.isFinite(dps_reg_used) && Number.isFinite(eps_ttm) && eps_ttm > 0)
       ? Math.min(200, +((dps_reg_used/eps_ttm)*100).toFixed(1))
       : null;
@@ -1662,21 +1690,31 @@ function standardDeviation(values) {
     return Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / values.length);
 }
 
+// ✅ v3.26: Drawdown forward correct (pic → creux dans le temps réel)
 function calculateDrawdowns(prices) {
-    let peak = prices[prices.length - 1]?.close || 0;
-    let maxDD_ytd = 0, maxDD_3y = 0;
     const yearStart = `${new Date().getFullYear()}-01-01`;
-    
-    for (let i = prices.length - 1; i >= 0; i--) {
-        const p = prices[i];
-        if (p.close > peak) peak = p.close;
-        const dd = (peak - p.close) / peak * 100;
-        
-        if (p.date >= yearStart) maxDD_ytd = Math.max(maxDD_ytd, dd);
-        if (prices.length - i <= 756) maxDD_3y = Math.max(maxDD_3y, dd);
+    const d3 = new Date(); d3.setFullYear(d3.getFullYear() - 3);
+    const threeYISO = d3.toISOString().slice(0, 10);
+
+    let peakYtd = null, maxYtd = 0;
+    let peak3y  = null, max3y  = 0;
+
+    for (const p of prices) {  // prices en ordre ASC (ancien → récent)
+        // YTD drawdown
+        if (p.date >= yearStart) {
+            peakYtd = (peakYtd == null) ? p.close : Math.max(peakYtd, p.close);
+            const ddY = (peakYtd - p.close) / peakYtd * 100;
+            if (ddY > maxYtd) maxYtd = ddY;
+        }
+        // 3Y drawdown
+        if (p.date >= threeYISO) {
+            peak3y = (peak3y == null) ? p.close : Math.max(peak3y, p.close);
+            const dd3 = (peak3y - p.close) / peak3y * 100;
+            if (dd3 > max3y) max3y = dd3;
+        }
     }
-    
-    return { ytd: maxDD_ytd.toFixed(2), year3: maxDD_3y.toFixed(2) };
+
+    return { ytd: maxYtd.toFixed(2), year3: max3y.toFixed(2) };
 }
 
 // ---------- TOPS HELPERS ----------
@@ -1793,7 +1831,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.25c - Fix BMPS + LDO cross-listings)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.26 - Fix performances)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
