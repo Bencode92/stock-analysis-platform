@@ -1,6 +1,9 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.7 - Résolution fondamentaux avec contexte exchange/country
+// Version 2.7.1 - Hotfix: ne pas ajouter mic_code pour US stocks
+// Fix v2.7.1: buildFundamentalsParams exclut les MICs US (XNAS/XNYS/BATS)
+//   car /balance_sheet et /income_statement ne supportent pas mic_code
+//   → les US stocks n'ont pas besoin de désambiguïsation
 // Changements v2.7:
 // - Ajout COUNTRY_EN et MIC_HINTS pour désambiguïser les appels balance_sheet/income_statement
 // - fetchBalanceSheet() et fetchIncomeStatement() acceptent un contexte {exchange, country}
@@ -128,6 +131,9 @@ const MIC_HINTS = {
     'XHEL': { exchange: 'NASDAQ Helsinki', country: 'Finland' },
 };
 
+// ✅ v2.7.1: MICs US — pas besoin de contexte, ticker seul suffit
+const US_MICS = new Set(['XNAS', 'XNYS', 'BATS', 'ARCX', 'XASE']);
+
 const normalize = s => (s||'').toLowerCase().trim();
 
 function toMIC(exchange, country=''){
@@ -141,10 +147,21 @@ function toMIC(exchange, country=''){
 }
 
 // ✅ v2.7: Helper — construit les paramètres API avec contexte exchange/country
+// ✅ v2.7.1: Skip contexte pour US (ticker seul fonctionne, mic_code casse l'appel)
 function buildFundamentalsParams(symbol, context = {}) {
   const mic = toMIC(context.exchange || '', context.country || '');
-  const hint = mic ? MIC_HINTS[mic] : null;
   const params = { symbol, period: 'annual', apikey: API_KEY };
+
+  // ✅ v2.7.1: Les US n'ont pas besoin de désambiguïsation
+  // et /balance_sheet ne supporte pas mic_code → ne rien ajouter
+  if (mic && US_MICS.has(mic)) {
+    if (DEBUG) {
+      console.log(`  [DEBUG] Fundamentals params for ${symbol}: US stock, no context needed`);
+    }
+    return params;
+  }
+
+  const hint = mic ? MIC_HINTS[mic] : null;
 
   if (hint) {
     if (/euronext/i.test(hint.exchange)) {
@@ -156,7 +173,13 @@ function buildFundamentalsParams(symbol, context = {}) {
       if (hint.country) params.country = hint.country;
     }
   } else if (mic) {
-    params.mic_code = mic;
+    // Non-US, non-MIC_HINTS: essayer exchange seul
+    // Ne PAS ajouter mic_code car /balance_sheet peut ne pas le supporter
+    // Utiliser plutôt le country EN si disponible
+    const countryEN = COUNTRY_EN[normalize(context.country || '')];
+    if (countryEN) {
+      params.country = countryEN;
+    }
   }
 
   if (DEBUG) {
@@ -534,7 +557,7 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.7 (+context exchange/country)');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.7.1 (+context, US fix)');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
@@ -770,7 +793,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.7 (+context)\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.7.1\n');
   console.log(`📊 Config:`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
