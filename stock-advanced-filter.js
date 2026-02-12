@@ -1,5 +1,10 @@
 // stock-advanced-filter.js
-// Version 3.25b - Fix Italian stocks missing_perf
+// Version 3.25c - Fix BMPS + LDO cross-listings
+// Changements v3.25c:
+// - BMPS: ajout MPI0 sur XETR (Germany)
+// - LDO: correction FMNB:XETR → LDO:XWBO (Austria)
+// - ITALY_FALLBACK: champ country optionnel (default Germany)
+// - tdParamTrials: utilise fb.country au lieu de hardcoded 'Germany'
 // Changements v3.25b:
 // - Expansion ITALY_FALLBACK: +5 cross-listings DE confirmés (PRY, BAMI, STLAM, MONC, LDO)
 // - Ajout country:'Germany' dans tdParamTrials pour essais XETR/FSX
@@ -220,7 +225,7 @@ function micForRegion(stock) {
     return mic;
 }
 
-// ✅ v3.25b: Résolution Europe corrigée (formats confirmés par tests API)
+// ✅ v3.25c: Résolution Europe corrigée (formats confirmés par tests API)
 // Construit la liste d'essais de paramètres selon la région
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     // si resolvedSym = "SYM:MIC", on récupère aussi le MIC
@@ -238,7 +243,7 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         trials.push({ symbol: base });                        // ticker pur
         if (mic) trials.push({ symbol: `${base}:${mic}` });  // dernier recours
     } else {
-        // ✅ v3.25b: Résolution Europe corrigée (formats confirmés par tests API)
+        // ✅ v3.25c: Résolution Europe corrigée (formats confirmés par tests API)
         const countryEN = COUNTRY_EN[normalize(stock.country)] || stock.country;
         const exLabel = normalize(stock.exchange);
 
@@ -247,12 +252,12 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
             trials.push({ symbol: base, exchange: 'Euronext', mic_code: mic, country: countryEN });
         }
 
-        // P2: Stocks italiens (Borsa Italiana / MTA) → cross-listing DE
-        // ✅ v3.25b: Ajout country:'Germany' pour améliorer la résolution API
+        // P2: Stocks italiens (Borsa Italiana / MTA) → cross-listing DE/AT
+        // ✅ v3.25c: Utilise fb.country (default 'Germany') pour supporter XWBO (Austria)
         if (/borsa italiana/.test(exLabel) || normalize(stock.country) === 'italie') {
             const fb = ITALY_FALLBACK[base];
             if (fb) {
-                trials.push({ symbol: fb.sym, exchange: fb.exchange, country: 'Germany' });
+                trials.push({ symbol: fb.sym, exchange: fb.exchange, country: fb.country || 'Germany' });
             }
             // Essayer le ticker original sur les exchanges DE
             trials.push({ symbol: base, exchange: 'XETR', country: 'Germany' });
@@ -374,7 +379,7 @@ const EX2MIC_PATTERNS = [
     ['nasdaq',                          'XNAS'],
     ['new york stock exchange inc.',    'XNYS'],
     ['cboe bzx',                        'BATS'],
-    ['cboe bzx exchange',               'BATS'],
+    ['cboe bzx exchange',              'BATS'],
 ];
 
 const COUNTRY2MIC = {
@@ -408,7 +413,8 @@ const COUNTRY_EN = {
     'royaume-uni':'United Kingdom', 'uk':'United Kingdom',
     'united kingdom':'United Kingdom',
     'irlande':'Ireland', 'ireland':'Ireland',
-    'autriche':'Austria', 'norvège':'Norway', 'norway':'Norway',
+    'autriche':'Austria', 'austria':'Austria',
+    'norvège':'Norway', 'norway':'Norway',
     'suède':'Sweden', 'danemark':'Denmark', 'finlande':'Finland',
     'japon':'Japan', 'japan':'Japan',
     'hong kong':'Hong Kong', 'singapore':'Singapore',
@@ -418,19 +424,21 @@ const COUNTRY_EN = {
     'china':'China', 'chine':'China',
 };
 
-// ✅ v3.25b: Mapping statique Italie → cross-listings DE (MTA/XMIL inaccessible via TD)
-// Confirmés par tests API time_series sur XETR/FSX
+// ✅ v3.25c: Mapping statique Italie → cross-listings DE/AT (MTA/XMIL inaccessible via TD)
+// Confirmés par tests API time_series sur XETR/FSX/XWBO
 const ITALY_FALLBACK = {
-    'ISP':   { sym: 'IES',  exchange: 'XETR' },   // Intesa Sanpaolo ✅
-    'UCG':   { sym: 'CRIN', exchange: 'XETR' },   // Unicredit ✅
-    'ENI':   { sym: 'ENI',  exchange: 'FSX' },    // ENI ✅
-    'ENEL':  { sym: 'ENL',  exchange: 'XETR' },   // Enel ✅
-    // ✅ v3.25b: 5 nouveaux mappings confirmés
-    'PRY':   { sym: 'AEU',  exchange: 'XETR' },   // Prysmian ✅
-    'BAMI':  { sym: 'BPM',  exchange: 'XETR' },   // Banco BPM ✅
-    'STLAM': { sym: '8TI',  exchange: 'XETR' },   // Stellantis ✅
-    'MONC':  { sym: 'MOV',  exchange: 'XETR' },   // Moncler ✅
-    'LDO':   { sym: 'FMNB', exchange: 'XETR' },   // Leonardo ✅
+    'ISP':   { sym: 'IES',  exchange: 'XETR' },                    // Intesa Sanpaolo ✅
+    'UCG':   { sym: 'CRIN', exchange: 'XETR' },                    // Unicredit ✅
+    'ENI':   { sym: 'ENI',  exchange: 'FSX' },                     // ENI ✅
+    'ENEL':  { sym: 'ENL',  exchange: 'XETR' },                    // Enel ✅
+    'PRY':   { sym: 'AEU',  exchange: 'XETR' },                    // Prysmian ✅
+    'BAMI':  { sym: 'BPM',  exchange: 'XETR' },                    // Banco BPM ✅
+    'STLAM': { sym: '8TI',  exchange: 'XETR' },                    // Stellantis ✅
+    'MONC':  { sym: 'MOV',  exchange: 'XETR' },                    // Moncler ✅
+    // ✅ v3.25c: Corrections confirmées par tests API
+    'LDO':   { sym: 'LDO',  exchange: 'XWBO', country: 'Austria' }, // Leonardo → Vienne ✅
+    'BMPS':  { sym: 'MPI0', exchange: 'XETR' },                    // Monte Paschi → XETR ✅
+    // CPR (Campari): aucun cross-listing trouvé ❌
 };
 
 // ✅ v3.25: MIC → exchange+country pour endpoints data TD
@@ -576,15 +584,16 @@ async function resolveSymbolSmart(symbol, stock) {
             if (okM && okN) return bestSym;
         }
     }
-    // ✅ v3.25: Fallback cross-listing DE pour stocks italiens (MTA inaccessible)
+    // ✅ v3.25: Fallback cross-listing DE/AT pour stocks italiens (MTA inaccessible)
     if (/borsa italiana/i.test(stock.exchange) || normalize(stock.country) === 'italie') {
         // Mapping statique confirmé
         const fb = ITALY_FALLBACK[symbol];
         if (fb) {
-            const qFb = await tryQuote(fb.sym, fb.exchange === 'XETR' ? 'XETR' : 'XFRA');
+            const fbMic = fb.exchange === 'XWBO' ? 'XWBO' : (fb.exchange === 'XETR' ? 'XETR' : 'XFRA');
+            const qFb = await tryQuote(fb.sym, fbMic);
             if (qFb) {
-                if (CONFIG.DEBUG) console.log(`[ITALY→DE] ${symbol} → ${fb.sym}:${fb.exchange}`);
-                return `${fb.sym}:${fb.exchange === 'XETR' ? 'XETR' : 'XFRA'}`;
+                if (CONFIG.DEBUG) console.log(`[ITALY→${fb.country || 'DE'}] ${symbol} → ${fb.sym}:${fbMic}`);
+                return `${fb.sym}:${fbMic}`;
             }
         }
         // Recherche dynamique : cross-listing Allemagne
@@ -1784,7 +1793,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.25b - Fix Italian stocks missing_perf)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.25c - Fix BMPS + LDO cross-listings)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
