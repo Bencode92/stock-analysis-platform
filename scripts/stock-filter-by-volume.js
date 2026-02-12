@@ -1,6 +1,7 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.10 - Ajout ITALY_FALLBACK pour fondamentaux italiens (remap ticker + exchange)
+// Version 2.10 - ITALY_FALLBACK: whitelist volume + fondamentaux via cross-listings DE
+// Version 2.9 - Fix ROIC (NOPAT/Avg IC), ROE (Avg Equity), cache versioning
 //   - ROIC = NOPAT / Average Invested Capital (méthode GuruFocus)
 //   - NOPAT = Operating Income × (1 - Tax Rate effective)
 //   - IC = Total Assets - Excess Cash (- AP si disponible)
@@ -149,7 +150,9 @@ const MIC_HINTS = {
     'XCSE': { exchange: 'NASDAQ Copenhagen', country: 'Denmark' },
     'XHEL': { exchange: 'NASDAQ Helsinki', country: 'Finland' },
 };
+
 // ✅ v2.10: Mapping Italie → cross-listings DE (tickers différents sur XETR)
+// Volume TD non fiable pour XMIL → ces blue caps sont whitelistées
 const ITALY_FALLBACK = {
     'ISP':   { sym: 'IES',  exchange: 'XETR', country: 'Germany' },
     'UCG':   { sym: 'CRIN', exchange: 'XETR', country: 'Germany' },
@@ -163,6 +166,7 @@ const ITALY_FALLBACK = {
     'BMPS':  { sym: 'MPI0', exchange: 'XETR', country: 'Germany' },
     'CPR':   { sym: '58H',  exchange: 'XETR', country: 'Germany' },
 };
+
 // ✅ v2.7.1: MICs US — pas besoin de contexte, ticker seul suffit
 const US_MICS = new Set(['XNAS', 'XNYS', 'BATS', 'ARCX', 'XASE']);
 
@@ -651,7 +655,7 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.9 (NOPAT/AvgIC)');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.10 (NOPAT/AvgIC + ITALY_FALLBACK)');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
@@ -878,7 +882,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.9\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.10\n');
   console.log(`📊 Config:`);
   console.log(`   REGIONS=${INPUTS.map(i => i.region).join(', ')}`);
   console.log(`   FORMULA_VERSION=${FORMULA_VERSION}`);
@@ -920,8 +924,6 @@ async function throttle() {
           vol = 999_999; // force pass — blue chip confirmée
         }
         if (DEBUG) console.log(`  [ITALY WHITELIST] ${ticker} → ${fb.sym}:${fb.exchange} (vol forced)`);
-      }
-        }
       }
 
       const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
@@ -965,18 +967,18 @@ async function throttle() {
     console.log(`✅ ${region}: ${filtered.length}/${rows.length} retenus`);
   }
 
-// Enrichissement fondamentaux - TOUTES les actions
-let combined = allOutputs.flatMap(o => o.rows);
-combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
+  // Enrichissement fondamentaux - TOUTES les actions
+  let combined = allOutputs.flatMap(o => o.rows);
+  combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
 
-// Sauvegarde par région (objets déjà enrichis par référence)
-for (const output of allOutputs) {
-  await writeCSV(output.file, output.rows);
-  console.log(`📁 ${output.title}: ${output.rows.length} stocks → ${output.file}`);
-}
+  // Sauvegarde par région (objets déjà enrichis par référence)
+  for (const output of allOutputs) {
+    await writeCSV(output.file, output.rows);
+    console.log(`📁 ${output.title}: ${output.rows.length} stocks → ${output.file}`);
+  }
 
-await writeCSV(path.join(OUT_DIR, 'Actions_filtrees_par_volume.csv'), combined);
-await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
+  await writeCSV(path.join(OUT_DIR, 'Actions_filtrees_par_volume.csv'), combined);
+  await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
 
   // Résumé final
   console.log('\n' + '='.repeat(50));
@@ -988,7 +990,7 @@ await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allR
   const withDE = combined.filter(s => s.de_ratio !== null).length;
   const withROIC = combined.filter(s => s.roic !== null).length;
 
-  console.log(`\n📈 Fondamentaux Buffett (v2.9 — NOPAT/AvgIC):`);
+  console.log(`\n📈 Fondamentaux Buffett (v2.10 — NOPAT/AvgIC + ITALY_FALLBACK):`);
   console.log(`  ROE:  ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
   console.log(`  D/E:  ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
   console.log(`  ROIC: ${withROIC}/${combined.length} (${(withROIC/combined.length*100).toFixed(1)}%)`);
