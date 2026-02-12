@@ -216,7 +216,7 @@ function micForRegion(stock) {
     return mic;
 }
 
-// ✅ CORRECTION v3.14: Priorisation MIC pour Europe
+// ✅ v3.25: Résolution Europe corrigée (formats confirmés par tests API)
 // Construit la liste d'essais de paramètres selon la région
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     // si resolvedSym = "SYM:MIC", on récupère aussi le MIC
@@ -228,22 +228,51 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
     }
     const mic = micFromResolved || micForRegion(stock);
     const trials = [];
-
     if (isUS(stock.exchange, stock.country)) {
         const ex = usExchangeName(stock.exchange);
         if (ex) trials.push({ symbol: base, exchange: ex }); // US: utiliser exchange=
         trials.push({ symbol: base });                        // ticker pur
         if (mic) trials.push({ symbol: `${base}:${mic}` });  // dernier recours
     } else {
-        // 🚀 PRIORITÉ MIC pour Europe/Asie (v3.14)
-        if (mic) {
-            trials.push({ symbol: `${base}:${mic}` });         // PRIORITÉ 1: suffixe SYM:MIC
-            trials.push({ symbol: base, mic_code: mic });      // PRIORITÉ 2: mic_code=
-        }
-        trials.push({ symbol: base });                        // fallback final
-        
-        // variantes exchange= pour Europe/Asie (utiles sur /quote et /statistics)
+        // ✅ v3.25: Résolution Europe corrigée (formats confirmés par tests API)
+        const countryEN = COUNTRY_EN[normalize(stock.country)] || stock.country;
         const exLabel = normalize(stock.exchange);
+
+        // P1: Euronext combo (Paris/Amsterdam/Brussels/Lisbon) — format confirmé TD
+        if (/euronext/.test(exLabel) && mic) {
+            trials.push({ symbol: base, exchange: 'Euronext', mic_code: mic, country: countryEN });
+        }
+
+        // P2: Stocks italiens (Borsa Italiana / MTA) → cross-listing DE
+        if (/borsa italiana/.test(exLabel) || normalize(stock.country) === 'italie') {
+            const fb = ITALY_FALLBACK[base];
+            if (fb) {
+                trials.push({ symbol: fb.sym, exchange: fb.exchange });
+            }
+            // Essayer le ticker original sur les exchanges DE
+            trials.push({ symbol: base, exchange: 'XETR' });
+            trials.push({ symbol: base, exchange: 'FSX' });
+        }
+
+        // P3: MIC_HINTS — exchange+country (confirmé pour LSE, ISE, BME, SIX)
+        const hint = mic ? MIC_HINTS[mic] : null;
+        if (hint) {
+            trials.push({ symbol: base, exchange: hint.exchange, country: hint.country });
+        }
+
+        // P4: mic_code= (fonctionne parfois)
+        if (mic) {
+            trials.push({ symbol: base, mic_code: mic });
+        }
+
+        // P5: SYM:MIC (souvent cassé sur TD, mais fallback)
+        if (mic) {
+            trials.push({ symbol: `${base}:${mic}` });
+        }
+
+        trials.push({ symbol: base });                        // fallback final
+
+        // variantes exchange= pour Europe/Asie (utiles sur /quote et /statistics)
         const exVar = [];
         if (/six swiss|^six$/.test(exLabel))                exVar.push('SIX','SIX Swiss Exchange');
         if (/bolsa.*madrid|bme/.test(exLabel) || /espagn/.test(normalize(stock.country)))
@@ -365,7 +394,41 @@ const COUNTRY2MIC = {
     'thailand':'XBKK', 'philippines':'XPHS', 'malaysia':'XKLS',
     'china':'XSHG' // si "Shenzhen", l'intitulé d'exchange donne XSHE via le pattern
 };
+// ✅ v3.25: Mapping pays FR→EN pour l'API TD
+const COUNTRY_EN = {
+    'france':'France', 'belgique':'Belgium', 'pays-bas':'Netherlands',
+    'portugal':'Portugal', 'italie':'Italy', 'italy':'Italy',
+    'espagne':'Spain', 'allemagne':'Germany', 'germany':'Germany',
+    'suisse':'Switzerland', 'switzerland':'Switzerland',
+    'royaume-uni':'United Kingdom', 'uk':'United Kingdom',
+    'united kingdom':'United Kingdom',
+    'irlande':'Ireland', 'ireland':'Ireland',
+    'autriche':'Austria', 'norvège':'Norway', 'norway':'Norway',
+    'suède':'Sweden', 'danemark':'Denmark', 'finlande':'Finland',
+    'japon':'Japan', 'japan':'Japan',
+    'hong kong':'Hong Kong', 'singapore':'Singapore',
+    'taiwan':'Taiwan', 'taïwan':'Taiwan',
+    'south korea':'South Korea', 'corée':'South Korea',
+    'inde':'India', 'india':'India',
+    'china':'China', 'chine':'China',
+};
 
+// ✅ v3.25: Mapping statique Italie → cross-listings DE (MTA/XMIL inaccessible via TD)
+const ITALY_FALLBACK = {
+    'ISP':   { sym: 'IES',  exchange: 'XETR' },   // Intesa Sanpaolo ✅
+    'UCG':   { sym: 'CRIN', exchange: 'XETR' },   // Unicredit ✅
+    'ENI':   { sym: 'ENI',  exchange: 'FSX' },    // ENI ✅
+    'ENEL':  { sym: 'ENL',  exchange: 'XETR' },   // Enel ✅
+};
+
+// ✅ v3.25: MIC → exchange+country pour endpoints data TD
+const MIC_HINTS = {
+    'XLON': { exchange: 'LSE', country: 'United Kingdom' },
+    'XDUB': { exchange: 'ISE', country: 'Ireland' },
+    'XSWX': { exchange: 'SIX', country: 'Switzerland' },
+    'XMAD': { exchange: 'BME', country: 'Spain' },
+    'XMIL': { exchange: 'MTA', country: 'Italy' },
+};
 function toMIC(exchange, country=''){
     const ex = normalize(exchange);
     if (ex) {
@@ -465,16 +528,15 @@ async function resolveSymbolSmart(symbol, stock) {
         return mic ? `${symbol}:${mic}` : symbol;         // symbole final (suffixé si on sait le MIC)
     }
 
-    // 2) lookup /stocks pour symbole TD non ambigu (priorité MIC voulu, LSE 0XXX)
-    const cand = await tdStocksLookup({ symbol, country: stock.country, exchange: stock.exchange });
+// 2) lookup /stocks pour symbole TD non ambigu (priorité MIC voulu, LSE 0XXX)
+    const countryEN = COUNTRY_EN[normalize(stock.country)] || stock.country;
+    const cand = await tdStocksLookup({ symbol, country: countryEN, exchange: stock.exchange });
     if (cand.length) {
         cand.sort((a,b)=>rankCandidate(b,stock) - rankCandidate(a,stock));
         const best = cand[0]; // ex: 0QOK (Roche)
-
         // Si best.symbol est déjà "0XXX", inutile de suffixer
         const bestSym = LSE_IOB.test(best.symbol) ? best.symbol
                        : (best.mic_code ? `${best.symbol}:${best.mic_code}` : best.symbol);
-
         // On valide que le quote obtenu colle au nom/marché
         const qBest = await tryQuote(best.symbol, best.mic_code);
         if (qBest) {
@@ -483,7 +545,41 @@ async function resolveSymbolSmart(symbol, stock) {
             if (okM && okN) return bestSym;
         }
     }
-
+    // ✅ v3.25: Fallback cross-listing DE pour stocks italiens (MTA inaccessible)
+    if (/borsa italiana/i.test(stock.exchange) || normalize(stock.country) === 'italie') {
+        // Mapping statique confirmé
+        const fb = ITALY_FALLBACK[symbol];
+        if (fb) {
+            const qFb = await tryQuote(fb.sym, fb.exchange === 'XETR' ? 'XETR' : 'XFRA');
+            if (qFb) {
+                if (CONFIG.DEBUG) console.log(`[ITALY→DE] ${symbol} → ${fb.sym}:${fb.exchange}`);
+                return `${fb.sym}:${fb.exchange === 'XETR' ? 'XETR' : 'XFRA'}`;
+            }
+        }
+        // Recherche dynamique : cross-listing Allemagne
+        const countryEN_it = COUNTRY_EN[normalize(stock.country)] || stock.country;
+        const deCands = await tdStocksLookup({ symbol, country: 'Germany' });
+        const DE_MICS = ['XETR', 'XFRA', 'XSTU', 'XHAN', 'XMUN'];
+        const deMatch = deCands.find(c => DE_MICS.includes(c.mic_code) && c.instrument_type === 'Common Stock');
+        if (deMatch) {
+            const qDyn = await tryQuote(deMatch.symbol, deMatch.mic_code);
+            if (qDyn) {
+                if (CONFIG.DEBUG) console.log(`[ITALY→DE DYN] ${symbol} → ${deMatch.symbol}:${deMatch.mic_code}`);
+                return `${deMatch.symbol}:${deMatch.mic_code}`;
+            }
+        }
+        // Dernier essai : Vienne (XWBO)
+        const atCands = await tdStocksLookup({ symbol, country: 'Austria' });
+        const atMatch = atCands.find(c => c.mic_code === 'XWBO' && c.instrument_type === 'Common Stock');
+        if (atMatch) {
+            const qAt = await tryQuote(atMatch.symbol, 'XWBO');
+            if (qAt) {
+                if (CONFIG.DEBUG) console.log(`[ITALY→AT] ${symbol} → ${atMatch.symbol}:XWBO`);
+                return `${atMatch.symbol}:XWBO`;
+            }
+        }
+        if (CONFIG.DEBUG) console.log(`[ITALY] ${symbol}: aucun cross-listing trouvé`);
+    }
     // 3) dernier recours : mapping simple
     const fallback = resolveSymbol(symbol, stock);
     
@@ -1128,11 +1224,11 @@ async function enrichStock(stock) {
         }
     }
     
-    // Normalisation LSE (GBX → GBP) pour la cohérence des ratios basés sur le prix
+ // Normalisation LSE (GBX/GBp → GBP) pour la cohérence des ratios basés sur le prix
     const usedCurrency = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
-    if (usedCurrency === 'GBX' && Number.isFinite(price)) {
-        price = price / 100; // 7450 GBX -> 74.50 GBP
-        if (CONFIG.DEBUG) console.log(`[GBX→GBP] ${stock.symbol}: price converted from GBX to GBP`);
+    if ((usedCurrency === 'GBX' || usedCurrency === 'GBp') && Number.isFinite(price)) {
+        price = price / 100; // 7450 GBX/GBp -> 74.50 GBP
+        if (CONFIG.DEBUG) console.log(`[GBX→GBP] ${stock.symbol}: price converted from ${usedCurrency} to GBP`);
     }
     
     // Fallback prix via market_cap / shares_outstanding
