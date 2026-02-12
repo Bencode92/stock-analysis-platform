@@ -1,6 +1,14 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.6 - Migration automatique ROIC
+// Version 2.7 - Résolution fondamentaux avec contexte exchange/country
+// Changements v2.7:
+// - Ajout COUNTRY_EN et MIC_HINTS pour désambiguïser les appels balance_sheet/income_statement
+// - fetchBalanceSheet() et fetchIncomeStatement() acceptent un contexte {exchange, country}
+// - Les paramètres API incluent exchange/mic_code/country pour éviter les faux positifs
+// - fetchFundamentalsForSymbol() propage le contexte
+// - enrichWithFundamentals() passe le contexte depuis les colonnes CSV
+// Changements v2.6:
+// - Migration automatique ROIC
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
@@ -82,6 +90,44 @@ const COUNTRY2MIC = {
   'china':'XSHG'
 };
 
+// ✅ v2.7: Mapping pays FR→EN pour l'API TD (fondamentaux)
+const COUNTRY_EN = {
+    'france':'France', 'belgique':'Belgium', 'pays-bas':'Netherlands',
+    'portugal':'Portugal', 'italie':'Italy', 'italy':'Italy',
+    'espagne':'Spain', 'allemagne':'Germany', 'germany':'Germany',
+    'suisse':'Switzerland', 'switzerland':'Switzerland',
+    'royaume-uni':'United Kingdom', 'uk':'United Kingdom',
+    'united kingdom':'United Kingdom',
+    'irlande':'Ireland', 'ireland':'Ireland',
+    'autriche':'Austria', 'norvège':'Norway', 'norway':'Norway',
+    'suède':'Sweden', 'danemark':'Denmark', 'finlande':'Finland',
+    'japon':'Japan', 'japan':'Japan',
+    'hong kong':'Hong Kong', 'singapore':'Singapore',
+    'taiwan':'Taiwan', 'taïwan':'Taiwan',
+    'south korea':'South Korea', 'corée':'South Korea',
+    'inde':'India', 'india':'India',
+    'china':'China', 'chine':'China',
+};
+
+// ✅ v2.7: MIC → exchange+country pour endpoints data TD (fondamentaux)
+const MIC_HINTS = {
+    'XLON': { exchange: 'LSE',      country: 'United Kingdom' },
+    'XDUB': { exchange: 'ISE',      country: 'Ireland' },
+    'XSWX': { exchange: 'SIX',      country: 'Switzerland' },
+    'XMAD': { exchange: 'BME',      country: 'Spain' },
+    'XPAR': { exchange: 'Euronext', country: 'France' },
+    'XAMS': { exchange: 'Euronext', country: 'Netherlands' },
+    'XBRU': { exchange: 'Euronext', country: 'Belgium' },
+    'XLIS': { exchange: 'Euronext', country: 'Portugal' },
+    'XETR': { exchange: 'XETR',    country: 'Germany' },
+    'XMIL': { exchange: 'XETR',    country: 'Germany' },  // Fallback DE pour Italie (MTA inaccessible)
+    'XWBO': { exchange: 'Vienna',   country: 'Austria' },
+    'XOSL': { exchange: 'OSE',      country: 'Norway' },
+    'XSTO': { exchange: 'NASDAQ Stockholm', country: 'Sweden' },
+    'XCSE': { exchange: 'NASDAQ Copenhagen', country: 'Denmark' },
+    'XHEL': { exchange: 'NASDAQ Helsinki', country: 'Finland' },
+};
+
 const normalize = s => (s||'').toLowerCase().trim();
 
 function toMIC(exchange, country=''){
@@ -92,6 +138,32 @@ function toMIC(exchange, country=''){
     }
   }
   return COUNTRY2MIC[normalize(country)] || null;
+}
+
+// ✅ v2.7: Helper — construit les paramètres API avec contexte exchange/country
+function buildFundamentalsParams(symbol, context = {}) {
+  const mic = toMIC(context.exchange || '', context.country || '');
+  const hint = mic ? MIC_HINTS[mic] : null;
+  const params = { symbol, period: 'annual', apikey: API_KEY };
+
+  if (hint) {
+    if (/euronext/i.test(hint.exchange)) {
+      params.exchange = 'Euronext';
+      params.mic_code = mic;
+      params.country = hint.country;
+    } else {
+      params.exchange = hint.exchange;
+      if (hint.country) params.country = hint.country;
+    }
+  } else if (mic) {
+    params.mic_code = mic;
+  }
+
+  if (DEBUG) {
+    console.log(`  [DEBUG] Fundamentals params for ${symbol}:`, JSON.stringify(params));
+  }
+
+  return params;
 }
 
 // ───────── Helpers de désambiguïsation ─────────
@@ -177,11 +249,13 @@ function isRateLimitError(data) {
   return /run out of API credits/i.test(msg) || /rate limit/i.test(msg);
 }
 
-// ✅ v2.5: Mise à jour pour extraire le cash (pour calcul ROIC)
-async function fetchBalanceSheet(symbol) {
+// ✅ v2.7: Accepte context pour désambiguïser via exchange/country
+async function fetchBalanceSheet(symbol, context = {}) {
   try {
+    const params = buildFundamentalsParams(symbol, context);
+
     const { data, headers } = await axios.get('https://api.twelvedata.com/balance_sheet', {
-      params: { symbol, period: 'annual', apikey: API_KEY },
+      params,
       timeout: 30000
     });
     
@@ -219,7 +293,7 @@ async function fetchBalanceSheet(symbol) {
     const currentLiab = liabilities.current_liabilities || {};
     const nonCurrentLiab = liabilities.non_current_liabilities || {};
     
-    // ✅ v2.5: NOUVEAU - Extraction du cash pour ROIC
+    // ✅ v2.5: Extraction du cash pour ROIC
     const currentAssets = assets.current_assets || {};
     
     const cashCandidates = [
@@ -293,7 +367,7 @@ async function fetchBalanceSheet(symbol) {
       total_equity: totalEquity,
       total_assets: totalAssets,
       total_liabilities: totalLiabilities,
-      cash_and_st_investments: cash_total,  // ✅ v2.5: NOUVEAU
+      cash_and_st_investments: cash_total,
       fiscal_date: sheet.fiscal_date || sheet.date || null
     };
   } catch (error) {
@@ -302,10 +376,13 @@ async function fetchBalanceSheet(symbol) {
   }
 }
 
-async function fetchIncomeStatement(symbol) {
+// ✅ v2.7: Accepte context pour désambiguïser via exchange/country
+async function fetchIncomeStatement(symbol, context = {}) {
   try {
+    const params = buildFundamentalsParams(symbol, context);
+
     const { data, headers } = await axios.get('https://api.twelvedata.com/income_statement', {
-      params: { symbol, period: 'annual', apikey: API_KEY },
+      params,
       timeout: 30000
     });
     
@@ -375,7 +452,7 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
   
   const equity     = balanceSheet.total_equity;
   const debt       = balanceSheet.total_debt ?? null;
-  const cash       = balanceSheet.cash_and_st_investments ?? 0;  // ✅ v2.5: NOUVEAU
+  const cash       = balanceSheet.cash_and_st_investments ?? 0;
   const net_income = incomeStatement?.net_income ?? null;
 
   let roe = null;
@@ -411,34 +488,35 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
   return {
     roe,
     de_ratio,
-    roic,                                    // ✅ v2.5: NOUVEAU
+    roic,
     net_income,
     total_debt: debt,
     total_equity: equity,
-    invested_capital,                        // ✅ v2.5: NOUVEAU
-    cash_and_st_investments: cash,           // ✅ v2.5: NOUVEAU
+    invested_capital,
+    cash_and_st_investments: cash,
     balance_sheet_date: balanceSheet.fiscal_date,
     income_statement_date: incomeStatement?.fiscal_date
   };
 }
 
-async function fetchFundamentalsForSymbol(symbol) {
-  const balanceSheet = await fetchBalanceSheet(symbol);
+// ✅ v2.7: Accepte context et le propage aux fetchers
+async function fetchFundamentalsForSymbol(symbol, context = {}) {
+  const balanceSheet = await fetchBalanceSheet(symbol, context);
   
   if (balanceSheet?._rateLimited) {
     console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
     await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
-    return fetchFundamentalsForSymbol(symbol);
+    return fetchFundamentalsForSymbol(symbol, context);
   }
   
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
   
-  const incomeStatement = await fetchIncomeStatement(symbol);
+  const incomeStatement = await fetchIncomeStatement(symbol, context);
   
   if (incomeStatement?._rateLimited) {
     console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
     await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
-    const incomeRetry = await fetchIncomeStatement(symbol);
+    const incomeRetry = await fetchIncomeStatement(symbol, context);
     const ratios = computeFundamentalRatios(balanceSheet, incomeRetry?._rateLimited ? null : incomeRetry);
     return { symbol, ...ratios, fetched_at: new Date().toISOString() };
   }
@@ -456,7 +534,7 @@ async function fetchFundamentalsForSymbol(symbol) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.6 (+ROIC)');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.7 (+context exchange/country)');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
@@ -469,7 +547,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   const fromCache = [];
   let needsRoicMigration = 0;
   
-  // ✅ v2.6: Migration automatique - re-fetch si cache valide MAIS roic manquant
+  // ✅ v2.7: Migration — re-fetch si cache sans contexte (v2.6→v2.7) pour les stocks qui avaient null
   for (const stock of stocks) {
     const ticker = stock['Ticker'];
     const cached = cache.data[ticker];
@@ -481,7 +559,11 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       // Vérifier si ROIC est présent dans le cache (migration v2.4 → v2.6)
       const hasRoic = cached.roic !== undefined;
       
-      if (cacheNotExpired && hasRoic) {
+      // ✅ v2.7: Re-fetch si cache valide mais ROE+D/E sont TOUS les deux null
+      // (probablement un appel sans contexte qui a échoué)
+      const needsContextMigration = cached.roe === null && cached.de_ratio === null && !cached._hasContext;
+      
+      if (cacheNotExpired && hasRoic && !needsContextMigration) {
         // Cache complet et valide → utiliser
         stock.roe = cached.roe;
         stock.de_ratio = cached.de_ratio;
@@ -492,7 +574,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         // Cache valide mais sans ROIC → migration nécessaire
         needsRoicMigration++;
       }
-      // Si cache expiré ou sans ROIC → needsUpdate
+      // Si cache expiré ou sans ROIC ou sans contexte → needsUpdate
     }
     needsUpdate.push(stock);
   }
@@ -521,7 +603,15 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     
     try {
       console.log(`  📊 [${processed + 1}/${toProcess.length}] ${ticker}...`);
-      const fundamentals = await fetchFundamentalsForSymbol(ticker);
+      
+      // ✅ v2.7: Passer le contexte exchange/country pour désambiguïser
+      const fundamentals = await fetchFundamentalsForSymbol(ticker, {
+        exchange: stock['Bourse de valeurs'] || '',
+        country: stock['Pays'] || ''
+      });
+      
+      // ✅ v2.7: Marquer le cache comme ayant été fetché avec contexte
+      fundamentals._hasContext = true;
       
       cache.data[ticker] = fundamentals;
       stock.roe = fundamentals.roe;
@@ -543,6 +633,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         roe: null,
         de_ratio: null,
         roic: null,
+        _hasContext: true,
         error: error.message,
         fetched_at: new Date().toISOString()
       };
@@ -679,7 +770,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.6 (+ROIC)\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.7 (+context)\n');
   console.log(`📊 Config:`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
