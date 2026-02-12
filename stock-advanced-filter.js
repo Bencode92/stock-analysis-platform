@@ -1,5 +1,9 @@
 // stock-advanced-filter.js
-// Version 3.23 - Ajout FCF Yield + EPS Growth 5Y
+// Version 3.25b - Fix Italian stocks missing_perf
+// Changements v3.25b:
+// - Expansion ITALY_FALLBACK: +5 cross-listings DE confirmés (PRY, BAMI, STLAM, MONC, LDO)
+// - Ajout country:'Germany' dans tdParamTrials pour essais XETR/FSX
+// - Fallback adjusted=false dans getPerformanceData si adjusted=true échoue
 // Changements v3.23:
 // - Ajout fcf_ttm dans getStatisticsData() depuis financials.cash_flow
 // - Nouvelle fonction getGrowthEstimates() pour EPS Growth 5Y via /growth_estimates
@@ -216,7 +220,7 @@ function micForRegion(stock) {
     return mic;
 }
 
-// ✅ v3.25: Résolution Europe corrigée (formats confirmés par tests API)
+// ✅ v3.25b: Résolution Europe corrigée (formats confirmés par tests API)
 // Construit la liste d'essais de paramètres selon la région
 function tdParamTrials(symbol, stock, resolvedSym=null) {
     // si resolvedSym = "SYM:MIC", on récupère aussi le MIC
@@ -234,7 +238,7 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         trials.push({ symbol: base });                        // ticker pur
         if (mic) trials.push({ symbol: `${base}:${mic}` });  // dernier recours
     } else {
-        // ✅ v3.25: Résolution Europe corrigée (formats confirmés par tests API)
+        // ✅ v3.25b: Résolution Europe corrigée (formats confirmés par tests API)
         const countryEN = COUNTRY_EN[normalize(stock.country)] || stock.country;
         const exLabel = normalize(stock.exchange);
 
@@ -244,14 +248,15 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
         }
 
         // P2: Stocks italiens (Borsa Italiana / MTA) → cross-listing DE
+        // ✅ v3.25b: Ajout country:'Germany' pour améliorer la résolution API
         if (/borsa italiana/.test(exLabel) || normalize(stock.country) === 'italie') {
             const fb = ITALY_FALLBACK[base];
             if (fb) {
-                trials.push({ symbol: fb.sym, exchange: fb.exchange });
+                trials.push({ symbol: fb.sym, exchange: fb.exchange, country: 'Germany' });
             }
             // Essayer le ticker original sur les exchanges DE
-            trials.push({ symbol: base, exchange: 'XETR' });
-            trials.push({ symbol: base, exchange: 'FSX' });
+            trials.push({ symbol: base, exchange: 'XETR', country: 'Germany' });
+            trials.push({ symbol: base, exchange: 'FSX', country: 'Germany' });
         }
 
         // P3: MIC_HINTS — exchange+country (confirmé pour LSE, ISE, BME, SIX)
@@ -363,7 +368,7 @@ const EX2MIC_PATTERNS = [
     ['euronext milan',                  'XMIL'],
     ['nasdaq stockholm',                'XSTO'],
     ['nasdaq copenhagen',               'XCSE'],
-    ['nasdaq helsinki',                 'XHEL'],
+    ['nasdaq helsinki',                  'XHEL'],
 
     // USA
     ['nasdaq',                          'XNAS'],
@@ -413,12 +418,19 @@ const COUNTRY_EN = {
     'china':'China', 'chine':'China',
 };
 
-// ✅ v3.25: Mapping statique Italie → cross-listings DE (MTA/XMIL inaccessible via TD)
+// ✅ v3.25b: Mapping statique Italie → cross-listings DE (MTA/XMIL inaccessible via TD)
+// Confirmés par tests API time_series sur XETR/FSX
 const ITALY_FALLBACK = {
     'ISP':   { sym: 'IES',  exchange: 'XETR' },   // Intesa Sanpaolo ✅
     'UCG':   { sym: 'CRIN', exchange: 'XETR' },   // Unicredit ✅
     'ENI':   { sym: 'ENI',  exchange: 'FSX' },    // ENI ✅
     'ENEL':  { sym: 'ENL',  exchange: 'XETR' },   // Enel ✅
+    // ✅ v3.25b: 5 nouveaux mappings confirmés
+    'PRY':   { sym: 'AEU',  exchange: 'XETR' },   // Prysmian ✅
+    'BAMI':  { sym: 'BPM',  exchange: 'XETR' },   // Banco BPM ✅
+    'STLAM': { sym: '8TI',  exchange: 'XETR' },   // Stellantis ✅
+    'MONC':  { sym: 'MOV',  exchange: 'XETR' },   // Moncler ✅
+    'LDO':   { sym: 'FMNB', exchange: 'XETR' },   // Leonardo ✅
 };
 
 // ✅ v3.25: MIC → exchange+country pour endpoints data TD
@@ -690,15 +702,28 @@ async function getQuoteData(symbol, stock) {
     }
 }
 
+// ✅ v3.25b: Ajout fallback adjusted=false dans getPerformanceData
 async function getPerformanceData(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.TIME_SERIES);
         const resolved = resolveSymbol(symbol, stock);
         const trials = tdParamTrials(symbol, stock, resolved);
 
-        const data = await fetchTD('time_series', trials, {
+        let data = await fetchTD('time_series', trials, {
             interval: '1day', outputsize: 900, order: 'ASC', adjusted: true
         });
+        
+        // ✅ v3.25b: Fallback adjusted=false si adjusted=true échoue
+        if (!data || data.status === 'error' || !data.values) {
+            if (CONFIG.DEBUG) console.log(`[TIME_SERIES] ${symbol}: adjusted=true failed, trying adjusted=false`);
+            await pay(CONFIG.CREDITS.TIME_SERIES);
+            data = await fetchTD('time_series', trials, {
+                interval: '1day', outputsize: 900, order: 'ASC', adjusted: false
+            });
+            if (CONFIG.DEBUG && data?.values) {
+                console.log(`[TIME_SERIES] ${symbol}: adjusted=false fallback OK (${data.values.length} bars)`);
+            }
+        }
         
         if (!data || data.status === 'error' || !data.values) return {};
 
@@ -1759,7 +1784,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.24 - Intégration ROE/D/E/ROIC + Score Buffett)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.25b - Fix Italian stocks missing_perf)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
