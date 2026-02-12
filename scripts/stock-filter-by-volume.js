@@ -1,5 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
+// Version 2.8 - Ajout sélection de région via REGIONS env var
 // Version 2.7.1 - Hotfix: ne pas ajouter mic_code pour US stocks
 // Fix v2.7.1: buildFundamentalsParams exclut les MICs US (XNAS/XNYS/BATS)
 //   car /balance_sheet et /income_statement ne supportent pas mic_code
@@ -23,11 +24,27 @@ if (!API_KEY) { console.error('❌ TWELVE_DATA_API_KEY manquante'); process.exit
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_DIR = process.env.OUTPUT_DIR || 'data/filtered';
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
-const INPUTS = [
+
+// ✅ v2.8: Toutes les régions disponibles
+const ALL_INPUTS = [
   { file: 'Actions_US.csv',     region: 'US' },
   { file: 'Actions_Europe.csv', region: 'EUROPE' },
   { file: 'Actions_Asie.csv',   region: 'ASIA' },
 ];
+
+// ✅ v2.8: Sélection de région via REGIONS env var (us, europe, asia, all)
+// Exemples: REGIONS=europe  |  REGIONS=us,europe  |  REGIONS=all
+const REGIONS_ENV = (process.env.REGIONS || 'all').toLowerCase().split(',').map(s => s.trim());
+const REGION_MAP = { us: 'US', europe: 'EUROPE', asia: 'ASIA' };
+
+const INPUTS = REGIONS_ENV.includes('all')
+  ? ALL_INPUTS
+  : ALL_INPUTS.filter(i => REGIONS_ENV.some(r => REGION_MAP[r] === i.region));
+
+if (INPUTS.length === 0) {
+  console.error(`❌ Aucune région valide pour REGIONS="${process.env.REGIONS}". Valeurs: us, europe, asia, all`);
+  process.exit(1);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGURATION FONDAMENTAUX BUFFETT
@@ -557,7 +574,7 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.7.1 (+context, US fix)');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.8 (+regions, +context, US fix)');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
@@ -793,8 +810,9 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.7.1\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.8\n');
   console.log(`📊 Config:`);
+  console.log(`   REGIONS=${INPUTS.map(i => i.region).join(', ')}`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
   console.log(`   DEBUG=${DEBUG}`);
