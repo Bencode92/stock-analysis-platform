@@ -1,7 +1,7 @@
 name: 📊 Filter Stocks by Volume
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# GÈRE: Filtrage par volume (tous marchés)
+# GÈRE: Filtrage par volume (tous marchés) + enrichissement fondamentaux
 # SCRIPT: scripts/stock-filter-by-volume.js
 # HORAIRE: 04:00 Paris (nuit, après clôture US)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -9,6 +9,12 @@ name: 📊 Filter Stocks by Volume
 on:
   workflow_dispatch:
     inputs:
+      region:
+        description: 'Région à traiter'
+        required: true
+        type: choice
+        options: [all, us, europe, asia]
+        default: 'all'
       debug:
         description: 'Enable debug mode'
         required: false
@@ -40,6 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_run: ${{ steps.detect.outputs.should_run }}
+      regions: ${{ steps.detect.outputs.regions }}
       
     steps:
       - name: 🕐 Detect if we should run
@@ -47,7 +54,8 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "✅ Manual trigger"
+            echo "regions=${{ inputs.region }}" >> $GITHUB_OUTPUT
+            echo "✅ Manual trigger: region=${{ inputs.region }}"
             exit 0
           fi
           
@@ -60,6 +68,7 @@ jobs:
           if [ "$PARIS" -ge "0340" ] && [ "$PARIS" -le "0420" ]; then
             echo "🌙 Volume filter window detected"
             echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "regions=all" >> $GITHUB_OUTPUT
           else
             echo "⏭️ Skipped: PARIS=$PARIS not in window (03:40-04:20)"
             echo "should_run=false" >> $GITHUB_OUTPUT
@@ -94,9 +103,11 @@ jobs:
           DEBUG: ${{ inputs.debug || '0' }}
           DATA_DIR: data
           OUTPUT_DIR: data/filtered
+          REGIONS: ${{ needs.gate.outputs.regions }}
         run: |
           echo "══════════════════════════════════════════════════════════════"
           echo "📊 Running stock-filter-by-volume.js"
+          echo "🌍 REGIONS=$REGIONS"
           echo "══════════════════════════════════════════════════════════════"
           
           node scripts/stock-filter-by-volume.js
@@ -123,7 +134,8 @@ jobs:
           done
           
           # GitHub Summary
-          echo "## 📊 Volume Filter Results" >> $GITHUB_STEP_SUMMARY
+          REGIONS="${{ needs.gate.outputs.regions }}"
+          echo "## 📊 Volume Filter Results (REGIONS=$REGIONS)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ -f data/filtered/Actions_US_filtered.csv ]; then
@@ -155,8 +167,9 @@ jobs:
             exit 0
           fi
           
+          REGIONS="${{ needs.gate.outputs.regions }}"
           TS=$(date -u +'%Y-%m-%d %H:%M UTC')
-          git commit -m "📊 Volume Filter - $TS [skip ci]"
+          git commit -m "📊 Volume Filter [$REGIONS] - $TS [skip ci]"
           
           BRANCH="${GITHUB_REF_NAME:-main}"
           for i in 1 2 3; do
