@@ -908,18 +908,19 @@ async function throttle() {
       let { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
       let vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
 
-      // ✅ v2.10: Fallback italien — si vol=0 et stock XMIL, essayer cross-listing DE
-      if (vol === 0 && mic === 'XMIL') {
+      // ✅ v2.10: Stocks italiens ITALY_FALLBACK → whitelist (volume TD non fiable pour XMIL)
+      if (mic === 'XMIL' && ITALY_FALLBACK[ticker]) {
         const fb = ITALY_FALLBACK[ticker];
-        if (fb) {
-          const fbQuote = await tryQuote(fb.sym, fb.exchange);
-          const fbVol = fbQuote ? (Number(fbQuote.volume)||Number(fbQuote.average_volume)||0) : 0;
-          if (fbVol > 0) {
-            sym = fb.sym;
-            quote = fbQuote;
-            vol = fbVol;
-            if (DEBUG) console.log(`  [ITALY] ${ticker} → ${fb.sym}:${fb.exchange} vol=${fbVol}`);
-          }
+        const fbQuote = await tryQuote(fb.sym, fb.exchange);
+        if (fbQuote) {
+          sym = fb.sym;
+          quote = fbQuote;
+          vol = Number(fbQuote.volume) || Number(fbQuote.average_volume) || 999_999;
+        } else {
+          vol = 999_999; // force pass — blue chip confirmée
+        }
+        if (DEBUG) console.log(`  [ITALY WHITELIST] ${ticker} → ${fb.sym}:${fb.exchange} (vol forced)`);
+      }
         }
       }
 
