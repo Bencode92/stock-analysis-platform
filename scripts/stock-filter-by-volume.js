@@ -1,6 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
-// Version 2.9 - Fix ROIC (NOPAT/Avg IC), ROE (Avg Equity), cache versioning
+// Version 2.10 - Ajout ITALY_FALLBACK pour fondamentaux italiens (remap ticker + exchange)
 //   - ROIC = NOPAT / Average Invested Capital (méthode GuruFocus)
 //   - NOPAT = Operating Income × (1 - Tax Rate effective)
 //   - IC = Total Assets - Excess Cash (- AP si disponible)
@@ -149,7 +149,20 @@ const MIC_HINTS = {
     'XCSE': { exchange: 'NASDAQ Copenhagen', country: 'Denmark' },
     'XHEL': { exchange: 'NASDAQ Helsinki', country: 'Finland' },
 };
-
+// ✅ v2.10: Mapping Italie → cross-listings DE (tickers différents sur XETR)
+const ITALY_FALLBACK = {
+    'ISP':   { sym: 'IES',  exchange: 'XETR', country: 'Germany' },
+    'UCG':   { sym: 'CRIN', exchange: 'XETR', country: 'Germany' },
+    'ENI':   { sym: 'ENI',  exchange: 'FSX',  country: 'Germany' },
+    'ENEL':  { sym: 'ENL',  exchange: 'XETR', country: 'Germany' },
+    'PRY':   { sym: 'AEU',  exchange: 'XETR', country: 'Germany' },
+    'BAMI':  { sym: 'BPM',  exchange: 'XETR', country: 'Germany' },
+    'STLAM': { sym: '8TI',  exchange: 'XETR', country: 'Germany' },
+    'MONC':  { sym: 'MOV',  exchange: 'XETR', country: 'Germany' },
+    'LDO':   { sym: 'FMNB', exchange: 'XETR', country: 'Germany' },
+    'BMPS':  { sym: 'MPI0', exchange: 'XETR', country: 'Germany' },
+    'CPR':   { sym: '58H',  exchange: 'XETR', country: 'Germany' },
+};
 // ✅ v2.7.1: MICs US — pas besoin de contexte, ticker seul suffit
 const US_MICS = new Set(['XNAS', 'XNYS', 'BATS', 'ARCX', 'XASE']);
 
@@ -172,6 +185,18 @@ function buildFundamentalsParams(symbol, context = {}) {
   if (mic && US_MICS.has(mic)) {
     if (DEBUG) console.log(`  [DEBUG] Fundamentals params for ${symbol}: US stock, no context needed`);
     return params;
+  }
+
+  // ✅ v2.10: Remap ticker italien vers cross-listing DE
+  if (mic === 'XMIL') {
+    const fb = ITALY_FALLBACK[symbol];
+    if (fb) {
+      params.symbol = fb.sym;
+      params.exchange = fb.exchange;
+      params.country = fb.country;
+      if (DEBUG) console.log(`  [DEBUG] ITALY_FALLBACK ${symbol} → ${fb.sym}:${fb.exchange}`);
+      return params;
+    }
   }
 
   const hint = mic ? MIC_HINTS[mic] : null;
